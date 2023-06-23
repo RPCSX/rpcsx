@@ -1,0 +1,3 @@
+[submodule "orbis-kernel"]
+	path = orbis-kernel
+	url = git@github.com:RPCSX/orbis-kernel.git
