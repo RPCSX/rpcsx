@@ -1,10 +1,10 @@
 #include "device.hpp"
-#include "amdgpu/bridge/bridge.hpp"
 #include "tiler.hpp"
 
-#include "spirv-tools/libspirv.hpp"
+//#include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
 #include "util/unreachable.hpp"
+#include <util/VerifyVulkan.hpp>
 #include <algorithm>
 #include <atomic>
 #include <bit>
@@ -30,17 +30,6 @@ std::uint64_t g_memoryBase;
 
 namespace amdgpu::device {
 MemoryZoneTable<StdSetInvalidationHandle> memoryZoneTable;
-
-inline Verify operator<<(Verify lhs, VkResult result) {
-  if (result != VK_SUCCESS) {
-    auto location = lhs.location();
-    util::unreachable("Verification failed at %s: %s:%u:%u(res = %d)",
-                      location.function_name(), location.file_name(),
-                      location.line(), location.column(), result);
-  }
-
-  return lhs;
-}
 
 inline VkBlendFactor blendMultiplierToVkBlendFactor(BlendMultiplier mul) {
   switch (mul) {
@@ -4264,20 +4253,10 @@ void amdgpu::device::AmdgpuDevice::updateFlipStatus() {}
 amdgpu::device::AmdgpuDevice::AmdgpuDevice(
     amdgpu::device::DrawContext dc)
     : mDc(dc) {
-  mBridgeCommandBuffer = amdgpu::bridge::createShmCommandBuffer("/amdgpu-cmds");
-
-  if (mBridgeCommandBuffer == nullptr) {
-    util::unreachable("Failed to create shm command buffer\n");
-  }
-
-  mBridge = amdgpu::bridge::BridgePuller(mBridgeCommandBuffer);
 }
 
 amdgpu::device::AmdgpuDevice::~AmdgpuDevice() {
   if (memoryFd != -1) {
     ::close(memoryFd);
   }
-
-  amdgpu::bridge::destroyShmCommandBuffer(mBridgeCommandBuffer);
-  amdgpu::bridge::unlinkShm("/amdgpu-cmds");
 }

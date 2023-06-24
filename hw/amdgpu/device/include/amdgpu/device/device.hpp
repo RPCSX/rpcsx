@@ -1480,8 +1480,6 @@ void handleCommandBuffer(RemoteMemory memory, DrawContext &ctxt,
 void setVkDevice(VkDevice device, VkPhysicalDeviceMemoryProperties properties);
 
 class AmdgpuDevice final {
-  amdgpu::bridge::BridgePuller mBridge;
-  amdgpu::bridge::BridgeHeader *mBridgeCommandBuffer = nullptr;
   amdgpu::device::DrawContext mDc;
   char *internalMemory = nullptr;
   RemoteMemory memory;
