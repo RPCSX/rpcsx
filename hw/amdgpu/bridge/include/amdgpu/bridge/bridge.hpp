@@ -83,18 +83,17 @@ enum class BridgeFlags {
   PullLock = 1 << 2,
 };
 
-class BridgePusher {
-  BridgeHeader *buffer = nullptr;
+struct BridgePusher {
+  BridgeHeader *header = nullptr;
 
-public:
   BridgePusher() = default;
-  BridgePusher(BridgeHeader *buffer) : buffer(buffer) {}
+  BridgePusher(BridgeHeader *header) : header(header) {}
 
   void setVm(std::uint64_t address, std::uint64_t size, const char *name) {
-    buffer->vmAddress = address;
-    buffer->vmSize = size;
-    std::strncpy(buffer->vmName, name, sizeof(buffer->vmName));
-    buffer->flags |= static_cast<std::uint64_t>(BridgeFlags::VmConfigured);
+    header->vmAddress = address;
+    header->vmSize = size;
+    std::strncpy(header->vmName, name, sizeof(header->vmName));
+    header->flags |= static_cast<std::uint64_t>(BridgeFlags::VmConfigured);
   }
 
   void sendMemoryProtect(std::uint64_t address, std::uint64_t size,
@@ -124,7 +123,7 @@ public:
   void sendDoFlip() { sendCommand(CommandId::DoFlip, {}); }
 
   void wait() {
-    while (buffer->pull != buffer->push)
+    while (header->pull != header->push)
       ;
   }
 
@@ -138,21 +137,21 @@ private:
     std::size_t cmdSize = args.size() + 1;
     std::uint64_t pos = getPushPosition(cmdSize);
 
-    buffer->commands[pos++] = makeCommandHeader(CommandId::Flip, cmdSize);
+    header->commands[pos++] = makeCommandHeader(CommandId::Flip, cmdSize);
     for (auto arg : args) {
-      buffer->commands[pos++] = arg;
+      header->commands[pos++] = arg;
     }
-    buffer->push = pos;
+    header->push = pos;
   }
 
   std::uint64_t getPushPosition(std::uint64_t cmdSize) {
-    std::uint64_t position = buffer->push;
+    std::uint64_t position = header->push;
 
-    if (position + cmdSize > buffer->size) {
-      if (position < buffer->size) {
-        buffer->commands[position] =
+    if (position + cmdSize > header->size) {
+      if (position < header->size) {
+        header->commands[position] =
             static_cast<std::uint64_t>(CommandId::Nop) |
-            ((buffer->size - position - 1) << 32);
+            ((header->size - position - 1) << 32);
       }
 
       position = 0;
@@ -162,44 +161,43 @@ private:
     return position;
   }
   void waitPuller(std::uint64_t pullValue) {
-    while (buffer->pull < pullValue) {
+    while (header->pull < pullValue) {
       ;
     }
   }
 };
 
-class BridgePuller {
-  BridgeHeader *buffer = nullptr;
+struct BridgePuller {
+  BridgeHeader *header = nullptr;
 
-public:
   BridgePuller() = default;
-  BridgePuller(BridgeHeader *buffer) : buffer(buffer) {}
+  BridgePuller(BridgeHeader *header) : header(header) {}
 
   std::size_t pullCommands(Command *commands, std::size_t maxCount) {
     std::size_t processed = 0;
 
     while (processed < maxCount) {
-      if (buffer->pull == buffer->push) {
+      if (header->pull == header->push) {
         break;
       }
 
-      auto pos = buffer->pull;
-      auto cmd = buffer->commands[pos];
+      auto pos = header->pull;
+      auto cmd = header->commands[pos];
       CommandId cmdId = static_cast<CommandId>(cmd);
       std::uint32_t argsCount = cmd >> 32;
 
       if (cmdId != CommandId::Nop) {
         commands[processed++] =
-            unpackCommand(cmdId, buffer->commands + pos + 1, argsCount);
+            unpackCommand(cmdId, header->commands + pos + 1, argsCount);
       }
 
       auto newPull = pos + argsCount + 1;
 
-      if (newPull >= buffer->size) {
+      if (newPull >= header->size) {
         newPull = 0;
       }
 
-      buffer->pull = newPull;
+      header->pull = newPull;
     }
 
     return processed;

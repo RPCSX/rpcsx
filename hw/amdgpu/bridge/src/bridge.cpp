@@ -14,7 +14,7 @@ amdgpu::bridge::createShmCommandBuffer(const char *name) {
     return nullptr;
   }
 
-  unlinkShm(name);
+  // unlinkShm(name);
 
   int fd = ::shm_open(name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
@@ -51,6 +51,11 @@ amdgpu::bridge::openShmCommandBuffer(const char *name) {
   int fd = ::shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
 
   if (fd == -1) {
+    return nullptr;
+  }
+
+  if (ftruncate(fd, kShmSize) < 0) {
+    ::close(fd);
     return nullptr;
   }
 

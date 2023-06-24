@@ -2,11 +2,17 @@
 #include <amdgpu/bridge/bridge.hpp>
 #include <amdgpu/device/device.hpp>
 #include <chrono>
+#include <csignal>
 #include <cstdio>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include <thread>
+#include <unistd.h>
 #include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include <GLFW/glfw3.h> // TODO: make in optional
 
@@ -262,8 +268,8 @@ int main(int argc, const char *argv[]) {
                                              &queueFamilyCount, nullptr);
     Verify() << (queueFamilyCount > 0);
     queueFamilyProperties.resize(queueFamilyCount);
-    for (auto &propery : queueFamilyProperties) {
-      propery.sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+    for (auto &property : queueFamilyProperties) {
+      property.sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
     }
 
     vkGetPhysicalDeviceQueueFamilyProperties2(
@@ -424,27 +430,33 @@ int main(int argc, const char *argv[]) {
                              &vkDevice);
 
 
-  std::vector<VkQueue> computeQueues;
-  std::vector<VkQueue> transferQueues;
-  std::vector<VkQueue> graphicsQueues;
+  std::vector<std::pair<VkQueue, unsigned>> computeQueues;
+  std::vector<std::pair<VkQueue, unsigned>> transferQueues;
+  std::vector<std::pair<VkQueue, unsigned>> graphicsQueues;
   VkQueue presentQueue = VK_NULL_HANDLE;
 
   for (auto &queueInfo : requestedQueues) {
     if (queueFamiliesWithComputeSupport.contains(queueInfo.queueFamilyIndex)) {
       for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount; ++queueIndex) {
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &computeQueues.emplace_back());
+        auto &[queue, index] = computeQueues.emplace_back();
+        index = queueInfo.queueFamilyIndex;
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &queue);
       }
     }
 
     if (queueFamiliesWithGraphicsSupport.contains(queueInfo.queueFamilyIndex)) {
       for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount; ++queueIndex) {
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &graphicsQueues.emplace_back());
+        auto &[queue, index] = graphicsQueues.emplace_back();
+        index = queueInfo.queueFamilyIndex;
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &queue);
       }
     }
 
     if (queueFamiliesWithTransferSupport.contains(queueInfo.queueFamilyIndex)) {
       for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount; ++queueIndex) {
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &transferQueues.emplace_back());
+        auto &[queue, index] = transferQueues.emplace_back();
+        index = queueInfo.queueFamilyIndex;
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &queue);
       }
     }
 
@@ -460,16 +472,56 @@ int main(int argc, const char *argv[]) {
 
   amdgpu::device::setVkDevice(vkDevice, vkPhyDeviceMemoryProperties);
 
-  std::printf("Initialization was succesful\n");
+  std::printf("Initialization was successful\n");
 
   // TODO: open emulator shared memory
-  auto bridge = amdgpu::bridge::createShmCommandBuffer(cmdBridgeName);
+  auto bridge = amdgpu::bridge::openShmCommandBuffer(cmdBridgeName);
+  if (bridge == nullptr) {
+    bridge = amdgpu::bridge::createShmCommandBuffer(cmdBridgeName);
+  }
+
+  if (bridge->pullerPid > 0 && ::kill(bridge->pullerPid, 0) == 0) {
+    // another instance of rpcsx-gpu on the same bridge, kill self after that
+
+    std::fprintf(stderr, "Another instance already exists\n");
+    return 1;
+  }
+
+  bridge->pullerPid = ::getpid();
 
   amdgpu::bridge::BridgePuller bridgePuller { bridge };
   amdgpu::bridge::Command commandsBuffer[32];
 
-  amdgpu::device::DrawContext dc{
-    // TODO
+  int memoryFd = ::shm_open(shmName, O_RDWR, S_IRUSR | S_IWUSR);
+
+  if (memoryFd < 0) {
+    std::printf("failed to open shared memory\n");
+  }
+
+  struct stat memoryStat;
+  ::fstat(memoryFd, &memoryStat);
+  amdgpu::RemoteMemory memory {
+    (char *)::mmap(nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0)
+  };
+
+  VkCommandPoolCreateInfo commandPoolCreateInfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+    .queueFamilyIndex = graphicsQueues.front().second
+  };
+
+  VkCommandPool commandPool;
+  Verify() << vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr, &commandPool);
+
+  VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+  };
+
+  VkPipelineCache pipelineCache;
+  Verify() << vkCreatePipelineCache(vkDevice, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
+  amdgpu::device::DrawContext dc{ // TODO
+    .pipelineCache = pipelineCache,
+    .queue = graphicsQueues.front().first,
+    .commandPool = commandPool,
   };
 
   amdgpu::device::AmdgpuDevice device{ dc };
@@ -484,9 +536,29 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
-    for (std::size_t i = 0; i < pulledCount; ++i) {
-      // TODO: handle command
+    for (auto cmd : std::span(commandsBuffer, pulledCount)) {
+      switch (cmd.id) {
+      case amdgpu::bridge::CommandId::SetUpSharedMemory:
+        break;
+      case amdgpu::bridge::CommandId::ProtectMemory:
+        break;
+      case amdgpu::bridge::CommandId::CommandBuffer:
+        break;
+      case amdgpu::bridge::CommandId::Flip:
+        break;
+      case amdgpu::bridge::CommandId::DoFlip:
+        break;
+      case amdgpu::bridge::CommandId::SetBuffer:
+        break;
+
+      default:
+        util::unreachable("Unexpected command id %u\n", (unsigned)cmd.id);
+      }
     }
+  }
+
+  if (bridge->pusherPid > 0) {
+    kill(bridge->pusherPid, SIGINT);
   }
 
   amdgpu::bridge::destroyShmCommandBuffer(bridge);

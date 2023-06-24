@@ -1,4 +1,6 @@
 #include "align.hpp"
+#include "amdgpu/bridge/bridge.hpp"
+#include "bridge.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
 #include "linker.hpp"
@@ -6,6 +8,8 @@
 #include "vfs.hpp"
 #include "vm.hpp"
 
+#include <filesystem>
+#include <linux/limits.h>
 #include <orbis/KernelContext.hpp>
 #include <orbis/module.hpp>
 #include <orbis/module/Module.hpp>
@@ -26,6 +30,8 @@
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
+
+static int g_gpuPid;
 
 struct LibcInfo {
   std::uint64_t textBegin = ~static_cast<std::uint64_t>(0);
@@ -159,7 +165,9 @@ static void printStackTrace(ucontext_t *context, orbis::Thread *thread,
 __attribute__((no_stack_protector)) static void
 handle_signal(int sig, siginfo_t *info, void *ucontext) {
   std::uint64_t hostFs = _readgsbase_u64();
-  _writefsbase_u64(hostFs);
+  if (hostFs != 0) {
+    _writefsbase_u64(hostFs);
+  }
 
   // syscall(SYS_arch_prctl, ARCH_GET_GS, &hostFs);
   // syscall(SYS_arch_prctl, ARCH_SET_FS, hostFs);
@@ -173,20 +181,32 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
     return;
   }
 
-  const char message[] = "Signal handler!\n";
-  write(2, message, sizeof(message) - 1);
+  if (g_gpuPid > 0) {
+    // stop gpu thread
+    ::kill(g_gpuPid, SIGINT);
+  }
 
-  char buf[128] = "";
-  int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
-                     g_currentThread ? "guest" : "host",
-                     g_currentThread ? g_currentThread->tid : ::gettid(),
-                     info->si_addr);
-  write(2, buf, len);
+  if (sig != SIGINT) {
+    char buf[128] = "";
+    int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
+                      g_currentThread ? "guest" : "host",
+                      g_currentThread ? g_currentThread->tid : ::gettid(),
+                      info->si_addr);
+    write(2, buf, len);
 
-  if (std::size_t printed = printAddressLocation(
-          buf, sizeof(buf), g_currentThread, (std::uint64_t)info->si_addr)) {
-    printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
-    write(2, buf, printed);
+    if (std::size_t printed = printAddressLocation(
+            buf, sizeof(buf), g_currentThread, (std::uint64_t)info->si_addr)) {
+      printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
+      write(2, buf, printed);
+    }
+
+
+    if (g_currentThread) {
+      printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), g_currentThread,
+                      2);
+    } else {
+      printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
+    }
   }
 
   struct sigaction act {};
@@ -202,11 +222,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
     std::exit(-1);
   }
 
-  if (g_currentThread) {
-    printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), g_currentThread,
-                    2);
-  } else {
-    printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
+  if (sig == SIGINT) {
+    std::raise(SIGINT);
   }
 }
 
@@ -257,6 +274,11 @@ static void setupSigHandlers() {
   }
 
   if (sigaction(SIGABRT, &act, NULL)) {
+    perror("Error sigaction:");
+    exit(-1);
+  }
+
+  if (sigaction(SIGINT, &act, NULL)) {
     perror("Error sigaction:");
     exit(-1);
   }
@@ -515,6 +537,72 @@ static void usage(const char *argv0) {
   std::printf("    --trace\n");
 }
 
+static std::filesystem::path getSelfDir() {
+  char path[PATH_MAX];
+  int len = ::readlink("/proc/self/exe", path, sizeof(path));
+  if (len < 0 || len >= sizeof(path)) {
+    // TODO
+    return std::filesystem::current_path();
+  }
+
+  return std::filesystem::path(path).parent_path();
+}
+
+static bool isRpsxGpuPid(int pid) {
+  if (pid <= 0 || ::kill(pid, 0) != 0) {
+    return false;
+  }
+
+  char path[PATH_MAX];
+  std::string procPath = "/proc/" + std::to_string(pid) + "/exe";
+  auto len = ::readlink(procPath.c_str(), path, sizeof(path));
+
+  if (len < 0 || len >= std::size(path)) {
+    return false;
+  }
+
+  path[len] = 0;
+
+  std::printf("filename is '%s'\n", std::filesystem::path(path).filename().c_str());
+
+  return std::filesystem::path(path).filename() == "rpcsx-gpu";
+}
+static void runRpsxGpu() {
+  const char *cmdBufferName = "/rpcsx-gpu-cmds";
+  amdgpu::bridge::BridgeHeader *bridgeHeader = amdgpu::bridge::openShmCommandBuffer(cmdBufferName);
+
+  if (bridgeHeader != nullptr && bridgeHeader->pullerPid > 0 && isRpsxGpuPid(bridgeHeader->pullerPid)) {
+    bridgeHeader->pusherPid = ::getpid();
+    g_gpuPid = bridgeHeader->pullerPid;
+    rx::bridge = bridgeHeader;
+    return;
+  }
+
+  std::printf("Starting rpcsx-gpu\n");
+
+  if (bridgeHeader == nullptr) {
+    bridgeHeader = amdgpu::bridge::createShmCommandBuffer(cmdBufferName);
+  }
+  bridgeHeader->pusherPid = ::getpid();
+  rx::bridge = bridgeHeader;
+
+  auto rpcsxGpuPath = getSelfDir() / "rpcsx-gpu";
+
+  if (!std::filesystem::is_regular_file(rpcsxGpuPath)) {
+    std::printf("failed to find rpcsx-gpu, continue without GPU emulation\n");
+    return;
+  }
+
+  g_gpuPid = ::fork();
+
+  if (g_gpuPid == 0) {
+    // TODO
+    const char *argv[] = {rpcsxGpuPath.c_str(), nullptr};
+
+    ::execv(rpcsxGpuPath.c_str(), const_cast<char **>(argv));
+  }
+}
+
 int main(int argc, const char *argv[]) {
   if (argc == 2) {
     if (std::strcmp(argv[1], "-h") == 0 ||
@@ -606,6 +694,8 @@ int main(int argc, const char *argv[]) {
   }
 
   rx::vm::initialize();
+  runRpsxGpu();
+
   // rx::vm::printHostStats();
   auto initProcess = context.createProcess(10);
   initProcess->sysent = &orbis::ps4_sysvec;

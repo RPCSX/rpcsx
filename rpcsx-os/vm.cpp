@@ -1,5 +1,6 @@
 #include "vm.hpp"
 #include "align.hpp"
+#include "bridge.hpp"
 #include <bit>
 #include <cassert>
 #include <cinttypes>
@@ -596,15 +597,15 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
 void rx::vm::initialize() {
   std::printf("Memory: initialization\n");
 
-  gMemoryShm = ::shm_open("/orbis-memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+  gMemoryShm = ::shm_open("/rpcsx-os-memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
   if (gMemoryShm == -1) {
-    std::printf("Memory: failed to open /orbis-memory\n");
+    std::printf("Memory: failed to open /rpcsx-os-memory\n");
     std::abort();
   }
 
   if (::ftruncate64(gMemoryShm, kMemorySize) < 0) {
-    std::printf("Memory: failed to allocate /orbis-memory\n");
+    std::printf("Memory: failed to allocate /rpcsx-os-memory\n");
     std::abort();
   }
 
@@ -798,7 +799,6 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   allocInfo.flags = kBlockFlagDirectMemory; // TODO
   allocInfo.name[0] = '\0';                 // TODO
 
-  // orbis::bridge.sendMemoryProtect(address, len, prot);
   auto result =
       utils::map(reinterpret_cast<void *>(address), len, prot & kMapProtCpuAll,
                  realFlags, gMemoryShm, address - kMinAddress);
@@ -814,6 +814,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     }
   }
 
+  rx::bridge.sendMemoryProtect(address, len, prot);
   return result;
 }
 
@@ -841,7 +842,7 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
 
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
       (address & kBlockMask) >> kPageShift, pages, ~0);
-  // orbis::bridge.sendMemoryProtect(address, size, 0);
+  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, 0);
   return utils::unmap(addr, size);
 }
 
@@ -871,8 +872,7 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
       (address & kBlockMask) >> kPageShift, pages,
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
 
-  // orbis::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr),
-  // size, prot);
+  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, prot);
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
 }
 

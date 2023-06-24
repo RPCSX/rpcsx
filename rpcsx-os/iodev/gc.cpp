@@ -1,3 +1,4 @@
+#include "bridge.hpp"
 #include "io-device.hpp"
 #include <atomic>
 #include <cinttypes>
@@ -58,7 +59,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
       std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
       std::fprintf(stderr, "    size = %lu\n", size);
 
-      // orbis::bridge.sendCommandBuffer(address, size);
+      rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
 
     break;
@@ -108,7 +109,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
       std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
       std::fprintf(stderr, "    size = %lu\n", size);
 
-      // orbis::bridge.sendCommandBuffer(address, size);
+      rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
 
     //orbis::bridge.sendDoFlip();

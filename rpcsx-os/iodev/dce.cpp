@@ -1,3 +1,4 @@
+#include "bridge.hpp"
 #include "io-device.hpp"
 #include <cinttypes>
 #include <cstddef>
@@ -15,54 +16,8 @@ struct VideoOutBuffer {
 
 struct DceDevice : public IoDevice {};
 
-// template <typename T>
-// inline bool
-// atomic_compare_exchange_weak(volatile T *ptr, T *expected, T desired,
-//                              int successMemOrder = __ATOMIC_SEQ_CST,
-//                              int failureMemOrder = __ATOMIC_SEQ_CST) {
-//   return __atomic_compare_exchange_n(ptr, expected, desired, true,
-//                                      __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
-// }
-
 struct DceInstance : public IoDeviceInstance {
   VideoOutBuffer bufferAttributes{};
-
-  // std::uint64_t flipStatusOffset =
-  //     mem::allocateInternal(sizeof(liverpool::bridge::FlipStatus),
-  //                           alignof(liverpool::bridge::FlipStatus));
-  // liverpool::bridge::FlipStatus *flipStatus = new (
-  //     mem::mapInternal(flipStatusOffset, sizeof(liverpool::bridge::FlipStatus)))
-  //     liverpool::bridge::FlipStatus();
-
-  DceInstance() {
-    // *flipStatus = {};
-    // orbis::bridge.sendSetFlipStatus(flipStatusOffset);
-  }
-  void registerBuffer(int index, std::uint64_t address) {
-    // orbis::bridge.sendSetBuffer(index, address, bufferAttributes.width,
-    //                             bufferAttributes.height, bufferAttributes.pitch,
-    //                             bufferAttributes.pixelFormat,
-    //                             bufferAttributes.tilingMode);
-  }
-
-  void flip(std::uint32_t bufferIndex, std::uint64_t flipMode,
-            std::uint64_t flipArg) {
-
-    // orbis::bridge.sendFlip(bufferIndex, flipArg);
-    // orbis::bridge.wait();
-  }
-
-  // liverpool::bridge::FlipStatus getFlipStatus() {
-  //   int expected = 0;
-  //   while (!atomic_compare_exchange_weak(&flipStatus->locked, &expected, 1)) {
-  //     expected = 0;
-  //   }
-
-  //   liverpool::bridge::FlipStatus result = *flipStatus;
-  //   flipStatus->locked = 0;
-
-  //   return result;
-  // }
 };
 
 struct RegisterBuffer {
@@ -149,14 +104,13 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
         return 0;
       }
 
-      // auto currentStatus = dceInstance->getFlipStatus();
-
       FlipControlStatus flipStatus{};
-      // flipStatus.flipArg = currentStatus.arg;
-      // flipStatus.count = currentStatus.count;
+      // TODO: lock bridge header
+      flipStatus.flipArg = rx::bridge.header->flipArg;
+      flipStatus.count = rx::bridge.header->flipCount;
       flipStatus.processTime = 0; // TODO
       flipStatus.tsc = 0;         // TODO
-      // flipStatus.currentBuffer = currentStatus.currentBuffer;
+      flipStatus.currentBuffer = rx::bridge.header->flipBuffer;
       flipStatus.unkQueueNum = 0;  // TODO
       flipStatus.gcQueueNum = 0;   // TODO
       flipStatus.unk2QueueNum = 0; // TODO
@@ -196,7 +150,22 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     std::fprintf(stderr, "dce: RegisterBuffer(%lx, %lx, %lx, %lx)\n",
                  args->attributeIndex, args->index, args->address, args->unk);
 
-    dceInstance->registerBuffer(args->index, args->address);
+
+    if (args->index >= std::size(rx::bridge.header->buffers)) {
+      // TODO
+      std::fprintf(stderr, "dce: out of buffers!\n");
+      return -1;
+    }
+
+    // TODO: lock bridge header
+    rx::bridge.header->buffers[args->index] = {
+      .bufferIndex = static_cast<uint32_t>(args->index),
+      .width = dceInstance->bufferAttributes.width,
+      .height = dceInstance->bufferAttributes.height,
+      .pitch = dceInstance->bufferAttributes.pitch,
+      .pixelFormat = dceInstance->bufferAttributes.pixelFormat,
+      .tilingMode = dceInstance->bufferAttributes.tilingMode
+    };
     return 0;
   }
 
@@ -235,7 +204,7 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
         args->arg1, args->displayBufferIndex, args->flipMode, args->flipArg,
         args->arg5, args->arg6, args->arg7, args->arg8);
 
-    dceInstance->flip(args->displayBufferIndex, args->flipMode, args->flipArg);
+    rx::bridge.sendFlip(args->displayBufferIndex, /*args->flipMode,*/ args->flipArg);
 
     if (args->flipMode == 1 || args->arg7 == 0) {
       // orbis::bridge.sendDoFlip();

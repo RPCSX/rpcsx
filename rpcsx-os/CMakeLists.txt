@@ -20,6 +20,7 @@ add_executable(rpcsx-os
   iodev/zero.cpp
 
   main.cpp
+  bridge.cpp
   vm.cpp
   ops.cpp
   linker.cpp
@@ -27,7 +28,7 @@ add_executable(rpcsx-os
   vfs.cpp
 )
 target_include_directories(rpcsx-os PUBLIC .)
-target_link_libraries(rpcsx-os PUBLIC orbis::kernel libcrypto unwind unwind-x86_64)
+target_link_libraries(rpcsx-os PUBLIC orbis::kernel amdgpu::bridge libcrypto unwind unwind-x86_64)
 target_link_options(rpcsx-os PUBLIC "LINKER:-Ttext-segment,0x0000010000000000")
 target_compile_options(rpcsx-os PRIVATE "-march=native")
 
