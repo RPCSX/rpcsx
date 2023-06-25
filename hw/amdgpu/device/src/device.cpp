@@ -2712,12 +2712,14 @@ static DirectMemory &getDirectMemory(std::uint64_t address, std::size_t size,
     zone.beginAddress *= kPageSize;
     zone.endAddress *= kPageSize;
 
+    assert(address >= zone.beginAddress && address + size < zone.endAddress);
+
     auto newResource = MemoryResource::CreateFromHost(
         (char *)g_rwMemory + zone.beginAddress - g_memoryBase,
         zone.endAddress - zone.beginAddress);
 
     it = directMemory.emplace_hint(it, zone.beginAddress,
-                                   DirectMemory{std::move(newResource)});
+                                   DirectMemory{.memoryResource = std::move(newResource)});
   }
 
   if (beginAddress != nullptr) {
@@ -2727,7 +2729,7 @@ static DirectMemory &getDirectMemory(std::uint64_t address, std::size_t size,
 }
 
 struct BufferRef {
-  Buffer *buffer = nullptr;
+  VkBuffer buffer = VK_NULL_HANDLE;
   VkDeviceSize offset = 0;
   VkDeviceSize size = 0;
 };
@@ -2745,7 +2747,7 @@ static BufferRef getDirectBuffer(std::uint64_t address, std::size_t size) {
         dm.memoryResource.getFromOffset(0, dm.memoryResource.getSize()));
   }
 
-  return {&dm.buffer, address - beginAddress, size};
+  return {dm.buffer.getHandle(), address - beginAddress, size};
 }
 
 void updateDirectState() {
@@ -2814,8 +2816,8 @@ struct RenderState {
   std::vector<VkWriteDescriptorSet> writeDescriptorSets;
   std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
   std::vector<VkDescriptorImageInfo> descriptorImageInfos;
-  std::forward_list<Image2D> images;
-  std::forward_list<Buffer> buffers;
+  std::vector<Image2D> images;
+  std::vector<Buffer> buffers;
   std::vector<VkImageView> imageViews;
   std::vector<VkSampler> samplers;
 
@@ -2845,11 +2847,12 @@ struct RenderState {
     }
 
     // create temporary buffer
-    auto &tmpBuffer = buffers.emplace_front(Buffer::Allocate(
-        getHostVisibleMemory(), size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+    auto tmpBuffer = Buffer::Allocate(getHostVisibleMemory(), size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     std::memcpy(tmpBuffer.getData(), memory.getPointer(address), size);
 
-    return BufferRef{.buffer = &tmpBuffer, .offset = 0, .size = size};
+    auto result = BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
+    buffers.push_back(std::move(tmpBuffer));
+    return result;
   }
 
   BufferRef getIndexBuffer(std::uint64_t address, std::size_t size) {
@@ -2862,11 +2865,12 @@ struct RenderState {
     }
 
     // create temporary buffer
-    auto &tmpBuffer = buffers.emplace_front(Buffer::Allocate(
-        getHostVisibleMemory(), size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+    auto tmpBuffer = Buffer::Allocate(getHostVisibleMemory(), size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     std::memcpy(tmpBuffer.getData(), memory.getPointer(address), size);
 
-    return BufferRef{.buffer = &tmpBuffer, .offset = 0, .size = size};
+    auto result = BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
+    buffers.push_back(std::move(tmpBuffer));
+    return result;
   }
 
   std::vector<std::uint32_t> loadShader(
@@ -2916,7 +2920,7 @@ struct RenderState {
         auto storageBuffer = getStorageBuffer(vbuffer->getAddress(), size);
 
         descriptorBufferInfos.push_back(descriptorBufferInfo(
-            storageBuffer.buffer->getHandle(), storageBuffer.offset, size));
+            storageBuffer.buffer, storageBuffer.offset, size));
 
         writeDescriptorSets.push_back(
             writeDescriptorSetBuffer(nullptr, descriptorType, uniform.binding,
@@ -2940,12 +2944,12 @@ struct RenderState {
 
         assert(tbuffer->width == tbuffer->pitch);
 
-        auto &image = images.emplace_front(Image2D::Allocate(
+        auto image = Image2D::Allocate(
             getDeviceLocalMemory(), tbuffer->width + 1, tbuffer->height + 1,
             colorFormat,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT));
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
-        buffers.emplace_front(
+        buffers.push_back(
             image.read(cmdBuffer, getHostVisibleMemory(),
                        memory.getPointer(tbuffer->getAddress()),
                        tbuffer->tiling_idx, VK_IMAGE_ASPECT_COLOR_BIT));
@@ -2965,6 +2969,7 @@ struct RenderState {
 
         image.transitionLayout(cmdBuffer,
                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        images.push_back(std::move(image));
         break;
       }
 
@@ -3134,7 +3139,7 @@ struct RenderState {
           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
               VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-      buffers.emplace_front(colorImage.read(
+      buffers.push_back(colorImage.read(
           readCommandBuffer, getHostVisibleMemory(),
           memory.getPointer(colorBuffer.base), colorBuffer.tileModeIndex,
           VK_IMAGE_ASPECT_COLOR_BIT));
@@ -3159,7 +3164,7 @@ struct RenderState {
                  : VK_IMAGE_USAGE_TRANSFER_DST_BIT));
 
     if (!depthClearEnable && zReadBase) {
-      buffers.emplace_front(depthImage.read(
+      buffers.push_back(depthImage.read(
           readCommandBuffer, getHostVisibleMemory(),
           memory.getPointer(zReadBase), 8, VK_IMAGE_ASPECT_DEPTH_BIT));
     }
@@ -3332,7 +3337,7 @@ struct RenderState {
         }
       }
 
-      indexBuffer = {&indexBufferStorage, 0, indexBufferSize};
+      indexBuffer = {indexBufferStorage.getHandle(), 0, indexBufferSize};
     } else if (indeciesAddress != 0) {
       unsigned indexSize = vkIndexType == VK_INDEX_TYPE_UINT16 ? 16 : 32;
       auto indexBufferSize = indexSize * indexCount;
