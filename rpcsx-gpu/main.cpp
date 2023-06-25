@@ -724,8 +724,11 @@ int main(int argc, const char *argv[]) {
 
   uint32_t imageIndex = 0;
   bool isImageAcquired = false;
-  std::vector<std::vector<VkBuffer>> swapchainHandles;
-  swapchainHandles.resize(swapchainImages.size());
+  std::vector<std::vector<VkBuffer>> swapchainBufferHandles;
+  swapchainBufferHandles.resize(swapchainImages.size());
+  std::vector<std::vector<VkImage>> swapchainImageHandles;
+  swapchainImageHandles.resize(swapchainImages.size());
+
   VkPipelineStageFlags submitPipelineStages =
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -772,16 +775,17 @@ int main(int argc, const char *argv[]) {
 
         vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
 
-        for (auto handle : swapchainHandles[imageIndex]) {
+        for (auto handle : swapchainBufferHandles[imageIndex]) {
           vkDestroyBuffer(vkDevice, handle, nullptr);
         }
 
-        swapchainHandles[imageIndex].clear();
+        swapchainBufferHandles[imageIndex].clear();
 
         if (device.handleFlip(cmd.flip.bufferIndex, cmd.flip.arg,
                               presentCmdBuffers[imageIndex],
                               swapchainImages[imageIndex], swapchainExtent,
-                              swapchainHandles[imageIndex])) {
+                              swapchainBufferHandles[imageIndex],
+                              swapchainImageHandles[imageIndex])) {
           vkEndCommandBuffer(presentCmdBuffers[imageIndex]);
 
           VkSubmitInfo submitInfo{};

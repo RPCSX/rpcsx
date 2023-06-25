@@ -1304,12 +1304,7 @@ public:
     iterator() = default;
     iterator(map_iterator it) : it(it) {}
 
-    ZoneInfo operator *() const {
-      return {
-        it->first,
-        std::next(it)->first
-      };
-    }
+    ZoneInfo operator*() const { return {it->first, std::next(it)->first}; }
 
     iterator &operator++() const {
       ++it;
@@ -1323,21 +1318,13 @@ public:
       return *this;
     }
 
-    bool operator==(iterator other) const {
-      return it == other.it;
-    }
+    bool operator==(iterator other) const { return it == other.it; }
 
-    bool operator!=(iterator other) const {
-      return it != other.it;
-    }
+    bool operator!=(iterator other) const { return it != other.it; }
   };
 
-  iterator begin() {
-    return iterator(mAreas.begin());
-  }
-  iterator end() {
-    return iterator(mAreas.end());
-  }
+  iterator begin() { return iterator(mAreas.begin()); }
+  iterator end() { return iterator(mAreas.end()); }
 
   void clear() { mAreas.clear(); }
 
@@ -1477,7 +1464,9 @@ void dispatch(RemoteMemory memory, DrawContext &ctxt, std::size_t dimX,
               std::size_t dimY, std::size_t dimZ);
 void handleCommandBuffer(RemoteMemory memory, DrawContext &ctxt,
                          std::uint32_t *cmds, std::uint32_t count);
-void setVkDevice(VkDevice device, VkPhysicalDeviceMemoryProperties memProperties, VkPhysicalDeviceProperties devProperties);
+void setVkDevice(VkDevice device,
+                 VkPhysicalDeviceMemoryProperties memProperties,
+                 VkPhysicalDeviceProperties devProperties);
 
 struct AmdgpuDevice {
   amdgpu::device::DrawContext dc;
@@ -1515,12 +1504,14 @@ struct AmdgpuDevice {
   void handleProtectMemory(std::uint64_t address, std::uint64_t size,
                            std::uint32_t prot);
   void handleCommandBuffer(std::uint64_t address, std::uint64_t size);
-  void handleSetBuffer(std::uint32_t bufferIndex, std::uint64_t address,
-                       std::uint32_t width, std::uint32_t height,
-                       std::uint32_t pitch, std::uint32_t pixelFormat,
-                       std::uint32_t tilingMode);
-  bool handleFlip(std::uint32_t bufferIndex, std::uint64_t arg, VkCommandBuffer cmd, VkImage targetImage, VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers);
-  AmdgpuDevice(amdgpu::device::DrawContext dc, amdgpu::bridge::BridgeHeader *bridge, RemoteMemory memory, std::uint64_t memorySize)
-    : dc(dc), bridge(bridge), memory(memory), memorySize(memorySize) {}
+  bool handleFlip(std::uint32_t bufferIndex, std::uint64_t arg,
+                  VkCommandBuffer cmd, VkImage targetImage,
+                  VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers,
+                  std::vector<VkImage> &usedImages);
+
+  AmdgpuDevice(amdgpu::device::DrawContext dc,
+               amdgpu::bridge::BridgeHeader *bridge, RemoteMemory memory,
+               std::uint64_t memorySize)
+      : dc(dc), bridge(bridge), memory(memory), memorySize(memorySize) {}
 };
 } // namespace amdgpu::device
