@@ -2802,11 +2802,11 @@ struct RenderState {
   struct StoreUniformInfo {
     std::uint64_t dstAddress;
     std::uint64_t size;
-    VkDeviceMemory memory;
+    void *source;
   };
 
   StoreUniformInfo storeUniforms[16];
-  std::size_t storeUniformsCount = 0;
+  std::size_t storeUniformCount = 0;
 
   std::vector<VkDeviceMemory> usedMemory;
 
@@ -2837,13 +2837,18 @@ struct RenderState {
     }
   }
 
-  BufferRef getStorageBuffer(std::uint64_t address, std::size_t size) {
+  struct StorageBuffer {
+    BufferRef buffer;
+    void *indirectMemory;
+  };
+
+  StorageBuffer getStorageBuffer(std::uint64_t address, std::size_t size) {
     if (kUseDirectMemory &&
         (address &
          (g_physicalDeviceProperties.limits.minStorageBufferOffsetAlignment -
           1)) == 0) {
       // offset is supported natively, return direct buffer
-      return getDirectBuffer(address, size);
+      return {getDirectBuffer(address, size), nullptr};
     }
 
     // create temporary buffer
@@ -2852,7 +2857,7 @@ struct RenderState {
 
     auto result = BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
     buffers.push_back(std::move(tmpBuffer));
-    return result;
+    return {result, tmpBuffer.getData()};
   }
 
   BufferRef getIndexBuffer(std::uint64_t address, std::size_t size) {
@@ -2917,7 +2922,7 @@ struct RenderState {
           size = 0x10;
         }
 
-        auto storageBuffer = getStorageBuffer(vbuffer->getAddress(), size);
+        auto [storageBuffer, indirectMemory] = getStorageBuffer(vbuffer->getAddress(), size);
 
         descriptorBufferInfos.push_back(descriptorBufferInfo(
             storageBuffer.buffer, storageBuffer.offset, size));
@@ -2925,6 +2930,19 @@ struct RenderState {
         writeDescriptorSets.push_back(
             writeDescriptorSetBuffer(nullptr, descriptorType, uniform.binding,
                                      &descriptorBufferInfos.back(), 1));
+
+        if (indirectMemory != nullptr && (uniform.accessOp & amdgpu::shader::AccessOp::Store) == amdgpu::shader::AccessOp::Store) {
+          if (storeUniformCount >= std::size(storeUniforms)) {
+            std::fprintf(stderr, "Too many uniform stores\n");
+            std::abort();
+          }
+
+          storeUniforms[storeUniformCount++] = {
+            .dstAddress = vbuffer->getAddress(),
+            .size = size,
+            .source = indirectMemory
+          };
+        }
         break;
       }
 
@@ -3016,15 +3034,11 @@ struct RenderState {
   }
 
   void uploadUniforms() {
-    for (std::size_t i = 0; i < storeUniformsCount; ++i) {
-      auto uniform = storeUniforms[i];
-      void *data;
-      vkMapMemory(g_vkDevice, uniform.memory, 0, uniform.size, 0, &data);
-      std::memcpy(memory.getPointer(uniform.dstAddress), data, uniform.size);
-      vkUnmapMemory(g_vkDevice, uniform.memory);
+    for (auto uniform : std::span(storeUniforms, storeUniformCount)) {
+      std::memcpy(memory.getPointer(uniform.dstAddress), uniform.source, uniform.size);
     }
 
-    storeUniformsCount = 0;
+    storeUniformCount = 0;
   }
 
   void eliminateFastClear() {
