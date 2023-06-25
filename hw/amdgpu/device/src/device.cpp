@@ -28,6 +28,8 @@ void *g_rwMemory;
 std::size_t g_memorySize;
 std::uint64_t g_memoryBase;
 
+static const bool kUseDirectMemory = false;
+
 namespace amdgpu::device {
 MemoryZoneTable<StdSetInvalidationHandle> memoryZoneTable;
 
@@ -2942,7 +2944,8 @@ public:
   }
 
   [[nodiscard]] Buffer read(VkCommandBuffer cmdBuffer, MemoryResource &pool,
-            const void *address, int tileMode, VkImageAspectFlags destAspect) {
+                            const void *address, int tileMode,
+                            VkImageAspectFlags destAspect) {
     auto transferBuffer = Buffer::Allocate(
         pool, mWidth * mHeight * 4,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -2956,8 +2959,9 @@ public:
     return transferBuffer;
   }
 
-  [[nodiscard]] Buffer write(VkCommandBuffer cmdBuffer, MemoryResource &pool, void *address,
-             int tileMode, VkImageAspectFlags sourceAspect) {
+  [[nodiscard]] Buffer write(VkCommandBuffer cmdBuffer, MemoryResource &pool,
+                             void *address, int tileMode,
+                             VkImageAspectFlags sourceAspect) {
     auto transferBuffer = Buffer::Allocate(
         pool, mWidth * mHeight * 4,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -2967,7 +2971,7 @@ public:
     writeImageBuffer(address, transferBuffer, tileMode,
                      SurfaceFormat::kSurfaceFormat8_8_8_8, // TODO
                      mWidth, mHeight, 1);
-    
+
     return transferBuffer;
   }
 
@@ -3021,8 +3025,7 @@ struct BufferRef {
   VkDeviceSize size = 0;
 };
 
-static BufferRef getDirectBuffer(std::uint64_t address, std::size_t size,
-                                 VkBufferUsageFlags usage) {
+static BufferRef getDirectBuffer(std::uint64_t address, std::size_t size) {
   std::uint64_t beginAddress;
   auto &dm = getDirectMemory(address, size, &beginAddress);
 
@@ -3126,11 +3129,12 @@ struct RenderState {
   }
 
   BufferRef getStorageBuffer(std::uint64_t address, std::size_t size) {
-    if ((address &
+    if (kUseDirectMemory &&
+        (address &
          (g_physicalDeviceProperties.limits.minStorageBufferOffsetAlignment -
           1)) == 0) {
       // offset is supported natively, return direct buffer
-      return getDirectBuffer(address, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+      return getDirectBuffer(address, size);
     }
 
     // create temporary buffer
@@ -3141,11 +3145,27 @@ struct RenderState {
     return BufferRef{.buffer = &tmpBuffer, .offset = 0, .size = size};
   }
 
-  std::vector<std::uint32_t>
-  loadShader(VkCommandBuffer cmdBuffer, shader::Stage stage, std::uint64_t address,
-             std::uint32_t *userSgprs, std::size_t userSgprsCount,
-             int &bindingOffset, std::uint32_t dimX = 1, std::uint32_t dimY = 1,
-             std::uint32_t dimZ = 1) {
+  BufferRef getIndexBuffer(std::uint64_t address, std::size_t size) {
+    if (kUseDirectMemory &&
+        (address &
+         (g_physicalDeviceProperties.limits.minStorageBufferOffsetAlignment -
+          1)) == 0) {
+      // offset is supported natively, return direct buffer
+      return getDirectBuffer(address, size);
+    }
+
+    // create temporary buffer
+    auto &tmpBuffer = buffers.emplace_front(Buffer::Allocate(
+        getHostVisibleMemory(), size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT));
+    std::memcpy(tmpBuffer.getMemory().data, memory.getPointer(address), size);
+
+    return BufferRef{.buffer = &tmpBuffer, .offset = 0, .size = size};
+  }
+
+  std::vector<std::uint32_t> loadShader(
+      VkCommandBuffer cmdBuffer, shader::Stage stage, std::uint64_t address,
+      std::uint32_t *userSgprs, std::size_t userSgprsCount, int &bindingOffset,
+      std::uint32_t dimX = 1, std::uint32_t dimY = 1, std::uint32_t dimZ = 1) {
     auto shader = shader::convert(
         memory, stage, address,
         std::span<const std::uint32_t>(userSgprs, userSgprsCount),
@@ -3218,9 +3238,10 @@ struct RenderState {
             colorFormat,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT));
 
-        buffers.emplace_front(image.read(cmdBuffer, getHostVisibleMemory(),
-                   memory.getPointer(tbuffer->getAddress()),
-                   tbuffer->tiling_idx, VK_IMAGE_ASPECT_COLOR_BIT));
+        buffers.emplace_front(
+            image.read(cmdBuffer, getHostVisibleMemory(),
+                       memory.getPointer(tbuffer->getAddress()),
+                       tbuffer->tiling_idx, VK_IMAGE_ASPECT_COLOR_BIT));
 
         auto imageView =
             createImageView2D(image.getHandle(), colorFormat, {},
@@ -3235,7 +3256,8 @@ struct RenderState {
             writeDescriptorSetImage(nullptr, descriptorType, uniform.binding,
                                     &descriptorImageInfos.back(), 1));
 
-        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        image.transitionLayout(cmdBuffer,
+                               VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         break;
       }
 
@@ -3358,7 +3380,8 @@ struct RenderState {
       allocInfo.commandPool = ctxt.commandPool;
       allocInfo.commandBufferCount = std::size(transferCommandBuffers);
 
-      Verify() << vkAllocateCommandBuffers(g_vkDevice, &allocInfo, transferCommandBuffers);
+      Verify() << vkAllocateCommandBuffers(g_vkDevice, &allocInfo,
+                                           transferCommandBuffers);
     }
 
     VkCommandBuffer readCommandBuffer = transferCommandBuffers[0];
@@ -3367,10 +3390,12 @@ struct RenderState {
     auto primType = static_cast<PrimitiveType>(vgtPrimitiveType);
 
     int bindingOffset = 0;
-    auto vertexShader = loadShader(readCommandBuffer, shader::Stage::Vertex, pgmVsAddress,
-                                   userVsData, vsUserSpgrs, bindingOffset);
-    auto fragmentShader = loadShader(readCommandBuffer, shader::Stage::Fragment, pgmPsAddress,
-                                     userPsData, psUserSpgrs, bindingOffset);
+    auto vertexShader =
+        loadShader(readCommandBuffer, shader::Stage::Vertex, pgmVsAddress,
+                   userVsData, vsUserSpgrs, bindingOffset);
+    auto fragmentShader =
+        loadShader(readCommandBuffer, shader::Stage::Fragment, pgmPsAddress,
+                   userPsData, psUserSpgrs, bindingOffset);
 
     auto colorFormat = VK_FORMAT_R8G8B8A8_SRGB;      // TODO
     auto depthFormat = VK_FORMAT_D32_SFLOAT_S8_UINT; // TODO
@@ -3402,9 +3427,10 @@ struct RenderState {
           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
               VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-      buffers.emplace_front(colorImage.read(readCommandBuffer, getHostVisibleMemory(),
-                      memory.getPointer(colorBuffer.base),
-                      colorBuffer.tileModeIndex, VK_IMAGE_ASPECT_COLOR_BIT));
+      buffers.emplace_front(colorImage.read(
+          readCommandBuffer, getHostVisibleMemory(),
+          memory.getPointer(colorBuffer.base), colorBuffer.tileModeIndex,
+          VK_IMAGE_ASPECT_COLOR_BIT));
 
       colorImage.transitionLayout(readCommandBuffer,
                                   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -3426,14 +3452,13 @@ struct RenderState {
                  : VK_IMAGE_USAGE_TRANSFER_DST_BIT));
 
     if (!depthClearEnable && zReadBase) {
-      buffers.emplace_front(depthImage.read(readCommandBuffer, getHostVisibleMemory(),
-                      memory.getPointer(zReadBase), 8,
-                      VK_IMAGE_ASPECT_DEPTH_BIT));
+      buffers.emplace_front(depthImage.read(
+          readCommandBuffer, getHostVisibleMemory(),
+          memory.getPointer(zReadBase), 8, VK_IMAGE_ASPECT_DEPTH_BIT));
     }
 
     depthImage.transitionLayout(
-        readCommandBuffer,
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        readCommandBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     auto depthImageView =
         createImageView2D(depthImage.getHandle(), depthFormat, {},
@@ -3605,8 +3630,7 @@ struct RenderState {
     } else if (indeciesAddress != 0) {
       unsigned indexSize = vkIndexType == VK_INDEX_TYPE_UINT16 ? 16 : 32;
       auto indexBufferSize = indexSize * indexCount;
-      indexBuffer = getDirectBuffer(indeciesAddress, indexBufferSize,
-                                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+      indexBuffer = getIndexBuffer(indeciesAddress, indexBufferSize);
     }
 
     if (indexBuffer.buffer == nullptr) {
@@ -3625,21 +3649,25 @@ struct RenderState {
     VkFence drawCompleteFence;
     VkFence writeCompleteFence;
     {
-      VkSemaphoreCreateInfo semCreateInfo {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      VkSemaphoreCreateInfo semCreateInfo{
+          .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
       };
-      vkCreateSemaphore(g_vkDevice, &semCreateInfo, g_vkAllocator, &readCompleteSem);
-      vkCreateSemaphore(g_vkDevice, &semCreateInfo, g_vkAllocator, &drawCompleteSem);
+      vkCreateSemaphore(g_vkDevice, &semCreateInfo, g_vkAllocator,
+                        &readCompleteSem);
+      vkCreateSemaphore(g_vkDevice, &semCreateInfo, g_vkAllocator,
+                        &drawCompleteSem);
 
-      VkFenceCreateInfo fenceCreateInfo {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-      };
-      vkCreateFence(g_vkDevice, &fenceCreateInfo, g_vkAllocator, &drawCompleteFence);
-      vkCreateFence(g_vkDevice, &fenceCreateInfo, g_vkAllocator, &writeCompleteFence);
+      VkFenceCreateInfo fenceCreateInfo{
+          .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+      vkCreateFence(g_vkDevice, &fenceCreateInfo, g_vkAllocator,
+                    &drawCompleteFence);
+      vkCreateFence(g_vkDevice, &fenceCreateInfo, g_vkAllocator,
+                    &writeCompleteFence);
     }
 
     VkPipelineStageFlags drawDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkPipelineStageFlags writeDstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    VkPipelineStageFlags writeDstStageMask =
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
     {
       VkSubmitInfo submitInfo{};
@@ -3676,17 +3704,18 @@ struct RenderState {
       auto &colorImage = colorImages[i];
       auto &colorBuffer = colorBuffers[i];
 
-      buffers.emplace_front(colorImage.write(writeCommandBuffer, getHostVisibleMemory(),
-                       memory.getPointer(colorBuffer.base),
-                       colorBuffer.tileModeIndex, VK_IMAGE_ASPECT_COLOR_BIT));
+      buffers.emplace_front(colorImage.write(
+          writeCommandBuffer, getHostVisibleMemory(),
+          memory.getPointer(colorBuffer.base), colorBuffer.tileModeIndex,
+          VK_IMAGE_ASPECT_COLOR_BIT));
     }
 
     // TODO: implement mrt support
 
     if (depthWriteEnable && zWriteBase != 0) {
-      buffers.emplace_front(depthImage.write(writeCommandBuffer, getHostVisibleMemory(),
-                       memory.getPointer(zWriteBase), 8,
-                       VK_IMAGE_ASPECT_DEPTH_BIT));
+      buffers.emplace_front(depthImage.write(
+          writeCommandBuffer, getHostVisibleMemory(),
+          memory.getPointer(zWriteBase), 8, VK_IMAGE_ASPECT_DEPTH_BIT));
     }
 
     {
@@ -3737,15 +3766,14 @@ struct RenderState {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(g_vkDevice, &allocInfo, &commandBuffer);
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
     auto computeShader =
-        loadShader(commandBuffer, shader::Stage::Compute, pgmComputeAddress, userComputeData,
-                   computeUserSpgrs, bindingOffset, computeNumThreadX,
-                   computeNumThreadY, computeNumThreadZ);
+        loadShader(commandBuffer, shader::Stage::Compute, pgmComputeAddress,
+                   userComputeData, computeUserSpgrs, bindingOffset,
+                   computeNumThreadX, computeNumThreadY, computeNumThreadZ);
     ShaderModule shader{};
 
     shader.descriptorSetLayout =
@@ -4199,11 +4227,10 @@ void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t address,
       memory, dc, memory.getPointer<std::uint32_t>(address), count);
 }
 
-bool amdgpu::device::AmdgpuDevice::handleFlip(std::uint32_t bufferIndex,
-                                              std::uint64_t arg,
-                                              VkCommandBuffer cmd,
-                                              VkImage targetImage,
-                                              VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers) {
+bool amdgpu::device::AmdgpuDevice::handleFlip(
+    std::uint32_t bufferIndex, std::uint64_t arg, VkCommandBuffer cmd,
+    VkImage targetImage, VkExtent2D targetExtent,
+    std::vector<VkBuffer> &usedBuffers) {
   std::printf("requested flip %d\n", bufferIndex);
 
   bridge->flipBuffer = bufferIndex;
@@ -4221,12 +4248,12 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(std::uint32_t bufferIndex,
 
   auto target = Image2D::CreateFromExternal(
       targetImage, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT,
-      VK_IMAGE_LAYOUT_UNDEFINED, targetExtent.width,
-      targetExtent.height);
+      VK_IMAGE_LAYOUT_UNDEFINED, targetExtent.width, targetExtent.height);
 
   target.transitionLayout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  auto tmpBuffer = target.read(cmd, getHostVisibleMemory(), memory.getPointer(buffer.address),
-               buffer.tilingMode, VK_IMAGE_ASPECT_COLOR_BIT);
+  auto tmpBuffer = target.read(cmd, getHostVisibleMemory(),
+                               memory.getPointer(buffer.address),
+                               buffer.tilingMode, VK_IMAGE_ASPECT_COLOR_BIT);
   target.transitionLayout(cmd, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
   usedBuffers.push_back(tmpBuffer.release());
   return true;
