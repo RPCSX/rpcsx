@@ -702,7 +702,7 @@ int main(int argc, const char *argv[]) {
 
   extern void *g_rwMemory;
   g_memorySize = memoryStat.st_size;
-  g_memoryBase = 0x400000;
+  g_memoryBase = 0x40000;
   g_rwMemory = ::mmap(nullptr, g_memorySize, PROT_READ | PROT_WRITE, MAP_SHARED,
                       memoryFd, 0);
 
