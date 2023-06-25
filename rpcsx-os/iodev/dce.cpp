@@ -159,10 +159,10 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
     // TODO: lock bridge header
     rx::bridge.header->buffers[args->index] = {
-      .bufferIndex = static_cast<uint32_t>(args->index),
       .width = dceInstance->bufferAttributes.width,
       .height = dceInstance->bufferAttributes.height,
       .pitch = dceInstance->bufferAttributes.pitch,
+      .address = args->address,
       .pixelFormat = dceInstance->bufferAttributes.pixelFormat,
       .tilingMode = dceInstance->bufferAttributes.tilingMode
     };

@@ -6,15 +6,19 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
 #include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 
 #include <GLFW/glfw3.h> // TODO: make in optional
+
+// TODO
+extern void *g_rwMemory;
+extern std::size_t g_memorySize;
+extern std::uint64_t g_memoryBase;
 
 static void usage(std::FILE *out, const char *argv0) {
   std::fprintf(out, "usage: %s [options...]\n", argv0);
@@ -122,13 +126,6 @@ int main(int argc, const char *argv[]) {
     requiredInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
-  VkApplicationInfo appInfo = {
-    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    .pApplicationName = "RPCSX",
-    .pEngineName = "none",
-    .apiVersion = VK_API_VERSION_1_3,
-  };
-
   uint32_t extCount = 0;
   vkEnumerateInstanceExtensionProperties(nullptr, &extCount, nullptr);
   std::vector<std::string> supportedInstanceExtensions;
@@ -155,6 +152,13 @@ int main(int argc, const char *argv[]) {
   }
 
   const char *validationLayerName = "VK_LAYER_KHRONOS_validation";
+
+  VkApplicationInfo appInfo = {
+      .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+      .pApplicationName = "RPCSX",
+      .pEngineName = "none",
+      .apiVersion = VK_API_VERSION_1_3,
+  };
 
   VkInstanceCreateInfo instanceCreateInfo = {};
   instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -186,7 +190,8 @@ int main(int argc, const char *argv[]) {
   std::printf("VK: Selected physical device is %s\n",
               vkPhyDeviceProperties.deviceName);
   VkPhysicalDeviceMemoryProperties vkPhyDeviceMemoryProperties;
-  vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice, &vkPhyDeviceMemoryProperties);
+  vkGetPhysicalDeviceMemoryProperties(vkPhysicalDevice,
+                                      &vkPhyDeviceMemoryProperties);
 
   VkPhysicalDevice8BitStorageFeatures storage_8bit = {
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES};
@@ -240,6 +245,7 @@ int main(int argc, const char *argv[]) {
       VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
       VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
       VK_EXT_SEPARATE_STENCIL_USAGE_EXTENSION_NAME,
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME,
   };
 
   if (isDeviceExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
@@ -338,9 +344,11 @@ int main(int argc, const char *argv[]) {
       requestedQueues.push_back(
           {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
            .queueFamilyIndex = queueFamily,
-           .queueCount = std::min<uint32_t>(queueFamilyProperties[queueFamily]
-                             .queueFamilyProperties.queueCount, defaultQueuePriorities.size()),
-          .pQueuePriorities = defaultQueuePriorities.data()});
+           .queueCount =
+               std::min<uint32_t>(queueFamilyProperties[queueFamily]
+                                      .queueFamilyProperties.queueCount,
+                                  defaultQueuePriorities.size()),
+           .pQueuePriorities = defaultQueuePriorities.data()});
     }
   }
 
@@ -394,41 +402,179 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  VkPhysicalDeviceVulkan13Features features13 { 
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-    .maintenance4 = VK_TRUE
+  VkPhysicalDeviceVulkan13Features phyDevFeatures13{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+      .maintenance4 = VK_TRUE};
+
+  VkPhysicalDeviceVulkan12Features phyDevFeatures12{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+      .pNext = &phyDevFeatures13,
+      .storageBuffer8BitAccess = VK_TRUE,
+      .uniformAndStorageBuffer8BitAccess = VK_TRUE,
+      .shaderFloat16 = VK_TRUE,
+      .shaderInt8 = VK_TRUE,
   };
 
-  VkPhysicalDeviceVulkan12Features features12 { 
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-    .pNext = &features13,
-    .storageBuffer8BitAccess = VK_TRUE,
-    .uniformAndStorageBuffer8BitAccess = VK_TRUE,
-    .shaderFloat16 = VK_TRUE,
-    .shaderInt8 = VK_TRUE,
-  };
-
-  VkPhysicalDeviceVulkan11Features features11 {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-    .pNext = &features12,
-    .storageBuffer16BitAccess = VK_TRUE,
-    .uniformAndStorageBuffer16BitAccess = VK_TRUE,
+  VkPhysicalDeviceVulkan11Features phyDevFeatures11{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+      .pNext = &phyDevFeatures12,
+      .storageBuffer16BitAccess = VK_TRUE,
+      .uniformAndStorageBuffer16BitAccess = VK_TRUE,
   };
 
   VkDeviceCreateInfo deviceCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-      .pNext = &features11,
+      .pNext = &phyDevFeatures11,
       .queueCreateInfoCount = static_cast<uint32_t>(requestedQueues.size()),
       .pQueueCreateInfos = requestedQueues.data(),
-      .enabledExtensionCount = static_cast<uint32_t>(requestedDeviceExtensions.size()),
+      .enabledExtensionCount =
+          static_cast<uint32_t>(requestedDeviceExtensions.size()),
       .ppEnabledExtensionNames = requestedDeviceExtensions.data(),
-      .pEnabledFeatures = &features2.features
-  };
+      .pEnabledFeatures = &features2.features};
 
   VkDevice vkDevice;
   Verify() << vkCreateDevice(vkPhysicalDevice, &deviceCreateInfo, nullptr,
                              &vkDevice);
+  VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+  VkExtent2D swapchainExtent{};
 
+  std::vector<VkImage> swapchainImages;
+
+  VkFormat swapchainColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+  VkColorSpaceKHR swapchainColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
+  uint32_t formatCount;
+  Verify() << vkGetPhysicalDeviceSurfaceFormatsKHR(vkPhysicalDevice, vkSurface,
+                                                   &formatCount, nullptr);
+  Verify() << (formatCount > 0);
+
+  std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+  Verify() << vkGetPhysicalDeviceSurfaceFormatsKHR(
+      vkPhysicalDevice, vkSurface, &formatCount, surfaceFormats.data());
+
+  if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
+    swapchainColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    swapchainColorSpace = surfaceFormats[0].colorSpace;
+  } else {
+    bool found_B8G8R8A8_UNORM = false;
+    for (auto &&surfaceFormat : surfaceFormats) {
+      if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM) {
+        swapchainColorFormat = surfaceFormat.format;
+        swapchainColorSpace = surfaceFormat.colorSpace;
+        found_B8G8R8A8_UNORM = true;
+        break;
+      }
+    }
+
+    if (!found_B8G8R8A8_UNORM) {
+      swapchainColorFormat = surfaceFormats[0].format;
+      swapchainColorSpace = surfaceFormats[0].colorSpace;
+    }
+  }
+
+  auto createSwapchain = [&] {
+    VkSwapchainKHR oldSwapchain = swapchain;
+
+    VkSurfaceCapabilitiesKHR surfCaps;
+    Verify() << vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkPhysicalDevice,
+                                                          vkSurface, &surfCaps);
+    uint32_t presentModeCount;
+    Verify() << vkGetPhysicalDeviceSurfacePresentModesKHR(
+        vkPhysicalDevice, vkSurface, &presentModeCount, NULL);
+    Verify() << (presentModeCount > 0);
+
+    std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+    Verify() << vkGetPhysicalDeviceSurfacePresentModesKHR(
+        vkPhysicalDevice, vkSurface, &presentModeCount, presentModes.data());
+
+    if (surfCaps.currentExtent.width != (uint32_t)-1) {
+      swapchainExtent = surfCaps.currentExtent;
+    }
+
+    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    for (std::size_t i = 0; i < presentModeCount; i++) {
+      if (presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+        swapchainPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        continue;
+      }
+
+      if (presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+        swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+        break;
+      }
+    }
+
+    uint32_t desiredNumberOfSwapchainImages = surfCaps.minImageCount;
+    if ((surfCaps.maxImageCount > 0) &&
+        (desiredNumberOfSwapchainImages > surfCaps.maxImageCount)) {
+      desiredNumberOfSwapchainImages = surfCaps.maxImageCount;
+    }
+
+    VkSurfaceTransformFlagsKHR preTransform;
+    if (surfCaps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+      preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    } else {
+      preTransform = surfCaps.currentTransform;
+    }
+
+    VkCompositeAlphaFlagBitsKHR compositeAlpha =
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = {
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+    };
+
+    for (auto &compositeAlphaFlag : compositeAlphaFlags) {
+      if (surfCaps.supportedCompositeAlpha & compositeAlphaFlag) {
+        compositeAlpha = compositeAlphaFlag;
+        break;
+      }
+    }
+
+    VkSwapchainCreateInfoKHR swapchainCI = {};
+    swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapchainCI.surface = vkSurface;
+    swapchainCI.minImageCount = desiredNumberOfSwapchainImages;
+    swapchainCI.imageFormat = swapchainColorFormat;
+    swapchainCI.imageColorSpace = swapchainColorSpace;
+    swapchainCI.imageExtent = {swapchainExtent.width, swapchainExtent.height};
+    swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swapchainCI.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
+    swapchainCI.imageArrayLayers = 1;
+    swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchainCI.queueFamilyIndexCount = 0;
+    swapchainCI.presentMode = swapchainPresentMode;
+    swapchainCI.oldSwapchain = oldSwapchain;
+    swapchainCI.clipped = VK_TRUE;
+    swapchainCI.compositeAlpha = compositeAlpha;
+
+    if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+      swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    if (surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+      swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    Verify() << vkCreateSwapchainKHR(vkDevice, &swapchainCI, nullptr,
+                                     &swapchain);
+
+    if (oldSwapchain != VK_NULL_HANDLE) {
+      vkDestroySwapchainKHR(vkDevice, oldSwapchain, nullptr);
+    }
+
+    uint32_t swapchainImageCount = 0;
+    Verify() << vkGetSwapchainImagesKHR(vkDevice, swapchain,
+                                        &swapchainImageCount, nullptr);
+
+    swapchainImages.resize(swapchainImageCount);
+    Verify() << vkGetSwapchainImagesKHR(
+        vkDevice, swapchain, &swapchainImageCount, swapchainImages.data());
+  };
+
+  createSwapchain();
 
   std::vector<std::pair<VkQueue, unsigned>> computeQueues;
   std::vector<std::pair<VkQueue, unsigned>> transferQueues;
@@ -437,30 +583,37 @@ int main(int argc, const char *argv[]) {
 
   for (auto &queueInfo : requestedQueues) {
     if (queueFamiliesWithComputeSupport.contains(queueInfo.queueFamilyIndex)) {
-      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount; ++queueIndex) {
+      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount;
+           ++queueIndex) {
         auto &[queue, index] = computeQueues.emplace_back();
         index = queueInfo.queueFamilyIndex;
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &queue);
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
+                         &queue);
       }
     }
 
     if (queueFamiliesWithGraphicsSupport.contains(queueInfo.queueFamilyIndex)) {
-      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount; ++queueIndex) {
+      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount;
+           ++queueIndex) {
         auto &[queue, index] = graphicsQueues.emplace_back();
         index = queueInfo.queueFamilyIndex;
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &queue);
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
+                         &queue);
       }
     }
 
     if (queueFamiliesWithTransferSupport.contains(queueInfo.queueFamilyIndex)) {
-      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount; ++queueIndex) {
+      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount;
+           ++queueIndex) {
         auto &[queue, index] = transferQueues.emplace_back();
         index = queueInfo.queueFamilyIndex;
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex, &queue);
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
+                         &queue);
       }
     }
 
-    if (presentQueue == VK_NULL_HANDLE && queueFamiliesWithPresentSupport.contains(queueInfo.queueFamilyIndex)) {
+    if (presentQueue == VK_NULL_HANDLE &&
+        queueFamiliesWithPresentSupport.contains(queueInfo.queueFamilyIndex)) {
       vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, 0, &presentQueue);
     }
   }
@@ -470,11 +623,55 @@ int main(int argc, const char *argv[]) {
   Verify() << (graphicsQueues.size() > 0);
   Verify() << (presentQueue != VK_NULL_HANDLE);
 
-  amdgpu::device::setVkDevice(vkDevice, vkPhyDeviceMemoryProperties);
+  VkCommandPoolCreateInfo commandPoolCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+      .queueFamilyIndex = graphicsQueues.front().second,
+  };
 
-  std::printf("Initialization was successful\n");
+  VkCommandPool commandPool;
+  Verify() << vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr,
+                                  &commandPool);
 
-  // TODO: open emulator shared memory
+  VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+  };
+
+  VkPipelineCache pipelineCache;
+  Verify() << vkCreatePipelineCache(vkDevice, &pipelineCacheCreateInfo, nullptr,
+                                    &pipelineCache);
+  amdgpu::device::DrawContext dc{
+      // TODO
+      .pipelineCache = pipelineCache,
+      .queue = graphicsQueues.front().first,
+      .commandPool = commandPool,
+  };
+
+  std::vector<VkFence> inFlightFences(swapchainImages.size());
+
+  for (auto &fence : inFlightFences) {
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    Verify() << vkCreateFence(vkDevice, &fenceInfo, nullptr, &fence);
+  }
+
+  VkSemaphore presentCompleteSemaphore;
+  VkSemaphore renderCompleteSemaphore;
+  {
+    VkSemaphoreCreateInfo semaphoreCreateInfo{};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    Verify() << vkCreateSemaphore(vkDevice, &semaphoreCreateInfo, nullptr,
+                                  &presentCompleteSemaphore);
+    Verify() << vkCreateSemaphore(vkDevice, &semaphoreCreateInfo, nullptr,
+                                  &renderCompleteSemaphore);
+  }
+
+  amdgpu::device::setVkDevice(vkDevice, vkPhyDeviceMemoryProperties,
+                              vkPhyDeviceProperties);
+
   auto bridge = amdgpu::bridge::openShmCommandBuffer(cmdBridgeName);
   if (bridge == nullptr) {
     bridge = amdgpu::bridge::createShmCommandBuffer(cmdBridgeName);
@@ -489,7 +686,7 @@ int main(int argc, const char *argv[]) {
 
   bridge->pullerPid = ::getpid();
 
-  amdgpu::bridge::BridgePuller bridgePuller { bridge };
+  amdgpu::bridge::BridgePuller bridgePuller{bridge};
   amdgpu::bridge::Command commandsBuffer[32];
 
   int memoryFd = ::shm_open(shmName, O_RDWR, S_IRUSR | S_IWUSR);
@@ -500,56 +697,125 @@ int main(int argc, const char *argv[]) {
 
   struct stat memoryStat;
   ::fstat(memoryFd, &memoryStat);
-  amdgpu::RemoteMemory memory {
-    (char *)::mmap(nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0)
-  };
+  amdgpu::RemoteMemory memory{(char *)::mmap(
+      nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0)};
 
-  VkCommandPoolCreateInfo commandPoolCreateInfo = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-    .queueFamilyIndex = graphicsQueues.front().second
-  };
+  extern void *g_rwMemory;
+  g_memorySize = memoryStat.st_size;
+  g_memoryBase = 0x400000;
+  g_rwMemory = ::mmap(nullptr, g_memorySize, PROT_READ | PROT_WRITE, MAP_SHARED,
+                      memoryFd, 0);
 
-  VkCommandPool commandPool;
-  Verify() << vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr, &commandPool);
+  amdgpu::device::AmdgpuDevice device(dc, bridgePuller.header, memory,
+                                      memoryStat.st_size);
 
-  VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-  };
+  std::vector<VkCommandBuffer> presentCmdBuffers(swapchainImages.size());
 
-  VkPipelineCache pipelineCache;
-  Verify() << vkCreatePipelineCache(vkDevice, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
-  amdgpu::device::DrawContext dc{ // TODO
-    .pipelineCache = pipelineCache,
-    .queue = graphicsQueues.front().first,
-    .commandPool = commandPool,
-  };
+  {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = dc.commandPool;
+    allocInfo.commandBufferCount = presentCmdBuffers.size();
+    vkAllocateCommandBuffers(vkDevice, &allocInfo, presentCmdBuffers.data());
+  }
 
-  amdgpu::device::AmdgpuDevice device{ dc };
+  std::printf("Initialization complete\n");
+
+  uint32_t imageIndex = 0;
+  bool isImageAcquired = false;
+  std::vector<std::vector<VkBuffer>> swapchainHandles;
+  swapchainHandles.resize(swapchainImages.size());
+  VkPipelineStageFlags submitPipelineStages =
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
-    std::size_t pulledCount = bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
+    std::size_t pulledCount =
+        bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
 
     if (pulledCount == 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Just for testing, should be removed
+      // std::this_thread::sleep_for(
+      //     std::chrono::milliseconds(1)); // Just for testing, should be
+      //     removed
       continue;
     }
 
     for (auto cmd : std::span(commandsBuffer, pulledCount)) {
       switch (cmd.id) {
-      case amdgpu::bridge::CommandId::SetUpSharedMemory:
-        break;
       case amdgpu::bridge::CommandId::ProtectMemory:
+        device.handleProtectMemory(cmd.memoryProt.address, cmd.memoryProt.size,
+                                   cmd.memoryProt.prot);
         break;
       case amdgpu::bridge::CommandId::CommandBuffer:
+        device.handleCommandBuffer(cmd.commandBuffer.address,
+                                   cmd.commandBuffer.size);
         break;
-      case amdgpu::bridge::CommandId::Flip:
+      case amdgpu::bridge::CommandId::Flip: {
+        if (!isImageAcquired) {
+          Verify() << vkAcquireNextImageKHR(vkDevice, swapchain, UINT64_MAX,
+                                            presentCompleteSemaphore, nullptr,
+                                            &imageIndex);
+
+          vkWaitForFences(vkDevice, 1, &inFlightFences[imageIndex], VK_TRUE,
+                          UINT64_MAX);
+          vkResetFences(vkDevice, 1, &inFlightFences[imageIndex]);
+        }
+
+        isImageAcquired = false;
+
+        vkResetCommandBuffer(presentCmdBuffers[imageIndex], 0);
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
+
+        for (auto handle : swapchainHandles[imageIndex]) {
+          vkDestroyBuffer(vkDevice, handle, nullptr);
+        }
+
+        swapchainHandles[imageIndex].clear();
+
+        if (device.handleFlip(cmd.flip.bufferIndex, cmd.flip.arg,
+                              presentCmdBuffers[imageIndex],
+                              swapchainImages[imageIndex], swapchainExtent,
+                              swapchainHandles[imageIndex])) {
+          vkEndCommandBuffer(presentCmdBuffers[imageIndex]);
+
+          VkSubmitInfo submitInfo{};
+          submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+          submitInfo.commandBufferCount = 1;
+          submitInfo.pCommandBuffers = &presentCmdBuffers[imageIndex];
+          submitInfo.waitSemaphoreCount = 1;
+          submitInfo.signalSemaphoreCount = 1;
+          submitInfo.pSignalSemaphores = &renderCompleteSemaphore;
+          submitInfo.pWaitSemaphores = &presentCompleteSemaphore;
+          submitInfo.pWaitDstStageMask = &submitPipelineStages;
+
+          Verify() << vkQueueSubmit(dc.queue, 1, &submitInfo,
+                                    inFlightFences[imageIndex]);
+
+          VkPresentInfoKHR presentInfo{};
+          presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+          presentInfo.waitSemaphoreCount = 1;
+          presentInfo.pWaitSemaphores = &renderCompleteSemaphore;
+          presentInfo.swapchainCount = 1;
+          presentInfo.pSwapchains = &swapchain;
+          presentInfo.pImageIndices = &imageIndex;
+
+          if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
+            std::printf("swapchain was invalidated\n");
+            createSwapchain();
+          }
+          // std::this_thread::sleep_for(std::chrono::seconds(3));
+        } else {
+          isImageAcquired = true;
+        }
+
         break;
-      case amdgpu::bridge::CommandId::DoFlip:
-        break;
-      case amdgpu::bridge::CommandId::SetBuffer:
-        break;
+      }
 
       default:
         util::unreachable("Unexpected command id %u\n", (unsigned)cmd.id);

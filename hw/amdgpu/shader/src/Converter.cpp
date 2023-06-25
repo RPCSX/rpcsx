@@ -297,19 +297,19 @@ amdgpu::shader::Shader amdgpu::shader::convert(
     entryBlock = scf::structurize(scfContext, entryBB);
   }
 
-  std::printf("========== stage: %u, user sgprs: %zu\n", (unsigned)stage,
-              userSpgrs.size());
-  std::printf("structurized CFG:\n");
+  // std::printf("========== stage: %u, user sgprs: %zu\n", (unsigned)stage,
+  //             userSpgrs.size());
+  // std::printf("structurized CFG:\n");
 
-  auto basicBlockPrinter = [memory](const scf::PrintOptions &opts,
-                                    unsigned depth, scf::BasicBlock *bb) {
-    printInstructions(opts, depth,
-                      memory.getPointer<std::uint32_t>(bb->getAddress()),
-                      bb->getSize());
-  };
+  // auto basicBlockPrinter = [memory](const scf::PrintOptions &opts,
+  //                                   unsigned depth, scf::BasicBlock *bb) {
+  //   printInstructions(opts, depth,
+  //                     memory.getPointer<std::uint32_t>(bb->getAddress()),
+  //                     bb->getSize());
+  // };
 
-  entryBlock->print({.blockPrinter = basicBlockPrinter}, 0);
-  std::printf("==========\n");
+  // entryBlock->print({.blockPrinter = basicBlockPrinter}, 0);
+  // std::printf("==========\n");
 
   auto mainFunction = ctxt.createFunction(0);
   mainFunction->userSgprs = userSpgrs;

@@ -7,12 +7,9 @@
 namespace amdgpu::bridge {
 enum class CommandId : std::uint32_t {
   Nop,
-  SetUpSharedMemory,
   ProtectMemory,
   CommandBuffer,
-  Flip,
-  DoFlip,
-  SetBuffer
+  Flip
 };
 
 struct CmdMemoryProt {
@@ -28,7 +25,6 @@ struct CmdCommandBuffer {
 };
 
 struct CmdBuffer {
-  std::uint32_t bufferIndex;
   std::uint32_t width;
   std::uint32_t height;
   std::uint32_t pitch;
@@ -106,21 +102,9 @@ struct BridgePusher {
     sendCommand(CommandId::CommandBuffer, {queue, address, size});
   }
 
-  void sendSetBuffer(std::uint32_t bufferIndex, std::uint64_t address,
-                     std::uint32_t width, std::uint32_t height,
-                     std::uint32_t pitch, std::uint32_t pixelFormat,
-                     std::uint32_t tilingMode) {
-    sendCommand(CommandId::SetBuffer,
-                {static_cast<std::uint64_t>(bufferIndex) << 32 | tilingMode,
-                 address, static_cast<std::uint64_t>(width) << 32 | height,
-                 static_cast<std::uint64_t>(pitch) << 32 | pixelFormat});
-  }
-
   void sendFlip(std::uint32_t bufferIndex, std::uint64_t arg) {
     sendCommand(CommandId::Flip, {bufferIndex, arg});
   }
-
-  void sendDoFlip() { sendCommand(CommandId::DoFlip, {}); }
 
   void wait() {
     while (header->pull != header->push)
@@ -137,7 +121,7 @@ private:
     std::size_t cmdSize = args.size() + 1;
     std::uint64_t pos = getPushPosition(cmdSize);
 
-    header->commands[pos++] = makeCommandHeader(CommandId::Flip, cmdSize);
+    header->commands[pos++] = makeCommandHeader(id, cmdSize);
     for (auto arg : args) {
       header->commands[pos++] = arg;
     }
@@ -211,8 +195,6 @@ private:
 
     switch (command) {
     case CommandId::Nop:
-    case CommandId::SetUpSharedMemory:
-    case CommandId::DoFlip:
       return result;
 
     case CommandId::ProtectMemory:
@@ -230,16 +212,6 @@ private:
     case CommandId::Flip:
       result.flip.bufferIndex = args[0];
       result.flip.arg = args[1];
-      return result;
-
-    case CommandId::SetBuffer:
-      result.buffer.bufferIndex = static_cast<std::uint32_t>(args[0] >> 32);
-      result.buffer.address = args[1];
-      result.buffer.width = static_cast<std::uint32_t>(args[2] >> 32);
-      result.buffer.height = static_cast<std::uint32_t>(args[2]);
-      result.buffer.pitch = static_cast<std::uint32_t>(args[3] >> 32);
-      result.buffer.pixelFormat = static_cast<std::uint32_t>(args[3]);
-      result.buffer.tilingMode = static_cast<std::uint32_t>(args[0]);
       return result;
     }
 

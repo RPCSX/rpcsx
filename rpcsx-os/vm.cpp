@@ -609,13 +609,9 @@ void rx::vm::initialize() {
     std::abort();
   }
 
-  std::uintptr_t virtualAddressStart = 0x40'0000;
-  std::uintptr_t virtualAddressEnd = 0xff'ffff'ffff;
+  reserve(0, kMinAddress); // unmapped area
 
-  reserve(0, virtualAddressStart); // unmapped area
-
-  utils::reserve(reinterpret_cast<void *>(virtualAddressStart),
-                 virtualAddressEnd - virtualAddressStart + 1);
+  utils::reserve(reinterpret_cast<void *>(kMinAddress), kMaxAddress - kMinAddress);
 
   // orbis::bridge.setUpSharedMemory(kMinAddress, kMemorySize, "/orbis-memory");
 }

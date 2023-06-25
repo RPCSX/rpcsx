@@ -1477,11 +1477,11 @@ void dispatch(RemoteMemory memory, DrawContext &ctxt, std::size_t dimX,
               std::size_t dimY, std::size_t dimZ);
 void handleCommandBuffer(RemoteMemory memory, DrawContext &ctxt,
                          std::uint32_t *cmds, std::uint32_t count);
-void setVkDevice(VkDevice device, VkPhysicalDeviceMemoryProperties properties);
+void setVkDevice(VkDevice device, VkPhysicalDeviceMemoryProperties memProperties, VkPhysicalDeviceProperties devProperties);
 
-class AmdgpuDevice final {
-  amdgpu::device::DrawContext mDc;
-  char *internalMemory = nullptr;
+struct AmdgpuDevice {
+  amdgpu::device::DrawContext dc;
+  amdgpu::bridge::BridgeHeader *bridge;
   RemoteMemory memory;
   std::uint64_t memorySize = 0;
   int memoryFd = -1;
@@ -1492,6 +1492,7 @@ class AmdgpuDevice final {
 
   struct RenderBuffer {
     void *memory;
+    std::uint64_t address;
     std::uint32_t pitch;
     std::uint32_t width;
     std::uint32_t height;
@@ -1511,30 +1512,15 @@ class AmdgpuDevice final {
 
   bool flipWasRequested = false;
 
-  void handleSetUpSharedMemory(std::uint64_t address, std::uint64_t size,
-                               std::uint64_t internalSize,
-                               const char *name);
-  void handleSetFlipStatus(std::uint64_t shmOffset);
   void handleProtectMemory(std::uint64_t address, std::uint64_t size,
                            std::uint32_t prot);
   void handleCommandBuffer(std::uint64_t address, std::uint64_t size);
-  void handleFlip(std::uint32_t bufferIndex, std::uint64_t arg);
   void handleSetBuffer(std::uint32_t bufferIndex, std::uint64_t address,
                        std::uint32_t width, std::uint32_t height,
                        std::uint32_t pitch, std::uint32_t pixelFormat,
                        std::uint32_t tilingMode);
-  void handleDoFlip();
-
-  void updateFlipStatus();
-
-public:
-  AmdgpuDevice(amdgpu::device::DrawContext dc);
-  ~AmdgpuDevice();
-
-  void handleCommands() {
-    // while (mBridge.processCommand(this) && !flipWasRequested) {
-    //   ;
-    // }
-  }
+  bool handleFlip(std::uint32_t bufferIndex, std::uint64_t arg, VkCommandBuffer cmd, VkImage targetImage, VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers);
+  AmdgpuDevice(amdgpu::device::DrawContext dc, amdgpu::bridge::BridgeHeader *bridge, RemoteMemory memory, std::uint64_t memorySize)
+    : dc(dc), bridge(bridge), memory(memory), memorySize(memorySize) {}
 };
 } // namespace amdgpu::device

@@ -1,10 +1,9 @@
 #include "device.hpp"
 #include "tiler.hpp"
 
-//#include "spirv-tools/libspirv.hpp"
+// #include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
 #include "util/unreachable.hpp"
-#include <util/VerifyVulkan.hpp>
 #include <algorithm>
 #include <atomic>
 #include <bit>
@@ -19,6 +18,7 @@
 #include <set>
 #include <shaders/rect_list.geom.h>
 #include <span>
+#include <util/VerifyVulkan.hpp>
 // #include <spirv_glsl.hpp>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -96,6 +96,7 @@ inline VkBlendOp blendFuncToVkBlendOp(BlendFunc func) {
 static VkDevice g_vkDevice = VK_NULL_HANDLE;
 static VkAllocationCallbacks *g_vkAllocator = nullptr;
 static VkPhysicalDeviceMemoryProperties g_physicalMemoryProperties;
+static VkPhysicalDeviceProperties g_physicalDeviceProperties;
 
 static std::uint32_t
 findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
@@ -117,12 +118,15 @@ findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
                     properties);
 }
 
-void setVkDevice(VkDevice device, VkPhysicalDeviceMemoryProperties properties) {
+void setVkDevice(VkDevice device,
+                 VkPhysicalDeviceMemoryProperties memProperties,
+                 VkPhysicalDeviceProperties devProperties) {
   g_vkDevice = device;
-  g_physicalMemoryProperties = properties;
+  g_physicalMemoryProperties = memProperties;
+  g_physicalDeviceProperties = devProperties;
 }
 
-#define GNM_GET_FIELD(src, registername, field)                            \
+#define GNM_GET_FIELD(src, registername, field)                                \
   (((src) & (GNM_##registername##__##field##__MASK)) >>                        \
    (GNM_##registername##__##field##__SHIFT))
 
@@ -435,8 +439,7 @@ struct ColorBuffer {
       break;
     }
     case CB_COLOR0_VIEW - CB_COLOR0_BASE: { // VIEW
-      auto viewSliceStart =
-          GNM_GET_FIELD(value, CB_COLOR0_VIEW, SLICE_START);
+      auto viewSliceStart = GNM_GET_FIELD(value, CB_COLOR0_VIEW, SLICE_START);
       auto viewSliceMax = GNM_GET_FIELD(value, CB_COLOR0_VIEW, SLICE_MAX);
 
       std::printf("  * SLICE_START = %lx\n", viewSliceStart);
@@ -453,8 +456,7 @@ struct ColorBuffer {
       auto dccEnable = GNM_GET_FIELD(value, CB_COLOR0_INFO, DCC_ENABLE);
       auto cmaskAddrType =
           GNM_GET_FIELD(value, CB_COLOR0_INFO, CMASK_ADDR_TYPE);
-      auto altTileMode =
-          GNM_GET_FIELD(value, CB_COLOR0_INFO, ALT_TILE_MODE);
+      auto altTileMode = GNM_GET_FIELD(value, CB_COLOR0_INFO, ALT_TILE_MODE);
       format = GNM_GET_FIELD(value, CB_COLOR0_INFO, FORMAT);
       auto arrayMode = GNM_GET_FIELD(value, CB_COLOR0_INFO, ARRAY_MODE);
       auto numberType = GNM_GET_FIELD(value, CB_COLOR0_INFO, NUMBER_TYPE);
@@ -463,12 +465,10 @@ struct ColorBuffer {
       auto blendClamp = GNM_GET_FIELD(value, CB_COLOR0_INFO, BLEND_CLAMP);
       auto clearColor = GNM_GET_FIELD(value, CB_COLOR0_INFO, CLEAR_COLOR);
       auto blendBypass = GNM_GET_FIELD(value, CB_COLOR0_INFO, BLEND_BYPASS);
-      auto blendFloat32 =
-          GNM_GET_FIELD(value, CB_COLOR0_INFO, BLEND_FLOAT32);
+      auto blendFloat32 = GNM_GET_FIELD(value, CB_COLOR0_INFO, BLEND_FLOAT32);
       auto simpleFloat = GNM_GET_FIELD(value, CB_COLOR0_INFO, SIMPLE_FLOAT);
       auto roundMode = GNM_GET_FIELD(value, CB_COLOR0_INFO, ROUND_MODE);
-      auto sourceFormat =
-          GNM_GET_FIELD(value, CB_COLOR0_INFO, SOURCE_FORMAT);
+      auto sourceFormat = GNM_GET_FIELD(value, CB_COLOR0_INFO, SOURCE_FORMAT);
 
       std::printf("  * FAST_CLEAR = %lu\n", fastClear);
       std::printf("  * COMPRESSION = %lu\n", compression);
@@ -493,12 +493,10 @@ struct ColorBuffer {
     }
 
     case CB_COLOR0_ATTRIB - CB_COLOR0_BASE: { // ATTRIB
-      tileModeIndex =
-          GNM_GET_FIELD(value, CB_COLOR0_ATTRIB, TILE_MODE_INDEX);
+      tileModeIndex = GNM_GET_FIELD(value, CB_COLOR0_ATTRIB, TILE_MODE_INDEX);
       auto fmask_tile_mode_index =
           GNM_GET_FIELD(value, CB_COLOR0_ATTRIB, FMASK_TILE_MODE_INDEX);
-      auto num_samples =
-          GNM_GET_FIELD(value, CB_COLOR0_ATTRIB, NUM_SAMPLES);
+      auto num_samples = GNM_GET_FIELD(value, CB_COLOR0_ATTRIB, NUM_SAMPLES);
       auto num_fragments =
           GNM_GET_FIELD(value, CB_COLOR0_ATTRIB, NUM_FRAGMENTS);
       auto force_dst_alpha_1 =
@@ -512,8 +510,7 @@ struct ColorBuffer {
       break;
     }
     case CB_COLOR0_CMASK - CB_COLOR0_BASE: { // CMASK
-      auto cmaskBase = GNM_GET_FIELD(value, CB_COLOR0_CMASK, BASE_256B)
-                       << 8;
+      auto cmaskBase = GNM_GET_FIELD(value, CB_COLOR0_CMASK, BASE_256B) << 8;
       std::printf("  * cmaskBase = %lx\n", cmaskBase);
       break;
     }
@@ -524,8 +521,7 @@ struct ColorBuffer {
       break;
     }
     case CB_COLOR0_FMASK - CB_COLOR0_BASE: { // FMASK
-      auto fmaskBase = GNM_GET_FIELD(value, CB_COLOR0_FMASK, BASE_256B)
-                       << 8;
+      auto fmaskBase = GNM_GET_FIELD(value, CB_COLOR0_FMASK, BASE_256B) << 8;
       std::printf("  * fmaskBase = %lx\n", fmaskBase);
       break;
     }
@@ -1013,24 +1009,9 @@ createPipelineShaderStage(DrawContext &dc,
   return shaderStage;
 }
 
-void transitionImageLayout(VkCommandPool commandPool, VkQueue queue,
-                           VkImage image, VkImageAspectFlags aspectFlags,
+void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
+                           VkImageAspectFlags aspectFlags,
                            VkImageLayout oldLayout, VkImageLayout newLayout) {
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = commandPool;
-  allocInfo.commandBufferCount = 1;
-
-  VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(g_vkDevice, &allocInfo, &commandBuffer);
-
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
   VkImageMemoryBarrier barrier{};
   barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.oldLayout = oldLayout;
@@ -1048,6 +1029,7 @@ void transitionImageLayout(VkCommandPool commandPool, VkQueue queue,
       -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
       return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
@@ -1082,7 +1064,27 @@ void transitionImageLayout(VkCommandPool commandPool, VkQueue queue,
 
   vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
                        nullptr, 0, nullptr, 1, &barrier);
+}
 
+void transitionImageLayout(VkCommandPool commandPool, VkQueue queue,
+                           VkImage image, VkImageAspectFlags aspectFlags,
+                           VkImageLayout oldLayout, VkImageLayout newLayout) {
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandPool = commandPool;
+  allocInfo.commandBufferCount = 1;
+
+  VkCommandBuffer commandBuffer;
+  vkAllocateCommandBuffers(g_vkDevice, &allocInfo, &commandBuffer);
+
+  VkCommandBufferBeginInfo beginInfo{};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  vkBeginCommandBuffer(commandBuffer, &beginInfo);
+  transitionImageLayout(commandBuffer, image, aspectFlags, oldLayout,
+                        newLayout);
   vkEndCommandBuffer(commandBuffer);
 
   VkSubmitInfo submitInfo{};
@@ -1205,6 +1207,26 @@ void copyBuffer(VkQueue queue, VkCommandPool commandPool, VkBuffer srcBuffer,
   vkFreeCommandBuffers(g_vkDevice, commandPool, 1, &commandBuffer);
 }
 
+void copyImageToBuffer(VkCommandBuffer commandBuffer, VkImage image,
+                       VkBuffer buffer, uint32_t width, uint32_t height,
+                       uint32_t bufferOffset, uint32_t bufferRowLength,
+                       uint32_t bufferHeight, VkImageAspectFlags aspectFlags) {
+  VkBufferImageCopy region{};
+  region.bufferOffset = bufferOffset;
+  region.bufferRowLength = bufferRowLength;
+  region.bufferImageHeight = bufferHeight;
+  region.imageSubresource.aspectMask = aspectFlags;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+  region.imageOffset = {0, 0, 0};
+  region.imageExtent = {width, height, 1};
+
+  vkCmdCopyImageToBuffer(commandBuffer, image,
+                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1,
+                         &region);
+}
+
 void copyImageToBuffer(VkCommandPool commandPool, VkQueue queue, VkImage image,
                        VkBuffer buffer, uint32_t width, uint32_t height,
                        uint32_t bufferOffset, uint32_t bufferRowLength,
@@ -1224,20 +1246,8 @@ void copyImageToBuffer(VkCommandPool commandPool, VkQueue queue, VkImage image,
 
   vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-  VkBufferImageCopy region{};
-  region.bufferOffset = bufferOffset;
-  region.bufferRowLength = bufferRowLength;
-  region.bufferImageHeight = bufferHeight;
-  region.imageSubresource.aspectMask = aspectFlags;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-  region.imageOffset = {0, 0, 0};
-  region.imageExtent = {width, height, 1};
-
-  vkCmdCopyImageToBuffer(commandBuffer, image,
-                         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1,
-                         &region);
+  copyImageToBuffer(commandBuffer, image, buffer, width, height, bufferOffset,
+                    bufferRowLength, bufferHeight, aspectFlags);
 
   vkEndCommandBuffer(commandBuffer);
 
@@ -1252,25 +1262,10 @@ void copyImageToBuffer(VkCommandPool commandPool, VkQueue queue, VkImage image,
   vkFreeCommandBuffers(g_vkDevice, commandPool, 1, &commandBuffer);
 }
 
-void copyBufferToImage(VkCommandPool commandPool, VkQueue queue, VkImage image,
+void copyBufferToImage(VkCommandBuffer cmdBuffer, VkImage image,
                        VkBuffer buffer, uint32_t width, uint32_t height,
                        uint32_t bufferOffset, uint32_t bufferRowLength,
                        uint32_t bufferHeight, VkImageAspectFlags aspectFlags) {
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = commandPool;
-  allocInfo.commandBufferCount = 1;
-
-  VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(g_vkDevice, &allocInfo, &commandBuffer);
-
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
   VkBufferImageCopy region{};
   region.bufferOffset = bufferOffset;
   region.bufferRowLength = bufferRowLength;
@@ -1282,20 +1277,8 @@ void copyBufferToImage(VkCommandPool commandPool, VkQueue queue, VkImage image,
   region.imageOffset = {0, 0, 0};
   region.imageExtent = {width, height, 1};
 
-  vkCmdCopyBufferToImage(commandBuffer, buffer, image,
+  vkCmdCopyBufferToImage(cmdBuffer, buffer, image,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-  vkEndCommandBuffer(commandBuffer);
-
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandBuffer;
-
-  Verify() << vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-  Verify() << vkQueueWaitIdle(queue);
-
-  vkFreeCommandBuffers(g_vkDevice, commandPool, 1, &commandBuffer);
 }
 
 static VkRenderPass createRenderPass(VkFormat colorFormat,
@@ -2153,7 +2136,8 @@ static void printSpirv(const std::vector<uint32_t> &bin) {
   //     spvContext, bin.data(), bin.size(),
   //     SPV_BINARY_TO_TEXT_OPTION_PRINT | // SPV_BINARY_TO_TEXT_OPTION_COLOR |
   //         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES |
-  //         SPV_BINARY_TO_TEXT_OPTION_COMMENT | SPV_BINARY_TO_TEXT_OPTION_INDENT,
+  //         SPV_BINARY_TO_TEXT_OPTION_COMMENT |
+  //         SPV_BINARY_TO_TEXT_OPTION_INDENT,
   //     nullptr, &diagnostic);
 
   // if (error != 0) {
@@ -2556,7 +2540,8 @@ public:
                                         &typeCreateInfo, 0};
 
     Semaphore result;
-    Verify() << vkCreateSemaphore(g_vkDevice, &createInfo, nullptr, &result.mSemaphore);
+    Verify() << vkCreateSemaphore(g_vkDevice, &createInfo, nullptr,
+                                  &result.mSemaphore);
     return result;
   }
 
@@ -2572,12 +2557,8 @@ public:
   }
 
   void signal(std::uint64_t value) {
-    VkSemaphoreSignalInfo signalInfo = {
-      VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
-      nullptr,
-      mSemaphore,
-      value
-    };
+    VkSemaphoreSignalInfo signalInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
+                                        nullptr, mSemaphore, value};
 
     Verify() << vkSignalSemaphore(g_vkDevice, &signalInfo);
   }
@@ -2588,9 +2569,7 @@ public:
     return result;
   }
 
-  VkSemaphore getHandle() const {
-    return mSemaphore;
-  }
+  VkSemaphore getHandle() const { return mSemaphore; }
 
   bool operator==(std::nullptr_t) const { return mSemaphore == nullptr; }
   bool operator!=(std::nullptr_t) const { return mSemaphore != nullptr; }
@@ -2717,6 +2696,7 @@ public:
   }
 
   VkBuffer getHandle() const { return mBuffer; }
+  [[nodiscard]] VkBuffer release() { return std::exchange(mBuffer, nullptr); }
 
   VkMemoryRequirements getMemoryRequirements() const {
     VkMemoryRequirements requirements{};
@@ -2735,13 +2715,12 @@ public:
     mMemory = memory;
   }
 
-  void copyTo(VkCommandBuffer cmdBuffer, VkBuffer dstBuffer, std::span<const VkBufferCopy> regions) {
-    vkCmdCopyBuffer(cmdBuffer, mBuffer, dstBuffer, regions.size(), regions.data());
+  void copyTo(VkCommandBuffer cmdBuffer, VkBuffer dstBuffer,
+              std::span<const VkBufferCopy> regions) {
+    vkCmdCopyBuffer(cmdBuffer, mBuffer, dstBuffer, regions.size(),
+                    regions.data());
 
-    VkDependencyInfo depInfo = {
-      VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-      nullptr
-    };
+    VkDependencyInfo depInfo = {VK_STRUCTURE_TYPE_DEPENDENCY_INFO, nullptr};
     vkCmdPipelineBarrier2(cmdBuffer, &depInfo);
   }
 
@@ -2849,7 +2828,7 @@ public:
   Image2D(Image2D &&other) { *this = std::move(other); }
 
   ~Image2D() {
-    if (mImage != nullptr) {
+    if (mImage != nullptr && mMemory.deviceMemory != VK_NULL_HANDLE) {
       vkDestroyImage(g_vkDevice, mImage, g_vkAllocator);
     }
   }
@@ -2913,6 +2892,20 @@ public:
     return result;
   }
 
+  static Image2D CreateFromExternal(VkImage image, VkFormat format,
+                                    VkImageAspectFlags aspects,
+                                    VkImageLayout layout, unsigned width,
+                                    unsigned height) {
+    Image2D result;
+    result.mImage = image;
+    result.mFormat = format;
+    result.mAspects = aspects;
+    result.mLayout = layout;
+    result.mWidth = width;
+    result.mHeight = height;
+    return result;
+  }
+
   VkImage getHandle() const { return mImage; }
 
   VkMemoryRequirements getMemoryRequirements() const {
@@ -2932,24 +2925,24 @@ public:
                                   memory.offset);
   }
 
-  void readFromBuffer(DrawContext &ctxt, const Buffer &buffer,
+  void readFromBuffer(VkCommandBuffer cmdBuffer, const Buffer &buffer,
                       VkImageAspectFlags destAspect) {
-    transitionLayout(ctxt, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    copyBufferToImage(ctxt.commandPool, ctxt.queue, mImage, buffer.getHandle(),
-                      mWidth, mHeight, 0, 0, 0, destAspect);
+    copyBufferToImage(cmdBuffer, mImage, buffer.getHandle(), mWidth, mHeight, 0,
+                      0, 0, destAspect);
   }
 
-  void writeToBuffer(DrawContext &ctxt, const Buffer &buffer,
+  void writeToBuffer(VkCommandBuffer cmdBuffer, const Buffer &buffer,
                      VkImageAspectFlags sourceAspect) {
-    transitionLayout(ctxt, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-    copyImageToBuffer(ctxt.commandPool, ctxt.queue, mImage, buffer.getHandle(),
-                      mWidth, mHeight, 0, 0, 0, sourceAspect);
+    copyImageToBuffer(cmdBuffer, mImage, buffer.getHandle(), mWidth, mHeight, 0,
+                      0, 0, sourceAspect);
   }
 
-  void read(MemoryResource &pool, DrawContext &ctxt, const void *address,
-            int tileMode, VkImageAspectFlags destAspect) {
+  [[nodiscard]] Buffer read(VkCommandBuffer cmdBuffer, MemoryResource &pool,
+            const void *address, int tileMode, VkImageAspectFlags destAspect) {
     auto transferBuffer = Buffer::Allocate(
         pool, mWidth * mHeight * 4,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -2958,29 +2951,32 @@ public:
                             SurfaceFormat::kSurfaceFormat8_8_8_8, // TODO
                             mWidth, mHeight, 1);
 
-    readFromBuffer(ctxt, transferBuffer, destAspect);
+    readFromBuffer(cmdBuffer, transferBuffer, destAspect);
+
+    return transferBuffer;
   }
 
-  void write(MemoryResource &pool, DrawContext &ctxt, void *address,
+  [[nodiscard]] Buffer write(VkCommandBuffer cmdBuffer, MemoryResource &pool, void *address,
              int tileMode, VkImageAspectFlags sourceAspect) {
     auto transferBuffer = Buffer::Allocate(
         pool, mWidth * mHeight * 4,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-    writeToBuffer(ctxt, transferBuffer, sourceAspect);
+    writeToBuffer(cmdBuffer, transferBuffer, sourceAspect);
 
     writeImageBuffer(address, transferBuffer, tileMode,
                      SurfaceFormat::kSurfaceFormat8_8_8_8, // TODO
                      mWidth, mHeight, 1);
+    
+    return transferBuffer;
   }
 
-  void transitionLayout(DrawContext &ctxt, VkImageLayout newLayout) {
+  void transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout) {
     if (mLayout == newLayout) {
       return;
     }
 
-    transitionImageLayout(ctxt.commandPool, ctxt.queue, mImage, mAspects,
-                          mLayout, newLayout);
+    transitionImageLayout(cmdBuffer, mImage, mAspects, mLayout, newLayout);
 
     mLayout = newLayout;
   }
@@ -3033,7 +3029,8 @@ static BufferRef getDirectBuffer(std::uint64_t address, std::size_t size,
   if (dm.buffer == nullptr) {
     dm.buffer = Buffer::CreateExternal(dm.memoryResource.getSize(),
                                        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                                           VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+                                           VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                           VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
     dm.buffer.bindMemory(
         dm.memoryResource.getFromOffset(0, dm.memoryResource.getSize()));
   }
@@ -3105,19 +3102,14 @@ struct RenderState {
   std::vector<VkVertexInputAttributeDescription> vertexAttrs;
   std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBindings;
   std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-  std::vector<VkBuffer> buffers;
   std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
   std::vector<VkDescriptorImageInfo> descriptorImageInfos;
   std::forward_list<Image2D> images;
-  std::forward_list<Buffer> buffers2;
+  std::forward_list<Buffer> buffers;
   std::vector<VkImageView> imageViews;
   std::vector<VkSampler> samplers;
 
   ~RenderState() {
-    for (auto buffer : buffers) {
-      vkDestroyBuffer(g_vkDevice, buffer, nullptr);
-    }
-
     for (auto view : imageViews) {
       vkDestroyImageView(g_vkDevice, view, nullptr);
     }
@@ -3133,8 +3125,24 @@ struct RenderState {
     }
   }
 
+  BufferRef getStorageBuffer(std::uint64_t address, std::size_t size) {
+    if ((address &
+         (g_physicalDeviceProperties.limits.minStorageBufferOffsetAlignment -
+          1)) == 0) {
+      // offset is supported natively, return direct buffer
+      return getDirectBuffer(address, size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    }
+
+    // create temporary buffer
+    auto &tmpBuffer = buffers.emplace_front(Buffer::Allocate(
+        getHostVisibleMemory(), size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+    std::memcpy(tmpBuffer.getMemory().data, memory.getPointer(address), size);
+
+    return BufferRef{.buffer = &tmpBuffer, .offset = 0, .size = size};
+  }
+
   std::vector<std::uint32_t>
-  loadShader(shader::Stage stage, std::uint64_t address,
+  loadShader(VkCommandBuffer cmdBuffer, shader::Stage stage, std::uint64_t address,
              std::uint32_t *userSgprs, std::size_t userSgprsCount,
              int &bindingOffset, std::uint32_t dimX = 1, std::uint32_t dimY = 1,
              std::uint32_t dimZ = 1) {
@@ -3178,8 +3186,7 @@ struct RenderState {
           size = 0x10;
         }
 
-        auto storageBuffer = getDirectBuffer(
-            vbuffer->getAddress(), size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+        auto storageBuffer = getStorageBuffer(vbuffer->getAddress(), size);
 
         descriptorBufferInfos.push_back(descriptorBufferInfo(
             storageBuffer.buffer->getHandle(), storageBuffer.offset, size));
@@ -3207,13 +3214,13 @@ struct RenderState {
         assert(tbuffer->width == tbuffer->pitch);
 
         auto &image = images.emplace_front(Image2D::Allocate(
-            deviceLocalMemory, tbuffer->width + 1, tbuffer->height + 1,
+            getDeviceLocalMemory(), tbuffer->width + 1, tbuffer->height + 1,
             colorFormat,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT));
 
-        image.read(hostVisibleMemory, ctxt,
+        buffers.emplace_front(image.read(cmdBuffer, getHostVisibleMemory(),
                    memory.getPointer(tbuffer->getAddress()),
-                   tbuffer->tiling_idx, VK_IMAGE_ASPECT_COLOR_BIT);
+                   tbuffer->tiling_idx, VK_IMAGE_ASPECT_COLOR_BIT));
 
         auto imageView =
             createImageView2D(image.getHandle(), colorFormat, {},
@@ -3228,7 +3235,7 @@ struct RenderState {
             writeDescriptorSetImage(nullptr, descriptorType, uniform.binding,
                                     &descriptorImageInfos.back(), 1));
 
-        image.transitionLayout(ctxt, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        image.transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         break;
       }
 
@@ -3338,12 +3345,31 @@ struct RenderState {
 
     depthClearEnable = true;
 
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VkCommandBuffer transferCommandBuffers[2];
+
+    {
+      VkCommandBufferAllocateInfo allocInfo{};
+      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+      allocInfo.commandPool = ctxt.commandPool;
+      allocInfo.commandBufferCount = std::size(transferCommandBuffers);
+
+      Verify() << vkAllocateCommandBuffers(g_vkDevice, &allocInfo, transferCommandBuffers);
+    }
+
+    VkCommandBuffer readCommandBuffer = transferCommandBuffers[0];
+    Verify() << vkBeginCommandBuffer(readCommandBuffer, &beginInfo);
+
     auto primType = static_cast<PrimitiveType>(vgtPrimitiveType);
 
     int bindingOffset = 0;
-    auto vertexShader = loadShader(shader::Stage::Vertex, pgmVsAddress,
+    auto vertexShader = loadShader(readCommandBuffer, shader::Stage::Vertex, pgmVsAddress,
                                    userVsData, vsUserSpgrs, bindingOffset);
-    auto fragmentShader = loadShader(shader::Stage::Fragment, pgmPsAddress,
+    auto fragmentShader = loadShader(readCommandBuffer, shader::Stage::Fragment, pgmPsAddress,
                                      userPsData, psUserSpgrs, bindingOffset);
 
     auto colorFormat = VK_FORMAT_R8G8B8A8_SRGB;      // TODO
@@ -3371,16 +3397,16 @@ struct RenderState {
         break;
       }
 
-      auto colorImage = Image2D::Allocate(deviceLocalMemory, screenScissorW,
-                                          screenScissorH, colorFormat,
-                                          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                                              VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-      colorImage.read(hostVisibleMemory, ctxt,
+      auto colorImage = Image2D::Allocate(
+          getDeviceLocalMemory(), screenScissorW, screenScissorH, colorFormat,
+          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+              VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+              VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+      buffers.emplace_front(colorImage.read(readCommandBuffer, getHostVisibleMemory(),
                       memory.getPointer(colorBuffer.base),
-                      colorBuffer.tileModeIndex, VK_IMAGE_ASPECT_COLOR_BIT);
+                      colorBuffer.tileModeIndex, VK_IMAGE_ASPECT_COLOR_BIT));
 
-      colorImage.transitionLayout(ctxt,
+      colorImage.transitionLayout(readCommandBuffer,
                                   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
       auto colorImageView =
@@ -3392,7 +3418,7 @@ struct RenderState {
     }
 
     auto depthImage = Image2D::Allocate(
-        deviceLocalMemory, screenScissorW, screenScissorH, depthFormat,
+        getDeviceLocalMemory(), screenScissorW, screenScissorH, depthFormat,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
             (depthClearEnable || zReadBase == 0
@@ -3400,12 +3426,14 @@ struct RenderState {
                  : VK_IMAGE_USAGE_TRANSFER_DST_BIT));
 
     if (!depthClearEnable && zReadBase) {
-      depthImage.read(hostVisibleMemory, ctxt, memory.getPointer(zReadBase), 8,
-                      VK_IMAGE_ASPECT_DEPTH_BIT);
+      buffers.emplace_front(depthImage.read(readCommandBuffer, getHostVisibleMemory(),
+                      memory.getPointer(zReadBase), 8,
+                      VK_IMAGE_ASPECT_DEPTH_BIT));
     }
 
     depthImage.transitionLayout(
-        ctxt, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        readCommandBuffer,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     auto depthImageView =
         createImageView2D(depthImage.getHandle(), depthFormat, {},
@@ -3456,21 +3484,19 @@ struct RenderState {
         createPipelineVertexInputState(vertexBindings, vertexAttrs),
         getVkPrimitiveType(primType), shaders);
 
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = ctxt.commandPool;
-    allocInfo.commandBufferCount = 1;
+    VkCommandBuffer drawCommandBuffer;
+    {
+      VkCommandBufferAllocateInfo allocInfo{};
+      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+      allocInfo.commandPool = ctxt.commandPool;
+      allocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer commandBuffer;
-    Verify() << vkAllocateCommandBuffers(g_vkDevice, &allocInfo,
-                                         &commandBuffer);
+      Verify() << vkAllocateCommandBuffers(g_vkDevice, &allocInfo,
+                                           &drawCommandBuffer);
+    }
 
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    Verify() << vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    Verify() << vkBeginCommandBuffer(drawCommandBuffer, &beginInfo);
 
     VkClearValue clearValues[2];
     clearValues[0].color = {{1.f, 1.f, 1.f, 1.0f}};
@@ -3484,10 +3510,10 @@ struct RenderState {
     renderPassBeginInfo.clearValueCount = 2;
     renderPassBeginInfo.pClearValues = clearValues;
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
+    vkCmdBeginRenderPass(drawCommandBuffer, &renderPassBeginInfo,
                          VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindPipeline(drawCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                       shader.pipeline);
 
     VkViewport viewport{};
@@ -3497,16 +3523,16 @@ struct RenderState {
     viewport.height = -(float)screenScissorH;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    vkCmdSetViewport(drawCommandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.extent.width = screenScissorW;
     scissor.extent.height = screenScissorH;
     scissor.offset.x = screenScissorX;
     scissor.offset.y = screenScissorY;
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(drawCommandBuffer, 0, 1, &scissor);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    vkCmdBindDescriptorSets(drawCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             shader.pipelineLayout, 0, 1, &descriptorSet, 0,
                             nullptr);
 
@@ -3537,7 +3563,7 @@ struct RenderState {
       auto indexBufferSize = indexSize * indexCount;
 
       indexBufferStorage = Buffer::Allocate(
-          hostVisibleMemory, indexBufferSize,
+          getHostVisibleMemory(), indexBufferSize,
           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
       void *data = indexBufferStorage.getMemory().data;
@@ -3584,43 +3610,107 @@ struct RenderState {
     }
 
     if (indexBuffer.buffer == nullptr) {
-      vkCmdDraw(commandBuffer, count, 1, 0, 0);
+      vkCmdDraw(drawCommandBuffer, count, 1, 0, 0);
     } else {
-      vkCmdBindIndexBuffer(commandBuffer, indexBufferStorage.getHandle(),
+      vkCmdBindIndexBuffer(drawCommandBuffer, indexBufferStorage.getHandle(),
                            indexBuffer.offset, vkIndexType);
-      vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
+      vkCmdDrawIndexed(drawCommandBuffer, indexCount, 1, 0, 0, 0);
     }
 
-    vkCmdEndRenderPass(commandBuffer);
-    vkEndCommandBuffer(commandBuffer);
+    vkCmdEndRenderPass(drawCommandBuffer);
+    vkEndCommandBuffer(drawCommandBuffer);
 
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+    VkSemaphore readCompleteSem;
+    VkSemaphore drawCompleteSem;
+    VkFence drawCompleteFence;
+    VkFence writeCompleteFence;
+    {
+      VkSemaphoreCreateInfo semCreateInfo {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+      };
+      vkCreateSemaphore(g_vkDevice, &semCreateInfo, g_vkAllocator, &readCompleteSem);
+      vkCreateSemaphore(g_vkDevice, &semCreateInfo, g_vkAllocator, &drawCompleteSem);
 
-    Verify() << vkQueueSubmit(ctxt.queue, 1, &submitInfo, nullptr);
-    Verify() << vkQueueWaitIdle(ctxt.queue);
+      VkFenceCreateInfo fenceCreateInfo {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
+      };
+      vkCreateFence(g_vkDevice, &fenceCreateInfo, g_vkAllocator, &drawCompleteFence);
+      vkCreateFence(g_vkDevice, &fenceCreateInfo, g_vkAllocator, &writeCompleteFence);
+    }
+
+    VkPipelineStageFlags drawDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkPipelineStageFlags writeDstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+    {
+      VkSubmitInfo submitInfo{};
+      submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submitInfo.commandBufferCount = 1;
+      submitInfo.pCommandBuffers = &readCommandBuffer;
+      submitInfo.pSignalSemaphores = &readCompleteSem;
+      submitInfo.signalSemaphoreCount = 1;
+
+      vkEndCommandBuffer(readCommandBuffer);
+      Verify() << vkQueueSubmit(ctxt.queue, 1, &submitInfo, VK_NULL_HANDLE);
+    }
+
+    {
+      VkSubmitInfo submitInfo{};
+      submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submitInfo.commandBufferCount = 1;
+      submitInfo.pCommandBuffers = &drawCommandBuffer;
+      submitInfo.pWaitSemaphores = &readCompleteSem;
+      submitInfo.waitSemaphoreCount = 1;
+      submitInfo.pSignalSemaphores = &drawCompleteSem;
+      submitInfo.signalSemaphoreCount = 1;
+      submitInfo.pWaitDstStageMask = &drawDstStageMask;
+      Verify() << vkQueueSubmit(ctxt.queue, 1, &submitInfo, drawCompleteFence);
+    }
+
+    // TODO: make image read/write on gpu side
+    vkWaitForFences(g_vkDevice, 1, &drawCompleteFence, VK_TRUE, UINT64_MAX);
+
+    VkCommandBuffer writeCommandBuffer = transferCommandBuffers[1];
+    Verify() << vkBeginCommandBuffer(writeCommandBuffer, &beginInfo);
 
     for (std::size_t i = 0, end = colorImages.size(); i < end; ++i) {
       auto &colorImage = colorImages[i];
       auto &colorBuffer = colorBuffers[i];
 
-      colorImage.write(hostVisibleMemory, ctxt,
+      buffers.emplace_front(colorImage.write(writeCommandBuffer, getHostVisibleMemory(),
                        memory.getPointer(colorBuffer.base),
-                       colorBuffer.tileModeIndex, VK_IMAGE_ASPECT_COLOR_BIT);
+                       colorBuffer.tileModeIndex, VK_IMAGE_ASPECT_COLOR_BIT));
     }
 
     // TODO: implement mrt support
 
     if (depthWriteEnable && zWriteBase != 0) {
-      depthImage.write(hostVisibleMemory, ctxt, memory.getPointer(zWriteBase),
-                       8, VK_IMAGE_ASPECT_DEPTH_BIT);
+      buffers.emplace_front(depthImage.write(writeCommandBuffer, getHostVisibleMemory(),
+                       memory.getPointer(zWriteBase), 8,
+                       VK_IMAGE_ASPECT_DEPTH_BIT));
     }
+
+    {
+      VkSubmitInfo submitInfo{};
+      submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submitInfo.commandBufferCount = 1;
+      submitInfo.pCommandBuffers = &writeCommandBuffer;
+      submitInfo.pWaitSemaphores = &drawCompleteSem;
+      submitInfo.waitSemaphoreCount = 1;
+      submitInfo.pWaitDstStageMask = &writeDstStageMask;
+      vkEndCommandBuffer(writeCommandBuffer);
+      Verify() << vkQueueSubmit(ctxt.queue, 1, &submitInfo, writeCompleteFence);
+    }
+
+    vkWaitForFences(g_vkDevice, 1, &writeCompleteFence, VK_TRUE, UINT64_MAX);
 
     uploadUniforms();
 
     shader.destroy();
+
+    vkDestroySemaphore(g_vkDevice, readCompleteSem, g_vkAllocator);
+    vkDestroySemaphore(g_vkDevice, drawCompleteSem, g_vkAllocator);
+    vkDestroyFence(g_vkDevice, drawCompleteFence, g_vkAllocator);
+    vkDestroyFence(g_vkDevice, writeCompleteFence, g_vkAllocator);
 
     vkDestroyFramebuffer(g_vkDevice, framebuffer, nullptr);
     vkDestroyRenderPass(g_vkDevice, renderPass, nullptr);
@@ -3637,8 +3727,23 @@ struct RenderState {
 
     int bindingOffset = 0;
 
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = ctxt.commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(g_vkDevice, &allocInfo, &commandBuffer);
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
     auto computeShader =
-        loadShader(shader::Stage::Compute, pgmComputeAddress, userComputeData,
+        loadShader(commandBuffer, shader::Stage::Compute, pgmComputeAddress, userComputeData,
                    computeUserSpgrs, bindingOffset, computeNumThreadX,
                    computeNumThreadY, computeNumThreadZ);
     ShaderModule shader{};
@@ -3664,22 +3769,6 @@ struct RenderState {
         shader.pipelineLayout,
         createPipelineShaderStage(ctxt, computeShader,
                                   VK_SHADER_STAGE_COMPUTE_BIT));
-
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = ctxt.commandPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(g_vkDevice, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                       shader.pipeline);
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -3704,14 +3793,14 @@ struct RenderState {
 } // namespace amdgpu::device
 
 void amdgpu::device::draw(RemoteMemory memory, DrawContext &ctxt,
-                             std::uint32_t count, std::uint64_t indeciesAddress,
-                             std::uint32_t indexCount) {
+                          std::uint32_t count, std::uint64_t indeciesAddress,
+                          std::uint32_t indexCount) {
   RenderState{ctxt, memory}.draw(count, indeciesAddress, indexCount);
 }
 
 void amdgpu::device::dispatch(RemoteMemory memory, DrawContext &ctxt,
-                                 std::size_t dimX, std::size_t dimY,
-                                 std::size_t dimZ) {
+                              std::size_t dimX, std::size_t dimY,
+                              std::size_t dimZ) {
 
   RenderState{ctxt, memory}.dispatch(dimX, dimY, dimZ);
 }
@@ -3771,17 +3860,15 @@ static void drawIndexAuto(amdgpu::RemoteMemory memory,
 }
 
 static void drawIndex2(amdgpu::RemoteMemory memory,
-                       amdgpu::device::DrawContext &ctxt,
-                       std::uint32_t maxSize, std::uint64_t address,
-                       std::uint32_t count) {
+                       amdgpu::device::DrawContext &ctxt, std::uint32_t maxSize,
+                       std::uint64_t address, std::uint32_t count) {
   draw(memory, ctxt, count, address, maxSize);
 }
 
-void amdgpu::device::handleCommandBuffer(RemoteMemory memory,
-                                            DrawContext &ctxt,
-                                            std::uint32_t *cmds,
-                                            std::uint32_t count) {
-  bool log = true;
+void amdgpu::device::handleCommandBuffer(RemoteMemory memory, DrawContext &ctxt,
+                                         std::uint32_t *cmds,
+                                         std::uint32_t count) {
+  bool log = false;
   for (std::uint32_t cmdOffset = 0; cmdOffset < count; ++cmdOffset) {
     auto cmd = cmds[cmdOffset];
     auto type = getBits(cmd, 31, 30);
@@ -4087,150 +4174,63 @@ void amdgpu::device::handleCommandBuffer(RemoteMemory memory,
   }
 }
 
-void amdgpu::device::AmdgpuDevice::handleSetUpSharedMemory(
-    std::uint64_t address, std::uint64_t size, std::uint64_t internalSize,
-    const char *name) {
-  std::printf("setup shared memory %s: %lx-%lx (internal size is %lx)\n", name,
-              address, address + size, internalSize);
-
-  memoryFd = ::shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
-
-  internalMemory = (char *)::mmap(nullptr, internalSize, PROT_READ | PROT_WRITE,
-                                  MAP_SHARED, memoryFd, 0);
-
-  memory = RemoteMemory{(char *)::mmap(nullptr, size, PROT_NONE, MAP_SHARED,
-                                       memoryFd, internalSize)};
-
-  memorySize = size;
-}
-void amdgpu::device::AmdgpuDevice::handleSetFlipStatus(
-    std::uint64_t shmOffset) {
-  std::printf("flip status at %lx\n", shmOffset);
-  //flipStatus = new (internalMemory + shmOffset) amdgpu::bridge::FlipStatus;
-}
-void amdgpu::device::AmdgpuDevice::handleProtectMemory(
-    std::uint64_t address, std::uint64_t size, std::uint32_t prot) {
+void amdgpu::device::AmdgpuDevice::handleProtectMemory(std::uint64_t address,
+                                                       std::uint64_t size,
+                                                       std::uint32_t prot) {
   ::mprotect(memory.getPointer(address), size, prot >> 4);
+
+  auto beginPage = address / kPageSize;
+  auto endPage = (address + size + kPageSize - 1) / kPageSize;
+
+  if (prot >> 4) {
+    memoryZoneTable.map(beginPage, endPage);
+    std::printf("Allocated area at %zx, size %zu\n", address, size);
+  } else {
+    memoryZoneTable.unmap(beginPage, endPage);
+  }
 }
-void amdgpu::device::AmdgpuDevice::handleCommandBuffer(
-    std::uint64_t address, std::uint64_t size) {
+void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t address,
+                                                       std::uint64_t size) {
   auto count = size / sizeof(std::uint32_t);
 
   std::printf("address = %lx, count = %lx\n", address, count);
 
   amdgpu::device::handleCommandBuffer(
-      memory, mDc, memory.getPointer<std::uint32_t>(address), count);
+      memory, dc, memory.getPointer<std::uint32_t>(address), count);
 }
 
-void amdgpu::device::AmdgpuDevice::handleFlip(std::uint32_t bufferIndex,
-                                                    std::uint64_t arg) {
+bool amdgpu::device::AmdgpuDevice::handleFlip(std::uint32_t bufferIndex,
+                                              std::uint64_t arg,
+                                              VkCommandBuffer cmd,
+                                              VkImage targetImage,
+                                              VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers) {
   std::printf("requested flip %d\n", bufferIndex);
 
-  auto &buffer = renderBuffers[bufferIndex];
+  bridge->flipBuffer = bufferIndex;
+  bridge->flipArg = arg;
+  bridge->flipCount = bridge->flipCount + 1;
 
-  /*
-  if (buffer.pitch == 0 || buffer.height == 0 || buffer.memory == nullptr) {
-    return;
-  }
-*/
+  auto buffer = bridge->buffers[bufferIndex];
 
-  flipWasRequested = true;
-
-  VkImageLayout oldImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-  if (buffer.vkDataPoiner == nullptr) {
-    auto vkImage = createImage2D(
-        buffer.width, buffer.height, VK_FORMAT_R8G8B8A8_SRGB,
-        VK_IMAGE_TILING_LINEAR,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(g_vkDevice, vkImage, &memRequirements);
-
-    auto imageMemory =
-        allocateAndBindImage(vkImage, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    buffer.vkImage = vkImage;
-    buffer.vkImageMemory = imageMemory;
-
-    Verify() << vkMapMemory(g_vkDevice, imageMemory, 0, memRequirements.size, 0,
-                            &buffer.vkDataPoiner);
-
-    buffer.vkImageView =
-        createImageView2D(vkImage, VK_FORMAT_R8G8B8A8_SRGB, {},
-                          imageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT));
-
-    transitionImageLayout(mDc.commandPool, mDc.queue, buffer.vkImage,
-                          VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    oldImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
-    /*
-        buffer.shader = false && buffer.tilingMode != 0
-                            ? &mDrawTiledTextureShader
-                            : findShader(overlay::ShaderId::DrawTexture);
-        buffer.vkDescriptorSet = createDescriptorSet(mDc.device, buffer.shader);
-
-        updateDescriptorSets(
-            mDc.device, std::array{writeDescriptorSetImage(
-                         buffer.vkDescriptorSet,
-                         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0,
-                         std::array{descriptorImageInfo(
-                             mTextureSampler, buffer.vkImageView,
-                             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)})});
-    */
+  if (buffer.pitch == 0 || buffer.height == 0 || buffer.address == 0) {
+    std::printf("Attempt to flip unallocated buffer\n");
+    return false;
   }
 
-  std::uint32_t *internalBuffer =
-      reinterpret_cast<std::uint32_t *>(buffer.vkDataPoiner);
+  getHostVisibleMemory().clear();
 
-  if (buffer.tilingMode != 0) {
-    auto src = reinterpret_cast<const char *>(buffer.memory);
+  auto target = Image2D::CreateFromExternal(
+      targetImage, VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_LAYOUT_UNDEFINED, targetExtent.width,
+      targetExtent.height);
 
-    int tilerIndex = amdgpu::device::surfaceTiler::precalculateTiles(
-        buffer.width, buffer.height);
-
-    for (std::size_t y = 0; y < buffer.height; ++y) {
-      for (std::size_t x = 0; x < buffer.width; ++x) {
-        std::memcpy(
-            internalBuffer + y * buffer.pitch + x,
-            src + amdgpu::device::surfaceTiler::getTiledElementByteOffset(
-                      tilerIndex, x, y),
-            sizeof(std::uint32_t));
-      }
-    }
-  } else {
-    std::memcpy(internalBuffer, buffer.memory,
-                buffer.pitch * buffer.height * sizeof(std::uint32_t));
-  }
-
-  /*
-   copyBufferToImage(mGraphicsCommandPool, mGraphicsQueue, buffer.vkBuffer,
-                     buffer.vkImage, buffer.width, buffer.height, 0,
-                     buffer.pitch, buffer.height);
-*/
-  if (oldImageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    transitionImageLayout(mDc.commandPool, mDc.queue, buffer.vkImage,
-                          VK_IMAGE_ASPECT_COLOR_BIT, oldImageLayout,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  }
-
-  transitionImageLayout(mDc.commandPool, mDc.queue, buffer.vkImage,
-                        VK_IMAGE_ASPECT_COLOR_BIT,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-  // std::fprintf(stderr, "Buffer %d %dx%d (%d)\n", bufferIndex, buffer.width,
-  //              buffer.height, buffer.pitch);
-
-  currentBuffer = bufferIndex;
-  flipArg = arg;
-  ++flipCount;
+  target.transitionLayout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  auto tmpBuffer = target.read(cmd, getHostVisibleMemory(), memory.getPointer(buffer.address),
+               buffer.tilingMode, VK_IMAGE_ASPECT_COLOR_BIT);
+  target.transitionLayout(cmd, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+  usedBuffers.push_back(tmpBuffer.release());
+  return true;
 }
-
-void amdgpu::device::AmdgpuDevice::handleDoFlip() {}
 
 void amdgpu::device::AmdgpuDevice::handleSetBuffer(
     std::uint32_t bufferIndex, std::uint64_t address, std::uint32_t width,
@@ -4241,22 +4241,10 @@ void amdgpu::device::AmdgpuDevice::handleSetBuffer(
 
   auto &buffer = renderBuffers[bufferIndex];
   buffer.memory = memory.getPointer(address);
+  buffer.address = address;
   buffer.pitch = pitch;
   buffer.width = width;
   buffer.height = height;
   buffer.pixelFormat = pixelFormat;
   buffer.tilingMode = tilingMode;
-}
-
-void amdgpu::device::AmdgpuDevice::updateFlipStatus() {}
-
-amdgpu::device::AmdgpuDevice::AmdgpuDevice(
-    amdgpu::device::DrawContext dc)
-    : mDc(dc) {
-}
-
-amdgpu::device::AmdgpuDevice::~AmdgpuDevice() {
-  if (memoryFd != -1) {
-    ::close(memoryFd);
-  }
 }
