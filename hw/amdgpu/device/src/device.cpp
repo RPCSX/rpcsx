@@ -3361,7 +3361,7 @@ struct RenderState {
     if (indexBuffer.buffer == nullptr) {
       vkCmdDraw(drawCommandBuffer, count, 1, 0, 0);
     } else {
-      vkCmdBindIndexBuffer(drawCommandBuffer, indexBufferStorage.getHandle(),
+      vkCmdBindIndexBuffer(drawCommandBuffer, indexBuffer.buffer,
                            indexBuffer.offset, vkIndexType);
       vkCmdDrawIndexed(drawCommandBuffer, indexCount, 1, 0, 0, 0);
     }
