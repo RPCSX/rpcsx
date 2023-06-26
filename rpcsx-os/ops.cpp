@@ -303,7 +303,21 @@ orbis::SysResult pwrite(orbis::Thread *thread, orbis::sint fd,
 }
 orbis::SysResult lseek(orbis::Thread *thread, orbis::sint fd,
                        orbis::ulong offset, orbis::sint whence) {
-  return ErrorCode::NOTSUP;
+  Ref<IoDeviceInstance> handle =
+      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+  if (handle == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto result = handle->lseek(handle.get(), offset, whence);
+
+  if (result < 0) {
+    // TODO
+    return ErrorCode::IO;
+  }
+
+  thread->retval[0] = result;
+  return {};
 }
 orbis::SysResult ftruncate(orbis::Thread *thread, orbis::sint fd,
                            orbis::off_t length) {
