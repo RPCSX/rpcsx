@@ -275,7 +275,21 @@ orbis::SysResult write(orbis::Thread *thread, orbis::sint fd,
 }
 orbis::SysResult read(orbis::Thread *thread, orbis::sint fd,
                       orbis::ptr<void> data, orbis::ulong size) {
-  return ErrorCode::NOTSUP;
+  Ref<IoDeviceInstance> handle =
+      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+  if (handle == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto result = handle->read(handle.get(), data, size);
+
+  if (result < 0) {
+    // TODO
+    return ErrorCode::IO;
+  }
+
+  thread->retval[0] = result;
+  return {};
 }
 orbis::SysResult pread(orbis::Thread *thread, orbis::sint fd,
                        orbis::ptr<void> data, orbis::ulong size,
