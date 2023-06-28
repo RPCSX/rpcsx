@@ -3349,6 +3349,17 @@ void convertMimg(Fragment &fragment, Mimg inst) {
     break;
   }
 
+  case Mimg::Op::IMAGE_GET_LOD: {
+    auto intT = fragment.context->getUInt32Type();
+    for (std::uint32_t dstOffset = 0, i = 0; i < 4; ++i) {
+      if (inst.dmask & (1 << i)) {
+        fragment.setVectorOperand(
+            inst.vdata + dstOffset++, {intT, fragment.context->getUInt32(0)});
+      }
+    }
+    break;
+  }
+
   default:
     inst.dump();
     util::unreachable();
