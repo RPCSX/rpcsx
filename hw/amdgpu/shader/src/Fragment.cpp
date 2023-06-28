@@ -2334,6 +2334,19 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     break;
   }
 
+  case Vop3::Op::V3_ADD_F32: {
+    auto floatT = fragment.context->getFloat32Type();
+    auto src0 = getSrc(0, TypeId::Float32);
+    auto src1 = getSrc(1, TypeId::Float32);
+    auto resultValue = fragment.builder.createFAdd(
+        floatT, spirv::cast<spirv::FloatValue>(src0.value),
+        spirv::cast<spirv::FloatValue>(src1.value));
+    auto result = applyClamp(applyOmod({floatT, resultValue}));
+
+    fragment.setVectorOperand(inst.vdst, result);
+    break;
+  }
+
   case Vop3::Op::V3_SUB_F32: {
     auto floatT = fragment.context->getFloat32Type();
     auto src0 = getSrc(0, TypeId::Float32);
