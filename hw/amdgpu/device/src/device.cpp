@@ -1787,6 +1787,41 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
       break;
     }
 
+  case kSurfaceFormatBc4:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC4_UNORM_BLOCK;
+
+    case kTextureChannelTypeSNorm:
+      return VK_FORMAT_BC4_SNORM_BLOCK;
+
+    default:
+      break;
+    }
+  case kSurfaceFormatBc5:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC5_UNORM_BLOCK;
+
+    case kTextureChannelTypeSNorm:
+      return VK_FORMAT_BC5_SNORM_BLOCK;
+
+    default:
+      break;
+    }
+
+  case kSurfaceFormatBc7:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC7_UNORM_BLOCK;
+
+    case kTextureChannelTypeSrgb:
+      return VK_FORMAT_BC7_SRGB_BLOCK;
+
+    default:
+      break;
+    }
+
   default:
     break;
   }
@@ -2718,8 +2753,9 @@ static DirectMemory &getDirectMemory(std::uint64_t address, std::size_t size,
         (char *)g_rwMemory + zone.beginAddress - g_memoryBase,
         zone.endAddress - zone.beginAddress);
 
-    it = directMemory.emplace_hint(it, zone.beginAddress,
-                                   DirectMemory{.memoryResource = std::move(newResource)});
+    it = directMemory.emplace_hint(
+        it, zone.beginAddress,
+        DirectMemory{.memoryResource = std::move(newResource)});
   }
 
   if (beginAddress != nullptr) {
@@ -2852,10 +2888,12 @@ struct RenderState {
     }
 
     // create temporary buffer
-    auto tmpBuffer = Buffer::Allocate(getHostVisibleMemory(), size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    auto tmpBuffer = Buffer::Allocate(getHostVisibleMemory(), size,
+                                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     std::memcpy(tmpBuffer.getData(), memory.getPointer(address), size);
 
-    auto result = BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
+    auto result =
+        BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
     buffers.push_back(std::move(tmpBuffer));
     return {result, tmpBuffer.getData()};
   }
@@ -2870,10 +2908,12 @@ struct RenderState {
     }
 
     // create temporary buffer
-    auto tmpBuffer = Buffer::Allocate(getHostVisibleMemory(), size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    auto tmpBuffer = Buffer::Allocate(getHostVisibleMemory(), size,
+                                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     std::memcpy(tmpBuffer.getData(), memory.getPointer(address), size);
 
-    auto result = BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
+    auto result =
+        BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
     buffers.push_back(std::move(tmpBuffer));
     return result;
   }
@@ -2922,7 +2962,8 @@ struct RenderState {
           size = 0x10;
         }
 
-        auto [storageBuffer, indirectMemory] = getStorageBuffer(vbuffer->getAddress(), size);
+        auto [storageBuffer, indirectMemory] =
+            getStorageBuffer(vbuffer->getAddress(), size);
 
         descriptorBufferInfos.push_back(descriptorBufferInfo(
             storageBuffer.buffer, storageBuffer.offset, size));
@@ -2931,17 +2972,18 @@ struct RenderState {
             writeDescriptorSetBuffer(nullptr, descriptorType, uniform.binding,
                                      &descriptorBufferInfos.back(), 1));
 
-        if (indirectMemory != nullptr && (uniform.accessOp & amdgpu::shader::AccessOp::Store) == amdgpu::shader::AccessOp::Store) {
+        if (indirectMemory != nullptr &&
+            (uniform.accessOp & amdgpu::shader::AccessOp::Store) ==
+                amdgpu::shader::AccessOp::Store) {
           if (storeUniformCount >= std::size(storeUniforms)) {
             std::fprintf(stderr, "Too many uniform stores\n");
             std::abort();
           }
 
-          storeUniforms[storeUniformCount++] = {
-            .dstAddress = vbuffer->getAddress(),
-            .size = size,
-            .source = indirectMemory
-          };
+          storeUniforms[storeUniformCount++] = {.dstAddress =
+                                                    vbuffer->getAddress(),
+                                                .size = size,
+                                                .source = indirectMemory};
         }
         break;
       }
@@ -2967,10 +3009,10 @@ struct RenderState {
             colorFormat,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
-        buffers.push_back(
-            image.read(cmdBuffer, getHostVisibleMemory(),
-                       memory.getPointer(tbuffer->getAddress()),
-                       tbuffer->tiling_idx, VK_IMAGE_ASPECT_COLOR_BIT));
+        buffers.push_back(image.read(cmdBuffer, getHostVisibleMemory(),
+                                     memory.getPointer(tbuffer->getAddress()),
+                                     tbuffer->tiling_idx,
+                                     VK_IMAGE_ASPECT_COLOR_BIT));
 
         auto imageView =
             createImageView2D(image.getHandle(), colorFormat, {},
@@ -3035,7 +3077,8 @@ struct RenderState {
 
   void uploadUniforms() {
     for (auto uniform : std::span(storeUniforms, storeUniformCount)) {
-      std::memcpy(memory.getPointer(uniform.dstAddress), uniform.source, uniform.size);
+      std::memcpy(memory.getPointer(uniform.dstAddress), uniform.source,
+                  uniform.size);
     }
 
     storeUniformCount = 0;
@@ -3430,7 +3473,7 @@ struct RenderState {
     for (auto &colorImage : colorImages) {
       resultColorBuffers.push_back(
           colorImage.writeToBuffer(writeCommandBuffer, getHostVisibleMemory(),
-                                  VK_IMAGE_ASPECT_COLOR_BIT));
+                                   VK_IMAGE_ASPECT_COLOR_BIT));
     }
 
     // TODO: implement mrt support
