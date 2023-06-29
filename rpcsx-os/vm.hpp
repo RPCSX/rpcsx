@@ -29,7 +29,7 @@ enum MapFlags {
   kMapFlagNoSync = 0x800,
   kMapFlagAnonymous = 0x1000,
   kMapFlagSystem = 0x2000,
-  kMapFlagAllAvaiable = 0x4000,
+  kMapFlagAllAvailable = 0x4000,
   kMapFlagNoCore = 0x20000,
   kMapFlagPrefaultRead = 0x40000,
   kMapFlagSelf = 0x80000,
@@ -43,6 +43,10 @@ enum MapProt {
   kMapProtGpuRead = 0x10,
   kMapProtGpuWrite = 0x20,
   kMapProtGpuAll = 0x30,
+};
+
+enum MapInternalFlags {
+  kMapInternalReserveOnly = 1 << 0,
 };
 
 struct VirtualQueryInfo {
@@ -63,8 +67,8 @@ std::string mapProtToString(std::int32_t prot);
 
 void printHostStats();
 void initialize();
-void uninitialize();
-void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags);
+void deinitialize();
+void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags, std::int32_t internalFlags = 0);
 bool unmap(void *addr, std::uint64_t size);
 bool protect(void *addr, std::uint64_t size, std::int32_t prot);
 

@@ -721,7 +721,7 @@ int main(int argc, const char *argv[]) {
   // entryPoint();
 
   // rx::vm::printHostStats();
-  rx::vm::uninitialize();
+  rx::vm::deinitialize();
 
   return status;
 }

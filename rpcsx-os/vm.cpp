@@ -135,13 +135,13 @@ std::string rx::vm::mapFlagsToString(std::int32_t flags) {
     result += "System";
     flags &= ~kMapFlagSystem;
   }
-  if ((flags & kMapFlagAllAvaiable) == kMapFlagAllAvaiable) {
+  if ((flags & kMapFlagAllAvailable) == kMapFlagAllAvailable) {
     if (!result.empty()) {
       result += " | ";
     }
 
-    result += "AllAvaiable";
-    flags &= ~kMapFlagAllAvaiable;
+    result += "AllAvailable";
+    flags &= ~kMapFlagAllAvailable;
   }
   if ((flags & kMapFlagNoCore) == kMapFlagNoCore) {
     if (!result.empty()) {
@@ -616,7 +616,7 @@ void rx::vm::initialize() {
   // orbis::bridge.setUpSharedMemory(kMinAddress, kMemorySize, "/orbis-memory");
 }
 
-void rx::vm::uninitialize() {
+void rx::vm::deinitialize() {
   std::printf("Memory: shutdown\n");
   ::close(gMemoryShm);
   gMemoryShm = -1;
@@ -648,7 +648,7 @@ bool setMemoryRangeName(std::uint64_t phyAddress, std::uint64_t size,
 */
 
 void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
-                  std::int32_t flags) {
+                  std::int32_t flags, std::int32_t internalFlags) {
   std::printf("rx::vm::map(addr = %p, len = %" PRIu64
               ", prot = %s, flags = %s)\n",
               addr, len, mapProtToString(prot).c_str(),
@@ -795,6 +795,10 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   allocInfo.flags = kBlockFlagDirectMemory; // TODO
   allocInfo.name[0] = '\0';                 // TODO
 
+  if (internalFlags & kMapInternalReserveOnly) {
+    return reinterpret_cast<void *>(address);
+  }
+
   auto result =
       utils::map(reinterpret_cast<void *>(address), len, prot & kMapProtCpuAll,
                  realFlags, gMemoryShm, address - kMinAddress);
@@ -916,4 +920,5 @@ void rx::vm::printHostStats() {
   }
 
   free(line);
+  fclose(maps);
 }
