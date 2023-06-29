@@ -469,14 +469,16 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
                   phdr.p_filesz);
       std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0, phdr.p_memsz - phdr.p_filesz);
 
-      if (result->segmentCount >= std::size(result->segments)) {
-        std::abort();
-      }
+      if (phdr.p_type == kElfProgramTypeLoad) {
+        if (result->segmentCount >= std::size(result->segments)) {
+          std::abort();
+        }
 
-      auto &segment = result->segments[result->segmentCount++];
-      segment.addr = imageBase + phdr.p_vaddr;
-      segment.size = phdr.p_memsz;
-      segment.prot = phdr.p_flags;
+        auto &segment = result->segments[result->segmentCount++];
+        segment.addr = imageBase + phdr.p_vaddr;
+        segment.size = phdr.p_memsz;
+        segment.prot = phdr.p_flags;
+      }
     }
   }
 
