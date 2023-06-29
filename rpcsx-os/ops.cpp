@@ -449,29 +449,31 @@ orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
 
 SysResult processNeeded(Thread *thread) {
   while (true) {
-    std::set<std::string> allNeededModules;
+    std::set<std::string> allNeededObjects;
     auto proc = thread->tproc;
     std::map<std::string, Module *> loadedModules;
+    std::map<std::string, Module *> loadedObjects;
 
     for (auto [id, module] : proc->modulesMap) {
-      for (auto mod : module->neededModules) {
-        allNeededModules.insert(mod.name);
+      for (const auto &object : module->needed) {
+        allNeededObjects.insert(object);
       }
 
-      loadedModules[module->name] = module;
+      loadedModules[module->moduleName] = module;
+      loadedObjects[module->soName] = module;
     }
 
     bool hasLoadedNeeded = false;
 
-    for (auto &needed : allNeededModules) {
-      if (auto it = loadedModules.find(needed); it != loadedModules.end()) {
+    for (auto &needed : allNeededObjects) {
+      if (auto it = loadedObjects.find(needed); it != loadedObjects.end()) {
         continue;
       }
 
       auto neededModule = rx::linker::loadModuleByName(needed, proc);
 
       if (neededModule == nullptr) {
-        std::printf("Needed '%s' not found\n", needed.c_str());
+        std::fprintf(stderr, "Needed '%s' not found\n", needed.c_str());
         return ErrorCode::NOENT;
       }
 
@@ -487,7 +489,13 @@ SysResult processNeeded(Thread *thread) {
             module->importedModules.clear();
             module->importedModules.reserve(module->neededModules.size());
             for (auto mod : module->neededModules) {
-              module->importedModules.push_back(loadedModules.at(mod.name));
+              if (auto it = loadedModules.find(mod.name); it != loadedModules.end()) {
+                module->importedModules.push_back(loadedModules.at(mod.name));
+                continue;
+              }
+
+              std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n", mod.name.c_str(), module->soName);
+              std::abort();
             }
           });
 

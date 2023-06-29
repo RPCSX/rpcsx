@@ -4,13 +4,13 @@
 #include "orbis/module/Module.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <crypto/sha1.h>
 #include <elf.h>
 #include <map>
 #include <memory>
 #include <orbis/thread/Process.hpp>
 #include <sys/mman.h>
 #include <unordered_map>
-#include <crypto/sha1.h>
 
 using orbis::utils::Ref;
 
@@ -269,13 +269,17 @@ struct Symbol {
   std::uint64_t bindMode;
 };
 
-static std::map<std::string, std::filesystem::path, std::less<>> g_moduleOverrideTable;
+static std::map<std::string, std::filesystem::path, std::less<>>
+    g_moduleOverrideTable;
 
-void rx::linker::override(std::string originalModuleName, std::filesystem::path replacedModulePath) {
-  g_moduleOverrideTable[std::move(originalModuleName)] = std::move(replacedModulePath);
+void rx::linker::override(std::string originalModuleName,
+                          std::filesystem::path replacedModulePath) {
+  g_moduleOverrideTable[std::move(originalModuleName)] =
+      std::move(replacedModulePath);
 }
 
-Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Process *process) {
+Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
+                                          orbis::Process *process) {
   Ref<orbis::Module> result{new orbis::Module{}};
 
   Elf64_Ehdr header;
@@ -315,8 +319,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
     case kElfProgramTypeNull:
       break;
     case kElfProgramTypeLoad:
-      baseAddress = std::min(
-          baseAddress, utils::alignDown(phdr.p_vaddr, phdr.p_align));
+      baseAddress =
+          std::min(baseAddress, utils::alignDown(phdr.p_vaddr, phdr.p_align));
       imageSize = std::max(
           imageSize, utils::alignUp(phdr.p_vaddr + phdr.p_memsz, phdr.p_align));
       break;
@@ -349,8 +353,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
       break;
     case kElfProgramTypeSceRelRo:
       sceRelRoPhdrIndex = index;
-      baseAddress = std::min(
-          baseAddress, utils::alignDown(phdr.p_vaddr, phdr.p_align));
+      baseAddress =
+          std::min(baseAddress, utils::alignDown(phdr.p_vaddr, phdr.p_align));
       imageSize = std::max(
           imageSize, utils::alignUp(phdr.p_vaddr + phdr.p_memsz, phdr.p_align));
       break;
@@ -370,30 +374,40 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
   }
 
   auto imageBase = reinterpret_cast<std::byte *>(
-      rx::vm::map(reinterpret_cast<void *>(baseAddress), utils::alignUp(imageSize, rx::vm::kPageSize),
-               rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
-               rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
+      rx::vm::map(reinterpret_cast<void *>(baseAddress),
+                  utils::alignUp(imageSize, rx::vm::kPageSize),
+                  rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
+                  rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
 
   if (imageBase == MAP_FAILED) {
     std::abort();
   }
 
   result->entryPoint =
-      header.e_entry ? reinterpret_cast<std::uintptr_t>(imageBase + header.e_entry) : 0;
+      header.e_entry
+          ? reinterpret_cast<std::uintptr_t>(imageBase + header.e_entry)
+          : 0;
 
   if (sceProcParamIndex >= 0) {
     result->processParam =
-        phdrs[sceProcParamIndex].p_vaddr ? reinterpret_cast<void *>(imageBase + phdrs[sceProcParamIndex].p_vaddr) : nullptr;
+        phdrs[sceProcParamIndex].p_vaddr
+            ? reinterpret_cast<void *>(imageBase +
+                                       phdrs[sceProcParamIndex].p_vaddr)
+            : nullptr;
     result->processParamSize = phdrs[sceProcParamIndex].p_memsz;
   }
 
   if (sceModuleParamIndex >= 0) {
     result->moduleParam =
-        phdrs[sceProcParamIndex].p_vaddr ? reinterpret_cast<void *>(imageBase + phdrs[sceModuleParamIndex].p_vaddr) : nullptr;
+        phdrs[sceProcParamIndex].p_vaddr
+            ? reinterpret_cast<void *>(imageBase +
+                                       phdrs[sceModuleParamIndex].p_vaddr)
+            : nullptr;
     result->moduleParamSize = phdrs[sceModuleParamIndex].p_memsz;
 
     // std::printf("sce_module_param: ");
-    // for (auto elem : image.subspan(phdrs[sceModuleParamIndex].p_offset, phdrs[sceModuleParamIndex].p_filesz)) {
+    // for (auto elem : image.subspan(phdrs[sceModuleParamIndex].p_offset,
+    // phdrs[sceModuleParamIndex].p_filesz)) {
     //   std::printf(" %02x", (unsigned)elem);
     // }
     // std::printf("\n");
@@ -403,7 +417,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
     result->tlsAlign = phdrs[tlsPhdrIndex].p_align;
     result->tlsSize = phdrs[tlsPhdrIndex].p_memsz;
     result->tlsInitSize = phdrs[tlsPhdrIndex].p_filesz;
-    result->tlsInit = phdrs[tlsPhdrIndex].p_vaddr ? imageBase + phdrs[tlsPhdrIndex].p_vaddr : nullptr;
+    result->tlsInit = phdrs[tlsPhdrIndex].p_vaddr
+                          ? imageBase + phdrs[tlsPhdrIndex].p_vaddr
+                          : nullptr;
   }
 
   if (gnuEhFramePhdrIndex >= 0 && phdrs[gnuEhFramePhdrIndex].p_vaddr > 0) {
@@ -462,7 +478,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
       dataBufferIt += size;
     }
 
-    result->ehFrame = imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr + (dataBuffer - image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
+    result->ehFrame =
+        imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr +
+        (dataBuffer - image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
     result->ehFrameSize = dataBufferIt - dataBuffer;
   }
 
@@ -471,7 +489,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
         phdr.p_type == kElfProgramTypeSceRelRo) {
       std::memcpy(imageBase + phdr.p_vaddr, image.data() + phdr.p_offset,
                   phdr.p_filesz);
-      std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0, phdr.p_memsz - phdr.p_filesz);
+      std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0,
+                  phdr.p_memsz - phdr.p_filesz);
 
       if (phdr.p_type == kElfProgramTypeLoad) {
         if (result->segmentCount >= std::size(result->segments)) {
@@ -542,16 +561,36 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
       //     dyn.d_tag == kElfDynamicTypeSceModuleInfo) {
       //   std::printf(" ('%s')",
       //               sceStrtab
-      //                   ? sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val)
-      //                   : "<no strtab>");
+      //                   ? sceStrtab +
+      //                   static_cast<std::uint32_t>(dyn.d_un.d_val) : "<no
+      //                   strtab>");
       // }
 
       // std::printf("\n");
 
       if (dyn.d_tag == kElfDynamicTypeSceModuleInfo) {
-        std::strncpy(result->name,
+        std::strncpy(result->moduleName,
                      sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val),
-                     sizeof(result->name));
+                     sizeof(result->moduleName));
+      }
+
+      if (dyn.d_tag == kElfDynamicTypeSoName) {
+        std::strncpy(result->soName,
+                     sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val),
+                     sizeof(result->soName));
+      }
+
+      if (dyn.d_tag == kElfDynamicTypeNeeded) {
+        auto name = std::string_view(
+            sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
+        if (name.ends_with(".prx")) {
+          result->needed.push_back(std::string(name));
+        } else if (name == "STREQUAL") {
+          // HACK for broken FWs
+          result->needed.push_back("libSceDolbyVision.prx");
+        } else {
+          std::fprintf(stderr, "Ignoring needed '%s'\n", name.data());
+        }
       }
 
       if (dyn.d_tag == kElfDynamicTypeSceModuleInfo) {
@@ -566,8 +605,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
           result->neededModules.emplace_back();
         }
 
-        result->neededModules[it->second].name =
-            sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
+        auto &mod = result->neededModules[it->second];
+        mod.name = sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
+        mod.isExport = false;
       } else if (dyn.d_tag == kElfDynamicTypeSceImportLib ||
                  dyn.d_tag == kElfDynamicTypeSceExportLib) {
         auto [it, inserted] = idToLibraryIndex.try_emplace(
@@ -577,14 +617,18 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
           result->neededLibraries.emplace_back();
         }
 
-        result->neededLibraries[it->second].name =
-            sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
+        auto &lib = result->neededLibraries[it->second];
+
+        lib.name = sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
+        lib.isExport = dyn.d_tag == kElfDynamicTypeSceExportLib;
       }
 
       switch (dyn.d_tag) {
       case kElfDynamicTypeScePltGot:
-        result->pltGot = dyn.d_un.d_ptr ?
-            reinterpret_cast<std::uint64_t *>(imageBase + dyn.d_un.d_ptr) : nullptr;
+        result->pltGot =
+            dyn.d_un.d_ptr
+                ? reinterpret_cast<std::uint64_t *>(imageBase + dyn.d_un.d_ptr)
+                : nullptr;
         break;
 
       case kElfDynamicTypeSceJmpRel:
@@ -693,9 +737,6 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
 
   result->base = imageBase;
   result->size = imageSize;
-
-  // std::printf("Module %s (%p - %p)\n", result->name, result->base,
-  //             (char *)result->base + result->size);
   // std::printf("Needed modules: [");
   // for (bool isFirst = true; auto &module : result->neededModules) {
   //   if (isFirst) {
@@ -725,6 +766,11 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
 
   result->id = process->modulesMap.insert(result);
   result->proc = process;
+
+  std::printf("Loaded module '%s' from object '%s', id: %u, address: %p - %p\n",
+              result->moduleName, result->soName, (unsigned)result->id,
+              result->base, (char *)result->base + result->size);
+
   if (tlsPhdrIndex >= 0 /* result->tlsSize != 0 */) {
     result->tlsIndex = process->nextTlsSlot++;
   }
@@ -736,7 +782,7 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
                                               orbis::Process *process) {
   orbis::Ref<IoDeviceInstance> instance;
   if (vfs::open(path, kOpenFlagReadOnly, 0, &instance).isError()) {
-    return{};
+    return {};
   }
 
   auto len = instance->lseek(instance.get(), 0, SEEK_END);
@@ -760,8 +806,14 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
   return loadModule(image, process);
 }
 
-Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name, orbis::Process *process)  {
-  if (auto it = g_moduleOverrideTable.find(name); it != g_moduleOverrideTable.end()) {
+Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
+                                                orbis::Process *process) {
+  if (name.ends_with(".prx")) {
+    name.remove_suffix(4);
+  }
+
+  if (auto it = g_moduleOverrideTable.find(name);
+      it != g_moduleOverrideTable.end()) {
     return loadModuleFile(it->second.c_str(), process);
   }
 
@@ -775,5 +827,5 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name, orbis::Pr
     }
   }
 
-  return{};
+  return {};
 }

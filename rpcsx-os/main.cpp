@@ -102,7 +102,7 @@ static std::size_t printAddressLocation(char *dest, std::size_t destLen,
       continue;
     }
 
-    return std::snprintf(dest, destLen, "%s+%#" PRIx64, module->name,
+    return std::snprintf(dest, destLen, "%s+%#" PRIx64, module->soName,
                          address - moduleBase);
   }
 
@@ -460,7 +460,7 @@ static int ps4Exec(orbis::Process *mainProcess,
   std::vector<std::uint64_t> envpOffsets;
 
   auto libkernel = rx::linker::loadModuleFile(
-      "/system/common/lib/libkernel_sys.sprx", mainProcess);
+      "/system/common/lib/libkernel.sprx", mainProcess);
 
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
