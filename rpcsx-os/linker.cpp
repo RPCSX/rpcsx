@@ -5,6 +5,7 @@
 #include "vfs.hpp"
 #include "vm.hpp"
 #include <elf.h>
+#include <map>
 #include <memory>
 #include <orbis/thread/Process.hpp>
 #include <sys/mman.h>
@@ -268,8 +269,11 @@ struct Symbol {
   std::uint64_t bindMode;
 };
 
-static std::unordered_map<std::uint64_t, std::vector<Symbol>> g_symTable;
-static std::vector<std::string> g_libraryPathList;
+static std::map<std::string, std::filesystem::path, std::less<>> g_moduleOverrideTable;
+
+void rx::linker::override(std::string originalModuleName, std::filesystem::path replacedModulePath) {
+  g_moduleOverrideTable[std::move(originalModuleName)] = std::move(replacedModulePath);
+}
 
 Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Process *process) {
   Ref<orbis::Module> result{new orbis::Module{}};
@@ -754,4 +758,22 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
   instance->close(instance.get());
 
   return loadModule(image, process);
+}
+
+Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name, orbis::Process *process)  {
+  if (auto it = g_moduleOverrideTable.find(name); it != g_moduleOverrideTable.end()) {
+    return loadModuleFile(it->second.c_str(), process);
+  }
+
+  for (auto path : {"/system/common/lib/", "/system/priv/lib/"}) {
+    auto filePath = std::string(path);
+    filePath += name;
+    filePath += ".sprx";
+
+    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), process)) {
+      return result;
+    }
+  }
+
+  return{};
 }

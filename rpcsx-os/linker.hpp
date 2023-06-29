@@ -3,6 +3,7 @@
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/Rc.hpp"
 #include <cstddef>
+#include <filesystem>
 #include <span>
 
 namespace rx::linker {
@@ -58,6 +59,8 @@ enum OrbisElfType_t {
   kElfTypeSceDynamic = 0xfe18
 };
 
-orbis::utils::Ref<orbis::Module> loadModule(std::span<std::byte> image, orbis::Process *process);
-orbis::utils::Ref<orbis::Module> loadModuleFile(const char *path, orbis::Process *process);
+void override(std::string originalModuleName, std::filesystem::path replacedModulePath);
+orbis::Ref<orbis::Module> loadModule(std::span<std::byte> image, orbis::Process *process);
+orbis::Ref<orbis::Module> loadModuleFile(const char *path, orbis::Process *process);
+orbis::Ref<orbis::Module> loadModuleByName(std::string_view name, orbis::Process *process);
 } // namespace re::loader

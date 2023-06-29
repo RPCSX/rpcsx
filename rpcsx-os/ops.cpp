@@ -468,23 +468,9 @@ SysResult processNeeded(Thread *thread) {
         continue;
       }
 
-      hasLoadedNeeded = true;
+      auto neededModule = rx::linker::loadModuleByName(needed, proc);
 
-      std::printf("loading needed: %s\n", needed.c_str());
-      bool isLoaded = false;
-      for (auto path : {"/system/common/lib/", "/system/priv/lib/"}) {
-        auto loadedNeeded = rx::linker::loadModuleFile(
-            (std::string(path) + needed + ".sprx").c_str(), proc);
-
-        if (loadedNeeded == nullptr) {
-          continue;
-        }
-
-        isLoaded = true;
-        break;
-      }
-
-      if (!isLoaded) {
+      if (neededModule == nullptr) {
         std::printf("Needed '%s' not found\n", needed.c_str());
         return ErrorCode::NOENT;
       }

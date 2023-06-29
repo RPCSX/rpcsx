@@ -534,6 +534,7 @@ static void usage(const char *argv0) {
   std::printf("%s [<options>...] <virtual path to elf> [args...]\n", argv0);
   std::printf("  options:\n");
   std::printf("    -m, --mount <host path> <virtual path>\n");
+  std::printf("    -o, --override <original module name> <virtual path to overriden module>\n");
   std::printf("    --trace\n");
 }
 
@@ -684,6 +685,20 @@ int main(int argc, const char *argv[]) {
       g_traceSyscalls = true;
       continue;
     }
+
+    if (argv[argIndex] == std::string_view("--override") ||
+        argv[argIndex] == std::string_view("-o")) {
+      if (argc <= argIndex + 2) {
+        usage(argv[0]);
+        return 1;
+      }
+
+      rx::linker::override(argv[argIndex + 1], argv[argIndex + 2]);
+
+      argIndex += 3;
+      continue;
+    }
+
 
     break;
   }
