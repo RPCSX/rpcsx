@@ -474,7 +474,20 @@ SysResult processNeeded(Thread *thread) {
 
       if (neededModule == nullptr) {
         std::fprintf(stderr, "Needed '%s' not found\n", needed.c_str());
-        return ErrorCode::NOENT;
+        continue;
+      }
+
+      if (neededModule->soName != needed) {
+        if (neededModule->soName[0] != '\0') {
+          std::fprintf(stderr, "Module name mismatch, expected '%s', loaded '%s' (%s)\n", needed.c_str(), neededModule->soName, neededModule->moduleName);
+          std::abort();
+        }
+
+        std::strncpy(neededModule->soName, needed.c_str(), sizeof(neededModule->soName));
+        if (neededModule->soName[sizeof(neededModule->soName) - 1] != '\0') {
+          std::fprintf(stderr, "Too big needed name\n");
+          std::abort();
+        }
       }
 
       hasLoadedNeeded = true;
@@ -495,7 +508,7 @@ SysResult processNeeded(Thread *thread) {
               }
 
               std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n", mod.name.c_str(), module->soName);
-              std::abort();
+              module->importedModules.push_back({});
             }
           });
 

@@ -718,6 +718,12 @@ int main(int argc, const char *argv[]) {
   initProcess->onSysExit = onSysExit;
   auto executableModule =
       rx::linker::loadModuleFile(argv[argIndex], initProcess);
+
+  if (executableModule == nullptr) {
+    std::fprintf(stderr, "Failed to open '%s'\n", argv[argIndex]);
+    std::abort();
+  }
+
   initProcess->processParam = executableModule->processParam;
   initProcess->processParamSize = executableModule->processParamSize;
 
