@@ -512,7 +512,7 @@ SysResult processNeeded(Thread *thread) {
 
 SysResult registerEhFrames(Thread *thread) {
   for (auto [id, module] : thread->tproc->modulesMap) {
-    __register_frame(module->ehFrameHdr);
+    __register_frame(module->ehFrame);
   }
 
   return {};

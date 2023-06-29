@@ -403,8 +403,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
   }
 
   if (gnuEhFramePhdrIndex >= 0 && phdrs[gnuEhFramePhdrIndex].p_vaddr > 0) {
-    result->ehFrame = imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr;
-    result->ehFrameSize = phdrs[gnuEhFramePhdrIndex].p_memsz;
+    result->ehFrameHdr = imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr;
+    result->ehFrameHdrSize = phdrs[gnuEhFramePhdrIndex].p_memsz;
 
     struct GnuExceptionInfo {
       uint8_t version;
@@ -458,8 +458,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image, orbis::Pro
       dataBufferIt += size;
     }
 
-    result->ehFrameHdr = imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr + (dataBuffer - image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
-    result->ehFrameHdrSize = dataBufferIt - dataBuffer;
+    result->ehFrame = imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr + (dataBuffer - image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
+    result->ehFrameSize = dataBufferIt - dataBuffer;
   }
 
   for (auto &phdr : phdrs) {
