@@ -474,6 +474,8 @@ SysResult processNeeded(Thread *thread) {
         std::printf("Needed '%s' not found\n", needed.c_str());
         return ErrorCode::NOENT;
       }
+
+      hasLoadedNeeded = true;
     }
 
     if (!hasLoadedNeeded) {
