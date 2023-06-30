@@ -4,24 +4,25 @@
 #include "orbis/utils/Rc.hpp"
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <span>
 
 namespace rx::linker {
 inline constexpr char nidLookup[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
 
-constexpr std::uint64_t decodeNid(std::string_view nid) {
+constexpr std::optional<std::uint64_t> decodeNid(std::string_view nid) {
   std::uint64_t result = 0;
 
   if (nid.size() > 11) {
-    std::abort();
+    return{};
   }
 
   for (std::size_t i = 0; i < nid.size(); ++i) {
     auto it = std::strchr(nidLookup, nid[i]);
 
     if (it == nullptr) {
-      std::abort();
+      return{};
     }
 
     auto value = static_cast<uint32_t>(it - nidLookup);
@@ -37,6 +38,19 @@ constexpr std::uint64_t decodeNid(std::string_view nid) {
   }
 
   return result;
+}
+
+struct nid {
+  char string[12];
+};
+
+constexpr nid encodeNid(std::uint64_t hash) {
+  return {{nidLookup[(hash >> 58) & 0x3f], nidLookup[(hash >> 52) & 0x3f],
+           nidLookup[(hash >> 46) & 0x3f], nidLookup[(hash >> 40) & 0x3f],
+           nidLookup[(hash >> 34) & 0x3f], nidLookup[(hash >> 28) & 0x3f],
+           nidLookup[(hash >> 22) & 0x3f], nidLookup[(hash >> 16) & 0x3f],
+           nidLookup[(hash >> 10) & 0x3f], nidLookup[(hash >> 4) & 0x3f],
+           nidLookup[(hash & 0xf) * 4], 0}};
 }
 
 std::uint64_t encodeFid(std::string_view fid);

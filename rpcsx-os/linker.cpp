@@ -562,7 +562,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       if (dyn.d_tag == kElfDynamicTypeNeeded) {
         auto name = std::string_view(
             sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
-        if (name.ends_with(".prx")) {
+        if (name == "libSceFreeTypeOptBm-PRX.prx") {
+          // TODO
+        } else if (name.ends_with(".prx")) {
           result->needed.push_back(std::string(name));
         } else if (name == "STREQUAL") {
           // HACK for broken FWs
@@ -820,15 +822,62 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
   return loadModule(image, process);
 }
 
+static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
+  auto result = orbis::create<orbis::Module>();
+
+  std::strncpy(result->soName, "libSceFreeTypeFull-PRX.prx", sizeof(result->soName) - 1);
+  std::strncpy(result->moduleName, "libSceFreeType", sizeof(result->moduleName) - 1);
+
+  result->neededLibraries.push_back({
+    .name = "libSceFreeType",
+    .isExport = true
+  });
+
+  for (auto dep : { "libSceFreeTypeSubFunc", "libSceFreeTypeOl", "libSceFreeTypeOt", "libSceFreeTypeOptOl", "libSceFreeTypeHinter" }) {
+    result->needed.push_back(dep);
+    result->needed.back() += "-PRX.prx";
+  }
+
+  for (auto needed : result->needed) {
+    auto neededMod = rx::linker::loadModuleByName(needed, process);
+
+    if (neededMod == nullptr) {
+      std::fprintf(stderr, "Failed to load needed '%s' for FreeType\n", needed.c_str());
+      std::abort();
+    }
+
+    result->namespaceModules.push_back(neededMod);
+  }
+
+  // TODO: load native library with module_start and module_stop
+  result->initProc = reinterpret_cast<void *>(+[] {});
+  result->finiProc = reinterpret_cast<void *>(+[] {});
+
+  result->id = process->modulesMap.insert(result);
+  result->proc = process;
+
+  return result;
+}
+
 Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
                                                 orbis::Process *process) {
   if (name.ends_with(".prx")) {
     name.remove_suffix(4);
   }
+  if (name.ends_with("-PRX")) {
+    name.remove_suffix(4); // TODO: implement lib scan
+  }
+  if (name.ends_with("-module")) {
+    name.remove_suffix(7); // TODO: implement lib scan
+  }
 
   if (auto it = g_moduleOverrideTable.find(name);
       it != g_moduleOverrideTable.end()) {
     return loadModuleFile(it->second.c_str(), process);
+  }
+
+  if (name == "libSceFreeTypeFull") {
+    return createSceFreeTypeFull(process);
   }
 
   for (auto path : {"/system/common/lib/", "/system/priv/lib/"}) {

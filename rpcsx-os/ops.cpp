@@ -40,7 +40,7 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
   }
 
   thread->retval[0] = reinterpret_cast<std::uint64_t>(result);
-  return{};
+  return {};
 }
 
 orbis::SysResult munmap(orbis::Thread *thread, orbis::ptr<void> addr,
@@ -371,14 +371,18 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
     return ErrorCode::INVAL;
   }
 
+  std::printf("sys_dynlib_dlsym(%s (%s), '%s')\n", module->soName, module->moduleName, symbol);
+
   std::string_view symView(symbol);
 
-  if (symView.size() == 11) {
-    if (auto addr = findSymbolById(module, rx::linker::decodeNid(symView))) {
+  if (auto nid = rx::linker::decodeNid(symView)) {
+    if (auto addr = findSymbolById(module, *nid)) {
       *addrp = addr;
       return {};
     }
   }
+
+  std::printf("sys_dynlib_dlsym(%s (%s), '%s')\n", module->soName, module->moduleName, rx::linker::encodeNid(rx::linker::encodeFid(symView)).string);
 
   if (auto addr = findSymbolById(module, rx::linker::encodeFid(symView))) {
     *addrp = addr;
@@ -479,11 +483,14 @@ SysResult processNeeded(Thread *thread) {
 
       if (neededModule->soName != needed) {
         if (neededModule->soName[0] != '\0') {
-          std::fprintf(stderr, "Module name mismatch, expected '%s', loaded '%s' (%s)\n", needed.c_str(), neededModule->soName, neededModule->moduleName);
-          std::abort();
+          std::fprintf(
+              stderr, "Module name mismatch, expected '%s', loaded '%s' (%s)\n",
+              needed.c_str(), neededModule->soName, neededModule->moduleName);
+          // std::abort();
         }
 
-        std::strncpy(neededModule->soName, needed.c_str(), sizeof(neededModule->soName));
+        std::strncpy(neededModule->soName, needed.c_str(),
+                     sizeof(neededModule->soName));
         if (neededModule->soName[sizeof(neededModule->soName) - 1] != '\0') {
           std::fprintf(stderr, "Too big needed name\n");
           std::abort();
@@ -494,23 +501,25 @@ SysResult processNeeded(Thread *thread) {
     }
 
     if (!hasLoadedNeeded) {
-      thread->tproc->modulesMap.walk(
-          [&loadedModules](ModuleHandle modId, Module *module) {
-            // std::printf("Module '%s' has id %u\n", module->name,
-            // (unsigned)modId);
+      thread->tproc->modulesMap.walk([&loadedModules](ModuleHandle modId,
+                                                      Module *module) {
+        // std::printf("Module '%s' has id %u\n", module->name,
+        // (unsigned)modId);
 
-            module->importedModules.clear();
-            module->importedModules.reserve(module->neededModules.size());
-            for (auto mod : module->neededModules) {
-              if (auto it = loadedModules.find(mod.name); it != loadedModules.end()) {
-                module->importedModules.push_back(loadedModules.at(mod.name));
-                continue;
-              }
+        module->importedModules.clear();
+        module->importedModules.reserve(module->neededModules.size());
+        for (auto mod : module->neededModules) {
+          if (auto it = loadedModules.find(mod.name);
+              it != loadedModules.end()) {
+            module->importedModules.push_back(loadedModules.at(mod.name));
+            continue;
+          }
 
-              std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n", mod.name.c_str(), module->soName);
-              module->importedModules.push_back({});
-            }
-          });
+          std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n",
+                       mod.name.c_str(), module->soName);
+          module->importedModules.push_back({});
+        }
+      });
 
       break;
     }
@@ -521,7 +530,9 @@ SysResult processNeeded(Thread *thread) {
 
 SysResult registerEhFrames(Thread *thread) {
   for (auto [id, module] : thread->tproc->modulesMap) {
-    __register_frame(module->ehFrame);
+    if (module->ehFrame != nullptr) { 
+      __register_frame(module->ehFrame);
+    }
   }
 
   return {};
