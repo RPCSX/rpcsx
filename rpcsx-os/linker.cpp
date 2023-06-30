@@ -376,7 +376,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   auto imageBase = reinterpret_cast<std::byte *>(
       rx::vm::map(reinterpret_cast<void *>(baseAddress),
                   utils::alignUp(imageSize, rx::vm::kPageSize),
-                  rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
+                  0,
                   rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
 
   if (imageBase == MAP_FAILED) {
@@ -482,27 +482,6 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         imageBase + phdrs[gnuEhFramePhdrIndex].p_vaddr +
         (dataBuffer - image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
     result->ehFrameSize = dataBufferIt - dataBuffer;
-  }
-
-  for (auto &phdr : phdrs) {
-    if (phdr.p_type == kElfProgramTypeLoad ||
-        phdr.p_type == kElfProgramTypeSceRelRo) {
-      std::memcpy(imageBase + phdr.p_vaddr, image.data() + phdr.p_offset,
-                  phdr.p_filesz);
-      std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0,
-                  phdr.p_memsz - phdr.p_filesz);
-
-      if (phdr.p_type == kElfProgramTypeLoad) {
-        if (result->segmentCount >= std::size(result->segments)) {
-          std::abort();
-        }
-
-        auto &segment = result->segments[result->segmentCount++];
-        segment.addr = imageBase + phdr.p_vaddr;
-        segment.size = phdr.p_memsz;
-        segment.prot = phdr.p_flags;
-      }
-    }
   }
 
   if (dynamicPhdrIndex >= 0 && phdrs[dynamicPhdrIndex].p_filesz > 0) {
@@ -701,18 +680,24 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             library = moduleLibary.substr(0, hashPos);
             module = moduleLibary.substr(hashPos + 1);
 
-            auto libaryNid = decodeNid(library);
-            auto moduleNid = decodeNid(module);
+            auto libaryNid = *decodeNid(library);
+            auto moduleNid = *decodeNid(module);
 
             symbol.libraryIndex = idToLibraryIndex.at(libaryNid);
             symbol.moduleIndex = idToModuleIndex.at(moduleNid);
-            symbol.id = decodeNid(name);
+            symbol.id = *decodeNid(name);
+          } else if (auto nid = decodeNid(fullName)) {
+            symbol.id = *nid;
+            symbol.libraryIndex = -1;
+            symbol.moduleIndex = -1;
           } else {
-            // std::printf("ignored: (%s) - %lx\n",
-            //             sceStrtab ? sceStrtab +
-            //                             static_cast<std::uint32_t>(sym.st_name)
-            //                       : "<no strtab>",
-            //             sym.st_value);
+            std::printf("ignored: (%s) - %lx\n",
+                        sceStrtab ? sceStrtab +
+                                        static_cast<std::uint32_t>(sym.st_name)
+                                  : "<no strtab>",
+                        sym.st_value);
+
+            continue;
           }
         }
 
@@ -731,6 +716,35 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       result->nonPltRelocations.reserve(nonPltRelocationCount);
       for (auto rel : std::span(nonPltRelocations, nonPltRelocationCount)) {
         result->nonPltRelocations.push_back(rel);
+      }
+    }
+  }
+
+  for (auto phdr : phdrs) {
+    if (phdr.p_type == kElfProgramTypeLoad ||
+        phdr.p_type == kElfProgramTypeSceRelRo) {
+      auto segmentSize = utils::alignUp(phdr.p_memsz, phdr.p_align);
+      ::mprotect(imageBase + phdr.p_vaddr, segmentSize, PROT_WRITE);
+      std::memcpy(imageBase + phdr.p_vaddr, image.data() + phdr.p_offset,
+                  phdr.p_filesz);
+      std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0,
+                  phdr.p_memsz - phdr.p_filesz);
+
+      if (phdr.p_type == kElfProgramTypeSceRelRo) {
+        phdr.p_flags |= vm::kMapProtCpuWrite; // TODO: reprotect on relocations
+      }
+
+      vm::protect(imageBase + phdr.p_vaddr, segmentSize, phdr.p_flags);
+
+      if (phdr.p_type == kElfProgramTypeLoad) {
+        if (result->segmentCount >= std::size(result->segments)) {
+          std::abort();
+        }
+
+        auto &segment = result->segments[result->segmentCount++];
+        segment.addr = imageBase + phdr.p_vaddr;
+        segment.size = phdr.p_memsz;
+        segment.prot = phdr.p_flags;
       }
     }
   }
