@@ -4023,6 +4023,11 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
 
   auto buffer = bridge->buffers[bufferIndex];
 
+  if (bufferIndex == ~static_cast<std::uint32_t>(0)) {
+    // black surface, ignore for now
+    return false;
+  }
+
   if (buffer.pitch == 0 || buffer.height == 0 || buffer.address == 0) {
     std::printf("Attempt to flip unallocated buffer\n");
     return false;
