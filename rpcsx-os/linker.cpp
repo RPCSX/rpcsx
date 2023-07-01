@@ -375,8 +375,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   auto imageBase = reinterpret_cast<std::byte *>(
       rx::vm::map(reinterpret_cast<void *>(baseAddress),
-                  utils::alignUp(imageSize, rx::vm::kPageSize),
-                  0,
+                  utils::alignUp(imageSize, rx::vm::kPageSize), 0,
                   rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
 
   if (imageBase == MAP_FAILED) {
@@ -562,15 +561,27 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       if (dyn.d_tag == kElfDynamicTypeNeeded) {
         auto name = std::string_view(
             sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
-        if (name == "libSceFreeTypeOptBm-PRX.prx") {
-          // TODO
-        } else if (name.ends_with(".prx")) {
-          result->needed.push_back(std::string(name));
-        } else if (name == "STREQUAL") {
+        if (name == "STREQUAL") {
           // HACK for broken FWs
-          result->needed.push_back("libSceDolbyVision.prx");
+          result->needed.push_back("libSceDolbyVision");
         } else {
-          std::fprintf(stderr, "Ignoring needed '%s'\n", name.data());
+          if (name.ends_with(".prx")) {
+            name.remove_suffix(4);
+          }
+          if (name.ends_with("-PRX")) {
+            name.remove_suffix(4); // TODO: implement lib scan
+          }
+          if (name.ends_with("-module")) {
+            name.remove_suffix(7); // TODO: implement lib scan
+          }
+          if (name.ends_with("_padebug")) {
+            name.remove_suffix(8);
+          }
+
+          if (name != "libSceFreeTypeOptBm") { // TODO
+            result->needed.push_back(std::string(name));
+            result->needed.back() += ".prx";
+          }
         }
       }
 
@@ -825,15 +836,17 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
 static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
   auto result = orbis::create<orbis::Module>();
 
-  std::strncpy(result->soName, "libSceFreeTypeFull-PRX.prx", sizeof(result->soName) - 1);
-  std::strncpy(result->moduleName, "libSceFreeType", sizeof(result->moduleName) - 1);
+  std::strncpy(result->soName, "libSceFreeTypeFull-PRX.prx",
+               sizeof(result->soName) - 1);
+  std::strncpy(result->moduleName, "libSceFreeType",
+               sizeof(result->moduleName) - 1);
 
-  result->neededLibraries.push_back({
-    .name = "libSceFreeType",
-    .isExport = true
-  });
+  result->neededLibraries.push_back(
+      {.name = "libSceFreeType", .isExport = true});
 
-  for (auto dep : { "libSceFreeTypeSubFunc", "libSceFreeTypeOl", "libSceFreeTypeOt", "libSceFreeTypeOptOl", "libSceFreeTypeHinter" }) {
+  for (auto dep :
+       {"libSceFreeTypeSubFunc", "libSceFreeTypeOl", "libSceFreeTypeOt",
+        "libSceFreeTypeOptOl", "libSceFreeTypeHinter"}) {
     result->needed.push_back(dep);
     result->needed.back() += "-PRX.prx";
   }
@@ -842,7 +855,8 @@ static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
     auto neededMod = rx::linker::loadModuleByName(needed, process);
 
     if (neededMod == nullptr) {
-      std::fprintf(stderr, "Failed to load needed '%s' for FreeType\n", needed.c_str());
+      std::fprintf(stderr, "Failed to load needed '%s' for FreeType\n",
+                   needed.c_str());
       std::abort();
     }
 
@@ -863,12 +877,6 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
                                                 orbis::Process *process) {
   if (name.ends_with(".prx")) {
     name.remove_suffix(4);
-  }
-  if (name.ends_with("-PRX")) {
-    name.remove_suffix(4); // TODO: implement lib scan
-  }
-  if (name.ends_with("-module")) {
-    name.remove_suffix(7); // TODO: implement lib scan
   }
 
   if (auto it = g_moduleOverrideTable.find(name);
