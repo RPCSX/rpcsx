@@ -527,6 +527,26 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     orbis::Relocation *nonPltRelocations = nullptr;
     std::size_t nonPltRelocationCount = 0;
 
+    auto patchSoName = [](std::string_view name) {
+      if (name.ends_with(".prx")) {
+        name.remove_suffix(4);
+      }
+      if (name.ends_with("-PRX")) {
+        name.remove_suffix(4); // TODO: implement lib scan
+      }
+      if (name.ends_with("-module")) {
+        name.remove_suffix(7); // TODO: implement lib scan
+      }
+      if (name.ends_with("_padebug")) {
+        name.remove_suffix(8);
+      }
+      if (name.ends_with("_sys")) {
+        name.remove_suffix(4);
+      }
+
+      return name;
+    };
+
     for (auto dyn : dyns) {
       // std::printf("%s: %lx", toString((OrbisElfDynamicType)dyn.d_tag),
       //             dyn.d_un.d_val);
@@ -553,9 +573,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       }
 
       if (dyn.d_tag == kElfDynamicTypeSoName) {
-        std::strncpy(result->soName,
-                     sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val),
-                     sizeof(result->soName));
+        auto name = patchSoName(sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
+        std::memcpy(result->soName, name.data(), name.size());
+        std::memcpy(result->soName + name.size(), ".prx", sizeof(".prx"));
       }
 
       if (dyn.d_tag == kElfDynamicTypeNeeded) {
@@ -565,19 +585,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
           // HACK for broken FWs
           result->needed.push_back("libSceDolbyVision");
         } else {
-          if (name.ends_with(".prx")) {
-            name.remove_suffix(4);
-          }
-          if (name.ends_with("-PRX")) {
-            name.remove_suffix(4); // TODO: implement lib scan
-          }
-          if (name.ends_with("-module")) {
-            name.remove_suffix(7); // TODO: implement lib scan
-          }
-          if (name.ends_with("_padebug")) {
-            name.remove_suffix(8);
-          }
-
+          name = patchSoName(name);
           if (name != "libSceFreeTypeOptBm") { // TODO
             result->needed.push_back(std::string(name));
             result->needed.back() += ".prx";
@@ -836,7 +844,7 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
 static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
   auto result = orbis::create<orbis::Module>();
 
-  std::strncpy(result->soName, "libSceFreeTypeFull-PRX.prx",
+  std::strncpy(result->soName, "libSceFreeTypeFull.prx",
                sizeof(result->soName) - 1);
   std::strncpy(result->moduleName, "libSceFreeType",
                sizeof(result->moduleName) - 1);
@@ -848,7 +856,7 @@ static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
        {"libSceFreeTypeSubFunc", "libSceFreeTypeOl", "libSceFreeTypeOt",
         "libSceFreeTypeOptOl", "libSceFreeTypeHinter"}) {
     result->needed.push_back(dep);
-    result->needed.back() += "-PRX.prx";
+    result->needed.back() += ".prx";
   }
 
   for (auto needed : result->needed) {
