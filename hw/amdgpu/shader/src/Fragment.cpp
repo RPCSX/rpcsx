@@ -3585,6 +3585,42 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     fragment.setVectorOperand(inst.vdst, {resultType, result});
     break;
   }
+  case Vop1::Op::V_FLOOR_F32: {
+    auto src = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+
+    auto glslStd450 = fragment.context->getGlslStd450();
+    auto result = fragment.builder.createExtInst(floatT, glslStd450,
+                                                 GLSLstd450Floor, {{src}});
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
+  case Vop1::Op::V_SIN_F32: {
+    auto src = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+
+    auto glslStd450 = fragment.context->getGlslStd450();
+    auto result = fragment.builder.createExtInst(floatT, glslStd450,
+                                                 GLSLstd450Sin, {{src}});
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
+  case Vop1::Op::V_COS_F32: {
+    auto src = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+
+    auto glslStd450 = fragment.context->getGlslStd450();
+    auto result = fragment.builder.createExtInst(floatT, glslStd450,
+                                                 GLSLstd450Cos, {{src}});
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
 
   default:
     inst.dump();
