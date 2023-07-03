@@ -1,7 +1,7 @@
 RPCSX
 =====
-This is an experimental emulator for PS4 (Play Station 4) written in C++ for Linux.
-It's NOT possible to run any games yet. It's also unknown when it will become possible.
+This is an experimental emulator for PS4 (PlayStation 4) written in C++ for Linux.
+It's NOT possible to run any games yet. It's also unknown when it will become possible. The emulator may support the PlayStation 5 in the future due to its extremely similar hardware and software, similar to how Dolphin decided to support Wii.
 
 ## Contributing
 
