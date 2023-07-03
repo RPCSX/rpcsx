@@ -4,6 +4,7 @@
 #include <string_view>
 #include <vector>
 #include <cstdarg>
+#include <cstdint>
 
 static void append_hex(std::string &out, std::uintmax_t value) {
   std::ostringstream buf;
