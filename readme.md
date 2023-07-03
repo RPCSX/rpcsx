@@ -12,3 +12,8 @@ If you want to contribute as a developer, please contact us in the Discord.
 ## Building
 
 Under construction.
+
+## License
+
+RPCSX is licensed under GPLv2 license except directories containing their own LICENSE file, or files containing their own license.
+Thus, orbis-kernel is licensed under the MIT license.
