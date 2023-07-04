@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
 struct DmemDevice : public IoDevice {
@@ -26,7 +27,7 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
   }
 
 
-  // 0x8010880a 
+  // 0x8010880a
   if (request == 0x8010880a) { // write data? used on initilization
     struct Args {
       std::uint64_t address;
@@ -50,7 +51,7 @@ static std::int32_t dipsw_device_open(IoDevice *device,
                                       orbis::Ref<IoDeviceInstance> *instance,
                                       const char *path, std::uint32_t flags,
                                       std::uint32_t mode) {
-  auto *newInstance = new DmemInstance();
+  auto *newInstance = orbis::knew<DmemInstance>();
   newInstance->ioctl = dipsw_instance_ioctl;
   io_device_instance_init(device, newInstance);
   *instance = newInstance;
@@ -58,7 +59,7 @@ static std::int32_t dipsw_device_open(IoDevice *device,
 }
 
 IoDevice *createDipswCharacterDevice() {
-  auto *newDevice = new DmemDevice();
+  auto *newDevice = orbis::knew<DmemDevice>();
   newDevice->open = dipsw_device_open;
   return newDevice;
 }

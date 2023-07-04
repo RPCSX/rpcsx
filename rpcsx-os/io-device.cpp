@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include <fcntl.h>
 #include <string>
 #include <unistd.h>
@@ -108,7 +109,7 @@ static std::int32_t host_io_open(IoDevice *device, orbis::Ref<IoDeviceInstance> 
     return 1; // TODO: convert errno
   }
 
-  auto newInstance = new HostIoDeviceInstance();
+  auto newInstance = orbis::knew<HostIoDeviceInstance>();
 
   newInstance->hostFd = hostFd;
 
@@ -124,7 +125,7 @@ static std::int32_t host_io_open(IoDevice *device, orbis::Ref<IoDeviceInstance> 
 }
 
 IoDevice *createHostIoDevice(const char *hostPath) {
-  auto result = new HostIoDevice();
+  auto result = orbis::knew<HostIoDevice>();
   result->open = host_io_open;
   result->hostPath = hostPath;
   return result;

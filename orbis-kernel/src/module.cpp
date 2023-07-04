@@ -2,7 +2,6 @@
 #include "thread.hpp"
 #include <utility>
 
-#include "module/Module.hpp"
 #include "thread/Process.hpp"
 #include <string_view>
 

@@ -3,6 +3,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE on)
 add_library(obj.orbis-kernel OBJECT
   src/module.cpp
   src/sysvec.cpp
+  src/KernelContext.cpp
   src/sys/sys_acct.cpp
   src/sys/sys_audit.cpp
   src/sys/sys_capability.cpp

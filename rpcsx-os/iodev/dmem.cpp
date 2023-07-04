@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include <cinttypes>
 #include <cstdio>
 #include "vm.hpp"
@@ -105,7 +106,7 @@ static std::int32_t dmem_device_open(IoDevice *device,
                                      orbis::Ref<IoDeviceInstance> *instance,
                                      const char *path, std::uint32_t flags,
                                      std::uint32_t mode) {
-  auto *newInstance = new DmemInstance{};
+  auto *newInstance = orbis::knew<DmemInstance>();
   newInstance->ioctl = dmem_instance_ioctl;
   newInstance->mmap = dmem_instance_mmap;
 
@@ -115,7 +116,7 @@ static std::int32_t dmem_device_open(IoDevice *device,
 }
 
 IoDevice *createDmemCharacterDevice(int index) {
-  auto *newDevice = new DmemDevice();
+  auto *newDevice = orbis::knew<DmemDevice>();
   newDevice->open = dmem_device_open;
   newDevice->index = index;
   newDevice->nextOffset = 0;

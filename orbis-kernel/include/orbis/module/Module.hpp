@@ -4,6 +4,7 @@
 #include "ModuleSegment.hpp"
 
 #include "../utils/Rc.hpp"
+#include "../KernelAllocator.hpp"
 
 #include "orbis-config.hpp"
 #include <cstddef>
@@ -65,7 +66,7 @@ struct Relocation {
   std::int64_t addend;
 };
 
-struct Module {
+struct Module final {
   Process *proc{};
   std::string vfsPath;
   char moduleName[256]{};
@@ -108,16 +109,17 @@ struct Module {
 
   bool isTlsDone = false;
 
-  std::vector<Symbol> symbols;
-  std::vector<Relocation> pltRelocations;
-  std::vector<Relocation> nonPltRelocations;
-  std::vector<ModuleNeeded> neededModules;
-  std::vector<ModuleNeeded> neededLibraries;
-  std::vector<utils::Ref<Module>> importedModules;
-  std::vector<utils::Ref<Module>> namespaceModules;
-  std::vector<std::string> needed;
+  utils::kvector<Symbol> symbols;
+  utils::kvector<Relocation> pltRelocations;
+  utils::kvector<Relocation> nonPltRelocations;
+  utils::kvector<ModuleNeeded> neededModules;
+  utils::kvector<ModuleNeeded> neededLibraries;
+  utils::kvector<utils::Ref<Module>> importedModules;
+  utils::kvector<utils::Ref<Module>> namespaceModules;
+  utils::kvector<std::string> needed;
 
   std::atomic<unsigned> references{0};
+  unsigned _total_size = 0;
 
   void incRef() {
     if (references.fetch_add(1, std::memory_order::relaxed) > 512) {

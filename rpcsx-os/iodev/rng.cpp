@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include "vm.hpp"
 #include <cinttypes>
 #include <cstdio>
@@ -23,7 +24,7 @@ static std::int32_t rng_device_open(IoDevice *device,
                                     orbis::Ref<IoDeviceInstance> *instance,
                                     const char *path, std::uint32_t flags,
                                     std::uint32_t mode) {
-  auto *newInstance = new RngInstance{};
+  auto *newInstance = orbis::knew<RngInstance>();
   newInstance->ioctl = rng_instance_ioctl;
   newInstance->mmap = rng_instance_mmap;
 
@@ -33,7 +34,7 @@ static std::int32_t rng_device_open(IoDevice *device,
 }
 
 IoDevice *createRngCharacterDevice() {
-  auto *newDevice = new RngDevice{};
+  auto *newDevice = orbis::knew<RngDevice>();
   newDevice->open = rng_device_open;
   return newDevice;
 }

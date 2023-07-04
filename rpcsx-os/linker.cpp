@@ -1,6 +1,7 @@
 #include "linker.hpp"
 #include "align.hpp"
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include "orbis/module/Module.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
@@ -280,7 +281,7 @@ void rx::linker::override(std::string originalModuleName,
 
 Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
                                           orbis::Process *process) {
-  Ref<orbis::Module> result{new orbis::Module{}};
+  Ref<orbis::Module> result{orbis::knew<orbis::Module>()};
 
   Elf64_Ehdr header;
   std::memcpy(&header, image.data(), sizeof(Elf64_Ehdr));
@@ -842,7 +843,7 @@ Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
 }
 
 static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
-  auto result = orbis::create<orbis::Module>();
+  auto result = orbis::knew<orbis::Module>();
 
   std::strncpy(result->soName, "libSceFreeTypeFull.prx",
                sizeof(result->soName) - 1);
