@@ -4,12 +4,12 @@
 #include "types.hpp"
 #include "ThreadState.hpp"
 
-#include <mutex>
+#include "../utils/SharedMutex.hpp"
 
 namespace orbis {
 struct Process;
 struct Thread {
-  std::mutex lock;
+  shared_mutex mtx;
   Process *tproc = nullptr;
   uint64_t retval[2]{};
   void *context{};
