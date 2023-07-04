@@ -1,3 +1,35 @@
+#include <filesystem>
+#if defined(LINUX)
+#include <linux/limits.h>
+#elif defined(MACOS)
+#include <limits.h>
+#endif
+#include <fcntl.h>
+#include <libunwind.h>
+#include <pthread.h>
+#include <unistd.h>
+
+#if defined(LINUX)
+#include <asm/prctl.h>
+#include <link.h>
+#include <sys/prctl.h>
+#endif
+
+#if defined(MACOS)
+#include <mach-o/dyld.h>
+#include <dlfcn.h>
+#include <sys/sysctl.h>
+#include <sys/param.h>
+#include <sys/user.h>
+#include <mach/mach_init.h>
+#include <mach/thread_act.h>
+#include <mach/mach_traps.h>
+#endif
+
+#include <csignal>
+#include <cstddef>
+#include <cstdint>
+
 #include "align.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "bridge.hpp"
@@ -7,9 +39,6 @@
 #include "ops.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
-
-#include <filesystem>
-#include <limits.h>
 #include <orbis/KernelContext.hpp>
 #include <orbis/module.hpp>
 #include <orbis/module/Module.hpp>
@@ -19,23 +48,6 @@
 #include <orbis/thread/ProcessOps.hpp>
 #include <orbis/thread/Thread.hpp>
 
-#include <fcntl.h>
-#include <libunwind.h>
-#include <mach-o/dyld.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <dlfcn.h>
-
-#include <sys/sysctl.h>
-#include <sys/param.h>
-#include <sys/user.h>
-#include <mach/mach_init.h>
-#include <mach/thread_act.h>
-#include <mach/mach_traps.h>
-
-#include <csignal>
-#include <cstddef>
-#include <cstdint>
 
 static int g_gpuPid;
 
