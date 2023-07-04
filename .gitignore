@@ -1,2 +1,6 @@
 build/
 compile_commands.json
+CMakeFiles
+*.cmake
+.vscode
+Makefile
