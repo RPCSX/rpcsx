@@ -27,7 +27,8 @@ add_executable(rpcsx-os
   io-device.cpp
   vfs.cpp
 )
-target_include_directories(rpcsx-os PUBLIC .)
+
+target_include_directories(rpcsx-os PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(rpcsx-os PUBLIC orbis::kernel amdgpu::bridge libcrypto unwind unwind-x86_64)
 target_link_options(rpcsx-os PUBLIC "LINKER:-Ttext-segment,0x0000010000000000")
 target_compile_options(rpcsx-os PRIVATE "-march=native")
