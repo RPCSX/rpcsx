@@ -28,32 +28,26 @@ using sint = int32_t;
 using slong = int64_t;
 using ulong = uint64_t;
 
-template <typename T>
-using ptr = T *;
-template <typename T>
-using cptr = T *const;
+template <typename T> using ptr = T *;
+template <typename T> using cptr = T *const;
 
 using caddr_t = ptr<char>;
 
 inline ErrorCode uread(void *kernelAddress, ptr<const void> userAddress,
-                        size_t size)
-{
+                  size_t size) {
   std::memcpy(kernelAddress, userAddress, size);
   return {};
 }
 
 inline ErrorCode uwrite(ptr<void> userAddress, const void *kernelAddress,
-                        size_t size)
-{
+                  size_t size) {
   std::memcpy(userAddress, kernelAddress, size);
   return {};
 }
 
-inline ErrorCode ureadString(char *kernelAddress, size_t kernelSize, ptr<const char> userAddress)
-{
+inline ErrorCode ureadString(char *kernelAddress, size_t kernelSize, ptr<const char> userAddress) {
   std::strncpy(kernelAddress, userAddress, kernelSize);
-  if (kernelAddress[kernelSize - 1] != '\0')
-  {
+  if (kernelAddress[kernelSize - 1] != '\0') {
     kernelAddress[kernelSize - 1] = '\0';
     return ErrorCode::NAMETOOLONG;
   }
@@ -61,17 +55,13 @@ inline ErrorCode ureadString(char *kernelAddress, size_t kernelSize, ptr<const c
   return {};
 }
 
-template <typename T>
-T uread(ptr<T> pointer)
-{
+template <typename T> T uread(ptr<T> pointer) {
   T result;
   uread(&result, pointer, sizeof(T));
   return result;
 }
 
-template <typename T>
-void uwrite(ptr<T> pointer, T data)
-{
+template <typename T> void uwrite(ptr<T> pointer, T data) {
   uwrite(pointer, &data, sizeof(T));
 }
 
