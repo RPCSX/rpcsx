@@ -1,5 +1,6 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include <cinttypes>
 #include <cstddef>
 #include <cstdio>
@@ -245,7 +246,7 @@ static std::int32_t dce_device_open(IoDevice *device,
                                     orbis::Ref<IoDeviceInstance> *instance,
                                     const char *path, std::uint32_t flags,
                                     std::uint32_t mode) {
-  auto *newInstance = new DceInstance();
+  auto *newInstance = orbis::knew<DceInstance>();
   newInstance->ioctl = dce_instance_ioctl;
   newInstance->mmap = dce_instance_mmap;
   io_device_instance_init(device, newInstance);
@@ -254,7 +255,7 @@ static std::int32_t dce_device_open(IoDevice *device,
 }
 
 IoDevice *createDceCharacterDevice() {
-  auto *newDevice = new DceDevice();
+  auto *newDevice = orbis::knew<DceDevice>();
   newDevice->open = dce_device_open;
   return newDevice;
 }

@@ -1,97 +1,41 @@
 #pragma once
-#include "orbis/thread/Process.hpp"
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedMutex.hpp"
 
+#include "orbis/thread/types.hpp"
+#include "KernelAllocator.hpp"
 #include <algorithm>
-#include <mutex>
 #include <utility>
-#include <vector>
 
 namespace orbis {
-class KernelContext {
+struct Process;
+
+class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) KernelContext final {
 public:
-  struct EventListener {
-    virtual ~EventListener() = default;
-    virtual void onProcessCreated(Process *) = 0;
-    virtual void onProcessDeleted(pid_t pid) = 0;
-  };
+  KernelContext();
+  ~KernelContext();
 
-  ~KernelContext() {
-    while (m_processes != nullptr) {
-      deleteProcess(&m_processes->object);
-    }
-  }
+  Process *createProcess(pid_t pid);
+  void deleteProcess(Process *proc);
+  Process *findProcessById(pid_t pid) const;
 
-  void addEventListener(EventListener *listener) {
-    m_event_listeners.push_back(listener);
-  }
-
-  void removeEventListener(EventListener *listener) {
-    auto it =
-        std::find(m_event_listeners.begin(), m_event_listeners.end(), listener);
-
-    if (it != m_event_listeners.end()) {
-      m_event_listeners.erase(it);
-    }
-  }
-
-  Process *createProcess(pid_t pid) {
-    auto newProcess = new utils::LinkedNode<Process>();
-    newProcess->object.context = this;
-    newProcess->object.pid = pid;
-    newProcess->object.state = ProcessState::NEW;
-
-    {
-      std::lock_guard lock(m_proc_mtx);
-      if (m_processes != nullptr) {
-        m_processes->insertPrev(*newProcess);
-      }
-
-      m_processes = newProcess;
-    }
-
-    for (auto listener : m_event_listeners) {
-      listener->onProcessCreated(&newProcess->object);
-    }
-
-    return &newProcess->object;
-  }
-
-  void deleteProcess(Process *proc) {
-    auto procNode = reinterpret_cast<utils::LinkedNode<Process> *>(proc);
-    auto pid = proc->pid;
-
-    {
-      std::lock_guard lock(m_proc_mtx);
-      auto next = procNode->erase();
-
-      if (procNode == m_processes) {
-        m_processes = next;
-      }
-    }
-
-    delete procNode;
-
-    for (auto listener : m_event_listeners) {
-      listener->onProcessDeleted(pid);
-    }
-  }
-
-  Process *findProcessById(pid_t pid) const {
-    std::lock_guard lock(m_proc_mtx);
-    for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
-      if (proc->object.pid == pid) {
-        return &proc->object;
-      }
-    }
-
-    return nullptr;
-  }
+  static void *kalloc(std::size_t size,
+                      std::size_t align = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+  static void kfree(void *ptr, std::size_t size);
 
 private:
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;
-  std::vector<EventListener *> m_event_listeners;
+
+  struct node {
+    std::size_t size;
+    node *next;
+  };
+
+  mutable shared_mutex m_heap_mtx;
+  void *m_heap_next = this + 1;
+  node *m_free_list = nullptr;
 };
+
+extern KernelContext &g_context;
 } // namespace orbis

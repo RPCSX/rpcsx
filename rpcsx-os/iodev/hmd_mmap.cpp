@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include "vm.hpp"
 #include <cinttypes>
 #include <cstdio>
@@ -31,7 +32,7 @@ static std::int32_t hmd_mmap_device_open(IoDevice *device,
                                          orbis::Ref<IoDeviceInstance>  *instance,
                                          const char *path, std::uint32_t flags,
                                          std::uint32_t mode) {
-  auto *newInstance = new HmdMmapInstance{};
+  auto *newInstance = orbis::knew<HmdMmapInstance>();
   newInstance->ioctl = hmd_mmap_instance_ioctl;
   newInstance->mmap = hmd_mmap_instance_mmap;
 
@@ -41,7 +42,7 @@ static std::int32_t hmd_mmap_device_open(IoDevice *device,
 }
 
 IoDevice *createHmdMmapCharacterDevice() {
-  auto *newDevice = new HmdMmapDevice();
+  auto *newDevice = orbis::knew<HmdMmapDevice>();
   newDevice->open = hmd_mmap_device_open;
   return newDevice;
 }

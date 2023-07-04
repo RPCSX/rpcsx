@@ -521,15 +521,6 @@ static int ps4Exec(orbis::Process *mainProcess,
   return 0;
 }
 
-struct KernelEventLogger : public orbis::KernelContext::EventListener {
-  void onProcessCreated(orbis::Process *process) override {
-    std::printf("process %u was created\n", (unsigned)process->pid);
-  }
-  void onProcessDeleted(orbis::pid_t pid) override {
-    std::printf("process %u was deleted\n", (unsigned)pid);
-  }
-};
-
 static void usage(const char *argv0) {
   std::printf("%s [<options>...] <virtual path to elf> [args...]\n", argv0);
   std::printf("  options:\n");
@@ -653,9 +644,6 @@ int main(int argc, const char *argv[]) {
 
   setupSigHandlers();
   // rx::vm::printHostStats();
-  KernelEventLogger eventLogger;
-  orbis::KernelContext context;
-  context.addEventListener(&eventLogger);
 
   rx::vfs::initialize();
 
@@ -712,7 +700,7 @@ int main(int argc, const char *argv[]) {
   runRpsxGpu();
 
   // rx::vm::printHostStats();
-  auto initProcess = context.createProcess(10);
+  auto initProcess = orbis::g_context.createProcess(10);
   initProcess->sysent = &orbis::ps4_sysvec;
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
