@@ -1,6 +1,7 @@
 #pragma once
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedMutex.hpp"
+#include "evf.hpp"
 
 #include "orbis/thread/types.hpp"
 #include "KernelAllocator.hpp"
@@ -23,9 +24,23 @@ public:
                       std::size_t align = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
   static void kfree(void *ptr, std::size_t size);
 
+  std::pair<EventFlag *, bool> createEventFlag(std::string name, std::int32_t flags) {
+    auto [it, inserted] = m_event_flags.try_emplace(std::move(name), knew<EventFlag>(flags));
+    return { it->second.get(), inserted };
+  }
+
+  Ref<EventFlag> findEventFlag(std::string_view name) {
+    if (auto it = m_event_flags.find(name); it != m_event_flags.end()) {
+      return it->second;
+    }
+
+    return{};
+  }
+
 private:
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;
+  kmap<std::string, Ref<EventFlag>> m_event_flags;
 
   struct node {
     std::size_t size;

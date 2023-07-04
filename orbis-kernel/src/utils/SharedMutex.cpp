@@ -45,7 +45,8 @@ void shared_mutex::impl_lock_shared(unsigned val) {
   }
 
   if ((old % c_sig) + c_one >= c_sig)
-    std::abort; // "shared_mutex overflow"
+    std::abort(); // "shared_mutex overflow"
+
   impl_wait();
   lock_downgrade();
 }

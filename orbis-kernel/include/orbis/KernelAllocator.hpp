@@ -44,7 +44,7 @@ using kunmap =
 template <typename T, typename... Args> T *knew(Args &&...args) {
   auto loc = static_cast<T *>(utils::kalloc(sizeof(T), alignof(T)));
   auto res = std::construct_at(loc, std::forward<Args>(args)...);
-  if constexpr (WithRc<T>)
+  if constexpr (requires(T *t) { t->_total_size = sizeof(T); })
     res->_total_size = sizeof(T);
   return res;
 }

@@ -1,11 +1,13 @@
 #pragma once
-#include "ProcessState.hpp"
 #include "orbis-config.hpp"
+
+#include "../evf.hpp"
+#include "../thread/Thread.hpp"
+#include "../thread/types.hpp"
+#include "ProcessState.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
 #include "orbis/utils/SharedMutex.hpp"
-#include "../thread/types.hpp"
-#include "../thread/Thread.hpp"
 
 #include <mutex>
 
@@ -22,8 +24,10 @@ struct Process {
   ProcessState state = ProcessState::NEW;
   Process *parentProcess = nullptr;
   shared_mutex mtx;
-  void (*onSysEnter)(Thread *thread, int id, uint64_t *args, int argsCount) = nullptr;
-  void (*onSysExit)(Thread *thread, int id, uint64_t *args, int argsCount, SysResult result) = nullptr;
+  void (*onSysEnter)(Thread *thread, int id, uint64_t *args,
+                     int argsCount) = nullptr;
+  void (*onSysExit)(Thread *thread, int id, uint64_t *args, int argsCount,
+                    SysResult result) = nullptr;
   ptr<void> processParam = nullptr;
   uint64_t processParamSize = 0;
   const ProcessOps *ops = nullptr;
@@ -31,6 +35,7 @@ struct Process {
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
 
+  utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
   utils::RcIdMap<Module, ModuleHandle> modulesMap;
   utils::OwningIdMap<Thread, lwpid_t> threadsMap;
   utils::RcIdMap<utils::RcBase, sint> fileDescriptors;

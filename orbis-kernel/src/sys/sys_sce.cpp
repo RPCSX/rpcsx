@@ -1,7 +1,11 @@
+#include "KernelContext.hpp"
 #include "error.hpp"
+#include "evf.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
+#include <chrono>
 
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
@@ -30,8 +34,8 @@ orbis::SysResult orbis::sys_mtypeprotect(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
-                                        uint32_t id, ptr<void> result, ptr<void> value,
-                                        uint64_t type) {
+                                        uint32_t id, ptr<void> result,
+                                        ptr<void> value, uint64_t type) {
   if (op == 25) {
     struct nonsys_int {
       union {
@@ -49,20 +53,17 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
 
     auto int_value = reinterpret_cast<nonsys_int *>(value);
 
-    std::printf("    encoded_id = %lx\n", int_value->encoded_id);
-    std::printf("    data[0] = %02x\n", int_value->encoded_id_parts.data[0]);
-    std::printf("    data[1] = %02x\n", int_value->encoded_id_parts.data[1]);
-    std::printf("    data[2] = %02x\n", int_value->encoded_id_parts.data[2]);
-    std::printf("    data[3] = %02x\n", int_value->encoded_id_parts.data[3]);
-    std::printf("    table = %u\n", int_value->encoded_id_parts.table);
-    std::printf("    index = %u\n", int_value->encoded_id_parts.index);
-    std::printf("    checksum = %x\n", int_value->encoded_id_parts.checksum);
-    std::printf("    unk = %x\n", int_value->unk);
-    std::printf("    value = %x\n", int_value->value);
+    ORBIS_LOG_TODO(
+        __FUNCTION__, int_value->encoded_id,
+        int_value->encoded_id_parts.data[0],
+        int_value->encoded_id_parts.data[1],
+        int_value->encoded_id_parts.data[2],
+        int_value->encoded_id_parts.data[3], int_value->encoded_id_parts.table,
+        int_value->encoded_id_parts.index, int_value->encoded_id_parts.checksum,
+        int_value->unk, int_value->value);
   }
 
-  return{};
-
+  return {};
 }
 orbis::SysResult orbis::sys_jitshm_create(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -80,32 +81,159 @@ orbis::SysResult orbis::sys_dl_notify_event(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
-                                       sint flag, ptr<struct evFlag> evf) {
-  return ErrorCode::NOSYS;
+                                       sint attrs, ptr<struct evFlag> evf) {
+  if (name == nullptr || evf != nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  if (attrs &
+      ~(kEvfAttrSingle | kEvfAttrMulti | kEvfAttrThPrio | kEvfAttrThFifo)) {
+    return ErrorCode::INVAL;
+  }
+
+  switch (attrs & (kEvfAttrSingle | kEvfAttrMulti)) {
+  case 0:
+  case kEvfAttrSingle | kEvfAttrMulti:
+    return ErrorCode::INVAL;
+
+  default:
+    break;
+  }
+
+  switch (attrs & (kEvfAttrThPrio | kEvfAttrThFifo)) {
+  case 0:
+  case kEvfAttrThPrio | kEvfAttrThFifo:
+    return ErrorCode::INVAL;
+  }
+
+  char _name[32];
+  if (auto result = ureadString(_name, sizeof(_name), name);
+      result != ErrorCode{}) {
+    return result;
+  }
+
+  auto eventFlag = knew<EventFlag>(attrs);
+  thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
+  return {};
 }
-orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint fd) {
+orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
+  ORBIS_LOG_TODO(__FUNCTION__, id);
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
-  return ErrorCode::NOSYS;
+  char _name[32];
+  if (auto result = ureadString(_name, sizeof(_name), name);
+      result != ErrorCode{}) {
+    return result;
+  }
+
+  auto eventFlag = thread->tproc->context->findEventFlag(name);
+
+  if (eventFlag == nullptr) {
+    return ErrorCode::SRCH;
+  }
+
+  std::strcpy(eventFlag->name, _name);
+  thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
+  return {};
 }
-orbis::SysResult orbis::sys_evf_close(Thread *thread, sint fd) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_evf_close(Thread *thread, sint id) {
+  if (!thread->tproc->evfMap.remove(id)) {
+    return ErrorCode::BADF;
+  }
+
+  return {};
 }
-orbis::SysResult orbis::sys_evf_wait(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
+                                     uint64_t patternSet, uint64_t mode,
+                                     ptr<uint64_t> pPatternSet,
+                                     ptr<uint> pTimeout) {
+  if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
+      (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
+               kEvfWaitModeClearPat)) != 0 ||
+      patternSet == 0) {
+    return ErrorCode::INVAL;
+  }
+
+  auto evf = thread->tproc->evfMap.get(id);
+
+  if (evf == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  std::uint32_t resultTimeout{};
+  std::uint64_t resultPattern{};
+  auto result = evf->wait(thread, mode, patternSet,
+                          pPatternSet != nullptr ? &resultPattern : nullptr,
+                          pTimeout != nullptr ? &resultTimeout : nullptr);
+
+  if (pPatternSet != nullptr) {
+    uwrite(pPatternSet, (uint64_t)resultPattern);
+  }
+
+  if (pTimeout != nullptr) {
+    uwrite(pTimeout, (uint32_t)resultTimeout);
+  }
+  return result;
 }
-orbis::SysResult orbis::sys_evf_trywait(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+
+orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
+                                        uint64_t patternSet, uint64_t mode,
+                                        ptr<uint64_t> pPatternSet) {
+  if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
+      (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
+               kEvfWaitModeClearPat)) != 0 ||
+      patternSet == 0) {
+    return ErrorCode::INVAL;
+  }
+
+  auto evf = thread->tproc->evfMap.get(id);
+
+  if (evf == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  std::uint64_t resultPattern{};
+  auto result = evf->tryWait(thread, mode, patternSet, pPatternSet != nullptr ? &resultPattern : nullptr);
+
+  if (pPatternSet != nullptr) {
+    uwrite(pPatternSet, (uint64_t)resultPattern);
+  }
+
+  return result;
 }
-orbis::SysResult orbis::sys_evf_set(Thread *thread, sint fd) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
+  auto evf = thread->tproc->evfMap.get(id);
+
+  if (evf == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  evf->set(value);
+  return{};
 }
-orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint fd) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
+  auto evf = thread->tproc->evfMap.get(id);
+
+  if (evf == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  evf->clear(value);
+  return{};
 }
-orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint fd) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value, ptr<sint> pNumWaitThreads) {
+  auto evf = thread->tproc->evfMap.get(id);
+
+  if (evf == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto numWaitThreads = evf->cancel(value);
+  if (pNumWaitThreads != nullptr) {
+    *pNumWaitThreads = numWaitThreads;
+  }
+  return{};
 }
 orbis::SysResult orbis::sys_query_memory_protection(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -137,13 +265,15 @@ orbis::SysResult orbis::sys_osem_post(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_osem_cancel(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_namedobj_create(Thread *thread, ptr<const char> name, ptr<void> object, uint64_t type) {
-  std::printf("sys_namedobj_create(name = %s, object = %p, type = 0x%lx) -> %d\n", name, object, type, 1);
+orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
+                                            ptr<const char> name,
+                                            ptr<void> object, uint64_t type) {
+  ORBIS_LOG_TODO(__FUNCTION__, name, object, type);
   thread->retval[0] = 1;
   return {};
 }
 orbis::SysResult orbis::sys_namedobj_delete(Thread *thread /* TODO */) {
-  std::printf("TODO: sys_namedobj_delete\n");
+  ORBIS_LOG_TODO(__FUNCTION__);
   return {};
 }
 orbis::SysResult orbis::sys_set_vm_container(Thread *thread /* TODO */) {
@@ -232,13 +362,14 @@ orbis::SysResult orbis::sys_obs_eport_close(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_is_in_sandbox(Thread *thread /* TODO */) {
   std::printf("sys_is_in_sandbox() -> 0\n");
-  return{};
+  return {};
 }
 orbis::SysResult orbis::sys_dmem_container(Thread *thread) {
   thread->retval[0] = 0; // returns default direct memory device
   return {};
 }
-orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid, ptr<void> info) {
+orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
+                                         ptr<void> info) {
   struct authinfo {
     uint64_t a;
     uint64_t b;
@@ -249,8 +380,10 @@ orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid, ptr<void> in
 
   return {};
 }
-orbis::SysResult orbis::sys_mname(Thread *thread, ptr<void> address, uint64_t length, ptr<const char> name) {
-  std::printf("sys_mname(%p, %p, '%s')\n", address, (char *)address + length, name);
+orbis::SysResult orbis::sys_mname(Thread *thread, ptr<void> address,
+                                  uint64_t length, ptr<const char> name) {
+  std::printf("sys_mname(%p, %p, '%s')\n", address, (char *)address + length,
+              name);
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_dlopen(Thread *thread /* TODO */) {
@@ -280,7 +413,7 @@ orbis::SysResult orbis::sys_dynlib_get_list(Thread *thread,
 
     pArray[actualNum++] = id;
   }
-  *pActualNum = actualNum;
+  uwrite(pActualNum, actualNum);
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_get_info(Thread *thread,
@@ -307,25 +440,27 @@ orbis::SysResult orbis::sys_dynlib_get_info(Thread *thread,
   uwrite(pInfo, result);
   return {};
 }
-orbis::SysResult
-orbis::sys_dynlib_load_prx(Thread *thread, ptr<const char> name, uint64_t arg1, ptr<ModuleHandle> pHandle, uint64_t arg3) {
+orbis::SysResult orbis::sys_dynlib_load_prx(Thread *thread,
+                                            ptr<const char> name, uint64_t arg1,
+                                            ptr<ModuleHandle> pHandle,
+                                            uint64_t arg3) {
   if (auto dynlib_load_prx = thread->tproc->ops->dynlib_load_prx) {
     return dynlib_load_prx(thread, name, arg1, pHandle, arg3);
   }
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_dynlib_unload_prx(Thread *thread, SceKernelModule handle) {
+orbis::SysResult orbis::sys_dynlib_unload_prx(Thread *thread,
+                                              SceKernelModule handle) {
   if (auto dynlib_unload_prx = thread->tproc->ops->dynlib_unload_prx) {
     return dynlib_unload_prx(thread, handle);
   }
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_dynlib_do_copy_relocations(Thread *thread) {
-  if (auto dynlib_do_copy_relocations = thread->tproc->ops->dynlib_do_copy_relocations) {
+orbis::SysResult orbis::sys_dynlib_do_copy_relocations(Thread *thread) {
+  if (auto dynlib_do_copy_relocations =
+          thread->tproc->ops->dynlib_do_copy_relocations) {
     return dynlib_do_copy_relocations(thread);
   }
 
@@ -334,8 +469,6 @@ orbis::sys_dynlib_do_copy_relocations(Thread *thread) {
 orbis::SysResult orbis::sys_dynlib_prepare_dlclose(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-
-// template<typename T> using le = T;
 
 orbis::SysResult orbis::sys_dynlib_get_proc_param(Thread *thread,
                                                   ptr<ptr<void>> procParam,
@@ -385,24 +518,30 @@ struct mdbg_property {
   char name[32];
 };
 
-orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> arg0, ptr<void> arg1) {
-  std::printf("sys_mdbg_service(op = %d, arg0 = %p, arg1 = %p)\n", op, arg0, arg1);
+orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
+                                         ptr<void> arg0, ptr<void> arg1) {
+  std::printf("sys_mdbg_service(op = %d, arg0 = %p, arg1 = %p)\n", op, arg0,
+              arg1);
 
   switch (op) {
   case 1: {
-    auto *prop = (mdbg_property *)arg0;
+    auto prop = uread((ptr<mdbg_property>)arg0);
     std::printf(
         "sys_mdbg_service set property (name='%s', address=0x%lx, size=%lu)\n",
-        prop->name, prop->addr_ptr, prop->areaSize);
+        prop.name, prop.addr_ptr, prop.areaSize);
+    // FIXME: investigate crash
+    // ORBIS_LOG_WARNING(__FUNCTION__, prop.name, prop.addr_ptr, prop.areaSize);
     break;
   }
 
   case 3: {
-    std::printf("sys_mdbg_service: ERROR CODE: %X\n", (unsigned)reinterpret_cast<uint64_t>(arg0));
+    auto errorCode = (unsigned)(uint64_t)(arg0);
+    ORBIS_LOG_ERROR("sys_mdbg_service: ERROR CODE", errorCode);
     break;
   }
 
   case 7: {
+    // TODO: read string from userspace
     std::printf("sys_mdbg_service: %s\n", (char *)arg0);
     break;
   }
@@ -411,7 +550,7 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> 
     break;
   }
 
-  return{};
+  return {};
 }
 orbis::SysResult orbis::sys_randomized_path(Thread *thread /* TODO */) {
   std::printf("TODO: sys_randomized_path()\n");
@@ -488,13 +627,10 @@ orbis::SysResult orbis::sys_get_proc_type_info(Thread *thread,
     uint64_t size = sizeof(dargs);
     uint32_t ptype;
     uint32_t pflags;
-  } args = {
-    .ptype = 1,
-    .pflags = 0
-  };
+  } args = {.ptype = 1, .pflags = 0};
 
   uwrite((ptr<dargs>)destProcessInfo, args);
-  return{};
+  return {};
 }
 orbis::SysResult orbis::sys_get_resident_count(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
@@ -526,18 +662,20 @@ orbis::SysResult orbis::sys_suspend_system(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 
-enum ImpiOpcode {
-  kIpmiCreateClient = 2
-};
+enum ImpiOpcode { kIpmiCreateClient = 2 };
 
 struct IpmiCreateClientParams {
   orbis::ptr<void> arg0;
   orbis::ptr<char> name;
   orbis::ptr<void> arg2;
 };
+
 static_assert(sizeof(IpmiCreateClientParams) == 0x18);
 
-orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint64_t id, uint64_t arg2, ptr<uint64_t> result, ptr<uint64_t> params, uint64_t paramsSize, uint64_t arg6) {
+orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint64_t id,
+                                         uint64_t arg2, ptr<uint64_t> result,
+                                         ptr<uint64_t> params,
+                                         uint64_t paramsSize, uint64_t arg6) {
   std::printf("TODO: sys_ipmimgr_call(id = %lld)\n", (unsigned long long)id);
 
   if (id == kIpmiCreateClient) {
@@ -548,12 +686,10 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint64_t id, uint64_t a
     auto createParams = (ptr<IpmiCreateClientParams>)params;
 
     std::printf("ipmi create client(%p, '%s', %p)\n",
-      (void *)createParams->arg0,
-      (char *)createParams->name,
-      (void *)createParams->arg2
-    );
+                (void *)createParams->arg0, (char *)createParams->name,
+                (void *)createParams->arg2);
 
-    return{};
+    return {};
   }
 
   if (id == 1131 || id == 1024 || id == 800) {
@@ -651,7 +787,10 @@ orbis::sys_get_sdk_compiled_version(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_app_state_change(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_dynlib_get_obj_member(Thread *thread, SceKernelModule handle, uint64_t index, ptr<ptr<void>> addrp) {
+orbis::SysResult orbis::sys_dynlib_get_obj_member(Thread *thread,
+                                                  SceKernelModule handle,
+                                                  uint64_t index,
+                                                  ptr<ptr<void>> addrp) {
   if (auto dynlib_get_obj_member = thread->tproc->ops->dynlib_get_obj_member) {
     return dynlib_get_obj_member(thread, handle, index, addrp);
   }
