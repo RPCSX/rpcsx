@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
 struct Hmd3daDevice : public IoDevice {
@@ -19,7 +20,7 @@ static std::int32_t hmd_3da_device_open(IoDevice *device,
                                         orbis::Ref<IoDeviceInstance> *instance,
                                         const char *path, std::uint32_t flags,
                                         std::uint32_t mode) {
-  auto *newInstance = new Hmd3daInstance{};
+  auto *newInstance = orbis::knew<Hmd3daInstance>();
   newInstance->ioctl = hmd_3da_instance_ioctl;
 
   io_device_instance_init(device, newInstance);
@@ -28,7 +29,7 @@ static std::int32_t hmd_3da_device_open(IoDevice *device,
 }
 
 IoDevice *createHmd3daCharacterDevice() {
-  auto *newDevice = new Hmd3daDevice();
+  auto *newDevice = orbis::knew<Hmd3daDevice>();
   newDevice->open = hmd_3da_device_open;
   return newDevice;
 }

@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 
 struct NullDevice : public IoDevice {};
 
@@ -13,7 +14,7 @@ static std::int64_t null_instance_write(IoDeviceInstance *instance,
 static std::int32_t null_device_open(IoDevice *device, orbis::Ref<IoDeviceInstance>  *instance,
                               const char *path, std::uint32_t flags,
                               std::uint32_t mode) {
-  auto *newInstance = new NullInstance{};
+  auto *newInstance = orbis::knew<NullInstance>();
   newInstance->write = null_instance_write;
 
   io_device_instance_init(device, newInstance);
@@ -22,7 +23,7 @@ static std::int32_t null_device_open(IoDevice *device, orbis::Ref<IoDeviceInstan
 }
 
 IoDevice *createNullCharacterDevice() {
-  auto *newDevice = new NullDevice();
+  auto *newDevice = orbis::knew<NullDevice>();
   newDevice->open = null_device_open;
   return newDevice;
 }
