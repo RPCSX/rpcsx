@@ -1,8 +1,9 @@
-#include "CfBuilder.hpp"
-#include "Instruction.hpp"
 #include <cassert>
-#include <amdgpu/RemoteMemory.hpp>
 #include <unordered_set>
+
+#include "shader/CfBuilder.hpp"
+#include "shader/Instruction.hpp"
+#include <amdgpu/RemoteMemory.hpp>
 
 using namespace amdgpu;
 using namespace amdgpu::shader;
@@ -24,7 +25,7 @@ struct CfgBuilder {
       instHex += size;
 
       if (instruction.instClass == InstructionClass::Sop1) {
-        Sop1 sop1{instHex - size};
+        Sop1 sop1{ instHex - size };
 
         if (sop1.op == Sop1::Op::S_SETPC_B64 ||
             sop1.op == Sop1::Op::S_SWAPPC_B64) {
@@ -36,7 +37,7 @@ struct CfgBuilder {
       }
 
       if (instruction.instClass == InstructionClass::Sopp) {
-        Sopp sopp{instHex - size};
+        Sopp sopp{ instHex - size };
 
         if (sopp.op == Sopp::Op::S_ENDPGM) {
           bb->createReturn();
@@ -143,7 +144,7 @@ struct CfgBuilder {
         auto succ1Address = successors[1];
 
         branches.push_back(
-            {address + size - 4, 2, {successors[0], successors[1]}});
+          { address + size - 4, 2, {successors[0], successors[1]} });
 
         if (processed.insert(successors[0]).second) {
           workList.push_back(successors[0]);
@@ -152,7 +153,7 @@ struct CfgBuilder {
           workList.push_back(successors[1]);
         }
       } else if (successorsCount == 1) {
-        branches.push_back({address + size - 4, 1, {successors[0]}});
+        branches.push_back({ address + size - 4, 1, {successors[0]} });
 
         if (processed.insert(successors[0]).second) {
           workList.push_back(successors[0]);
@@ -165,8 +166,8 @@ struct CfgBuilder {
       assert(bb);
       if (branch.count == 2) {
         bb->createConditionalBranch(
-            context->getBasicBlockAt(branch.targets[0]),
-            context->getBasicBlockAt(branch.targets[1]));
+          context->getBasicBlockAt(branch.targets[0]),
+          context->getBasicBlockAt(branch.targets[1]));
       } else {
         bb->createBranch(context->getBasicBlockAt(branch.targets[0]));
       }
@@ -177,8 +178,8 @@ struct CfgBuilder {
 };
 
 cf::BasicBlock *amdgpu::shader::buildCf(cf::Context &ctxt,
-                                           RemoteMemory memory,
-                                           std::uint64_t entryPoint) {
+                                        RemoteMemory memory,
+                                        std::uint64_t entryPoint) {
   CfgBuilder builder;
   builder.context = &ctxt;
   builder.memory = memory;

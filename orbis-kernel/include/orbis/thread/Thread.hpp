@@ -1,8 +1,8 @@
 #pragma once
 
-#include "orbis-config.hpp"
-#include "types.hpp"
-#include "ThreadState.hpp"
+#include "orbis-kernel-config/orbis-config.hpp"
+#include "thread/types.hpp"
+#include "thread/ThreadState.hpp"
 
 #include "../utils/SharedMutex.hpp"
 

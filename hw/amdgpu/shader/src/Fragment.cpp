@@ -1,13 +1,13 @@
-#include "Fragment.hpp"
-#include "ConverterContext.hpp"
-#include "RegisterId.hpp"
-#include "RegisterState.hpp"
+#include <bit>
 
 #include <spirv/GLSL.std.450.h>
+
+#include "shader/Fragment.hpp"
+#include "shader/ConverterContext.hpp"
+#include "shader/RegisterId.hpp"
+#include "shader/RegisterState.hpp"
 #include <spirv/spirv-instruction.hpp>
 #include <util/unreachable.hpp>
-
-#include <bit>
 
 using namespace amdgpu::shader;
 
@@ -154,11 +154,11 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
   auto loadType = pickBufferType(surfaceFormat, channelType);
 
   auto uniform =
-      fragment.context->getOrCreateStorageBuffer(vBufferData, loadType);
+    fragment.context->getOrCreateStorageBuffer(vBufferData, loadType);
   uniform->accessOp |= AccessOp::Load;
 
   auto storageBufferPointerType = fragment.context->getPointerType(
-      spv::StorageClass::StorageBuffer, loadType);
+    spv::StorageClass::StorageBuffer, loadType);
 
   auto &builder = fragment.builder;
 
@@ -190,16 +190,16 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
       if (channel != 0) {
         channelOffset =
-            builder.createIAdd(fragment.context->getUInt32Type(), channelOffset,
-                               fragment.context->getUInt32(channel));
+          builder.createIAdd(fragment.context->getUInt32Type(), channelOffset,
+                             fragment.context->getUInt32(channel));
       }
 
       auto uniformPointerValue = fragment.builder.createAccessChain(
-          storageBufferPointerType, uniform->variable,
-          {{fragment.context->getUInt32(0), channelOffset}});
+        storageBufferPointerType, uniform->variable,
+        { {fragment.context->getUInt32(0), channelOffset} });
 
       auto channelValue = fragment.builder.createLoad(
-          fragment.context->getType(loadType), uniformPointerValue);
+        fragment.context->getType(loadType), uniformPointerValue);
       switch (channelType) {
       case kTextureChannelTypeFloat:
       case kTextureChannelTypeSInt:
@@ -209,20 +209,20 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
       case kTextureChannelTypeUNorm: {
         auto maxValue =
-            (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
+          (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
 
         auto uintChannelValue = spirv::cast<spirv::UIntValue>(channelValue);
 
         if (loadType != TypeId::UInt32) {
           uintChannelValue = builder.createUConvert(
-              fragment.context->getUInt32Type(), uintChannelValue);
+            fragment.context->getUInt32Type(), uintChannelValue);
         }
 
         auto floatChannelValue = builder.createConvertUToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+          fragment.context->getFloat32Type(), uintChannelValue);
         floatChannelValue = builder.createFDiv(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(maxValue));
+          fragment.context->getFloat32Type(), floatChannelValue,
+          fragment.context->getFloat32(maxValue));
         result[channel] = floatChannelValue;
         resultType = fragment.context->getFloat32Type();
         break;
@@ -230,29 +230,29 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
       case kTextureChannelTypeSNorm: {
         auto maxValue =
-            (static_cast<std::uint64_t>(1) << (channelSize * 8 - 1)) - 1;
+          (static_cast<std::uint64_t>(1) << (channelSize * 8 - 1)) - 1;
 
         auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
 
         if (loadType != TypeId::SInt32) {
           uintChannelValue = builder.createSConvert(
-              fragment.context->getSint32Type(), uintChannelValue);
+            fragment.context->getSint32Type(), uintChannelValue);
         }
 
         auto floatChannelValue = builder.createConvertSToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+          fragment.context->getFloat32Type(), uintChannelValue);
 
         floatChannelValue = builder.createFDiv(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(maxValue));
+          fragment.context->getFloat32Type(), floatChannelValue,
+          fragment.context->getFloat32(maxValue));
 
         auto glslStd450 = fragment.context->getGlslStd450();
         floatChannelValue =
-            spirv::cast<spirv::FloatValue>(fragment.builder.createExtInst(
-                fragment.context->getFloat32Type(), glslStd450,
-                GLSLstd450FClamp,
-                {{floatChannelValue, fragment.context->getFloat32(-1),
-                  fragment.context->getFloat32(1)}}));
+          spirv::cast<spirv::FloatValue>(fragment.builder.createExtInst(
+            fragment.context->getFloat32Type(), glslStd450,
+            GLSLstd450FClamp,
+            { {floatChannelValue, fragment.context->getFloat32(-1),
+              fragment.context->getFloat32(1)} }));
         result[channel] = floatChannelValue;
         resultType = fragment.context->getFloat32Type();
         break;
@@ -263,11 +263,11 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
         if (loadType != TypeId::UInt32) {
           uintChannelValue = builder.createUConvert(
-              fragment.context->getUInt32Type(), uintChannelValue);
+            fragment.context->getUInt32Type(), uintChannelValue);
         }
 
         auto floatChannelValue = builder.createConvertUToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+          fragment.context->getFloat32Type(), uintChannelValue);
 
         result[channel] = floatChannelValue;
         resultType = fragment.context->getFloat32Type();
@@ -279,11 +279,11 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
         if (loadType != TypeId::SInt32) {
           uintChannelValue = builder.createSConvert(
-              fragment.context->getSint32Type(), uintChannelValue);
+            fragment.context->getSint32Type(), uintChannelValue);
         }
 
         auto floatChannelValue = builder.createConvertSToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+          fragment.context->getFloat32Type(), uintChannelValue);
 
         result[channel] = floatChannelValue;
         resultType = fragment.context->getFloat32Type();
@@ -292,28 +292,28 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
       case kTextureChannelTypeSNormNoZero: {
         auto maxValue =
-            (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
+          (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
 
         auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
 
         if (loadType != TypeId::SInt32) {
           uintChannelValue = builder.createSConvert(
-              fragment.context->getSint32Type(), uintChannelValue);
+            fragment.context->getSint32Type(), uintChannelValue);
         }
 
         auto floatChannelValue = builder.createConvertSToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+          fragment.context->getFloat32Type(), uintChannelValue);
 
         floatChannelValue = builder.createFMul(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(2));
+          fragment.context->getFloat32Type(), floatChannelValue,
+          fragment.context->getFloat32(2));
         floatChannelValue = builder.createFAdd(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(1));
+          fragment.context->getFloat32Type(), floatChannelValue,
+          fragment.context->getFloat32(1));
 
         floatChannelValue = builder.createFDiv(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(maxValue));
+          fragment.context->getFloat32Type(), floatChannelValue,
+          fragment.context->getFloat32(maxValue));
 
         result[channel] = floatChannelValue;
         resultType = fragment.context->getFloat32Type();
@@ -327,8 +327,8 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
     for (; channel < count; ++channel) {
       result[channel] =
-          fragment.createBitcast(resultType, fragment.context->getUInt32Type(),
-                                 fragment.context->getUInt32(0));
+        fragment.createBitcast(resultType, fragment.context->getUInt32Type(),
+                               fragment.context->getUInt32(0));
     }
     return resultType;
   }
@@ -349,11 +349,11 @@ void convertToFormat(RegisterId sourceRegister, int count, Fragment &fragment,
   auto storeType = pickBufferType(surfaceFormat, channelType);
 
   auto uniform =
-      fragment.context->getOrCreateStorageBuffer(vBufferData, storeType);
+    fragment.context->getOrCreateStorageBuffer(vBufferData, storeType);
   uniform->accessOp |= AccessOp::Store;
 
   auto uniformPointerType = fragment.context->getPointerType(
-      spv::StorageClass::StorageBuffer, storeType);
+    spv::StorageClass::StorageBuffer, storeType);
 
   auto &builder = fragment.builder;
   switch (surfaceFormat) {
@@ -384,24 +384,24 @@ void convertToFormat(RegisterId sourceRegister, int count, Fragment &fragment,
 
       if (channel != 0) {
         channelOffset =
-            builder.createIAdd(fragment.context->getUInt32Type(), channelOffset,
-                               fragment.context->getUInt32(channel));
+          builder.createIAdd(fragment.context->getUInt32Type(), channelOffset,
+                             fragment.context->getUInt32(channel));
       }
 
       auto uniformPointerValue = fragment.builder.createAccessChain(
-          uniformPointerType, uniform->variable,
-          {{fragment.context->getUInt32(0), channelOffset}});
+        uniformPointerType, uniform->variable,
+        { {fragment.context->getUInt32(0), channelOffset} });
 
       switch (channelType) {
       case kTextureChannelTypeFloat:
       case kTextureChannelTypeSInt:
       case kTextureChannelTypeUInt:
         fragment.builder.createStore(
-            uniformPointerValue,
-            fragment
-                .getOperand(RegisterId::Raw(sourceRegister + channel),
-                            storeType)
-                .value);
+          uniformPointerValue,
+          fragment
+          .getOperand(RegisterId::Raw(sourceRegister + channel),
+                      storeType)
+          .value);
         break;
 
       default:
@@ -411,17 +411,17 @@ void convertToFormat(RegisterId sourceRegister, int count, Fragment &fragment,
 
     for (; channel < count; ++channel) {
       auto channelOffset =
-          builder.createIAdd(fragment.context->getUInt32Type(), offset,
-                             fragment.context->getUInt32(channel));
+        builder.createIAdd(fragment.context->getUInt32Type(), offset,
+                           fragment.context->getUInt32(channel));
       auto uniformPointerValue = fragment.builder.createAccessChain(
-          uniformPointerType, uniform->variable,
-          {{fragment.context->getUInt32(0), channelOffset}});
+        uniformPointerType, uniform->variable,
+        { {fragment.context->getUInt32(0), channelOffset} });
 
       fragment.builder.createStore(
-          uniformPointerValue,
-          fragment.createBitcast(fragment.context->getType(storeType),
-                                 fragment.context->getUInt32Type(),
-                                 fragment.context->getUInt32(0)));
+        uniformPointerValue,
+        fragment.createBitcast(fragment.context->getType(storeType),
+                               fragment.context->getUInt32Type(),
+                               fragment.context->getUInt32(0)));
     }
 
     return;
@@ -529,7 +529,7 @@ struct GnmTBuffer {
 
   std::uint64_t getAddress() const {
     return static_cast<std::uint64_t>(static_cast<std::uint32_t>(baseaddr256))
-           << 8;
+      << 8;
   }
 };
 
@@ -618,13 +618,13 @@ Value doCmpOp(Fragment &fragment, TypeId type, spirv::Value src0,
     break;
   case CmpKind::O:
     cmp = fragment.builder.createLogicalAnd(
-        boolT, fragment.builder.createFOrdEqual(boolT, src0, src0),
-        fragment.builder.createFOrdEqual(boolT, src1, src1));
+      boolT, fragment.builder.createFOrdEqual(boolT, src0, src0),
+      fragment.builder.createFOrdEqual(boolT, src1, src1));
     break;
   case CmpKind::U:
     cmp = fragment.builder.createLogicalAnd(
-        boolT, fragment.builder.createFUnordNotEqual(boolT, src0, src0),
-        fragment.builder.createFUnordNotEqual(boolT, src1, src1));
+      boolT, fragment.builder.createFUnordNotEqual(boolT, src0, src0),
+      fragment.builder.createFUnordNotEqual(boolT, src1, src1));
     break;
   case CmpKind::NGE:
     cmp = fragment.builder.createFUnordLessThan(boolT, src0, src1);
@@ -661,15 +661,15 @@ Value doCmpOp(Fragment &fragment, TypeId type, spirv::Value src0,
   auto uint32T = fragment.context->getUInt32Type();
   auto uint32_0 = fragment.context->getUInt32(0);
   auto result = fragment.builder.createSelect(
-      uint32T, cmp, fragment.context->getUInt32(1), uint32_0);
+    uint32T, cmp, fragment.context->getUInt32(1), uint32_0);
 
   if ((flags & CmpFlags::X) == CmpFlags::X) {
-    fragment.setOperand(RegisterId::ExecLo, {uint32T, result});
-    fragment.setOperand(RegisterId::ExecHi, {uint32T, uint32_0});
+    fragment.setOperand(RegisterId::ExecLo, { uint32T, result });
+    fragment.setOperand(RegisterId::ExecHi, { uint32T, uint32_0 });
   }
 
   // TODO: handle flags
-  return {uint32T, result};
+  return { uint32T, result };
 };
 
 void convertVop2(Fragment &fragment, Vop2 inst) {
@@ -684,11 +684,11 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto src1 = fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value;
 
     auto src = fragment.builder.createCompositeConstruct(
-        float2T, std::array{src0, src1});
+      float2T, std::array{ src0, src1 });
     auto dst = fragment.builder.createExtInst(
-        uintT, glslStd450, GLSLstd450PackHalf2x16, std::array{src});
+      uintT, glslStd450, GLSLstd450PackHalf2x16, std::array{ src });
 
-    fragment.setVectorOperand(inst.vdst, {uintT, dst});
+    fragment.setVectorOperand(inst.vdst, { uintT, dst });
     break;
   }
   case Vop2::Op::V_AND_B32: {
@@ -697,8 +697,8 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto uintT = fragment.context->getType(TypeId::UInt32);
 
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createBitwiseAnd(uintT, src0, src1)});
+      inst.vdst,
+      { uintT, fragment.builder.createBitwiseAnd(uintT, src0, src1) });
     break;
   }
 
@@ -708,8 +708,8 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto uintT = fragment.context->getType(TypeId::UInt32);
 
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createBitwiseOr(uintT, src0, src1)});
+      inst.vdst,
+      { uintT, fragment.builder.createBitwiseOr(uintT, src0, src1) });
     break;
   }
 
@@ -718,15 +718,15 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto src1 = fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value;
     auto uintT = fragment.context->getType(TypeId::UInt32);
     auto resultStruct =
-        fragment.context->getStructType(std::array{uintT, uintT});
+      fragment.context->getStructType(std::array{ uintT, uintT });
     auto result = fragment.builder.createIAddCarry(resultStruct, src0, src1);
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, std::array{static_cast<std::uint32_t>(0)})});
+      inst.vdst,
+      { uintT, fragment.builder.createCompositeExtract(
+                  uintT, result, std::array{static_cast<std::uint32_t>(0)}) });
     fragment.setVcc(
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, std::array{static_cast<std::uint32_t>(1)})});
+      { uintT, fragment.builder.createCompositeExtract(
+                  uintT, result, std::array{static_cast<std::uint32_t>(1)}) });
     // TODO: update vcc hi
     break;
   }
@@ -736,42 +736,42 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto src1 = fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value;
     auto uintT = fragment.context->getType(TypeId::UInt32);
     auto resultStruct =
-        fragment.context->getStructType(std::array{uintT, uintT});
+      fragment.context->getStructType(std::array{ uintT, uintT });
     auto result = fragment.builder.createISubBorrow(resultStruct, src0, src1);
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, std::array{static_cast<std::uint32_t>(0)})});
+      inst.vdst,
+      { uintT, fragment.builder.createCompositeExtract(
+                  uintT, result, std::array{static_cast<std::uint32_t>(0)}) });
     fragment.setVcc(
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, std::array{static_cast<std::uint32_t>(1)})});
+      { uintT, fragment.builder.createCompositeExtract(
+                  uintT, result, std::array{static_cast<std::uint32_t>(1)}) });
     // TODO: update vcc hi
     break;
   }
 
   case Vop2::Op::V_MAC_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto dst = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vdst, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vdst, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFAdd(
-        floatT, fragment.builder.createFMul(floatT, src0, src1), dst);
+      floatT, fragment.builder.createFMul(floatT, src0, src1), dst);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MAC_LEGACY_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto dst = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vdst, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vdst, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
     auto boolT = fragment.context->getBoolType();
     auto float0 = fragment.context->getFloat32(0);
@@ -779,119 +779,119 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto src0IsZero = fragment.builder.createFOrdEqual(boolT, src0, float0);
     auto src1IsZero = fragment.builder.createFOrdEqual(boolT, src1, float0);
     auto anySrcIsZero =
-        fragment.builder.createLogicalOr(boolT, src0IsZero, src1IsZero);
+      fragment.builder.createLogicalOr(boolT, src0IsZero, src1IsZero);
 
     auto result = fragment.builder.createFAdd(
-        floatT,
-        fragment.builder.createSelect(
-            floatT, anySrcIsZero, float0,
-            fragment.builder.createFMul(floatT, src0, src1)),
-        dst);
+      floatT,
+      fragment.builder.createSelect(
+        floatT, anySrcIsZero, float0,
+        fragment.builder.createFMul(floatT, src0, src1)),
+      dst);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MUL_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFMul(floatT, src0, src1);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_ADD_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFAdd(floatT, src0, src1);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_SUB_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFSub(floatT, src0, src1);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
   case Vop2::Op::V_SUBREV_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFSub(floatT, src1, src0);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
   case Vop2::Op::V_SUBREV_I32: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::SIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::SInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::SInt32).value);
     auto floatT = fragment.context->getSint32Type();
 
     auto result = fragment.builder.createISub(floatT, src1, src0);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MIN_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
     auto boolT = fragment.context->getBoolType();
 
     auto result = fragment.builder.createSelect(
-        floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
-        src1);
+      floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
+      src1);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MAX_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
     auto boolT = fragment.context->getBoolType();
 
     auto result = fragment.builder.createSelect(
-        floatT, fragment.builder.createFOrdGreaterThanEqual(boolT, src0, src1),
-        src0, src1);
+      floatT, fragment.builder.createFOrdGreaterThanEqual(boolT, src0, src1),
+      src0, src1);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MUL_LEGACY_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
     auto boolT = fragment.context->getBoolType();
     auto float0 = fragment.context->getFloat32(0);
@@ -899,123 +899,123 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
     auto src0IsZero = fragment.builder.createFOrdEqual(boolT, src0, float0);
     auto src1IsZero = fragment.builder.createFOrdEqual(boolT, src1, float0);
     auto anySrcIsZero =
-        fragment.builder.createLogicalOr(boolT, src0IsZero, src1IsZero);
+      fragment.builder.createLogicalOr(boolT, src0IsZero, src1IsZero);
 
     auto result = fragment.builder.createSelect(
-        floatT, anySrcIsZero, float0,
-        fragment.builder.createFMul(floatT, src0, src1));
+      floatT, anySrcIsZero, float0,
+      fragment.builder.createFMul(floatT, src0, src1));
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MADAK_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto constant = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(255, TypeId::Float32).value);
+      fragment.getScalarOperand(255, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFAdd(
-        floatT, fragment.builder.createFMul(floatT, src0, src1), constant);
+      floatT, fragment.builder.createFMul(floatT, src0, src1), constant);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_MADMK_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::Float32).value);
     auto constant = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(255, TypeId::Float32).value);
+      fragment.getScalarOperand(255, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFAdd(
-        floatT, fragment.builder.createFMul(floatT, src0, constant), src1);
+      floatT, fragment.builder.createFMul(floatT, src0, constant), src1);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop2::Op::V_LSHL_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
     auto uintT = fragment.context->getType(TypeId::UInt32);
 
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createShiftLeftLogical(uintT, src0, src1)});
+      inst.vdst,
+      { uintT, fragment.builder.createShiftLeftLogical(uintT, src0, src1) });
     break;
   }
 
   case Vop2::Op::V_LSHLREV_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
     auto uintT = fragment.context->getType(TypeId::UInt32);
 
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createShiftLeftLogical(uintT, src1, src0)});
+      inst.vdst,
+      { uintT, fragment.builder.createShiftLeftLogical(uintT, src1, src0) });
     break;
   }
 
   case Vop2::Op::V_LSHR_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
     auto uintT = fragment.context->getType(TypeId::UInt32);
 
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createShiftRightLogical(uintT, src0, src1)});
+      inst.vdst,
+      { uintT, fragment.builder.createShiftRightLogical(uintT, src0, src1) });
     break;
   }
 
   case Vop2::Op::V_LSHRREV_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value);
     auto uintT = fragment.context->getType(TypeId::UInt32);
 
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createShiftRightLogical(uintT, src1, src0)});
+      inst.vdst,
+      { uintT, fragment.builder.createShiftRightLogical(uintT, src1, src0) });
     break;
   }
 
   case Vop2::Op::V_ASHR_I32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::SInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::SInt32).value);
     auto sintT = fragment.context->getType(TypeId::SInt32);
 
     fragment.setVectorOperand(
-        inst.vdst, {sintT, fragment.builder.createShiftRightArithmetic(
-                               sintT, src0, src1)});
+      inst.vdst, { sintT, fragment.builder.createShiftRightArithmetic(
+                             sintT, src0, src1) });
     break;
   }
 
   case Vop2::Op::V_ASHRREV_I32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getVectorOperand(inst.vsrc1, TypeId::SInt32).value);
+      fragment.getVectorOperand(inst.vsrc1, TypeId::SInt32).value);
     auto sintT = fragment.context->getType(TypeId::SInt32);
 
     fragment.setVectorOperand(
-        inst.vdst, {sintT, fragment.builder.createShiftRightArithmetic(
-                               sintT, src1, src0)});
+      inst.vdst, { sintT, fragment.builder.createShiftRightArithmetic(
+                             sintT, src1, src0) });
     break;
   }
 
@@ -1030,7 +1030,7 @@ void convertVop2(Fragment &fragment, Vop2 inst) {
 
     auto uint32T = fragment.context->getUInt32Type();
     auto result = fragment.builder.createSelect(uint32T, cmp, src1, src0);
-    fragment.setVectorOperand(inst.vdst, {uint32T, result});
+    fragment.setVectorOperand(inst.vdst, { uint32T, result });
     break;
   }
 
@@ -1044,304 +1044,304 @@ void convertSop2(Fragment &fragment, Sop2 inst) {
   switch (inst.op) {
   case Sop2::Op::S_ADD_U32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createIAdd(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_ADD_I32: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::SInt32).value);
     auto resultT = fragment.context->getSint32Type();
     auto result = fragment.builder.createIAdd(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_ASHR_I32: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto resultT = fragment.context->getSint32Type();
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        resultT, src1, fragment.context->getUInt32(0x3f)));
+      resultT, src1, fragment.context->getUInt32(0x3f)));
 
     auto result =
-        fragment.builder.createShiftRightArithmetic(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      fragment.builder.createShiftRightArithmetic(resultT, src0, src1);
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_ASHR_I64: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::SInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::SInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto resultT = fragment.context->getSint64Type();
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        resultT, src1, fragment.context->getUInt32(0x3f)));
+      resultT, src1, fragment.context->getUInt32(0x3f)));
 
     auto result =
-        fragment.builder.createShiftRightArithmetic(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      fragment.builder.createShiftRightArithmetic(resultT, src0, src1);
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_LSHR_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto resultT = fragment.context->getUInt32Type();
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        resultT, src1, fragment.context->getUInt32(0x1f)));
+      resultT, src1, fragment.context->getUInt32(0x1f)));
 
     auto result = fragment.builder.createShiftRightLogical(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_LSHR_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto resultT = fragment.context->getUInt64Type();
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        resultT, src1, fragment.context->getUInt32(0x3f)));
+      resultT, src1, fragment.context->getUInt32(0x3f)));
 
     auto result = fragment.builder.createShiftRightLogical(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_LSHL_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto resultT = fragment.context->getUInt32Type();
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        resultT, src1, fragment.context->getUInt32(0x1f)));
+      resultT, src1, fragment.context->getUInt32(0x1f)));
 
     auto result = fragment.builder.createShiftLeftLogical(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_LSHL_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
 
     auto resultT = fragment.context->getUInt64Type();
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        resultT, src1, fragment.context->getUInt32(0x3f)));
+      resultT, src1, fragment.context->getUInt32(0x3f)));
 
     auto result = fragment.builder.createShiftLeftLogical(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_CSELECT_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto resultT = fragment.context->getUInt32Type();
     auto result =
-        fragment.builder.createSelect(resultT, fragment.getScc(), src0, src1);
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      fragment.builder.createSelect(resultT, fragment.getScc(), src0, src1);
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_CSELECT_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
 
     auto resultT = fragment.context->getUInt64Type();
     auto result =
-        fragment.builder.createSelect(resultT, fragment.getScc(), src0, src1);
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      fragment.builder.createSelect(resultT, fragment.getScc(), src0, src1);
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_MUL_I32: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::SInt32).value);
     auto resultT = fragment.context->getSint32Type();
     auto result = fragment.builder.createIMul(resultT, src0, src1);
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_AND_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createBitwiseAnd(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_ANDN2_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createBitwiseAnd(
-        resultT, src0, fragment.builder.createNot(resultT, src1));
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      resultT, src0, fragment.builder.createNot(resultT, src1));
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_AND_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
     auto resultT = fragment.context->getUInt64Type();
     auto result = fragment.builder.createBitwiseAnd(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_ANDN2_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
     auto resultT = fragment.context->getUInt64Type();
     auto result = fragment.builder.createBitwiseAnd(
-        resultT, src0, fragment.builder.createNot(resultT, src1));
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      resultT, src0, fragment.builder.createNot(resultT, src1));
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_OR_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createBitwiseOr(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_OR_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
     auto resultT = fragment.context->getUInt64Type();
     auto result = fragment.builder.createBitwiseOr(resultT, src0, src1);
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_NAND_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createNot(
-        resultT, fragment.builder.createBitwiseAnd(resultT, src0, src1));
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      resultT, fragment.builder.createBitwiseAnd(resultT, src0, src1));
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_NAND_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
     auto resultT = fragment.context->getUInt64Type();
     auto result = fragment.builder.createNot(
-        resultT, fragment.builder.createBitwiseAnd(resultT, src0, src1));
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      resultT, fragment.builder.createBitwiseAnd(resultT, src0, src1));
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_NOR_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createNot(
-        resultT, fragment.builder.createBitwiseOr(resultT, src0, src1));
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      resultT, fragment.builder.createBitwiseOr(resultT, src0, src1));
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
   case Sop2::Op::S_NOR_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt64).value);
     auto resultT = fragment.context->getUInt64Type();
     auto result = fragment.builder.createNot(
-        resultT, fragment.builder.createBitwiseOr(resultT, src0, src1));
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+      resultT, fragment.builder.createBitwiseOr(resultT, src0, src1));
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
   case Sop2::Op::S_BFE_U32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
 
     auto operandT = fragment.context->getUInt32Type();
 
     auto offset =
-        spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-            operandT, src1, fragment.context->getUInt32(0x1f)));
+      spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
+        operandT, src1, fragment.context->getUInt32(0x1f)));
     auto size = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT,
-        fragment.builder.createShiftRightLogical(
-            operandT, src1, fragment.context->getUInt32(16)),
-        fragment.context->getUInt32(0x7f)));
+      operandT,
+      fragment.builder.createShiftRightLogical(
+        operandT, src1, fragment.context->getUInt32(16)),
+      fragment.context->getUInt32(0x7f)));
 
     auto field =
-        fragment.builder.createShiftRightLogical(operandT, src0, offset);
+      fragment.builder.createShiftRightLogical(operandT, src0, offset);
     auto mask = fragment.builder.createISub(
-        operandT,
-        fragment.builder.createShiftLeftLogical(
-            operandT, fragment.context->getUInt32(1), size),
-        fragment.context->getUInt32(1));
+      operandT,
+      fragment.builder.createShiftLeftLogical(
+        operandT, fragment.context->getUInt32(1), size),
+      fragment.context->getUInt32(1));
 
     auto result = fragment.builder.createBitwiseAnd(operandT, field, mask);
     auto resultT = fragment.context->getUInt32Type();
-    fragment.setScc({resultT, result});
-    fragment.setScalarOperand(inst.sdst, {resultT, result});
+    fragment.setScc({ resultT, result });
+    fragment.setScalarOperand(inst.sdst, { resultT, result });
     break;
   }
 
@@ -1355,8 +1355,8 @@ void convertSopk(Fragment &fragment, Sopk inst) {
   switch (inst.op) {
   case Sopk::Op::S_MOVK_I32:
     fragment.setScalarOperand(inst.sdst,
-                              {fragment.context->getSint32Type(),
-                               fragment.context->getSInt32(inst.simm)});
+                              { fragment.context->getSint32Type(),
+                               fragment.context->getSInt32(inst.simm) });
     break;
   default:
     inst.dump();
@@ -1379,15 +1379,15 @@ void convertSmrd(Fragment &fragment, Smrd inst) {
     }
 
     auto result = fragment.builder.createUDiv(
-        resultT, spirv::cast<spirv::UIntValue>(resultV),
-        fragment.context->getUInt32(4));
+      resultT, spirv::cast<spirv::UIntValue>(resultV),
+      fragment.context->getUInt32(4));
 
     if (adv != 0) {
       result = fragment.builder.createIAdd(resultT, result,
                                            fragment.context->getUInt32(adv));
     }
     return result;
-  };
+    };
 
   switch (inst.op) {
   case Smrd::Op::S_BUFFER_LOAD_DWORD:
@@ -1396,16 +1396,16 @@ void convertSmrd(Fragment &fragment, Smrd inst) {
   case Smrd::Op::S_BUFFER_LOAD_DWORDX8:
   case Smrd::Op::S_BUFFER_LOAD_DWORDX16: {
     std::uint32_t count = 1
-                          << (static_cast<int>(inst.op) -
-                              static_cast<int>(Smrd::Op::S_BUFFER_LOAD_DWORD));
+      << (static_cast<int>(inst.op) -
+          static_cast<int>(Smrd::Op::S_BUFFER_LOAD_DWORD));
     auto vBuffer0 =
-        fragment.getScalarOperand((inst.sbase << 1) + 0, TypeId::UInt32);
+      fragment.getScalarOperand((inst.sbase << 1) + 0, TypeId::UInt32);
     auto vBuffer1 =
-        fragment.getScalarOperand((inst.sbase << 1) + 1, TypeId::UInt32);
+      fragment.getScalarOperand((inst.sbase << 1) + 1, TypeId::UInt32);
     auto vBuffer2 =
-        fragment.getScalarOperand((inst.sbase << 1) + 2, TypeId::UInt32);
+      fragment.getScalarOperand((inst.sbase << 1) + 2, TypeId::UInt32);
     auto vBuffer3 =
-        fragment.getScalarOperand((inst.sbase << 1) + 3, TypeId::UInt32);
+      fragment.getScalarOperand((inst.sbase << 1) + 3, TypeId::UInt32);
 
     auto optVBuffer0Value = fragment.context->findUint32Value(vBuffer0.value);
     auto optVBuffer1Value = fragment.context->findUint32Value(vBuffer1.value);
@@ -1414,26 +1414,26 @@ void convertSmrd(Fragment &fragment, Smrd inst) {
 
     if (optVBuffer0Value && optVBuffer1Value && optVBuffer2Value &&
         optVBuffer3Value) {
-      std::uint32_t vBufferData[] = {*optVBuffer0Value, *optVBuffer1Value,
-                                     *optVBuffer2Value, *optVBuffer3Value};
+      std::uint32_t vBufferData[] = { *optVBuffer0Value, *optVBuffer1Value,
+                                     *optVBuffer2Value, *optVBuffer3Value };
       auto vbuffer = reinterpret_cast<GnmVBuffer *>(vBufferData);
       // std::printf("vBuffer address = %lx\n", vbuffer->getAddress());
 
       auto valueT = fragment.context->getFloat32Type();
       auto uniform = fragment.context->getOrCreateStorageBuffer(
-          vBufferData, TypeId::Float32);
+        vBufferData, TypeId::Float32);
       uniform->accessOp |= AccessOp::Load;
       auto storageBufferPointerType = fragment.context->getPointerType(
-          spv::StorageClass::StorageBuffer, TypeId::Float32);
+        spv::StorageClass::StorageBuffer, TypeId::Float32);
 
       for (std::uint32_t i = 0; i < count; ++i) {
         auto storageBufferPointerValue = fragment.builder.createAccessChain(
-            storageBufferPointerType, uniform->variable,
-            {{fragment.context->getUInt32(0), getOffset(i)}});
+          storageBufferPointerType, uniform->variable,
+          { {fragment.context->getUInt32(0), getOffset(i)} });
 
         auto value =
-            fragment.builder.createLoad(valueT, storageBufferPointerValue);
-        fragment.setScalarOperand(inst.sdst + i, {valueT, value});
+          fragment.builder.createLoad(valueT, storageBufferPointerValue);
+        fragment.setScalarOperand(inst.sdst + i, { valueT, value });
       }
     } else {
       // FIXME: implement runtime V# buffer fetching
@@ -1453,7 +1453,7 @@ void convertSmrd(Fragment &fragment, Smrd inst) {
     auto uint32T = fragment.context->getUInt32Type();
     auto sgprLo = fragment.getScalarOperand(inst.sbase << 1, TypeId::UInt32);
     auto sgprHi =
-        fragment.getScalarOperand((inst.sbase << 1) + 1, TypeId::UInt32);
+      fragment.getScalarOperand((inst.sbase << 1) + 1, TypeId::UInt32);
     auto optLoAddress = fragment.context->findUint32Value(sgprLo.value);
     auto optHiAddress = fragment.context->findUint32Value(sgprHi.value);
 
@@ -1461,13 +1461,13 @@ void convertSmrd(Fragment &fragment, Smrd inst) {
       // if it is imm and address is known, read the values now
       auto memory = fragment.context->getMemory();
       auto address =
-          *optLoAddress | (static_cast<std::uint64_t>(*optHiAddress) << 32);
+        *optLoAddress | (static_cast<std::uint64_t>(*optHiAddress) << 32);
 
       auto data =
-          memory.getPointer<std::uint32_t>(address + (inst.offset << 2));
+        memory.getPointer<std::uint32_t>(address + (inst.offset << 2));
       for (std::uint32_t i = 0; i < count; ++i) {
         fragment.setScalarOperand(
-            inst.sdst + i, {uint32T, fragment.context->getUInt32(data[i])});
+          inst.sdst + i, { uint32T, fragment.context->getUInt32(data[i]) });
       }
     } else {
       // FIXME: implement
@@ -1489,75 +1489,75 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   auto applyOmod = [&](Value result) -> Value {
     switch (inst.omod) {
     case 1:
-      return {result.type, fragment.builder.createFMul(
+      return { result.type, fragment.builder.createFMul(
                                spirv::cast<spirv::FloatType>(result.type),
                                spirv::cast<spirv::FloatValue>(result.value),
-                               fragment.context->getFloat32(2))};
+                               fragment.context->getFloat32(2)) };
 
     case 2:
-      return {result.type, fragment.builder.createFMul(
+      return { result.type, fragment.builder.createFMul(
                                spirv::cast<spirv::FloatType>(result.type),
                                spirv::cast<spirv::FloatValue>(result.value),
-                               fragment.context->getFloat32(4))};
+                               fragment.context->getFloat32(4)) };
     case 3:
-      return {result.type, fragment.builder.createFDiv(
+      return { result.type, fragment.builder.createFDiv(
                                spirv::cast<spirv::FloatType>(result.type),
                                spirv::cast<spirv::FloatValue>(result.value),
-                               fragment.context->getFloat32(2))};
+                               fragment.context->getFloat32(2)) };
 
     default:
     case 0:
       return result;
     }
-  };
+    };
 
   auto applyClamp = [&](Value result) -> Value {
     if (inst.clmp) {
       auto glslStd450 = fragment.context->getGlslStd450();
       result.value = fragment.builder.createExtInst(
-          result.type, glslStd450, GLSLstd450FClamp,
-          {{result.value, fragment.context->getFloat32(0),
-            fragment.context->getFloat32(1)}});
+        result.type, glslStd450, GLSLstd450FClamp,
+        { {result.value, fragment.context->getFloat32(0),
+          fragment.context->getFloat32(1)} });
     }
 
     return result;
-  };
+    };
 
   auto getSrc = [&](int index, TypeId type) -> Value {
     std::uint32_t src =
-        index == 0 ? inst.src0 : (index == 1 ? inst.src1 : inst.src2);
+      index == 0 ? inst.src0 : (index == 1 ? inst.src1 : inst.src2);
 
     auto result = fragment.getScalarOperand(src, type);
 
     if (inst.abs & (1 << index)) {
       auto glslStd450 = fragment.context->getGlslStd450();
       result.value = fragment.builder.createExtInst(
-          result.type, glslStd450, GLSLstd450FAbs, {{result.value}});
+        result.type, glslStd450, GLSLstd450FAbs, { {result.value} });
     }
 
     if (inst.neg & (1 << index)) {
       result.value = fragment.builder.createFNegate(
-          spirv::cast<spirv::FloatType>(result.type),
-          spirv::cast<spirv::FloatValue>(result.value));
+        spirv::cast<spirv::FloatType>(result.type),
+        spirv::cast<spirv::FloatValue>(result.value));
     }
 
     return result;
-  };
+    };
 
   auto getSdstSrc = [&](int index, TypeId type) -> Value {
     std::uint32_t src =
-        index == 0 ? inst.src0 : (index == 1 ? inst.src1 : inst.src2);
+      index == 0 ? inst.src0 : (index == 1 ? inst.src1 : inst.src2);
 
     auto result = fragment.getScalarOperand(src, type);
 
     if (inst.neg & (1 << index)) {
       result.value = fragment.builder.createFNegate(
-          spirv::cast<spirv::FloatType>(result.type),
-          spirv::cast<spirv::FloatValue>(result.value));
+        spirv::cast<spirv::FloatType>(result.type),
+        spirv::cast<spirv::FloatValue>(result.value));
     }
 
     return result;
-  };
+    };
 
   auto cmpOp = [&](TypeId type, CmpKind kind, CmpFlags flags = CmpFlags::None) {
     auto src0 = fragment.getScalarOperand(inst.src0, type).value;
@@ -1565,9 +1565,9 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
 
     auto result = doCmpOp(fragment, type, src0, src1, kind, flags);
     fragment.setScalarOperand(inst.vdst, result);
-    fragment.setScalarOperand(inst.vdst + 1, {fragment.context->getUInt32Type(),
-                                              fragment.context->getUInt32(0)});
-  };
+    fragment.setScalarOperand(inst.vdst + 1, { fragment.context->getUInt32Type(),
+                                              fragment.context->getUInt32(0) });
+    };
 
   switch (inst.op) {
   case Vop3::Op::V3_CMP_F_F32:
@@ -1978,8 +1978,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   case Vop3::Op::V3_CMP_T_I32:
     cmpOp(TypeId::SInt32, CmpKind::T);
     break;
-  // case Vop3::Op::V3_CMP_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS);
-  // break;
+    // case Vop3::Op::V3_CMP_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS);
+    // break;
   case Vop3::Op::V3_CMP_LT_I16:
     cmpOp(TypeId::SInt16, CmpKind::LT);
     break;
@@ -1998,8 +1998,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   case Vop3::Op::V3_CMP_GE_I16:
     cmpOp(TypeId::SInt16, CmpKind::GE);
     break;
-  // case Vop3::Op::V3_CMP_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS);
-  // break;
+    // case Vop3::Op::V3_CMP_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS);
+    // break;
   case Vop3::Op::V3_CMPX_F_I32:
     cmpOp(TypeId::SInt32, CmpKind::F, CmpFlags::X);
     break;
@@ -2024,8 +2024,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   case Vop3::Op::V3_CMPX_T_I32:
     cmpOp(TypeId::SInt32, CmpKind::T, CmpFlags::X);
     break;
-  // case Vop3::Op::V3_CMPX_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS,
-  // CmpFlags::X); break;
+    // case Vop3::Op::V3_CMPX_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS,
+    // CmpFlags::X); break;
   case Vop3::Op::V3_CMPX_LT_I16:
     cmpOp(TypeId::SInt16, CmpKind::LT, CmpFlags::X);
     break;
@@ -2044,8 +2044,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   case Vop3::Op::V3_CMPX_GE_I16:
     cmpOp(TypeId::SInt16, CmpKind::GE, CmpFlags::X);
     break;
-  // case Vop3::Op::V3_CMPX_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS,
-  // CmpFlags::X); break;
+    // case Vop3::Op::V3_CMPX_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS,
+    // CmpFlags::X); break;
   case Vop3::Op::V3_CMP_F_I64:
     cmpOp(TypeId::SInt64, CmpKind::F);
     break;
@@ -2070,8 +2070,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   case Vop3::Op::V3_CMP_T_I64:
     cmpOp(TypeId::SInt64, CmpKind::T);
     break;
-  // case Vop3::Op::V3_CMP_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS);
-  // break;
+    // case Vop3::Op::V3_CMP_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS);
+    // break;
   case Vop3::Op::V3_CMP_LT_U16:
     cmpOp(TypeId::UInt16, CmpKind::LT);
     break;
@@ -2114,8 +2114,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
   case Vop3::Op::V3_CMPX_T_I64:
     cmpOp(TypeId::SInt64, CmpKind::T, CmpFlags::X);
     break;
-  // case Vop3::Op::V3_CMPX_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS,
-  // CmpFlags::X); break;
+    // case Vop3::Op::V3_CMPX_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS,
+    // CmpFlags::X); break;
   case Vop3::Op::V3_CMPX_LT_U16:
     cmpOp(TypeId::UInt16, CmpKind::LT, CmpFlags::X);
     break;
@@ -2308,8 +2308,8 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto floatT = fragment.context->getFloat32Type();
     auto float1 = fragment.context->getFloat32(1);
     auto resultValue = fragment.builder.createFDiv(
-        floatT, float1, spirv::cast<spirv::FloatValue>(src.value));
-    auto result = applyClamp(applyOmod({floatT, resultValue}));
+      floatT, float1, spirv::cast<spirv::FloatValue>(src.value));
+    auto result = applyClamp(applyOmod({ floatT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2320,16 +2320,16 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src1 = fragment.getScalarOperand(inst.src1, TypeId::UInt32).value;
     auto uintT = fragment.context->getType(TypeId::UInt32);
     auto resultStruct =
-        fragment.context->getStructType(std::array{uintT, uintT});
+      fragment.context->getStructType(std::array{ uintT, uintT });
     auto result = fragment.builder.createIAddCarry(resultStruct, src0, src1);
     fragment.setVectorOperand(
-        inst.vdst,
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, std::array{static_cast<std::uint32_t>(0)})});
+      inst.vdst,
+      { uintT, fragment.builder.createCompositeExtract(
+                  uintT, result, std::array{static_cast<std::uint32_t>(0)}) });
     fragment.setScalarOperand(
-        inst.sdst,
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, std::array{static_cast<std::uint32_t>(1)})});
+      inst.sdst,
+      { uintT, fragment.builder.createCompositeExtract(
+                  uintT, result, std::array{static_cast<std::uint32_t>(1)}) });
     // TODO: update sdst + 1
     break;
   }
@@ -2339,9 +2339,9 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src0 = getSrc(0, TypeId::Float32);
     auto src1 = getSrc(1, TypeId::Float32);
     auto resultValue = fragment.builder.createFAdd(
-        floatT, spirv::cast<spirv::FloatValue>(src0.value),
-        spirv::cast<spirv::FloatValue>(src1.value));
-    auto result = applyClamp(applyOmod({floatT, resultValue}));
+      floatT, spirv::cast<spirv::FloatValue>(src0.value),
+      spirv::cast<spirv::FloatValue>(src1.value));
+    auto result = applyClamp(applyOmod({ floatT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2352,9 +2352,9 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src0 = getSrc(0, TypeId::Float32);
     auto src1 = getSrc(1, TypeId::Float32);
     auto resultValue = fragment.builder.createFSub(
-        floatT, spirv::cast<spirv::FloatValue>(src0.value),
-        spirv::cast<spirv::FloatValue>(src1.value));
-    auto result = applyClamp(applyOmod({floatT, resultValue}));
+      floatT, spirv::cast<spirv::FloatValue>(src0.value),
+      spirv::cast<spirv::FloatValue>(src1.value));
+    auto result = applyClamp(applyOmod({ floatT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2365,9 +2365,9 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src0 = getSrc(0, TypeId::Float32);
     auto src1 = getSrc(1, TypeId::Float32);
     auto resultValue = fragment.builder.createFMul(
-        floatT, spirv::cast<spirv::FloatValue>(src0.value),
-        spirv::cast<spirv::FloatValue>(src1.value));
-    auto result = applyClamp(applyOmod({floatT, resultValue}));
+      floatT, spirv::cast<spirv::FloatValue>(src0.value),
+      spirv::cast<spirv::FloatValue>(src1.value));
+    auto result = applyClamp(applyOmod({ floatT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2377,9 +2377,9 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src0 = getSrc(0, TypeId::SInt32);
     auto src1 = getSrc(1, TypeId::SInt32);
     auto resultValue = fragment.builder.createIMul(
-        resultT, spirv::cast<spirv::SIntValue>(src0.value),
-        spirv::cast<spirv::SIntValue>(src1.value));
-    auto result = applyClamp(applyOmod({resultT, resultValue}));
+      resultT, spirv::cast<spirv::SIntValue>(src0.value),
+      spirv::cast<spirv::SIntValue>(src1.value));
+    auto result = applyClamp(applyOmod({ resultT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2392,18 +2392,18 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto sint64T = fragment.context->getSint64Type();
 
     auto src0_64 = fragment.builder.createSConvert(
-        sint64T, spirv::cast<spirv::SIntValue>(src0.value));
+      sint64T, spirv::cast<spirv::SIntValue>(src0.value));
     auto src1_64 = fragment.builder.createSConvert(
-        sint64T, spirv::cast<spirv::SIntValue>(src1.value));
+      sint64T, spirv::cast<spirv::SIntValue>(src1.value));
 
     auto resultValue64 = fragment.builder.createIMul(
-        sint64T, spirv::cast<spirv::SIntValue>(src0_64),
-        spirv::cast<spirv::SIntValue>(src1_64));
+      sint64T, spirv::cast<spirv::SIntValue>(src0_64),
+      spirv::cast<spirv::SIntValue>(src1_64));
 
     resultValue64 = fragment.builder.createShiftRightLogical(
-        sint64T, resultValue64, fragment.context->getUInt32(32));
+      sint64T, resultValue64, fragment.context->getUInt32(32));
     auto resultValue = fragment.builder.createSConvert(resultT, resultValue64);
-    auto result = applyClamp(applyOmod({resultT, resultValue}));
+    auto result = applyClamp(applyOmod({ resultT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2421,9 +2421,9 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto resultValue64 = fragment.builder.createIMul(uint64T, src0_64, src1_64);
 
     resultValue64 = fragment.builder.createShiftRightLogical(
-        uint64T, resultValue64, fragment.context->getUInt32(32));
+      uint64T, resultValue64, fragment.context->getUInt32(32));
     auto resultValue = fragment.builder.createUConvert(resultT, resultValue64);
-    auto result = applyClamp(applyOmod({resultT, resultValue}));
+    auto result = applyClamp(applyOmod({ resultT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
@@ -2435,117 +2435,117 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src1 = getSrc(1, TypeId::Float32);
 
     auto dst = spirv::cast<spirv::FloatValue>( // FIXME: should use src2?
-        fragment.getVectorOperand(inst.vdst, TypeId::Float32).value);
+                                              fragment.getVectorOperand(inst.vdst, TypeId::Float32).value);
 
     auto resultValue = fragment.builder.createFAdd(
-        floatT,
-        fragment.builder.createFMul(floatT,
-                                    spirv::cast<spirv::FloatValue>(src0.value),
-                                    spirv::cast<spirv::FloatValue>(src1.value)),
-        dst);
+      floatT,
+      fragment.builder.createFMul(floatT,
+                                  spirv::cast<spirv::FloatValue>(src0.value),
+                                  spirv::cast<spirv::FloatValue>(src1.value)),
+      dst);
 
-    auto result = applyClamp(applyOmod({floatT, resultValue}));
+    auto result = applyClamp(applyOmod({ floatT, resultValue }));
 
     fragment.setVectorOperand(inst.vdst, result);
     break;
   }
   case Vop3::Op::V3_MAD_U32_U24: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src1, TypeId::UInt32).value);
     auto src2 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src2, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src2, TypeId::UInt32).value);
     auto operandT = fragment.context->getUInt32Type();
 
     src0 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src0, fragment.context->getUInt32((1 << 24) - 1)));
+      operandT, src0, fragment.context->getUInt32((1 << 24) - 1)));
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src1, fragment.context->getUInt32((1 << 24) - 1)));
+      operandT, src1, fragment.context->getUInt32((1 << 24) - 1)));
 
     auto result = fragment.builder.createIAdd(
-        operandT, fragment.builder.createIMul(operandT, src0, src1), src2);
+      operandT, fragment.builder.createIMul(operandT, src0, src1), src2);
 
-    fragment.setVectorOperand(inst.vdst, {operandT, result});
+    fragment.setVectorOperand(inst.vdst, { operandT, result });
     break;
   }
   case Vop3::Op::V3_MAD_I32_I24: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src1, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src1, TypeId::SInt32).value);
     auto src2 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src2, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src2, TypeId::SInt32).value);
     auto operandT = fragment.context->getSint32Type();
 
     src0 = fragment.builder.createShiftLeftLogical(
-        operandT, src0, fragment.context->getUInt32(8));
+      operandT, src0, fragment.context->getUInt32(8));
     src0 = fragment.builder.createShiftRightArithmetic(
-        operandT, src0, fragment.context->getUInt32(8));
+      operandT, src0, fragment.context->getUInt32(8));
     src1 = fragment.builder.createShiftLeftLogical(
-        operandT, src1, fragment.context->getUInt32(8));
+      operandT, src1, fragment.context->getUInt32(8));
     src1 = fragment.builder.createShiftRightArithmetic(
-        operandT, src1, fragment.context->getUInt32(8));
+      operandT, src1, fragment.context->getUInt32(8));
 
     auto result = fragment.builder.createIAdd(
-        operandT, fragment.builder.createIMul(operandT, src0, src1), src2);
+      operandT, fragment.builder.createIMul(operandT, src0, src1), src2);
 
-    fragment.setVectorOperand(inst.vdst, {operandT, result});
+    fragment.setVectorOperand(inst.vdst, { operandT, result });
     break;
   }
   case Vop3::Op::V3_MUL_U32_U24: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src1, TypeId::UInt32).value);
     auto operandT = fragment.context->getUInt32Type();
 
     src0 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src0, fragment.context->getUInt32((1 << 24) - 1)));
+      operandT, src0, fragment.context->getUInt32((1 << 24) - 1)));
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src1, fragment.context->getUInt32((1 << 24) - 1)));
+      operandT, src1, fragment.context->getUInt32((1 << 24) - 1)));
 
     auto result = fragment.builder.createIMul(operandT, src0, src1);
 
-    fragment.setVectorOperand(inst.vdst, {operandT, result});
+    fragment.setVectorOperand(inst.vdst, { operandT, result });
     break;
   }
   case Vop3::Op::V3_MUL_I32_I24: {
     auto src0 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
     auto src1 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src1, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src1, TypeId::SInt32).value);
     auto src2 = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src2, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src2, TypeId::SInt32).value);
     auto operandT = fragment.context->getSint32Type();
 
     src0 = fragment.builder.createShiftLeftLogical(
-        operandT, src0, fragment.context->getUInt32(8));
+      operandT, src0, fragment.context->getUInt32(8));
     src0 = fragment.builder.createShiftRightArithmetic(
-        operandT, src0, fragment.context->getUInt32(8));
+      operandT, src0, fragment.context->getUInt32(8));
     src1 = fragment.builder.createShiftLeftLogical(
-        operandT, src1, fragment.context->getUInt32(8));
+      operandT, src1, fragment.context->getUInt32(8));
     src1 = fragment.builder.createShiftRightArithmetic(
-        operandT, src1, fragment.context->getUInt32(8));
+      operandT, src1, fragment.context->getUInt32(8));
 
     auto result = fragment.builder.createIMul(operandT, src0, src1);
 
-    fragment.setVectorOperand(inst.vdst, {operandT, result});
+    fragment.setVectorOperand(inst.vdst, { operandT, result });
     break;
   }
   case Vop3::Op::V3_MAD_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto src1 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
     auto src2 = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src2, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src2, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto result = fragment.builder.createFAdd(
-        floatT, fragment.builder.createFMul(floatT, src0, src1), src2);
+      floatT, fragment.builder.createFMul(floatT, src0, src1), src2);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
   case Vop3::Op::V3_CNDMASK_B32: {
@@ -2554,46 +2554,46 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src2 = fragment.getScalarOperand(inst.src2, TypeId::UInt32).value;
 
     auto cmp = fragment.builder.createINotEqual(
-        fragment.context->getBoolType(), src2, fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), src2, fragment.context->getUInt32(0));
 
     auto uint32T = fragment.context->getUInt32Type();
     auto result = fragment.builder.createSelect(uint32T, cmp, src1, src0);
-    fragment.setVectorOperand(inst.vdst, {uint32T, result});
+    fragment.setVectorOperand(inst.vdst, { uint32T, result });
     break;
   }
 
   case Vop3::Op::V3_BFE_U32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src1, TypeId::UInt32).value);
     auto src2 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.src2, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.src2, TypeId::UInt32).value);
 
     auto operandT = fragment.context->getUInt32Type();
 
     auto voffset =
-        spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-            operandT, src1, fragment.context->getUInt32(0x1f)));
+      spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
+        operandT, src1, fragment.context->getUInt32(0x1f)));
     auto vsize =
-        spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-            operandT, src2, fragment.context->getUInt32(0x1f)));
+      spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
+        operandT, src2, fragment.context->getUInt32(0x1f)));
     auto field =
-        fragment.builder.createShiftRightLogical(operandT, src0, voffset);
+      fragment.builder.createShiftRightLogical(operandT, src0, voffset);
     auto mask = fragment.builder.createISub(
-        operandT,
-        fragment.builder.createShiftLeftLogical(
-            operandT, fragment.context->getUInt32(1), vsize),
-        fragment.context->getUInt32(1));
+      operandT,
+      fragment.builder.createShiftLeftLogical(
+        operandT, fragment.context->getUInt32(1), vsize),
+      fragment.context->getUInt32(1));
 
     auto resultT = fragment.context->getUInt32Type();
     auto result = fragment.builder.createSelect(
-        operandT,
-        fragment.builder.createIEqual(fragment.context->getBoolType(), vsize,
-                                      fragment.context->getUInt32(0)),
-        fragment.context->getUInt32(0),
-        fragment.builder.createBitwiseAnd(operandT, field, mask));
-    fragment.setVectorOperand(inst.vdst, {resultT, result});
+      operandT,
+      fragment.builder.createIEqual(fragment.context->getBoolType(), vsize,
+                                    fragment.context->getUInt32(0)),
+      fragment.context->getUInt32(0),
+      fragment.builder.createBitwiseAnd(operandT, field, mask));
+    fragment.setVectorOperand(inst.vdst, { resultT, result });
     break;
   }
 
@@ -2606,11 +2606,11 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto src1 = fragment.getScalarOperand(inst.src1, TypeId::Float32).value;
 
     auto src = fragment.builder.createCompositeConstruct(
-        float2T, std::array{src0, src1});
+      float2T, std::array{ src0, src1 });
     auto dst = fragment.builder.createExtInst(
-        uintT, glslStd450, GLSLstd450PackHalf2x16, std::array{src});
+      uintT, glslStd450, GLSLstd450PackHalf2x16, std::array{ src });
 
-    fragment.setVectorOperand(inst.vdst, {uintT, dst});
+    fragment.setVectorOperand(inst.vdst, { uintT, dst });
     break;
   }
 
@@ -2627,11 +2627,11 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto sabsdiff = fragment.builder.createExtInst(sint32T, glslStd450,
-                                                   GLSLstd450SAbs, {{sdiff}});
+                                                   GLSLstd450SAbs, { {sdiff} });
 
     auto absdiff = fragment.builder.createBitcast(uint32T, sabsdiff);
     auto result = fragment.builder.createIAdd(uint32T, absdiff, src2);
-    fragment.setVectorOperand(inst.vdst, {uint32T, result});
+    fragment.setVectorOperand(inst.vdst, { uint32T, result });
     break;
   }
 
@@ -2656,7 +2656,7 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
   auto getSOffset = [&](std::int32_t adv = 0) -> spirv::UIntValue {
     auto resultT = fragment.context->getUInt32Type();
     auto resultV =
-        fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value;
+      fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value;
     auto result = spirv::cast<spirv::UIntValue>(resultV);
 
     if (adv != 0) {
@@ -2669,17 +2669,17 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
     }
 
     return result;
-  };
+    };
 
   auto getVBuffer = [&] {
     auto vBuffer0 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 0, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 0, TypeId::UInt32);
     auto vBuffer1 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 1, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 1, TypeId::UInt32);
     auto vBuffer2 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 2, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 2, TypeId::UInt32);
     auto vBuffer3 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 3, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 3, TypeId::UInt32);
 
     auto optVBuffer0Value = fragment.context->findUint32Value(vBuffer0.value);
     auto optVBuffer1Value = fragment.context->findUint32Value(vBuffer1.value);
@@ -2691,7 +2691,7 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
       // V# buffer value is known, read the buffer now
       std::array<std::uint32_t, 4> vBufferData = {
           *optVBuffer0Value, *optVBuffer1Value, *optVBuffer2Value,
-          *optVBuffer3Value};
+          *optVBuffer3Value };
 
       GnmVBuffer result;
       std::memcpy(&result, vBufferData.data(), sizeof(result));
@@ -2699,7 +2699,7 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
     }
 
     util::unreachable();
-  };
+    };
 
   auto getAddress = [&](GnmVBuffer *vbuffer) {
     auto &builder = fragment.builder;
@@ -2708,14 +2708,14 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
     spirv::UIntValue index;
     if (inst.idxen) {
       index = spirv::cast<spirv::UIntValue>(
-          fragment.getVectorOperand(inst.vaddr, TypeId::UInt32).value);
+        fragment.getVectorOperand(inst.vaddr, TypeId::UInt32).value);
     }
 
     // std::printf("vBuffer address = %lx\n", vbuffer->getAddress());
 
     if (vbuffer->addtid_en) {
       spirv::UIntValue threadId =
-          builder.createLoad(uint32T, fragment.context->getThreadId());
+        builder.createLoad(uint32T, fragment.context->getThreadId());
 
       if (index) {
         index = builder.createIAdd(uint32T, index, threadId);
@@ -2725,14 +2725,14 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
     }
 
     auto offset = inst.offset ? fragment.context->getUInt32(inst.offset)
-                              : spirv::UIntValue{};
+      : spirv::UIntValue{};
 
     if (inst.offen) {
       auto off = spirv::cast<spirv::UIntValue>(
-          fragment
-              .getVectorOperand(inst.vaddr + (inst.idxen ? 1 : 0),
-                                TypeId::UInt32)
-              .value);
+        fragment
+        .getVectorOperand(inst.vaddr + (inst.idxen ? 1 : 0),
+                          TypeId::UInt32)
+        .value);
 
       if (offset) {
         offset = builder.createIAdd(uint32T, off, offset);
@@ -2749,7 +2749,7 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
       }
 
       auto offset = builder.createIMul(
-          uint32T, index, fragment.context->getUInt32(vbuffer->stride));
+        uint32T, index, fragment.context->getUInt32(vbuffer->stride));
       if (address == fragment.context->getUInt32(0)) {
         return offset;
       }
@@ -2771,20 +2771,20 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
       auto offset_lsb = builder.createUMod(uint32T, offset, elementSize);
 
       auto indexMsb = builder.createIMul(
-          uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
+        uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
       auto offsetMsb = builder.createIMul(
-          uint32T, offset_msb,
-          fragment.context->getUInt32(vbuffer->element_size));
+        uint32T, offset_msb,
+        fragment.context->getUInt32(vbuffer->element_size));
 
       address = builder.createIAdd(
-          uint32T, address,
-          builder.createIMul(uint32T,
-                             builder.createIAdd(uint32T, indexMsb, offsetMsb),
-                             indexStride));
+        uint32T, address,
+        builder.createIMul(uint32T,
+                           builder.createIAdd(uint32T, indexMsb, offsetMsb),
+                           indexStride));
 
       address = builder.createIAdd(
-          uint32T, address,
-          builder.createIMul(uint32T, index_lsb, elementSize));
+        uint32T, address,
+        builder.createIMul(uint32T, index_lsb, elementSize));
 
       return builder.createIAdd(uint32T, address, offset_lsb);
     }
@@ -2795,10 +2795,10 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
       auto index_lsb = builder.createUMod(uint32T, index, indexStride);
 
       auto indexMsb = builder.createIMul(
-          uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
+        uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
 
       return builder.createIAdd(
-          uint32T, address, builder.createIMul(uint32T, indexMsb, indexStride));
+        uint32T, address, builder.createIMul(uint32T, indexMsb, indexStride));
     }
 
     if (!offset) {
@@ -2811,14 +2811,14 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
     auto offset_lsb = builder.createUMod(uint32T, offset, elementSize);
 
     auto offsetMsb =
-        builder.createIMul(uint32T, offset_msb,
-                           fragment.context->getUInt32(vbuffer->element_size));
+      builder.createIMul(uint32T, offset_msb,
+                         fragment.context->getUInt32(vbuffer->element_size));
 
     address = builder.createIAdd(
-        uint32T, address, builder.createIMul(uint32T, offsetMsb, indexStride));
+      uint32T, address, builder.createIMul(uint32T, offsetMsb, indexStride));
 
     return builder.createIAdd(uint32T, address, offset_lsb);
-  };
+    };
 
   switch (inst.op) {
   case Mubuf::Op::BUFFER_LOAD_FORMAT_X:
@@ -2826,18 +2826,18 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
   case Mubuf::Op::BUFFER_LOAD_FORMAT_XYZ:
   case Mubuf::Op::BUFFER_LOAD_FORMAT_XYZW: {
     std::uint32_t count = static_cast<int>(inst.op) -
-                          static_cast<int>(Mubuf::Op::BUFFER_LOAD_FORMAT_X) + 1;
+      static_cast<int>(Mubuf::Op::BUFFER_LOAD_FORMAT_X) + 1;
 
     auto vbuffer = getVBuffer();
     auto address = getAddress(&vbuffer);
 
     spirv::Value result[4];
     auto resultType = convertFromFormat(
-        result, count, fragment, reinterpret_cast<std::uint32_t *>(&vbuffer),
-        address, vbuffer.dfmt, vbuffer.nfmt);
+      result, count, fragment, reinterpret_cast<std::uint32_t *>(&vbuffer),
+      address, vbuffer.dfmt, vbuffer.nfmt);
 
     for (std::uint32_t i = 0; i < count; ++i) {
-      fragment.setVectorOperand(inst.vdata + i, {resultType, result[i]});
+      fragment.setVectorOperand(inst.vdata + i, { resultType, result[i] });
     }
     break;
   }
@@ -2847,8 +2847,8 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
   case Mubuf::Op::BUFFER_STORE_FORMAT_XYZ:
   case Mubuf::Op::BUFFER_STORE_FORMAT_XYZW: {
     std::uint32_t count = static_cast<int>(inst.op) -
-                          static_cast<int>(Mubuf::Op::BUFFER_STORE_FORMAT_X) +
-                          1;
+      static_cast<int>(Mubuf::Op::BUFFER_STORE_FORMAT_X) +
+      1;
 
     auto vbuffer = getVBuffer();
     auto address = getAddress(&vbuffer);
@@ -2871,36 +2871,36 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
   case Mubuf::Op::BUFFER_LOAD_DWORDX4:
   case Mubuf::Op::BUFFER_LOAD_DWORDX3: {
     std::uint32_t count = static_cast<int>(inst.op) -
-                          static_cast<int>(Mubuf::Op::BUFFER_LOAD_DWORD) + 1;
+      static_cast<int>(Mubuf::Op::BUFFER_LOAD_DWORD) + 1;
 
     auto vbuffer = getVBuffer();
     auto address = getAddress(&vbuffer);
     auto loadType = fragment.context->getType(TypeId::UInt32);
     auto uniform = fragment.context->getOrCreateStorageBuffer(
-        reinterpret_cast<std::uint32_t *>(&vbuffer), TypeId::UInt32);
+      reinterpret_cast<std::uint32_t *>(&vbuffer), TypeId::UInt32);
     uniform->accessOp |= AccessOp::Load;
 
     auto uniformPointerType = fragment.context->getPointerType(
-        spv::StorageClass::StorageBuffer, TypeId::UInt32);
+      spv::StorageClass::StorageBuffer, TypeId::UInt32);
     address =
-        fragment.builder.createUDiv(fragment.context->getUInt32Type(), address,
-                                    fragment.context->getUInt32(4));
+      fragment.builder.createUDiv(fragment.context->getUInt32Type(), address,
+                                  fragment.context->getUInt32(4));
 
     for (int i = 0; i < count; ++i) {
       auto channelOffset = address;
 
       if (i != 0) {
         channelOffset = fragment.builder.createIAdd(
-            fragment.context->getUInt32Type(), channelOffset,
-            fragment.context->getUInt32(i));
+          fragment.context->getUInt32Type(), channelOffset,
+          fragment.context->getUInt32(i));
       }
 
       auto uniformPointerValue = fragment.builder.createAccessChain(
-          uniformPointerType, uniform->variable,
-          {{fragment.context->getUInt32(0), channelOffset}});
+        uniformPointerType, uniform->variable,
+        { {fragment.context->getUInt32(0), channelOffset} });
 
       auto value = fragment.builder.createLoad(loadType, uniformPointerValue);
-      fragment.setVectorOperand(inst.vdata + i, {loadType, value});
+      fragment.setVectorOperand(inst.vdata + i, { loadType, value });
     }
     break;
   }
@@ -2915,37 +2915,37 @@ void convertMubuf(Fragment &fragment, Mubuf inst) {
   case Mubuf::Op::BUFFER_STORE_DWORDX4:
   case Mubuf::Op::BUFFER_STORE_DWORDX3: {
     std::uint32_t count = static_cast<int>(inst.op) -
-                          static_cast<int>(Mubuf::Op::BUFFER_STORE_DWORD) + 1;
+      static_cast<int>(Mubuf::Op::BUFFER_STORE_DWORD) + 1;
 
     auto vbuffer = getVBuffer();
     auto address = getAddress(&vbuffer);
     auto storeType = fragment.context->getType(TypeId::UInt32);
     auto uniform = fragment.context->getOrCreateStorageBuffer(
-        reinterpret_cast<std::uint32_t *>(&vbuffer), TypeId::UInt32);
+      reinterpret_cast<std::uint32_t *>(&vbuffer), TypeId::UInt32);
     uniform->accessOp |= AccessOp::Store;
 
     auto uniformPointerType = fragment.context->getPointerType(
-        spv::StorageClass::StorageBuffer, TypeId::UInt32);
+      spv::StorageClass::StorageBuffer, TypeId::UInt32);
     address =
-        fragment.builder.createUDiv(fragment.context->getUInt32Type(), address,
-                                    fragment.context->getUInt32(4));
+      fragment.builder.createUDiv(fragment.context->getUInt32Type(), address,
+                                  fragment.context->getUInt32(4));
 
     for (int i = 0; i < count; ++i) {
       auto channelOffset = address;
 
       if (i != 0) {
         channelOffset = fragment.builder.createIAdd(
-            fragment.context->getUInt32Type(), channelOffset,
-            fragment.context->getUInt32(i));
+          fragment.context->getUInt32Type(), channelOffset,
+          fragment.context->getUInt32(i));
       }
 
       auto uniformPointerValue = fragment.builder.createAccessChain(
-          uniformPointerType, uniform->variable,
-          {{fragment.context->getUInt32(0), channelOffset}});
+        uniformPointerType, uniform->variable,
+        { {fragment.context->getUInt32(0), channelOffset} });
 
       fragment.builder.createStore(
-          uniformPointerValue,
-          fragment.getVectorOperand(inst.vdata + i, TypeId::UInt32).value);
+        uniformPointerValue,
+        fragment.getVectorOperand(inst.vdata + i, TypeId::UInt32).value);
     }
   }
 
@@ -2964,19 +2964,19 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
   case Mtbuf::Op::TBUFFER_LOAD_FORMAT_XYZ:
   case Mtbuf::Op::TBUFFER_LOAD_FORMAT_XYZW: {
     std::uint32_t count = static_cast<int>(inst.op) -
-                          static_cast<int>(Mtbuf::Op::TBUFFER_LOAD_FORMAT_X) +
-                          1;
+      static_cast<int>(Mtbuf::Op::TBUFFER_LOAD_FORMAT_X) +
+      1;
 
     auto &builder = fragment.builder;
 
     auto vBuffer0 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 0, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 0, TypeId::UInt32);
     auto vBuffer1 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 1, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 1, TypeId::UInt32);
     auto vBuffer2 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 2, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 2, TypeId::UInt32);
     auto vBuffer3 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 3, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 3, TypeId::UInt32);
 
     auto optVBuffer0Value = fragment.context->findUint32Value(vBuffer0.value);
     auto optVBuffer1Value = fragment.context->findUint32Value(vBuffer1.value);
@@ -2986,12 +2986,12 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
     if (optVBuffer0Value && optVBuffer1Value && optVBuffer2Value &&
         optVBuffer3Value) {
       // V# buffer value is known, read the buffer now
-      std::uint32_t vBufferData[] = {*optVBuffer0Value, *optVBuffer1Value,
-                                     *optVBuffer2Value, *optVBuffer3Value};
+      std::uint32_t vBufferData[] = { *optVBuffer0Value, *optVBuffer1Value,
+                                     *optVBuffer2Value, *optVBuffer3Value };
 
       auto vbuffer = reinterpret_cast<GnmVBuffer *>(vBufferData);
       auto base = spirv::cast<spirv::UIntValue>(
-          fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value);
+        fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value);
 
       auto uint32T = fragment.context->getUInt32Type();
       auto uint32_0 = fragment.context->getUInt32(0);
@@ -3000,7 +3000,7 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
         util::unreachable("!! dfmt is invalid !!\n");
 
         for (std::uint32_t i = 0; i < count; ++i) {
-          fragment.setVectorOperand(inst.vdata + i, {uint32T, uint32_0});
+          fragment.setVectorOperand(inst.vdata + i, { uint32T, uint32_0 });
         }
 
         return;
@@ -3009,14 +3009,14 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
       spirv::UIntValue index;
       if (inst.idxen) {
         index = spirv::cast<spirv::UIntValue>(
-            fragment.getVectorOperand(inst.vaddr, TypeId::UInt32).value);
+          fragment.getVectorOperand(inst.vaddr, TypeId::UInt32).value);
       }
 
       // std::printf("vBuffer address = %lx\n", vbuffer->getAddress());
 
       if (vbuffer->addtid_en) {
         spirv::UIntValue threadId =
-            builder.createLoad(uint32T, fragment.context->getThreadId());
+          builder.createLoad(uint32T, fragment.context->getThreadId());
 
         if (index) {
           index = builder.createIAdd(uint32T, index, threadId);
@@ -3026,14 +3026,14 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
       }
 
       auto offset = inst.offset ? fragment.context->getUInt32(inst.offset)
-                                : spirv::UIntValue{};
+        : spirv::UIntValue{};
 
       if (inst.offen) {
         auto off = spirv::cast<spirv::UIntValue>(
-            fragment
-                .getVectorOperand(inst.vaddr + (inst.idxen ? 1 : 0),
-                                  TypeId::UInt32)
-                .value);
+          fragment
+          .getVectorOperand(inst.vaddr + (inst.idxen ? 1 : 0),
+                            TypeId::UInt32)
+          .value);
 
         if (offset) {
           offset = builder.createIAdd(uint32T, off, offset);
@@ -3046,7 +3046,7 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
       if (vbuffer->swizzle_en == 0) {
         if (vbuffer->stride != 0 && index) {
           auto offset = builder.createIMul(
-              uint32T, index, fragment.context->getUInt32(vbuffer->stride));
+            uint32T, index, fragment.context->getUInt32(vbuffer->stride));
           if (address == uint32_0) {
             address = offset;
           } else {
@@ -3064,20 +3064,20 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
           auto offset_lsb = builder.createUMod(uint32T, offset, elementSize);
 
           auto indexMsb = builder.createIMul(
-              uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
+            uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
           auto offsetMsb = builder.createIMul(
-              uint32T, offset_msb,
-              fragment.context->getUInt32(vbuffer->element_size));
+            uint32T, offset_msb,
+            fragment.context->getUInt32(vbuffer->element_size));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(
-                  uint32T, builder.createIAdd(uint32T, indexMsb, offsetMsb),
-                  indexStride));
+            uint32T, address,
+            builder.createIMul(
+              uint32T, builder.createIAdd(uint32T, indexMsb, offsetMsb),
+              indexStride));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(uint32T, index_lsb, elementSize));
+            uint32T, address,
+            builder.createIMul(uint32T, index_lsb, elementSize));
 
           address = builder.createIAdd(uint32T, address, offset_lsb);
         } else if (index) {
@@ -3086,11 +3086,11 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
           auto index_lsb = builder.createUMod(uint32T, index, indexStride);
 
           auto indexMsb = builder.createIMul(
-              uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
+            uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(uint32T, indexMsb, indexStride));
+            uint32T, address,
+            builder.createIMul(uint32T, indexMsb, indexStride));
         } else if (offset) {
           auto indexStride = fragment.context->getUInt32(vbuffer->index_stride);
           auto elementSize = fragment.context->getUInt32(vbuffer->element_size);
@@ -3098,12 +3098,12 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
           auto offset_lsb = builder.createUMod(uint32T, offset, elementSize);
 
           auto offsetMsb = builder.createIMul(
-              uint32T, offset_msb,
-              fragment.context->getUInt32(vbuffer->element_size));
+            uint32T, offset_msb,
+            fragment.context->getUInt32(vbuffer->element_size));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(uint32T, offsetMsb, indexStride));
+            uint32T, address,
+            builder.createIMul(uint32T, offsetMsb, indexStride));
 
           address = builder.createIAdd(uint32T, address, offset_lsb);
         }
@@ -3114,7 +3114,7 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
                                           address, inst.dfmt, inst.nfmt);
 
       for (std::uint32_t i = 0; i < count; ++i) {
-        fragment.setVectorOperand(inst.vdata + i, {resultType, result[i]});
+        fragment.setVectorOperand(inst.vdata + i, { resultType, result[i] });
       }
       break;
     } else {
@@ -3127,18 +3127,18 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
   case Mtbuf::Op::TBUFFER_STORE_FORMAT_XYZ:
   case Mtbuf::Op::TBUFFER_STORE_FORMAT_XYZW: {
     std::uint32_t count = static_cast<int>(inst.op) -
-                          static_cast<int>(Mtbuf::Op::TBUFFER_STORE_FORMAT_X) +
-                          1;
+      static_cast<int>(Mtbuf::Op::TBUFFER_STORE_FORMAT_X) +
+      1;
     auto &builder = fragment.builder;
 
     auto vBuffer0 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 0, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 0, TypeId::UInt32);
     auto vBuffer1 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 1, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 1, TypeId::UInt32);
     auto vBuffer2 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 2, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 2, TypeId::UInt32);
     auto vBuffer3 =
-        fragment.getScalarOperand((inst.srsrc << 2) + 3, TypeId::UInt32);
+      fragment.getScalarOperand((inst.srsrc << 2) + 3, TypeId::UInt32);
 
     auto optVBuffer0Value = fragment.context->findUint32Value(vBuffer0.value);
     auto optVBuffer1Value = fragment.context->findUint32Value(vBuffer1.value);
@@ -3148,14 +3148,14 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
     if (optVBuffer0Value && optVBuffer1Value && optVBuffer2Value &&
         optVBuffer3Value) {
       // V# buffer value is known, read the buffer now
-      std::uint32_t vBufferData[] = {*optVBuffer0Value, *optVBuffer1Value,
-                                     *optVBuffer2Value, *optVBuffer3Value};
+      std::uint32_t vBufferData[] = { *optVBuffer0Value, *optVBuffer1Value,
+                                     *optVBuffer2Value, *optVBuffer3Value };
 
       auto vbuffer = reinterpret_cast<GnmVBuffer *>(vBufferData);
       // std::printf("vBuffer address = %lx\n", vbuffer->getAddress());
 
       auto base = spirv::cast<spirv::UIntValue>(
-          fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value);
+        fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value);
 
       auto uint32T = fragment.context->getUInt32Type();
       auto uint32_0 = fragment.context->getUInt32(0);
@@ -3164,7 +3164,7 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
         util::unreachable("!! dfmt is invalid !!\n");
 
         for (std::uint32_t i = 0; i < count; ++i) {
-          fragment.setVectorOperand(inst.vdata + i, {uint32T, uint32_0});
+          fragment.setVectorOperand(inst.vdata + i, { uint32T, uint32_0 });
         }
 
         return;
@@ -3173,12 +3173,12 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
       spirv::UIntValue index;
       if (inst.idxen) {
         index = spirv::cast<spirv::UIntValue>(
-            fragment.getVectorOperand(inst.vaddr, TypeId::UInt32).value);
+          fragment.getVectorOperand(inst.vaddr, TypeId::UInt32).value);
       }
 
       if (vbuffer->addtid_en) {
         spirv::UIntValue threadId =
-            builder.createLoad(uint32T, fragment.context->getThreadId());
+          builder.createLoad(uint32T, fragment.context->getThreadId());
 
         if (index) {
           index = builder.createIAdd(uint32T, index, threadId);
@@ -3188,14 +3188,14 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
       }
 
       auto offset = inst.offset ? fragment.context->getUInt32(inst.offset)
-                                : spirv::UIntValue{};
+        : spirv::UIntValue{};
 
       if (inst.offen) {
         auto off = spirv::cast<spirv::UIntValue>(
-            fragment
-                .getVectorOperand(inst.vaddr + (inst.idxen ? 1 : 0),
-                                  TypeId::UInt32)
-                .value);
+          fragment
+          .getVectorOperand(inst.vaddr + (inst.idxen ? 1 : 0),
+                            TypeId::UInt32)
+          .value);
 
         if (offset) {
           offset = builder.createIAdd(uint32T, off, offset);
@@ -3208,7 +3208,7 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
       if (vbuffer->swizzle_en == 0) {
         if (vbuffer->stride != 0 && index) {
           auto offset = builder.createIMul(
-              uint32T, index, fragment.context->getUInt32(vbuffer->stride));
+            uint32T, index, fragment.context->getUInt32(vbuffer->stride));
           if (address == uint32_0) {
             address = offset;
           } else {
@@ -3226,20 +3226,20 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
           auto offset_lsb = builder.createUMod(uint32T, offset, elementSize);
 
           auto indexMsb = builder.createIMul(
-              uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
+            uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
           auto offsetMsb = builder.createIMul(
-              uint32T, offset_msb,
-              fragment.context->getUInt32(vbuffer->element_size));
+            uint32T, offset_msb,
+            fragment.context->getUInt32(vbuffer->element_size));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(
-                  uint32T, builder.createIAdd(uint32T, indexMsb, offsetMsb),
-                  indexStride));
+            uint32T, address,
+            builder.createIMul(
+              uint32T, builder.createIAdd(uint32T, indexMsb, offsetMsb),
+              indexStride));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(uint32T, index_lsb, elementSize));
+            uint32T, address,
+            builder.createIMul(uint32T, index_lsb, elementSize));
 
           address = builder.createIAdd(uint32T, address, offset_lsb);
         } else if (index) {
@@ -3248,11 +3248,11 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
           auto index_lsb = builder.createUMod(uint32T, index, indexStride);
 
           auto indexMsb = builder.createIMul(
-              uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
+            uint32T, index_msb, fragment.context->getUInt32(vbuffer->stride));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(uint32T, indexMsb, indexStride));
+            uint32T, address,
+            builder.createIMul(uint32T, indexMsb, indexStride));
         } else if (offset) {
           auto indexStride = fragment.context->getUInt32(vbuffer->index_stride);
           auto elementSize = fragment.context->getUInt32(vbuffer->element_size);
@@ -3260,12 +3260,12 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
           auto offset_lsb = builder.createUMod(uint32T, offset, elementSize);
 
           auto offsetMsb = builder.createIMul(
-              uint32T, offset_msb,
-              fragment.context->getUInt32(vbuffer->element_size));
+            uint32T, offset_msb,
+            fragment.context->getUInt32(vbuffer->element_size));
 
           address = builder.createIAdd(
-              uint32T, address,
-              builder.createIMul(uint32T, offsetMsb, indexStride));
+            uint32T, address,
+            builder.createIMul(uint32T, offsetMsb, indexStride));
 
           address = builder.createIAdd(uint32T, address, offset_lsb);
         }
@@ -3298,12 +3298,12 @@ void convertMimg(Fragment &fragment, Mimg inst) {
       auto uint32x2T = fragment.context->getUint32x2Type();
       auto lod = fragment.getScalarOperand(inst.vaddr, TypeId::UInt32);
       auto sizeResult =
-          fragment.builder.createImageQuerySizeLod(uint32x2T, image, lod.value);
+        fragment.builder.createImageQuerySizeLod(uint32x2T, image, lod.value);
 
       values[0] =
-          fragment.builder.createCompositeExtract(uint32T, sizeResult, {{0}});
+        fragment.builder.createCompositeExtract(uint32T, sizeResult, { {0} });
       values[1] =
-          fragment.builder.createCompositeExtract(uint32T, sizeResult, {{1}});
+        fragment.builder.createCompositeExtract(uint32T, sizeResult, { {1} });
       values[2] = fragment.context->getUInt32(1);
     }
 
@@ -3314,7 +3314,7 @@ void convertMimg(Fragment &fragment, Mimg inst) {
 
     for (std::size_t dstOffset = 0, i = 0; i < 4; ++i) {
       if (inst.dmask & (1 << i)) {
-        fragment.setVectorOperand(inst.vdata + dstOffset++, {uint32T, values[i]});
+        fragment.setVectorOperand(inst.vdata + dstOffset++, { uint32T, values[i] });
       }
     }
     break;
@@ -3324,26 +3324,26 @@ void convertMimg(Fragment &fragment, Mimg inst) {
     auto sampler = fragment.createSampler(RegisterId::Raw(inst.ssamp << 2));
     auto coord0 = fragment.getVectorOperand(inst.vaddr, TypeId::Float32).value;
     auto coord1 =
-        fragment.getVectorOperand(inst.vaddr + 1, TypeId::Float32).value;
+      fragment.getVectorOperand(inst.vaddr + 1, TypeId::Float32).value;
     auto coord2 =
-        fragment.getVectorOperand(inst.vaddr + 2, TypeId::Float32).value;
+      fragment.getVectorOperand(inst.vaddr + 2, TypeId::Float32).value;
     auto coords = fragment.builder.createCompositeConstruct(
-        fragment.context->getFloat32x3Type(),
-        {{coord0, coord1, coord2}}); // TODO
+      fragment.context->getFloat32x3Type(),
+      { {coord0, coord1, coord2} }); // TODO
 
     auto sampledImage2dT = fragment.context->getSampledImage2DType();
     auto float4T = fragment.context->getFloat32x4Type();
     auto floatT = fragment.context->getFloat32Type();
     auto sampledImage =
-        fragment.builder.createSampledImage(sampledImage2dT, image, sampler);
+      fragment.builder.createSampledImage(sampledImage2dT, image, sampler);
     auto value = fragment.builder.createImageSampleImplicitLod(
-        float4T, sampledImage, coords);
+      float4T, sampledImage, coords);
 
     for (std::uint32_t dstOffset = 0, i = 0; i < 4; ++i) {
       if (inst.dmask & (1 << i)) {
         fragment.setVectorOperand(
-            inst.vdata + dstOffset++, {floatT, fragment.builder.createCompositeExtract(
-                                         floatT, value, {{i}})});
+          inst.vdata + dstOffset++, { floatT, fragment.builder.createCompositeExtract(
+                                       floatT, value, {{i}}) });
       }
     }
     break;
@@ -3354,7 +3354,7 @@ void convertMimg(Fragment &fragment, Mimg inst) {
     for (std::uint32_t dstOffset = 0, i = 0; i < 4; ++i) {
       if (inst.dmask & (1 << i)) {
         fragment.setVectorOperand(
-            inst.vdata + dstOffset++, {intT, fragment.context->getUInt32(0)});
+          inst.vdata + dstOffset++, { intT, fragment.context->getUInt32(0) });
       }
     }
     break;
@@ -3392,9 +3392,9 @@ void convertVintrp(Fragment &fragment, Vintrp inst) {
     auto attr = fragment.getAttrOperand(inst.attr, TypeId::Float32x4);
     auto channelType = fragment.context->getType(TypeId::Float32);
     auto attrChan = fragment.builder.createCompositeExtract(
-        channelType, attr.value,
-        std::array{static_cast<std::uint32_t>(inst.attrChan)});
-    fragment.setVectorOperand(inst.vdst, {channelType, attrChan});
+      channelType, attr.value,
+      std::array{ static_cast<std::uint32_t>(inst.attrChan) });
+    fragment.setVectorOperand(inst.vdst, { channelType, attrChan });
     break;
   }
 
@@ -3426,17 +3426,17 @@ void convertExp(Fragment &fragment, Exp inst) {
     auto zwUint = fragment.getVectorOperand(inst.vsrc1, TypeId::UInt32).value;
 
     auto xy = fragment.builder.createExtInst(
-        float2T, glslStd450, GLSLstd450UnpackHalf2x16, std::array{xyUint});
+      float2T, glslStd450, GLSLstd450UnpackHalf2x16, std::array{ xyUint });
     auto zw = fragment.builder.createExtInst(
-        float2T, glslStd450, GLSLstd450UnpackHalf2x16, std::array{zwUint});
+      float2T, glslStd450, GLSLstd450UnpackHalf2x16, std::array{ zwUint });
     exports[0] = fragment.builder.createCompositeExtract(
-        floatT, xy, std::array{static_cast<std::uint32_t>(0)});
+      floatT, xy, std::array{ static_cast<std::uint32_t>(0) });
     exports[1] = fragment.builder.createCompositeExtract(
-        floatT, xy, std::array{static_cast<std::uint32_t>(1)});
+      floatT, xy, std::array{ static_cast<std::uint32_t>(1) });
     exports[2] = fragment.builder.createCompositeExtract(
-        floatT, zw, std::array{static_cast<std::uint32_t>(0)});
+      floatT, zw, std::array{ static_cast<std::uint32_t>(0) });
     exports[3] = fragment.builder.createCompositeExtract(
-        floatT, zw, std::array{static_cast<std::uint32_t>(1)});
+      floatT, zw, std::array{ static_cast<std::uint32_t>(1) });
     // value = fragment.builder.createCompositeConstruct(type, std::array{x, y,
     // z, w});
   } else {
@@ -3457,22 +3457,22 @@ void convertExp(Fragment &fragment, Exp inst) {
 
   auto resultType = fragment.context->getFloat32x4Type();
   auto floatType = fragment.context->getFloat32Type();
-/*
-  if (inst.en != 0xf) {
-    auto prevValue = fragment.getExportTarget(inst.target, TypeId::Float32x4);
-    if (prevValue) {
-      for (std::uint32_t i = 0; i < 4; ++i) {
-        if (~inst.en & (1 << i)) {
-          exports[i] = fragment.builder.createCompositeExtract(
-              floatType, prevValue.value, {{i}});
+  /*
+    if (inst.en != 0xf) {
+      auto prevValue = fragment.getExportTarget(inst.target, TypeId::Float32x4);
+      if (prevValue) {
+        for (std::uint32_t i = 0; i < 4; ++i) {
+          if (~inst.en & (1 << i)) {
+            exports[i] = fragment.builder.createCompositeExtract(
+                floatType, prevValue.value, {{i}});
+          }
         }
       }
     }
-  }
-*/
+  */
 
   auto value = fragment.builder.createCompositeConstruct(resultType, exports);
-  fragment.setExportTarget(inst.target, {resultType, value});
+  fragment.setExportTarget(inst.target, { resultType, value });
 }
 
 void convertVop1(Fragment &fragment, Vop1 inst) {
@@ -3480,91 +3480,91 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
   switch (inst.op) {
   case Vop1::Op::V_MOV_B32:
     fragment.setVectorOperand(
-        inst.vdst, fragment.getScalarOperand(inst.src0, TypeId::UInt32,
-                                             OperandGetFlags::PreserveType));
+      inst.vdst, fragment.getScalarOperand(inst.src0, TypeId::UInt32,
+                                           OperandGetFlags::PreserveType));
     break;
 
   case Vop1::Op::V_RCP_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
     auto float1 = fragment.context->getFloat32(1);
     auto result = fragment.builder.createFDiv(floatT, float1, src);
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop1::Op::V_RSQ_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
     auto float1 = fragment.context->getFloat32(1);
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(
-        floatT, glslStd450, GLSLstd450InverseSqrt, {{src}});
+      floatT, glslStd450, GLSLstd450InverseSqrt, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop1::Op::V_SQRT_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
-                                                 GLSLstd450Sqrt, {{src}});
+                                                 GLSLstd450Sqrt, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop1::Op::V_EXP_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
-                                                 GLSLstd450Exp2, {{src}});
+                                                 GLSLstd450Exp2, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
 
   case Vop1::Op::V_FRACT_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
-                                                 GLSLstd450Fract, {{src}});
+                                                 GLSLstd450Fract, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
   case Vop1::Op::V_CVT_I32_F32: {
     auto src = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto resultType = fragment.context->getType(TypeId::SInt32);
     auto result = fragment.builder.createConvertFToS(resultType, src);
 
-    fragment.setVectorOperand(inst.vdst, {resultType, result});
+    fragment.setVectorOperand(inst.vdst, { resultType, result });
     break;
   }
   case Vop1::Op::V_CVT_F32_I32: {
     auto src = spirv::cast<spirv::SIntValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::SInt32).value);
     auto resultType = fragment.context->getType(TypeId::Float32);
     auto result = fragment.builder.createConvertSToF(resultType, src);
 
-    fragment.setVectorOperand(inst.vdst, {resultType, result});
+    fragment.setVectorOperand(inst.vdst, { resultType, result });
     break;
   }
 
@@ -3573,52 +3573,52 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     auto resultType = fragment.context->getType(TypeId::UInt32);
     auto result = fragment.builder.createConvertFToU(resultType, src);
 
-    fragment.setVectorOperand(inst.vdst, {resultType, result});
+    fragment.setVectorOperand(inst.vdst, { resultType, result });
     break;
   }
   case Vop1::Op::V_CVT_F32_U32: {
     auto src = fragment.getScalarOperand(inst.src0, TypeId::UInt32).value;
     auto resultType = fragment.context->getFloat32Type();
     auto result = fragment.builder.createConvertUToF(
-        resultType, spirv::cast<spirv::UIntValue>(src));
+      resultType, spirv::cast<spirv::UIntValue>(src));
 
-    fragment.setVectorOperand(inst.vdst, {resultType, result});
+    fragment.setVectorOperand(inst.vdst, { resultType, result });
     break;
   }
   case Vop1::Op::V_FLOOR_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
-                                                 GLSLstd450Floor, {{src}});
+                                                 GLSLstd450Floor, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
   case Vop1::Op::V_SIN_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
-                                                 GLSLstd450Sin, {{src}});
+                                                 GLSLstd450Sin, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
   case Vop1::Op::V_COS_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+      fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
-                                                 GLSLstd450Cos, {{src}});
+                                                 GLSLstd450Cos, { {src} });
 
-    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    fragment.setVectorOperand(inst.vdst, { floatT, result });
     break;
   }
 
@@ -3637,7 +3637,7 @@ void convertVopc(Fragment &fragment, Vopc inst) {
 
     auto result = doCmpOp(fragment, type, src0, src1, kind, flags);
     fragment.setVcc(result);
-  };
+    };
 
   switch (inst.op) {
   case Vopc::Op::V_CMP_F_F32:
@@ -4048,8 +4048,8 @@ void convertVopc(Fragment &fragment, Vopc inst) {
   case Vopc::Op::V_CMP_T_I32:
     cmpOp(TypeId::SInt32, CmpKind::T);
     break;
-  // case Vopc::Op::V_CMP_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS);
-  // break;
+    // case Vopc::Op::V_CMP_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS);
+    // break;
   case Vopc::Op::V_CMP_LT_I16:
     cmpOp(TypeId::SInt16, CmpKind::LT);
     break;
@@ -4068,8 +4068,8 @@ void convertVopc(Fragment &fragment, Vopc inst) {
   case Vopc::Op::V_CMP_GE_I16:
     cmpOp(TypeId::SInt16, CmpKind::GE);
     break;
-  // case Vopc::Op::V_CMP_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS);
-  // break;
+    // case Vopc::Op::V_CMP_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS);
+    // break;
   case Vopc::Op::V_CMPX_F_I32:
     cmpOp(TypeId::SInt32, CmpKind::F, CmpFlags::X);
     break;
@@ -4094,8 +4094,8 @@ void convertVopc(Fragment &fragment, Vopc inst) {
   case Vopc::Op::V_CMPX_T_I32:
     cmpOp(TypeId::SInt32, CmpKind::T, CmpFlags::X);
     break;
-  // case Vopc::Op::V_CMPX_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS,
-  // CmpFlags::X); break;
+    // case Vopc::Op::V_CMPX_CLASS_F32: cmpOp(TypeId::Float32, CmpKind::CLASS,
+    // CmpFlags::X); break;
   case Vopc::Op::V_CMPX_LT_I16:
     cmpOp(TypeId::SInt16, CmpKind::LT, CmpFlags::X);
     break;
@@ -4114,8 +4114,8 @@ void convertVopc(Fragment &fragment, Vopc inst) {
   case Vopc::Op::V_CMPX_GE_I16:
     cmpOp(TypeId::SInt16, CmpKind::GE, CmpFlags::X);
     break;
-  // case Vopc::Op::V_CMPX_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS,
-  // CmpFlags::X); break;
+    // case Vopc::Op::V_CMPX_CLASS_F16: cmpOp(TypeId::Float16, CmpKind::CLASS,
+    // CmpFlags::X); break;
   case Vopc::Op::V_CMP_F_I64:
     cmpOp(TypeId::SInt64, CmpKind::F);
     break;
@@ -4140,8 +4140,8 @@ void convertVopc(Fragment &fragment, Vopc inst) {
   case Vopc::Op::V_CMP_T_I64:
     cmpOp(TypeId::SInt64, CmpKind::T);
     break;
-  // case Vopc::Op::V_CMP_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS);
-  // break;
+    // case Vopc::Op::V_CMP_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS);
+    // break;
   case Vopc::Op::V_CMP_LT_U16:
     cmpOp(TypeId::UInt16, CmpKind::LT);
     break;
@@ -4184,8 +4184,8 @@ void convertVopc(Fragment &fragment, Vopc inst) {
   case Vopc::Op::V_CMPX_T_I64:
     cmpOp(TypeId::SInt64, CmpKind::T, CmpFlags::X);
     break;
-  // case Vopc::Op::V_CMPX_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS,
-  // CmpFlags::X); break;
+    // case Vopc::Op::V_CMPX_CLASS_F64: cmpOp(TypeId::Float64, CmpKind::CLASS,
+    // CmpFlags::X); break;
   case Vopc::Op::V_CMPX_LT_U16:
     cmpOp(TypeId::UInt16, CmpKind::LT, CmpFlags::X);
     break;
@@ -4408,15 +4408,15 @@ void convertSop1(Fragment &fragment, Sop1 inst) {
   switch (inst.op) {
   case Sop1::Op::S_MOV_B32:
     fragment.setScalarOperand(
-        inst.sdst, fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32));
+      inst.sdst, fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32));
     break;
 
   case Sop1::Op::S_MOV_B64:
     fragment.setScalarOperand(
-        inst.sdst, fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32));
+      inst.sdst, fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32));
     fragment.setScalarOperand(
-        inst.sdst + 1,
-        fragment.getScalarOperand(inst.ssrc0 + 1, TypeId::UInt32));
+      inst.sdst + 1,
+      fragment.getScalarOperand(inst.ssrc0 + 1, TypeId::UInt32));
     break;
 
   case Sop1::Op::S_WQM_B32: {
@@ -4435,21 +4435,21 @@ void convertSop1(Fragment &fragment, Sop1 inst) {
     auto srcHi = fragment.getScalarOperand(inst.ssrc0 + 1, TypeId::UInt32);
 
     fragment.setOperand(
-        RegisterId::ExecLo,
-        {srcLo.type, fragment.builder.createBitwiseAnd(srcLo.type, srcLo.value,
-                                                       execLo.value)});
+      RegisterId::ExecLo,
+      { srcLo.type, fragment.builder.createBitwiseAnd(srcLo.type, srcLo.value,
+                                                     execLo.value) });
     fragment.setOperand(
-        RegisterId::ExecHi,
-        {srcHi.type, fragment.builder.createBitwiseAnd(srcHi.type, srcHi.value,
-                                                       execHi.value)});
+      RegisterId::ExecHi,
+      { srcHi.type, fragment.builder.createBitwiseAnd(srcHi.type, srcHi.value,
+                                                     execHi.value) });
     auto uint32_0 = fragment.context->getUInt32(0);
     auto boolT = fragment.context->getBoolType();
     auto loIsNotZero =
-        fragment.builder.createINotEqual(boolT, execLo.value, uint32_0);
+      fragment.builder.createINotEqual(boolT, execLo.value, uint32_0);
     auto hiIsNotZero =
-        fragment.builder.createINotEqual(boolT, execHi.value, uint32_0);
-    fragment.setScc({boolT, fragment.builder.createLogicalAnd(
-                                boolT, loIsNotZero, hiIsNotZero)});
+      fragment.builder.createINotEqual(boolT, execHi.value, uint32_0);
+    fragment.setScc({ boolT, fragment.builder.createLogicalAnd(
+                                boolT, loIsNotZero, hiIsNotZero) });
     fragment.setScalarOperand(inst.sdst, execLo);
     fragment.setScalarOperand(inst.sdst + 1, execHi);
     break;
@@ -4467,7 +4467,7 @@ void convertSop1(Fragment &fragment, Sop1 inst) {
       }
 
       fragment.jumpAddress =
-          *ssrc0OptValue | (static_cast<std::uint64_t>(*ssrc1OptValue) << 32);
+        *ssrc0OptValue | (static_cast<std::uint64_t>(*ssrc1OptValue) << 32);
     } else {
       util::unreachable();
     }
@@ -4485,14 +4485,14 @@ void convertSop1(Fragment &fragment, Sop1 inst) {
       }
 
       auto pc = fragment.registers->pc;
-      fragment.setScalarOperand(inst.sdst, {fragment.context->getUInt32Type(),
-                                            fragment.context->getUInt32(pc)});
+      fragment.setScalarOperand(inst.sdst, { fragment.context->getUInt32Type(),
+                                            fragment.context->getUInt32(pc) });
       fragment.setScalarOperand(inst.sdst + 1,
-                                {fragment.context->getUInt32Type(),
-                                 fragment.context->getUInt32(pc >> 32)});
+                                { fragment.context->getUInt32Type(),
+                                 fragment.context->getUInt32(pc >> 32) });
 
       fragment.jumpAddress =
-          *ssrc0OptValue | (static_cast<std::uint64_t>(*ssrc1OptValue) << 32);
+        *ssrc0OptValue | (static_cast<std::uint64_t>(*ssrc1OptValue) << 32);
     } else {
       inst.dump();
       util::unreachable();
@@ -4515,7 +4515,7 @@ void convertSopc(Fragment &fragment, Sopc inst) {
 
     auto result = doCmpOp(fragment, type, src0, src1, kind, CmpFlags::None);
     fragment.setScc(result);
-  };
+    };
 
   switch (inst.op) {
   case Sopc::Op::S_CMP_EQ_I32:
@@ -4557,78 +4557,78 @@ void convertSopc(Fragment &fragment, Sopc inst) {
 
   case Sopc::Op::S_BITCMP0_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto operandT = fragment.context->getUInt32Type();
 
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src1, fragment.context->getUInt32(0x1f)));
+      operandT, src1, fragment.context->getUInt32(0x1f)));
     auto bit = fragment.builder.createBitwiseAnd(
-        operandT,
-        fragment.builder.createShiftRightLogical(operandT, src0, src1),
-        fragment.context->getUInt32(1));
+      operandT,
+      fragment.builder.createShiftRightLogical(operandT, src0, src1),
+      fragment.context->getUInt32(1));
 
     auto boolT = fragment.context->getBoolType();
-    fragment.setScc({boolT, fragment.builder.createIEqual(
-                                boolT, bit, fragment.context->getUInt32(0))});
+    fragment.setScc({ boolT, fragment.builder.createIEqual(
+                                boolT, bit, fragment.context->getUInt32(0)) });
     break;
   }
   case Sopc::Op::S_BITCMP1_B32: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto operandT = fragment.context->getUInt32Type();
 
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src1, fragment.context->getUInt32(0x1f)));
+      operandT, src1, fragment.context->getUInt32(0x1f)));
     auto bit = fragment.builder.createBitwiseAnd(
-        operandT,
-        fragment.builder.createShiftRightLogical(operandT, src0, src1),
-        fragment.context->getUInt32(1));
+      operandT,
+      fragment.builder.createShiftRightLogical(operandT, src0, src1),
+      fragment.context->getUInt32(1));
 
     auto boolT = fragment.context->getBoolType();
-    fragment.setScc({boolT, fragment.builder.createIEqual(
-                                boolT, bit, fragment.context->getUInt32(1))});
+    fragment.setScc({ boolT, fragment.builder.createIEqual(
+                                boolT, bit, fragment.context->getUInt32(1)) });
     break;
   }
   case Sopc::Op::S_BITCMP0_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto operandT = fragment.context->getUInt64Type();
 
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src1, fragment.context->getUInt32(0x3f)));
+      operandT, src1, fragment.context->getUInt32(0x3f)));
     auto bit = fragment.builder.createBitwiseAnd(
-        operandT,
-        fragment.builder.createShiftRightLogical(operandT, src0, src1),
-        fragment.context->getUInt64(1));
+      operandT,
+      fragment.builder.createShiftRightLogical(operandT, src0, src1),
+      fragment.context->getUInt64(1));
 
     auto boolT = fragment.context->getBoolType();
-    fragment.setScc({boolT, fragment.builder.createIEqual(
-                                boolT, bit, fragment.context->getUInt64(0))});
+    fragment.setScc({ boolT, fragment.builder.createIEqual(
+                                boolT, bit, fragment.context->getUInt64(0)) });
     break;
   }
   case Sopc::Op::S_BITCMP1_B64: {
     auto src0 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
+      fragment.getScalarOperand(inst.ssrc0, TypeId::UInt64).value);
     auto src1 = spirv::cast<spirv::UIntValue>(
-        fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
+      fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value);
     auto operandT = fragment.context->getUInt64Type();
 
     src1 = spirv::cast<spirv::UIntValue>(fragment.builder.createBitwiseAnd(
-        operandT, src1, fragment.context->getUInt32(0x3f)));
+      operandT, src1, fragment.context->getUInt32(0x3f)));
     auto bit = fragment.builder.createBitwiseAnd(
-        operandT,
-        fragment.builder.createShiftRightLogical(operandT, src0, src1),
-        fragment.context->getUInt64(1));
+      operandT,
+      fragment.builder.createShiftRightLogical(operandT, src0, src1),
+      fragment.context->getUInt64(1));
 
     auto boolT = fragment.context->getBoolType();
-    fragment.setScc({boolT, fragment.builder.createIEqual(
-                                boolT, bit, fragment.context->getUInt64(1))});
+    fragment.setScc({ boolT, fragment.builder.createIEqual(
+                                boolT, bit, fragment.context->getUInt64(1)) });
     break;
   }
   default:
@@ -4655,7 +4655,7 @@ void convertSopp(Fragment &fragment, Sopp inst) {
         fragment.builder.createBranchConditional(condition,
        ifTrueTarget->builder.id, ifFalseTarget->entryBlockId);
     */
-  };
+    };
 
   switch (inst.op) {
   case Sopp::Op::S_WAITCNT:
@@ -4676,7 +4676,7 @@ void convertSopp(Fragment &fragment, Sopp inst) {
 
   case Sopp::Op::S_CBRANCH_SCC0: {
     createCondBranch(fragment.builder.createLogicalNot(
-        fragment.context->getBoolType(), fragment.getScc()));
+      fragment.context->getBoolType(), fragment.getScc()));
     break;
   }
 
@@ -4687,51 +4687,51 @@ void convertSopp(Fragment &fragment, Sopp inst) {
 
   case Sopp::Op::S_CBRANCH_VCCZ: {
     auto loIsZero = fragment.builder.createIEqual(
-        fragment.context->getBoolType(), fragment.getVccLo().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getVccLo().value,
+      fragment.context->getUInt32(0));
     auto hiIsZero = fragment.builder.createIEqual(
-        fragment.context->getBoolType(), fragment.getVccHi().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getVccHi().value,
+      fragment.context->getUInt32(0));
     createCondBranch(fragment.builder.createLogicalAnd(
-        fragment.context->getBoolType(), loIsZero, hiIsZero));
+      fragment.context->getBoolType(), loIsZero, hiIsZero));
     break;
   }
 
   case Sopp::Op::S_CBRANCH_VCCNZ: {
     auto loIsNotZero = fragment.builder.createINotEqual(
-        fragment.context->getBoolType(), fragment.getVccLo().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getVccLo().value,
+      fragment.context->getUInt32(0));
     auto hiIsNotZero = fragment.builder.createINotEqual(
-        fragment.context->getBoolType(), fragment.getVccHi().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getVccHi().value,
+      fragment.context->getUInt32(0));
 
     createCondBranch(fragment.builder.createLogicalOr(
-        fragment.context->getBoolType(), loIsNotZero, hiIsNotZero));
+      fragment.context->getBoolType(), loIsNotZero, hiIsNotZero));
     break;
   }
 
   case Sopp::Op::S_CBRANCH_EXECZ: {
     auto loIsZero = fragment.builder.createIEqual(
-        fragment.context->getBoolType(), fragment.getExecLo().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getExecLo().value,
+      fragment.context->getUInt32(0));
     auto hiIsZero = fragment.builder.createIEqual(
-        fragment.context->getBoolType(), fragment.getExecHi().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getExecHi().value,
+      fragment.context->getUInt32(0));
     createCondBranch(fragment.builder.createLogicalAnd(
-        fragment.context->getBoolType(), loIsZero, hiIsZero));
+      fragment.context->getBoolType(), loIsZero, hiIsZero));
     break;
   }
 
   case Sopp::Op::S_CBRANCH_EXECNZ: {
     auto loIsNotZero = fragment.builder.createINotEqual(
-        fragment.context->getBoolType(), fragment.getExecLo().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getExecLo().value,
+      fragment.context->getUInt32(0));
     auto hiIsNotZero = fragment.builder.createINotEqual(
-        fragment.context->getBoolType(), fragment.getExecHi().value,
-        fragment.context->getUInt32(0));
+      fragment.context->getBoolType(), fragment.getExecHi().value,
+      fragment.context->getUInt32(0));
 
     createCondBranch(fragment.builder.createLogicalOr(
-        fragment.context->getBoolType(), loIsNotZero, hiIsNotZero));
+      fragment.context->getBoolType(), loIsNotZero, hiIsNotZero));
     break;
   }
 
@@ -4854,7 +4854,7 @@ void Fragment::injectValuesFromPreds() {
     Value value;
 
     if (allSameValues) {
-      value = {type, predValues.back().first};
+      value = { type, predValues.back().first };
       // std::printf(" ** %s[%u] is value = %u\n", getRegName(id),
       // id.getOffset(),
       //             predValues.back().first.id);
@@ -4869,11 +4869,11 @@ void Fragment::injectValuesFromPreds() {
       //   std::printf("%u", value.first.id);
       // }
       // std::printf(" }\n");
-      value = {type, builder.createPhi(type, predValues)};
+      value = { type, builder.createPhi(type, predValues) };
     }
 
     registers->setRegister(id, value);
-  };
+    };
 
   for (auto id : values) {
     setupRegisterValue(id);
@@ -4904,7 +4904,7 @@ spirv::SamplerValue Fragment::createSampler(RegisterId base) {
     };
 
     auto uniform = context->getOrCreateUniformConstant(
-        sbuffer, std::size(sbuffer), TypeId::Sampler);
+      sbuffer, std::size(sbuffer), TypeId::Sampler);
     return builder.createLoad(context->getSamplerType(), uniform->variable);
   } else {
     util::unreachable();
@@ -4936,7 +4936,7 @@ spirv::ImageValue Fragment::createImage(RegisterId base, bool r128) {
     };
 
     auto uniform = context->getOrCreateUniformConstant(
-        sbuffer, std::size(sbuffer), TypeId::Image2D);
+      sbuffer, std::size(sbuffer), TypeId::Image2D);
     return builder.createLoad(context->getImage2DType(), uniform->variable);
   }
 
@@ -4962,7 +4962,7 @@ spirv::ImageValue Fragment::createImage(RegisterId base, bool r128) {
   };
 
   auto uniform = context->getOrCreateUniformConstant(
-      sbuffer, std::size(sbuffer), TypeId::Image2D);
+    sbuffer, std::size(sbuffer), TypeId::Image2D);
   return builder.createLoad(context->getImage2DType(), uniform->variable);
 }
 
@@ -4990,18 +4990,18 @@ Value Fragment::createCompositeExtract(Value composite, std::uint32_t member) {
     auto column = member % 4;
 
     auto rowType = context->getType(
-        static_cast<TypeId::enum_type>(static_cast<int>(baseType) + 3));
+      static_cast<TypeId::enum_type>(static_cast<int>(baseType) + 3));
 
     auto rowValue =
-        builder.createCompositeExtract(rowType, composite.value, {{row}});
+      builder.createCompositeExtract(rowType, composite.value, { {row} });
     resultValue =
-        builder.createCompositeExtract(resultType, rowValue, {{column}});
+      builder.createCompositeExtract(resultType, rowValue, { {column} });
   } else {
     resultValue =
-        builder.createCompositeExtract(resultType, composite.value, {{member}});
+      builder.createCompositeExtract(resultType, composite.value, { {member} });
   }
 
-  return {resultType, resultValue};
+  return { resultType, resultValue };
 }
 
 spirv::Value Fragment::createBitcast(spirv::Type to, spirv::Type from,
@@ -5106,7 +5106,7 @@ Value Fragment::getOperand(RegisterId id, TypeId type, OperandGetFlags flags) {
       members.push_back(member.value);
     }
 
-    return {resultType, builder.createCompositeConstruct(resultType, members)};
+    return { resultType, builder.createCompositeConstruct(resultType, members) };
   }
 
   if (registerElementsCount != 2) {
@@ -5136,20 +5136,20 @@ Value Fragment::getOperand(RegisterId id, TypeId type, OperandGetFlags flags) {
 
   auto uint64T = context->getUInt64Type();
   auto valueLo = builder.createUConvert(
-      uint64T,
-      spirv::cast<spirv::UIntValue>(getOperand(id, TypeId::UInt32).value));
+    uint64T,
+    spirv::cast<spirv::UIntValue>(getOperand(id, TypeId::UInt32).value));
   auto valueHi = builder.createUConvert(
-      uint64T, spirv::cast<spirv::UIntValue>(
-                   getOperand(RegisterId::Raw(id + 1), TypeId::UInt32).value));
+    uint64T, spirv::cast<spirv::UIntValue>(
+      getOperand(RegisterId::Raw(id + 1), TypeId::UInt32).value));
   valueHi =
-      builder.createShiftLeftLogical(uint64T, valueHi, context->getUInt32(32));
+    builder.createShiftLeftLogical(uint64T, valueHi, context->getUInt32(32));
   auto value = builder.createBitwiseOr(uint64T, valueLo, valueHi);
 
   if (baseTypeId != TypeId::UInt64) {
     value = createBitcast(baseType, context->getUInt64Type(), value);
   }
 
-  return {resultType, value};
+  return { resultType, value };
 }
 
 void Fragment::setOperand(RegisterId id, Value value) {
@@ -5181,13 +5181,13 @@ void Fragment::setOperand(RegisterId id, Value value) {
     if (value.type != boolT) {
       if (value.type == context->getUInt32Type()) {
         value.value =
-            builder.createINotEqual(boolT, value.value, context->getUInt32(0));
+          builder.createINotEqual(boolT, value.value, context->getUInt32(0));
       } else if (value.type == context->getSint32Type()) {
         value.value =
-            builder.createINotEqual(boolT, value.value, context->getSInt32(0));
+          builder.createINotEqual(boolT, value.value, context->getSInt32(0));
       } else if (value.type == context->getUInt64Type()) {
         value.value =
-            builder.createINotEqual(boolT, value.value, context->getUInt64(0));
+          builder.createINotEqual(boolT, value.value, context->getUInt64(0));
       } else {
         util::unreachable();
       }
@@ -5244,17 +5244,17 @@ void Fragment::setOperand(RegisterId id, Value value) {
     auto uint64_value = spirv::cast<spirv::UIntValue>(value.value);
     if (baseTypeId != TypeId::UInt64) {
       uint64_value = spirv::cast<spirv::UIntValue>(
-          createBitcast(uint64T, context->getType(baseTypeId), value.value));
+        createBitcast(uint64T, context->getType(baseTypeId), value.value));
     }
 
     auto uint32T = context->getUInt32Type();
     auto valueLo = builder.createUConvert(uint32T, uint64_value);
     auto valueHi = builder.createUConvert(
-        uint32T, builder.createShiftRightLogical(uint64T, uint64_value,
-                                                 context->getUInt32(32)));
+      uint32T, builder.createShiftRightLogical(uint64T, uint64_value,
+                                               context->getUInt32(32)));
 
-    setOperand(id, {uint32T, valueLo});
-    setOperand(RegisterId::Raw(id.raw + 1), {uint32T, valueHi});
+    setOperand(id, { uint32T, valueLo });
+    setOperand(RegisterId::Raw(id.raw + 1), { uint32T, valueHi });
   }
 }
 
@@ -5264,7 +5264,7 @@ void Fragment::setVcc(Value value) {
 
   setOperand(RegisterId::VccLo, value);
   setOperand(RegisterId::VccHi,
-             {context->getUInt32Type(), context->getUInt32(0)});
+             { context->getUInt32Type(), context->getUInt32(0) });
 }
 
 void Fragment::setScc(Value value) {
@@ -5280,7 +5280,7 @@ void Fragment::setScc(Value value) {
 
 spirv::BoolValue Fragment::getScc() {
   auto result =
-      getOperand(RegisterId::Scc, TypeId::Bool, OperandGetFlags::PreserveType);
+    getOperand(RegisterId::Scc, TypeId::Bool, OperandGetFlags::PreserveType);
 
   if (result.type == context->getBoolType()) {
     return spirv::cast<spirv::BoolValue>(result.value);
@@ -5368,30 +5368,30 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id) {
   if (id.isScalar()) {
     switch (id.getOffset()) {
     case 128 ... 192:
-      return {context->getSint32Type(), context->getSInt32(id - 128)};
+      return { context->getSint32Type(), context->getSInt32(id - 128) };
     case 193 ... 208:
-      return {context->getSint32Type(),
-              context->getSInt32(-static_cast<std::int32_t>(id - 192))};
+      return { context->getSint32Type(),
+              context->getSInt32(-static_cast<std::int32_t>(id - 192)) };
     case 240:
-      return {context->getFloat32Type(), context->getFloat32(0.5f)};
+      return { context->getFloat32Type(), context->getFloat32(0.5f) };
     case 241:
-      return {context->getFloat32Type(), context->getFloat32(-0.5f)};
+      return { context->getFloat32Type(), context->getFloat32(-0.5f) };
     case 242:
-      return {context->getFloat32Type(), context->getFloat32(1.0f)};
+      return { context->getFloat32Type(), context->getFloat32(1.0f) };
     case 243:
-      return {context->getFloat32Type(), context->getFloat32(-1.0f)};
+      return { context->getFloat32Type(), context->getFloat32(-1.0f) };
     case 244:
-      return {context->getFloat32Type(), context->getFloat32(2.0f)};
+      return { context->getFloat32Type(), context->getFloat32(2.0f) };
     case 245:
-      return {context->getFloat32Type(), context->getFloat32(-2.0f)};
+      return { context->getFloat32Type(), context->getFloat32(-2.0f) };
     case 246:
-      return {context->getFloat32Type(), context->getFloat32(4.0f)};
+      return { context->getFloat32Type(), context->getFloat32(4.0f) };
     case 247:
-      return {context->getFloat32Type(), context->getFloat32(-4.0f)};
+      return { context->getFloat32Type(), context->getFloat32(-4.0f) };
     case 255: {
       auto ptr = context->getMemory().getPointer<std::uint32_t>(registers->pc);
       registers->pc += sizeof(std::uint32_t);
-      return {context->getUInt32Type(), context->getUInt32(*ptr)};
+      return { context->getUInt32Type(), context->getUInt32(*ptr) };
     }
     }
   }
@@ -5413,7 +5413,7 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id) {
 }
 
 Value amdgpu::shader::Fragment::getRegister(RegisterId id,
-                                               spirv::Type type) {
+                                            spirv::Type type) {
   auto result = getRegister(id);
 
   if (!result) {
@@ -5424,7 +5424,7 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id,
     util::unreachable("%u is ulong\n", id.raw);
   }
 
-  return {type, createBitcast(type, result.type, result.value)};
+  return { type, createBitcast(type, result.type, result.value) };
 }
 
 void amdgpu::shader::Fragment::setRegister(RegisterId id, Value value) {

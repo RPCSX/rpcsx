@@ -2,13 +2,13 @@
 
 #include <mutex>
 
-#include "ProcessState.hpp"
-#include "orbis-config.hpp"
+#include "thread/ProcessState.hpp"
+#include "orbis-kernel-config/orbis-config.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
 #include "orbis/utils/SharedMutex.hpp"
-#include "../thread/types.hpp"
-#include "../thread/Thread.hpp"
+#include "thread/types.hpp"
+#include "thread/Thread.hpp"
 
 namespace orbis {
 class KernelContext;

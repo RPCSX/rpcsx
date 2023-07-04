@@ -1,23 +1,24 @@
-#include "Converter.hpp"
-#include "CfBuilder.hpp"
-#include "ConverterContext.hpp"
-#include "Fragment.hpp"
-#include "FragmentTerminator.hpp"
-#include "Instruction.hpp"
-#include "RegisterId.hpp"
-#include "RegisterState.hpp"
-#include "cf.hpp"
-#include "amdgpu/RemoteMemory.hpp"
-#include "scf.hpp"
-#include "util/unreachable.hpp"
 #include <compare>
 #include <cstddef>
 #include <forward_list>
 #include <memory>
-#include <spirv/spirv.hpp>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "shader/Converter.hpp"
+#include "shader/CfBuilder.hpp"
+#include "shader/ConverterContext.hpp"
+#include "shader/Fragment.hpp"
+#include "shader/FragmentTerminator.hpp"
+#include "shader/Instruction.hpp"
+#include "shader/RegisterId.hpp"
+#include "shader/RegisterState.hpp"
+#include "shader/cf.hpp"
+#include "shader/scf.hpp"
+#include "amdgpu/RemoteMemory.hpp"
+#include "util/unreachable.hpp"
+#include <spirv/spirv.hpp>
 
 static void printInstructions(const scf::PrintOptions &options, unsigned depth,
                               std::uint32_t *instBegin, std::size_t size) {
@@ -100,16 +101,16 @@ private:
     auto inst = memory.getPointer<std::uint32_t>(fragment->registers->pc);
     auto instClass = getInstructionClass(*inst);
     return instClass == InstructionClass::Vop2 ||
-           instClass == InstructionClass::Vop3 ||
-           instClass == InstructionClass::Mubuf ||
-           instClass == InstructionClass::Mtbuf ||
-           instClass == InstructionClass::Mimg ||
-           instClass == InstructionClass::Ds ||
-           instClass == InstructionClass::Vintrp ||
-           instClass == InstructionClass::Exp ||
-           instClass == InstructionClass::Vop1 ||
-           instClass == InstructionClass::Vopc/* ||
-           instClass == InstructionClass::Smrd*/;
+      instClass == InstructionClass::Vop3 ||
+      instClass == InstructionClass::Mubuf ||
+      instClass == InstructionClass::Mtbuf ||
+      instClass == InstructionClass::Mimg ||
+      instClass == InstructionClass::Ds ||
+      instClass == InstructionClass::Vintrp ||
+      instClass == InstructionClass::Exp ||
+      instClass == InstructionClass::Vop1 ||
+      instClass == InstructionClass::Vopc/* ||
+      instClass == InstructionClass::Smrd*/;
   }
 
   spirv::BoolValue createExecTest(Fragment *fragment) {
@@ -118,9 +119,9 @@ private:
     auto boolT = context->getBoolType();
     auto uint32_0 = context->getUInt32(0);
     auto loIsNotZero =
-        builder.createINotEqual(boolT, fragment->getExecLo().value, uint32_0);
+      builder.createINotEqual(boolT, fragment->getExecLo().value, uint32_0);
     auto hiIsNotZero =
-        builder.createINotEqual(boolT, fragment->getExecHi().value, uint32_0);
+      builder.createINotEqual(boolT, fragment->getExecHi().value, uint32_0);
 
     return builder.createLogicalOr(boolT, loIsNotZero, hiIsNotZero);
   }
@@ -155,9 +156,9 @@ private:
           currentFragment->appendBranch(*bodyFragment);
           currentFragment->appendBranch(*mergeFragment);
           currentFragment->builder.createSelectionMerge(
-              mergeFragment->entryBlockId, {});
+            mergeFragment->entryBlockId, {});
           currentFragment->builder.createBranchConditional(
-              cond, bodyFragment->entryBlockId, mergeFragment->entryBlockId);
+            cond, bodyFragment->entryBlockId, mergeFragment->entryBlockId);
 
           initState(bodyFragment, bb->getAddress());
           bodyFragment->convert(bb->getSize());
@@ -185,10 +186,10 @@ private:
         currentFragment->appendBranch(*ifFalseFragment);
 
         currentFragment->builder.createSelectionMerge(
-            mergeFragment->entryBlockId, {});
+          mergeFragment->entryBlockId, {});
         currentFragment->builder.createBranchConditional(
-            currentFragment->branchCondition, ifTrueFragment->entryBlockId,
-            ifFalseFragment->entryBlockId);
+          currentFragment->branchCondition, ifTrueFragment->entryBlockId,
+          ifFalseFragment->entryBlockId);
 
         auto ifTrueLastBlock = convertBlock(ifElse->ifTrue, ifTrueFragment);
         auto ifFalseLastBlock = convertBlock(ifElse->ifFalse, ifFalseFragment);
@@ -238,12 +239,12 @@ private:
         auto block = buildCf(cfContext, memory, jumpAddress);
         auto basicBlockPrinter = [this](const scf::PrintOptions &opts,
                                         unsigned depth, scf::BasicBlock *bb) {
-          printInstructions(opts, depth,
-                            memory.getPointer<std::uint32_t>(bb->getAddress()),
-                            bb->getSize());
-        };
+                                          printInstructions(opts, depth,
+                                                            memory.getPointer<std::uint32_t>(bb->getAddress()),
+                                                            bb->getSize());
+          };
         auto scfBlock = scf::structurize(*scfContext, block);
-        scfBlock->print({.blockPrinter = basicBlockPrinter}, 0);
+        scfBlock->print({ .blockPrinter = basicBlockPrinter }, 0);
         std::fflush(stdout);
 
         auto targetFragment = function->createFragment();
@@ -262,7 +263,7 @@ private:
       if (dynCast<scf::Return>(node)) {
         currentFragment->appendBranch(function->exitFragment);
         currentFragment->builder.createBranch(
-            function->exitFragment.entryBlockId);
+          function->exitFragment.entryBlockId);
         return nullptr;
       }
 
@@ -275,9 +276,9 @@ private:
 }; // namespace amdgpu::shader
 
 amdgpu::shader::Shader amdgpu::shader::convert(
-    RemoteMemory memory, Stage stage, std::uint64_t entry,
-    std::span<const std::uint32_t> userSpgrs, int bindingOffset,
-    std::uint32_t dimX, std::uint32_t dimY, std::uint32_t dimZ) {
+  RemoteMemory memory, Stage stage, std::uint64_t entry,
+  std::span<const std::uint32_t> userSpgrs, int bindingOffset,
+  std::uint32_t dimX, std::uint32_t dimY, std::uint32_t dimZ) {
   ConverterContext ctxt(memory, stage);
   auto &builder = ctxt.getBuilder();
   builder.createCapability(spv::Capability::Shader);
@@ -334,9 +335,9 @@ amdgpu::shader::Shader amdgpu::shader::convert(
     std::uint32_t descriptorSet = 0;
 
     ctxt.getBuilder().createDecorate(
-        uniform.variable, spv::Decoration::DescriptorSet, {{descriptorSet}});
+      uniform.variable, spv::Decoration::DescriptorSet, { {descriptorSet} });
     ctxt.getBuilder().createDecorate(uniform.variable, spv::Decoration::Binding,
-                                     {{newUniform.binding}});
+                                     { {newUniform.binding} });
 
     switch (uniform.typeId) {
     case TypeId::Sampler:
@@ -381,7 +382,7 @@ amdgpu::shader::Shader amdgpu::shader::convert(
                              ctxt.getInterfaces());
     builder.createExecutionMode(mainFunction->builder.id,
                                 spv::ExecutionMode::LocalSize,
-                                {{dimX, dimY, dimZ}});
+                                { {dimX, dimY, dimZ} });
   }
 
   result.spirv = ctxt.getBuilder().build(SPV_VERSION, 0);

@@ -1,6 +1,6 @@
-#include "Function.hpp"
-#include "ConverterContext.hpp"
-#include "RegisterId.hpp"
+#include "shader/Function.hpp"
+#include "shader/ConverterContext.hpp"
+#include "shader/RegisterId.hpp"
 
 using namespace amdgpu::shader;
 

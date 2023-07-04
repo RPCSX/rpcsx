@@ -1,9 +1,10 @@
-#include "scf.hpp"
-#include "cf.hpp"
 #include <cassert>
 #include <fstream>
 #include <unordered_set>
 #include <utility>
+
+#include "shader/scf.hpp"
+#include "shader/cf.hpp"
 
 void scf::Block::eraseFrom(Node *endBefore) {
   mEnd = endBefore->getPrev();
