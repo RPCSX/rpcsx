@@ -4,3 +4,6 @@ CMakeFiles
 *.cmake
 .vscode
 Makefile
+*.DS_Store
+*.a
+*.o
