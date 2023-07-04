@@ -30,7 +30,7 @@ template <std::size_t Count> struct BitSet {
 
     if (auto chunkOffset = offset % BitsPerChunk) {
       auto count =
-          std::countr_zero(_bits[offset / BitsPerChunk] >> chunkOffset);
+        std::countr_zero(_bits[offset / BitsPerChunk] >> chunkOffset);
 
       if (count != BitsPerChunk) {
         return count + offset;
@@ -87,12 +87,12 @@ template <std::size_t Count> struct BitSet {
 
   constexpr void clear(std::size_t index) {
     _bits[index / BitsPerChunk] &=
-        ~(static_cast<chunk_type>(1) << (index % BitsPerChunk));
+      ~(static_cast<chunk_type>(1) << (index % BitsPerChunk));
   }
 
   constexpr void set(std::size_t index) {
     _bits[index / BitsPerChunk] |= static_cast<chunk_type>(1)
-                                   << (index % BitsPerChunk);
+      << (index % BitsPerChunk);
   }
 
   constexpr bool test(std::size_t index) const {

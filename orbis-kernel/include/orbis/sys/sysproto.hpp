@@ -1,6 +1,7 @@
+#include <array>
+
 #include <orbis/error.hpp>
 #include <orbis/thread.hpp>
-#include <array>
 
 namespace orbis {
 using acl_type_t = sint;

@@ -1,15 +1,14 @@
 #pragma once
 
-#include "ModuleHandle.hpp"
-#include "ModuleSegment.hpp"
-
-#include "../utils/Rc.hpp"
-#include "../KernelAllocator.hpp"
-
-#include "orbis-config.hpp"
 #include <cstddef>
 #include <vector>
 #include <string>
+
+#include "ModuleHandle.hpp"
+#include "ModuleSegment.hpp"
+#include "../utils/Rc.hpp"
+#include "../KernelAllocator.hpp"
+#include "orbis-config.hpp"
 
 namespace orbis {
 struct Thread;
@@ -118,7 +117,7 @@ struct Module final {
   utils::kvector<utils::Ref<Module>> namespaceModules;
   utils::kvector<std::string> needed;
 
-  std::atomic<unsigned> references{0};
+  std::atomic<unsigned> references{ 0 };
   unsigned _total_size = 0;
 
   void incRef() {

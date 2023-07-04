@@ -1,23 +1,23 @@
 #pragma once
 
-#include "BitSet.hpp"
-#include "Rc.hpp"
-
-#include <algorithm>
 #include <bit>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
+#include "BitSet.hpp"
+#include "Rc.hpp"
+
 namespace orbis {
 inline namespace utils {
 template <WithRc T, typename IdT = int, std::size_t MaxId = 4096,
-          std::size_t MinId = 0>
+  std::size_t MinId = 0>
   requires(MaxId > MinId)
 class RcIdMap {
   static constexpr auto ChunkSize = std::min<std::size_t>(MaxId - MinId, 64);
   static constexpr auto ChunkCount =
-      (MaxId - MinId + ChunkSize - 1) / ChunkSize;
+    (MaxId - MinId + ChunkSize - 1) / ChunkSize;
 
   struct IdMapChunk {
     BitSet<ChunkSize> mask = {};
@@ -72,8 +72,8 @@ public:
     }
 
     std::pair<IdT, T *> operator*() const {
-      return {static_cast<IdT>(chunk * ChunkSize + index + MinId),
-              chunks[chunk].objects[index]};
+      return { static_cast<IdT>(chunk * ChunkSize + index + MinId),
+              chunks[chunk].objects[index] };
     }
 
     bool operator!=(const end_iterator &) const { return chunk < ChunkCount; }
@@ -107,7 +107,7 @@ public:
     }
   }
 
-  iterator begin() const { return iterator{m_chunks}; }
+  iterator begin() const { return iterator{ m_chunks }; }
 
   end_iterator end() const { return {}; }
 
@@ -125,7 +125,7 @@ private:
       m_fullChunks.set(page);
     }
 
-    return {static_cast<IdT>(page * ChunkSize + index + MinId)};
+    return { static_cast<IdT>(page * ChunkSize + index + MinId) };
   }
 
 public:
@@ -190,12 +190,12 @@ public:
 };
 
 template <typename T, typename IdT = int, std::size_t MaxId = 4096,
-          std::size_t MinId = 0>
+  std::size_t MinId = 0>
   requires(MaxId > MinId)
 struct OwningIdMap {
   static constexpr auto ChunkSize = std::min<std::size_t>(MaxId - MinId, 64);
   static constexpr auto ChunkCount =
-      (MaxId - MinId + ChunkSize - 1) / ChunkSize;
+    (MaxId - MinId + ChunkSize - 1) / ChunkSize;
 
   struct IdMapChunk {
     BitSet<ChunkSize> mask = {};
@@ -232,8 +232,8 @@ struct OwningIdMap {
 
       mask.set(index);
 
-      return {index,
-              std::construct_at(get(index), std::forward<ArgsT>(args)...)};
+      return { index,
+              std::construct_at(get(index), std::forward<ArgsT>(args)...) };
     }
 
     T *get(std::size_t index) {
@@ -264,8 +264,8 @@ struct OwningIdMap {
       fullChunks.set(page);
     }
 
-    return {static_cast<IdT>(page * ChunkSize + newElem.first + MinId),
-            newElem.second};
+    return { static_cast<IdT>(page * ChunkSize + newElem.first + MinId),
+            newElem.second };
   }
 
   T *get(IdT id) {

@@ -8,10 +8,10 @@
 namespace orbis {
 template <typename T, typename... Args> T *knew(Args &&...args);
 inline namespace utils {
-void kfree(void* ptr, std::size_t size);
+void kfree(void *ptr, std::size_t size);
 
 struct RcBase {
-  std::atomic<unsigned> references{0};
+  std::atomic<unsigned> references{ 0 };
   unsigned _total_size = 0; // Set by knew/kcreate
 
   virtual ~RcBase() = default;

@@ -11,5 +11,5 @@ extern sysentvec ps5_sysvec;
 
 struct Thread;
 void syscall_entry(Thread *thread);
-const char *getSysentName(SysResult (*sysent)(Thread *, uint64_t *));
+const char *getSysentName(SysResult(*sysent)(Thread *, uint64_t *));
 } // namespace orbis

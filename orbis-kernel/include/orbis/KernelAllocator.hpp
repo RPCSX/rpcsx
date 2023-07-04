@@ -1,16 +1,16 @@
 #pragma once
 
-#include "utils/Rc.hpp"
 #include <utility>
 #include <vector>
 #include <deque>
 #include <map>
 #include <unordered_map>
+#include "utils/Rc.hpp"
 
 namespace orbis {
 inline namespace utils {
 void *kalloc(std::size_t size, std::size_t align);
-void kfree(void* ptr, std::size_t size);
+void kfree(void *ptr, std::size_t size);
 template <typename T> struct kallocator {
   using value_type = T;
 
@@ -36,9 +36,9 @@ template <typename T> using kdeque = std::deque<T, kallocator<T>>;
 template <typename K, typename T, typename Cmp = std::less<>>
 using kmap = std::map<K, T, Cmp, kallocator<std::pair<const K, T>>>;
 template <typename K, typename T, typename Hash = std::hash<K>,
-          typename Pred = std::equal_to<K>>
-using kunmap =
-    std::unordered_map<K, T, Hash, Pred, kallocator<std::pair<const K, T>>>;
+  typename Pred = std::equal_to<K>>
+  using kunmap =
+  std::unordered_map<K, T, Hash, Pred, kallocator<std::pair<const K, T>>>;
 } // namespace utils
 
 template <typename T, typename... Args> T *knew(Args &&...args) {

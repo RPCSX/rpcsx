@@ -1,6 +1,7 @@
 #pragma once
-#include <atomic>
+
 #include <span>
+#include <atomic>
 #include <string>
 
 namespace orbis {

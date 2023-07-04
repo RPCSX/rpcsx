@@ -1,19 +1,20 @@
-#include <algorithm>
-#include <amdgpu/bridge/bridge.hpp>
-#include <amdgpu/device/device.hpp>
-#include <chrono>
-#include <csignal>
-#include <cstdio>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <thread>
 #include <unistd.h>
-#include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-
 #include <GLFW/glfw3.h> // TODO: make in optional
+
+#include <algorithm>
+#include <chrono>
+#include <csignal>
+#include <cstdio>
+#include <thread>
+
+#include <amdgpu/bridge/bridge.hpp>
+#include <amdgpu/device/device.hpp>
+#include <util/VerifyVulkan.hpp>
 
 // TODO
 extern void *g_rwMemory;
@@ -27,8 +28,8 @@ static void usage(std::FILE *out, const char *argv0) {
                "    --cmd-bridge <name> - setup command queue bridge name\n");
   std::fprintf(out, "    --shm <name> - setup shared memory name\n");
   std::fprintf(
-      out,
-      "    --gpu <index> - specify physical gpu index to use, default is 0\n");
+    out,
+    "    --gpu <index> - specify physical gpu index to use, default is 0\n");
   std::fprintf(out,
                "    --presenter <presenter mode> - set flip engine target\n");
   std::fprintf(out, "    -h, --help - show this message\n");
@@ -118,7 +119,7 @@ int main(int argc, const char *argv[]) {
   glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
   auto requiredInstanceExtensions = std::vector<const char *>(
-      glfwExtensions, glfwExtensions + glfwExtensionCount);
+    glfwExtensions, glfwExtensions + glfwExtensionCount);
 
   bool enableValidation = true;
 
@@ -133,7 +134,7 @@ int main(int argc, const char *argv[]) {
   if (extCount > 0) {
     std::vector<VkExtensionProperties> extensions(extCount);
     if (vkEnumerateInstanceExtensionProperties(
-            nullptr, &extCount, &extensions.front()) == VK_SUCCESS) {
+      nullptr, &extCount, &extensions.front()) == VK_SUCCESS) {
       supportedInstanceExtensions.reserve(extensions.size());
       for (VkExtensionProperties extension : extensions) {
         supportedInstanceExtensions.push_back(extension.extensionName);
@@ -166,7 +167,7 @@ int main(int argc, const char *argv[]) {
   instanceCreateInfo.pApplicationInfo = &appInfo;
   instanceCreateInfo.enabledExtensionCount = requiredInstanceExtensions.size();
   instanceCreateInfo.ppEnabledExtensionNames =
-      requiredInstanceExtensions.data();
+    requiredInstanceExtensions.data();
 
   if (enableValidation) {
     instanceCreateInfo.ppEnabledLayerNames = &validationLayerName;
@@ -181,7 +182,7 @@ int main(int argc, const char *argv[]) {
     Verify() << vkEnumeratePhysicalDevices(vkInstance, &count, devices.data());
     Verify() << (index < count);
     return devices[index];
-  };
+    };
 
   auto vkPhysicalDevice = getVkPhyDevice(gpuIndex);
 
@@ -194,17 +195,17 @@ int main(int argc, const char *argv[]) {
                                       &vkPhyDeviceMemoryProperties);
 
   VkPhysicalDevice8BitStorageFeatures storage_8bit = {
-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES};
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES };
   VkPhysicalDevice16BitStorageFeatures storage_16bit = {
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
-      .pNext = &storage_8bit};
+      .pNext = &storage_8bit };
   VkPhysicalDeviceShaderFloat16Int8Features float16_int8 = {
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES,
-      .pNext = &storage_16bit};
+      .pNext = &storage_16bit };
 
   VkPhysicalDeviceFeatures2 features2 = {
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-      .pNext = &float16_int8};
+      .pNext = &float16_int8 };
   vkGetPhysicalDeviceFeatures2(vkPhysicalDevice, &features2);
 
   Verify() << storage_8bit.uniformAndStorageBuffer8BitAccess;
@@ -236,7 +237,7 @@ int main(int argc, const char *argv[]) {
     return std::find(vkSupportedDeviceExtensions.begin(),
                      vkSupportedDeviceExtensions.end(),
                      extension) != vkSupportedDeviceExtensions.end();
-  };
+    };
 
   std::vector<const char *> requestedDeviceExtensions = {
       VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
@@ -259,9 +260,9 @@ int main(int argc, const char *argv[]) {
   for (const char *requestedExtension : requestedDeviceExtensions) {
     if (!isDeviceExtensionSupported(requestedExtension)) {
       std::fprintf(
-          stderr,
-          "Requested device extension '%s' is not present at device level\n",
-          requestedExtension);
+        stderr,
+        "Requested device extension '%s' is not present at device level\n",
+        requestedExtension);
       std::abort();
     }
   }
@@ -279,7 +280,7 @@ int main(int argc, const char *argv[]) {
     }
 
     vkGetPhysicalDeviceQueueFamilyProperties2(
-        vkPhysicalDevice, &queueFamilyCount, queueFamilyProperties.data());
+      vkPhysicalDevice, &queueFamilyCount, queueFamilyProperties.data());
   }
 
   VkSurfaceKHR vkSurface;
@@ -335,20 +336,20 @@ int main(int argc, const char *argv[]) {
        ++queueFamily) {
     if (queueFamiliesWithGraphicsSupport.contains(queueFamily)) {
       requestedQueues.push_back(
-          {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-           .queueFamilyIndex = queueFamily,
-           .queueCount = 1,
-           .pQueuePriorities = defaultQueuePriorities.data()});
+        { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+         .queueFamilyIndex = queueFamily,
+         .queueCount = 1,
+         .pQueuePriorities = defaultQueuePriorities.data() });
     } else if (queueFamiliesWithComputeSupport.contains(queueFamily) ||
                queueFamiliesWithTransferSupport.contains(queueFamily)) {
       requestedQueues.push_back(
-          {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-           .queueFamilyIndex = queueFamily,
-           .queueCount =
-               std::min<uint32_t>(queueFamilyProperties[queueFamily]
-                                      .queueFamilyProperties.queueCount,
-                                  defaultQueuePriorities.size()),
-           .pQueuePriorities = defaultQueuePriorities.data()});
+        { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+         .queueFamilyIndex = queueFamily,
+         .queueCount =
+             std::min<uint32_t>(queueFamilyProperties[queueFamily]
+                                    .queueFamilyProperties.queueCount,
+                                defaultQueuePriorities.size()),
+         .pQueuePriorities = defaultQueuePriorities.data() });
     }
   }
 
@@ -370,10 +371,10 @@ int main(int argc, const char *argv[]) {
 
     if (!alreadyRequested) {
       requestedQueues.push_back(
-          {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-           .queueFamilyIndex = queueFamily,
-           .queueCount = 1,
-           .pQueuePriorities = defaultQueuePriorities.data()});
+        { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+         .queueFamilyIndex = queueFamily,
+         .queueCount = 1,
+         .pQueuePriorities = defaultQueuePriorities.data() });
     }
 
     requestedPresentQueue = true;
@@ -392,10 +393,10 @@ int main(int argc, const char *argv[]) {
 
       if (!alreadyRequested) {
         requestedQueues.push_back(
-            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-             .queueFamilyIndex = queueFamily,
-             .queueCount = 1,
-             .pQueuePriorities = defaultQueuePriorities.data()});
+          { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+           .queueFamilyIndex = queueFamily,
+           .queueCount = 1,
+           .pQueuePriorities = defaultQueuePriorities.data() });
       }
 
       requestedPresentQueue = true;
@@ -404,7 +405,7 @@ int main(int argc, const char *argv[]) {
 
   VkPhysicalDeviceVulkan13Features phyDevFeatures13{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-      .maintenance4 = VK_TRUE};
+      .maintenance4 = VK_TRUE };
 
   VkPhysicalDeviceVulkan12Features phyDevFeatures12{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
@@ -430,7 +431,7 @@ int main(int argc, const char *argv[]) {
       .enabledExtensionCount =
           static_cast<uint32_t>(requestedDeviceExtensions.size()),
       .ppEnabledExtensionNames = requestedDeviceExtensions.data(),
-      .pEnabledFeatures = &features2.features};
+      .pEnabledFeatures = &features2.features };
 
   VkDevice vkDevice;
   Verify() << vkCreateDevice(vkPhysicalDevice, &deviceCreateInfo, nullptr,
@@ -450,7 +451,7 @@ int main(int argc, const char *argv[]) {
 
   std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
   Verify() << vkGetPhysicalDeviceSurfaceFormatsKHR(
-      vkPhysicalDevice, vkSurface, &formatCount, surfaceFormats.data());
+    vkPhysicalDevice, vkSurface, &formatCount, surfaceFormats.data());
 
   if ((formatCount == 1) && (surfaceFormats[0].format == VK_FORMAT_UNDEFINED)) {
     swapchainColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -480,12 +481,12 @@ int main(int argc, const char *argv[]) {
                                                           vkSurface, &surfCaps);
     uint32_t presentModeCount;
     Verify() << vkGetPhysicalDeviceSurfacePresentModesKHR(
-        vkPhysicalDevice, vkSurface, &presentModeCount, NULL);
+      vkPhysicalDevice, vkSurface, &presentModeCount, NULL);
     Verify() << (presentModeCount > 0);
 
     std::vector<VkPresentModeKHR> presentModes(presentModeCount);
     Verify() << vkGetPhysicalDeviceSurfacePresentModesKHR(
-        vkPhysicalDevice, vkSurface, &presentModeCount, presentModes.data());
+      vkPhysicalDevice, vkSurface, &presentModeCount, presentModes.data());
 
     if (surfCaps.currentExtent.width != (uint32_t)-1) {
       swapchainExtent = surfCaps.currentExtent;
@@ -518,7 +519,7 @@ int main(int argc, const char *argv[]) {
     }
 
     VkCompositeAlphaFlagBitsKHR compositeAlpha =
-        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+      VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = {
         VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
@@ -539,7 +540,7 @@ int main(int argc, const char *argv[]) {
     swapchainCI.minImageCount = desiredNumberOfSwapchainImages;
     swapchainCI.imageFormat = swapchainColorFormat;
     swapchainCI.imageColorSpace = swapchainColorSpace;
-    swapchainCI.imageExtent = {swapchainExtent.width, swapchainExtent.height};
+    swapchainCI.imageExtent = { swapchainExtent.width, swapchainExtent.height };
     swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     swapchainCI.preTransform = (VkSurfaceTransformFlagBitsKHR)preTransform;
     swapchainCI.imageArrayLayers = 1;
@@ -571,8 +572,8 @@ int main(int argc, const char *argv[]) {
 
     swapchainImages.resize(swapchainImageCount);
     Verify() << vkGetSwapchainImagesKHR(
-        vkDevice, swapchain, &swapchainImageCount, swapchainImages.data());
-  };
+      vkDevice, swapchain, &swapchainImageCount, swapchainImages.data());
+    };
 
   createSwapchain();
 
@@ -641,10 +642,10 @@ int main(int argc, const char *argv[]) {
   Verify() << vkCreatePipelineCache(vkDevice, &pipelineCacheCreateInfo, nullptr,
                                     &pipelineCache);
   amdgpu::device::DrawContext dc{
-      // TODO
-      .pipelineCache = pipelineCache,
-      .queue = graphicsQueues.front().first,
-      .commandPool = commandPool,
+    // TODO
+    .pipelineCache = pipelineCache,
+    .queue = graphicsQueues.front().first,
+    .commandPool = commandPool,
   };
 
   std::vector<VkFence> inFlightFences(swapchainImages.size());
@@ -686,7 +687,7 @@ int main(int argc, const char *argv[]) {
 
   bridge->pullerPid = ::getpid();
 
-  amdgpu::bridge::BridgePuller bridgePuller{bridge};
+  amdgpu::bridge::BridgePuller bridgePuller{ bridge };
   amdgpu::bridge::Command commandsBuffer[32];
 
   int memoryFd = ::shm_open(shmName, O_RDWR, S_IRUSR | S_IWUSR);
@@ -697,8 +698,8 @@ int main(int argc, const char *argv[]) {
 
   struct stat memoryStat;
   ::fstat(memoryFd, &memoryStat);
-  amdgpu::RemoteMemory memory{(char *)::mmap(
-      nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0)};
+  amdgpu::RemoteMemory memory{ (char *)::mmap(
+      nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0) };
 
   extern void *g_rwMemory;
   g_memorySize = memoryStat.st_size;
@@ -730,13 +731,13 @@ int main(int argc, const char *argv[]) {
   swapchainImageHandles.resize(swapchainImages.size());
 
   VkPipelineStageFlags submitPipelineStages =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
     std::size_t pulledCount =
-        bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
+      bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
 
     if (pulledCount == 0) {
       // std::this_thread::sleep_for(

@@ -18,12 +18,12 @@ atomic_fetch_op(std::atomic<T> &v, F func) {
       std::invoke(func, _new);
       if (v.compare_exchange_strong(old, _new)) [[likely]] {
         return old;
-      }
+        }
     } else {
       RT ret = std::invoke(func, _new);
       if (!ret || v.compare_exchange_strong(old, _new)) [[likely]] {
-        return {old, std::move(ret)};
-      }
+        return { old, std::move(ret) };
+        }
     }
   }
 }
@@ -38,12 +38,12 @@ inline RT atomic_op(std::atomic<T> &v, F func) {
       std::invoke(func, _new);
       if (v.compare_exchange_strong(old, _new)) [[likely]] {
         return;
-      }
+        }
     } else {
       RT result = std::invoke(func, _new);
       if (v.compare_exchange_strong(old, _new)) [[likely]] {
         return result;
-      }
+        }
     }
   }
 }

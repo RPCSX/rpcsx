@@ -1,10 +1,11 @@
-#include "utils/Logs.hpp"
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
 #include <cstdarg>
 #include <cstdint>
+
+#include "utils/Logs.hpp"
 
 static void append_hex(std::string &out, std::uintmax_t value) {
   std::ostringstream buf;

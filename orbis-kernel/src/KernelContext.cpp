@@ -1,7 +1,8 @@
-#include "orbis/KernelContext.hpp"
-#include "orbis/thread/Process.hpp"
 #include <sys/mman.h>
 #include <sys/unistd.h>
+
+#include "orbis/KernelContext.hpp"
+#include "orbis/thread/Process.hpp"
 
 namespace orbis {
 KernelContext &g_context = *[]() -> KernelContext * {
@@ -13,79 +14,79 @@ KernelContext &g_context = *[]() -> KernelContext * {
     std::abort();
 
   return new (ptr) KernelContext;
-}();
+  }();
 
-KernelContext::KernelContext() {}
-KernelContext::~KernelContext() {}
+  KernelContext::KernelContext() {}
+  KernelContext::~KernelContext() {}
 
-Process *KernelContext::createProcess(pid_t pid) {
-  auto newProcess = knew<utils::LinkedNode<Process>>();
-  newProcess->object.context = this;
-  newProcess->object.pid = pid;
-  newProcess->object.state = ProcessState::NEW;
+  Process *KernelContext::createProcess(pid_t pid) {
+    auto newProcess = knew<utils::LinkedNode<Process>>();
+    newProcess->object.context = this;
+    newProcess->object.pid = pid;
+    newProcess->object.state = ProcessState::NEW;
 
-  {
+    {
+      std::lock_guard lock(m_proc_mtx);
+      if (m_processes != nullptr) {
+        m_processes->insertPrev(*newProcess);
+      }
+
+      m_processes = newProcess;
+    }
+
+    return &newProcess->object;
+  }
+
+  void KernelContext::deleteProcess(Process *proc) {
+    auto procNode = reinterpret_cast<utils::LinkedNode<Process> *>(proc);
+    auto pid = proc->pid;
+
+    {
+      std::lock_guard lock(m_proc_mtx);
+      auto next = procNode->erase();
+
+      if (procNode == m_processes) {
+        m_processes = next;
+      }
+    }
+
+    kdelete(procNode);
+  }
+
+  Process *KernelContext::findProcessById(pid_t pid) const {
     std::lock_guard lock(m_proc_mtx);
-    if (m_processes != nullptr) {
-      m_processes->insertPrev(*newProcess);
+    for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
+      if (proc->object.pid == pid) {
+        return &proc->object;
+      }
     }
 
-    m_processes = newProcess;
+    return nullptr;
   }
 
-  return &newProcess->object;
-}
-
-void KernelContext::deleteProcess(Process *proc) {
-  auto procNode = reinterpret_cast<utils::LinkedNode<Process> *>(proc);
-  auto pid = proc->pid;
-
-  {
-    std::lock_guard lock(m_proc_mtx);
-    auto next = procNode->erase();
-
-    if (procNode == m_processes) {
-      m_processes = next;
-    }
+  void *KernelContext::kalloc(std::size_t size, std::size_t align) {
+    std::lock_guard lock(g_context.m_heap_mtx);
+    align = std::max(align, sizeof(node));
+    auto heap = reinterpret_cast<std::uintptr_t>(g_context.m_heap_next);
+    heap = (heap + (align - 1)) & ~(align - 1);
+    auto result = reinterpret_cast<void *>(heap);
+    g_context.m_heap_next = reinterpret_cast<void *>(heap + size);
+    return result;
   }
 
-  kdelete(procNode);
-}
-
-Process *KernelContext::findProcessById(pid_t pid) const {
-  std::lock_guard lock(m_proc_mtx);
-  for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
-    if (proc->object.pid == pid) {
-      return &proc->object;
-    }
+  void KernelContext::kfree(void *ptr, std::size_t size) {
+    std::lock_guard lock(g_context.m_heap_mtx);
+    if (!size)
+      std::abort();
+    // TODO: create node and put it into
   }
 
-  return nullptr;
-}
-
-void *KernelContext::kalloc(std::size_t size, std::size_t align) {
-  std::lock_guard lock(g_context.m_heap_mtx);
-  align = std::max(align, sizeof(node));
-  auto heap = reinterpret_cast<std::uintptr_t>(g_context.m_heap_next);
-  heap = (heap + (align - 1)) & ~(align - 1);
-  auto result = reinterpret_cast<void *>(heap);
-  g_context.m_heap_next = reinterpret_cast<void *>(heap + size);
-  return result;
-}
-
-void KernelContext::kfree(void *ptr, std::size_t size) {
-  std::lock_guard lock(g_context.m_heap_mtx);
-  if (!size)
-    std::abort();
-  // TODO: create node and put it into
-}
-
-inline namespace utils {
-void kfree(void *ptr, std::size_t size) {
-  return KernelContext::kfree(ptr, size);
-}
-void *kalloc(std::size_t size, std::size_t align) {
-  return KernelContext::kalloc(size, align);
-}
-} // namespace utils
+  inline namespace utils {
+  void kfree(void *ptr, std::size_t size) {
+    return KernelContext::kfree(ptr, size);
+  }
+  void *kalloc(std::size_t size, std::size_t align) {
+    return KernelContext::kalloc(size, align);
+  }
+  } // namespace utils
 } // namespace orbis

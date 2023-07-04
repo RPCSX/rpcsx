@@ -1,18 +1,18 @@
-#include "orbis/sys/syscall.hpp"
-#include "orbis/thread/Process.hpp"
-#include "orbis/thread/ProcessOps.hpp"
 #include <concepts>
 #include <condition_variable>
 #include <cstddef>
 #include <deque>
 #include <functional>
+#include <thread>
+#include <utility>
 
 #include <orbis/KernelContext.hpp>
 #include <orbis/error.hpp>
 #include <orbis/sys/sysentry.hpp>
 #include <orbis/thread/Thread.hpp>
-#include <thread>
-#include <utility>
+#include "orbis/sys/syscall.hpp"
+#include "orbis/thread/Process.hpp"
+#include "orbis/thread/ProcessOps.hpp"
 
 struct Registers {
   std::uint64_t r15;
@@ -94,8 +94,8 @@ class CPU {
   std::deque<Task> m_workQueue;
   std::condition_variable m_cv;
   std::mutex m_mtx;
-  std::atomic<bool> m_terminate_flag{false};
-  std::thread m_hostThread{[this] { entry(); }};
+  std::atomic<bool> m_terminate_flag{ false };
+  std::thread m_hostThread{ [this] { entry(); } };
 
 public:
   CPU(int index) : m_index(index) {}
@@ -105,7 +105,7 @@ public:
   }
 
   void addTask(orbis::Thread *thread, std::function<void()> task) {
-    m_workQueue.push_back({thread, std::move(task)});
+    m_workQueue.push_back({ thread, std::move(task) });
     m_cv.notify_one();
   }
 
@@ -167,7 +167,7 @@ struct orbis::ProcessOps procOps = {
 };
 
 static orbis::Thread *allocateGuestThread(orbis::Process *process,
-                                   orbis::lwpid_t tid) {
+                                          orbis::lwpid_t tid) {
   auto guestThread = new orbis::Thread{};
   guestThread->state = orbis::ThreadState::RUNQ;
   guestThread->tid = tid;
@@ -233,7 +233,7 @@ int main() {
 
   auto initMainThread = allocateGuestThread(initProc, 1);
 
-  CPU cpu{0};
+  CPU cpu{ 0 };
   Event completeEvent;
   cpu.addTask(initMainThread, [&completeEvent] {
     Registers regs{};
@@ -245,7 +245,7 @@ int main() {
     orbis::syscall_entry(g_guestThread);
 
     completeEvent.fire();
-  });
+              });
 
   completeEvent.wait();
   delete initMainThread;

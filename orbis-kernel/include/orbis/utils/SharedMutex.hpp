@@ -31,7 +31,7 @@ public:
     // Conditional increment
     unsigned value = m_value.load();
     return value < c_one - 1 &&
-           m_value.compare_exchange_strong(value, value + 1);
+      m_value.compare_exchange_strong(value, value + 1);
   }
 
   // Lock with HLE acquire hint
@@ -41,8 +41,8 @@ public:
       unsigned old = value;
       if (compare_exchange_hle_acq(m_value, old, value + 1)) [[likely]] {
         return;
+        }
       }
-    }
 
     impl_lock_shared(value + 1);
   }
@@ -52,7 +52,7 @@ public:
     const unsigned value = fetch_add_hle_rel(m_value, -1u);
     if (value >= c_one) [[unlikely]] {
       impl_unlock_shared(value);
-    }
+      }
   }
 
   bool try_lock() {
@@ -65,7 +65,7 @@ public:
     unsigned value = 0;
     if (!compare_exchange_hle_acq(m_value, value, +c_one)) [[unlikely]] {
       impl_lock(value);
-    }
+      }
   }
 
   // Unlock with HLE release hint
@@ -73,7 +73,7 @@ public:
     const unsigned value = fetch_add_hle_rel(m_value, 0u - c_one);
     if (value != c_one) [[unlikely]] {
       impl_unlock(value);
-    }
+      }
   }
 
   bool try_lock_upgrade() {
@@ -82,13 +82,13 @@ public:
     // Conditional increment, try to convert a single reader into a writer,
     // ignoring other writers
     return (value + c_one - 1) % c_one == 0 &&
-           m_value.compare_exchange_strong(value, value + c_one - 1);
+      m_value.compare_exchange_strong(value, value + c_one - 1);
   }
 
   void lock_upgrade() {
     if (!try_lock_upgrade()) [[unlikely]] {
       impl_lock_upgrade();
-    }
+      }
   }
 
   void lock_downgrade() {

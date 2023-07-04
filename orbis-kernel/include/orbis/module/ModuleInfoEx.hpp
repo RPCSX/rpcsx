@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ModuleSegment.hpp"
-
 #include "orbis-config.hpp"
 
 namespace orbis {

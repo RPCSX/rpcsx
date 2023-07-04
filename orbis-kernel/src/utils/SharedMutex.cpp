@@ -1,8 +1,9 @@
-#include "utils/SharedMutex.hpp"
 #include <linux/futex.h>
 #include <syscall.h>
 #include <unistd.h>
 #include <xmmintrin.h>
+
+#include "utils/SharedMutex.hpp"
 
 static void busy_wait(unsigned long long cycles = 3000) {
   const auto stop = __builtin_ia32_rdtsc() + cycles;
@@ -67,7 +68,7 @@ void shared_mutex::impl_wait() {
       }
 
       return false;
-    });
+                                           });
 
     if (ok) {
       break;

@@ -1,9 +1,9 @@
-#include "module/Module.hpp"
-#include "thread.hpp"
 #include <utility>
+#include <string_view>
 
 #include "thread/Process.hpp"
-#include <string_view>
+#include "module/Module.hpp"
+#include "orbis/thread.hpp"
 
 // TODO: move relocations to the platform specific code
 enum RelType {
@@ -60,8 +60,8 @@ static void allocateTlsOffset(orbis::Process *process, orbis::Module *module) {
   }
 
   auto offset =
-      calculateTlsOffset(module->tlsIndex == 1 ? 0 : process->lastTlsOffset,
-                         module->tlsSize, module->tlsAlign);
+    calculateTlsOffset(module->tlsIndex == 1 ? 0 : process->lastTlsOffset,
+                       module->tlsSize, module->tlsAlign);
 
   module->tlsOffset = offset;
   process->lastTlsOffset = offset;
@@ -136,7 +136,7 @@ static orbis::SysResult doRelocation(orbis::Process *process,
       std::printf("Requested library is '%s', exists in libraries: [",
                   library.name.c_str());
 
-      for (bool isFirst = true; auto &lib : foundInLibs) {
+      for (bool isFirst = true; auto & lib : foundInLibs) {
         if (isFirst) {
           isFirst = false;
         } else {
@@ -148,7 +148,7 @@ static orbis::SysResult doRelocation(orbis::Process *process,
       std::printf("]\n");
     }
     return std::pair(module, symbol.address);
-  };
+    };
 
   switch (rel.relType) {
   case kRelNone:
@@ -158,14 +158,14 @@ static orbis::SysResult doRelocation(orbis::Process *process,
     *where = reinterpret_cast<std::uintptr_t>(defObj->base) + S + A;
     return {};
   }
-    return {};
+             return {};
   case kRelPc32: {
     auto [defObj, S] = findDefModule();
     *where32 = reinterpret_cast<std::uintptr_t>(defObj->base) + S + A - P;
     return {};
   }
-  // case kRelCopy:
-  //   return{};
+               // case kRelCopy:
+               //   return{};
   case kRelGlobDat: {
     auto [defObj, S] = findDefModule();
     *where = reinterpret_cast<std::uintptr_t>(defObj->base) + S;

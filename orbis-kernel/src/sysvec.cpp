@@ -1,7 +1,8 @@
+#include <unordered_map>
+
 #include "sys/syscall.hpp"
 #include "sys/sysproto.hpp"
 #include "sys/sysentry.hpp"
-#include <unordered_map>
 
 enum { PSL_C = 0x1 };
 
@@ -78,7 +79,7 @@ namespace orbis {
 namespace detail {
 template <auto Fn> struct WrapImpl;
 
-template <typename... Args, SysResult (*Fn)(Thread *, Args...)>
+template <typename... Args, SysResult(*Fn)(Thread *, Args...)>
   requires(sizeof...(Args) < 8)
 struct WrapImpl<Fn> {
   constexpr sysent operator()() {
@@ -106,7 +107,7 @@ template <auto Fn> constexpr auto wrap() -> decltype(detail::WrapImpl<Fn>()()) {
   return detail::WrapImpl<Fn>()();
 }
 
-static const std::unordered_map<SysResult (*)(Thread *, uint64_t *), const char *> gImplToName = {
+static const std::unordered_map<SysResult(*)(Thread *, uint64_t *), const char *> gImplToName = {
   {wrap<nosys>().call, "nosys"},
   {wrap<sys_exit>().call, "sys_exit"},
   {wrap<sys_fork>().call, "sys_fork"},
@@ -680,7 +681,7 @@ static const std::unordered_map<SysResult (*)(Thread *, uint64_t *), const char 
   {wrap<sys_workspace_ctrl>().call, "sys_workspace_ctrl"},
 };
 
-const char *getSysentName(SysResult (*sysent)(Thread *, uint64_t *)) {
+const char *getSysentName(SysResult(*sysent)(Thread *, uint64_t *)) {
   auto it = gImplToName.find(sysent);
   if (it == gImplToName.end()) {
     return nullptr;

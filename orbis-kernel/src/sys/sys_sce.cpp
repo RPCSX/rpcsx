@@ -1,4 +1,4 @@
-#include "error.hpp"
+#include "orbis/error.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
 #include "sys/sysproto.hpp"
@@ -392,8 +392,8 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> 
   case 1: {
     auto *prop = (mdbg_property *)arg0;
     std::printf(
-        "sys_mdbg_service set property (name='%s', address=0x%lx, size=%lu)\n",
-        prop->name, prop->addr_ptr, prop->areaSize);
+      "sys_mdbg_service set property (name='%s', address=0x%lx, size=%lu)\n",
+      prop->name, prop->addr_ptr, prop->areaSize);
     break;
   }
 
@@ -548,9 +548,9 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint64_t id, uint64_t a
     auto createParams = (ptr<IpmiCreateClientParams>)params;
 
     std::printf("ipmi create client(%p, '%s', %p)\n",
-      (void *)createParams->arg0,
-      (char *)createParams->name,
-      (void *)createParams->arg2
+                (void *)createParams->arg0,
+                (char *)createParams->name,
+                (void *)createParams->arg2
     );
 
     return{};

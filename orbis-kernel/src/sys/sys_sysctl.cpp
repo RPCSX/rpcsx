@@ -154,12 +154,12 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         auto processParam =
-            reinterpret_cast<std::byte *>(thread->tproc->processParam);
+          reinterpret_cast<std::byte *>(thread->tproc->processParam);
 
         auto sdkVersion = processParam        //
-                          + sizeof(uint64_t)  // size
-                          + sizeof(uint32_t)  // magic
-                          + sizeof(uint32_t); // entryCount
+          + sizeof(uint64_t)  // size
+          + sizeof(uint32_t)  // magic
+          + sizeof(uint32_t); // entryCount
 
         std::printf("Reporting SDK version %x\n",
                     *reinterpret_cast<uint32_t *>(sdkVersion));
