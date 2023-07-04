@@ -1,9 +1,59 @@
-build/
-compile_commands.json
-CMakeFiles
-*.cmake
-.vscode
-Makefile
-*.DS_Store
-*.a
+# Compiled Object files
+*.slo
+*.lo
 *.o
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.opensdf
+*.sdf
+*.suo
+*.tlog
+*.idb
+*.pdb
+*.obj
+*.ilk
+*.pch
+
+*.log
+*.exe
+*.dll
+*.elf
+*.lastbuildstate
+*.unsuccessfulbuild
+*.res
+*.dump
+*.wav
+
+# Visual Studio Files
+.vs/*
+.vscode/*
+*.ipch
+*.vspx
+*.psess
+*.VC.*
+*.vcxproj.user
+enc_temp_folder/*
+CMakeSettings.json
+*PVS-Studio*
+PVS/*
+
+# cmake
+Makefile
+*CMakeFiles*
+CMakeCache.txt
+*cmake_install.cmake*
+CPackConfig.cmake
+CPackSourceConfig.cmake
+compile_commands.json
+
+# macOS
+*.DS_Store
+
+build/
