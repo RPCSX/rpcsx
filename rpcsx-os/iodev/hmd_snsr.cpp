@@ -1,5 +1,5 @@
 #include "io-device.hpp"
-
+#include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
 struct HmdSnsrDevice : public IoDevice {};
@@ -19,7 +19,7 @@ static std::int32_t smd_snr_device_open(IoDevice *device,
                                         orbis::Ref<IoDeviceInstance>  *instance,
                                         const char *path, std::uint32_t flags,
                                         std::uint32_t mode) {
-  auto *newInstance = new HmdSnsrInstance{};
+  auto *newInstance = orbis::knew<HmdSnsrInstance>();
   newInstance->ioctl = smd_snr_instance_ioctl;
   io_device_instance_init(device, newInstance);
   *instance = newInstance;
@@ -27,7 +27,7 @@ static std::int32_t smd_snr_device_open(IoDevice *device,
 }
 
 IoDevice *createHmdSnsrCharacterDevice() {
-  auto *newDevice = new HmdSnsrDevice();
+  auto *newDevice = orbis::knew<HmdSnsrDevice>();
   newDevice->open = smd_snr_device_open;
   return newDevice;
 }

@@ -1,4 +1,5 @@
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include <fstream>
 
 struct StderrInstance : public IoDeviceInstance {};
@@ -25,7 +26,7 @@ static std::int32_t stderr_device_open(IoDevice *device,
                                        std::uint32_t mode) {
   auto stderrDevice = static_cast<StderrDevice *>(device);
   if (stderrDevice->instance == nullptr) {
-    auto *newInstance = new StderrInstance{};
+    auto *newInstance = orbis::knew<StderrInstance>();
     newInstance->write = stderr_instance_write;
     newInstance->close = stderr_instance_close;
 
@@ -42,7 +43,7 @@ static std::int32_t stderr_device_open(IoDevice *device,
 }
 
 IoDevice *createStderrCharacterDevice() {
-  auto *newDevice = new StderrDevice();
+  auto *newDevice = orbis::knew<StderrDevice>();
   newDevice->open = stderr_device_open;
   return newDevice;
 }

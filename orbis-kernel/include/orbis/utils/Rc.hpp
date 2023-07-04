@@ -6,9 +6,13 @@
 #include <utility>
 
 namespace orbis {
+template <typename T, typename... Args> T *knew(Args &&...args);
 inline namespace utils {
+void kfree(void* ptr, std::size_t size);
+
 struct RcBase {
   std::atomic<unsigned> references{0};
+  unsigned _total_size = 0; // Set by knew/kcreate
 
   virtual ~RcBase() = default;
 
@@ -21,7 +25,9 @@ struct RcBase {
   // returns true if object was destroyed
   bool decRef() {
     if (references.fetch_sub(1, std::memory_order::relaxed) == 1) {
-      delete this;
+      auto size = _total_size;
+      this->~RcBase();
+      orbis::utils::kfree(this, size);
       return true;
     }
 
@@ -116,9 +122,8 @@ public:
 
 template <WithRc T, typename... ArgsT>
   requires(std::is_constructible_v<T, ArgsT...>)
-Ref<T> create(ArgsT &&...args) {
-  auto result = new T(std::forward<ArgsT>(args)...);
-  return Ref<T>(result);
+Ref<T> kcreate(ArgsT &&...args) {
+  return Ref<T>(knew<T>(std::forward<ArgsT>(args)...));
 }
 } // namespace utils
 } // namespace orbis
