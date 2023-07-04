@@ -3,9 +3,9 @@
 #include <cstdio>
 #include <cstring>
 
-#include "vm.hpp"
-#include "bridge.hpp"
-#include "io-device.hpp"
+#include "rpcsx-os/vm.hpp"
+#include "rpcsx-os/bridge.hpp"
+#include "rpcsx-os/io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 
 struct VideoOutBuffer {

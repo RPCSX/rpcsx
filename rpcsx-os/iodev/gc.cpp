@@ -9,9 +9,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "vm.hpp"
-#include "bridge.hpp"
-#include "io-device.hpp"
+#include "rpcsx-os/vm.hpp"
+#include "rpcsx-os/bridge.hpp"
+#include "rpcsx-os/io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 // #include <rpcs4/bridge.hpp>
 

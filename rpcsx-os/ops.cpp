@@ -6,15 +6,15 @@
 #include <optional>
 #include <set>
 
-#include "ops.hpp"
-#include "io-device.hpp"
-#include "linker.hpp"
 #include "orbis/module/ModuleHandle.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Rc.hpp"
-#include "vfs.hpp"
-#include "vm.hpp"
+#include "rpcsx-os/ops.hpp"
+#include "rpcsx-os/io-device.hpp"
+#include "rpcsx-os/linker.hpp"
+#include "rpcsx-os/vfs.hpp"
+#include "rpcsx-os/vm.hpp"
 
 using namespace orbis;
 

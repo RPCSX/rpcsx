@@ -20,15 +20,15 @@
 #include <orbis/thread/Process.hpp>
 #include <orbis/thread/ProcessOps.hpp>
 #include <orbis/thread/Thread.hpp>
-#include "align.hpp"
 #include "amdgpu/bridge/bridge.hpp"
-#include "bridge.hpp"
-#include "io-device.hpp"
-#include "io-devices.hpp"
-#include "linker.hpp"
-#include "ops.hpp"
-#include "vfs.hpp"
-#include "vm.hpp"
+#include "rpcsx-os/align.hpp"
+#include "rpcsx-os/bridge.hpp"
+#include "rpcsx-os/io-device.hpp"
+#include "rpcsx-os/io-devices.hpp"
+#include "rpcsx-os/linker.hpp"
+#include "rpcsx-os/ops.hpp"
+#include "rpcsx-os/vfs.hpp"
+#include "rpcsx-os/vm.hpp"
 
 static int g_gpuPid;
 

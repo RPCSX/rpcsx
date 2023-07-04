@@ -2,8 +2,8 @@
 #include <map>
 #include <string_view>
 
-#include "vfs.hpp"
-#include "io-device.hpp"
+#include "rpcsx-os/vfs.hpp"
+#include "rpcsx-os/io-device.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "orbis/error/SysResult.hpp"
 

@@ -6,13 +6,13 @@
 #include <memory>
 #include <unordered_map>
 
-#include "linker.hpp"
-#include "align.hpp"
-#include "io-device.hpp"
+#include "rpcsx-os/linker.hpp"
+#include "rpcsx-os/align.hpp"
+#include "rpcsx-os/io-device.hpp"
+#include "rpcsx-os/vfs.hpp"
+#include "rpcsx-os/vm.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/module/Module.hpp"
-#include "vfs.hpp"
-#include "vm.hpp"
 #include <orbis/thread/Process.hpp>
 
 using orbis::utils::Ref;

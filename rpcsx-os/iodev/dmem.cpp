@@ -1,8 +1,8 @@
 #include <cinttypes>
 #include <cstdio>
 
-#include "vm.hpp"
-#include "io-device.hpp"
+#include "rpcsx-os/vm.hpp"
+#include "rpcsx-os/io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 
 struct DmemDevice : public IoDevice {
