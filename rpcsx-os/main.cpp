@@ -9,7 +9,7 @@
 #include "vm.hpp"
 
 #include <filesystem>
-#include <linux/limits.h>
+#include <limits.h>
 #include <orbis/KernelContext.hpp>
 #include <orbis/module.hpp>
 #include <orbis/module/Module.hpp>
@@ -19,13 +19,19 @@
 #include <orbis/thread/ProcessOps.hpp>
 #include <orbis/thread/Thread.hpp>
 
-#include <asm/prctl.h>
 #include <fcntl.h>
 #include <libunwind.h>
-#include <link.h>
+#include <mach-o/dyld.h>
 #include <pthread.h>
-#include <sys/prctl.h>
 #include <unistd.h>
+#include <dlfcn.h>
+
+#include <sys/sysctl.h>
+#include <sys/param.h>
+#include <sys/user.h>
+#include <mach/mach_init.h>
+#include <mach/thread_act.h>
+#include <mach/mach_traps.h>
 
 #include <csignal>
 #include <cstddef>
@@ -285,25 +291,37 @@ static void setupSigHandlers() {
 }
 
 __attribute__((no_stack_protector)) static void *
-emuThreadEntryPoint(void *paramsVoid) {
-  auto params = *reinterpret_cast<ThreadParam *>(paramsVoid);
-  delete reinterpret_cast<ThreadParam *>(paramsVoid);
+emuThreadEntryPoint(void* paramsVoid) {
+  auto params = *reinterpret_cast<ThreadParam*>(paramsVoid);
+  delete reinterpret_cast<ThreadParam*>(paramsVoid);
 
   g_currentThread = params.thread;
 
-  std::uint64_t hostFs;
-  syscall(SYS_arch_prctl, ARCH_GET_FS, &hostFs);
-  syscall(SYS_arch_prctl, ARCH_SET_GS, hostFs);
+  mach_vm_address_t hostFs;
+  size_t size = sizeof(hostFs);
+  sysctlbyname("hw.optional.hostfs", &hostFs, &size, nullptr, 0);
 
-  if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
-            libcInfo.textBegin, libcInfo.textSize, nullptr)) {
-    perror("prctl failed\n");
+  if (thread_set_special_port(mach_thread_self(), THREAD_KERNEL_PORT, hostFs) != KERN_SUCCESS) {
+    perror("thread_set_special_port failed\n");
     exit(-1);
   }
 
-  syscall(SYS_arch_prctl, ARCH_SET_FS, params.thread->fsBase);
+  thread_state_flavor_t flavor;
+  mach_msg_type_number_t stateCount;
+  natural_t threadInfo[THREAD_STATE_MAX];
+  flavor = THREAD_STATE_FLAVOR;
+  stateCount = THREAD_STATE_COUNT;
+  if (thread_info(mach_thread_self(), flavor, (thread_info_t)threadInfo, &stateCount) != KERN_SUCCESS) {
+    perror("thread_info failed\n");
+    exit(-1);
+  }
+  threadInfo[FS] = params.thread->fsBase;
+  if (thread_set_state(mach_thread_self(), flavor, (thread_state_t)threadInfo, stateCount) != KERN_SUCCESS) {
+    perror("thread_set_state failed\n");
+    exit(-1);
+  }
+
   params.startFunc(params.arg);
-  syscall(SYS_arch_prctl, ARCH_SET_FS, hostFs);
 
   return nullptr;
 }

@@ -1,6 +1,4 @@
 #include "utils/SharedMutex.hpp"
-#include <linux/futex.h>
-#include <syscall.h>
 #include <unistd.h>
 #include <xmmintrin.h>
 
@@ -59,26 +57,28 @@ void shared_mutex::impl_unlock_shared(unsigned old) {
   }
 }
 void shared_mutex::impl_wait() {
+  pthread_mutex_lock(&m_mutex); // Acquire the mutex
+
   while (true) {
-    const auto [old, ok] = atomic_fetch_op(m_value, [](unsigned &value) {
-      if (value >= c_sig) {
-        value -= c_sig;
-        return true;
-      }
-
-      return false;
-    });
-
-    if (ok) {
+    if (m_value >= c_sig) {
+      m_value -= c_sig;
+      pthread_mutex_unlock(&m_mutex); // Release the mutex
       break;
     }
-
-    syscall(SYS_futex, &m_value, FUTEX_WAIT, old, 0, 0, 0);
+    else {
+      pthread_cond_wait(&m_cond, &m_mutex); // Wait on the condition variable
+    }
   }
+
+  pthread_mutex_unlock(&m_mutex); // Release the mutex
 }
 void shared_mutex::impl_signal() {
-  m_value += c_sig;
-  syscall(SYS_futex, &m_value, FUTEX_WAKE, 1, 0, 0, 0);
+    pthread_mutex_lock(&m_mutex);  // Acquire the mutex
+
+    m_value += c_sig;
+    pthread_cond_signal(&m_cond);  // Signal the condition variable
+
+    pthread_mutex_unlock(&m_mutex);  // Release the mutex
 }
 void shared_mutex::impl_lock(unsigned val) {
   if (val >= c_err)

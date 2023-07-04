@@ -52,8 +52,6 @@ orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com, caddr_t da
   }
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_pselect(Thread *thread, sint nd, ptr<fd_set> in, ptr<fd_set> ou, ptr<fd_set> ex, ptr<const struct timespec> ts, ptr<const sigset_t> sm) { return ErrorCode::NOSYS; }
-orbis::SysResult orbis::sys_select(Thread *thread, sint nd, ptr<struct fd_set_t> in, ptr<struct fd_set_t> out, ptr<struct fd_set_t> ex, ptr<struct timeval> tv) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_poll(Thread *thread, ptr<struct pollfd> fds, uint nfds, sint timeout) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_openbsd_poll(Thread *thread, ptr<struct pollfd> fds, uint nfds, sint timeout) { return ErrorCode::NOSYS; }
 

@@ -103,7 +103,7 @@ void log_class_string<long>::format(std::string &out, const void *arg) {
 }
 
 template <>
-void log_class_string<ulong>::format(std::string &out, const void *arg) {
+void log_class_string<unsigned long>::format(std::string &out, const void *arg) {
   append_hex(out, get_object(arg));
 }
 

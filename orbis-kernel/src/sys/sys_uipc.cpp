@@ -17,6 +17,3 @@ orbis::SysResult orbis::sys_getsockname(Thread *thread, sint fdes, ptr<struct so
 orbis::SysResult orbis::sys_getpeername(Thread *thread, sint fdes, ptr<struct sockaddr> asa, ptr<uint32_t> alen) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_sendfile(Thread *thread, sint fd, sint s, off_t offset, size_t nbytes, ptr<struct sf_hdtr> hdtr, ptr<off_t> sbytes, sint flags) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_sctp_peeloff(Thread *thread, sint sd, uint32_t name) { return ErrorCode::NOSYS; }
-orbis::SysResult orbis::sys_sctp_generic_sendmsg(Thread *thread, sint sd, caddr_t msg, sint mlen, caddr_t to, __socklen_t tolen, ptr<struct sctp_sndrcvinfo> sinfo, sint flags) { return ErrorCode::NOSYS; }
-orbis::SysResult orbis::sys_sctp_generic_sendmsg_iov(Thread *thread, sint sd, ptr<struct iovec> iov, sint iovlen, caddr_t to, __socklen_t tolen, ptr<struct sctp_sndrcvinfo> sinfo, sint flags) { return ErrorCode::NOSYS; }
-orbis::SysResult orbis::sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<struct iovec> iov, sint iovlen, caddr_t from, __socklen_t fromlen, ptr<struct sctp_sndrcvinfo> sinfo, sint flags) { return ErrorCode::NOSYS; }
