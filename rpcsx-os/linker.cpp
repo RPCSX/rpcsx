@@ -5,6 +5,11 @@
 #include <map>
 #include <memory>
 #include <unordered_map>
+#include <functional>
+#include <utility>
+#include <algorithm>
+#include <vector>
+#include <string>
 
 #include "rpcsx-os/linker.hpp"
 #include "rpcsx-os/align.hpp"

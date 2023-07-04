@@ -8,9 +8,9 @@
 #include <cstring>
 #include <map>
 
-#include "vm.hpp"
-#include "align.hpp"
-#include "bridge.hpp"
+#include "rpcsx-os/vm.hpp"
+#include "rpcsx-os/align.hpp"
+#include "rpcsx-os/bridge.hpp"
 
 namespace utils {
 namespace {

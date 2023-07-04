@@ -78,4 +78,4 @@ void override(std::string originalModuleName, std::filesystem::path replacedModu
 orbis::Ref<orbis::Module> loadModule(std::span<std::byte> image, orbis::Process *process);
 orbis::Ref<orbis::Module> loadModuleFile(const char *path, orbis::Process *process);
 orbis::Ref<orbis::Module> loadModuleByName(std::string_view name, orbis::Process *process);
-} // namespace re::loader
+} // namespace rx::linker
