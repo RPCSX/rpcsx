@@ -1,6 +1,7 @@
+#include <cstring>
+
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
-#include <cstring>
 
 struct ZeroDevice : public IoDevice {
 };
@@ -15,7 +16,7 @@ static std::int64_t zero_device_read(IoDeviceInstance *instance, void *data,
 }
 
 static std::int32_t zero_device_open(IoDevice *device,
-                                     orbis::Ref<IoDeviceInstance>  *instance,
+                                     orbis::Ref<IoDeviceInstance> *instance,
                                      const char *path, std::uint32_t flags,
                                      std::uint32_t mode) {
   auto *newInstance = orbis::knew<ZeroInstance>();

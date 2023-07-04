@@ -1,15 +1,16 @@
 #pragma once
 
-#include "orbis/module/Module.hpp"
-#include "orbis/utils/Rc.hpp"
 #include <cstddef>
 #include <filesystem>
 #include <optional>
 #include <span>
 
+#include "orbis/module/Module.hpp"
+#include "orbis/utils/Rc.hpp"
+
 namespace rx::linker {
 inline constexpr char nidLookup[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
 
 constexpr std::optional<std::uint64_t> decodeNid(std::string_view nid) {
   std::uint64_t result = 0;
@@ -45,12 +46,12 @@ struct nid {
 };
 
 constexpr nid encodeNid(std::uint64_t hash) {
-  return {{nidLookup[(hash >> 58) & 0x3f], nidLookup[(hash >> 52) & 0x3f],
+  return { {nidLookup[(hash >> 58) & 0x3f], nidLookup[(hash >> 52) & 0x3f],
            nidLookup[(hash >> 46) & 0x3f], nidLookup[(hash >> 40) & 0x3f],
            nidLookup[(hash >> 34) & 0x3f], nidLookup[(hash >> 28) & 0x3f],
            nidLookup[(hash >> 22) & 0x3f], nidLookup[(hash >> 16) & 0x3f],
            nidLookup[(hash >> 10) & 0x3f], nidLookup[(hash >> 4) & 0x3f],
-           nidLookup[(hash & 0xf) * 4], 0}};
+           nidLookup[(hash & 0xf) * 4], 0} };
 }
 
 std::uint64_t encodeFid(std::string_view fid);

@@ -1,14 +1,16 @@
-#include "vm.hpp"
-#include "align.hpp"
-#include "bridge.hpp"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
 #include <bit>
 #include <cassert>
 #include <cinttypes>
 #include <cstring>
-#include <fcntl.h>
 #include <map>
-#include <sys/mman.h>
-#include <unistd.h>
+
+#include "vm.hpp"
+#include "align.hpp"
+#include "bridge.hpp"
 
 namespace utils {
 namespace {
@@ -243,7 +245,7 @@ std::string rx::vm::mapProtToString(std::int32_t prot) {
 static constexpr std::uint64_t kPageMask = rx::vm::kPageSize - 1;
 static constexpr std::uint64_t kBlockShift = 32;
 static constexpr std::uint64_t kBlockSize = static_cast<std::uint64_t>(1)
-                                            << kBlockShift;
+<< kBlockShift;
 static constexpr std::uint64_t kBlockMask = kBlockSize - 1;
 static constexpr std::uint64_t kPagesInBlock = kBlockSize / rx::vm::kPageSize;
 static constexpr std::uint64_t kFirstBlock = 0x00;
@@ -253,7 +255,7 @@ static constexpr std::uint64_t kGroupSize = 64;
 static constexpr std::uint64_t kGroupMask = kGroupSize - 1;
 static constexpr std::uint64_t kGroupsInBlock = kPagesInBlock / kGroupSize;
 static constexpr std::uint64_t kMinAddress =
-    kFirstBlock * kBlockSize + rx::vm::kPageSize * 0x10;
+kFirstBlock * kBlockSize + rx::vm::kPageSize * 0x10;
 static constexpr std::uint64_t kMaxAddress = (kLastBlock + 1) * kBlockSize - 1;
 static constexpr std::uint64_t kMemorySize = kBlockCount * kBlockSize;
 
@@ -309,30 +311,30 @@ struct Block {
     std::uint64_t groupIndex = firstPage / kGroupSize;
 
     std::uint64_t addAllocatedFlags =
-        (addFlags & kAllocated) ? ~static_cast<std::uint64_t>(0) : 0;
+      (addFlags & kAllocated) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addReadableFlags =
-        (addFlags & kReadable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (addFlags & kReadable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addWritableFlags =
-        (addFlags & kWritable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (addFlags & kWritable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addExecutableFlags =
-        (addFlags & kExecutable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (addFlags & kExecutable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addGpuReadableFlags =
-        (addFlags & kGpuReadable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (addFlags & kGpuReadable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addGpuWritableFlags =
-        (addFlags & kGpuWritable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (addFlags & kGpuWritable) ? ~static_cast<std::uint64_t>(0) : 0;
 
     std::uint64_t removeAllocatedFlags =
-        (removeFlags & kAllocated) ? ~static_cast<std::uint64_t>(0) : 0;
+      (removeFlags & kAllocated) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeReadableFlags =
-        (removeFlags & kReadable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (removeFlags & kReadable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeWritableFlags =
-        (removeFlags & kWritable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (removeFlags & kWritable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeExecutableFlags =
-        (removeFlags & kExecutable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (removeFlags & kExecutable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeGpuReadableFlags =
-        (removeFlags & kGpuReadable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (removeFlags & kGpuReadable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeGpuWritableFlags =
-        (removeFlags & kGpuWritable) ? ~static_cast<std::uint64_t>(0) : 0;
+      (removeFlags & kGpuWritable) ? ~static_cast<std::uint64_t>(0) : 0;
 
     if ((firstPage & kGroupMask) != 0) {
       auto count = kGroupSize - (firstPage & kGroupMask);
@@ -347,19 +349,19 @@ struct Block {
       auto &group = groups[groupIndex++];
 
       group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
-                        (addAllocatedFlags & mask);
+        (addAllocatedFlags & mask);
       group.readable = (group.readable & ~(removeReadableFlags & mask)) |
-                       (addReadableFlags & mask);
+        (addReadableFlags & mask);
       group.writable = (group.writable & ~(removeWritableFlags & mask)) |
-                       (addWritableFlags & mask);
+        (addWritableFlags & mask);
       group.executable = (group.executable & ~(removeExecutableFlags & mask)) |
-                         (addExecutableFlags & mask);
+        (addExecutableFlags & mask);
       group.gpuReadable =
-          (group.gpuReadable & ~(removeGpuReadableFlags & mask)) |
-          (addGpuReadableFlags & mask);
+        (group.gpuReadable & ~(removeGpuReadableFlags & mask)) |
+        (addGpuReadableFlags & mask);
       group.gpuWritable =
-          (group.gpuWritable & ~(removeGpuWritableFlags & mask)) |
-          (addGpuWritableFlags & mask);
+        (group.gpuWritable & ~(removeGpuWritableFlags & mask)) |
+        (addGpuWritableFlags & mask);
     }
 
     while (pagesCount >= kGroupSize) {
@@ -368,17 +370,17 @@ struct Block {
       auto &group = groups[groupIndex++];
 
       group.allocated =
-          (group.allocated & ~removeAllocatedFlags) | addAllocatedFlags;
+        (group.allocated & ~removeAllocatedFlags) | addAllocatedFlags;
       group.readable =
-          (group.readable & ~removeReadableFlags) | addReadableFlags;
+        (group.readable & ~removeReadableFlags) | addReadableFlags;
       group.writable =
-          (group.writable & ~removeWritableFlags) | addWritableFlags;
+        (group.writable & ~removeWritableFlags) | addWritableFlags;
       group.executable =
-          (group.executable & ~removeExecutableFlags) | addExecutableFlags;
+        (group.executable & ~removeExecutableFlags) | addExecutableFlags;
       group.gpuReadable =
-          (group.gpuReadable & ~removeGpuReadableFlags) | addGpuReadableFlags;
+        (group.gpuReadable & ~removeGpuReadableFlags) | addGpuReadableFlags;
       group.gpuWritable =
-          (group.gpuWritable & ~removeGpuWritableFlags) | addGpuWritableFlags;
+        (group.gpuWritable & ~removeGpuWritableFlags) | addGpuWritableFlags;
     }
 
     if (pagesCount > 0) {
@@ -386,19 +388,19 @@ struct Block {
       auto &group = groups[groupIndex++];
 
       group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
-                        (addAllocatedFlags & mask);
+        (addAllocatedFlags & mask);
       group.readable = (group.readable & ~(removeReadableFlags & mask)) |
-                       (addReadableFlags & mask);
+        (addReadableFlags & mask);
       group.writable = (group.writable & ~(removeWritableFlags & mask)) |
-                       (addWritableFlags & mask);
+        (addWritableFlags & mask);
       group.executable = (group.executable & ~(removeExecutableFlags & mask)) |
-                         (addExecutableFlags & mask);
+        (addExecutableFlags & mask);
       group.gpuReadable =
-          (group.gpuReadable & ~(removeGpuReadableFlags & mask)) |
-          (addGpuReadableFlags & mask);
+        (group.gpuReadable & ~(removeGpuReadableFlags & mask)) |
+        (addGpuReadableFlags & mask);
       group.gpuWritable =
-          (group.gpuWritable & ~(removeGpuWritableFlags & mask)) |
-          (addGpuWritableFlags & mask);
+        (group.gpuWritable & ~(removeGpuWritableFlags & mask)) |
+        (addGpuWritableFlags & mask);
     }
   }
 
@@ -499,14 +501,14 @@ struct Block {
               if (freeCount >= count ||
                   (freeCount > 0 && processedPages >= kGroupSize)) {
                 foundPage =
-                    groupIndex * kGroupSize + processedPages - freeCount;
+                  groupIndex * kGroupSize + processedPages - freeCount;
                 foundCount = freeCount;
                 break;
               }
 
               while (auto usedCount = std::countr_one(tmpAllocatedBits)) {
                 auto nextProcessedPages =
-                    utils::alignUp(processedPages + usedCount, groupAlignment);
+                  utils::alignUp(processedPages + usedCount, groupAlignment);
                 if (nextProcessedPages - processedPages >= 64) {
                   tmpAllocatedBits = 0;
                 } else {
@@ -520,9 +522,9 @@ struct Block {
             // searching on next iterations
             auto freeCount = std::countl_zero(allocatedBits);
             auto alignedPageIndex =
-                utils::alignUp(kGroupSize - freeCount, groupAlignment);
+              utils::alignUp(kGroupSize - freeCount, groupAlignment);
             freeCount =
-                kGroupSize - alignedPageIndex; // calc aligned free pages
+              kGroupSize - alignedPageIndex; // calc aligned free pages
 
             foundCount = freeCount;
             foundPage = groupIndex * kGroupSize + alignedPageIndex;
@@ -531,7 +533,7 @@ struct Block {
       }
     } else {
       std::uint64_t blockAlignment =
-          alignment / (kGroupSize * rx::vm::kPageSize);
+        alignment / (kGroupSize * rx::vm::kPageSize);
 
       for (std::uint64_t groupIndex = 0;
            groupIndex < kGroupsInBlock && foundCount < count; ++groupIndex) {
@@ -579,7 +581,7 @@ struct Block {
 static Block gBlocks[kBlockCount];
 
 static std::map<std::uint64_t, rx::vm::VirtualQueryInfo, std::greater<>>
-    gVirtualAllocations;
+gVirtualAllocations;
 
 static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   auto blockIndex = startAddress >> kBlockShift;
@@ -589,7 +591,7 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
 
   auto firstPage = (startAddress & kBlockMask) >> rx::vm::kPageShift;
   auto pagesCount =
-      (endAddress - startAddress + (rx::vm::kPageSize - 1)) >> rx::vm::kPageShift;
+    (endAddress - startAddress + (rx::vm::kPageSize - 1)) >> rx::vm::kPageShift;
 
   gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated);
 }
@@ -630,7 +632,7 @@ void rx::vm::deinitialize() {
 constexpr auto kPhysicalMemorySize = 5568ull * 1024 * 1024;
 constexpr auto kFlexibleMemorySize = 448ull * 1024 * 1024;
 constexpr auto kMainDirectMemorySize =
-    kPhysicalMemorySize - kFlexibleMemorySize;
+kPhysicalMemorySize - kFlexibleMemorySize;
 
 /*
 std::uint64_t allocate(std::uint64_t phyAddress, std::uint64_t size,
@@ -723,7 +725,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     for (auto blockIndex = hitBlockIndex; blockIndex <= kLastBlock;
          ++blockIndex) {
       auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
-          pagesCount, alignment);
+        pagesCount, alignment);
 
       if (pageAddress != kBadAddress) {
         address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
@@ -738,7 +740,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     std::size_t blockIndex = 0; // system managed block
 
     auto pageAddress =
-        gBlocks[blockIndex - kFirstBlock].findFreePages(pagesCount, alignment);
+      gBlocks[blockIndex - kFirstBlock].findFreePages(pagesCount, alignment);
 
     if (pageAddress != kBadAddress) {
       address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
@@ -765,8 +767,8 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
-      (address & kBlockMask) >> kPageShift, pagesCount,
-      (flags & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated);
+    (address & kBlockMask) >> kPageShift, pagesCount,
+    (flags & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated);
 
   int realFlags = MAP_FIXED | MAP_SHARED;
   bool isAnon = (flags & kMapFlagAnonymous) == kMapFlagAnonymous;
@@ -800,8 +802,8 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   auto result =
-      utils::map(reinterpret_cast<void *>(address), len, prot & kMapProtCpuAll,
-                 realFlags, gMemoryShm, address - kMinAddress);
+    utils::map(reinterpret_cast<void *>(address), len, prot & kMapProtCpuAll,
+               realFlags, gMemoryShm, address - kMinAddress);
 
   if (result != MAP_FAILED && isAnon) {
     bool needReprotect = (prot & PROT_WRITE) == 0;
@@ -835,13 +837,13 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
 
   if ((address >> kBlockShift) != ((address + size - 1) >> kBlockShift)) {
     std::printf(
-        "Memory error: unmap cross block range. address 0x%lx, size=0x%lx\n",
-        address, size);
+      "Memory error: unmap cross block range. address 0x%lx, size=0x%lx\n",
+      address, size);
     __builtin_trap();
   }
 
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
-      (address & kBlockMask) >> kPageShift, pages, ~0);
+    (address & kBlockMask) >> kPageShift, pages, ~0);
   rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, 0);
   return utils::unmap(addr, size);
 }
@@ -869,8 +871,8 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   }
 
   gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
-      (address & kBlockMask) >> kPageShift, pages,
-      kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
+    (address & kBlockMask) >> kPageShift, pages,
+    kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
 
   rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, prot);
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;

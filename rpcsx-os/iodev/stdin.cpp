@@ -8,7 +8,7 @@ struct StdinInstance : public IoDeviceInstance {
 };
 
 static std::int64_t stdin_instance_read(IoDeviceInstance *instance, void *data,
-                         std::uint64_t size) {
+                                        std::uint64_t size) {
   return -1;
 }
 

@@ -1,11 +1,12 @@
-#include "bridge.hpp"
-#include "io-device.hpp"
-#include "orbis/KernelAllocator.hpp"
 #include <cinttypes>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+
 #include "vm.hpp"
+#include "bridge.hpp"
+#include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 
 struct VideoOutBuffer {
   std::uint32_t pixelFormat;
@@ -174,15 +175,15 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     auto args = reinterpret_cast<RegisterBufferAttributeArgs *>(argp);
 
     std::fprintf(
-        stderr,
-        "dce: RegisterBufferAttributes(unk0=%lx, unk1=%x, unk2_flag=%x, "
-        "unk3=%x, "
-        "pixelFormat=%x, tilingMode=%x, pitch=%u, width=%u, "
-        "height=%u, "
-        "unk4_zero=%x, unk5_zero=%x, unk6=%x, unk7_-1=%lx, unk8=%x)\n",
-        args->unk0, args->unk1, args->unk2_flag, args->unk3, args->pixelFormat,
-        args->tilingMode, args->pitch, args->width, args->height,
-        args->unk4_zero, args->unk5_zero, args->unk6, args->unk7, args->unk8);
+      stderr,
+      "dce: RegisterBufferAttributes(unk0=%lx, unk1=%x, unk2_flag=%x, "
+      "unk3=%x, "
+      "pixelFormat=%x, tilingMode=%x, pitch=%u, width=%u, "
+      "height=%u, "
+      "unk4_zero=%x, unk5_zero=%x, unk6=%x, unk7_-1=%lx, unk8=%x)\n",
+      args->unk0, args->unk1, args->unk2_flag, args->unk3, args->pixelFormat,
+      args->tilingMode, args->pitch, args->width, args->height,
+      args->unk4_zero, args->unk5_zero, args->unk6, args->unk7, args->unk8);
 
     dceInstance->bufferAttributes.pixelFormat = args->pixelFormat;
     dceInstance->bufferAttributes.tilingMode = args->tilingMode;
@@ -197,13 +198,13 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     auto args = reinterpret_cast<FlipRequestArgs *>(argp);
 
     std::fprintf(
-        stderr,
-        "dce: FlipRequestArgs(%lx, displayBufferIndex = %x, flipMode = %lx, "
-        "flipArg = %lx, "
-        "%x, %x, %x, "
-        "%x)\n",
-        args->arg1, args->displayBufferIndex, args->flipMode, args->flipArg,
-        args->arg5, args->arg6, args->arg7, args->arg8);
+      stderr,
+      "dce: FlipRequestArgs(%lx, displayBufferIndex = %x, flipMode = %lx, "
+      "flipArg = %lx, "
+      "%x, %x, %x, "
+      "%x)\n",
+      args->arg1, args->displayBufferIndex, args->flipMode, args->flipArg,
+      args->arg5, args->arg6, args->arg7, args->arg8);
 
     rx::bridge.sendFlip(args->displayBufferIndex, /*args->flipMode,*/ args->flipArg);
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "orbis/utils/Rc.hpp"
 #include <cstdint>
+#include "orbis/utils/Rc.hpp"
 
 struct IoDevice;
 

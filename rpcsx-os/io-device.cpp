@@ -1,8 +1,10 @@
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <string>
+
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
-#include <fcntl.h>
-#include <string>
-#include <unistd.h>
 
 std::int64_t io_device_instance_close(IoDeviceInstance *instance) {
   return 0;

@@ -1,7 +1,7 @@
-#include "io-device.hpp"
-#include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
+#include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 
 struct StdoutInstance : public IoDeviceInstance {};
 

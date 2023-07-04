@@ -1,17 +1,19 @@
-#include "bridge.hpp"
-#include "io-device.hpp"
-#include "orbis/KernelAllocator.hpp"
+#include <sys/mman.h>
+
 #include <atomic>
 #include <cinttypes>
 #include <cstdio>
 #include <cstring>
-// #include <rpcs4/bridge.hpp>
-#include "vm.hpp"
 #include <string>
-#include <sys/mman.h>
 #include <thread>
 #include <type_traits>
 #include <utility>
+
+#include "vm.hpp"
+#include "bridge.hpp"
+#include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
+// #include <rpcs4/bridge.hpp>
 
 struct GcDevice : public IoDevice {};
 
@@ -26,7 +28,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
   switch (request) {
   case 0xc008811b: // get submit done flag ptr?
-                   // TODO
+    // TODO
     std::fprintf(stderr, "gc ioctl 0xc008811b(%lx)\n", *(std::uint64_t *)argp);
     *reinterpret_cast<void **>(argp) = &g_submitDoneFlag;
     return 0;
@@ -146,9 +148,9 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     };
     auto args = reinterpret_cast<Args *>(argp);
     std::fprintf(
-        stderr,
-        "gc ioctl stats report control(unk=%x,arg1=%x,arg2=%x,arg3=%x)\n",
-        args->unk, args->arg1, args->arg2, args->arg3);
+      stderr,
+      "gc ioctl stats report control(unk=%x,arg1=%x,arg2=%x,arg3=%x)\n",
+      args->unk, args->arg1, args->arg2, args->arg3);
     break;
   }
 

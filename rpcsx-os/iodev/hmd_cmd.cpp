@@ -1,6 +1,7 @@
+#include <cstdio>
+
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
-#include <cstdio>
 
 struct HmdCmdDevice : public IoDevice {
 };
@@ -12,7 +13,7 @@ static std::int64_t hmd_cmd_instance_ioctl(IoDeviceInstance *instance,
                                            std::uint64_t request, void *argp) {
 
   std::fprintf(stderr, "***ERROR*** Unhandled hmd_cmd ioctl %lx\n",
-        request);
+               request);
   return -1;
 }
 

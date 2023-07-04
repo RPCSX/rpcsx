@@ -1,6 +1,7 @@
+#include <fstream>
+
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
-#include <fstream>
 
 struct StderrInstance : public IoDeviceInstance {};
 

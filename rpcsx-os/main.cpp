@@ -1,3 +1,25 @@
+#include <linux/limits.h>
+#include <asm/prctl.h>
+#include <fcntl.h>
+#include <libunwind.h>
+#include <link.h>
+#include <pthread.h>
+#include <sys/prctl.h>
+#include <unistd.h>
+
+#include <filesystem>
+#include <csignal>
+#include <cstddef>
+#include <cstdint>
+
+#include <orbis/KernelContext.hpp>
+#include <orbis/module.hpp>
+#include <orbis/module/Module.hpp>
+#include <orbis/sys/sysentry.hpp>
+#include <orbis/sys/sysproto.hpp>
+#include <orbis/thread/Process.hpp>
+#include <orbis/thread/ProcessOps.hpp>
+#include <orbis/thread/Thread.hpp>
 #include "align.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "bridge.hpp"
@@ -7,29 +29,6 @@
 #include "ops.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
-
-#include <filesystem>
-#include <linux/limits.h>
-#include <orbis/KernelContext.hpp>
-#include <orbis/module.hpp>
-#include <orbis/module/Module.hpp>
-#include <orbis/sys/sysentry.hpp>
-#include <orbis/sys/sysproto.hpp>
-#include <orbis/thread/Process.hpp>
-#include <orbis/thread/ProcessOps.hpp>
-#include <orbis/thread/Thread.hpp>
-
-#include <asm/prctl.h>
-#include <fcntl.h>
-#include <libunwind.h>
-#include <link.h>
-#include <pthread.h>
-#include <sys/prctl.h>
-#include <unistd.h>
-
-#include <csignal>
-#include <cstddef>
-#include <cstdint>
 
 static int g_gpuPid;
 
@@ -69,20 +68,20 @@ static void printStackTrace(ucontext_t *context, int fileno) {
 
     unw_word_t off;
     int proc_res =
-        unw_get_proc_name(&cursor, functionName, sizeof(functionName), &off);
+      unw_get_proc_name(&cursor, functionName, sizeof(functionName), &off);
 
     Dl_info dlinfo;
     int dladdr_res = ::dladdr((void *)ip, &dlinfo);
 
     unsigned long baseAddress =
-        dladdr_res != 0 ? reinterpret_cast<std::uint64_t>(dlinfo.dli_fbase) : 0;
+      dladdr_res != 0 ? reinterpret_cast<std::uint64_t>(dlinfo.dli_fbase) : 0;
 
     int len = snprintf(buffer, sizeof(buffer), "%3d: %s+%p: %s(%lx)+%#lx\n",
                        count, (dladdr_res != 0 ? dlinfo.dli_fname : "??"),
                        reinterpret_cast<void *>(ip - baseAddress),
                        (proc_res == 0 ? functionName : "??"),
                        reinterpret_cast<unsigned long>(
-                           proc_res == 0 ? ip - baseAddress - off : 0),
+                         proc_res == 0 ? ip - baseAddress - off : 0),
                        static_cast<unsigned long>(proc_res == 0 ? off : 0));
     write(fileno, buffer, len);
     count++;
@@ -130,7 +129,7 @@ static void printStackTrace(ucontext_t *context, orbis::Thread *thread,
     std::size_t offset = 0;
 
     offset +=
-        std::snprintf(buffer + offset, sizeof(buffer) - offset, "%3d: ", count);
+      std::snprintf(buffer + offset, sizeof(buffer) - offset, "%3d: ", count);
 
     if (auto loc = printAddressLocation(buffer + offset,
                                         sizeof(buffer) - offset, thread, ip)) {
@@ -139,21 +138,21 @@ static void printStackTrace(ucontext_t *context, orbis::Thread *thread,
     } else {
       unw_word_t off;
       int proc_res =
-          unw_get_proc_name(&cursor, functionName, sizeof(functionName), &off);
+        unw_get_proc_name(&cursor, functionName, sizeof(functionName), &off);
 
       Dl_info dlinfo;
       int dladdr_res = ::dladdr((void *)ip, &dlinfo);
 
       unsigned long baseAddress =
-          dladdr_res != 0 ? reinterpret_cast<std::uint64_t>(dlinfo.dli_fbase)
-                          : 0;
+        dladdr_res != 0 ? reinterpret_cast<std::uint64_t>(dlinfo.dli_fbase)
+        : 0;
 
       offset = snprintf(buffer, sizeof(buffer), "%3d: %s+%p: %s(%lx)+%#lx\n",
                         count, (dladdr_res != 0 ? dlinfo.dli_fname : "??"),
                         reinterpret_cast<void *>(ip - baseAddress),
                         (proc_res == 0 ? functionName : "??"),
                         reinterpret_cast<unsigned long>(
-                            proc_res == 0 ? ip - baseAddress - off : 0),
+                          proc_res == 0 ? ip - baseAddress - off : 0),
                         static_cast<unsigned long>(proc_res == 0 ? off : 0));
     }
 
@@ -189,13 +188,13 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (sig != SIGINT) {
     char buf[128] = "";
     int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
-                      g_currentThread ? "guest" : "host",
-                      g_currentThread ? g_currentThread->tid : ::gettid(),
-                      info->si_addr);
+                       g_currentThread ? "guest" : "host",
+                       g_currentThread ? g_currentThread->tid : ::gettid(),
+                       info->si_addr);
     write(2, buf, len);
 
     if (std::size_t printed = printAddressLocation(
-            buf, sizeof(buf), g_currentThread, (std::uint64_t)info->si_addr)) {
+      buf, sizeof(buf), g_currentThread, (std::uint64_t)info->si_addr)) {
       printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
       write(2, buf, printed);
     }
@@ -426,13 +425,13 @@ static int ps4Exec(orbis::Process *mainProcess,
   const auto stackSize = 0x40000 * 16;
   auto stackStartAddress = stackEndAddress - stackSize;
   mainThread.stackStart =
-      rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
-               rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
-               rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
-                   rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
+    rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
+                rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
+                rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
+                rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
 
   mainThread.stackEnd =
-      reinterpret_cast<std::byte *>(mainThread.stackStart) + stackSize;
+    reinterpret_cast<std::byte *>(mainThread.stackStart) + stackSize;
 
   rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
   rx::vfs::mount("/dev/dmem1", createDmemCharacterDevice(1));
@@ -460,12 +459,12 @@ static int ps4Exec(orbis::Process *mainProcess,
   std::vector<std::uint64_t> envpOffsets;
 
   auto libkernel = rx::linker::loadModuleFile(
-      "/system/common/lib/libkernel_sys.sprx", mainProcess);
+    "/system/common/lib/libkernel_sys.sprx", mainProcess);
 
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
 
-  StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread.stackEnd)};
+  StackWriter stack{ reinterpret_cast<std::uint64_t>(mainThread.stackEnd) };
 
   for (auto elem : argv) {
     argvOffsets.push_back(stack.pushString(elem));
@@ -488,8 +487,8 @@ static int ps4Exec(orbis::Process *mainProcess,
   // clang-format on
 
   std::size_t argSize =
-      sizeof(std::uint64_t) + sizeof(std::uint64_t) * argvOffsets.size() +
-      sizeof(std::uint64_t) * envpOffsets.size() + sizeof(auxv);
+    sizeof(std::uint64_t) + sizeof(std::uint64_t) * argvOffsets.size() +
+    sizeof(std::uint64_t) * envpOffsets.size() + sizeof(auxv);
 
   auto sp = stack.alloc(argSize, 32);
 
@@ -512,12 +511,12 @@ static int ps4Exec(orbis::Process *mainProcess,
   getcontext(&currentContext);
 
   createEmuThread(
-      mainThread, libkernel->entryPoint,
-      utils::alignDown(
-          stack.address -
-              reinterpret_cast<std::uint64_t>(mainThread.stackStart) - 0x1000,
-          rx::vm::kPageSize),
-      sp);
+    mainThread, libkernel->entryPoint,
+    utils::alignDown(
+      stack.address -
+      reinterpret_cast<std::uint64_t>(mainThread.stackStart) - 0x1000,
+      rx::vm::kPageSize),
+    sp);
   return 0;
 }
 
@@ -589,7 +588,7 @@ static void runRpsxGpu() {
 
   if (g_gpuPid == 0) {
     // TODO
-    const char *argv[] = {rpcsxGpuPath.c_str(), nullptr};
+    const char *argv[] = { rpcsxGpuPath.c_str(), nullptr };
 
     ::execv(rpcsxGpuPath.c_str(), const_cast<char **>(argv));
   }
@@ -626,7 +625,7 @@ int main(int argc, const char *argv[]) {
 
         if (phdr.p_type == PT_LOAD && (phdr.p_flags & PF_X) == PF_X) {
           libcInfo->textBegin =
-              std::min(libcInfo->textBegin, phdr.p_vaddr + info->dlpi_addr);
+            std::min(libcInfo->textBegin, phdr.p_vaddr + info->dlpi_addr);
           libcInfo->textSize = std::max(libcInfo->textSize, phdr.p_memsz);
         }
       }
@@ -635,7 +634,7 @@ int main(int argc, const char *argv[]) {
     }
 
     return 0;
-  };
+    };
 
   dl_iterate_phdr(processPhdr, &libcInfo);
 
@@ -705,7 +704,7 @@ int main(int argc, const char *argv[]) {
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
   auto executableModule =
-      rx::linker::loadModuleFile(argv[argIndex], initProcess);
+    rx::linker::loadModuleFile(argv[argIndex], initProcess);
 
   if (executableModule == nullptr) {
     std::fprintf(stderr, "Failed to open '%s'\n", argv[argIndex]);

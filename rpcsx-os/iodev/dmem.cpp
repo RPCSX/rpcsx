@@ -1,8 +1,9 @@
-#include "io-device.hpp"
-#include "orbis/KernelAllocator.hpp"
 #include <cinttypes>
 #include <cstdio>
+
 #include "vm.hpp"
+#include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 
 struct DmemDevice : public IoDevice {
   int index;
@@ -22,7 +23,7 @@ struct AllocateDirectMemoryArgs {
 
 static constexpr auto dmemSize = 4ul * 1024 * 1024 * 1024;
 // static const std::uint64_t nextOffset = 0;
-//  static const std::uint64_t memBeginAddress = 0xfe0000000;
+// static const std::uint64_t memBeginAddress = 0xfe0000000;
 
 static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
                                         std::uint64_t request, void *argp) {
@@ -42,14 +43,14 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
   case 0xc0288001: { // sceKernelAllocateDirectMemory
     auto args = reinterpret_cast<AllocateDirectMemoryArgs *>(argp);
     auto alignedOffset =
-        (device->nextOffset + args->alignment - 1) & ~(args->alignment - 1);
+      (device->nextOffset + args->alignment - 1) & ~(args->alignment - 1);
 
     std::fprintf(
-        stderr,
-        "dmem%u allocateDirectMemory(searchStart = %lx, searchEnd = %lx, len "
-        "= %lx, alignment = %lx, memoryType = %x) -> 0x%lx\n",
-        device->index, args->searchStart, args->searchEnd, args->len,
-        args->alignment, args->memoryType, alignedOffset);
+      stderr,
+      "dmem%u allocateDirectMemory(searchStart = %lx, searchEnd = %lx, len "
+      "= %lx, alignment = %lx, memoryType = %x) -> 0x%lx\n",
+      device->index, args->searchStart, args->searchEnd, args->len,
+      args->alignment, args->memoryType, alignedOffset);
 
     if (alignedOffset + args->len > dmemSize) {
       return -1;
@@ -69,8 +70,8 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
     auto args = reinterpret_cast<Args *>(argp);
 
     std::fprintf(
-        stderr, "TODO: dmem%u releaseDirectMemory(address=0x%lx, size=0x%lx)\n",
-        device->index, args->address, args->size);
+      stderr, "TODO: dmem%u releaseDirectMemory(address=0x%lx, size=0x%lx)\n",
+      device->index, args->address, args->size);
     //std::fflush(stdout);
     //__builtin_trap();
     return 0;
@@ -97,8 +98,8 @@ static void *dmem_instance_mmap(IoDeviceInstance *instance, void *address,
                offset, device->memBeginAddress + offset);
 
   auto addr =
-      rx::vm::map(reinterpret_cast<void *>(device->memBeginAddress + offset), size,
-               prot, flags);
+    rx::vm::map(reinterpret_cast<void *>(device->memBeginAddress + offset), size,
+                prot, flags);
   return addr;
 }
 

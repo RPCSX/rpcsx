@@ -1,8 +1,9 @@
+#include <cinttypes>
+#include <cstdio>
+
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "vm.hpp"
-#include <cinttypes>
-#include <cstdio>
 
 struct RngDevice : public IoDevice {};
 struct RngInstance : public IoDeviceInstance {};

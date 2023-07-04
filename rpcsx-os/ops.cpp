@@ -1,3 +1,11 @@
+#include <unistd.h>
+
+#include <cstdio>
+#include <filesystem>
+#include <map>
+#include <optional>
+#include <set>
+
 #include "ops.hpp"
 #include "io-device.hpp"
 #include "linker.hpp"
@@ -7,12 +15,6 @@
 #include "orbis/utils/Rc.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
-#include <cstdio>
-#include <filesystem>
-#include <map>
-#include <optional>
-#include <set>
-#include <unistd.h>
 
 using namespace orbis;
 
@@ -25,9 +27,10 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
   auto result = (void *)-1;
   if (fd == -1) {
     result = rx::vm::map(addr, len, prot, flags);
-  } else {
+  }
+  else {
     Ref<IoDeviceInstance> handle =
-        static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
     if (handle == nullptr) {
       return ErrorCode::BADF;
     }
@@ -240,7 +243,7 @@ orbis::SysResult ioctl(orbis::Thread *thread, orbis::sint fd, orbis::ulong com,
   std::printf("ioctl: %s\n", ioctlToString(com).c_str());
 
   Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+    static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
   if (handle == nullptr) {
     return ErrorCode::BADF;
   }
@@ -258,7 +261,7 @@ orbis::SysResult ioctl(orbis::Thread *thread, orbis::sint fd, orbis::ulong com,
 orbis::SysResult write(orbis::Thread *thread, orbis::sint fd,
                        orbis::ptr<const void> data, orbis::ulong size) {
   Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+    static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
   if (handle == nullptr) {
     return ErrorCode::BADF;
   }
@@ -276,7 +279,7 @@ orbis::SysResult write(orbis::Thread *thread, orbis::sint fd,
 orbis::SysResult read(orbis::Thread *thread, orbis::sint fd,
                       orbis::ptr<void> data, orbis::ulong size) {
   Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+    static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
   if (handle == nullptr) {
     return ErrorCode::BADF;
   }
@@ -304,7 +307,7 @@ orbis::SysResult pwrite(orbis::Thread *thread, orbis::sint fd,
 orbis::SysResult lseek(orbis::Thread *thread, orbis::sint fd,
                        orbis::ulong offset, orbis::sint whence) {
   Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+    static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
   if (handle == nullptr) {
     return ErrorCode::BADF;
   }
@@ -484,8 +487,8 @@ SysResult processNeeded(Thread *thread) {
       if (neededModule->soName != needed) {
         if (neededModule->soName[0] != '\0') {
           std::fprintf(
-              stderr, "Module name mismatch, expected '%s', loaded '%s' (%s)\n",
-              needed.c_str(), neededModule->soName, neededModule->moduleName);
+            stderr, "Module name mismatch, expected '%s', loaded '%s' (%s)\n",
+            needed.c_str(), neededModule->soName, neededModule->moduleName);
           // std::abort();
         }
 
@@ -503,23 +506,23 @@ SysResult processNeeded(Thread *thread) {
     if (!hasLoadedNeeded) {
       thread->tproc->modulesMap.walk([&loadedModules](ModuleHandle modId,
                                                       Module *module) {
-        // std::printf("Module '%s' has id %u\n", module->name,
-        // (unsigned)modId);
+                                                        // std::printf("Module '%s' has id %u\n", module->name,
+                                                        // (unsigned)modId);
 
-        module->importedModules.clear();
-        module->importedModules.reserve(module->neededModules.size());
-        for (auto mod : module->neededModules) {
-          if (auto it = loadedModules.find(mod.name);
-              it != loadedModules.end()) {
-            module->importedModules.push_back(loadedModules.at(mod.name));
-            continue;
-          }
+                                                        module->importedModules.clear();
+                                                        module->importedModules.reserve(module->neededModules.size());
+                                                        for (auto mod : module->neededModules) {
+                                                          if (auto it = loadedModules.find(mod.name);
+                                                              it != loadedModules.end()) {
+                                                            module->importedModules.push_back(loadedModules.at(mod.name));
+                                                            continue;
+                                                          }
 
-          std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n",
-                       mod.name.c_str(), module->soName);
-          module->importedModules.push_back({});
-        }
-      });
+                                                          std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n",
+                                                                       mod.name.c_str(), module->soName);
+                                                          module->importedModules.push_back({});
+                                                        }
+                                     });
 
       break;
     }
@@ -530,7 +533,7 @@ SysResult processNeeded(Thread *thread) {
 
 SysResult registerEhFrames(Thread *thread) {
   for (auto [id, module] : thread->tproc->modulesMap) {
-    if (module->ehFrame != nullptr) { 
+    if (module->ehFrame != nullptr) {
       __register_frame(module->ehFrame);
     }
   }

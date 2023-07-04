@@ -6,7 +6,7 @@
 namespace rx::vm {
 static constexpr std::uint64_t kPageShift = 14;
 static constexpr std::uint64_t kPageSize = static_cast<std::uint64_t>(1)
-                                           << kPageShift;
+<< kPageShift;
 
 enum BlockFlags {
   kBlockFlagFlexibleMemory = 1 << 0,

@@ -1,11 +1,13 @@
 #pragma once
 
-#include "orbis/error.hpp"
-#include "orbis/thread/RegisterId.hpp"
-#include <cstdint>
-#include <cstring>
 #include <sys/ucontext.h>
 #include <immintrin.h>
+
+#include <cstdint>
+#include <cstring>
+
+#include "orbis/error.hpp"
+#include "orbis/thread/RegisterId.hpp"
 
 namespace orbis {
 using int8_t = std::int8_t;
@@ -29,18 +31,18 @@ using slong = int64_t;
 using ulong = uint64_t;
 
 template <typename T> using ptr = T *;
-template <typename T> using cptr = T * const;
+template <typename T> using cptr = T *const;
 
 using caddr_t = ptr<char>;
 
 inline ErrorCode uread(void *kernelAddress, ptr<const void> userAddress,
-                  size_t size) {
+                       size_t size) {
   std::memcpy(kernelAddress, userAddress, size);
   return {};
 }
 
 inline ErrorCode uwrite(ptr<void> userAddress, const void *kernelAddress,
-                   size_t size) {
+                        size_t size) {
   std::memcpy(userAddress, kernelAddress, size);
   return {};
 }

@@ -1,6 +1,7 @@
+#include <cstdio>
+
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
-#include <cstdio>
 
 struct DmemDevice : public IoDevice {
 };
@@ -42,7 +43,7 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
   }
 
   std::fprintf(stderr, "***ERROR*** Unhandled dipsw ioctl %lx\n", request);
-   std::fflush(stdout);
+  std::fflush(stdout);
   //__builtin_trap();
   return 0;
 }

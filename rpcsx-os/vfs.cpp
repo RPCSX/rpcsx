@@ -1,12 +1,11 @@
-
+#include <filesystem>
+#include <map>
+#include <string_view>
 
 #include "vfs.hpp"
 #include "io-device.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "orbis/error/SysResult.hpp"
-#include <filesystem>
-#include <map>
-#include <string_view>
 
 static std::map<std::string, orbis::Ref<IoDevice>> sMountsMap;
 
@@ -17,7 +16,7 @@ void rx::vfs::deinitialize() {
 
 orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath, IoDevice *dev) {
   auto [it, inserted] =
-      sMountsMap.emplace(guestPath.lexically_normal().string(), dev);
+    sMountsMap.emplace(guestPath.lexically_normal().string(), dev);
 
   if (!inserted) {
     return orbis::ErrorCode::EXIST;
@@ -27,7 +26,7 @@ orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath, IoDevice
 }
 
 orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
-                           orbis::Ref<IoDeviceInstance> *instance) {
+                               orbis::Ref<IoDeviceInstance> *instance) {
   orbis::Ref<IoDevice> device;
   bool isCharacterDevice = path.starts_with("/dev/");
 
@@ -52,7 +51,7 @@ orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
 
   if (device != nullptr) {
     return (orbis::ErrorCode)device->open(
-        device.get(), instance, std::string(path).c_str(), flags, mode);
+      device.get(), instance, std::string(path).c_str(), flags, mode);
   }
 
   if (isCharacterDevice) {
