@@ -3,7 +3,9 @@
 #include <atomic>
 #include <mutex>
 #include <orbis/utils/AtomicOp.hpp>
+#if defined(MAC)
 #include <pthread.h>
+#endif
 
 namespace orbis {
 inline namespace utils {
@@ -102,9 +104,11 @@ public:
 
   // Check whether can immediately obtain a shared (reader) lock
   bool is_lockable() const { return m_value.load() < c_one - 1; }
+#if defined(MAC)
 private:
   pthread_mutex_t m_mutex;  // Mutex for synchronization
   pthread_cond_t m_cond;    // Condition variable for signaling
+#endif
 };
 
 // Simplified shared (reader) lock implementation.
