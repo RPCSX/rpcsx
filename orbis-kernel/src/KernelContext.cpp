@@ -15,7 +15,9 @@ KernelContext &g_context = *[]() -> KernelContext * {
   return new (ptr) KernelContext;
 }();
 
-KernelContext::KernelContext() {}
+KernelContext::KernelContext() {
+  std::printf("orbis::KernelContext initialized, addr=%p", this);
+}
 KernelContext::~KernelContext() {}
 
 Process *KernelContext::createProcess(pid_t pid) {

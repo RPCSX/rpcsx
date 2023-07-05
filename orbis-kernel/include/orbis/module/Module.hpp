@@ -122,6 +122,8 @@ struct Module final {
   unsigned _total_size = 0;
 
   void incRef() {
+    if (_total_size != sizeof(Module))
+      std::abort();
     if (references.fetch_add(1, std::memory_order::relaxed) > 512) {
       assert(!"too many references");
     }

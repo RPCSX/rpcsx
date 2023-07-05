@@ -6,7 +6,7 @@
 #include <utility>
 
 namespace orbis {
-template <typename T, typename... Args> T *knew(Args &&...args);
+//template <typename T, typename... Args> T *knew(Args &&...args);
 inline namespace utils {
 void kfree(void* ptr, std::size_t size);
 
@@ -17,6 +17,8 @@ struct RcBase {
   virtual ~RcBase() = default;
 
   void incRef() {
+    if (!_total_size)
+      std::abort();
     if (references.fetch_add(1, std::memory_order::relaxed) > 512) {
       assert(!"too many references");
     }
@@ -120,10 +122,10 @@ public:
   auto operator<=>(const Ref &other) const = default;
 };
 
-template <WithRc T, typename... ArgsT>
-  requires(std::is_constructible_v<T, ArgsT...>)
-Ref<T> kcreate(ArgsT &&...args) {
-  return Ref<T>(knew<T>(std::forward<ArgsT>(args)...));
-}
+// template <WithRc T, typename... ArgsT>
+//   requires(std::is_constructible_v<T, ArgsT...>)
+// Ref<T> kcreate(ArgsT &&...args) {
+//   return Ref<T>(knew<T>(std::forward<ArgsT>(args)...));
+// }
 } // namespace utils
 } // namespace orbis
