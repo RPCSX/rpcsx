@@ -9,7 +9,16 @@ If you want to contribute as a developer, please contact us in the Discord. http
 
 ## Building
 
-Under construction.
+1. Install dependencies
+   
+   `sudo apt install clang spirv-tools glslang-tools libunwind-dev libglfw3 libglfw3-dev`
+3. Install [Vulkan SDK](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)
+4. Build Makefiles
+   
+   `cmake .`
+5. Build RPCSX
+   
+   `make`
 
 ## License
 
