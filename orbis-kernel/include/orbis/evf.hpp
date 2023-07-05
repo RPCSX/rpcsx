@@ -1,4 +1,5 @@
 #pragma once
+#include "KernelAllocator.hpp"
 #include "thread/Thread.hpp"
 #include "utils/SharedMutex.hpp"
 #include <atomic>
@@ -24,7 +25,7 @@ struct EventFlag {
 
   bool isDeleted = false;
   std::uint8_t attrs;
-  std::atomic<unsigned> references{1};
+  std::atomic<unsigned> references{0};
   std::atomic<std::uint64_t> value;
 
   struct WaitingThread {
@@ -97,7 +98,7 @@ struct EventFlag {
 
   void decRef() {
     if (references.fetch_sub(1, std::memory_order::relaxed) == 1) {
-      delete this;
+      kdelete(this);
     }
   }
 };

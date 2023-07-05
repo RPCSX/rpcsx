@@ -117,8 +117,16 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
   return {};
 }
 orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
-  ORBIS_LOG_TODO(__FUNCTION__, id);
-  return ErrorCode::NOSYS;
+  Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
+  if (evf == nullptr) {
+    return ErrorCode::SRCH;
+  }
+
+   // TODO: do destroy and remove atomically
+  evf->destroy();
+  thread->tproc->evfMap.remove(id);
+
+  return {};
 }
 orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
   char _name[32];
@@ -139,7 +147,7 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
 }
 orbis::SysResult orbis::sys_evf_close(Thread *thread, sint id) {
   if (!thread->tproc->evfMap.remove(id)) {
-    return ErrorCode::BADF;
+    return ErrorCode::SRCH;
   }
 
   return {};
@@ -155,10 +163,10 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
     return ErrorCode::INVAL;
   }
 
-  auto evf = thread->tproc->evfMap.get(id);
+  Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
-    return ErrorCode::BADF;
+    return ErrorCode::SRCH;
   }
 
   std::uint32_t resultTimeout{};
@@ -187,10 +195,10 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
     return ErrorCode::INVAL;
   }
 
-  auto evf = thread->tproc->evfMap.get(id);
+  Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
-    return ErrorCode::BADF;
+    return ErrorCode::SRCH;
   }
 
   std::uint64_t resultPattern{};
@@ -203,30 +211,30 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
   return result;
 }
 orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
-  auto evf = thread->tproc->evfMap.get(id);
+  Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
-    return ErrorCode::BADF;
+    return ErrorCode::SRCH;
   }
 
   evf->set(value);
   return{};
 }
 orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
-  auto evf = thread->tproc->evfMap.get(id);
+  Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
-    return ErrorCode::BADF;
+    return ErrorCode::SRCH;
   }
 
   evf->clear(value);
   return{};
 }
 orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value, ptr<sint> pNumWaitThreads) {
-  auto evf = thread->tproc->evfMap.get(id);
+  Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
-    return ErrorCode::BADF;
+    return ErrorCode::SRCH;
   }
 
   auto numWaitThreads = evf->cancel(value);
