@@ -24,7 +24,7 @@ public:
                       std::size_t align = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
   static void kfree(void *ptr, std::size_t size);
 
-  std::pair<EventFlag *, bool> createEventFlag(std::string name, std::int32_t flags) {
+  std::pair<EventFlag *, bool> createEventFlag(utils::kstring name, std::int32_t flags) {
     auto [it, inserted] = m_event_flags.try_emplace(std::move(name), knew<EventFlag>(flags));
     return { it->second.get(), inserted };
   }
@@ -40,7 +40,7 @@ public:
 private:
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;
-  kmap<std::string, Ref<EventFlag>> m_event_flags;
+  utils::kmap<utils::kstring, Ref<EventFlag>> m_event_flags;
 
   struct node {
     std::size_t size;

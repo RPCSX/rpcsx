@@ -19,7 +19,7 @@ void io_device_instance_init(IoDevice *device, IoDeviceInstance *instance) {
 }
 
 struct HostIoDevice : IoDevice {
-  std::string hostPath;
+  orbis::utils::kstring hostPath;
 };
 
 struct HostIoDeviceInstance : IoDeviceInstance {

@@ -453,14 +453,14 @@ orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
 
 SysResult processNeeded(Thread *thread) {
   while (true) {
-    std::set<std::string> allNeededObjects;
+    std::set<std::string, std::less<>> allNeededObjects;
     auto proc = thread->tproc;
-    std::map<std::string, Module *> loadedModules;
-    std::map<std::string, Module *> loadedObjects;
+    std::map<std::string, Module *, std::less<>> loadedModules;
+    std::map<std::string, Module *, std::less<>> loadedObjects;
 
     for (auto [id, module] : proc->modulesMap) {
       for (const auto &object : module->needed) {
-        allNeededObjects.insert(object);
+        allNeededObjects.emplace(object.begin(), object.end());
       }
 
       loadedModules[module->moduleName] = module;
@@ -509,9 +509,9 @@ SysResult processNeeded(Thread *thread) {
         module->importedModules.clear();
         module->importedModules.reserve(module->neededModules.size());
         for (auto mod : module->neededModules) {
-          if (auto it = loadedModules.find(mod.name);
+          if (auto it = loadedModules.find(std::string_view(mod.name));
               it != loadedModules.end()) {
-            module->importedModules.push_back(loadedModules.at(mod.name));
+            module->importedModules.emplace_back(it->second);
             continue;
           }
 
@@ -530,7 +530,7 @@ SysResult processNeeded(Thread *thread) {
 
 SysResult registerEhFrames(Thread *thread) {
   for (auto [id, module] : thread->tproc->modulesMap) {
-    if (module->ehFrame != nullptr) { 
+    if (module->ehFrame != nullptr) {
       __register_frame(module->ehFrame);
     }
   }

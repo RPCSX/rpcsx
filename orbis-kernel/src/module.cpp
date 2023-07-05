@@ -1,4 +1,5 @@
 #include "module/Module.hpp"
+#include "KernelAllocator.hpp"
 #include "thread.hpp"
 #include <utility>
 
@@ -108,7 +109,7 @@ static orbis::SysResult doRelocation(orbis::Process *process,
         return std::pair(defModule.get(), defSym.address);
       }
 
-      foundInLibs.push_back(defLib.name);
+      foundInLibs.emplace_back(std::string_view(defLib.name));
     }
 
     for (auto nsDefModule : defModule->namespaceModules) {

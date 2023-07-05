@@ -2,6 +2,7 @@
 
 #include "utils/Rc.hpp"
 #include <utility>
+#include <string>
 #include <vector>
 #include <deque>
 #include <map>
@@ -31,6 +32,7 @@ template <typename T> struct kallocator {
   }
 };
 
+using kstring = std::basic_string<char, std::char_traits<char>, kallocator<char>>;
 template <typename T> using kvector = std::vector<T, kallocator<T>>;
 template <typename T> using kdeque = std::deque<T, kallocator<T>>;
 template <typename K, typename T, typename Cmp = std::less<>>

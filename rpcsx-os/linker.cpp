@@ -588,7 +588,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         } else {
           name = patchSoName(name);
           if (name != "libSceFreeTypeOptBm") { // TODO
-            result->needed.push_back(std::string(name));
+            result->needed.emplace_back(name);
             result->needed.back() += ".prx";
           }
         }

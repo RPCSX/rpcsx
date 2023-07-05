@@ -16,7 +16,7 @@ struct Thread;
 struct Process;
 
 struct ModuleNeeded {
-  std::string name;
+  utils::kstring name;
   std::uint16_t version;
   std::uint16_t attr;
   bool isExport;
@@ -68,7 +68,7 @@ struct Relocation {
 
 struct Module final {
   Process *proc{};
-  std::string vfsPath;
+  utils::kstring vfsPath;
   char moduleName[256]{};
   char soName[256]{};
   ModuleHandle id{};
@@ -116,7 +116,7 @@ struct Module final {
   utils::kvector<ModuleNeeded> neededLibraries;
   utils::kvector<utils::Ref<Module>> importedModules;
   utils::kvector<utils::Ref<Module>> namespaceModules;
-  utils::kvector<std::string> needed;
+  utils::kvector<utils::kstring> needed;
 
   std::atomic<unsigned> references{0};
   unsigned _total_size = 0;
