@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <map>
+#include <mutex>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -35,6 +36,8 @@ bool unmap(void *address, std::size_t size) {
 }
 } // namespace
 } // namespace utils
+
+static std::mutex g_mtx;
 
 std::string rx::vm::mapFlagsToString(std::int32_t flags) {
   std::string result;
@@ -687,6 +690,8 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     }
   }
 
+  std::lock_guard lock(g_mtx);
+
   std::uint64_t address = 0;
   if ((flags & kMapFlagFixed) == kMapFlagFixed) {
     address = hitAddress;
@@ -840,6 +845,7 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
     __builtin_trap();
   }
 
+  std::lock_guard lock(g_mtx);
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
       (address & kBlockMask) >> kPageShift, pages, ~0);
   rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, 0);
@@ -868,6 +874,8 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
     std::abort();
   }
 
+  std::lock_guard lock(g_mtx);
+
   gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
       (address & kBlockMask) >> kPageShift, pages,
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
@@ -884,8 +892,9 @@ bool rx::vm::queryProtection(const void *addr, std::uint64_t *startAddress,
 
 bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
                           VirtualQueryInfo *info) {
-  auto address = reinterpret_cast<std::uint64_t>(addr);
+  std::lock_guard lock(g_mtx);
 
+  auto address = reinterpret_cast<std::uint64_t>(addr);
   auto it = gVirtualAllocations.lower_bound(address);
 
   if (it == gVirtualAllocations.end()) {
