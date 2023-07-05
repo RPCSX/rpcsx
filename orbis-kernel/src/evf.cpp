@@ -109,13 +109,19 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *,
   return ErrorCode::BUSY;
 }
 
-std::size_t orbis::EventFlag::notify(bool isCancel, std::uint64_t cancelValue) {
+std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
   writer_lock lock(queueMtx);
   auto count = waitingThreadsCount.load(std::memory_order::relaxed);
   auto patValue = value.load(std::memory_order::relaxed);
 
+  if (type == NotifyType::Destroy) {
+    isDeleted = true;
+  } else if (type == NotifyType::Set) {
+    patValue |= bits;
+  }
+
   auto testThread = [&](WaitingThread *thread) {
-    if (!isCancel && !isDeleted && !thread->test(patValue)) {
+    if (type != NotifyType::Set && !thread->test(patValue)) {
       return false;
     }
 
@@ -124,18 +130,16 @@ std::size_t orbis::EventFlag::notify(bool isCancel, std::uint64_t cancelValue) {
     if (thread->patternSet != nullptr) {
       *thread->patternSet = resultValue;
     }
-    if (isCancel) {
+    if (type == NotifyType::Cancel) {
       *thread->isCanceled = true;
-    } else {
-      value.store(resultValue, std::memory_order::relaxed);
     }
 
     // TODO: update thread state
     thread->mtx->unlock(); // release wait on waiter thread
 
     waitingThreadsCount.fetch_sub(1, std::memory_order::relaxed);
+    std::memmove(thread, thread + 1, (waitingThreads + count - (thread + 1)) * sizeof(*waitingThreads));
     --count;
-    std::memmove(thread, thread + 1, waitingThreads + count - (thread + 1));
     return true;
   };
 
@@ -160,8 +164,10 @@ std::size_t orbis::EventFlag::notify(bool isCancel, std::uint64_t cancelValue) {
     }
   }
 
-  if (isCancel) {
-    value.store(cancelValue, std::memory_order::relaxed);
+  if (type == NotifyType::Cancel) {
+    value.store(bits, std::memory_order::relaxed);
+  } else {
+    value.store(patValue, std::memory_order::relaxed);
   }
   return result;
 }

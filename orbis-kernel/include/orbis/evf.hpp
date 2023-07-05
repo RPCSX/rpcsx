@@ -61,6 +61,12 @@ struct EventFlag {
 
   shared_mutex queueMtx;
 
+  enum class NotifyType {
+    Set,
+    Cancel,
+    Destroy
+  };
+
   explicit EventFlag(std::int32_t attrs) : attrs(attrs) {}
 
   ErrorCode wait(Thread *thread, std::uint8_t waitMode,
@@ -68,33 +74,23 @@ struct EventFlag {
                  std::uint32_t *timeout);
   ErrorCode tryWait(Thread *thread, std::uint8_t waitMode,
                     std::uint64_t bitPattern, std::uint64_t *patternSet);
-  std::size_t notify(bool isCancel = false, std::uint64_t cancelValue = 0);
+  std::size_t notify(NotifyType type, std::uint64_t bits);
 
   std::size_t destroy() {
-    isDeleted = true;
-    return notify();
+    return notify(NotifyType::Destroy, {});
   }
 
   std::size_t cancel(std::uint64_t value) {
-    return notify(true, value);
+    return notify(NotifyType::Cancel, value);
   }
 
   std::size_t set(std::uint64_t bits) {
-    {
-      writer_lock lock(queueMtx);
-      value.fetch_or(bits, std::memory_order::relaxed);
-    }
-
-    return notify();
+    return notify(NotifyType::Set, bits);
   }
 
   void clear(std::uint64_t bits) {
-    {
-      writer_lock lock(queueMtx);
-      value.fetch_and(bits, std::memory_order::relaxed);
-    }
-
-    value &= bits;
+    writer_lock lock(queueMtx);
+    value.fetch_and(bits, std::memory_order::relaxed);
   }
 
   void incRef() { references.fetch_add(1, std::memory_order::relaxed); }
