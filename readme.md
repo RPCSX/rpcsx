@@ -9,7 +9,7 @@ If you want to contribute as a developer, please contact us in the Discord. http
 
 ## Building
 
-1. Install dependencies for Debian-like distributive
+1. Install dependencies for Debian-like distributions
    
    `sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools`
 2. Building
@@ -18,7 +18,7 @@ If you want to contribute as a developer, please contact us in the Discord. http
 
 4. Run
    
-   See usage message of rpcsx-os (-h argument), or follow to our discord for help.
+   See usage message of rpcsx-os (-h argument), or join the Discord for help.
 
 ## License
 
