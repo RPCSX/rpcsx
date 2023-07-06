@@ -26,26 +26,25 @@ template <typename T, typename = void> struct log_class_string {
   static void format(std::string &out, const void *arg);
 };
 
-template <> struct log_class_string<const void *, void> {
+template <> struct log_class_string<void *, void> {
   static void format(std::string &out, const void *arg);
 };
 
 template <typename T>
-struct log_class_string<T *, void> : log_class_string<const void *, void> {};
+struct log_class_string<T *, void> : log_class_string<void *, void> {};
 
-template <> struct log_class_string<const char *, void> {
+template <> struct log_class_string<char *, void> {
   static void format(std::string &out, const void *arg);
 };
 
-template <>
-struct log_class_string<char *, void> : log_class_string<const char *> {};
+template <std::size_t N> struct log_class_string<char[N]> {
+  static void format(std::string &out, const void *arg) {
+    out += reinterpret_cast<const char *>(arg);
+  }
+};
 
 template <>
-struct log_class_string<const char8_t *, void>
-    : log_class_string<const char *> {};
-
-template <>
-struct log_class_string<char8_t *, void> : log_class_string<const char8_t *> {};
+struct log_class_string<char8_t *, void> : log_class_string<char *> {};
 
 template <typename... Args>
 using log_args_t = const void *(&&)[sizeof...(Args) + 1];
@@ -62,7 +61,7 @@ struct log_type_info {
 
 template <typename... Args>
 constexpr const log_type_info type_info_v[sizeof...(Args) + 1]{
-    log_type_info::make<std::decay_t<Args>>()...};
+    log_type_info::make<std::remove_cvref_t<Args>>()...};
 
 void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
                       const log_type_info *sup, ...);

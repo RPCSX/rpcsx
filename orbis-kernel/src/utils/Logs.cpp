@@ -13,12 +13,12 @@ static void append_hex(std::string &out, std::uintmax_t value) {
 }
 
 namespace orbis::logs {
-void log_class_string<const void *>::format(std::string &out, const void *arg) {
+void log_class_string<void *>::format(std::string &out, const void *arg) {
   const void *ptr = *reinterpret_cast<const void *const *>(arg);
   append_hex(out, reinterpret_cast<std::uintptr_t>(ptr));
 }
 
-void log_class_string<const char *>::format(std::string &out, const void *arg) {
+void log_class_string<char *>::format(std::string &out, const void *arg) {
   out += *reinterpret_cast<const char *const *>(arg);
 }
 
@@ -137,6 +137,9 @@ void log_class_string<bool>::format(std::string &out, const void *arg) {
 
 void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
                       const log_type_info *sup, ...) {
+  if (lvl > logs_level.load(std::memory_order::relaxed)) {
+    return;
+  }
 
   /*constinit thread_local*/ std::string text;
   /*constinit thread_local*/ std::vector<const void *> args;
