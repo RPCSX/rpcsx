@@ -8,12 +8,15 @@ jobs:
         steps:
         - uses: actions/checkout@v1
         - uses: ZedThree/clang-tidy-review@v0.12.0
-          id: review
+            id: review
+            with:
+                apt_packages: libunwind-dev libglfw3-dev
+                cmake_command: cmake .
 
         # Uploads an artefact containing clang_fixes.json
         - uses: ZedThree/clang-tidy-review/upload@v0.12.0
-          id: upload-review
+            id: upload-review
 
         # If there are any comments, fail the check
         - if: steps.review.outputs.total_comments > 0
-          run: exit 1
+            run: exit 1
