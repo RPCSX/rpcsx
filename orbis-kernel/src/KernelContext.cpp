@@ -16,6 +16,14 @@ KernelContext &g_context = *[]() -> KernelContext * {
 }();
 
 KernelContext::KernelContext() {
+  // Initialize recursive heap mutex
+  pthread_mutexattr_t mtx_attr;
+  pthread_mutexattr_init(&mtx_attr);
+  pthread_mutexattr_settype(&mtx_attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutexattr_setpshared(&mtx_attr, PTHREAD_PROCESS_SHARED);
+  pthread_mutex_init(&m_heap_mtx, &mtx_attr);
+  pthread_mutexattr_destroy(&mtx_attr);
+
   std::printf("orbis::KernelContext initialized, addr=%p", this);
 }
 KernelContext::~KernelContext() {}
@@ -66,28 +74,53 @@ Process *KernelContext::findProcessById(pid_t pid) const {
 }
 
 void *KernelContext::kalloc(std::size_t size, std::size_t align) {
-  std::lock_guard lock(g_context.m_heap_mtx);
-  align = std::max(align, sizeof(node));
-  auto heap = reinterpret_cast<std::uintptr_t>(g_context.m_heap_next);
+  pthread_mutex_lock(&m_heap_mtx);
+  if (!m_heap_is_freeing) {
+    // Try to reuse previously freed block
+    for (auto [it, end] = m_free_heap.equal_range(size); it != end; it++) {
+      auto result = it->second;
+      if (!(reinterpret_cast<std::uintptr_t>(result) & (align - 1))) {
+        m_used_node.insert(m_free_heap.extract(it));
+        pthread_mutex_unlock(&m_heap_mtx);
+        return result;
+      }
+    }
+  }
+
+  align = std::max<std::size_t>(align, __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+  auto heap = reinterpret_cast<std::uintptr_t>(m_heap_next);
   heap = (heap + (align - 1)) & ~(align - 1);
   auto result = reinterpret_cast<void *>(heap);
-  g_context.m_heap_next = reinterpret_cast<void *>(heap + size);
+  m_heap_next = reinterpret_cast<void *>(heap + size);
+  pthread_mutex_unlock(&m_heap_mtx);
   return result;
 }
 
 void KernelContext::kfree(void *ptr, std::size_t size) {
-  std::lock_guard lock(g_context.m_heap_mtx);
+  pthread_mutex_lock(&m_heap_mtx);
   if (!size)
     std::abort();
-  // TODO: create node and put it into
+  if (m_heap_is_freeing)
+    std::abort();
+  m_heap_is_freeing = true;
+  if (!m_used_node.empty()) {
+    auto node = m_used_node.extract(m_used_node.begin());
+    node.key() = size;
+    node.mapped() = ptr;
+    m_free_heap.insert(std::move(node));
+  } else {
+    m_free_heap.emplace(size, ptr);
+  }
+  m_heap_is_freeing = false;
+  pthread_mutex_unlock(&m_heap_mtx);
 }
 
 inline namespace utils {
 void kfree(void *ptr, std::size_t size) {
-  return KernelContext::kfree(ptr, size);
+  return g_context.kfree(ptr, size);
 }
 void *kalloc(std::size_t size, std::size_t align) {
-  return KernelContext::kalloc(size, align);
+  return g_context.kalloc(size, align);
 }
 } // namespace utils
 } // namespace orbis
