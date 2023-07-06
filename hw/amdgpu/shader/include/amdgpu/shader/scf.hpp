@@ -40,8 +40,8 @@ public:
   Node *getParent() const { return mParent; }
 
   template <typename T>
-  requires(std::is_base_of_v<Node, T>) auto getParent() const
-      -> decltype(dynCast<T>(mParent)) {
+    requires(std::is_base_of_v<Node, T>)
+  auto getParent() const -> decltype(dynCast<T>(mParent)) {
     return dynCast<T>(mParent);
   }
 
@@ -53,18 +53,18 @@ public:
 };
 
 template <typename T, typename ST>
-requires(std::is_base_of_v<Node, T> &&std::is_base_of_v<Node, ST>) &&
-    requires(ST *s) {
-  dynamic_cast<T *>(s);
+  requires(std::is_base_of_v<Node, T> && std::is_base_of_v<Node, ST>) &&
+          requires(ST *s) { dynamic_cast<T *>(s); }
+T *dynCast(ST *s) {
+  return dynamic_cast<T *>(s);
 }
-T *dynCast(ST *s) { return dynamic_cast<T *>(s); }
 
 template <typename T, typename ST>
-requires(std::is_base_of_v<Node, T> &&std::is_base_of_v<Node, ST>) &&
-    requires(const ST *s) {
-  dynamic_cast<const T *>(s);
+  requires(std::is_base_of_v<Node, T> && std::is_base_of_v<Node, ST>) &&
+          requires(const ST *s) { dynamic_cast<const T *>(s); }
+const T *dynCast(const ST *s) {
+  return dynamic_cast<const T *>(s);
 }
-const T *dynCast(const ST *s) { return dynamic_cast<const T *>(s); }
 
 inline bool isNodeEqual(const Node *lhs, const Node *rhs) {
   if (lhs == rhs) {
@@ -331,7 +331,8 @@ class Context {
 
 public:
   template <typename T, typename... ArgsT>
-  requires(std::is_constructible_v<T, ArgsT...>) T *create(ArgsT &&...args) {
+    requires(std::is_constructible_v<T, ArgsT...>)
+  T *create(ArgsT &&...args) {
     auto result = new T(std::forward<ArgsT>(args)...);
     mNodes.push_front(std::unique_ptr<Node>{result});
     return result;

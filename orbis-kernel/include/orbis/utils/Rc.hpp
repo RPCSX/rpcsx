@@ -50,23 +50,24 @@ public:
   Ref() = default;
 
   template <typename OT>
-  requires(std::is_base_of_v<T, OT>) Ref(OT *ref) : m_ref(ref) {
+    requires(std::is_base_of_v<T, OT>)
+  Ref(OT *ref) : m_ref(ref) {
     if (m_ref != nullptr) {
       ref->incRef();
     }
   }
 
   template <typename OT>
-  requires(std::is_base_of_v<T, OT>) Ref(const Ref<OT> &other)
-      : m_ref(other.get()) {
+    requires(std::is_base_of_v<T, OT>)
+  Ref(const Ref<OT> &other) : m_ref(other.get()) {
     if (m_ref != nullptr) {
       m_ref->incRef();
     }
   }
 
   template <typename OT>
-  requires(std::is_base_of_v<T, OT>) Ref(Ref<OT> &&other)
-      : m_ref(other.release()) {}
+    requires(std::is_base_of_v<T, OT>)
+  Ref(Ref<OT> &&other) : m_ref(other.release()) {}
 
   Ref(const Ref &other) : m_ref(other.get()) {
     if (m_ref != nullptr) {
@@ -76,19 +77,22 @@ public:
   Ref(Ref &&other) : m_ref(other.release()) {}
 
   template <typename OT>
-  requires(std::is_base_of_v<T, OT>) Ref &operator=(Ref<OT> &&other) {
+    requires(std::is_base_of_v<T, OT>)
+  Ref &operator=(Ref<OT> &&other) {
     other.swap(*this);
     return *this;
   }
 
   template <typename OT>
-  requires(std::is_base_of_v<T, OT>) Ref &operator=(OT *other) {
+    requires(std::is_base_of_v<T, OT>)
+  Ref &operator=(OT *other) {
     *this = Ref(other);
     return *this;
   }
 
   template <typename OT>
-  requires(std::is_base_of_v<T, OT>) Ref &operator=(const Ref<OT> &other) {
+    requires(std::is_base_of_v<T, OT>)
+  Ref &operator=(const Ref<OT> &other) {
     *this = Ref(other);
     return *this;
   }

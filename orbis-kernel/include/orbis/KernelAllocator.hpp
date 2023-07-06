@@ -15,7 +15,9 @@ void kfree(void *ptr, std::size_t size);
 template <typename T> struct kallocator {
   using value_type = T;
 
-  template <typename U> struct rebind { using other = kallocator<U>; };
+  template <typename U> struct rebind {
+    using other = kallocator<U>;
+  };
 
   T *allocate(std::size_t n) {
     return static_cast<T *>(kalloc(sizeof(T) * n, alignof(T)));
@@ -47,7 +49,7 @@ using kunmap =
 template <typename T, typename... Args> T *knew(Args &&...args) {
   auto loc = static_cast<T *>(utils::kalloc(sizeof(T), alignof(T)));
   auto res = std::construct_at(loc, std::forward<Args>(args)...);
-  if constexpr (requires(T * t) { t->_total_size = sizeof(T); })
+  if constexpr (requires(T *t) { t->_total_size = sizeof(T); })
     res->_total_size = sizeof(T);
   return res;
 }
