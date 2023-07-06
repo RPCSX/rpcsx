@@ -8,4 +8,4 @@ void deinitialize();
 
 extern thread_local orbis::Thread *g_current;
 void invoke(orbis::Thread *thread);
-}
+} // namespace rx::thread

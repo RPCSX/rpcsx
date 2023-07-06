@@ -71,8 +71,8 @@ struct ImageValue : Value {};
 struct SampledImageValue : Value {};
 
 template <typename T>
-  requires(std::is_base_of_v<Value, T>)
-struct ConstantValue : T {};
+requires(std::is_base_of_v<Value, T>) struct ConstantValue : T {
+};
 
 struct AnyConstantValue : Value {
   AnyConstantValue() = default;
@@ -95,28 +95,28 @@ struct AnyConstantValue : Value {
 };
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct VectorOfType : VectorType {};
+requires(std::is_base_of_v<Type, T>) struct VectorOfType : VectorType {
+};
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct ArrayOfType : ArrayType {};
+requires(std::is_base_of_v<Type, T>) struct ArrayOfType : ArrayType {
+};
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct VectorOfValue : VectorValue {};
+requires(std::is_base_of_v<Type, T>) struct VectorOfValue : VectorValue {
+};
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct ArrayOfValue : ArrayValue {};
+requires(std::is_base_of_v<Type, T>) struct ArrayOfValue : ArrayValue {
+};
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct PointerToType : PointerType {};
+requires(std::is_base_of_v<Type, T>) struct PointerToType : PointerType {
+};
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct PointerToValue : PointerValue {};
+requires(std::is_base_of_v<Type, T>) struct PointerToValue : PointerValue {
+};
 
 struct StructPointerValue : Value {};
 
@@ -125,45 +125,21 @@ struct VariableValue : PointerValue {};
 namespace detail {
 template <typename T> struct TypeToValueImpl;
 
-template <> struct TypeToValueImpl<Type> {
-  using type = Value;
-};
-template <> struct TypeToValueImpl<BoolType> {
-  using type = BoolValue;
-};
-template <> struct TypeToValueImpl<IntType> {
-  using type = IntValue;
-};
-template <> struct TypeToValueImpl<SIntType> {
-  using type = SIntValue;
-};
-template <> struct TypeToValueImpl<UIntType> {
-  using type = UIntValue;
-};
-template <> struct TypeToValueImpl<FloatType> {
-  using type = FloatValue;
-};
-template <> struct TypeToValueImpl<StructType> {
-  using type = StructValue;
-};
-template <> struct TypeToValueImpl<PointerType> {
-  using type = PointerValue;
-};
+template <> struct TypeToValueImpl<Type> { using type = Value; };
+template <> struct TypeToValueImpl<BoolType> { using type = BoolValue; };
+template <> struct TypeToValueImpl<IntType> { using type = IntValue; };
+template <> struct TypeToValueImpl<SIntType> { using type = SIntValue; };
+template <> struct TypeToValueImpl<UIntType> { using type = UIntValue; };
+template <> struct TypeToValueImpl<FloatType> { using type = FloatValue; };
+template <> struct TypeToValueImpl<StructType> { using type = StructValue; };
+template <> struct TypeToValueImpl<PointerType> { using type = PointerValue; };
 template <> struct TypeToValueImpl<VariableValue> {
   using type = PointerValue;
 };
-template <> struct TypeToValueImpl<VectorType> {
-  using type = VectorValue;
-};
-template <> struct TypeToValueImpl<ArrayType> {
-  using type = ArrayValue;
-};
-template <> struct TypeToValueImpl<SamplerType> {
-  using type = SamplerValue;
-};
-template <> struct TypeToValueImpl<ImageType> {
-  using type = ImageValue;
-};
+template <> struct TypeToValueImpl<VectorType> { using type = VectorValue; };
+template <> struct TypeToValueImpl<ArrayType> { using type = ArrayValue; };
+template <> struct TypeToValueImpl<SamplerType> { using type = SamplerValue; };
+template <> struct TypeToValueImpl<ImageType> { using type = ImageValue; };
 template <> struct TypeToValueImpl<SampledImageType> {
   using type = SampledImageValue;
 };
@@ -184,8 +160,7 @@ template <typename T>
 using TypeToValue = typename detail::TypeToValueImpl<T>::type;
 
 template <typename T>
-  requires(std::is_base_of_v<Type, T>)
-struct ScalarOrVectorOfValue : Value {
+requires(std::is_base_of_v<Type, T>) struct ScalarOrVectorOfValue : Value {
   ScalarOrVectorOfValue() = default;
 
   ScalarOrVectorOfValue(TypeToValue<T> scalar) { id = scalar.id; }
@@ -199,8 +174,8 @@ using ConstantInt = ConstantValue<IntValue>;
 using ConstantFloat = ConstantValue<FloatValue>;
 
 template <typename ToT, typename FromT>
-  requires(std::is_base_of_v<FromT, ToT> && std::is_base_of_v<Id, FromT>)
-ToT cast(FromT from) {
+requires(std::is_base_of_v<FromT, ToT> &&std::is_base_of_v<Id, FromT>) ToT
+    cast(FromT from) {
   ToT result;
   result.id = from.id;
   return result;
@@ -277,8 +252,7 @@ struct IdGenerator {
   std::uint32_t bounds = 1;
 
   template <typename T>
-    requires(std::is_base_of_v<Id, T>)
-  T newId() {
+  requires(std::is_base_of_v<Id, T>) T newId() {
     T result;
     result.id = bounds++;
     return result;
@@ -544,9 +518,8 @@ public:
 
   // arithmetic
   template <typename T>
-    requires(std::is_base_of_v<ScalarType, T>)
-  TypeToValue<T> createInst(spv::Op op, T resultType,
-                            std::span<const TypeToValue<T>> operands) {
+  requires(std::is_base_of_v<ScalarType, T>) TypeToValue<T> createInst(
+      spv::Op op, T resultType, std::span<const TypeToValue<T>> operands) {
     auto region = bodyRegion.pushOp(op, 3 + operands.size());
     auto id = newId<TypeToValue<T>>();
     region.pushIdUse(resultType);
@@ -583,142 +556,142 @@ public:
   }
 
   template <typename T>
-    requires(std::is_same_v<SIntType, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T>)
-  TypeToValue<T> createSNegate(T resultType, TypeToValue<T> operand) {
+  requires(std::is_same_v<SIntType, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T>)
+      TypeToValue<T> createSNegate(T resultType, TypeToValue<T> operand) {
     return createInst(spv::Op::OpSNegate, resultType, std::array{operand});
   }
 
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFNegate(T resultType, TypeToValue<T> operand) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFNegate(T resultType, TypeToValue<T> operand) {
     return createInst(spv::Op::OpFNegate, resultType, std::array{operand});
   }
 
   template <typename T>
-    requires(std::is_same_v<IntType, T> || std::is_base_of_v<IntType, T> ||
-             std::is_same_v<VectorOfType<IntType>, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T> ||
-             std::is_same_v<VectorOfType<UIntType>, T>)
-  TypeToValue<T> createIAdd(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<IntType, T> || std::is_base_of_v<IntType, T> ||
+           std::is_same_v<VectorOfType<IntType>, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T> ||
+           std::is_same_v<VectorOfType<UIntType>, T>)
+      TypeToValue<T> createIAdd(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpIAdd, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFAdd(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFAdd(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpFAdd, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<IntType, T> || std::is_base_of_v<IntType, T> ||
-             std::is_same_v<VectorOfType<IntType>, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T> ||
-             std::is_same_v<VectorOfType<UIntType>, T>)
-  TypeToValue<T> createISub(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<IntType, T> || std::is_base_of_v<IntType, T> ||
+           std::is_same_v<VectorOfType<IntType>, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T> ||
+           std::is_same_v<VectorOfType<UIntType>, T>)
+      TypeToValue<T> createISub(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpISub, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFSub(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFSub(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpFSub, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<IntType, T> || std::is_base_of_v<IntType, T> ||
-             std::is_same_v<VectorOfType<IntType>, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T> ||
-             std::is_same_v<VectorOfType<UIntType>, T>)
-  TypeToValue<T> createIMul(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<IntType, T> || std::is_base_of_v<IntType, T> ||
+           std::is_same_v<VectorOfType<IntType>, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T> ||
+           std::is_same_v<VectorOfType<UIntType>, T>)
+      TypeToValue<T> createIMul(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpIMul, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFMul(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFMul(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpFMul, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<UIntType, T> ||
-             std::is_same_v<VectorOfType<UIntType>, T>)
-  TypeToValue<T> createUDiv(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<UIntType, T> ||
+           std::is_same_v<VectorOfType<UIntType>, T>)
+      TypeToValue<T> createUDiv(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpUDiv, resultType,
                       std::array{operand1, operand2});
   }
   template <typename T>
-    requires(std::is_same_v<SIntType, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T>)
-  TypeToValue<T> createSDiv(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<SIntType, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T>)
+      TypeToValue<T> createSDiv(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpSDiv, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFDiv(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFDiv(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpFDiv, resultType,
                       std::array{operand1, operand2});
   }
   template <typename T>
-    requires(std::is_same_v<UIntType, T> ||
-             std::is_same_v<VectorOfType<UIntType>, T>)
-  TypeToValue<T> createUMod(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<UIntType, T> ||
+           std::is_same_v<VectorOfType<UIntType>, T>)
+      TypeToValue<T> createUMod(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpUMod, resultType,
                       std::array{operand1, operand2});
   }
   template <typename T>
-    requires(std::is_same_v<SIntType, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T>)
-  TypeToValue<T> createSRem(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<SIntType, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T>)
+      TypeToValue<T> createSRem(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpSRem, resultType,
                       std::array{operand1, operand2});
   }
 
   template <typename T>
-    requires(std::is_same_v<SIntType, T> ||
-             std::is_same_v<VectorOfType<SIntType>, T>)
-  TypeToValue<T> createSMod(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<SIntType, T> ||
+           std::is_same_v<VectorOfType<SIntType>, T>)
+      TypeToValue<T> createSMod(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpSMod, resultType,
                       std::array{operand1, operand2});
   }
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFRem(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFRem(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpFRem, resultType,
                       std::array{operand1, operand2});
   }
   template <typename T>
-    requires(std::is_same_v<FloatType, T> ||
-             std::is_same_v<VectorOfType<FloatType>, T>)
-  TypeToValue<T> createFMod(T resultType, TypeToValue<T> operand1,
-                            TypeToValue<T> operand2) {
+  requires(std::is_same_v<FloatType, T> ||
+           std::is_same_v<VectorOfType<FloatType>, T>)
+      TypeToValue<T> createFMod(T resultType, TypeToValue<T> operand1,
+                                TypeToValue<T> operand2) {
     return createInst(spv::Op::OpFMod, resultType,
                       std::array{operand1, operand2});
   }
@@ -795,9 +768,8 @@ public:
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  TypeToValue<T> createPhi(T resultType,
-                           std::span<const std::pair<Value, Block>> values) {
+  requires(std::is_base_of_v<Type, T>) TypeToValue<T> createPhi(
+      T resultType, std::span<const std::pair<Value, Block>> values) {
     return cast<TypeToValue<T>>(
         createPhi(static_cast<Type>(resultType), values));
   }
@@ -883,8 +855,8 @@ public:
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  TypeToValue<T> createLoad(T resultType, PointerValue pointer) {
+  requires(std::is_base_of_v<Type, T>)
+      TypeToValue<T> createLoad(T resultType, PointerValue pointer) {
     auto region = bodyRegion.pushOp(spv::Op::OpLoad, 4);
     auto id = newId<TypeToValue<T>>();
     region.pushIdUse(resultType);
@@ -1521,8 +1493,7 @@ public:
     return id;
   }
 
-  IntValue createImageQueryLevels(IntType resultType,
-                                  ImageValue sampledImage) {
+  IntValue createImageQueryLevels(IntType resultType, ImageValue sampledImage) {
     auto region = bodyRegion.pushOp(spv::Op::OpImageQueryLevels, 4);
     auto id = newId<IntValue>();
     region.pushIdUse(resultType);
@@ -1617,8 +1588,8 @@ public:
       : mIdGenerator(&idGenerator), capabilityRegion{1}, extensionRegion{1},
         extInstRegion{4}, memoryModelRegion{3}, entryPointRegion{1},
         executionModeRegion{1}, debugRegion{0}, annotationRegion{1},
-        globalRegion{1}, functionDeclRegion{1},
-        functionRegion{expInstructionsCount} {}
+        globalRegion{1}, functionDeclRegion{1}, functionRegion{
+                                                    expInstructionsCount} {}
 
   SpirvBuilder clone() const { return *this; }
 
@@ -1698,8 +1669,8 @@ public:
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  TypeToValue<T> createUndef(T resultType) {
+  requires(std::is_base_of_v<Type, T>)
+      TypeToValue<T> createUndef(T resultType) {
     return cast<TypeToValue<T>>(createUndef(resultType));
   }
 
@@ -1985,8 +1956,8 @@ public:
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  PointerToType<T> createTypePointer(spv::StorageClass storageClass, T type) {
+  requires(std::is_base_of_v<Type, T>) PointerToType<T> createTypePointer(
+      spv::StorageClass storageClass, T type) {
     return cast<PointerToType<T>>(
         createTypePointer(storageClass, static_cast<Type>(type)));
   }
@@ -2024,9 +1995,9 @@ public:
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  ConstantValue<TypeToValue<T>>
-  createConstant(T type, std::span<const std::uint32_t> values) {
+  requires(std::is_base_of_v<Type, T>)
+      ConstantValue<TypeToValue<T>> createConstant(
+          T type, std::span<const std::uint32_t> values) {
     auto region = globalRegion.pushOp(spv::Op::OpConstant, 3 + values.size());
     auto id = newId<ConstantValue<TypeToValue<T>>>();
     region.pushIdUse(type);
@@ -2038,14 +2009,16 @@ public:
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  ConstantValue<TypeToValue<T>> createConstant32(T type, std::uint32_t value) {
+  requires(std::is_base_of_v<Type, T>)
+      ConstantValue<TypeToValue<T>> createConstant32(T type,
+                                                     std::uint32_t value) {
     return createConstant(type, std::array{value});
   }
 
   template <typename T>
-    requires(std::is_base_of_v<Type, T>)
-  ConstantValue<TypeToValue<T>> createConstant64(T type, std::uint64_t value) {
+  requires(std::is_base_of_v<Type, T>)
+      ConstantValue<TypeToValue<T>> createConstant64(T type,
+                                                     std::uint64_t value) {
     return createConstant(type,
                           std::array{static_cast<std::uint32_t>(value),
                                      static_cast<std::uint32_t>(value >> 32)});

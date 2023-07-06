@@ -15,14 +15,14 @@ constexpr std::optional<std::uint64_t> decodeNid(std::string_view nid) {
   std::uint64_t result = 0;
 
   if (nid.size() > 11) {
-    return{};
+    return {};
   }
 
   for (std::size_t i = 0; i < nid.size(); ++i) {
     auto it = std::strchr(nidLookup, nid[i]);
 
     if (it == nullptr) {
-      return{};
+      return {};
     }
 
     auto value = static_cast<uint32_t>(it - nidLookup);
@@ -73,8 +73,12 @@ enum OrbisElfType_t {
   kElfTypeSceDynamic = 0xfe18
 };
 
-void override(std::string originalModuleName, std::filesystem::path replacedModulePath);
-orbis::Ref<orbis::Module> loadModule(std::span<std::byte> image, orbis::Process *process);
-orbis::Ref<orbis::Module> loadModuleFile(const char *path, orbis::Process *process);
-orbis::Ref<orbis::Module> loadModuleByName(std::string_view name, orbis::Process *process);
-} // namespace re::loader
+void override(std::string originalModuleName,
+              std::filesystem::path replacedModulePath);
+orbis::Ref<orbis::Module> loadModule(std::span<std::byte> image,
+                                     orbis::Process *process);
+orbis::Ref<orbis::Module> loadModuleFile(const char *path,
+                                         orbis::Process *process);
+orbis::Ref<orbis::Module> loadModuleByName(std::string_view name,
+                                           orbis::Process *process);
+} // namespace rx::linker

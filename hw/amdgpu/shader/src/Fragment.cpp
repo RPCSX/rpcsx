@@ -3288,7 +3288,8 @@ void convertMimg(Fragment &fragment, Mimg inst) {
   fragment.registers->pc += Mimg::kMinInstSize * sizeof(std::uint32_t);
   switch (inst.op) {
   case Mimg::Op::IMAGE_GET_RESINFO: {
-    auto image = fragment.createImage(RegisterId::Raw(inst.srsrc << 2), inst.r128);
+    auto image =
+        fragment.createImage(RegisterId::Raw(inst.srsrc << 2), inst.r128);
     spirv::Value values[4];
     auto uint32T = fragment.context->getUInt32Type();
 
@@ -3314,13 +3315,15 @@ void convertMimg(Fragment &fragment, Mimg inst) {
 
     for (std::size_t dstOffset = 0, i = 0; i < 4; ++i) {
       if (inst.dmask & (1 << i)) {
-        fragment.setVectorOperand(inst.vdata + dstOffset++, {uint32T, values[i]});
+        fragment.setVectorOperand(inst.vdata + dstOffset++,
+                                  {uint32T, values[i]});
       }
     }
     break;
   }
   case Mimg::Op::IMAGE_SAMPLE: {
-    auto image = fragment.createImage(RegisterId::Raw(inst.srsrc << 2), inst.r128);
+    auto image =
+        fragment.createImage(RegisterId::Raw(inst.srsrc << 2), inst.r128);
     auto sampler = fragment.createSampler(RegisterId::Raw(inst.ssamp << 2));
     auto coord0 = fragment.getVectorOperand(inst.vaddr, TypeId::Float32).value;
     auto coord1 =
@@ -3342,8 +3345,9 @@ void convertMimg(Fragment &fragment, Mimg inst) {
     for (std::uint32_t dstOffset = 0, i = 0; i < 4; ++i) {
       if (inst.dmask & (1 << i)) {
         fragment.setVectorOperand(
-            inst.vdata + dstOffset++, {floatT, fragment.builder.createCompositeExtract(
-                                         floatT, value, {{i}})});
+            inst.vdata + dstOffset++,
+            {floatT,
+             fragment.builder.createCompositeExtract(floatT, value, {{i}})});
       }
     }
     break;
@@ -3353,8 +3357,8 @@ void convertMimg(Fragment &fragment, Mimg inst) {
     auto intT = fragment.context->getUInt32Type();
     for (std::uint32_t dstOffset = 0, i = 0; i < 4; ++i) {
       if (inst.dmask & (1 << i)) {
-        fragment.setVectorOperand(
-            inst.vdata + dstOffset++, {intT, fragment.context->getUInt32(0)});
+        fragment.setVectorOperand(inst.vdata + dstOffset++,
+                                  {intT, fragment.context->getUInt32(0)});
       }
     }
     break;
@@ -3457,19 +3461,19 @@ void convertExp(Fragment &fragment, Exp inst) {
 
   auto resultType = fragment.context->getFloat32x4Type();
   auto floatType = fragment.context->getFloat32Type();
-/*
-  if (inst.en != 0xf) {
-    auto prevValue = fragment.getExportTarget(inst.target, TypeId::Float32x4);
-    if (prevValue) {
-      for (std::uint32_t i = 0; i < 4; ++i) {
-        if (~inst.en & (1 << i)) {
-          exports[i] = fragment.builder.createCompositeExtract(
-              floatType, prevValue.value, {{i}});
+  /*
+    if (inst.en != 0xf) {
+      auto prevValue = fragment.getExportTarget(inst.target, TypeId::Float32x4);
+      if (prevValue) {
+        for (std::uint32_t i = 0; i < 4; ++i) {
+          if (~inst.en & (1 << i)) {
+            exports[i] = fragment.builder.createCompositeExtract(
+                floatType, prevValue.value, {{i}});
+          }
         }
       }
     }
-  }
-*/
+  */
 
   auto value = fragment.builder.createCompositeConstruct(resultType, exports);
   fragment.setExportTarget(inst.target, {resultType, value});
@@ -3534,7 +3538,6 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
   }
-
 
   case Vop1::Op::V_FRACT_F32: {
     auto src = spirv::cast<spirv::FloatValue>(
@@ -5412,8 +5415,7 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id) {
   return result;
 }
 
-Value amdgpu::shader::Fragment::getRegister(RegisterId id,
-                                               spirv::Type type) {
+Value amdgpu::shader::Fragment::getRegister(RegisterId id, spirv::Type type) {
   auto result = getRegister(id);
 
   if (!result) {

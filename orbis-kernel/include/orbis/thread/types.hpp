@@ -13,15 +13,19 @@ struct rtprio {
 };
 
 struct thr_param {
-	ptr<void(void *)> start_func;
-	ptr<void> arg;
-	ptr<char> stack_base;
-	size_t stack_size;
-	ptr<char> tls_base;
-	size_t tls_size;
-	ptr<slong> child_tid; // Address to store the new thread identifier, for the child's use
-	ptr<slong> parent_tid; // Address to store the new thread identifier, for the parent's use
-	sint flags; // Thread	creation flags. The flags member may specify the following flags:
-	ptr<rtprio> rtp; // Real-time scheduling priority for the new thread. May be NULL to inherit the priority from the creating	thread
+  ptr<void(void *)> start_func;
+  ptr<void> arg;
+  ptr<char> stack_base;
+  size_t stack_size;
+  ptr<char> tls_base;
+  size_t tls_size;
+  ptr<slong> child_tid;  // Address to store the new thread identifier, for the
+                         // child's use
+  ptr<slong> parent_tid; // Address to store the new thread identifier, for the
+                         // parent's use
+  sint flags;      // Thread	creation flags. The flags member may specify the
+                   // following flags:
+  ptr<rtprio> rtp; // Real-time scheduling priority for the new thread. May be
+                   // NULL to inherit the priority from the creating	thread
 };
 } // namespace orbis

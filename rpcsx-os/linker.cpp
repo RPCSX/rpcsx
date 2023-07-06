@@ -574,7 +574,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       }
 
       if (dyn.d_tag == kElfDynamicTypeSoName) {
-        auto name = patchSoName(sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
+        auto name =
+            patchSoName(sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
         std::memcpy(result->soName, name.data(), name.size());
         std::memcpy(result->soName + name.size(), ".prx", sizeof(".prx"));
       }

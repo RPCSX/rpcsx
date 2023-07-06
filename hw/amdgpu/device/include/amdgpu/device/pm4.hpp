@@ -98,5 +98,4 @@ enum PM4Opcodes {
 };
 
 const char *pm4OpcodeToString(int opcode);
-} // namespace amdgpu::device
-
+} // namespace amdgpu

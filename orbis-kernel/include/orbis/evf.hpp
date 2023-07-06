@@ -62,11 +62,7 @@ struct EventFlag {
 
   shared_mutex queueMtx;
 
-  enum class NotifyType {
-    Set,
-    Cancel,
-    Destroy
-  };
+  enum class NotifyType { Set, Cancel, Destroy };
 
   explicit EventFlag(std::int32_t attrs) : attrs(attrs) {}
 
@@ -77,17 +73,13 @@ struct EventFlag {
                     std::uint64_t bitPattern, std::uint64_t *patternSet);
   std::size_t notify(NotifyType type, std::uint64_t bits);
 
-  std::size_t destroy() {
-    return notify(NotifyType::Destroy, {});
-  }
+  std::size_t destroy() { return notify(NotifyType::Destroy, {}); }
 
   std::size_t cancel(std::uint64_t value) {
     return notify(NotifyType::Cancel, value);
   }
 
-  std::size_t set(std::uint64_t bits) {
-    return notify(NotifyType::Set, bits);
-  }
+  std::size_t set(std::uint64_t bits) { return notify(NotifyType::Set, bits); }
 
   void clear(std::uint64_t bits) {
     writer_lock lock(queueMtx);

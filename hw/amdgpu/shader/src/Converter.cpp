@@ -6,8 +6,8 @@
 #include "Instruction.hpp"
 #include "RegisterId.hpp"
 #include "RegisterState.hpp"
-#include "cf.hpp"
 #include "amdgpu/RemoteMemory.hpp"
+#include "cf.hpp"
 #include "scf.hpp"
 #include "util/unreachable.hpp"
 #include <compare>
@@ -108,8 +108,9 @@ private:
            instClass == InstructionClass::Vintrp ||
            instClass == InstructionClass::Exp ||
            instClass == InstructionClass::Vop1 ||
-           instClass == InstructionClass::Vopc/* ||
-           instClass == InstructionClass::Smrd*/;
+           instClass == InstructionClass::Vopc /* ||
+            instClass == InstructionClass::Smrd*/
+        ;
   }
 
   spirv::BoolValue createExecTest(Fragment *fragment) {
@@ -274,10 +275,11 @@ private:
 };
 }; // namespace amdgpu::shader
 
-amdgpu::shader::Shader amdgpu::shader::convert(
-    RemoteMemory memory, Stage stage, std::uint64_t entry,
-    std::span<const std::uint32_t> userSpgrs, int bindingOffset,
-    std::uint32_t dimX, std::uint32_t dimY, std::uint32_t dimZ) {
+amdgpu::shader::Shader
+amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
+                        std::span<const std::uint32_t> userSpgrs,
+                        int bindingOffset, std::uint32_t dimX,
+                        std::uint32_t dimY, std::uint32_t dimZ) {
   ConverterContext ctxt(memory, stage);
   auto &builder = ctxt.getBuilder();
   builder.createCapability(spv::Capability::Shader);

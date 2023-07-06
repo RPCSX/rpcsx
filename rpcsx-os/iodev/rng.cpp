@@ -9,7 +9,8 @@ struct RngInstance : public IoDeviceInstance {};
 
 static std::int64_t rng_instance_ioctl(IoDeviceInstance *instance,
                                        std::uint64_t request, void *argp) {
-  std::fprintf(stderr, "***ERROR*** Unhandled rng ioctl %" PRIx64 "\n", request);
+  std::fprintf(stderr, "***ERROR*** Unhandled rng ioctl %" PRIx64 "\n",
+               request);
   return 0;
 }
 

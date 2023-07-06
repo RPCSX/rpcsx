@@ -1,6 +1,8 @@
 #include "sys/sysproto.hpp"
 
-orbis::SysResult orbis::sys_thr_create(Thread *thread, ptr<struct ucontext> ctxt, ptr<slong> arg, sint flags) {
+orbis::SysResult orbis::sys_thr_create(Thread *thread,
+                                       ptr<struct ucontext> ctxt,
+                                       ptr<slong> arg, sint flags) {
   if (auto thr_create = thread->tproc->ops->thr_create) {
     return thr_create(thread, ctxt, arg, flags);
   }
@@ -8,7 +10,8 @@ orbis::SysResult orbis::sys_thr_create(Thread *thread, ptr<struct ucontext> ctxt
   return ErrorCode::NOSYS;
 }
 
-orbis::SysResult orbis::sys_thr_new(Thread *thread, ptr<struct thr_param> param, sint param_size) {
+orbis::SysResult orbis::sys_thr_new(Thread *thread, ptr<struct thr_param> param,
+                                    sint param_size) {
   if (auto thr_new = thread->tproc->ops->thr_new) {
     return thr_new(thread, param, param_size);
   }
@@ -36,7 +39,8 @@ orbis::SysResult orbis::sys_thr_kill(Thread *thread, slong id, sint sig) {
   return ErrorCode::NOSYS;
 }
 
-orbis::SysResult orbis::sys_thr_kill2(Thread *thread, pid_t pid, slong id, sint sig) {
+orbis::SysResult orbis::sys_thr_kill2(Thread *thread, pid_t pid, slong id,
+                                      sint sig) {
   if (auto thr_kill2 = thread->tproc->ops->thr_kill2) {
     return thr_kill2(thread, pid, id, sig);
   }
@@ -44,7 +48,8 @@ orbis::SysResult orbis::sys_thr_kill2(Thread *thread, pid_t pid, slong id, sint 
   return ErrorCode::NOSYS;
 }
 
-orbis::SysResult orbis::sys_thr_suspend(Thread *thread, ptr<const struct timespec> timeout) {
+orbis::SysResult orbis::sys_thr_suspend(Thread *thread,
+                                        ptr<const struct timespec> timeout) {
   if (auto thr_suspend = thread->tproc->ops->thr_suspend) {
     return thr_suspend(thread, timeout);
   }
@@ -60,7 +65,8 @@ orbis::SysResult orbis::sys_thr_wake(Thread *thread, slong id) {
   return ErrorCode::NOSYS;
 }
 
-orbis::SysResult orbis::sys_thr_set_name(Thread *thread, slong id, ptr<const char> name) {
+orbis::SysResult orbis::sys_thr_set_name(Thread *thread, slong id,
+                                         ptr<const char> name) {
   if (auto thr_set_name = thread->tproc->ops->thr_set_name) {
     return thr_set_name(thread, id, name);
   }

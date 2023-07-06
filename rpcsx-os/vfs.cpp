@@ -11,11 +11,10 @@
 static std::map<std::string, orbis::Ref<IoDevice>> sMountsMap;
 
 void rx::vfs::initialize() {}
-void rx::vfs::deinitialize() {
-  sMountsMap.clear();
-}
+void rx::vfs::deinitialize() { sMountsMap.clear(); }
 
-orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath, IoDevice *dev) {
+orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath,
+                                IoDevice *dev) {
   auto [it, inserted] =
       sMountsMap.emplace(guestPath.lexically_normal().string(), dev);
 
@@ -27,7 +26,7 @@ orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath, IoDevice
 }
 
 orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
-                           orbis::Ref<IoDeviceInstance> *instance) {
+                               orbis::Ref<IoDeviceInstance> *instance) {
   orbis::Ref<IoDevice> device;
   bool isCharacterDevice = path.starts_with("/dev/");
 

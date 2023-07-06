@@ -3,13 +3,13 @@
 #include "ModuleHandle.hpp"
 #include "ModuleSegment.hpp"
 
-#include "../utils/Rc.hpp"
 #include "../KernelAllocator.hpp"
+#include "../utils/Rc.hpp"
 
 #include "orbis-config.hpp"
 #include <cstddef>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace orbis {
 struct Thread;
@@ -22,12 +22,7 @@ struct ModuleNeeded {
   bool isExport;
 };
 
-enum class SymbolBind : std::uint8_t {
-  Local,
-  Global,
-  Weak,
-  Unique = 10
-};
+enum class SymbolBind : std::uint8_t { Local, Global, Weak, Unique = 10 };
 
 enum class SymbolVisibility : std::uint8_t {
   Default,
@@ -46,7 +41,6 @@ enum class SymbolType : std::uint8_t {
   Tls,
   IFunc = 10,
 };
-
 
 struct Symbol {
   std::int32_t moduleIndex;
@@ -130,7 +124,8 @@ struct Module final {
   }
 
   void decRef() {
-    if (references.fetch_sub(1, std::memory_order::relaxed) == 1 && proc != nullptr) {
+    if (references.fetch_sub(1, std::memory_order::relaxed) == 1 &&
+        proc != nullptr) {
       destroy();
     }
   }
@@ -141,5 +136,6 @@ private:
   void destroy();
 };
 
-utils::Ref<Module> createModule(Thread *p, std::string vfsPath, const char *name);
+utils::Ref<Module> createModule(Thread *p, std::string vfsPath,
+                                const char *name);
 } // namespace orbis

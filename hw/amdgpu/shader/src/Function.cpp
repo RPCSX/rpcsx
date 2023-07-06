@@ -268,7 +268,8 @@ void Function::insertReturn() {
     exitFragment.builder.createStore(valuePointer, value.value);
   }
 
-  auto resultValue = exitFragment.builder.createLoad(resultType, resultVariable);
+  auto resultValue =
+      exitFragment.builder.createLoad(resultType, resultVariable);
 
   exitFragment.builder.createReturnValue(resultValue);
 }

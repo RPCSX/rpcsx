@@ -7,9 +7,7 @@ class Verify {
   util::SourceLocation mLocation;
 
 public:
-  util::SourceLocation location() const {
-    return mLocation;
-  }
+  util::SourceLocation location() const { return mLocation; }
 
   Verify(util::SourceLocation location = util::SourceLocation())
       : mLocation(location) {}

@@ -8,7 +8,9 @@ struct StderrDevice : public IoDevice {
   StderrInstance *instance = nullptr;
 };
 
-static std::int64_t stderr_instance_write(IoDeviceInstance *instance, const void *data, std::uint64_t size) {
+static std::int64_t stderr_instance_write(IoDeviceInstance *instance,
+                                          const void *data,
+                                          std::uint64_t size) {
   auto result = fwrite(data, 1, size, stderr);
   fflush(stderr);
 

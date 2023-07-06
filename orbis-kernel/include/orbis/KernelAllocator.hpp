@@ -1,17 +1,17 @@
 #pragma once
 
 #include "utils/Rc.hpp"
-#include <utility>
-#include <string>
-#include <vector>
 #include <deque>
 #include <map>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace orbis {
 inline namespace utils {
 void *kalloc(std::size_t size, std::size_t align);
-void kfree(void* ptr, std::size_t size);
+void kfree(void *ptr, std::size_t size);
 template <typename T> struct kallocator {
   using value_type = T;
 
@@ -21,9 +21,7 @@ template <typename T> struct kallocator {
     return static_cast<T *>(kalloc(sizeof(T) * n, alignof(T)));
   }
 
-  void deallocate(T *p, std::size_t n) {
-    kfree(p, sizeof(T) * n);
-  }
+  void deallocate(T *p, std::size_t n) { kfree(p, sizeof(T) * n); }
 
   template <typename U>
   friend constexpr bool operator==(const kallocator &,
@@ -32,7 +30,8 @@ template <typename T> struct kallocator {
   }
 };
 
-using kstring = std::basic_string<char, std::char_traits<char>, kallocator<char>>;
+using kstring =
+    std::basic_string<char, std::char_traits<char>, kallocator<char>>;
 template <typename T> using kvector = std::vector<T, kallocator<T>>;
 template <typename T> using kdeque = std::deque<T, kallocator<T>>;
 template <typename K, typename T, typename Cmp = std::less<>>
@@ -48,7 +47,7 @@ using kunmap =
 template <typename T, typename... Args> T *knew(Args &&...args) {
   auto loc = static_cast<T *>(utils::kalloc(sizeof(T), alignof(T)));
   auto res = std::construct_at(loc, std::forward<Args>(args)...);
-  if constexpr (requires(T *t) { t->_total_size = sizeof(T); })
+  if constexpr (requires(T * t) { t->_total_size = sizeof(T); })
     res->_total_size = sizeof(T);
   return res;
 }

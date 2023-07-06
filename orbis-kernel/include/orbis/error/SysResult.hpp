@@ -8,7 +8,7 @@ class SysResult {
 
 public:
   SysResult() = default;
-  SysResult(ErrorCode ec) : mValue(-static_cast<int>(ec)){}
+  SysResult(ErrorCode ec) : mValue(-static_cast<int>(ec)) {}
 
   [[nodiscard]] static SysResult notAnError(ErrorCode ec) {
     SysResult result;

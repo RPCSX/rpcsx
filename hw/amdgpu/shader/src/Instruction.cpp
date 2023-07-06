@@ -3013,8 +3013,8 @@ void amdgpu::shader::Mtbuf::dump() const {
   printScalarOperand(soffset, inst + instSize);
   printf(" #offset=%x,offen=%x,idxen=%x,glc=%x,op=%x,dfmt=%x,nfmt=%x,vaddr=%x,"
          "vdata=%x,srsrc=%x,slc=%x,tfe=%x,soffset=%x",
-         offset, offen, idxen, glc, (unsigned)op, dfmt, nfmt, vaddr, vdata, srsrc, slc,
-         tfe, soffset);
+         offset, offen, idxen, glc, (unsigned)op, dfmt, nfmt, vaddr, vdata,
+         srsrc, slc, tfe, soffset);
 }
 void amdgpu::shader::Mimg::dump() const {
   int instSize = kMinInstSize;

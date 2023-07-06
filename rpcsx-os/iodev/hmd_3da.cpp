@@ -2,17 +2,14 @@
 #include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
-struct Hmd3daDevice : public IoDevice {
-};
+struct Hmd3daDevice : public IoDevice {};
 
-struct Hmd3daInstance : public IoDeviceInstance {
-};
+struct Hmd3daInstance : public IoDeviceInstance {};
 
 static std::int64_t hmd_3da_instance_ioctl(IoDeviceInstance *instance,
                                            std::uint64_t request, void *argp) {
 
-  std::fprintf(stderr, "***ERROR*** Unhandled hmd_3da ioctl %lx\n",
-        request);
+  std::fprintf(stderr, "***ERROR*** Unhandled hmd_3da ioctl %lx\n", request);
   return -1;
 }
 

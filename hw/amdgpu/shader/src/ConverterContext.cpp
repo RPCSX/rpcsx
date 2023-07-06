@@ -217,7 +217,7 @@ UniformInfo *ConverterContext::createStorageBuffer(TypeId type) {
   newUniform.variable = uniformVariable;
   newUniform.isBuffer = true;
   std::printf("new storage buffer %u of type %u\n", newUniform.index,
-               newUniform.typeId.raw);
+              newUniform.typeId.raw);
   return &newUniform;
 }
 
@@ -397,11 +397,11 @@ spirv::VariableValue ConverterContext::getFragCoord() {
   }
 
   auto inputType = getPointerType(spv::StorageClass::Input, TypeId::Float32x4);
-  mFragCoord =
-      mBuilder.createVariable(inputType, spv::StorageClass::Input);
+  mFragCoord = mBuilder.createVariable(inputType, spv::StorageClass::Input);
 
-  mBuilder.createDecorate(mFragCoord, spv::Decoration::BuiltIn,
-                          {{static_cast<std::uint32_t>(spv::BuiltIn::FragCoord)}});
+  mBuilder.createDecorate(
+      mFragCoord, spv::Decoration::BuiltIn,
+      {{static_cast<std::uint32_t>(spv::BuiltIn::FragCoord)}});
 
   mInterfaces.push_back(mFragCoord);
   return mFragCoord;

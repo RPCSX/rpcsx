@@ -1,7 +1,7 @@
 #include "CfBuilder.hpp"
 #include "Instruction.hpp"
-#include <cassert>
 #include <amdgpu/RemoteMemory.hpp>
+#include <cassert>
 #include <unordered_set>
 
 using namespace amdgpu;
@@ -176,9 +176,8 @@ struct CfgBuilder {
   }
 };
 
-cf::BasicBlock *amdgpu::shader::buildCf(cf::Context &ctxt,
-                                           RemoteMemory memory,
-                                           std::uint64_t entryPoint) {
+cf::BasicBlock *amdgpu::shader::buildCf(cf::Context &ctxt, RemoteMemory memory,
+                                        std::uint64_t entryPoint) {
   CfgBuilder builder;
   builder.context = &ctxt;
   builder.memory = memory;
