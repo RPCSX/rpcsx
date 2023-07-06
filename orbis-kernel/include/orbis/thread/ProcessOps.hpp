@@ -40,7 +40,7 @@ struct ProcessOps {
   SysResult (*dynlib_unload_prx)(Thread *thread, ModuleHandle handle);
 
   SysResult (*thr_create)(Thread *thread, ptr<struct ucontext> ctxt, ptr<slong> arg, sint flags);
-  SysResult (*thr_new)(Thread *thread, ptr<struct thr_param> param, sint param_size);
+  SysResult (*thr_new)(Thread *thread, ptr<thr_param> param, sint param_size);
   SysResult (*thr_exit)(Thread *thread, ptr<slong> state);
   SysResult (*thr_kill)(Thread *thread, slong id, sint sig);
   SysResult (*thr_kill2)(Thread *thread, pid_t pid, slong id, sint sig);

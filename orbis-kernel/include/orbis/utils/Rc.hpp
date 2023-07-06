@@ -52,7 +52,9 @@ public:
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
   Ref(OT *ref) : m_ref(ref) {
-    ref->incRef();
+    if (m_ref != nullptr) {
+      ref->incRef();
+    }
   }
 
   template <typename OT>

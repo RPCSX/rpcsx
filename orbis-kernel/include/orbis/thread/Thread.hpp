@@ -26,5 +26,9 @@ struct Thread {
 
   lwpid_t tid = -1;
   ThreadState state = ThreadState::INACTIVE;
+
+  // FIXME: implement thread destruction
+  void incRef() {}
+  void decRef() {}
 };
 } // namespace orbis
