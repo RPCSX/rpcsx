@@ -1,8 +1,8 @@
 #pragma once
 
+#include "ThreadState.hpp"
 #include "orbis-config.hpp"
 #include "types.hpp"
-#include "ThreadState.hpp"
 
 #include "../utils/SharedMutex.hpp"
 
@@ -19,10 +19,7 @@ struct Thread {
   uint64_t gsBase{};
   char name[32];
 
-  uint64_t sigMask[4] = {
-    0x7fff'ffff,
-    0
-  };
+  uint64_t sigMask[4] = {0x7fff'ffff, 0};
 
   lwpid_t tid = -1;
   ThreadState state = ThreadState::INACTIVE;

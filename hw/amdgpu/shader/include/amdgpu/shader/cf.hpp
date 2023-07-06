@@ -73,7 +73,8 @@ public:
     }
   }
 
-  template <std::invocable<BasicBlock *> T> void walkPredecessors(T &&cb) const {
+  template <std::invocable<BasicBlock *> T>
+  void walkPredecessors(T &&cb) const {
     for (auto pred : predecessors) {
       cb(pred);
     }
@@ -92,7 +93,9 @@ public:
     return successors[1] != nullptr ? 2 : 1;
   }
 
-  BasicBlock *getSuccessor(std::size_t index) const { return successors[index]; }
+  BasicBlock *getSuccessor(std::size_t index) const {
+    return successors[index];
+  }
 
   void split(BasicBlock *target);
 };
@@ -108,7 +111,7 @@ public:
 
     return nullptr;
   }
-  
+
   BasicBlock *getBasicBlock(std::uint64_t address) {
     if (auto it = basicBlocks.lower_bound(address); it != basicBlocks.end()) {
       auto bb = &it->second;

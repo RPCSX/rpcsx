@@ -2,11 +2,9 @@
 #include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
-struct DipswDevice : public IoDevice {
-};
+struct DipswDevice : public IoDevice {};
 
-struct DipswInstance : public IoDeviceInstance {
-};
+struct DipswInstance : public IoDeviceInstance {};
 
 static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
                                          std::uint64_t request, void *argp) {
@@ -26,7 +24,6 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
     return 0;
   }
 
-
   // 0x8010880a
   if (request == 0x8010880a) { // write data? used on initilization
     struct Args {
@@ -36,13 +33,14 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr, "dipsw ioctl 0x8010880a(0x%lx, 0x%lx)\n", args->address, args->size);
+    std::fprintf(stderr, "dipsw ioctl 0x8010880a(0x%lx, 0x%lx)\n",
+                 args->address, args->size);
 
     return 0;
   }
 
   std::fprintf(stderr, "***ERROR*** Unhandled dipsw ioctl %lx\n", request);
-   std::fflush(stdout);
+  std::fflush(stdout);
   //__builtin_trap();
   return 0;
 }

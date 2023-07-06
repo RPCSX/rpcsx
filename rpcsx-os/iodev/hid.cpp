@@ -9,7 +9,8 @@ struct HidInstance : public IoDeviceInstance {};
 
 static std::int64_t hid_instance_ioctl(IoDeviceInstance *instance,
                                        std::uint64_t request, void *argp) {
-  std::fprintf(stderr, "***ERROR*** Unhandled hid ioctl %" PRIx64 "\n", request);
+  std::fprintf(stderr, "***ERROR*** Unhandled hid ioctl %" PRIx64 "\n",
+               request);
 
   // 0x800c4802
   return 0;
@@ -23,7 +24,7 @@ static void *hid_instance_mmap(IoDeviceInstance *instance, void *address,
 }
 
 static std::int32_t hid_device_open(IoDevice *device,
-                                    orbis::Ref<IoDeviceInstance>  *instance,
+                                    orbis::Ref<IoDeviceInstance> *instance,
                                     const char *path, std::uint32_t flags,
                                     std::uint32_t mode) {
   auto *newInstance = orbis::knew<HidInstance>();

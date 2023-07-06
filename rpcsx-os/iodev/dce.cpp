@@ -1,11 +1,11 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "vm.hpp"
 #include <cinttypes>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
-#include "vm.hpp"
 
 struct VideoOutBuffer {
   std::uint32_t pixelFormat;
@@ -151,7 +151,6 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     std::fprintf(stderr, "dce: RegisterBuffer(%lx, %lx, %lx, %lx)\n",
                  args->attributeIndex, args->index, args->address, args->unk);
 
-
     if (args->index >= std::size(rx::bridge.header->buffers)) {
       // TODO
       std::fprintf(stderr, "dce: out of buffers!\n");
@@ -160,13 +159,12 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
     // TODO: lock bridge header
     rx::bridge.header->buffers[args->index] = {
-      .width = dceInstance->bufferAttributes.width,
-      .height = dceInstance->bufferAttributes.height,
-      .pitch = dceInstance->bufferAttributes.pitch,
-      .address = args->address,
-      .pixelFormat = dceInstance->bufferAttributes.pixelFormat,
-      .tilingMode = dceInstance->bufferAttributes.tilingMode
-    };
+        .width = dceInstance->bufferAttributes.width,
+        .height = dceInstance->bufferAttributes.height,
+        .pitch = dceInstance->bufferAttributes.pitch,
+        .address = args->address,
+        .pixelFormat = dceInstance->bufferAttributes.pixelFormat,
+        .tilingMode = dceInstance->bufferAttributes.tilingMode};
     return 0;
   }
 
@@ -205,12 +203,12 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
         args->arg1, args->displayBufferIndex, args->flipMode, args->flipArg,
         args->arg5, args->arg6, args->arg7, args->arg8);
 
-    rx::bridge.sendFlip(args->displayBufferIndex, /*args->flipMode,*/ args->flipArg);
+    rx::bridge.sendFlip(args->displayBufferIndex,
+                        /*args->flipMode,*/ args->flipArg);
 
     if (args->flipMode == 1 || args->arg7 == 0) {
       // orbis::bridge.sendDoFlip();
     }
-
 
     if (args->displayBufferIndex != -1) {
       if (bufferInUsePtr) {

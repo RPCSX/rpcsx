@@ -4,9 +4,7 @@
 #include <string>
 #include <unistd.h>
 
-std::int64_t io_device_instance_close(IoDeviceInstance *instance) {
-  return 0;
-}
+std::int64_t io_device_instance_close(IoDeviceInstance *instance) { return 0; }
 
 void io_device_instance_init(IoDevice *device, IoDeviceInstance *instance) {
   if (instance->device == nullptr) {
@@ -54,7 +52,8 @@ static std::int64_t host_io_device_instance_close(IoDeviceInstance *instance) {
   return io_device_instance_close(instance);
 }
 
-static std::int32_t host_io_open(IoDevice *device, orbis::Ref<IoDeviceInstance> *instance,
+static std::int32_t host_io_open(IoDevice *device,
+                                 orbis::Ref<IoDeviceInstance> *instance,
                                  const char *path, std::uint32_t flags,
                                  std::uint32_t mode) {
   auto hostDevice = static_cast<HostIoDevice *>(device);
@@ -99,7 +98,8 @@ static std::int32_t host_io_open(IoDevice *device, orbis::Ref<IoDeviceInstance> 
   }
 
   if (flags != 0) {
-    std::fprintf(stderr, "host_io_open: ***ERROR*** Unhandled open flags %x\n", flags);
+    std::fprintf(stderr, "host_io_open: ***ERROR*** Unhandled open flags %x\n",
+                 flags);
   }
 
   int hostFd = ::open(realPath.c_str(), realFlags, 0777);

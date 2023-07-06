@@ -1,11 +1,14 @@
 #pragma once
 
 #include "SourceLocation.hpp"
-#include <cstdio>
 #include <cstdarg>
+#include <cstdio>
 
 namespace util {
-[[noreturn]] inline void unreachable_impl() { std::fflush(stdout); __builtin_trap(); }
+[[noreturn]] inline void unreachable_impl() {
+  std::fflush(stdout);
+  __builtin_trap();
+}
 
 [[noreturn]] inline void unreachable(SourceLocation location = {}) {
   std::printf("\n");

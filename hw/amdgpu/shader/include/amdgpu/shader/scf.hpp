@@ -31,51 +31,40 @@ class Node {
 public:
   virtual ~Node() = default;
   virtual void print(const PrintOptions &options, unsigned depth) = 0;
-  virtual bool isEqual(const Node &other) const {
-    return this == &other;
-  }
+  virtual bool isEqual(const Node &other) const { return this == &other; }
 
-  void dump() {
-    print({}, 0);
-  }
+  void dump() { print({}, 0); }
 
-  void setParent(Node *parent) {
-    mParent = parent;
-  }
+  void setParent(Node *parent) { mParent = parent; }
 
-  Node *getParent() const {
-    return mParent;
-  }
+  Node *getParent() const { return mParent; }
 
-  template<typename T> requires(std::is_base_of_v<Node, T>)
-  auto getParent() const -> decltype(dynCast<T>(mParent)) {
+  template <typename T>
+  requires(std::is_base_of_v<Node, T>) auto getParent() const
+      -> decltype(dynCast<T>(mParent)) {
     return dynCast<T>(mParent);
   }
 
-  Node *getNext() const {
-    return mNext;
-  }
+  Node *getNext() const { return mNext; }
 
-  Node *getPrev() const {
-    return mPrev; 
-  }
+  Node *getPrev() const { return mPrev; }
 
   friend class Block;
 };
 
 template <typename T, typename ST>
-  requires(std::is_base_of_v<Node, T> && std::is_base_of_v<Node, ST>) &&
-          requires(ST *s) { dynamic_cast<T *>(s); }
-T *dynCast(ST *s) {
-  return dynamic_cast<T *>(s);
+requires(std::is_base_of_v<Node, T> &&std::is_base_of_v<Node, ST>) &&
+    requires(ST *s) {
+  dynamic_cast<T *>(s);
 }
+T *dynCast(ST *s) { return dynamic_cast<T *>(s); }
 
 template <typename T, typename ST>
-  requires(std::is_base_of_v<Node, T> && std::is_base_of_v<Node, ST>) &&
-          requires(const ST *s) { dynamic_cast<const T *>(s); }
-const T *dynCast(const ST *s) {
-  return dynamic_cast<const T *>(s);
+requires(std::is_base_of_v<Node, T> &&std::is_base_of_v<Node, ST>) &&
+    requires(const ST *s) {
+  dynamic_cast<const T *>(s);
 }
+const T *dynCast(const ST *s) { return dynamic_cast<const T *>(s); }
 
 inline bool isNodeEqual(const Node *lhs, const Node *rhs) {
   if (lhs == rhs) {
@@ -105,7 +94,6 @@ struct Return final : Node {
   }
 };
 
-
 class Context;
 
 class Block final : public Node {
@@ -124,25 +112,14 @@ public:
     std::printf("%s}\n", options.makeIdent(depth).c_str());
   }
 
-  bool isEmpty() const {
-    return mBegin == nullptr;
-  }
+  bool isEmpty() const { return mBegin == nullptr; }
 
-  Node *getRootNode() const {
-    return mBegin;
-  }
-  Node *getLastNode() const {
-    return mEnd;
-  }
+  Node *getRootNode() const { return mBegin; }
+  Node *getLastNode() const { return mEnd; }
 
-  void setUserData(void *data) {
-    mUserData = data;
-  }
-  void* getUserData() const {
-    return mUserData;
-  }
-  template<typename T>
-  T* getUserData() const {
+  void setUserData(void *data) { mUserData = data; }
+  void *getUserData() const { return mUserData; }
+  template <typename T> T *getUserData() const {
     return static_cast<T *>(mUserData);
   }
 
@@ -239,9 +216,7 @@ public:
     }
   }
 
-  Block *getBlock() const {
-    return dynCast<Block>(getParent());
-  }
+  Block *getBlock() const { return dynCast<Block>(getParent()); }
 
   bool isEqual(const Node &other) const override {
     if (this == &other) {
@@ -320,9 +295,7 @@ struct Jump final : Node {
 struct Loop final : Node {
   Block *body;
 
-  Loop(Block *body) : body(body) {
-    body->setParent(this);
-  }
+  Loop(Block *body) : body(body) { body->setParent(this); }
 
   bool isEqual(const Node &other) const override {
     if (this == &other) {
@@ -358,8 +331,7 @@ class Context {
 
 public:
   template <typename T, typename... ArgsT>
-    requires(std::is_constructible_v<T, ArgsT...>)
-  T *create(ArgsT &&...args) {
+  requires(std::is_constructible_v<T, ArgsT...>) T *create(ArgsT &&...args) {
     auto result = new T(std::forward<ArgsT>(args)...);
     mNodes.push_front(std::unique_ptr<Node>{result});
     return result;

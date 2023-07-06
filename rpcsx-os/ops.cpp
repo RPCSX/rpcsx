@@ -374,7 +374,8 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
     return ErrorCode::INVAL;
   }
 
-  std::printf("sys_dynlib_dlsym(%s (%s), '%s')\n", module->soName, module->moduleName, symbol);
+  std::printf("sys_dynlib_dlsym(%s (%s), '%s')\n", module->soName,
+              module->moduleName, symbol);
 
   std::string_view symView(symbol);
 
@@ -385,7 +386,9 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
     }
   }
 
-  std::printf("sys_dynlib_dlsym(%s (%s), '%s')\n", module->soName, module->moduleName, rx::linker::encodeNid(rx::linker::encodeFid(symView)).string);
+  std::printf("sys_dynlib_dlsym(%s (%s), '%s')\n", module->soName,
+              module->moduleName,
+              rx::linker::encodeNid(rx::linker::encodeFid(symView)).string);
 
   if (auto addr = findSymbolById(module, rx::linker::encodeFid(symView))) {
     *addrp = addr;
@@ -444,27 +447,30 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 
   std::printf("Starting child thread %lu\n", (long)(proc->pid + baseId));
 
-  std::thread {
-    [=, childThread = Ref<Thread>(childThread)] {
-      uwrite(_param.child_tid, slong(childThread->tid));
-      auto context = new ucontext_t{};
+  std::thread{[=, childThread = Ref<Thread>(childThread)] {
+    uwrite(_param.child_tid, slong(childThread->tid));
+    auto context = new ucontext_t{};
 
-      context->uc_mcontext.gregs[REG_RDI] = reinterpret_cast<std::uintptr_t>(_param.arg);
-      context->uc_mcontext.gregs[REG_RSI] = reinterpret_cast<std::uintptr_t>(_param.arg);
-      context->uc_mcontext.gregs[REG_RSP] = reinterpret_cast<std::uintptr_t>(childThread->stackEnd);
-      context->uc_mcontext.gregs[REG_RIP] = reinterpret_cast<std::uintptr_t>(_param.start_func);
+    context->uc_mcontext.gregs[REG_RDI] =
+        reinterpret_cast<std::uintptr_t>(_param.arg);
+    context->uc_mcontext.gregs[REG_RSI] =
+        reinterpret_cast<std::uintptr_t>(_param.arg);
+    context->uc_mcontext.gregs[REG_RSP] =
+        reinterpret_cast<std::uintptr_t>(childThread->stackEnd);
+    context->uc_mcontext.gregs[REG_RIP] =
+        reinterpret_cast<std::uintptr_t>(_param.start_func);
 
-      childThread->context = context;
-      childThread->state = orbis::ThreadState::RUNNING;
-      rx::thread::invoke(childThread.get());
-    }
-  }.detach();
+    childThread->context = context;
+    childThread->state = orbis::ThreadState::RUNNING;
+    rx::thread::invoke(childThread.get());
+  }}.detach();
 
   return {};
 }
 SysResult thr_exit(orbis::Thread *thread, orbis::ptr<orbis::slong> state) {
-  std::printf("Requested exit of thread %u, state %p\n", (unsigned)thread->tid, state);
-  // FIXME: do sys_mtx(WAKE) if state is not null 
+  std::printf("Requested exit of thread %u, state %p\n", (unsigned)thread->tid,
+              state);
+  // FIXME: do sys_mtx(WAKE) if state is not null
 
   // FIXME: implement exit
   while (true) {

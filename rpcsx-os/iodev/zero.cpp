@@ -2,11 +2,9 @@
 #include "orbis/KernelAllocator.hpp"
 #include <cstring>
 
-struct ZeroDevice : public IoDevice {
-};
+struct ZeroDevice : public IoDevice {};
 
-struct ZeroInstance : public IoDeviceInstance {
-};
+struct ZeroInstance : public IoDeviceInstance {};
 
 static std::int64_t zero_device_read(IoDeviceInstance *instance, void *data,
                                      std::uint64_t size) {
@@ -15,7 +13,7 @@ static std::int64_t zero_device_read(IoDeviceInstance *instance, void *data,
 }
 
 static std::int32_t zero_device_open(IoDevice *device,
-                                     orbis::Ref<IoDeviceInstance>  *instance,
+                                     orbis::Ref<IoDeviceInstance> *instance,
                                      const char *path, std::uint32_t flags,
                                      std::uint32_t mode) {
   auto *newInstance = orbis::knew<ZeroInstance>();

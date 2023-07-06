@@ -313,7 +313,8 @@ struct Tiler1d {
     m_bitsPerElement = 128;// getBitsPerElement(texture->dfmt);
     m_microTileMode = Gnm::MicroTileMode::kMicroTileModeThin;
     m_tileThickness = (m_arrayMode == Gnm::kArrayMode1dTiledThick) ? 4 : 1;
-    m_tileBytes     = (kMicroTileWidth * kMicroTileHeight * m_tileThickness * m_bitsPerElement + 7) / 8;
+    m_tileBytes     = (kMicroTileWidth * kMicroTileHeight * m_tileThickness *
+    m_bitsPerElement + 7) / 8;
 
     auto width = texture->width + 1;
     auto height = texture->height + 1;
@@ -326,8 +327,8 @@ struct Tiler1d {
     m_arrayMode = (Gnm::ArrayMode)2;
     m_bitsPerElement = 128;
     m_microTileMode = (Gnm::MicroTileMode)1;
-    m_tileThickness= 1;
-    m_tileBytes= 1024;
+    m_tileThickness = 1;
+    m_tileBytes = 1024;
     m_tilesPerRow = 16;
     m_tilesPerSlice = 256;
   }

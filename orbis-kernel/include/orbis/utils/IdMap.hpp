@@ -13,8 +13,7 @@ namespace orbis {
 inline namespace utils {
 template <WithRc T, typename IdT = int, std::size_t MaxId = 4096,
           std::size_t MinId = 0>
-  requires(MaxId > MinId)
-class RcIdMap {
+requires(MaxId > MinId) class RcIdMap {
   static constexpr auto ChunkSize = std::min<std::size_t>(MaxId - MinId, 64);
   static constexpr auto ChunkCount =
       (MaxId - MinId + ChunkSize - 1) / ChunkSize;
@@ -191,8 +190,7 @@ public:
 
 template <typename T, typename IdT = int, std::size_t MaxId = 4096,
           std::size_t MinId = 0>
-  requires(MaxId > MinId)
-struct OwningIdMap {
+requires(MaxId > MinId) struct OwningIdMap {
   static constexpr auto ChunkSize = std::min<std::size_t>(MaxId - MinId, 64);
   static constexpr auto ChunkCount =
       (MaxId - MinId + ChunkSize - 1) / ChunkSize;
@@ -250,8 +248,8 @@ struct OwningIdMap {
   BitSet<ChunkCount> fullChunks;
 
   template <typename... ArgsT>
-    requires(std::is_constructible_v<T, ArgsT...>)
-  std::pair<IdT, T *> emplace(ArgsT &&...args) {
+  requires(std::is_constructible_v<T, ArgsT...>) std::pair<IdT, T *> emplace(
+      ArgsT &&...args) {
     auto page = fullChunks.countr_one();
 
     if (page == ChunkCount) {

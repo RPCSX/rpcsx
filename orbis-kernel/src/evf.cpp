@@ -81,8 +81,7 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
   return {};
 }
 
-orbis::ErrorCode orbis::EventFlag::tryWait(Thread *,
-                                           std::uint8_t waitMode,
+orbis::ErrorCode orbis::EventFlag::tryWait(Thread *, std::uint8_t waitMode,
                                            std::uint64_t bitPattern,
                                            std::uint64_t *patternSet) {
   writer_lock lock(queueMtx);
@@ -91,9 +90,8 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *,
     return ErrorCode::ACCES;
   }
 
-  auto waitingThread = WaitingThread{
-                                      .bitPattern = bitPattern,
-                                      .waitMode = waitMode};
+  auto waitingThread =
+      WaitingThread{.bitPattern = bitPattern, .waitMode = waitMode};
 
   if (auto patValue = value.load(std::memory_order::relaxed);
       waitingThread.test(patValue)) {
@@ -138,7 +136,9 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
     thread->mtx->unlock(); // release wait on waiter thread
 
     waitingThreadsCount.fetch_sub(1, std::memory_order::relaxed);
-    std::memmove(thread, thread + 1, (waitingThreads + count - (thread + 1)) * sizeof(*waitingThreads));
+    std::memmove(thread, thread + 1,
+                 (waitingThreads + count - (thread + 1)) *
+                     sizeof(*waitingThreads));
     --count;
     return true;
   };

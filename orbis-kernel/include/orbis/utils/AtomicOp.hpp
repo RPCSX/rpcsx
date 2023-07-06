@@ -1,8 +1,8 @@
 #pragma once
 
 #include <atomic>
-#include <utility>
 #include <functional>
+#include <utility>
 
 namespace orbis {
 inline namespace utils {

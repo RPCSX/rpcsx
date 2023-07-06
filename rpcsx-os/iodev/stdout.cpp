@@ -2,7 +2,6 @@
 #include "orbis/KernelAllocator.hpp"
 #include <cstdio>
 
-
 struct StdoutInstance : public IoDeviceInstance {};
 
 struct StdoutDevice : public IoDevice {

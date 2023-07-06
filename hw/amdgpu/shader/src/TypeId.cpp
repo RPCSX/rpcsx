@@ -99,7 +99,7 @@ std::size_t amdgpu::shader::TypeId::getElementsCount() const {
   case TypeId::Float32:
   case TypeId::Float64:
     return 1;
-  
+
   case TypeId::UInt32x2:
     return 2;
   case TypeId::UInt32x3:

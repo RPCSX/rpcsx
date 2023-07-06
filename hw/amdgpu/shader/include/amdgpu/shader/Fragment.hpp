@@ -14,10 +14,7 @@
 #include <spirv/spirv-builder.hpp>
 
 namespace amdgpu::shader {
-enum class OperandGetFlags {
-  None,
-  PreserveType = 1 << 0
-};
+enum class OperandGetFlags { None, PreserveType = 1 << 0 };
 
 struct Function;
 class ConverterContext;
@@ -36,9 +33,7 @@ struct Fragment {
   std::uint64_t jumpAddress = 0;
   spirv::BoolValue branchCondition;
 
-  void appendBranch(Fragment &other) {
-    other.predecessors.push_back(this);
-  }
+  void appendBranch(Fragment &other) { other.predecessors.push_back(this); }
 
   void injectValuesFromPreds();
 
@@ -47,34 +42,31 @@ struct Fragment {
   spirv::SamplerValue createSampler(RegisterId base);
   spirv::ImageValue createImage(RegisterId base, bool r128); // TODO: params
   Value createCompositeExtract(Value composite, std::uint32_t member);
-  Value getOperand(RegisterId id, TypeId type, OperandGetFlags flags = OperandGetFlags::None);
+  Value getOperand(RegisterId id, TypeId type,
+                   OperandGetFlags flags = OperandGetFlags::None);
   void setOperand(RegisterId id, Value value);
   void setVcc(Value value);
   void setScc(Value value);
   spirv::BoolValue getScc();
-  spirv::Value createBitcast(spirv::Type to, spirv::Type from, spirv::Value value);
+  spirv::Value createBitcast(spirv::Type to, spirv::Type from,
+                             spirv::Value value);
 
-  Value getScalarOperand(int id, TypeId type, OperandGetFlags flags = OperandGetFlags::None) {
+  Value getScalarOperand(int id, TypeId type,
+                         OperandGetFlags flags = OperandGetFlags::None) {
     return getOperand(RegisterId::Scalar(id), type, flags);
   }
-  Value getVectorOperand(int id, TypeId type, OperandGetFlags flags = OperandGetFlags::None) {
+  Value getVectorOperand(int id, TypeId type,
+                         OperandGetFlags flags = OperandGetFlags::None) {
     return getOperand(RegisterId::Vector(id), type, flags);
   }
-  Value getAttrOperand(int id, TypeId type, OperandGetFlags flags = OperandGetFlags::None) {
+  Value getAttrOperand(int id, TypeId type,
+                       OperandGetFlags flags = OperandGetFlags::None) {
     return getOperand(RegisterId::Attr(id), type, flags);
   }
-  Value getVccLo() {
-    return getOperand(RegisterId::VccLo, TypeId::UInt32);
-  }
-  Value getVccHi() {
-    return getOperand(RegisterId::VccHi, TypeId::UInt32);
-  }
-  Value getExecLo() {
-    return getOperand(RegisterId::ExecLo, TypeId::UInt32);
-  }
-  Value getExecHi() {
-    return getOperand(RegisterId::ExecHi, TypeId::UInt32);
-  }
+  Value getVccLo() { return getOperand(RegisterId::VccLo, TypeId::UInt32); }
+  Value getVccHi() { return getOperand(RegisterId::VccHi, TypeId::UInt32); }
+  Value getExecLo() { return getOperand(RegisterId::ExecLo, TypeId::UInt32); }
+  Value getExecHi() { return getOperand(RegisterId::ExecHi, TypeId::UInt32); }
   void setScalarOperand(int id, Value value) {
     setOperand(RegisterId::Scalar(id), value);
   }

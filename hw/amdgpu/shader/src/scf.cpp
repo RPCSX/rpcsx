@@ -7,7 +7,7 @@
 
 void scf::Block::eraseFrom(Node *endBefore) {
   mEnd = endBefore->getPrev();
-  if (mEnd != nullptr) { 
+  if (mEnd != nullptr) {
     mEnd->mNext = nullptr;
   } else {
     mBegin = nullptr;

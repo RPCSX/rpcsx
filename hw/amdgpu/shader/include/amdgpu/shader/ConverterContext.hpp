@@ -9,18 +9,18 @@
 #include "Value.hpp"
 #include "scf.hpp"
 
-#include <forward_list>
 #include <amdgpu/RemoteMemory.hpp>
+#include <forward_list>
 #include <spirv/spirv-builder.hpp>
 #include <unordered_map>
 #include <util/unreachable.hpp>
 
 #include <bit>
-#include <span>
 #include <cassert>
 #include <cstdint>
-#include <vector>
 #include <map>
+#include <span>
+#include <vector>
 
 namespace amdgpu::shader {
 /*
@@ -99,13 +99,12 @@ class ConverterContext {
   spirv::Function mDiscardFn;
 
 public:
-  ConverterContext(RemoteMemory memory, Stage stage) : mMemory(memory), mStage(stage) {
+  ConverterContext(RemoteMemory memory, Stage stage)
+      : mMemory(memory), mStage(stage) {
     mGlslStd450 = mBuilder.createExtInstImport("GLSL.std.450");
   }
 
-  const decltype(mInterfaces) &getInterfaces() const {
-    return mInterfaces;
-  }
+  const decltype(mInterfaces) &getInterfaces() const { return mInterfaces; }
 
   spirv::SpirvBuilder &getBuilder() { return mBuilder; }
   RemoteMemory getMemory() const { return mMemory; }
@@ -155,11 +154,13 @@ public:
   }
 
   spirv::ArrayOfType<spirv::UIntType> getArrayUint32x8Type() {
-    return spirv::cast<spirv::ArrayOfType<spirv::UIntType>>(getType(TypeId::ArrayUInt32x8));
+    return spirv::cast<spirv::ArrayOfType<spirv::UIntType>>(
+        getType(TypeId::ArrayUInt32x8));
   }
 
   spirv::ArrayOfType<spirv::UIntType> getArrayUint32x16Type() {
-    return spirv::cast<spirv::ArrayOfType<spirv::UIntType>>(getType(TypeId::ArrayUInt32x16));
+    return spirv::cast<spirv::ArrayOfType<spirv::UIntType>>(
+        getType(TypeId::ArrayUInt32x16));
   }
 
   spirv::SIntType getSint32Type() {
@@ -225,12 +226,14 @@ public:
     return spirv::cast<spirv::ImageType>(getType(TypeId::Image2D));
   }
   spirv::SampledImageType getSampledImage2DType() {
-    return spirv::cast<spirv::SampledImageType>(getType(TypeId::SampledImage2D));
+    return spirv::cast<spirv::SampledImageType>(
+        getType(TypeId::SampledImage2D));
   }
 
   UniformInfo *createStorageBuffer(TypeId type);
   UniformInfo *getOrCreateStorageBuffer(std::uint32_t *vbuffer, TypeId type);
-  UniformInfo *getOrCreateUniformConstant(std::uint32_t *buffer, std::size_t size, TypeId type);
+  UniformInfo *getOrCreateUniformConstant(std::uint32_t *buffer,
+                                          std::size_t size, TypeId type);
   spirv::VariableValue getThreadId();
   spirv::VariableValue getWorkgroupId();
   spirv::VariableValue getLocalInvocationId();
@@ -250,8 +253,6 @@ public:
   Function *createFunction(std::size_t expectedSize);
   Fragment *createFragment(std::size_t expectedSize);
 
-  std::vector<UniformInfo> &getUniforms() {
-    return mUniforms;
-  }
+  std::vector<UniformInfo> &getUniforms() { return mUniforms; }
 };
 } // namespace amdgpu::shader

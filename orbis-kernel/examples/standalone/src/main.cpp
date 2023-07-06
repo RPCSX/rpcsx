@@ -38,49 +38,100 @@ namespace orbis {
 uint64_t readRegister(void *context, RegisterId id) {
   auto c = reinterpret_cast<Registers *>(context);
   switch (id) {
-  case RegisterId::r15: return c->r15;
-  case RegisterId::r14: return c->r14;
-  case RegisterId::r13: return c->r13;
-  case RegisterId::r12: return c->r12;
-  case RegisterId::r11: return c->r11;
-  case RegisterId::r10: return c->r10;
-  case RegisterId::r9: return c->r9;
-  case RegisterId::r8: return c->r8;
-  case RegisterId::rdi: return c->rdi;
-  case RegisterId::rsi: return c->rsi;
-  case RegisterId::rbp: return c->rbp;
-  case RegisterId::rbx: return c->rbx;
-  case RegisterId::rdx: return c->rdx;
-  case RegisterId::rcx: return c->rcx;
-  case RegisterId::rax: return c->rax;
-  case RegisterId::rsp: return c->rsp;
-  case RegisterId::rflags: return c->rflags;
+  case RegisterId::r15:
+    return c->r15;
+  case RegisterId::r14:
+    return c->r14;
+  case RegisterId::r13:
+    return c->r13;
+  case RegisterId::r12:
+    return c->r12;
+  case RegisterId::r11:
+    return c->r11;
+  case RegisterId::r10:
+    return c->r10;
+  case RegisterId::r9:
+    return c->r9;
+  case RegisterId::r8:
+    return c->r8;
+  case RegisterId::rdi:
+    return c->rdi;
+  case RegisterId::rsi:
+    return c->rsi;
+  case RegisterId::rbp:
+    return c->rbp;
+  case RegisterId::rbx:
+    return c->rbx;
+  case RegisterId::rdx:
+    return c->rdx;
+  case RegisterId::rcx:
+    return c->rcx;
+  case RegisterId::rax:
+    return c->rax;
+  case RegisterId::rsp:
+    return c->rsp;
+  case RegisterId::rflags:
+    return c->rflags;
   }
 }
 
 void writeRegister(void *context, RegisterId id, uint64_t value) {
   auto c = reinterpret_cast<Registers *>(context);
   switch (id) {
-  case RegisterId::r15: c->r15 = value; return;
-  case RegisterId::r14: c->r14 = value; return;
-  case RegisterId::r13: c->r13 = value; return;
-  case RegisterId::r12: c->r12 = value; return;
-  case RegisterId::r11: c->r11 = value; return;
-  case RegisterId::r10: c->r10 = value; return;
-  case RegisterId::r9: c->r9 = value; return;
-  case RegisterId::r8: c->r8 = value; return;
-  case RegisterId::rdi: c->rdi = value; return;
-  case RegisterId::rsi: c->rsi = value; return;
-  case RegisterId::rbp: c->rbp = value; return;
-  case RegisterId::rbx: c->rbx = value; return;
-  case RegisterId::rdx: c->rdx = value; return;
-  case RegisterId::rcx: c->rcx = value; return;
-  case RegisterId::rax: c->rax = value; return;
-  case RegisterId::rsp: c->rsp = value; return;
-  case RegisterId::rflags: c->rflags = value; return;
+  case RegisterId::r15:
+    c->r15 = value;
+    return;
+  case RegisterId::r14:
+    c->r14 = value;
+    return;
+  case RegisterId::r13:
+    c->r13 = value;
+    return;
+  case RegisterId::r12:
+    c->r12 = value;
+    return;
+  case RegisterId::r11:
+    c->r11 = value;
+    return;
+  case RegisterId::r10:
+    c->r10 = value;
+    return;
+  case RegisterId::r9:
+    c->r9 = value;
+    return;
+  case RegisterId::r8:
+    c->r8 = value;
+    return;
+  case RegisterId::rdi:
+    c->rdi = value;
+    return;
+  case RegisterId::rsi:
+    c->rsi = value;
+    return;
+  case RegisterId::rbp:
+    c->rbp = value;
+    return;
+  case RegisterId::rbx:
+    c->rbx = value;
+    return;
+  case RegisterId::rdx:
+    c->rdx = value;
+    return;
+  case RegisterId::rcx:
+    c->rcx = value;
+    return;
+  case RegisterId::rax:
+    c->rax = value;
+    return;
+  case RegisterId::rsp:
+    c->rsp = value;
+    return;
+  case RegisterId::rflags:
+    c->rflags = value;
+    return;
   }
 }
-}
+} // namespace orbis
 
 static thread_local orbis::Thread *g_guestThread = nullptr;
 
@@ -100,9 +151,7 @@ class CPU {
 public:
   CPU(int index) : m_index(index) {}
 
-  int getIndex() const {
-    return m_index;
-  }
+  int getIndex() const { return m_index; }
 
   void addTask(orbis::Thread *thread, std::function<void()> task) {
     m_workQueue.push_back({thread, std::move(task)});
@@ -160,21 +209,19 @@ public:
 };
 
 struct orbis::ProcessOps procOps = {
-  .exit = [](orbis::Thread *, orbis::sint status) -> orbis::SysResult {
-    std::printf("sys_exit(%u)\n", status);
-    std::exit(status);
-  }
-};
+    .exit = [](orbis::Thread *, orbis::sint status) -> orbis::SysResult {
+      std::printf("sys_exit(%u)\n", status);
+      std::exit(status);
+    }};
 
 static orbis::Thread *allocateGuestThread(orbis::Process *process,
-                                   orbis::lwpid_t tid) {
+                                          orbis::lwpid_t tid) {
   auto guestThread = new orbis::Thread{};
   guestThread->state = orbis::ThreadState::RUNQ;
   guestThread->tid = tid;
   guestThread->tproc = process;
   return guestThread;
 }
-
 
 static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
                        int argsCount) {

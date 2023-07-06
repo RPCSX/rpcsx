@@ -1,8 +1,8 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "vm.hpp"
 #include <cinttypes>
 #include <cstdio>
-#include "vm.hpp"
 
 struct DmemDevice : public IoDevice {
   int index;
@@ -71,14 +71,15 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
     std::fprintf(
         stderr, "TODO: dmem%u releaseDirectMemory(address=0x%lx, size=0x%lx)\n",
         device->index, args->address, args->size);
-    //std::fflush(stdout);
+    // std::fflush(stdout);
     //__builtin_trap();
     return 0;
   }
 
   default:
     std::fprintf(stderr, "***ERROR*** Unhandled dmem%u ioctl %lx\n",
-                 static_cast<DmemDevice *>(instance->device.get())->index, request);
+                 static_cast<DmemDevice *>(instance->device.get())->index,
+                 request);
 
     return 0;
 
@@ -97,8 +98,8 @@ static void *dmem_instance_mmap(IoDeviceInstance *instance, void *address,
                offset, device->memBeginAddress + offset);
 
   auto addr =
-      rx::vm::map(reinterpret_cast<void *>(device->memBeginAddress + offset), size,
-               prot, flags);
+      rx::vm::map(reinterpret_cast<void *>(device->memBeginAddress + offset),
+                  size, prot, flags);
   return addr;
 }
 

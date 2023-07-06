@@ -127,7 +127,7 @@ orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
     return ErrorCode::SRCH;
   }
 
-   // TODO: do destroy and remove atomically
+  // TODO: do destroy and remove atomically
   evf->destroy();
   thread->tproc->evfMap.remove(id);
 
@@ -163,7 +163,7 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
                                      ptr<uint> pTimeout) {
   if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
       (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
-               kEvfWaitModeClearPat)) != 0 ||
+                kEvfWaitModeClearPat)) != 0 ||
       patternSet == 0) {
     return ErrorCode::INVAL;
   }
@@ -195,7 +195,7 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
                                         ptr<uint64_t> pPatternSet) {
   if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
       (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
-               kEvfWaitModeClearPat)) != 0 ||
+                kEvfWaitModeClearPat)) != 0 ||
       patternSet == 0) {
     return ErrorCode::INVAL;
   }
@@ -207,7 +207,8 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
   }
 
   std::uint64_t resultPattern{};
-  auto result = evf->tryWait(thread, mode, patternSet, pPatternSet != nullptr ? &resultPattern : nullptr);
+  auto result = evf->tryWait(thread, mode, patternSet,
+                             pPatternSet != nullptr ? &resultPattern : nullptr);
 
   if (pPatternSet != nullptr) {
     uwrite(pPatternSet, (uint64_t)resultPattern);
@@ -223,7 +224,7 @@ orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
   }
 
   evf->set(value);
-  return{};
+  return {};
 }
 orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
@@ -233,9 +234,10 @@ orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
   }
 
   evf->clear(value);
-  return{};
+  return {};
 }
-orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value, ptr<sint> pNumWaitThreads) {
+orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
+                                       ptr<sint> pNumWaitThreads) {
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
@@ -246,7 +248,7 @@ orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value, 
   if (pNumWaitThreads != nullptr) {
     *pNumWaitThreads = numWaitThreads;
   }
-  return{};
+  return {};
 }
 orbis::SysResult orbis::sys_query_memory_protection(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;

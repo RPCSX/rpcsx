@@ -39,20 +39,35 @@ amdgpu::shader::RegisterState::getRegister(RegisterId regId) {
   util::unreachable();
 }
 
-void amdgpu::shader::RegisterState::setRegister(RegisterId regId,
-                                                   Value value) {
+void amdgpu::shader::RegisterState::setRegister(RegisterId regId, Value value) {
   auto offset = regId.getOffset();
 
   if (regId.isScalar()) {
     switch (offset) {
-    case 0 ... 103: sgprs[offset] = value; return;
-    case 106: vccLo = value; return;
-    case 107: vccHi = value; return;
-    case 124: m0 = value; return;
-    case 126: execLo = value; return;
-    case 127: execHi = value; return;
-    case 253: scc = value; return;
-    case 254: ldsDirect = value; return;
+    case 0 ... 103:
+      sgprs[offset] = value;
+      return;
+    case 106:
+      vccLo = value;
+      return;
+    case 107:
+      vccHi = value;
+      return;
+    case 124:
+      m0 = value;
+      return;
+    case 126:
+      execLo = value;
+      return;
+    case 127:
+      execHi = value;
+      return;
+    case 253:
+      scc = value;
+      return;
+    case 254:
+      ldsDirect = value;
+      return;
     }
 
     util::unreachable();

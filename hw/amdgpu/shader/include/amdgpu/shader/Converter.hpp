@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Stage.hpp"
 #include "AccessOp.hpp"
+#include "Stage.hpp"
 
 #include <amdgpu/RemoteMemory.hpp>
 
@@ -11,11 +11,7 @@
 
 namespace amdgpu::shader {
 struct Shader {
-  enum class UniformKind {
-    Buffer,
-    Sampler,
-    Image
-  };
+  enum class UniformKind { Buffer, Sampler, Image };
 
   struct UniformInfo {
     std::uint32_t binding;

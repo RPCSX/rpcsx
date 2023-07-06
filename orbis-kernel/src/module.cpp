@@ -131,8 +131,10 @@ static orbis::SysResult doRelocation(orbis::Process *process,
       }
     }
 
-    std::printf("'%s' ('%s') uses undefined symbol '%llx' in '%s' ('%s') module\n",
-                module->moduleName, module->soName, (unsigned long long)symbol.id, defModule->moduleName, defModule->soName);
+    std::printf(
+        "'%s' ('%s') uses undefined symbol '%llx' in '%s' ('%s') module\n",
+        module->moduleName, module->soName, (unsigned long long)symbol.id,
+        defModule->moduleName, defModule->soName);
     if (foundInLibs.size() > 0) {
       std::printf("Requested library is '%s', exists in libraries: [",
                   library.name.c_str());

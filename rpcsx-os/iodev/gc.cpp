@@ -113,7 +113,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
       rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
 
-    //orbis::bridge.sendDoFlip();
+    // orbis::bridge.sendDoFlip();
     break;
   }
 
@@ -209,11 +209,11 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    std::fprintf(stderr,
-                 "gc ioctl ding dong for workload(pipeHi=%x, pipeLo=%x, queueId=%x, "
-                 "nextStartOffsetInDw=%x)\n",
-                 args->pipeHi, args->pipeLo, args->queueId, args->nextStartOffsetInDw);
-
+    std::fprintf(
+        stderr,
+        "gc ioctl ding dong for workload(pipeHi=%x, pipeLo=%x, queueId=%x, "
+        "nextStartOffsetInDw=%x)\n",
+        args->pipeHi, args->pipeLo, args->queueId, args->nextStartOffsetInDw);
 
     // TODO: implement
 
@@ -222,12 +222,14 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
   case 0xc0048114: {
     // SetWaveLimitMultipliers
-    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request, (unsigned long)*(std::uint32_t *)argp);
+    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request,
+                 (unsigned long)*(std::uint32_t *)argp);
     break;
   }
 
   case 0xc004811f: {
-    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request, (unsigned long)*(std::uint32_t *)argp);
+    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request,
+                 (unsigned long)*(std::uint32_t *)argp);
     break;
   }
 

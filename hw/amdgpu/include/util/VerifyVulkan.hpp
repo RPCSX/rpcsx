@@ -12,4 +12,3 @@ inline Verify operator<<(Verify lhs, VkResult result) {
 
   return lhs;
 }
-

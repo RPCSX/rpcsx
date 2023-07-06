@@ -1,6 +1,6 @@
 #pragma once
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
 namespace rx::vm {
@@ -68,11 +68,12 @@ std::string mapProtToString(std::int32_t prot);
 void printHostStats();
 void initialize();
 void deinitialize();
-void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags, std::int32_t internalFlags = 0);
+void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags,
+          std::int32_t internalFlags = 0);
 bool unmap(void *addr, std::uint64_t size);
 bool protect(void *addr, std::uint64_t size, std::int32_t prot);
 
 bool virtualQuery(const void *addr, std::int32_t flags, VirtualQueryInfo *info);
 bool queryProtection(const void *addr, std::uint64_t *startAddress,
                      std::uint64_t *endAddress, std::int64_t *prot);
-}
+} // namespace rx::vm

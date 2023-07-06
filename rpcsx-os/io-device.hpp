@@ -49,7 +49,6 @@ struct IoDevice : orbis::RcBase {
                        std::uint32_t mode) = nullptr;
 };
 
-
 std::int64_t io_device_instance_close(IoDeviceInstance *instance);
 void io_device_instance_init(IoDevice *device, IoDeviceInstance *instance);
 

@@ -5,9 +5,9 @@
 #include "io-devices.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
+#include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
-#include "thread.hpp"
 
 #include <filesystem>
 #include <linux/limits.h>
@@ -164,21 +164,22 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (sig != SIGINT) {
     char buf[128] = "";
     int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
-                      rx::thread::g_current ? "guest" : "host",
-                      rx::thread::g_current ? rx::thread::g_current->tid : ::gettid(),
-                      info->si_addr);
+                       rx::thread::g_current ? "guest" : "host",
+                       rx::thread::g_current ? rx::thread::g_current->tid
+                                             : ::gettid(),
+                       info->si_addr);
     write(2, buf, len);
 
-    if (std::size_t printed = printAddressLocation(
-            buf, sizeof(buf), rx::thread::g_current, (std::uint64_t)info->si_addr)) {
+    if (std::size_t printed =
+            printAddressLocation(buf, sizeof(buf), rx::thread::g_current,
+                                 (std::uint64_t)info->si_addr)) {
       printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
       write(2, buf, printed);
     }
 
-
     if (rx::thread::g_current) {
-      printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), rx::thread::g_current,
-                      2);
+      printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
+                      rx::thread::g_current, 2);
     } else {
       printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
     }
@@ -219,7 +220,7 @@ static void setupSigHandlers() {
     exit(EXIT_FAILURE);
   }
 
-  struct sigaction act{};
+  struct sigaction act {};
   act.sa_sigaction = handle_signal;
   act.sa_flags = SA_SIGINFO | SA_ONSTACK;
 
@@ -253,7 +254,6 @@ static void setupSigHandlers() {
     exit(-1);
   }
 }
-
 
 struct StackWriter {
   std::uint64_t address;
@@ -357,9 +357,9 @@ static int ps4Exec(orbis::Process *mainProcess,
   auto stackStartAddress = stackEndAddress - stackSize;
   mainThread->stackStart =
       rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
-               rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
-               rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
-                   rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
+                  rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
+                  rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
+                      rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
 
   mainThread->stackEnd =
       reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
@@ -444,9 +444,9 @@ static int ps4Exec(orbis::Process *mainProcess,
   context->uc_mcontext.gregs[REG_RSP] = sp;
 
   // FIXME: should be at guest user space
-  context->uc_mcontext.gregs[REG_RDX] = reinterpret_cast<std::uint64_t>(+[] {
-    std::printf("At exit\n");
-  });;
+  context->uc_mcontext.gregs[REG_RDX] =
+      reinterpret_cast<std::uint64_t>(+[] { std::printf("At exit\n"); });
+  ;
   context->uc_mcontext.gregs[REG_RIP] = libkernel->entryPoint;
 
   mainThread->context = context;
@@ -458,7 +458,8 @@ static void usage(const char *argv0) {
   std::printf("%s [<options>...] <virtual path to elf> [args...]\n", argv0);
   std::printf("  options:\n");
   std::printf("    -m, --mount <host path> <virtual path>\n");
-  std::printf("    -o, --override <original module name> <virtual path to overriden module>\n");
+  std::printf("    -o, --override <original module name> <virtual path to "
+              "overriden module>\n");
   std::printf("    --trace\n");
 }
 
@@ -488,15 +489,18 @@ static bool isRpsxGpuPid(int pid) {
 
   path[len] = 0;
 
-  std::printf("filename is '%s'\n", std::filesystem::path(path).filename().c_str());
+  std::printf("filename is '%s'\n",
+              std::filesystem::path(path).filename().c_str());
 
   return std::filesystem::path(path).filename() == "rpcsx-gpu";
 }
 static void runRpsxGpu() {
   const char *cmdBufferName = "/rpcsx-gpu-cmds";
-  amdgpu::bridge::BridgeHeader *bridgeHeader = amdgpu::bridge::openShmCommandBuffer(cmdBufferName);
+  amdgpu::bridge::BridgeHeader *bridgeHeader =
+      amdgpu::bridge::openShmCommandBuffer(cmdBufferName);
 
-  if (bridgeHeader != nullptr && bridgeHeader->pullerPid > 0 && isRpsxGpuPid(bridgeHeader->pullerPid)) {
+  if (bridgeHeader != nullptr && bridgeHeader->pullerPid > 0 &&
+      isRpsxGpuPid(bridgeHeader->pullerPid)) {
     bridgeHeader->pusherPid = ::getpid();
     g_gpuPid = bridgeHeader->pullerPid;
     rx::bridge = bridgeHeader;
@@ -561,7 +565,8 @@ int main(int argc, const char *argv[]) {
         return 1;
       }
 
-      rx::vfs::mount(argv[argIndex + 2], createHostIoDevice(argv[argIndex + 1]));
+      rx::vfs::mount(argv[argIndex + 2],
+                     createHostIoDevice(argv[argIndex + 1]));
       argIndex += 3;
       continue;
     }
@@ -584,7 +589,6 @@ int main(int argc, const char *argv[]) {
       argIndex += 3;
       continue;
     }
-
 
     break;
   }

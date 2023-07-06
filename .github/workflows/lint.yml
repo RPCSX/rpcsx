@@ -1,0 +1,25 @@
+name: Linting
+on:
+  pull_request:
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v1
+    - name: Run clang-tidy
+      uses: ZedThree/clang-tidy-review@v0.13.1
+      id: review
+      with:
+        apt_packages: libunwind-dev, libglfw3-dev, libvulkan-dev, vulkan-validationlayers-dev, spirv-tools
+        cmake_command: cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=on
+
+    # Uploads an artefact containing clang_fixes.json
+    - name: Upload review
+      uses: ZedThree/clang-tidy-review/upload@v0.13.1
+      id: upload-review
+
+    # If there are any comments, fail the check
+    - if: steps.review.outputs.total_comments > 0
+      run: exit 1

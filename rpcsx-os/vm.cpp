@@ -591,8 +591,8 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   assert(blockIndex == (endAddress >> kBlockShift));
 
   auto firstPage = (startAddress & kBlockMask) >> rx::vm::kPageShift;
-  auto pagesCount =
-      (endAddress - startAddress + (rx::vm::kPageSize - 1)) >> rx::vm::kPageShift;
+  auto pagesCount = (endAddress - startAddress + (rx::vm::kPageSize - 1)) >>
+                    rx::vm::kPageShift;
 
   gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated);
 }
@@ -600,7 +600,8 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
 void rx::vm::initialize() {
   std::printf("Memory: initialization\n");
 
-  gMemoryShm = ::shm_open("/rpcsx-os-memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+  gMemoryShm =
+      ::shm_open("/rpcsx-os-memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
   if (gMemoryShm == -1) {
     std::printf("Memory: failed to open /rpcsx-os-memory\n");
@@ -614,7 +615,8 @@ void rx::vm::initialize() {
 
   reserve(0, kMinAddress); // unmapped area
 
-  utils::reserve(reinterpret_cast<void *>(kMinAddress), kMaxAddress - kMinAddress);
+  utils::reserve(reinterpret_cast<void *>(kMinAddress),
+                 kMaxAddress - kMinAddress);
 
   // orbis::bridge.setUpSharedMemory(kMinAddress, kMemorySize, "/orbis-memory");
 }
@@ -853,8 +855,8 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
 }
 
 bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
-  std::printf("rx::vm::protect(addr = %p, len = %" PRIu64 ", prot = %s)\n", addr,
-              size, mapProtToString(prot).c_str());
+  std::printf("rx::vm::protect(addr = %p, len = %" PRIu64 ", prot = %s)\n",
+              addr, size, mapProtToString(prot).c_str());
 
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
@@ -880,7 +882,8 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
       (address & kBlockMask) >> kPageShift, pages,
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
 
-  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, prot);
+  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size,
+                               prot);
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
 }
 

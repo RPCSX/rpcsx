@@ -1419,7 +1419,8 @@ struct Mtbuf {
   bool idxen = fetchMaskedValue(inst[0], idxenMask);
   bool glc = fetchMaskedValue(inst[0], glcMask);
   SurfaceFormat dfmt = (SurfaceFormat)fetchMaskedValue(inst[0], dfmtMask);
-  TextureChannelType nfmt = (TextureChannelType)fetchMaskedValue(inst[0], nfmtMask);
+  TextureChannelType nfmt =
+      (TextureChannelType)fetchMaskedValue(inst[0], nfmtMask);
 
   std::uint8_t vaddr = fetchMaskedValue(inst[1], vaddrMask);
   std::uint8_t vdata = fetchMaskedValue(inst[1], vdataMask);
