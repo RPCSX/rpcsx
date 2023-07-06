@@ -149,4 +149,20 @@ void shared_mutex::impl_lock_upgrade() {
 
   impl_wait();
 }
+unsigned shared_mutex::lock_forced() {
+  return atomic_op(m_value, [](unsigned &v) {
+    if (v & c_sig) {
+      v -= c_sig;
+      v += c_one;
+      return 0u;
+    }
+
+    if (v == 0) {
+      v += c_one;
+      return 0u;
+    }
+
+    return v;
+  });
+}
 } // namespace orbis::utils

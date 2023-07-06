@@ -62,6 +62,7 @@ add_library(obj.orbis-kernel OBJECT
 
   src/utils/Logs.cpp
   src/utils/SharedMutex.cpp
+  src/utils/SharedCV.cpp
 )
 
 target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config)

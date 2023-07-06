@@ -101,6 +101,9 @@ public:
 
   // Check whether can immediately obtain a shared (reader) lock
   bool is_lockable() const { return m_value.load() < c_one - 1; }
+
+  // For CV
+  unsigned lock_forced();
 };
 
 // Simplified shared (reader) lock implementation.
