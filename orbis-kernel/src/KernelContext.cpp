@@ -74,6 +74,11 @@ Process *KernelContext::findProcessById(pid_t pid) const {
 }
 
 void *KernelContext::kalloc(std::size_t size, std::size_t align) {
+  size = (size + (__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1)) &
+         ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
+  if (!size)
+    std::abort();
+
   pthread_mutex_lock(&m_heap_mtx);
   if (!m_heap_is_freeing) {
     // Try to reuse previously freed block
@@ -97,9 +102,12 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
 }
 
 void KernelContext::kfree(void *ptr, std::size_t size) {
-  pthread_mutex_lock(&m_heap_mtx);
+  size = (size + (__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1)) &
+         ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
   if (!size)
     std::abort();
+
+  pthread_mutex_lock(&m_heap_mtx);
   if (m_heap_is_freeing)
     std::abort();
   m_heap_is_freeing = true;
@@ -116,9 +124,7 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
 }
 
 inline namespace utils {
-void kfree(void *ptr, std::size_t size) {
-  return g_context.kfree(ptr, size);
-}
+void kfree(void *ptr, std::size_t size) { return g_context.kfree(ptr, size); }
 void *kalloc(std::size_t size, std::size_t align) {
   return g_context.kalloc(size, align);
 }
