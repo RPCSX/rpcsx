@@ -15,13 +15,7 @@ jobs:
         clang_tidy_version: 15
         apt_packages: libunwind-dev, libglfw3-dev, libvulkan-dev, vulkan-validationlayers-dev, spirv-tools
         cmake_command: cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=on
-        lgtm_comment_body: "No linting issues found!"
-
-    # Uploads an artefact containing clang_fixes.json
+        split_workflow: true
     - name: Upload review
       uses: ZedThree/clang-tidy-review/upload@v0.13.1
       id: upload-review
-
-    # If there are any comments, fail the check
-    - if: steps.review.outputs.total_comments > 0
-      run: exit 1
