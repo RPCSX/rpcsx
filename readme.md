@@ -1,11 +1,20 @@
-RPCSX
-=====
-This is an experimental emulator for PS4 (Play Station 4) written in C++ for Linux.
-It's NOT possible to run any games yet. It's also unknown when it will become possible.
+<div align="center">
+   
+# RPCSX
+*An experimental emulator for PS4 (PlayStation 4) written in C++ for Linux*
+
+![](https://img.shields.io/github/actions/workflow/status/RPCSX/rpcsx/format.yml?style=for-the-badge)
+[![](https://img.shields.io/discord/252023769500090368?style=for-the-badge)](https://discord.gg/PYUcckGr)
+
+</div>
+
+> **Warning** <br/>
+> It's NOT possible to run any games yet, and there is no ETA for when this will change
+
 
 ## Contributing
 
-If you want to contribute as a developer, please contact us in the Discord. https://discord.gg/PYUcckGr
+If you want to contribute as a developer, please contact us in the [Discord](https://discord.gg/PYUcckGr).
 
 ## Building
 
@@ -18,7 +27,7 @@ If you want to contribute as a developer, please contact us in the Discord. http
 
 4. Run
    
-   See usage message of rpcsx-os (-h argument), or join the Discord for help.
+   See usage message of rpcsx-os (-h argument), or join the [Discord](https://discord.gg/PYUcckGr) for help.
 
 ## License
 
