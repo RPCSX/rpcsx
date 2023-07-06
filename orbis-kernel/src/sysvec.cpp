@@ -82,7 +82,8 @@ namespace detail {
 template <auto Fn> struct WrapImpl;
 
 template <typename... Args, SysResult (*Fn)(Thread *, Args...)>
-requires(sizeof...(Args) < 8) struct WrapImpl<Fn> {
+  requires(sizeof...(Args) < 8)
+struct WrapImpl<Fn> {
   constexpr sysent operator()() {
     sysent result;
     result.narg = sizeof...(Args);

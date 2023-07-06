@@ -1,0 +1,13 @@
+name: Post clang-tidy review comments
+on:
+  workflow_run:
+    workflows: ["Linting"]
+    types:
+      - completed
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ZedThree/clang-tidy-review/post@v0.12.0
+        with:
+          lgtm_comment_body: "No linting issues found!"
