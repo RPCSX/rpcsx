@@ -1,7 +1,7 @@
 <div align="center">
    
 # RPCSX
-*An experimental emulator for PS4 (PlayStation 4) written in C++ for Linux*
+*An experimental emulator for PS4 (PlayStation 4) for Linux written in C++*
 
 ![](https://img.shields.io/github/actions/workflow/status/RPCSX/rpcsx/format.yml?style=for-the-badge)
 [![](https://img.shields.io/discord/252023769500090368?style=for-the-badge)](https://discord.gg/PYUcckGr)
