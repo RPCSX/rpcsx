@@ -9,16 +9,16 @@ If you want to contribute as a developer, please contact us in the Discord. http
 
 ## Building
 
-1. Install dependencies
+1. Install dependencies for Debian-like distributive
    
-   `sudo apt install build-essential cmake clang libunwind-dev libglfw3-dev`
-3. Install [Vulkan SDK](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)
-4. Build Makefiles
+   `sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev`
+2. Building
    
-   `cmake .`
-5. Build RPCSX
+   `mkdir -p build && cd build && cmake .. && cmake --build .`
+
+4. Run
    
-   `make`
+   See usage message of rpcsx-os (-h argument), or follow to our discord for help.
 
 ## License
 
