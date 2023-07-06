@@ -100,13 +100,7 @@ void rx::thread::invoke(orbis::Thread *thread) {
   _writefsbase_u64(thread->fsBase);
   auto context = reinterpret_cast<ucontext_t *>(thread->context);
 
-  asm volatile("movq $0, %%r8\n"
-               "movq $0, %%r9\n"
-               "movq $0, %%r11\n"
-               "movq $0, %%r12\n"
-               "movq $0, %%r13\n"
-               "movq $0, %%r14\n"
-               "movq %1, %%rsp\n"
+  asm volatile("movq %1, %%rsp\n"
                "callq *%0\n"
                :
                : "rm"(context->uc_mcontext.gregs[REG_RIP]),
