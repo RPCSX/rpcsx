@@ -7,6 +7,7 @@
 #include "ops.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include "thread.hpp"
 
 #include <filesystem>
 #include <linux/limits.h>
@@ -25,6 +26,8 @@
 #include <link.h>
 #include <pthread.h>
 #include <sys/prctl.h>
+#include <sys/ucontext.h>
+#include <ucontext.h>
 #include <unistd.h>
 
 #include <csignal>
@@ -33,20 +36,11 @@
 
 static int g_gpuPid;
 
-struct LibcInfo {
-  std::uint64_t textBegin = ~static_cast<std::uint64_t>(0);
-  std::uint64_t textSize = 0;
-};
-
-static LibcInfo libcInfo;
-
 struct ThreadParam {
   void (*startFunc)(void *);
   void *arg;
   orbis::Thread *thread;
 };
-
-static thread_local orbis::Thread *g_currentThread = nullptr;
 
 static void printStackTrace(ucontext_t *context, int fileno) {
   unw_cursor_t cursor;
@@ -169,15 +163,11 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
     _writefsbase_u64(hostFs);
   }
 
-  // syscall(SYS_arch_prctl, ARCH_GET_GS, &hostFs);
-  // syscall(SYS_arch_prctl, ARCH_SET_FS, hostFs);
-
   if (sig == SIGSYS) {
-    // printf("%x: %x\n", tid, thread->tid);
-    g_currentThread->context = reinterpret_cast<ucontext_t *>(ucontext);
-    orbis::syscall_entry(g_currentThread);
-    _writefsbase_u64(g_currentThread->fsBase);
-    // syscall(SYS_arch_prctl, ARCH_SET_FS, g_currentThread->regs.fs);
+    auto prevContext = std::exchange(rx::thread::g_current->context, ucontext);
+    orbis::syscall_entry(rx::thread::g_current);
+    rx::thread::g_current->context = prevContext;
+    _writefsbase_u64(rx::thread::g_current->fsBase);
     return;
   }
 
@@ -189,20 +179,20 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (sig != SIGINT) {
     char buf[128] = "";
     int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
-                      g_currentThread ? "guest" : "host",
-                      g_currentThread ? g_currentThread->tid : ::gettid(),
+                      rx::thread::g_current ? "guest" : "host",
+                      rx::thread::g_current ? rx::thread::g_current->tid : ::gettid(),
                       info->si_addr);
     write(2, buf, len);
 
     if (std::size_t printed = printAddressLocation(
-            buf, sizeof(buf), g_currentThread, (std::uint64_t)info->si_addr)) {
+            buf, sizeof(buf), rx::thread::g_current, (std::uint64_t)info->si_addr)) {
       printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
       write(2, buf, printed);
     }
 
 
-    if (g_currentThread) {
-      printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), g_currentThread,
+    if (rx::thread::g_current) {
+      printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), rx::thread::g_current,
                       2);
     } else {
       printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
@@ -284,29 +274,6 @@ static void setupSigHandlers() {
   }
 }
 
-__attribute__((no_stack_protector)) static void *
-emuThreadEntryPoint(void *paramsVoid) {
-  auto params = *reinterpret_cast<ThreadParam *>(paramsVoid);
-  delete reinterpret_cast<ThreadParam *>(paramsVoid);
-
-  g_currentThread = params.thread;
-
-  std::uint64_t hostFs;
-  syscall(SYS_arch_prctl, ARCH_GET_FS, &hostFs);
-  syscall(SYS_arch_prctl, ARCH_SET_GS, hostFs);
-
-  if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
-            libcInfo.textBegin, libcInfo.textSize, nullptr)) {
-    perror("prctl failed\n");
-    exit(-1);
-  }
-
-  syscall(SYS_arch_prctl, ARCH_SET_FS, params.thread->fsBase);
-  params.startFunc(params.arg);
-  syscall(SYS_arch_prctl, ARCH_SET_FS, hostFs);
-
-  return nullptr;
-}
 
 struct StackWriter {
   std::uint64_t address;
@@ -333,23 +300,6 @@ struct StackWriter {
     return address;
   }
 };
-
-static void createEmuThread(orbis::Thread &thread, uint64_t entryPoint,
-                            uint64_t hostStackSize, uint64_t arg) {
-  pthread_attr_t attr;
-  pthread_attr_init(&attr);
-  pthread_attr_setstack(&attr, thread.stackStart, hostStackSize);
-
-  pthread_t pthread;
-  auto params = new ThreadParam;
-
-  params->startFunc = (void (*)(void *))entryPoint;
-  params->arg = (void *)arg;
-  params->thread = &thread;
-
-  pthread_create(&pthread, &attr, emuThreadEntryPoint, params);
-  pthread_join(pthread, nullptr);
-}
 
 static bool g_traceSyscalls = false;
 static const char *getSyscallName(orbis::Thread *thread, int sysno) {
@@ -508,17 +458,20 @@ static int ps4Exec(orbis::Process *mainProcess,
 
   memcpy(arg, auxv, sizeof(auxv));
 
-  ucontext_t currentContext;
-  getcontext(&currentContext);
+  auto context = new ucontext_t{};
 
-  createEmuThread(
-      mainThread, libkernel->entryPoint,
-      utils::alignDown(
-          stack.address -
-              reinterpret_cast<std::uint64_t>(mainThread.stackStart) - 0x1000,
-          rx::vm::kPageSize),
-      sp);
-  return 0;
+  context->uc_mcontext.gregs[REG_RDI] = sp;
+  context->uc_mcontext.gregs[REG_RSP] = sp;
+
+  // FIXME: should be at guest user space
+  context->uc_mcontext.gregs[REG_RDX] = reinterpret_cast<std::uint64_t>(+[] {
+    std::printf("At exit\n");
+  });;
+  context->uc_mcontext.gregs[REG_RIP] = libkernel->entryPoint;
+
+  mainThread.context = context;
+  rx::thread::invoke(&mainThread);
+  std::abort();
 }
 
 static void usage(const char *argv0) {
@@ -609,42 +562,7 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  auto processPhdr = [](struct dl_phdr_info *info, size_t, void *data) {
-    auto path = std::string_view(info->dlpi_name);
-    auto slashPos = path.rfind('/');
-    if (slashPos == std::string_view::npos) {
-      return 0;
-    }
-
-    auto name = path.substr(slashPos + 1);
-    if (name.starts_with("libc.so")) {
-      std::printf("%s\n", std::string(name).c_str());
-      auto libcInfo = reinterpret_cast<LibcInfo *>(data);
-
-      for (std::size_t i = 0; i < info->dlpi_phnum; ++i) {
-        auto &phdr = info->dlpi_phdr[i];
-
-        if (phdr.p_type == PT_LOAD && (phdr.p_flags & PF_X) == PF_X) {
-          libcInfo->textBegin =
-              std::min(libcInfo->textBegin, phdr.p_vaddr + info->dlpi_addr);
-          libcInfo->textSize = std::max(libcInfo->textSize, phdr.p_memsz);
-        }
-      }
-
-      return 1;
-    }
-
-    return 0;
-  };
-
-  dl_iterate_phdr(processPhdr, &libcInfo);
-
-  std::printf("libc text %zx-%zx\n", libcInfo.textBegin,
-              libcInfo.textBegin + libcInfo.textSize);
-
   setupSigHandlers();
-  // rx::vm::printHostStats();
-
   rx::vfs::initialize();
 
   int argIndex = 1;
@@ -696,6 +614,7 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
+  rx::thread::initialize();
   rx::vm::initialize();
   runRpsxGpu();
 
@@ -731,6 +650,7 @@ int main(int argc, const char *argv[]) {
 
   // rx::vm::printHostStats();
   rx::vm::deinitialize();
+  rx::thread::deinitialize();
 
   return status;
 }

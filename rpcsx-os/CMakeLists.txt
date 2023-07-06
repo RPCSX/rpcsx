@@ -25,6 +25,7 @@ add_executable(rpcsx-os
   ops.cpp
   linker.cpp
   io-device.cpp
+  thread.cpp
   vfs.cpp
 )
 target_include_directories(rpcsx-os PUBLIC .)
