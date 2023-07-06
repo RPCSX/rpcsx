@@ -1,5 +1,7 @@
 #include "thread.hpp"
+#include "orbis/sys/sysentry.hpp"
 #include <asm/prctl.h>
+#include <csignal>
 #include <immintrin.h>
 #include <link.h>
 #include <linux/prctl.h>
@@ -15,7 +17,19 @@ struct LibcInfo {
   std::uint64_t textSize = 0;
 };
 
-static LibcInfo libcInfo;
+LibcInfo libcInfo;
+
+static __attribute__((no_stack_protector)) void
+handleSigSys(int sig, siginfo_t *info, void *ucontext) {
+  if (auto hostFs = _readgsbase_u64()) {
+    _writefsbase_u64(hostFs);
+  }
+
+  auto prevContext = std::exchange(rx::thread::g_current->context, ucontext);
+  orbis::syscall_entry(rx::thread::g_current);
+  rx::thread::g_current->context = prevContext;
+  _writefsbase_u64(rx::thread::g_current->fsBase);
+}
 
 void rx::thread::initialize() {
   auto processPhdr = [](struct dl_phdr_info *info, size_t, void *data) {
@@ -50,12 +64,29 @@ void rx::thread::initialize() {
 
   std::printf("libc text %zx-%zx\n", libcInfo.textBegin,
               libcInfo.textBegin + libcInfo.textSize);
+
+  struct sigaction act {};
+  act.sa_sigaction = handleSigSys;
+  act.sa_flags = SA_SIGINFO | SA_ONSTACK;
+
+  if (sigaction(SIGSYS, &act, NULL)) {
+    perror("Error sigaction:");
+    exit(-1);
+  }
 }
 
 void rx::thread::deinitialize() {}
 
 void rx::thread::invoke(orbis::Thread *thread) {
   g_current = thread;
+
+  sigset_t unblockSigs{};
+  sigset_t oldSigmask{};
+  sigaddset(&unblockSigs, SIGSYS);
+  if (pthread_sigmask(SIG_UNBLOCK, &unblockSigs, &oldSigmask)) {
+    perror("pthread_sigmask failed\n");
+    exit(-1);
+  }
 
   std::uint64_t hostFs = _readfsbase_u64();
   _writegsbase_u64(hostFs);

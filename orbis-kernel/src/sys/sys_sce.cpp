@@ -94,7 +94,8 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
   switch (attrs & (kEvfAttrSingle | kEvfAttrMulti)) {
   case 0:
   case kEvfAttrSingle | kEvfAttrMulti:
-    return ErrorCode::INVAL;
+    attrs = (attrs & ~(kEvfAttrSingle | kEvfAttrMulti)) | kEvfAttrSingle;
+    break;
 
   default:
     break;
@@ -103,7 +104,11 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
   switch (attrs & (kEvfAttrThPrio | kEvfAttrThFifo)) {
   case 0:
   case kEvfAttrThPrio | kEvfAttrThFifo:
-    return ErrorCode::INVAL;
+    attrs = (attrs & ~(kEvfAttrThPrio | kEvfAttrThFifo)) | kEvfAttrThFifo;
+    break;
+
+  default:
+    break;
   }
 
   char _name[32];

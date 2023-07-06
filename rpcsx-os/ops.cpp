@@ -5,13 +5,16 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Rc.hpp"
+#include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <map>
 #include <optional>
 #include <set>
+#include <thread>
 #include <unistd.h>
 
 using namespace orbis;
@@ -421,11 +424,52 @@ SysResult thr_create(orbis::Thread *thread, orbis::ptr<struct ucontext> ctxt,
                      ptr<orbis::slong> arg, orbis::sint flags) {
   return ErrorCode::NOTSUP;
 }
-SysResult thr_new(orbis::Thread *thread, orbis::ptr<struct thr_param> param,
+SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
                   orbis::sint param_size) {
+  return {}; // FIXME: remove when we ready for MT
+  auto _param = uread(param);
+
+  auto proc = thread->tproc;
+  auto [baseId, childThread] = proc->threadsMap.emplace();
+  childThread->tproc = proc;
+  childThread->tid = proc->pid + baseId;
+  childThread->state = orbis::ThreadState::RUNQ;
+  childThread->stackStart = _param.stack_base;
+  childThread->stackEnd = _param.stack_base + _param.stack_size;
+  childThread->fsBase = reinterpret_cast<std::uintptr_t>(_param.tls_base);
+
+  uwrite(_param.parent_tid, slong(childThread->tid));
+
+  // FIXME: implement scheduler
+
+  std::printf("Starting child thread %lu\n", (long)(proc->pid + baseId));
+
+  std::thread {
+    [=, childThread = Ref<Thread>(childThread)] {
+      uwrite(_param.child_tid, slong(childThread->tid));
+      auto context = new ucontext_t{};
+
+      context->uc_mcontext.gregs[REG_RDI] = reinterpret_cast<std::uintptr_t>(_param.arg);
+      context->uc_mcontext.gregs[REG_RSI] = reinterpret_cast<std::uintptr_t>(_param.arg);
+      context->uc_mcontext.gregs[REG_RSP] = reinterpret_cast<std::uintptr_t>(childThread->stackEnd);
+      context->uc_mcontext.gregs[REG_RIP] = reinterpret_cast<std::uintptr_t>(_param.start_func);
+
+      childThread->context = context;
+      childThread->state = orbis::ThreadState::RUNNING;
+      rx::thread::invoke(childThread.get());
+    }
+  }.detach();
+
   return {};
 }
 SysResult thr_exit(orbis::Thread *thread, orbis::ptr<orbis::slong> state) {
+  std::printf("Requested exit of thread %u, state %p\n", (unsigned)thread->tid, state);
+  // FIXME: do sys_mtx(WAKE) if state is not null 
+
+  // FIXME: implement exit
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::seconds(60));
+  }
   return ErrorCode::NOTSUP;
 }
 SysResult thr_kill(orbis::Thread *thread, orbis::slong id, orbis::sint sig) {

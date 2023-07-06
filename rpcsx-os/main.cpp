@@ -36,12 +36,6 @@
 
 static int g_gpuPid;
 
-struct ThreadParam {
-  void (*startFunc)(void *);
-  void *arg;
-  orbis::Thread *thread;
-};
-
 static void printStackTrace(ucontext_t *context, int fileno) {
   unw_cursor_t cursor;
 
@@ -158,17 +152,8 @@ static void printStackTrace(ucontext_t *context, orbis::Thread *thread,
 
 __attribute__((no_stack_protector)) static void
 handle_signal(int sig, siginfo_t *info, void *ucontext) {
-  std::uint64_t hostFs = _readgsbase_u64();
-  if (hostFs != 0) {
+  if (auto hostFs = _readgsbase_u64()) {
     _writefsbase_u64(hostFs);
-  }
-
-  if (sig == SIGSYS) {
-    auto prevContext = std::exchange(rx::thread::g_current->context, ucontext);
-    orbis::syscall_entry(rx::thread::g_current);
-    rx::thread::g_current->context = prevContext;
-    _writefsbase_u64(rx::thread::g_current->fsBase);
-    return;
   }
 
   if (g_gpuPid > 0) {
@@ -234,14 +219,9 @@ static void setupSigHandlers() {
     exit(EXIT_FAILURE);
   }
 
-  struct sigaction act;
-  sigset_t mask;
-  memset(&act, 0, sizeof(act));
-  sigemptyset(&mask);
-
+  struct sigaction act{};
   act.sa_sigaction = handle_signal;
   act.sa_flags = SA_SIGINFO | SA_ONSTACK;
-  act.sa_mask = mask;
 
   if (sigaction(SIGSYS, &act, NULL)) {
     perror("Error sigaction:");
@@ -367,22 +347,22 @@ static int ps4Exec(orbis::Process *mainProcess,
   mainProcess->sysent = &orbis::ps4_sysvec;
   mainProcess->ops = &rx::procOpsTable;
 
-  orbis::Thread mainThread;
-  mainThread.tproc = mainProcess;
-  mainThread.tid = mainProcess->pid;
-  mainThread.state = orbis::ThreadState::RUNNING;
+  auto [baseId, mainThread] = mainProcess->threadsMap.emplace();
+  mainThread->tproc = mainProcess;
+  mainThread->tid = mainProcess->pid + baseId;
+  mainThread->state = orbis::ThreadState::RUNNING;
 
   const auto stackEndAddress = 0x7'ffff'c000ull;
   const auto stackSize = 0x40000 * 16;
   auto stackStartAddress = stackEndAddress - stackSize;
-  mainThread.stackStart =
+  mainThread->stackStart =
       rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
                rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
                rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
                    rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
 
-  mainThread.stackEnd =
-      reinterpret_cast<std::byte *>(mainThread.stackStart) + stackSize;
+  mainThread->stackEnd =
+      reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
 
   rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
   rx::vfs::mount("/dev/dmem1", createDmemCharacterDevice(1));
@@ -402,9 +382,9 @@ static int ps4Exec(orbis::Process *mainProcess,
   rx::vfs::mount("/dev/gc", createGcCharacterDevice());
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
 
-  rx::procOpsTable.open(&mainThread, "/dev/stdin", 0, 0);
-  rx::procOpsTable.open(&mainThread, "/dev/stdout", 0, 0);
-  rx::procOpsTable.open(&mainThread, "/dev/stderr", 0, 0);
+  rx::procOpsTable.open(mainThread, "/dev/stdin", 0, 0);
+  rx::procOpsTable.open(mainThread, "/dev/stdout", 0, 0);
+  rx::procOpsTable.open(mainThread, "/dev/stderr", 0, 0);
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
@@ -415,7 +395,7 @@ static int ps4Exec(orbis::Process *mainProcess,
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
 
-  StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread.stackEnd)};
+  StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 
   for (auto elem : argv) {
     argvOffsets.push_back(stack.pushString(elem));
@@ -469,8 +449,8 @@ static int ps4Exec(orbis::Process *mainProcess,
   });;
   context->uc_mcontext.gregs[REG_RIP] = libkernel->entryPoint;
 
-  mainThread.context = context;
-  rx::thread::invoke(&mainThread);
+  mainThread->context = context;
+  rx::thread::invoke(mainThread);
   std::abort();
 }
 
