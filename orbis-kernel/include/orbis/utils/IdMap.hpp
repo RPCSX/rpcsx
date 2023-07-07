@@ -178,7 +178,29 @@ public:
     return m_chunks[chunk].get(index);
   }
 
-  bool remove(IdT id) {
+  bool destroy(IdT id) requires requires(T t) { t.destroy(); } {
+    const auto rawId = static_cast<std::size_t>(id) - MinId;
+
+    if (rawId >= MaxId - MinId) {
+      return false;
+    }
+
+    const auto chunk = rawId / ChunkSize;
+    const auto index = rawId % ChunkSize;
+
+    std::lock_guard lock(mutex);
+
+    if (!m_chunks[chunk].mask.test(index)) {
+      return false;
+    }
+
+    m_chunks[chunk].get(index)->destroy();
+    m_chunks[chunk].remove(index);
+    m_fullChunks.clear(chunk);
+    return true;
+  }
+
+  bool close(IdT id) {
     const auto rawId = static_cast<std::size_t>(id) - MinId;
 
     if (rawId >= MaxId - MinId) {
@@ -197,6 +219,10 @@ public:
     m_chunks[chunk].remove(index);
     m_fullChunks.clear(chunk);
     return true;
+  }
+
+  [[deprecated("use close()")]] bool remove(IdT id) {
+    return close(id);
   }
 };
 
