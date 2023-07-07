@@ -68,11 +68,11 @@ add_library(obj.orbis-kernel OBJECT
 target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config)
 
 target_include_directories(obj.orbis-kernel
-PUBLIC
-  include
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 
-PRIVATE
-  include/orbis
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/orbis
 )
 
 add_library(orbis-kernel STATIC)
