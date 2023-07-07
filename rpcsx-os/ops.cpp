@@ -114,7 +114,7 @@ orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
 }
 
 orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
-  if (!thread->tproc->fileDescriptors.remove(fd)) {
+  if (!thread->tproc->fileDescriptors.close(fd)) {
     return ErrorCode::BADF;
   }
 
@@ -240,12 +240,16 @@ static std::string ioctlToString(unsigned long arg) {
 
 orbis::SysResult ioctl(orbis::Thread *thread, orbis::sint fd, orbis::ulong com,
                        orbis::caddr_t argp) {
-  std::printf("ioctl: %s\n", ioctlToString(com).c_str());
+  std::printf("ioctl: %d %s\n", (int)fd, ioctlToString(com).c_str());
 
   Ref<IoDeviceInstance> handle =
       static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
   if (handle == nullptr) {
     return ErrorCode::BADF;
+  }
+
+  if (handle->ioctl == nullptr) {
+    return ErrorCode::NOTSUP;
   }
 
   auto result = handle->ioctl(handle.get(), com, argp);
@@ -411,7 +415,7 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
   thread->tproc->ops->processNeeded(thread);
   auto result = module->relocate(thread->tproc);
   if (result.isError()) {
-    thread->tproc->modulesMap.remove(module->id);
+    thread->tproc->modulesMap.close(module->id);
     return result;
   }
 

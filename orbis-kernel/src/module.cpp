@@ -253,5 +253,5 @@ orbis::SysResult orbis::Module::relocate(Process *process) {
 
 void orbis::Module::destroy() {
   std::lock_guard lock(proc->mtx);
-  proc->modulesMap.remove(id);
+  proc->modulesMap.close(id);
 }

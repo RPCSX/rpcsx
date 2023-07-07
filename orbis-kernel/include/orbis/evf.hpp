@@ -11,6 +11,7 @@ enum {
   kEvfAttrThPrio = 0x02,
   kEvfAttrSingle = 0x10,
   kEvfAttrMulti = 0x20,
+  kEvfAttrShared = 0x100,
 };
 
 enum {

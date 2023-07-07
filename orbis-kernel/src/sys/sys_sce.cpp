@@ -9,7 +9,7 @@
 
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_netabort(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -19,7 +19,7 @@ orbis::SysResult orbis::sys_netgetsockinfo(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_socketex(Thread *thread, ptr<const char> name,
                                      sint domain, sint type, sint protocol) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_socketclose(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -53,6 +53,9 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
 
     auto int_value = reinterpret_cast<nonsys_int *>(value);
 
+    const char *const string = "someString";
+
+    ORBIS_LOG_TODO(__FUNCTION__, string);
     ORBIS_LOG_TODO(
         __FUNCTION__, int_value->encoded_id,
         int_value->encoded_id_parts.data[0],
@@ -86,8 +89,8 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
     return ErrorCode::INVAL;
   }
 
-  if (attrs &
-      ~(kEvfAttrSingle | kEvfAttrMulti | kEvfAttrThPrio | kEvfAttrThFifo)) {
+  if (attrs & ~(kEvfAttrSingle | kEvfAttrMulti | kEvfAttrThPrio |
+                kEvfAttrThFifo | kEvfAttrShared)) {
     return ErrorCode::INVAL;
   }
 
@@ -117,7 +120,22 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
     return result;
   }
 
-  auto eventFlag = knew<EventFlag>(attrs);
+  EventFlag *eventFlag;
+  if (attrs & kEvfAttrShared) {
+    auto [insertedEvf, inserted] =
+        thread->tproc->context->createEventFlag(_name, attrs);
+
+    if (!inserted) {
+      return ErrorCode::EXIST; // FIXME: verify
+    }
+
+    eventFlag = insertedEvf;
+  } else {
+    eventFlag = knew<EventFlag>(attrs);
+  }
+
+  ORBIS_LOG_WARNING(__FUNCTION__, _name);
+
   thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
   return {};
 }
@@ -127,10 +145,7 @@ orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
     return ErrorCode::SRCH;
   }
 
-  // TODO: do destroy and remove atomically
-  evf->destroy();
-  thread->tproc->evfMap.remove(id);
-
+  thread->tproc->evfMap.destroy(id);
   return {};
 }
 orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
@@ -140,9 +155,13 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
     return result;
   }
 
+  ORBIS_LOG_WARNING(__FUNCTION__, _name);
+
   auto eventFlag = thread->tproc->context->findEventFlag(name);
 
   if (eventFlag == nullptr) {
+    // HACK :)
+    return sys_evf_create(thread, name, kEvfAttrShared, nullptr);
     return ErrorCode::SRCH;
   }
 
@@ -151,7 +170,7 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
   return {};
 }
 orbis::SysResult orbis::sys_evf_close(Thread *thread, sint id) {
-  if (!thread->tproc->evfMap.remove(id)) {
+  if (!thread->tproc->evfMap.close(id)) {
     return ErrorCode::SRCH;
   }
 
@@ -541,11 +560,7 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
   switch (op) {
   case 1: {
     auto prop = uread((ptr<mdbg_property>)arg0);
-    std::printf(
-        "sys_mdbg_service set property (name='%s', address=0x%lx, size=%lu)\n",
-        prop.name, prop.addr_ptr, prop.areaSize);
-    // FIXME: investigate crash
-    // ORBIS_LOG_WARNING(__FUNCTION__, prop.name, prop.addr_ptr, prop.areaSize);
+    ORBIS_LOG_WARNING(__FUNCTION__, prop.name, prop.addr_ptr, prop.areaSize);
     break;
   }
 

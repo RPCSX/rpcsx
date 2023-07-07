@@ -119,7 +119,7 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
   }
 
   auto testThread = [&](WaitingThread *thread) {
-    if (type != NotifyType::Set && !thread->test(patValue)) {
+    if (type == NotifyType::Set && !thread->test(patValue)) {
       return false;
     }
 
