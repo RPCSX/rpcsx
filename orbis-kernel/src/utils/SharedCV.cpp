@@ -82,8 +82,9 @@ void shared_cv::impl_wake(shared_mutex &mutex, int _count) noexcept {
 
   if (_count) {
     // Wake up one thread + requeue remaining waiters
-    if (auto r = syscall(SYS_futex, &m_value, FUTEX_REQUEUE, +locked,
-                         &mutex, _count - +locked, 0);
+    unsigned awake_count = locked ? 1 : 0;
+    if (auto r = syscall(SYS_futex, &m_value, FUTEX_REQUEUE, awake_count,
+                         &mutex, _count - awake_count, 0);
         r < _count) {
       // Keep awaking waiters
       return impl_wake(mutex, is_one ? 1 : INT_MAX);
