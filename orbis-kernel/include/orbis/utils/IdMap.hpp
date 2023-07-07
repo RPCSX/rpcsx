@@ -2,6 +2,7 @@
 
 #include "BitSet.hpp"
 #include "Rc.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -55,6 +56,8 @@ class RcIdMap {
 public:
   static constexpr auto npos = static_cast<IdT>(~static_cast<std::size_t>(0));
 
+  shared_mutex mutex;
+
   struct end_iterator {};
 
   class iterator {
@@ -95,6 +98,8 @@ public:
   };
 
   void walk(auto cb) {
+    std::lock_guard lock(mutex);
+
     for (std::size_t chunk = 0; chunk < ChunkCount; ++chunk) {
       std::size_t index = m_chunks[chunk].mask.countr_zero();
 
@@ -113,6 +118,8 @@ public:
 
 private:
   IdT insert_impl(T *object) {
+    std::lock_guard lock(mutex);
+
     auto page = m_fullChunks.countr_one();
 
     if (page == ChunkCount) {
@@ -162,6 +169,8 @@ public:
     const auto chunk = rawId / ChunkSize;
     const auto index = rawId % ChunkSize;
 
+    std::lock_guard lock(mutex);
+
     if (!m_chunks[chunk].mask.test(index)) {
       return nullptr;
     }
@@ -178,6 +187,8 @@ public:
 
     const auto chunk = rawId / ChunkSize;
     const auto index = rawId % ChunkSize;
+
+    std::lock_guard lock(mutex);
 
     if (!m_chunks[chunk].mask.test(index)) {
       return false;
