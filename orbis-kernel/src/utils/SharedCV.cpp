@@ -67,16 +67,13 @@ void shared_cv::impl_wake(shared_mutex &mutex, int _count) noexcept {
     unsigned do_wake = _m_locks == 0;
     if (auto r = syscall(SYS_futex, &m_value, FUTEX_CMP_REQUEUE, do_wake,
                          &mutex, _count - do_wake, _old);
-        r > 0) {
-      if (mutex.is_free()) // Avoid deadlock (TODO: proper fix?)
-        syscall(SYS_futex, &mutex, FUTEX_WAKE, 1, nullptr, 0, 0);
-      if (!is_one) // Keep awaking waiters
-        return impl_wake(mutex, INT_MAX);
-    } else if (r == EAGAIN) {
-      // Retry if something has changed (TODO: is it necessary?)
+        r < _count) {
+      // Keep awaking waiters
       return impl_wake(mutex, is_one ? 1 : INT_MAX);
-    } else if (r < 0)
-      std::abort(); // Unknown error
+    } else if (mutex.is_free()) {
+      // Avoid deadlock (TODO: proper fix?)
+      syscall(SYS_futex, &mutex, FUTEX_WAKE, 1, nullptr, 0, 0);
+    }
   }
 }
 } // namespace orbis::utils
