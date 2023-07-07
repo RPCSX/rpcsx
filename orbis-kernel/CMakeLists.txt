@@ -5,6 +5,7 @@ add_library(obj.orbis-kernel OBJECT
   src/sysvec.cpp
   src/evf.cpp
   src/KernelContext.cpp
+  src/umtx.cpp
   src/sys/sys_acct.cpp
   src/sys/sys_audit.cpp
   src/sys/sys_capability.cpp
