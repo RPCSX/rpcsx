@@ -59,9 +59,22 @@ struct log_type_info {
   }
 };
 
+namespace detail {
+template <typename T> struct remove_const_data {
+  using type = T;
+};
+template <typename T> struct remove_const_data<const T *> {
+  using type = T *;
+};
+
+template <typename T>
+using remove_const_data_t = typename remove_const_data<T>::type;
+} // namespace detail
+
 template <typename... Args>
 constexpr const log_type_info type_info_v[sizeof...(Args) + 1]{
-    log_type_info::make<std::remove_cvref_t<Args>>()...};
+    log_type_info::make<
+        detail::remove_const_data_t<std::remove_cvref_t<Args>>>()...};
 
 void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
                       const log_type_info *sup, ...);
