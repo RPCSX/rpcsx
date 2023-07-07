@@ -19,19 +19,29 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _old,
 
   // Cleanup
   const auto old = atomic_fetch_op(m_value, [](unsigned &value) {
-    // Remove waiter (c_waiter_mask)
-    value -= 1;
+    // Remove waiter if no signals
+    if (!(value & ~c_waiter_mask))
+      value -= 1;
 
     // Try to remove signal
     if (value & c_signal_mask)
-      value -= c_signal_mask & (0 - c_signal_mask);
+      value -= c_signal_one;
+    if (value | c_locked_mask)
+      value -= c_locked_mask;
   });
 
   // Lock is already acquired
-  if (old & c_signal_mask) {
+  if (old & c_locked_mask) {
     return;
   }
 
+  // Wait directly (waiter has been added)
+  if (old & c_signal_mask) {
+    mutex.impl_wait();
+    return;
+  }
+
+  // Possibly spurious wakeup
   mutex.lock();
 }
 
@@ -45,34 +55,38 @@ void shared_cv::impl_wake(shared_mutex &mutex, int _count) noexcept {
     return;
 
   // Try to lock the mutex
-  unsigned _m_locks = mutex.lock_forced();
+  const bool locked = mutex.lock_forced(_count);
 
   const int max_sig = atomic_op(m_value, [&](unsigned &value) {
     // Verify the number of waiters
     int max_sig = std::min<int>(_count, value & c_waiter_mask);
 
     // Add lock signal (mutex was immediately locked)
-    if (_m_locks == 0)
-      value += c_signal_mask & (0 - c_signal_mask);
+    if (locked && max_sig)
+      value |= c_locked_mask;
+
+    // Add normal signals
+    value += c_signal_one * max_sig;
+
+    // Remove waiters
+    value -= max_sig;
     _old = value;
     return max_sig;
   });
 
   if (max_sig < _count) {
+    // Fixup mutex
+    mutex.lock_forced(max_sig - _count);
     _count = max_sig;
   }
 
   if (_count) {
     // Wake up one thread + requeue remaining waiters
-    unsigned do_wake = _m_locks == 0;
-    if (auto r = syscall(SYS_futex, &m_value, FUTEX_CMP_REQUEUE, do_wake,
-                         &mutex, _count - do_wake, _old);
+    if (auto r = syscall(SYS_futex, &m_value, FUTEX_CMP_REQUEUE, +locked,
+                         &mutex, _count - +locked, _old);
         r < _count) {
       // Keep awaking waiters
       return impl_wake(mutex, is_one ? 1 : INT_MAX);
-    } else if (mutex.is_free()) {
-      // Avoid deadlock (TODO: proper fix?)
-      syscall(SYS_futex, &mutex, FUTEX_WAKE, 1, nullptr, 0, 0);
     }
   }
 }

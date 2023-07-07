@@ -10,7 +10,9 @@ inline namespace utils {
 class shared_cv {
   enum : unsigned {
     c_waiter_mask = 0xffff,
-    c_signal_mask = 0xffffffff & ~c_waiter_mask,
+    c_signal_mask = 0x7fff0000,
+    c_locked_mask = 0x80000000,
+    c_signal_one = c_waiter_mask + 1,
   };
 
   std::atomic<unsigned> m_value{0};

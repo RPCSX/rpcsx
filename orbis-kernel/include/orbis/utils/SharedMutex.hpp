@@ -7,7 +7,9 @@
 namespace orbis {
 inline namespace utils {
 // IPC-ready shared mutex, using only writer lock is recommended
-struct shared_mutex final {
+class shared_mutex final {
+  friend class shared_cv;
+
   enum : unsigned {
     c_one = 1u << 14, // Fixed-point 1.0 value (one writer)
     c_sig = 1u << 30,
@@ -102,8 +104,9 @@ public:
   // Check whether can immediately obtain a shared (reader) lock
   bool is_lockable() const { return m_value.load() < c_one - 1; }
 
+private:
   // For CV
-  unsigned lock_forced();
+  bool lock_forced(int count = 1);
 };
 
 // Simplified shared (reader) lock implementation.

@@ -149,20 +149,34 @@ void shared_mutex::impl_lock_upgrade() {
 
   impl_wait();
 }
-unsigned shared_mutex::lock_forced() {
-  return atomic_op(m_value, [](unsigned &v) {
-    if (v & c_sig) {
-      v -= c_sig;
-      v += c_one;
-      return 0u;
-    }
+bool shared_mutex::lock_forced(int count) {
+  if (count == 0)
+    std::abort();
+  if (count > 0) {
+    // Lock
+    return atomic_op(m_value, [&](unsigned &v) {
+      if (v & c_sig) {
+        v -= c_sig;
+        v += c_one * (count - 1);
+        return true;
+      }
 
-    if (v == 0) {
-      v += c_one;
-      return 0u;
-    }
+      if (v == 0) {
+        v += c_one * count;
+        return true;
+      }
 
-    return v;
-  });
+      v += c_one * count;
+      return false;
+    });
+  }
+
+  // Unlock
+  const unsigned value = m_value.fetch_add(c_one * count);
+  if (value != c_one) [[unlikely]] {
+    impl_unlock(value);
+  }
+
+  return false;
 }
 } // namespace orbis::utils
