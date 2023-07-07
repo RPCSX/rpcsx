@@ -20,6 +20,7 @@ add_executable(rpcsx-os
   iodev/zero.cpp
 
   main.cpp
+  backtrace.cpp
   bridge.cpp
   vm.cpp
   ops.cpp
