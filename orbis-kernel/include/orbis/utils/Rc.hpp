@@ -48,6 +48,7 @@ template <typename T> class Ref {
 
 public:
   Ref() = default;
+  Ref(std::nullptr_t) {}
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
