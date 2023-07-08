@@ -52,14 +52,14 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
     if (std::size_t printed =
             rx::printAddressLocation(buf, sizeof(buf), rx::thread::g_current,
-                                 (std::uint64_t)info->si_addr)) {
+                                     (std::uint64_t)info->si_addr)) {
       printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
       write(2, buf, printed);
     }
 
     if (rx::thread::g_current) {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
-                      rx::thread::g_current, 2);
+                          rx::thread::g_current, 2);
     } else {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
     }

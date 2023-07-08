@@ -178,7 +178,9 @@ public:
     return m_chunks[chunk].get(index);
   }
 
-  bool destroy(IdT id) requires requires(T t) { t.destroy(); } {
+  bool destroy(IdT id)
+    requires requires(T t) { t.destroy(); }
+  {
     const auto rawId = static_cast<std::size_t>(id) - MinId;
 
     if (rawId >= MaxId - MinId) {
@@ -221,9 +223,7 @@ public:
     return true;
   }
 
-  [[deprecated("use close()")]] bool remove(IdT id) {
-    return close(id);
-  }
+  [[deprecated("use close()")]] bool remove(IdT id) { return close(id); }
 };
 
 template <typename T, typename IdT = int, std::size_t MaxId = 4096,
