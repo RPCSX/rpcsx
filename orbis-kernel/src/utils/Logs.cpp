@@ -19,7 +19,15 @@ void log_class_string<void *>::format(std::string &out, const void *arg) {
 }
 
 void log_class_string<char *>::format(std::string &out, const void *arg) {
-  out += *reinterpret_cast<const char *const *>(arg);
+  const char* ptr = *reinterpret_cast<const char *const *>(arg);
+  const auto addr = reinterpret_cast<std::uintptr_t>(ptr);
+  if (addr < 0x10000 || addr > 0x7fff'ffff'ffff) {
+    out += "{{{{{BAD_ADDR:";
+    append_hex(out, addr);
+    out += "}}}}}";
+    return;
+  }
+  out += ptr;
 }
 
 template <>
