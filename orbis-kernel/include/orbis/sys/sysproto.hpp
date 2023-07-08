@@ -615,10 +615,10 @@ SysResult sys_jitshm_alias(Thread *thread /* TODO */);
 SysResult sys_dl_get_list(Thread *thread /* TODO */);
 SysResult sys_dl_get_info(Thread *thread /* TODO */);
 SysResult sys_dl_notify_event(Thread *thread /* TODO */);
-SysResult sys_evf_create(Thread *thread, ptr<char> name, sint attrs,
+SysResult sys_evf_create(Thread *thread, ptr<const char[32]> name, sint attrs,
                          ptr<struct evFlag> evf);
 SysResult sys_evf_delete(Thread *thread, sint id);
-SysResult sys_evf_open(Thread *thread, ptr<char> name);
+SysResult sys_evf_open(Thread *thread, ptr<const char[32]> name);
 SysResult sys_evf_close(Thread *thread, sint id);
 SysResult sys_evf_wait(Thread *thread, sint id, uint64_t patternSet,
                        uint64_t mode, ptr<uint64_t> pPatternSet,
@@ -640,7 +640,7 @@ SysResult sys_osem_wait(Thread *thread /* TODO */);
 SysResult sys_osem_trywait(Thread *thread /* TODO */);
 SysResult sys_osem_post(Thread *thread /* TODO */);
 SysResult sys_osem_cancel(Thread *thread /* TODO */);
-SysResult sys_namedobj_create(Thread *thread, ptr<const char> name,
+SysResult sys_namedobj_create(Thread *thread, ptr<const char[32]> name,
                               ptr<void> object, uint16_t type);
 SysResult sys_namedobj_delete(Thread *thread, uint16_t id, uint16_t type);
 SysResult sys_set_vm_container(Thread *thread /* TODO */);

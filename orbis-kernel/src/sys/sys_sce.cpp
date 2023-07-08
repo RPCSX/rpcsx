@@ -84,8 +84,9 @@ orbis::SysResult orbis::sys_dl_get_info(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_dl_notify_event(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
+orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
                                        sint attrs, ptr<struct evFlag> evf) {
+  ORBIS_LOG_WARNING(__FUNCTION__, name, attrs, evf);
   if (name == nullptr || evf != nullptr) {
     return ErrorCode::INVAL;
   }
@@ -116,7 +117,7 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
   }
 
   char _name[32];
-  if (auto result = ureadString(_name, sizeof(_name), name);
+  if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
       result != ErrorCode{}) {
     return result;
   }
@@ -135,8 +136,6 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<char> name,
     eventFlag = knew<EventFlag>(attrs);
   }
 
-  ORBIS_LOG_WARNING(__FUNCTION__, _name);
-
   thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
   return {};
 }
@@ -149,16 +148,15 @@ orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
   thread->tproc->evfMap.destroy(id);
   return {};
 }
-orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<char> name) {
+orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
+  ORBIS_LOG_WARNING(__FUNCTION__, name);
   char _name[32];
-  if (auto result = ureadString(_name, sizeof(_name), name);
+  if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
       result != ErrorCode{}) {
     return result;
   }
 
-  ORBIS_LOG_WARNING(__FUNCTION__, _name);
-
-  auto eventFlag = thread->tproc->context->findEventFlag(name);
+  auto eventFlag = thread->tproc->context->findEventFlag(_name);
 
   if (eventFlag == nullptr) {
     // HACK :)
@@ -301,11 +299,11 @@ orbis::SysResult orbis::sys_osem_cancel(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
-                                            ptr<const char> name,
+                                            ptr<const char[32]> name,
                                             ptr<void> object, uint16_t type) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, name, object, type);
+  ORBIS_LOG_NOTICE(__FUNCTION__, *name, object, type);
   char _name[32];
-  if (auto result = ureadString(_name, sizeof(_name), name);
+  if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
       result != ErrorCode{}) {
     return result;
   }

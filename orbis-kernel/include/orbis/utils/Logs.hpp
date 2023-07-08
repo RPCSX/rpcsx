@@ -34,17 +34,30 @@ template <typename T>
 struct log_class_string<T *, void> : log_class_string<void *, void> {};
 
 template <> struct log_class_string<char *, void> {
+  static void format_n(std::string &out, const void *str, std::size_t n);
   static void format(std::string &out, const void *arg);
 };
 
+template <>
+struct log_class_string<const char *, void> : log_class_string<char *> {};
+
 template <std::size_t N> struct log_class_string<char[N]> {
   static void format(std::string &out, const void *arg) {
-    out += reinterpret_cast<const char *>(arg);
+    log_class_string<char *, void>::format_n(out, arg, N);
+  }
+};
+
+template <std::size_t N> struct log_class_string<const char[N]> {
+  static void format(std::string &out, const void *arg) {
+    log_class_string<char *, void>::format_n(out, arg, N);
   }
 };
 
 template <>
 struct log_class_string<char8_t *, void> : log_class_string<char *> {};
+
+template <>
+struct log_class_string<const char8_t *, void> : log_class_string<char *> {};
 
 template <typename... Args>
 using log_args_t = const void *(&&)[sizeof...(Args) + 1];
@@ -59,22 +72,9 @@ struct log_type_info {
   }
 };
 
-namespace detail {
-template <typename T> struct remove_const_data {
-  using type = T;
-};
-template <typename T> struct remove_const_data<const T *> {
-  using type = T *;
-};
-
-template <typename T>
-using remove_const_data_t = typename remove_const_data<T>::type;
-} // namespace detail
-
 template <typename... Args>
 constexpr const log_type_info type_info_v[sizeof...(Args) + 1]{
-    log_type_info::make<
-        detail::remove_const_data_t<std::remove_cvref_t<Args>>>()...};
+    log_type_info::make<std::remove_cvref_t<Args>>()...};
 
 void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
                       const log_type_info *sup, ...);

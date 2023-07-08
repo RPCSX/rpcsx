@@ -18,8 +18,27 @@ void log_class_string<void *>::format(std::string &out, const void *arg) {
   append_hex(out, reinterpret_cast<std::uintptr_t>(ptr));
 }
 
+void log_class_string<char *>::format_n(std::string &out, const void *arg,
+                                        std::size_t n) {
+  const char *ptr = reinterpret_cast<const char *>(arg);
+  const auto addr = reinterpret_cast<std::uintptr_t>(ptr);
+  const auto _end = n ? addr + n - 1 : addr;
+  if (addr < 0x10000 || std::max(n, _end) > 0x7fff'ffff'ffff) {
+    out += "{{{{{BAD_ADDR:";
+    append_hex(out, addr);
+    out += "}}}}}";
+    return;
+  }
+  while (n--) {
+    const char c = *ptr++;
+    if (!c)
+      break;
+    out += c;
+  }
+}
+
 void log_class_string<char *>::format(std::string &out, const void *arg) {
-  const char* ptr = *reinterpret_cast<const char *const *>(arg);
+  const char *ptr = *reinterpret_cast<const char *const *>(arg);
   const auto addr = reinterpret_cast<std::uintptr_t>(ptr);
   if (addr < 0x10000 || addr > 0x7fff'ffff'ffff) {
     out += "{{{{{BAD_ADDR:";
