@@ -39,5 +39,14 @@ struct Process {
   utils::RcIdMap<Module, ModuleHandle> modulesMap;
   utils::OwningIdMap<Thread, lwpid_t> threadsMap;
   utils::RcIdMap<utils::RcBase, sint> fileDescriptors;
+
+  // Named objects for debugging
+  utils::shared_mutex namedObjMutex;
+  utils::kmap<void*, utils::kstring> namedObjNames;
+  utils::OwningIdMap<void*, std::uint16_t, 65535, 1> mutexIds;
+  utils::OwningIdMap<void*, std::uint16_t, 65535, 1> condIds;
+  utils::OwningIdMap<void*, std::uint16_t, 65535, 1> rwlockIds;
+  utils::OwningIdMap<void*, std::uint16_t, 65535, 1> barrierIds;
+  utils::OwningIdMap<sint, std::uint16_t, 65535, 1> equeueIds;
 };
 } // namespace orbis

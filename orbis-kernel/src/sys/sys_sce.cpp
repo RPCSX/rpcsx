@@ -4,6 +4,7 @@
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
 #include "sys/sysproto.hpp"
+#include "sys/sys_sce.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
 
@@ -301,13 +302,89 @@ orbis::SysResult orbis::sys_osem_cancel(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
                                             ptr<const char> name,
-                                            ptr<void> object, uint64_t type) {
-  ORBIS_LOG_TODO(__FUNCTION__, name, object, type);
-  thread->retval[0] = 1;
+                                            ptr<void> object, uint16_t type) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, name, object, type);
+  utils::kstring str = name;
+  if (str.size() > 31)
+    return ErrorCode::NAMETOOLONG;
+  if (type < 0x101 || type > 0x107)
+    return ErrorCode::INVAL;
+
+  std::lock_guard lock(thread->tproc->namedObjMutex);
+  if (!thread->tproc->namedObjNames.try_emplace(object, std::move(str)).second) {
+    ORBIS_LOG_FATAL("Named object: pointer colflict", type, object);
+  }
+
+  switch (type) {
+  case kNamedObjTypeMutex:
+    thread->retval[0] = thread->tproc->mutexIds.emplace(object).first;
+    break;
+  case kNamedObjTypeCond:
+    thread->retval[0] = thread->tproc->condIds.emplace(object).first;
+    break;
+  case kNamedObjTypeRwlock:
+    thread->retval[0] = thread->tproc->rwlockIds.emplace(object).first;
+    break;
+  case kNamedObjTypeBarrier:
+    thread->retval[0] = thread->tproc->barrierIds.emplace(object).first;
+    break;
+  case kNamedObjTypeEqueue:
+    thread->retval[0] =
+        thread->tproc->equeueIds.emplace((std::intptr_t)object).first;
+    break;
+  default:
+    std::abort();
+  }
+
   return {};
 }
-orbis::SysResult orbis::sys_namedobj_delete(Thread *thread /* TODO */) {
-  ORBIS_LOG_TODO(__FUNCTION__);
+orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint16_t id,
+                                            uint16_t type) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, id, type);
+  if (id == 0 || type < 0x101 || type > 0x107)
+    return ErrorCode::INVAL;
+
+  std::lock_guard lock(thread->tproc->namedObjMutex);
+  void *object = nullptr;
+  switch (type) {
+  case kNamedObjTypeMutex:
+    if (auto pobj = thread->tproc->mutexIds.get(id))
+      object = *pobj, thread->tproc->mutexIds.destroy(id);
+    else
+      return ErrorCode::SRCH;
+    break;
+  case kNamedObjTypeCond:
+    if (auto pobj = thread->tproc->condIds.get(id))
+      object = *pobj, thread->tproc->condIds.destroy(id);
+    else
+      return ErrorCode::SRCH;
+    break;
+  case kNamedObjTypeRwlock:
+    if (auto pobj = thread->tproc->rwlockIds.get(id))
+      object = *pobj, thread->tproc->rwlockIds.destroy(id);
+    else
+      return ErrorCode::SRCH;
+    break;
+  case kNamedObjTypeBarrier:
+    if (auto pobj = thread->tproc->barrierIds.get(id))
+      object = *pobj, thread->tproc->barrierIds.destroy(id);
+    else
+      return ErrorCode::SRCH;
+    break;
+  case kNamedObjTypeEqueue:
+    if (auto pobj = thread->tproc->equeueIds.get(id))
+      object = (void*)*pobj, thread->tproc->equeueIds.destroy(id);
+    else
+      return ErrorCode::SRCH;
+    break;
+  default:
+    std::abort();
+  }
+
+  if (!thread->tproc->namedObjNames.erase(object)) {
+    ORBIS_LOG_ERROR("Named object: pointer not found", type, object);
+  }
+
   return {};
 }
 orbis::SysResult orbis::sys_set_vm_container(Thread *thread /* TODO */) {

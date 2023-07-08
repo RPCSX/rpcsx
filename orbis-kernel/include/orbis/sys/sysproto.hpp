@@ -641,8 +641,8 @@ SysResult sys_osem_trywait(Thread *thread /* TODO */);
 SysResult sys_osem_post(Thread *thread /* TODO */);
 SysResult sys_osem_cancel(Thread *thread /* TODO */);
 SysResult sys_namedobj_create(Thread *thread, ptr<const char> name,
-                              ptr<void> object, uint64_t type);
-SysResult sys_namedobj_delete(Thread *thread /* TODO */);
+                              ptr<void> object, uint16_t type);
+SysResult sys_namedobj_delete(Thread *thread, uint16_t id, uint16_t type);
 SysResult sys_set_vm_container(Thread *thread /* TODO */);
 SysResult sys_debug_init(Thread *thread /* TODO */);
 SysResult sys_suspend_process(Thread *thread, pid_t pid);
