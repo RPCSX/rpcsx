@@ -1,15 +1,25 @@
 name: Formatting check
+
 on:
   push:
+    paths-ignore:
+      - "**/*.md"
+      - '**/*.txt'
+      - '3rdparty/*'
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - '**/*.txt'
+      - '3rdparty/*'
   workflow_dispatch:
+
 jobs:
   formatting-check:
-    name: Formatting Check
     runs-on: ubuntu-latest
     steps:
-    - name: Check out repo
+    - name: Checkout
       uses: actions/checkout@v3
+
     - name: Run clang-format
       uses: jidicula/clang-format-action@v4.11.0
       with:
