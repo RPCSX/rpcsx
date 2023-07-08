@@ -1,10 +1,10 @@
+#include "sys/sys_sce.hpp"
 #include "KernelContext.hpp"
 #include "error.hpp"
 #include "evf.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
 #include "sys/sysproto.hpp"
-#include "sys/sys_sce.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
 
@@ -304,14 +304,16 @@ orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
                                             ptr<const char> name,
                                             ptr<void> object, uint16_t type) {
   ORBIS_LOG_NOTICE(__FUNCTION__, name, object, type);
-  utils::kstring str = name;
-  if (str.size() > 31)
-    return ErrorCode::NAMETOOLONG;
+  char _name[32];
+  if (auto result = ureadString(_name, sizeof(_name), name);
+      result != ErrorCode{}) {
+    return result;
+  }
   if (type < 0x101 || type > 0x107)
     return ErrorCode::INVAL;
 
   std::lock_guard lock(thread->tproc->namedObjMutex);
-  if (!thread->tproc->namedObjNames.try_emplace(object, std::move(str)).second) {
+  if (!thread->tproc->namedObjNames.try_emplace(object, _name).second) {
     ORBIS_LOG_FATAL("Named object: pointer colflict", type, object);
   }
 
@@ -373,7 +375,7 @@ orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint16_t id,
     break;
   case kNamedObjTypeEqueue:
     if (auto pobj = thread->tproc->equeueIds.get(id))
-      object = (void*)*pobj, thread->tproc->equeueIds.destroy(id);
+      object = (void *)*pobj, thread->tproc->equeueIds.destroy(id);
     else
       return ErrorCode::SRCH;
     break;
