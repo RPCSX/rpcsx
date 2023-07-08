@@ -3,8 +3,11 @@
 # RPCSX
 *An experimental emulator for PS4 (PlayStation 4) for Linux written in C++*
 
-![](https://img.shields.io/github/actions/workflow/status/RPCSX/rpcsx/format.yml?style=for-the-badge&label=Formatting)
-[![](https://img.shields.io/discord/252023769500090368?style=for-the-badge)](https://discord.gg/t6dzA4wUdG)
+[![Build RPCSX](../../../actions/workflows/rpcsx.yml/badge.svg)](../../../actions/workflows/rpcsx.yml)
+
+[![Formatting check](../../../actions/workflows/format.yml/badge.svg)](../../../actions/workflows/format.yml)
+
+[![](https://img.shields.io/discord/252023769500090368?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/t6dzA4wUdG)
 
 </div>
 
@@ -27,7 +30,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 4. Run
    
-   See usage message of rpcsx-os (-h argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
+   See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
 
 ## License
 
