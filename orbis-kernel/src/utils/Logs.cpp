@@ -198,6 +198,34 @@ void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
   }
   text += ")";
 
-  std::fprintf(stderr, "%s\n", text.c_str());
+  const char *color = "";
+  switch (lvl) {
+  case LogLevel::Always:
+    color = "\e[36;1m";
+    break;
+  case LogLevel::Fatal:
+    color = "\e[35;1m";
+    break;
+  case LogLevel::Error:
+    color = "\e[0;31m";
+    break;
+  case LogLevel::Todo:
+    color = "\e[1;33m";
+    break;
+  case LogLevel::Success:
+    color = "\e[1;32m";
+    break;
+  case LogLevel::Warning:
+    color = "\e[0;33m";
+    break;
+  case LogLevel::Notice:
+    color = "";
+    break;
+  case LogLevel::Trace:
+    color = "";
+    break;
+  }
+
+  std::fprintf(stderr, "%s%s\e[0m\n", color, text.c_str());
 }
 } // namespace orbis::logs
