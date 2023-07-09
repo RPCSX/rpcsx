@@ -109,8 +109,16 @@ template <auto Fn> constexpr auto wrap() -> decltype(detail::WrapImpl<Fn>()()) {
   return detail::WrapImpl<Fn>()();
 }
 
+namespace {
+struct sysc_hash {
+  std::size_t operator()(SysResult (*ptr)(Thread *, uint64_t *)) const {
+    return reinterpret_cast<std::uintptr_t>(ptr) >> 4;
+  }
+};
+} // namespace
+
 static const std::unordered_map<SysResult (*)(Thread *, uint64_t *),
-                                const char *>
+                                const char *, sysc_hash>
     gImplToName = {
         {wrap<nosys>().call, "nosys"},
         {wrap<sys_exit>().call, "sys_exit"},
