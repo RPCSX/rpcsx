@@ -53,10 +53,6 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
     };
 
     auto int_value = reinterpret_cast<nonsys_int *>(value);
-
-    const char *const string = "someString";
-
-    ORBIS_LOG_TODO(__FUNCTION__, string);
     ORBIS_LOG_TODO(
         __FUNCTION__, int_value->encoded_id,
         int_value->encoded_id_parts.data[0],
