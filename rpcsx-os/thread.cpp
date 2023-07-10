@@ -5,6 +5,7 @@
 #include <immintrin.h>
 #include <link.h>
 #include <linux/prctl.h>
+#include <string>
 #include <sys/prctl.h>
 #include <sys/ucontext.h>
 #include <ucontext.h>

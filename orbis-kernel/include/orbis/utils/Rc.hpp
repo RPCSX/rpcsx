@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstdlib>
 #include <type_traits>
 #include <utility>
 
