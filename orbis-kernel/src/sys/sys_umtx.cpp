@@ -34,7 +34,7 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return ErrorCode::FAULT;
   auto with_timeout = [&](auto op) -> orbis::ErrorCode {
     timespec *ts = nullptr;
-    timespec timeout;
+    timespec timeout{};
     if (uaddr2 != nullptr) {
       auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
       if (result != ErrorCode{}) {
@@ -43,18 +43,19 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
 
       ts = &timeout;
     }
-    std::uint64_t usec = 0;
+    __uint128_t usec = timeout.sec;
     auto start = std::chrono::steady_clock::now();
 
     if (!ts) {
-      usec = -1;
       while (true) {
-        if (auto r = op(usec); r != ErrorCode::TIMEDOUT)
+        if (auto r = op(-1); r != ErrorCode::TIMEDOUT)
           return r;
       }
     } else {
+      usec *= 1000'000;
       usec += (timeout.nsec + 999) / 1000;
-      usec += timeout.sec * 1000'000;
+      if (usec >= UINT64_MAX)
+        usec = -2;
       std::uint64_t udiff = 0;
       while (true) {
         if (auto r = op(usec - udiff); r != ErrorCode::TIMEDOUT)
