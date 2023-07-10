@@ -30,6 +30,8 @@ void UmtxChain::erase(std::pair<const UmtxKey, UmtxCond> *obj) {
 
 void UmtxChain::notify_one(const UmtxKey &key) {
   auto it = sleep_queue.find(key);
+  if (it == sleep_queue.end())
+    return;
   it->second.thr = nullptr;
   it->second.cv.notify_one(mtx);
   this->erase(&*it);
@@ -50,14 +52,32 @@ orbis::ErrorCode orbis::umtx_unlock_umtx(Thread *thread, ptr<umtx> umtx,
 
 orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
                                   std::uint64_t ut) {
-  ORBIS_LOG_TODO(__FUNCTION__, addr, id, ut);
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_NOTICE(__FUNCTION__, addr, id, ut);
+  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, addr);
+  auto node = chain.enqueue(key, thread);
+  ErrorCode result = {};
+  // TODO: this is inaccurate with timeout as FreeBsd 9.1 only checks id once
+  if (reinterpret_cast<ptr<std::atomic<ulong>>>(addr)->load() == id) {
+    node->second.cv.wait(chain.mtx, ut);
+    if (node->second.thr == thread)
+      result = ErrorCode::TIMEDOUT;
+  }
+  if (node->second.thr == thread)
+    chain.erase(node);
+  return result;
 }
 
-orbis::ErrorCode orbis::umtx_wake(Thread *thread, ptr<void> uaddr,
-                                  sint n_wake) {
-  ORBIS_LOG_TODO(__FUNCTION__, uaddr, n_wake);
-  return ErrorCode::NOSYS;
+orbis::ErrorCode orbis::umtx_wake(Thread *thread, ptr<void> addr, sint n_wake) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, addr, n_wake);
+  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, addr);
+  std::size_t count = chain.sleep_queue.count(key);
+  // TODO: check this
+  while (count--) {
+    chain.notify_one(key);
+    if (n_wake-- <= 1)
+      break;
+  }
+  return {};
 }
 
 namespace orbis {
@@ -152,7 +172,8 @@ static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
   std::size_t count = chain.sleep_queue.count(key);
   bool ok = m->owner.compare_exchange_strong(
       owner, count <= 1 ? kUmutexUnowned : kUmutexContested);
-  chain.notify_one(key);
+  if (count)
+    chain.notify_one(key);
   if (!ok)
     return ErrorCode::INVAL;
   return {};

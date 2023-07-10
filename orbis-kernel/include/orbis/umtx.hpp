@@ -64,7 +64,7 @@ ErrorCode umtx_lock_umtx(Thread *thread, ptr<umtx> umtx, ulong id,
                          std::uint64_t ut);
 ErrorCode umtx_unlock_umtx(Thread *thread, ptr<umtx> umtx, ulong id);
 ErrorCode umtx_wait(Thread *thread, ptr<void> addr, ulong id, std::uint64_t ut);
-ErrorCode umtx_wake(Thread *thread, ptr<void> uaddr, sint n_wake);
+ErrorCode umtx_wake(Thread *thread, ptr<void> addr, sint n_wake);
 ErrorCode umtx_trylock_umutex(Thread *thread, ptr<umutex> m);
 ErrorCode umtx_lock_umutex(Thread *thread, ptr<umutex> m, std::uint64_t ut);
 ErrorCode umtx_unlock_umutex(Thread *thread, ptr<umutex> m);
