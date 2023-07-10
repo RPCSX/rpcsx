@@ -77,6 +77,7 @@ void log_class_string<umutex_lock_mode>::format(std::string &out,
 static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
                                 std::uint64_t ut, umutex_lock_mode mode) {
   ORBIS_LOG_NOTICE(__FUNCTION__, m, flags, ut, mode);
+
   ErrorCode error = {};
   while (true) {
     int owner = m->owner.load(std::memory_order_acquire);
@@ -107,10 +108,9 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
 
     auto [chain, key, lock] = g_context.getUmtxChain1(thread->tproc->pid, m);
     auto node = chain.enqueue(key, thread);
-    bool ok = m->owner.compare_exchange_strong(owner, owner | kUmutexContested);
-    if (ok && node->second.thr == thread) {
+    if (m->owner.compare_exchange_strong(owner, owner | kUmutexContested)) {
       node->second.cv.wait(chain.mtx, ut);
-      if (node->second.thr)
+      if (node->second.thr == thread)
         error = ErrorCode::TIMEDOUT;
     }
     if (node->second.thr == thread)
