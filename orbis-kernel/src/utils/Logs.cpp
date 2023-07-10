@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unistd.h>
 #include <vector>
 
 static void append_hex(std::string &out, std::uintmax_t value) {
@@ -226,6 +227,11 @@ void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
     break;
   }
 
-  std::fprintf(stderr, "%s%s\e[0m\n", color, text.c_str());
+  static const bool istty = isatty(fileno(stderr));
+  if (istty) {
+    std::fprintf(stderr, "%s%s\e[0m\n", color, text.c_str());
+  } else {
+    std::fprintf(stderr, "%s\n", text.c_str());
+  }
 }
 } // namespace orbis::logs
