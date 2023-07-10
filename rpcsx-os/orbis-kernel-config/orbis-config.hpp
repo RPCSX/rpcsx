@@ -103,6 +103,8 @@ inline uint64_t readRegister(void *context, RegisterId id) {
     return c->gregs[REG_RSP];
   case RegisterId::rflags:
     return c->gregs[REG_EFL];
+  default:
+    return 0;
   }
 }
 
