@@ -27,6 +27,13 @@ void UmtxChain::erase(std::pair<const UmtxKey, UmtxCond> *obj) {
     }
   }
 }
+
+void UmtxChain::notify_one(const UmtxKey &key) {
+  auto it = sleep_queue.find(key);
+  it->second.thr = nullptr;
+  it->second.cv.notify_one(mtx);
+  this->erase(&*it);
+}
 } // namespace orbis
 
 orbis::ErrorCode orbis::umtx_lock_umtx(Thread *thread, ptr<umtx> umtx, ulong id,
@@ -145,10 +152,7 @@ static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
   std::size_t count = chain.sleep_queue.count(key);
   bool ok = m->owner.compare_exchange_strong(
       owner, count <= 1 ? kUmutexUnowned : kUmutexContested);
-  auto it = chain.sleep_queue.find(key);
-  it->second.thr = nullptr;
-  it->second.cv.notify_one(chain.mtx);
-  chain.erase(&*it);
+  chain.notify_one(key);
   if (!ok)
     return ErrorCode::INVAL;
   return {};
@@ -285,11 +289,23 @@ orbis::ErrorCode orbis::umtx_wait_umutex(Thread *thread, ptr<umutex> m,
   return ErrorCode::INVAL;
 }
 
-orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<void> obj,
-                                         std::int64_t val, ptr<void> uaddr1,
-                                         ptr<void> uaddr2) {
-  ORBIS_LOG_TODO(__FUNCTION__, obj, val, uaddr1, uaddr2);
-  return ErrorCode::NOSYS;
+orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<umutex> m) {
+  ORBIS_LOG_TRACE(__FUNCTION__, m);
+  int owner = m->owner.load(std::memory_order::acquire);
+  if ((owner & ~kUmutexContested) != 0)
+    return {};
+
+  [[maybe_unused]] uint flags = uread(&m->flags);
+
+  auto [chain, key, lock] = g_context.getUmtxChain1(thread->tproc->pid, m);
+  std::size_t count = chain.sleep_queue.count(key);
+  if (count <= 1) {
+    owner = kUmutexContested;
+    m->owner.compare_exchange_strong(owner, kUmutexUnowned);
+  }
+  if (count != 0 && (owner & ~kUmutexContested) == 0)
+    chain.notify_one(key);
+  return {};
 }
 
 orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<void> obj,

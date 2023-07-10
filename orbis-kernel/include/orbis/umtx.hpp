@@ -86,8 +86,7 @@ ErrorCode umtx_wait_uint_private(Thread *thread, ptr<void> addr, ulong id,
                                  std::uint64_t ut);
 ErrorCode umtx_wake_private(Thread *thread, ptr<void> uaddr, sint n_wake);
 ErrorCode umtx_wait_umutex(Thread *thread, ptr<umutex> m, std::uint64_t ut);
-ErrorCode umtx_wake_umutex(Thread *thread, ptr<void> obj, std::int64_t val,
-                           ptr<void> uaddr1, ptr<void> uaddr2);
+ErrorCode umtx_wake_umutex(Thread *thread, ptr<umutex> m);
 ErrorCode umtx_sem_wait(Thread *thread, ptr<void> obj, std::int64_t val,
                         ptr<void> uaddr1, ptr<void> uaddr2);
 ErrorCode umtx_sem_wake(Thread *thread, ptr<void> obj, std::int64_t val,

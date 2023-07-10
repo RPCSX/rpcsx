@@ -38,6 +38,8 @@ struct UmtxChain {
 
   std::pair<const UmtxKey, UmtxCond> *enqueue(UmtxKey &key, Thread *thr);
   void erase(std::pair<const UmtxKey, UmtxCond> *obj);
+  void notify_one(const UmtxKey &key);
+  void notify_all(const UmtxKey &key);
 };
 
 class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) KernelContext final {
