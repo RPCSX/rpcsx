@@ -89,9 +89,7 @@ struct BridgePusher {
     header->vmAddress = address;
     header->vmSize = size;
     std::strncpy(header->vmName, name, sizeof(header->vmName));
-    std::uint64_t temp = header->flags;
-    temp |= static_cast<std::uint64_t>(BridgeFlags::VmConfigured);
-    header->flags = temp;
+    header->flags = header->flags | static_cast<std::uint64_t>(BridgeFlags::VmConfigured);
   }
 
   void sendMemoryProtect(std::uint64_t address, std::uint64_t size,

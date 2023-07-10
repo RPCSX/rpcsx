@@ -4,6 +4,7 @@
 #include "orbis/thread/RegisterId.hpp"
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
 #include <immintrin.h>
 #include <sys/ucontext.h>
 
@@ -104,7 +105,8 @@ inline uint64_t readRegister(void *context, RegisterId id) {
   case RegisterId::rflags:
     return c->gregs[REG_EFL];
   default:
-    return 0;
+    std::fprintf(stderr, "***ERROR*** Unhandled RegisterId %d\n", static_cast<int>(id));
+    std::abort();
   }
 }
 
