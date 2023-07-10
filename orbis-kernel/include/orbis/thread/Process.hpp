@@ -17,6 +17,11 @@ struct Thread;
 struct ProcessOps;
 struct sysentvec;
 
+struct NamedObjInfo {
+  void *idptr;
+  uint16_t ty;
+};
+
 struct Process {
   KernelContext *context = nullptr;
   pid_t pid = -1;
@@ -43,10 +48,6 @@ struct Process {
   // Named objects for debugging
   utils::shared_mutex namedObjMutex;
   utils::kmap<void *, utils::kstring> namedObjNames;
-  utils::OwningIdMap<void *, std::uint16_t, 65535, 1> mutexIds;
-  utils::OwningIdMap<void *, std::uint16_t, 65535, 1> condIds;
-  utils::OwningIdMap<void *, std::uint16_t, 65535, 1> rwlockIds;
-  utils::OwningIdMap<void *, std::uint16_t, 65535, 1> barrierIds;
-  utils::OwningIdMap<sint, std::uint16_t, 65535, 1> equeueIds;
+  utils::OwningIdMap<NamedObjInfo, std::uint16_t, 65535, 1> namedObjIds;
 };
 } // namespace orbis
