@@ -85,7 +85,10 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
     for (auto [it, end] = m_free_heap.equal_range(size); it != end; it++) {
       auto result = it->second;
       if (!(reinterpret_cast<std::uintptr_t>(result) & (align - 1))) {
-        m_used_node.insert(m_free_heap.extract(it));
+        auto node = m_free_heap.extract(it);
+        node.key() = 0;
+        node.mapped() = nullptr;
+        m_used_node.insert(m_used_node.begin(), std::move(node));
         pthread_mutex_unlock(&m_heap_mtx);
         return result;
       }
