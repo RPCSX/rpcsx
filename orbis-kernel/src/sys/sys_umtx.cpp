@@ -1,6 +1,8 @@
+#include "orbis/utils/Logs.hpp"
 #include "sys/sysproto.hpp"
 #include "time.hpp"
 #include "umtx.hpp"
+#include <chrono>
 
 static orbis::ErrorCode ureadTimespec(orbis::timespec &ts,
                                       orbis::ptr<orbis::timespec> addr) {
@@ -13,16 +15,24 @@ static orbis::ErrorCode ureadTimespec(orbis::timespec &ts,
 }
 
 orbis::SysResult orbis::sys__umtx_lock(Thread *thread, ptr<umtx> umtx) {
-  return umtx_lock_umtx(thread, umtx, thread->tid, nullptr);
+  ORBIS_LOG_TODO(__FUNCTION__, umtx);
+  if (reinterpret_cast<std::uintptr_t>(umtx) - 0x10000 > 0xff'fffe'ffff)
+    return ErrorCode::FAULT;
+  return umtx_lock_umtx(thread, umtx, thread->tid, -1);
 }
 orbis::SysResult orbis::sys__umtx_unlock(Thread *thread, ptr<umtx> umtx) {
+  ORBIS_LOG_TODO(__FUNCTION__, umtx);
+  if (reinterpret_cast<std::uintptr_t>(umtx) - 0x10000 > 0xff'fffe'ffff)
+    return ErrorCode::FAULT;
   return umtx_unlock_umtx(thread, umtx, thread->tid);
 }
 orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
                                      ulong val, ptr<void> uaddr1,
                                      ptr<void> uaddr2) {
-  switch (op) {
-  case 0: {
+  ORBIS_LOG_TODO(__FUNCTION__, obj, op, val, uaddr1, uaddr2);
+  if (reinterpret_cast<std::uintptr_t>(obj) - 0x10000 > 0xff'fffe'ffff)
+    return ErrorCode::FAULT;
+  auto with_timeout = [&](auto op) -> orbis::ErrorCode {
     timespec *ts = nullptr;
     timespec timeout;
     if (uaddr2 != nullptr) {
@@ -33,41 +43,49 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
 
       ts = &timeout;
     }
+    std::uint64_t usec = 0;
+    auto start = std::chrono::steady_clock::now();
 
-    return umtx_lock_umtx(thread, (ptr<umtx>)obj, val, ts);
+    if (!ts) {
+      usec = -1;
+      while (true) {
+        if (auto r = op(usec); r != ErrorCode::TIMEDOUT)
+          return r;
+      }
+    } else {
+      usec += (timeout.nsec + 999) / 1000;
+      usec += timeout.sec * 1000'000;
+      std::uint64_t udiff = 0;
+      while (true) {
+        if (auto r = op(usec - udiff); r != ErrorCode::TIMEDOUT)
+          return r;
+        udiff = (std::chrono::steady_clock::now() - start).count() / 1000;
+        if (udiff >= usec)
+          return ErrorCode::TIMEDOUT;
+      }
+    }
+  };
+
+  switch (op) {
+  case 0: {
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_lock_umtx(thread, (ptr<umtx>)obj, val, ut);
+    });
   }
   case 1:
     return umtx_unlock_umtx(thread, (ptr<umtx>)obj, val);
   case 2: {
-    timespec *ts = nullptr;
-    timespec timeout;
-    if (uaddr2 != nullptr) {
-      auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
-      if (result != ErrorCode{}) {
-        return result;
-      }
-
-      ts = &timeout;
-    }
-
-    return umtx_wait(thread, obj, val, ts);
+    return with_timeout(
+        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut); });
   }
   case 3:
     return umtx_wake(thread, obj, val);
   case 4:
     return umtx_trylock_umutex(thread, (ptr<umutex>)obj);
   case 5: {
-    timespec *ts = nullptr;
-    timespec timeout;
-    if (uaddr2 != nullptr) {
-      auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
-      if (result != ErrorCode{}) {
-        return result;
-      }
-
-      ts = &timeout;
-    }
-    return umtx_lock_umutex(thread, (ptr<umutex>)obj, ts);
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_lock_umutex(thread, (ptr<umutex>)obj, ut);
+    });
   }
   case 6:
     return umtx_unlock_umutex(thread, (ptr<umutex>)obj);
@@ -76,18 +94,10 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
                             (ptr<uint32_t>)uaddr1);
 
   case 8: {
-    timespec *ts = nullptr;
-    timespec timeout;
-    if (uaddr2 != nullptr) {
-      auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
-      if (result != ErrorCode{}) {
-        return result;
-      }
-
-      ts = &timeout;
-    }
-
-    return umtx_cv_wait(thread, (ptr<ucond>)obj, (ptr<umutex>)uaddr1, ts, val);
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_cv_wait(thread, (ptr<ucond>)obj, (ptr<umutex>)uaddr1, ut,
+                          val);
+    });
   }
 
   case 9:
@@ -95,18 +105,8 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case 10:
     return umtx_cv_broadcast(thread, (ptr<ucond>)obj);
   case 11: {
-    timespec *ts = nullptr;
-    timespec timeout;
-    if (uaddr2 != nullptr) {
-      auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
-      if (result != ErrorCode{}) {
-        return result;
-      }
-
-      ts = &timeout;
-    }
-
-    return umtx_wait_uint(thread, obj, val, ts);
+    return with_timeout(
+        [&](std::uint64_t ut) { return umtx_wait_uint(thread, obj, val, ut); });
   }
   case 12:
     return umtx_rw_rdlock(thread, obj, val, uaddr1, uaddr2);
@@ -115,34 +115,16 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case 14:
     return umtx_rw_unlock(thread, obj, val, uaddr1, uaddr2);
   case 15: {
-    timespec *ts = nullptr;
-    timespec timeout;
-    if (uaddr2 != nullptr) {
-      auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
-      if (result != ErrorCode{}) {
-        return result;
-      }
-
-      ts = &timeout;
-    }
-
-    return umtx_wait_uint_private(thread, obj, val, ts);
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_wait_uint_private(thread, obj, val, ut);
+    });
   }
   case 16:
     return umtx_wake_private(thread, obj, val);
   case 17: {
-    timespec *ts = nullptr;
-    timespec timeout;
-    if (uaddr2 != nullptr) {
-      auto result = ureadTimespec(timeout, (ptr<timespec>)uaddr2);
-      if (result != ErrorCode{}) {
-        return result;
-      }
-
-      ts = &timeout;
-    }
-
-    return umtx_wait_umutex(thread, (ptr<umutex>)obj, ts);
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_wait_umutex(thread, (ptr<umutex>)obj, ut);
+    });
   }
   case 18:
     return umtx_wake_umutex(thread, obj, val, uaddr1, uaddr2);
