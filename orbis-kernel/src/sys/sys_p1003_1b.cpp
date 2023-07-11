@@ -1,4 +1,5 @@
 #include "sys/sysproto.hpp"
+#include <thread>
 
 orbis::SysResult
 orbis::sys_sched_setparam(Thread *thread, pid_t pid,
@@ -18,7 +19,8 @@ orbis::SysResult orbis::sys_sched_getscheduler(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_sched_yield(Thread *thread) {
-  return ErrorCode::NOSYS;
+  std::this_thread::yield();
+  return {};
 }
 orbis::SysResult orbis::sys_sched_get_priority_max(Thread *thread,
                                                    sint policy) {
