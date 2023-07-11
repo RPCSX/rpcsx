@@ -25,6 +25,10 @@ inline constexpr auto kUrwLockWriteWaiters = 0x40000000;
 inline constexpr auto kUrwLockReadWaiters = 0x20000000;
 inline constexpr auto kUrwLockMaxReaders = 0x1fffffff;
 
+inline constexpr auto kCvWaitCheckUnparking = 0x01;
+inline constexpr auto kCvWaitAbsTime = 0x02;
+inline constexpr auto kCvWaitClockId = 0x04;
+
 inline constexpr auto kSemNamed = 2;
 
 struct umtx {

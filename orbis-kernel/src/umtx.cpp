@@ -254,8 +254,51 @@ orbis::ErrorCode orbis::umtx_set_ceiling(Thread *thread, ptr<umutex> m,
 orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
                                      ptr<umutex> m, std::uint64_t ut,
                                      ulong wflags) {
-  ORBIS_LOG_TODO(__FUNCTION__, cv, m, ut, wflags);
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_NOTICE(__FUNCTION__, cv, m, ut, wflags);
+  const uint flags = uread(&cv->flags);
+  if ((wflags & kCvWaitClockId) != 0) {
+    ORBIS_LOG_FATAL("umtx_cv_wait: CLOCK_ID unimplemented", wflags);
+    return ErrorCode::NOSYS;
+  }
+  if ((wflags & kCvWaitAbsTime) != 0) {
+    ORBIS_LOG_FATAL("umtx_cv_wait: ABSTIME unimplemented", wflags);
+    return ErrorCode::NOSYS;
+  }
+
+  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, m);
+  auto node = chain.enqueue(key, thread);
+
+  if (!cv->has_waiters.load(std::memory_order::relaxed))
+    cv->has_waiters.store(1, std::memory_order::relaxed);
+
+  ErrorCode result = umtx_unlock_umutex(thread, m);
+  if (result == ErrorCode{}) {
+    if (ut + 1 == 0) {
+      node->second.cv.wait(chain.mtx, ut);
+    } else {
+      auto start = std::chrono::steady_clock::now();
+      std::uint64_t udiff = 0;
+      while (true) {
+        node->second.cv.wait(chain.mtx, ut - udiff);
+        if (node->second.thr != thread)
+          break;
+        udiff = (std::chrono::steady_clock::now() - start).count() / 1000;
+        if (udiff >= ut) {
+          result = ErrorCode::TIMEDOUT;
+          break;
+        }
+      }
+    }
+  }
+
+  if (node->second.thr != thread) {
+    result = {};
+  } else {
+    chain.erase(node);
+    if (chain.sleep_queue.count(key) == 0)
+      cv->has_waiters.store(0, std::memory_order::relaxed);
+  }
+  return result;
 }
 
 orbis::ErrorCode orbis::umtx_cv_signal(Thread *thread, ptr<ucond> cv) {
