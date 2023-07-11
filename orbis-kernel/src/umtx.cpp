@@ -59,12 +59,17 @@ orbis::ErrorCode orbis::umtx_unlock_umtx(Thread *thread, ptr<umtx> umtx,
 }
 
 orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
-                                  std::uint64_t ut) {
+                                  std::uint64_t ut, bool is32) {
   ORBIS_LOG_NOTICE(__FUNCTION__, addr, id, ut);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, addr);
   auto node = chain.enqueue(key, thread);
   ErrorCode result = {};
-  if (reinterpret_cast<ptr<std::atomic<ulong>>>(addr)->load() == id) {
+  ulong val = 0;
+  if (is32)
+    val = reinterpret_cast<ptr<std::atomic<uint>>>(addr)->load();
+  else
+    val = reinterpret_cast<ptr<std::atomic<ulong>>>(addr)->load();
+  if (val == id) {
     if (ut + 1 == 0) {
       node->second.cv.wait(chain.mtx);
     } else {
@@ -326,12 +331,6 @@ orbis::ErrorCode orbis::umtx_cv_broadcast(Thread *thread, ptr<ucond> cv) {
   return ErrorCode::NOSYS;
 }
 
-orbis::ErrorCode orbis::umtx_wait_uint(Thread *thread, ptr<void> addr, ulong id,
-                                       std::uint64_t ut) {
-  ORBIS_LOG_TODO(__FUNCTION__, addr, id, ut);
-  return ErrorCode::NOSYS;
-}
-
 orbis::ErrorCode orbis::umtx_rw_rdlock(Thread *thread, ptr<void> obj,
                                        std::int64_t val, ptr<void> uaddr1,
                                        ptr<void> uaddr2) {
@@ -350,12 +349,6 @@ orbis::ErrorCode orbis::umtx_rw_unlock(Thread *thread, ptr<void> obj,
                                        std::int64_t val, ptr<void> uaddr1,
                                        ptr<void> uaddr2) {
   ORBIS_LOG_TODO(__FUNCTION__, obj, val, uaddr1, uaddr2);
-  return ErrorCode::NOSYS;
-}
-
-orbis::ErrorCode orbis::umtx_wait_uint_private(Thread *thread, ptr<void> addr,
-                                               ulong id, std::uint64_t ut) {
-  ORBIS_LOG_TODO(__FUNCTION__, addr, id, ut);
   return ErrorCode::NOSYS;
 }
 
