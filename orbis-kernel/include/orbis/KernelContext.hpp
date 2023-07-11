@@ -56,12 +56,13 @@ public:
   void kfree(void *ptr, std::size_t size);
 
   std::pair<EventFlag *, bool> createEventFlag(utils::kstring name,
-                                               std::int32_t flags) {
+                                               std::int32_t flags,
+                                               std::uint64_t initPattern) {
     std::lock_guard lock(m_evf_mtx);
 
     auto [it, inserted] = m_event_flags.try_emplace(std::move(name), nullptr);
     if (inserted) {
-      it->second = knew<EventFlag>(flags);
+      it->second = knew<EventFlag>(flags, initPattern);
     }
 
     return {it->second.get(), inserted};

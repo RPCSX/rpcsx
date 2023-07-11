@@ -81,9 +81,9 @@ orbis::SysResult orbis::sys_dl_notify_event(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
-                                       sint attrs, ptr<struct evFlag> evf) {
-  ORBIS_LOG_WARNING(__FUNCTION__, name, attrs, evf);
-  if (name == nullptr || evf != nullptr) {
+                                       sint attrs, uint64_t initPattern) {
+  ORBIS_LOG_WARNING(__FUNCTION__, name, attrs, initPattern);
+  if (name == nullptr) {
     return ErrorCode::INVAL;
   }
 
@@ -121,7 +121,7 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
   EventFlag *eventFlag;
   if (attrs & kEvfAttrShared) {
     auto [insertedEvf, inserted] =
-        thread->tproc->context->createEventFlag(_name, attrs);
+        thread->tproc->context->createEventFlag(_name, attrs, initPattern);
 
     if (!inserted) {
       return ErrorCode::EXIST; // FIXME: verify
@@ -129,7 +129,7 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
 
     eventFlag = insertedEvf;
   } else {
-    eventFlag = knew<EventFlag>(attrs);
+    eventFlag = knew<EventFlag>(attrs, initPattern);
   }
 
   thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
@@ -156,7 +156,7 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
 
   if (eventFlag == nullptr) {
     // HACK :)
-    return sys_evf_create(thread, name, kEvfAttrShared, nullptr);
+    return sys_evf_create(thread, name, kEvfAttrShared, 0);
     return ErrorCode::SRCH;
   }
 

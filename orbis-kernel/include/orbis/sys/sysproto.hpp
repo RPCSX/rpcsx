@@ -616,7 +616,7 @@ SysResult sys_dl_get_list(Thread *thread /* TODO */);
 SysResult sys_dl_get_info(Thread *thread /* TODO */);
 SysResult sys_dl_notify_event(Thread *thread /* TODO */);
 SysResult sys_evf_create(Thread *thread, ptr<const char[32]> name, sint attrs,
-                         ptr<struct evFlag> evf);
+                         uint64_t initPattern);
 SysResult sys_evf_delete(Thread *thread, sint id);
 SysResult sys_evf_open(Thread *thread, ptr<const char[32]> name);
 SysResult sys_evf_close(Thread *thread, sint id);

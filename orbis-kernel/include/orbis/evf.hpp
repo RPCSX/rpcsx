@@ -65,7 +65,8 @@ struct EventFlag {
 
   enum class NotifyType { Set, Cancel, Destroy };
 
-  explicit EventFlag(std::int32_t attrs) : attrs(attrs) {}
+  explicit EventFlag(std::int32_t attrs, std::uint64_t initPattern)
+      : attrs(attrs), value(initPattern) {}
 
   ErrorCode wait(Thread *thread, std::uint8_t waitMode,
                  std::uint64_t bitPattern, std::uint64_t *patternSet,
