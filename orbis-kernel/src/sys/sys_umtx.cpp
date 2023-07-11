@@ -32,7 +32,7 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   ORBIS_LOG_TRACE(__FUNCTION__, obj, op, val, uaddr1, uaddr2);
   if (reinterpret_cast<std::uintptr_t>(obj) - 0x10000 > 0xff'fffe'ffff)
     return ErrorCode::FAULT;
-  auto with_timeout = [&](auto op) -> orbis::ErrorCode {
+  auto with_timeout = [&](auto op, bool loop = true) -> orbis::ErrorCode {
     timespec *ts = nullptr;
     timespec timeout{};
     if (uaddr2 != nullptr) {
@@ -43,19 +43,23 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
 
       ts = &timeout;
     }
-    __uint128_t usec = timeout.sec;
-    auto start = std::chrono::steady_clock::now();
 
     if (!ts) {
+      if (!loop)
+        return op(-1);
       while (true) {
         if (auto r = op(-1); r != ErrorCode::TIMEDOUT)
           return r;
       }
     } else {
+      __uint128_t usec = timeout.sec;
       usec *= 1000'000;
       usec += (timeout.nsec + 999) / 1000;
       if (usec >= UINT64_MAX)
         usec = -2;
+      if (!loop)
+        return op(usec);
+      auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
       while (true) {
         if (auto r = op(usec - udiff); r != ErrorCode::TIMEDOUT)
@@ -77,7 +81,8 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return umtx_unlock_umtx(thread, (ptr<umtx>)obj, val);
   case 2: {
     return with_timeout(
-        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut); });
+        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut); },
+        false);
   }
   case 3:
     return umtx_wake(thread, obj, val);

@@ -56,11 +56,23 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, addr);
   auto node = chain.enqueue(key, thread);
   ErrorCode result = {};
-  // TODO: this is inaccurate with timeout as FreeBsd 9.1 only checks id once
   if (reinterpret_cast<ptr<std::atomic<ulong>>>(addr)->load() == id) {
-    node->second.cv.wait(chain.mtx, ut);
-    if (node->second.thr == thread)
-      result = ErrorCode::TIMEDOUT;
+    if (ut + 1 == 0) {
+      node->second.cv.wait(chain.mtx);
+    } else {
+      auto start = std::chrono::steady_clock::now();
+      std::uint64_t udiff = 0;
+      while (true) {
+        node->second.cv.wait(chain.mtx, ut - udiff);
+        if (node->second.thr != thread)
+          break;
+        udiff = (std::chrono::steady_clock::now() - start).count() / 1000;
+        if (udiff >= ut) {
+          result = ErrorCode::TIMEDOUT;
+          break;
+        }
+      }
+    }
   }
   if (node->second.thr == thread)
     chain.erase(node);
