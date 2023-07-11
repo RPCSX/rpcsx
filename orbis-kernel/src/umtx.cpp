@@ -28,13 +28,21 @@ void UmtxChain::erase(std::pair<const UmtxKey, UmtxCond> *obj) {
   }
 }
 
-void UmtxChain::notify_one(const UmtxKey &key) {
+uint UmtxChain::notify_one(const UmtxKey &key) {
   auto it = sleep_queue.find(key);
   if (it == sleep_queue.end())
-    return;
+    return 0;
   it->second.thr = nullptr;
   it->second.cv.notify_one(mtx);
   this->erase(&*it);
+  return 1;
+}
+
+uint UmtxChain::notify_all(const UmtxKey &key) {
+  uint n = 0;
+  while (notify_one(key))
+    n++;
+  return n;
 }
 } // namespace orbis
 
@@ -302,12 +310,19 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
 }
 
 orbis::ErrorCode orbis::umtx_cv_signal(Thread *thread, ptr<ucond> cv) {
-  ORBIS_LOG_TODO(__FUNCTION__, cv);
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_NOTICE(__FUNCTION__, cv);
+  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, cv);
+  std::size_t count = chain.sleep_queue.count(key);
+  if (chain.notify_one(key) >= count)
+    cv->has_waiters.store(0, std::memory_order::relaxed);
+  return {};
 }
 
 orbis::ErrorCode orbis::umtx_cv_broadcast(Thread *thread, ptr<ucond> cv) {
-  ORBIS_LOG_TODO(__FUNCTION__, cv);
+  ORBIS_LOG_NOTICE(__FUNCTION__, cv);
+  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, cv);
+  chain.notify_all(key);
+  cv->has_waiters.store(0, std::memory_order::relaxed);
   return ErrorCode::NOSYS;
 }
 
