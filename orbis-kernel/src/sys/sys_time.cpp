@@ -1,4 +1,5 @@
 #include "sys/sysproto.hpp"
+#include "time.hpp"
 #include "utils/Logs.hpp"
 #include <ctime>
 
@@ -100,16 +101,15 @@ orbis::SysResult orbis::sys_clock_gettime(Thread *, clockid_t clock_id,
   return uwrite(tp, result);
 }
 orbis::SysResult orbis::sys_clock_settime(Thread *thread, clockid_t clock_id,
-                                          ptr<const struct timespec> tp) {
+                                          ptr<const timespec> tp) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_clock_getres(Thread *thread, clockid_t clock_id,
-                                         ptr<struct timespec> tp) {
+                                         ptr<timespec> tp) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_nanosleep(Thread *thread,
-                                      ptr<const struct timespec> rqtp,
-                                      ptr<struct timespec> rmtp) {
+orbis::SysResult orbis::sys_nanosleep(Thread *thread, ptr<const timespec> rqtp,
+                                      ptr<timespec> rmtp) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<struct timeval> tp,

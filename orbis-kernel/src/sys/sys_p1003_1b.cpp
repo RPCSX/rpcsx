@@ -30,8 +30,7 @@ orbis::SysResult orbis::sys_sched_get_priority_min(Thread *thread,
                                                    sint policy) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_sched_rr_get_interval(Thread *thread, pid_t pid,
-                                 ptr<struct timespec> interval) {
+orbis::SysResult orbis::sys_sched_rr_get_interval(Thread *thread, pid_t pid,
+                                                  ptr<timespec> interval) {
   return ErrorCode::NOSYS;
 }

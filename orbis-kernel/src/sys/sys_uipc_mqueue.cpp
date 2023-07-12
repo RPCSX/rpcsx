@@ -13,16 +13,16 @@ orbis::SysResult orbis::sys_kmq_setattr(Thread *thread, sint mqd,
                                         ptr<struct mq_attr> oattr) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_kmq_timedreceive(Thread *thread, sint mqd, ptr<const char> msg_ptr,
-                            size_t msg_len, ptr<uint> msg_prio,
-                            ptr<const struct timespec> abstimeout) {
+orbis::SysResult orbis::sys_kmq_timedreceive(Thread *thread, sint mqd,
+                                             ptr<const char> msg_ptr,
+                                             size_t msg_len, ptr<uint> msg_prio,
+                                             ptr<const timespec> abstimeout) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_kmq_timedsend(Thread *thread, sint mqd, ptr<char> msg_ptr,
-                         size_t msg_len, ptr<uint> msg_prio,
-                         ptr<const struct timespec> abstimeout) {
+orbis::SysResult orbis::sys_kmq_timedsend(Thread *thread, sint mqd,
+                                          ptr<char> msg_ptr, size_t msg_len,
+                                          ptr<uint> msg_prio,
+                                          ptr<const timespec> abstimeout) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_kmq_notify(Thread *thread, sint mqd,

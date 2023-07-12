@@ -7,6 +7,7 @@
 namespace orbis {
 struct Thread;
 struct Module;
+struct timespec;
 
 struct ProcessOps {
   SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
@@ -57,7 +58,7 @@ struct ProcessOps {
   SysResult (*thr_exit)(Thread *thread, ptr<slong> state);
   SysResult (*thr_kill)(Thread *thread, slong id, sint sig);
   SysResult (*thr_kill2)(Thread *thread, pid_t pid, slong id, sint sig);
-  SysResult (*thr_suspend)(Thread *thread, ptr<const struct timespec> timeout);
+  SysResult (*thr_suspend)(Thread *thread, ptr<const timespec> timeout);
   SysResult (*thr_wake)(Thread *thread, slong id);
   SysResult (*thr_set_name)(Thread *thread, slong id, ptr<const char> name);
 

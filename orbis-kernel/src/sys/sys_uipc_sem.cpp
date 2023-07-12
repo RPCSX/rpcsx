@@ -22,7 +22,7 @@ orbis::SysResult orbis::sys_ksem_wait(Thread *thread, semid_t id) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_ksem_timedwait(Thread *thread, semid_t id,
-                                           ptr<const struct timespec> abstime) {
+                                           ptr<const timespec> abstime) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_ksem_trywait(Thread *thread, semid_t id) {

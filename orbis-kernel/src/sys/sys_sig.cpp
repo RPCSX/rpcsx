@@ -44,7 +44,7 @@ orbis::SysResult orbis::sys_sigwait(Thread *thread,
 orbis::SysResult orbis::sys_sigtimedwait(Thread *thread,
                                          ptr<const struct sigset> set,
                                          ptr<struct siginfo> info,
-                                         ptr<const struct timespec> timeout) {
+                                         ptr<const timespec> timeout) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_sigwaitinfo(Thread *thread,

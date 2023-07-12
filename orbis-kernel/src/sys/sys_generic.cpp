@@ -78,7 +78,7 @@ orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com,
 }
 orbis::SysResult orbis::sys_pselect(Thread *thread, sint nd, ptr<fd_set> in,
                                     ptr<fd_set> ou, ptr<fd_set> ex,
-                                    ptr<const struct timespec> ts,
+                                    ptr<const timespec> ts,
                                     ptr<const sigset_t> sm) {
   return ErrorCode::NOSYS;
 }

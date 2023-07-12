@@ -13,6 +13,8 @@ using SceKernelModule = ModuleHandle;
 
 struct ModuleInfo;
 struct ModuleInfoEx;
+struct KEvent;
+struct timespec;
 
 struct stack_t;
 
@@ -211,11 +213,11 @@ SysResult sys_shmat(Thread *thread, sint shmid, ptr<const void> shmaddr,
 SysResult sys_shmdt(Thread *thread, ptr<const void> shmaddr);
 SysResult sys_shmget(Thread *thread, key_t key, size_t size, sint shmflg);
 SysResult sys_clock_gettime(Thread *thread, clockid_t clock_id,
-                            ptr<struct timespec> tp);
+                            ptr<timespec> tp);
 SysResult sys_clock_settime(Thread *thread, clockid_t clock_id,
-                            ptr<const struct timespec> tp);
+                            ptr<const timespec> tp);
 SysResult sys_clock_getres(Thread *thread, clockid_t clock_id,
-                           ptr<struct timespec> tp);
+                           ptr<timespec> tp);
 SysResult sys_ktimer_create(Thread *thread, clockid_t clock_id,
                             ptr<struct sigevent> evp, ptr<sint> timerid);
 SysResult sys_ktimer_delete(Thread *thread, sint timerid);
@@ -225,8 +227,8 @@ SysResult sys_ktimer_settime(Thread *thread, sint timerid, sint flags,
 SysResult sys_ktimer_gettime(Thread *thread, sint timerid,
                              ptr<struct itimerspec> value);
 SysResult sys_ktimer_getoverrun(Thread *thread, sint timerid);
-SysResult sys_nanosleep(Thread *thread, ptr<const struct timespec> rqtp,
-                        ptr<struct timespec> rmtp);
+SysResult sys_nanosleep(Thread *thread, ptr<const timespec> rqtp,
+                        ptr<timespec> rmtp);
 SysResult sys_ntp_gettime(Thread *thread, ptr<struct ntptimeval> ntvp);
 SysResult sys_minherit(Thread *thread, ptr<void> addr, size_t len,
                        sint inherit);
@@ -270,7 +272,7 @@ SysResult sys_setresuid(Thread *thread, uid_t ruid, uid_t euid, uid_t suid);
 SysResult sys_setresgid(Thread *thread, gid_t rgid, gid_t egid, gid_t sgid);
 SysResult sys_aio_return(Thread *thread, ptr<struct aiocb> aiocbp);
 SysResult sys_aio_suspend(Thread *thread, ptr<struct aiocb> aiocbp, sint nent,
-                          ptr<const struct timespec> timeout);
+                          ptr<const timespec> timeout);
 SysResult sys_aio_cancel(Thread *thread, sint fd, ptr<struct aiocb> aiocbp);
 SysResult sys_aio_error(Thread *thread, ptr<struct aiocb> aiocbp);
 SysResult sys_oaio_read(Thread *thread, ptr<struct aiocb> aiocbp);
@@ -293,7 +295,7 @@ SysResult sys_sched_yield(Thread *thread);
 SysResult sys_sched_get_priority_max(Thread *thread, sint policy);
 SysResult sys_sched_get_priority_min(Thread *thread, sint policy);
 SysResult sys_sched_rr_get_interval(Thread *thread, pid_t pid,
-                                    ptr<struct timespec> interval);
+                                    ptr<timespec> interval);
 SysResult sys_utrace(Thread *thread, ptr<const void> addr, size_t len);
 SysResult sys_kldsym(Thread *thread, sint fileid, sint cmd, ptr<void> data);
 SysResult sys_jail(Thread *thread, ptr<struct jail> jail);
@@ -306,7 +308,7 @@ SysResult sys_sigsuspend(Thread *thread, ptr<const struct sigset> set);
 SysResult sys_sigpending(Thread *thread, ptr<struct sigset> set);
 SysResult sys_sigtimedwait(Thread *thread, ptr<const struct sigset> set,
                            ptr<struct siginfo> info,
-                           ptr<const struct timespec> timeout);
+                           ptr<const timespec> timeout);
 SysResult sys_sigwaitinfo(Thread *thread, ptr<const struct sigset> set,
                           ptr<struct siginfo> info);
 SysResult sys___acl_get_file(Thread *thread, ptr<char> path, acl_type_t type,
@@ -336,15 +338,15 @@ SysResult sys_extattr_get_file(Thread *thread, ptr<char> path,
 SysResult sys_extattr_delete_file(Thread *thread, ptr<char> path,
                                   sint attrnamespace, ptr<const char> attrname);
 SysResult sys_aio_waitcomplete(Thread *thread, ptr<ptr<struct aiocb>> aiocbp,
-                               ptr<struct timespec> timeout);
+                               ptr<timespec> timeout);
 SysResult sys_getresuid(Thread *thread, ptr<uid_t> ruid, ptr<uid_t> euid,
                         ptr<uid_t> suid);
 SysResult sys_getresgid(Thread *thread, ptr<gid_t> rgid, ptr<gid_t> egid,
                         ptr<gid_t> sgid);
 SysResult sys_kqueue(Thread *thread);
-SysResult sys_kevent(Thread *thread, sint fd, ptr<struct kevent> changelist,
-                     sint nchanges, ptr<struct kevent> eventlist, sint nevents,
-                     ptr<const struct timespec> timeout);
+SysResult sys_kevent(Thread *thread, sint fd, ptr<KEvent> changelist,
+                     sint nchanges, ptr<KEvent> eventlist, sint nevents,
+                     ptr<const timespec> timeout);
 SysResult sys_extattr_set_fd(Thread *thread, sint fd, sint attrnamespace,
                              ptr<const char> attrname, ptr<void> data,
                              size_t nbytes);
@@ -443,8 +445,8 @@ SysResult sys_extattr_list_link(Thread *thread, ptr<const char> path,
                                 sint attrnamespace, ptr<void> data,
                                 size_t nbytes);
 SysResult sys_ksem_timedwait(Thread *thread, semid_t id,
-                             ptr<const struct timespec> abstime);
-SysResult sys_thr_suspend(Thread *thread, ptr<const struct timespec> timeout);
+                             ptr<const timespec> abstime);
+SysResult sys_thr_suspend(Thread *thread, ptr<const timespec> timeout);
 SysResult sys_thr_wake(Thread *thread, slong id);
 SysResult sys_kldunloadf(Thread *thread, slong fileid, sint flags);
 SysResult sys_audit(Thread *thread, ptr<const void> record, uint length);
@@ -473,10 +475,10 @@ SysResult sys_kmq_setattr(Thread *thread, sint mqd,
 SysResult sys_kmq_timedreceive(Thread *thread, sint mqd,
                                ptr<const char> msg_ptr, size_t msg_len,
                                ptr<uint> msg_prio,
-                               ptr<const struct timespec> abstimeout);
+                               ptr<const timespec> abstimeout);
 SysResult sys_kmq_timedsend(Thread *thread, sint mqd, ptr<char> msg_ptr,
                             size_t msg_len, ptr<uint> msg_prio,
-                            ptr<const struct timespec> abstimeout);
+                            ptr<const timespec> abstimeout);
 SysResult sys_kmq_notify(Thread *thread, sint mqd,
                          ptr<const struct sigevent> sigev);
 SysResult sys_kmq_unlink(Thread *thread, ptr<const char> path);
@@ -575,7 +577,7 @@ SysResult sys_pdfork(Thread *thread, ptr<sint> fdp, sint flags);
 SysResult sys_pdkill(Thread *thread, sint fd, sint signum);
 SysResult sys_pdgetpid(Thread *thread, sint fd, ptr<pid_t> pidp);
 SysResult sys_pselect(Thread *thread, sint nd, ptr<fd_set> in, ptr<fd_set> ou,
-                      ptr<fd_set> ex, ptr<const struct timespec> ts,
+                      ptr<fd_set> ex, ptr<const timespec> ts,
                       ptr<const sigset_t> sm);
 SysResult sys_getloginclass(Thread *thread, ptr<char> namebuf, size_t namelen);
 SysResult sys_setloginclass(Thread *thread, ptr<char> namebuf);

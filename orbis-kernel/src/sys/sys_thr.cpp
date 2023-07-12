@@ -48,7 +48,7 @@ orbis::SysResult orbis::sys_thr_kill2(Thread *thread, pid_t pid, slong id,
 }
 
 orbis::SysResult orbis::sys_thr_suspend(Thread *thread,
-                                        ptr<const struct timespec> timeout) {
+                                        ptr<const timespec> timeout) {
   if (auto thr_suspend = thread->tproc->ops->thr_suspend) {
     return thr_suspend(thread, timeout);
   }

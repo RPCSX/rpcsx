@@ -135,7 +135,7 @@ orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
 #define IOC_DIRMASK (IOC_VOID | IOC_OUT | IOC_IN)
 
 #define _IOC(inout, group, num, len)                                           \
-  ((unsigned long)((inout) | (((len)&IOCPARM_MASK) << 16) | ((group) << 8) |   \
+  ((unsigned long)((inout) | (((len) & IOCPARM_MASK) << 16) | ((group) << 8) | \
                    (num)))
 #define _IO(g, n) _IOC(IOC_VOID, (g), (n), 0)
 #define _IOWINT(g, n) _IOC(IOC_VOID, (g), (n), sizeof(int))
@@ -498,7 +498,7 @@ SysResult thr_kill2(orbis::Thread *thread, orbis::pid_t pid, orbis::slong id,
   return ErrorCode::NOTSUP;
 }
 SysResult thr_suspend(orbis::Thread *thread,
-                      orbis::ptr<const timespec> timeout) {
+                      orbis::ptr<const orbis::timespec> timeout) {
   return ErrorCode::NOTSUP;
 }
 SysResult thr_wake(orbis::Thread *thread, orbis::slong id) {

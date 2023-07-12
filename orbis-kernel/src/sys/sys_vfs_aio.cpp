@@ -6,7 +6,7 @@ orbis::SysResult orbis::sys_aio_return(Thread *thread,
 }
 orbis::SysResult orbis::sys_aio_suspend(Thread *thread,
                                         ptr<struct aiocb> aiocbp, sint nent,
-                                        ptr<const struct timespec> timeout) {
+                                        ptr<const timespec> timeout) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_aio_cancel(Thread *thread, sint fd,
@@ -44,7 +44,7 @@ orbis::SysResult orbis::sys_lio_listio(Thread *thread, sint mode,
 }
 orbis::SysResult orbis::sys_aio_waitcomplete(Thread *thread,
                                              ptr<ptr<struct aiocb>> aiocbp,
-                                             ptr<struct timespec> timeout) {
+                                             ptr<timespec> timeout) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_aio_fsync(Thread *thread, sint op,
