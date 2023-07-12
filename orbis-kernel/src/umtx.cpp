@@ -60,7 +60,7 @@ orbis::ErrorCode orbis::umtx_unlock_umtx(Thread *thread, ptr<umtx> umtx,
 
 orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
                                   std::uint64_t ut, bool is32) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, addr, id, ut);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, addr, id, ut, is32);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, addr);
   auto node = chain.enqueue(key, thread);
   ErrorCode result = {};
@@ -93,7 +93,7 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
 }
 
 orbis::ErrorCode orbis::umtx_wake(Thread *thread, ptr<void> addr, sint n_wake) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, addr, n_wake);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, addr, n_wake);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, addr);
   std::size_t count = chain.sleep_queue.count(key);
   // TODO: check this
@@ -128,7 +128,7 @@ void log_class_string<umutex_lock_mode>::format(std::string &out,
 }
 static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
                                 std::uint64_t ut, umutex_lock_mode mode) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, m, flags, ut, mode);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, m, flags, ut, mode);
 
   ErrorCode error = {};
   while (true) {
@@ -182,7 +182,7 @@ static ErrorCode do_lock_pp(Thread *thread, ptr<umutex> m, uint flags,
   return ErrorCode::NOSYS;
 }
 static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, m, flags);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, m, flags);
 
   int owner = m->owner.load(std::memory_order_acquire);
   if ((owner & ~kUmutexContested) != thread->tid)
@@ -267,7 +267,7 @@ orbis::ErrorCode orbis::umtx_set_ceiling(Thread *thread, ptr<umutex> m,
 orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
                                      ptr<umutex> m, std::uint64_t ut,
                                      ulong wflags) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, cv, m, ut, wflags);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, cv, m, ut, wflags);
   const uint flags = uread(&cv->flags);
   if ((wflags & kCvWaitClockId) != 0) {
     ORBIS_LOG_FATAL("umtx_cv_wait: CLOCK_ID unimplemented", wflags);
@@ -315,7 +315,7 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
 }
 
 orbis::ErrorCode orbis::umtx_cv_signal(Thread *thread, ptr<ucond> cv) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, cv);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, cv);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, cv);
   std::size_t count = chain.sleep_queue.count(key);
   if (chain.notify_one(key) >= count)
@@ -324,7 +324,7 @@ orbis::ErrorCode orbis::umtx_cv_signal(Thread *thread, ptr<ucond> cv) {
 }
 
 orbis::ErrorCode orbis::umtx_cv_broadcast(Thread *thread, ptr<ucond> cv) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, cv);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, cv);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, cv);
   chain.notify_all(key);
   cv->has_waiters.store(0, std::memory_order::relaxed);
@@ -407,10 +407,10 @@ orbis::ErrorCode orbis::umtx_sem_wake(Thread *thread, ptr<void> obj,
 
 orbis::ErrorCode orbis::umtx_nwake_private(Thread *thread, ptr<void *> uaddrs,
                                            std::int64_t count) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, uaddrs, count);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, uaddrs, count);
   while (count-- > 0) {
     void *uaddr;
-    auto error = uread(uaddr, uaddrs);
+    auto error = uread(uaddr, uaddrs++);
     if (error != ErrorCode{})
       return error;
     umtx_wake_private(thread, uaddr, 1);

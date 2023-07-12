@@ -1,20 +1,21 @@
 #include "orbis/utils/SharedCV.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <linux/futex.h>
 #include <syscall.h>
 #include <unistd.h>
 
 namespace orbis::utils {
-void shared_cv::impl_wait(shared_mutex &mutex, unsigned _old,
+void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
                           std::uint64_t usec_timeout) noexcept {
   // Not supposed to fail
-  if (!_old)
+  if (!_val)
     std::abort();
 
   // Wait with timeout
   struct timespec timeout {};
   timeout.tv_nsec = (usec_timeout % 1000'000) * 1000;
   timeout.tv_sec = (usec_timeout / 1000'000);
-  syscall(SYS_futex, &m_value, FUTEX_WAIT, _old,
+  syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
           usec_timeout + 1 ? &timeout : nullptr, 0, 0);
 
   // Cleanup
@@ -64,6 +65,8 @@ void shared_cv::impl_wake(shared_mutex &mutex, int _count) noexcept {
     // Add lock signal (mutex was immediately locked)
     if (locked && max_sig)
       value |= c_locked_mask;
+    else if (locked)
+      std::abort();
 
     // Add normal signals
     value += c_signal_one * max_sig;
@@ -84,7 +87,7 @@ void shared_cv::impl_wake(shared_mutex &mutex, int _count) noexcept {
     // Wake up one thread + requeue remaining waiters
     unsigned awake_count = locked ? 1 : 0;
     if (auto r = syscall(SYS_futex, &m_value, FUTEX_REQUEUE, awake_count,
-                         &mutex, _count - awake_count, 0);
+                         _count - awake_count, &mutex, 0);
         r < _count) {
       // Keep awaking waiters
       return impl_wake(mutex, is_one ? 1 : INT_MAX);

@@ -1,4 +1,5 @@
 #include "utils/SharedMutex.hpp"
+#include "utils/Logs.hpp"
 #include <linux/futex.h>
 #include <syscall.h>
 #include <unistd.h>
