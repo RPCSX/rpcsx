@@ -1,6 +1,7 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <atomic>
 #include <cinttypes>
 #include <cstdio>
@@ -27,7 +28,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
   switch (request) {
   case 0xc008811b: // get submit done flag ptr?
                    // TODO
-    std::fprintf(stderr, "gc ioctl 0xc008811b(%lx)\n", *(std::uint64_t *)argp);
+    ORBIS_LOG_ERROR("gc ioctl 0xc008811b", *(std::uint64_t *)argp);
     *reinterpret_cast<void **>(argp) = &g_submitDoneFlag;
     return 0;
 
@@ -40,8 +41,8 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr, "gc ioctl 0xc0108102(%x, %x, %p)\n", args->arg0,
-                 args->count, args->cmds);
+    flockfile(stderr);
+    ORBIS_LOG_ERROR("gc ioctl 0xc0108102", args->arg0, args->count, args->cmds);
 
     for (int i = 0; i < args->count; ++i) {
       auto cmd = args->cmds + (i * 2);
@@ -62,6 +63,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
       rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
+    funlockfile(stderr);
 
     break;
   }
@@ -74,8 +76,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr, "gc ioctl 0xc0088101(%x, %x)\n", args->arg0,
-                 args->arg1);
+    ORBIS_LOG_ERROR("gc ioctl 0xc0088101\n", args->arg0, args->arg1);
     break;
   }
 
@@ -90,8 +91,9 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr, "gc ioctl 0xc020810c(%x, %x, %p, %lx, %x)\n",
-                 args->arg0, args->count, args->cmds, args->arg3, args->arg4);
+    flockfile(stderr);
+    ORBIS_LOG_ERROR("gc ioctl 0xc020810c", args->arg0, args->count, args->cmds,
+                    args->arg3, args->arg4);
 
     for (int i = 0; i < args->count; ++i) {
       auto cmd = args->cmds + (i * 2);
@@ -112,13 +114,14 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
       rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
+    funlockfile(stderr);
 
     // orbis::bridge.sendDoFlip();
     break;
   }
 
   case 0xc0048116: {
-    std::fprintf(stderr, "gc ioctl 0xc0048116(%x)\n", *(std::uint32_t *)argp);
+    ORBIS_LOG_ERROR("gc ioctl 0xc0048116", *(std::uint32_t *)argp);
     break;
   }
 
@@ -131,9 +134,8 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     };
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr,
-                 "gc ioctl set gs ring sizes: arg1=0x%x, arg2=0x%x, unk=0x%x\n",
-                 args->arg1, args->arg2, args->unk);
+    ORBIS_LOG_ERROR("gc ioctl set gs ring sizes", args->arg1, args->arg2,
+                    args->unk);
     break;
   }
 
@@ -145,10 +147,8 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
       std::uint32_t arg3;
     };
     auto args = reinterpret_cast<Args *>(argp);
-    std::fprintf(
-        stderr,
-        "gc ioctl stats report control(unk=%x,arg1=%x,arg2=%x,arg3=%x)\n",
-        args->unk, args->arg1, args->arg2, args->arg3);
+    ORBIS_LOG_ERROR("gc ioctl stats report control", args->unk, args->arg1,
+                    args->arg2, args->arg3);
     break;
   }
 
@@ -159,8 +159,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    std::fprintf(stderr, "gc ioctl stats mask(arg1=%lx,arg2=%lx)\n", args->arg1,
-                 args->arg2);
+    ORBIS_LOG_ERROR("gc ioctl stats mask", args->arg1, args->arg2);
     break;
   }
 
@@ -178,13 +177,9 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr,
-                 "gc ioctl map compute queue(pipeHi=%x, pipeLo=%x, queueId=%x, "
-                 "queuePipe=%x, ringBaseAddress=%lx, readPtrAddress=%lx, "
-                 "unkPtr=%lx, count=%u)\n",
-                 args->pipeHi, args->pipeLo, args->queueId, args->queuePipe,
-                 args->ringBaseAddress, args->readPtrAddress, args->dingDongPtr,
-                 args->count);
+    ORBIS_LOG_ERROR("gc ioctl map compute queue", args->pipeHi, args->pipeLo,
+                    args->queueId, args->queuePipe, args->ringBaseAddress,
+                    args->readPtrAddress, args->dingDongPtr, args->count);
 
     args->pipeHi = 0x769c766;
     args->pipeLo = 0x72e8e3c1;
@@ -209,11 +204,8 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    std::fprintf(
-        stderr,
-        "gc ioctl ding dong for workload(pipeHi=%x, pipeLo=%x, queueId=%x, "
-        "nextStartOffsetInDw=%x)\n",
-        args->pipeHi, args->pipeLo, args->queueId, args->nextStartOffsetInDw);
+    ORBIS_LOG_ERROR("gc ioctl ding dong for workload", args->pipeHi,
+                    args->pipeLo, args->queueId, args->nextStartOffsetInDw);
 
     // TODO: implement
 
@@ -222,19 +214,19 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 
   case 0xc0048114: {
     // SetWaveLimitMultipliers
-    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request,
-                 (unsigned long)*(std::uint32_t *)argp);
+    ORBIS_LOG_WARNING("Unknown gc ioctl", request,
+                      (unsigned long)*(std::uint32_t *)argp);
     break;
   }
 
   case 0xc004811f: {
-    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request,
-                 (unsigned long)*(std::uint32_t *)argp);
+    ORBIS_LOG_WARNING("Unknown gc ioctl", request,
+                      (unsigned long)*(std::uint32_t *)argp);
     break;
   }
 
   default:
-    std::fprintf(stderr, "***ERROR*** Unhandled gc ioctl %lx\n", request);
+    ORBIS_LOG_FATAL("Unhandled gc ioctl", request);
     std::fflush(stdout);
     __builtin_trap();
     break;
@@ -245,7 +237,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
 static void *gc_instance_mmap(IoDeviceInstance *instance, void *address,
                               std::uint64_t size, std::int32_t prot,
                               std::int32_t flags, std::int64_t offset) {
-  std::fprintf(stderr, "***ERROR*** Unhandled gc mmap %lx\n", offset);
+  ORBIS_LOG_FATAL("Unhandled gc mmap", offset);
 
   return rx::vm::map(address, size, prot, flags);
 }

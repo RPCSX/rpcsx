@@ -1024,6 +1024,7 @@ inline const std::string opcodeToString(int op) {
 inline void dumpShader(const std::uint32_t *data) {
   int hackExit = 0;
 
+  flockfile(stdout);
   while (true) {
     auto instHex = *data;
     bool isEnd = instHex == 0xBF810000 || instHex == 0xBE802000;
@@ -1042,6 +1043,7 @@ inline void dumpShader(const std::uint32_t *data) {
       break;
     }
   }
+  funlockfile(stdout);
 }
 
 enum BlendMultiplier {

@@ -1,6 +1,7 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
 #include <cinttypes>
 #include <cstddef>
@@ -94,12 +95,12 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     // flip control
     auto args = reinterpret_cast<FlipControlArgs *>(argp);
 
-    std::printf("dce: FlipControl(%d, %lx, %p, %lx)\n", args->id, args->arg2,
-                args->ptr, args->size);
+    ORBIS_LOG_NOTICE("dce: FlipControl", args->id, args->arg2, args->ptr,
+                     args->size);
 
     if (args->id == 6) { // set flip rate?
-      std::printf("dce: FlipControl(set flip rate, %lx, %p, %lx)\n", args->arg2,
-                  args->ptr, args->size);
+      ORBIS_LOG_NOTICE("dce: FlipControl: set flip rate", args->arg2, args->ptr,
+                       args->size);
     } else if (args->id == 10) {
       if (args->size != sizeof(FlipControlStatus)) {
         return 0;
@@ -128,17 +129,17 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
       status->x = 0;
       status->y = 0;
     } else if (args->id == 9) {
-      std::printf("dce: FlipControl allocate(%u, %lx, %p, %lx)\n", args->id,
-                  args->arg2, args->ptr, args->size);
+      ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
+                       args->ptr, args->size);
       *(std::uint64_t *)args->ptr = 0;         // dev offset
       *(std::uint64_t *)args->size = 0x100000; // size
     } else if (args->id == 31) {
       bufferInUsePtr = (std::uint64_t *)args->size;
-      std::printf("flipStatusPtr = %p\n", bufferInUsePtr);
+      ORBIS_LOG_NOTICE("flipStatusPtr: ", bufferInUsePtr);
       return 0;
     } else if (args->id != 0 && args->id != 1) { // used during open/close
-      std::printf("dce: UNIMPLEMENTED FlipControl(%u, %lx, %p, %lx)\n",
-                  args->id, args->arg2, args->ptr, args->size);
+      ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
+                       args->ptr, args->size);
 
       std::fflush(stdout);
       __builtin_trap();
@@ -148,12 +149,12 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
   if (request == 0xc0308206) {
     auto args = reinterpret_cast<RegisterBuffer *>(argp);
-    std::fprintf(stderr, "dce: RegisterBuffer(%lx, %lx, %lx, %lx)\n",
-                 args->attributeIndex, args->index, args->address, args->unk);
+    ORBIS_LOG_ERROR("dce: RegisterBuffer", args->attributeIndex, args->index,
+                    args->address, args->unk);
 
     if (args->index >= std::size(rx::bridge.header->buffers)) {
       // TODO
-      std::fprintf(stderr, "dce: out of buffers!\n");
+      ORBIS_LOG_FATAL("dce: out of buffers!");
       return -1;
     }
 
@@ -171,16 +172,11 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
   if (request == 0xc0308207) { // SCE_SYS_DCE_IOCTL_REGISTER_BUFFER_ATTRIBUTE
     auto args = reinterpret_cast<RegisterBufferAttributeArgs *>(argp);
 
-    std::fprintf(
-        stderr,
-        "dce: RegisterBufferAttributes(unk0=%lx, unk1=%x, unk2_flag=%x, "
-        "unk3=%x, "
-        "pixelFormat=%x, tilingMode=%x, pitch=%u, width=%u, "
-        "height=%u, "
-        "unk4_zero=%x, unk5_zero=%x, unk6=%x, unk7_-1=%lx, unk8=%x)\n",
-        args->unk0, args->unk1, args->unk2_flag, args->unk3, args->pixelFormat,
-        args->tilingMode, args->pitch, args->width, args->height,
-        args->unk4_zero, args->unk5_zero, args->unk6, args->unk7, args->unk8);
+    ORBIS_LOG_ERROR("dce: RegisterBufferAttributes", args->unk0, args->unk1,
+                    args->unk2_flag, args->unk3, args->pixelFormat,
+                    args->tilingMode, args->pitch, args->width, args->height,
+                    args->unk4_zero, args->unk5_zero, args->unk6, args->unk7,
+                    args->unk8);
 
     dceInstance->bufferAttributes.pixelFormat = args->pixelFormat;
     dceInstance->bufferAttributes.tilingMode = args->tilingMode;
@@ -194,14 +190,9 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     // flip request
     auto args = reinterpret_cast<FlipRequestArgs *>(argp);
 
-    std::fprintf(
-        stderr,
-        "dce: FlipRequestArgs(%lx, displayBufferIndex = %x, flipMode = %lx, "
-        "flipArg = %lx, "
-        "%x, %x, %x, "
-        "%x)\n",
-        args->arg1, args->displayBufferIndex, args->flipMode, args->flipArg,
-        args->arg5, args->arg6, args->arg7, args->arg8);
+    ORBIS_LOG_ERROR("dce: FlipRequestArgs", args->arg1,
+                    args->displayBufferIndex, args->flipMode, args->flipArg,
+                    args->arg5, args->arg6, args->arg7, args->arg8);
 
     rx::bridge.sendFlip(args->displayBufferIndex,
                         /*args->flipMode,*/ args->flipArg);
@@ -213,7 +204,7 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     if (args->displayBufferIndex != -1) {
       if (bufferInUsePtr) {
         auto ptr = bufferInUsePtr + args->displayBufferIndex;
-        std::printf(" ========== fill status to %p\n", ptr);
+        ORBIS_LOG_NOTICE(" ========== fill status to:", ptr);
         *ptr = 0;
       }
     }
@@ -222,11 +213,11 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
   if (request == 0x80088209) { // deallocate?
     auto arg = *reinterpret_cast<std::uint64_t *>(argp);
-    std::fprintf(stderr, "dce: 0x80088209(%lx)\n", arg);
+    ORBIS_LOG_ERROR("dce: 0x80088209", arg);
     return 0;
   }
 
-  std::fprintf(stderr, "***ERROR*** Unhandled dce ioctl %lx\n", request);
+  ORBIS_LOG_FATAL("Unhandled dce ioctl", request);
   std::fflush(stdout);
   __builtin_trap();
   return 0;
@@ -235,8 +226,7 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 static void *dce_instance_mmap(IoDeviceInstance *instance, void *address,
                                std::uint64_t size, std::int32_t prot,
                                std::int32_t flags, std::int64_t offset) {
-  std::fprintf(stderr, "dce mmap: address=%p, size=%lx, offset=%lx\n", address,
-               size, offset);
+  ORBIS_LOG_FATAL("dce mmap", address, size, offset);
   return rx::vm::map(address, size, prot, flags);
 }
 

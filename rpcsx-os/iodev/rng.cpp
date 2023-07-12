@@ -1,5 +1,6 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
 #include <cinttypes>
 #include <cstdio>
@@ -9,15 +10,14 @@ struct RngInstance : public IoDeviceInstance {};
 
 static std::int64_t rng_instance_ioctl(IoDeviceInstance *instance,
                                        std::uint64_t request, void *argp) {
-  std::fprintf(stderr, "***ERROR*** Unhandled rng ioctl %" PRIx64 "\n",
-               request);
+  ORBIS_LOG_FATAL("Unhandled rng ioctl", request);
   return 0;
 }
 
 static void *rng_instance_mmap(IoDeviceInstance *instance, void *address,
                                std::uint64_t size, std::int32_t prot,
                                std::int32_t flags, std::int64_t offset) {
-  std::fprintf(stderr, "***ERROR*** Unhandled rng mmap %" PRIx64 "\n", offset);
+  ORBIS_LOG_FATAL("Unhandled rng mmap", offset);
   return rx::vm::map(address, size, prot, flags);
 }
 

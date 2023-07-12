@@ -1,5 +1,6 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <cstdio>
 
 struct HmdSnsrDevice : public IoDevice {};
@@ -8,8 +9,7 @@ struct HmdSnsrInstance : public IoDeviceInstance {};
 
 static std::int64_t smd_snr_instance_ioctl(IoDeviceInstance *instance,
                                            std::uint64_t request, void *argp) {
-
-  std::fprintf(stderr, "***ERROR*** Unhandled hmd_snsr ioctl %lx\n", request);
+  ORBIS_LOG_FATAL("Unhandled hmd_snsr ioctl", request);
   return -1;
 }
 

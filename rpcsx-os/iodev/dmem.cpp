@@ -1,5 +1,6 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
 #include <cinttypes>
 #include <cstdio>
@@ -30,12 +31,12 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
   auto device = static_cast<DmemDevice *>(instance->device.get());
   switch (request) {
   case 0x4008800a: // get size
-    std::fprintf(stderr, "dmem%u getTotalSize(%p)\n", device->index, argp);
+    ORBIS_LOG_ERROR("dmem getTotalSize", device->index, argp);
     *(std::uint64_t *)argp = dmemSize;
     return 0;
 
   case 0xc0208016: // get avaiable size
-    std::fprintf(stderr, "dmem%u getAvaiableSize(%p)\n", device->index, argp);
+    ORBIS_LOG_ERROR("dmem getAvaiableSize", device->index, argp);
     *(std::uint64_t *)argp = dmemSize - device->nextOffset;
     return 0;
 
@@ -44,12 +45,9 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
     auto alignedOffset =
         (device->nextOffset + args->alignment - 1) & ~(args->alignment - 1);
 
-    std::fprintf(
-        stderr,
-        "dmem%u allocateDirectMemory(searchStart = %lx, searchEnd = %lx, len "
-        "= %lx, alignment = %lx, memoryType = %x) -> 0x%lx\n",
-        device->index, args->searchStart, args->searchEnd, args->len,
-        args->alignment, args->memoryType, alignedOffset);
+    ORBIS_LOG_ERROR("dmem allocateDirectMemory", device->index,
+                    args->searchStart, args->searchEnd, args->len,
+                    args->alignment, args->memoryType, alignedOffset);
 
     if (alignedOffset + args->len > dmemSize) {
       return -1;
@@ -68,19 +66,16 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(
-        stderr, "TODO: dmem%u releaseDirectMemory(address=0x%lx, size=0x%lx)\n",
-        device->index, args->address, args->size);
+    ORBIS_LOG_TODO("dmem releaseDirectMemory", device->index, args->address,
+                   args->size);
     // std::fflush(stdout);
     //__builtin_trap();
     return 0;
   }
 
   default:
-    std::fprintf(stderr, "***ERROR*** Unhandled dmem%u ioctl %lx\n",
-                 static_cast<DmemDevice *>(instance->device.get())->index,
-                 request);
 
+    ORBIS_LOG_FATAL("Unhandled dmem ioctl", device->index, request);
     return 0;
 
     std::fflush(stdout);
@@ -94,12 +89,10 @@ static void *dmem_instance_mmap(IoDeviceInstance *instance, void *address,
                                 std::uint64_t size, std::int32_t prot,
                                 std::int32_t flags, std::int64_t offset) {
   auto device = static_cast<DmemDevice *>(instance->device.get());
-  std::fprintf(stderr, "WARNING: dmem%u mmap %lx -> %lx\n", device->index,
-               offset, device->memBeginAddress + offset);
+  auto target = device->memBeginAddress + offset;
+  ORBIS_LOG_WARNING("dmem mmap", device->index, offset, target);
 
-  auto addr =
-      rx::vm::map(reinterpret_cast<void *>(device->memBeginAddress + offset),
-                  size, prot, flags);
+  auto addr = rx::vm::map(reinterpret_cast<void *>(target), size, prot, flags);
   return addr;
 }
 

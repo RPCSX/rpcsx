@@ -1,5 +1,6 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <cstdio>
 
 struct DipswDevice : public IoDevice {};
@@ -9,7 +10,7 @@ struct DipswInstance : public IoDeviceInstance {};
 static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
                                          std::uint64_t request, void *argp) {
   if (request == 0x40048806) { // is connected?
-    std::fprintf(stderr, "dipsw ioctl 0x40048806(%p)\n", argp);
+    ORBIS_LOG_ERROR("dipsw ioctl 0x40048806", argp);
 
     *reinterpret_cast<std::uint32_t *>(argp) = 0;
     return 0;
@@ -19,7 +20,7 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
   // 0x40088809
 
   if (request == 0x40088808) {
-    std::fprintf(stderr, "dipsw ioctl 0x40088808(%p)\n", argp);
+    ORBIS_LOG_ERROR("dipsw ioctl 0x40088808", argp);
     *reinterpret_cast<std::uint32_t *>(argp) = 1;
     return 0;
   }
@@ -33,13 +34,12 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    std::fprintf(stderr, "dipsw ioctl 0x8010880a(0x%lx, 0x%lx)\n",
-                 args->address, args->size);
+    ORBIS_LOG_ERROR("dipsw ioctl 0x8010880a", args->address, args->size);
 
     return 0;
   }
 
-  std::fprintf(stderr, "***ERROR*** Unhandled dipsw ioctl %lx\n", request);
+  ORBIS_LOG_FATAL("Unhandled dipsw ioctl", request);
   std::fflush(stdout);
   //__builtin_trap();
   return 0;

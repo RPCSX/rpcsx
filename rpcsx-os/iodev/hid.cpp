@@ -1,5 +1,6 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
 #include <cinttypes>
 #include <cstdio>
@@ -9,8 +10,7 @@ struct HidInstance : public IoDeviceInstance {};
 
 static std::int64_t hid_instance_ioctl(IoDeviceInstance *instance,
                                        std::uint64_t request, void *argp) {
-  std::fprintf(stderr, "***ERROR*** Unhandled hid ioctl %" PRIx64 "\n",
-               request);
+  ORBIS_LOG_FATAL("Unhandled hid ioctl", request);
 
   // 0x800c4802
   return 0;
@@ -19,7 +19,7 @@ static std::int64_t hid_instance_ioctl(IoDeviceInstance *instance,
 static void *hid_instance_mmap(IoDeviceInstance *instance, void *address,
                                std::uint64_t size, std::int32_t prot,
                                std::int32_t flags, std::int64_t offset) {
-  std::fprintf(stderr, "***ERROR*** Unhandled hid mmap %" PRIx64 "\n", offset);
+  ORBIS_LOG_FATAL("Unhandled hid mmap", offset);
   return rx::vm::map(address, size, prot, flags);
 }
 
