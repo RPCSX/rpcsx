@@ -133,6 +133,8 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
     }
 
     // TODO: update thread state
+    if (thread->mtx->is_free())
+      std::abort();
     thread->mtx->unlock(); // release wait on waiter thread
 
     waitingThreadsCount.fetch_sub(1, std::memory_order::relaxed);
