@@ -720,9 +720,8 @@ SysResult sys_get_paging_stats_of_all_objects(Thread *thread /* TODO */);
 SysResult sys_test_debug_rwmem(Thread *thread /* TODO */);
 SysResult sys_free_stack(Thread *thread /* TODO */);
 SysResult sys_suspend_system(Thread *thread /* TODO */);
-SysResult sys_ipmimgr_call(Thread *thread, uint64_t id, uint64_t arg2,
-                           ptr<uint64_t> result, ptr<uint64_t> params,
-                           uint64_t arg5, uint64_t arg6);
+SysResult sys_ipmimgr_call(Thread *thread, uint op, uint kid, ptr<uint> result,
+                           ptr<void> params, uint64_t paramsz, uint64_t arg6);
 SysResult sys_get_gpo(Thread *thread /* TODO */);
 SysResult sys_get_vm_map_timestamp(Thread *thread /* TODO */);
 SysResult sys_opmc_set_hw(Thread *thread /* TODO */);

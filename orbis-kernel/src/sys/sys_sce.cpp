@@ -737,7 +737,14 @@ orbis::SysResult orbis::sys_suspend_system(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 
-enum ImpiOpcode { kIpmiCreateClient = 2 };
+enum ImpiOpcode {
+  kImpiCreateServer = 0,
+  kImpiDestroyServer = 1,
+  kIpmiCreateClient = 2,
+  kImpiDestroyClient = 3,
+  kImpiCreateSession = 4,
+  kImpiDestroySession = 5,
+};
 
 struct IpmiCreateClientParams {
   orbis::ptr<void> arg0;
@@ -747,37 +754,45 @@ struct IpmiCreateClientParams {
 
 static_assert(sizeof(IpmiCreateClientParams) == 0x18);
 
-orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint64_t id,
-                                         uint64_t arg2, ptr<uint64_t> result,
-                                         ptr<uint64_t> params,
-                                         uint64_t paramsSize, uint64_t arg6) {
-  std::printf("TODO: sys_ipmimgr_call(id = %lld)\n", (unsigned long long)id);
+orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
+                                         ptr<uint> result, ptr<void> params,
+                                         uint64_t paramsSz, uint64_t arg6) {
+  ORBIS_LOG_TODO("sys_ipmimgr_call", op, kid, result, params, paramsSz, arg6);
 
-  if (id == kIpmiCreateClient) {
-    if (paramsSize != sizeof(IpmiCreateClientParams)) {
+  if (op == kIpmiCreateClient) {
+    if (paramsSz != sizeof(IpmiCreateClientParams)) {
       return ErrorCode::INVAL;
     }
 
     auto createParams = (ptr<IpmiCreateClientParams>)params;
 
-    std::printf("ipmi create client(%p, '%s', %p)\n",
-                (void *)createParams->arg0, (char *)createParams->name,
-                (void *)createParams->arg2);
-
+    ORBIS_LOG_TODO("IPMI: create client", createParams->arg0,
+                   createParams->name, createParams->arg2);
+    uwrite<uint>(result, 0x1);
+    thread->retval[0] = 0;
     return {};
   }
 
-  if (id == 1131 || id == 1024 || id == 800) {
+  if (op == kImpiDestroyClient) {
+    ORBIS_LOG_TODO("IPMI: destroy client");
+    if (result)
+      uwrite<uint>(result, 0);
+    thread->retval[0] = 0;
+    return {};
+  }
+
+  if (op == 0x400) {
+    ORBIS_LOG_TODO("IMPI: connect?");
+    if (result)
+      uwrite<uint>(result, 0);
+    thread->retval[0] = 0;
+    return {};
+  }
+
+  if (op == 1131 || op == 1024 || op == 800) {
     thread->retval[0] = -0x40004; // HACK
     return {};
     // return -0x40004;
-  }
-
-  if (id == 3) {
-    if (result) {
-      *result = 0;
-    }
-    return {};
   }
 
   return {};
