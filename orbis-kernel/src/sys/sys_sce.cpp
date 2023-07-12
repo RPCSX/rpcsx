@@ -601,7 +601,10 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
 
   switch (op) {
   case 1: {
-    auto prop = uread((ptr<mdbg_property>)arg0);
+    mdbg_property prop;
+    if (auto error = uread(prop, (ptr<mdbg_property>)arg0);
+        error != ErrorCode{})
+      return error;
     ORBIS_LOG_WARNING(__FUNCTION__, prop.name, prop.addr_ptr, prop.areaSize);
     break;
   }

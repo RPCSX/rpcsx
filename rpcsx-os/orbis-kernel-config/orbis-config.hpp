@@ -42,32 +42,34 @@ using caddr_t = ptr<char>;
 
 [[nodiscard]] inline ErrorCode
 ureadRaw(void *kernelAddress, ptr<const void> userAddress, size_t size) {
+  auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
+  if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+    return ErrorCode::FAULT;
   std::memcpy(kernelAddress, userAddress, size);
   return {};
 }
 
 [[nodiscard]] inline ErrorCode
 uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
+  auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
+  if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+    return ErrorCode::FAULT;
   std::memcpy(userAddress, kernelAddress, size);
   return {};
 }
 
-[[nodiscard]] inline ErrorCode ureadString(char *kernelAddress,
-                                           size_t kernelSize,
+[[nodiscard]] inline ErrorCode ureadString(char *kernelAddress, size_t size,
                                            ptr<const char> userAddress) {
-  std::strncpy(kernelAddress, userAddress, kernelSize);
-  if (kernelAddress[kernelSize - 1] != '\0') {
-    kernelAddress[kernelSize - 1] = '\0';
+  auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
+  if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+    return ErrorCode::FAULT;
+  std::strncpy(kernelAddress, userAddress, size);
+  if (kernelAddress[size - 1] != '\0') {
+    kernelAddress[size - 1] = '\0';
     return ErrorCode::NAMETOOLONG;
   }
 
   return {};
-}
-
-template <typename T> [[deprecated]] T uread(ptr<const T> pointer) {
-  T result{};
-  ureadRaw(&result, pointer, sizeof(T));
-  return result;
 }
 
 template <typename T> [[nodiscard]] ErrorCode uread(T &result, ptr<T> pointer) {

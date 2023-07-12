@@ -6,7 +6,9 @@
 
 static orbis::ErrorCode ureadTimespec(orbis::timespec &ts,
                                       orbis::ptr<orbis::timespec> addr) {
-  ts = uread(addr);
+  orbis::ErrorCode error = uread(ts, addr);
+  if (error != orbis::ErrorCode{})
+    return error;
   if (ts.sec < 0 || ts.nsec < 0 || ts.nsec > 1000000000) {
     return orbis::ErrorCode::INVAL;
   }

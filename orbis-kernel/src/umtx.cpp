@@ -216,7 +216,9 @@ static ErrorCode do_unlock_pp(Thread *thread, ptr<umutex> m, uint flags) {
 
 orbis::ErrorCode orbis::umtx_trylock_umutex(Thread *thread, ptr<umutex> m) {
   ORBIS_LOG_TRACE(__FUNCTION__, m);
-  uint flags = uread(&m->flags);
+  uint flags;
+  if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
+    return err;
   switch (flags & (kUmutexPrioInherit | kUmutexPrioProtect)) {
   case 0:
     return do_lock_normal(thread, m, flags, 0, umutex_lock_mode::try_);
@@ -231,7 +233,9 @@ orbis::ErrorCode orbis::umtx_trylock_umutex(Thread *thread, ptr<umutex> m) {
 orbis::ErrorCode orbis::umtx_lock_umutex(Thread *thread, ptr<umutex> m,
                                          std::uint64_t ut) {
   ORBIS_LOG_TRACE(__FUNCTION__, m, ut);
-  uint flags = uread(&m->flags);
+  uint flags;
+  if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
+    return err;
   switch (flags & (kUmutexPrioInherit | kUmutexPrioProtect)) {
   case 0:
     return do_lock_normal(thread, m, flags, ut, umutex_lock_mode::lock);
@@ -245,7 +249,9 @@ orbis::ErrorCode orbis::umtx_lock_umutex(Thread *thread, ptr<umutex> m,
 
 orbis::ErrorCode orbis::umtx_unlock_umutex(Thread *thread, ptr<umutex> m) {
   ORBIS_LOG_TRACE(__FUNCTION__, m);
-  uint flags = uread(&m->flags);
+  uint flags;
+  if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
+    return err;
   switch (flags & (kUmutexPrioInherit | kUmutexPrioProtect)) {
   case 0:
     return do_unlock_normal(thread, m, flags);
@@ -268,7 +274,9 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
                                      ptr<umutex> m, std::uint64_t ut,
                                      ulong wflags) {
   ORBIS_LOG_NOTICE(__FUNCTION__, thread, cv, m, ut, wflags);
-  const uint flags = uread(&cv->flags);
+  uint flags;
+  if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
+    return err;
   if ((wflags & kCvWaitClockId) != 0) {
     ORBIS_LOG_FATAL("umtx_cv_wait: CLOCK_ID unimplemented", wflags);
     return ErrorCode::NOSYS;
@@ -360,7 +368,9 @@ orbis::ErrorCode orbis::umtx_wake_private(Thread *thread, ptr<void> uaddr,
 orbis::ErrorCode orbis::umtx_wait_umutex(Thread *thread, ptr<umutex> m,
                                          std::uint64_t ut) {
   ORBIS_LOG_TRACE(__FUNCTION__, m, ut);
-  uint flags = uread(&m->flags);
+  uint flags;
+  if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
+    return err;
   switch (flags & (kUmutexPrioInherit | kUmutexPrioProtect)) {
   case 0:
     return do_lock_normal(thread, m, flags, ut, umutex_lock_mode::wait);
@@ -378,7 +388,9 @@ orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<umutex> m) {
   if ((owner & ~kUmutexContested) != 0)
     return {};
 
-  [[maybe_unused]] uint flags = uread(&m->flags);
+  [[maybe_unused]] uint flags;
+  if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
+    return err;
 
   auto [chain, key, lock] = g_context.getUmtxChain1(thread->tproc->pid, m);
   std::size_t count = chain.sleep_queue.count(key);

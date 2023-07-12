@@ -108,7 +108,9 @@ orbis::SysResult orbis::sys_nfssvc(Thread *thread, sint flag, caddr_t argp) {
 }
 orbis::SysResult orbis::sys_sysarch(Thread *thread, sint op, ptr<char> parms) {
   if (op == 129) {
-    auto fs = uread((ptr<uint64_t>)parms);
+    uint64_t fs;
+    if (auto error = uread(fs, (ptr<uint64_t>)parms); error != ErrorCode{})
+      return error;
     std::printf("sys_sysarch: set FS to 0x%zx\n", (std::size_t)fs);
     thread->fsBase = fs;
     return {};
