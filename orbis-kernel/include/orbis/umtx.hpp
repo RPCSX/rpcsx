@@ -92,7 +92,7 @@ ErrorCode umtx_sem_wait(Thread *thread, ptr<void> obj, std::int64_t val,
                         ptr<void> uaddr1, ptr<void> uaddr2);
 ErrorCode umtx_sem_wake(Thread *thread, ptr<void> obj, std::int64_t val,
                         ptr<void> uaddr1, ptr<void> uaddr2);
-ErrorCode umtx_nwake_private(Thread *thread, ptr<void> uaddrs,
+ErrorCode umtx_nwake_private(Thread *thread, ptr<void *> uaddrs,
                              std::int64_t count);
 ErrorCode umtx_wake2_umutex(Thread *thread, ptr<void> obj, std::int64_t val,
                             ptr<void> uaddr1, ptr<void> uaddr2);

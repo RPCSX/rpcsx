@@ -354,8 +354,7 @@ orbis::ErrorCode orbis::umtx_rw_unlock(Thread *thread, ptr<void> obj,
 
 orbis::ErrorCode orbis::umtx_wake_private(Thread *thread, ptr<void> uaddr,
                                           sint n_wake) {
-  ORBIS_LOG_TODO(__FUNCTION__, uaddr, n_wake);
-  return ErrorCode::NOSYS;
+  return umtx_wake(thread, uaddr, n_wake);
 }
 
 orbis::ErrorCode orbis::umtx_wait_umutex(Thread *thread, ptr<umutex> m,
@@ -406,10 +405,17 @@ orbis::ErrorCode orbis::umtx_sem_wake(Thread *thread, ptr<void> obj,
   return ErrorCode::NOSYS;
 }
 
-orbis::ErrorCode orbis::umtx_nwake_private(Thread *thread, ptr<void> uaddrs,
+orbis::ErrorCode orbis::umtx_nwake_private(Thread *thread, ptr<void *> uaddrs,
                                            std::int64_t count) {
-  ORBIS_LOG_TODO(__FUNCTION__, uaddrs, count);
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_NOTICE(__FUNCTION__, uaddrs, count);
+  while (count-- > 0) {
+    void *uaddr;
+    auto error = uread(uaddr, uaddrs);
+    if (error != ErrorCode{})
+      return error;
+    umtx_wake_private(thread, uaddr, 1);
+  }
+  return {};
 }
 
 orbis::ErrorCode orbis::umtx_wake2_umutex(Thread *thread, ptr<void> obj,

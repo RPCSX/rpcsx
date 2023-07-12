@@ -142,7 +142,7 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case 20:
     return umtx_sem_wake(thread, obj, val, uaddr1, uaddr2);
   case 21:
-    return umtx_nwake_private(thread, obj, val);
+    return umtx_nwake_private(thread, (ptr<void *>)obj, val);
   case 22:
     return umtx_wake2_umutex(thread, obj, val, uaddr1, uaddr2);
   }
