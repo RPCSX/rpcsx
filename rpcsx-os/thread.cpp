@@ -13,13 +13,6 @@
 
 thread_local orbis::Thread *rx::thread::g_current = nullptr;
 
-struct LibcInfo {
-  std::uint64_t textBegin = ~static_cast<std::uint64_t>(0);
-  std::uint64_t textSize = 0;
-};
-
-LibcInfo libcInfo;
-
 static __attribute__((no_stack_protector)) void
 handleSigSys(int sig, siginfo_t *info, void *ucontext) {
   if (auto hostFs = _readgsbase_u64()) {
@@ -33,39 +26,6 @@ handleSigSys(int sig, siginfo_t *info, void *ucontext) {
 }
 
 void rx::thread::initialize() {
-  auto processPhdr = [](struct dl_phdr_info *info, size_t, void *data) {
-    auto path = std::string_view(info->dlpi_name);
-    auto slashPos = path.rfind('/');
-    if (slashPos == std::string_view::npos) {
-      return 0;
-    }
-
-    auto name = path.substr(slashPos + 1);
-    if (name.starts_with("libc.so")) {
-      std::printf("%s\n", std::string(name).c_str());
-      auto libcInfo = reinterpret_cast<LibcInfo *>(data);
-
-      for (std::size_t i = 0; i < info->dlpi_phnum; ++i) {
-        auto &phdr = info->dlpi_phdr[i];
-
-        if (phdr.p_type == PT_LOAD && (phdr.p_flags & PF_X) == PF_X) {
-          libcInfo->textBegin =
-              std::min(libcInfo->textBegin, phdr.p_vaddr + info->dlpi_addr);
-          libcInfo->textSize = std::max(libcInfo->textSize, phdr.p_memsz);
-        }
-      }
-
-      return 1;
-    }
-
-    return 0;
-  };
-
-  dl_iterate_phdr(processPhdr, &libcInfo);
-
-  std::printf("libc text %zx-%zx\n", libcInfo.textBegin,
-              libcInfo.textBegin + libcInfo.textSize);
-
   struct sigaction act {};
   act.sa_sigaction = handleSigSys;
   act.sa_flags = SA_SIGINFO | SA_ONSTACK;
@@ -93,7 +53,7 @@ void rx::thread::invoke(orbis::Thread *thread) {
   _writegsbase_u64(hostFs);
 
   if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
-            libcInfo.textBegin, libcInfo.textSize, nullptr)) {
+            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
     perror("prctl failed\n");
     exit(-1);
   }
