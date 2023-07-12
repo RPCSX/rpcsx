@@ -186,7 +186,8 @@ void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
   va_end(c_args);
 
   text += msg;
-  text += "(";
+  if (args_count)
+    text += "(";
   for (std::size_t i = 0; i < args_count; i++) {
     if (i)
       text += ", ";
@@ -197,7 +198,8 @@ void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
     text += "=";
     sup[i].log_string(text, args[i]);
   }
-  text += ")";
+  if (args_count)
+    text += ")";
 
   const char *color = "";
   switch (lvl) {
