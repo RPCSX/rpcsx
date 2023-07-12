@@ -297,7 +297,7 @@ orbis::SysResult orbis::sys_osem_cancel(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
                                             ptr<const char[32]> name,
                                             ptr<void> object, uint16_t type) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, *name, object, type);
+  ORBIS_LOG_NOTICE(__FUNCTION__, name, object, type);
   char _name[32];
   if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
       result != ErrorCode{}) {
@@ -305,7 +305,7 @@ orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
   }
   if (type < 0x101 || type > 0x104) {
     if (type != 0x107)
-      ORBIS_LOG_ERROR(__FUNCTION__, *name, object, type);
+      ORBIS_LOG_ERROR(__FUNCTION__, name, object, type);
   }
 
   std::lock_guard lock(thread->tproc->namedObjMutex);

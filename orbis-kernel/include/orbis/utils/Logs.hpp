@@ -53,6 +53,18 @@ template <std::size_t N> struct log_class_string<const char[N]> {
   }
 };
 
+template <std::size_t N> struct log_class_string<char (*)[N]> {
+  static void format(std::string &out, const void *arg) {
+    log_class_string<char *, void>::format_n(out, *(char **)arg, N);
+  }
+};
+
+template <std::size_t N> struct log_class_string<const char (*)[N]> {
+  static void format(std::string &out, const void *arg) {
+    log_class_string<char *, void>::format_n(out, *(char **)arg, N);
+  }
+};
+
 template <>
 struct log_class_string<char8_t *, void> : log_class_string<char *> {};
 
