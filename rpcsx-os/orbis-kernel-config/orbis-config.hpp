@@ -40,14 +40,14 @@ template <typename T> using cptr = T *const;
 
 using caddr_t = ptr<char>;
 
-[[nodiscard]] inline ErrorCode uread(void *kernelAddress,
-                                     ptr<const void> userAddress, size_t size) {
+[[nodiscard]] inline ErrorCode
+ureadRaw(void *kernelAddress, ptr<const void> userAddress, size_t size) {
   std::memcpy(kernelAddress, userAddress, size);
   return {};
 }
 
-[[nodiscard]] inline ErrorCode uwrite(ptr<void> userAddress,
-                                      const void *kernelAddress, size_t size) {
+[[nodiscard]] inline ErrorCode
+uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
   std::memcpy(userAddress, kernelAddress, size);
   return {};
 }
@@ -64,28 +64,28 @@ using caddr_t = ptr<char>;
   return {};
 }
 
-template <typename T> [[deprecated]] T uread(ptr<T> pointer) {
-  T result;
-  uread(&result, pointer, sizeof(T));
+template <typename T> [[deprecated]] T uread(ptr<const T> pointer) {
+  T result{};
+  ureadRaw(&result, pointer, sizeof(T));
   return result;
 }
 
 template <typename T> [[nodiscard]] ErrorCode uread(T &result, ptr<T> pointer) {
-  return uread(&result, pointer, sizeof(T));
+  return ureadRaw(&result, pointer, sizeof(T));
 }
 
 template <typename T> [[nodiscard]] ErrorCode uwrite(ptr<T> pointer, T data) {
-  return uwrite(pointer, &data, sizeof(T));
+  return uwriteRaw(pointer, &data, sizeof(T));
 }
 
 template <typename T>
 [[nodiscard]] ErrorCode uread(T *result, ptr<T> pointer, std::size_t count) {
-  return uread(&result, pointer, sizeof(T) * count);
+  return ureadRaw(&result, pointer, sizeof(T) * count);
 }
 
 template <typename T>
 [[nodiscard]] ErrorCode uwrite(ptr<T> pointer, T *data, std::size_t count) {
-  return uwrite(pointer, &data, sizeof(T) * count);
+  return uwriteRaw(pointer, &data, sizeof(T) * count);
 }
 
 inline uint64_t readRegister(void *context, RegisterId id) {

@@ -43,11 +43,11 @@ void orbis::syscall_entry(Thread *thread) {
         std::abort();
       }
 
-      error =
-          int(uread(args + regcnt,
-                    ptr<void>(readRegister(thread->context, RegisterId::rsp) +
-                              sizeof(uint64_t)),
-                    (sysent.narg - regcnt) * sizeof(uint64_t)));
+      error = int(
+          ureadRaw(args + regcnt,
+                   ptr<void>(readRegister(thread->context, RegisterId::rsp) +
+                             sizeof(uint64_t)),
+                   (sysent.narg - regcnt) * sizeof(uint64_t)));
     }
 
     if (error == 0) {

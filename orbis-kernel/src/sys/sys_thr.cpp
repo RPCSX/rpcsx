@@ -20,8 +20,7 @@ orbis::SysResult orbis::sys_thr_new(Thread *thread, ptr<struct thr_param> param,
 }
 
 orbis::SysResult orbis::sys_thr_self(Thread *thread, ptr<slong> id) {
-  uwrite(id, (slong)thread->tid);
-  return {};
+  return uwrite(id, (slong)thread->tid);
 }
 
 orbis::SysResult orbis::sys_thr_exit(Thread *thread, ptr<slong> state) {

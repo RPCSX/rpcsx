@@ -433,8 +433,11 @@ SysResult thr_create(orbis::Thread *thread, orbis::ptr<struct ucontext> ctxt,
 }
 SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
                   orbis::sint param_size) {
-  return {}; // FIXME: remove when we ready for MT
-  auto _param = uread(param);
+  thr_param _param;
+  auto result = uread(_param, param);
+  if (result != ErrorCode{}) {
+    return result;
+  }
 
   auto proc = thread->tproc;
   auto [baseId, childThread] = proc->threadsMap.emplace();
@@ -445,14 +448,19 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   childThread->stackEnd = _param.stack_base + _param.stack_size;
   childThread->fsBase = reinterpret_cast<std::uintptr_t>(_param.tls_base);
 
-  uwrite(_param.parent_tid, slong(childThread->tid));
+  result = uwrite(_param.parent_tid, slong(childThread->tid));
+
+  if (result != ErrorCode{}) {
+    return result;
+  }
 
   // FIXME: implement scheduler
 
   std::printf("Starting child thread %lu\n", (long)(proc->pid + baseId));
 
   std::thread{[=, childThread = Ref<Thread>(childThread)] {
-    uwrite(_param.child_tid, slong(childThread->tid));
+    static_cast<void>(
+        uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
     auto context = new ucontext_t{};
 
     context->uc_mcontext.gregs[REG_RDI] =
