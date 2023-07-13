@@ -1,3 +1,4 @@
+#include "align.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "backtrace.hpp"
 #include "bridge.hpp"
@@ -85,14 +86,15 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
 static void setupSigHandlers() {
   stack_t ss;
-
-  ss.ss_sp = malloc(SIGSTKSZ);
+  auto sigStackSize = std::max<std::size_t>(
+      SIGSTKSZ, utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+  ss.ss_sp = malloc(sigStackSize);
   if (ss.ss_sp == NULL) {
     perror("malloc");
     exit(EXIT_FAILURE);
   }
 
-  ss.ss_size = SIGSTKSZ;
+  ss.ss_size = sigStackSize;
   ss.ss_flags = 0;
 
   if (sigaltstack(&ss, NULL) == -1) {

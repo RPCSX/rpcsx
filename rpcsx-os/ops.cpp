@@ -1,4 +1,5 @@
 #include "ops.hpp"
+#include "align.hpp"
 #include "io-device.hpp"
 #include "linker.hpp"
 #include "orbis/module/ModuleHandle.hpp"
@@ -473,13 +474,16 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   std::thread{[=, childThread = Ref<Thread>(childThread)] {
     stack_t ss;
 
-    ss.ss_sp = malloc(SIGSTKSZ);
+    auto sigStackSize = std::max<std::size_t>(
+        SIGSTKSZ, ::utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+
+    ss.ss_sp = malloc(sigStackSize);
     if (ss.ss_sp == NULL) {
       perror("malloc");
       exit(EXIT_FAILURE);
     }
 
-    ss.ss_size = SIGSTKSZ;
+    ss.ss_size = sigStackSize;
     ss.ss_flags = 0;
 
     if (sigaltstack(&ss, NULL) == -1) {
