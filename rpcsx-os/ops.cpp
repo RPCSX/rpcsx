@@ -129,6 +129,7 @@ orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
   return {};
 }
 
+// clang-format off
 #define IOCPARM_SHIFT 13 /* number of bits for ioctl size */
 #define IOCPARM_MASK ((1 << IOCPARM_SHIFT) - 1) /* parameter length mask */
 #define IOCPARM_LEN(x) (((x) >> 16) & IOCPARM_MASK)
@@ -151,6 +152,7 @@ orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
 #define _IOW(g, n, t) _IOC(IOC_IN, (g), (n), sizeof(t))
 /* this should be _IORW, but stdio got there first */
 #define _IOWR(g, n, t) _IOC(IOC_INOUT, (g), (n), sizeof(t))
+// clang-format on
 
 static std::string iocGroupToString(unsigned iocGroup) {
   if (iocGroup >= 128) {
