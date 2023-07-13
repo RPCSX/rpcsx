@@ -136,6 +136,7 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
   return {};
 }
 orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
+  ORBIS_LOG_WARNING(__FUNCTION__, id);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
   if (evf == nullptr) {
     return ErrorCode::SRCH;
@@ -176,8 +177,8 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
                                      uint64_t patternSet, uint64_t mode,
                                      ptr<uint64_t> pPatternSet,
                                      ptr<uint> pTimeout) {
-  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, patternSet, mode, pPatternSet,
-                  pTimeout);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, patternSet, mode, pPatternSet,
+                   pTimeout);
   if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
       (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
                 kEvfWaitModeClearPat)) != 0 ||
@@ -197,7 +198,7 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
                           pPatternSet != nullptr ? &resultPattern : nullptr,
                           pTimeout != nullptr ? &resultTimeout : nullptr);
 
-  ORBIS_LOG_TRACE("sys_evf_wait wakeup", thread, resultPattern, resultTimeout);
+  ORBIS_LOG_NOTICE("sys_evf_wait wakeup", thread, resultPattern, resultTimeout);
 
   if (pPatternSet != nullptr) {
     uwrite(pPatternSet, (uint64_t)resultPattern);
@@ -212,7 +213,7 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
 orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
                                         uint64_t patternSet, uint64_t mode,
                                         ptr<uint64_t> pPatternSet) {
-  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, patternSet, mode, pPatternSet);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, patternSet, mode, pPatternSet);
   if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
       (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
                 kEvfWaitModeClearPat)) != 0 ||
@@ -237,7 +238,7 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
   return result;
 }
 orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
-  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, value);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, value);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
@@ -248,7 +249,7 @@ orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
   return {};
 }
 orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
-  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, value);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, value);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
@@ -260,7 +261,7 @@ orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
 }
 orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                                        ptr<sint> pNumWaitThreads) {
-  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, value, pNumWaitThreads);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, value, pNumWaitThreads);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {

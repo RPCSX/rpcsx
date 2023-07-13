@@ -486,6 +486,7 @@ int main(int argc, const char *argv[]) {
 
   // rx::vm::printHostStats();
   auto initProcess = orbis::g_context.createProcess(10);
+  pthread_setname_np(pthread_self(), "10.MAINTHREAD");
   initProcess->sysent = &orbis::ps4_sysvec;
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;

@@ -472,6 +472,8 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   std::printf("Starting child thread %lu\n", (long)(proc->pid + baseId));
 
   std::thread{[=, childThread = Ref<Thread>(childThread)] {
+    pthread_setname_np(pthread_self(),
+                       std::to_string(childThread->tid).c_str());
     stack_t ss;
 
     auto sigStackSize = std::max<std::size_t>(
