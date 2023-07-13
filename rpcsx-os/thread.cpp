@@ -1,4 +1,5 @@
 #include "thread.hpp"
+#include "backtrace.hpp"
 #include "orbis/sys/sysentry.hpp"
 #include <asm/prctl.h>
 #include <csignal>
@@ -7,7 +8,6 @@
 #include <linux/prctl.h>
 #include <string>
 #include <sys/prctl.h>
-#include <sys/ucontext.h>
 #include <ucontext.h>
 #include <unistd.h>
 
@@ -19,6 +19,8 @@ handleSigSys(int sig, siginfo_t *info, void *ucontext) {
     _writefsbase_u64(hostFs);
   }
 
+  // rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
+  // rx::thread::g_current, 1);
   auto prevContext = std::exchange(rx::thread::g_current->context, ucontext);
   orbis::syscall_entry(rx::thread::g_current);
   rx::thread::g_current->context = prevContext;
@@ -40,6 +42,22 @@ void rx::thread::deinitialize() {}
 
 void rx::thread::invoke(orbis::Thread *thread) {
   g_current = thread;
+
+  stack_t ss;
+
+  ss.ss_sp = malloc(SIGSTKSZ);
+  if (ss.ss_sp == NULL) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
+
+  ss.ss_size = SIGSTKSZ;
+  ss.ss_flags = 0;
+
+  if (sigaltstack(&ss, NULL) == -1) {
+    perror("sigaltstack");
+    exit(EXIT_FAILURE);
+  }
 
   sigset_t unblockSigs{};
   sigset_t oldSigmask{};
