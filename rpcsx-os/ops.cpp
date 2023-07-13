@@ -114,10 +114,11 @@ orbis::SysResult virtual_query(orbis::Thread *thread,
 
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
                       orbis::sint flags, orbis::sint mode) {
+  ORBIS_LOG_NOTICE("sys_open", path, flags, mode);
   orbis::Ref<IoDeviceInstance> instance;
   auto result = rx::vfs::open(path, flags, mode, &instance);
   if (result.isError()) {
-    ORBIS_LOG_WARNING("sys_open: failed to open", path, result);
+    ORBIS_LOG_WARNING("sys_open: failed to open", path, result.value());
     return result;
   }
 
