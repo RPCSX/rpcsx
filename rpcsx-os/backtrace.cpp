@@ -19,8 +19,10 @@ std::size_t rx::printAddressLocation(char *dest, std::size_t destLen,
       continue;
     }
 
-    return std::snprintf(dest, destLen, "%s+%#" PRIx64, module->soName,
-                         address - moduleBase);
+    return std::snprintf(dest, destLen, "%s+%#" PRIx64 " (%#" PRIx64 ")",
+                         module->soName[0] != '\0' ? module->soName
+                                                   : module->moduleName,
+                         address - moduleBase, address);
   }
 
   return 0;
