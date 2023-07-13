@@ -23,7 +23,7 @@ orbis::SysResult orbis::sys_socketex(Thread *thread, ptr<const char> name,
   return {};
 }
 orbis::SysResult orbis::sys_socketclose(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_netgetiflist(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -280,7 +280,7 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_osem_create(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_osem_delete(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -326,6 +326,7 @@ orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
     ORBIS_LOG_ERROR("Named object: pointer colflict", type, object);
   }
 
+  thread->retval[0] = id;
   return {};
 }
 orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint16_t id,
