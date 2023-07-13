@@ -100,6 +100,11 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
   heap = (heap + (align - 1)) & ~(align - 1);
   auto result = reinterpret_cast<void *>(heap);
   m_heap_next = reinterpret_cast<void *>(heap + size);
+  // Check overflow
+  if (heap + size < heap)
+    std::abort();
+  if (heap + size > (uintptr_t)&g_context + 0x1'0000'0000)
+    std::abort();
   pthread_mutex_unlock(&m_heap_mtx);
   return result;
 }
