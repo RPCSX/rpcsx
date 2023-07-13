@@ -71,7 +71,11 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
     val = reinterpret_cast<ptr<std::atomic<ulong>>>(addr)->load();
   if (val == id) {
     if (ut + 1 == 0) {
-      node->second.cv.wait(chain.mtx);
+      while (true) {
+        node->second.cv.wait(chain.mtx);
+        if (node->second.thr != thread)
+          break;
+      }
     } else {
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
@@ -162,8 +166,9 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
     auto node = chain.enqueue(key, thread);
     if (m->owner.compare_exchange_strong(owner, owner | kUmutexContested)) {
       node->second.cv.wait(chain.mtx, ut);
-      if (node->second.thr == thread)
+      if (node->second.thr == thread) {
         error = ErrorCode::TIMEDOUT;
+      }
     }
     if (node->second.thr == thread)
       chain.erase(node);
@@ -298,7 +303,11 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
   ErrorCode result = umtx_unlock_umutex(thread, m);
   if (result == ErrorCode{}) {
     if (ut + 1 == 0) {
-      node->second.cv.wait(chain.mtx, ut);
+      while (true) {
+        node->second.cv.wait(chain.mtx, ut);
+        if (node->second.thr != thread)
+          break;
+      }
     } else {
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;

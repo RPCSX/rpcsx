@@ -104,10 +104,12 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
                             (ptr<uint32_t>)uaddr1);
 
   case 8: {
-    return with_timeout([&](std::uint64_t ut) {
-      return umtx_cv_wait(thread, (ptr<ucond>)obj, (ptr<umutex>)uaddr1, ut,
-                          val);
-    });
+    return with_timeout(
+        [&](std::uint64_t ut) {
+          return umtx_cv_wait(thread, (ptr<ucond>)obj, (ptr<umutex>)uaddr1, ut,
+                              val);
+        },
+        false);
   }
 
   case 9:
