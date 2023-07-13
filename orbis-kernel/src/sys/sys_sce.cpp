@@ -791,6 +791,14 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return {};
   }
 
+  if (op == 0x320) {
+    ORBIS_LOG_TODO("IMPI: sync?");
+    if (result)
+      uwrite<uint>(result, 0);
+    thread->retval[0] = 0;
+    return {};
+  }
+
   if (op == 1131 || op == 1024 || op == 800) {
     thread->retval[0] = -0x40004; // HACK
     return {};
