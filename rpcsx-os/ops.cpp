@@ -6,6 +6,7 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/umtx.hpp"
+#include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
@@ -113,14 +114,16 @@ orbis::SysResult virtual_query(orbis::Thread *thread,
 
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
                       orbis::sint flags, orbis::sint mode) {
-  std::printf("sys_open(%s)\n", path);
   orbis::Ref<IoDeviceInstance> instance;
   auto result = rx::vfs::open(path, flags, mode, &instance);
   if (result.isError()) {
+    ORBIS_LOG_WARNING("sys_open: failed to open", path, result);
     return result;
   }
 
-  thread->retval[0] = thread->tproc->fileDescriptors.insert(instance);
+  auto fd = thread->tproc->fileDescriptors.insert(instance);
+  thread->retval[0] = fd;
+  ORBIS_LOG_WARNING("sys_open", path, fd);
   return {};
 }
 
@@ -129,6 +132,7 @@ orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
     return ErrorCode::BADF;
   }
 
+  ORBIS_LOG_WARNING("sys_close", fd);
   return {};
 }
 
@@ -314,7 +318,24 @@ orbis::SysResult read(orbis::Thread *thread, orbis::sint fd,
 orbis::SysResult pread(orbis::Thread *thread, orbis::sint fd,
                        orbis::ptr<void> data, orbis::ulong size,
                        orbis::ulong offset) {
-  return ErrorCode::NOTSUP;
+  Ref<IoDeviceInstance> handle =
+      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
+  if (handle == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto prevPos = handle->lseek(handle.get(), 0, SEEK_CUR);
+  handle->lseek(handle.get(), offset, SEEK_SET);
+  auto result = handle->read(handle.get(), data, size);
+  handle->lseek(handle.get(), prevPos, SEEK_SET);
+
+  if (result < 0) {
+    // TODO
+    return ErrorCode::IO;
+  }
+
+  thread->retval[0] = result;
+  return {};
 }
 orbis::SysResult pwrite(orbis::Thread *thread, orbis::sint fd,
                         orbis::ptr<const void> data, orbis::ulong size,
