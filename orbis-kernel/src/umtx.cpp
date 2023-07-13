@@ -277,11 +277,15 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
   uint flags;
   if (ErrorCode err = uread(flags, &m->flags); err != ErrorCode{})
     return err;
-  if ((wflags & kCvWaitClockId) != 0) {
+  if ((wflags & ~(kCvWaitAbsTime | kCvWaitClockId))) {
+    ORBIS_LOG_FATAL("umtx_cv_wait: UNKNOWN wflags", wflags);
+    return ErrorCode::INVAL;
+  }
+  if ((wflags & kCvWaitClockId) != 0 && ut + 1) {
     ORBIS_LOG_FATAL("umtx_cv_wait: CLOCK_ID unimplemented", wflags);
     return ErrorCode::NOSYS;
   }
-  if ((wflags & kCvWaitAbsTime) != 0) {
+  if ((wflags & kCvWaitAbsTime) != 0 && ut + 1) {
     ORBIS_LOG_FATAL("umtx_cv_wait: ABSTIME unimplemented", wflags);
     return ErrorCode::NOSYS;
   }
