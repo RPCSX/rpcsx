@@ -27,7 +27,7 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
     // Try to remove signal
     if (value & c_signal_mask)
       value -= c_signal_one;
-    if (value | c_locked_mask)
+    if (value & c_locked_mask)
       value -= c_locked_mask;
   });
 
