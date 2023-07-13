@@ -174,7 +174,7 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
 static ErrorCode do_lock_pi(Thread *thread, ptr<umutex> m, uint flags,
                             std::uint64_t ut, umutex_lock_mode mode) {
   ORBIS_LOG_TODO(__FUNCTION__, m, flags, ut, mode);
-  return ErrorCode::NOSYS;
+  return do_lock_normal(thread, m, flags, ut, mode);
 }
 static ErrorCode do_lock_pp(Thread *thread, ptr<umutex> m, uint flags,
                             std::uint64_t ut, umutex_lock_mode mode) {
@@ -205,7 +205,7 @@ static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
 }
 static ErrorCode do_unlock_pi(Thread *thread, ptr<umutex> m, uint flags) {
   ORBIS_LOG_TODO(__FUNCTION__, m, flags);
-  return ErrorCode::NOSYS;
+  return do_unlock_normal(thread, m, flags);
 }
 static ErrorCode do_unlock_pp(Thread *thread, ptr<umutex> m, uint flags) {
   ORBIS_LOG_TODO(__FUNCTION__, m, flags);
