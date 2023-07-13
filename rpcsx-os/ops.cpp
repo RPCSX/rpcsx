@@ -4,6 +4,7 @@
 #include "orbis/module/ModuleHandle.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/umtx.hpp"
 #include "orbis/utils/Rc.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
@@ -492,7 +493,10 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 SysResult thr_exit(orbis::Thread *thread, orbis::ptr<orbis::slong> state) {
   std::printf("Requested exit of thread %u, state %p\n", (unsigned)thread->tid,
               state);
-  // FIXME: do sys_mtx(WAKE) if state is not null
+  if (state != nullptr) {
+    static_cast<void>(uwrite(state, (orbis::slong)1));
+    umtx_wake(thread, state, INT_MAX);
+  }
 
   // FIXME: implement exit
   while (true) {
