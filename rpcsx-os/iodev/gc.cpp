@@ -225,6 +225,13 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     break;
   }
 
+  case 0x802450c9: {
+    // used during Net initialization
+    std::fprintf(stderr, "***WARNING*** Unknown gc ioctl_%lx(0x%lx)\n", request,
+                 (unsigned long)*(std::uint32_t *)argp);
+    break;
+  }
+
   default:
     ORBIS_LOG_FATAL("Unhandled gc ioctl", request);
     std::fflush(stdout);
