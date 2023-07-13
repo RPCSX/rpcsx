@@ -294,7 +294,7 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
     return ErrorCode::NOSYS;
   }
 
-  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, m);
+  auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, cv);
   auto node = chain.enqueue(key, thread);
 
   if (!cv->has_waiters.load(std::memory_order::relaxed))
