@@ -1,3 +1,4 @@
+#include "stat.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
 
@@ -103,16 +104,36 @@ orbis::SysResult orbis::sys_eaccess(Thread *thread, ptr<char> path,
                                     sint flags) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path,
-                                 ptr<struct stat> ub) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub) {
+  ORBIS_LOG_TODO(__FUNCTION__, path, ub);
+  auto result = sys_open(thread, path, 0, 0);
+  if (result.isError()) {
+    return result;
+  }
+
+  auto fd = thread->retval[0];
+  result = sys_lseek(thread, fd, 0, SEEK_END);
+  if (result.isError()) {
+    sys_close(thread, fd);
+    return result;
+  }
+
+  auto len = thread->retval[0];
+  *ub = {};
+  ub->size = len;
+  ub->blksize = 1;
+  ub->blocks = len;
+  ub->mode = 0777;
+  sys_close(thread, fd);
+  thread->retval[0] = 0;
+  return {};
 }
 orbis::SysResult orbis::sys_fstatat(Thread *thread, sint fd, ptr<char> path,
-                                    ptr<struct stat> buf, sint flag) {
+                                    ptr<Stat> buf, sint flag) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_lstat(Thread *thread, ptr<char> path,
-                                  ptr<struct stat> ub) {
+                                  ptr<Stat> ub) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_nstat(Thread *thread, ptr<char> path,
@@ -257,7 +278,7 @@ orbis::sys_fhopen(Thread *thread, ptr<const struct fhandle> u_fhp, sint flags) {
 }
 orbis::SysResult orbis::sys_fhstat(Thread *thread,
                                    ptr<const struct fhandle> u_fhp,
-                                   ptr<struct stat> sb) {
+                                   ptr<Stat> sb) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_fhstatfs(Thread *thread,

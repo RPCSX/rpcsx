@@ -23,8 +23,7 @@ orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {
 orbis::SysResult orbis::sys_closefrom(Thread *thread, sint lowfd) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_fstat(Thread *thread, sint fd,
-                                  ptr<struct stat> ub) {
+orbis::SysResult orbis::sys_fstat(Thread *thread, sint fd, ptr<Stat> ub) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_nfstat(Thread *thread, sint fd,

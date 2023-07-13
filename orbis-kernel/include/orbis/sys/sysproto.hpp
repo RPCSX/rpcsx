@@ -15,7 +15,7 @@ struct ModuleInfo;
 struct ModuleInfoEx;
 struct KEvent;
 struct timespec;
-
+struct Stat;
 struct stack_t;
 
 SysResult nosys(Thread *thread);
@@ -173,9 +173,9 @@ SysResult sys_ntp_adjtime(Thread *thread, ptr<struct timex> tp);
 SysResult sys_setgid(Thread *thread, gid_t gid);
 SysResult sys_setegid(Thread *thread, gid_t egid);
 SysResult sys_seteuid(Thread *thread, uid_t euid);
-SysResult sys_stat(Thread *thread, ptr<char> path, ptr<struct stat> ub);
-SysResult sys_fstat(Thread *thread, sint fd, ptr<struct stat> ub);
-SysResult sys_lstat(Thread *thread, ptr<char> path, ptr<struct stat> ub);
+SysResult sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub);
+SysResult sys_fstat(Thread *thread, sint fd, ptr<Stat> ub);
+SysResult sys_lstat(Thread *thread, ptr<char> path, ptr<Stat> ub);
 SysResult sys_pathconf(Thread *thread, ptr<char> path, sint name);
 SysResult sys_fpathconf(Thread *thread, sint fd, sint name);
 SysResult sys_getrlimit(Thread *thread, uint which, ptr<struct rlimit> rlp);
@@ -255,7 +255,7 @@ SysResult sys_pwritev(Thread *thread, sint fd, ptr<struct iovec> iovp,
 SysResult sys_fhopen(Thread *thread, ptr<const struct fhandle> u_fhp,
                      sint flags);
 SysResult sys_fhstat(Thread *thread, ptr<const struct fhandle> u_fhp,
-                     ptr<struct stat> sb);
+                     ptr<Stat> sb);
 SysResult sys_modnext(Thread *thread, sint modid);
 SysResult sys_modstat(Thread *thread, sint modid, ptr<struct module_stat> stat);
 SysResult sys_modfnext(Thread *thread, sint modid);
@@ -535,8 +535,8 @@ SysResult sys_fchownat(Thread *thread, sint fd, ptr<char> path, uid_t uid,
                        gid_t gid, sint flag);
 SysResult sys_fexecve(Thread *thread, sint fd, ptr<ptr<char>> argv,
                       ptr<ptr<char>> envv);
-SysResult sys_fstatat(Thread *thread, sint fd, ptr<char> path,
-                      ptr<struct stat> buf, sint flag);
+SysResult sys_fstatat(Thread *thread, sint fd, ptr<char> path, ptr<Stat> buf,
+                      sint flag);
 SysResult sys_futimesat(Thread *thread, sint fd, ptr<char> path,
                         ptr<struct timeval> times);
 SysResult sys_linkat(Thread *thread, sint fd1, ptr<char> path1, sint fd2,
