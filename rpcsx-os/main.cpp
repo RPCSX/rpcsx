@@ -84,6 +84,22 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 }
 
 static void setupSigHandlers() {
+  stack_t ss;
+
+  ss.ss_sp = malloc(SIGSTKSZ);
+  if (ss.ss_sp == NULL) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
+
+  ss.ss_size = SIGSTKSZ;
+  ss.ss_flags = 0;
+
+  if (sigaltstack(&ss, NULL) == -1) {
+    perror("sigaltstack");
+    exit(EXIT_FAILURE);
+  }
+
   struct sigaction act {};
   act.sa_sigaction = handle_signal;
   act.sa_flags = SA_SIGINFO | SA_ONSTACK;

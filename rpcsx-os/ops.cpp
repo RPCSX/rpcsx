@@ -10,6 +10,7 @@
 #include "vfs.hpp"
 #include "vm.hpp"
 #include <chrono>
+#include <csignal>
 #include <cstdio>
 #include <filesystem>
 #include <map>
@@ -470,6 +471,22 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   std::printf("Starting child thread %lu\n", (long)(proc->pid + baseId));
 
   std::thread{[=, childThread = Ref<Thread>(childThread)] {
+    stack_t ss;
+
+    ss.ss_sp = malloc(SIGSTKSZ);
+    if (ss.ss_sp == NULL) {
+      perror("malloc");
+      exit(EXIT_FAILURE);
+    }
+
+    ss.ss_size = SIGSTKSZ;
+    ss.ss_flags = 0;
+
+    if (sigaltstack(&ss, NULL) == -1) {
+      perror("sigaltstack");
+      exit(EXIT_FAILURE);
+    }
+
     static_cast<void>(
         uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
     auto context = new ucontext_t{};

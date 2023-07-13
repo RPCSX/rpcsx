@@ -43,22 +43,6 @@ void rx::thread::deinitialize() {}
 void rx::thread::invoke(orbis::Thread *thread) {
   g_current = thread;
 
-  stack_t ss;
-
-  ss.ss_sp = malloc(SIGSTKSZ);
-  if (ss.ss_sp == NULL) {
-    perror("malloc");
-    exit(EXIT_FAILURE);
-  }
-
-  ss.ss_size = SIGSTKSZ;
-  ss.ss_flags = 0;
-
-  if (sigaltstack(&ss, NULL) == -1) {
-    perror("sigaltstack");
-    exit(EXIT_FAILURE);
-  }
-
   sigset_t unblockSigs{};
   sigset_t oldSigmask{};
   sigaddset(&unblockSigs, SIGSYS);
