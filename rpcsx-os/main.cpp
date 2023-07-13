@@ -178,6 +178,7 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
   if (true || !g_traceSyscalls) {
     return;
   }
+  flockfile(stdout);
   std::printf("   [%u] ", thread->tid);
 
   if (auto name = getSyscallName(thread, id)) {
@@ -195,6 +196,7 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
   }
 
   std::printf(")\n");
+  funlockfile(stdout);
 }
 
 static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
@@ -203,6 +205,7 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
     return;
   }
 
+  flockfile(stdout);
   std::printf("%c: [%u] ", result.isError() ? 'E' : 'S', thread->tid);
 
   if (auto name = getSyscallName(thread, id)) {
@@ -221,6 +224,7 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
 
   std::printf(") -> Status %d, Value %lx:%lx\n", result.value(),
               thread->retval[0], thread->retval[1]);
+  funlockfile(stdout);
 }
 
 static int ps4Exec(orbis::Process *mainProcess,

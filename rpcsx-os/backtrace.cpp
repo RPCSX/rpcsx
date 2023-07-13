@@ -77,11 +77,12 @@ void rx::printStackTrace(ucontext_t *context, orbis::Thread *thread,
   unw_cursor_t cursor;
 
   char buffer[1024];
-
+  flockfile(stderr);
   if (int r = unw_init_local2(&cursor, context, UNW_INIT_SIGNAL_FRAME)) {
     int len = snprintf(buffer, sizeof(buffer), "unw_init_local: %s\n",
                        unw_strerror(r));
     write(fileno, buffer, len);
+    funlockfile(stderr);
     return;
   }
 
@@ -123,4 +124,5 @@ void rx::printStackTrace(ucontext_t *context, orbis::Thread *thread,
     write(fileno, buffer, offset);
     count++;
   } while (unw_step(&cursor) > 0 && count < 32);
+  funlockfile(stderr);
 }
