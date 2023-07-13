@@ -1,6 +1,7 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/error/ErrorCode.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
 #include <cinttypes>
@@ -92,7 +93,26 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
   static std::uint64_t *bufferInUsePtr = nullptr;
 
   if (request == 0xc0308203) {
+    // returns:
+    // PERM
+    // NOMEM
+    // FAULT
+    // BUSY
+    // INVAL
+    // OPNOTSUPP
     // flip control
+
+    // 0xc - scaler ctl
+    // 0x11 - output ctl
+    // 0x12 - vblank ctl
+    // 0x14 - display ctl
+    // 0x15 - subwindow ctl
+    // 0x18 - cursor ctl
+    // 0x19 - port ctl
+    // 0x1d - color ctl
+    // 0x1f - config ctl
+    // 0x20 - zoom buffer ctl
+    // 0x21 - adjust color
     auto args = reinterpret_cast<FlipControlArgs *>(argp);
 
     ORBIS_LOG_NOTICE("dce: FlipControl", args->id, args->arg2, args->ptr,
@@ -137,12 +157,15 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
       bufferInUsePtr = (std::uint64_t *)args->size;
       ORBIS_LOG_NOTICE("flipStatusPtr: ", bufferInUsePtr);
       return 0;
+    } else if (args->id == 33) { // adjust color
+      std::printf("adjust color\n");
+      return 0;
     } else if (args->id != 0 && args->id != 1) { // used during open/close
       ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
                        args->ptr, args->size);
 
       std::fflush(stdout);
-      __builtin_trap();
+      //__builtin_trap();
     }
     return 0;
   }
@@ -218,6 +241,8 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
   }
 
   ORBIS_LOG_FATAL("Unhandled dce ioctl", request);
+  // 0xc0188213 - color conversion
+
   std::fflush(stdout);
   __builtin_trap();
   return 0;
