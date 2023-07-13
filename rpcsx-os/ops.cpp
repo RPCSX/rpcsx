@@ -35,7 +35,12 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
       return ErrorCode::BADF;
     }
 
-    result = handle->mmap(handle.get(), addr, len, prot, flags, pos);
+    if (handle->mmap != nullptr) {
+      result = handle->mmap(handle.get(), addr, len, prot, flags, pos);
+    } else {
+      std::printf("unimplemented mmap\n");
+      result = rx::vm::map(addr, len, prot, flags);
+    }
   }
 
   if (result == (void *)-1) {
@@ -46,8 +51,11 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
   return {};
 }
 
-orbis::SysResult munmap(orbis::Thread *thread, orbis::ptr<void> addr,
+orbis::SysResult munmap(orbis::Thread *, orbis::ptr<void> addr,
                         orbis::size_t len) {
+  if (rx::vm::unmap(addr, len)) {
+    return {};
+  }
   return ErrorCode::INVAL;
 }
 
@@ -135,7 +143,7 @@ orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
 #define IOC_DIRMASK (IOC_VOID | IOC_OUT | IOC_IN)
 
 #define _IOC(inout, group, num, len)                                           \
-  ((unsigned long)((inout) | (((len)&IOCPARM_MASK) << 16) | ((group) << 8) |   \
+  ((unsigned long)((inout) | (((len) & IOCPARM_MASK) << 16) | ((group) << 8) | \
                    (num)))
 #define _IO(g, n) _IOC(IOC_VOID, (g), (n), 0)
 #define _IOWINT(g, n) _IOC(IOC_VOID, (g), (n), sizeof(int))
@@ -328,7 +336,7 @@ orbis::SysResult lseek(orbis::Thread *thread, orbis::sint fd,
 }
 orbis::SysResult ftruncate(orbis::Thread *thread, orbis::sint fd,
                            orbis::off_t length) {
-  return ErrorCode::NOTSUP;
+  return {};
 }
 orbis::SysResult truncate(orbis::Thread *thread, orbis::ptr<const char> path,
                           orbis::off_t length) {
