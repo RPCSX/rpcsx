@@ -340,7 +340,7 @@ orbis::ErrorCode orbis::umtx_cv_broadcast(Thread *thread, ptr<ucond> cv) {
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, cv);
   chain.notify_all(key);
   cv->has_waiters.store(0, std::memory_order::relaxed);
-  return ErrorCode::NOSYS;
+  return {};
 }
 
 orbis::ErrorCode orbis::umtx_rw_rdlock(Thread *thread, ptr<void> obj,
