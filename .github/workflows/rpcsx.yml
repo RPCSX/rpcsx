@@ -27,7 +27,7 @@ jobs:
         sudo apt update
         sudo apt install build-essential libunwind-dev \
         libglfw3-dev libvulkan-dev vulkan-validationlayers-dev \
-        spirv-tools glslang-tools
+        spirv-tools glslang-tools libspirv-cross-c-shared-dev
 
     - name: Build RPCSX
       run: |
