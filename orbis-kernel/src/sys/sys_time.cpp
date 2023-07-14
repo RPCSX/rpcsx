@@ -114,9 +114,9 @@ orbis::SysResult orbis::sys_nanosleep(Thread *thread, ptr<const timespec> rqtp,
 }
 orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
                                          ptr<orbis::timezone> tzp) {
+  ORBIS_LOG_TRACE(__FUNCTION__, tp, tzp);
   struct ::timeval tv;
-  struct ::timezone tz;
-  if (::gettimeofday(&tv, &tz) != 0)
+  if (::gettimeofday(&tv, nullptr) != 0)
     std::abort();
   if (tp) {
     orbis::timeval value;
@@ -126,9 +126,12 @@ orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
       return e;
   }
   if (tzp) {
+    struct ::tm tp;
+    if (localtime_r(&tv.tv_sec, &tp) != &tp)
+      std::abort();
     orbis::timezone value;
-    value.tz_dsttime = tz.tz_dsttime;
-    value.tz_minuteswest = tz.tz_minuteswest;
+    value.tz_dsttime = tp.tm_isdst;
+    value.tz_minuteswest = -tp.tm_gmtoff / 60;
     if (auto e = uwrite(tzp, value); e != ErrorCode{})
       return e;
   }

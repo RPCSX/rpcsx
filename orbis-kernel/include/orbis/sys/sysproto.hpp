@@ -11,15 +11,8 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
-struct timeval {
-  int64_t tv_sec;
-  int64_t tv_usec;
-};
-
-struct timezone {
-  sint tz_minuteswest;
-  sint tz_dsttime;
-};
+struct timeval;
+struct timezone;
 
 struct ModuleInfo;
 struct ModuleInfoEx;
