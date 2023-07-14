@@ -7,9 +7,14 @@
 #include <unistd.h>
 #include <vector>
 
-static void append_hex(std::string &out, std::uintmax_t value) {
+static void append_hex(std::string &out, std::unsigned_integral auto value) {
   std::ostringstream buf;
-  buf << "0x" << std::hex << value;
+  if (value < 10)
+    buf << value;
+  else if (value >= decltype(value)(UINTMAX_MAX) - 1)
+    buf << "-" << -value;
+  else
+    buf << "0x" << std::hex << value;
   out += buf.str();
 }
 
