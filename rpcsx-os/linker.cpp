@@ -894,6 +894,10 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
     return loadModuleFile(it->second.c_str(), process);
   }
 
+  if (name == "libSceAbstractTwitch") {
+    return nullptr;
+  }
+
   if (name == "libSceFreeTypeFull") {
     return createSceFreeTypeFull(process);
   }
