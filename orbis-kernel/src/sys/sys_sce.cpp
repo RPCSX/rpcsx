@@ -4,6 +4,7 @@
 #include "evf.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
+#include "orbis/time.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
@@ -852,11 +853,31 @@ orbis::SysResult orbis::sys_set_timezone_info(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_set_phys_fmem_limit(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_utc_to_localtime(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_utc_to_localtime(Thread *thread, int64_t time,
+                                             int64_t *localtime,
+                                             orbis::timesec *_sec,
+                                             int *_dst_sec) {
+  ORBIS_LOG_TRACE(__FUNCTION__, time, localtime, _sec, _dst_sec);
+  struct ::tm tp;
+  auto result = ::mktime(::localtime_r(&time, &tp));
+  if (auto e = uwrite(localtime, result); e != ErrorCode{})
+    return e;
+  uwrite(_sec, {});
+  uwrite(_dst_sec, 0);
+  return {};
 }
-orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread, int64_t time,
+                                             uint unk, int64_t *ptime,
+                                             orbis::timesec *_sec,
+                                             int *_dst_sec) {
+  ORBIS_LOG_TRACE(__FUNCTION__, time, unk, ptime, _sec, _dst_sec);
+  struct ::tm tp;
+  auto result = ::mktime(::gmtime_r(&time, &tp));
+  if (auto e = uwrite(ptime, result); e != ErrorCode{})
+    return e;
+  uwrite(_sec, {});
+  uwrite(_dst_sec, 0);
+  return {};
 }
 orbis::SysResult orbis::sys_set_uevt(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;

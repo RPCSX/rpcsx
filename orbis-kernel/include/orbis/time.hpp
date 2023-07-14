@@ -15,4 +15,9 @@ struct timezone {
   sint tz_minuteswest;
   sint tz_dsttime;
 };
+struct timesec {
+  int64_t tz_time;
+  sint tz_secwest;
+  sint tz_dstsec;
+};
 } // namespace orbis

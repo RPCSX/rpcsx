@@ -1,6 +1,7 @@
 #include <array>
 #include <orbis/error.hpp>
 #include <orbis/thread.hpp>
+#include <orbis/time.hpp>
 
 namespace orbis {
 using acl_type_t = sint;
@@ -10,9 +11,6 @@ using cpusetid_t = sint;
 using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
-
-struct timeval;
-struct timezone;
 
 struct ModuleInfo;
 struct ModuleInfoEx;
@@ -740,8 +738,11 @@ SysResult sys_thr_get_ucontext(Thread *thread /* TODO */);
 SysResult sys_thr_set_ucontext(Thread *thread /* TODO */);
 SysResult sys_set_timezone_info(Thread *thread /* TODO */);
 SysResult sys_set_phys_fmem_limit(Thread *thread /* TODO */);
-SysResult sys_utc_to_localtime(Thread *thread /* TODO */);
-SysResult sys_localtime_to_utc(Thread *thread /* TODO */);
+SysResult sys_utc_to_localtime(Thread *thread, int64_t time, int64_t *localtime,
+                               orbis::timesec *_sec, int *_dst_sec);
+SysResult sys_localtime_to_utc(Thread *thread, int64_t time, uint unk,
+                               int64_t *ptime, orbis::timesec *_sec,
+                               int *_dst_sec);
 SysResult sys_set_uevt(Thread *thread /* TODO */);
 SysResult sys_get_cpu_usage_proc(Thread *thread /* TODO */);
 SysResult sys_get_map_statistics(Thread *thread /* TODO */);
