@@ -129,6 +129,9 @@ orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
 }
 
 orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
+  if (fd == 0) {
+    return {};
+  }
   if (!thread->tproc->fileDescriptors.close(fd)) {
     return ErrorCode::BADF;
   }
