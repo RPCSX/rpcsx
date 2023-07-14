@@ -1,7 +1,6 @@
 #include "device.hpp"
 #include "tiler.hpp"
 
-// #include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
 #include "util/unreachable.hpp"
 #include <algorithm>
@@ -18,10 +17,10 @@
 #include <set>
 #include <shaders/rect_list.geom.h>
 #include <span>
-#include <util/VerifyVulkan.hpp>
-// #include <spirv_glsl.hpp>
+#include <spirv_cross/spirv_glsl.hpp>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan_core.h>
 
 using namespace amdgpu;
@@ -1679,6 +1678,34 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
     }
     break;
 
+  case kSurfaceFormat8_8:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_R8G8_UNORM;
+    case kTextureChannelTypeSNorm:
+      return VK_FORMAT_R8G8_SNORM;
+    case kTextureChannelTypeUInt:
+      return VK_FORMAT_R8G8_UINT;
+    case kTextureChannelTypeSInt:
+      return VK_FORMAT_R8G8_SINT;
+    default:
+      break;
+    }
+    break;
+
+  case kSurfaceFormat16_16:
+    switch (channel) {
+    case kTextureChannelTypeUInt:
+      return VK_FORMAT_R16G16_UINT;
+    case kTextureChannelTypeSInt:
+      return VK_FORMAT_R16G16_SINT;
+    case kTextureChannelTypeFloat:
+      return VK_FORMAT_R16G16_SFLOAT;
+    default:
+      break;
+    }
+    break;
+
   case kSurfaceFormat32_32:
     switch (channel) {
     case kTextureChannelTypeUInt:
@@ -1978,36 +2005,35 @@ static bool validateSpirv(const std::vector<uint32_t> &bin) {
 }
 
 static void printSpirv(const std::vector<uint32_t> &bin) {
-  // spv_target_env target_env = SPV_ENV_VULKAN_1_3;
-  // spv_context spvContext = spvContextCreate(target_env);
-  // spv_diagnostic diagnostic = nullptr;
+  spv_target_env target_env = SPV_ENV_VULKAN_1_3;
+  spv_context spvContext = spvContextCreate(target_env);
+  spv_diagnostic diagnostic = nullptr;
 
-  // spv_result_t error = spvBinaryToText(
-  //     spvContext, bin.data(), bin.size(),
-  //     SPV_BINARY_TO_TEXT_OPTION_PRINT | // SPV_BINARY_TO_TEXT_OPTION_COLOR |
-  //         SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES |
-  //         SPV_BINARY_TO_TEXT_OPTION_COMMENT |
-  //         SPV_BINARY_TO_TEXT_OPTION_INDENT,
-  //     nullptr, &diagnostic);
+  spv_result_t error = spvBinaryToText(
+      spvContext, bin.data(), bin.size(),
+      SPV_BINARY_TO_TEXT_OPTION_PRINT | // SPV_BINARY_TO_TEXT_OPTION_COLOR |
+          SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES |
+          SPV_BINARY_TO_TEXT_OPTION_COMMENT | SPV_BINARY_TO_TEXT_OPTION_INDENT,
+      nullptr, &diagnostic);
 
-  // if (error != 0) {
-  //   spvDiagnosticPrint(diagnostic);
-  // }
+  if (error != 0) {
+    spvDiagnosticPrint(diagnostic);
+  }
 
-  // spvDiagnosticDestroy(diagnostic);
-  // spvContextDestroy(spvContext);
+  spvDiagnosticDestroy(diagnostic);
+  spvContextDestroy(spvContext);
 
-  // if (error != 0) {
-  //   return;
-  // }
+  if (error != 0) {
+    return;
+  }
 
-  // spirv_cross::CompilerGLSL glsl(bin);
-  // spirv_cross::CompilerGLSL::Options options;
-  // options.version = 460;
-  // options.es = false;
-  // options.vulkan_semantics = true;
-  // glsl.set_common_options(options);
-  // std::printf("%s\n", glsl.compile().c_str());
+  spirv_cross::CompilerGLSL glsl(bin);
+  spirv_cross::CompilerGLSL::Options options;
+  options.version = 460;
+  options.es = false;
+  options.vulkan_semantics = true;
+  glsl.set_common_options(options);
+  std::printf("%s\n", glsl.compile().c_str());
 }
 
 static std::optional<std::vector<uint32_t>>
@@ -3002,7 +3028,7 @@ struct RenderState {
                     tbuffer->tiling_idx);
         std::fflush(stdout);
 
-        assert(tbuffer->width == tbuffer->pitch);
+        // assert(tbuffer->width == tbuffer->pitch);
 
         auto image = Image2D::Allocate(
             getDeviceLocalMemory(), tbuffer->width + 1, tbuffer->height + 1,
@@ -3989,16 +4015,36 @@ void amdgpu::device::handleCommandBuffer(RemoteMemory memory, DrawContext &ctxt,
 void amdgpu::device::AmdgpuDevice::handleProtectMemory(std::uint64_t address,
                                                        std::uint64_t size,
                                                        std::uint32_t prot) {
-  ::mprotect(memory.getPointer(address), size, prot >> 4);
-
   auto beginPage = address / kPageSize;
   auto endPage = (address + size + kPageSize - 1) / kPageSize;
 
+  ::mprotect(memory.getPointer(address), size, prot >> 4);
+
   if (prot >> 4) {
     memoryZoneTable.map(beginPage, endPage);
-    std::printf("Allocated area at %zx, size %zu\n", address, size);
+    const char *protStr;
+    switch (prot >> 4) {
+    case PROT_READ:
+      protStr = "R";
+      break;
+
+    case PROT_WRITE:
+      protStr = "W";
+      break;
+
+    case PROT_WRITE | PROT_READ:
+      protStr = "W";
+      break;
+
+    default:
+      protStr = "unknown";
+      break;
+    }
+    std::printf("Allocated area at %zx, size %lx, prot %s\n", address, size,
+                protStr);
   } else {
     memoryZoneTable.unmap(beginPage, endPage);
+    std::printf("Unmapped area at %zx, size %lx\n", address, size);
   }
 }
 void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t address,

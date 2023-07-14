@@ -2,12 +2,9 @@
 
 #include "Fragment.hpp"
 #include "Function.hpp"
-#include "RegisterId.hpp"
 #include "Stage.hpp"
 #include "TypeId.hpp"
 #include "Uniform.hpp"
-#include "Value.hpp"
-#include "scf.hpp"
 
 #include <amdgpu/RemoteMemory.hpp>
 #include <forward_list>

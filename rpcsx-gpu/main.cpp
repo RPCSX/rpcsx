@@ -5,6 +5,7 @@
 #include <csignal>
 #include <cstdio>
 #include <fcntl.h>
+#include <filesystem>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <thread>
@@ -689,10 +690,18 @@ int main(int argc, const char *argv[]) {
   amdgpu::bridge::BridgePuller bridgePuller{bridge};
   amdgpu::bridge::Command commandsBuffer[32];
 
+  if (!std::filesystem::exists(std::string("/dev/shm") + shmName)) {
+    std::printf("Waiting for OS\n");
+    while (!std::filesystem::exists(std::string("/dev/shm") + shmName)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    }
+  }
+
   int memoryFd = ::shm_open(shmName, O_RDWR, S_IRUSR | S_IWUSR);
 
   if (memoryFd < 0) {
     std::printf("failed to open shared memory\n");
+    return 1;
   }
 
   struct stat memoryStat;

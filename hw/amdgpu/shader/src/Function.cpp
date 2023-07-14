@@ -225,10 +225,9 @@ spirv::FunctionType Function::getFunctionType() {
   return context->getFunctionType(getResultType(), params);
 }
 
-Fragment *Function::createFragment() {
+Fragment *Function::createDetachedFragment() {
   auto result = context->createFragment(0);
   result->function = this;
-  fragments.push_back(result);
   return result;
 }
 

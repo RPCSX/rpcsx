@@ -1,6 +1,7 @@
 #pragma once
 #include "Fragment.hpp"
 #include "RegisterId.hpp"
+#include "Stage.hpp"
 #include "spirv/spirv-builder.hpp"
 #include <span>
 
@@ -24,7 +25,14 @@ struct Function {
   spirv::Type getResultType();
   spirv::FunctionType getFunctionType();
 
-  Fragment *createFragment();
+  Fragment *createFragment() {
+    auto result = createDetachedFragment();
+    appendFragment(result);
+    return result;
+  }
+
+  Fragment *createDetachedFragment();
+  void appendFragment(Fragment *fragment) { fragments.push_back(fragment); }
 
   void insertReturn();
 };

@@ -1165,6 +1165,25 @@ public:
     return id;
   }
 
+  // relational
+  BoolValue createIsNan(BoolType resultType, Value operand1) {
+    auto region = bodyRegion.pushOp(spv::Op::OpIsNan, 4);
+    auto id = newId<BoolValue>();
+    region.pushIdUse(resultType);
+    region.pushIdDef(id);
+    region.pushIdUse(operand1);
+    return id;
+  }
+
+  BoolValue createIsInf(BoolType resultType, Value operand1) {
+    auto region = bodyRegion.pushOp(spv::Op::OpIsInf, 4);
+    auto id = newId<BoolValue>();
+    region.pushIdUse(resultType);
+    region.pushIdDef(id);
+    region.pushIdUse(operand1);
+    return id;
+  }
+
   // logic
   BoolValue createLogicalEqual(BoolType resultType, Value operand1,
                                Value operand2) {
@@ -1470,6 +1489,32 @@ public:
       std::span<const Id> args = {}) {
     auto region = bodyRegion.pushOp(
         spv::Op::OpImageSampleImplicitLod,
+        5 + (operands == spv::ImageOperandsMask::MaskNone ? 0
+                                                          : 1 + args.size()));
+    auto id = newId<VectorOfValue<FloatType>>();
+    region.pushIdUse(resultType);
+    region.pushIdDef(id);
+    region.pushIdUse(sampledImage);
+    region.pushIdUse(coords);
+
+    if (operands != spv::ImageOperandsMask::MaskNone) {
+      region.pushWord(static_cast<unsigned>(operands));
+
+      for (auto arg : args) {
+        region.pushIdUse(arg);
+      }
+    }
+
+    return id;
+  }
+
+  VectorOfValue<FloatType> createImageSampleExplicitLod(
+      VectorOfType<FloatType> resultType, SampledImageValue sampledImage,
+      ScalarOrVectorOfValue<FloatType> coords,
+      spv::ImageOperandsMask operands = spv::ImageOperandsMask::MaskNone,
+      std::span<const Id> args = {}) {
+    auto region = bodyRegion.pushOp(
+        spv::Op::OpImageSampleExplicitLod,
         5 + (operands == spv::ImageOperandsMask::MaskNone ? 0
                                                           : 1 + args.size()));
     auto id = newId<VectorOfValue<FloatType>>();

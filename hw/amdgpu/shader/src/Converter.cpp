@@ -49,7 +49,7 @@ public:
     function = fn;
     memory = mem;
 
-    auto lastFragment = convertBlock(block, &function->entryFragment);
+    auto lastFragment = convertBlock(block, &function->entryFragment, nullptr);
 
     if (lastFragment != nullptr) {
       lastFragment->builder.createBranch(fn->exitFragment.entryBlockId);
@@ -126,7 +126,8 @@ private:
     return builder.createLogicalOr(boolT, loIsNotZero, hiIsNotZero);
   }
 
-  Fragment *convertBlock(scf::Block *block, Fragment *rootFragment) {
+  Fragment *convertBlock(scf::Block *block, Fragment *rootFragment,
+                         Fragment *loopMergeFragment) {
     Fragment *currentFragment = nullptr;
 
     for (scf::Node *node = block->getRootNode(); node != nullptr;
@@ -178,6 +179,33 @@ private:
       }
 
       if (auto ifElse = dynCast<scf::IfElse>(node)) {
+        auto isBreakBlock = [](scf::Block *block) {
+          if (block->isEmpty()) {
+            return false;
+          }
+          if (block->getLastNode() != block->getRootNode()) {
+            return false;
+          }
+
+          return dynamic_cast<scf::Break *>(block->getRootNode()) != nullptr;
+        };
+
+        if (loopMergeFragment != nullptr && ifElse->ifTrue->isEmpty() &&
+            isBreakBlock(ifElse->ifFalse)) {
+          auto mergeFragment = function->createFragment();
+          currentFragment->appendBranch(*mergeFragment);
+          currentFragment->appendBranch(*loopMergeFragment);
+
+          currentFragment->builder.createBranchConditional(
+              currentFragment->branchCondition, mergeFragment->entryBlockId,
+              loopMergeFragment->entryBlockId);
+
+          initState(mergeFragment);
+          releaseStateOf(currentFragment);
+          currentFragment = mergeFragment;
+          continue;
+        }
+
         auto ifTrueFragment = function->createFragment();
         auto ifFalseFragment = function->createFragment();
         auto mergeFragment = function->createFragment();
@@ -185,18 +213,16 @@ private:
         currentFragment->appendBranch(*ifTrueFragment);
         currentFragment->appendBranch(*ifFalseFragment);
 
-        currentFragment->builder.createSelectionMerge(
-            mergeFragment->entryBlockId, {});
-        currentFragment->builder.createBranchConditional(
-            currentFragment->branchCondition, ifTrueFragment->entryBlockId,
-            ifFalseFragment->entryBlockId);
-
-        auto ifTrueLastBlock = convertBlock(ifElse->ifTrue, ifTrueFragment);
-        auto ifFalseLastBlock = convertBlock(ifElse->ifFalse, ifFalseFragment);
+        auto ifTrueLastBlock =
+            convertBlock(ifElse->ifTrue, ifTrueFragment, loopMergeFragment);
+        auto ifFalseLastBlock =
+            convertBlock(ifElse->ifFalse, ifFalseFragment, loopMergeFragment);
 
         if (ifTrueLastBlock != nullptr) {
-          ifTrueLastBlock->builder.createBranch(mergeFragment->entryBlockId);
-          ifTrueLastBlock->appendBranch(*mergeFragment);
+          if (!ifTrueLastBlock->hasTerminator) {
+            ifTrueLastBlock->builder.createBranch(mergeFragment->entryBlockId);
+            ifTrueLastBlock->appendBranch(*mergeFragment);
+          }
 
           if (ifTrueLastBlock->registers == nullptr) {
             initState(ifTrueLastBlock);
@@ -204,13 +230,22 @@ private:
         }
 
         if (ifFalseLastBlock != nullptr) {
-          ifFalseLastBlock->builder.createBranch(mergeFragment->entryBlockId);
-          ifFalseLastBlock->appendBranch(*mergeFragment);
+          if (!ifFalseLastBlock->hasTerminator) {
+            ifFalseLastBlock->builder.createBranch(mergeFragment->entryBlockId);
+            ifFalseLastBlock->appendBranch(*mergeFragment);
+          }
 
           if (ifFalseLastBlock->registers == nullptr) {
             initState(ifFalseLastBlock);
           }
         }
+
+        currentFragment->builder.createSelectionMerge(
+            mergeFragment->entryBlockId, {});
+
+        currentFragment->builder.createBranchConditional(
+            currentFragment->branchCondition, ifTrueFragment->entryBlockId,
+            ifFalseFragment->entryBlockId);
 
         releaseStateOf(currentFragment);
         initState(mergeFragment);
@@ -222,6 +257,56 @@ private:
         if (ifFalseLastBlock != nullptr) {
           releaseStateOf(ifFalseLastBlock);
         }
+        currentFragment = mergeFragment;
+        continue;
+      }
+
+      if (auto loop = dynCast<scf::Loop>(node)) {
+        auto headerFragment = function->createFragment();
+        auto bodyFragment = function->createFragment();
+        auto mergeFragment = function->createDetachedFragment();
+        auto continueFragment = function->createDetachedFragment();
+
+        currentFragment->builder.createBranch(headerFragment->entryBlockId);
+        currentFragment->appendBranch(*headerFragment);
+
+        initState(headerFragment);
+        releaseStateOf(currentFragment);
+
+        headerFragment->builder.createLoopMerge(
+            mergeFragment->entryBlockId, continueFragment->entryBlockId,
+            spv::LoopControlMask::MaskNone, {});
+
+        headerFragment->builder.createBranch(bodyFragment->entryBlockId);
+        headerFragment->appendBranch(*bodyFragment);
+
+        auto bodyLastBlock =
+            convertBlock(loop->body, bodyFragment, mergeFragment);
+
+        if (bodyLastBlock != nullptr) {
+          if (bodyLastBlock->registers == nullptr) {
+            initState(bodyLastBlock);
+          }
+
+          bodyLastBlock->builder.createBranch(continueFragment->entryBlockId);
+          bodyLastBlock->appendBranch(*continueFragment);
+        }
+
+        continueFragment->builder.createBranch(headerFragment->entryBlockId);
+        continueFragment->appendBranch(*headerFragment);
+        initState(continueFragment);
+
+        releaseStateOf(headerFragment);
+        initState(mergeFragment);
+
+        if (bodyLastBlock != nullptr) {
+          releaseStateOf(bodyLastBlock);
+        }
+
+        function->appendFragment(continueFragment);
+        function->appendFragment(mergeFragment);
+        releaseStateOf(continueFragment);
+
         currentFragment = mergeFragment;
         continue;
       }
@@ -250,7 +335,7 @@ private:
         auto targetFragment = function->createFragment();
         currentFragment->builder.createBranch(targetFragment->entryBlockId);
         currentFragment->appendBranch(*targetFragment);
-        auto result = convertBlock(scfBlock, targetFragment);
+        auto result = convertBlock(scfBlock, targetFragment, nullptr);
 
         if (currentFragment->registers == nullptr) {
           initState(targetFragment);
@@ -264,9 +349,11 @@ private:
         currentFragment->appendBranch(function->exitFragment);
         currentFragment->builder.createBranch(
             function->exitFragment.entryBlockId);
+        currentFragment->hasTerminator = true;
         return nullptr;
       }
 
+      node->dump();
       util::unreachable();
     }
 

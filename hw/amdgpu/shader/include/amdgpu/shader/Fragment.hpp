@@ -1,16 +1,11 @@
 #pragma once
-
-#include "FragmentTerminator.hpp"
-#include "Instruction.hpp"
 #include "RegisterId.hpp"
 #include "RegisterState.hpp"
-#include "Stage.hpp"
 #include "TypeId.hpp"
-#include "Uniform.hpp"
-#include "scf.hpp"
 
 #include <map>
 #include <optional>
+#include <set>
 #include <spirv/spirv-builder.hpp>
 
 namespace amdgpu::shader {
@@ -32,6 +27,7 @@ struct Fragment {
   std::vector<Fragment *> predecessors;
   std::uint64_t jumpAddress = 0;
   spirv::BoolValue branchCondition;
+  bool hasTerminator = false;
 
   void appendBranch(Fragment &other) { other.predecessors.push_back(this); }
 
