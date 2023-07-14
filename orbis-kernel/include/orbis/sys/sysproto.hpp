@@ -11,6 +11,16 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
+struct timeval {
+  int64_t tv_sec;
+  int64_t tv_usec;
+};
+
+struct timezone {
+  sint tz_minuteswest;
+  sint tz_dsttime;
+};
+
 struct ModuleInfo;
 struct ModuleInfoEx;
 struct KEvent;
@@ -120,8 +130,8 @@ SysResult sys_bind(Thread *thread, sint s, caddr_t name, sint namelen);
 SysResult sys_setsockopt(Thread *thread, sint s, sint level, sint name,
                          caddr_t val, sint valsize);
 SysResult sys_listen(Thread *thread, sint s, sint backlog);
-SysResult sys_gettimeofday(Thread *thread, ptr<struct timeval> tp,
-                           ptr<struct timezone> tzp);
+SysResult sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
+                           ptr<orbis::timezone> tzp);
 SysResult sys_getrusage(Thread *thread, sint who, ptr<struct rusage> rusage);
 SysResult sys_getsockopt(Thread *thread, sint s, sint level, sint name,
                          caddr_t val, ptr<sint> avalsize);
@@ -130,7 +140,7 @@ SysResult sys_readv(Thread *thread, sint fd, ptr<struct iovec> iovp,
 SysResult sys_writev(Thread *thread, sint fd, ptr<struct iovec> iovp,
                      uint iovcnt);
 SysResult sys_settimeofday(Thread *thread, ptr<struct timeval> tp,
-                           ptr<struct timezone> tzp);
+                           ptr<orbis::timezone> tzp);
 SysResult sys_fchown(Thread *thread, sint fd, sint uid, sint gid);
 SysResult sys_fchmod(Thread *thread, sint fd, sint mode);
 SysResult sys_setreuid(Thread *thread, sint ruid, sint euid);
