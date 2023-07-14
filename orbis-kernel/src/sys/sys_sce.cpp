@@ -872,7 +872,8 @@ orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread, int64_t time,
                                              int *_dst_sec) {
   ORBIS_LOG_TRACE(__FUNCTION__, time, unk, ptime, _sec, _dst_sec);
   struct ::tm tp;
-  auto result = ::mktime(::gmtime_r(&time, &tp));
+  ::time_t timez = 0;
+  auto result = time - ::mktime(::localtime_r(&timez, &tp));
   if (auto e = uwrite(ptime, result); e != ErrorCode{})
     return e;
   uwrite(_sec, {});
