@@ -902,6 +902,15 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
     return createSceFreeTypeFull(process);
   }
 
+  {
+    std::string filePath = "/app0/sce_module/";
+    filePath += name;
+    filePath += ".elf";
+    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), process)) {
+      return result;
+    }
+  }
+
   for (auto path : {"/system/common/lib/", "/system/priv/lib/"}) {
     auto filePath = std::string(path);
     filePath += name;
