@@ -12,9 +12,9 @@ static void append_hex(std::string &out, std::unsigned_integral auto value) {
   if (value < 10)
     buf << value;
   else if (value >= decltype(value)(UINTMAX_MAX) - 1)
-    buf << "-" << -value;
+    buf << "-" << std::uintmax_t(decltype(value)(-value));
   else
-    buf << "0x" << std::hex << value;
+    buf << "0x" << std::hex << std::uintmax_t(value);
   out += buf.str();
 }
 
