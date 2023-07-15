@@ -130,8 +130,8 @@ orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
     if (localtime_r(&tv.tv_sec, &tp) != &tp)
       std::abort();
     orbis::timezone value;
-    value.tz_dsttime = tp.tm_isdst;
-    value.tz_minuteswest = -tp.tm_gmtoff / 60;
+    value.tz_dsttime = 0; // TODO
+    value.tz_mineast = tp.tm_gmtoff / 60;
     if (auto e = uwrite(tzp, value); e != ErrorCode{})
       return e;
   }

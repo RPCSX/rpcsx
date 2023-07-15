@@ -857,6 +857,10 @@ orbis::SysResult orbis::sys_utc_to_localtime(Thread *thread, int64_t time,
                                              int64_t *localtime,
                                              orbis::timesec *_sec,
                                              int *_dst_sec) {
+  // Disabled for now
+  thread->retval[0] = (int)ErrorCode::RANGE;
+  return {};
+
   ORBIS_LOG_TRACE(__FUNCTION__, time, localtime, _sec, _dst_sec);
   struct ::tm tp;
   auto result = ::mktime(::localtime_r(&time, &tp));
@@ -870,6 +874,10 @@ orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread, int64_t time,
                                              uint unk, int64_t *ptime,
                                              orbis::timesec *_sec,
                                              int *_dst_sec) {
+  // Disabled for now
+  thread->retval[0] = (int)ErrorCode::RANGE;
+  return {};
+
   ORBIS_LOG_TRACE(__FUNCTION__, time, unk, ptime, _sec, _dst_sec);
   struct ::tm tp;
   ::time_t timez = 0;

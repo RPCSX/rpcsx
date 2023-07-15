@@ -12,7 +12,7 @@ struct timeval {
   int64_t tv_usec;
 };
 struct timezone {
-  sint tz_minuteswest;
+  sint tz_mineast;
   sint tz_dsttime;
 };
 struct timesec {
