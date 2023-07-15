@@ -309,6 +309,8 @@ orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
                                             ptr<const char[32]> name,
                                             ptr<void> object, uint16_t type) {
   ORBIS_LOG_NOTICE(__FUNCTION__, name, object, type);
+  if (!name)
+    return ErrorCode::INVAL;
   char _name[32];
   if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
       result != ErrorCode{}) {
@@ -335,7 +337,7 @@ orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint16_t id,
                                             uint16_t type) {
   ORBIS_LOG_NOTICE(__FUNCTION__, id, type);
   if (id == 0)
-    return ErrorCode::INVAL;
+    return ErrorCode::SRCH;
   if (type < 0x101 || type > 0x104) {
     if (type != 0x107)
       ORBIS_LOG_ERROR(__FUNCTION__, id, type);
@@ -353,6 +355,7 @@ orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint16_t id,
     ORBIS_LOG_ERROR("Named object: pointer not found", type, object);
   }
 
+  thread->tproc->namedObjIds.destroy(id);
   return {};
 }
 orbis::SysResult orbis::sys_set_vm_container(Thread *thread /* TODO */) {
