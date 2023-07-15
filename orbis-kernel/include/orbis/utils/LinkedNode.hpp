@@ -2,7 +2,7 @@
 
 namespace orbis {
 inline namespace utils {
-template <typename T> struct LinkedNode {
+template <typename T> struct LinkedNode final {
   T object;
   LinkedNode *next = nullptr;
   LinkedNode *prev = nullptr;

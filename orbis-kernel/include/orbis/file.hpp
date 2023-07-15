@@ -40,7 +40,7 @@ struct FileOps {
                       Thread *thread) = nullptr;
 };
 
-struct File {
+struct File final {
   FileOps *ops;
   Ref<RcBase> device;
   std::atomic<unsigned> refs{0};

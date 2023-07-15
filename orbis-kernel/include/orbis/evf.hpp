@@ -21,7 +21,7 @@ enum {
   kEvfWaitModeClearPat = 0x20,
 };
 
-struct EventFlag {
+struct EventFlag final {
   char name[32];
 
   bool isDeleted = false;

@@ -22,7 +22,7 @@ struct NamedObjInfo {
   uint16_t ty;
 };
 
-struct Process {
+struct Process final {
   KernelContext *context = nullptr;
   pid_t pid = -1;
   sysentvec *sysent = nullptr;

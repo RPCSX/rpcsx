@@ -54,9 +54,16 @@ template <typename T, typename... Args> T *knew(Args &&...args) {
   return res;
 }
 
+// clang-format off
 template <typename T> void kdelete(T *ptr) {
+  auto total_size = sizeof(T);
+  if constexpr (requires(T *t) { t->_total_size = sizeof(T); })
+    total_size = ptr->_total_size;
+  else
+    static_assert(std::is_final_v<T>, "Uncertain type size");
   ptr->~T();
-  utils::kfree(ptr, sizeof(T));
+  utils::kfree(ptr, total_size);
 }
+// clang-format on
 
 } // namespace orbis
