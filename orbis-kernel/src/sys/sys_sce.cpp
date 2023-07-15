@@ -271,7 +271,7 @@ orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
 
   auto numWaitThreads = evf->cancel(value);
   if (pNumWaitThreads != nullptr) {
-    *pNumWaitThreads = numWaitThreads;
+    return uwrite(pNumWaitThreads, static_cast<sint>(numWaitThreads));
   }
   return {};
 }
