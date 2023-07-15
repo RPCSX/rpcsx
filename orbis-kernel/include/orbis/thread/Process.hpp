@@ -48,6 +48,6 @@ struct Process {
   // Named objects for debugging
   utils::shared_mutex namedObjMutex;
   utils::kmap<void *, utils::kstring> namedObjNames;
-  utils::OwningIdMap<NamedObjInfo, std::uint16_t, 65535, 1> namedObjIds;
+  utils::OwningIdMap<NamedObjInfo, uint, 65535, 1> namedObjIds;
 };
 } // namespace orbis

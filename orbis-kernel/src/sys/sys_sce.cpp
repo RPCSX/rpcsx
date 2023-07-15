@@ -333,11 +333,9 @@ orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
   thread->retval[0] = id;
   return {};
 }
-orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint16_t id,
+orbis::SysResult orbis::sys_namedobj_delete(Thread *thread, uint id,
                                             uint16_t type) {
   ORBIS_LOG_NOTICE(__FUNCTION__, id, type);
-  if (id == 0)
-    return ErrorCode::SRCH;
   if (type < 0x101 || type > 0x104) {
     if (type != 0x107)
       ORBIS_LOG_ERROR(__FUNCTION__, id, type);

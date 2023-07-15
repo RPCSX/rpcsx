@@ -5,9 +5,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <type_traits>
 #include <immintrin.h>
 #include <sys/ucontext.h>
+#include <type_traits>
 
 namespace orbis {
 using int8_t = std::int8_t;
@@ -81,7 +81,9 @@ template <typename T> [[nodiscard]] ErrorCode uwrite(ptr<T> pointer, T data) {
   return uwriteRaw(pointer, &data, sizeof(T));
 }
 
-template <typename T, typename U> requires (std::is_arithmetic_v<T> && std::is_arithmetic_v<U> && sizeof(T) > sizeof(U) && !std::is_same_v<std::remove_cv_t<T>, bool>)
+template <typename T, typename U>
+  requires(std::is_arithmetic_v<T> && std::is_arithmetic_v<U> &&
+           sizeof(T) > sizeof(U) && !std::is_same_v<std::remove_cv_t<T>, bool>)
 [[nodiscard]] ErrorCode uwrite(ptr<T> pointer, U data) {
   T converted = data;
   return uwriteRaw(pointer, &converted, sizeof(T));
