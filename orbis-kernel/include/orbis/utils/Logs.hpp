@@ -88,11 +88,11 @@ template <typename... Args>
 constexpr const log_type_info type_info_v[sizeof...(Args) + 1]{
     log_type_info::make<std::remove_cvref_t<Args>>()...};
 
-void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
-                      const log_type_info *sup, ...);
+void _orbis_log_print(LogLevel lvl, std::string_view msg,
+                      std::string_view names, const log_type_info *sup, ...);
 
 template <typename... Args>
-void _orbis_log_impl(LogLevel lvl, const char *msg, const char *names,
+void _orbis_log_impl(LogLevel lvl, std::string_view msg, std::string_view names,
                      const Args &...args) {
   // Fast filtering
   if (logs_level.load(std::memory_order::relaxed) < lvl)

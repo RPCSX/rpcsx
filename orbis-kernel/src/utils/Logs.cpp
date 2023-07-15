@@ -168,8 +168,8 @@ void log_class_string<bool>::format(std::string &out, const void *arg) {
   out += get_object(arg) ? "1" : "0";
 }
 
-void _orbis_log_print(LogLevel lvl, const char *msg, std::string_view names,
-                      const log_type_info *sup, ...) {
+void _orbis_log_print(LogLevel lvl, std::string_view msg,
+                      std::string_view names, const log_type_info *sup, ...) {
   if (lvl > logs_level.load(std::memory_order::relaxed)) {
     return;
   }
