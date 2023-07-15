@@ -51,6 +51,8 @@ public:
   void deleteProcess(Process *proc);
   Process *findProcessById(pid_t pid) const;
 
+  long getTscFreq();
+
   void *kalloc(std::size_t size,
                std::size_t align = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
   void kfree(void *ptr, std::size_t size);
@@ -112,6 +114,8 @@ private:
   utils::kmultimap<std::size_t, void *> m_used_node;
 
   UmtxChain m_umtx_chains[2][c_umtx_chains]{};
+
+  std::atomic<long> m_tsc_freq{0};
 
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;

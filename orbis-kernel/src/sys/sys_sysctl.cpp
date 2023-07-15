@@ -1,3 +1,4 @@
+#include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
 
 orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
@@ -232,7 +233,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        *(uint64_t *)old = 1000000000ull;
+        *(uint64_t *)old = g_context.getTscFreq();
         return {};
 
       default:

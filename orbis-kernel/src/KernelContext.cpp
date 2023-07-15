@@ -24,7 +24,8 @@ KernelContext::KernelContext() {
   pthread_mutex_init(&m_heap_mtx, &mtx_attr);
   pthread_mutexattr_destroy(&mtx_attr);
 
-  std::printf("orbis::KernelContext initialized, addr=%p", this);
+  std::printf("orbis::KernelContext initialized, addr=%p\n", this);
+  std::printf("TSC frequency: %lu\n", getTscFreq());
 }
 KernelContext::~KernelContext() {}
 
@@ -71,6 +72,49 @@ Process *KernelContext::findProcessById(pid_t pid) const {
   }
 
   return nullptr;
+}
+
+long KernelContext::getTscFreq() {
+  auto cal_tsc = []() -> long {
+    const long timer_freq = 1'000'000'000;
+
+    // Calibrate TSC
+    constexpr int samples = 40;
+    long rdtsc_data[samples];
+    long timer_data[samples];
+    long error_data[samples];
+
+    struct timespec ts0;
+    clock_gettime(CLOCK_MONOTONIC, &ts0);
+    long sec_base = ts0.tv_sec;
+
+    for (int i = 0; i < samples; i++) {
+      usleep(200);
+      error_data[i] = (__builtin_ia32_lfence(), __builtin_ia32_rdtsc());
+      struct timespec ts;
+      clock_gettime(CLOCK_MONOTONIC, &ts);
+      rdtsc_data[i] = (__builtin_ia32_lfence(), __builtin_ia32_rdtsc());
+      timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
+    }
+
+    // Compute average TSC
+    long acc = 0;
+    for (int i = 0; i < samples - 1; i++) {
+      acc += (rdtsc_data[i + 1] - rdtsc_data[i]) * timer_freq /
+             (timer_data[i + 1] - timer_data[i]);
+    }
+
+    // Rounding
+    acc /= (samples - 1);
+    constexpr long grain = 1'000'000;
+    return grain * (acc / grain + long{(acc % grain) > (grain / 2)});
+  };
+
+  long freq = m_tsc_freq.load();
+  if (freq)
+    return freq;
+  m_tsc_freq.compare_exchange_strong(freq, cal_tsc());
+  return m_tsc_freq.load();
 }
 
 void *KernelContext::kalloc(std::size_t size, std::size_t align) {
