@@ -22,6 +22,22 @@ struct NamedObjInfo {
   uint16_t ty;
 };
 
+struct NamedMemoryRange {
+  uint64_t begin, end;
+
+  constexpr bool operator<(const NamedMemoryRange &rhs) const {
+    return end <= rhs.begin;
+  }
+
+  friend constexpr bool operator<(const NamedMemoryRange &lhs, uint64_t ptr) {
+    return lhs.end <= ptr;
+  }
+
+  friend constexpr bool operator<(uint64_t ptr, const NamedMemoryRange &rhs) {
+    return ptr < rhs.begin;
+  }
+};
+
 struct Process final {
   KernelContext *context = nullptr;
   pid_t pid = -1;
@@ -49,5 +65,9 @@ struct Process final {
   utils::shared_mutex namedObjMutex;
   utils::kmap<void *, utils::kstring> namedObjNames;
   utils::OwningIdMap<NamedObjInfo, uint, 65535, 1> namedObjIds;
+
+  // Named memory ranges for debugging
+  utils::shared_mutex namedMemMutex;
+  utils::kmap<NamedMemoryRange, utils::kstring> namedMem;
 };
 } // namespace orbis

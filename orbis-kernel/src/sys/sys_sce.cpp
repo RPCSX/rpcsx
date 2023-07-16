@@ -460,10 +460,34 @@ orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
 
   return {};
 }
-orbis::SysResult orbis::sys_mname(Thread *thread, ptr<void> address,
-                                  uint64_t length, ptr<const char> name) {
-  std::printf("sys_mname(%p, %p, '%s')\n", address, (char *)address + length,
-              name);
+orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
+                                  ptr<const char[32]> name) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, addr, len, name);
+  if (addr < 0x40000 || addr >= 0x100'0000'0000 || 0x100'0000'0000 - addr < len)
+    return ErrorCode::INVAL;
+  char _name[32];
+  if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
+      result != ErrorCode{}) {
+    return result;
+  }
+
+  NamedMemoryRange range;
+  range.begin = addr & ~0x3fffull;
+  range.end = range.begin;
+  range.end += ((addr & 0x3fff) + 0x3fff + len) & ~0x3fffull;
+
+  std::lock_guard lock(thread->tproc->namedMemMutex);
+  auto [it, end] = thread->tproc->namedMem.equal_range<NamedMemoryRange>(range);
+  while (it != end) {
+    auto [addr2, end2] = it->first;
+    auto len2 = end2 - addr2;
+    ORBIS_LOG_NOTICE("sys_mname: removed overlapped", it->second, addr2, len2);
+    it = thread->tproc->namedMem.erase(it);
+  }
+  if (!thread->tproc->namedMem.try_emplace(range, _name).second)
+    std::abort();
+  if (!thread->tproc->namedMem.count(addr))
+    std::abort();
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_dlopen(Thread *thread /* TODO */) {

@@ -1,5 +1,6 @@
 #include "orbis/KernelContext.hpp"
 #include "orbis/thread/Process.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <sys/mman.h>
 #include <sys/unistd.h>
 
@@ -182,4 +183,11 @@ void *kalloc(std::size_t size, std::size_t align) {
   return g_context.kalloc(size, align);
 }
 } // namespace utils
+
+inline namespace logs {
+template <>
+void log_class_string<kstring>::format(std::string &out, const void *arg) {
+  out += get_object(arg);
+}
+} // namespace logs
 } // namespace orbis
