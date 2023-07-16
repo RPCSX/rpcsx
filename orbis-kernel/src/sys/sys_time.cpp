@@ -108,9 +108,27 @@ orbis::SysResult orbis::sys_clock_getres(Thread *thread, clockid_t clock_id,
                                          ptr<timespec> tp) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_nanosleep(Thread *thread, ptr<const timespec> rqtp,
-                                      ptr<timespec> rmtp) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_nanosleep(Thread *thread,
+                                      cptr<orbis::timespec> rqtp,
+                                      ptr<orbis::timespec> rmtp) {
+  ORBIS_LOG_TRACE(__FUNCTION__, rqtp, rmtp);
+  struct ::timespec rq;
+  struct ::timespec rm;
+  orbis::timespec value;
+  if (auto e = uread(value, rqtp); e != ErrorCode{})
+    return e;
+  rq.tv_sec = value.sec;
+  rq.tv_nsec = value.nsec;
+  if (::nanosleep(&rq, &rm) == EINTR) {
+    if (rmtp) {
+      value.sec = rm.tv_sec;
+      value.nsec = rm.tv_nsec;
+      if (auto e = uwrite(rmtp, value); e != ErrorCode{})
+        return e;
+    }
+    return ErrorCode::INTR;
+  }
+  return {};
 }
 orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
                                          ptr<orbis::timezone> tzp) {

@@ -228,8 +228,8 @@ SysResult sys_ktimer_settime(Thread *thread, sint timerid, sint flags,
 SysResult sys_ktimer_gettime(Thread *thread, sint timerid,
                              ptr<struct itimerspec> value);
 SysResult sys_ktimer_getoverrun(Thread *thread, sint timerid);
-SysResult sys_nanosleep(Thread *thread, ptr<const timespec> rqtp,
-                        ptr<timespec> rmtp);
+SysResult sys_nanosleep(Thread *thread, cptr<orbis::timespec> rqtp,
+                        ptr<orbis::timespec> rmtp);
 SysResult sys_ntp_gettime(Thread *thread, ptr<struct ntptimeval> ntvp);
 SysResult sys_minherit(Thread *thread, ptr<void> addr, size_t len,
                        sint inherit);
