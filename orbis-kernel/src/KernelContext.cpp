@@ -158,6 +158,7 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
          ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
   if (!size)
     std::abort();
+  std::memset(ptr, 0xcc, size);
 
   pthread_mutex_lock(&m_heap_mtx);
   if (m_heap_is_freeing)
