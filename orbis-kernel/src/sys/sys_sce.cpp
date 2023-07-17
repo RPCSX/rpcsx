@@ -94,9 +94,10 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
   }
 
   switch (attrs & (kEvfAttrSingle | kEvfAttrMulti)) {
-  case 0:
   case kEvfAttrSingle | kEvfAttrMulti:
-    attrs = (attrs & ~(kEvfAttrSingle | kEvfAttrMulti)) | kEvfAttrSingle;
+    return ErrorCode::INVAL;
+  case 0:
+    attrs |= kEvfAttrSingle;
     break;
 
   default:
@@ -104,9 +105,10 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
   }
 
   switch (attrs & (kEvfAttrThPrio | kEvfAttrThFifo)) {
-  case 0:
   case kEvfAttrThPrio | kEvfAttrThFifo:
-    attrs = (attrs & ~(kEvfAttrThPrio | kEvfAttrThFifo)) | kEvfAttrThFifo;
+    return ErrorCode::INVAL;
+  case 0:
+    attrs |= kEvfAttrThFifo;
     break;
 
   default:
@@ -131,6 +133,7 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
     eventFlag = insertedEvf;
   } else {
     eventFlag = knew<EventFlag>(attrs, initPattern);
+    std::strncpy(eventFlag->name, _name, 32);
   }
 
   thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
@@ -162,7 +165,6 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
     return ErrorCode::SRCH;
   }
 
-  std::strcpy(eventFlag->name, _name);
   thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
   return {};
 }

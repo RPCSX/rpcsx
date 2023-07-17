@@ -65,6 +65,7 @@ public:
     auto [it, inserted] = m_event_flags.try_emplace(std::move(name), nullptr);
     if (inserted) {
       it->second = knew<EventFlag>(flags, initPattern);
+      std::strncpy(it->second->name, it->first.c_str(), 32);
     }
 
     return {it->second.get(), inserted};
@@ -106,7 +107,6 @@ public:
   }
 
 private:
-  shared_mutex m_evf_mtx;
   mutable pthread_mutex_t m_heap_mtx;
   void *m_heap_next = this + 1;
   bool m_heap_is_freeing = false;
@@ -119,6 +119,8 @@ private:
 
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;
+
+  shared_mutex m_evf_mtx;
   utils::kmap<utils::kstring, Ref<EventFlag>> m_event_flags;
 };
 
