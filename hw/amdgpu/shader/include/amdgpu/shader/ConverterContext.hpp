@@ -167,6 +167,9 @@ public:
     return spirv::cast<spirv::SIntType>(getType(TypeId::SInt64));
   }
 
+  spirv::FloatType getFloat16Type() {
+    return spirv::cast<spirv::FloatType>(getType(TypeId::Float16));
+  }
   spirv::FloatType getFloat32Type() {
     return spirv::cast<spirv::FloatType>(getType(TypeId::Float32));
   }
