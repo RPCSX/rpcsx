@@ -1543,6 +1543,10 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
   switch (surface) {
   case kSurfaceFormat8: {
     switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_R8_UNORM;
+    case kTextureChannelTypeSNorm:
+      return VK_FORMAT_R8_SNORM;
     case kTextureChannelTypeUInt:
       return VK_FORMAT_R8_UINT;
     case kTextureChannelTypeSInt:
