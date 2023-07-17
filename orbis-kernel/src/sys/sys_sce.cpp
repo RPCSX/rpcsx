@@ -5,6 +5,7 @@
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
 #include "orbis/time.hpp"
+#include "osem.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
@@ -283,28 +284,139 @@ orbis::SysResult orbis::sys_query_memory_protection(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_batch_map(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_osem_create(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_osem_create(Thread *thread,
+                                        ptr<const char[32]> name, uint attrs,
+                                        sint initCount, sint maxCount) {
+  ORBIS_LOG_WARNING(__FUNCTION__, name, attrs, initCount, maxCount);
+  if (name == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  if (attrs & ~(kSemaAttrThPrio | kSemaAttrThFifo | kSemaAttrShared)) {
+    return ErrorCode::INVAL;
+  }
+
+  switch (attrs & (kSemaAttrThPrio | kSemaAttrThFifo)) {
+  case kSemaAttrThPrio | kSemaAttrThFifo:
+    return ErrorCode::INVAL;
+  case 0:
+    attrs |= kSemaAttrThFifo;
+    break;
+
+  default:
+    break;
+  }
+
+  if (maxCount <= 0 || initCount < 0 || maxCount < initCount)
+    return ErrorCode::INVAL;
+
+  char _name[32];
+  if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
+      result != ErrorCode{}) {
+    return result;
+  }
+
+  Semaphore *sem;
+  if (attrs & kSemaAttrShared) {
+    auto [insertedSem, ok] = thread->tproc->context->createSemaphore(
+        _name, attrs, initCount, maxCount);
+
+    if (!ok) {
+      return ErrorCode::EXIST; // FIXME: verify
+    }
+
+    sem = insertedSem;
+  } else {
+    sem = knew<Semaphore>(attrs, initCount, maxCount);
+  }
+
+  thread->retval[0] = thread->tproc->semMap.insert(sem);
   return {};
 }
-orbis::SysResult orbis::sys_osem_delete(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_osem_delete(Thread *thread, sint id) {
+  ORBIS_LOG_WARNING(__FUNCTION__, id);
+  Ref<Semaphore> sem = thread->tproc->semMap.get(id);
+  if (sem == nullptr) {
+    return ErrorCode::SRCH;
+  }
+
+  thread->tproc->semMap.destroy(id);
+  return {};
 }
-orbis::SysResult orbis::sys_osem_open(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_osem_open(Thread *thread,
+                                      ptr<const char[32]> name) {
+  ORBIS_LOG_WARNING(__FUNCTION__, name);
+  char _name[32];
+  if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
+      result != ErrorCode{}) {
+    return result;
+  }
+
+  auto sem = thread->tproc->context->findSemaphore(_name);
+  if (sem == nullptr) {
+    return ErrorCode::SRCH;
+  }
+
+  thread->retval[0] = thread->tproc->semMap.insert(sem);
+  return {};
 }
-orbis::SysResult orbis::sys_osem_close(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_osem_close(Thread *thread, sint id) {
+  ORBIS_LOG_WARNING(__FUNCTION__, id);
+  if (!thread->tproc->semMap.close(id)) {
+    return ErrorCode::SRCH;
+  }
+
+  return {};
 }
-orbis::SysResult orbis::sys_osem_wait(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
+                                      ptr<uint> pTimeout) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, need, pTimeout);
+  Ref<Semaphore> sem = thread->tproc->semMap.get(id);
+  if (pTimeout)
+    ORBIS_LOG_FATAL("sys_osem_wait timeout is not implemented!");
+  if (need < 1 || need > sem->maxValue)
+    return ErrorCode::INVAL;
+
+  std::lock_guard lock(sem->mtx);
+  while (true) {
+    if (sem->isDeleted)
+      return ErrorCode::ACCES;
+    if (sem->value >= need) {
+      sem->value -= need;
+      break;
+    }
+    sem->cond.wait(sem->mtx);
+  }
+  return {};
 }
-orbis::SysResult orbis::sys_osem_trywait(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, need);
+  Ref<Semaphore> sem = thread->tproc->semMap.get(id);
+  if (need < 1 || need > sem->maxValue)
+    return ErrorCode::INVAL;
+
+  std::lock_guard lock(sem->mtx);
+  if (sem->isDeleted || sem->value < need)
+    return ErrorCode::BUSY;
+  sem->value -= need;
+  return {};
 }
-orbis::SysResult orbis::sys_osem_post(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_osem_post(Thread *thread, sint id, sint count) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, count);
+  Ref<Semaphore> sem = thread->tproc->semMap.get(id);
+  if (count < 1 || count > sem->maxValue - sem->value)
+    return ErrorCode::INVAL;
+
+  std::lock_guard lock(sem->mtx);
+  if (sem->isDeleted)
+    return {};
+  sem->value += count;
+  sem->cond.notify_all(sem->mtx);
+  return {};
 }
-orbis::SysResult orbis::sys_osem_cancel(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_osem_cancel(Thread *thread, sint id, sint set,
+                                        ptr<uint> pNumWaitThreads) {
+  ORBIS_LOG_TODO(__FUNCTION__, thread, id, set, pNumWaitThreads);
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_namedobj_create(Thread *thread,

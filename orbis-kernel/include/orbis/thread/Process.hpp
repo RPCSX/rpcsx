@@ -2,6 +2,7 @@
 #include "orbis-config.hpp"
 
 #include "../evf.hpp"
+#include "../osem.hpp"
 #include "../thread/Thread.hpp"
 #include "../thread/types.hpp"
 #include "ProcessState.hpp"
@@ -57,6 +58,7 @@ struct Process final {
   std::uint64_t lastTlsOffset = 0;
 
   utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
+  utils::RcIdMap<Semaphore, sint, 4097, 1> semMap;
   utils::RcIdMap<Module, ModuleHandle> modulesMap;
   utils::OwningIdMap<Thread, lwpid_t> threadsMap;
   utils::RcIdMap<utils::RcBase, sint> fileDescriptors;

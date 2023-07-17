@@ -635,14 +635,16 @@ SysResult sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                          ptr<sint> pNumWaitThreads);
 SysResult sys_query_memory_protection(Thread *thread /* TODO */);
 SysResult sys_batch_map(Thread *thread /* TODO */);
-SysResult sys_osem_create(Thread *thread /* TODO */);
-SysResult sys_osem_delete(Thread *thread /* TODO */);
-SysResult sys_osem_open(Thread *thread /* TODO */);
-SysResult sys_osem_close(Thread *thread /* TODO */);
-SysResult sys_osem_wait(Thread *thread /* TODO */);
-SysResult sys_osem_trywait(Thread *thread /* TODO */);
-SysResult sys_osem_post(Thread *thread /* TODO */);
-SysResult sys_osem_cancel(Thread *thread /* TODO */);
+SysResult sys_osem_create(Thread *thread, ptr<const char[32]> name, uint attrs,
+                          sint initCount, sint maxCount);
+SysResult sys_osem_delete(Thread *thread, sint id);
+SysResult sys_osem_open(Thread *thread, ptr<const char[32]> name);
+SysResult sys_osem_close(Thread *thread, sint id);
+SysResult sys_osem_wait(Thread *thread, sint id, sint need, ptr<uint> pTimeout);
+SysResult sys_osem_trywait(Thread *thread, sint id, sint need);
+SysResult sys_osem_post(Thread *thread, sint id, sint count);
+SysResult sys_osem_cancel(Thread *thread, sint id, sint set,
+                          ptr<uint> pNumWaitThreads);
 SysResult sys_namedobj_create(Thread *thread, ptr<const char[32]> name,
                               ptr<void> object, uint16_t type);
 SysResult sys_namedobj_delete(Thread *thread, uint id, uint16_t type);

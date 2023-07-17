@@ -1,5 +1,6 @@
 #pragma once
 #include "evf.hpp"
+#include "osem.hpp"
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedCV.hpp"
 #include "utils/SharedMutex.hpp"
@@ -81,6 +82,28 @@ public:
     return {};
   }
 
+  std::pair<Semaphore *, bool> createSemaphore(utils::kstring name,
+                                               std::uint32_t attrs,
+                                               std::int32_t initCount,
+                                               std::int32_t maxCount) {
+    std::lock_guard lock(m_sem_mtx);
+    auto [it, inserted] = m_semaphores.try_emplace(std::move(name), nullptr);
+    if (inserted) {
+      it->second = knew<Semaphore>(attrs, initCount, maxCount);
+    }
+
+    return {it->second.get(), inserted};
+  }
+
+  Ref<Semaphore> findSemaphore(std::string_view name) {
+    std::lock_guard lock(m_sem_mtx);
+    if (auto it = m_semaphores.find(name); it != m_semaphores.end()) {
+      return it->second;
+    }
+
+    return {};
+  }
+
   enum {
     c_golden_ratio_prime = 2654404609u,
     c_umtx_chains = 512,
@@ -122,6 +145,9 @@ private:
 
   shared_mutex m_evf_mtx;
   utils::kmap<utils::kstring, Ref<EventFlag>> m_event_flags;
+
+  shared_mutex m_sem_mtx;
+  utils::kmap<utils::kstring, Ref<Semaphore>> m_semaphores;
 };
 
 extern KernelContext &g_context;
