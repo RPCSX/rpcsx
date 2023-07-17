@@ -123,7 +123,7 @@ orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub) {
   ub->size = len;
   ub->blksize = 1;
   ub->blocks = len;
-  ub->mode = 0777;
+  ub->mode = 0777 | 0x8000;
   sys_close(thread, fd);
   thread->retval[0] = 0;
   return {};

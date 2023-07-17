@@ -111,7 +111,7 @@ orbis::SysResult orbis::sys_clock_getres(Thread *thread, clockid_t clock_id,
 orbis::SysResult orbis::sys_nanosleep(Thread *thread,
                                       cptr<orbis::timespec> rqtp,
                                       ptr<orbis::timespec> rmtp) {
-  ORBIS_LOG_TRACE(__FUNCTION__, rqtp, rmtp);
+  ORBIS_LOG_NOTICE(__FUNCTION__, rqtp, rmtp);
   struct ::timespec rq;
   struct ::timespec rm;
   orbis::timespec value;

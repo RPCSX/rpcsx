@@ -1,7 +1,9 @@
+#include "orbis/utils/Logs.hpp"
 #include "sys/sysproto.hpp"
 
 orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
                                  size_t nbyte) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, fd, buf, nbyte);
   if (auto read = thread->tproc->ops->read) {
     return read(thread, fd, buf, nbyte);
   }
@@ -10,6 +12,7 @@ orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
 }
 orbis::SysResult orbis::sys_pread(Thread *thread, sint fd, ptr<void> buf,
                                   size_t nbyte, off_t offset) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, fd, buf, nbyte, offset);
   if (auto pread = thread->tproc->ops->pread) {
     return pread(thread, fd, buf, nbyte, offset);
   }
@@ -32,6 +35,7 @@ orbis::SysResult orbis::sys_preadv(Thread *thread, sint fd,
 }
 orbis::SysResult orbis::sys_write(Thread *thread, sint fd, ptr<const void> buf,
                                   size_t nbyte) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, fd, buf, nbyte);
   if (auto write = thread->tproc->ops->write) {
     return write(thread, fd, buf, nbyte);
   }
