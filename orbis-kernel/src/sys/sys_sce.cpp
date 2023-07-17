@@ -488,6 +488,21 @@ orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
     std::abort();
   if (!thread->tproc->namedMem.count(addr))
     std::abort();
+
+  std::lock_guard lock2(thread->tproc->mtx);
+  thread->tproc->threadsMap.walk([&](auto id, auto obj) {
+    if (obj->stackStart == (void *)addr) {
+      std::string name = std::to_string(obj->tid) + "_" + _name;
+      if (name.size() > 15)
+        name.resize(15);
+      ORBIS_LOG_NOTICE("sys_mname: setting thread name", obj->tid, name,
+                       obj->handle.native_handle());
+      if (!pthread_setname_np(obj->handle.native_handle(), name.c_str())) {
+        perror("pthread_setname_np");
+      }
+    }
+  });
+
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_dlopen(Thread *thread /* TODO */) {

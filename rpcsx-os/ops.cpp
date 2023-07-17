@@ -477,6 +477,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   }
 
   auto proc = thread->tproc;
+  std::lock_guard lock(proc->mtx);
   auto [baseId, childThread] = proc->threadsMap.emplace();
   childThread->tproc = proc;
   childThread->tid = proc->pid + baseId;
@@ -493,11 +494,10 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 
   // FIXME: implement scheduler
 
-  std::printf("Starting child thread %lu\n", (long)(proc->pid + baseId));
+  ORBIS_LOG_NOTICE("Starting child thread", childThread->tid,
+                   childThread->stackStart);
 
-  std::thread{[=, childThread = Ref<Thread>(childThread)] {
-    pthread_setname_np(pthread_self(),
-                       std::to_string(childThread->tid).c_str());
+  auto stdthr = std::thread{[=, childThread = Ref<Thread>(childThread)] {
     stack_t ss;
 
     auto sigStackSize = std::max<std::size_t>(
@@ -506,7 +506,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
     ss.ss_sp = malloc(sigStackSize);
     if (ss.ss_sp == NULL) {
       perror("malloc");
-      exit(EXIT_FAILURE);
+      ::exit(EXIT_FAILURE);
     }
 
     ss.ss_size = sigStackSize;
@@ -514,7 +514,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 
     if (sigaltstack(&ss, NULL) == -1) {
       perror("sigaltstack");
-      exit(EXIT_FAILURE);
+      ::exit(EXIT_FAILURE);
     }
 
     static_cast<void>(
@@ -533,8 +533,14 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
     childThread->context = context;
     childThread->state = orbis::ThreadState::RUNNING;
     rx::thread::invoke(childThread.get());
-  }}.detach();
+  }};
 
+  if (pthread_setname_np(stdthr.native_handle(),
+                         std::to_string(childThread->tid).c_str())) {
+    perror("pthread_setname_np");
+  }
+
+  childThread->handle = std::move(stdthr);
   return {};
 }
 SysResult thr_exit(orbis::Thread *thread, orbis::ptr<orbis::slong> state) {

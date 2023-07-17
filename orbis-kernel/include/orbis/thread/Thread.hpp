@@ -5,6 +5,7 @@
 #include "types.hpp"
 
 #include "../utils/SharedMutex.hpp"
+#include <thread>
 
 namespace orbis {
 struct Process;
@@ -17,12 +18,13 @@ struct Thread {
   ptr<void> stackEnd;
   uint64_t fsBase{};
   uint64_t gsBase{};
-  char name[32];
+  char name[32]{};
 
   uint64_t sigMask[4] = {0x7fff'ffff, 0};
 
   lwpid_t tid = -1;
   ThreadState state = ThreadState::INACTIVE;
+  std::thread handle;
 
   // FIXME: implement thread destruction
   void incRef() {}

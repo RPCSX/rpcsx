@@ -338,6 +338,19 @@ struct OwningIdMap {
     fullChunks.clear(chunk);
     return true;
   }
+
+  void walk(auto cb) {
+    for (std::size_t chunk = 0; chunk < ChunkCount; ++chunk) {
+      std::size_t index = chunks[chunk].mask.countr_zero();
+
+      while (index < ChunkSize) {
+        auto id = static_cast<IdT>(index + chunk * ChunkSize + MinId);
+        cb(id, chunks[chunk].get(id));
+
+        index = chunks[chunk].mask.countr_zero(index + 1);
+      }
+    }
+  }
 };
 } // namespace utils
 } // namespace orbis
