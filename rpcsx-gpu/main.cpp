@@ -20,6 +20,7 @@
 extern void *g_rwMemory;
 extern std::size_t g_memorySize;
 extern std::uint64_t g_memoryBase;
+extern amdgpu::RemoteMemory g_hostMemory;
 
 static void usage(std::FILE *out, const char *argv0) {
   std::fprintf(out, "usage: %s [options...]\n", argv0);
@@ -243,8 +244,8 @@ int main(int argc, const char *argv[]) {
       VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
       VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
       VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
-      VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
-      VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+      // VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
+      // VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
       VK_EXT_SEPARATE_STENCIL_USAGE_EXTENSION_NAME,
       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
   };
@@ -414,6 +415,7 @@ int main(int argc, const char *argv[]) {
       .uniformAndStorageBuffer8BitAccess = VK_TRUE,
       .shaderFloat16 = VK_TRUE,
       .shaderInt8 = VK_TRUE,
+      .timelineSemaphore = VK_TRUE,
   };
 
   VkPhysicalDeviceVulkan11Features phyDevFeatures11{
@@ -715,8 +717,8 @@ int main(int argc, const char *argv[]) {
   g_rwMemory = ::mmap(nullptr, g_memorySize, PROT_READ | PROT_WRITE, MAP_SHARED,
                       memoryFd, 0);
 
-  amdgpu::device::AmdgpuDevice device(dc, bridgePuller.header, memory,
-                                      memoryStat.st_size);
+  g_hostMemory = memory;
+  amdgpu::device::AmdgpuDevice device(dc, bridgePuller.header);
 
   std::vector<VkCommandBuffer> presentCmdBuffers(swapchainImages.size());
 

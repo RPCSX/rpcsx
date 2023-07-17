@@ -1076,7 +1076,7 @@ enum BlendFunc {
   kBlendFuncReverseSubtract = 0x00000004,
 };
 
-enum PrimitiveType {
+enum PrimitiveType : unsigned {
   kPrimitiveTypeNone = 0x00000000,
   kPrimitiveTypePointList = 0x00000001,
   kPrimitiveTypeLineList = 0x00000002,
@@ -1096,7 +1096,7 @@ enum PrimitiveType {
   kPrimitiveTypePolygon = 0x00000015
 };
 
-enum SurfaceFormat {
+enum SurfaceFormat : unsigned {
   kSurfaceFormatInvalid = 0x00000000,
   kSurfaceFormat8 = 0x00000001,
   kSurfaceFormat16 = 0x00000002,
@@ -1148,7 +1148,7 @@ enum SurfaceFormat {
   kSurfaceFormat1Reversed = 0x0000003C,
 };
 
-enum TextureChannelType {
+enum TextureChannelType : unsigned {
   kTextureChannelTypeUNorm = 0x00000000,
   kTextureChannelTypeSNorm = 0x00000001,
   kTextureChannelTypeUScaled = 0x00000002,
@@ -1209,7 +1209,7 @@ struct GnmVBuffer {
 
 static_assert(sizeof(GnmVBuffer) == sizeof(std::uint64_t) * 2);
 
-enum class TextureType {
+enum class TextureType : uint64_t {
   Dim1D = 8,
   Dim2D,
   Dim3D,
@@ -1275,26 +1275,26 @@ struct ShaderModule {
 
 constexpr auto kPageSize = 0x4000;
 
-struct ZoneInfo {
+struct AreaInfo {
   std::uint64_t beginAddress;
   std::uint64_t endAddress;
 };
 
 struct NoInvalidationHandle {
-  void handleInvalidation(std::uint64_t address) {}
+  void handleInvalidation(std::uint64_t) {}
 };
 
 struct StdSetInvalidationHandle {
-  std::set<std::uint64_t, std::greater<>> invalidatedZones;
+  std::set<std::uint64_t, std::greater<>> invalidated;
 
   void handleInvalidation(std::uint64_t address) {
-    invalidatedZones.insert(address);
+    invalidated.insert(address);
   }
 };
 
 template <typename InvalidationHandleT = NoInvalidationHandle>
-class MemoryZoneTable : public InvalidationHandleT {
-  enum class Kind { U, X };
+class MemoryAreaTable : public InvalidationHandleT {
+  enum class Kind { O, X };
   std::map<std::uint64_t, Kind> mAreas;
 
 public:
@@ -1306,7 +1306,7 @@ public:
     iterator() = default;
     iterator(map_iterator it) : it(it) {}
 
-    ZoneInfo operator*() const { return {it->first, std::next(it)->first}; }
+    AreaInfo operator*() const { return {it->first, std::next(it)->first}; }
 
     iterator &operator++() const {
       ++it;
@@ -1321,7 +1321,6 @@ public:
     }
 
     bool operator==(iterator other) const { return it == other.it; }
-
     bool operator!=(iterator other) const { return it != other.it; }
   };
 
@@ -1330,16 +1329,16 @@ public:
 
   void clear() { mAreas.clear(); }
 
-  ZoneInfo queryZone(std::uint64_t address) const {
+  AreaInfo queryArea(std::uint64_t address) const {
     auto it = mAreas.lower_bound(address);
     assert(it != mAreas.end());
     std::uint64_t endAddress = 0;
     if (it->first != address) {
-      assert(it->second == Kind::U);
+      assert(it->second == Kind::X);
       endAddress = it->first;
       --it;
     } else {
-      assert(it->second == Kind::X);
+      assert(it->second == Kind::O);
       endAddress = std::next(it)->first;
     }
 
@@ -1349,11 +1348,11 @@ public:
   }
 
   void map(std::uint64_t beginAddress, std::uint64_t endAddress) {
-    auto [beginIt, beginInserted] = mAreas.emplace(beginAddress, Kind::X);
-    auto [endIt, endInserted] = mAreas.emplace(endAddress, Kind::U);
+    auto [beginIt, beginInserted] = mAreas.emplace(beginAddress, Kind::O);
+    auto [endIt, endInserted] = mAreas.emplace(endAddress, Kind::X);
 
     if (!beginInserted) {
-      if (beginIt->second == Kind::U) {
+      if (beginIt->second == Kind::X) {
         // it was close, extend to open
         assert(beginIt != mAreas.begin());
         --beginIt;
@@ -1361,7 +1360,7 @@ public:
     } else if (beginIt != mAreas.begin()) {
       auto prevRangePointIt = std::prev(beginIt);
 
-      if (prevRangePointIt->second == Kind::X) {
+      if (prevRangePointIt->second == Kind::O) {
         // we found range start before inserted one, remove insertion and extend
         // begin
         this->handleInvalidation(beginIt->first);
@@ -1371,7 +1370,7 @@ public:
     }
 
     if (!endInserted) {
-      if (endIt->second == Kind::X) {
+      if (endIt->second == Kind::O) {
         // it was open, extend to close
         assert(endIt != mAreas.end());
         ++endIt;
@@ -1380,7 +1379,7 @@ public:
       auto nextRangePointIt = std::next(endIt);
 
       if (nextRangePointIt != mAreas.end() &&
-          nextRangePointIt->second == Kind::U) {
+          nextRangePointIt->second == Kind::X) {
         // we found range end after inserted one, remove insertion and extend
         // end
         this->handleInvalidation(std::prev(endIt)->first);
@@ -1397,16 +1396,16 @@ public:
     }
   }
 
-  void unmap(std::uint64_t beginAddres, std::uint64_t endAddress) {
-    auto beginIt = mAreas.lower_bound(beginAddres);
+  void unmap(std::uint64_t beginAddress, std::uint64_t endAddress) {
+    auto beginIt = mAreas.lower_bound(beginAddress);
 
     if (beginIt == mAreas.end() || beginIt->first >= endAddress) {
       return;
     }
-    if (beginIt->first > beginAddres && beginIt->second == Kind::U) {
+    if (beginIt->first > beginAddress && beginIt->second == Kind::X) {
       // we have found end after unmap begin, need to insert new end
       this->handleInvalidation(std::prev(beginIt)->first);
-      auto newBeginIt = mAreas.emplace_hint(beginIt, beginAddres, Kind::U);
+      auto newBeginIt = mAreas.emplace_hint(beginIt, beginAddress, Kind::X);
       mAreas.erase(beginIt);
 
       if (newBeginIt == mAreas.end()) {
@@ -1414,25 +1413,25 @@ public:
       }
 
       beginIt = std::next(newBeginIt);
-    } else if (beginIt->second == Kind::U) {
+    } else if (beginIt->second == Kind::X) {
       beginIt = ++beginIt;
     }
 
-    Kind lastKind = Kind::U;
+    Kind lastKind = Kind::X;
     while (beginIt != mAreas.end() && beginIt->first <= endAddress) {
       lastKind = beginIt->second;
-      if (lastKind == Kind::X) {
+      if (lastKind == Kind::O) {
         this->handleInvalidation(std::prev(beginIt)->first);
       }
       beginIt = mAreas.erase(beginIt);
     }
 
-    if (lastKind != Kind::X) {
+    if (lastKind != Kind::O) {
       return;
     }
 
     // Last removed was range open, need to insert new one at unmap end
-    mAreas.emplace_hint(beginIt, endAddress, Kind::X);
+    mAreas.emplace_hint(beginIt, endAddress, Kind::O);
   }
 
   std::size_t totalMemory() const {
@@ -1449,7 +1448,7 @@ public:
   }
 };
 
-extern MemoryZoneTable<StdSetInvalidationHandle> memoryZoneTable;
+extern MemoryAreaTable<StdSetInvalidationHandle> memoryAreaTable;
 
 struct DrawContext {
   VkPipelineCache pipelineCache;
@@ -1460,12 +1459,6 @@ struct DrawContext {
   ~DrawContext();
 };
 
-void draw(RemoteMemory memory, DrawContext &ctxt, std::uint32_t count,
-          std::uint64_t indeciesAddress, std::uint32_t indexCount);
-void dispatch(RemoteMemory memory, DrawContext &ctxt, std::size_t dimX,
-              std::size_t dimY, std::size_t dimZ);
-void handleCommandBuffer(RemoteMemory memory, DrawContext &ctxt,
-                         std::uint32_t *cmds, std::uint32_t count);
 void setVkDevice(VkDevice device,
                  VkPhysicalDeviceMemoryProperties memProperties,
                  VkPhysicalDeviceProperties devProperties);
@@ -1473,35 +1466,6 @@ void setVkDevice(VkDevice device,
 struct AmdgpuDevice {
   amdgpu::device::DrawContext dc;
   amdgpu::bridge::BridgeHeader *bridge;
-  RemoteMemory memory;
-  std::uint64_t memorySize = 0;
-  int memoryFd = -1;
-  std::uint32_t currentBuffer = -1;
-  std::uint64_t flipArg = 0;
-  std::uint64_t flipCount = 0;
-  // amdgpu::bridge::FlipStatus *flipStatus = nullptr;
-
-  struct RenderBuffer {
-    void *memory;
-    std::uint64_t address;
-    std::uint32_t pitch;
-    std::uint32_t width;
-    std::uint32_t height;
-    std::uint32_t pixelFormat;
-    std::uint32_t tilingMode;
-
-    VkImage vkImage;
-    void *vkDataPoiner;
-    VkImageView vkImageView;
-    VkDeviceMemory vkImageMemory;
-
-    VkDescriptorSet vkDescriptorSet;
-    const ShaderModule *shader;
-  };
-
-  RenderBuffer renderBuffers[8]{};
-
-  bool flipWasRequested = false;
 
   void handleProtectMemory(std::uint64_t address, std::uint64_t size,
                            std::uint32_t prot);
@@ -1512,8 +1476,7 @@ struct AmdgpuDevice {
                   std::vector<VkImage> &usedImages);
 
   AmdgpuDevice(amdgpu::device::DrawContext dc,
-               amdgpu::bridge::BridgeHeader *bridge, RemoteMemory memory,
-               std::uint64_t memorySize)
-      : dc(dc), bridge(bridge), memory(memory), memorySize(memorySize) {}
+               amdgpu::bridge::BridgeHeader *bridge)
+      : dc(dc), bridge(bridge) {}
 };
 } // namespace amdgpu::device

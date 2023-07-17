@@ -163,14 +163,19 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
       spv::StorageClass::StorageBuffer, loadType);
 
   auto &builder = fragment.builder;
+  std::size_t chanSize = 0;
 
   switch (surfaceFormat) {
   case kSurfaceFormat8:
   case kSurfaceFormat8_8:
   case kSurfaceFormat8_8_8_8:
+    chanSize += 8;
+    [[fallthrough]];
   case kSurfaceFormat16:
   case kSurfaceFormat16_16:
   case kSurfaceFormat16_16_16_16:
+    chanSize += 8;
+    [[fallthrough]];
   case kSurfaceFormat32:
   case kSurfaceFormat32_32:
   case kSurfaceFormat32_32_32:
@@ -202,6 +207,18 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
 
       auto channelValue = fragment.builder.createLoad(
           fragment.context->getType(loadType), uniformPointerValue);
+
+      if (chanSize != 0) {
+        if (chanSize == 16) {
+          if (loadType != TypeId::Float16) {
+            channelValue = fragment.builder.createBitcast(
+                fragment.context->getFloat16Type(), channelValue);
+          }
+
+          channelValue = fragment.builder.createFConvert(
+              fragment.context->getFloat32Type(), channelValue);
+        }
+      }
       switch (channelType) {
       case kTextureChannelTypeFloat:
       case kTextureChannelTypeSInt:
@@ -327,11 +344,12 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
       }
     }
 
-    for (; channel < count; ++channel) {
-      result[channel] =
-          fragment.createBitcast(resultType, fragment.context->getUInt32Type(),
-                                 fragment.context->getUInt32(0));
-    }
+    // for (; channel < count; ++channel) {
+    //   result[channel] =
+    //       fragment.createBitcast(resultType,
+    //       fragment.context->getUInt32Type(),
+    //                              fragment.context->getUInt32(0));
+    // }
     return resultType;
   }
 
@@ -2437,6 +2455,13 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
         {uintT, fragment.builder.createCompositeExtract(
                     uintT, result, std::array{static_cast<std::uint32_t>(1)})});
     // TODO: update sdst + 1
+    break;
+  }
+
+  case Vop3::Op::V3_MOV_B32: {
+    auto src0 = getSrc(0, TypeId::Float32);
+
+    fragment.setVectorOperand(inst.vdst, src0);
     break;
   }
 
