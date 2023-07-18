@@ -178,25 +178,25 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
   if (true || !g_traceSyscalls) {
     return;
   }
-  flockfile(stdout);
-  std::printf("   [%u] ", thread->tid);
+  flockfile(stderr);
+  std::fprintf(stderr, "   [%u] ", thread->tid);
 
   if (auto name = getSyscallName(thread, id)) {
-    std::printf("%s(", name);
+    std::fprintf(stderr, "%s(", name);
   } else {
-    std::printf("sys_%u(", id);
+    std::fprintf(stderr, "sys_%u(", id);
   }
 
   for (int i = 0; i < argsCount; ++i) {
     if (i != 0) {
-      std::printf(", ");
+      std::fprintf(stderr, ", ");
     }
 
-    std::printf("%#lx", args[i]);
+    std::fprintf(stderr, "%#lx", args[i]);
   }
 
-  std::printf(")\n");
-  funlockfile(stdout);
+  std::fprintf(stderr, ")\n");
+  funlockfile(stderr);
 }
 
 static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
@@ -205,26 +205,26 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
     return;
   }
 
-  flockfile(stdout);
-  std::printf("%c: [%u] ", result.isError() ? 'E' : 'S', thread->tid);
+  flockfile(stderr);
+  std::fprintf(stderr, "%c: [%u] ", result.isError() ? 'E' : 'S', thread->tid);
 
   if (auto name = getSyscallName(thread, id)) {
-    std::printf("%s(", name);
+    std::fprintf(stderr, "%s(", name);
   } else {
-    std::printf("sys_%u(", id);
+    std::fprintf(stderr, "sys_%u(", id);
   }
 
   for (int i = 0; i < argsCount; ++i) {
     if (i != 0) {
-      std::printf(", ");
+      std::fprintf(stderr, ", ");
     }
 
-    std::printf("%#lx", args[i]);
+    std::fprintf(stderr, "%#lx", args[i]);
   }
 
-  std::printf(") -> Status %d, Value %lx:%lx\n", result.value(),
-              thread->retval[0], thread->retval[1]);
-  funlockfile(stdout);
+  std::fprintf(stderr, ") -> Status %d, Value %lx:%lx\n", result.value(),
+               thread->retval[0], thread->retval[1]);
+  funlockfile(stderr);
 }
 
 static int ps4Exec(orbis::Process *mainProcess,
