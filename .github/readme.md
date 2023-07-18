@@ -19,7 +19,7 @@
 
 If you want to contribute as a developer, please contact us in the [Discord](https://discord.gg/t6dzA4wUdG).
 
-# Building
+## Building
 
 1. Install dependencies for Debian-like distributions
    
@@ -29,35 +29,33 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
    
    `mkdir -p build && cd build && cmake .. && cmake --build .`
 
-# How to create to create virtual hdd
-
-   Setup size of virtual hdd
+## How to create to create virtual hdd
  
-   `truncate -s 512M ps4-hdd.exfat`
+`truncate -s 512M ps4-hdd.exfat`
 
-   `mkfs.exfat -n PS4-HDD ./ps4-hdd.exfat`
+`mkfs.exfat -n PS4-HDD ./ps4-hdd.exfat`
 
-    `mkdir ps4-fs`
+`mkdir ps4-fs`
 
-   ``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
+``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
 
-# How to Run samples and games ( one day )
+## How to Run samples and games ( one day )
    
-     See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
+See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
 
-     you can run emulator with Samples using this command:
+You can run emulator with Samples using this command:
    
-     `rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --mount "<path to 'game' root>" /app0 /app0/some-test-sample.elf [<args for test elf>...]`
+`rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --mount "<path to 'game' root>" /app0 /app0/some-test-sample.elf [<args for test elf>...]`
 
-# Creating a log
+## Creating a log
 
-    use flag
+use flag
     
-    `--trace` if you got sigfault
+`--trace` if you got sigfault
     
-    you can redirect all log messages to the file by appending following to command:
+You can redirect all log messages to the file by appending following to command:
 
-     `&>log.txt`
+`&>log.txt`
       
 
 
@@ -65,3 +63,4 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 RPCSX is licensed under GPLv2 license except directories containing their own LICENSE file, or files containing their own license.
 Thus, orbis-kernel is licensed under the MIT license.
+
