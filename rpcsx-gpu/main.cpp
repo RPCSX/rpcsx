@@ -790,7 +790,12 @@ int main(int argc, const char *argv[]) {
           vkDestroyBuffer(vkDevice, handle, nullptr);
         }
 
+        for (auto handle : swapchainImageHandles[imageIndex]) {
+          vkDestroyImage(vkDevice, handle, nullptr);
+        }
+
         swapchainBufferHandles[imageIndex].clear();
+        swapchainImageHandles[imageIndex].clear();
 
         if (device.handleFlip(cmd.flip.bufferIndex, cmd.flip.arg,
                               presentCmdBuffers[imageIndex],
@@ -841,6 +846,34 @@ int main(int argc, const char *argv[]) {
   if (bridge->pusherPid > 0) {
     kill(bridge->pusherPid, SIGINT);
   }
+
+  for (auto fence : inFlightFences) {
+    vkDestroyFence(vkDevice, fence, nullptr);
+  }
+
+  vkDestroySemaphore(vkDevice, presentCompleteSemaphore, nullptr);
+  vkDestroySemaphore(vkDevice, renderCompleteSemaphore, nullptr);
+  vkDestroyCommandPool(vkDevice, commandPool, nullptr);
+
+  for (auto &handles : swapchainImageHandles) {
+    for (auto handle : handles) {
+      vkDestroyImage(vkDevice, handle, nullptr);
+    }
+  }
+  for (auto &handles : swapchainBufferHandles) {
+    for (auto handle : handles) {
+      vkDestroyBuffer(vkDevice, handle, nullptr);
+    }
+  }
+
+  vkDestroySwapchainKHR(vkDevice, swapchain, nullptr);
+
+  for (auto handle : swapchainImages) {
+    vkDestroyImage(vkDevice, handle, nullptr);
+  }
+
+  vkDestroyDevice(vkDevice, nullptr);
+  vkDestroyInstance(vkInstance, nullptr);
 
   amdgpu::bridge::destroyShmCommandBuffer(bridge);
   amdgpu::bridge::unlinkShm(cmdBridgeName);
