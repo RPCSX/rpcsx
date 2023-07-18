@@ -39,7 +39,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
     `mkdir ps4-fs`
 
-    `sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs`
+    ``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
 
 5. Run
    
