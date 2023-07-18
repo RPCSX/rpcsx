@@ -15,16 +15,20 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
   using namespace std::chrono;
 
   steady_clock::time_point start{};
-  if (timeout)
-    start = steady_clock::now();
   uint64_t elapsed = 0;
+  uint64_t fullTimeout = -1;
+  if (timeout) {
+    start = steady_clock::now();
+    fullTimeout = *timeout;
+  }
 
   auto update_timeout = [&] {
     if (!timeout)
       return;
     auto now = steady_clock::now();
     elapsed = duration_cast<microseconds>(now - start).count();
-    if (*timeout >= elapsed) {
+    if (fullTimeout > elapsed) {
+      *timeout = fullTimeout - elapsed;
       return;
     }
     *timeout = 0;
@@ -86,7 +90,7 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     waitingThreads[position] = waitingThread;
 
     if (timeout) {
-      cv.wait(queueMtx, *timeout - elapsed);
+      cv.wait(queueMtx, *timeout);
       update_timeout();
       continue;
     }
