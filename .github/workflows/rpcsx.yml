@@ -27,12 +27,13 @@ jobs:
         sudo apt update
         sudo apt install build-essential libunwind-dev \
         libglfw3-dev libvulkan-dev vulkan-validationlayers-dev \
-        spirv-tools glslang-tools libspirv-cross-c-shared-dev
+        spirv-tools glslang-tools libspirv-cross-c-shared-dev \
+        libxbyak-dev
 
     - name: Build RPCSX
       run: |
         cmake -B build
-        cmake --build build
+        cmake --build build -j4
 
     - name: Upload RPCSX
       uses: actions/upload-artifact@v3
