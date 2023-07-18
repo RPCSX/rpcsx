@@ -19,17 +19,17 @@
 
 If you want to contribute as a developer, please contact us in the [Discord](https://discord.gg/t6dzA4wUdG).
 
-## Building
+# Building
 
 1. Install dependencies for Debian-like distributions
    
-   `sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev`
+   ``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
    
-3. Building
+2. Building
    
    `mkdir -p build && cd build && cmake .. && cmake --build .`
 
-4. How to create to create virtual hdd
+# How to create to create virtual hdd
 
    Setup size of virtual hdd
  
@@ -39,9 +39,9 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
     `mkdir ps4-fs`
 
-    ``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
+   ``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
 
-5. Run
+# How to Run samples and games ( one day )
    
      See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
 
@@ -49,7 +49,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
    
      `rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --mount "<path to 'game' root>" /app0 /app0/some-test-sample.elf [<args for test elf>...]`
 
- 6. Creating a log
+# Creating a log
 
     use flag
     
