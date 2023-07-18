@@ -12,18 +12,19 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
 
   bool isCanceled = false;
 
-  std::chrono::steady_clock::time_point start{};
+  using namespace std::chrono;
+
+  steady_clock::time_point start{};
   if (timeout)
-    start = std::chrono::steady_clock::now();
+    start = steady_clock::now();
+  uint64_t elapsed = 0;
 
   auto update_timeout = [&] {
     if (!timeout)
       return;
-    auto now = std::chrono::steady_clock::now();
-    auto dif = (now - start).count() / 1000;
-    if (*timeout > dif) {
-      *timeout -= dif;
-      start += std::chrono::microseconds(dif);
+    auto now = steady_clock::now();
+    elapsed = duration_cast<microseconds>(now - start).count();
+    if (*timeout >= elapsed) {
       return;
     }
     *timeout = 0;
@@ -84,8 +85,13 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
 
     waitingThreads[position] = waitingThread;
 
-    cv.wait(queueMtx, timeout ? *timeout : -1ul);
-    update_timeout();
+    if (timeout) {
+      cv.wait(queueMtx, *timeout - elapsed);
+      update_timeout();
+      continue;
+    }
+
+    cv.wait(queueMtx);
   }
 
   // TODO: update thread state
