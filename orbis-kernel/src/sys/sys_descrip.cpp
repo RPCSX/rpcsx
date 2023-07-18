@@ -1,3 +1,5 @@
+#include "orbis/utils/Logs.hpp"
+#include "stat.hpp"
 #include "sys/sysproto.hpp"
 
 orbis::SysResult orbis::sys_getdtablesize(Thread *thread) {
@@ -24,6 +26,7 @@ orbis::SysResult orbis::sys_closefrom(Thread *thread, sint lowfd) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_fstat(Thread *thread, sint fd, ptr<Stat> ub) {
+  ORBIS_LOG_TODO(__FUNCTION__, fd, ub);
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_nfstat(Thread *thread, sint fd,

@@ -105,10 +105,10 @@ orbis::SysResult orbis::sys_eaccess(Thread *thread, ptr<char> path,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub) {
-  ORBIS_LOG_TODO(__FUNCTION__, path, ub);
+  ORBIS_LOG_WARNING(__FUNCTION__, path, ub);
   auto result = sys_open(thread, path, 0, 0);
   if (result.isError()) {
-    return result;
+    return ErrorCode::NOENT;
   }
 
   auto fd = thread->retval[0];
@@ -119,11 +119,18 @@ orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub) {
   }
 
   auto len = thread->retval[0];
-  *ub = {};
-  ub->size = len;
-  ub->blksize = 1;
-  ub->blocks = len;
-  ub->mode = 0777 | 0x8000;
+  result = sys_pread(thread, fd, ub, 1, 0);
+  if (result.isError()) {
+    *ub = {};
+    ub->mode = 0777 | 0x4000;
+  } else {
+    *ub = {};
+    ub->size = len;
+    ub->blksize = 1;
+    ub->blocks = len;
+    ub->mode = 0777 | 0x8000;
+  }
+
   sys_close(thread, fd);
   thread->retval[0] = 0;
   return {};
