@@ -10,8 +10,29 @@
 #include <sys/prctl.h>
 #include <ucontext.h>
 #include <unistd.h>
+#include <xbyak/xbyak.h>
 
 thread_local orbis::Thread *rx::thread::g_current = nullptr;
+
+static auto setContext = [] {
+  struct SetContext : Xbyak::CodeGenerator {
+    SetContext() {
+      mov(rbp, rdi);
+      mov(rax, qword[rbp + REG_RAX * sizeof(unsigned long long)]);
+      mov(rdi, qword[rbp + REG_RDI * sizeof(unsigned long long)]);
+      mov(rdx, qword[rbp + REG_RDX * sizeof(unsigned long long)]);
+      mov(rcx, qword[rbp + REG_RCX * sizeof(unsigned long long)]);
+      mov(rbx, qword[rbp + REG_RBX * sizeof(unsigned long long)]);
+      mov(rsi, qword[rbp + REG_RSI * sizeof(unsigned long long)]);
+      mov(rsp, qword[rbp + REG_RSP * sizeof(unsigned long long)]);
+
+      mov(rbp, qword[rbp + REG_RIP * sizeof(unsigned long long)]);
+      call(rbp);
+    }
+  } static setContextStorage;
+
+  return setContextStorage.getCode<void (*)(const mcontext_t &)>();
+}();
 
 static __attribute__((no_stack_protector)) void
 handleSigSys(int sig, siginfo_t *info, void *ucontext) {
@@ -63,16 +84,6 @@ void rx::thread::invoke(orbis::Thread *thread) {
   _writefsbase_u64(thread->fsBase);
   auto context = reinterpret_cast<ucontext_t *>(thread->context);
 
-  asm volatile("movq %1, %%rsp\n"
-               "callq *%0\n"
-               :
-               : "rm"(context->uc_mcontext.gregs[REG_RIP]),
-                 "rm"(context->uc_mcontext.gregs[REG_RSP]),
-                 "D"(context->uc_mcontext.gregs[REG_RDI]),
-                 "S"(context->uc_mcontext.gregs[REG_RSI]),
-                 "d"(context->uc_mcontext.gregs[REG_RDX]),
-                 "c"(context->uc_mcontext.gregs[REG_RCX]),
-                 "b"(context->uc_mcontext.gregs[REG_RBX])
-               : "memory");
+  setContext(context->uc_mcontext);
   _writefsbase_u64(hostFs);
 }

@@ -1,0 +1,3 @@
+[submodule "3rdparty/xbyak"]
+	path = 3rdparty/xbyak
+	url = git@github.com:herumi/xbyak.git
