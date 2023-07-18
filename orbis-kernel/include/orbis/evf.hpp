@@ -1,6 +1,7 @@
 #pragma once
 #include "KernelAllocator.hpp"
 #include "thread/Thread.hpp"
+#include "utils/SharedCV.hpp"
 #include "utils/SharedMutex.hpp"
 #include <atomic>
 #include <condition_variable>
@@ -31,7 +32,7 @@ struct EventFlag final {
 
   struct WaitingThread {
     Thread *thread;
-    shared_mutex *mtx;
+    utils::shared_cv *cv;
     std::uint64_t *patternSet;
     bool *isCanceled;
     std::uint64_t bitPattern;
