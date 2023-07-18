@@ -42,7 +42,7 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
     if (handle->mmap != nullptr) {
       result = handle->mmap(handle.get(), addr, len, prot, flags, pos);
     } else {
-      std::printf("unimplemented mmap\n");
+      std::printf("unimplemented mmap for fd %d\n", static_cast<int>(fd));
       result = rx::vm::map(addr, len, prot, flags);
     }
   }
@@ -70,7 +70,9 @@ orbis::SysResult msync(orbis::Thread *thread, orbis::ptr<void> addr,
 
 orbis::SysResult mprotect(orbis::Thread *thread, orbis::ptr<const void> addr,
                           orbis::size_t len, orbis::sint prot) {
-  rx::vm::protect((void *)addr, len, prot);
+  if (!rx::vm::protect((void *)addr, len, prot)) {
+    return ErrorCode::INVAL;
+  }
   return {};
 }
 
@@ -398,7 +400,7 @@ orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
 ptr<char> findSymbolById(orbis::Module *module, std::uint64_t id) {
   for (auto sym : module->symbols) {
     if (sym.id == id && sym.bind != orbis::SymbolBind::Local) {
-      return (ptr<char>)module->base + sym.address;
+      return sym.address != 0 ? (ptr<char>)module->base + sym.address : 0;
     }
   }
 

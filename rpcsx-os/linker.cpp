@@ -714,13 +714,10 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             symbol.libraryIndex = -1;
             symbol.moduleIndex = -1;
           } else {
-            std::printf("ignored: (%s) - %lx\n",
-                        sceStrtab ? sceStrtab +
-                                        static_cast<std::uint32_t>(sym.st_name)
-                                  : "<no strtab>",
-                        sym.st_value);
-
-            continue;
+            symbol.id =
+                encodeFid(sceStrtab + static_cast<std::uint32_t>(sym.st_name));
+            symbol.libraryIndex = -1;
+            symbol.moduleIndex = -1;
           }
         }
 
