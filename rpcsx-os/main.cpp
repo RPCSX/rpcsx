@@ -278,6 +278,13 @@ static int ps4Exec(orbis::Process *mainProcess,
   auto libkernel = rx::linker::loadModuleFile(
       "/system/common/lib/libkernel_sys.sprx", mainProcess);
 
+  if (libkernel == nullptr) {
+    std::fprintf(stderr, "libkernel not found\n");
+    return 1;
+  }
+
+  libkernel->id = mainProcess->modulesMap.insert(libkernel);
+
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
 
@@ -502,6 +509,7 @@ int main(int argc, const char *argv[]) {
     std::abort();
   }
 
+  executableModule->id = initProcess->modulesMap.insert(executableModule);
   initProcess->processParam = executableModule->processParam;
   initProcess->processParamSize = executableModule->processParamSize;
 
@@ -516,8 +524,6 @@ int main(int argc, const char *argv[]) {
     std::fprintf(stderr, "Unexpected executable type\n");
     status = 1;
   }
-
-  // entryPoint();
 
   // rx::vm::printHostStats();
   rx::vm::deinitialize();

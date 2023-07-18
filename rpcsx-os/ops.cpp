@@ -26,6 +26,94 @@ using namespace orbis;
 extern "C" void __register_frame(const void *);
 
 namespace {
+static std::pair<SysResult, Ref<Module>>
+loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
+        std::map<std::string, Module *, std::less<>> &loadedObjects,
+        std::map<std::string, Module *, std::less<>> &loadedModules,
+        std::string_view expectedName) {
+  if (auto it = loadedObjects.find(name); it != loadedObjects.end()) {
+    return {{}, it->second};
+  }
+
+  auto module = rx::linker::loadModuleFile(name, thread->tproc);
+
+  if (module == nullptr) {
+    if (!expectedName.empty()) {
+      loadedObjects[std::string(expectedName)] = nullptr;
+    }
+
+    return {ErrorCode::NOENT, {}};
+  }
+
+  if (!expectedName.empty() && expectedName != module->soName) {
+    if (module->soName[0] != '\0') {
+      std::fprintf(stderr,
+                   "Module name mismatch, expected '%s', loaded '%s' (%s)\n",
+                   std::string(expectedName).c_str(), module->soName,
+                   module->moduleName);
+      // std::abort();
+    }
+
+    std::strncpy(module->soName, std::string(expectedName).c_str(),
+                 sizeof(module->soName));
+    if (module->soName[sizeof(module->soName) - 1] != '\0') {
+      std::fprintf(stderr, "Too big needed name\n");
+      std::abort();
+    }
+  }
+
+  std::printf("Loaded '%s'\n", module->soName);
+
+  loadedObjects[module->soName] = module.get();
+  loadedModules[module->moduleName] = module.get();
+
+  for (auto &needed : module->needed) {
+    auto [result, neededModule] =
+        loadPrx(thread, needed, relocate, loadedObjects, loadedModules, needed);
+
+    if (result.isError() || neededModule == nullptr) {
+      std::fprintf(stderr, "Needed '%s' not found\n", needed.c_str());
+    }
+  }
+
+  module->importedModules.reserve(module->neededModules.size());
+
+  for (auto mod : module->neededModules) {
+    if (auto it = loadedModules.find(std::string_view(mod.name));
+        it != loadedModules.end()) {
+      module->importedModules.emplace_back(it->second);
+      continue;
+    }
+
+    std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n",
+                 mod.name.c_str(), module->soName);
+    module->importedModules.push_back({});
+  }
+
+  if (relocate) {
+    auto result = module->relocate(thread->tproc);
+    if (result.isError()) {
+      return {result, module};
+    }
+  }
+
+  module->id = thread->tproc->modulesMap.insert(module);
+  return {{}, module};
+}
+
+static std::pair<SysResult, Ref<Module>>
+loadPrx(orbis::Thread *thread, std::string_view name, bool relocate) {
+  std::map<std::string, Module *, std::less<>> loadedObjects;
+  std::map<std::string, Module *, std::less<>> loadedModules;
+
+  for (auto [id, module] : thread->tproc->modulesMap) {
+    loadedObjects[module->soName] = module;
+    loadedModules[module->moduleName] = module;
+  }
+
+  return loadPrx(thread, name, relocate, loadedObjects, loadedModules, {});
+};
+
 orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
                       orbis::size_t len, orbis::sint prot, orbis::sint flags,
                       orbis::sint fd, orbis::off_t pos) {
@@ -378,6 +466,7 @@ orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
                                        orbis::ModuleHandle handle,
                                        orbis::uint64_t index,
                                        orbis::ptr<orbis::ptr<void>> addrp) {
+  std::lock_guard lock(thread->tproc->mtx);
   auto module = thread->tproc->modulesMap.get(handle);
 
   if (module == nullptr) {
@@ -411,6 +500,7 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
                               orbis::ptr<const char> symbol,
                               orbis::ptr<orbis::ptr<void>> addrp) {
   std::printf("sys_dynlib_dlsym(%u, '%s')\n", (unsigned)handle, symbol);
+  std::lock_guard lock(thread->tproc->mtx);
   auto module = thread->tproc->modulesMap.get(handle);
 
   if (module == nullptr) {
@@ -444,17 +534,24 @@ orbis::SysResult dynlib_do_copy_relocations(orbis::Thread *thread) {
   // TODO
   return {};
 }
+
 orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
                                  orbis::ptr<const char> name,
                                  orbis::uint64_t arg1,
                                  orbis::ptr<ModuleHandle> pHandle,
                                  orbis::uint64_t arg3) {
   std::printf("sys_dynlib_load_prx: %s\n", name);
-  auto module = rx::linker::loadModuleFile(name, thread->tproc);
-  thread->tproc->ops->processNeeded(thread);
-  auto result = module->relocate(thread->tproc);
+
+  std::lock_guard lock(thread->tproc->mtx);
+
+  char _name[256];
+  auto errorCode = ureadString(_name, sizeof(_name), name);
+  if (errorCode != ErrorCode{}) {
+    return errorCode;
+  }
+
+  auto [result, module] = loadPrx(thread, _name, true);
   if (result.isError()) {
-    thread->tproc->modulesMap.close(module->id);
     return result;
   }
 
@@ -583,77 +680,44 @@ orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
 }
 
 SysResult processNeeded(Thread *thread) {
-  while (true) {
-    std::set<std::string, std::less<>> allNeededObjects;
-    auto proc = thread->tproc;
-    std::map<std::string, Module *, std::less<>> loadedModules;
-    std::map<std::string, Module *, std::less<>> loadedObjects;
+  std::map<std::string, Module *, std::less<>> loadedObjects;
+  std::map<std::string, Module *, std::less<>> loadedModules;
+  std::set<std::string> allNeeded;
 
-    for (auto [id, module] : proc->modulesMap) {
-      for (const auto &object : module->needed) {
-        allNeededObjects.emplace(object.begin(), object.end());
-      }
-
-      loadedModules[module->moduleName] = module;
-      loadedObjects[module->soName] = module;
+  for (auto [id, module] : thread->tproc->modulesMap) {
+    loadedObjects[module->soName] = module;
+    loadedModules[module->moduleName] = module;
+    for (auto &needed : module->needed) {
+      allNeeded.insert(std::string(needed));
     }
+  }
 
-    bool hasLoadedNeeded = false;
+  for (auto needed : allNeeded) {
+    auto [result, neededModule] =
+        loadPrx(thread, needed, false, loadedObjects, loadedModules, needed);
 
-    for (auto &needed : allNeededObjects) {
-      if (auto it = loadedObjects.find(needed); it != loadedObjects.end()) {
+    if (result.isError() || neededModule == nullptr) {
+      std::fprintf(stderr, "Needed '%s' not found\n", needed.c_str());
+      continue;
+    }
+  }
+
+  for (auto [id, module] : thread->tproc->modulesMap) {
+    module->importedModules.reserve(module->neededModules.size());
+
+    for (auto mod : module->neededModules) {
+      if (auto it = loadedModules.find(std::string_view(mod.name));
+          it != loadedModules.end()) {
+        module->importedModules.emplace_back(it->second);
         continue;
       }
 
-      auto neededModule = rx::linker::loadModuleByName(needed, proc);
-
-      if (neededModule == nullptr) {
-        std::fprintf(stderr, "Needed '%s' not found\n", needed.c_str());
-        continue;
-      }
-
-      if (neededModule->soName != needed) {
-        if (neededModule->soName[0] != '\0') {
-          std::fprintf(
-              stderr, "Module name mismatch, expected '%s', loaded '%s' (%s)\n",
-              needed.c_str(), neededModule->soName, neededModule->moduleName);
-          // std::abort();
-        }
-
-        std::strncpy(neededModule->soName, needed.c_str(),
-                     sizeof(neededModule->soName));
-        if (neededModule->soName[sizeof(neededModule->soName) - 1] != '\0') {
-          std::fprintf(stderr, "Too big needed name\n");
-          std::abort();
-        }
-      }
-
-      hasLoadedNeeded = true;
+      std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n",
+                   mod.name.c_str(), module->soName);
+      module->importedModules.push_back({});
     }
 
-    if (!hasLoadedNeeded) {
-      thread->tproc->modulesMap.walk([&loadedModules](ModuleHandle modId,
-                                                      Module *module) {
-        // std::printf("Module '%s' has id %u\n", module->name,
-        // (unsigned)modId);
-
-        module->importedModules.clear();
-        module->importedModules.reserve(module->neededModules.size());
-        for (auto mod : module->neededModules) {
-          if (auto it = loadedModules.find(std::string_view(mod.name));
-              it != loadedModules.end()) {
-            module->importedModules.emplace_back(it->second);
-            continue;
-          }
-
-          std::fprintf(stderr, "Not found needed module '%s' for object '%s'\n",
-                       mod.name.c_str(), module->soName);
-          module->importedModules.push_back({});
-        }
-      });
-
-      break;
-    }
+    module->relocate(thread->tproc);
   }
 
   return {};

@@ -798,7 +798,6 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     rx::vm::protect(seg.addr, seg.size, rx::vm::kMapProtCpuAll);
   }
 
-  result->id = process->modulesMap.insert(result);
   result->proc = process;
 
   std::printf("Loaded module '%s' from object '%s', id: %u, address: %p - %p\n",
@@ -812,8 +811,12 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   return result;
 }
 
-Ref<orbis::Module> rx::linker::loadModuleFile(const char *path,
+Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
                                               orbis::Process *process) {
+  if (!path.contains('/')) {
+    return loadModuleByName(path, process);
+  }
+
   orbis::Ref<IoDeviceInstance> instance;
   if (vfs::open(path, kOpenFlagReadOnly, 0, &instance).isError()) {
     return {};
