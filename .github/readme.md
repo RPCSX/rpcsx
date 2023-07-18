@@ -21,13 +21,13 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 ## Building
 
-1. Install dependencies for Debian-like distributions
+First Install The dependencies for Debian-like distributions.
    
-   ``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
+``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
    
-2. Building
+Command for building the emulator.
    
-   `mkdir -p build && cd build && cmake .. && cmake --build .`
+`mkdir -p build && cd build && cmake .. && cmake --build .`
 
 ## How to create to create virtual hdd
  
