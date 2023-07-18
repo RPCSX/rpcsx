@@ -23,7 +23,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 1. Install dependencies for Debian-like distributions
    
-   `sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev`
+   `sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev`
 2. Building
    
    `mkdir -p build && cd build && cmake .. && cmake --build .`
