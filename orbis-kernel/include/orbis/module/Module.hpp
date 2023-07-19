@@ -18,7 +18,7 @@ struct Process;
 struct ModuleNeeded {
   utils::kstring name;
   std::uint16_t version;
-  std::uint16_t attr;
+  std::uint64_t attr;
   bool isExport;
 };
 
@@ -92,8 +92,8 @@ struct Module final {
 
   ptr<uint64_t> pltGot{};
 
+  uint64_t attributes{};
   uint16_t version{};
-  uint16_t attributes{};
   uint16_t type{};
   uint16_t flags{};
   uint64_t entryPoint{};
