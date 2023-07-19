@@ -61,7 +61,7 @@ You can use this flag if you get sigfault for debugging.
     
 `--trace` 
     
-> You can redirect all log messages to a file by appending following to command:
+You can redirect all log messages to a file by appending following to command:
 
 `&>log.txt`
       
