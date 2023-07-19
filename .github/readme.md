@@ -26,6 +26,10 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 First Install The dependencies for Debian-like distributions.
    
 ``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
+
+## Cloning the Repo
+
+``git clone https://github.com/RPCSX/rpcsx && cd rpcsx``
    
 Command for building the emulator.
    
