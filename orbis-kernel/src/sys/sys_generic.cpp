@@ -75,6 +75,7 @@ orbis::SysResult orbis::sys_freebsd6_ftruncate(Thread *thread, sint fd, sint,
 }
 orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com,
                                   caddr_t data) {
+  ORBIS_LOG_WARNING(__FUNCTION__, fd, com);
   if (auto ioctl = thread->tproc->ops->ioctl) {
     return ioctl(thread, fd, com, data);
   }

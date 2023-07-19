@@ -16,6 +16,7 @@ orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, fd);
   if (auto close = thread->tproc->ops->close) {
     return close(thread, fd);
   }
