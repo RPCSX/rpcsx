@@ -607,7 +607,7 @@ SysResult sys_netabort(Thread *thread /* TODO */);
 SysResult sys_netgetsockinfo(Thread *thread /* TODO */);
 SysResult sys_socketex(Thread *thread, ptr<const char> name, sint domain,
                        sint type, sint protocol);
-SysResult sys_socketclose(Thread *thread /* TODO */);
+SysResult sys_socketclose(Thread *thread, sint fd);
 SysResult sys_netgetiflist(Thread *thread /* TODO */);
 SysResult sys_kqueueex(Thread *thread /* TODO */);
 SysResult sys_mtypeprotect(Thread *thread /* TODO */);
