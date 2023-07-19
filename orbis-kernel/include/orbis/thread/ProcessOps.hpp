@@ -30,6 +30,8 @@ struct ProcessOps {
 
   SysResult (*open)(Thread *thread, ptr<const char> path, sint flags,
                     sint mode);
+  SysResult (*socket)(Thread *thread, ptr<const char> name, sint domain,
+                      sint type, sint protocol);
   SysResult (*close)(Thread *thread, sint fd);
   SysResult (*ioctl)(Thread *thread, sint fd, ulong com, caddr_t argp);
   SysResult (*write)(Thread *thread, sint fd, ptr<const void> data, ulong size);

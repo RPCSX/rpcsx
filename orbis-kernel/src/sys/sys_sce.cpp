@@ -22,10 +22,20 @@ orbis::SysResult orbis::sys_netgetsockinfo(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_socketex(Thread *thread, ptr<const char> name,
                                      sint domain, sint type, sint protocol) {
-  return {};
+  ORBIS_LOG_TODO(__FUNCTION__, name, domain, type, protocol);
+  if (auto socket = thread->tproc->ops->socket) {
+    return socket(thread, name, domain, type, protocol);
+  }
+  return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_socketclose(Thread *thread /* TODO */) {
-  return {};
+orbis::SysResult orbis::sys_socketclose(Thread *thread, sint fd) {
+  // This syscall is identical to sys_close
+  ORBIS_LOG_NOTICE(__FUNCTION__, fd);
+  if (auto close = thread->tproc->ops->close) {
+    return close(thread, fd);
+  }
+
+  return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_netgetiflist(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;

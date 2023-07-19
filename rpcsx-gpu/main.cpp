@@ -763,7 +763,8 @@ int main(int argc, const char *argv[]) {
                                    cmd.memoryProt.prot);
         break;
       case amdgpu::bridge::CommandId::CommandBuffer:
-        device.handleCommandBuffer(cmd.commandBuffer.address,
+        device.handleCommandBuffer(cmd.commandBuffer.queue,
+                                   cmd.commandBuffer.address,
                                    cmd.commandBuffer.size);
         break;
       case amdgpu::bridge::CommandId::Flip: {

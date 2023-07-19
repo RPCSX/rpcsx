@@ -552,123 +552,41 @@ public:
   bool operator!=(std::nullptr_t) const { return mBuffer != nullptr; }
 };
 
-class Image2D {
+class Image2D;
+
+class ImageRef {
   VkImage mImage = VK_NULL_HANDLE;
   VkFormat mFormat = {};
   VkImageAspectFlags mAspects = {};
-  VkImageLayout mLayout = {};
+  VkImageLayout *mLayout = {};
   unsigned mWidth = 0;
   unsigned mHeight = 0;
-  DeviceMemoryRef mMemory;
+  unsigned mDepth = 0;
 
 public:
-  Image2D(const Image2D &) = delete;
+  ImageRef() = default;
+  ImageRef(Image2D &);
 
-  Image2D() = default;
-  Image2D(Image2D &&other) { *this = std::move(other); }
-
-  ~Image2D() {
-    if (mImage != nullptr && mMemory.deviceMemory != VK_NULL_HANDLE) {
-      vkDestroyImage(g_vkDevice, mImage, g_vkAllocator);
-    }
-  }
-
-  Image2D &operator=(Image2D &&other) {
-    std::swap(mImage, other.mImage);
-    std::swap(mFormat, other.mFormat);
-    std::swap(mAspects, other.mAspects);
-    std::swap(mLayout, other.mLayout);
-    std::swap(mWidth, other.mWidth);
-    std::swap(mHeight, other.mHeight);
-    std::swap(mMemory, other.mMemory);
-    return *this;
-  }
-
-  Image2D(uint32_t width, uint32_t height, VkFormat format,
-          VkImageUsageFlags usage,
-          VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL,
-          VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT,
-          VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-          uint32_t mipLevels = 1, uint32_t arrayLevels = 1,
-          VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED) {
-    VkImageCreateInfo imageInfo{};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = mipLevels;
-    imageInfo.arrayLayers = arrayLevels;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = samples;
-    imageInfo.sharingMode = sharingMode;
-
-    mFormat = format;
-
-    if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-      mAspects |= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-    } else {
-      mAspects |= VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    mLayout = initialLayout;
-    mWidth = width;
-    mHeight = height;
-
-    Verify() << vkCreateImage(g_vkDevice, &imageInfo, nullptr, &mImage);
-  }
-
-  static Image2D
-  Allocate(MemoryResource &pool, uint32_t width, uint32_t height,
-           VkFormat format, VkImageUsageFlags usage,
-           VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL,
-           VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT,
-           VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-           uint32_t mipLevels = 1, uint32_t arrayLevels = 1,
-           VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED) {
-
-    Image2D result(width, height, format, usage, tiling, samples, sharingMode,
-                   mipLevels, arrayLevels, initialLayout);
-
-    result.allocateAndBind(pool);
-    return result;
-  }
-
-  static Image2D CreateFromExternal(VkImage image, VkFormat format,
-                                    VkImageAspectFlags aspects,
-                                    VkImageLayout layout, unsigned width,
-                                    unsigned height) {
-    Image2D result;
+  static ImageRef Create(VkImage image, VkFormat format,
+                         VkImageAspectFlags aspects, VkImageLayout *layout,
+                         unsigned width, unsigned height, unsigned depth) {
+    ImageRef result;
     result.mImage = image;
     result.mFormat = format;
     result.mAspects = aspects;
     result.mLayout = layout;
     result.mWidth = width;
     result.mHeight = height;
+    result.mDepth = depth;
     return result;
   }
 
   VkImage getHandle() const { return mImage; }
-  [[nodiscard]] VkImage release() { return std::exchange(mImage, nullptr); }
 
   VkMemoryRequirements getMemoryRequirements() const {
     VkMemoryRequirements requirements{};
     vkGetImageMemoryRequirements(g_vkDevice, mImage, &requirements);
     return requirements;
-  }
-
-  void allocateAndBind(MemoryResource &pool) {
-    auto memory = pool.allocate(getMemoryRequirements());
-    bindMemory(memory);
-  }
-
-  void bindMemory(DeviceMemoryRef memory) {
-    mMemory = memory;
-    Verify() << vkBindImageMemory(g_vkDevice, mImage, memory.deviceMemory,
-                                  memory.offset);
   }
 
   void readFromBuffer(VkCommandBuffer cmdBuffer, const Buffer &buffer,
@@ -749,13 +667,13 @@ public:
   }
 
   void transitionLayout(VkCommandBuffer cmdBuffer, VkImageLayout newLayout) {
-    if (mLayout == newLayout) {
+    if (*mLayout == newLayout) {
       return;
     }
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = mLayout;
+    barrier.oldLayout = *mLayout;
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -798,7 +716,7 @@ public:
       }
     };
 
-    auto [sourceStage, sourceAccess] = layoutToStageAccess(mLayout);
+    auto [sourceStage, sourceAccess] = layoutToStageAccess(*mLayout);
     auto [destinationStage, destinationAccess] = layoutToStageAccess(newLayout);
 
     barrier.srcAccessMask = sourceAccess;
@@ -807,9 +725,122 @@ public:
     vkCmdPipelineBarrier(cmdBuffer, sourceStage, destinationStage, 0, 0,
                          nullptr, 0, nullptr, 1, &barrier);
 
-    mLayout = newLayout;
+    *mLayout = newLayout;
+  }
+};
+
+class Image2D {
+  VkImage mImage = VK_NULL_HANDLE;
+  VkFormat mFormat = {};
+  VkImageAspectFlags mAspects = {};
+  VkImageLayout mLayout = {};
+  unsigned mWidth = 0;
+  unsigned mHeight = 0;
+
+public:
+  Image2D(const Image2D &) = delete;
+
+  Image2D() = default;
+  Image2D(Image2D &&other) { *this = std::move(other); }
+
+  ~Image2D() {
+    if (mImage != nullptr) {
+      vkDestroyImage(g_vkDevice, mImage, g_vkAllocator);
+    }
   }
 
-  // DeviceMemoryRef getMemory() const { return mMemory; }
+  Image2D &operator=(Image2D &&other) {
+    std::swap(mImage, other.mImage);
+    std::swap(mFormat, other.mFormat);
+    std::swap(mAspects, other.mAspects);
+    std::swap(mLayout, other.mLayout);
+    std::swap(mWidth, other.mWidth);
+    std::swap(mHeight, other.mHeight);
+    return *this;
+  }
+
+  Image2D(uint32_t width, uint32_t height, VkFormat format,
+          VkImageUsageFlags usage,
+          VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL,
+          VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT,
+          VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+          uint32_t mipLevels = 1, uint32_t arrayLevels = 1,
+          VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED) {
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = mipLevels;
+    imageInfo.arrayLayers = arrayLevels;
+    imageInfo.format = format;
+    imageInfo.tiling = tiling;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage;
+    imageInfo.samples = samples;
+    imageInfo.sharingMode = sharingMode;
+
+    mFormat = format;
+
+    if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+      mAspects |= VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+    } else {
+      mAspects |= VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    mLayout = initialLayout;
+    mWidth = width;
+    mHeight = height;
+
+    Verify() << vkCreateImage(g_vkDevice, &imageInfo, nullptr, &mImage);
+  }
+
+  static Image2D
+  Allocate(MemoryResource &pool, uint32_t width, uint32_t height,
+           VkFormat format, VkImageUsageFlags usage,
+           VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL,
+           VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT,
+           VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+           uint32_t mipLevels = 1, uint32_t arrayLevels = 1,
+           VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED) {
+
+    Image2D result(width, height, format, usage, tiling, samples, sharingMode,
+                   mipLevels, arrayLevels, initialLayout);
+
+    result.allocateAndBind(pool);
+    return result;
+  }
+
+  VkImage getHandle() const { return mImage; }
+  [[nodiscard]] VkImage release() { return std::exchange(mImage, nullptr); }
+
+  VkMemoryRequirements getMemoryRequirements() const {
+    VkMemoryRequirements requirements{};
+    vkGetImageMemoryRequirements(g_vkDevice, mImage, &requirements);
+    return requirements;
+  }
+
+  void allocateAndBind(MemoryResource &pool) {
+    auto memory = pool.allocate(getMemoryRequirements());
+    bindMemory(memory);
+  }
+
+  void bindMemory(DeviceMemoryRef memory) {
+    Verify() << vkBindImageMemory(g_vkDevice, mImage, memory.deviceMemory,
+                                  memory.offset);
+  }
+
+  friend ImageRef;
 };
+
+inline ImageRef::ImageRef(Image2D &image) {
+  mImage = image.mImage;
+  mFormat = image.mFormat;
+  mAspects = image.mAspects;
+  mLayout = &image.mLayout;
+  mWidth = image.mWidth;
+  mHeight = image.mHeight;
+  mDepth = 1;
+}
 } // namespace amdgpu::device::vk

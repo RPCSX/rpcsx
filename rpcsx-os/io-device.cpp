@@ -1,7 +1,9 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <fcntl.h>
 #include <string>
+#include <sys/socket.h>
 #include <unistd.h>
 
 std::int64_t io_device_instance_close(IoDeviceInstance *instance) { return 0; }
@@ -21,6 +23,11 @@ struct HostIoDevice : IoDevice {
 };
 
 struct HostIoDeviceInstance : IoDeviceInstance {
+  int hostFd;
+};
+
+struct SocketDeviceInstance : IoDeviceInstance {
+  orbis::utils::kstring name;
   int hostFd;
 };
 
@@ -129,4 +136,26 @@ IoDevice *createHostIoDevice(const char *hostPath) {
   result->open = host_io_open;
   result->hostPath = hostPath;
   return result;
+}
+
+static std::int64_t socket_instance_ioctl(IoDeviceInstance *instance,
+                                          std::uint64_t request, void *argp) {
+
+  ORBIS_LOG_FATAL("Unhandled socket ioctl", request);
+  return 0;
+}
+
+static std::int64_t socket_instance_close(IoDeviceInstance *instance) {
+  return 0;
+}
+
+orbis::ErrorCode createSocket(const char *name, int dom, int type, int prot,
+                              orbis::Ref<IoDeviceInstance> *instance) {
+  auto s = orbis::knew<SocketDeviceInstance>();
+  s->ioctl = socket_instance_ioctl;
+  s->close = socket_instance_close;
+  s->name = name;
+  s->hostFd = ::socket(dom, type, prot);
+  *instance = s;
+  return {};
 }

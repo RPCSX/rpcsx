@@ -4,6 +4,9 @@
 #include <cstdint>
 
 struct IoDevice;
+namespace orbis {
+enum class ErrorCode : int;
+}
 
 enum OpenFlags {
   kOpenFlagReadOnly = 0x0,
@@ -53,3 +56,5 @@ std::int64_t io_device_instance_close(IoDeviceInstance *instance);
 void io_device_instance_init(IoDevice *device, IoDeviceInstance *instance);
 
 IoDevice *createHostIoDevice(const char *hostPath);
+orbis::ErrorCode createSocket(const char *name, int dom, int type, int prot,
+                              orbis::Ref<IoDeviceInstance> *instance);
