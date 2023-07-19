@@ -12,7 +12,9 @@
 </div>
 
 > **Warning** <br/>
-> It's NOT possible to run any games yet, and there is no ETA for when this will change
+> It's NOT possible to run any games yet, and there is no ETA for when this will change.
+
+> Do not ask for link to games or system files. Piracy is not permitted on the GitHub nor in the Discord.
 
 
 ## Contributing
@@ -24,12 +26,18 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 First Install The dependencies for Debian-like distributions.
    
 ``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
+
+## Cloning the Repo
+
+``git clone https://github.com/RPCSX/rpcsx && cd rpcsx``
    
-Command for building the emulator.
+## Command for building the emulator.
    
 `mkdir -p build && cd build && cmake .. && cmake --build .`
 
-## How to create to create virtual hdd
+## How to create virtual hdd
+
+> The PS4 has case-insensitive filesystem. To create the virtual hdd do the following:
  
 `truncate -s 512M ps4-hdd.exfat`
 
@@ -49,11 +57,11 @@ You can run emulator with Samples using this command:
 
 ## Creating a log
 
-use flag
+You can use this flag if you get sigfault for debugging.
     
-`--trace` if you got sigfault
+`--trace` 
     
-You can redirect all log messages to the file by appending following to command:
+You can redirect all log messages to a file by appending following to command:
 
 `&>log.txt`
       
