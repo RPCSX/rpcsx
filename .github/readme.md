@@ -47,7 +47,7 @@ First install the dependencies for Debian-like distributions.
 
 ``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
 
-## How to run samples and games ( one day )
+## How to run samples and games
    
 See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
 
@@ -57,7 +57,7 @@ You can run the emulator with some samples using this command:
 
 ## Creating a log
 
-You can use this flag if you got a sigfault for debugging.
+You can use this flag if you got a sigfault for debugging purposes.
     
 `--trace` 
     
