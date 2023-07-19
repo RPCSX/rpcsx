@@ -31,7 +31,7 @@ First Install The dependencies for Debian-like distributions.
 
 ``git clone https://github.com/RPCSX/rpcsx && cd rpcsx``
    
-## Command for building the emulator.
+## Command for building the emulator
    
 `mkdir -p build && cd build && cmake .. && cmake --build .`
 
