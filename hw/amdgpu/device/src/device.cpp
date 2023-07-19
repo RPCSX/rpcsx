@@ -1978,7 +1978,7 @@ struct AreaCache {
   };
 
   struct WriteBackImage {
-    vk::Image2D *image;
+    vk::ImageRef image;
     std::uint64_t address;
     std::uint32_t tileMode;
     std::uint32_t width;
@@ -2047,7 +2047,7 @@ struct AreaCache {
     return result;
   }
 
-  vk::Image2D *getImage(std::uint64_t areaOffset, VkCommandBuffer cmdBuffer,
+  vk::ImageRef getImage(std::uint64_t areaOffset, VkCommandBuffer cmdBuffer,
                         TileMode tileMode, std::uint32_t width,
                         std::uint32_t height, std::uint32_t depth,
                         std::uint32_t pitch, SurfaceFormat format,
@@ -2068,8 +2068,10 @@ struct AreaCache {
 
     auto vkFormat = surfaceFormatToVkFormat(format, channelType);
 
-    auto image = vk::Image2D::Allocate(getDeviceLocalMemory(), width, height,
-                                       vkFormat, usage);
+    auto imageHandle = vk::Image2D::Allocate(getDeviceLocalMemory(), width,
+                                             height, vkFormat, usage);
+
+    auto image = vk::ImageRef(imageHandle);
 
     if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
       buffers.push_back(image.read(
@@ -2078,11 +2080,11 @@ struct AreaCache {
           getBitWidthOfSurfaceFormat(format) / 8, pitch));
     }
 
-    auto &result = images.emplace_front(std::move(image));
+    images.emplace_front(std::move(imageHandle));
 
     if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
       writeBackImages.push_back({
-          .image = &result,
+          .image = image,
           .address = writeBackAddress,
           .tileMode = tileMode,
           .width = width,
@@ -2094,13 +2096,13 @@ struct AreaCache {
       });
     }
 
-    return &result;
+    return image;
   }
 
   void writeImageToBuffers(VkCommandBuffer cmd) {
     for (auto wbImage : writeBackImages) {
-      auto buffer = wbImage.image->writeToBuffer(cmd, getHostVisibleMemory(),
-                                                 wbImage.aspect);
+      auto buffer = wbImage.image.writeToBuffer(cmd, getHostVisibleMemory(),
+                                                wbImage.aspect);
       writeBackBuffers.push_back(
           {.bufferMemory = buffer.getData(),
            .address = wbImage.address,
@@ -2246,23 +2248,6 @@ struct RenderState {
     return area.getBuffer(address - area.areaAddress, size, usage, access);
   }
 
-  vk::Image2D *getImage(std::uint64_t address, VkCommandBuffer cmdBuffer,
-                        TileMode tileMode, std::uint32_t width,
-                        std::uint32_t height, std::uint32_t depth,
-                        std::uint32_t pitch, SurfaceFormat format,
-                        TextureChannelType channelType, VkImageUsageFlags usage,
-                        VkImageAspectFlags aspect, shader::AccessOp access,
-                        std::uint64_t writeBackAddress) {
-    auto &area = getArea(address, pitch * height * depth *
-                                      getBitWidthOfSurfaceFormat(format) / 8);
-
-    touchedAreas.insert(&area);
-
-    return area.getImage(address - area.areaAddress, cmdBuffer, tileMode, width,
-                         height, depth, pitch, format, channelType, usage,
-                         aspect, access, writeBackAddress);
-  }
-
   std::vector<std::uint32_t> loadShader(
       VkCommandBuffer cmdBuffer, shader::Stage stage, std::uint64_t address,
       std::uint32_t *userSgprs, std::size_t userSgprsCount, int &bindingOffset,
@@ -2382,10 +2367,12 @@ struct RenderState {
           bpp = 16;
         }
 
-        auto image = vk::Image2D::Allocate(
+        auto imageHandle = vk::Image2D::Allocate(
             getDeviceLocalMemory(), tbuffer->width + 1, tbuffer->height + 1,
             colorFormat,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+        auto image = vk::ImageRef(imageHandle);
+        images.push_back(std::move(imageHandle));
 
         buffers.push_back(
             image.read(cmdBuffer, getHostVisibleMemory(),
@@ -2408,7 +2395,6 @@ struct RenderState {
 
         image.transitionLayout(cmdBuffer,
                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        images.push_back(std::move(image));
         break;
       }
 
@@ -2563,11 +2549,13 @@ struct RenderState {
           surfaceFormatToVkFormat((SurfaceFormat)colorBuffer.format,
                                   TextureChannelType::kTextureChannelTypeSrgb);
 
-      auto colorImage = vk::Image2D::Allocate(
+      auto colorImageHandle = vk::Image2D::Allocate(
           getDeviceLocalMemory(), screenScissorW, screenScissorH, format,
           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
               VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+      auto colorImage = vk::ImageRef(colorImageHandle);
+      colorImages.push_back(std::move(colorImageHandle));
 
       buffers.push_back(colorImage.read(
           readCommandBuffer, getHostVisibleMemory(),
@@ -2582,7 +2570,6 @@ struct RenderState {
           createImageView2D(colorImage.getHandle(), format, {},
                             imageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT));
 
-      colorImages.push_back(std::move(colorImage));
       framebufferAttachments.push_back(colorImageView);
 
       uint32_t attachmentIndex = attachments.size();
@@ -2604,13 +2591,14 @@ struct RenderState {
       });
     }
 
-    auto depthImage = vk::Image2D::Allocate(
+    auto depthImageHandle = vk::Image2D::Allocate(
         getDeviceLocalMemory(), screenScissorW, screenScissorH, depthFormat,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
             VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
             (depthClearEnable || zReadBase == 0
                  ? 0
                  : VK_IMAGE_USAGE_TRANSFER_DST_BIT));
+    auto depthImage = vk::ImageRef(depthImageHandle);
 
     {
       if (!depthClearEnable && zReadBase) {
@@ -2907,8 +2895,9 @@ struct RenderState {
 
     for (auto &colorImage : colorImages) {
       resultColorBuffers.push_back(
-          colorImage.writeToBuffer(writeCommandBuffer, getHostVisibleMemory(),
-                                   VK_IMAGE_ASPECT_COLOR_BIT));
+          vk::ImageRef(colorImage)
+              .writeToBuffer(writeCommandBuffer, getHostVisibleMemory(),
+                             VK_IMAGE_ASPECT_COLOR_BIT));
     }
 
     vk::Buffer resultDepthBuffer;
@@ -3475,10 +3464,12 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
               buffer.width, buffer.height, targetExtent.width,
               targetExtent.height);
 
-  auto bufferImage = vk::Image2D::Allocate(
+  auto bufferImageHandle = vk::Image2D::Allocate(
       getDeviceLocalMemory(), buffer.width, buffer.height,
       VK_FORMAT_R8G8B8A8_SRGB, // TODO
       VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+
+  auto bufferImage = vk::ImageRef(bufferImageHandle);
 
   auto tmpBuffer = bufferImage.read(
       cmd, getHostVisibleMemory(), g_hostMemory.getPointer(buffer.address),
@@ -3518,6 +3509,6 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
                         VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
   usedBuffers.push_back(tmpBuffer.release());
-  usedImages.push_back(bufferImage.release());
+  usedImages.push_back(bufferImageHandle.release());
   return true;
 }
