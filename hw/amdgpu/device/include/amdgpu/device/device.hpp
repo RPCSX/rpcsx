@@ -1469,7 +1469,8 @@ struct AmdgpuDevice {
 
   void handleProtectMemory(std::uint64_t address, std::uint64_t size,
                            std::uint32_t prot);
-  void handleCommandBuffer(std::uint64_t address, std::uint64_t size);
+  void handleCommandBuffer(std::uint64_t queueId, std::uint64_t address,
+                           std::uint64_t size);
   bool handleFlip(std::uint32_t bufferIndex, std::uint64_t arg,
                   VkCommandBuffer cmd, VkImage targetImage,
                   VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers,
