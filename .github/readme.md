@@ -35,7 +35,8 @@ First Install The dependencies for Debian-like distributions.
    
 `mkdir -p build && cd build && cmake .. && cmake --build .`
 
-## How to create to create virtual hdd
+## How to create virtual hdd
+
 > ps4 has case-insensitive filesystem. to create virtual hdd do following:
  
 `truncate -s 512M ps4-hdd.exfat`
@@ -56,11 +57,11 @@ You can run emulator with Samples using this command:
 
 ## Creating a log
 
-use flag
+You can use this flag if you get sigfault for debugging.
     
-`--trace` if you got sigfault
+`--trace` 
     
-You can redirect all log messages to the file by appending following to command:
+> You can redirect all log messages to a file by appending following to command:
 
 `&>log.txt`
       
