@@ -23,7 +23,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 ## Building
 
-The dependencies for Debian-like distributions
+The dependencies for Debian-like distributions:
    
 ``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
 
@@ -57,7 +57,7 @@ You can run the emulator with Samples using this command:
 
 ## Creating a log
 
-You can use this flag if you get a sigfault for debugging.
+You can use this flag if you get a sigfault for debugging
     
 `--trace` 
     
