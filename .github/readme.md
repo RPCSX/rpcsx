@@ -37,7 +37,7 @@ First Install The dependencies for Debian-like distributions.
 
 ## How to create virtual hdd
 
-> ps4 has case-insensitive filesystem. to create virtual hdd do following:
+> ps4 has case-insensitive filesystem. To create the virtual hdd do following:
  
 `truncate -s 512M ps4-hdd.exfat`
 
