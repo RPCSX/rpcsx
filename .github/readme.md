@@ -36,6 +36,7 @@ First Install The dependencies for Debian-like distributions.
 `mkdir -p build && cd build && cmake .. && cmake --build .`
 
 ## How to create to create virtual hdd
+> ps4 has case-insensitive filesystem. to create virtual hdd do following:
  
 `truncate -s 512M ps4-hdd.exfat`
 
