@@ -12,7 +12,6 @@ namespace orbis {
 struct Process;
 struct Thread {
   utils::shared_mutex mtx;
-  utils::shared_cv sync_cv;
   Process *tproc = nullptr;
   uint64_t retval[2]{};
   void *context{};
@@ -27,6 +26,11 @@ struct Thread {
   lwpid_t tid = -1;
   ThreadState state = ThreadState::INACTIVE;
   std::thread handle;
+
+  // Used to wake up thread in sleep queue
+  utils::shared_cv sync_cv;
+  uint64_t evfResultPattern;
+  uint64_t evfIsCancelled;
 
   // FIXME: implement thread destruction
   void incRef() {}

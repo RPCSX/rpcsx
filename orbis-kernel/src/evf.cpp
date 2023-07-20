@@ -29,16 +29,15 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     *timeout = 0;
   };
 
-  // Use retval to pass information between threads
-  thread->retval[0] = 0; // resultPattern
-  thread->retval[1] = 0; // isCanceled
+  thread->evfResultPattern = 0;
+  thread->evfIsCancelled = 0;
 
   std::unique_lock lock(queueMtx);
   while (true) {
     if (isDeleted) {
       return ErrorCode::ACCES;
     }
-    if (thread->retval[1]) {
+    if (thread->evfIsCancelled) {
       return ErrorCode::CANCELED;
     }
 
@@ -49,7 +48,7 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
         waitingThread.test(patValue)) {
       auto resultValue = waitingThread.applyClear(patValue);
       value.store(resultValue, std::memory_order::relaxed);
-      thread->retval[0] = resultValue;
+      thread->evfResultPattern = resultValue;
       // Success
       break;
     }
@@ -111,7 +110,7 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *thread,
       waitingThread.test(patValue)) {
     auto resultValue = waitingThread.applyClear(patValue);
     value.store(resultValue, std::memory_order::relaxed);
-    thread->retval[0] = resultValue;
+    thread->evfResultPattern = resultValue;
     return {};
   }
 
@@ -136,9 +135,9 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
 
     auto resultValue = thread->applyClear(patValue);
     patValue = resultValue;
-    thread->thread->retval[0] = resultValue;
+    thread->thread->evfResultPattern = resultValue;
     if (type == NotifyType::Cancel) {
-      thread->thread->retval[1] = true;
+      thread->thread->evfIsCancelled = 1;
     }
 
     // TODO: update thread state
