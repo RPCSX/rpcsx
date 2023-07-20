@@ -62,10 +62,11 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
     }
   }
 
-  std::printf("Loaded '%s'\n", module->soName);
-
   loadedObjects[module->soName] = module.get();
-  loadedModules[module->moduleName] = module.get();
+  if (loadedModules.try_emplace(module->moduleName, module.get()).second) {
+    std::printf("Setting '%s' as '%s' module\n", module->soName,
+                module->moduleName);
+  }
 
   for (auto &needed : module->needed) {
     auto [result, neededModule] =
@@ -98,6 +99,8 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
   }
 
   module->id = thread->tproc->modulesMap.insert(module);
+  std::fprintf(stderr, "'%s' ('%s') was loaded with id '%u'\n",
+               module->moduleName, module->soName, (unsigned)module->id);
   return {{}, module};
 }
 

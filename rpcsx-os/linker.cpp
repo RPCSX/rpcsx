@@ -571,6 +571,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         std::strncpy(result->moduleName,
                      sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val),
                      sizeof(result->moduleName));
+      } else if (dyn.d_tag == kElfDynamicTypeSceModuleAttr) {
+        result->attributes = dyn.d_un.d_val;
       }
 
       if (dyn.d_tag == kElfDynamicTypeSoName) {
@@ -585,7 +587,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
         if (name == "STREQUAL") {
           // HACK for broken FWs
-          result->needed.push_back("libSceDolbyVision");
+          result->needed.push_back("libSceDolbyVision.prx");
         } else {
           name = patchSoName(name);
           if (name != "libSceFreeTypeOptBm") { // TODO
@@ -609,6 +611,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
         auto &mod = result->neededModules[it->second];
         mod.name = sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
+        mod.attr = static_cast<std::uint16_t>(dyn.d_un.d_val >> 32);
         mod.isExport = false;
       } else if (dyn.d_tag == kElfDynamicTypeSceImportLib ||
                  dyn.d_tag == kElfDynamicTypeSceExportLib) {
@@ -623,6 +626,18 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
         lib.name = sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
         lib.isExport = dyn.d_tag == kElfDynamicTypeSceExportLib;
+      } else if (dyn.d_tag == kElfDynamicTypeSceExportLibAttr ||
+                 dyn.d_tag == kElfDynamicTypeSceImportLibAttr) {
+        auto [it, inserted] = idToLibraryIndex.try_emplace(
+            dyn.d_un.d_val >> 48, result->neededLibraries.size());
+
+        if (inserted) {
+          result->neededLibraries.emplace_back();
+        }
+
+        auto &lib = result->neededLibraries[it->second];
+
+        lib.attr = dyn.d_un.d_val & ((static_cast<std::uint64_t>(1) << 48) - 1);
       }
 
       switch (dyn.d_tag) {
@@ -800,9 +815,20 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   result->proc = process;
 
-  std::printf("Loaded module '%s' from object '%s', id: %u, address: %p - %p\n",
-              result->moduleName, result->soName, (unsigned)result->id,
-              result->base, (char *)result->base + result->size);
+  std::printf("Loaded module '%s' (%lx) from object '%s', address: %p - %p\n",
+              result->moduleName, (unsigned long)result->attributes,
+              result->soName, result->base,
+              (char *)result->base + result->size);
+
+  for (auto mod : result->neededModules) {
+    std::printf("  needed module '%s' (%lx)\n", mod.name.c_str(),
+                (unsigned long)mod.attr);
+  }
+
+  for (auto lib : result->neededLibraries) {
+    std::printf("  needed library '%s' (%lx), kind %s\n", lib.name.c_str(),
+                (unsigned long)lib.attr, lib.isExport ? "export" : "import");
+  }
 
   if (tlsPhdrIndex >= 0 /* result->tlsSize != 0 */) {
     result->tlsIndex = process->nextTlsSlot++;
@@ -877,7 +903,6 @@ static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
   result->initProc = reinterpret_cast<void *>(+[] {});
   result->finiProc = reinterpret_cast<void *>(+[] {});
 
-  result->id = process->modulesMap.insert(result);
   result->proc = process;
 
   return result;
