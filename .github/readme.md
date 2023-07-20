@@ -46,7 +46,7 @@ sudo pacman -S libunwind glfw-x11 vulkan-devel glslang
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 ```
 ```
-yay -S spirv-cross xbyak
+yay -S spirv-cross
 ```
 
 ## Getting spriv-cross on Fedora and Arch Linux
