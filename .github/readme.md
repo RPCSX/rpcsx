@@ -73,17 +73,11 @@ mkdir -p build && cd build && cmake .. && cmake --build .
  
 ```
 truncate -s 512M ps4-hdd.exfat
-```
 
-```
 mkfs.exfat -n PS4-HDD ./ps4-hdd.exfat
-```
 
-```
 mkdir ps4-fs
-```
 
-```
 sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs
 ```
 
