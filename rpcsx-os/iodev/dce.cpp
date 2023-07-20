@@ -90,7 +90,6 @@ struct ResolutionStatus {
 static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
                                        std::uint64_t request, void *argp) {
   auto dceInstance = static_cast<DceInstance *>(instance);
-  static std::uint64_t *bufferInUsePtr = nullptr;
 
   if (request == 0xc0308203) {
     // returns:
@@ -154,8 +153,7 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
       *(std::uint64_t *)args->ptr = 0;         // dev offset
       *(std::uint64_t *)args->size = 0x100000; // size
     } else if (args->id == 31) {
-      bufferInUsePtr = (std::uint64_t *)args->size;
-      ORBIS_LOG_NOTICE("flipStatusPtr: ", bufferInUsePtr);
+      rx::bridge.header->bufferInUseAddress = args->size;
       return 0;
     } else if (args->id == 33) { // adjust color
       std::printf("adjust color\n");
@@ -219,18 +217,6 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
     rx::bridge.sendFlip(args->displayBufferIndex,
                         /*args->flipMode,*/ args->flipArg);
-
-    if (args->flipMode == 1 || args->arg7 == 0) {
-      // orbis::bridge.sendDoFlip();
-    }
-
-    if (args->displayBufferIndex != -1) {
-      if (bufferInUsePtr) {
-        auto ptr = bufferInUsePtr + args->displayBufferIndex;
-        ORBIS_LOG_NOTICE(" ========== fill status to:", ptr);
-        *ptr = 0;
-      }
-    }
     return 0;
   }
 

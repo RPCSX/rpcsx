@@ -50,6 +50,7 @@ struct BridgeHeader {
   volatile std::uint32_t flipBuffer;
   volatile std::uint64_t flipArg;
   volatile std::uint64_t flipCount;
+  volatile std::uint64_t bufferInUseAddress;
   std::uint32_t memoryAreaCount;
   std::uint32_t commandBufferCount;
   std::uint32_t bufferCount;
