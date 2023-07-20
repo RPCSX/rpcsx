@@ -23,7 +23,8 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 ## Building
 
-### First, install the dependencies for Debian-like distributions.
+
+### The dependencies for Debian-like distributions.
 ```   
 sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev
 ```
@@ -68,7 +69,7 @@ mkdir -p build && cd build && cmake .. && cmake --build .
 
 ## How to create a Virtual HDD
 
-> The PS4 has case-insensitive filesystem. To create the virtual hdd do the following:
+> The PS4 has a case-insensitive filesystem. To create the Virtual HDD, do the following:
  
 ```
 truncate -s 512M ps4-hdd.exfat
