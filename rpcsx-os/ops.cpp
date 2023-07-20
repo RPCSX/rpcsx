@@ -62,10 +62,11 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
     }
   }
 
-  std::printf("Loaded '%s'\n", module->soName);
-
   loadedObjects[module->soName] = module.get();
-  loadedModules[module->moduleName] = module.get();
+  if (loadedModules.try_emplace(module->moduleName, module.get()).second) {
+    std::printf("Setting '%s' as '%s' module\n", module->soName,
+                module->moduleName);
+  }
 
   for (auto &needed : module->needed) {
     auto [result, neededModule] =
@@ -98,6 +99,8 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
   }
 
   module->id = thread->tproc->modulesMap.insert(module);
+  std::fprintf(stderr, "'%s' ('%s') was loaded with id '%u'\n",
+               module->moduleName, module->soName, (unsigned)module->id);
   return {{}, module};
 }
 
@@ -130,7 +133,8 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
     if (handle->mmap != nullptr) {
       result = handle->mmap(handle.get(), addr, len, prot, flags, pos);
     } else {
-      std::printf("unimplemented mmap for fd %d\n", static_cast<int>(fd));
+      ORBIS_LOG_FATAL("unimplemented mmap", fd, (void *)addr, len, prot, flags,
+                      pos);
       result = rx::vm::map(addr, len, prot, flags);
     }
   }
@@ -207,13 +211,29 @@ orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
   orbis::Ref<IoDeviceInstance> instance;
   auto result = rx::vfs::open(path, flags, mode, &instance);
   if (result.isError()) {
-    ORBIS_LOG_WARNING("sys_open: failed to open", path, result.value());
+    ORBIS_LOG_WARNING("Failed to open file", path, result.value());
     return result;
   }
 
   auto fd = thread->tproc->fileDescriptors.insert(instance);
   thread->retval[0] = fd;
-  ORBIS_LOG_WARNING("sys_open", path, fd);
+  ORBIS_LOG_WARNING("File opened", path, fd);
+  return {};
+}
+
+orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
+                        orbis::sint domain, orbis::sint type,
+                        orbis::sint protocol) {
+  orbis::Ref<IoDeviceInstance> instance;
+  auto error = createSocket(name, domain, type, protocol, &instance);
+  if (error != ErrorCode{}) {
+    ORBIS_LOG_WARNING("Failed to open socket", name, int(error));
+    return error;
+  }
+
+  auto fd = thread->tproc->fileDescriptors.insert(instance);
+  thread->retval[0] = fd;
+  ORBIS_LOG_WARNING("Socket opened", name, fd);
   return {};
 }
 
@@ -225,7 +245,7 @@ orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
     return ErrorCode::BADF;
   }
 
-  ORBIS_LOG_WARNING("sys_close", fd);
+  ORBIS_LOG_WARNING("fd closed", fd);
   return {};
 }
 
@@ -748,6 +768,7 @@ ProcessOps rx::procOpsTable = {
     .munlock = munlock,
     .virtual_query = virtual_query,
     .open = open,
+    .socket = socket,
     .close = close,
     .ioctl = ioctl,
     .write = write,

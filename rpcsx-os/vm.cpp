@@ -307,6 +307,28 @@ struct Block {
     modifyFlags(firstPage, pagesCount, 0, flags);
   }
 
+  unsigned getProtection(std::uint64_t page) const {
+    std::uint64_t groupIndex = page / kGroupSize;
+    auto mask = makePagesMask(page & kGroupMask, 1);
+    auto &group = groups[groupIndex];
+
+    if ((group.allocated & mask) == 0) {
+      return 0;
+    }
+
+    unsigned result = 0;
+
+    result |= (group.readable & mask) == mask ? kReadable : 0;
+    result |= (group.writable & mask) == mask ? kReadable | kWritable : 0;
+
+    result |= (group.executable & mask) == mask ? kReadable | kExecutable : 0;
+
+    result |= (group.gpuReadable & mask) == mask ? kGpuReadable : 0;
+    result |= (group.gpuWritable & mask) == mask ? kGpuWritable : 0;
+
+    return result;
+  }
+
   void modifyFlags(std::uint64_t firstPage, std::uint64_t pagesCount,
                    std::uint32_t addFlags, std::uint32_t removeFlags) {
     std::uint64_t groupIndex = firstPage / kGroupSize;
@@ -344,7 +366,7 @@ struct Block {
         count = pagesCount;
       }
 
-      auto mask = makePagesMask(firstPage, count);
+      auto mask = makePagesMask(firstPage & kGroupMask, count);
       pagesCount -= count;
 
       auto &group = groups[groupIndex++];
@@ -891,6 +913,18 @@ bool rx::vm::queryProtection(const void *addr, std::uint64_t *startAddress,
                              std::uint64_t *endAddress, std::int64_t *prot) {
   // TODO
   return false;
+}
+
+unsigned rx::vm::getPageProtection(std::uint64_t address) {
+  if (address < kMinAddress || address >= kMaxAddress) {
+    std::printf("Memory error: getPageProtection out of memory\n");
+    return 0;
+  }
+
+  std::lock_guard lock(g_mtx);
+
+  return gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
+      (address & kBlockMask) >> kPageShift);
 }
 
 bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,

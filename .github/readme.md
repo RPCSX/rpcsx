@@ -12,7 +12,9 @@
 </div>
 
 > **Warning** <br/>
-> It's NOT possible to run any games yet, and there is no ETA for when this will change
+> It's NOT possible to run any games yet, and there is no ETA for when this will change.
+
+> Do not ask for link to games or system files. Piracy is not permitted on the GitHub nor in the Discord.
 
 
 ## Contributing
@@ -21,18 +23,52 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 ## Building
 
-1. Install dependencies for Debian-like distributions
+First Install The dependencies for Debian-like distributions.
    
-   `sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev`
-2. Building
-   
-   `mkdir -p build && cd build && cmake .. && cmake --build .`
+``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
 
-4. Run
+## Cloning the Repo
+
+``git clone https://github.com/RPCSX/rpcsx && cd rpcsx``
    
-   See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
+## Command for building the emulator.
+   
+`mkdir -p build && cd build && cmake .. && cmake --build .`
+
+## How to create virtual hdd
+
+> The PS4 has case-insensitive filesystem. To create the virtual hdd do the following:
+ 
+`truncate -s 512M ps4-hdd.exfat`
+
+`mkfs.exfat -n PS4-HDD ./ps4-hdd.exfat`
+
+`mkdir ps4-fs`
+
+``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
+
+## How to Run samples and games ( one day )
+   
+See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
+
+You can run emulator with Samples using this command:
+   
+`rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --mount "<path to 'game' root>" /app0 /app0/some-test-sample.elf [<args for test elf>...]`
+
+## Creating a log
+
+You can use this flag if you get sigfault for debugging.
+    
+`--trace` 
+    
+You can redirect all log messages to a file by appending following to command:
+
+`&>log.txt`
+      
+
 
 ## License
 
 RPCSX is licensed under GPLv2 license except directories containing their own LICENSE file, or files containing their own license.
 Thus, orbis-kernel is licensed under the MIT license.
+
