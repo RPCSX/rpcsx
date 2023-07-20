@@ -57,7 +57,7 @@ You can run the emulator with some samples using this command:
 
 ## Creating a log
 
-You can use this flag if you encountered a sigfault for debugging purposes.
+You can use this flag if you encountered a segfault for debugging purposes.
     
 `--trace` 
     
