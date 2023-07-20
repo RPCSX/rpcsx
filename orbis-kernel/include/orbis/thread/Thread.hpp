@@ -4,13 +4,15 @@
 #include "orbis-config.hpp"
 #include "types.hpp"
 
+#include "../utils/SharedCV.hpp"
 #include "../utils/SharedMutex.hpp"
 #include <thread>
 
 namespace orbis {
 struct Process;
 struct Thread {
-  shared_mutex mtx;
+  utils::shared_mutex mtx;
+  utils::shared_cv sync_cv;
   Process *tproc = nullptr;
   uint64_t retval[2]{};
   void *context{};

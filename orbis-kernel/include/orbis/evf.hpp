@@ -32,9 +32,6 @@ struct EventFlag final {
 
   struct WaitingThread {
     Thread *thread;
-    utils::shared_cv *cv;
-    std::uint64_t *patternSet;
-    bool *isCanceled;
     std::uint64_t bitPattern;
     std::uint8_t waitMode;
 
@@ -70,10 +67,9 @@ struct EventFlag final {
       : attrs(attrs), value(initPattern) {}
 
   ErrorCode wait(Thread *thread, std::uint8_t waitMode,
-                 std::uint64_t bitPattern, std::uint64_t *patternSet,
-                 std::uint32_t *timeout);
+                 std::uint64_t bitPattern, std::uint32_t *timeout);
   ErrorCode tryWait(Thread *thread, std::uint8_t waitMode,
-                    std::uint64_t bitPattern, std::uint64_t *patternSet);
+                    std::uint64_t bitPattern);
   std::size_t notify(NotifyType type, std::uint64_t bits);
 
   std::size_t destroy() { return notify(NotifyType::Destroy, {}); }

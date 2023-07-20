@@ -209,8 +209,8 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
   std::uint32_t resultTimeout{};
   std::uint64_t resultPattern{};
   auto result = evf->wait(thread, mode, patternSet,
-                          pPatternSet != nullptr ? &resultPattern : nullptr,
                           pTimeout != nullptr ? &resultTimeout : nullptr);
+  resultPattern = thread->retval[0];
 
   ORBIS_LOG_NOTICE("sys_evf_wait wakeup", thread, resultPattern, resultTimeout);
 
@@ -221,6 +221,9 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
   if (pTimeout != nullptr) {
     uwrite(pTimeout, (uint32_t)resultTimeout);
   }
+
+  thread->retval[0] = 0;
+  thread->retval[1] = 0;
   return result;
 }
 
@@ -242,13 +245,14 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
   }
 
   std::uint64_t resultPattern{};
-  auto result = evf->tryWait(thread, mode, patternSet,
-                             pPatternSet != nullptr ? &resultPattern : nullptr);
+  auto result = evf->tryWait(thread, mode, patternSet);
+  resultPattern = thread->retval[0];
 
   if (pPatternSet != nullptr) {
     uwrite(pPatternSet, (uint64_t)resultPattern);
   }
 
+  thread->retval[0] = 0;
   return result;
 }
 orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {

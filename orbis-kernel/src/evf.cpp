@@ -6,12 +6,7 @@
 
 orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
                                         std::uint64_t bitPattern,
-                                        std::uint64_t *patternSet,
                                         std::uint32_t *timeout) {
-  utils::shared_cv cv;
-
-  bool isCanceled = false;
-
   using namespace std::chrono;
 
   steady_clock::time_point start{};
@@ -34,29 +29,27 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     *timeout = 0;
   };
 
+  // Use retval to pass information between threads
+  thread->retval[0] = 0; // resultPattern
+  thread->retval[1] = 0; // isCanceled
+
   std::unique_lock lock(queueMtx);
   while (true) {
     if (isDeleted) {
       return ErrorCode::ACCES;
     }
-    if (isCanceled) {
+    if (thread->retval[1]) {
       return ErrorCode::CANCELED;
     }
 
-    auto waitingThread = WaitingThread{.thread = thread,
-                                       .cv = &cv,
-                                       .patternSet = patternSet,
-                                       .isCanceled = &isCanceled,
-                                       .bitPattern = bitPattern,
-                                       .waitMode = waitMode};
+    auto waitingThread = WaitingThread{
+        .thread = thread, .bitPattern = bitPattern, .waitMode = waitMode};
 
     if (auto patValue = value.load(std::memory_order::relaxed);
         waitingThread.test(patValue)) {
       auto resultValue = waitingThread.applyClear(patValue);
       value.store(resultValue, std::memory_order::relaxed);
-      if (patternSet != nullptr) {
-        *patternSet = resultValue;
-      }
+      thread->retval[0] = resultValue;
       // Success
       break;
     }
@@ -90,21 +83,21 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     waitingThreads[position] = waitingThread;
 
     if (timeout) {
-      cv.wait(queueMtx, *timeout);
+      thread->sync_cv.wait(queueMtx, *timeout);
       update_timeout();
       continue;
     }
 
-    cv.wait(queueMtx);
+    thread->sync_cv.wait(queueMtx);
   }
 
   // TODO: update thread state
   return {};
 }
 
-orbis::ErrorCode orbis::EventFlag::tryWait(Thread *, std::uint8_t waitMode,
-                                           std::uint64_t bitPattern,
-                                           std::uint64_t *patternSet) {
+orbis::ErrorCode orbis::EventFlag::tryWait(Thread *thread,
+                                           std::uint8_t waitMode,
+                                           std::uint64_t bitPattern) {
   writer_lock lock(queueMtx);
 
   if (isDeleted) {
@@ -118,10 +111,7 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *, std::uint8_t waitMode,
       waitingThread.test(patValue)) {
     auto resultValue = waitingThread.applyClear(patValue);
     value.store(resultValue, std::memory_order::relaxed);
-    if (patternSet != nullptr) {
-      *patternSet = resultValue;
-    }
-
+    thread->retval[0] = resultValue;
     return {};
   }
 
@@ -146,16 +136,14 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
 
     auto resultValue = thread->applyClear(patValue);
     patValue = resultValue;
-    if (thread->patternSet != nullptr) {
-      *thread->patternSet = resultValue;
-    }
+    thread->thread->retval[0] = resultValue;
     if (type == NotifyType::Cancel) {
-      *thread->isCanceled = true;
+      thread->thread->retval[1] = true;
     }
 
     // TODO: update thread state
     // release wait on waiter thread
-    thread->cv->notify_one(queueMtx);
+    thread->thread->sync_cv.notify_one(queueMtx);
 
     waitingThreadsCount.fetch_sub(1, std::memory_order::relaxed);
     std::memmove(thread, thread + 1,
