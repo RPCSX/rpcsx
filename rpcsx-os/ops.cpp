@@ -1,5 +1,6 @@
 #include "ops.hpp"
 #include "align.hpp"
+#include "backtrace.hpp"
 #include "io-device.hpp"
 #include "linker.hpp"
 #include "orbis/module/ModuleHandle.hpp"
@@ -752,6 +753,10 @@ SysResult registerEhFrames(Thread *thread) {
 
   return {};
 }
+
+void where(Thread *thread) {
+  rx::printStackTrace((ucontext_t *)thread->context, thread, 2);
+}
 } // namespace
 
 ProcessOps rx::procOpsTable = {
@@ -794,4 +799,5 @@ ProcessOps rx::procOpsTable = {
     .exit = exit,
     .processNeeded = processNeeded,
     .registerEhFrames = registerEhFrames,
+    .where = where,
 };

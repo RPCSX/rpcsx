@@ -32,6 +32,9 @@ struct Thread {
   uint64_t evfResultPattern;
   uint64_t evfIsCancelled;
 
+  // Print backtrace
+  void where();
+
   // FIXME: implement thread destruction
   void incRef() {}
   void decRef() {}

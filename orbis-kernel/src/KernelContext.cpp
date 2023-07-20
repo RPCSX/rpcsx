@@ -1,5 +1,6 @@
 #include "orbis/KernelContext.hpp"
 #include "orbis/thread/Process.hpp"
+#include "orbis/thread/ProcessOps.hpp"
 #include "orbis/utils/Logs.hpp"
 #include <sys/mman.h>
 #include <sys/unistd.h>
@@ -85,14 +86,14 @@ long KernelContext::getTscFreq() {
     long timer_data[samples];
     long error_data[samples];
 
-    struct timespec ts0;
+    struct ::timespec ts0;
     clock_gettime(CLOCK_MONOTONIC, &ts0);
     long sec_base = ts0.tv_sec;
 
     for (int i = 0; i < samples; i++) {
       usleep(200);
       error_data[i] = (__builtin_ia32_lfence(), __builtin_ia32_rdtsc());
-      struct timespec ts;
+      struct ::timespec ts;
       clock_gettime(CLOCK_MONOTONIC, &ts);
       rdtsc_data[i] = (__builtin_ia32_lfence(), __builtin_ia32_rdtsc());
       timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
@@ -190,4 +191,6 @@ void log_class_string<kstring>::format(std::string &out, const void *arg) {
   out += get_object(arg);
 }
 } // namespace logs
+
+void Thread::where() { tproc->ops->where(this); }
 } // namespace orbis
