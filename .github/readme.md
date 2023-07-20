@@ -40,7 +40,7 @@ The dependencies for Fedora distributions:
 
 ## Cloning the Repo
 
-``git clone --resursive https://github.com/RPCSX/rpcsx && cd rpcsx``
+``git clone --recursive https://github.com/RPCSX/rpcsx && cd rpcsx``
 
 > if you get a cmake error run ``git submodule update --init --recursive``
    
