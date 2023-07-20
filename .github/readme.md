@@ -23,7 +23,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 ## Building
 
-First install the dependencies for Debian-like distributions.
+First, install the dependencies for Debian-like distributions.
    
 ``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
 
@@ -37,7 +37,7 @@ First install the dependencies for Debian-like distributions.
 
 ## How to create a Virtual HDD
 
-> The PS4 has case-insensitive filesystem. To create the Virtual HDD, do the following:
+> The PS4 has a case-insensitive filesystem. To create the Virtual HDD, do the following:
  
 `truncate -s 512M ps4-hdd.exfat`
 
@@ -61,7 +61,7 @@ You can use this flag if you encountered a segfault for debugging purposes.
     
 `--trace` 
     
-You can redirect all log messages to a file by appending following to command:
+You can redirect all log messages to a file by appending this command:
 
 `&>log.txt`
       
