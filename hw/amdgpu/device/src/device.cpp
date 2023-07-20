@@ -2075,7 +2075,7 @@ struct AreaCache {
     auto imageHandle = vk::Image2D::Allocate(getDeviceLocalMemory(), width,
                                              height, vkFormat, usage);
 
-    auto image = vk::ImageRef(imageHandle);
+    auto image = vk::ImageRef(images.emplace_front(std::move(imageHandle)));
 
     if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
       buffers.push_back(image.read(
@@ -2083,8 +2083,6 @@ struct AreaCache {
           g_hostMemory.getPointer(areaAddress + areaOffset), tileMode, aspect,
           getBitWidthOfSurfaceFormat(format) / 8, pitch));
     }
-
-    images.emplace_front(std::move(imageHandle));
 
     if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
       writeBackImages.push_back({
@@ -2377,7 +2375,6 @@ struct RenderState {
             colorFormat,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
         auto image = vk::ImageRef(imageHandle);
-        images.push_back(std::move(imageHandle));
 
         buffers.push_back(
             image.read(cmdBuffer, getHostVisibleMemory(),
@@ -2400,6 +2397,7 @@ struct RenderState {
 
         image.transitionLayout(cmdBuffer,
                                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        images.push_back(std::move(imageHandle));
         break;
       }
 
@@ -2561,7 +2559,6 @@ struct RenderState {
                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                                     VK_IMAGE_USAGE_TRANSFER_DST_BIT);
       auto colorImage = vk::ImageRef(colorImageHandle);
-      colorImages.push_back(std::move(colorImageHandle));
 
       buffers.push_back(colorImage.read(
           readCommandBuffer, getHostVisibleMemory(),
@@ -2595,6 +2592,8 @@ struct RenderState {
           .attachment = attachmentIndex,
           .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       });
+
+      colorImages.push_back(std::move(colorImageHandle));
     }
 
     auto depthImageHandle =
@@ -3457,16 +3456,16 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
     std::vector<VkBuffer> &usedBuffers, std::vector<VkImage> &usedImages) {
   std::printf("requested flip %d\n", bufferIndex);
 
-  bridge->flipBuffer = bufferIndex;
-  bridge->flipArg = arg;
-  bridge->flipCount = bridge->flipCount + 1;
-
-  auto buffer = bridge->buffers[bufferIndex];
-
   if (bufferIndex == ~static_cast<std::uint32_t>(0)) {
+    bridge->flipBuffer = bufferIndex;
+    bridge->flipArg = arg;
+    bridge->flipCount = bridge->flipCount + 1;
+
     // black surface, ignore for now
     return false;
   }
+
+  auto buffer = bridge->buffers[bufferIndex];
 
   if (buffer.pitch == 0 || buffer.height == 0 || buffer.address == 0) {
     std::printf("Attempt to flip unallocated buffer\n");
@@ -3526,5 +3525,14 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
 
   usedBuffers.push_back(tmpBuffer.release());
   usedImages.push_back(bufferImageHandle.release());
+
+  bridge->flipBuffer = bufferIndex;
+  bridge->flipArg = arg;
+  bridge->flipCount = bridge->flipCount + 1;
+  auto bufferInUse =
+      g_hostMemory.getPointer<std::uint64_t>(bridge->bufferInUseAddress);
+  if (bufferInUse != nullptr) {
+    bufferInUse[bufferIndex] = 0;
+  }
   return true;
 }
