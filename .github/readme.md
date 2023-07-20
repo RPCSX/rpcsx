@@ -25,6 +25,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 
 ### The dependencies for Debian-like distributions.
+
 ```   
 sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev
 ```
@@ -36,18 +37,17 @@ sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation
 ```
 
 ### The dependencies for Arch distributions:
+
 ```
 sudo pacman -S libunwind glfw-x11 vulkan-devel glslang
 ```
-> Side note you will need to pull ``spirv-cross xbyak`` from the AUR for now so do the following
-
+> Side note you will need to pull ``spirv-cross`` from the AUR for now so do the following
 ```
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 ```
 ```
 yay -S spirv-cross xbyak
 ```
-
 
 ## Getting spriv-cross on Fedora and Arch Linux
 
@@ -63,12 +63,9 @@ git clone https://github.com/KhronosGroup/SPIRV-Cross && cd SPIRV-Cross && mkdir
 ```
 git clone --recursive https://github.com/RPCSX/rpcsx && cd rpcsx
 ```
-
-> if you get a cmake error run
 ```
 git submodule update --init --recursive
-```
-   
+```  
 ## How to compile the emulator
    
 ```
