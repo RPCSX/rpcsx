@@ -3,6 +3,8 @@
 # RPCSX
 *An experimental emulator for PS4 (PlayStation 4) for Linux written in C++*
 
+[French](.github/readme-fr.md) | [English](.github/readme.md)
+
 [![Build RPCSX](../../../actions/workflows/rpcsx.yml/badge.svg)](../../../actions/workflows/rpcsx.yml)
 
 [![Formatting check](../../../actions/workflows/format.yml/badge.svg)](../../../actions/workflows/format.yml)
