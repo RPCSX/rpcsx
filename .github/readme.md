@@ -31,7 +31,7 @@ sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev 
 ### The dependencies for Fedora distributions:
 
 ```
-sudo dnf in cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel
+sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel
 ```
 
 ## Getting spriv-cross on Fedora and Arch Linux
