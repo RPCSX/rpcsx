@@ -47,6 +47,7 @@ git clone https://github.com/KhronosGroup/SPIRV-Cross && cd SPIRV-Cross && mkdir
 ```
 > **Warning** <br/>
 > Fedora will compile to a point and then error out
+> Arch will have to use xbyak from the aur for now
 
 ## Cloning the Repo
 
