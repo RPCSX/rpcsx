@@ -22,7 +22,7 @@
 
 Si vous souhaitez contribuer en tant que développeur, veuillez nous contacter sur [Discord](https://discord.gg/t6dzA4wUdG) (Anglais).
 
-## Building
+## Compiler
 
 Tout d'abord, installez les dependencies pour les distributions Debian-like.
    
