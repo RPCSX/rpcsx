@@ -57,29 +57,17 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
       return ErrorCode::TIMEDOUT;
     }
 
-    std::size_t position;
-
     if (attrs & kEvfAttrSingle) {
-      if (waitingThreadsCount.fetch_add(1, std::memory_order::relaxed) != 0) {
-        waitingThreadsCount.store(1, std::memory_order::relaxed);
+      if (!waitingThreads.empty())
         return ErrorCode::PERM;
-      }
-
-      position = 0;
     } else {
       if (attrs & kEvfAttrThFifo) {
-        position = waitingThreadsCount.fetch_add(1, std::memory_order::relaxed);
       } else {
         // FIXME: sort waitingThreads by priority
-        position = waitingThreadsCount.fetch_add(1, std::memory_order::relaxed);
       }
     }
 
-    if (position >= std::size(waitingThreads)) {
-      std::abort();
-    }
-
-    waitingThreads[position] = waitingThread;
+    waitingThreads.emplace_back(waitingThread);
 
     if (timeout) {
       thread->sync_cv.wait(queueMtx, *timeout);
@@ -119,7 +107,6 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *thread,
 
 std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
   writer_lock lock(queueMtx);
-  auto count = waitingThreadsCount.load(std::memory_order::relaxed);
   auto patValue = value.load(std::memory_order::relaxed);
 
   if (type == NotifyType::Destroy) {
@@ -143,35 +130,11 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
     // TODO: update thread state
     // release wait on waiter thread
     thread->thread->sync_cv.notify_one(queueMtx);
-
-    waitingThreadsCount.fetch_sub(1, std::memory_order::relaxed);
-    std::memmove(thread, thread + 1,
-                 (waitingThreads + count - (thread + 1)) *
-                     sizeof(*waitingThreads));
-    --count;
     return true;
   };
 
-  std::size_t result = 0;
-  if (attrs & kEvfAttrThFifo) {
-    for (std::size_t i = count; i > 0;) {
-      if (!testThread(waitingThreads + i - 1)) {
-        --i;
-        continue;
-      }
-
-      ++result;
-    }
-  } else {
-    for (std::size_t i = 0; i < count;) {
-      if (!testThread(waitingThreads + i)) {
-        ++i;
-        continue;
-      }
-
-      ++result;
-    }
-  }
+  std::size_t result = std::erase_if(
+      waitingThreads, [&](auto &thread) { return testThread(&thread); });
 
   if (type == NotifyType::Cancel) {
     value.store(bits, std::memory_order::relaxed);

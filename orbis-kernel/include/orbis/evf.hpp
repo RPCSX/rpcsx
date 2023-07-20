@@ -56,10 +56,8 @@ struct EventFlag final {
     }
   };
 
-  WaitingThread waitingThreads[32]; // TODO: create vector?
-  std::atomic<std::uint32_t> waitingThreadsCount = 0;
-
-  shared_mutex queueMtx;
+  utils::shared_mutex queueMtx;
+  utils::kvector<WaitingThread> waitingThreads;
 
   enum class NotifyType { Set, Cancel, Destroy };
 
