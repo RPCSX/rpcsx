@@ -61,7 +61,7 @@ git clone --recursive https://github.com/RPCSX/rpcsx && cd rpcsx
 git submodule update --init --recursive
 ```
    
-## How to compile The emulator
+## How to compile the emulator
    
 ```
 mkdir -p build && cd build && cmake .. && cmake --build .
