@@ -36,7 +36,9 @@ sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation
 ```
 
 ### The dependencies for Arch distributions:
-
+```
+sudo pacman -S libunwind glfw-x11 vulkan-devel glslang
+```
 > Side note you will need to pull ``spirv-cross xbyak`` from the AUR for now so do the following
 
 ```
@@ -45,9 +47,7 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/ya
 ```
 yay -S spirv-cross xbyak
 ```
-```
-sudo pacman -S libunwind glfw-x11 vulkan-devel glslang
-```
+
 
 ## Getting spriv-cross on Fedora and Arch Linux
 
