@@ -760,8 +760,8 @@ struct mdbg_property {
 
 orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
                                          ptr<void> arg0, ptr<void> arg1) {
-  std::printf("sys_mdbg_service(op = %d, arg0 = %p, arg1 = %p)\n", op, arg0,
-              arg1);
+  ORBIS_LOG_NOTICE("sys_mdbg_service", thread->tid, op, arg0, arg1);
+  thread->where();
 
   switch (op) {
   case 1: {
@@ -781,7 +781,12 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
 
   case 7: {
     // TODO: read string from userspace
-    std::printf("sys_mdbg_service: %s\n", (char *)arg0);
+    ORBIS_LOG_NOTICE("sys_mdbg_service", (char *)arg0);
+    break;
+  }
+
+  case 0x14: {
+    std::this_thread::sleep_for(std::chrono::years(1));
     break;
   }
 
