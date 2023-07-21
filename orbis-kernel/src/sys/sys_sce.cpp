@@ -922,6 +922,7 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
                                          uint64_t paramsSz, uint64_t arg6) {
   ORBIS_LOG_TODO("sys_ipmimgr_call", op, kid, result, params, paramsSz, arg6);
+  thread->where();
 
   if (op == kIpmiCreateClient) {
     if (paramsSz != sizeof(IpmiCreateClientParams)) {
@@ -933,40 +934,45 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     ORBIS_LOG_TODO("IPMI: create client", createParams->arg0,
                    createParams->name, createParams->arg2);
     uwrite<uint>(result, 0x1);
-    thread->retval[0] = 0;
-    return {};
   }
 
   if (op == kImpiDestroyClient) {
     ORBIS_LOG_TODO("IPMI: destroy client");
     if (result)
       uwrite<uint>(result, 0);
-    thread->retval[0] = 0;
-    return {};
   }
 
   if (op == 0x400) {
     ORBIS_LOG_TODO("IMPI: connect?");
     if (result)
       uwrite<uint>(result, 0);
-    thread->retval[0] = 0;
-    return {};
   }
 
   if (op == 0x320) {
     ORBIS_LOG_TODO("IMPI: sync?");
     if (result)
-      uwrite<uint>(result, 0);
-    thread->retval[0] = 0;
-    return {};
+      uwrite<uint>(result, 1);
   }
 
-  if (op == 1131 || op == 1024 || op == 800) {
+  if (op == 0x310) {
+    ORBIS_LOG_TODO("IMPI: disconnect?");
+    if (result)
+      uwrite<uint>(result, 0);
+  }
+
+  if (op == 0x252) {
+    ORBIS_LOG_TODO("IMPI: try get client message?");
+    thread->where();
+    if (result)
+      uwrite<uint>(result, 0x80020003);
+  }
+
+  if (op == 0x46b) {
     thread->retval[0] = -0x40004; // HACK
     return {};
-    // return -0x40004;
   }
 
+  thread->retval[0] = 0;
   return {};
 }
 orbis::SysResult orbis::sys_get_gpo(Thread *thread /* TODO */) {
