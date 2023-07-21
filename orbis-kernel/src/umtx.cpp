@@ -467,10 +467,8 @@ orbis::ErrorCode orbis::umtx_sem_wake(Thread *thread, ptr<usem> sem) {
   ORBIS_LOG_WARNING(__FUNCTION__, sem);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread->tproc->pid, sem);
   std::size_t count = chain.sleep_queue.count(key);
-  if (auto up = chain.notify_one(key); up >= count)
-    thread->retval[0] = sem->has_waiters;
-  else
-    thread->retval[0] = 0;
+  if (chain.notify_one(key) >= count)
+    sem->has_waiters.store(0, std::memory_order::relaxed);
   return {};
 }
 
