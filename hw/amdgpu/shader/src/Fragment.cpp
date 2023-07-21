@@ -3600,6 +3600,11 @@ void convertVintrp(Fragment &fragment, Vintrp inst) {
     fragment.setVectorOperand(inst.vdst, {channelType, attrChan});
     break;
   }
+  case Vintrp::Op::V_INTERP_MOV_F32: {
+    fragment.setVectorOperand(
+        inst.vdst, fragment.getScalarOperand(inst.vsrc, TypeId::Float32x4));
+    break;
+  }
 
   default:
     inst.dump();
