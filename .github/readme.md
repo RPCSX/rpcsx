@@ -21,51 +21,9 @@
 
 If you want to contribute as a developer, please contact us in the [Discord](https://discord.gg/t6dzA4wUdG).
 
-## Building
+## How to Compile the Emulator 
 
-First, install the dependencies for Debian-like distributions.
-   
-``sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libxbyak-dev``
-
-## Cloning the Repo
-
-``git clone https://github.com/RPCSX/rpcsx && cd rpcsx``
-   
-## Building the emulator
-   
-`mkdir -p build && cd build && cmake .. && cmake --build .`
-
-## How to create a Virtual HDD
-
-> The PS4 has a case-insensitive filesystem. To create the Virtual HDD, do the following:
- 
-`truncate -s 512M ps4-hdd.exfat`
-
-`mkfs.exfat -n PS4-HDD ./ps4-hdd.exfat`
-
-`mkdir ps4-fs`
-
-``sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs``
-
-## How to run samples and games
-   
-See usage message of `rpcsx-os` (`-h` argument), or join the [Discord](https://discord.gg/t6dzA4wUdG) for help.
-
-You can run the emulator with some samples using this command:
-   
-`rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --mount "<path to 'game' root>" /app0 /app0/some-test-sample.elf [<args for test elf>...]`
-
-## Creating a log
-
-You can use this flag if you encountered a segfault for debugging purposes.
-    
-`--trace` 
-    
-You can redirect all log messages to a file by appending this command:
-
-`&>log.txt`
-      
-
+* [How to Compile rpcsx](BUILDING.md)
 
 ## License
 
