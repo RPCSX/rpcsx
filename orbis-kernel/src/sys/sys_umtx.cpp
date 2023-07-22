@@ -86,7 +86,7 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case 2: {
     return with_timeout(
         [&](std::uint64_t ut) {
-          return umtx_wait(thread, obj, val, ut, false);
+          return umtx_wait(thread, obj, val, ut, false, true);
         },
         false);
   }
@@ -120,7 +120,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return umtx_cv_broadcast(thread, (ptr<ucond>)obj);
   case 11: {
     return with_timeout(
-        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut, true); },
+        [&](std::uint64_t ut) {
+          return umtx_wait(thread, obj, val, ut, true, true);
+        },
         false);
   }
   case 12:
@@ -131,7 +133,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return umtx_rw_unlock(thread, obj, val, uaddr1, uaddr2);
   case 15: {
     return with_timeout(
-        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut, true); },
+        [&](std::uint64_t ut) {
+          return umtx_wait(thread, obj, val, ut, true, false);
+        },
         false);
   }
   case 16:

@@ -19,8 +19,8 @@ struct Thread;
 
 struct UmtxKey {
   // TODO: may contain a reference to a shared memory
-  void *addr;
-  pid_t pid;
+  std::uintptr_t addr;
+  orbis::pid_t pid;
 
   auto operator<=>(const UmtxKey &) const = default;
 };
@@ -112,21 +112,16 @@ public:
 
   // Use getUmtxChain0 or getUmtxChain1
   std::tuple<UmtxChain &, UmtxKey, std::unique_lock<shared_mutex>>
-  getUmtxChainIndexed(int i, pid_t pid, void *ptr) {
-    auto n = reinterpret_cast<std::uintptr_t>(ptr) + pid;
-    n = ((n * c_golden_ratio_prime) >> c_umtx_shifts) % c_umtx_chains;
-    std::unique_lock lock(m_umtx_chains[i][n].mtx);
-    return {m_umtx_chains[i][n], UmtxKey{ptr, pid}, std::move(lock)};
-  }
+  getUmtxChainIndexed(int i, Thread *t, uint32_t flags, void *ptr);
 
   // Internal Umtx: Wait/Cv/Sem
-  auto getUmtxChain0(pid_t pid, void *ptr) {
-    return getUmtxChainIndexed(0, pid, ptr);
+  auto getUmtxChain0(Thread *t, uint32_t flags, void *ptr) {
+    return getUmtxChainIndexed(0, t, flags, ptr);
   }
 
   // Internal Umtx: Mutex/Umtx/Rwlock
-  auto getUmtxChain1(pid_t pid, void *ptr) {
-    return getUmtxChainIndexed(1, pid, ptr);
+  auto getUmtxChain1(Thread *t, uint32_t flags, void *ptr) {
+    return getUmtxChainIndexed(1, t, flags, ptr);
   }
 
 private:
