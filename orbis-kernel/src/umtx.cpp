@@ -102,6 +102,11 @@ orbis::ErrorCode orbis::umtx_wake(Thread *thread, ptr<void> addr, sint n_wake) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread->tid, addr, n_wake);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, true, addr);
   std::size_t count = chain.sleep_queue.count(key);
+  if (key.pid == 0) {
+    // IPC workaround (TODO)
+    chain.notify_all(key);
+    return {};
+  }
   // TODO: check this
   while (count--) {
     chain.notify_one(key);
@@ -204,6 +209,13 @@ static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
   std::size_t count = chain.sleep_queue.count(key);
   bool ok = m->owner.compare_exchange_strong(
       owner, count <= 1 ? kUmutexUnowned : kUmutexContested);
+  if (key.pid == 0) {
+    // IPC workaround (TODO)
+    chain.notify_all(key);
+    if (!ok)
+      return ErrorCode::INVAL;
+    return {};
+  }
   if (count)
     chain.notify_one(key);
   if (!ok)
@@ -341,6 +353,12 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
 orbis::ErrorCode orbis::umtx_cv_signal(Thread *thread, ptr<ucond> cv) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread->tid, cv);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, cv->flags, cv);
+  if (key.pid == 0) {
+    // IPC workaround (TODO)
+    chain.notify_all(key);
+    cv->has_waiters = 0;
+    return {};
+  }
   std::size_t count = chain.sleep_queue.count(key);
   if (chain.notify_one(key) >= count)
     cv->has_waiters.store(0, std::memory_order::relaxed);
@@ -473,8 +491,14 @@ orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<usem> sem,
 }
 
 orbis::ErrorCode orbis::umtx_sem_wake(Thread *thread, ptr<usem> sem) {
-  ORBIS_LOG_WARNING(__FUNCTION__, sem);
+  ORBIS_LOG_TRACE(__FUNCTION__, sem);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, sem->flags, sem);
+  if (key.pid == 0) {
+    // IPC workaround (TODO)
+    chain.notify_all(key);
+    sem->has_waiters = 0;
+    return {};
+  }
   std::size_t count = chain.sleep_queue.count(key);
   if (chain.notify_one(key) >= count)
     sem->has_waiters.store(0, std::memory_order::relaxed);
