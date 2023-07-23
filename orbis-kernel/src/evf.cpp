@@ -131,11 +131,9 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
     }
 
     auto resultValue = thread->applyClear(patValue);
+    thread->thread->evfResultPattern = patValue;
+    thread->thread->evfIsCancelled = type == NotifyType::Cancel;
     patValue = resultValue;
-    thread->thread->evfResultPattern = resultValue;
-    if (type == NotifyType::Cancel) {
-      thread->thread->evfIsCancelled = 1;
-    }
 
     // TODO: update thread state
     // release wait on waiter thread
