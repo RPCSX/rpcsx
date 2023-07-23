@@ -23,6 +23,7 @@ enum OpenFlags {
   kOpenFlagExcl = 0x800,
   kOpenFlagDSync = 0x1000,
   kOpenFlagDirect = 0x10000,
+  kOpenFlagDirectory = 0x20000,
 };
 
 struct IoDeviceInstance : orbis::RcBase {
