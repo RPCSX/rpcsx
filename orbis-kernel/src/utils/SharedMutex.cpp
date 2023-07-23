@@ -152,7 +152,7 @@ void shared_mutex::impl_lock_upgrade() {
 }
 bool shared_mutex::lock_forced(int count) {
   if (count == 0)
-    std::abort();
+    return false;
   if (count > 0) {
     // Lock
     return atomic_op(m_value, [&](unsigned &v) {
@@ -172,12 +172,8 @@ bool shared_mutex::lock_forced(int count) {
     });
   }
 
-  // Unlock
-  const unsigned value = m_value.fetch_add(c_one * count);
-  if (value != c_one) [[unlikely]] {
-    impl_unlock(value);
-  }
-
-  return false;
+  // Remove waiters
+  m_value.fetch_add(c_one * count);
+  return true;
 }
 } // namespace orbis::utils
