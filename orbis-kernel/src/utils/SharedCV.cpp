@@ -15,13 +15,16 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
   struct timespec timeout {};
   timeout.tv_nsec = (usec_timeout % 1000'000) * 1000;
   timeout.tv_sec = (usec_timeout / 1000'000);
-  syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
-          usec_timeout + 1 ? &timeout : nullptr, 0, 0);
+again:
+  auto result = syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
+                        usec_timeout + 1 ? &timeout : nullptr, 0, 0);
+  if (result < 0)
+    result = errno;
 
   // Cleanup
-  const auto old = atomic_fetch_op(m_value, [](unsigned &value) {
+  const auto old = atomic_fetch_op(m_value, [&](unsigned &value) {
     // Remove waiter if no signals
-    if (!(value & ~c_waiter_mask))
+    if (!(value & ~c_waiter_mask) && result != EAGAIN)
       value -= 1;
 
     // Try to remove signal
@@ -43,6 +46,8 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
   }
 
   // Possibly spurious wakeup
+  if (result == EAGAIN)
+    goto again;
   mutex.lock();
 }
 
