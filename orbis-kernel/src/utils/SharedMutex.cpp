@@ -158,7 +158,7 @@ bool shared_mutex::lock_forced(int count) {
     return atomic_op(m_value, [&](unsigned &v) {
       if (v & c_sig) {
         v -= c_sig;
-        v += c_one * (count - 1);
+        v += c_one * count;
         return true;
       }
 
