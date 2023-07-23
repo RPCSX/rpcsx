@@ -35,6 +35,8 @@ struct EventFlag final {
     std::uint64_t bitPattern;
     std::uint8_t waitMode;
 
+    bool operator==(const WaitingThread &) const = default;
+
     bool test(std::uint64_t value) const {
       if (waitMode & kEvfWaitModeAnd) {
         return (value & bitPattern) == bitPattern;

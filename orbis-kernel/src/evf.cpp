@@ -30,16 +30,24 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
   };
 
   thread->evfResultPattern = 0;
-  thread->evfIsCancelled = 0;
+  thread->evfIsCancelled = -1;
 
   std::unique_lock lock(queueMtx);
   while (true) {
     if (isDeleted) {
+      if (thread->evfIsCancelled == UINT64_MAX)
+        thread->evfResultPattern = value.load();
       return ErrorCode::ACCES;
     }
-    if (thread->evfIsCancelled) {
+    if (thread->evfIsCancelled == 1) {
       return ErrorCode::CANCELED;
     }
+    if (thread->evfIsCancelled == 0) {
+      break;
+    }
+
+    thread->evfResultPattern = 0;
+    thread->evfIsCancelled = -1;
 
     auto waitingThread = WaitingThread{
         .thread = thread, .bitPattern = bitPattern, .waitMode = waitMode};
@@ -48,12 +56,11 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
         waitingThread.test(patValue)) {
       auto resultValue = waitingThread.applyClear(patValue);
       value.store(resultValue, std::memory_order::relaxed);
-      thread->evfResultPattern = resultValue;
+      thread->evfResultPattern = patValue;
       // Success
       break;
-    }
-
-    if (timeout && *timeout == 0) {
+    } else if (timeout && *timeout == 0) {
+      thread->evfResultPattern = patValue;
       return ErrorCode::TIMEDOUT;
     }
 
@@ -72,10 +79,13 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     if (timeout) {
       thread->sync_cv.wait(queueMtx, *timeout);
       update_timeout();
-      continue;
+    } else {
+      thread->sync_cv.wait(queueMtx);
     }
 
-    thread->sync_cv.wait(queueMtx);
+    if (thread->evfIsCancelled == UINT64_MAX) {
+      std::erase(waitingThreads, waitingThread);
+    }
   }
 
   // TODO: update thread state
@@ -98,7 +108,7 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *thread,
       waitingThread.test(patValue)) {
     auto resultValue = waitingThread.applyClear(patValue);
     value.store(resultValue, std::memory_order::relaxed);
-    thread->evfResultPattern = resultValue;
+    thread->evfResultPattern = patValue;
     return {};
   }
 
