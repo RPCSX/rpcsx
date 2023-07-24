@@ -4,6 +4,7 @@
 #include "Stage.hpp"
 
 #include <amdgpu/RemoteMemory.hpp>
+#include <util/area.hpp>
 
 #include <cstdint>
 #include <span>
@@ -25,7 +26,7 @@ struct Shader {
 };
 
 Shader convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
-               std::span<const std::uint32_t> userSpgrs, int bindingOffset,
-               std::uint32_t dimX = 1, std::uint32_t dimY = 1,
-               std::uint32_t dimZ = 1);
+               std::span<const std::uint32_t> userSpgrs, std::uint32_t dimX,
+               std::uint32_t dimY, std::uint32_t dimZ,
+               util::MemoryAreaTable<> &dependencies);
 } // namespace amdgpu::shader

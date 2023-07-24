@@ -5,11 +5,11 @@
 #include "Stage.hpp"
 #include "TypeId.hpp"
 #include "Uniform.hpp"
+#include "util/area.hpp"
 
 #include <amdgpu/RemoteMemory.hpp>
 #include <forward_list>
 #include <spirv/spirv-builder.hpp>
-#include <unordered_map>
 #include <util/unreachable.hpp>
 
 #include <bit>
@@ -96,8 +96,11 @@ class ConverterContext {
   spirv::Function mDiscardFn;
 
 public:
-  ConverterContext(RemoteMemory memory, Stage stage)
-      : mMemory(memory), mStage(stage) {
+  util::MemoryAreaTable<> *dependencies = nullptr;
+
+  ConverterContext(RemoteMemory memory, Stage stage,
+                   util::MemoryAreaTable<> *dependencies)
+      : mStage(stage), mMemory(memory), dependencies(dependencies) {
     mGlslStd450 = mBuilder.createExtInstImport("GLSL.std.450");
   }
 

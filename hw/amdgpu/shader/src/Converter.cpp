@@ -2,21 +2,16 @@
 #include "CfBuilder.hpp"
 #include "ConverterContext.hpp"
 #include "Fragment.hpp"
-#include "FragmentTerminator.hpp"
 #include "Instruction.hpp"
-#include "RegisterId.hpp"
 #include "RegisterState.hpp"
+#include "UniformBindings.hpp"
 #include "amdgpu/RemoteMemory.hpp"
 #include "cf.hpp"
 #include "scf.hpp"
 #include "util/unreachable.hpp"
-#include <compare>
 #include <cstddef>
 #include <forward_list>
-#include <memory>
 #include <spirv/spirv.hpp>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 static void printInstructions(const scf::PrintOptions &options, unsigned depth,
@@ -365,9 +360,10 @@ private:
 amdgpu::shader::Shader
 amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
                         std::span<const std::uint32_t> userSpgrs,
-                        int bindingOffset, std::uint32_t dimX,
-                        std::uint32_t dimY, std::uint32_t dimZ) {
-  ConverterContext ctxt(memory, stage);
+                        std::uint32_t dimX, std::uint32_t dimY,
+                        std::uint32_t dimZ,
+                        util::MemoryAreaTable<> &dependencies) {
+  ConverterContext ctxt(memory, stage, &dependencies);
   auto &builder = ctxt.getBuilder();
   builder.createCapability(spv::Capability::Shader);
   builder.createCapability(spv::Capability::ImageQuery);
@@ -412,9 +408,12 @@ amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
   std::fflush(stdout);
   mainFunction->exitFragment.outputs.clear();
 
+  std::size_t samplerCount = 0;
+  std::size_t imageCount = 0;
+  std::size_t bufferCount = 0;
+
   for (auto &uniform : ctxt.getUniforms()) {
     auto &newUniform = result.uniforms.emplace_back();
-    newUniform.binding = bindingOffset++;
 
     for (int i = 0; i < 8; ++i) {
       newUniform.buffer[i] = uniform.buffer[i];
@@ -422,22 +421,28 @@ amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
 
     std::uint32_t descriptorSet = 0;
 
+    switch (uniform.typeId) {
+    case TypeId::Sampler:
+      newUniform.kind = Shader::UniformKind::Sampler;
+      newUniform.binding =
+          UniformBindings::getSamplerBinding(stage, samplerCount++);
+      break;
+    case TypeId::Image2D:
+      newUniform.kind = Shader::UniformKind::Image;
+      newUniform.binding =
+          UniformBindings::getImageBinding(stage, imageCount++);
+      break;
+    default:
+      newUniform.kind = Shader::UniformKind::Buffer;
+      newUniform.binding =
+          UniformBindings::getBufferBinding(stage, bufferCount++);
+      break;
+    }
+
     ctxt.getBuilder().createDecorate(
         uniform.variable, spv::Decoration::DescriptorSet, {{descriptorSet}});
     ctxt.getBuilder().createDecorate(uniform.variable, spv::Decoration::Binding,
                                      {{newUniform.binding}});
-
-    switch (uniform.typeId) {
-    case TypeId::Sampler:
-      newUniform.kind = Shader::UniformKind::Sampler;
-      break;
-    case TypeId::Image2D:
-      newUniform.kind = Shader::UniformKind::Image;
-      break;
-    default:
-      newUniform.kind = Shader::UniformKind::Buffer;
-      break;
-    }
 
     newUniform.accessOp = uniform.accessOp;
   }
