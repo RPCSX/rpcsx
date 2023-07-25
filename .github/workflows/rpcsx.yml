@@ -31,9 +31,9 @@ jobs:
         VULKANVER=1.3.259
         curl -sSfLo Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
         tar -xf Vulkan-Headers*.tar.gz
-        cd Vulkan-Headers*
-        cmake . -Bbuild -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-        cd build
+        cd Vulkan-Headers*/ 
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
         make -j$(nproc)
         sudo make install
 
