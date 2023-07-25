@@ -28,7 +28,6 @@ jobs:
         libglfw3-dev libvulkan-dev vulkan-validationlayers-dev \
         spirv-tools glslang-tools libspirv-cross-c-shared-dev \
         libxbyak-dev
-        
         VULKANVER=1.3.259
         curl -sSfLo Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
         tar -xf Vulkan-Headers*.tar.gz
