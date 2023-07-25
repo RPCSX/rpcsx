@@ -33,8 +33,8 @@ jobs:
         tar -xf Vulkan-Headers*.tar.gz
         cd Vulkan-Headers*/ 
         mkdir build && cd build
-        cmake ../ -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-        make
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+        make -j$(nproc)
         sudo make install
 
     - name: Build RPCSX
