@@ -36,7 +36,7 @@ jobs:
         mkdir build && cd build
         cmake ../ -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
         ninja
-        sudo ninja install
+        sudo make install
 
     - name: Build RPCSX
       run: |
