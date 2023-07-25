@@ -30,7 +30,7 @@ jobs:
         libxbyak-dev
         
         VULKANVER=1.3.259
-        curl -sL -o Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
+        curl -sSfLo Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
         tar -xf Vulkan-Headers*.tar.gz
         cd Vulkan-Headers*/ 
         mkdir build && cd build
