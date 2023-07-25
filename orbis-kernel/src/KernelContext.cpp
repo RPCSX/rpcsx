@@ -1,5 +1,6 @@
 #include "orbis/KernelContext.hpp"
 #include "orbis/thread/Process.hpp"
+#include "orbis/thread/ProcessOps.hpp"
 #include "orbis/utils/Logs.hpp"
 #include <sys/mman.h>
 #include <sys/unistd.h>
@@ -85,14 +86,14 @@ long KernelContext::getTscFreq() {
     long timer_data[samples];
     long error_data[samples];
 
-    struct timespec ts0;
+    struct ::timespec ts0;
     clock_gettime(CLOCK_MONOTONIC, &ts0);
     long sec_base = ts0.tv_sec;
 
     for (int i = 0; i < samples; i++) {
       usleep(200);
       error_data[i] = (__builtin_ia32_lfence(), __builtin_ia32_rdtsc());
-      struct timespec ts;
+      struct ::timespec ts;
       clock_gettime(CLOCK_MONOTONIC, &ts);
       rdtsc_data[i] = (__builtin_ia32_lfence(), __builtin_ia32_rdtsc());
       timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
@@ -177,6 +178,23 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
   pthread_mutex_unlock(&m_heap_mtx);
 }
 
+std::tuple<UmtxChain &, UmtxKey, std::unique_lock<shared_mutex>>
+KernelContext::getUmtxChainIndexed(int i, Thread *t, uint32_t flags,
+                                   void *ptr) {
+  auto pid = t->tproc->pid;
+  if (flags & 1) {
+    pid = 0; // Process shared (TODO)
+    ORBIS_LOG_WARNING("Using process-shared umtx", t->tid, ptr);
+  }
+  auto p = reinterpret_cast<std::uintptr_t>(ptr);
+  auto n = p + pid;
+  if (flags & 1)
+    n %= 0x4000;
+  n = ((n * c_golden_ratio_prime) >> c_umtx_shifts) % c_umtx_chains;
+  std::unique_lock lock(m_umtx_chains[i][n].mtx);
+  return {m_umtx_chains[i][n], UmtxKey{p, pid}, std::move(lock)};
+}
+
 inline namespace utils {
 void kfree(void *ptr, std::size_t size) { return g_context.kfree(ptr, size); }
 void *kalloc(std::size_t size, std::size_t align) {
@@ -190,4 +208,6 @@ void log_class_string<kstring>::format(std::string &out, const void *arg) {
   out += get_object(arg);
 }
 } // namespace logs
+
+void Thread::where() { tproc->ops->where(this); }
 } // namespace orbis

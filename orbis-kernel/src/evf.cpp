@@ -6,12 +6,7 @@
 
 orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
                                         std::uint64_t bitPattern,
-                                        std::uint64_t *patternSet,
                                         std::uint32_t *timeout) {
-  utils::shared_cv cv;
-
-  bool isCanceled = false;
-
   using namespace std::chrono;
 
   steady_clock::time_point start{};
@@ -34,77 +29,72 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     *timeout = 0;
   };
 
+  thread->evfResultPattern = 0;
+  thread->evfIsCancelled = -1;
+
   std::unique_lock lock(queueMtx);
   while (true) {
     if (isDeleted) {
+      if (thread->evfIsCancelled == UINT64_MAX)
+        thread->evfResultPattern = value.load();
       return ErrorCode::ACCES;
     }
-    if (isCanceled) {
+    if (thread->evfIsCancelled == 1) {
       return ErrorCode::CANCELED;
     }
+    if (thread->evfIsCancelled == 0) {
+      break;
+    }
 
-    auto waitingThread = WaitingThread{.thread = thread,
-                                       .cv = &cv,
-                                       .patternSet = patternSet,
-                                       .isCanceled = &isCanceled,
-                                       .bitPattern = bitPattern,
-                                       .waitMode = waitMode};
+    thread->evfResultPattern = 0;
+    thread->evfIsCancelled = -1;
+
+    auto waitingThread = WaitingThread{
+        .thread = thread, .bitPattern = bitPattern, .waitMode = waitMode};
 
     if (auto patValue = value.load(std::memory_order::relaxed);
         waitingThread.test(patValue)) {
       auto resultValue = waitingThread.applyClear(patValue);
       value.store(resultValue, std::memory_order::relaxed);
-      if (patternSet != nullptr) {
-        *patternSet = resultValue;
-      }
+      thread->evfResultPattern = patValue;
       // Success
       break;
-    }
-
-    if (timeout && *timeout == 0) {
+    } else if (timeout && *timeout == 0) {
+      thread->evfResultPattern = patValue;
       return ErrorCode::TIMEDOUT;
     }
 
-    std::size_t position;
-
     if (attrs & kEvfAttrSingle) {
-      if (waitingThreadsCount.fetch_add(1, std::memory_order::relaxed) != 0) {
-        waitingThreadsCount.store(1, std::memory_order::relaxed);
+      if (!waitingThreads.empty())
         return ErrorCode::PERM;
-      }
-
-      position = 0;
     } else {
       if (attrs & kEvfAttrThFifo) {
-        position = waitingThreadsCount.fetch_add(1, std::memory_order::relaxed);
       } else {
         // FIXME: sort waitingThreads by priority
-        position = waitingThreadsCount.fetch_add(1, std::memory_order::relaxed);
       }
     }
 
-    if (position >= std::size(waitingThreads)) {
-      std::abort();
-    }
-
-    waitingThreads[position] = waitingThread;
+    waitingThreads.emplace_back(waitingThread);
 
     if (timeout) {
-      cv.wait(queueMtx, *timeout);
+      thread->sync_cv.wait(queueMtx, *timeout);
       update_timeout();
-      continue;
+    } else {
+      thread->sync_cv.wait(queueMtx);
     }
 
-    cv.wait(queueMtx);
+    if (thread->evfIsCancelled == UINT64_MAX) {
+      std::erase(waitingThreads, waitingThread);
+    }
   }
 
   // TODO: update thread state
   return {};
 }
 
-orbis::ErrorCode orbis::EventFlag::tryWait(Thread *, std::uint8_t waitMode,
-                                           std::uint64_t bitPattern,
-                                           std::uint64_t *patternSet) {
+orbis::ErrorCode orbis::EventFlag::tryWait(Thread *thread,
+                                           std::uint8_t waitMode,
+                                           std::uint64_t bitPattern) {
   writer_lock lock(queueMtx);
 
   if (isDeleted) {
@@ -118,10 +108,7 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *, std::uint8_t waitMode,
       waitingThread.test(patValue)) {
     auto resultValue = waitingThread.applyClear(patValue);
     value.store(resultValue, std::memory_order::relaxed);
-    if (patternSet != nullptr) {
-      *patternSet = resultValue;
-    }
-
+    thread->evfResultPattern = patValue;
     return {};
   }
 
@@ -130,7 +117,6 @@ orbis::ErrorCode orbis::EventFlag::tryWait(Thread *, std::uint8_t waitMode,
 
 std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
   writer_lock lock(queueMtx);
-  auto count = waitingThreadsCount.load(std::memory_order::relaxed);
   auto patValue = value.load(std::memory_order::relaxed);
 
   if (type == NotifyType::Destroy) {
@@ -145,46 +131,18 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
     }
 
     auto resultValue = thread->applyClear(patValue);
+    thread->thread->evfResultPattern = patValue;
+    thread->thread->evfIsCancelled = type == NotifyType::Cancel;
     patValue = resultValue;
-    if (thread->patternSet != nullptr) {
-      *thread->patternSet = resultValue;
-    }
-    if (type == NotifyType::Cancel) {
-      *thread->isCanceled = true;
-    }
 
     // TODO: update thread state
     // release wait on waiter thread
-    thread->cv->notify_one(queueMtx);
-
-    waitingThreadsCount.fetch_sub(1, std::memory_order::relaxed);
-    std::memmove(thread, thread + 1,
-                 (waitingThreads + count - (thread + 1)) *
-                     sizeof(*waitingThreads));
-    --count;
+    thread->thread->sync_cv.notify_one(queueMtx);
     return true;
   };
 
-  std::size_t result = 0;
-  if (attrs & kEvfAttrThFifo) {
-    for (std::size_t i = count; i > 0;) {
-      if (!testThread(waitingThreads + i - 1)) {
-        --i;
-        continue;
-      }
-
-      ++result;
-    }
-  } else {
-    for (std::size_t i = 0; i < count;) {
-      if (!testThread(waitingThreads + i)) {
-        ++i;
-        continue;
-      }
-
-      ++result;
-    }
-  }
+  std::size_t result = std::erase_if(
+      waitingThreads, [&](auto &thread) { return testThread(&thread); });
 
   if (type == NotifyType::Cancel) {
     value.store(bits, std::memory_order::relaxed);

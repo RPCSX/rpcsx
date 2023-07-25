@@ -1568,6 +1568,10 @@ void convertSmrd(Fragment &fragment, Smrd inst) {
       auto address =
           *optLoAddress | (static_cast<std::uint64_t>(*optHiAddress) << 32);
 
+      fragment.context->dependencies->map(address + (inst.offset << 2),
+                                          address + (inst.offset << 2) +
+                                              sizeof(std::uint32_t) * count);
+
       auto data =
           memory.getPointer<std::uint32_t>(address + (inst.offset << 2));
       for (std::uint32_t i = 0; i < count; ++i) {
@@ -3588,7 +3592,8 @@ void convertVintrp(Fragment &fragment, Vintrp inst) {
     // interpolated value stored in attr#
     break;
 
-  case Vintrp::Op::V_INTERP_P2_F32: {
+  case Vintrp::Op::V_INTERP_P2_F32:
+  case Vintrp::Op::V_INTERP_MOV_F32: {
     // TODO: operation should read from LDS
     // TODO: accurate emulation
 
@@ -3600,6 +3605,12 @@ void convertVintrp(Fragment &fragment, Vintrp inst) {
     fragment.setVectorOperand(inst.vdst, {channelType, attrChan});
     break;
   }
+    // {
+    //   fragment.setVectorOperand(
+    //       inst.vdst, fragment.getScalarOperand(inst.vsrc,
+    //       TypeId::Float32x4));
+    //   break;
+    // }
 
   default:
     inst.dump();
@@ -5567,6 +5578,8 @@ void amdgpu::shader::Fragment::convert(std::uint64_t size) {
   auto ptr = context->getMemory().getPointer<std::uint32_t>(registers->pc);
   auto endptr = ptr + size / sizeof(std::uint32_t);
 
+  context->dependencies->map(registers->pc, registers->pc + size);
+
   while (ptr < endptr) {
     Instruction inst(ptr);
     // auto startPoint = builder.bodyRegion.getCurrentPosition();
@@ -5608,6 +5621,8 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id) {
     case 247:
       return {context->getFloat32Type(), context->getFloat32(-4.0f)};
     case 255: {
+      context->dependencies->map(registers->pc,
+                                 registers->pc + sizeof(std::uint32_t));
       auto ptr = context->getMemory().getPointer<std::uint32_t>(registers->pc);
       registers->pc += sizeof(std::uint32_t);
       return {context->getUInt32Type(), context->getUInt32(*ptr)};

@@ -146,6 +146,7 @@ static std::int64_t socket_instance_ioctl(IoDeviceInstance *instance,
 }
 
 static std::int64_t socket_instance_close(IoDeviceInstance *instance) {
+  ::close(static_cast<SocketDeviceInstance *>(instance)->hostFd);
   return 0;
 }
 

@@ -2,9 +2,12 @@
 
 #include "tiler.hpp"
 #include "util/VerifyVulkan.hpp"
+#include "util/area.hpp"
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <mutex>
 #include <span>
 #include <utility>
 #include <vulkan/vulkan_core.h>
@@ -150,78 +153,58 @@ struct DeviceMemoryRef {
   VkDeviceSize offset = 0;
   VkDeviceSize size = 0;
   void *data = nullptr;
+  void *allocator = nullptr;
+
+  void (*release)(DeviceMemoryRef &memoryRef) = nullptr;
 };
 
 class MemoryResource {
   DeviceMemory mMemory;
-  VkMemoryPropertyFlags mProperties = 0;
-  std::size_t mSize = 0;
-  std::size_t mAllocationOffset = 0;
   char *mData = nullptr;
+  util::MemoryAreaTable<> table;
+  const char *debugName = "<unknown>";
+
+  std::mutex mMtx;
 
 public:
-  MemoryResource(const MemoryResource &) = delete;
-
   MemoryResource() = default;
-  MemoryResource(MemoryResource &&other) = default;
-  MemoryResource &operator=(MemoryResource &&other) = default;
-
   ~MemoryResource() {
     if (mMemory.getHandle() != nullptr && mData != nullptr) {
       vkUnmapMemory(g_vkDevice, mMemory.getHandle());
     }
   }
 
-  void clear() { mAllocationOffset = 0; }
-
-  static MemoryResource CreateFromFd(int fd, std::size_t size) {
+  void initFromHost(void *data, std::size_t size) {
+    assert(mMemory.getHandle() == nullptr);
     auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    MemoryResource result;
-    result.mMemory = DeviceMemory::CreateExternalFd(
-        fd, size, findPhysicalMemoryTypeIndex(~0, properties));
-    result.mProperties = properties;
-    result.mSize = size;
-
-    return result;
+    mMemory = DeviceMemory::CreateExternalHostMemory(data, size, properties);
+    table.map(0, size);
+    debugName = "direct";
   }
 
-  static MemoryResource CreateFromHost(void *data, std::size_t size) {
+  void initHostVisible(std::size_t size) {
+    assert(mMemory.getHandle() == nullptr);
     auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    MemoryResource result;
-    result.mMemory =
-        DeviceMemory::CreateExternalHostMemory(data, size, properties);
-    result.mProperties = properties;
-    result.mSize = size;
-
-    return result;
-  }
-
-  static MemoryResource CreateHostVisible(std::size_t size) {
-    auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    MemoryResource result;
-    result.mMemory = DeviceMemory::Allocate(size, ~0, properties);
-    result.mProperties = properties;
-    result.mSize = size;
+    auto memory = DeviceMemory::Allocate(size, ~0, properties);
 
     void *data = nullptr;
-    Verify() << vkMapMemory(g_vkDevice, result.mMemory.getHandle(), 0, size, 0,
-                            &data);
-    result.mData = reinterpret_cast<char *>(data);
+    Verify() << vkMapMemory(g_vkDevice, memory.getHandle(), 0, size, 0, &data);
 
-    return result;
+    mMemory = std::move(memory);
+    table.map(0, size);
+    mData = reinterpret_cast<char *>(data);
+    debugName = "host";
   }
 
-  static MemoryResource CreateDeviceLocal(std::size_t size) {
+  void initDeviceLocal(std::size_t size) {
+    assert(mMemory.getHandle() == nullptr);
     auto properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    MemoryResource result;
-    result.mMemory = DeviceMemory::Allocate(size, ~0, properties);
-    result.mProperties = properties;
-    result.mSize = size;
-    return result;
+    mMemory = DeviceMemory::Allocate(size, ~0, properties);
+    table.map(0, size);
+    debugName = "local";
   }
 
   DeviceMemoryRef allocate(VkMemoryRequirements requirements) {
@@ -230,21 +213,54 @@ public:
       util::unreachable();
     }
 
-    auto offset = (mAllocationOffset + requirements.alignment - 1) &
-                  ~(requirements.alignment - 1);
-    mAllocationOffset = offset + requirements.size;
-    if (mAllocationOffset > mSize) {
-      util::unreachable("out of memory resource");
+    std::lock_guard lock(mMtx);
+
+    for (auto elem : table) {
+      auto offset = (elem.beginAddress + requirements.alignment - 1) &
+                    ~(requirements.alignment - 1);
+
+      if (offset >= elem.endAddress) {
+        continue;
+      }
+
+      auto blockSize = elem.endAddress - offset;
+
+      if (blockSize < requirements.size) {
+        continue;
+      }
+
+      table.unmap(offset, offset + requirements.size);
+      return {mMemory.getHandle(),
+              offset,
+              requirements.size,
+              mData,
+              this,
+              [](DeviceMemoryRef &memoryRef) {
+                auto self =
+                    reinterpret_cast<MemoryResource *>(memoryRef.allocator);
+                self->deallocate(memoryRef);
+              }};
     }
 
-    return {mMemory.getHandle(), offset, requirements.size, mData};
+    util::unreachable("out of memory resource");
+  }
+
+  void deallocate(DeviceMemoryRef memory) {
+    std::lock_guard lock(mMtx);
+    table.map(memory.offset, memory.offset + memory.size);
+  }
+
+  void dump() {
+    std::lock_guard lock(mMtx);
+
+    for (auto elem : table) {
+      std::fprintf(stderr, "%zu - %zu\n", elem.beginAddress, elem.endAddress);
+    }
   }
 
   DeviceMemoryRef getFromOffset(std::uint64_t offset, std::size_t size) {
-    return {mMemory.getHandle(), offset, size, nullptr};
+    return {mMemory.getHandle(), offset, size, nullptr, nullptr, nullptr};
   }
-
-  std::size_t getSize() const { return mSize; }
 
   explicit operator bool() const { return mMemory.getHandle() != nullptr; }
 };
@@ -364,6 +380,10 @@ public:
   ~Buffer() {
     if (mBuffer != nullptr) {
       vkDestroyBuffer(g_vkDevice, mBuffer, g_vkAllocator);
+
+      if (mMemory.release != nullptr) {
+        mMemory.release(mMemory);
+      }
     }
   }
 
@@ -589,12 +609,13 @@ public:
     return requirements;
   }
 
-  void readFromBuffer(VkCommandBuffer cmdBuffer, const Buffer &buffer,
-                      VkImageAspectFlags destAspect) {
+  void readFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer buffer,
+                      VkImageAspectFlags destAspect,
+                      VkDeviceSize bufferOffset = 0) {
     transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     VkBufferImageCopy region{};
-    region.bufferOffset = 0;
+    region.bufferOffset = bufferOffset;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
     region.imageSubresource.aspectMask = destAspect;
@@ -604,11 +625,11 @@ public:
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {mWidth, mHeight, 1};
 
-    vkCmdCopyBufferToImage(cmdBuffer, buffer.getHandle(), mImage,
+    vkCmdCopyBufferToImage(cmdBuffer, buffer, mImage,
                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
   }
 
-  void writeToBuffer(VkCommandBuffer cmdBuffer, const Buffer &buffer,
+  void writeToBuffer(VkCommandBuffer cmdBuffer, VkBuffer buffer,
                      VkImageAspectFlags sourceAspect) {
     transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
@@ -624,8 +645,8 @@ public:
     region.imageExtent = {mWidth, mHeight, 1};
 
     vkCmdCopyImageToBuffer(cmdBuffer, mImage,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           buffer.getHandle(), 1, &region);
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1,
+                           &region);
   }
 
   [[nodiscard]] Buffer writeToBuffer(VkCommandBuffer cmdBuffer,
@@ -635,7 +656,7 @@ public:
         pool, getMemoryRequirements().size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-    writeToBuffer(cmdBuffer, transferBuffer, sourceAspect);
+    writeToBuffer(cmdBuffer, transferBuffer.getHandle(), sourceAspect);
     return transferBuffer;
   }
 
@@ -661,7 +682,7 @@ public:
     transferBuffer.readFromImage(address, bpp, tileMode, width, height, 1,
                                  pitch);
 
-    readFromBuffer(cmdBuffer, transferBuffer, destAspect);
+    readFromBuffer(cmdBuffer, transferBuffer.getHandle(), destAspect);
 
     return transferBuffer;
   }
@@ -736,6 +757,7 @@ class Image2D {
   VkImageLayout mLayout = {};
   unsigned mWidth = 0;
   unsigned mHeight = 0;
+  DeviceMemoryRef mMemory;
 
 public:
   Image2D(const Image2D &) = delete;
@@ -746,6 +768,10 @@ public:
   ~Image2D() {
     if (mImage != nullptr) {
       vkDestroyImage(g_vkDevice, mImage, g_vkAllocator);
+
+      if (mMemory.release != nullptr) {
+        mMemory.release(mMemory);
+      }
     }
   }
 
@@ -829,6 +855,7 @@ public:
   void bindMemory(DeviceMemoryRef memory) {
     Verify() << vkBindImageMemory(g_vkDevice, mImage, memory.deviceMemory,
                                   memory.offset);
+    mMemory = memory;
   }
 
   friend ImageRef;

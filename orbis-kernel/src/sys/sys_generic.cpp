@@ -64,6 +64,7 @@ orbis::SysResult orbis::sys_pwritev(Thread *thread, sint fd,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_ftruncate(Thread *thread, sint fd, off_t length) {
+  ORBIS_LOG_WARNING(__FUNCTION__, fd, length);
   if (auto ftruncate = thread->tproc->ops->ftruncate) {
     return ftruncate(thread, fd, length);
   }

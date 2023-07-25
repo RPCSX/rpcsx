@@ -1,5 +1,6 @@
 #include "ops.hpp"
 #include "align.hpp"
+#include "backtrace.hpp"
 #include "io-device.hpp"
 #include "linker.hpp"
 #include "orbis/module/ModuleHandle.hpp"
@@ -31,6 +32,10 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
         std::map<std::string, Module *, std::less<>> &loadedObjects,
         std::map<std::string, Module *, std::less<>> &loadedModules,
         std::string_view expectedName) {
+  if (auto it = loadedObjects.find(expectedName); it != loadedObjects.end()) {
+    return {{}, it->second};
+  }
+
   if (auto it = loadedObjects.find(name); it != loadedObjects.end()) {
     return {{}, it->second};
   }
@@ -105,7 +110,7 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
 }
 
 static std::pair<SysResult, Ref<Module>>
-loadPrx(orbis::Thread *thread, std::string_view name, bool relocate) {
+loadPrx(orbis::Thread *thread, std::string_view path, bool relocate) {
   std::map<std::string, Module *, std::less<>> loadedObjects;
   std::map<std::string, Module *, std::less<>> loadedModules;
 
@@ -114,8 +119,21 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate) {
     loadedModules[module->moduleName] = module;
   }
 
-  return loadPrx(thread, name, relocate, loadedObjects, loadedModules, {});
-};
+  std::string expectedName;
+  if (auto sep = path.rfind('/'); sep != std::string_view::npos) {
+    auto tmpExpectedName = path.substr(sep + 1);
+
+    if (tmpExpectedName.ends_with(".sprx")) {
+      tmpExpectedName.remove_suffix(5);
+    }
+
+    expectedName += tmpExpectedName;
+    expectedName += ".prx";
+  }
+
+  return loadPrx(thread, path, relocate, loadedObjects, loadedModules,
+                 expectedName);
+}
 
 orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
                       orbis::size_t len, orbis::sint prot, orbis::sint flags,
@@ -752,6 +770,10 @@ SysResult registerEhFrames(Thread *thread) {
 
   return {};
 }
+
+void where(Thread *thread) {
+  rx::printStackTrace((ucontext_t *)thread->context, thread, 2);
+}
 } // namespace
 
 ProcessOps rx::procOpsTable = {
@@ -794,4 +816,5 @@ ProcessOps rx::procOpsTable = {
     .exit = exit,
     .processNeeded = processNeeded,
     .registerEhFrames = registerEhFrames,
+    .where = where,
 };

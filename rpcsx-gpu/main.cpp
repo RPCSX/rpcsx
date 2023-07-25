@@ -1,3 +1,4 @@
+#include "amdgpu/RemoteMemory.hpp"
 #include <algorithm>
 #include <amdgpu/bridge/bridge.hpp>
 #include <amdgpu/device/device.hpp>
@@ -33,6 +34,7 @@ static void usage(std::FILE *out, const char *argv0) {
       "    --gpu <index> - specify physical gpu index to use, default is 0\n");
   std::fprintf(out,
                "    --presenter <presenter mode> - set flip engine target\n");
+  std::fprintf(out, "    --no-validation - disable validation layers\n");
   std::fprintf(out, "    -h, --help - show this message\n");
   std::fprintf(out, "\n");
   std::fprintf(out, "  presenter mode:\n");
@@ -52,6 +54,7 @@ int main(int argc, const char *argv[]) {
   const char *shmName = "/rpcsx-os-memory";
   unsigned long gpuIndex = 0;
   auto presenter = PresenterMode::Window;
+  bool noValidation = false;
 
   for (int i = 1; i < argc; ++i) {
     if (argv[i] == std::string_view("--cmd-bridge")) {
@@ -106,6 +109,11 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
+    if (argv[i] == std::string_view("--no-validation")) {
+      noValidation = true;
+      continue;
+    }
+
     usage(stderr, argv[0]);
     return 1;
   }
@@ -122,7 +130,7 @@ int main(int argc, const char *argv[]) {
   auto requiredInstanceExtensions = std::vector<const char *>(
       glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-  bool enableValidation = true;
+  bool enableValidation = !noValidation;
 
   if (enableValidation) {
     requiredInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -248,6 +256,7 @@ int main(int argc, const char *argv[]) {
       // VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
       VK_EXT_SEPARATE_STENCIL_USAGE_EXTENSION_NAME,
       VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+      VK_EXT_SHADER_OBJECT_EXTENSION_NAME,
   };
 
   if (isDeviceExtensionSupported(VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
@@ -404,9 +413,16 @@ int main(int argc, const char *argv[]) {
     }
   }
 
+  VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
+      .shaderObject = VK_TRUE};
+
   VkPhysicalDeviceVulkan13Features phyDevFeatures13{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-      .maintenance4 = VK_TRUE};
+      .pNext = &shaderObjectFeatures,
+      .dynamicRendering = VK_TRUE,
+      .maintenance4 = VK_TRUE,
+  };
 
   VkPhysicalDeviceVulkan12Features phyDevFeatures12{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,

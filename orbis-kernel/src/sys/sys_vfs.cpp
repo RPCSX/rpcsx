@@ -259,7 +259,9 @@ orbis::SysResult orbis::sys_rmdir(Thread *thread, ptr<char> path) {
 orbis::SysResult orbis::sys_getdirentries(Thread *thread, sint fd,
                                           ptr<char> buf, uint count,
                                           ptr<slong> basep) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, fd, (void *)buf, count, basep);
+  thread->where();
+  return {};
 }
 orbis::SysResult orbis::sys_getdents(Thread *thread, sint fd, ptr<char> buf,
                                      size_t count) {

@@ -180,7 +180,7 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
   return {};
 }
 orbis::SysResult orbis::sys_evf_close(Thread *thread, sint id) {
-  ORBIS_LOG_WARNING(__FUNCTION__, thread, id);
+  ORBIS_LOG_WARNING(__FUNCTION__, thread->tid, id);
   if (!thread->tproc->evfMap.close(id)) {
     return ErrorCode::SRCH;
   }
@@ -191,7 +191,7 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
                                      uint64_t patternSet, uint64_t mode,
                                      ptr<uint64_t> pPatternSet,
                                      ptr<uint> pTimeout) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, patternSet, mode, pPatternSet,
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread->tid, id, patternSet, mode, pPatternSet,
                    pTimeout);
   if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
       (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
@@ -207,27 +207,28 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
   }
 
   std::uint32_t resultTimeout{};
-  std::uint64_t resultPattern{};
   auto result = evf->wait(thread, mode, patternSet,
-                          pPatternSet != nullptr ? &resultPattern : nullptr,
                           pTimeout != nullptr ? &resultTimeout : nullptr);
 
-  ORBIS_LOG_NOTICE("sys_evf_wait wakeup", thread, resultPattern, resultTimeout);
+  ORBIS_LOG_NOTICE("sys_evf_wait wakeup", thread->tid,
+                   thread->evfResultPattern);
 
   if (pPatternSet != nullptr) {
-    uwrite(pPatternSet, (uint64_t)resultPattern);
+    uwrite(pPatternSet, thread->evfResultPattern);
   }
 
   if (pTimeout != nullptr) {
-    uwrite(pTimeout, (uint32_t)resultTimeout);
+    uwrite(pTimeout, resultTimeout);
   }
+
   return result;
 }
 
 orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
                                         uint64_t patternSet, uint64_t mode,
                                         ptr<uint64_t> pPatternSet) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, patternSet, mode, pPatternSet);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread->tid, id, patternSet, mode,
+                   pPatternSet);
   if ((mode & (kEvfWaitModeAnd | kEvfWaitModeOr)) == 0 ||
       (mode & ~(kEvfWaitModeAnd | kEvfWaitModeOr | kEvfWaitModeClearAll |
                 kEvfWaitModeClearPat)) != 0 ||
@@ -241,18 +242,16 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
     return ErrorCode::SRCH;
   }
 
-  std::uint64_t resultPattern{};
-  auto result = evf->tryWait(thread, mode, patternSet,
-                             pPatternSet != nullptr ? &resultPattern : nullptr);
+  auto result = evf->tryWait(thread, mode, patternSet);
 
   if (pPatternSet != nullptr) {
-    uwrite(pPatternSet, (uint64_t)resultPattern);
+    uwrite(pPatternSet, thread->evfResultPattern);
   }
 
   return result;
 }
 orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, value);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread->tid, id, value);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
@@ -263,7 +262,7 @@ orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
   return {};
 }
 orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, value);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread->tid, id, value);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
@@ -275,7 +274,7 @@ orbis::SysResult orbis::sys_evf_clear(Thread *thread, sint id, uint64_t value) {
 }
 orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                                        ptr<sint> pNumWaitThreads) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, value, pNumWaitThreads);
+  ORBIS_LOG_NOTICE(__FUNCTION__, thread->tid, id, value, pNumWaitThreads);
   Ref<EventFlag> evf = thread->tproc->evfMap.get(id);
 
   if (evf == nullptr) {
@@ -613,20 +612,6 @@ orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
   if (!thread->tproc->namedMem.count(addr))
     std::abort();
 
-  std::lock_guard lock2(thread->tproc->mtx);
-  thread->tproc->threadsMap.walk([&](auto id, auto obj) {
-    if (obj->stackStart == (void *)addr) {
-      std::string name = std::to_string(obj->tid) + "_" + _name;
-      if (name.size() > 15)
-        name.resize(15);
-      ORBIS_LOG_NOTICE("sys_mname: setting thread name", obj->tid, name,
-                       obj->handle.native_handle());
-      if (!pthread_setname_np(obj->handle.native_handle(), name.c_str())) {
-        perror("pthread_setname_np");
-      }
-    }
-  });
-
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_dlopen(Thread *thread /* TODO */) {
@@ -763,8 +748,8 @@ struct mdbg_property {
 
 orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
                                          ptr<void> arg0, ptr<void> arg1) {
-  std::printf("sys_mdbg_service(op = %d, arg0 = %p, arg1 = %p)\n", op, arg0,
-              arg1);
+  ORBIS_LOG_NOTICE("sys_mdbg_service", thread->tid, op, arg0, arg1);
+  thread->where();
 
   switch (op) {
   case 1: {
@@ -784,7 +769,12 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
 
   case 7: {
     // TODO: read string from userspace
-    std::printf("sys_mdbg_service: %s\n", (char *)arg0);
+    ORBIS_LOG_NOTICE("sys_mdbg_service", (char *)arg0);
+    break;
+  }
+
+  case 0x14: {
+    std::this_thread::sleep_for(std::chrono::years(1));
     break;
   }
 
@@ -925,6 +915,7 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
                                          uint64_t paramsSz, uint64_t arg6) {
   ORBIS_LOG_TODO("sys_ipmimgr_call", op, kid, result, params, paramsSz, arg6);
+  thread->where();
 
   if (op == kIpmiCreateClient) {
     if (paramsSz != sizeof(IpmiCreateClientParams)) {
@@ -936,40 +927,45 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     ORBIS_LOG_TODO("IPMI: create client", createParams->arg0,
                    createParams->name, createParams->arg2);
     uwrite<uint>(result, 0x1);
-    thread->retval[0] = 0;
-    return {};
   }
 
   if (op == kImpiDestroyClient) {
     ORBIS_LOG_TODO("IPMI: destroy client");
     if (result)
       uwrite<uint>(result, 0);
-    thread->retval[0] = 0;
-    return {};
   }
 
   if (op == 0x400) {
     ORBIS_LOG_TODO("IMPI: connect?");
     if (result)
       uwrite<uint>(result, 0);
-    thread->retval[0] = 0;
-    return {};
   }
 
   if (op == 0x320) {
     ORBIS_LOG_TODO("IMPI: sync?");
     if (result)
-      uwrite<uint>(result, 0);
-    thread->retval[0] = 0;
-    return {};
+      uwrite<uint>(result, 1);
   }
 
-  if (op == 1131 || op == 1024 || op == 800) {
+  if (op == 0x310) {
+    ORBIS_LOG_TODO("IMPI: disconnect?");
+    if (result)
+      uwrite<uint>(result, 0);
+  }
+
+  if (op == 0x252) {
+    ORBIS_LOG_TODO("IMPI: try get client message?");
+    thread->where();
+    if (result)
+      uwrite<uint>(result, 0x80020003);
+  }
+
+  if (op == 0x46b) {
     thread->retval[0] = -0x40004; // HACK
     return {};
-    // return -0x40004;
   }
 
+  thread->retval[0] = 0;
   return {};
 }
 orbis::SysResult orbis::sys_get_gpo(Thread *thread /* TODO */) {
@@ -1021,11 +1017,10 @@ orbis::SysResult orbis::sys_utc_to_localtime(Thread *thread, int64_t time,
                                              int64_t *localtime,
                                              orbis::timesec *_sec,
                                              int *_dst_sec) {
-  // Disabled for now
-  thread->retval[0] = (int)ErrorCode::RANGE;
-  return {};
-
   ORBIS_LOG_TRACE(__FUNCTION__, time, localtime, _sec, _dst_sec);
+  // Disabled for now
+  return SysResult::notAnError(ErrorCode::RANGE);
+
   struct ::tm tp;
   auto result = ::mktime(::localtime_r(&time, &tp));
   if (auto e = uwrite(localtime, result); e != ErrorCode{})
@@ -1038,11 +1033,10 @@ orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread, int64_t time,
                                              uint unk, int64_t *ptime,
                                              orbis::timesec *_sec,
                                              int *_dst_sec) {
-  // Disabled for now
-  thread->retval[0] = (int)ErrorCode::RANGE;
-  return {};
-
   ORBIS_LOG_TRACE(__FUNCTION__, time, unk, ptime, _sec, _dst_sec);
+  // Disabled for now
+  return SysResult::notAnError(ErrorCode::RANGE);
+
   struct ::tm tp;
   ::time_t timez = 0;
   auto result = time - ::mktime(::localtime_r(&timez, &tp));

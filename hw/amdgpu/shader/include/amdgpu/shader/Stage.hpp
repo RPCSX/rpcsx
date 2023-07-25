@@ -1,5 +1,5 @@
 #pragma once
 
 namespace amdgpu::shader {
-enum class Stage { None, Vertex, Fragment, Geometry, Compute };
+enum class Stage : unsigned char { None, Vertex, Fragment, Geometry, Compute };
 }

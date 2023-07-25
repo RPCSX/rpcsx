@@ -12,7 +12,7 @@ struct CfgBuilder {
   RemoteMemory memory;
 
   std::size_t analyzeBb(cf::BasicBlock *bb, std::uint64_t *successors,
-                        std::size_t *successorsCount, auto pushWork) {
+                        std::size_t *successorsCount) {
     auto address = bb->getAddress();
     auto instBegin = memory.getPointer<std::uint32_t>(address);
     auto instHex = instBegin;
@@ -130,18 +130,10 @@ struct CfgBuilder {
 
       std::uint64_t successors[2];
       std::size_t successorsCount = 0;
-      std::size_t size = analyzeBb(bb, successors, &successorsCount,
-                                   [&](std::uint64_t address) {
-                                     if (processed.insert(address).second) {
-                                       workList.push_back(address);
-                                     }
-                                   });
+      std::size_t size = analyzeBb(bb, successors, &successorsCount);
       bb->setSize(size);
 
       if (successorsCount == 2) {
-        auto succ0Address = successors[0];
-        auto succ1Address = successors[1];
-
         branches.push_back(
             {address + size - 4, 2, {successors[0], successors[1]}});
 

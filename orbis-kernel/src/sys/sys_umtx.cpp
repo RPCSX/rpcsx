@@ -66,7 +66,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
       while (true) {
         if (auto r = op(usec - udiff); r != ErrorCode::TIMEDOUT)
           return r;
-        udiff = (std::chrono::steady_clock::now() - start).count() / 1000;
+        udiff = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::steady_clock::now() - start)
+                    .count();
         if (udiff >= usec)
           return ErrorCode::TIMEDOUT;
       }
@@ -84,7 +86,7 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case 2: {
     return with_timeout(
         [&](std::uint64_t ut) {
-          return umtx_wait(thread, obj, val, ut, false);
+          return umtx_wait(thread, obj, val, ut, false, true);
         },
         false);
   }
@@ -118,7 +120,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return umtx_cv_broadcast(thread, (ptr<ucond>)obj);
   case 11: {
     return with_timeout(
-        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut, true); },
+        [&](std::uint64_t ut) {
+          return umtx_wait(thread, obj, val, ut, true, true);
+        },
         false);
   }
   case 12:
@@ -129,7 +133,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return umtx_rw_unlock(thread, obj, val, uaddr1, uaddr2);
   case 15: {
     return with_timeout(
-        [&](std::uint64_t ut) { return umtx_wait(thread, obj, val, ut, true); },
+        [&](std::uint64_t ut) {
+          return umtx_wait(thread, obj, val, ut, true, false);
+        },
         false);
   }
   case 16:
@@ -142,9 +148,13 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case 18:
     return umtx_wake_umutex(thread, (ptr<umutex>)obj);
   case 19:
-    return umtx_sem_wait(thread, obj, val, uaddr1, uaddr2);
+    return with_timeout(
+        [&](std::uint64_t ut) {
+          return umtx_sem_wait(thread, (ptr<usem>)obj, ut);
+        },
+        false);
   case 20:
-    return umtx_sem_wake(thread, obj, val, uaddr1, uaddr2);
+    return umtx_sem_wake(thread, (ptr<usem>)obj);
   case 21:
     return umtx_nwake_private(thread, (ptr<void *>)obj, val);
   case 22:
