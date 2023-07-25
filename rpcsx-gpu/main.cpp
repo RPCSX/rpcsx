@@ -14,6 +14,7 @@
 #include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
+#include <span>
 
 #include <GLFW/glfw3.h> // TODO: make in optional
 
