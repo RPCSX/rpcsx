@@ -24,6 +24,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 ## How to Compile the Emulator 
 
 * [How to Compile rpcsx](BUILDING.md)
+* [How to Use rpcsx](USAGE.md)
 
 ## License
 
