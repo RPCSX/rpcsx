@@ -10,7 +10,7 @@ sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev 
 ### The dependencies for Fedora distributions:
 
 ```
-sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel
+sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel Python2
 ```
 
 ### The dependencies for Arch distributions:
@@ -23,8 +23,12 @@ sudo pacman -S libunwind glfw-x11 vulkan-devel glslang
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 ```
 ```
-yay -S spirv-cross
+yay -S spirv-cross python2-bin
 ```
+
+## Getting python2 
+
+[How to install python2 on ubuntu](https://tecadmin.net/install-python-2-7-on-ubuntu-and-linuxmint/)
 
 ## Getting spriv-cross on Fedora and Arch Linux
 
