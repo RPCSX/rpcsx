@@ -230,6 +230,7 @@ orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
   auto result = rx::vfs::open(path, flags, mode, &instance);
   if (result.isError()) {
     ORBIS_LOG_WARNING("Failed to open file", path, result.value());
+    thread->where();
     return result;
   }
 
@@ -404,6 +405,7 @@ orbis::SysResult ioctl(orbis::Thread *thread, orbis::sint fd, orbis::ulong com,
 
   if (result < 0) {
     // TODO
+    thread->where();
     return ErrorCode::IO;
   }
 
