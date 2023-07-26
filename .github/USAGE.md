@@ -4,7 +4,7 @@
 
 ### eboot.bin needs to be unfselfed and to do this [python2](BUILDING.md) is required with this tool [ps4_unfself](https://github.com/SocraticBliss/ps4_unfself)
 
-place ```ps4_unfself.py``` into the same folder as the eboot.bin then open a console and type 
+Place ```ps4_unfself.py``` into the same folder as the eboot.bin then open a console and type 
 
 ```
 python2 ps4_unfself.py eboot.bin
