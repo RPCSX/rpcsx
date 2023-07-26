@@ -4,32 +4,27 @@
 ### The dependencies for Debian-like distributions.
 
 ```   
-sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev
+sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev python3-pip
 ```
 
 ### The dependencies for Fedora distributions:
 
 ```
-sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel python2
+sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel python3-pip 
 ```
 
 ### The dependencies for Arch distributions:
 
 ```
-sudo pacman -S libunwind glfw-x11 vulkan-devel glslang
+sudo pacman -S libunwind glfw-x11 vulkan-devel glslang python-pip
 ```
 > Side note you will need to pull ``spirv-cross`` from the AUR for now so do the following
 ```
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
 ```
 ```
-yay -S spirv-cross python2-bin
+yay -S spirv-cross
 ```
-
-## Getting python2 
-
-[How to install python2 on ubuntu](https://tecadmin.net/install-python-2-7-on-ubuntu-and-linuxmint/)
-
 ## Getting spriv-cross on Fedora and Arch Linux
 
 ```
