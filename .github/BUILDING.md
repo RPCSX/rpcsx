@@ -25,6 +25,15 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/ya
 ```
 yay -S spirv-cross
 ```
+
+## We need one more thing 
+
+Python2 is now replaced fully and to use ```ps4_unfself``` we have to use python3 and install future using ```pip```
+
+```
+pip install future
+```
+
 ## Getting spriv-cross on Fedora and Arch Linux
 
 ```
