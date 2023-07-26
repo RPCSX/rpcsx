@@ -11,8 +11,13 @@ struct StderrDevice : public IoDevice {
 static std::int64_t stderr_instance_write(IoDeviceInstance *instance,
                                           const void *data,
                                           std::uint64_t size) {
-  auto result = fwrite(data, 1, size, stderr);
-  fflush(stderr);
+  static const bool istty = isatty(fileno(stderr));
+  if (size && istty)
+    std::fprintf(stderr, "\e[0;35m");
+  auto result = std::fwrite(data, 1, size, stderr);
+  if (size && istty)
+    std::fprintf(stderr, "\e[0m");
+  std::fflush(stderr);
 
   return result;
 }

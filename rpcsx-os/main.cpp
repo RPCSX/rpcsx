@@ -267,6 +267,7 @@ static int ps4Exec(orbis::Process *mainProcess,
   rx::vfs::mount("/dev/hid", createHidCharacterDevice());
   rx::vfs::mount("/dev/gc", createGcCharacterDevice());
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
+  rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
 
   rx::procOpsTable.open(mainThread, "/dev/stdin", 0, 0);
   rx::procOpsTable.open(mainThread, "/dev/stdout", 0, 0);

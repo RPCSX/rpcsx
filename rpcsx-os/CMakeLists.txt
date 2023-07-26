@@ -2,7 +2,8 @@ add_library(standalone-config INTERFACE)
 target_include_directories(standalone-config INTERFACE orbis-kernel-config)
 add_library(orbis::kernel::config ALIAS standalone-config)
 
-add_executable(rpcsx-os 
+add_executable(rpcsx-os
+  iodev/ajm.cpp
   iodev/dce.cpp
   iodev/dipsw.cpp
   iodev/dmem.cpp

@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <filesystem>
+#include <span>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <thread>
@@ -14,7 +15,6 @@
 #include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
-#include <span>
 
 #include <GLFW/glfw3.h> // TODO: make in optional
 

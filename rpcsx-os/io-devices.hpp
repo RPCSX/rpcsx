@@ -17,3 +17,4 @@ IoDevice *createStdinCharacterDevice();
 IoDevice *createStdoutCharacterDevice();
 IoDevice *createZeroCharacterDevice();
 IoDevice *createRngCharacterDevice();
+IoDevice *createAjmCharacterDevice();

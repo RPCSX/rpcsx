@@ -448,7 +448,7 @@ orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<umutex> m) {
 
 orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<usem> sem,
                                       std::uint64_t ut) {
-  ORBIS_LOG_WARNING(__FUNCTION__, sem, ut);
+  ORBIS_LOG_TRACE(__FUNCTION__, sem, ut);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, sem->flags, sem);
   auto node = chain.enqueue(key, thread);
 
