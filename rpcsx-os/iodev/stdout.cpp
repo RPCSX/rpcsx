@@ -11,7 +11,11 @@ struct StdoutDevice : public IoDevice {
 static std::int64_t stdout_instance_write(IoDeviceInstance *instance,
                                           const void *data,
                                           std::uint64_t size) {
+  if (size)
+    std::fprintf(stdout, "\e[30;1m");
   auto result = std::fwrite(data, 1, size, stdout);
+  if (size)
+    std::fprintf(stdout, "\e[0m");
   std::fflush(stdout);
 
   return result;
