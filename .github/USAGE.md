@@ -9,7 +9,7 @@ Place ```ps4_unfself.py``` into the same folder as the eboot.bin then open a con
 ```
 python2 ps4_unfself.py eboot.bin
 ```
-you will get a read out and it will make a ```eboot.elf```
+You will get a read out and it will make an ```eboot.elf```
 
 ## How to run samples and games
 
