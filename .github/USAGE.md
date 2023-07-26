@@ -2,7 +2,7 @@
 
 ## How to prepare eboot.bin with ps4_unfself
 
-### eboot.bin needs to be unfselfed and to do this [python2](BUILDING.md) is required with this tool [ps4_unfself](https://github.com/SocraticBliss/ps4_unfself)
+### eboot.bin needs to be unfselfed and to do this [pip](BUILDING.md) is required with this tool [ps4_unfself](https://github.com/SocraticBliss/ps4_unfself)
 
 Place ```ps4_unfself.py``` into the same folder as the eboot.bin then open a console and type 
 
