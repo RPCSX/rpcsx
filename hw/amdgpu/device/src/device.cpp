@@ -1693,7 +1693,7 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
   case kSurfaceFormat24_8:
     switch (channel) {
     case kTextureChannelTypeUNorm:
-      return VK_FORMAT_D24_UNORM_S8_UINT;
+      return VK_FORMAT_D32_SFLOAT_S8_UINT; // HACK for amdgpu
 
     default:
       break;
