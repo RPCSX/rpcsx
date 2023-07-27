@@ -86,10 +86,14 @@ public:
   T *operator->() const { return m_ref; }
   explicit operator bool() const { return m_ref != nullptr; }
   bool operator==(std::nullptr_t) const { return m_ref == nullptr; }
-  bool operator!=(std::nullptr_t) const { return m_ref != nullptr; }
+  bool operator==(const Ref &other) const = default;
+  bool operator==(const T *other) const { return m_ref == other; }
   auto operator<=>(const T *other) const { return m_ref <=> other; }
   auto operator<=>(const Ref &other) const = default;
 };
+
+template <typename T> Ref(T *) -> Ref<T>;
+template <typename T> Ref(Ref<T>) -> Ref<T>;
 
 enum class TaskState { InProgress, Complete, Canceled };
 
@@ -194,6 +198,12 @@ struct AsyncTask<T> : AsyncTaskCtl {
     return *this;
   }
 
+  ~AsyncTask() {
+    if (isInProgress()) {
+      std::bit_cast<T *>(&taskStorage)->~T();
+    }
+  }
+
   void invoke() override {
     auto &lambda = *std::bit_cast<T *>(&taskStorage);
     auto &base = *static_cast<const AsyncTaskCtl *>(this);
@@ -273,7 +283,7 @@ private:
     while (!exit.load(std::memory_order::relaxed)) {
       Ref<AsyncTaskCtl> task;
 
-      if (task == nullptr) {
+      {
         std::unique_lock lock(taskMtx);
 
         if (tasks.empty()) {
@@ -288,9 +298,7 @@ private:
         tasks.pop_back();
       }
 
-      if (task != nullptr) {
-        task->invoke();
-      }
+      task->invoke();
     }
   }
 };

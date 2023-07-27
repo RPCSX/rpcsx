@@ -1,5 +1,9 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE on)
 
+add_library(obj.orbis-utils-ipc OBJECT
+  src/utils/SharedMutex.cpp
+  src/utils/SharedCV.cpp
+)
 add_library(obj.orbis-kernel OBJECT
   src/module.cpp
   src/sysvec.cpp
@@ -62,11 +66,9 @@ add_library(obj.orbis-kernel OBJECT
   src/sys/sys_vm_unix.cpp
 
   src/utils/Logs.cpp
-  src/utils/SharedMutex.cpp
-  src/utils/SharedCV.cpp
 )
 
-target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config)
+target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config obj.orbis-utils-ipc)
 
 target_include_directories(obj.orbis-kernel
     PUBLIC
@@ -76,10 +78,21 @@ target_include_directories(obj.orbis-kernel
         ${CMAKE_CURRENT_SOURCE_DIR}/include/orbis
 )
 
+target_include_directories(obj.orbis-utils-ipc
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/orbis
+)
+
+add_library(orbis-utils-ipc STATIC)
 add_library(orbis-kernel STATIC)
 add_library(orbis-kernel-shared SHARED)
+add_library(orbis::utils::ipc ALIAS orbis-utils-ipc)
 add_library(orbis::kernel ALIAS orbis-kernel)
 add_library(orbis::kernel-shared ALIAS orbis-kernel-shared)
 
+target_link_libraries(orbis-utils-ipc PUBLIC obj.orbis-utils-ipc)
 target_link_libraries(orbis-kernel PUBLIC obj.orbis-kernel)
 target_link_libraries(orbis-kernel-shared PUBLIC obj.orbis-kernel)

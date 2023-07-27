@@ -130,9 +130,32 @@ public:
   void unmap(std::uint64_t beginAddress, std::uint64_t endAddress) {
     auto beginIt = mAreas.lower_bound(beginAddress);
 
-    if (beginIt == mAreas.end() || beginIt->first >= endAddress) {
+    if (beginIt == mAreas.end()) {
       return;
     }
+    if (beginIt->first >= endAddress) {
+      if (beginIt->second != Kind::X) {
+        return;
+      }
+
+      auto prevEnd = beginIt->first;
+
+      --beginIt;
+      if (beginIt->first >= endAddress) {
+        return;
+      }
+
+      if (beginIt->first < beginAddress) {
+        this->handleInvalidation(beginIt->first);
+        mAreas.emplace(beginAddress, Kind::X);
+      }
+
+      if (prevEnd > endAddress) {
+        mAreas.emplace(endAddress, Kind::O);
+        return;
+      }
+    }
+
     if (beginIt->first > beginAddress && beginIt->second == Kind::X) {
       // we have found end after unmap begin, need to insert new end
       this->handleInvalidation(std::prev(beginIt)->first);
@@ -179,4 +202,166 @@ public:
   }
 };
 
+template <typename PayloadT> class MemoryTableWithPayload {
+  enum class Kind { O, X, XO };
+  std::map<std::uint64_t, std::pair<Kind, PayloadT>> mAreas;
+
+public:
+  struct AreaInfo {
+    std::uint64_t beginAddress;
+    std::uint64_t endAddress;
+    PayloadT payload;
+  };
+
+  class iterator {
+    using map_iterator =
+        typename std::map<std::uint64_t, std::pair<Kind, PayloadT>>::iterator;
+    map_iterator it;
+
+  public:
+    iterator() = default;
+    iterator(map_iterator it) : it(it) {}
+
+    AreaInfo operator*() const {
+      return {it->first, std::next(it)->first, it->second.second};
+    }
+
+    iterator &operator++() {
+      ++it;
+
+      if (it->second.first != Kind::XO) {
+        ++it;
+      }
+
+      return *this;
+    }
+
+    bool operator==(iterator other) const { return it == other.it; }
+    bool operator!=(iterator other) const { return it != other.it; }
+  };
+
+  iterator begin() { return iterator(mAreas.begin()); }
+  iterator end() { return iterator(mAreas.end()); }
+
+  void clear() { mAreas.clear(); }
+
+  iterator queryArea(std::uint64_t address) {
+    auto it = mAreas.lower_bound(address);
+
+    if (it == mAreas.end()) {
+      return it;
+    }
+
+    std::uint64_t endAddress = 0;
+
+    if (it->first == address) {
+      if (it->second.first == Kind::X) {
+        return mAreas.end();
+      }
+
+      endAddress = std::next(it)->first;
+    } else {
+      if (it->second.first == Kind::O) {
+        return mAreas.end();
+      }
+
+      endAddress = it->first;
+      --it;
+    }
+
+    return endAddress < address ? mAreas.end() : it;
+  }
+
+  void map(std::uint64_t beginAddress, std::uint64_t endAddress,
+           PayloadT payload, bool merge = true) {
+    assert(beginAddress < endAddress);
+    auto [beginIt, beginInserted] =
+        mAreas.emplace(beginAddress, std::pair{Kind::O, payload});
+    auto [endIt, endInserted] =
+        mAreas.emplace(endAddress, std::pair{Kind::X, PayloadT{}});
+
+    bool seenOpen = false;
+    bool endCollision = false;
+    bool lastRemovedIsOpen = false;
+    PayloadT lastRemovedOpenPayload;
+
+    if (!beginInserted || !endInserted) {
+      if (!beginInserted) {
+        if (beginIt->second.first == Kind::X) {
+          beginIt->second.first = Kind::XO;
+        } else {
+          seenOpen = true;
+          lastRemovedIsOpen = true;
+          lastRemovedOpenPayload = std::move(beginIt->second.second);
+        }
+
+        beginIt->second.second = std::move(payload);
+      }
+
+      if (!endInserted) {
+        if (endIt->second.first == Kind::O) {
+          endIt->second.first = Kind::XO;
+        } else {
+          endCollision = true;
+        }
+
+        lastRemovedIsOpen = false;
+      }
+    } else if (beginIt != mAreas.begin()) {
+      auto prev = std::prev(beginIt);
+
+      if (prev->second.first != Kind::X) {
+        beginIt->second.first = Kind::XO;
+        seenOpen = true;
+        lastRemovedIsOpen = true;
+        lastRemovedOpenPayload = prev->second.second;
+      }
+    }
+
+    auto origBegin = beginIt;
+    ++beginIt;
+    while (beginIt != endIt) {
+      if (beginIt->second.first == Kind::X) {
+        lastRemovedIsOpen = false;
+        if (!seenOpen) {
+          origBegin->second.first = Kind::XO;
+        }
+      } else {
+        if (!seenOpen && beginIt->second.first == Kind::XO) {
+          origBegin->second.first = Kind::XO;
+        }
+
+        seenOpen = true;
+        lastRemovedIsOpen = true;
+        lastRemovedOpenPayload = std::move(beginIt->second.second);
+      }
+      beginIt = mAreas.erase(beginIt);
+    }
+
+    if (endCollision && !seenOpen) {
+      origBegin->second.first = Kind::XO;
+    } else if (lastRemovedIsOpen && !endCollision) {
+      endIt->second.first = Kind::XO;
+      endIt->second.second = std::move(lastRemovedOpenPayload);
+    }
+
+    if (!merge) {
+      return;
+    }
+
+    if (origBegin->second.first == Kind::XO) {
+      auto prevBegin = std::prev(origBegin);
+
+      if (prevBegin->second.second == origBegin->second.second) {
+        mAreas.erase(origBegin);
+      }
+    }
+
+    if (endIt->second.first == Kind::XO) {
+      if (endIt->second.second == origBegin->second.second) {
+        mAreas.erase(endIt);
+      }
+    }
+  }
+};
 } // namespace util

@@ -1,8 +1,11 @@
 #pragma once
 
+#include "orbis/utils/SharedMutex.hpp"
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
+#include <orbis/utils/SharedCV.hpp>
 
 namespace amdgpu::bridge {
 enum class CommandId : std::uint32_t {
@@ -38,6 +41,14 @@ struct CmdFlip {
   std::uint64_t arg;
 };
 
+enum {
+  kPageWriteWatch = 1 << 0,
+  kPageReadWriteLock = 1 << 1,
+  kPageInvalidated = 1 << 2,
+};
+
+static constexpr auto kHostPageSize = 0x1000;
+
 struct BridgeHeader {
   std::uint64_t size;
   std::uint64_t info;
@@ -57,6 +68,10 @@ struct BridgeHeader {
   CmdMemoryProt memoryAreas[128];
   CmdCommandBuffer commandBuffers[32];
   CmdBuffer buffers[8];
+  // orbis::shared_mutex cacheCommandMtx;
+  // orbis::shared_cv cacheCommandCv;
+  std::atomic<std::uint64_t> cacheCommands[4];
+  std::atomic<std::uint8_t> cachePages[0x100'0000'0000 / kHostPageSize];
 
   volatile std::uint64_t pull;
   volatile std::uint64_t push;

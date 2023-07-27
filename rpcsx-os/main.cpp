@@ -10,6 +10,7 @@
 #include "vfs.hpp"
 #include "vm.hpp"
 
+#include <atomic>
 #include <elf.h>
 #include <filesystem>
 #include <orbis/KernelContext.hpp>
@@ -23,6 +24,7 @@
 
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/mman.h>
 #include <ucontext.h>
 
 #include <csignal>
@@ -35,6 +37,67 @@ __attribute__((no_stack_protector)) static void
 handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (auto hostFs = _readgsbase_u64()) {
     _writefsbase_u64(hostFs);
+  }
+
+  auto signalAddress = reinterpret_cast<std::uintptr_t>(info->si_addr);
+
+  if (rx::thread::g_current != nullptr && sig == SIGSEGV &&
+      signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
+    auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
+    bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+    auto origVmProt = rx::vm::getPageProtection(signalAddress);
+    int prot = 0;
+    auto page = signalAddress / amdgpu::bridge::kHostPageSize;
+
+    if (origVmProt & rx::vm::kMapProtCpuRead) {
+      prot |= PROT_READ;
+    }
+    if (origVmProt & rx::vm::kMapProtCpuWrite) {
+      prot |= PROT_WRITE;
+    }
+    if (origVmProt & rx::vm::kMapProtCpuExec) {
+      prot |= PROT_EXEC;
+    }
+
+    if (prot & (isWrite ? PROT_WRITE : PROT_READ)) {
+      auto bridge = rx::bridge.header;
+
+      while (true) {
+        auto flags = bridge->cachePages[page].load(std::memory_order::relaxed);
+
+        if ((flags & amdgpu::bridge::kPageReadWriteLock) != 0) {
+          continue;
+        }
+
+        if ((flags & amdgpu::bridge::kPageWriteWatch) == 0) {
+          break;
+        }
+
+        if (!isWrite) {
+          prot &= ~PROT_WRITE;
+          break;
+        }
+
+        if (bridge->cachePages[page].compare_exchange_weak(
+                flags, amdgpu::bridge::kPageInvalidated,
+                std::memory_order::relaxed)) {
+          break;
+        }
+      }
+
+      if (::mprotect((void *)(page * amdgpu::bridge::kHostPageSize),
+                     amdgpu::bridge::kHostPageSize, prot)) {
+        std::perror("cache reprotection error");
+        std::abort();
+      }
+
+      _writefsbase_u64(rx::thread::g_current->fsBase);
+      return;
+    }
+
+    std::fprintf(stderr, "SIGSEGV, address %lx, access %s, prot %s\n",
+                 signalAddress, isWrite ? "write" : "read",
+                 rx::vm::mapProtToString(origVmProt).c_str());
   }
 
   if (g_gpuPid > 0) {
@@ -513,6 +576,68 @@ int main(int argc, const char *argv[]) {
   executableModule->id = initProcess->modulesMap.insert(executableModule);
   initProcess->processParam = executableModule->processParam;
   initProcess->processParamSize = executableModule->processParamSize;
+
+  std::thread{[] {
+    pthread_setname_np(pthread_self(), "Bridge");
+    auto bridge = rx::bridge.header;
+
+    std::vector<std::uint64_t> fetchedCommands;
+    fetchedCommands.reserve(std::size(bridge->cacheCommands));
+
+    while (true) {
+      for (auto &command : bridge->cacheCommands) {
+        std::uint64_t value = command.load(std::memory_order::relaxed);
+
+        if (value != 0) {
+          fetchedCommands.push_back(value);
+          command.store(0, std::memory_order::relaxed);
+        }
+      }
+
+      if (fetchedCommands.empty()) {
+        continue;
+      }
+
+      for (auto command : fetchedCommands) {
+        auto page = static_cast<std::uint32_t>(command);
+        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
+
+        auto pageFlags =
+            bridge->cachePages[page].load(std::memory_order::relaxed);
+
+        auto address =
+            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
+        auto origVmProt = rx::vm::getPageProtection(address);
+        int prot = 0;
+
+        if (origVmProt & rx::vm::kMapProtCpuRead) {
+          prot |= PROT_READ;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuWrite) {
+          prot |= PROT_WRITE;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuExec) {
+          prot |= PROT_EXEC;
+        }
+
+        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
+          prot &= ~(PROT_READ | PROT_WRITE);
+        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
+          prot &= ~PROT_WRITE;
+        }
+
+        // std::fprintf(stderr, "protection %lx-%lx\n", address,
+        //              address + amdgpu::bridge::kHostPageSize * count);
+        if (::mprotect(reinterpret_cast<void *>(address),
+                       amdgpu::bridge::kHostPageSize * count, prot)) {
+          perror("protection failed");
+          std::abort();
+        }
+      }
+
+      fetchedCommands.clear();
+    }
+  }}.detach();
 
   int status = 0;
 

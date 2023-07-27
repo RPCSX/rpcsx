@@ -1,4 +1,5 @@
 #include "amdgpu/RemoteMemory.hpp"
+#include "amdgpu/device/vk.hpp"
 #include <algorithm>
 #include <amdgpu/bridge/bridge.hpp>
 #include <amdgpu/device/device.hpp>
@@ -643,6 +644,10 @@ int main(int argc, const char *argv[]) {
   Verify() << (graphicsQueues.size() > 0);
   Verify() << (presentQueue != VK_NULL_HANDLE);
 
+  amdgpu::device::vk::g_computeQueues = computeQueues;
+  amdgpu::device::vk::g_transferQueues = transferQueues;
+  amdgpu::device::vk::g_graphicsQueues = graphicsQueues;
+
   VkCommandPoolCreateInfo commandPoolCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
@@ -653,16 +658,8 @@ int main(int argc, const char *argv[]) {
   Verify() << vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr,
                                   &commandPool);
 
-  VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-  };
-
-  VkPipelineCache pipelineCache;
-  Verify() << vkCreatePipelineCache(vkDevice, &pipelineCacheCreateInfo, nullptr,
-                                    &pipelineCache);
   amdgpu::device::DrawContext dc{
       // TODO
-      .pipelineCache = pipelineCache,
       .queue = graphicsQueues.front().first,
       .commandPool = commandPool,
   };
@@ -707,7 +704,7 @@ int main(int argc, const char *argv[]) {
   bridge->pullerPid = ::getpid();
 
   amdgpu::bridge::BridgePuller bridgePuller{bridge};
-  amdgpu::bridge::Command commandsBuffer[32];
+  amdgpu::bridge::Command commandsBuffer[1];
 
   if (!std::filesystem::exists(std::string("/dev/shm") + shmName)) {
     std::printf("Waiting for OS\n");
@@ -735,163 +732,169 @@ int main(int argc, const char *argv[]) {
                       memoryFd, 0);
 
   g_hostMemory = memory;
-  amdgpu::device::AmdgpuDevice device(dc, bridgePuller.header);
-
-  std::vector<VkCommandBuffer> presentCmdBuffers(swapchainImages.size());
 
   {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = dc.commandPool;
-    allocInfo.commandBufferCount = presentCmdBuffers.size();
-    vkAllocateCommandBuffers(vkDevice, &allocInfo, presentCmdBuffers.data());
-  }
+    amdgpu::device::AmdgpuDevice device(dc, bridgePuller.header);
 
-  std::printf("Initialization complete\n");
-
-  uint32_t imageIndex = 0;
-  bool isImageAcquired = false;
-  std::vector<std::vector<VkBuffer>> swapchainBufferHandles;
-  swapchainBufferHandles.resize(swapchainImages.size());
-  std::vector<std::vector<VkImage>> swapchainImageHandles;
-  swapchainImageHandles.resize(swapchainImages.size());
-
-  VkPipelineStageFlags submitPipelineStages =
-      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-  while (!glfwWindowShouldClose(window)) {
-    glfwPollEvents();
-
-    std::size_t pulledCount =
-        bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
-
-    if (pulledCount == 0) {
-      // std::this_thread::sleep_for(
-      //     std::chrono::milliseconds(1)); // Just for testing, should be
-      //     removed
-      continue;
+    for (std::uint32_t end = bridge->memoryAreaCount, i = 0; i < end; ++i) {
+      auto area = bridge->memoryAreas[i];
+      device.handleProtectMemory(area.address, area.size, area.prot);
     }
 
-    for (auto cmd : std::span(commandsBuffer, pulledCount)) {
-      switch (cmd.id) {
-      case amdgpu::bridge::CommandId::ProtectMemory:
-        device.handleProtectMemory(cmd.memoryProt.address, cmd.memoryProt.size,
-                                   cmd.memoryProt.prot);
-        break;
-      case amdgpu::bridge::CommandId::CommandBuffer:
-        device.handleCommandBuffer(cmd.commandBuffer.queue,
-                                   cmd.commandBuffer.address,
-                                   cmd.commandBuffer.size);
-        break;
-      case amdgpu::bridge::CommandId::Flip: {
-        if (!isImageAcquired) {
-          Verify() << vkAcquireNextImageKHR(vkDevice, swapchain, UINT64_MAX,
-                                            presentCompleteSemaphore, nullptr,
-                                            &imageIndex);
+    std::vector<VkCommandBuffer> presentCmdBuffers(swapchainImages.size());
 
-          vkWaitForFences(vkDevice, 1, &inFlightFences[imageIndex], VK_TRUE,
-                          UINT64_MAX);
-          vkResetFences(vkDevice, 1, &inFlightFences[imageIndex]);
-        }
+    {
+      VkCommandBufferAllocateInfo allocInfo{};
+      allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+      allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+      allocInfo.commandPool = dc.commandPool;
+      allocInfo.commandBufferCount = presentCmdBuffers.size();
+      vkAllocateCommandBuffers(vkDevice, &allocInfo, presentCmdBuffers.data());
+    }
 
-        isImageAcquired = false;
+    std::printf("Initialization complete\n");
 
-        vkResetCommandBuffer(presentCmdBuffers[imageIndex], 0);
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    uint32_t imageIndex = 0;
+    bool isImageAcquired = false;
+    std::vector<std::vector<VkBuffer>> swapchainBufferHandles;
+    swapchainBufferHandles.resize(swapchainImages.size());
+    std::vector<std::vector<VkImage>> swapchainImageHandles;
+    swapchainImageHandles.resize(swapchainImages.size());
 
-        vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
+    VkPipelineStageFlags submitPipelineStages =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-        for (auto handle : swapchainBufferHandles[imageIndex]) {
-          vkDestroyBuffer(vkDevice, handle, nullptr);
-        }
+    while (!glfwWindowShouldClose(window)) {
+      glfwPollEvents();
 
-        for (auto handle : swapchainImageHandles[imageIndex]) {
-          vkDestroyImage(vkDevice, handle, nullptr);
-        }
+      std::size_t pulledCount =
+          bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
 
-        swapchainBufferHandles[imageIndex].clear();
-        swapchainImageHandles[imageIndex].clear();
+      if (pulledCount == 0) {
+        // std::this_thread::sleep_for(
+        //     std::chrono::milliseconds(1)); // Just for testing, should be
+        //     removed
+        continue;
+      }
 
-        if (device.handleFlip(cmd.flip.bufferIndex, cmd.flip.arg,
-                              presentCmdBuffers[imageIndex],
-                              swapchainImages[imageIndex], swapchainExtent,
-                              swapchainBufferHandles[imageIndex],
-                              swapchainImageHandles[imageIndex])) {
-          vkEndCommandBuffer(presentCmdBuffers[imageIndex]);
+      for (auto cmd : std::span(commandsBuffer, pulledCount)) {
+        switch (cmd.id) {
+        case amdgpu::bridge::CommandId::ProtectMemory:
+          device.handleProtectMemory(cmd.memoryProt.address,
+                                     cmd.memoryProt.size, cmd.memoryProt.prot);
+          break;
+        case amdgpu::bridge::CommandId::CommandBuffer:
+          device.handleCommandBuffer(cmd.commandBuffer.queue,
+                                     cmd.commandBuffer.address,
+                                     cmd.commandBuffer.size);
+          break;
+        case amdgpu::bridge::CommandId::Flip: {
+          if (!isImageAcquired) {
+            Verify() << vkAcquireNextImageKHR(vkDevice, swapchain, UINT64_MAX,
+                                              presentCompleteSemaphore, nullptr,
+                                              &imageIndex);
 
-          VkSubmitInfo submitInfo{};
-          submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-          submitInfo.commandBufferCount = 1;
-          submitInfo.pCommandBuffers = &presentCmdBuffers[imageIndex];
-          submitInfo.waitSemaphoreCount = 1;
-          submitInfo.signalSemaphoreCount = 1;
-          submitInfo.pSignalSemaphores = &renderCompleteSemaphore;
-          submitInfo.pWaitSemaphores = &presentCompleteSemaphore;
-          submitInfo.pWaitDstStageMask = &submitPipelineStages;
-
-          Verify() << vkQueueSubmit(dc.queue, 1, &submitInfo,
-                                    inFlightFences[imageIndex]);
-
-          VkPresentInfoKHR presentInfo{};
-          presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-          presentInfo.waitSemaphoreCount = 1;
-          presentInfo.pWaitSemaphores = &renderCompleteSemaphore;
-          presentInfo.swapchainCount = 1;
-          presentInfo.pSwapchains = &swapchain;
-          presentInfo.pImageIndices = &imageIndex;
-
-          if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
-            std::printf("swapchain was invalidated\n");
-            createSwapchain();
+            vkWaitForFences(vkDevice, 1, &inFlightFences[imageIndex], VK_TRUE,
+                            UINT64_MAX);
+            vkResetFences(vkDevice, 1, &inFlightFences[imageIndex]);
           }
-          // std::this_thread::sleep_for(std::chrono::seconds(3));
-        } else {
-          isImageAcquired = true;
+
+          isImageAcquired = false;
+
+          vkResetCommandBuffer(presentCmdBuffers[imageIndex], 0);
+          VkCommandBufferBeginInfo beginInfo{};
+          beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+          beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+          vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
+
+          for (auto handle : swapchainBufferHandles[imageIndex]) {
+            vkDestroyBuffer(vkDevice, handle, nullptr);
+          }
+
+          for (auto handle : swapchainImageHandles[imageIndex]) {
+            vkDestroyImage(vkDevice, handle, nullptr);
+          }
+
+          swapchainBufferHandles[imageIndex].clear();
+          swapchainImageHandles[imageIndex].clear();
+
+          if (device.handleFlip(cmd.flip.bufferIndex, cmd.flip.arg,
+                                presentCmdBuffers[imageIndex],
+                                swapchainImages[imageIndex], swapchainExtent,
+                                swapchainBufferHandles[imageIndex],
+                                swapchainImageHandles[imageIndex])) {
+            vkEndCommandBuffer(presentCmdBuffers[imageIndex]);
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &presentCmdBuffers[imageIndex];
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores = &renderCompleteSemaphore;
+            submitInfo.pWaitSemaphores = &presentCompleteSemaphore;
+            submitInfo.pWaitDstStageMask = &submitPipelineStages;
+
+            Verify() << vkQueueSubmit(dc.queue, 1, &submitInfo,
+                                      inFlightFences[imageIndex]);
+
+            VkPresentInfoKHR presentInfo{};
+            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+            presentInfo.waitSemaphoreCount = 1;
+            presentInfo.pWaitSemaphores = &renderCompleteSemaphore;
+            presentInfo.swapchainCount = 1;
+            presentInfo.pSwapchains = &swapchain;
+            presentInfo.pImageIndices = &imageIndex;
+
+            if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
+              std::printf("swapchain was invalidated\n");
+              createSwapchain();
+            }
+            // std::this_thread::sleep_for(std::chrono::seconds(3));
+          } else {
+            isImageAcquired = true;
+          }
+
+          break;
         }
 
-        break;
-      }
-
-      default:
-        util::unreachable("Unexpected command id %u\n", (unsigned)cmd.id);
+        default:
+          util::unreachable("Unexpected command id %u\n", (unsigned)cmd.id);
+        }
       }
     }
-  }
 
-  if (bridge->pusherPid > 0) {
-    kill(bridge->pusherPid, SIGINT);
-  }
-
-  for (auto fence : inFlightFences) {
-    vkDestroyFence(vkDevice, fence, nullptr);
-  }
-
-  vkDestroySemaphore(vkDevice, presentCompleteSemaphore, nullptr);
-  vkDestroySemaphore(vkDevice, renderCompleteSemaphore, nullptr);
-  vkDestroyCommandPool(vkDevice, commandPool, nullptr);
-
-  for (auto &handles : swapchainImageHandles) {
-    for (auto handle : handles) {
-      vkDestroyImage(vkDevice, handle, nullptr);
+    if (bridge->pusherPid > 0) {
+      kill(bridge->pusherPid, SIGINT);
     }
-  }
-  for (auto &handles : swapchainBufferHandles) {
-    for (auto handle : handles) {
-      vkDestroyBuffer(vkDevice, handle, nullptr);
+
+    for (auto fence : inFlightFences) {
+      vkDestroyFence(vkDevice, fence, nullptr);
+    }
+
+    vkDestroySemaphore(vkDevice, presentCompleteSemaphore, nullptr);
+    vkDestroySemaphore(vkDevice, renderCompleteSemaphore, nullptr);
+    vkDestroyCommandPool(vkDevice, commandPool, nullptr);
+
+    for (auto &handles : swapchainImageHandles) {
+      for (auto handle : handles) {
+        vkDestroyImage(vkDevice, handle, nullptr);
+      }
+    }
+    for (auto &handles : swapchainBufferHandles) {
+      for (auto handle : handles) {
+        vkDestroyBuffer(vkDevice, handle, nullptr);
+      }
     }
   }
 
   vkDestroySwapchainKHR(vkDevice, swapchain, nullptr);
-
-  for (auto handle : swapchainImages) {
-    vkDestroyImage(vkDevice, handle, nullptr);
-  }
-
   vkDestroyDevice(vkDevice, nullptr);
+  vkDestroySurfaceKHR(vkInstance, vkSurface, nullptr);
   vkDestroyInstance(vkInstance, nullptr);
+
+  glfwDestroyWindow(window);
 
   amdgpu::bridge::destroyShmCommandBuffer(bridge);
   amdgpu::bridge::unlinkShm(cmdBridgeName);
