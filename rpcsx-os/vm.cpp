@@ -676,10 +676,11 @@ bool setMemoryRangeName(std::uint64_t phyAddress, std::uint64_t size,
 
 void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
                   std::int32_t flags, std::int32_t internalFlags) {
-  std::printf("rx::vm::map(addr = %p, len = %" PRIu64
-              ", prot = %s, flags = %s)\n",
-              addr, len, mapProtToString(prot).c_str(),
-              mapFlagsToString(flags).c_str());
+  std::fprintf(stderr,
+               "rx::vm::map(addr = %p, len = %" PRIu64
+               ", prot = %s, flags = %s)\n",
+               addr, len, mapProtToString(prot).c_str(),
+               mapFlagsToString(flags).c_str());
 
   auto pagesCount = (len + (kPageSize - 1)) >> kPageShift;
   auto hitAddress = reinterpret_cast<std::uint64_t>(addr);
@@ -795,7 +796,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
       (address & kBlockMask) >> kPageShift, pagesCount,
-      (flags & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated);
+      (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated);
 
   int realFlags = MAP_FIXED | MAP_SHARED;
   bool isAnon = (flags & kMapFlagAnonymous) == kMapFlagAnonymous;
