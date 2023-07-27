@@ -3735,7 +3735,7 @@ struct RenderState {
     }
 
     if (regs.zReadBase != regs.zWriteBase) {
-      std::unreachable();
+      __builtin_unreachable();
     }
 
     auto depthImage = g_cache.getImage(
