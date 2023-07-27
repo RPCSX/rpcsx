@@ -4,8 +4,9 @@
 ### The dependencies for Debian-like distributions.
 
 ```   
-sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev python3-pip
+sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev python3-pip git
 ```
+# git is only needed for ubuntu 22.04
 
 ### The dependencies for Fedora distributions:
 
@@ -21,6 +22,10 @@ sudo pacman -S libunwind glfw-x11 vulkan-devel glslang python-pip git cmake
 > Side note you will need to pull ``spirv-cross`` from the AUR for now so do the following
 ```
 sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si
+```
+> Side note glslang as of the newest version is broken and it needs a simple fix
+```
+sudo ln -s /usr/bin/glslang /usr/bin/glslangValidator
 ```
 ```
 yay -S spirv-cross
