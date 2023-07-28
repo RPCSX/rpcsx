@@ -3832,8 +3832,7 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     auto src = spirv::cast<spirv::FloatValue>(
         fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
-    auto constant = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(248, TypeId::Float32).value); // 2pi
+    auto constant = fragment.context->getFloat32(M_PI * 2); // 2pi
     src = fragment.builder.createFMul(floatT, src, constant);
 
     auto glslStd450 = fragment.context->getGlslStd450();
@@ -3847,8 +3846,7 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     auto src = spirv::cast<spirv::FloatValue>(
         fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
-    auto constant = spirv::cast<spirv::FloatValue>(
-        fragment.getScalarOperand(248, TypeId::Float32).value); // 2pi
+    auto constant = fragment.context->getFloat32(M_PI * 2); // 2pi
     src = fragment.builder.createFMul(floatT, src, constant);
 
     auto glslStd450 = fragment.context->getGlslStd450();
@@ -5627,8 +5625,8 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id) {
       return {context->getFloat32Type(), context->getFloat32(4.0f)};
     case 247:
       return {context->getFloat32Type(), context->getFloat32(-4.0f)};
-    case 248:
-      return {context->getFloat32Type(), context->getFloat32(M_PI * 2)};
+    // case 248:
+    //   return {context->getFloat32Type(), context->getFloat32(1 / M_PI * 2)};
     case 255: {
       context->dependencies->map(registers->pc,
                                  registers->pc + sizeof(std::uint32_t));
