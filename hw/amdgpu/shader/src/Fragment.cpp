@@ -2682,6 +2682,22 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
   }
+  case Vop3::Op::V3_MAX_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+
+    auto floatT = fragment.context->getFloat32Type();
+    auto boolT = fragment.context->getBoolType();
+
+    auto result = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdGreaterThanEqual(boolT, src0, src1),
+        src0, src1);
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
   case Vop3::Op::V3_MAX3_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
         fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
@@ -2698,6 +2714,42 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto result = fragment.builder.createSelect(
         floatT, fragment.builder.createFOrdGreaterThanEqual(boolT, max01, src2),
         max01, src2);
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
+  case Vop3::Op::V3_MIN_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+
+    auto floatT = fragment.context->getFloat32Type();
+    auto boolT = fragment.context->getBoolType();
+
+    auto result = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
+        src1);
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
+  case Vop3::Op::V3_MIN3_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+    auto src2 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src2, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+    auto boolT = fragment.context->getBoolType();
+
+    auto min01 = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
+        src1);
+    auto result = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, min01, src2), min01,
+        src2);
 
     fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
@@ -2802,6 +2854,18 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto absdiff = fragment.builder.createBitcast(uint32T, sabsdiff);
     auto result = fragment.builder.createIAdd(uint32T, absdiff, src2);
     fragment.setVectorOperand(inst.vdst, {uint32T, result});
+    break;
+  }
+  case Vop3::Op::V3_RSQ_F32: {
+    auto src = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+
+    auto glslStd450 = fragment.context->getGlslStd450();
+    auto result = fragment.builder.createExtInst(
+        floatT, glslStd450, GLSLstd450InverseSqrt, {{src}});
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
   }
 
