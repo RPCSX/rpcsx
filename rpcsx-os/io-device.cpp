@@ -87,9 +87,15 @@ static orbis::ErrorCode host_read(orbis::File *file, orbis::Uio *uio,
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
   }
 
-  ssize_t cnt;
+  ssize_t cnt = 0;
   if (hostFile->hostFd == 0) {
-    cnt = ::read(hostFile->hostFd, vec.data(), vec.size());
+    for (auto io : vec) {
+      cnt += ::read(hostFile->hostFd, io.iov_base, io.iov_len);
+
+      if (cnt != io.iov_len) {
+        break;
+      }
+    }
   } else {
     cnt = ::preadv(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
   }
@@ -110,9 +116,15 @@ static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
   }
 
-  ssize_t cnt;
+  ssize_t cnt = 0;
   if (hostFile->hostFd == 1 || hostFile->hostFd == 2) {
-    cnt = ::write(hostFile->hostFd, vec.data(), vec.size());
+    for (auto io : vec) {
+      cnt += ::write(hostFile->hostFd, io.iov_base, io.iov_len);
+
+      if (cnt != io.iov_len) {
+        break;
+      }
+    }
   } else {
     cnt = ::pwritev(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
   }
