@@ -847,9 +847,12 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
               sizeof(ModuleSegment) * module->segmentCount);
   result.segmentCount = module->segmentCount;
   result.refCount = module->references.load(std::memory_order::relaxed);
-  uwrite(destModuleInfoEx, result);
-
-  return {};
+  ORBIS_LOG_WARNING(__FUNCTION__, result.id, result.name, result.tlsIndex,
+                    result.tlsInit, result.tlsInitSize, result.tlsSize,
+                    result.tlsOffset, result.tlsAlign, result.initProc,
+                    result.finiProc, result.ehFrameHdr, result.ehFrame,
+                    result.ehFrameHdrSize, result.ehFrameSize);
+  return uwrite(destModuleInfoEx, result);
 }
 orbis::SysResult orbis::sys_budget_getid(Thread *thread) {
   return ErrorCode::NOSYS;
@@ -922,6 +925,24 @@ struct IpmiCreateClientParams {
 
 static_assert(sizeof(IpmiCreateClientParams) == 0x18);
 
+struct IpmiBufferInfo {};
+struct IpmiDataInfo {
+  orbis::ptr<void> data;
+  orbis::uint64_t size;
+};
+
+struct IpmiSyncCallParams {
+  orbis::uint32_t method;
+  orbis::uint32_t dataCount;
+  orbis::uint64_t flags; // ?
+  orbis::ptr<IpmiDataInfo> pData;
+  orbis::ptr<IpmiBufferInfo> pBuffers;
+  orbis::ptr<orbis::sint> pResult;
+  orbis::uint32_t resultCount;
+};
+
+static_assert(sizeof(IpmiSyncCallParams) == 0x30);
+
 orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
                                          uint64_t paramsSz, uint64_t arg6) {
@@ -937,38 +958,117 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
 
     ORBIS_LOG_TODO("IPMI: create client", createParams->arg0,
                    createParams->name, createParams->arg2);
-    uwrite<uint>(result, 0x1);
+    // auto server = g_context.findIpmiServer(createParams->name);
+
+    // if (server == nullptr) {
+    //   ORBIS_LOG_TODO("IPMI: failed to find server", createParams->name);
+    // }
+
+    auto ipmiClient = knew<IpmiClient>(createParams->name);
+    // ipmiClient->connection = server;
+    auto id = thread->tproc->ipmiClientMap.insert(ipmiClient);
+    return uwrite<uint>(result, id);
   }
 
   if (op == kImpiDestroyClient) {
     ORBIS_LOG_TODO("IPMI: destroy client");
-    if (result)
-      uwrite<uint>(result, 0);
+    thread->tproc->ipmiClientMap.close(kid);
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
+
+    return {};
+  }
+
+  auto client = thread->tproc->ipmiClientMap.get(kid);
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
   }
 
   if (op == 0x400) {
     ORBIS_LOG_TODO("IMPI: connect?");
-    if (result)
-      uwrite<uint>(result, 0);
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
   }
 
   if (op == 0x320) {
-    ORBIS_LOG_TODO("IMPI: sync?");
-    if (result)
-      uwrite<uint>(result, 1);
+    ORBIS_LOG_TODO("IMPI: invoke sync method");
+
+    if (paramsSz != sizeof(IpmiSyncCallParams)) {
+      return ErrorCode::INVAL;
+    }
+
+    IpmiSyncCallParams syncCallParams;
+    auto errorCode = uread(syncCallParams, (ptr<IpmiSyncCallParams>)params);
+    if (errorCode != ErrorCode{}) {
+      return errorCode;
+    }
+
+    ORBIS_LOG_TODO("impi: invokeSyncMethod", client->name,
+                   syncCallParams.method, syncCallParams.dataCount,
+                   syncCallParams.flags, syncCallParams.pData,
+                   syncCallParams.pBuffers, syncCallParams.pResult,
+                   syncCallParams.resultCount);
+
+    IpmiDataInfo dataInfo;
+    uread(dataInfo, syncCallParams.pData);
+
+    ORBIS_LOG_TODO("", dataInfo.data, dataInfo.size);
+
+    if (client->name == "SceMbusIpc") {
+      if (syncCallParams.method == 0xce110007) { // SceMbusIpcAddHandleByUserId
+        struct SceMbusIpcAddHandleByUserIdMethodArgs {
+          uint32_t unk; // 0
+          uint32_t deviceId;
+          uint32_t userId;
+          uint32_t type;
+          uint32_t index;
+          uint32_t reserved;
+          uint32_t pid;
+        };
+
+        static_assert(sizeof(SceMbusIpcAddHandleByUserIdMethodArgs) == 0x1c);
+
+        if (dataInfo.size != sizeof(SceMbusIpcAddHandleByUserIdMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceMbusIpcAddHandleByUserIdMethodArgs args;
+        uread(args, ptr<SceMbusIpcAddHandleByUserIdMethodArgs>(dataInfo.data));
+
+        ORBIS_LOG_TODO("impi: SceMbusIpcAddHandleByUserId", args.unk,
+                       args.deviceId, args.userId, args.type, args.index,
+                       args.reserved, args.pid);
+      }
+
+      return uwrite<uint>(result, 1);
+    }
+
+    if (result != nullptr) {
+      return uwrite<uint>(result, 1);
+    }
+
+    return {};
   }
 
   if (op == 0x310) {
     ORBIS_LOG_TODO("IMPI: disconnect?");
-    if (result)
-      uwrite<uint>(result, 0);
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
+
+    return {};
   }
 
   if (op == 0x252) {
     ORBIS_LOG_TODO("IMPI: try get client message?");
     thread->where();
-    if (result)
-      uwrite<uint>(result, 0x80020003);
+    if (result) {
+      return uwrite<uint>(result, 0x80020003);
+    }
+    return {};
   }
 
   if (op == 0x46b) {
@@ -976,7 +1076,6 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return {};
   }
 
-  thread->retval[0] = 0;
   return {};
 }
 orbis::SysResult orbis::sys_get_gpo(Thread *thread /* TODO */) {
