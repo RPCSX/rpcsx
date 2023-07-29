@@ -579,7 +579,7 @@ orbis::SysResult orbis::sys_is_in_sandbox(Thread *thread /* TODO */) {
   return {};
 }
 orbis::SysResult orbis::sys_dmem_container(Thread *thread) {
-  thread->retval[0] = 0; // returns default direct memory device
+  thread->retval[0] = 1; // returns default direct memory device
   return {};
 }
 orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
