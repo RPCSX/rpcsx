@@ -167,192 +167,195 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
   std::size_t chanSize = 0;
 
   switch (surfaceFormat) {
-  case kSurfaceFormat8:
-  case kSurfaceFormat8_8:
-  case kSurfaceFormat8_8_8_8:
-    chanSize += 8;
+  case kSurfaceFormat32:
+  case kSurfaceFormat32_32:
+  case kSurfaceFormat32_32_32:
+  case kSurfaceFormat32_32_32_32:
+    chanSize += 16;
     [[fallthrough]];
+
   case kSurfaceFormat16:
   case kSurfaceFormat16_16:
   case kSurfaceFormat16_16_16_16:
     chanSize += 8;
     [[fallthrough]];
-  case kSurfaceFormat32:
-  case kSurfaceFormat32_32:
-  case kSurfaceFormat32_32_32:
-  case kSurfaceFormat32_32_32_32: {
-    // format not requires bit fetching
-    auto totalChannelsCount = getChannelsCount(surfaceFormat);
-    auto channelSize = sizeOfFormat(surfaceFormat) / 8 / totalChannelsCount;
-    auto channelsCount = std::min<int>(count, totalChannelsCount);
 
-    if (channelSize != 1) {
-      offset = builder.createUDiv(fragment.context->getUInt32Type(), offset,
-                                  fragment.context->getUInt32(channelSize));
-    }
+  case kSurfaceFormat8:
+  case kSurfaceFormat8_8:
+  case kSurfaceFormat8_8_8_8:
+    chanSize += 8;
+    {
+      // format not requires bit fetching
+      auto totalChannelsCount = getChannelsCount(surfaceFormat);
+      auto channelSize = sizeOfFormat(surfaceFormat) / 8 / totalChannelsCount;
+      auto channelsCount = std::min<int>(count, totalChannelsCount);
 
-    int channel = 0;
-    auto resultType = fragment.context->getType(loadType);
-    for (; channel < channelsCount; ++channel) {
-      auto channelOffset = offset;
-
-      if (channel != 0) {
-        channelOffset =
-            builder.createIAdd(fragment.context->getUInt32Type(), channelOffset,
-                               fragment.context->getUInt32(channel));
+      if (channelSize != 1) {
+        offset = builder.createUDiv(fragment.context->getUInt32Type(), offset,
+                                    fragment.context->getUInt32(channelSize));
       }
 
-      auto uniformPointerValue = fragment.builder.createAccessChain(
-          storageBufferPointerType, uniform->variable,
-          {{fragment.context->getUInt32(0), channelOffset}});
+      int channel = 0;
+      auto resultType = fragment.context->getType(loadType);
+      for (; channel < channelsCount; ++channel) {
+        auto channelOffset = offset;
 
-      auto channelValue = fragment.builder.createLoad(
-          fragment.context->getType(loadType), uniformPointerValue);
+        if (channel != 0) {
+          channelOffset = builder.createIAdd(
+              fragment.context->getUInt32Type(), channelOffset,
+              fragment.context->getUInt32(channel));
+        }
 
-      if (chanSize != 0) {
-        if (chanSize == 16) {
-          if (loadType != TypeId::Float16) {
-            channelValue = fragment.builder.createBitcast(
-                fragment.context->getFloat16Type(), channelValue);
+        auto uniformPointerValue = fragment.builder.createAccessChain(
+            storageBufferPointerType, uniform->variable,
+            {{fragment.context->getUInt32(0), channelOffset}});
+
+        auto channelValue = fragment.builder.createLoad(
+            fragment.context->getType(loadType), uniformPointerValue);
+
+        if (chanSize != 0) {
+          if (chanSize == 16) {
+            if (loadType != TypeId::Float16) {
+              channelValue = fragment.builder.createBitcast(
+                  fragment.context->getFloat16Type(), channelValue);
+            }
+
+            channelValue = fragment.builder.createFConvert(
+                fragment.context->getFloat32Type(), channelValue);
+          }
+        }
+        switch (channelType) {
+        case kTextureChannelTypeFloat:
+        case kTextureChannelTypeSInt:
+        case kTextureChannelTypeUInt:
+          result[channel] = channelValue;
+          break;
+
+        case kTextureChannelTypeUNorm: {
+          auto maxValue =
+              (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
+
+          auto uintChannelValue = spirv::cast<spirv::UIntValue>(channelValue);
+
+          if (loadType != TypeId::UInt32) {
+            uintChannelValue = builder.createUConvert(
+                fragment.context->getUInt32Type(), uintChannelValue);
           }
 
-          channelValue = fragment.builder.createFConvert(
-              fragment.context->getFloat32Type(), channelValue);
-        }
-      }
-      switch (channelType) {
-      case kTextureChannelTypeFloat:
-      case kTextureChannelTypeSInt:
-      case kTextureChannelTypeUInt:
-        result[channel] = channelValue;
-        break;
-
-      case kTextureChannelTypeUNorm: {
-        auto maxValue =
-            (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
-
-        auto uintChannelValue = spirv::cast<spirv::UIntValue>(channelValue);
-
-        if (loadType != TypeId::UInt32) {
-          uintChannelValue = builder.createUConvert(
-              fragment.context->getUInt32Type(), uintChannelValue);
+          auto floatChannelValue = builder.createConvertUToF(
+              fragment.context->getFloat32Type(), uintChannelValue);
+          floatChannelValue = builder.createFDiv(
+              fragment.context->getFloat32Type(), floatChannelValue,
+              fragment.context->getFloat32(maxValue));
+          result[channel] = floatChannelValue;
+          resultType = fragment.context->getFloat32Type();
+          break;
         }
 
-        auto floatChannelValue = builder.createConvertUToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
-        floatChannelValue = builder.createFDiv(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(maxValue));
-        result[channel] = floatChannelValue;
-        resultType = fragment.context->getFloat32Type();
-        break;
-      }
+        case kTextureChannelTypeSNorm: {
+          auto maxValue =
+              (static_cast<std::uint64_t>(1) << (channelSize * 8 - 1)) - 1;
 
-      case kTextureChannelTypeSNorm: {
-        auto maxValue =
-            (static_cast<std::uint64_t>(1) << (channelSize * 8 - 1)) - 1;
+          auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
 
-        auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
+          if (loadType != TypeId::SInt32) {
+            uintChannelValue = builder.createSConvert(
+                fragment.context->getSint32Type(), uintChannelValue);
+          }
 
-        if (loadType != TypeId::SInt32) {
-          uintChannelValue = builder.createSConvert(
-              fragment.context->getSint32Type(), uintChannelValue);
+          auto floatChannelValue = builder.createConvertSToF(
+              fragment.context->getFloat32Type(), uintChannelValue);
+
+          floatChannelValue = builder.createFDiv(
+              fragment.context->getFloat32Type(), floatChannelValue,
+              fragment.context->getFloat32(maxValue));
+
+          auto glslStd450 = fragment.context->getGlslStd450();
+          floatChannelValue =
+              spirv::cast<spirv::FloatValue>(fragment.builder.createExtInst(
+                  fragment.context->getFloat32Type(), glslStd450,
+                  GLSLstd450FClamp,
+                  {{floatChannelValue, fragment.context->getFloat32(-1),
+                    fragment.context->getFloat32(1)}}));
+          result[channel] = floatChannelValue;
+          resultType = fragment.context->getFloat32Type();
+          break;
         }
 
-        auto floatChannelValue = builder.createConvertSToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+        case kTextureChannelTypeUScaled: {
+          auto uintChannelValue = spirv::cast<spirv::UIntValue>(channelValue);
 
-        floatChannelValue = builder.createFDiv(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(maxValue));
+          if (loadType != TypeId::UInt32) {
+            uintChannelValue = builder.createUConvert(
+                fragment.context->getUInt32Type(), uintChannelValue);
+          }
 
-        auto glslStd450 = fragment.context->getGlslStd450();
-        floatChannelValue =
-            spirv::cast<spirv::FloatValue>(fragment.builder.createExtInst(
-                fragment.context->getFloat32Type(), glslStd450,
-                GLSLstd450FClamp,
-                {{floatChannelValue, fragment.context->getFloat32(-1),
-                  fragment.context->getFloat32(1)}}));
-        result[channel] = floatChannelValue;
-        resultType = fragment.context->getFloat32Type();
-        break;
-      }
+          auto floatChannelValue = builder.createConvertUToF(
+              fragment.context->getFloat32Type(), uintChannelValue);
 
-      case kTextureChannelTypeUScaled: {
-        auto uintChannelValue = spirv::cast<spirv::UIntValue>(channelValue);
-
-        if (loadType != TypeId::UInt32) {
-          uintChannelValue = builder.createUConvert(
-              fragment.context->getUInt32Type(), uintChannelValue);
+          result[channel] = floatChannelValue;
+          resultType = fragment.context->getFloat32Type();
+          break;
         }
 
-        auto floatChannelValue = builder.createConvertUToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+        case kTextureChannelTypeSScaled: {
+          auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
 
-        result[channel] = floatChannelValue;
-        resultType = fragment.context->getFloat32Type();
-        break;
-      }
+          if (loadType != TypeId::SInt32) {
+            uintChannelValue = builder.createSConvert(
+                fragment.context->getSint32Type(), uintChannelValue);
+          }
 
-      case kTextureChannelTypeSScaled: {
-        auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
+          auto floatChannelValue = builder.createConvertSToF(
+              fragment.context->getFloat32Type(), uintChannelValue);
 
-        if (loadType != TypeId::SInt32) {
-          uintChannelValue = builder.createSConvert(
-              fragment.context->getSint32Type(), uintChannelValue);
+          result[channel] = floatChannelValue;
+          resultType = fragment.context->getFloat32Type();
+          break;
         }
 
-        auto floatChannelValue = builder.createConvertSToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
+        case kTextureChannelTypeSNormNoZero: {
+          auto maxValue =
+              (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
 
-        result[channel] = floatChannelValue;
-        resultType = fragment.context->getFloat32Type();
-        break;
-      }
+          auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
 
-      case kTextureChannelTypeSNormNoZero: {
-        auto maxValue =
-            (static_cast<std::uint64_t>(1) << (channelSize * 8)) - 1;
+          if (loadType != TypeId::SInt32) {
+            uintChannelValue = builder.createSConvert(
+                fragment.context->getSint32Type(), uintChannelValue);
+          }
 
-        auto uintChannelValue = spirv::cast<spirv::SIntValue>(channelValue);
+          auto floatChannelValue = builder.createConvertSToF(
+              fragment.context->getFloat32Type(), uintChannelValue);
 
-        if (loadType != TypeId::SInt32) {
-          uintChannelValue = builder.createSConvert(
-              fragment.context->getSint32Type(), uintChannelValue);
+          floatChannelValue = builder.createFMul(
+              fragment.context->getFloat32Type(), floatChannelValue,
+              fragment.context->getFloat32(2));
+          floatChannelValue = builder.createFAdd(
+              fragment.context->getFloat32Type(), floatChannelValue,
+              fragment.context->getFloat32(1));
+
+          floatChannelValue = builder.createFDiv(
+              fragment.context->getFloat32Type(), floatChannelValue,
+              fragment.context->getFloat32(maxValue));
+
+          result[channel] = floatChannelValue;
+          resultType = fragment.context->getFloat32Type();
+          break;
         }
 
-        auto floatChannelValue = builder.createConvertSToF(
-            fragment.context->getFloat32Type(), uintChannelValue);
-
-        floatChannelValue = builder.createFMul(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(2));
-        floatChannelValue = builder.createFAdd(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(1));
-
-        floatChannelValue = builder.createFDiv(
-            fragment.context->getFloat32Type(), floatChannelValue,
-            fragment.context->getFloat32(maxValue));
-
-        result[channel] = floatChannelValue;
-        resultType = fragment.context->getFloat32Type();
-        break;
+        default:
+          util::unreachable("unimplemented channel type %u", channelType);
+        }
       }
 
-      default:
-        util::unreachable("unimplemented channel type %u", channelType);
-      }
+      // for (; channel < count; ++channel) {
+      //   result[channel] = fragment.createBitcast(
+      //       resultType, fragment.context->getUInt32Type(),
+      //       fragment.context->getUInt32(0));
+      // }
+      return resultType;
     }
-
-    // for (; channel < count; ++channel) {
-    //   result[channel] =
-    //       fragment.createBitcast(resultType,
-    //       fragment.context->getUInt32Type(),
-    //                              fragment.context->getUInt32(0));
-    // }
-    return resultType;
-  }
 
   default:
     break;
