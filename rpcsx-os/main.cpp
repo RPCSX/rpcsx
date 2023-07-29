@@ -287,6 +287,8 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
 
   std::fprintf(stderr, ") -> Status %d, Value %lx:%lx\n", result.value(),
                thread->retval[0], thread->retval[1]);
+
+  thread->where();
   funlockfile(stderr);
 }
 

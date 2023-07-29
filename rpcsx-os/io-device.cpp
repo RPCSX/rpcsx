@@ -76,6 +76,8 @@ static orbis::ErrorCode convertErrno() {
     return orbis::ErrorCode::SPIPE;
   case EPIPE:
     return orbis::ErrorCode::PIPE;
+  case EINVAL:
+    return orbis::ErrorCode::INVAL;
 
   default:
     ORBIS_LOG_ERROR("Unconverted errno", error);

@@ -15,4 +15,5 @@ IoDevice *createNullCharacterDevice();
 IoDevice *createZeroCharacterDevice();
 IoDevice *createRngCharacterDevice();
 IoDevice *createAjmCharacterDevice();
+IoDevice *createSblSrvCharacterDevice();
 IoDevice *createShmDevice();
