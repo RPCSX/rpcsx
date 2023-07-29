@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -46,7 +47,9 @@ using kunmap =
     std::unordered_map<K, T, Hash, Pred, kallocator<std::pair<const K, T>>>;
 } // namespace utils
 
-template <typename T, typename... Args> T *knew(Args &&...args) {
+template <typename T, typename... Args>
+  requires(std::is_constructible_v<T, Args...>)
+T *knew(Args &&...args) {
   auto loc = static_cast<T *>(utils::kalloc(sizeof(T), alignof(T)));
   auto res = std::construct_at(loc, std::forward<Args>(args)...);
   if constexpr (requires(T *t) { t->_total_size = sizeof(T); })

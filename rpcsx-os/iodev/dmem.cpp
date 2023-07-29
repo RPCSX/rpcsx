@@ -1,17 +1,22 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 #include "vm.hpp"
-#include <cinttypes>
-#include <cstdio>
+#include <mutex>
 
 struct DmemDevice : public IoDevice {
+  orbis::shared_mutex mtx;
   int index;
   std::uint64_t nextOffset;
   std::uint64_t memBeginAddress;
+
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
 };
 
-struct DmemInstance : public IoDeviceInstance {};
+struct DmemFile : public orbis::File {};
 
 struct AllocateDirectMemoryArgs {
   std::uint64_t searchStart;
@@ -25,20 +30,21 @@ static constexpr auto dmemSize = 4ul * 1024 * 1024 * 1024;
 // static const std::uint64_t nextOffset = 0;
 //  static const std::uint64_t memBeginAddress = 0xfe0000000;
 
-static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
-                                        std::uint64_t request, void *argp) {
+static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
+                                   void *argp, orbis::Thread *thread) {
+  auto device = static_cast<DmemDevice *>(file->device.get());
 
-  auto device = static_cast<DmemDevice *>(instance->device.get());
+  std::lock_guard lock(device->mtx);
   switch (request) {
   case 0x4008800a: // get size
     ORBIS_LOG_ERROR("dmem getTotalSize", device->index, argp);
     *(std::uint64_t *)argp = dmemSize;
-    return 0;
+    return {};
 
   case 0xc0208016: // get avaiable size
     ORBIS_LOG_ERROR("dmem getAvaiableSize", device->index, argp);
     *(std::uint64_t *)argp = dmemSize - device->nextOffset;
-    return 0;
+    return {};
 
   case 0xc0288001: { // sceKernelAllocateDirectMemory
     auto args = reinterpret_cast<AllocateDirectMemoryArgs *>(argp);
@@ -50,12 +56,12 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
                     args->alignment, args->memoryType, alignedOffset);
 
     if (alignedOffset + args->len > dmemSize) {
-      return -1;
+      return orbis::ErrorCode::NOMEM;
     }
 
     args->searchStart = alignedOffset;
     device->nextOffset = alignedOffset + args->len;
-    return 0;
+    return {};
   }
 
   case 0x80108002: { // sceKernelReleaseDirectMemory
@@ -70,48 +76,51 @@ static std::int64_t dmem_instance_ioctl(IoDeviceInstance *instance,
                    args->size);
     // std::fflush(stdout);
     //__builtin_trap();
-    return 0;
+    return {};
   }
 
   default:
-
     ORBIS_LOG_FATAL("Unhandled dmem ioctl", device->index, request);
-    return 0;
-
-    std::fflush(stdout);
-    __builtin_trap();
+    return {};
   }
-
-  return -1;
 }
 
-static void *dmem_instance_mmap(IoDeviceInstance *instance, void *address,
-                                std::uint64_t size, std::int32_t prot,
-                                std::int32_t flags, std::int64_t offset) {
-  auto device = static_cast<DmemDevice *>(instance->device.get());
+static orbis::ErrorCode dmem_mmap(orbis::File *file, void **address,
+                                  std::uint64_t size, std::int32_t prot,
+                                  std::int32_t flags, std::int64_t offset,
+                                  orbis::Thread *thread) {
+  auto device = static_cast<DmemDevice *>(file->device.get());
   auto target = device->memBeginAddress + offset;
   ORBIS_LOG_WARNING("dmem mmap", device->index, offset, target);
 
-  auto addr = rx::vm::map(reinterpret_cast<void *>(target), size, prot, flags);
-  return addr;
+  auto result =
+      rx::vm::map(reinterpret_cast<void *>(target), size, prot, flags);
+
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::INVAL; // TODO
+  }
+
+  *address = result;
+  return {};
 }
 
-static std::int32_t dmem_device_open(IoDevice *device,
-                                     orbis::Ref<IoDeviceInstance> *instance,
-                                     const char *path, std::uint32_t flags,
-                                     std::uint32_t mode) {
-  auto *newInstance = orbis::knew<DmemInstance>();
-  newInstance->ioctl = dmem_instance_ioctl;
-  newInstance->mmap = dmem_instance_mmap;
+static const orbis::FileOps ops = {
+    .ioctl = dmem_ioctl,
+    .mmap = dmem_mmap,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode DmemDevice::open(orbis::Ref<orbis::File> *file,
+                                  const char *path, std::uint32_t flags,
+                                  std::uint32_t mode) {
+  auto newFile = orbis::knew<DmemFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
 IoDevice *createDmemCharacterDevice(int index) {
   auto *newDevice = orbis::knew<DmemDevice>();
-  newDevice->open = dmem_device_open;
   newDevice->index = index;
   newDevice->nextOffset = 0;
   newDevice->memBeginAddress = 0xf'e000'0000 + dmemSize * index;

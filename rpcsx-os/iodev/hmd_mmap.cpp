@@ -2,44 +2,51 @@
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
-#include <cinttypes>
-#include <cstdio>
 
-struct HmdMmapDevice : public IoDevice {};
+struct HmdMmapDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
+};
+struct HmdMmapFile : public orbis::File {};
 
-struct HmdMmapInstance : public IoDeviceInstance {};
-
-static std::int64_t hmd_mmap_instance_ioctl(IoDeviceInstance *instance,
-                                            std::uint64_t request, void *argp) {
-
+static orbis::ErrorCode hmd_mmap_ioctl(orbis::File *file, std::uint64_t request,
+                                       void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hmd_mmap ioctl", request);
-  std::fflush(stdout);
-  __builtin_trap();
-  return -1;
+
+  // 0x800c4802
+  return {};
 }
 
-static void *hmd_mmap_instance_mmap(IoDeviceInstance *instance, void *address,
-                                    std::uint64_t size, std::int32_t prot,
-                                    std::int32_t flags, std::int64_t offset) {
-  ORBIS_LOG_FATAL("Unhandled hmd_mmap mmap", offset);
-  return rx::vm::map(address, size, prot, flags);
+static orbis::ErrorCode hmd_mmap_mmap(orbis::File *file, void **address,
+                                      std::uint64_t size, std::int32_t prot,
+                                      std::int32_t flags, std::int64_t offset,
+                                      orbis::Thread *thread) {
+  ORBIS_LOG_FATAL("hmd_mmap mmap", address, size, offset);
+  auto result = rx::vm::map(*address, size, prot, flags);
+
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::INVAL; // TODO
+  }
+
+  *address = result;
+  return {};
 }
 
-static std::int32_t hmd_mmap_device_open(IoDevice *device,
-                                         orbis::Ref<IoDeviceInstance> *instance,
-                                         const char *path, std::uint32_t flags,
-                                         std::uint32_t mode) {
-  auto *newInstance = orbis::knew<HmdMmapInstance>();
-  newInstance->ioctl = hmd_mmap_instance_ioctl;
-  newInstance->mmap = hmd_mmap_instance_mmap;
+static const orbis::FileOps ops = {
+    .ioctl = hmd_mmap_ioctl,
+    .mmap = hmd_mmap_mmap,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode HmdMmapDevice::open(orbis::Ref<orbis::File> *file,
+                                     const char *path, std::uint32_t flags,
+                                     std::uint32_t mode) {
+  auto newFile = orbis::knew<HmdMmapFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
 IoDevice *createHmdMmapCharacterDevice() {
-  auto *newDevice = orbis::knew<HmdMmapDevice>();
-  newDevice->open = hmd_mmap_device_open;
-  return newDevice;
+  return orbis::knew<HmdMmapDevice>();
 }

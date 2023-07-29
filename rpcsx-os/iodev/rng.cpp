@@ -2,40 +2,49 @@
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
-#include <cinttypes>
-#include <cstdio>
 
-struct RngDevice : public IoDevice {};
-struct RngInstance : public IoDeviceInstance {};
+struct RngDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
+};
+struct RngFile : public orbis::File {};
 
-static std::int64_t rng_instance_ioctl(IoDeviceInstance *instance,
-                                       std::uint64_t request, void *argp) {
+static orbis::ErrorCode rng_ioctl(orbis::File *file, std::uint64_t request,
+                                  void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled rng ioctl", request);
-  return 0;
+
+  // 0x800c4802
+  return {};
 }
 
-static void *rng_instance_mmap(IoDeviceInstance *instance, void *address,
-                               std::uint64_t size, std::int32_t prot,
-                               std::int32_t flags, std::int64_t offset) {
-  ORBIS_LOG_FATAL("Unhandled rng mmap", offset);
-  return rx::vm::map(address, size, prot, flags);
+static orbis::ErrorCode rng_mmap(orbis::File *file, void **address,
+                                 std::uint64_t size, std::int32_t prot,
+                                 std::int32_t flags, std::int64_t offset,
+                                 orbis::Thread *thread) {
+  ORBIS_LOG_FATAL("rng mmap", address, size, offset);
+  auto result = rx::vm::map(*address, size, prot, flags);
+
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::INVAL; // TODO
+  }
+
+  *address = result;
+  return {};
 }
 
-static std::int32_t rng_device_open(IoDevice *device,
-                                    orbis::Ref<IoDeviceInstance> *instance,
-                                    const char *path, std::uint32_t flags,
-                                    std::uint32_t mode) {
-  auto *newInstance = orbis::knew<RngInstance>();
-  newInstance->ioctl = rng_instance_ioctl;
-  newInstance->mmap = rng_instance_mmap;
+static const orbis::FileOps ops = {
+    .ioctl = rng_ioctl,
+    .mmap = rng_mmap,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode RngDevice::open(orbis::Ref<orbis::File> *file,
+                                 const char *path, std::uint32_t flags,
+                                 std::uint32_t mode) {
+  auto newFile = orbis::knew<RngFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createRngCharacterDevice() {
-  auto *newDevice = orbis::knew<RngDevice>();
-  newDevice->open = rng_device_open;
-  return newDevice;
-}
+IoDevice *createRngCharacterDevice() { return orbis::knew<RngDevice>(); }

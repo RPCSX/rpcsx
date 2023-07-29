@@ -1,8 +1,8 @@
 #pragma once
 
-#include "KernelAllocator.hpp"
 #include "error/ErrorCode.hpp"
-#include <atomic>
+#include "utils/Rc.hpp"
+#include "utils/SharedMutex.hpp"
 #include <cstdint>
 
 namespace orbis {
@@ -16,10 +16,8 @@ struct FileOps {
   std::int32_t flags;
   ErrorCode (*ioctl)(File *file, std::uint64_t request, void *argp,
                      Thread *thread) = nullptr;
-  ErrorCode (*rdwr)(File *file, Uio *uio, Thread *thread) = nullptr;
-  ErrorCode (*close)(File *file, Thread *thread) = nullptr;
-  ErrorCode (*lseek)(File *file, std::uint64_t *offset, std::uint32_t whence,
-                     Thread *thread) = nullptr;
+  ErrorCode (*read)(File *file, Uio *uio, Thread *thread) = nullptr;
+  ErrorCode (*write)(File *file, Uio *uio, Thread *thread) = nullptr;
 
   ErrorCode (*truncate)(File *file, std::uint64_t len,
                         Thread *thread) = nullptr;
@@ -40,17 +38,10 @@ struct FileOps {
                       Thread *thread) = nullptr;
 };
 
-struct File final {
-  FileOps *ops;
+struct File : RcBase {
+  shared_mutex mtx;
+  const FileOps *ops = nullptr;
   Ref<RcBase> device;
-  std::atomic<unsigned> refs{0};
-
-  void incRef() { refs.fetch_add(1, std::memory_order::acquire); }
-
-  void decRef() {
-    if (refs.fetch_sub(1, std::memory_order::release) == 1) {
-      kdelete(this);
-    }
-  }
+  std::uint64_t nextOff = 0;
 };
 } // namespace orbis

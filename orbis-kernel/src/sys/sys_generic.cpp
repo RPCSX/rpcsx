@@ -1,74 +1,296 @@
 #include "orbis/utils/Logs.hpp"
 #include "sys/sysproto.hpp"
+#include "uio.hpp"
 
 orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
                                  size_t nbyte) {
-  ORBIS_LOG_TRACE(__FUNCTION__, fd, buf, nbyte);
-  if (auto read = thread->tproc->ops->read) {
-    return read(thread, fd, buf, nbyte);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
 
-  return ErrorCode::NOSYS;
+  auto read = file->ops->read;
+  if (read == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  IoVec vec{.base = (void *)buf, .len = nbyte};
+
+  Uio io{
+      .offset = file->nextOff,
+      .iov = &vec,
+      .iovcnt = 1,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Read,
+      .td = thread,
+  };
+
+  auto error = read(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  auto cnt = io.offset - file->nextOff;
+  file->nextOff = io.offset;
+
+  thread->retval[0] = cnt;
+  return {};
 }
 orbis::SysResult orbis::sys_pread(Thread *thread, sint fd, ptr<void> buf,
                                   size_t nbyte, off_t offset) {
-  ORBIS_LOG_TRACE(__FUNCTION__, fd, buf, nbyte, offset);
-  if (auto pread = thread->tproc->ops->pread) {
-    return pread(thread, fd, buf, nbyte, offset);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
 
-  return ErrorCode::NOSYS;
+  auto read = file->ops->read;
+  if (read == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  IoVec vec{.base = (void *)buf, .len = nbyte};
+
+  Uio io{
+      .offset = static_cast<std::uint64_t>(offset),
+      .iov = &vec,
+      .iovcnt = 1,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Read,
+      .td = thread,
+  };
+
+  auto error = read(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  thread->retval[0] = io.offset - offset;
+  return {};
 }
 orbis::SysResult orbis::sys_freebsd6_pread(Thread *thread, sint fd,
                                            ptr<void> buf, size_t nbyte, sint,
                                            off_t offset) {
   return sys_pread(thread, fd, buf, nbyte, offset);
 }
-orbis::SysResult orbis::sys_readv(Thread *thread, sint fd,
-                                  ptr<struct iovec> iovp, uint iovcnt) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp,
+                                  uint iovcnt) {
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto read = file->ops->read;
+  if (read == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+
+  Uio io{
+      .offset = file->nextOff,
+      .iov = iovp,
+      .iovcnt = iovcnt,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Read,
+      .td = thread,
+  };
+
+  auto error = read(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  auto cnt = io.offset - file->nextOff;
+  file->nextOff = io.offset;
+  thread->retval[0] = cnt;
+  return {};
 }
-orbis::SysResult orbis::sys_preadv(Thread *thread, sint fd,
-                                   ptr<struct iovec> iovp, uint iovcnt,
-                                   off_t offset) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_preadv(Thread *thread, sint fd, ptr<IoVec> iovp,
+                                   uint iovcnt, off_t offset) {
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto read = file->ops->read;
+  if (read == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+
+  Uio io{
+      .offset = static_cast<std::uint64_t>(offset),
+      .iov = iovp,
+      .iovcnt = iovcnt,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Read,
+      .td = thread,
+  };
+
+  auto error = read(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  thread->retval[0] = io.offset - offset;
+  return {};
 }
 orbis::SysResult orbis::sys_write(Thread *thread, sint fd, ptr<const void> buf,
                                   size_t nbyte) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, fd, buf, nbyte);
-  if (auto write = thread->tproc->ops->write) {
-    return write(thread, fd, buf, nbyte);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
 
-  return ErrorCode::NOSYS;
+  auto write = file->ops->write;
+  if (write == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  IoVec vec{.base = (void *)buf, .len = nbyte};
+
+  Uio io{
+      .offset = file->nextOff,
+      .iov = &vec,
+      .iovcnt = 1,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Write,
+      .td = thread,
+  };
+
+  auto error = write(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  auto cnt = io.offset - file->nextOff;
+  file->nextOff = io.offset;
+
+  thread->retval[0] = cnt;
+  return {};
 }
 orbis::SysResult orbis::sys_pwrite(Thread *thread, sint fd, ptr<const void> buf,
                                    size_t nbyte, off_t offset) {
-  if (auto pwrite = thread->tproc->ops->pwrite) {
-    return pwrite(thread, fd, buf, nbyte, offset);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
-  return ErrorCode::NOSYS;
+
+  auto write = file->ops->write;
+  if (write == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  IoVec vec{.base = (void *)buf, .len = nbyte};
+
+  Uio io{
+      .offset = static_cast<std::uint64_t>(offset),
+      .iov = &vec,
+      .iovcnt = 1,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Write,
+      .td = thread,
+  };
+
+  auto error = write(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  thread->retval[0] = io.offset - offset;
+  return {};
 }
 orbis::SysResult orbis::sys_freebsd6_pwrite(Thread *thread, sint fd,
                                             ptr<const void> buf, size_t nbyte,
                                             sint, off_t offset) {
   return sys_pwrite(thread, fd, buf, nbyte, offset);
 }
-orbis::SysResult orbis::sys_writev(Thread *thread, sint fd,
-                                   ptr<struct iovec> iovp, uint iovcnt) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp,
+                                   uint iovcnt) {
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto write = file->ops->write;
+  if (write == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+
+  Uio io{
+      .offset = file->nextOff,
+      .iov = iovp,
+      .iovcnt = iovcnt,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Write,
+      .td = thread,
+  };
+
+  auto error = write(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  auto cnt = io.offset - file->nextOff;
+  file->nextOff = io.offset;
+
+  thread->retval[0] = cnt;
+  return {};
 }
-orbis::SysResult orbis::sys_pwritev(Thread *thread, sint fd,
-                                    ptr<struct iovec> iovp, uint iovcnt,
-                                    off_t offset) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp,
+                                    uint iovcnt, off_t offset) {
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto write = file->ops->write;
+  if (write == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+
+  Uio io{
+      .offset = static_cast<std::uint64_t>(offset),
+      .iov = iovp,
+      .iovcnt = iovcnt,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Write,
+      .td = thread,
+  };
+  auto error = write(file.get(), &io, thread);
+  if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    return error;
+  }
+
+  thread->retval[0] = io.offset - offset;
+  return {};
 }
 orbis::SysResult orbis::sys_ftruncate(Thread *thread, sint fd, off_t length) {
   ORBIS_LOG_WARNING(__FUNCTION__, fd, length);
-  if (auto ftruncate = thread->tproc->ops->ftruncate) {
-    return ftruncate(thread, fd, length);
+  if (fd == 0) {
+    return {}; // FIXME: remove when shm implemented
   }
-  return ErrorCode::NOSYS;
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto truncate = file->ops->truncate;
+  if (truncate == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  return truncate(file.get(), length, thread);
 }
 orbis::SysResult orbis::sys_freebsd6_ftruncate(Thread *thread, sint fd, sint,
                                                off_t length) {
@@ -77,10 +299,18 @@ orbis::SysResult orbis::sys_freebsd6_ftruncate(Thread *thread, sint fd, sint,
 orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com,
                                   caddr_t data) {
   ORBIS_LOG_WARNING(__FUNCTION__, fd, com);
-  if (auto ioctl = thread->tproc->ops->ioctl) {
-    return ioctl(thread, fd, com, data);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
-  return ErrorCode::NOSYS;
+
+  auto ioctl = file->ops->ioctl;
+  if (ioctl == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  return ioctl(file.get(), com, data, thread);
 }
 orbis::SysResult orbis::sys_pselect(Thread *thread, sint nd, ptr<fd_set> in,
                                     ptr<fd_set> ou, ptr<fd_set> ex,
@@ -117,12 +347,12 @@ orbis::SysResult orbis::sys_sysarch(Thread *thread, sint op, ptr<char> parms) {
     uint64_t fs;
     if (auto error = uread(fs, (ptr<uint64_t>)parms); error != ErrorCode{})
       return error;
-    std::printf("sys_sysarch: set FS to 0x%zx\n", (std::size_t)fs);
+    ORBIS_LOG_WARNING("sys_sysarch: set FS", (std::size_t)fs);
     thread->fsBase = fs;
     return {};
   }
 
-  std::printf("sys_sysarch(op = %d, parms = %p): unknown op\n", op, parms);
+  ORBIS_LOG_WARNING(__FUNCTION__, op, parms);
   return {};
 }
 orbis::SysResult orbis::sys_nnpfs_syscall(Thread *thread, sint operation,

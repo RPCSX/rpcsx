@@ -2,12 +2,13 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/error/ErrorCode.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 #include "vm.hpp"
-#include <cinttypes>
-#include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <mutex>
 
 struct VideoOutBuffer {
   std::uint32_t pixelFormat;
@@ -15,12 +16,6 @@ struct VideoOutBuffer {
   std::uint32_t pitch;
   std::uint32_t width;
   std::uint32_t height;
-};
-
-struct DceDevice : public IoDevice {};
-
-struct DceInstance : public IoDeviceInstance {
-  VideoOutBuffer bufferAttributes{};
 };
 
 struct RegisterBuffer {
@@ -87,9 +82,20 @@ struct ResolutionStatus {
   std::uint32_t y;
 };
 
-static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
-                                       std::uint64_t request, void *argp) {
-  auto dceInstance = static_cast<DceInstance *>(instance);
+struct DceFile : public orbis::File {};
+
+struct DceDevice : IoDevice {
+  orbis::shared_mutex mtx;
+  VideoOutBuffer bufferAttributes{}; // TODO
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
+};
+
+static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
+                                  void *argp, orbis::Thread *thread) {
+  auto device = static_cast<DceDevice *>(file->device.get());
+
+  std::lock_guard lock(device->mtx);
 
   if (request == 0xc0308203) {
     // returns:
@@ -122,7 +128,7 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
                        args->size);
     } else if (args->id == 10) {
       if (args->size != sizeof(FlipControlStatus)) {
-        return 0;
+        return {};
       }
 
       FlipControlStatus flipStatus{};
@@ -154,10 +160,10 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
       *(std::uint64_t *)args->size = 0x100000; // size
     } else if (args->id == 31) {
       rx::bridge.header->bufferInUseAddress = args->size;
-      return 0;
+      return {};
     } else if (args->id == 33) { // adjust color
       std::printf("adjust color\n");
-      return 0;
+      return {};
     } else if (args->id != 0 && args->id != 1) { // used during open/close
       ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
                        args->ptr, args->size);
@@ -165,7 +171,7 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
       std::fflush(stdout);
       //__builtin_trap();
     }
-    return 0;
+    return {};
   }
 
   if (request == 0xc0308206) {
@@ -176,18 +182,18 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
     if (args->index >= std::size(rx::bridge.header->buffers)) {
       // TODO
       ORBIS_LOG_FATAL("dce: out of buffers!");
-      return -1;
+      return orbis::ErrorCode::NOMEM;
     }
 
     // TODO: lock bridge header
     rx::bridge.header->buffers[args->index] = {
-        .width = dceInstance->bufferAttributes.width,
-        .height = dceInstance->bufferAttributes.height,
-        .pitch = dceInstance->bufferAttributes.pitch,
+        .width = device->bufferAttributes.width,
+        .height = device->bufferAttributes.height,
+        .pitch = device->bufferAttributes.pitch,
         .address = args->address,
-        .pixelFormat = dceInstance->bufferAttributes.pixelFormat,
-        .tilingMode = dceInstance->bufferAttributes.tilingMode};
-    return 0;
+        .pixelFormat = device->bufferAttributes.pixelFormat,
+        .tilingMode = device->bufferAttributes.tilingMode};
+    return {};
   }
 
   if (request == 0xc0308207) { // SCE_SYS_DCE_IOCTL_REGISTER_BUFFER_ATTRIBUTE
@@ -199,12 +205,12 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
                     args->unk4_zero, args->unk5_zero, args->unk6, args->unk7,
                     args->unk8);
 
-    dceInstance->bufferAttributes.pixelFormat = args->pixelFormat;
-    dceInstance->bufferAttributes.tilingMode = args->tilingMode;
-    dceInstance->bufferAttributes.pitch = args->pitch;
-    dceInstance->bufferAttributes.width = args->width;
-    dceInstance->bufferAttributes.height = args->height;
-    return 0;
+    device->bufferAttributes.pixelFormat = args->pixelFormat;
+    device->bufferAttributes.tilingMode = args->tilingMode;
+    device->bufferAttributes.pitch = args->pitch;
+    device->bufferAttributes.width = args->width;
+    device->bufferAttributes.height = args->height;
+    return {};
   }
 
   if (request == 0xc0488204) {
@@ -217,13 +223,13 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
     rx::bridge.sendFlip(args->displayBufferIndex,
                         /*args->flipMode,*/ args->flipArg);
-    return 0;
+    return {};
   }
 
   if (request == 0x80088209) { // deallocate?
     auto arg = *reinterpret_cast<std::uint64_t *>(argp);
     ORBIS_LOG_ERROR("dce: 0x80088209", arg);
-    return 0;
+    return {};
   }
 
   ORBIS_LOG_FATAL("Unhandled dce ioctl", request);
@@ -231,30 +237,37 @@ static std::int64_t dce_instance_ioctl(IoDeviceInstance *instance,
 
   std::fflush(stdout);
   __builtin_trap();
-  return 0;
+  return {};
 }
 
-static void *dce_instance_mmap(IoDeviceInstance *instance, void *address,
-                               std::uint64_t size, std::int32_t prot,
-                               std::int32_t flags, std::int64_t offset) {
+static orbis::ErrorCode dce_mmap(orbis::File *file, void **address,
+                                 std::uint64_t size, std::int32_t prot,
+                                 std::int32_t flags, std::int64_t offset,
+                                 orbis::Thread *thread) {
   ORBIS_LOG_FATAL("dce mmap", address, size, offset);
-  return rx::vm::map(address, size, prot, flags);
+  auto result = rx::vm::map(*address, size, prot, flags);
+
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::INVAL; // TODO
+  }
+
+  *address = result;
+  return {};
 }
 
-static std::int32_t dce_device_open(IoDevice *device,
-                                    orbis::Ref<IoDeviceInstance> *instance,
-                                    const char *path, std::uint32_t flags,
-                                    std::uint32_t mode) {
-  auto *newInstance = orbis::knew<DceInstance>();
-  newInstance->ioctl = dce_instance_ioctl;
-  newInstance->mmap = dce_instance_mmap;
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+static const orbis::FileOps ops = {
+    .ioctl = dce_ioctl,
+    .mmap = dce_mmap,
+};
+
+orbis::ErrorCode DceDevice::open(orbis::Ref<orbis::File> *file,
+                                 const char *path, std::uint32_t flags,
+                                 std::uint32_t mode) {
+  auto newFile = orbis::knew<DceFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createDceCharacterDevice() {
-  auto *newDevice = orbis::knew<DceDevice>();
-  newDevice->open = dce_device_open;
-  return newDevice;
-}
+IoDevice *createDceCharacterDevice() { return orbis::knew<DceDevice>(); }

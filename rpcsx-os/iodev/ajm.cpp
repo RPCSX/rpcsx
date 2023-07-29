@@ -1,33 +1,31 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <cstdio>
 
-struct AjmDevice : public IoDevice {};
+struct AjmFile : orbis::File {};
 
-struct AjmInstance : public IoDeviceInstance {};
-
-static std::int64_t ajm_instance_ioctl(IoDeviceInstance *instance,
-                                       std::uint64_t request, void *argp) {
+static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
+                                  void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled AJM ioctl", request);
-  return -1;
+  return orbis::ErrorCode::PERM;
 }
 
-static std::int32_t ajm_device_open(IoDevice *device,
-                                    orbis::Ref<IoDeviceInstance> *instance,
-                                    const char *path, std::uint32_t flags,
-                                    std::uint32_t mode) {
-  auto *newInstance = orbis::knew<AjmInstance>();
-  newInstance->ioctl = ajm_instance_ioctl;
+static const orbis::FileOps fileOps = {
+    .ioctl = ajm_ioctl,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
-}
+struct AjmDevice : IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override {
+    auto newFile = orbis::knew<AjmFile>();
+    newFile->ops = &fileOps;
+    newFile->device = this;
 
-IoDevice *createAjmCharacterDevice() {
-  auto *newDevice = orbis::knew<AjmDevice>();
-  newDevice->open = ajm_device_open;
-  return newDevice;
-}
+    *file = newFile;
+    return {};
+  }
+};
+
+IoDevice *createAjmCharacterDevice() { return orbis::knew<AjmDevice>(); }

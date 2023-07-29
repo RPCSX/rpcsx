@@ -1,31 +1,36 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <cstdio>
 
-struct HmdSnsrDevice : public IoDevice {};
+struct HmdSnsrDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
+};
+struct HmdSnsrFile : public orbis::File {};
 
-struct HmdSnsrInstance : public IoDeviceInstance {};
-
-static std::int64_t smd_snr_instance_ioctl(IoDeviceInstance *instance,
-                                           std::uint64_t request, void *argp) {
+static orbis::ErrorCode hmd_snsr_ioctl(orbis::File *file, std::uint64_t request,
+                                       void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hmd_snsr ioctl", request);
-  return -1;
+
+  // 0x800c4802
+  return {};
 }
 
-static std::int32_t smd_snr_device_open(IoDevice *device,
-                                        orbis::Ref<IoDeviceInstance> *instance,
-                                        const char *path, std::uint32_t flags,
-                                        std::uint32_t mode) {
-  auto *newInstance = orbis::knew<HmdSnsrInstance>();
-  newInstance->ioctl = smd_snr_instance_ioctl;
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+static const orbis::FileOps ops = {
+    .ioctl = hmd_snsr_ioctl,
+};
+
+orbis::ErrorCode HmdSnsrDevice::open(orbis::Ref<orbis::File> *file,
+                                     const char *path, std::uint32_t flags,
+                                     std::uint32_t mode) {
+  auto newFile = orbis::knew<HmdSnsrFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
 IoDevice *createHmdSnsrCharacterDevice() {
-  auto *newDevice = orbis::knew<HmdSnsrDevice>();
-  newDevice->open = smd_snr_device_open;
-  return newDevice;
+  return orbis::knew<HmdSnsrDevice>();
 }

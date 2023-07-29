@@ -3,6 +3,8 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/module/Module.hpp"
+#include "orbis/stat.hpp"
+#include "orbis/uio.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
 #include <crypto/sha1.h>
@@ -838,38 +840,56 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 }
 
 Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
-                                              orbis::Process *process) {
+                                              orbis::Thread *thread) {
   if (!path.contains('/')) {
-    return loadModuleByName(path, process);
+    return loadModuleByName(path, thread);
   }
 
-  orbis::Ref<IoDeviceInstance> instance;
+  orbis::Ref<orbis::File> instance;
   if (vfs::open(path, kOpenFlagReadOnly, 0, &instance).isError()) {
     return {};
   }
 
-  auto len = instance->lseek(instance.get(), 0, SEEK_END);
-  instance->lseek(instance.get(), 0, SEEK_SET);
+  orbis::Stat fileStat;
+  if (instance->ops->stat(instance.get(), &fileStat, nullptr) !=
+      orbis::ErrorCode{}) {
+    return {};
+  }
+
+  auto len = fileStat.size;
 
   std::vector<std::byte> image(len);
   auto ptr = image.data();
-  auto endPtr = ptr + image.size();
+  orbis::IoVec ioVec{
+      .base = ptr,
+      .len = static_cast<std::uint64_t>(len),
+  };
+  orbis::Uio io{
+      .offset = 0,
+      .iov = &ioVec,
+      .iovcnt = 1,
+      .resid = 0,
+      .segflg = orbis::UioSeg::SysSpace,
+      .rw = orbis::UioRw::Read,
+      .td = thread,
+  };
 
-  while (ptr != endPtr) {
-    auto result = instance->read(instance.get(), ptr, endPtr - ptr);
-    if (result < 0) {
+  while (io.offset < image.size()) {
+    ioVec = {
+        .base = ptr + io.offset,
+        .len = image.size() - io.offset,
+    };
+    auto result = instance->ops->read(instance.get(), &io, thread);
+    if (result != orbis::ErrorCode{}) {
       std::fprintf(stderr, "Module file reading error\n");
       std::abort();
     }
-    ptr += result;
   }
 
-  instance->close(instance.get());
-
-  return loadModule(image, process);
+  return loadModule(image, thread->tproc);
 }
 
-static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
+static Ref<orbis::Module> createSceFreeTypeFull(orbis::Thread *thread) {
   auto result = orbis::knew<orbis::Module>();
 
   std::strncpy(result->soName, "libSceFreeTypeFull.prx",
@@ -888,7 +908,7 @@ static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
   }
 
   for (auto needed : result->needed) {
-    auto neededMod = rx::linker::loadModuleByName(needed, process);
+    auto neededMod = rx::linker::loadModuleByName(needed, thread);
 
     if (neededMod == nullptr) {
       std::fprintf(stderr, "Failed to load needed '%s' for FreeType\n",
@@ -903,20 +923,20 @@ static Ref<orbis::Module> createSceFreeTypeFull(orbis::Process *process) {
   result->initProc = reinterpret_cast<void *>(+[] {});
   result->finiProc = reinterpret_cast<void *>(+[] {});
 
-  result->proc = process;
+  result->proc = thread->tproc;
 
   return result;
 }
 
 Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
-                                                orbis::Process *process) {
+                                                orbis::Thread *thread) {
   if (name.ends_with(".prx")) {
     name.remove_suffix(4);
   }
 
   if (auto it = g_moduleOverrideTable.find(name);
       it != g_moduleOverrideTable.end()) {
-    return loadModuleFile(it->second.c_str(), process);
+    return loadModuleFile(it->second.c_str(), thread);
   }
 
   if (name == "libSceAbstractTwitch") {
@@ -924,14 +944,14 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
   }
 
   if (name == "libSceFreeTypeFull") {
-    return createSceFreeTypeFull(process);
+    return createSceFreeTypeFull(thread);
   }
 
   {
     std::string filePath = "/app0/sce_module/";
     filePath += name;
     filePath += ".elf";
-    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), process)) {
+    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
       return result;
     }
   }
@@ -941,7 +961,7 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
     filePath += name;
     filePath += ".sprx";
 
-    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), process)) {
+    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
       return result;
     }
   }

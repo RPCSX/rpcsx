@@ -20,8 +20,8 @@ enum class UioSeg : std::uint8_t {
 struct Uio {
   std::uint64_t offset;
   IoVec *iov;
-  std::int32_t iovcnt;
-  std::int32_t resid;
+  std::uint32_t iovcnt;
+  std::int64_t resid;
   UioSeg segflg;
   UioRw rw;
   void *td;

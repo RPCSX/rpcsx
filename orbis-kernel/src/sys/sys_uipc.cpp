@@ -82,12 +82,12 @@ orbis::sys_sctp_generic_sendmsg(Thread *thread, sint sd, caddr_t msg, sint mlen,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_sctp_generic_sendmsg_iov(
-    Thread *thread, sint sd, ptr<struct iovec> iov, sint iovlen, caddr_t to,
+    Thread *thread, sint sd, ptr<IoVec> iov, sint iovlen, caddr_t to,
     __socklen_t tolen, ptr<struct sctp_sndrcvinfo> sinfo, sint flags) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult
-orbis::sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<struct iovec> iov,
+orbis::sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<IoVec> iov,
                                 sint iovlen, caddr_t from, __socklen_t fromlen,
                                 ptr<struct sctp_sndrcvinfo> sinfo, sint flags) {
   return ErrorCode::NOSYS;

@@ -1,43 +1,34 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "vm.hpp"
-#include <cinttypes>
-#include <cstdio>
 
-struct HidDevice : public IoDevice {};
-struct HidInstance : public IoDeviceInstance {};
+struct HidDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
+};
+struct HidFile : public orbis::File {};
 
-static std::int64_t hid_instance_ioctl(IoDeviceInstance *instance,
-                                       std::uint64_t request, void *argp) {
+static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
+                                  void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hid ioctl", request);
 
   // 0x800c4802
-  return 0;
+  return {};
 }
 
-static void *hid_instance_mmap(IoDeviceInstance *instance, void *address,
-                               std::uint64_t size, std::int32_t prot,
-                               std::int32_t flags, std::int64_t offset) {
-  ORBIS_LOG_FATAL("Unhandled hid mmap", offset);
-  return rx::vm::map(address, size, prot, flags);
+static const orbis::FileOps ops = {
+    .ioctl = hid_ioctl,
+};
+
+orbis::ErrorCode HidDevice::open(orbis::Ref<orbis::File> *file,
+                                 const char *path, std::uint32_t flags,
+                                 std::uint32_t mode) {
+  auto newFile = orbis::knew<HidFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-static std::int32_t hid_device_open(IoDevice *device,
-                                    orbis::Ref<IoDeviceInstance> *instance,
-                                    const char *path, std::uint32_t flags,
-                                    std::uint32_t mode) {
-  auto *newInstance = orbis::knew<HidInstance>();
-  newInstance->ioctl = hid_instance_ioctl;
-  newInstance->mmap = hid_instance_mmap;
-
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
-}
-
-IoDevice *createHidCharacterDevice() {
-  auto *newDevice = orbis::knew<HidDevice>();
-  newDevice->open = hid_device_open;
-  return newDevice;
-}
+IoDevice *createHidCharacterDevice() { return orbis::knew<HidDevice>(); }

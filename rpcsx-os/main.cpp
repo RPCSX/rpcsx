@@ -290,17 +290,9 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   funlockfile(stderr);
 }
 
-static int ps4Exec(orbis::Process *mainProcess,
+static int ps4Exec(orbis::Thread *mainThread,
                    orbis::utils::Ref<orbis::Module> executableModule,
                    std::span<const char *> argv, std::span<const char *> envp) {
-  mainProcess->sysent = &orbis::ps4_sysvec;
-  mainProcess->ops = &rx::procOpsTable;
-
-  auto [baseId, mainThread] = mainProcess->threadsMap.emplace();
-  mainThread->tproc = mainProcess;
-  mainThread->tid = mainProcess->pid + baseId;
-  mainThread->state = orbis::ThreadState::RUNNING;
-
   const auto stackEndAddress = 0x7'ffff'c000ull;
   const auto stackSize = 0x40000 * 16;
   auto stackStartAddress = stackEndAddress - stackSize;
@@ -316,9 +308,9 @@ static int ps4Exec(orbis::Process *mainProcess,
   rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
   rx::vfs::mount("/dev/dmem1", createDmemCharacterDevice(1));
   rx::vfs::mount("/dev/dmem2", createDmemCharacterDevice(2));
-  rx::vfs::mount("/dev/stdout", createStdoutCharacterDevice());
-  rx::vfs::mount("/dev/stderr", createStderrCharacterDevice());
-  rx::vfs::mount("/dev/stdin", createStdinCharacterDevice());
+  rx::vfs::mount("/dev/stdout", createFdWrapDevice(STDOUT_FILENO));
+  rx::vfs::mount("/dev/stderr", createFdWrapDevice(STDERR_FILENO));
+  rx::vfs::mount("/dev/stdin", createFdWrapDevice(STDIN_FILENO));
   rx::vfs::mount("/dev/zero", createZeroCharacterDevice());
   rx::vfs::mount("/dev/null", createNullCharacterDevice());
   rx::vfs::mount("/dev/dipsw", createDipswCharacterDevice());
@@ -332,22 +324,29 @@ static int ps4Exec(orbis::Process *mainProcess,
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
   rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
 
-  rx::procOpsTable.open(mainThread, "/dev/stdin", 0, 0);
-  rx::procOpsTable.open(mainThread, "/dev/stdout", 0, 0);
-  rx::procOpsTable.open(mainThread, "/dev/stderr", 0, 0);
+  orbis::Ref<orbis::File> stdinFile;
+  orbis::Ref<orbis::File> stdoutFile;
+  orbis::Ref<orbis::File> stderrFile;
+  rx::procOpsTable.open(mainThread, "/dev/stdin", 0, 0, &stdinFile);
+  rx::procOpsTable.open(mainThread, "/dev/stdout", 0, 0, &stdoutFile);
+  rx::procOpsTable.open(mainThread, "/dev/stderr", 0, 0, &stderrFile);
+
+  mainThread->tproc->fileDescriptors.insert(stdinFile);
+  mainThread->tproc->fileDescriptors.insert(stdoutFile);
+  mainThread->tproc->fileDescriptors.insert(stderrFile);
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
 
   auto libkernel = rx::linker::loadModuleFile(
-      "/system/common/lib/libkernel_sys.sprx", mainProcess);
+      "/system/common/lib/libkernel_sys.sprx", mainThread);
 
   if (libkernel == nullptr) {
     std::fprintf(stderr, "libkernel not found\n");
     return 1;
   }
 
-  libkernel->id = mainProcess->modulesMap.insert(libkernel);
+  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
 
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
@@ -562,20 +561,6 @@ int main(int argc, const char *argv[]) {
   // rx::vm::printHostStats();
   auto initProcess = orbis::g_context.createProcess(10);
   pthread_setname_np(pthread_self(), "10.MAINTHREAD");
-  initProcess->sysent = &orbis::ps4_sysvec;
-  initProcess->onSysEnter = onSysEnter;
-  initProcess->onSysExit = onSysExit;
-  auto executableModule =
-      rx::linker::loadModuleFile(argv[argIndex], initProcess);
-
-  if (executableModule == nullptr) {
-    std::fprintf(stderr, "Failed to open '%s'\n", argv[argIndex]);
-    std::abort();
-  }
-
-  executableModule->id = initProcess->modulesMap.insert(executableModule);
-  initProcess->processParam = executableModule->processParam;
-  initProcess->processParamSize = executableModule->processParamSize;
 
   std::thread{[] {
     pthread_setname_np(pthread_self(), "Bridge");
@@ -641,9 +626,31 @@ int main(int argc, const char *argv[]) {
 
   int status = 0;
 
+  initProcess->sysent = &orbis::ps4_sysvec;
+  initProcess->onSysEnter = onSysEnter;
+  initProcess->onSysExit = onSysExit;
+  initProcess->ops = &rx::procOpsTable;
+
+  auto [baseId, mainThread] = initProcess->threadsMap.emplace();
+  mainThread->tproc = initProcess;
+  mainThread->tid = initProcess->pid + baseId;
+  mainThread->state = orbis::ThreadState::RUNNING;
+
+  auto executableModule =
+      rx::linker::loadModuleFile(argv[argIndex], mainThread);
+
+  if (executableModule == nullptr) {
+    std::fprintf(stderr, "Failed to open '%s'\n", argv[argIndex]);
+    std::abort();
+  }
+
+  executableModule->id = initProcess->modulesMap.insert(executableModule);
+  initProcess->processParam = executableModule->processParam;
+  initProcess->processParamSize = executableModule->processParamSize;
+
   if (executableModule->type == rx::linker::kElfTypeSceDynExec ||
       executableModule->type == rx::linker::kElfTypeSceExec) {
-    status = ps4Exec(initProcess, std::move(executableModule),
+    status = ps4Exec(mainThread, std::move(executableModule),
                      std::span(argv + argIndex, argc - argIndex),
                      std::span<const char *>());
   } else {

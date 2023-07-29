@@ -40,7 +40,7 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
     return {{}, it->second};
   }
 
-  auto module = rx::linker::loadModuleFile(name, thread->tproc);
+  auto module = rx::linker::loadModuleFile(name, thread);
 
   if (module == nullptr) {
     if (!expectedName.empty()) {
@@ -138,30 +138,35 @@ loadPrx(orbis::Thread *thread, std::string_view path, bool relocate) {
 orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
                       orbis::size_t len, orbis::sint prot, orbis::sint flags,
                       orbis::sint fd, orbis::off_t pos) {
-  auto result = (void *)-1;
   if (fd == -1) {
-    result = rx::vm::map(addr, len, prot, flags);
-  } else {
-    Ref<IoDeviceInstance> handle =
-        static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
-    if (handle == nullptr) {
-      return ErrorCode::BADF;
+    auto result = rx::vm::map(addr, len, prot, flags);
+    if (result == (void *)-1) {
+      return ErrorCode::NOMEM;
     }
 
-    if (handle->mmap != nullptr) {
-      result = handle->mmap(handle.get(), addr, len, prot, flags, pos);
-    } else {
-      ORBIS_LOG_FATAL("unimplemented mmap", fd, (void *)addr, len, prot, flags,
-                      pos);
-      result = rx::vm::map(addr, len, prot, flags);
-    }
+    thread->retval[0] = reinterpret_cast<std::uint64_t>(result);
+    return {};
   }
 
-  if (result == (void *)-1) {
-    return ErrorCode::NOMEM;
+  auto file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
 
-  thread->retval[0] = reinterpret_cast<std::uint64_t>(result);
+  if (file->ops->mmap == nullptr) {
+    ORBIS_LOG_FATAL("unimplemented mmap", fd, (void *)addr, len, prot, flags,
+                    pos);
+    return mmap(thread, addr, len, prot, flags, -1, 0);
+  }
+
+  void *maddr = addr;
+  auto result = file->ops->mmap(file, &maddr, len, prot, flags, pos, thread);
+
+  if (result != ErrorCode{}) {
+    return result;
+  }
+
+  thread->retval[0] = reinterpret_cast<std::uint64_t>(maddr);
   return {};
 }
 
@@ -225,281 +230,15 @@ orbis::SysResult virtual_query(orbis::Thread *thread,
 }
 
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
-                      orbis::sint flags, orbis::sint mode) {
-  orbis::Ref<IoDeviceInstance> instance;
-  auto result = rx::vfs::open(path, flags, mode, &instance);
-  if (result.isError()) {
-    ORBIS_LOG_WARNING("Failed to open file", path, result.value());
-    thread->where();
-    return result;
-  }
-
-  auto fd = thread->tproc->fileDescriptors.insert(instance);
-  thread->retval[0] = fd;
-  ORBIS_LOG_WARNING("File opened", path, fd);
-  return {};
+                      orbis::sint flags, orbis::sint mode,
+                      orbis::Ref<orbis::File> *file) {
+  return rx::vfs::open(path, flags, mode, file);
 }
 
 orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
                         orbis::sint domain, orbis::sint type,
-                        orbis::sint protocol) {
-  orbis::Ref<IoDeviceInstance> instance;
-  auto error = createSocket(name, domain, type, protocol, &instance);
-  if (error != ErrorCode{}) {
-    ORBIS_LOG_WARNING("Failed to open socket", name, int(error));
-    return error;
-  }
-
-  auto fd = thread->tproc->fileDescriptors.insert(instance);
-  thread->retval[0] = fd;
-  ORBIS_LOG_WARNING("Socket opened", name, fd);
-  return {};
-}
-
-orbis::SysResult close(orbis::Thread *thread, orbis::sint fd) {
-  if (fd == 0) {
-    return {};
-  }
-  if (!thread->tproc->fileDescriptors.close(fd)) {
-    return ErrorCode::BADF;
-  }
-
-  ORBIS_LOG_WARNING("fd closed", fd);
-  return {};
-}
-
-// clang-format off
-#define IOCPARM_SHIFT 13 /* number of bits for ioctl size */
-#define IOCPARM_MASK ((1 << IOCPARM_SHIFT) - 1) /* parameter length mask */
-#define IOCPARM_LEN(x) (((x) >> 16) & IOCPARM_MASK)
-#define IOCBASECMD(x) ((x) & ~(IOCPARM_MASK << 16))
-#define IOCGROUP(x) (((x) >> 8) & 0xff)
-
-#define IOCPARM_MAX (1 << IOCPARM_SHIFT) /* max size of ioctl */
-#define IOC_VOID 0x20000000              /* no parameters */
-#define IOC_OUT 0x40000000               /* copy out parameters */
-#define IOC_IN 0x80000000                /* copy in parameters */
-#define IOC_INOUT (IOC_IN | IOC_OUT)
-#define IOC_DIRMASK (IOC_VOID | IOC_OUT | IOC_IN)
-
-#define _IOC(inout, group, num, len)                                           \
-  ((unsigned long)((inout) | (((len) & IOCPARM_MASK) << 16) | ((group) << 8) | \
-                   (num)))
-#define _IO(g, n) _IOC(IOC_VOID, (g), (n), 0)
-#define _IOWINT(g, n) _IOC(IOC_VOID, (g), (n), sizeof(int))
-#define _IOR(g, n, t) _IOC(IOC_OUT, (g), (n), sizeof(t))
-#define _IOW(g, n, t) _IOC(IOC_IN, (g), (n), sizeof(t))
-/* this should be _IORW, but stdio got there first */
-#define _IOWR(g, n, t) _IOC(IOC_INOUT, (g), (n), sizeof(t))
-// clang-format on
-
-static std::string iocGroupToString(unsigned iocGroup) {
-  if (iocGroup >= 128) {
-    const char *sceGroups[] = {
-        "DEV",
-        "DMEM",
-        "GC",
-        "DCE",
-        "UVD",
-        "VCE",
-        "DBGGC",
-        "TWSI",
-        "MDBG",
-        "DEVENV",
-        "AJM",
-        "TRACE",
-        "IBS",
-        "MBUS",
-        "HDMI",
-        "CAMERA",
-        "FAN",
-        "THERMAL",
-        "PFS",
-        "ICC_CONFIG",
-        "IPC",
-        "IOSCHED",
-        "ICC_INDICATOR",
-        "EXFATFS",
-        "ICC_NVS",
-        "DVE",
-        "ICC_POWER",
-        "AV_CONTROL",
-        "ICC_SC_CONFIGURATION",
-        "ICC_DEVICE_POWER",
-        "SSHOT",
-        "DCE_SCANIN",
-        "FSCTRL",
-        "HMD",
-        "SHM",
-        "PHYSHM",
-        "HMDDFU",
-        "BLUETOOTH_HID",
-        "SBI",
-        "S3DA",
-        "SPM",
-        "BLOCKPOOL",
-        "SDK_EVENTLOG",
-    };
-
-    if (iocGroup - 127 >= std::size(sceGroups)) {
-      return "'?'";
-    }
-
-    return sceGroups[iocGroup - 127];
-  }
-
-  if (isprint(iocGroup)) {
-    return "'" + std::string(1, (char)iocGroup) + "'";
-  }
-
-  return "'?'";
-}
-
-static void printIoctl(unsigned long arg) {
-  std::printf("0x%lx { IO%s%s %lu(%s), %lu, %lu }\n", arg,
-              arg & IOC_OUT ? "R" : "", arg & IOC_IN ? "W" : "", IOCGROUP(arg),
-              iocGroupToString(IOCGROUP(arg)).c_str(), arg & 0xFF,
-              IOCPARM_LEN(arg));
-}
-
-static void ioctlToStream(std::ostream &stream, unsigned long arg) {
-  stream << "0x" << std::hex << arg << " { IO";
-
-  if ((arg & IOC_OUT) != 0) {
-    stream << 'R';
-  }
-
-  if ((arg & IOC_IN) != 0) {
-    stream << 'W';
-  }
-  if ((arg & IOC_VOID) != 0) {
-    stream << 'i';
-  }
-
-  stream << " 0x" << IOCGROUP(arg);
-  stream << "('" << iocGroupToString(IOCGROUP(arg)) << "'), ";
-  stream << std::dec << (arg & 0xFF) << ", " << IOCPARM_LEN(arg) << " }";
-}
-
-static std::string ioctlToString(unsigned long arg) {
-  std::ostringstream stream;
-  ioctlToStream(stream, arg);
-  return std::move(stream).str();
-}
-
-orbis::SysResult ioctl(orbis::Thread *thread, orbis::sint fd, orbis::ulong com,
-                       orbis::caddr_t argp) {
-  std::printf("ioctl: %d %s\n", (int)fd, ioctlToString(com).c_str());
-
-  Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
-  if (handle == nullptr) {
-    return ErrorCode::BADF;
-  }
-
-  if (handle->ioctl == nullptr) {
-    return ErrorCode::NOTSUP;
-  }
-
-  auto result = handle->ioctl(handle.get(), com, argp);
-
-  if (result < 0) {
-    // TODO
-    thread->where();
-    return ErrorCode::IO;
-  }
-
-  thread->retval[0] = result;
-  return {};
-}
-orbis::SysResult write(orbis::Thread *thread, orbis::sint fd,
-                       orbis::ptr<const void> data, orbis::ulong size) {
-  Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
-  if (handle == nullptr) {
-    return ErrorCode::BADF;
-  }
-
-  auto result = handle->write(handle.get(), data, size);
-
-  if (result < 0) {
-    // TODO
-    return ErrorCode::IO;
-  }
-
-  thread->retval[0] = result;
-  return {};
-}
-orbis::SysResult read(orbis::Thread *thread, orbis::sint fd,
-                      orbis::ptr<void> data, orbis::ulong size) {
-  Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
-  if (handle == nullptr) {
-    return ErrorCode::BADF;
-  }
-
-  auto result = handle->read(handle.get(), data, size);
-
-  if (result < 0) {
-    // TODO
-    return ErrorCode::IO;
-  }
-
-  thread->retval[0] = result;
-  return {};
-}
-orbis::SysResult pread(orbis::Thread *thread, orbis::sint fd,
-                       orbis::ptr<void> data, orbis::ulong size,
-                       orbis::ulong offset) {
-  Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
-  if (handle == nullptr) {
-    return ErrorCode::BADF;
-  }
-
-  auto prevPos = handle->lseek(handle.get(), 0, SEEK_CUR);
-  handle->lseek(handle.get(), offset, SEEK_SET);
-  auto result = handle->read(handle.get(), data, size);
-  handle->lseek(handle.get(), prevPos, SEEK_SET);
-
-  if (result < 0) {
-    // TODO
-    return ErrorCode::IO;
-  }
-
-  thread->retval[0] = result;
-  return {};
-}
-orbis::SysResult pwrite(orbis::Thread *thread, orbis::sint fd,
-                        orbis::ptr<const void> data, orbis::ulong size,
-                        orbis::ulong offset) {
-  return ErrorCode::NOTSUP;
-}
-orbis::SysResult lseek(orbis::Thread *thread, orbis::sint fd,
-                       orbis::ulong offset, orbis::sint whence) {
-  Ref<IoDeviceInstance> handle =
-      static_cast<IoDeviceInstance *>(thread->tproc->fileDescriptors.get(fd));
-  if (handle == nullptr) {
-    return ErrorCode::BADF;
-  }
-
-  auto result = handle->lseek(handle.get(), offset, whence);
-
-  if (result < 0) {
-    // TODO
-    return ErrorCode::IO;
-  }
-
-  thread->retval[0] = result;
-  return {};
-}
-orbis::SysResult ftruncate(orbis::Thread *thread, orbis::sint fd,
-                           orbis::off_t length) {
-  return {};
-}
-orbis::SysResult truncate(orbis::Thread *thread, orbis::ptr<const char> path,
-                          orbis::off_t length) {
-  return ErrorCode::NOTSUP;
+                        orbis::sint protocol, Ref<File> *file) {
+  return createSocket(file, name, domain, type, protocol);
 }
 
 orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
@@ -793,15 +532,6 @@ ProcessOps rx::procOpsTable = {
     .virtual_query = virtual_query,
     .open = open,
     .socket = socket,
-    .close = close,
-    .ioctl = ioctl,
-    .write = write,
-    .read = read,
-    .pread = pread,
-    .pwrite = pwrite,
-    .lseek = lseek,
-    .ftruncate = ftruncate,
-    .truncate = truncate,
     .dynlib_get_obj_member = dynlib_get_obj_member,
     .dynlib_dlsym = dynlib_dlsym,
     .dynlib_do_copy_relocations = dynlib_do_copy_relocations,

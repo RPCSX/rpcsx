@@ -1,27 +1,21 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <atomic>
-#include <cinttypes>
-#include <cstdio>
-#include <cstring>
-// #include <rpcs4/bridge.hpp>
 #include "vm.hpp"
-#include <string>
+#include <cstdio>
 #include <sys/mman.h>
-#include <thread>
-#include <type_traits>
-#include <utility>
 
-struct GcDevice : public IoDevice {};
-
-struct GcInstance : public IoDeviceInstance {};
-
+struct GcDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode) override;
+};
+struct GcFile : public orbis::File {};
 static std::uint64_t g_submitDoneFlag;
 
-static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
-                                      std::uint64_t request, void *argp) {
+static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
+                                 void *argp, orbis::Thread *thread) {
   // 0xc00c8110
   // 0xc0848119
 
@@ -30,7 +24,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
                    // TODO
     ORBIS_LOG_ERROR("gc ioctl 0xc008811b", *(std::uint64_t *)argp);
     *reinterpret_cast<void **>(argp) = &g_submitDoneFlag;
-    return 0;
+    break;
 
   case 0xc0108102: { // submit?
     struct Args {
@@ -44,7 +38,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     flockfile(stderr);
     ORBIS_LOG_ERROR("gc ioctl 0xc0108102", args->arg0, args->count, args->cmds);
 
-    for (int i = 0; i < args->count; ++i) {
+    for (unsigned i = 0; i < args->count; ++i) {
       auto cmd = args->cmds + (i * 2);
       auto cmdId = cmd[0] & 0xffff'ffff;
       auto addressLoPart = cmd[0] >> 32;
@@ -95,7 +89,7 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     ORBIS_LOG_ERROR("gc ioctl 0xc020810c", args->arg0, args->count, args->cmds,
                     args->arg3, args->arg4);
 
-    for (int i = 0; i < args->count; ++i) {
+    for (unsigned i = 0; i < args->count; ++i) {
       auto cmd = args->cmds + (i * 2);
       auto cmdId = cmd[0] & 0xffff'ffff;
       auto addressLoPart = cmd[0] >> 32;
@@ -238,31 +232,36 @@ static std::int64_t gc_instance_ioctl(IoDeviceInstance *instance,
     __builtin_trap();
     break;
   }
-  return 0;
+  return {};
 }
 
-static void *gc_instance_mmap(IoDeviceInstance *instance, void *address,
-                              std::uint64_t size, std::int32_t prot,
-                              std::int32_t flags, std::int64_t offset) {
-  ORBIS_LOG_FATAL("Unhandled gc mmap", offset);
+static orbis::ErrorCode gc_mmap(orbis::File *file, void **address,
+                                std::uint64_t size, std::int32_t prot,
+                                std::int32_t flags, std::int64_t offset,
+                                orbis::Thread *thread) {
+  ORBIS_LOG_FATAL("gc mmap", address, size, offset);
+  auto result = rx::vm::map(*address, size, prot, flags);
 
-  return rx::vm::map(address, size, prot, flags);
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::INVAL; // TODO
+  }
+
+  *address = result;
+  return {};
 }
 
-static std::int32_t gc_device_open(IoDevice *device,
-                                   orbis::Ref<IoDeviceInstance> *instance,
-                                   const char *path, std::uint32_t flags,
-                                   std::uint32_t mode) {
-  auto *newInstance = orbis::knew<GcInstance>();
-  newInstance->ioctl = gc_instance_ioctl;
-  newInstance->mmap = gc_instance_mmap;
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+static const orbis::FileOps ops = {
+    .ioctl = gc_ioctl,
+    .mmap = gc_mmap,
+};
+
+orbis::ErrorCode GcDevice::open(orbis::Ref<orbis::File> *file, const char *path,
+                                std::uint32_t flags, std::uint32_t mode) {
+  auto newFile = orbis::knew<GcFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createGcCharacterDevice() {
-  auto *newDevice = orbis::knew<GcDevice>();
-  newDevice->open = gc_device_open;
-  return newDevice;
-}
+IoDevice *createGcCharacterDevice() { return orbis::knew<GcDevice>(); }

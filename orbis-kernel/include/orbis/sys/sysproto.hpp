@@ -18,6 +18,7 @@ struct KEvent;
 struct timespec;
 struct Stat;
 struct stack_t;
+struct IoVec;
 
 SysResult nosys(Thread *thread);
 
@@ -126,10 +127,8 @@ SysResult sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
 SysResult sys_getrusage(Thread *thread, sint who, ptr<struct rusage> rusage);
 SysResult sys_getsockopt(Thread *thread, sint s, sint level, sint name,
                          caddr_t val, ptr<sint> avalsize);
-SysResult sys_readv(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                    uint iovcnt);
-SysResult sys_writev(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                     uint iovcnt);
+SysResult sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
+SysResult sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
 SysResult sys_settimeofday(Thread *thread, ptr<struct timeval> tp,
                            ptr<orbis::timezone> tzp);
 SysResult sys_fchown(Thread *thread, sint fd, sint uid, sint gid);
@@ -249,10 +248,10 @@ SysResult sys_lutimes(Thread *thread, ptr<char> path, ptr<struct timeval> tptr);
 SysResult sys_nstat(Thread *thread, ptr<char> path, ptr<struct nstat> ub);
 SysResult sys_nfstat(Thread *thread, sint fd, ptr<struct nstat> sb);
 SysResult sys_nlstat(Thread *thread, ptr<char> path, ptr<struct nstat> ub);
-SysResult sys_preadv(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                     uint iovcnt, off_t offset);
-SysResult sys_pwritev(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                      uint iovcnt, off_t offset);
+SysResult sys_preadv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt,
+                     off_t offset);
+SysResult sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt,
+                      off_t offset);
 SysResult sys_fhopen(Thread *thread, ptr<const struct fhandle> u_fhp,
                      sint flags);
 SysResult sys_fhstat(Thread *thread, ptr<const struct fhandle> u_fhp,
@@ -361,8 +360,7 @@ SysResult sys_eaccess(Thread *thread, ptr<char> path, sint flags);
 SysResult sys_afs3_syscall(Thread *thread, slong syscall, slong param1,
                            slong param2, slong param3, slong param4,
                            slong param5, slong param6);
-SysResult sys_nmount(Thread *thread, ptr<struct iovec> iovp, uint iovcnt,
-                     sint flags);
+SysResult sys_nmount(Thread *thread, ptr<IoVec> iovp, uint iovcnt, sint flags);
 SysResult sys___mac_get_proc(Thread *thread, ptr<struct mac> mac_p);
 SysResult sys___mac_set_proc(Thread *thread, ptr<struct mac> mac_p);
 SysResult sys___mac_get_fd(Thread *thread, sint fd, ptr<struct mac> mac_p);
@@ -494,14 +492,14 @@ SysResult sys_sctp_generic_sendmsg(Thread *thread, sint sd, caddr_t msg,
                                    sint mlen, caddr_t to, __socklen_t tolen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
-SysResult sys_sctp_generic_sendmsg_iov(Thread *thread, sint sd,
-                                       ptr<struct iovec> iov, sint iovlen,
-                                       caddr_t to, __socklen_t tolen,
+SysResult sys_sctp_generic_sendmsg_iov(Thread *thread, sint sd, ptr<IoVec> iov,
+                                       sint iovlen, caddr_t to,
+                                       __socklen_t tolen,
                                        ptr<struct sctp_sndrcvinfo> sinfo,
                                        sint flags);
-SysResult sys_sctp_generic_recvmsg(Thread *thread, sint sd,
-                                   ptr<struct iovec> iov, sint iovlen,
-                                   caddr_t from, __socklen_t fromlen,
+SysResult sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<IoVec> iov,
+                                   sint iovlen, caddr_t from,
+                                   __socklen_t fromlen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
 SysResult sys_pread(Thread *thread, sint fd, ptr<void> buf, size_t nbyte,
@@ -557,9 +555,9 @@ SysResult sys_symlinkat(Thread *thread, ptr<char> path1, sint fd,
 SysResult sys_unlinkat(Thread *thread, sint fd, ptr<char> path, sint flag);
 SysResult sys_posix_openpt(Thread *thread, sint flags);
 SysResult sys_gssd_syscall(Thread *thread, ptr<char> path);
-SysResult sys_jail_get(Thread *thread, ptr<struct iovec> iovp, uint iovcnt,
+SysResult sys_jail_get(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
                        sint flags);
-SysResult sys_jail_set(Thread *thread, ptr<struct iovec> iovp, uint iovcnt,
+SysResult sys_jail_set(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
                        sint flags);
 SysResult sys_jail_remove(Thread *thread, sint jid);
 SysResult sys_closefrom(Thread *thread, sint lowfd);

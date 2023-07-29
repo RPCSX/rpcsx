@@ -3,7 +3,7 @@
 #include "thread/Process.hpp"
 #include "utils/Logs.hpp"
 
-struct KQueue : orbis::RcBase {};
+struct KQueue : orbis::File {};
 
 orbis::SysResult orbis::sys_kqueue(Thread *thread) {
   ORBIS_LOG_TODO(__FUNCTION__);

@@ -1,12 +1,9 @@
 #pragma once
 
+#include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Rc.hpp"
 #include <cstdint>
-
-struct IoDevice;
-namespace orbis {
-enum class ErrorCode : int;
-}
 
 enum OpenFlags {
   kOpenFlagReadOnly = 0x0,
@@ -26,36 +23,13 @@ enum OpenFlags {
   kOpenFlagDirectory = 0x20000,
 };
 
-struct IoDeviceInstance : orbis::RcBase {
-  orbis::Ref<IoDevice> device;
-
-  std::int64_t (*ioctl)(IoDeviceInstance *instance, std::uint64_t request,
-                        void *argp) = nullptr;
-
-  std::int64_t (*write)(IoDeviceInstance *instance, const void *data,
-                        std::uint64_t size) = nullptr;
-  std::int64_t (*read)(IoDeviceInstance *instance, void *data,
-                       std::uint64_t size) = nullptr;
-  std::int64_t (*close)(IoDeviceInstance *instance) = nullptr;
-  std::int64_t (*lseek)(IoDeviceInstance *instance, std::uint64_t offset,
-                        std::uint32_t whence) = nullptr;
-
-  void *(*mmap)(IoDeviceInstance *instance, void *address, std::uint64_t size,
-                std::int32_t prot, std::int32_t flags,
-                std::int64_t offset) = nullptr;
-  void *(*munmap)(IoDeviceInstance *instance, void *address,
-                  std::uint64_t size) = nullptr;
-};
-
 struct IoDevice : orbis::RcBase {
-  std::int32_t (*open)(IoDevice *device, orbis::Ref<IoDeviceInstance> *instance,
-                       const char *path, std::uint32_t flags,
-                       std::uint32_t mode) = nullptr;
+  virtual orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                                std::uint32_t flags, std::uint32_t mode) = 0;
 };
 
-std::int64_t io_device_instance_close(IoDeviceInstance *instance);
-void io_device_instance_init(IoDevice *device, IoDeviceInstance *instance);
-
-IoDevice *createHostIoDevice(const char *hostPath);
-orbis::ErrorCode createSocket(const char *name, int dom, int type, int prot,
-                              orbis::Ref<IoDeviceInstance> *instance);
+IoDevice *createHostIoDevice(orbis::kstring hostPath);
+orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
+                              orbis::kstring name, int dom, int type, int prot);
+orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device);
+IoDevice *createFdWrapDevice(int fd);
