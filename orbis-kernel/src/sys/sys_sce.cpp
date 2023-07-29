@@ -372,6 +372,8 @@ orbis::SysResult orbis::sys_osem_open(Thread *thread,
 
   auto sem = thread->tproc->context->findSemaphore(_name);
   if (sem == nullptr) {
+    // FIXME: hack :)
+    return sys_osem_create(thread, name, kSemaAttrShared, 0, 10000);
     return ErrorCode::SRCH;
   }
 
