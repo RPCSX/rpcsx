@@ -28,22 +28,25 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
   auto realFlags = O_RDWR; // TODO
 
   std::size_t size = 0;
-  if (name == "/rpcsx-SceShellCoreUtil") {
-    // TODO
+  if (~flags & 0x200) {
+    if (name == "/rpcsx-SceShellCoreUtil") {
+      // TODO
+      realFlags |= O_CREAT;
+      size = 0x4000;
+    } else if (name == "/rpcsx-vmicDdShmAin") {
+      // TODO
+      realFlags |= O_CREAT;
+      size = 0x4000;
+    } else if (name == "/rpcsx-SceNpPlusLogger") {
+      realFlags |= O_CREAT;
+      size = 0x4400;
+    } else {
+      ORBIS_LOG_ERROR("SHM: unknown shared memory", path);
+      thread->where();
+      std::abort();
+    }
+  } else {
     realFlags |= O_CREAT;
-    size = 0x4000;
-  } else if (name == "/rpcsx-vmicDdShmAin") {
-    // TODO
-    realFlags |= O_CREAT;
-    size = 0x4000;
-  } else if (name == "/rpcsx-SceNpPlusLogger") {
-    realFlags |= O_CREAT;
-    size = 0x4400;
-    thread->where();
-  } else if (~flags & 0x200) {
-    ORBIS_LOG_ERROR("SHM: unknown shared memory", path);
-    thread->where();
-    std::abort();
   }
 
   int fd = shm_open(name.c_str(), realFlags, S_IRUSR | S_IWUSR);
