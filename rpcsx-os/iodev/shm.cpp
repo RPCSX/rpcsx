@@ -2,6 +2,7 @@
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -31,9 +32,19 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
     // TODO
     realFlags |= O_CREAT;
     size = 0x4000;
+  } else if (name == "/rpcsx-vmicDdShmAin") {
+    // TODO
+    realFlags |= O_CREAT;
+    size = 0x4000;
+  } else if (name == "/rpcsx-SceNpPlusLogger") {
+    realFlags |= O_CREAT;
+    size = 0x4400;
+    thread->where();
+  } else if (~flags & 0x200) {
+    ORBIS_LOG_ERROR("SHM: unknown shared memory", path);
+    thread->where();
+    std::abort();
   }
-
-  realFlags |= O_CREAT; // TODO
 
   int fd = shm_open(name.c_str(), realFlags, S_IRUSR | S_IWUSR);
   if (fd < 0) {
