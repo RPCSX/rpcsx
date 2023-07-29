@@ -1,22 +1,11 @@
+#include "dmem.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "orbis/utils/SharedMutex.hpp"
 #include "vm.hpp"
 #include <mutex>
-
-struct DmemDevice : public IoDevice {
-  orbis::shared_mutex mtx;
-  int index;
-  std::uint64_t nextOffset;
-  std::uint64_t memBeginAddress;
-
-  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode,
-                        orbis::Thread *thread) override;
-};
 
 struct DmemFile : public orbis::File {};
 
@@ -31,6 +20,22 @@ struct AllocateDirectMemoryArgs {
 static constexpr auto dmemSize = 4ul * 1024 * 1024 * 1024;
 // static const std::uint64_t nextOffset = 0;
 //  static const std::uint64_t memBeginAddress = 0xfe0000000;
+
+orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
+                                  std::int32_t memoryType, std::int32_t prot,
+                                  std::int32_t flags,
+                                  std::int64_t directMemoryStart) {
+  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, memoryType);
+
+  auto result = rx::vm::map(*address, len, prot, flags);
+
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::NOMEM; // TODO
+  }
+
+  *address = result;
+  return {};
+}
 
 static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                                    void *argp, orbis::Thread *thread) {

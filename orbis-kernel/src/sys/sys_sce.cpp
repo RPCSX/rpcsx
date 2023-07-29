@@ -1093,7 +1093,13 @@ orbis::SysResult orbis::sys_opmc_get_hw(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_get_cpu_usage_all(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_mmap_dmem(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
+                                      sint memoryType, sint prot, sint flags,
+                                      off_t directMemoryStart) {
+  if (auto dmem_mmap = thread->tproc->ops->dmem_mmap) {
+    return dmem_mmap(thread, addr, len, memoryType, prot, flags,
+                     directMemoryStart);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_physhm_open(Thread *thread /* TODO */) {

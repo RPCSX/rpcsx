@@ -14,6 +14,9 @@ struct File;
 struct ProcessOps {
   SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
                     sint flags, sint fd, off_t pos);
+  SysResult (*dmem_mmap)(Thread *thread, caddr_t addr, size_t len,
+                         sint memoryType, sint prot, sint flags,
+                         off_t directMemoryStart);
   SysResult (*munmap)(Thread *thread, ptr<void> addr, size_t len);
   SysResult (*msync)(Thread *thread, ptr<void> addr, size_t len, sint flags);
   SysResult (*mprotect)(Thread *thread, ptr<const void> addr, size_t len,

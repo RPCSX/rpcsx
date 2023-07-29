@@ -2,6 +2,7 @@
 #include "align.hpp"
 #include "backtrace.hpp"
 #include "io-device.hpp"
+#include "iodev/dmem.hpp"
 #include "linker.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/module/ModuleHandle.hpp"
@@ -167,6 +168,22 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
   }
 
   thread->retval[0] = reinterpret_cast<std::uint64_t>(maddr);
+  return {};
+}
+
+orbis::SysResult dmem_mmap(orbis::Thread *thread, orbis::caddr_t addr,
+                           orbis::size_t len, orbis::sint memoryType,
+                           orbis::sint prot, sint flags,
+                           orbis::off_t directMemoryStart) {
+  auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
+  void *address = addr;
+  auto result =
+      dmem->mmap(&address, len, memoryType, prot, flags, directMemoryStart);
+  if (result != ErrorCode{}) {
+    return result;
+  }
+
+  thread->retval[0] = reinterpret_cast<std::uint64_t>(address);
   return {};
 }
 
@@ -531,6 +548,7 @@ void where(Thread *thread) {
 
 ProcessOps rx::procOpsTable = {
     .mmap = mmap,
+    .dmem_mmap = dmem_mmap,
     .munmap = munmap,
     .msync = msync,
     .mprotect = mprotect,

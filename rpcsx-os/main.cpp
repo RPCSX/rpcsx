@@ -307,8 +307,11 @@ static int ps4Exec(orbis::Thread *mainThread,
   mainThread->stackEnd =
       reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
 
+  auto dmem1 = createDmemCharacterDevice(1);
+  orbis::g_context.dmemDevice = dmem1;
+
   rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
-  rx::vfs::mount("/dev/dmem1", createDmemCharacterDevice(1));
+  rx::vfs::mount("/dev/dmem1", dmem1);
   rx::vfs::mount("/dev/dmem2", createDmemCharacterDevice(2));
   rx::vfs::mount("/dev/stdout", createFdWrapDevice(STDOUT_FILENO));
   rx::vfs::mount("/dev/stderr", createFdWrapDevice(STDERR_FILENO));

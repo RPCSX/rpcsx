@@ -728,7 +728,9 @@ SysResult sys_get_vm_map_timestamp(Thread *thread /* TODO */);
 SysResult sys_opmc_set_hw(Thread *thread /* TODO */);
 SysResult sys_opmc_get_hw(Thread *thread /* TODO */);
 SysResult sys_get_cpu_usage_all(Thread *thread /* TODO */);
-SysResult sys_mmap_dmem(Thread *thread /* TODO */);
+SysResult sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
+                        sint memoryType, sint prot, sint flags,
+                        off_t directMemoryStart);
 SysResult sys_physhm_open(Thread *thread /* TODO */);
 SysResult sys_physhm_unlink(Thread *thread /* TODO */);
 SysResult sys_resume_internal_hdd(Thread *thread /* TODO */);
