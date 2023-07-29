@@ -148,6 +148,7 @@ public:
   }
 
   Ref<RcBase> shmDevice;
+  Ref<RcBase> dmemDevice;
 
 private:
   mutable pthread_mutex_t m_heap_mtx;
