@@ -1,6 +1,7 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedMutex.hpp"
 #include "vm.hpp"
@@ -80,10 +81,42 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
     return {};
   }
 
-  default:
-    ORBIS_LOG_FATAL("Unhandled dmem ioctl", device->index, request);
+  case 0xc020a801: {
+    struct Args {
+      std::uint64_t len;
+      std::uint64_t searchStart;
+      std::uint64_t searchEnd;
+      std::uint32_t alignment;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_TODO("dmem memory pool expand", device->index, args->len,
+                   args->searchStart, args->searchEnd, args->alignment);
     return {};
   }
+
+  case 0xc0288011: {
+    auto args = reinterpret_cast<AllocateDirectMemoryArgs *>(argp);
+    // TODO
+    auto alignedOffset =
+        (device->nextOffset + args->alignment - 1) & ~(args->alignment - 1);
+
+    ORBIS_LOG_ERROR("dmem allocateMainDirectMemory", device->index,
+                    args->searchStart, args->searchEnd, args->len,
+                    args->alignment, args->memoryType, alignedOffset);
+
+    if (alignedOffset + args->len > dmemSize) {
+      return orbis::ErrorCode::NOMEM;
+    }
+
+    args->searchStart = alignedOffset;
+    device->nextOffset = alignedOffset + args->len;
+    return {};
+  }
+  }
+
+  thread->where();
+  ORBIS_LOG_FATAL("Unhandled dmem ioctl", device->index, request);
+  return {};
 }
 
 static orbis::ErrorCode dmem_mmap(orbis::File *file, void **address,
