@@ -25,7 +25,11 @@ enum OpenFlags {
 
 struct IoDevice : orbis::RcBase {
   virtual orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                                std::uint32_t flags, std::uint32_t mode) = 0;
+                                std::uint32_t flags, std::uint32_t mode,
+                                orbis::Thread *thread) = 0;
+  virtual orbis::ErrorCode unlink(const char *path, orbis::Thread *thread) {
+    return orbis::ErrorCode::NOTSUP;
+  }
 };
 
 IoDevice *createHostIoDevice(orbis::kstring hostPath);

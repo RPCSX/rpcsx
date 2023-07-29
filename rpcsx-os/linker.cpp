@@ -846,7 +846,7 @@ Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
   }
 
   orbis::Ref<orbis::File> instance;
-  if (vfs::open(path, kOpenFlagReadOnly, 0, &instance).isError()) {
+  if (vfs::open(path, kOpenFlagReadOnly, 0, &instance, thread).isError()) {
     return {};
   }
 

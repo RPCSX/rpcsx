@@ -32,8 +32,11 @@ struct ProcessOps {
 
   SysResult (*open)(Thread *thread, ptr<const char> path, sint flags, sint mode,
                     Ref<File> *file);
+  SysResult (*shm_open)(Thread *thread, const char *path, sint flags, sint mode,
+                        Ref<File> *file);
   SysResult (*socket)(Thread *thread, ptr<const char> name, sint domain,
                       sint type, sint protocol, Ref<File> *file);
+  SysResult (*shm_unlink)(Thread *thread, const char *path);
   SysResult (*dynlib_get_obj_member)(Thread *thread, ModuleHandle handle,
                                      uint64_t index, ptr<ptr<void>> addrp);
   SysResult (*dynlib_dlsym)(Thread *thread, ModuleHandle handle,

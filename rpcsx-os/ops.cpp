@@ -3,6 +3,7 @@
 #include "backtrace.hpp"
 #include "io-device.hpp"
 #include "linker.hpp"
+#include "orbis/KernelContext.hpp"
 #include "orbis/module/ModuleHandle.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
@@ -15,7 +16,6 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
-#include <filesystem>
 #include <map>
 #include <optional>
 #include <set>
@@ -232,13 +232,25 @@ orbis::SysResult virtual_query(orbis::Thread *thread,
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
                       orbis::sint flags, orbis::sint mode,
                       orbis::Ref<orbis::File> *file) {
-  return rx::vfs::open(path, flags, mode, file);
+  return rx::vfs::open(path, flags, mode, file, thread);
+}
+
+orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
+                          orbis::sint flags, orbis::sint mode,
+                          orbis::Ref<orbis::File> *file) {
+  auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
+  return dev->open(file, path, flags, mode, thread);
 }
 
 orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
                         orbis::sint domain, orbis::sint type,
                         orbis::sint protocol, Ref<File> *file) {
   return createSocket(file, name, domain, type, protocol);
+}
+
+orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
+  auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
+  return dev->unlink(path, thread);
 }
 
 orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
@@ -531,7 +543,9 @@ ProcessOps rx::procOpsTable = {
     .munlock = munlock,
     .virtual_query = virtual_query,
     .open = open,
+    .shm_open = shm_open,
     .socket = socket,
+    .shm_unlink = shm_unlink,
     .dynlib_get_obj_member = dynlib_get_obj_member,
     .dynlib_dlsym = dynlib_dlsym,
     .dynlib_do_copy_relocations = dynlib_do_copy_relocations,

@@ -12,5 +12,5 @@ void initialize();
 void deinitialize();
 orbis::SysResult mount(const std::filesystem::path &guestPath, IoDevice *dev);
 orbis::SysResult open(std::string_view path, int flags, int mode,
-                      orbis::Ref<orbis::File> *file);
+                      orbis::Ref<orbis::File> *file, orbis::Thread *thread);
 } // namespace rx::vfs

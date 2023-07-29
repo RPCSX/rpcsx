@@ -6,7 +6,8 @@
 
 struct ZeroDevice : public IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override;
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
 };
 struct ZeroFile : public orbis::File {};
 
@@ -26,7 +27,7 @@ static const orbis::FileOps ops = {
 
 orbis::ErrorCode ZeroDevice::open(orbis::Ref<orbis::File> *file,
                                   const char *path, std::uint32_t flags,
-                                  std::uint32_t mode) {
+                                  std::uint32_t mode, orbis::Thread *thread) {
   auto newFile = orbis::knew<ZeroFile>();
   newFile->device = this;
   newFile->ops = &ops;

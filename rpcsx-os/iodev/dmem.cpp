@@ -13,7 +13,8 @@ struct DmemDevice : public IoDevice {
   std::uint64_t memBeginAddress;
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override;
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
 };
 
 struct DmemFile : public orbis::File {};
@@ -111,7 +112,7 @@ static const orbis::FileOps ops = {
 
 orbis::ErrorCode DmemDevice::open(orbis::Ref<orbis::File> *file,
                                   const char *path, std::uint32_t flags,
-                                  std::uint32_t mode) {
+                                  std::uint32_t mode, orbis::Thread *thread) {
   auto newFile = orbis::knew<DmemFile>();
   newFile->device = this;
   newFile->ops = &ops;

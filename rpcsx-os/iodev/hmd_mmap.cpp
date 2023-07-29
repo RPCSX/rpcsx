@@ -5,7 +5,8 @@
 
 struct HmdMmapDevice : public IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override;
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
 };
 struct HmdMmapFile : public orbis::File {};
 
@@ -39,7 +40,8 @@ static const orbis::FileOps ops = {
 
 orbis::ErrorCode HmdMmapDevice::open(orbis::Ref<orbis::File> *file,
                                      const char *path, std::uint32_t flags,
-                                     std::uint32_t mode) {
+                                     std::uint32_t mode,
+                                     orbis::Thread *thread) {
   auto newFile = orbis::knew<HmdMmapFile>();
   newFile->device = this;
   newFile->ops = &ops;

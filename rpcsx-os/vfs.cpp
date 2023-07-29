@@ -26,7 +26,8 @@ orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath,
 }
 
 orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
-                               orbis::Ref<orbis::File> *file) {
+                               orbis::Ref<orbis::File> *file,
+                               orbis::Thread *thread) {
   orbis::Ref<IoDevice> device;
   bool isCharacterDevice = path.starts_with("/dev/");
 
@@ -51,7 +52,7 @@ orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
 
   if (device != nullptr) {
     return (orbis::ErrorCode)device->open(file, std::string(path).c_str(),
-                                          flags, mode);
+                                          flags, mode, thread);
   }
 
   if (isCharacterDevice) {

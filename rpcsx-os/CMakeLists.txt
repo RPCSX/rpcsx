@@ -15,6 +15,7 @@ add_executable(rpcsx-os
   iodev/hmd_snsr.cpp
   iodev/null.cpp
   iodev/rng.cpp
+  iodev/shm.cpp
   iodev/zero.cpp
 
   main.cpp

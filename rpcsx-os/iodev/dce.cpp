@@ -88,7 +88,8 @@ struct DceDevice : IoDevice {
   orbis::shared_mutex mtx;
   VideoOutBuffer bufferAttributes{}; // TODO
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override;
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
 };
 
 static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
@@ -262,7 +263,7 @@ static const orbis::FileOps ops = {
 
 orbis::ErrorCode DceDevice::open(orbis::Ref<orbis::File> *file,
                                  const char *path, std::uint32_t flags,
-                                 std::uint32_t mode) {
+                                 std::uint32_t mode, orbis::Thread *thread) {
   auto newFile = orbis::knew<DceFile>();
   newFile->device = this;
   newFile->ops = &ops;

@@ -275,10 +275,6 @@ orbis::SysResult orbis::sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp,
   return {};
 }
 orbis::SysResult orbis::sys_ftruncate(Thread *thread, sint fd, off_t length) {
-  ORBIS_LOG_WARNING(__FUNCTION__, fd, length);
-  if (fd == 0) {
-    return {}; // FIXME: remove when shm implemented
-  }
   Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;

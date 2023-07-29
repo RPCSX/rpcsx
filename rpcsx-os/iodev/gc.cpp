@@ -9,7 +9,8 @@
 
 struct GcDevice : public IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override;
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
 };
 struct GcFile : public orbis::File {};
 static std::uint64_t g_submitDoneFlag;
@@ -256,7 +257,8 @@ static const orbis::FileOps ops = {
 };
 
 orbis::ErrorCode GcDevice::open(orbis::Ref<orbis::File> *file, const char *path,
-                                std::uint32_t flags, std::uint32_t mode) {
+                                std::uint32_t flags, std::uint32_t mode,
+                                orbis::Thread *thread) {
   auto newFile = orbis::knew<GcFile>();
   newFile->device = this;
   newFile->ops = &ops;

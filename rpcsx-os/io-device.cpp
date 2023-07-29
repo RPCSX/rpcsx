@@ -4,10 +4,12 @@
 #include "orbis/stat.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "vm.hpp"
 #include <cerrno>
 #include <fcntl.h>
 #include <span>
 #include <string>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -18,6 +20,8 @@ struct HostFile : orbis::File {
   int hostFd = -1;
 
   ~HostFile() {
+    std::printf("Destroying host file\n");
+
     if (hostFd > 0) {
       ::close(hostFd);
     }
@@ -40,7 +44,8 @@ struct HostFsDevice : IoDevice {
 
   explicit HostFsDevice(orbis::kstring path) : hostPath(std::move(path)) {}
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override;
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
 };
 
 static orbis::ErrorCode convertErrno() {
@@ -137,6 +142,32 @@ static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
   return {};
 }
 
+static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
+                                  std::uint64_t size, std::int32_t prot,
+                                  std::int32_t flags, std::int64_t offset,
+                                  orbis::Thread *thread) {
+  auto hostFile = static_cast<HostFile *>(file);
+
+  auto result =
+      rx::vm::map(*address, size, prot, flags, rx::vm::kMapInternalReserveOnly);
+
+  if (result == (void *)-1) {
+    return orbis::ErrorCode::NOMEM;
+  }
+
+  result = ::mmap(result, size, prot & rx::vm::kMapProtCpuAll,
+                  MAP_SHARED | MAP_FIXED, hostFile->hostFd, offset);
+  if (result == (void *)-1) {
+    auto result = convertErrno();
+    return result;
+  }
+
+  std::printf("shm mapped at %p-%p\n", result, (char *)result + size);
+
+  *address = result;
+  return {};
+}
+
 static orbis::ErrorCode host_stat(orbis::File *file, orbis::Stat *sb,
                                   orbis::Thread *thread) {
   auto hostFile = static_cast<HostFile *>(file);
@@ -198,6 +229,7 @@ static const orbis::FileOps hostOps = {
     .write = host_write,
     .truncate = host_truncate,
     .stat = host_stat,
+    .mmap = host_mmap,
 };
 
 static const orbis::FileOps socketOps = {
@@ -226,7 +258,7 @@ orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
 
 orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
                                     const char *path, std::uint32_t flags,
-                                    std::uint32_t mode) {
+                                    std::uint32_t mode, orbis::Thread *thread) {
   auto realPath = hostPath + "/" + path;
 
   int realFlags = flags & O_ACCMODE;
@@ -304,7 +336,8 @@ struct FdWrapDevice : public IoDevice {
   int fd;
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode) override {
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override {
     *file = createHostFile(fd, this);
     return {};
   }

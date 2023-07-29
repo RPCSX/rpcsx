@@ -124,6 +124,8 @@ public:
     return getUmtxChainIndexed(1, t, flags, ptr);
   }
 
+  Ref<RcBase> shmDevice;
+
 private:
   mutable pthread_mutex_t m_heap_mtx;
   void *m_heap_next = this + 1;

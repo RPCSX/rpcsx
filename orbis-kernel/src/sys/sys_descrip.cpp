@@ -17,10 +17,6 @@ orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
 }
 orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {
   ORBIS_LOG_NOTICE(__FUNCTION__, fd);
-  if (fd == 0) {
-    return {}; // FIXME: remove when shm would be implemented
-  }
-
   if (thread->tproc->fileDescriptors.close(fd)) {
     return {};
   }

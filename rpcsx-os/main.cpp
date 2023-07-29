@@ -335,6 +335,8 @@ static int ps4Exec(orbis::Thread *mainThread,
   mainThread->tproc->fileDescriptors.insert(stdoutFile);
   mainThread->tproc->fileDescriptors.insert(stderrFile);
 
+  orbis::g_context.shmDevice = createShmDevice();
+
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
 
