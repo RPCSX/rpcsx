@@ -1615,6 +1615,16 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
     }
     break;
 
+  case kSurfaceFormat5_6_5:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_R5G6B5_UNORM_PACK16;
+
+    default:
+      break;
+    }
+    break;
+
   case kSurfaceFormat16_16:
     switch (channel) {
     case kTextureChannelTypeUInt:
@@ -2820,7 +2830,7 @@ struct CacheLine {
 
     if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
       // TODO
-      // handleHostInvalidations(writeTag - 1, cacheBeginAddress, cacheSize)
+      // handleHostInvalidations(writeTag - 1, cacheBeginAddress, cacheSize);
 
       if (!result->isInSync(hostSyncTable, hostSyncMtx, address, size)) {
         auto buffer = getBufferInternal(address, size);
