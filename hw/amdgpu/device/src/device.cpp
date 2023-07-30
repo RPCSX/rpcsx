@@ -2830,7 +2830,7 @@ struct CacheLine {
 
     if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
       // TODO
-      // handleHostInvalidations(writeTag - 1, cacheBeginAddress, cacheSize);
+      handleHostInvalidations(writeTag - 1, cacheBeginAddress, cacheSize);
 
       if (!result->isInSync(hostSyncTable, hostSyncMtx, address, size)) {
         auto buffer = getBufferInternal(address, size);
