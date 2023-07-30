@@ -520,7 +520,7 @@ void _orbis_log_print(LogLevel lvl, std::string_view msg,
     color = "\e[0;33m";
     break;
   case LogLevel::Notice:
-    color = "";
+    color = "\e[0;36m";
     break;
   case LogLevel::Trace:
     color = "";
