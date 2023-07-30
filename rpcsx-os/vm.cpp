@@ -626,12 +626,12 @@ void rx::vm::initialize() {
       ::shm_open("/rpcsx-os-memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
   if (gMemoryShm == -1) {
-    std::printf("Memory: failed to open /rpcsx-os-memory\n");
+    std::fprintf(stderr, "Memory: failed to open /rpcsx-os-memory\n");
     std::abort();
   }
 
   if (::ftruncate64(gMemoryShm, kMemorySize) < 0) {
-    std::printf("Memory: failed to allocate /rpcsx-os-memory\n");
+    std::fprintf(stderr, "Memory: failed to allocate /rpcsx-os-memory\n");
     std::abort();
   }
 
@@ -693,13 +693,14 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (alignment < kPageSize) {
-    std::printf("Memory error: wrong alignment %" PRId64 "\n", alignment);
+    std::fprintf(stderr, "Memory error: wrong alignment %" PRId64 "\n",
+                 alignment);
     alignment = kPageSize;
   }
 
   if (len > kBlockSize) {
-    std::printf("Memory error: too big allocation %" PRId64 " pages\n",
-                pagesCount);
+    std::fprintf(stderr, "Memory error: too big allocation %" PRId64 " pages\n",
+                 pagesCount);
     return MAP_FAILED;
   }
 
@@ -724,9 +725,10 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     auto blockIndex = address >> kBlockShift;
 
     if (blockIndex < kFirstBlock || blockIndex > kLastBlock) {
-      std::printf("Memory error: fixed mapping with wrong address %" PRIx64
-                  " pages\n",
-                  address);
+      std::fprintf(stderr,
+                   "Memory error: fixed mapping with wrong address %" PRIx64
+                   " pages\n",
+                   address);
       return MAP_FAILED;
     }
   } else if (hitAddress != 0) {
@@ -734,8 +736,9 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     auto page = (hitAddress & kBlockMask) >> kPageShift;
 
     if (blockIndex < kFirstBlock || blockIndex > kLastBlock) {
-      std::printf("Memory error: wrong hit address %" PRIx64 " pages\n",
-                  hitAddress);
+      std::fprintf(stderr,
+                   "Memory error: wrong hit address %" PRIx64 " pages\n",
+                   hitAddress);
       hitAddress = 0;
     } else {
       blockIndex -= kFirstBlock;
@@ -778,19 +781,20 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (address == 0) {
-    std::printf("Memory error: no free memory left for mapping of %" PRId64
-                " pages\n",
-                pagesCount);
+    std::fprintf(stderr,
+                 "Memory error: no free memory left for mapping of %" PRId64
+                 " pages\n",
+                 pagesCount);
     return MAP_FAILED;
   }
 
   if (address & (alignment - 1)) {
-    std::printf("Memory error: failed to map aligned address\n");
+    std::fprintf(stderr, "Memory error: failed to map aligned address\n");
     std::abort();
   }
 
   if (address >= kMaxAddress || address > kMaxAddress - len) {
-    std::printf("Memory error: out of memory\n");
+    std::fprintf(stderr, "Memory error: out of memory\n");
     std::abort();
   }
 
@@ -813,7 +817,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     }
   */
   if (flags) {
-    std::printf("   unhandled flags 0x%" PRIx32 "\n", flags);
+    std::fprintf(stderr, "   unhandled flags 0x%" PRIx32 "\n", flags);
   }
 
   auto &allocInfo = gVirtualAllocations[address];
@@ -854,17 +858,18 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
 
   if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
       address > kMaxAddress - size) {
-    std::printf("Memory error: unmap out of memory\n");
+    std::fprintf(stderr, "Memory error: unmap out of memory\n");
     return false;
   }
 
   if ((address & kPageMask) != 0) {
-    std::printf("Memory error: unmap unaligned address\n");
+    std::fprintf(stderr, "Memory error: unmap unaligned address\n");
     return false;
   }
 
   if ((address >> kBlockShift) != ((address + size - 1) >> kBlockShift)) {
-    std::printf(
+    std::fprintf(
+        stderr,
         "Memory error: unmap cross block range. address 0x%lx, size=0x%lx\n",
         address, size);
     __builtin_trap();
@@ -885,17 +890,17 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   auto address = reinterpret_cast<std::uint64_t>(addr);
   if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
       address > kMaxAddress - size) {
-    std::printf("Memory error: protect out of memory\n");
+    std::fprintf(stderr, "Memory error: protect out of memory\n");
     return false;
   }
 
   if ((address & kPageMask) != 0) {
-    std::printf("Memory error: protect unaligned address\n");
+    std::fprintf(stderr, "Memory error: protect unaligned address\n");
     return false;
   }
 
   if ((address >> kBlockShift) != ((address + size - 1) >> kBlockShift)) {
-    std::printf("Memory error: protect cross block range\n");
+    std::fprintf(stderr, "Memory error: protect cross block range\n");
     std::abort();
   }
 
@@ -918,7 +923,7 @@ bool rx::vm::queryProtection(const void *addr, std::uint64_t *startAddress,
 
 unsigned rx::vm::getPageProtection(std::uint64_t address) {
   if (address < kMinAddress || address >= kMaxAddress) {
-    std::printf("Memory error: getPageProtection out of memory\n");
+    std::fprintf(stderr, "Memory error: getPageProtection out of memory\n");
     return 0;
   }
 
