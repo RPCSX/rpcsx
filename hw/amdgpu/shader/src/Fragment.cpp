@@ -5312,6 +5312,9 @@ spirv::Value Fragment::createBitcast(spirv::Type to, spirv::Type from,
     return value;
   }
 
+  if (from == context->getUInt8Type())
+    value = builder.createUConvert(to, spirv::cast<spirv::UIntValue>(value));
+
   if (from == context->getFloat32Type()) {
     if (auto origValue = context->findFloat32Value(value)) {
       if (to == context->getUInt32Type()) {

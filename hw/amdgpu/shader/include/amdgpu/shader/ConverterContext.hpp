@@ -137,6 +137,9 @@ public:
   spirv::UIntType getUInt64Type() {
     return spirv::cast<spirv::UIntType>(getType(TypeId::UInt64));
   }
+  spirv::UIntType getUInt8Type() {
+    return spirv::cast<spirv::UIntType>(getType(TypeId::UInt8));
+  }
 
   spirv::VectorOfType<spirv::UIntType> getUint32x2Type() {
     return spirv::cast<spirv::VectorOfType<spirv::UIntType>>(
