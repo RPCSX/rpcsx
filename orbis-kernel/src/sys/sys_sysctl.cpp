@@ -19,7 +19,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     sdk_version,
     sched_cpusetsize,
     proc_ptc,
-
+    cpu_mode,
   };
 
   enum sysctl_hw {
@@ -32,7 +32,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   };
 
   // for (unsigned int i = 0; i < namelen; ++i) {
-  //   std::printf("   name[%u] = %u\n", i, name[i]);
+  //   std::fprintf(stderr, "   name[%u] = %u\n", i, name[i]);
   // }
 
   if (namelen == 3) {
@@ -70,14 +70,15 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     case sysctl_ctl::unspec: {
       switch (name[1]) {
       case 3: {
-        std::printf("   unspec - get name of '%s'\n",
-                    std::string((char *)new_, newlen).c_str());
+        std::fprintf(stderr, "   unspec - get name of '%s'\n",
+                     std::string((char *)new_, newlen).c_str());
         auto searchName = std::string_view((char *)new_, newlen);
         auto *dest = (std::uint32_t *)old;
         std::uint32_t count = 0;
 
         if (searchName == "kern.smp.cpus") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
             return ErrorCode::INVAL;
           }
 
@@ -85,6 +86,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           dest[count++] = smp_cpus;
         } else if (searchName == "machdep.tsc_freq") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
             return ErrorCode::INVAL;
           }
 
@@ -92,6 +94,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           dest[count++] = tsc_freq;
         } else if (searchName == "kern.sdk_version") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
             return ErrorCode::INVAL;
           }
 
@@ -99,6 +102,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           dest[count++] = sdk_version;
         } else if (searchName == "kern.sched.cpusetsize") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
             return ErrorCode::INVAL;
           }
 
@@ -106,15 +110,24 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           dest[count++] = sched_cpusetsize;
         } else if (searchName == "kern.proc.ptc") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
-            std::printf("   kern.proc.ptc error\n");
+            std::fprintf(stderr, "   %s error\n", searchName.data());
             return ErrorCode::INVAL;
           }
 
           dest[count++] = kern;
           dest[count++] = proc_ptc;
+        } else if (searchName == "kern.cpumode") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = kern;
+          dest[count++] = cpu_mode;
         }
 
         if (count == 0) {
+          std::fprintf(stderr, "   %s is unknown\n", searchName.data());
           return ErrorCode::SRCH;
         }
 
@@ -198,6 +211,19 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         *(std::uint64_t *)old = 1357;
+        break;
+      }
+
+      case sysctl_kern::cpu_mode: {
+        if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+        // 0 - 6 cpu
+        // 1 - 7 cpu, low power
+        // 5 - 7 cpu, normal
+        *(std::uint32_t *)old = 5;
+        break;
       }
 
       default:
