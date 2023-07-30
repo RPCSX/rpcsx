@@ -257,6 +257,9 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
     uwrite(pPatternSet, thread->evfResultPattern);
   }
 
+  if (result == ErrorCode::BUSY) {
+    return SysResult::notAnError(result);
+  }
   return result;
 }
 orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
@@ -417,7 +420,7 @@ orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
 
   std::lock_guard lock(sem->mtx);
   if (sem->isDeleted || sem->value < need)
-    return ErrorCode::BUSY;
+    return orbis::SysResult::notAnError(ErrorCode::BUSY);
   sem->value -= need;
   return {};
 }
