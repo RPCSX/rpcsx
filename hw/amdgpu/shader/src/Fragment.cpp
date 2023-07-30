@@ -640,7 +640,11 @@ Value doCmpOp(Fragment &fragment, TypeId type, spirv::Value src0,
     }
     break;
   case CmpKind::LG:
-    cmp = fragment.builder.createFOrdNotEqual(boolT, src0, src1);
+    if (type.isFloatPoint()) {
+      cmp = fragment.builder.createFOrdNotEqual(boolT, src0, src1);
+    } else {
+      cmp = fragment.builder.createINotEqual(boolT, src0, src1);
+    }
     break;
   case CmpKind::GE:
     if (type.isFloatPoint()) {
