@@ -48,10 +48,22 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
     *(std::uint64_t *)argp = dmemSize;
     return {};
 
-  case 0xc0208016: // get avaiable size
-    ORBIS_LOG_ERROR("dmem getAvaiableSize", device->index, argp);
-    *(std::uint64_t *)argp = dmemSize - device->nextOffset;
+  case 0xc0208016: { // get available size
+    struct Args {
+      std::uint64_t searchStart;
+      std::uint64_t searchEnd;
+      std::uint64_t alignment;
+      std::uint64_t size;
+    };
+
+    auto args = reinterpret_cast<Args *>(argp);
+
+    ORBIS_LOG_ERROR("dmem getAvaiableSize", device->index, argp, dmemSize,
+                    device->nextOffset, dmemSize - device->nextOffset);
+    args->searchStart = device->nextOffset;
+    args->size = dmemSize - device->nextOffset;
     return {};
+  }
 
   case 0xc0288001: { // sceKernelAllocateDirectMemory
     auto args = reinterpret_cast<AllocateDirectMemoryArgs *>(argp);
@@ -83,19 +95,6 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                    args->size);
     // std::fflush(stdout);
     //__builtin_trap();
-    return {};
-  }
-
-  case 0xc020a801: {
-    struct Args {
-      std::uint64_t len;
-      std::uint64_t searchStart;
-      std::uint64_t searchEnd;
-      std::uint32_t alignment;
-    };
-    auto args = reinterpret_cast<Args *>(argp);
-    ORBIS_LOG_TODO("dmem memory pool expand", device->index, args->len,
-                   args->searchStart, args->searchEnd, args->alignment);
     return {};
   }
 
