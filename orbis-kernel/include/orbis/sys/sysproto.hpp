@@ -674,7 +674,7 @@ SysResult sys_obs_eport_trigger(Thread *thread /* TODO */);
 SysResult sys_obs_eport_open(Thread *thread /* TODO */);
 SysResult sys_obs_eport_close(Thread *thread /* TODO */);
 SysResult sys_is_in_sandbox(Thread *thread /* TODO */);
-SysResult sys_dmem_container(Thread *thread);
+SysResult sys_dmem_container(Thread *thread, uint id);
 SysResult sys_get_authinfo(Thread *thread, pid_t pid, ptr<void> info);
 SysResult sys_mname(Thread *thread, uint64_t address, uint64_t length,
                     ptr<const char[32]> name);

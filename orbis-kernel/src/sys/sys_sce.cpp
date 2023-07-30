@@ -578,8 +578,11 @@ orbis::SysResult orbis::sys_is_in_sandbox(Thread *thread /* TODO */) {
   std::printf("sys_is_in_sandbox() -> 0\n");
   return {};
 }
-orbis::SysResult orbis::sys_dmem_container(Thread *thread) {
+orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, id);
   thread->retval[0] = 1; // returns default direct memory device
+  if (id + 1)
+    return ErrorCode::PERM;
   return {};
 }
 orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
@@ -718,6 +721,7 @@ orbis::SysResult orbis::sys_dynlib_get_proc_param(Thread *thread,
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_process_needed_and_relocate(Thread *thread) {
+  ORBIS_LOG_NOTICE(__FUNCTION__);
   if (auto processNeeded = thread->tproc->ops->processNeeded) {
     auto result = processNeeded(thread);
 
@@ -741,6 +745,7 @@ orbis::SysResult orbis::sys_dynlib_process_needed_and_relocate(Thread *thread) {
     }
   }
 
+  ORBIS_LOG_WARNING(__FUNCTION__);
   return {};
 }
 orbis::SysResult orbis::sys_sandbox_path(Thread *thread /* TODO */) {
