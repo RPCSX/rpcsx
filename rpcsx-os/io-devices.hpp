@@ -17,3 +17,4 @@ IoDevice *createRngCharacterDevice();
 IoDevice *createAjmCharacterDevice();
 IoDevice *createSblSrvCharacterDevice();
 IoDevice *createShmDevice();
+IoDevice *createBlockPoolDevice();

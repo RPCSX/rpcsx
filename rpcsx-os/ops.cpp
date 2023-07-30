@@ -2,6 +2,7 @@
 #include "align.hpp"
 #include "backtrace.hpp"
 #include "io-device.hpp"
+#include "iodev/blockpool.hpp"
 #include "iodev/dmem.hpp"
 #include "linker.hpp"
 #include "orbis/KernelContext.hpp"
@@ -257,6 +258,33 @@ orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
                           orbis::Ref<orbis::File> *file) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
   return dev->open(file, path, flags, mode, thread);
+}
+
+orbis::SysResult blockpool_open(orbis::Thread *thread,
+                                orbis::Ref<orbis::File> *file) {
+  auto dev = static_cast<IoDevice *>(orbis::g_context.blockpoolDevice.get());
+  return dev->open(file, nullptr, 0, 0, thread);
+}
+
+orbis::SysResult blockpool_map(orbis::Thread *thread, orbis::caddr_t addr,
+                               orbis::size_t len, orbis::sint prot,
+                               orbis::sint flags) {
+  auto blockpool =
+      static_cast<BlockPoolDevice *>(orbis::g_context.blockpoolDevice.get());
+  void *address = addr;
+  auto result = blockpool->map(&address, len, prot, flags, thread);
+  if (result != ErrorCode{}) {
+    return result;
+  }
+
+  thread->retval[0] = reinterpret_cast<std::uint64_t>(address);
+  return {};
+}
+orbis::SysResult blockpool_unmap(orbis::Thread *thread, orbis::caddr_t addr,
+                                 orbis::size_t len) {
+  auto blockpool =
+      static_cast<BlockPoolDevice *>(orbis::g_context.blockpoolDevice.get());
+  return blockpool->unmap(addr, len, thread);
 }
 
 orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
@@ -562,6 +590,9 @@ ProcessOps rx::procOpsTable = {
     .virtual_query = virtual_query,
     .open = open,
     .shm_open = shm_open,
+    .blockpool_open = blockpool_open,
+    .blockpool_map = blockpool_map,
+    .blockpool_unmap = blockpool_unmap,
     .socket = socket,
     .shm_unlink = shm_unlink,
     .dynlib_get_obj_member = dynlib_get_obj_member,

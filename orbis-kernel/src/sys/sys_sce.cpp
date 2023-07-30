@@ -1217,13 +1217,31 @@ orbis::sys_prepare_to_resume_process(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_process_terminate(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_blockpool_open(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_blockpool_open(Thread *thread) {
+  if (auto blockpool_open = thread->tproc->ops->blockpool_open) {
+    Ref<File> file;
+    auto result = blockpool_open(thread, &file);
+    if (result.isError()) {
+      return result;
+    }
+
+    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
+    return {};
+  }
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_blockpool_map(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_blockpool_map(Thread *thread, caddr_t addr,
+                                          size_t len, sint prot, sint flags) {
+  if (auto blockpool_map = thread->tproc->ops->blockpool_map) {
+    return blockpool_map(thread, addr, len, prot, flags);
+  }
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_blockpool_unmap(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_blockpool_unmap(Thread *thread, caddr_t addr,
+                                            size_t len, sint flags) {
+  if (auto blockpool_unmap = thread->tproc->ops->blockpool_unmap) {
+    return blockpool_unmap(thread, addr, len);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult

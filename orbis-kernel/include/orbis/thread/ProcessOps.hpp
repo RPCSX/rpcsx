@@ -37,6 +37,10 @@ struct ProcessOps {
                     Ref<File> *file);
   SysResult (*shm_open)(Thread *thread, const char *path, sint flags, sint mode,
                         Ref<File> *file);
+  SysResult (*blockpool_open)(Thread *thread, Ref<File> *file);
+  SysResult (*blockpool_map)(Thread *thread, caddr_t addr, size_t len,
+                             sint prot, sint flags);
+  SysResult (*blockpool_unmap)(Thread *thread, caddr_t addr, size_t len);
   SysResult (*socket)(Thread *thread, ptr<const char> name, sint domain,
                       sint type, sint protocol, Ref<File> *file);
   SysResult (*shm_unlink)(Thread *thread, const char *path);

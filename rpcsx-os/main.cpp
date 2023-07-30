@@ -342,6 +342,7 @@ static int ps4Exec(orbis::Thread *mainThread,
   mainThread->tproc->fileDescriptors.insert(stderrFile);
 
   orbis::g_context.shmDevice = createShmDevice();
+  orbis::g_context.blockpoolDevice = createBlockPoolDevice();
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;

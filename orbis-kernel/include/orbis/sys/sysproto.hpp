@@ -759,9 +759,11 @@ SysResult sys_dynlib_get_obj_member(Thread *thread, SceKernelModule handle,
 SysResult sys_budget_get_ptype_of_budget(Thread *thread /* TODO */);
 SysResult sys_prepare_to_resume_process(Thread *thread /* TODO */);
 SysResult sys_process_terminate(Thread *thread /* TODO */);
-SysResult sys_blockpool_open(Thread *thread /* TODO */);
-SysResult sys_blockpool_map(Thread *thread /* TODO */);
-SysResult sys_blockpool_unmap(Thread *thread /* TODO */);
+SysResult sys_blockpool_open(Thread *thread);
+SysResult sys_blockpool_map(Thread *thread, caddr_t addr, size_t len, sint prot,
+                            sint flags);
+SysResult sys_blockpool_unmap(Thread *thread, caddr_t addr, size_t len,
+                              sint flags);
 SysResult sys_dynlib_get_info_for_libdbg(Thread *thread /* TODO */);
 SysResult sys_blockpool_batch(Thread *thread /* TODO */);
 SysResult sys_fdatasync(Thread *thread /* TODO */);
