@@ -1001,6 +1001,12 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return ErrorCode::INVAL;
   }
 
+  if (op == 0x241) {
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
+  }
+
   if (op == 0x400) {
     ORBIS_LOG_TODO("IMPI: connect?");
     if (result) {
