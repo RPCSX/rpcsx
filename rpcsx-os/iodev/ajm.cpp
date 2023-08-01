@@ -9,7 +9,7 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled AJM ioctl", request);
-  return orbis::ErrorCode::PERM;
+  return {};
 }
 
 static const orbis::FileOps fileOps = {
