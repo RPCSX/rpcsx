@@ -10,6 +10,7 @@ struct Thread;
 struct Module;
 struct timespec;
 struct File;
+struct MemoryProtection;
 
 struct ProcessOps {
   SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
@@ -32,6 +33,8 @@ struct ProcessOps {
   SysResult (*munlock)(Thread *thread, ptr<const void> addr, size_t len);
   SysResult (*virtual_query)(Thread *thread, ptr<const void> addr, sint flags,
                              ptr<void> info, ulong infoSize);
+  SysResult (*query_memory_protection)(Thread *thread, ptr<void> address,
+                                       ptr<MemoryProtection> protection);
 
   SysResult (*open)(Thread *thread, ptr<const char> path, sint flags, sint mode,
                     Ref<File> *file);

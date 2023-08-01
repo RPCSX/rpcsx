@@ -299,7 +299,14 @@ orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
   }
   return {};
 }
-orbis::SysResult orbis::sys_query_memory_protection(Thread *thread /* TODO */) {
+orbis::SysResult
+orbis::sys_query_memory_protection(Thread *thread, ptr<void> address,
+                                   ptr<MemoryProtection> protection) {
+  if (auto query_memory_protection =
+          thread->tproc->ops->query_memory_protection) {
+    return query_memory_protection(thread, address, protection);
+  }
+
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_batch_map(Thread *thread /* TODO */) {

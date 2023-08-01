@@ -1,4 +1,3 @@
-#include <array>
 #include <orbis/error.hpp>
 #include <orbis/thread.hpp>
 #include <orbis/time.hpp>
@@ -12,6 +11,7 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
+struct MemoryProtection;
 struct ModuleInfo;
 struct ModuleInfoEx;
 struct KEvent;
@@ -631,7 +631,8 @@ SysResult sys_evf_set(Thread *thread, sint id, uint64_t value);
 SysResult sys_evf_clear(Thread *thread, sint id, uint64_t value);
 SysResult sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                          ptr<sint> pNumWaitThreads);
-SysResult sys_query_memory_protection(Thread *thread /* TODO */);
+SysResult sys_query_memory_protection(Thread *thread, ptr<void> address,
+                                      ptr<MemoryProtection> protection);
 SysResult sys_batch_map(Thread *thread /* TODO */);
 SysResult sys_osem_create(Thread *thread, ptr<const char[32]> name, uint attrs,
                           sint initCount, sint maxCount);

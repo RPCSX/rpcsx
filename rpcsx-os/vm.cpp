@@ -4,6 +4,7 @@
 #include <bit>
 #include <cassert>
 #include <cinttypes>
+#include <cstdint>
 #include <cstring>
 #include <fcntl.h>
 #include <map>
@@ -915,10 +916,60 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
 }
 
+static std::int32_t getPageProtectionImpl(std::uint64_t address) {
+  return gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
+      (address & kBlockMask) >> rx::vm::kPageShift);
+}
+
 bool rx::vm::queryProtection(const void *addr, std::uint64_t *startAddress,
-                             std::uint64_t *endAddress, std::int64_t *prot) {
-  // TODO
-  return false;
+                             std::uint64_t *endAddress, std::int32_t *prot) {
+  auto address = reinterpret_cast<std::uintptr_t>(addr);
+  if (address < kMinAddress || address >= kMaxAddress) {
+    return false;
+  }
+
+  std::uint64_t start = address & ~kPageMask;
+  std::uint64_t end = start + kPageSize;
+
+  std::lock_guard lock(g_mtx);
+
+  auto resultProt = getPageProtectionImpl(address);
+
+  while (true) {
+    auto testAddr = start - kPageSize;
+    if (testAddr < kMinAddress) {
+      break;
+    }
+
+    auto testProt = getPageProtectionImpl(testAddr);
+
+    if (resultProt != testProt) {
+      break;
+    }
+
+    start = testAddr;
+  }
+
+  while (true) {
+    auto testAddr = end;
+    if (testAddr >= kMaxAddress) {
+      break;
+    }
+
+    auto testProt = getPageProtectionImpl(testAddr);
+
+    if (resultProt != testProt) {
+      break;
+    }
+
+    end = testAddr + kPageSize;
+  }
+
+  *startAddress = start;
+  *endAddress = end;
+  *prot = resultProt;
+
+  return true;
 }
 
 unsigned rx::vm::getPageProtection(std::uint64_t address) {
@@ -929,8 +980,7 @@ unsigned rx::vm::getPageProtection(std::uint64_t address) {
 
   std::lock_guard lock(g_mtx);
 
-  return gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
-      (address & kBlockMask) >> kPageShift);
+  return getPageProtectionImpl(address);
 }
 
 bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,

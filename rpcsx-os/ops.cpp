@@ -12,6 +12,7 @@
 #include "orbis/umtx.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
+#include "orbis/vm.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
@@ -245,6 +246,16 @@ orbis::SysResult virtual_query(orbis::Thread *thread,
     return ErrorCode::FAULT;
   }
   return {};
+}
+
+orbis::SysResult
+query_memory_protection(orbis::Thread *thread, orbis::ptr<void> address,
+                        orbis::ptr<MemoryProtection> protection) {
+  if (rx::vm::queryProtection(address, &protection->startAddress,
+                              &protection->endAddress, &protection->prot)) {
+    return {};
+  }
+  return ErrorCode::INVAL;
 }
 
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
@@ -588,6 +599,7 @@ ProcessOps rx::procOpsTable = {
     .munlockall = munlockall,
     .munlock = munlock,
     .virtual_query = virtual_query,
+    .query_memory_protection = query_memory_protection,
     .open = open,
     .shm_open = shm_open,
     .blockpool_open = blockpool_open,

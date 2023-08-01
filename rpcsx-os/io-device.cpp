@@ -20,8 +20,6 @@ struct HostFile : orbis::File {
   int hostFd = -1;
 
   ~HostFile() {
-    std::printf("Destroying host file\n");
-
     if (hostFd > 0) {
       ::close(hostFd);
     }
