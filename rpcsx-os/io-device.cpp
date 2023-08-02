@@ -259,7 +259,7 @@ orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
 orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
                                     const char *path, std::uint32_t flags,
                                     std::uint32_t mode, orbis::Thread *thread) {
-  auto realPath = hostPath + "/" + path;
+  auto realPath = hostPath + path;
 
   int realFlags = flags & O_ACCMODE;
   flags &= ~O_ACCMODE;
