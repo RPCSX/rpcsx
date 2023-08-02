@@ -344,11 +344,11 @@ public:
     std::memcpy(mData.data() + offset, other.data(),
                 other.size() * sizeof(std::uint32_t));
 
-    for (auto &[id, def] : mIdDefs) {
+    for (auto &[id, def] : other.mIdDefs) {
       mIdDefs[id] = offset + def;
     }
 
-    for (auto &[id, uses] : mIdUses) {
+    for (auto &[id, uses] : other.mIdUses) {
       auto &idUses = mIdUses[id];
       idUses.reserve(idUses.size() + uses.size());
 
