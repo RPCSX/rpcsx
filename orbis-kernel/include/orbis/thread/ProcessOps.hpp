@@ -3,15 +3,21 @@
 #include "../module/ModuleHandle.hpp"
 #include "../thread/types.hpp"
 #include "orbis-config.hpp"
+#include "orbis/utils/Rc.hpp"
 
 namespace orbis {
 struct Thread;
 struct Module;
 struct timespec;
+struct File;
+struct MemoryProtection;
 
 struct ProcessOps {
   SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
                     sint flags, sint fd, off_t pos);
+  SysResult (*dmem_mmap)(Thread *thread, caddr_t addr, size_t len,
+                         sint memoryType, sint prot, sint flags,
+                         off_t directMemoryStart);
   SysResult (*munmap)(Thread *thread, ptr<void> addr, size_t len);
   SysResult (*msync)(Thread *thread, ptr<void> addr, size_t len, sint flags);
   SysResult (*mprotect)(Thread *thread, ptr<const void> addr, size_t len,
@@ -27,23 +33,20 @@ struct ProcessOps {
   SysResult (*munlock)(Thread *thread, ptr<const void> addr, size_t len);
   SysResult (*virtual_query)(Thread *thread, ptr<const void> addr, sint flags,
                              ptr<void> info, ulong infoSize);
+  SysResult (*query_memory_protection)(Thread *thread, ptr<void> address,
+                                       ptr<MemoryProtection> protection);
 
-  SysResult (*open)(Thread *thread, ptr<const char> path, sint flags,
-                    sint mode);
+  SysResult (*open)(Thread *thread, ptr<const char> path, sint flags, sint mode,
+                    Ref<File> *file);
+  SysResult (*shm_open)(Thread *thread, const char *path, sint flags, sint mode,
+                        Ref<File> *file);
+  SysResult (*blockpool_open)(Thread *thread, Ref<File> *file);
+  SysResult (*blockpool_map)(Thread *thread, caddr_t addr, size_t len,
+                             sint prot, sint flags);
+  SysResult (*blockpool_unmap)(Thread *thread, caddr_t addr, size_t len);
   SysResult (*socket)(Thread *thread, ptr<const char> name, sint domain,
-                      sint type, sint protocol);
-  SysResult (*close)(Thread *thread, sint fd);
-  SysResult (*ioctl)(Thread *thread, sint fd, ulong com, caddr_t argp);
-  SysResult (*write)(Thread *thread, sint fd, ptr<const void> data, ulong size);
-  SysResult (*read)(Thread *thread, sint fd, ptr<void> data, ulong size);
-  SysResult (*pread)(Thread *thread, sint fd, ptr<void> data, ulong size,
-                     ulong offset);
-  SysResult (*pwrite)(Thread *thread, sint fd, ptr<const void> data, ulong size,
-                      ulong offset);
-  SysResult (*lseek)(Thread *thread, sint fd, ulong offset, sint whence);
-  SysResult (*ftruncate)(Thread *thread, sint fd, off_t length);
-  SysResult (*truncate)(Thread *thread, ptr<const char> path, off_t length);
-
+                      sint type, sint protocol, Ref<File> *file);
+  SysResult (*shm_unlink)(Thread *thread, const char *path);
   SysResult (*dynlib_get_obj_member)(Thread *thread, ModuleHandle handle,
                                      uint64_t index, ptr<ptr<void>> addrp);
   SysResult (*dynlib_dlsym)(Thread *thread, ModuleHandle handle,

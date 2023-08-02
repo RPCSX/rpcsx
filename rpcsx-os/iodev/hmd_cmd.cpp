@@ -1,34 +1,34 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <cstdio>
 
-struct HmdCmdDevice : public IoDevice {};
+struct HmdCmdDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+};
+struct HmdCmdFile : public orbis::File {};
 
-struct HmdCmdInstance : public IoDeviceInstance {};
-
-static std::int64_t hmd_cmd_instance_ioctl(IoDeviceInstance *instance,
-                                           std::uint64_t request, void *argp) {
-
+static orbis::ErrorCode hmd_cmd_ioctl(orbis::File *file, std::uint64_t request,
+                                      void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hmd_cmd ioctl", request);
-  return -1;
+
+  // 0x800c4802
+  return {};
 }
 
-static std::int32_t hmd_cmd_device_open(IoDevice *device,
-                                        orbis::Ref<IoDeviceInstance> *instance,
-                                        const char *path, std::uint32_t flags,
-                                        std::uint32_t mode) {
-  auto *newInstance = orbis::knew<HmdCmdInstance>();
-  newInstance->ioctl = hmd_cmd_instance_ioctl;
+static const orbis::FileOps ops = {
+    .ioctl = hmd_cmd_ioctl,
+};
 
-  io_device_instance_init(device, newInstance);
-
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode HmdCmdDevice::open(orbis::Ref<orbis::File> *file,
+                                    const char *path, std::uint32_t flags,
+                                    std::uint32_t mode, orbis::Thread *thread) {
+  auto newFile = orbis::knew<HmdCmdFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createHmdCmdCharacterDevice() {
-  auto *newDevice = orbis::knew<HmdCmdDevice>();
-  newDevice->open = hmd_cmd_device_open;
-  return newDevice;
-}
+IoDevice *createHmdCmdCharacterDevice() { return orbis::knew<HmdCmdDevice>(); }

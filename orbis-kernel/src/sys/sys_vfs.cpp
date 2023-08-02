@@ -32,7 +32,14 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
                                  sint mode) {
   ORBIS_LOG_NOTICE("sys_open", path, flags, mode);
   if (auto open = thread->tproc->ops->open) {
-    return open(thread, path, flags, mode);
+    Ref<File> file;
+    auto result = open(thread, path, flags, mode, &file);
+    if (result.isError()) {
+      return result;
+    }
+
+    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
+    return {};
   }
 
   return ErrorCode::NOSYS;
@@ -84,10 +91,46 @@ orbis::SysResult orbis::sys_unlinkat(Thread *thread, sint fd, ptr<char> path,
 }
 orbis::SysResult orbis::sys_lseek(Thread *thread, sint fd, off_t offset,
                                   sint whence) {
-  if (auto lseek = thread->tproc->ops->lseek) {
-    return lseek(thread, fd, offset, whence);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
-  return ErrorCode::NOSYS;
+
+  std::lock_guard lock(file->mtx);
+
+  // TODO: use ioctl?
+  switch (whence) {
+  case SEEK_SET:
+    file->nextOff = offset;
+    break;
+
+  case SEEK_CUR:
+    file->nextOff += offset;
+    break;
+
+  case SEEK_END: {
+    if (file->ops->stat == nullptr) {
+      ORBIS_LOG_ERROR("seek with end whence: unimplemented stat");
+      return ErrorCode::NOTSUP;
+    }
+
+    orbis::Stat stat;
+    auto result = file->ops->stat(file.get(), &stat, thread);
+    if (result != ErrorCode{}) {
+      return result;
+    }
+
+    file->nextOff = stat.size + offset;
+    break;
+  }
+
+  default:
+    ORBIS_LOG_ERROR("sys_lseek: unimplemented whence", whence);
+    return ErrorCode::NOSYS;
+  }
+
+  thread->retval[0] = file->nextOff;
+  return {};
 }
 orbis::SysResult orbis::sys_freebsd6_lseek(Thread *thread, sint fd, sint,
                                            off_t offset, sint whence) {
@@ -105,35 +148,30 @@ orbis::SysResult orbis::sys_eaccess(Thread *thread, ptr<char> path,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub) {
-  ORBIS_LOG_WARNING(__FUNCTION__, path, ub);
-  auto result = sys_open(thread, path, 0, 0);
+  Ref<File> file;
+  auto result = thread->tproc->ops->open(thread, path, 0, 0, &file);
   if (result.isError()) {
-    return ErrorCode::NOENT;
-  }
-
-  auto fd = thread->retval[0];
-  result = sys_lseek(thread, fd, 0, SEEK_END);
-  if (result.isError()) {
-    sys_close(thread, fd);
     return result;
   }
 
-  auto len = thread->retval[0];
-  result = sys_pread(thread, fd, ub, 1, 0);
-  if (result.isError()) {
-    *ub = {};
-    ub->mode = 0777 | 0x4000;
-  } else {
-    *ub = {};
-    ub->size = len;
-    ub->blksize = 1;
-    ub->blocks = len;
-    ub->mode = 0777 | 0x8000;
+  auto stat = file->ops->stat;
+  if (stat == nullptr) {
+    return ErrorCode::NOTSUP;
   }
 
-  sys_close(thread, fd);
-  thread->retval[0] = 0;
-  return {};
+  std::lock_guard lock(file->mtx);
+  Stat _ub;
+  result = uread(_ub, ub);
+  if (result.isError()) {
+    return result;
+  }
+
+  result = stat(file.get(), &_ub, thread);
+  if (result.isError()) {
+    return result;
+  }
+
+  return uwrite(ub, _ub);
 }
 orbis::SysResult orbis::sys_fstatat(Thread *thread, sint fd, ptr<char> path,
                                     ptr<Stat> buf, sint flag) {
@@ -226,18 +264,25 @@ orbis::SysResult orbis::sys_futimes(Thread *thread, sint fd,
 }
 orbis::SysResult orbis::sys_truncate(Thread *thread, ptr<char> path,
                                      off_t length) {
-  if (auto truncate = thread->tproc->ops->truncate) {
-    return truncate(thread, path, length);
+  Ref<File> file;
+  auto result = thread->tproc->ops->open(thread, path, 0, 0, &file);
+  if (result.isError()) {
+    return result;
   }
-  return ErrorCode::NOSYS;
+
+  auto truncate = file->ops->truncate;
+  if (truncate == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  return truncate(file.get(), length, thread);
 }
 orbis::SysResult orbis::sys_freebsd6_truncate(Thread *thread, ptr<char> path,
                                               sint, off_t length) {
   return sys_truncate(thread, path, length);
 }
-orbis::SysResult orbis::sys_fsync(Thread *thread, sint fd) {
-  return ErrorCode::NOSYS;
-}
+orbis::SysResult orbis::sys_fsync(Thread *thread, sint fd) { return {}; }
 orbis::SysResult orbis::sys_rename(Thread *thread, ptr<char> from,
                                    ptr<char> to) {
   return ErrorCode::NOSYS;

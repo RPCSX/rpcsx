@@ -1,4 +1,5 @@
 #include "utils/Logs.hpp"
+#include "error/ErrorCode.hpp"
 #include <cstdarg>
 #include <cstdint>
 #include <sstream>
@@ -168,6 +169,298 @@ void log_class_string<bool>::format(std::string &out, const void *arg) {
   out += get_object(arg) ? "1" : "0";
 }
 
+template <>
+void log_class_string<orbis::ErrorCode>::format(std::string &out,
+                                                const void *arg) {
+  auto errorCode = get_object(arg);
+  switch (errorCode) {
+  case ErrorCode::PERM:
+    out += "PERM";
+    return;
+  case ErrorCode::NOENT:
+    out += "NOENT";
+    return;
+  case ErrorCode::SRCH:
+    out += "SRCH";
+    return;
+  case ErrorCode::INTR:
+    out += "INTR";
+    return;
+  case ErrorCode::IO:
+    out += "IO";
+    return;
+  case ErrorCode::NXIO:
+    out += "NXIO";
+    return;
+  case ErrorCode::TOOBIG:
+    out += "TOOBIG";
+    return;
+  case ErrorCode::NOEXEC:
+    out += "NOEXEC";
+    return;
+  case ErrorCode::BADF:
+    out += "BADF";
+    return;
+  case ErrorCode::CHILD:
+    out += "CHILD";
+    return;
+  case ErrorCode::DEADLK:
+    out += "DEADLK";
+    return;
+  case ErrorCode::NOMEM:
+    out += "NOMEM";
+    return;
+  case ErrorCode::ACCES:
+    out += "ACCES";
+    return;
+  case ErrorCode::FAULT:
+    out += "FAULT";
+    return;
+  case ErrorCode::NOTBLK:
+    out += "NOTBLK";
+    return;
+  case ErrorCode::BUSY:
+    out += "BUSY";
+    return;
+  case ErrorCode::EXIST:
+    out += "EXIST";
+    return;
+  case ErrorCode::XDEV:
+    out += "XDEV";
+    return;
+  case ErrorCode::NODEV:
+    out += "NODEV";
+    return;
+  case ErrorCode::NOTDIR:
+    out += "NOTDIR";
+    return;
+  case ErrorCode::ISDIR:
+    out += "ISDIR";
+    return;
+  case ErrorCode::INVAL:
+    out += "INVAL";
+    return;
+  case ErrorCode::NFILE:
+    out += "NFILE";
+    return;
+  case ErrorCode::MFILE:
+    out += "MFILE";
+    return;
+  case ErrorCode::NOTTY:
+    out += "NOTTY";
+    return;
+  case ErrorCode::TXTBSY:
+    out += "TXTBSY";
+    return;
+  case ErrorCode::FBIG:
+    out += "FBIG";
+    return;
+  case ErrorCode::NOSPC:
+    out += "NOSPC";
+    return;
+  case ErrorCode::SPIPE:
+    out += "SPIPE";
+    return;
+  case ErrorCode::ROFS:
+    out += "ROFS";
+    return;
+  case ErrorCode::MLINK:
+    out += "MLINK";
+    return;
+  case ErrorCode::PIPE:
+    out += "PIPE";
+    return;
+  case ErrorCode::DOM:
+    out += "DOM";
+    return;
+  case ErrorCode::RANGE:
+    out += "RANGE";
+    return;
+  case ErrorCode::AGAIN:
+    out += "AGAIN";
+    return;
+  case ErrorCode::INPROGRESS:
+    out += "INPROGRESS";
+    return;
+  case ErrorCode::ALREADY:
+    out += "ALREADY";
+    return;
+  case ErrorCode::NOTSOCK:
+    out += "NOTSOCK";
+    return;
+  case ErrorCode::DESTADDRREQ:
+    out += "DESTADDRREQ";
+    return;
+  case ErrorCode::MSGSIZE:
+    out += "MSGSIZE";
+    return;
+  case ErrorCode::PROTOTYPE:
+    out += "PROTOTYPE";
+    return;
+  case ErrorCode::NOPROTOOPT:
+    out += "NOPROTOOPT";
+    return;
+  case ErrorCode::PROTONOSUPPORT:
+    out += "PROTONOSUPPORT";
+    return;
+  case ErrorCode::SOCKTNOSUPPORT:
+    out += "SOCKTNOSUPPORT";
+    return;
+  case ErrorCode::OPNOTSUPP:
+    out += "OPNOTSUPP";
+    return;
+  case ErrorCode::PFNOSUPPORT:
+    out += "PFNOSUPPORT";
+    return;
+  case ErrorCode::AFNOSUPPORT:
+    out += "AFNOSUPPORT";
+    return;
+  case ErrorCode::ADDRINUSE:
+    out += "ADDRINUSE";
+    return;
+  case ErrorCode::ADDRNOTAVAIL:
+    out += "ADDRNOTAVAIL";
+    return;
+  case ErrorCode::NETDOWN:
+    out += "NETDOWN";
+    return;
+  case ErrorCode::NETUNREACH:
+    out += "NETUNREACH";
+    return;
+  case ErrorCode::NETRESET:
+    out += "NETRESET";
+    return;
+  case ErrorCode::CONNABORTED:
+    out += "CONNABORTED";
+    return;
+  case ErrorCode::CONNRESET:
+    out += "CONNRESET";
+    return;
+  case ErrorCode::NOBUFS:
+    out += "NOBUFS";
+    return;
+  case ErrorCode::ISCONN:
+    out += "ISCONN";
+    return;
+  case ErrorCode::NOTCONN:
+    out += "NOTCONN";
+    return;
+  case ErrorCode::SHUTDOWN:
+    out += "SHUTDOWN";
+    return;
+  case ErrorCode::TOOMANYREFS:
+    out += "TOOMANYREFS";
+    return;
+  case ErrorCode::TIMEDOUT:
+    out += "TIMEDOUT";
+    return;
+  case ErrorCode::CONNREFUSED:
+    out += "CONNREFUSED";
+    return;
+  case ErrorCode::LOOP:
+    out += "LOOP";
+    return;
+  case ErrorCode::NAMETOOLONG:
+    out += "NAMETOOLONG";
+    return;
+  case ErrorCode::HOSTDOWN:
+    out += "HOSTDOWN";
+    return;
+  case ErrorCode::HOSTUNREACH:
+    out += "HOSTUNREACH";
+    return;
+  case ErrorCode::NOTEMPTY:
+    out += "NOTEMPTY";
+    return;
+  case ErrorCode::PROCLIM:
+    out += "PROCLIM";
+    return;
+  case ErrorCode::USERS:
+    out += "USERS";
+    return;
+  case ErrorCode::DQUOT:
+    out += "DQUOT";
+    return;
+  case ErrorCode::STALE:
+    out += "STALE";
+    return;
+  case ErrorCode::REMOTE:
+    out += "REMOTE";
+    return;
+  case ErrorCode::BADRPC:
+    out += "BADRPC";
+    return;
+  case ErrorCode::RPCMISMATCH:
+    out += "RPCMISMATCH";
+    return;
+  case ErrorCode::PROGUNAVAIL:
+    out += "PROGUNAVAIL";
+    return;
+  case ErrorCode::PROGMISMATCH:
+    out += "PROGMISMATCH";
+    return;
+  case ErrorCode::PROCUNAVAIL:
+    out += "PROCUNAVAIL";
+    return;
+  case ErrorCode::NOLCK:
+    out += "NOLCK";
+    return;
+  case ErrorCode::NOSYS:
+    out += "NOSYS";
+    return;
+  case ErrorCode::FTYPE:
+    out += "FTYPE";
+    return;
+  case ErrorCode::AUTH:
+    out += "AUTH";
+    return;
+  case ErrorCode::NEEDAUTH:
+    out += "NEEDAUTH";
+    return;
+  case ErrorCode::IDRM:
+    out += "IDRM";
+    return;
+  case ErrorCode::NOMSG:
+    out += "NOMSG";
+    return;
+  case ErrorCode::OVERFLOW:
+    out += "OVERFLOW";
+    return;
+  case ErrorCode::CANCELED:
+    out += "CANCELED";
+    return;
+  case ErrorCode::ILSEQ:
+    out += "ILSEQ";
+    return;
+  case ErrorCode::NOATTR:
+    out += "NOATTR";
+    return;
+  case ErrorCode::DOOFUS:
+    out += "DOOFUS";
+    return;
+  case ErrorCode::BADMSG:
+    out += "BADMSG";
+    return;
+  case ErrorCode::MULTIHOP:
+    out += "MULTIHOP";
+    return;
+  case ErrorCode::NOLINK:
+    out += "NOLINK";
+    return;
+  case ErrorCode::PROTO:
+    out += "PROTO";
+    return;
+  case ErrorCode::NOTCAPABLE:
+    out += "NOTCAPABLE";
+    return;
+  case ErrorCode::CAPMODE:
+    out += "CAPMODE";
+    return;
+  }
+
+  out += "<unknown " + std::to_string((int)errorCode) + ">";
+}
+
 void _orbis_log_print(LogLevel lvl, std::string_view msg,
                       std::string_view names, const log_type_info *sup, ...) {
   if (lvl > logs_level.load(std::memory_order::relaxed)) {
@@ -227,7 +520,7 @@ void _orbis_log_print(LogLevel lvl, std::string_view msg,
     color = "\e[0;33m";
     break;
   case LogLevel::Notice:
-    color = "";
+    color = "\e[0;36m";
     break;
   case LogLevel::Trace:
     color = "";

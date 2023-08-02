@@ -1,5 +1,6 @@
 #pragma once
 #include "evf.hpp"
+#include "ipmi.hpp"
 #include "osem.hpp"
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedCV.hpp"
@@ -104,6 +105,28 @@ public:
     return {};
   }
 
+  std::pair<IpmiServer *, bool> createIpmiServer(utils::kstring name,
+                                                 std::uint32_t attrs,
+                                                 std::int32_t initCount,
+                                                 std::int32_t maxCount) {
+    std::lock_guard lock(m_sem_mtx);
+    auto [it, inserted] = mIpmiServers.try_emplace(std::move(name), nullptr);
+    if (inserted) {
+      it->second = knew<IpmiServer>(name);
+    }
+
+    return {it->second.get(), inserted};
+  }
+
+  Ref<IpmiServer> findIpmiServer(std::string_view name) {
+    std::lock_guard lock(m_sem_mtx);
+    if (auto it = mIpmiServers.find(name); it != mIpmiServers.end()) {
+      return it->second;
+    }
+
+    return {};
+  }
+
   enum {
     c_golden_ratio_prime = 2654404609u,
     c_umtx_chains = 512,
@@ -124,6 +147,10 @@ public:
     return getUmtxChainIndexed(1, t, flags, ptr);
   }
 
+  Ref<RcBase> shmDevice;
+  Ref<RcBase> dmemDevice;
+  Ref<RcBase> blockpoolDevice;
+
 private:
   mutable pthread_mutex_t m_heap_mtx;
   void *m_heap_next = this + 1;
@@ -143,6 +170,9 @@ private:
 
   shared_mutex m_sem_mtx;
   utils::kmap<utils::kstring, Ref<Semaphore>> m_semaphores;
+
+  shared_mutex mIpmiServerMtx;
+  utils::kmap<utils::kstring, Ref<IpmiServer>> mIpmiServers;
 };
 
 extern KernelContext &g_context;

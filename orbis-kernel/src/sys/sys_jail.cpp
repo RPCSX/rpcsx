@@ -3,11 +3,11 @@
 orbis::SysResult orbis::sys_jail(Thread *thread, ptr<struct jail> jail) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_jail_set(Thread *thread, ptr<struct iovec> iovp,
+orbis::SysResult orbis::sys_jail_set(Thread *thread, ptr<IoVec> iovp,
                                      uint iovcnt, sint flags) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_jail_get(Thread *thread, ptr<struct iovec> iovp,
+orbis::SysResult orbis::sys_jail_get(Thread *thread, ptr<IoVec> iovp,
                                      uint iovcnt, sint flags) {
   return ErrorCode::NOSYS;
 }

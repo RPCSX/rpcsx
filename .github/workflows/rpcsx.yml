@@ -24,10 +24,9 @@ jobs:
     - name: Setup dependencies
       run: |
         sudo apt update
-        sudo apt install build-essential libunwind-dev \
+        sudo apt install -y cmake build-essential libunwind-dev \
         libglfw3-dev libvulkan-dev vulkan-validationlayers-dev \
-        spirv-tools glslang-tools libspirv-cross-c-shared-dev \
-        libxbyak-dev
+        spirv-tools glslang-tools libspirv-cross-c-shared-dev
         VULKANVER=1.3.259
         curl -sSfLo Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
         tar -xf Vulkan-Headers*.tar.gz
@@ -39,7 +38,7 @@ jobs:
 
     - name: Build RPCSX
       run: |
-        cmake -B build
+        cmake -B build && \
         cmake --build build -j4
 
     - name: Upload RPCSX

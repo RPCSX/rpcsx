@@ -1,31 +1,38 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/uio.hpp"
 #include <cstring>
+#include <span>
 
-struct ZeroDevice : public IoDevice {};
+struct ZeroDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+};
+struct ZeroFile : public orbis::File {};
 
-struct ZeroInstance : public IoDeviceInstance {};
-
-static std::int64_t zero_device_read(IoDeviceInstance *instance, void *data,
-                                     std::uint64_t size) {
-  std::memset(data, 0, size);
-  return size;
+static orbis::ErrorCode zero_read(orbis::File *file, orbis::Uio *uio,
+                                  orbis::Thread *) {
+  for (auto entry : std::span(uio->iov, uio->iovcnt)) {
+    std::memset(entry.base, 0, entry.len);
+    uio->offset += entry.len;
+  }
+  uio->resid = 0;
+  return {};
 }
 
-static std::int32_t zero_device_open(IoDevice *device,
-                                     orbis::Ref<IoDeviceInstance> *instance,
-                                     const char *path, std::uint32_t flags,
-                                     std::uint32_t mode) {
-  auto *newInstance = orbis::knew<ZeroInstance>();
-  newInstance->read = zero_device_read;
+static const orbis::FileOps ops = {
+    .read = zero_read,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode ZeroDevice::open(orbis::Ref<orbis::File> *file,
+                                  const char *path, std::uint32_t flags,
+                                  std::uint32_t mode, orbis::Thread *thread) {
+  auto newFile = orbis::knew<ZeroFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createZeroCharacterDevice() {
-  auto *newDevice = orbis::knew<ZeroDevice>();
-  newDevice->open = zero_device_open;
-  return newDevice;
-}
+IoDevice *createZeroCharacterDevice() { return orbis::knew<ZeroDevice>(); }

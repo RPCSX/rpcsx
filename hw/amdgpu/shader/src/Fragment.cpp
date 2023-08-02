@@ -10,6 +10,7 @@
 #include <util/unreachable.hpp>
 
 #include <bit>
+#include <cmath>
 
 using namespace amdgpu::shader;
 
@@ -163,23 +164,18 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
       spv::StorageClass::StorageBuffer, loadType);
 
   auto &builder = fragment.builder;
-  std::size_t chanSize = 0;
 
   switch (surfaceFormat) {
-  case kSurfaceFormat8:
-  case kSurfaceFormat8_8:
-  case kSurfaceFormat8_8_8_8:
-    chanSize += 8;
-    [[fallthrough]];
-  case kSurfaceFormat16:
-  case kSurfaceFormat16_16:
-  case kSurfaceFormat16_16_16_16:
-    chanSize += 8;
-    [[fallthrough]];
   case kSurfaceFormat32:
   case kSurfaceFormat32_32:
   case kSurfaceFormat32_32_32:
-  case kSurfaceFormat32_32_32_32: {
+  case kSurfaceFormat32_32_32_32:
+  case kSurfaceFormat16:
+  case kSurfaceFormat16_16:
+  case kSurfaceFormat16_16_16_16:
+  case kSurfaceFormat8:
+  case kSurfaceFormat8_8:
+  case kSurfaceFormat8_8_8_8: {
     // format not requires bit fetching
     auto totalChannelsCount = getChannelsCount(surfaceFormat);
     auto channelSize = sizeOfFormat(surfaceFormat) / 8 / totalChannelsCount;
@@ -208,21 +204,39 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
       auto channelValue = fragment.builder.createLoad(
           fragment.context->getType(loadType), uniformPointerValue);
 
-      if (chanSize != 0) {
-        if (chanSize == 16) {
-          if (loadType != TypeId::Float16) {
-            channelValue = fragment.builder.createBitcast(
-                fragment.context->getFloat16Type(), channelValue);
-          }
-
+      switch (channelType) {
+      case kTextureChannelTypeFloat: {
+        if (loadType != TypeId::Float32) {
           channelValue = fragment.builder.createFConvert(
               fragment.context->getFloat32Type(), channelValue);
+
+          resultType = fragment.context->getFloat32Type();
         }
+
+        result[channel] = channelValue;
+        break;
       }
-      switch (channelType) {
-      case kTextureChannelTypeFloat:
-      case kTextureChannelTypeSInt:
+      case kTextureChannelTypeSInt: {
+        if (loadType != TypeId::SInt32) {
+          channelValue = fragment.builder.createSConvert(
+              fragment.context->getSint32Type(),
+              spirv::cast<spirv::SIntValue>(channelValue));
+
+          resultType = fragment.context->getSint32Type();
+        }
+
+        result[channel] = channelValue;
+        break;
+      }
       case kTextureChannelTypeUInt:
+        if (loadType != TypeId::UInt32) {
+          channelValue = fragment.builder.createUConvert(
+              fragment.context->getUInt32Type(),
+              spirv::cast<spirv::UIntValue>(channelValue));
+
+          resultType = fragment.context->getUInt32Type();
+        }
+
         result[channel] = channelValue;
         break;
 
@@ -345,10 +359,9 @@ spirv::Type convertFromFormat(spirv::Value *result, int count,
     }
 
     // for (; channel < count; ++channel) {
-    //   result[channel] =
-    //       fragment.createBitcast(resultType,
-    //       fragment.context->getUInt32Type(),
-    //                              fragment.context->getUInt32(0));
+    //   result[channel] = fragment.createBitcast(
+    //       resultType, fragment.context->getUInt32Type(),
+    //       fragment.context->getUInt32(0));
     // }
     return resultType;
   }
@@ -627,7 +640,11 @@ Value doCmpOp(Fragment &fragment, TypeId type, spirv::Value src0,
     }
     break;
   case CmpKind::LG:
-    cmp = fragment.builder.createFOrdNotEqual(boolT, src0, src1);
+    if (type.isFloatPoint()) {
+      cmp = fragment.builder.createFOrdNotEqual(boolT, src0, src1);
+    } else {
+      cmp = fragment.builder.createINotEqual(boolT, src0, src1);
+    }
     break;
   case CmpKind::GE:
     if (type.isFloatPoint()) {
@@ -2681,6 +2698,22 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
   }
+  case Vop3::Op::V3_MAX_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+
+    auto floatT = fragment.context->getFloat32Type();
+    auto boolT = fragment.context->getBoolType();
+
+    auto result = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdGreaterThanEqual(boolT, src0, src1),
+        src0, src1);
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
   case Vop3::Op::V3_MAX3_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
         fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
@@ -2700,6 +2733,69 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
 
     fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
+  }
+  case Vop3::Op::V3_MIN_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+
+    auto floatT = fragment.context->getFloat32Type();
+    auto boolT = fragment.context->getBoolType();
+
+    auto result = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
+        src1);
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
+  case Vop3::Op::V3_MIN3_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+    auto src2 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src2, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+    auto boolT = fragment.context->getBoolType();
+
+    auto min01 = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
+        src1);
+    auto result = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, min01, src2), min01,
+        src2);
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
+    break;
+  }
+
+  case Vop3::Op::V3_MED3_F32: {
+    auto src0 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto src1 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src1, TypeId::Float32).value);
+    auto src2 = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src2, TypeId::Float32).value);
+    auto boolT = fragment.context->getBoolType();
+    auto floatT = fragment.context->getFloat32Type();
+    auto glslStd450 = fragment.context->getGlslStd450();
+
+    auto min01 = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, src0, src1), src0,
+        src1);
+    auto max01 = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdGreaterThan(boolT, src0, src1), src0,
+        src1);
+    auto minMax011 = fragment.builder.createSelect(
+        floatT, fragment.builder.createFOrdLessThan(boolT, max01, src2), max01,
+        src2);
+
+    auto result = fragment.builder.createExtInst(
+        floatT, glslStd450, GLSLstd450NMax, {{min01, minMax011}});
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
   }
   case Vop3::Op::V3_FMA_F32: {
     auto src0 = spirv::cast<spirv::FloatValue>(
@@ -2801,6 +2897,18 @@ void convertVop3(Fragment &fragment, Vop3 inst) {
     auto absdiff = fragment.builder.createBitcast(uint32T, sabsdiff);
     auto result = fragment.builder.createIAdd(uint32T, absdiff, src2);
     fragment.setVectorOperand(inst.vdst, {uint32T, result});
+    break;
+  }
+  case Vop3::Op::V3_RSQ_F32: {
+    auto src = spirv::cast<spirv::FloatValue>(
+        fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
+    auto floatT = fragment.context->getFloat32Type();
+
+    auto glslStd450 = fragment.context->getGlslStd450();
+    auto result = fragment.builder.createExtInst(
+        floatT, glslStd450, GLSLstd450InverseSqrt, {{src}});
+
+    fragment.setVectorOperand(inst.vdst, {floatT, result});
     break;
   }
 
@@ -3831,6 +3939,8 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     auto src = spirv::cast<spirv::FloatValue>(
         fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
+    auto constant = fragment.context->getFloat32(M_PI * 2); // 2pi
+    src = fragment.builder.createFMul(floatT, src, constant);
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
@@ -3843,6 +3953,8 @@ void convertVop1(Fragment &fragment, Vop1 inst) {
     auto src = spirv::cast<spirv::FloatValue>(
         fragment.getScalarOperand(inst.src0, TypeId::Float32).value);
     auto floatT = fragment.context->getFloat32Type();
+    auto constant = fragment.context->getFloat32(M_PI * 2); // 2pi
+    src = fragment.builder.createFMul(floatT, src, constant);
 
     auto glslStd450 = fragment.context->getGlslStd450();
     auto result = fragment.builder.createExtInst(floatT, glslStd450,
@@ -5240,6 +5352,9 @@ spirv::Value Fragment::createBitcast(spirv::Type to, spirv::Type from,
     return value;
   }
 
+  if (from == context->getUInt8Type())
+    value = builder.createUConvert(to, spirv::cast<spirv::UIntValue>(value));
+
   if (from == context->getFloat32Type()) {
     if (auto origValue = context->findFloat32Value(value)) {
       if (to == context->getUInt32Type()) {
@@ -5620,6 +5735,8 @@ Value amdgpu::shader::Fragment::getRegister(RegisterId id) {
       return {context->getFloat32Type(), context->getFloat32(4.0f)};
     case 247:
       return {context->getFloat32Type(), context->getFloat32(-4.0f)};
+    // case 248:
+    //   return {context->getFloat32Type(), context->getFloat32(1 / M_PI * 2)};
     case 255: {
       context->dependencies->map(registers->pc,
                                  registers->pc + sizeof(std::uint32_t));

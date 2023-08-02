@@ -1,19 +1,17 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <cstdio>
 
-struct DipswDevice : public IoDevice {};
+struct DipswFile : public orbis::File {};
 
-struct DipswInstance : public IoDeviceInstance {};
-
-static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
-                                         std::uint64_t request, void *argp) {
+static orbis::ErrorCode dipsw_ioctl(orbis::File *file, std::uint64_t request,
+                                    void *argp, orbis::Thread *thread) {
   if (request == 0x40048806) { // is connected?
     ORBIS_LOG_ERROR("dipsw ioctl 0x40048806", argp);
 
     *reinterpret_cast<std::uint32_t *>(argp) = 0;
-    return 0;
+    return {};
   }
 
   // 0x40088808
@@ -22,7 +20,7 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
   if (request == 0x40088808) {
     ORBIS_LOG_ERROR("dipsw ioctl 0x40088808", argp);
     *reinterpret_cast<std::uint32_t *>(argp) = 1;
-    return 0;
+    return {};
   }
 
   // 0x8010880a
@@ -36,28 +34,28 @@ static std::int64_t dipsw_instance_ioctl(IoDeviceInstance *instance,
 
     ORBIS_LOG_ERROR("dipsw ioctl 0x8010880a", args->address, args->size);
 
-    return 0;
+    return {};
   }
 
   ORBIS_LOG_FATAL("Unhandled dipsw ioctl", request);
-  std::fflush(stdout);
   //__builtin_trap();
-  return 0;
+  return {};
 }
 
-static std::int32_t dipsw_device_open(IoDevice *device,
-                                      orbis::Ref<IoDeviceInstance> *instance,
-                                      const char *path, std::uint32_t flags,
-                                      std::uint32_t mode) {
-  auto *newInstance = orbis::knew<DipswInstance>();
-  newInstance->ioctl = dipsw_instance_ioctl;
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
-}
+static const orbis::FileOps ops = {
+    .ioctl = dipsw_ioctl,
+};
 
-IoDevice *createDipswCharacterDevice() {
-  auto *newDevice = orbis::knew<DipswDevice>();
-  newDevice->open = dipsw_device_open;
-  return newDevice;
-}
+struct DipswDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override {
+    auto newFile = orbis::knew<DipswFile>();
+    newFile->device = this;
+    newFile->ops = &ops;
+    *file = newFile;
+    return {};
+  }
+};
+
+IoDevice *createDipswCharacterDevice() { return orbis::knew<DipswDevice>(); }

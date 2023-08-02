@@ -9,12 +9,18 @@
 #include <cstring>
 #include <mutex>
 #include <span>
+#include <string_view>
 #include <utility>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 namespace amdgpu::device::vk {
 extern VkDevice g_vkDevice;
 extern VkAllocationCallbacks *g_vkAllocator;
+extern std::vector<std::pair<VkQueue, unsigned>> g_computeQueues;
+extern std::vector<std::pair<VkQueue, unsigned>> g_transferQueues;
+extern std::vector<std::pair<VkQueue, unsigned>> g_graphicsQueues;
+
 std::uint32_t findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
                                           VkMemoryPropertyFlags properties);
 
@@ -229,6 +235,11 @@ public:
         continue;
       }
 
+      if (debugName == std::string_view{"local"}) {
+        std::printf("memory: allocation %s memory %lx-%lx\n", debugName, offset,
+                    offset + requirements.size);
+      }
+
       table.unmap(offset, offset + requirements.size);
       return {mMemory.getHandle(),
               offset,
@@ -248,6 +259,8 @@ public:
   void deallocate(DeviceMemoryRef memory) {
     std::lock_guard lock(mMtx);
     table.map(memory.offset, memory.offset + memory.size);
+    std::printf("memory: free %s memory %lx-%lx\n", debugName, memory.offset,
+                memory.offset + memory.size);
   }
 
   void dump() {
@@ -601,12 +614,28 @@ public:
     return result;
   }
 
+  unsigned getWidth() const { return mWidth; }
+  unsigned getHeight() const { return mHeight; }
+  unsigned getDepth() const { return mDepth; }
   VkImage getHandle() const { return mImage; }
 
   VkMemoryRequirements getMemoryRequirements() const {
     VkMemoryRequirements requirements{};
     vkGetImageMemoryRequirements(g_vkDevice, mImage, &requirements);
     return requirements;
+  }
+
+  VkSubresourceLayout getSubresourceLayout(VkImageAspectFlags aspectMask,
+                                           uint32_t mipLevel = 0,
+                                           uint32_t arrayLayer = 0) const {
+    VkImageSubresource subResource{.aspectMask = aspectMask,
+                                   .mipLevel = mipLevel,
+                                   .arrayLayer = arrayLayer};
+    VkSubresourceLayout subResourceLayout;
+    vkGetImageSubresourceLayout(g_vkDevice, mImage, &subResource,
+                                &subResourceLayout);
+
+    return subResourceLayout;
   }
 
   void readFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer buffer,
@@ -858,6 +887,7 @@ public:
     mMemory = memory;
   }
 
+  const DeviceMemoryRef &getMemory() const { return mMemory; }
   friend ImageRef;
 };
 

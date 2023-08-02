@@ -1,33 +1,35 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <cstdio>
 
-struct Hmd3daDevice : public IoDevice {};
+struct Hmd3daDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+};
+struct Hmd3daFile : public orbis::File {};
 
-struct Hmd3daInstance : public IoDeviceInstance {};
-
-static std::int64_t hmd_3da_instance_ioctl(IoDeviceInstance *instance,
-                                           std::uint64_t request, void *argp) {
-
+static orbis::ErrorCode hmd_3da_ioctl(orbis::File *file, std::uint64_t request,
+                                      void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hmd_3da ioctl", request);
-  return -1;
+
+  // 0x800c4802
+  return {};
 }
 
-static std::int32_t hmd_3da_device_open(IoDevice *device,
-                                        orbis::Ref<IoDeviceInstance> *instance,
-                                        const char *path, std::uint32_t flags,
-                                        std::uint32_t mode) {
-  auto *newInstance = orbis::knew<Hmd3daInstance>();
-  newInstance->ioctl = hmd_3da_instance_ioctl;
+static const orbis::FileOps ops = {
+    .ioctl = hmd_3da_ioctl,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode Hmd3daDevice::open(orbis::Ref<orbis::File> *file,
+                                    const char *path, std::uint32_t flags,
+                                    std::uint32_t mode, orbis::Thread *thread) {
+  auto newFile = orbis::knew<Hmd3daFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createHmd3daCharacterDevice() {
-  auto *newDevice = orbis::knew<Hmd3daDevice>();
-  newDevice->open = hmd_3da_device_open;
-  return newDevice;
-}
+IoDevice *createHmd3daCharacterDevice() { return orbis::knew<Hmd3daDevice>(); }

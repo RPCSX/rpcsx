@@ -8,7 +8,7 @@ orbis::SysResult orbis::sys_unmount(Thread *thread, ptr<char> path,
                                     sint flags) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_nmount(Thread *thread, ptr<struct iovec> iovp,
-                                   uint iovcnt, sint flags) {
+orbis::SysResult orbis::sys_nmount(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
+                                   sint flags) {
   return ErrorCode::NOSYS;
 }

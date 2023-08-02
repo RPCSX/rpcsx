@@ -44,12 +44,13 @@ spirv::PointerType
 ConverterContext::getStructPointerType(spv::StorageClass storageClass,
                                        spirv::StructType structType) {
   StructTypeEntry *entry = nullptr;
-  for (auto &structType : mStructTypes) {
-    if (structType.id != structType.id) {
+  for (auto &type : mStructTypes) {
+    if (type.id != structType) {
       continue;
     }
 
-    entry = &structType;
+    entry = &type;
+    break;
   }
 
   if (entry == nullptr) {

@@ -1,9 +1,10 @@
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
 
 orbis::SysResult orbis::sys_sigaction(Thread *thread, sint sig,
                                       ptr<struct sigaction> act,
                                       ptr<struct sigaction> oact) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_sigprocmask(Thread *thread, sint how,
                                         ptr<uint64_t> set, ptr<uint64_t> oset) {
@@ -31,7 +32,9 @@ orbis::SysResult orbis::sys_sigprocmask(Thread *thread, sint how,
       break;
 
     default:
-      return ErrorCode::INVAL;
+      ORBIS_LOG_ERROR("sys_sigprocmask: unimplemented how", how);
+      thread->where();
+      return {};
     }
   }
   return {};

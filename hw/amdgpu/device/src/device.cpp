@@ -1,4 +1,5 @@
 #include "device.hpp"
+#include "amdgpu/bridge/bridge.hpp"
 #include "amdgpu/shader/AccessOp.hpp"
 #include "amdgpu/shader/Converter.hpp"
 #include "scheduler.hpp"
@@ -9,6 +10,7 @@
 #include "util/unreachable.hpp"
 #include "vk.hpp"
 #include <amdgpu/shader/UniformBindings.hpp>
+#include <atomic>
 #include <bit>
 #include <compare>
 #include <cstddef>
@@ -17,6 +19,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <forward_list>
+#include <fstream>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -33,6 +36,9 @@
 using namespace amdgpu;
 using namespace amdgpu::device;
 
+static const bool kUseDirectMemory = false;
+static amdgpu::bridge::BridgeHeader *g_bridge;
+
 void *g_rwMemory;
 std::size_t g_memorySize;
 std::uint64_t g_memoryBase;
@@ -41,6 +47,10 @@ RemoteMemory g_hostMemory;
 namespace amdgpu::device::vk {
 VkDevice g_vkDevice = VK_NULL_HANDLE;
 VkAllocationCallbacks *g_vkAllocator = nullptr;
+std::vector<std::pair<VkQueue, unsigned>> g_computeQueues;
+std::vector<std::pair<VkQueue, unsigned>> g_transferQueues;
+std::vector<std::pair<VkQueue, unsigned>> g_graphicsQueues;
+
 static VkPhysicalDeviceMemoryProperties g_physicalMemoryProperties;
 static VkPhysicalDeviceProperties g_physicalDeviceProperties;
 std::uint32_t findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
@@ -79,6 +89,18 @@ static VkResult _vkCreateShadersEXT(VkDevice device, uint32_t createInfoCount,
   return fn(device, createInfoCount, pCreateInfos, pAllocator, pShaders);
 }
 
+static void _vkDestroyShaderEXT(VkDevice device, VkShaderEXT shader,
+                                const VkAllocationCallbacks *pAllocator) {
+  static PFN_vkDestroyShaderEXT fn;
+
+  if (fn == nullptr) {
+    fn = (PFN_vkDestroyShaderEXT)vkGetDeviceProcAddr(vk::g_vkDevice,
+                                                     "vkDestroyShaderEXT");
+  }
+
+  fn(device, shader, pAllocator);
+}
+
 static void _vkCmdBindShadersEXT(VkCommandBuffer commandBuffer,
                                  uint32_t stageCount,
                                  const VkShaderStageFlagBits *pStages,
@@ -93,7 +115,376 @@ static void _vkCmdBindShadersEXT(VkCommandBuffer commandBuffer,
   return fn(commandBuffer, stageCount, pStages, pShaders);
 }
 
-static const bool kUseDirectMemory = false;
+static void _vkCmdSetColorBlendEnableEXT(VkCommandBuffer commandBuffer,
+                                         uint32_t firstAttachment,
+                                         uint32_t attachmentCount,
+                                         const VkBool32 *pColorBlendEnables) {
+  static PFN_vkCmdSetColorBlendEnableEXT fn;
+
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetColorBlendEnableEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetColorBlendEnableEXT");
+  }
+
+  return fn(commandBuffer, firstAttachment, attachmentCount,
+            pColorBlendEnables);
+}
+static void _vkCmdSetColorBlendEquationEXT(
+    VkCommandBuffer commandBuffer, uint32_t firstAttachment,
+    uint32_t attachmentCount,
+    const VkColorBlendEquationEXT *pColorBlendEquations) {
+  static PFN_vkCmdSetColorBlendEquationEXT fn;
+
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetColorBlendEquationEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetColorBlendEquationEXT");
+  }
+
+  return fn(commandBuffer, firstAttachment, attachmentCount,
+            pColorBlendEquations);
+}
+
+static void _vkCmdSetDepthClampEnableEXT(VkCommandBuffer commandBuffer,
+                                         VkBool32 depthClampEnable) {
+  static PFN_vkCmdSetDepthClampEnableEXT fn;
+
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetDepthClampEnableEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetDepthClampEnableEXT");
+  }
+
+  return fn(commandBuffer, depthClampEnable);
+}
+
+static void _vkCmdSetLogicOpEXT(VkCommandBuffer commandBuffer,
+                                VkLogicOp logicOp) {
+  static PFN_vkCmdSetLogicOpEXT fn;
+
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetLogicOpEXT)vkGetDeviceProcAddr(vk::g_vkDevice,
+                                                     "vkCmdSetLogicOpEXT");
+  }
+
+  return fn(commandBuffer, logicOp);
+}
+
+static void _vkCmdSetPolygonModeEXT(VkCommandBuffer commandBuffer,
+                                    VkPolygonMode polygonMode) {
+  static PFN_vkCmdSetPolygonModeEXT fn;
+
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetPolygonModeEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetPolygonModeEXT");
+  }
+
+  return fn(commandBuffer, polygonMode);
+}
+
+static void _vkCmdSetLogicOpEnableEXT(VkCommandBuffer commandBuffer,
+                                      VkBool32 logicOpEnable) {
+  static PFN_vkCmdSetLogicOpEnableEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetLogicOpEnableEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetLogicOpEnableEXT");
+  }
+
+  return fn(commandBuffer, logicOpEnable);
+}
+static void
+_vkCmdSetRasterizationSamplesEXT(VkCommandBuffer commandBuffer,
+                                 VkSampleCountFlagBits rasterizationSamples) {
+  static PFN_vkCmdSetRasterizationSamplesEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetRasterizationSamplesEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetRasterizationSamplesEXT");
+  }
+
+  return fn(commandBuffer, rasterizationSamples);
+}
+static void _vkCmdSetSampleMaskEXT(VkCommandBuffer commandBuffer,
+                                   VkSampleCountFlagBits samples,
+                                   const VkSampleMask *pSampleMask) {
+  static PFN_vkCmdSetSampleMaskEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetSampleMaskEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetSampleMaskEXT");
+  }
+
+  return fn(commandBuffer, samples, pSampleMask);
+}
+static void
+_vkCmdSetTessellationDomainOriginEXT(VkCommandBuffer commandBuffer,
+                                     VkTessellationDomainOrigin domainOrigin) {
+  static PFN_vkCmdSetTessellationDomainOriginEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetTessellationDomainOriginEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetTessellationDomainOriginEXT");
+  }
+
+  return fn(commandBuffer, domainOrigin);
+}
+static void _vkCmdSetAlphaToCoverageEnableEXT(VkCommandBuffer commandBuffer,
+                                              VkBool32 alphaToCoverageEnable) {
+  static PFN_vkCmdSetAlphaToCoverageEnableEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetAlphaToCoverageEnableEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetAlphaToCoverageEnableEXT");
+  }
+
+  return fn(commandBuffer, alphaToCoverageEnable);
+}
+static void _vkCmdSetVertexInputEXT(
+    VkCommandBuffer commandBuffer, uint32_t vertexBindingDescriptionCount,
+    const VkVertexInputBindingDescription2EXT *pVertexBindingDescriptions,
+    uint32_t vertexAttributeDescriptionCount,
+    const VkVertexInputAttributeDescription2EXT *pVertexAttributeDescriptions) {
+  static PFN_vkCmdSetVertexInputEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetVertexInputEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetVertexInputEXT");
+  }
+
+  return fn(commandBuffer, vertexBindingDescriptionCount,
+            pVertexBindingDescriptions, vertexAttributeDescriptionCount,
+            pVertexAttributeDescriptions);
+}
+static void
+_vkCmdSetColorWriteMaskEXT(VkCommandBuffer commandBuffer,
+                           uint32_t firstAttachment, uint32_t attachmentCount,
+                           const VkColorComponentFlags *pColorWriteMasks) {
+  static PFN_vkCmdSetColorWriteMaskEXT fn;
+  if (fn == nullptr) {
+    fn = (PFN_vkCmdSetColorWriteMaskEXT)vkGetDeviceProcAddr(
+        vk::g_vkDevice, "vkCmdSetColorWriteMaskEXT");
+  }
+
+  return fn(commandBuffer, firstAttachment, attachmentCount, pColorWriteMasks);
+}
+static void submitToQueue(VkQueue queue, VkCommandBuffer cmdBuffer,
+                          vk::Semaphore &sem, std::uint64_t signalValue) {
+  VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{
+      .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+      .signalSemaphoreValueCount = 1,
+      .pSignalSemaphoreValues = &signalValue,
+  };
+
+  VkSubmitInfo submitInfo{
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = &timelineSubmitInfo,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &cmdBuffer,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &sem.mSemaphore,
+  };
+
+  Verify() << vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+}
+
+static void submitToQueue(VkQueue queue, VkCommandBuffer cmdBuffer,
+                          vk::Semaphore &sem, std::uint64_t waitValue,
+                          std::uint64_t signalValue,
+                          VkPipelineStageFlags waitDstStage) {
+  VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{
+      .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+      .waitSemaphoreValueCount = 1,
+      .pWaitSemaphoreValues = &waitValue,
+      .signalSemaphoreValueCount = 1,
+      .pSignalSemaphoreValues = &signalValue,
+  };
+
+  VkSubmitInfo submitInfo{
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = &timelineSubmitInfo,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &sem.mSemaphore,
+      .pWaitDstStageMask = &waitDstStage,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &cmdBuffer,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &sem.mSemaphore,
+  };
+
+  Verify() << vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+}
+
+struct GpuTaskCtl {
+  std::atomic<unsigned> refs{0};
+  vk::Semaphore semaphore = vk::Semaphore::Create();
+
+  virtual ~GpuTaskCtl() = default;
+
+  void incRef() { refs.fetch_add(1, std::memory_order::relaxed); }
+  void decRef() {
+    if (refs.fetch_sub(1, std::memory_order::relaxed) == 1) {
+      delete this;
+    }
+  }
+
+  bool isComplete() { return semaphore.getCounterValue() == 1; }
+  bool isInProgress() { return semaphore.getCounterValue() == 0; }
+
+  void wait() { semaphore.wait(1, UINTMAX_MAX); }
+  virtual void invoke(VkCommandBuffer commandBuffer) = 0;
+};
+
+template <typename T> struct GpuTask;
+
+template <typename T>
+  requires(std::is_invocable_r_v<void, T, VkCommandBuffer> &&
+           detail::LambdaWithoutClosure<T>)
+struct GpuTask<T> : GpuTaskCtl {
+  static constexpr void (*fn)(VkCommandBuffer) = +std::declval<T>();
+
+  GpuTask() = default;
+  GpuTask(T &&) {}
+
+  void invoke(VkCommandBuffer commandBuffer) override { fn(commandBuffer); }
+};
+
+template <typename T>
+  requires(std::is_invocable_r_v<void, T, VkCommandBuffer> &&
+           !detail::LambdaWithoutClosure<T>)
+struct GpuTask<T> : GpuTaskCtl {
+  alignas(T) std::byte taskStorage[sizeof(T)];
+
+  GpuTask() = default;
+  GpuTask(T &&t) { new (taskStorage) T(std::forward<T>(t)); }
+  GpuTask &operator=(T &&t) {
+    new (taskStorage) T(std::forward<T>(t));
+    return *this;
+  }
+
+  void invoke(VkCommandBuffer commandBuffer) override {
+    auto &lambda = *std::bit_cast<T *>(&taskStorage);
+    lambda(commandBuffer);
+    std::bit_cast<T *>(&taskStorage)->~T();
+  }
+};
+
+template <typename T>
+  requires std::is_invocable_r_v<void, T, VkCommandBuffer>
+Ref<GpuTaskCtl> createGpuTask(T &&task) {
+  return Ref<GpuTaskCtl>(new GpuTask<T>(std::forward<T>(task)));
+}
+
+struct GpuScheduler {
+  std::vector<std::thread> threads;
+
+  std::vector<std::thread> workThreads;
+  std::vector<Ref<GpuTaskCtl>> tasks;
+  std::mutex taskMtx;
+  std::condition_variable taskCv;
+  std::atomic<bool> exit{false};
+
+public:
+  explicit GpuScheduler(std::span<std::pair<VkQueue, std::uint32_t>> queues) {
+    for (auto [queue, queueFamilyIndex] : queues) {
+      workThreads.push_back(
+          std::thread{[=, this] { entry(queue, queueFamilyIndex); }});
+    }
+  }
+
+  ~GpuScheduler() {
+    exit = true;
+    taskCv.notify_all();
+
+    for (auto &thread : workThreads) {
+      thread.join();
+    }
+  }
+
+  template <typename T>
+    requires std::is_invocable_r_v<void, T, VkCommandBuffer>
+  Ref<GpuTaskCtl> enqueue(T &&task) {
+    auto taskHandle = createGpuTask(std::forward<T>(task));
+    enqueue(taskHandle);
+    return taskHandle;
+  }
+
+  void enqueue(Ref<GpuTaskCtl> task) {
+    std::lock_guard lock(taskMtx);
+    tasks.push_back(std::move(task));
+    taskCv.notify_one();
+  }
+
+  template <typename T>
+    requires std::is_invocable_r_v<bool, T, const AsyncTaskCtl &>
+  void enqueue(TaskSet &set, T &&task) {
+    auto taskCtl = enqueue(std::forward<T>(task));
+    set.append(taskCtl);
+  }
+
+private:
+  void entry(VkQueue queue, std::uint32_t queueFamilyIndex) {
+    VkCommandPool pool;
+    {
+      VkCommandPoolCreateInfo poolCreateInfo{
+          .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+          .queueFamilyIndex = queueFamilyIndex};
+
+      Verify() << vkCreateCommandPool(vk::g_vkDevice, &poolCreateInfo,
+                                      vk::g_vkAllocator, &pool);
+    }
+
+    while (!exit.load(std::memory_order::relaxed)) {
+      Ref<GpuTaskCtl> task;
+
+      {
+        std::unique_lock lock(taskMtx);
+
+        if (tasks.empty()) {
+          taskCv.wait(lock);
+        }
+
+        if (tasks.empty()) {
+          continue;
+        }
+
+        task = std::move(tasks.back());
+        tasks.pop_back();
+      }
+
+      VkCommandBuffer cmdBuffer;
+      {
+        VkCommandBufferAllocateInfo allocateInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+        };
+        Verify() << vkAllocateCommandBuffers(vk::g_vkDevice, &allocateInfo,
+                                             &cmdBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        };
+
+        vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+      }
+
+      task->invoke(cmdBuffer);
+      vkEndCommandBuffer(cmdBuffer);
+
+      submitToQueue(queue, cmdBuffer, task->semaphore, 1);
+    }
+
+    vkDestroyCommandPool(vk::g_vkDevice, pool, vk::g_vkAllocator);
+  }
+};
+
+static GpuScheduler &getTransferQueueScheduler() {
+  static GpuScheduler result{vk::g_transferQueues};
+  return result;
+}
+static GpuScheduler &getComputeQueueScheduler() {
+  static GpuScheduler result{vk::g_computeQueues};
+  return result;
+}
+static GpuScheduler &getGraphicsQueueScheduler() {
+  static GpuScheduler result{vk::g_graphicsQueues};
+  return result;
+}
 
 static util::MemoryAreaTable<util::StdSetInvalidationHandle> memoryAreaTable;
 
@@ -1224,6 +1615,16 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
     }
     break;
 
+  case kSurfaceFormat5_6_5:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_R5G6B5_UNORM_PACK16;
+
+    default:
+      break;
+    }
+    break;
+
   case kSurfaceFormat16_16:
     switch (channel) {
     case kTextureChannelTypeUInt:
@@ -1302,7 +1703,7 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
   case kSurfaceFormat24_8:
     switch (channel) {
     case kTextureChannelTypeUNorm:
-      return VK_FORMAT_D24_UNORM_S8_UINT;
+      return VK_FORMAT_D32_SFLOAT_S8_UINT; // HACK for amdgpu
 
     default:
       break;
@@ -1597,6 +1998,89 @@ static vk::MemoryResource &getDeviceLocalMemory() {
   return deviceLocalMemory;
 }
 
+static void saveImage(const char *name, vk::Image2D &image,
+                      VkImageLayout layout) {
+  auto imageRef = vk::ImageRef(image);
+  vk::Image2D transferImage(imageRef.getWidth(), imageRef.getHeight(),
+                            VK_FORMAT_R8G8B8A8_UNORM,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL |
+                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+  auto transferImageMemory =
+      vk::DeviceMemory::Allocate(transferImage.getMemoryRequirements(),
+                                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  transferImage.bindMemory(vk::DeviceMemoryRef{
+      .deviceMemory = transferImageMemory.getHandle(),
+      .offset = 0,
+      .size = transferImageMemory.getSize(),
+  });
+
+  auto transferImageRef = vk::ImageRef(transferImage);
+
+  auto imageSize = transferImageRef.getMemoryRequirements().size;
+
+  auto transferBuffer = vk::Buffer::Allocate(
+      getHostVisibleMemory(), imageSize,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+
+  getGraphicsQueueScheduler()
+      .enqueue([&](VkCommandBuffer commandBuffer) {
+        VkImageBlit region{
+            .srcSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                               .mipLevel = 0,
+                               .baseArrayLayer = 0,
+                               .layerCount = 1},
+            .srcOffsets = {{},
+                           {static_cast<int32_t>(imageRef.getWidth()),
+                            static_cast<int32_t>(imageRef.getHeight()), 1}},
+            .dstSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                               .mipLevel = 0,
+                               .baseArrayLayer = 0,
+                               .layerCount = 1},
+            .dstOffsets = {{},
+                           {static_cast<int32_t>(imageRef.getWidth()),
+                            static_cast<int32_t>(imageRef.getHeight()), 1}},
+        };
+
+        imageRef.transitionLayout(commandBuffer,
+                                  VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+        transferImageRef.transitionLayout(commandBuffer,
+                                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+        vkCmdBlitImage(
+            commandBuffer, imageRef.getHandle(),
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, transferImage.getHandle(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_LINEAR);
+
+        transferImageRef.transitionLayout(commandBuffer,
+                                          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        transferImageRef.writeToBuffer(commandBuffer,
+                                       transferBuffer.getHandle(),
+                                       VK_IMAGE_ASPECT_COLOR_BIT);
+
+        imageRef.transitionLayout(commandBuffer, layout);
+      })
+      ->wait();
+
+  std::ofstream file(name, std::ios::out | std::ios::binary);
+  auto data = (unsigned int *)transferBuffer.getData();
+
+  file << "P6\n"
+       << transferImageRef.getWidth() << "\n"
+       << transferImageRef.getHeight() << "\n"
+       << 255 << "\n";
+
+  for (uint32_t y = 0; y < transferImageRef.getHeight(); y++) {
+    for (uint32_t x = 0; x < transferImageRef.getWidth(); x++) {
+      file.write((char *)data, 3);
+      data++;
+    }
+  }
+  file.close();
+}
+
 struct BufferRef {
   VkBuffer buffer = VK_NULL_HANDLE;
   VkDeviceSize offset = 0;
@@ -1605,257 +2089,6 @@ struct BufferRef {
 
 static constexpr bool isAligned(std::uint64_t offset, std::uint64_t alignment) {
   return (offset & (alignment - 1)) == 0;
-}
-/*
-struct AreaCache {
-  vk::MemoryResource hostMemoryResource;
-  vk::Buffer directBuffer;
-  std::uint64_t areaAddress;
-  std::uint64_t areaSize;
-  std::vector<vk::Buffer> buffers;
-  std::forward_list<vk::Image2D> images;
-  std::mutex mtx;
-
-  struct WriteBackBuffer {
-    void *bufferMemory;
-    std::uint64_t address;
-    std::uint64_t size;
-  };
-
-  struct WriteBackImage {
-    vk::ImageRef image;
-    std::uint64_t address;
-    std::uint32_t tileMode;
-    std::uint32_t width;
-    std::uint32_t height;
-    std::uint32_t depth;
-    std::uint32_t pitch;
-    VkImageAspectFlags aspect;
-    SurfaceFormat format;
-  };
-
-  std::vector<WriteBackBuffer> writeBackBuffers;
-  std::vector<WriteBackImage> writeBackImages;
-
-  AreaCache(std::uint64_t areaAddress, std::uint64_t areaSize)
-      : areaAddress(areaAddress), areaSize(areaSize) {
-    if (kUseDirectMemory) {
-      hostMemoryResource.initFromHost(
-          (char *)g_rwMemory + areaAddress - g_memoryBase, areaSize);
-
-      directBuffer = vk::Buffer::CreateExternal(
-          areaSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-                        VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-      directBuffer.bindMemory(hostMemoryResource.getFromOffset(0, areaSize));
-    }
-  }
-
-  ~AreaCache() { writeBack(); }
-
-  BufferRef getBuffer(std::uint64_t areaOffset, std::uint64_t size,
-                      VkBufferUsageFlags usage, shader::AccessOp access) {
-    if (kUseDirectMemory &&
-        isAligned(areaOffset, vk::g_physicalDeviceProperties.limits
-                                  .minStorageBufferOffsetAlignment)) {
-      // offset is supported natively, return direct buffer
-      return {directBuffer.getHandle(), areaOffset, size};
-    }
-
-    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
-      usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    }
-
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    }
-
-    auto tmpBuffer = vk::Buffer::Allocate(getHostVisibleMemory(), size, usage);
-
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      std::memcpy(tmpBuffer.getData(),
-                  g_hostMemory.getPointer(areaAddress + areaOffset), size);
-    }
-
-    auto result =
-        BufferRef{.buffer = tmpBuffer.getHandle(), .offset = 0, .size = size};
-
-    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
-      writeBackBuffers.push_back({.bufferMemory = tmpBuffer.getData(),
-                                  .address = areaAddress + areaOffset,
-                                  .size = result.size});
-    }
-
-    buffers.push_back(std::move(tmpBuffer));
-
-    return result;
-  }
-
-  vk::ImageRef getImage(std::uint64_t areaOffset, VkCommandBuffer cmdBuffer,
-                        TileMode tileMode, std::uint32_t width,
-                        std::uint32_t height, std::uint32_t depth,
-                        std::uint32_t pitch, SurfaceFormat format,
-                        TextureChannelType channelType, VkImageUsageFlags usage,
-                        VkImageAspectFlags aspect, shader::AccessOp access,
-                        std::uint64_t writeBackAddress) {
-    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
-      usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    }
-
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    }
-
-    if (depth != 1) {
-      util::unreachable();
-    }
-
-    auto vkFormat = surfaceFormatToVkFormat(format, channelType);
-
-    auto imageHandle = vk::Image2D::Allocate(getDeviceLocalMemory(), width,
-                                             height, vkFormat, usage);
-
-    auto image = vk::ImageRef(images.emplace_front(std::move(imageHandle)));
-
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      buffers.push_back(image.read(
-          cmdBuffer, getHostVisibleMemory(),
-          g_hostMemory.getPointer(areaAddress + areaOffset), tileMode, aspect,
-          getBitWidthOfSurfaceFormat(format) / 8, pitch));
-    }
-
-    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
-      writeBackImages.push_back({
-          .image = image,
-          .address = writeBackAddress,
-          .tileMode = tileMode,
-          .width = width,
-          .height = height,
-          .depth = depth,
-          .pitch = pitch,
-          .aspect = aspect,
-          .format = format,
-      });
-    }
-
-    return image;
-  }
-
-  void writeImageToBuffers(VkCommandBuffer cmd) {
-    for (auto wbImage : writeBackImages) {
-      auto buffer = wbImage.image.writeToBuffer(cmd, getHostVisibleMemory(),
-                                                wbImage.aspect);
-      writeBackBuffers.push_back(
-          {.bufferMemory = buffer.getData(),
-           .address = wbImage.address,
-           .size = wbImage.pitch * wbImage.height * wbImage.depth *
-                   (getBitWidthOfSurfaceFormat(wbImage.format) / 8)});
-      buffers.push_back(std::move(buffer));
-    }
-  }
-
-  void writeBack() {
-    for (auto wbBuffer : writeBackBuffers) {
-      std::memcpy(g_hostMemory.getPointer(wbBuffer.address),
-                  wbBuffer.bufferMemory, wbBuffer.size);
-    }
-  }
-};
-
-static std::map<std::uint64_t, AreaCache, std::greater<>> areaCaches;
-static std::mutex areaMutex;
-
-static AreaCache &getArea(std::uint64_t address, std::size_t size) {
-  std::lock_guard lock(areaMutex);
-  auto it = areaCaches.lower_bound(address);
-
-  if (it == areaCaches.end() ||
-      address >= it->second.areaAddress + it->second.areaSize ||
-      it->second.areaAddress >= address + size) {
-    auto area = memoryAreaTable.queryArea(address / kPageSize);
-    area.beginAddress *= kPageSize;
-    area.endAddress *= kPageSize;
-
-    assert(address >= area.beginAddress && address + size < area.endAddress);
-    it = areaCaches.emplace_hint(
-        it, std::piecewise_construct, std::tuple{area.beginAddress},
-        std::tuple{area.beginAddress, area.endAddress});
-  }
-
-  return it->second;
-}
-static void updateCacheAreasState() {
-  auto areas = std::exchange(memoryAreaTable.invalidated, {});
-  auto it = areaCaches.begin();
-
-  if (it == areaCaches.end()) {
-    return;
-  }
-
-  for (auto area : areas) {
-    while (it->first > area) {
-      if (++it == areaCaches.end()) {
-        return;
-      }
-    }
-
-    if (it->first == area) {
-      it = areaCaches.erase(it);
-
-      if (it == areaCaches.end()) {
-        return;
-      }
-    }
-  }
-}
-*/
-
-static void submitToQueue(VkQueue queue, VkCommandBuffer cmdBuffer,
-                          vk::Semaphore &sem, std::uint64_t signalValue) {
-  VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{
-      .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
-      .signalSemaphoreValueCount = 1,
-      .pSignalSemaphoreValues = &signalValue,
-  };
-
-  VkSubmitInfo submitInfo{
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = &timelineSubmitInfo,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &cmdBuffer,
-      .signalSemaphoreCount = 1,
-      .pSignalSemaphores = &sem.mSemaphore,
-  };
-
-  Verify() << vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-}
-
-static void submitToQueue(VkQueue queue, VkCommandBuffer cmdBuffer,
-                          vk::Semaphore &sem, std::uint64_t waitValue,
-                          std::uint64_t signalValue,
-                          VkPipelineStageFlags waitDstStage) {
-  VkTimelineSemaphoreSubmitInfo timelineSubmitInfo{
-      .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
-      .waitSemaphoreValueCount = 1,
-      .pWaitSemaphoreValues = &waitValue,
-      .signalSemaphoreValueCount = 1,
-      .pSignalSemaphoreValues = &signalValue,
-  };
-
-  VkSubmitInfo submitInfo{
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = &timelineSubmitInfo,
-      .waitSemaphoreCount = 1,
-      .pWaitSemaphores = &sem.mSemaphore,
-      .pWaitDstStageMask = &waitDstStage,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &cmdBuffer,
-      .signalSemaphoreCount = 1,
-      .pSignalSemaphores = &sem.mSemaphore,
-  };
-
-  Verify() << vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 }
 
 static void
@@ -1958,68 +2191,443 @@ static std::pair<VkDescriptorSetLayout, VkPipelineLayout> getComputeLayout() {
   return result;
 }
 
-struct Cache {
-  struct ShaderKey {
-    std::uint64_t address;
-    std::uint16_t dimX;
-    std::uint16_t dimY;
-    std::uint16_t dimZ;
-    shader::Stage stage;
-    std::uint8_t userSgprCount;
-    std::uint32_t userSgprs[16];
+struct ShaderKey {
+  std::uint64_t address;
+  std::uint16_t dimX;
+  std::uint16_t dimY;
+  std::uint16_t dimZ;
+  shader::Stage stage;
+  std::uint8_t userSgprCount;
+  std::uint32_t userSgprs[16];
 
-    auto operator<=>(const ShaderKey &other) const {
-      auto result = address <=> other.address;
+  auto operator<=>(const ShaderKey &other) const {
+    auto result = address <=> other.address;
+    if (result != std::strong_ordering::equal) {
+      return result;
+    }
+
+    result = dimX <=> other.dimX;
+    if (result != std::strong_ordering::equal) {
+      return result;
+    }
+
+    result = dimY <=> other.dimY;
+    if (result != std::strong_ordering::equal) {
+      return result;
+    }
+
+    result = dimZ <=> other.dimZ;
+    if (result != std::strong_ordering::equal) {
+      return result;
+    }
+
+    result = stage <=> other.stage;
+    if (result != std::strong_ordering::equal) {
+      return result;
+    }
+
+    result = userSgprCount <=> other.userSgprCount;
+    if (result != std::strong_ordering::equal) {
+      return result;
+    }
+
+    for (std::size_t i = 0; i < std::size(userSgprs); ++i) {
+      if (i >= userSgprCount) {
+        break;
+      }
+
+      result = userSgprs[i] <=> other.userSgprs[i];
       if (result != std::strong_ordering::equal) {
         return result;
       }
+    }
 
-      result = dimX <=> other.dimX;
-      if (result != std::strong_ordering::equal) {
-        return result;
+    return result;
+  }
+};
+
+struct CachedShader {
+  std::map<std::uint64_t, std::vector<char>> cachedData;
+  shader::Shader info;
+  VkShaderEXT shader;
+
+  ~CachedShader() {
+    _vkDestroyShaderEXT(vk::g_vkDevice, shader, vk::g_vkAllocator);
+  }
+};
+
+struct CacheOverlayBase;
+struct CacheBufferOverlay;
+struct CacheImageOverlay;
+
+struct CacheSyncEntry {
+  std::uint64_t tag;
+  Ref<CacheOverlayBase> overlay;
+
+  auto operator<=>(const CacheSyncEntry &) const = default;
+};
+
+struct CacheOverlayBase {
+  std::mutex mtx;
+  util::MemoryAreaTable<> loadMemorySyncTable;
+  util::MemoryTableWithPayload<std::uint64_t> syncState;
+
+  std::atomic<unsigned> refs{0};
+  virtual ~CacheOverlayBase() = default;
+
+  void incRef() { refs.fetch_add(1, std::memory_order::relaxed); }
+  void decRef() {
+    if (refs.fetch_sub(1, std::memory_order::relaxed) == 1) {
+      delete this;
+    }
+  }
+
+  std::optional<decltype(syncState)::AreaInfo> getSyncTag(std::uint64_t address,
+                                                          std::uint64_t size) {
+    std::lock_guard lock(mtx);
+    auto it = syncState.queryArea(address);
+    if (it == syncState.end()) {
+      return {};
+    }
+
+    auto state = *it;
+
+    if (state.endAddress < address + size || state.beginAddress > address) {
+      // has no single sync state
+      return {};
+    }
+
+    return state;
+  }
+
+  bool isInSync(util::MemoryTableWithPayload<CacheSyncEntry> &table,
+                std::mutex &tableMutex, std::uint64_t address,
+                std::uint64_t size) {
+    auto optSyncTag = getSyncTag(address, size);
+    if (!optSyncTag) {
+      return false;
+    }
+
+    auto syncTag = *optSyncTag;
+
+    std::lock_guard lock(tableMutex);
+    auto tableArea = table.queryArea(address);
+
+    if (tableArea == table.end()) {
+      return false;
+    }
+
+    auto tableTag = *tableArea;
+
+    if (tableTag.beginAddress > address ||
+        tableTag.endAddress < address + size) {
+      return false;
+    }
+
+    return tableTag.payload.tag == syncTag.payload;
+  }
+
+  virtual void writeBuffer(Ref<CacheBufferOverlay> sourceBuffer,
+                           std::uint64_t address, std::uint64_t size) {
+    std::printf("cache: unimplemented buffer write to %lx-%lx\n", address,
+                address + size);
+  }
+
+  virtual void readBuffer(Ref<CacheBufferOverlay> targetBuffer,
+                          std::uint64_t address, std::uint64_t size) {
+    std::printf("cache: unimplemented buffer read from %lx-%lx\n", address,
+                address + size);
+  }
+};
+
+struct CacheBufferOverlay : CacheOverlayBase {
+  vk::Buffer buffer;
+  std::uint64_t bufferAddress;
+
+  void read(util::MemoryTableWithPayload<CacheSyncEntry> &table,
+            std::mutex &tableMtx, std::uint64_t address,
+            std::uint32_t elementCount, std::uint32_t stride,
+            std::uint32_t elementSize, bool cache) {
+    std::lock_guard lock(mtx);
+    auto size = stride == 0
+                    ? static_cast<std::uint64_t>(elementCount) * elementSize
+                    : static_cast<std::uint64_t>(elementCount) * stride;
+    auto doRead = [&](std::uint64_t address, std::uint64_t size,
+                      std::uint64_t tag, Ref<CacheOverlayBase> overlay) {
+      overlay->readBuffer(this, address, size);
+      syncState.map(address, address + size, tag);
+    };
+
+    auto getAreaInfo = [&](std::uint64_t address) {
+      std::lock_guard lock(tableMtx);
+      auto it = table.queryArea(address);
+      if (it == table.end()) {
+        util::unreachable();
+      }
+      return *it;
+    };
+
+    while (size > 0) {
+      auto state = getAreaInfo(address);
+
+      assert(state.endAddress > address);
+      auto origAreaSize = std::min(state.endAddress - address, size);
+      auto areaSize = origAreaSize;
+
+      if (!cache) {
+        state.payload.overlay->readBuffer(this, address, areaSize);
+        size -= areaSize;
+        address += areaSize;
+        continue;
       }
 
-      result = dimY <=> other.dimY;
-      if (result != std::strong_ordering::equal) {
-        return result;
-      }
+      while (areaSize > 0) {
+        auto blockSyncStateIt = syncState.queryArea(address);
 
-      result = dimZ <=> other.dimZ;
-      if (result != std::strong_ordering::equal) {
-        return result;
-      }
-
-      result = stage <=> other.stage;
-      if (result != std::strong_ordering::equal) {
-        return result;
-      }
-
-      result = userSgprCount <=> other.userSgprCount;
-      if (result != std::strong_ordering::equal) {
-        return result;
-      }
-
-      for (std::size_t i = 0; i < std::size(userSgprs); ++i) {
-        if (i >= userSgprCount) {
+        if (blockSyncStateIt == syncState.end()) {
+          doRead(address, areaSize, state.payload.tag, state.payload.overlay);
+          address += areaSize;
           break;
         }
 
-        result = userSgprs[i] <=> other.userSgprs[i];
-        if (result != std::strong_ordering::equal) {
-          return result;
+        auto blockSyncState = *blockSyncStateIt;
+        auto blockSize =
+            std::min(blockSyncState.endAddress - address, areaSize);
+
+        if (blockSyncState.payload != state.payload.tag) {
+          doRead(address, areaSize, state.payload.tag, state.payload.overlay);
         }
+
+        areaSize -= blockSize;
+        address += blockSize;
       }
 
-      return result;
+      size -= origAreaSize;
     }
-  };
+  }
 
-  struct CachedShader {
-    std::map<std::uint64_t, std::vector<char>> cachedData;
-    shader::Shader info;
-    VkShaderEXT shader;
-  };
+  void readBuffer(Ref<CacheBufferOverlay> targetBuffer, std::uint64_t address,
+                  std::uint64_t size) override {
+    auto targetOffset = address - targetBuffer->bufferAddress;
+    auto sourceOffset = address - bufferAddress;
+    std::memcpy((char *)targetBuffer->buffer.getData() + targetOffset,
+                (char *)buffer.getData() + sourceOffset, size);
+  }
+};
 
+struct CacheImageOverlay : CacheOverlayBase {
+  vk::Image2D image;
+
+  vk::Buffer trasferBuffer; // TODO: remove
+  VkImageView view = VK_NULL_HANDLE;
+  std::uint32_t dataWidth;
+  std::uint32_t dataPitch;
+  std::uint32_t dataHeight;
+  std::uint8_t bpp;
+  TileMode tileMode;
+  VkImageAspectFlags aspect;
+  Ref<CacheBufferOverlay> usedBuffer;
+
+  ~CacheImageOverlay() {
+    if (view != VK_NULL_HANDLE) {
+      vkDestroyImageView(vk::g_vkDevice, view, vk::g_vkAllocator);
+    }
+  }
+
+  void read(VkCommandBuffer commandBuffer, std::uint64_t address,
+            Ref<CacheBufferOverlay> srcBuffer) {
+    if (usedBuffer != nullptr) {
+      util::unreachable();
+    }
+
+    usedBuffer = srcBuffer;
+    auto offset = address - srcBuffer->bufferAddress;
+
+    vk::ImageRef imageRef(image);
+    auto size = dataHeight * dataPitch * bpp;
+
+    if (dataPitch == dataWidth &&
+        (tileMode == kTileModeDisplay_2dThin ||
+         tileMode == kTileModeDisplay_LinearAligned)) {
+      imageRef.transitionLayout(commandBuffer,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+      VkBufferImageCopy region{
+          .bufferOffset = offset,
+          .bufferRowLength = 0,
+          .bufferImageHeight = 0,
+          .imageSubresource =
+              {
+                  .aspectMask = aspect,
+                  .mipLevel = 0,
+                  .baseArrayLayer = 0,
+                  .layerCount = 1,
+              },
+          .imageOffset = {0, 0, 0},
+          .imageExtent = {imageRef.getWidth(), imageRef.getHeight(), 1},
+      };
+
+      vkCmdCopyBufferToImage(commandBuffer, srcBuffer->buffer.getHandle(),
+                             image.getHandle(),
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+      auto tag = *srcBuffer->getSyncTag(address, size);
+      std::lock_guard lock(mtx);
+      syncState.map(address, address + size, tag.payload);
+      return;
+    }
+
+    auto bufferData = (char *)srcBuffer->buffer.getData() + offset;
+
+    trasferBuffer.readFromImage(bufferData, bpp, tileMode, dataWidth,
+                                dataHeight, 1, dataPitch);
+
+    imageRef.readFromBuffer(commandBuffer, trasferBuffer.getHandle(), aspect);
+    auto tag = *srcBuffer->getSyncTag(address, size);
+    std::lock_guard lock(mtx);
+    syncState.map(address, address + size, tag.payload);
+  }
+
+  void readBuffer(Ref<CacheBufferOverlay> targetBuffer, std::uint64_t address,
+                  std::uint64_t size) override {
+    auto offset = address - targetBuffer->bufferAddress;
+
+    if (dataPitch == dataWidth &&
+        (tileMode == kTileModeDisplay_2dThin ||
+         tileMode == kTileModeDisplay_LinearAligned)) {
+      auto uploadTaskCtl = getGraphicsQueueScheduler().enqueue(
+          [=, self = Ref(this)](VkCommandBuffer commandBuffer) {
+            vk::ImageRef imageRef(self->image);
+
+            imageRef.transitionLayout(commandBuffer,
+                                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+            VkBufferImageCopy region{
+                .bufferOffset = offset,
+                .bufferRowLength = 0,
+                .bufferImageHeight = 0,
+                .imageSubresource =
+                    {
+                        .aspectMask = self->aspect,
+                        .mipLevel = 0,
+                        .baseArrayLayer = 0,
+                        .layerCount = 1,
+                    },
+                .imageOffset = {0, 0, 0},
+                .imageExtent = {imageRef.getWidth(), imageRef.getHeight(),
+                                imageRef.getDepth()},
+            };
+
+            vkCmdCopyImageToBuffer(commandBuffer, imageRef.getHandle(),
+                                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                   targetBuffer->buffer.getHandle(), 1,
+                                   &region);
+          });
+
+      uploadTaskCtl->wait();
+      return;
+    }
+
+    auto uploadTaskCtl = getGraphicsQueueScheduler().enqueue(
+        [=, self = Ref(this)](VkCommandBuffer commandBuffer) {
+          vk::ImageRef imageRef(self->image);
+          imageRef.writeToBuffer(commandBuffer, self->trasferBuffer.getHandle(),
+                                 self->aspect);
+          return true;
+        });
+
+    uploadTaskCtl->wait();
+
+    auto targetData = (char *)targetBuffer->buffer.getData() + offset;
+    trasferBuffer.writeAsImageTo(targetData, bpp, tileMode, dataWidth,
+                                 dataHeight, 1, dataPitch);
+  }
+};
+
+struct MemoryOverlay : CacheOverlayBase {
+  void readBuffer(Ref<CacheBufferOverlay> targetBuffer, std::uint64_t address,
+                  std::uint64_t size) override {
+    auto offset = address - targetBuffer->bufferAddress;
+    auto targetData = (char *)targetBuffer->buffer.getData() + offset;
+
+    std::memcpy(targetData, g_hostMemory.getPointer(address), size);
+  }
+
+  void writeBuffer(Ref<CacheBufferOverlay> sourceBuffer, std::uint64_t address,
+                   std::uint64_t size) override {
+    auto offset = address - sourceBuffer->bufferAddress;
+    auto sourceData = (char *)sourceBuffer->buffer.getData() + offset;
+
+    std::memcpy(g_hostMemory.getPointer(address), sourceData, size);
+  }
+};
+
+static void notifyPageChanges(std::uint32_t firstPage,
+                              std::uint32_t pageCount) {
+  std::uint64_t command =
+      (static_cast<std::uint64_t>(pageCount - 1) << 32) | firstPage;
+
+  while (true) {
+    for (std::size_t i = 0; i < std::size(g_bridge->cacheCommands); ++i) {
+      std::uint64_t expCommand = 0;
+      if (g_bridge->cacheCommands[i].compare_exchange_strong(
+              expCommand, command, std::memory_order::acquire,
+              std::memory_order::relaxed)) {
+        return;
+      }
+    }
+  }
+}
+
+static void modifyWatchFlags(std::uint64_t address, std::uint64_t size,
+                             std::uint8_t addFlags, std::uint8_t removeFlags) {
+  auto firstPage = address / bridge::kHostPageSize;
+  auto lastPage =
+      (address + size + bridge::kHostPageSize - 1) / bridge::kHostPageSize;
+  bool hasChanges = false;
+  for (auto page = firstPage; page < lastPage; ++page) {
+    auto prevValue =
+        g_bridge->cachePages[page].load(std::memory_order::relaxed);
+    auto newValue = (prevValue & ~removeFlags) | addFlags;
+
+    if (newValue == prevValue) {
+      continue;
+    }
+
+    while (!g_bridge->cachePages[page].compare_exchange_weak(
+        prevValue, newValue, std::memory_order::relaxed)) {
+      newValue = (prevValue & ~removeFlags) | addFlags;
+    }
+
+    if (newValue != prevValue) {
+      hasChanges = true;
+    }
+  }
+
+  if (hasChanges) {
+    notifyPageChanges(firstPage, lastPage - firstPage);
+  }
+}
+
+static void watchWrites(std::uint64_t address, std::uint64_t size) {
+  modifyWatchFlags(address, size, bridge::kPageWriteWatch,
+                   bridge::kPageInvalidated);
+}
+static void lockReadWrite(std::uint64_t address, std::uint64_t size) {
+  modifyWatchFlags(address, size, bridge::kPageReadWriteLock,
+                   bridge::kPageInvalidated);
+}
+static void unlockReadWrite(std::uint64_t address, std::uint64_t size) {
+  modifyWatchFlags(address, size, bridge::kPageWriteWatch,
+                   bridge::kPageReadWriteLock);
+}
+
+struct CacheLine {
+  std::uint64_t areaAddress;
+  std::uint64_t areaSize;
+
+  Ref<CacheOverlayBase> memoryOverlay;
+
+  // TODO: flat image storage
   struct ImageKey {
     std::uint64_t address;
     SurfaceFormat dataFormat;
@@ -2033,63 +2641,479 @@ struct Cache {
     auto operator<=>(const ImageKey &other) const = default;
   };
 
-  struct CachedImageView {
-    VkImageView view;
-    VkFormat format;
-  };
+  std::mutex hostSyncMtx;
+  util::MemoryTableWithPayload<CacheSyncEntry> hostSyncTable;
 
-  struct CachedImage {
-    vk::Image2D image;
-    std::vector<CachedImageView> views;
-  };
+  std::mutex bufferTableMtx;
+  std::unordered_map<std::uint64_t,
+                     util::MemoryTableWithPayload<Ref<CacheBufferOverlay>>>
+      bufferTable;
 
-  struct BufferKey {
-    std::uint64_t address;
-    std::uint64_t size;
+  std::mutex imageTableMtx;
+  std::map<ImageKey, Ref<CacheImageOverlay>> imageTable;
 
-    auto operator<=>(const BufferKey &other) const {
-      auto result = other.address <=> address;
+  std::mutex writeBackTableMtx;
+  util::MemoryTableWithPayload<Ref<AsyncTaskCtl>> writeBackTable;
 
-      if (result != std::strong_ordering::equal) {
-        return result;
+  CacheLine(std::uint64_t areaAddress, std::uint64_t areaSize)
+      : areaAddress(areaAddress), areaSize(areaSize) {
+    memoryOverlay = new MemoryOverlay();
+    hostSyncTable.map(areaAddress, areaAddress + areaSize, {1, memoryOverlay});
+  }
+
+  void markHostInvalidated(std::uint64_t tag, std::uint64_t address,
+                           std::uint64_t size) {
+    std::lock_guard lock(hostSyncMtx);
+    hostSyncTable.map(address, address + size, {tag, memoryOverlay});
+  }
+
+  bool handleHostInvalidations(std::uint64_t tag, std::uint64_t address,
+                               std::uint64_t size) {
+    auto firstPage = address / bridge::kHostPageSize;
+    auto lastPage =
+        (address + size + bridge::kHostPageSize - 1) / bridge::kHostPageSize;
+
+    bool hasInvalidations = false;
+
+    for (auto page = firstPage; page < lastPage; ++page) {
+      auto prevValue =
+          g_bridge->cachePages[page].load(std::memory_order::relaxed);
+
+      if (~prevValue & bridge::kPageInvalidated) {
+        continue;
       }
 
-      return size <=> other.size;
+      while (!g_bridge->cachePages[page].compare_exchange_weak(
+          prevValue, prevValue & ~bridge::kPageInvalidated,
+          std::memory_order::relaxed)) {
+      }
+
+      markHostInvalidated(tag, page * bridge::kHostPageSize,
+                          bridge::kHostPageSize);
+      hasInvalidations = true;
     }
-  };
 
-  struct CachedBuffer {
-    vk::Buffer buffer;
-    BufferRef ref;
-    void *data;
-  };
+    return hasInvalidations;
+  }
 
-  std::mutex mtx;
-  std::map<ShaderKey, std::forward_list<CachedShader>> shaders;
-  std::map<ImageKey, CachedImage> images;
-  std::map<BufferKey, CachedBuffer> buffers;
-  VkSampler sampler{};
-  vk::Semaphore semaphore;
+  void trackCacheRead(std::uint64_t address, std::uint64_t size) {
+    watchWrites(address, size);
+  }
 
-  struct WriteBuffer {
-    std::uint64_t size;
-    Ref<AsyncTaskCtl> taskCtl;
-    CachedBuffer *bufferPtr;
-  };
+  void setWriteBackTask(std::uint64_t address, std::uint64_t size,
+                        Ref<AsyncTaskCtl> task) {
+    std::lock_guard lock(writeBackTableMtx);
+    auto it = writeBackTable.queryArea(address);
 
-  std::map<std::uint64_t, WriteBuffer> writeBuffers;
+    while (it != writeBackTable.end()) {
+      auto taskInfo = *it;
 
+      if (taskInfo.beginAddress >= address + size) {
+        break;
+      }
+
+      if (taskInfo.beginAddress >= address &&
+          taskInfo.endAddress <= address + size) {
+        if (taskInfo.payload != nullptr) {
+          // another task with smaller range already in progress, we can cancel
+          // it
+          std::printf("prev upload task cancelation\n");
+          taskInfo.payload->cancel();
+        }
+      }
+
+      ++it;
+    }
+
+    g_scheduler.enqueue(task);
+    writeBackTable.map(address, address + size, std::move(task));
+  }
+
+  void trackCacheWrite(std::uint64_t address, std::uint64_t size,
+                       std::uint64_t tag, Ref<CacheOverlayBase> entry) {
+    lockReadWrite(address, size);
+
+    auto writeBackTask = createTask([=, this](const AsyncTaskCtl &ctl) {
+      if (ctl.isCanceled()) {
+        return false;
+      }
+
+      auto buffer = getBufferInternal(address, size);
+
+      if (ctl.isCanceled()) {
+        return false;
+      }
+
+      buffer->read(hostSyncTable, hostSyncMtx, address, size, 0, 1, true);
+
+      if (ctl.isCanceled()) {
+        return false;
+      }
+
+      memoryOverlay->writeBuffer(buffer, address, size);
+      unlockReadWrite(address, size);
+
+      std::lock_guard lock(writeBackTableMtx);
+      writeBackTable.map(address, address + size, nullptr);
+      return true;
+    });
+
+    setWriteBackTask(address, size, writeBackTask);
+    std::lock_guard lock(hostSyncMtx);
+    hostSyncTable.map(address, address + size, {.tag = tag, .overlay = entry});
+    entry->syncState.map(address, address + size, tag);
+  }
+
+  Ref<CacheBufferOverlay>
+  getBuffer(std::uint64_t writeTag, TaskSet &readTaskSet, TaskSet &writeTaskSet,
+            std::uint64_t address, std::uint32_t elementCount,
+            std::uint32_t stride, std::uint32_t elementSize,
+            shader::AccessOp access) {
+    auto size = stride == 0
+                    ? static_cast<std::uint64_t>(elementCount) * elementSize
+                    : static_cast<std::uint64_t>(elementCount) * stride;
+
+    auto result = getBufferInternal(address, size);
+    bool cacheValue =
+        size >= bridge::kHostPageSize ||
+        (access & shader::AccessOp::Store) == shader::AccessOp::Store;
+
+    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
+      if (!cacheValue || handleHostInvalidations(writeTag - 1, address, size) ||
+          !result->isInSync(hostSyncTable, hostSyncMtx, address, size)) {
+        g_scheduler.enqueue(readTaskSet, [=, this](const AsyncTaskCtl &) {
+          result->read(hostSyncTable, hostSyncMtx, address, elementCount,
+                       stride, elementSize, cacheValue);
+          if (cacheValue) {
+            // std::printf("caching %lx-%lx\n", address, size);
+            trackCacheRead(address, size);
+          }
+          return true;
+        });
+      }
+    }
+
+    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
+      auto writeTask = createTask([=, this](const AsyncTaskCtl &) {
+        trackCacheWrite(address, size, writeTag, result);
+        return true;
+      });
+
+      writeTaskSet.append(writeTask);
+    }
+
+    return result;
+  }
+
+  Ref<CacheImageOverlay>
+  getImage(std::uint64_t writeTag, TaskSet &readTaskSet, TaskSet &writeTaskSet,
+           VkCommandBuffer readCommandBuffer, std::uint64_t address,
+           SurfaceFormat dataFormat, TextureChannelType channelType,
+           TileMode tileMode, std::uint32_t width, std::uint32_t height,
+           std::uint32_t depth, std::uint32_t pitch, shader::AccessOp access,
+           VkImageLayout layout, bool isColor = true) {
+    auto result = getImageInternal(address, dataFormat, channelType, tileMode,
+                                   width, height, depth, pitch, isColor);
+
+    auto size = result->bpp * result->dataHeight * result->dataPitch;
+
+    auto cacheBeginAddress =
+        (address + bridge::kHostPageSize - 1) & ~(bridge::kHostPageSize - 1);
+    auto cacheEndAddress = (address + size) & ~(bridge::kHostPageSize - 1);
+
+    if (cacheBeginAddress == cacheEndAddress) {
+      cacheBeginAddress = address;
+      cacheEndAddress = address + size;
+    }
+
+    auto cacheSize = cacheEndAddress - cacheBeginAddress;
+
+    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
+      // TODO
+      handleHostInvalidations(writeTag - 1, cacheBeginAddress, cacheSize);
+
+      if (!result->isInSync(hostSyncTable, hostSyncMtx, address, size)) {
+        auto buffer = getBufferInternal(address, size);
+
+        if (!buffer->isInSync(hostSyncTable, hostSyncMtx, address, size)) {
+          buffer->read(hostSyncTable, hostSyncMtx, address, size, 0, 1, true);
+        }
+
+        result->read(readCommandBuffer, address, buffer);
+        trackCacheRead(cacheBeginAddress, cacheSize);
+      }
+    }
+
+    vk::ImageRef(result->image).transitionLayout(readCommandBuffer, layout);
+
+    auto writeTask = createTask([=, this](const AsyncTaskCtl &) {
+      result->usedBuffer = nullptr;
+
+      if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
+        trackCacheWrite(address, size, writeTag, result);
+      }
+
+      if (false && isColor) {
+        static unsigned index = 0;
+        saveImage(("images/" + std::to_string(index++) + ".ppm").c_str(),
+                  result->image, layout);
+      }
+      return true;
+    });
+
+    writeTaskSet.append(writeTask);
+
+    return result;
+  }
+
+private:
+  Ref<CacheBufferOverlay> getBufferInternal(std::uint64_t address,
+                                            std::uint64_t size) {
+    auto alignment =
+        vk::g_physicalDeviceProperties.limits.minStorageBufferOffsetAlignment;
+
+    if (address + size > areaAddress + areaSize) {
+      util::unreachable();
+    }
+
+    auto offset = (address - areaAddress) & (alignment - 1);
+
+    std::lock_guard lock(bufferTableMtx);
+    auto &table = bufferTable[offset];
+
+    if (auto it = table.queryArea(address); it != table.end()) {
+      auto bufferInfo = *it;
+
+      if (bufferInfo.beginAddress <= address &&
+          bufferInfo.endAddress >= address + size) {
+        if (!isAligned(address - bufferInfo.beginAddress, alignment)) {
+          util::unreachable();
+        }
+
+        return bufferInfo.payload;
+      }
+
+      assert(bufferInfo.beginAddress <= address);
+
+      auto endAddress = std::max(bufferInfo.endAddress, address + size);
+      address = bufferInfo.beginAddress;
+
+      while (it != table.end()) {
+        bufferInfo = *it;
+        if (endAddress > bufferInfo.endAddress) {
+          auto nextIt = it;
+          if (++nextIt != table.end()) {
+            auto nextInfo = *nextIt;
+            if (nextInfo.beginAddress >= endAddress) {
+              break;
+            }
+            endAddress = nextInfo.endAddress;
+          }
+        }
+        ++it;
+      }
+
+      size = endAddress - address;
+    }
+
+    auto bufferOverlay = new CacheBufferOverlay();
+    bufferOverlay->buffer = vk::Buffer::Allocate(
+        getHostVisibleMemory(), size,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    bufferOverlay->bufferAddress = address;
+
+    table.map(address, address + size, bufferOverlay);
+    return bufferOverlay;
+  }
+
+  Ref<CacheImageOverlay>
+  getImageInternal(std::uint64_t address, SurfaceFormat dataFormat,
+                   TextureChannelType channelType, TileMode tileMode,
+                   std::uint32_t width, std::uint32_t height,
+                   std::uint32_t depth, std::uint32_t pitch, bool isColor) {
+    ImageKey key{
+        .address = address,
+        .dataFormat = dataFormat,
+        .channelType = channelType,
+        .tileMode = tileMode,
+        .width = width,
+        .height = height,
+        .depth = depth,
+        .pitch = pitch,
+    };
+
+    decltype(imageTable)::iterator it;
+    {
+      std::lock_guard lock(imageTableMtx);
+
+      auto [emplacedIt, inserted] =
+          imageTable.try_emplace(key, Ref<CacheImageOverlay>{});
+
+      if (!inserted) {
+        return emplacedIt->second;
+      }
+
+      it = emplacedIt;
+    }
+
+    std::printf(
+        "Image cache miss: address: %lx, dataFormat: %u, channelType: %u, "
+        "tileMode: %u, width: %u, height: %u, depth: %u, pitch: %u\n",
+        address, dataFormat, channelType, tileMode, width, height, depth,
+        pitch);
+
+    auto colorFormat = surfaceFormatToVkFormat(dataFormat, channelType);
+    auto usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+    bool isCompressed =
+        dataFormat == kSurfaceFormatBc1 || dataFormat == kSurfaceFormatBc2 ||
+        dataFormat == kSurfaceFormatBc3 || dataFormat == kSurfaceFormatBc4 ||
+        dataFormat == kSurfaceFormatBc5 || dataFormat == kSurfaceFormatBc6 ||
+        dataFormat == kSurfaceFormatBc7;
+    if (!isCompressed) {
+      if (isColor) {
+        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+      } else {
+        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+      }
+    }
+
+    auto newOverlay = new CacheImageOverlay();
+
+    newOverlay->image = vk::Image2D::Allocate(getDeviceLocalMemory(), width,
+                                              height, colorFormat, usage);
+
+    auto bpp = getBitWidthOfSurfaceFormat(dataFormat) / 8;
+
+    std::uint32_t dataWidth = width;
+    std::uint32_t dataPitch = pitch;
+    std::uint32_t dataHeight = height;
+
+    /*if (dataFormat == kSurfaceFormatBc1) {
+      width = (width + 7) / 8;
+      height = (height + 7) / 8;
+      pitch = (pitch + 7) / 8;
+      bpp = 8;
+    } else */
+    if (isCompressed) {
+      dataWidth = (width + 3) / 4;
+      dataPitch = (height + 3) / 4;
+      dataHeight = (pitch + 3) / 4;
+      bpp = 16;
+    }
+
+    auto memSize = vk::ImageRef(newOverlay->image).getMemoryRequirements().size;
+
+    newOverlay->trasferBuffer = vk::Buffer::Allocate(
+        getHostVisibleMemory(), memSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+
+    newOverlay->dataWidth = dataWidth;
+    newOverlay->dataPitch = dataPitch;
+    newOverlay->dataHeight = dataHeight;
+    newOverlay->bpp = bpp;
+    newOverlay->tileMode = tileMode;
+
+    VkImageViewCreateInfo viewInfo{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = newOverlay->image.getHandle(),
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = colorFormat,
+        .components = {}, // TODO
+        .subresourceRange =
+            {
+                .aspectMask = static_cast<VkImageAspectFlags>(
+                    isColor ? VK_IMAGE_ASPECT_COLOR_BIT
+                            : VK_IMAGE_ASPECT_DEPTH_BIT |
+                                  VK_IMAGE_ASPECT_STENCIL_BIT),
+                .baseMipLevel = 0, // TODO
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    Verify() << vkCreateImageView(vk::g_vkDevice, &viewInfo, nullptr,
+                                  &newOverlay->view);
+
+    newOverlay->aspect =
+        isColor ? VK_IMAGE_ASPECT_COLOR_BIT : VK_IMAGE_ASPECT_DEPTH_BIT;
+    it->second = newOverlay;
+    return it->second;
+  }
+};
+
+struct Cache {
   // TODO: use descriptor buffer instead
   VkDescriptorPool graphicsDescriptorPool{};
   VkDescriptorPool computeDescriptorPool{};
   std::vector<VkDescriptorSet> graphicsDecsriptorSets;
   std::vector<VkDescriptorSet> computeDecsriptorSets;
 
-  vk::Semaphore &getSemaphore() {
-    if (semaphore.mSemaphore == VK_NULL_HANDLE) {
-      semaphore = vk::Semaphore::Create();
+  struct DetachedImageKey {
+    SurfaceFormat dataFormat;
+    TextureChannelType channelType;
+    std::uint32_t width;
+    std::uint32_t height;
+    std::uint32_t depth;
+
+    auto operator<=>(const DetachedImageKey &other) const = default;
+  };
+
+  // TODO: read S#
+  VkSampler sampler{};
+  std::map<DetachedImageKey, Ref<CacheImageOverlay>> datachedImages;
+  std::map<std::uint64_t, CacheLine, std::greater<>> cacheLines;
+  std::atomic<std::uint64_t> nextTag{2};
+  std::map<ShaderKey, std::forward_list<CachedShader>> shaders;
+
+  std::mutex mtx;
+
+  void clear() {
+    vkDestroyDescriptorPool(vk::g_vkDevice, graphicsDescriptorPool,
+                            vk::g_vkAllocator);
+    vkDestroyDescriptorPool(vk::g_vkDevice, computeDescriptorPool,
+                            vk::g_vkAllocator);
+    vkDestroySampler(vk::g_vkDevice, sampler, vk::g_vkAllocator);
+    graphicsDescriptorPool = VK_NULL_HANDLE;
+    computeDescriptorPool = VK_NULL_HANDLE;
+    sampler = VK_NULL_HANDLE;
+
+    graphicsDecsriptorSets.clear();
+    computeDecsriptorSets.clear();
+    datachedImages.clear();
+    cacheLines.clear();
+    nextTag = 2;
+  }
+
+  void syncLines() {
+    std::lock_guard lock(mtx);
+
+    auto areas = std::exchange(memoryAreaTable.invalidated, {});
+    auto it = cacheLines.begin();
+
+    if (it == cacheLines.end()) {
+      return;
     }
-    return semaphore;
+
+    for (auto area : areas) {
+      while (it->first > area) {
+        if (++it == cacheLines.end()) {
+          return;
+        }
+      }
+
+      if (it->first == area) {
+        it = cacheLines.erase(it);
+
+        if (it == cacheLines.end()) {
+          return;
+        }
+      }
+    }
   }
 
   VkDescriptorSet getComputeDescriptorSet() {
@@ -2119,7 +3143,7 @@ struct Cache {
         };
 
         Verify() << vkCreateDescriptorPool(
-            vk::g_vkDevice, &info, vk::g_vkAllocator, &graphicsDescriptorPool);
+            vk::g_vkDevice, &info, vk::g_vkAllocator, &computeDescriptorPool);
       }
 
       if (!computeDecsriptorSets.empty()) {
@@ -2133,7 +3157,7 @@ struct Cache {
 
     VkDescriptorSetAllocateInfo info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = graphicsDescriptorPool,
+        .descriptorPool = computeDescriptorPool,
         .descriptorSetCount = 1,
         .pSetLayouts = &layout,
     };
@@ -2141,6 +3165,36 @@ struct Cache {
     VkDescriptorSet result;
     Verify() << vkAllocateDescriptorSets(vk::g_vkDevice, &info, &result);
     return result;
+  }
+
+  std::uint64_t createTag() { return nextTag.fetch_add(2); }
+
+  VkSampler getSampler() {
+    if (sampler != VK_NULL_HANDLE) {
+      return sampler;
+    }
+
+    std::lock_guard lock(mtx);
+    VkSamplerCreateInfo samplerInfo{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_LINEAR,
+        .minFilter = VK_FILTER_LINEAR,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+        .mipLodBias = 0.0f,
+        .anisotropyEnable = VK_FALSE,
+        .maxAnisotropy = 1.0,
+        .compareOp = VK_COMPARE_OP_NEVER,
+        .minLod = 0.0f,
+        .maxLod = 0.0f,
+        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+    };
+
+    Verify() << vkCreateSampler(vk::g_vkDevice, &samplerInfo, nullptr,
+                                &sampler);
+    return sampler;
   }
 
   VkDescriptorSet getGraphicsDescriptorSet() {
@@ -2267,14 +3321,14 @@ struct Cache {
 
       // printSpirv(info.spirv);
 
-      // for (auto [startAddress, endAddress] : dependencies) {
-      //   auto ptr = g_hostMemory.getPointer(startAddress);
-      //   auto &target = entry->cachedData[startAddress];
-      //   target.resize(endAddress - startAddress);
+      for (auto [startAddress, endAddress] : dependencies) {
+        auto ptr = g_hostMemory.getPointer(startAddress);
+        auto &target = entry->cachedData[startAddress];
+        target.resize(endAddress - startAddress);
 
-      //   std::printf("shader dependency %lx-%lx\n", startAddress, endAddress);
-      //   std::memcpy(target.data(), ptr, target.size());
-      // }
+        // std::printf("shader dependency %lx-%lx\n", startAddress, endAddress);
+        std::memcpy(target.data(), ptr, target.size());
+      }
 
       VkShaderCreateInfoEXT createInfo{
           .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT,
@@ -2286,7 +3340,8 @@ struct Cache {
           .pCode = info.spirv.data(),
           .pName = "main",
           .setLayoutCount = 1,
-          .pSetLayouts = &descriptorSetLayout};
+          .pSetLayouts = &descriptorSetLayout,
+      };
 
       VkShaderEXT shader;
       Verify() << _vkCreateShadersEXT(vk::g_vkDevice, 1, &createInfo,
@@ -2299,308 +3354,100 @@ struct Cache {
     return *entry;
   }
 
-  BufferRef getBuffer(TaskSet &readTaskSet, TaskSet &writeTaskSet,
-                      std::uint64_t address, std::uint64_t size,
-                      shader::AccessOp access) {
-    auto [buffer, ref, data] =
-        getBufferInternal(readTaskSet, address, size, access);
+  Ref<CacheImageOverlay>
+  getImage(std::uint64_t writeTag, TaskSet &readTaskSet, TaskSet &writeTaskSet,
+           VkCommandBuffer readCommandBuffer, std::uint64_t address,
+           SurfaceFormat dataFormat, TextureChannelType channelType,
+           TileMode tileMode, std::uint32_t width, std::uint32_t height,
+           std::uint32_t depth, std::uint32_t pitch, shader::AccessOp access,
+           VkImageLayout layout, bool isColor = true) {
+    if (address == 0) {
+      assert(isColor == false);
+      assert(access == shader::AccessOp::None);
 
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      g_scheduler.enqueue(readTaskSet, [=](const AsyncTaskCtl &) {
-        std::memcpy(data, g_hostMemory.getPointer(address), size);
-        return true;
-      });
-    }
+      DetachedImageKey key{
+          .dataFormat = dataFormat,
+          .channelType = channelType,
+          .width = width,
+          .height = height,
+          .depth = depth,
+      };
 
-    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
-      auto writeBackTask = createTask([=](const AsyncTaskCtl &ctl) {
-        if (ctl.isCanceled()) {
-          return false;
-        }
+      auto [it, inserted] =
+          datachedImages.emplace(key, Ref<CacheImageOverlay>());
 
-        std::memcpy(g_hostMemory.getPointer(address), data, size);
-        return true;
-      });
+      if (inserted) {
+        auto format = surfaceFormatToVkFormat(dataFormat, channelType);
+        auto detachedOverlay = new CacheImageOverlay();
+        detachedOverlay->image =
+            vk::Image2D::Allocate(getDeviceLocalMemory(), width, height, format,
+                                  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                                      VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                                      VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        VkImageViewCreateInfo createInfo{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = detachedOverlay->image.getHandle(),
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = format,
+            .subresourceRange =
+                {
+                    .aspectMask = static_cast<VkImageAspectFlags>(
+                        VK_IMAGE_ASPECT_DEPTH_BIT |
+                        VK_IMAGE_ASPECT_STENCIL_BIT),
+                    .levelCount = 1,
+                    .layerCount = 1,
+                },
+        };
 
-      writeTaskSet.append(std::move(writeBackTask));
-    }
+        vkCreateImageView(vk::g_vkDevice, &createInfo, vk::g_vkAllocator,
+                          &detachedOverlay->view);
 
-    return ref;
-  }
-
-  VkImage getImage(TaskSet &readTaskSet, VkCommandBuffer readCommandBuffer,
-                   std::uint64_t address, SurfaceFormat dataFormat,
-                   TextureChannelType channelType, TileMode tileMode,
-                   std::uint32_t width, std::uint32_t height,
-                   std::uint32_t pitch, VkImageLayout layout) {
-    auto &result = getImageInternal(
-        readTaskSet, readCommandBuffer, address, dataFormat, channelType,
-        tileMode, width, height, 1, pitch, shader::AccessOp::Load, true);
-    vk::ImageRef(result.image).transitionLayout(readCommandBuffer, layout);
-    return result.image.getHandle();
-  }
-
-  VkSampler getSampler() {
-    if (sampler != VK_NULL_HANDLE) {
-      return sampler;
-    }
-
-    std::lock_guard lock(mtx);
-    VkSamplerCreateInfo samplerInfo{
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-        .mipLodBias = 0.0f,
-        .anisotropyEnable = VK_FALSE,
-        .maxAnisotropy = 1.0,
-        .compareOp = VK_COMPARE_OP_NEVER,
-        .minLod = 0.0f,
-        .maxLod = 0.0f,
-        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-    };
-
-    Verify() << vkCreateSampler(vk::g_vkDevice, &samplerInfo, nullptr,
-                                &sampler);
-    return sampler;
-  }
-
-  VkImageView getImageView(TaskSet &readTaskSet, TaskSet &writeTaskSet,
-                           VkCommandBuffer readCommandBuffer,
-                           std::uint64_t address, SurfaceFormat dataFormat,
-                           TextureChannelType channelType, TileMode tileMode,
-                           std::uint32_t width, std::uint32_t height,
-                           std::uint32_t depth, std::uint32_t pitch,
-                           shader::AccessOp access, VkImageLayout layout,
-                           bool isColor = true) {
-    auto &result = getImageInternal(readTaskSet, readCommandBuffer, address,
-                                    dataFormat, channelType, tileMode, width,
-                                    height, depth, pitch, access, isColor);
-    if ((access & shader::AccessOp::Store) == shader::AccessOp::Store) {
-      // TODO
-    }
-
-    auto colorFormat = surfaceFormatToVkFormat(dataFormat, channelType);
-    vk::ImageRef(result.image).transitionLayout(readCommandBuffer, layout);
-
-    std::lock_guard lock(mtx);
-
-    for (auto view : result.views) {
-      if (view.format == colorFormat) {
-        return view.view;
+        it->second = detachedOverlay;
       }
+
+      vk::ImageRef(it->second->image)
+          .transitionLayout(readCommandBuffer, layout);
+      return it->second;
     }
 
-    VkImageViewCreateInfo viewInfo{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = result.image.getHandle(),
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = colorFormat,
-        .components = {}, // TODO
-        .subresourceRange =
-            {
-                .aspectMask = static_cast<VkImageAspectFlags>(
-                    isColor ? VK_IMAGE_ASPECT_COLOR_BIT
-                            : VK_IMAGE_ASPECT_DEPTH_BIT |
-                                  VK_IMAGE_ASPECT_STENCIL_BIT),
-                .baseMipLevel = 0, // TODO
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-    };
+    auto &line = getLine(address, pitch * height * depth);
+    return line.getImage(writeTag, readTaskSet, writeTaskSet, readCommandBuffer,
+                         address, dataFormat, channelType, tileMode, width,
+                         height, depth, pitch, access, layout, isColor);
+  }
 
-    VkImageView imageView;
-    Verify() << vkCreateImageView(vk::g_vkDevice, &viewInfo, nullptr,
-                                  &imageView);
-
-    result.views.push_back({.view = imageView, .format = colorFormat});
-    return imageView;
+  Ref<CacheBufferOverlay>
+  getBuffer(std::uint64_t writeTag, TaskSet &readTaskSet, TaskSet &writeTaskSet,
+            std::uint64_t address, std::uint32_t elementCount,
+            std::uint32_t stride, std::uint32_t elementSize,
+            shader::AccessOp access) {
+    auto &line = getLine(address, stride != 0 ? stride * elementCount
+                                              : elementSize * elementCount);
+    return line.getBuffer(writeTag, readTaskSet, writeTaskSet, address,
+                          elementCount, stride, elementSize, access);
   }
 
 private:
-  std::tuple<vk::Buffer *, BufferRef, void *>
-  getBufferInternal(TaskSet &readTaskSet, std::uint64_t address,
-                    std::uint64_t size, shader::AccessOp access) {
-    BufferKey key{.address = address, .size = size};
+  CacheLine &getLine(std::uint64_t address, std::size_t size) {
+    std::lock_guard lock(mtx);
+    auto it = cacheLines.lower_bound(address);
 
-    decltype(buffers)::iterator it;
-    {
-      std::lock_guard lock(mtx);
-      it = buffers.lower_bound(key);
+    if (it == cacheLines.end() ||
+        address >= it->second.areaAddress + it->second.areaSize ||
+        it->second.areaAddress >= address + size) {
+      auto area = memoryAreaTable.queryArea(address / kPageSize);
+      area.beginAddress *= kPageSize;
+      area.endAddress *= kPageSize;
 
-      auto isCompatiableKey = [&] {
-        if (it == buffers.end()) {
-          // std::printf(
-          //     "Buffer cache miss: address: %lx, end address: %lx: not
-          //     found\n", address, address + size);
-          return false;
-        }
-
-        if (it->first.address + it->first.size < key.address + key.size) {
-          // std::printf("Buffer cache miss: address: %lx, end address: %lx: "
-          //             "exists smaller %lx-%lx\n",
-          //             address, address + size, it->first.address,
-          //             it->first.address + it->first.size);
-          return false;
-        }
-
-        if (!isAligned(key.address - it->first.address,
-                       vk::g_physicalDeviceProperties.limits
-                           .minStorageBufferOffsetAlignment)) {
-          // std::printf("Buffer cache miss: address: %lx, end address: %lx: "
-          //             "incompatiable offset %lx-%lx\n",
-          //             address, address + size, it->first.address,
-          //             it->first.address + it->first.size);
-          return false;
-        }
-
-        return true;
-      };
-
-      if (!isCompatiableKey()) {
-        it = buffers.emplace_hint(it, key, CachedBuffer{});
-      } else {
-        assert(it->first.address <= address);
-        assert(it->first.address + it->first.size >= address + size);
-
-        // if (it->first.address != address || it->first.size != size) {
-        //   std::printf("cache: reusing buffer %lx-%lx for %lx-%lx\n",
-        //               it->first.address, it->first.address + it->first.size,
-        //               address, address + size);
-        // }
-
-        BufferRef ref{.buffer = it->second.buffer.getHandle(),
-                      .offset =
-                          it->second.ref.offset + (address - it->first.address),
-                      .size = size};
-
-        auto data = reinterpret_cast<char *>(it->second.data) + ref.offset;
-        return {&it->second.buffer, ref, data};
-      }
+      assert(address >= area.beginAddress && address + size < area.endAddress);
+      it = cacheLines.emplace_hint(
+          it, std::piecewise_construct, std::tuple{area.beginAddress},
+          std::tuple{area.beginAddress, area.endAddress});
     }
 
-    auto usage =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    auto buffer = vk::Buffer::Allocate(getHostVisibleMemory(), size, usage);
-
-    it->second.buffer = std::move(buffer);
-    it->second.ref = {
-        .buffer = it->second.buffer.getHandle(), .offset = 0, .size = size};
-    it->second.data = reinterpret_cast<char *>(it->second.buffer.getData());
-
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      g_scheduler.enqueue(
-          readTaskSet, [=, data = it->second.data](const AsyncTaskCtl &) {
-            std::memcpy(data, g_hostMemory.getPointer(address), size);
-            return true;
-          });
-    }
-
-    return {&it->second.buffer, it->second.ref, it->second.data};
-  }
-
-  CachedImage &getImageInternal(TaskSet &readTaskSet,
-                                VkCommandBuffer readCommandBuffer,
-                                std::uint64_t address, SurfaceFormat dataFormat,
-                                TextureChannelType channelType,
-                                TileMode tileMode, std::uint32_t width,
-                                std::uint32_t height, std::uint32_t depth,
-                                std::uint32_t pitch, shader::AccessOp access,
-                                bool isColor = true) {
-    ImageKey key{
-        .address = address,
-        .dataFormat = dataFormat,
-        .channelType = channelType,
-        .tileMode = tileMode,
-        .width = width,
-        .height = height,
-        .depth = depth,
-        .pitch = pitch,
-    };
-
-    decltype(images)::iterator it;
-    {
-      std::lock_guard lock(mtx);
-
-      auto [emplacedIt, inserted] = images.try_emplace(key, CachedImage{});
-
-      if (!inserted) {
-        return emplacedIt->second;
-      }
-
-      it = emplacedIt;
-    }
-
-    std::printf(
-        "Image cache miss: address: %lx, dataFormat: %u, channelType: %u, "
-        "tileMode: %u, width: %u, height: %u, depth: %u, pitch: %u\n",
-        address, dataFormat, channelType, tileMode, width, height, depth,
-        pitch);
-
-    auto colorFormat = surfaceFormatToVkFormat(dataFormat, channelType);
-    auto usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
-    bool isCompressed =
-        dataFormat == kSurfaceFormatBc1 || dataFormat == kSurfaceFormatBc2 ||
-        dataFormat == kSurfaceFormatBc3 || dataFormat == kSurfaceFormatBc4 ||
-        dataFormat == kSurfaceFormatBc5 || dataFormat == kSurfaceFormatBc6 ||
-        dataFormat == kSurfaceFormatBc7;
-    if (!isCompressed) {
-      if (isColor) {
-        usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-      } else {
-        usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      }
-    }
-
-    auto imageHandle = vk::Image2D::Allocate(getDeviceLocalMemory(), width,
-                                             height, colorFormat, usage);
-
-    if ((access & shader::AccessOp::Load) == shader::AccessOp::Load) {
-      auto bpp = getBitWidthOfSurfaceFormat(dataFormat) / 8;
-
-      /*if (dataFormat == kSurfaceFormatBc1) {
-        width = (width + 7) / 8;
-        height = (height + 7) / 8;
-        pitch = (pitch + 7) / 8;
-        bpp = 8;
-      } else */
-      if (dataFormat == kSurfaceFormatBc1 || dataFormat == kSurfaceFormatBc2 ||
-          dataFormat == kSurfaceFormatBc3 || dataFormat == kSurfaceFormatBc4 ||
-          dataFormat == kSurfaceFormatBc5 || dataFormat == kSurfaceFormatBc6 ||
-          dataFormat == kSurfaceFormatBc7) {
-        width = (width + 3) / 4;
-        height = (height + 3) / 4;
-        pitch = (pitch + 3) / 4;
-        bpp = 16;
-      }
-
-      auto image = vk::ImageRef(imageHandle);
-      auto memSize = image.getMemoryRequirements().size;
-      auto [buffer, ref, data] = getBufferInternal(
-          readTaskSet, address, memSize, shader::AccessOp::None);
-
-      g_scheduler.enqueue(readTaskSet, [=](const AsyncTaskCtl &) {
-        buffer->readFromImage(g_hostMemory.getPointer(address), bpp, tileMode,
-                              width, height, 1, pitch);
-        return true;
-      });
-
-      image.readFromBuffer(readCommandBuffer, ref.buffer,
-                           isColor ? VK_IMAGE_ASPECT_COLOR_BIT
-                                   : VK_IMAGE_ASPECT_DEPTH_BIT,
-                           ref.offset);
-    }
-
-    it->second.image = std::move(imageHandle);
     return it->second;
   }
+
 } g_cache;
 
 static VkShaderEXT getPrimTypeRectGeomShader() {
@@ -2631,32 +3478,27 @@ static VkShaderEXT getPrimTypeRectGeomShader() {
 struct RenderState {
   DrawContext &ctxt;
   QueueRegisters &regs;
+  std::uint64_t tag = g_cache.createTag();
+  std::vector<Ref<CacheImageOverlay>> usedImages;
+  std::vector<Ref<CacheBufferOverlay>> usedBuffers;
 
   void loadShaderBindings(TaskSet &readTaskSet, TaskSet &storeTaskSet,
                           VkDescriptorSet descSet, const shader::Shader &shader,
-                          VkCommandBuffer cmdBuffer, bool isCompute = false) {
+                          VkCommandBuffer cmdBuffer) {
     for (auto &uniform : shader.uniforms) {
       switch (uniform.kind) {
       case shader::Shader::UniformKind::Buffer: {
         auto &vbuffer = *reinterpret_cast<const GnmVBuffer *>(uniform.buffer);
-        auto size = vbuffer.getSize();
-        if (size == 0) {
-          size = 0x10;
-        }
 
-        if (isCompute) {
-          std::printf("compute buffer %lx-%lx\n", vbuffer.getAddress(),
-                      vbuffer.getAddress() + vbuffer.getSize());
-        }
-
-        auto storageBuffer =
-            g_cache.getBuffer(readTaskSet, storeTaskSet, vbuffer.getAddress(),
-                              size, uniform.accessOp);
+        auto bufferRef = g_cache.getBuffer(
+            tag, readTaskSet, storeTaskSet, vbuffer.getAddress(),
+            vbuffer.getNumRecords(), vbuffer.getStride(),
+            vbuffer.getElementSize(), uniform.accessOp);
 
         VkDescriptorBufferInfo bufferInfo{
-            .buffer = storageBuffer.buffer,
-            .offset = storageBuffer.offset,
-            .range = size,
+            .buffer = bufferRef->buffer.getHandle(),
+            .offset = vbuffer.getAddress() - bufferRef->bufferAddress,
+            .range = vbuffer.getSize(),
         };
 
         VkWriteDescriptorSet writeDescSet{
@@ -2667,6 +3509,8 @@ struct RenderState {
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .pBufferInfo = &bufferInfo,
         };
+
+        usedBuffers.push_back(std::move(bufferRef));
 
         vkUpdateDescriptorSets(vk::g_vkDevice, 1, &writeDescSet, 0, nullptr);
         break;
@@ -2684,15 +3528,17 @@ struct RenderState {
         std::size_t pitch = tbuffer.pitch + 1;
         auto tileMode = (TileMode)tbuffer.tiling_idx;
 
-        auto imageView = g_cache.getImageView(
-            readTaskSet, storeTaskSet, cmdBuffer, tbuffer.getAddress(),
+        auto image = g_cache.getImage(
+            tag, readTaskSet, storeTaskSet, cmdBuffer, tbuffer.getAddress(),
             dataFormat, channelType, tileMode, width, height, depth, pitch,
-            uniform.accessOp, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            shader::AccessOp::Load, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         VkDescriptorImageInfo imageInfo{
-            .imageView = imageView,
+            .imageView = image->view,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
+
+        usedImages.push_back(std::move(image));
 
         VkWriteDescriptorSet writeDescSet{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -2740,6 +3586,7 @@ struct RenderState {
   void resolve() {
     // TODO: when texture cache will be implemented it MSAA should be done by
     // GPU
+    util::unreachable();
     auto srcBuffer = regs.colorBuffers[0];
     auto dstBuffer = regs.colorBuffers[1];
 
@@ -2777,7 +3624,7 @@ struct RenderState {
       return;
     }
 
-    // regs.depthClearEnable = true;
+    regs.depthClearEnable = true;
 
     TaskSet loadTaskSet, storeTaskSet;
     auto [desriptorSetLayout, pipelineLayout] = getGraphicsLayout();
@@ -2789,7 +3636,7 @@ struct RenderState {
         loadTaskSet, desriptorSetLayout, shader::Stage::Fragment,
         regs.pgmPsAddress, regs.userPsData, regs.psUserSpgrs);
 
-    auto &sem = g_cache.getSemaphore();
+    auto sem = vk::Semaphore::Create();
     loadTaskSet.wait();
 
     VkCommandBufferBeginInfo beginInfo{};
@@ -2814,20 +3661,23 @@ struct RenderState {
 
     auto primType = static_cast<PrimitiveType>(regs.vgtPrimitiveType);
 
-    std::vector<vk::Image2D> colorImages;
     std::vector<VkRenderingAttachmentInfo> colorAttachments;
 
+    std::vector<VkBool32> colorBlendEnable;
+    std::vector<VkColorBlendEquationEXT> colorBlendEquation;
+    std::vector<VkColorComponentFlags> colorWriteMask;
     for (auto targetMask = regs.cbRenderTargetMask;
          auto &colorBuffer : regs.colorBuffers) {
       if (targetMask == 0 || colorBuffer.base == 0) {
         break;
       }
 
-      if ((targetMask & 0xf) == 0) {
+      auto mask = targetMask & 0xf;
+
+      if (mask == 0) {
         targetMask >>= 4;
         continue;
       }
-
       targetMask >>= 4;
 
       shader::AccessOp access =
@@ -2836,19 +3686,44 @@ struct RenderState {
       auto dataFormat = (SurfaceFormat)colorBuffer.format;
       auto channelType = kTextureChannelTypeSrgb; // TODO
 
-      auto colorImageView = g_cache.getImageView(
-          loadTaskSet, storeTaskSet, readCommandBuffer, colorBuffer.base,
+      auto colorImage = g_cache.getImage(
+          tag, loadTaskSet, storeTaskSet, readCommandBuffer, colorBuffer.base,
           dataFormat, channelType, (TileMode)colorBuffer.tileModeIndex,
           regs.screenScissorW, regs.screenScissorH, 1, regs.screenScissorW,
           access, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
       colorAttachments.push_back({
           .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-          .imageView = colorImageView,
+          .imageView = colorImage->view,
           .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
           .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
           .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       });
+
+      usedImages.push_back(std::move(colorImage));
+
+      colorBlendEnable.push_back(regs.blendEnable ? VK_TRUE : VK_FALSE);
+      colorBlendEquation.push_back(VkColorBlendEquationEXT{
+          .srcColorBlendFactor =
+              blendMultiplierToVkBlendFactor(regs.blendColorSrc),
+          .dstColorBlendFactor =
+              blendMultiplierToVkBlendFactor(regs.blendColorDst),
+          .colorBlendOp = blendFuncToVkBlendOp(regs.blendColorFn),
+          .srcAlphaBlendFactor =
+              regs.blendSeparateAlpha
+                  ? blendMultiplierToVkBlendFactor(regs.blendAlphaSrc)
+                  : blendMultiplierToVkBlendFactor(regs.blendColorSrc),
+          .dstAlphaBlendFactor =
+              regs.blendSeparateAlpha
+                  ? blendMultiplierToVkBlendFactor(regs.blendAlphaDst)
+                  : blendMultiplierToVkBlendFactor(regs.blendColorDst),
+          .alphaBlendOp = blendFuncToVkBlendOp(regs.blendAlphaFn),
+      });
+
+      colorWriteMask.push_back(((mask & 1) ? VK_COLOR_COMPONENT_R_BIT : 0) |
+                               ((mask & 2) ? VK_COLOR_COMPONENT_G_BIT : 0) |
+                               ((mask & 4) ? VK_COLOR_COMPONENT_B_BIT : 0) |
+                               ((mask & 8) ? VK_COLOR_COMPONENT_A_BIT : 0));
     }
 
     auto descSet = g_cache.getGraphicsDescriptorSet();
@@ -2869,8 +3744,12 @@ struct RenderState {
       depthAccess |= shader::AccessOp::Store;
     }
 
-    auto depthImageView = g_cache.getImageView(
-        loadTaskSet, storeTaskSet, readCommandBuffer, regs.zReadBase,
+    if (regs.zReadBase != regs.zWriteBase) {
+      __builtin_unreachable();
+    }
+
+    auto depthImage = g_cache.getImage(
+        tag, loadTaskSet, storeTaskSet, readCommandBuffer, regs.zReadBase,
         kSurfaceFormat24_8, kTextureChannelTypeUNorm,
         kTileModeDisplay_LinearAligned, regs.screenScissorW,
         regs.screenScissorH, 1, regs.screenScissorW, depthAccess,
@@ -2878,7 +3757,7 @@ struct RenderState {
 
     VkRenderingAttachmentInfo depthAttachment{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = depthImageView,
+        .imageView = depthImage->view,
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .loadOp = !regs.depthClearEnable && regs.zReadBase
                       ? VK_ATTACHMENT_LOAD_OP_LOAD
@@ -2920,6 +3799,7 @@ struct RenderState {
         .pDepthAttachment = &depthAttachment,
         .pStencilAttachment = &depthAttachment,
     };
+
     vkCmdBeginRendering(drawCommandBuffer, &renderInfo);
 
     // std::printf("viewport: %ux%u, %ux%u\n", regs.screenScissorX,
@@ -2941,20 +3821,58 @@ struct RenderState {
     scissor.offset.y = regs.screenScissorY;
     vkCmdSetScissor(drawCommandBuffer, 0, 1, &scissor);
 
-    // vkCmdSetDepthClampEnableEXT(drawCommandBuffer, VK_TRUE);
+    _vkCmdSetColorBlendEnableEXT(drawCommandBuffer, 0, colorBlendEnable.size(),
+                                 colorBlendEnable.data());
+    _vkCmdSetColorBlendEquationEXT(drawCommandBuffer, 0,
+                                   colorBlendEquation.size(),
+                                   colorBlendEquation.data());
+
+    _vkCmdSetDepthClampEnableEXT(drawCommandBuffer, VK_TRUE);
     vkCmdSetDepthCompareOp(drawCommandBuffer, (VkCompareOp)regs.zFunc);
     vkCmdSetDepthTestEnable(drawCommandBuffer,
                             regs.depthEnable ? VK_TRUE : VK_FALSE);
     vkCmdSetDepthWriteEnable(drawCommandBuffer,
                              regs.depthWriteEnable ? VK_TRUE : VK_FALSE);
-    // vkCmdSetDepthBounds(drawCommandBuffer, -1.f, 1.f);
-    // vkCmdSetDepthBoundsTestEnable(drawCommandBuffer,
-    //                               regs.depthBoundsEnable ? VK_TRUE :
-    //                               VK_FALSE);
-    // vkCmdSetCullMode(
-    //     drawCommandBuffer,
-    //     (regs.cullBack ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE) |
-    //         (regs.cullFront ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_NONE));
+    vkCmdSetDepthBounds(drawCommandBuffer, -1.f, 1.f);
+    vkCmdSetDepthBoundsTestEnable(drawCommandBuffer,
+                                  regs.depthBoundsEnable ? VK_TRUE : VK_FALSE);
+    vkCmdSetStencilOp(drawCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK,
+                      VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP,
+                      VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS);
+
+    // VkDeviceSize strides = 0;
+    // vkCmdBindVertexBuffers2EXT(drawCommandBuffer, 0, 0, nullptr, nullptr,
+    //                            nullptr, &strides);
+    vkCmdSetRasterizerDiscardEnable(drawCommandBuffer, VK_FALSE);
+    vkCmdSetDepthBiasEnable(drawCommandBuffer, VK_TRUE);
+    vkCmdSetDepthBias(drawCommandBuffer, 0, 1, 1);
+    vkCmdSetPrimitiveRestartEnable(drawCommandBuffer, VK_FALSE);
+
+    _vkCmdSetLogicOpEnableEXT(drawCommandBuffer, VK_FALSE);
+    _vkCmdSetLogicOpEXT(drawCommandBuffer, VK_LOGIC_OP_AND);
+    _vkCmdSetPolygonModeEXT(drawCommandBuffer, VK_POLYGON_MODE_FILL);
+    _vkCmdSetRasterizationSamplesEXT(drawCommandBuffer, VK_SAMPLE_COUNT_1_BIT);
+    VkSampleMask sampleMask = ~0;
+    _vkCmdSetSampleMaskEXT(drawCommandBuffer, VK_SAMPLE_COUNT_1_BIT,
+                           &sampleMask);
+    _vkCmdSetTessellationDomainOriginEXT(
+        drawCommandBuffer, VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT);
+    _vkCmdSetAlphaToCoverageEnableEXT(drawCommandBuffer, VK_FALSE);
+    _vkCmdSetVertexInputEXT(drawCommandBuffer, 0, nullptr, 0, nullptr);
+    _vkCmdSetColorWriteMaskEXT(drawCommandBuffer, 0, colorWriteMask.size(),
+                               colorWriteMask.data());
+
+    vkCmdSetStencilCompareMask(drawCommandBuffer,
+                               VK_STENCIL_FACE_FRONT_AND_BACK, 0);
+    vkCmdSetStencilWriteMask(drawCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK,
+                             0);
+    vkCmdSetStencilReference(drawCommandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK,
+                             0);
+
+    vkCmdSetCullMode(
+        drawCommandBuffer,
+        (regs.cullBack ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE) |
+            (regs.cullFront ? VK_CULL_MODE_FRONT_BIT : VK_CULL_MODE_NONE));
     vkCmdSetFrontFace(drawCommandBuffer, regs.face
                                              ? VK_FRONT_FACE_CLOCKWISE
                                              : VK_FRONT_FACE_COUNTER_CLOCKWISE);
@@ -3034,11 +3952,17 @@ struct RenderState {
       indexBuffer = {indexBufferStorage.getHandle(), 0, indexBufferSize};
     } else if (indeciesAddress != 0) {
       unsigned indexSize = vkIndexType == VK_INDEX_TYPE_UINT16 ? 2 : 4;
-      auto indexBufferSize = indexSize * indexCount;
 
-      indexBuffer =
-          g_cache.getBuffer(loadTaskSet, storeTaskSet, indeciesAddress,
-                            indexBufferSize, shader::AccessOp::Load);
+      auto bufferRef =
+          g_cache.getBuffer(tag, loadTaskSet, storeTaskSet, indeciesAddress,
+                            indexCount, 0, indexSize, shader::AccessOp::Load);
+      indexBuffer = {
+          .buffer = bufferRef->buffer.getHandle(),
+          .offset = indeciesAddress - bufferRef->bufferAddress,
+          .size = static_cast<std::uint64_t>(indexCount) * indexSize,
+      };
+
+      usedBuffers.push_back(std::move(bufferRef));
     }
 
     VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_VERTEX_BIT,
@@ -3065,9 +3989,9 @@ struct RenderState {
     vkCmdEndRendering(drawCommandBuffer);
     vkEndCommandBuffer(drawCommandBuffer);
 
-    vkEndCommandBuffer(readCommandBuffer);
-
     loadTaskSet.wait();
+
+    vkEndCommandBuffer(readCommandBuffer);
 
     submitToQueue(ctxt.queue, readCommandBuffer, sem, 1);
     submitToQueue(ctxt.queue, drawCommandBuffer, sem, 1, 2,
@@ -3085,54 +4009,43 @@ struct RenderState {
 
     sem.wait(3, UINTMAX_MAX);
     storeTaskSet.enqueue(g_scheduler);
+    storeTaskSet.wait();
   }
 
   void dispatch(std::size_t dimX, std::size_t dimY, std::size_t dimZ) {
-    VkCommandBufferAllocateInfo allocInfo{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = ctxt.commandPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-    };
-
-    VkCommandBufferBeginInfo beginInfo{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    };
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(vk::g_vkDevice, &allocInfo, &commandBuffer);
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    TaskSet loadTaskSet, storeTaskSet;
-    auto [desriptorSetLayout, pipelineLayout] = getComputeLayout();
-
-    auto &computeShader = g_cache.getShader(
-        loadTaskSet, desriptorSetLayout, shader::Stage::Compute,
-        regs.pgmComputeAddress, regs.userComputeData, regs.computeUserSpgrs,
-        regs.computeNumThreadX, regs.computeNumThreadY, regs.computeNumThreadZ);
-    loadTaskSet.wait();
-
     auto descSet = g_cache.getComputeDescriptorSet();
-    loadShaderBindings(loadTaskSet, storeTaskSet, descSet, computeShader.info,
-                       commandBuffer);
+    TaskSet storeTaskSet;
 
-    VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_COMPUTE_BIT};
-    _vkCmdBindShadersEXT(commandBuffer, 1, stages + 0, &computeShader.shader);
+    auto computeTask = getComputeQueueScheduler().enqueue(
+        [&, this](VkCommandBuffer commandBuffer) {
+          TaskSet loadTaskSet;
+          auto [desriptorSetLayout, pipelineLayout] = getComputeLayout();
 
-    loadTaskSet.wait();
+          auto &computeShader = g_cache.getShader(
+              loadTaskSet, desriptorSetLayout, shader::Stage::Compute,
+              regs.pgmComputeAddress, regs.userComputeData,
+              regs.computeUserSpgrs, regs.computeNumThreadX,
+              regs.computeNumThreadY, regs.computeNumThreadZ);
+          loadTaskSet.wait();
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pipelineLayout, 0, 1, &descSet, 0, nullptr);
+          VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_COMPUTE_BIT};
+          _vkCmdBindShadersEXT(commandBuffer, 1, stages + 0,
+                               &computeShader.shader);
 
-    vkCmdDispatch(commandBuffer, dimX, dimY, dimZ);
-    vkEndCommandBuffer(commandBuffer);
+          loadShaderBindings(loadTaskSet, storeTaskSet, descSet,
+                             computeShader.info, commandBuffer);
+          loadTaskSet.wait();
 
-    auto &sem = g_cache.getSemaphore();
-    submitToQueue(ctxt.queue, commandBuffer, sem, 1);
-    sem.wait(1, UINTMAX_MAX);
-    // storeTaskSet.enqueue(g_scheduler);
-    // storeTaskSet.wait();
+          vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
+                                  pipelineLayout, 0, 1, &descSet, 0, nullptr);
+
+          vkCmdDispatch(commandBuffer, dimX, dimY, dimZ);
+        });
+
+    computeTask->wait();
+    g_cache.releaseComputeDescriptorSet(descSet);
+    storeTaskSet.enqueue(g_scheduler);
+    storeTaskSet.wait();
   }
 };
 
@@ -3553,6 +4466,21 @@ void amdgpu::device::AmdgpuDevice::handleProtectMemory(std::uint64_t address,
     memoryAreaTable.unmap(beginPage, endPage);
     std::printf("Unmapped area at %zx, size %lx\n", address, size);
   }
+
+  std::size_t index = 0;
+  for (auto area : memoryAreaTable) {
+    if (index >= std::size(g_bridge->memoryAreas)) {
+      util::unreachable("too many memory areas");
+    }
+
+    g_bridge->memoryAreas[index++] = {
+        .address = area.beginAddress * kPageSize,
+        .size = (area.endAddress - area.beginAddress) * kPageSize,
+        .prot = (PROT_READ | PROT_WRITE) << 4 // TODO
+    };
+  }
+
+  g_bridge->memoryAreaCount = index;
 }
 
 static std::unordered_map<std::uint64_t, QueueRegisters> queueRegs;
@@ -3572,12 +4500,12 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
     std::uint32_t bufferIndex, std::uint64_t arg, VkCommandBuffer cmd,
     VkImage targetImage, VkExtent2D targetExtent,
     std::vector<VkBuffer> &usedBuffers, std::vector<VkImage> &usedImages) {
-  std::printf("requested flip %d\n", bufferIndex);
+  // std::printf("requested flip %d\n", bufferIndex);
 
   if (bufferIndex == ~static_cast<std::uint32_t>(0)) {
-    bridge->flipBuffer = bufferIndex;
-    bridge->flipArg = arg;
-    bridge->flipCount = bridge->flipCount + 1;
+    g_bridge->flipBuffer = bufferIndex;
+    g_bridge->flipArg = arg;
+    g_bridge->flipCount = g_bridge->flipCount + 1;
 
     // black surface, ignore for now
     return false;
@@ -3588,7 +4516,7 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
   // std::fprintf(stderr, "host visible memory: ");
   // getHostVisibleMemory().dump();
 
-  auto buffer = bridge->buffers[bufferIndex];
+  auto buffer = g_bridge->buffers[bufferIndex];
 
   if (buffer.pitch == 0 || buffer.height == 0 || buffer.address == 0) {
     std::printf("Attempt to flip unallocated buffer\n");
@@ -3600,15 +4528,25 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
               targetExtent.height);
 
   TaskSet readTask;
-  auto image =
-      g_cache.getImage(readTask, cmd, buffer.address, kSurfaceFormat8_8_8_8,
-                       kTextureChannelTypeSrgb,
-                       buffer.tilingMode == 1 ? kTileModeDisplay_2dThin
-                                              : kTileModeDisplay_LinearAligned,
-                       buffer.width, buffer.height, buffer.pitch,
-                       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+  TaskSet writeTask;
+  Ref<CacheImageOverlay> imageRef;
 
+  auto loadTask =
+      getGraphicsQueueScheduler().enqueue([&](VkCommandBuffer commandBuffer) {
+        imageRef = g_cache.getImage(
+            0, readTask, writeTask, commandBuffer, buffer.address,
+            kSurfaceFormat8_8_8_8, kTextureChannelTypeSrgb,
+            buffer.tilingMode == 1 ? kTileModeDisplay_2dThin
+                                   : kTileModeDisplay_LinearAligned,
+            buffer.width, buffer.height, 1, buffer.pitch,
+            shader::AccessOp::Load, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+      });
+
+  loadTask->wait();
   readTask.wait();
+
+  writeTask.enqueue(g_scheduler);
+  writeTask.wait();
 
   transitionImageLayout(cmd, targetImage, VK_IMAGE_ASPECT_COLOR_BIT,
                         VK_IMAGE_LAYOUT_UNDEFINED,
@@ -3631,7 +4569,8 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
                       static_cast<int32_t>(targetExtent.height), 1}},
   };
 
-  vkCmdBlitImage(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, targetImage,
+  vkCmdBlitImage(cmd, imageRef->image.getHandle(),
+                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, targetImage,
                  VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region,
                  VK_FILTER_LINEAR);
 
@@ -3639,13 +4578,32 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-  bridge->flipBuffer = bufferIndex;
-  bridge->flipArg = arg;
-  bridge->flipCount = bridge->flipCount + 1;
+  g_bridge->flipBuffer = bufferIndex;
+  g_bridge->flipArg = arg;
+  g_bridge->flipCount = g_bridge->flipCount + 1;
   auto bufferInUse =
-      g_hostMemory.getPointer<std::uint64_t>(bridge->bufferInUseAddress);
+      g_hostMemory.getPointer<std::uint64_t>(g_bridge->bufferInUseAddress);
   if (bufferInUse != nullptr) {
     bufferInUse[bufferIndex] = 0;
   }
   return true;
+}
+
+AmdgpuDevice::AmdgpuDevice(amdgpu::device::DrawContext dc,
+                           amdgpu::bridge::BridgeHeader *bridge)
+    : dc(dc) {
+  g_bridge = bridge;
+}
+
+AmdgpuDevice::~AmdgpuDevice() {
+  g_cache.clear();
+
+  auto [gSetLayout, gPipelineLayout] = getGraphicsLayout();
+  auto [cSetLayout, cPipelineLayout] = getComputeLayout();
+
+  vkDestroyDescriptorSetLayout(vk::g_vkDevice, gSetLayout, vk::g_vkAllocator);
+  vkDestroyDescriptorSetLayout(vk::g_vkDevice, cSetLayout, vk::g_vkAllocator);
+
+  vkDestroyPipelineLayout(vk::g_vkDevice, gPipelineLayout, vk::g_vkAllocator);
+  vkDestroyPipelineLayout(vk::g_vkDevice, cPipelineLayout, vk::g_vkAllocator);
 }

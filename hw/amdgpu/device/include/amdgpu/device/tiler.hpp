@@ -83,8 +83,7 @@ inline uint32_t getThinElementIndex(uint32_t x, uint32_t y) {
   return elem;
 }
 
-inline uint32_t getDisplayElementIndex(uint32_t x, uint32_t y, uint32_t z,
-                                       uint32_t bpp) {
+inline uint32_t getDisplayElementIndex(uint32_t x, uint32_t y, uint32_t bpp) {
   uint32_t elem = 0;
   switch (bpp) {
   case 8:
@@ -456,7 +455,7 @@ inline uint64_t computeTiledElementByteOffset(
     util::unreachable();
   case kTileModeDisplay_2dThin:
     return compute2dThinTileElementOffset(bpp, macroTileMode,
-                                          getDisplayElementIndex(x, y, z, bpp),
+                                          getDisplayElementIndex(x, y, bpp),
                                           tileSwizzleMask, fragmentIndex,
                                           arraySlice, x, y, z, height, pitch) /
            8;

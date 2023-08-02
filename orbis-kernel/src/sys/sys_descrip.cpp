@@ -17,53 +17,39 @@ orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
 }
 orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {
   ORBIS_LOG_NOTICE(__FUNCTION__, fd);
-  if (auto close = thread->tproc->ops->close) {
-    return close(thread, fd);
+  if (thread->tproc->fileDescriptors.close(fd)) {
+    return {};
   }
 
-  return ErrorCode::NOSYS;
+  return ErrorCode::BADF;
 }
 orbis::SysResult orbis::sys_closefrom(Thread *thread, sint lowfd) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_fstat(Thread *thread, sint fd, ptr<Stat> ub) {
-  ORBIS_LOG_WARNING(__FUNCTION__, fd, ub);
-  thread->where();
-  if (fd == 0) {
-    return ErrorCode::PERM;
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
   }
 
-  auto result = sys_lseek(thread, fd, 0, SEEK_CUR);
-  auto oldpos = thread->retval[0];
-  if (result.isError()) {
+  auto stat = file->ops->stat;
+  if (stat == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+
+  std::lock_guard lock(file->mtx);
+  Stat _ub;
+  auto result = uread(_ub, ub);
+  if (result != ErrorCode{}) {
     return result;
   }
 
-  result = sys_lseek(thread, fd, 0, SEEK_END);
-  auto len = thread->retval[0];
-  if (result.isError()) {
+  result = stat(file.get(), &_ub, thread);
+  if (result != ErrorCode{}) {
     return result;
   }
 
-  result = sys_read(thread, fd, ub, 1);
-  if (result.isError()) {
-    *ub = {};
-    ub->mode = 0777 | 0x4000;
-  } else {
-    *ub = {};
-    ub->size = len;
-    ub->blksize = 1;
-    ub->blocks = len;
-    ub->mode = 0777 | 0x8000;
-  }
-
-  result = sys_lseek(thread, fd, oldpos, SEEK_SET);
-  if (result.isError()) {
-    return result;
-  }
-
-  thread->retval[0] = 0;
-  return {};
+  return uwrite(ub, _ub);
 }
 orbis::SysResult orbis::sys_nfstat(Thread *thread, sint fd,
                                    ptr<struct nstat> sb) {

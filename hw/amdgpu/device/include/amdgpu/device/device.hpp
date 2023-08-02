@@ -1263,7 +1263,6 @@ static_assert(sizeof(GnmTBuffer) == sizeof(std::uint64_t) * 4);
 constexpr auto kPageSize = 0x4000;
 
 struct DrawContext {
-  VkPipelineCache pipelineCache;
   VkQueue queue;
   VkCommandPool commandPool;
 };
@@ -1274,7 +1273,6 @@ void setVkDevice(VkDevice device,
 
 struct AmdgpuDevice {
   amdgpu::device::DrawContext dc;
-  amdgpu::bridge::BridgeHeader *bridge;
 
   void handleProtectMemory(std::uint64_t address, std::uint64_t size,
                            std::uint32_t prot);
@@ -1286,7 +1284,8 @@ struct AmdgpuDevice {
                   std::vector<VkImage> &usedImages);
 
   AmdgpuDevice(amdgpu::device::DrawContext dc,
-               amdgpu::bridge::BridgeHeader *bridge)
-      : dc(dc), bridge(bridge) {}
+               amdgpu::bridge::BridgeHeader *bridge);
+
+  ~AmdgpuDevice();
 };
 } // namespace amdgpu::device

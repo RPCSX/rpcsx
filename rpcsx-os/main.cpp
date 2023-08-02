@@ -10,6 +10,7 @@
 #include "vfs.hpp"
 #include "vm.hpp"
 
+#include <atomic>
 #include <elf.h>
 #include <filesystem>
 #include <orbis/KernelContext.hpp>
@@ -23,6 +24,7 @@
 
 #include <fcntl.h>
 #include <pthread.h>
+#include <sys/mman.h>
 #include <ucontext.h>
 
 #include <csignal>
@@ -35,6 +37,67 @@ __attribute__((no_stack_protector)) static void
 handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (auto hostFs = _readgsbase_u64()) {
     _writefsbase_u64(hostFs);
+  }
+
+  auto signalAddress = reinterpret_cast<std::uintptr_t>(info->si_addr);
+
+  if (rx::thread::g_current != nullptr && sig == SIGSEGV &&
+      signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
+    auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
+    bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+    auto origVmProt = rx::vm::getPageProtection(signalAddress);
+    int prot = 0;
+    auto page = signalAddress / amdgpu::bridge::kHostPageSize;
+
+    if (origVmProt & rx::vm::kMapProtCpuRead) {
+      prot |= PROT_READ;
+    }
+    if (origVmProt & rx::vm::kMapProtCpuWrite) {
+      prot |= PROT_WRITE;
+    }
+    if (origVmProt & rx::vm::kMapProtCpuExec) {
+      prot |= PROT_EXEC;
+    }
+
+    if (prot & (isWrite ? PROT_WRITE : PROT_READ)) {
+      auto bridge = rx::bridge.header;
+
+      while (true) {
+        auto flags = bridge->cachePages[page].load(std::memory_order::relaxed);
+
+        if ((flags & amdgpu::bridge::kPageReadWriteLock) != 0) {
+          continue;
+        }
+
+        if ((flags & amdgpu::bridge::kPageWriteWatch) == 0) {
+          break;
+        }
+
+        if (!isWrite) {
+          prot &= ~PROT_WRITE;
+          break;
+        }
+
+        if (bridge->cachePages[page].compare_exchange_weak(
+                flags, amdgpu::bridge::kPageInvalidated,
+                std::memory_order::relaxed)) {
+          break;
+        }
+      }
+
+      if (::mprotect((void *)(page * amdgpu::bridge::kHostPageSize),
+                     amdgpu::bridge::kHostPageSize, prot)) {
+        std::perror("cache reprotection error");
+        std::abort();
+      }
+
+      _writefsbase_u64(rx::thread::g_current->fsBase);
+      return;
+    }
+
+    std::fprintf(stderr, "SIGSEGV, address %lx, access %s, prot %s\n",
+                 signalAddress, isWrite ? "write" : "read",
+                 rx::vm::mapProtToString(origVmProt).c_str());
   }
 
   if (g_gpuPid > 0) {
@@ -224,20 +287,14 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
 
   std::fprintf(stderr, ") -> Status %d, Value %lx:%lx\n", result.value(),
                thread->retval[0], thread->retval[1]);
+
+  thread->where();
   funlockfile(stderr);
 }
 
-static int ps4Exec(orbis::Process *mainProcess,
+static int ps4Exec(orbis::Thread *mainThread,
                    orbis::utils::Ref<orbis::Module> executableModule,
                    std::span<const char *> argv, std::span<const char *> envp) {
-  mainProcess->sysent = &orbis::ps4_sysvec;
-  mainProcess->ops = &rx::procOpsTable;
-
-  auto [baseId, mainThread] = mainProcess->threadsMap.emplace();
-  mainThread->tproc = mainProcess;
-  mainThread->tid = mainProcess->pid + baseId;
-  mainThread->state = orbis::ThreadState::RUNNING;
-
   const auto stackEndAddress = 0x7'ffff'c000ull;
   const auto stackSize = 0x40000 * 16;
   auto stackStartAddress = stackEndAddress - stackSize;
@@ -250,12 +307,15 @@ static int ps4Exec(orbis::Process *mainProcess,
   mainThread->stackEnd =
       reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
 
+  auto dmem1 = createDmemCharacterDevice(1);
+  orbis::g_context.dmemDevice = dmem1;
+
   rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
-  rx::vfs::mount("/dev/dmem1", createDmemCharacterDevice(1));
+  rx::vfs::mount("/dev/dmem1", dmem1);
   rx::vfs::mount("/dev/dmem2", createDmemCharacterDevice(2));
-  rx::vfs::mount("/dev/stdout", createStdoutCharacterDevice());
-  rx::vfs::mount("/dev/stderr", createStderrCharacterDevice());
-  rx::vfs::mount("/dev/stdin", createStdinCharacterDevice());
+  rx::vfs::mount("/dev/stdout", createFdWrapDevice(STDOUT_FILENO));
+  rx::vfs::mount("/dev/stderr", createFdWrapDevice(STDERR_FILENO));
+  rx::vfs::mount("/dev/stdin", createFdWrapDevice(STDIN_FILENO));
   rx::vfs::mount("/dev/zero", createZeroCharacterDevice());
   rx::vfs::mount("/dev/null", createNullCharacterDevice());
   rx::vfs::mount("/dev/dipsw", createDipswCharacterDevice());
@@ -267,24 +327,35 @@ static int ps4Exec(orbis::Process *mainProcess,
   rx::vfs::mount("/dev/hid", createHidCharacterDevice());
   rx::vfs::mount("/dev/gc", createGcCharacterDevice());
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
+  rx::vfs::mount("/dev/sbl_srv", createSblSrvCharacterDevice());
   rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
 
-  rx::procOpsTable.open(mainThread, "/dev/stdin", 0, 0);
-  rx::procOpsTable.open(mainThread, "/dev/stdout", 0, 0);
-  rx::procOpsTable.open(mainThread, "/dev/stderr", 0, 0);
+  orbis::Ref<orbis::File> stdinFile;
+  orbis::Ref<orbis::File> stdoutFile;
+  orbis::Ref<orbis::File> stderrFile;
+  rx::procOpsTable.open(mainThread, "/dev/stdin", 0, 0, &stdinFile);
+  rx::procOpsTable.open(mainThread, "/dev/stdout", 0, 0, &stdoutFile);
+  rx::procOpsTable.open(mainThread, "/dev/stderr", 0, 0, &stderrFile);
+
+  mainThread->tproc->fileDescriptors.insert(stdinFile);
+  mainThread->tproc->fileDescriptors.insert(stdoutFile);
+  mainThread->tproc->fileDescriptors.insert(stderrFile);
+
+  orbis::g_context.shmDevice = createShmDevice();
+  orbis::g_context.blockpoolDevice = createBlockPoolDevice();
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
 
   auto libkernel = rx::linker::loadModuleFile(
-      "/system/common/lib/libkernel_sys.sprx", mainProcess);
+      "/system/common/lib/libkernel_sys.sprx", mainThread);
 
   if (libkernel == nullptr) {
     std::fprintf(stderr, "libkernel not found\n");
     return 1;
   }
 
-  libkernel->id = mainProcess->modulesMap.insert(libkernel);
+  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
 
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
@@ -499,11 +570,83 @@ int main(int argc, const char *argv[]) {
   // rx::vm::printHostStats();
   auto initProcess = orbis::g_context.createProcess(10);
   pthread_setname_np(pthread_self(), "10.MAINTHREAD");
+
+  std::thread{[] {
+    pthread_setname_np(pthread_self(), "Bridge");
+    auto bridge = rx::bridge.header;
+
+    std::vector<std::uint64_t> fetchedCommands;
+    fetchedCommands.reserve(std::size(bridge->cacheCommands));
+
+    while (true) {
+      for (auto &command : bridge->cacheCommands) {
+        std::uint64_t value = command.load(std::memory_order::relaxed);
+
+        if (value != 0) {
+          fetchedCommands.push_back(value);
+          command.store(0, std::memory_order::relaxed);
+        }
+      }
+
+      if (fetchedCommands.empty()) {
+        continue;
+      }
+
+      for (auto command : fetchedCommands) {
+        auto page = static_cast<std::uint32_t>(command);
+        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
+
+        auto pageFlags =
+            bridge->cachePages[page].load(std::memory_order::relaxed);
+
+        auto address =
+            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
+        auto origVmProt = rx::vm::getPageProtection(address);
+        int prot = 0;
+
+        if (origVmProt & rx::vm::kMapProtCpuRead) {
+          prot |= PROT_READ;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuWrite) {
+          prot |= PROT_WRITE;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuExec) {
+          prot |= PROT_EXEC;
+        }
+
+        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
+          prot &= ~(PROT_READ | PROT_WRITE);
+        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
+          prot &= ~PROT_WRITE;
+        }
+
+        // std::fprintf(stderr, "protection %lx-%lx\n", address,
+        //              address + amdgpu::bridge::kHostPageSize * count);
+        if (::mprotect(reinterpret_cast<void *>(address),
+                       amdgpu::bridge::kHostPageSize * count, prot)) {
+          perror("protection failed");
+          std::abort();
+        }
+      }
+
+      fetchedCommands.clear();
+    }
+  }}.detach();
+
+  int status = 0;
+
   initProcess->sysent = &orbis::ps4_sysvec;
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
+  initProcess->ops = &rx::procOpsTable;
+
+  auto [baseId, mainThread] = initProcess->threadsMap.emplace();
+  mainThread->tproc = initProcess;
+  mainThread->tid = initProcess->pid + baseId;
+  mainThread->state = orbis::ThreadState::RUNNING;
+
   auto executableModule =
-      rx::linker::loadModuleFile(argv[argIndex], initProcess);
+      rx::linker::loadModuleFile(argv[argIndex], mainThread);
 
   if (executableModule == nullptr) {
     std::fprintf(stderr, "Failed to open '%s'\n", argv[argIndex]);
@@ -514,11 +657,9 @@ int main(int argc, const char *argv[]) {
   initProcess->processParam = executableModule->processParam;
   initProcess->processParamSize = executableModule->processParamSize;
 
-  int status = 0;
-
   if (executableModule->type == rx::linker::kElfTypeSceDynExec ||
       executableModule->type == rx::linker::kElfTypeSceExec) {
-    status = ps4Exec(initProcess, std::move(executableModule),
+    status = ps4Exec(mainThread, std::move(executableModule),
                      std::span(argv + argIndex, argc - argIndex),
                      std::span<const char *>());
   } else {

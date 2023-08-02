@@ -1,4 +1,3 @@
-#include <array>
 #include <orbis/error.hpp>
 #include <orbis/thread.hpp>
 #include <orbis/time.hpp>
@@ -12,12 +11,14 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
+struct MemoryProtection;
 struct ModuleInfo;
 struct ModuleInfoEx;
 struct KEvent;
 struct timespec;
 struct Stat;
 struct stack_t;
+struct IoVec;
 
 SysResult nosys(Thread *thread);
 
@@ -126,10 +127,8 @@ SysResult sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
 SysResult sys_getrusage(Thread *thread, sint who, ptr<struct rusage> rusage);
 SysResult sys_getsockopt(Thread *thread, sint s, sint level, sint name,
                          caddr_t val, ptr<sint> avalsize);
-SysResult sys_readv(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                    uint iovcnt);
-SysResult sys_writev(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                     uint iovcnt);
+SysResult sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
+SysResult sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
 SysResult sys_settimeofday(Thread *thread, ptr<struct timeval> tp,
                            ptr<orbis::timezone> tzp);
 SysResult sys_fchown(Thread *thread, sint fd, sint uid, sint gid);
@@ -249,10 +248,10 @@ SysResult sys_lutimes(Thread *thread, ptr<char> path, ptr<struct timeval> tptr);
 SysResult sys_nstat(Thread *thread, ptr<char> path, ptr<struct nstat> ub);
 SysResult sys_nfstat(Thread *thread, sint fd, ptr<struct nstat> sb);
 SysResult sys_nlstat(Thread *thread, ptr<char> path, ptr<struct nstat> ub);
-SysResult sys_preadv(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                     uint iovcnt, off_t offset);
-SysResult sys_pwritev(Thread *thread, sint fd, ptr<struct iovec> iovp,
-                      uint iovcnt, off_t offset);
+SysResult sys_preadv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt,
+                     off_t offset);
+SysResult sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt,
+                      off_t offset);
 SysResult sys_fhopen(Thread *thread, ptr<const struct fhandle> u_fhp,
                      sint flags);
 SysResult sys_fhstat(Thread *thread, ptr<const struct fhandle> u_fhp,
@@ -361,8 +360,7 @@ SysResult sys_eaccess(Thread *thread, ptr<char> path, sint flags);
 SysResult sys_afs3_syscall(Thread *thread, slong syscall, slong param1,
                            slong param2, slong param3, slong param4,
                            slong param5, slong param6);
-SysResult sys_nmount(Thread *thread, ptr<struct iovec> iovp, uint iovcnt,
-                     sint flags);
+SysResult sys_nmount(Thread *thread, ptr<IoVec> iovp, uint iovcnt, sint flags);
 SysResult sys___mac_get_proc(Thread *thread, ptr<struct mac> mac_p);
 SysResult sys___mac_set_proc(Thread *thread, ptr<struct mac> mac_p);
 SysResult sys___mac_get_fd(Thread *thread, sint fd, ptr<struct mac> mac_p);
@@ -494,14 +492,14 @@ SysResult sys_sctp_generic_sendmsg(Thread *thread, sint sd, caddr_t msg,
                                    sint mlen, caddr_t to, __socklen_t tolen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
-SysResult sys_sctp_generic_sendmsg_iov(Thread *thread, sint sd,
-                                       ptr<struct iovec> iov, sint iovlen,
-                                       caddr_t to, __socklen_t tolen,
+SysResult sys_sctp_generic_sendmsg_iov(Thread *thread, sint sd, ptr<IoVec> iov,
+                                       sint iovlen, caddr_t to,
+                                       __socklen_t tolen,
                                        ptr<struct sctp_sndrcvinfo> sinfo,
                                        sint flags);
-SysResult sys_sctp_generic_recvmsg(Thread *thread, sint sd,
-                                   ptr<struct iovec> iov, sint iovlen,
-                                   caddr_t from, __socklen_t fromlen,
+SysResult sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<IoVec> iov,
+                                   sint iovlen, caddr_t from,
+                                   __socklen_t fromlen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
 SysResult sys_pread(Thread *thread, sint fd, ptr<void> buf, size_t nbyte,
@@ -557,9 +555,9 @@ SysResult sys_symlinkat(Thread *thread, ptr<char> path1, sint fd,
 SysResult sys_unlinkat(Thread *thread, sint fd, ptr<char> path, sint flag);
 SysResult sys_posix_openpt(Thread *thread, sint flags);
 SysResult sys_gssd_syscall(Thread *thread, ptr<char> path);
-SysResult sys_jail_get(Thread *thread, ptr<struct iovec> iovp, uint iovcnt,
+SysResult sys_jail_get(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
                        sint flags);
-SysResult sys_jail_set(Thread *thread, ptr<struct iovec> iovp, uint iovcnt,
+SysResult sys_jail_set(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
                        sint flags);
 SysResult sys_jail_remove(Thread *thread, sint jid);
 SysResult sys_closefrom(Thread *thread, sint lowfd);
@@ -633,7 +631,8 @@ SysResult sys_evf_set(Thread *thread, sint id, uint64_t value);
 SysResult sys_evf_clear(Thread *thread, sint id, uint64_t value);
 SysResult sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                          ptr<sint> pNumWaitThreads);
-SysResult sys_query_memory_protection(Thread *thread /* TODO */);
+SysResult sys_query_memory_protection(Thread *thread, ptr<void> address,
+                                      ptr<MemoryProtection> protection);
 SysResult sys_batch_map(Thread *thread /* TODO */);
 SysResult sys_osem_create(Thread *thread, ptr<const char[32]> name, uint attrs,
                           sint initCount, sint maxCount);
@@ -676,7 +675,7 @@ SysResult sys_obs_eport_trigger(Thread *thread /* TODO */);
 SysResult sys_obs_eport_open(Thread *thread /* TODO */);
 SysResult sys_obs_eport_close(Thread *thread /* TODO */);
 SysResult sys_is_in_sandbox(Thread *thread /* TODO */);
-SysResult sys_dmem_container(Thread *thread);
+SysResult sys_dmem_container(Thread *thread, uint id);
 SysResult sys_get_authinfo(Thread *thread, pid_t pid, ptr<void> info);
 SysResult sys_mname(Thread *thread, uint64_t address, uint64_t length,
                     ptr<const char[32]> name);
@@ -730,7 +729,9 @@ SysResult sys_get_vm_map_timestamp(Thread *thread /* TODO */);
 SysResult sys_opmc_set_hw(Thread *thread /* TODO */);
 SysResult sys_opmc_get_hw(Thread *thread /* TODO */);
 SysResult sys_get_cpu_usage_all(Thread *thread /* TODO */);
-SysResult sys_mmap_dmem(Thread *thread /* TODO */);
+SysResult sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
+                        sint memoryType, sint prot, sint flags,
+                        off_t directMemoryStart);
 SysResult sys_physhm_open(Thread *thread /* TODO */);
 SysResult sys_physhm_unlink(Thread *thread /* TODO */);
 SysResult sys_resume_internal_hdd(Thread *thread /* TODO */);
@@ -759,9 +760,11 @@ SysResult sys_dynlib_get_obj_member(Thread *thread, SceKernelModule handle,
 SysResult sys_budget_get_ptype_of_budget(Thread *thread /* TODO */);
 SysResult sys_prepare_to_resume_process(Thread *thread /* TODO */);
 SysResult sys_process_terminate(Thread *thread /* TODO */);
-SysResult sys_blockpool_open(Thread *thread /* TODO */);
-SysResult sys_blockpool_map(Thread *thread /* TODO */);
-SysResult sys_blockpool_unmap(Thread *thread /* TODO */);
+SysResult sys_blockpool_open(Thread *thread);
+SysResult sys_blockpool_map(Thread *thread, caddr_t addr, size_t len, sint prot,
+                            sint flags);
+SysResult sys_blockpool_unmap(Thread *thread, caddr_t addr, size_t len,
+                              sint flags);
 SysResult sys_dynlib_get_info_for_libdbg(Thread *thread /* TODO */);
 SysResult sys_blockpool_batch(Thread *thread /* TODO */);
 SysResult sys_fdatasync(Thread *thread /* TODO */);

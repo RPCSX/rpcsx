@@ -1,29 +1,32 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/uio.hpp"
 
-struct NullDevice : public IoDevice {};
+struct NullDevice : public IoDevice {
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+};
+struct NullFile : public orbis::File {};
 
-struct NullInstance : public IoDeviceInstance {};
-
-static std::int64_t null_instance_write(IoDeviceInstance *instance,
-                                        const void *data, std::uint64_t size) {
-  return size;
+static orbis::ErrorCode null_write(orbis::File *file, orbis::Uio *uio,
+                                   orbis::Thread *) {
+  uio->resid = 0;
+  return {};
 }
 
-static std::int32_t null_device_open(IoDevice *device,
-                                     orbis::Ref<IoDeviceInstance> *instance,
-                                     const char *path, std::uint32_t flags,
-                                     std::uint32_t mode) {
-  auto *newInstance = orbis::knew<NullInstance>();
-  newInstance->write = null_instance_write;
+static const orbis::FileOps ops = {
+    .write = null_write,
+};
 
-  io_device_instance_init(device, newInstance);
-  *instance = newInstance;
-  return 0;
+orbis::ErrorCode NullDevice::open(orbis::Ref<orbis::File> *file,
+                                  const char *path, std::uint32_t flags,
+                                  std::uint32_t mode, orbis::Thread *thread) {
+  auto newFile = orbis::knew<NullFile>();
+  newFile->device = this;
+  newFile->ops = &ops;
+  *file = newFile;
+  return {};
 }
 
-IoDevice *createNullCharacterDevice() {
-  auto *newDevice = orbis::knew<NullDevice>();
-  newDevice->open = null_device_open;
-  return newDevice;
-}
+IoDevice *createNullCharacterDevice() { return orbis::knew<NullDevice>(); }

@@ -8,7 +8,6 @@
 #include "osem.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
-#include <chrono>
 
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
@@ -24,18 +23,28 @@ orbis::SysResult orbis::sys_socketex(Thread *thread, ptr<const char> name,
                                      sint domain, sint type, sint protocol) {
   ORBIS_LOG_TODO(__FUNCTION__, name, domain, type, protocol);
   if (auto socket = thread->tproc->ops->socket) {
-    return socket(thread, name, domain, type, protocol);
+    Ref<File> file;
+    auto result = socket(thread, name, domain, type, protocol, &file);
+
+    if (result.isError()) {
+      return result;
+    }
+
+    auto fd = thread->tproc->fileDescriptors.insert(file);
+    ORBIS_LOG_WARNING("Socket opened", name, fd);
+    thread->retval[0] = fd;
+    return {};
   }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_socketclose(Thread *thread, sint fd) {
   // This syscall is identical to sys_close
   ORBIS_LOG_NOTICE(__FUNCTION__, fd);
-  if (auto close = thread->tproc->ops->close) {
-    return close(thread, fd);
+  if (thread->tproc->fileDescriptors.close(fd)) {
+    return {};
   }
 
-  return ErrorCode::NOSYS;
+  return ErrorCode::BADF;
 }
 orbis::SysResult orbis::sys_netgetiflist(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -248,6 +257,9 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
     uwrite(pPatternSet, thread->evfResultPattern);
   }
 
+  if (result == ErrorCode::BUSY) {
+    return SysResult::notAnError(result);
+  }
   return result;
 }
 orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
@@ -287,7 +299,14 @@ orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
   }
   return {};
 }
-orbis::SysResult orbis::sys_query_memory_protection(Thread *thread /* TODO */) {
+orbis::SysResult
+orbis::sys_query_memory_protection(Thread *thread, ptr<void> address,
+                                   ptr<MemoryProtection> protection) {
+  if (auto query_memory_protection =
+          thread->tproc->ops->query_memory_protection) {
+    return query_memory_protection(thread, address, protection);
+  }
+
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_batch_map(Thread *thread /* TODO */) {
@@ -363,6 +382,8 @@ orbis::SysResult orbis::sys_osem_open(Thread *thread,
 
   auto sem = thread->tproc->context->findSemaphore(_name);
   if (sem == nullptr) {
+    // FIXME: hack :)
+    return sys_osem_create(thread, name, kSemaAttrShared, 0, 10000);
     return ErrorCode::SRCH;
   }
 
@@ -406,7 +427,7 @@ orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
 
   std::lock_guard lock(sem->mtx);
   if (sem->isDeleted || sem->value < need)
-    return ErrorCode::BUSY;
+    return orbis::SysResult::notAnError(ErrorCode::BUSY);
   sem->value -= need;
   return {};
 }
@@ -567,8 +588,11 @@ orbis::SysResult orbis::sys_is_in_sandbox(Thread *thread /* TODO */) {
   std::printf("sys_is_in_sandbox() -> 0\n");
   return {};
 }
-orbis::SysResult orbis::sys_dmem_container(Thread *thread) {
-  thread->retval[0] = 0; // returns default direct memory device
+orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
+  ORBIS_LOG_NOTICE(__FUNCTION__, id);
+  thread->retval[0] = 1; // returns default direct memory device
+  if (id + 1)
+    return ErrorCode::PERM;
   return {};
 }
 orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
@@ -707,6 +731,7 @@ orbis::SysResult orbis::sys_dynlib_get_proc_param(Thread *thread,
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_process_needed_and_relocate(Thread *thread) {
+  ORBIS_LOG_NOTICE(__FUNCTION__);
   if (auto processNeeded = thread->tproc->ops->processNeeded) {
     auto result = processNeeded(thread);
 
@@ -730,6 +755,7 @@ orbis::SysResult orbis::sys_dynlib_process_needed_and_relocate(Thread *thread) {
     }
   }
 
+  ORBIS_LOG_WARNING(__FUNCTION__);
   return {};
 }
 orbis::SysResult orbis::sys_sandbox_path(Thread *thread /* TODO */) {
@@ -836,9 +862,12 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
               sizeof(ModuleSegment) * module->segmentCount);
   result.segmentCount = module->segmentCount;
   result.refCount = module->references.load(std::memory_order::relaxed);
-  uwrite(destModuleInfoEx, result);
-
-  return {};
+  ORBIS_LOG_WARNING(__FUNCTION__, result.id, result.name, result.tlsIndex,
+                    result.tlsInit, result.tlsInitSize, result.tlsSize,
+                    result.tlsOffset, result.tlsAlign, result.initProc,
+                    result.finiProc, result.ehFrameHdr, result.ehFrame,
+                    result.ehFrameHdrSize, result.ehFrameSize);
+  return uwrite(destModuleInfoEx, result);
 }
 orbis::SysResult orbis::sys_budget_getid(Thread *thread) {
   return ErrorCode::NOSYS;
@@ -911,6 +940,24 @@ struct IpmiCreateClientParams {
 
 static_assert(sizeof(IpmiCreateClientParams) == 0x18);
 
+struct IpmiBufferInfo {};
+struct IpmiDataInfo {
+  orbis::ptr<void> data;
+  orbis::uint64_t size;
+};
+
+struct IpmiSyncCallParams {
+  orbis::uint32_t method;
+  orbis::uint32_t dataCount;
+  orbis::uint64_t flags; // ?
+  orbis::ptr<IpmiDataInfo> pData;
+  orbis::ptr<IpmiBufferInfo> pBuffers;
+  orbis::ptr<orbis::sint> pResult;
+  orbis::uint32_t resultCount;
+};
+
+static_assert(sizeof(IpmiSyncCallParams) == 0x30);
+
 orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
                                          uint64_t paramsSz, uint64_t arg6) {
@@ -926,38 +973,123 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
 
     ORBIS_LOG_TODO("IPMI: create client", createParams->arg0,
                    createParams->name, createParams->arg2);
-    uwrite<uint>(result, 0x1);
+    // auto server = g_context.findIpmiServer(createParams->name);
+
+    // if (server == nullptr) {
+    //   ORBIS_LOG_TODO("IPMI: failed to find server", createParams->name);
+    // }
+
+    auto ipmiClient = knew<IpmiClient>(createParams->name);
+    // ipmiClient->connection = server;
+    auto id = thread->tproc->ipmiClientMap.insert(ipmiClient);
+    return uwrite<uint>(result, id);
   }
 
   if (op == kImpiDestroyClient) {
     ORBIS_LOG_TODO("IPMI: destroy client");
-    if (result)
-      uwrite<uint>(result, 0);
+    thread->tproc->ipmiClientMap.close(kid);
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
+
+    return {};
+  }
+
+  auto client = thread->tproc->ipmiClientMap.get(kid);
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  if (op == 0x241) {
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
   }
 
   if (op == 0x400) {
     ORBIS_LOG_TODO("IMPI: connect?");
-    if (result)
-      uwrite<uint>(result, 0);
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
   }
 
   if (op == 0x320) {
-    ORBIS_LOG_TODO("IMPI: sync?");
-    if (result)
-      uwrite<uint>(result, 1);
+    ORBIS_LOG_TODO("IMPI: invoke sync method");
+
+    if (paramsSz != sizeof(IpmiSyncCallParams)) {
+      return ErrorCode::INVAL;
+    }
+
+    IpmiSyncCallParams syncCallParams;
+    auto errorCode = uread(syncCallParams, (ptr<IpmiSyncCallParams>)params);
+    if (errorCode != ErrorCode{}) {
+      return errorCode;
+    }
+
+    ORBIS_LOG_TODO("impi: invokeSyncMethod", client->name,
+                   syncCallParams.method, syncCallParams.dataCount,
+                   syncCallParams.flags, syncCallParams.pData,
+                   syncCallParams.pBuffers, syncCallParams.pResult,
+                   syncCallParams.resultCount);
+
+    IpmiDataInfo dataInfo;
+    uread(dataInfo, syncCallParams.pData);
+
+    ORBIS_LOG_TODO("", dataInfo.data, dataInfo.size);
+
+    if (client->name == "SceMbusIpc") {
+      if (syncCallParams.method == 0xce110007) { // SceMbusIpcAddHandleByUserId
+        struct SceMbusIpcAddHandleByUserIdMethodArgs {
+          uint32_t unk; // 0
+          uint32_t deviceId;
+          uint32_t userId;
+          uint32_t type;
+          uint32_t index;
+          uint32_t reserved;
+          uint32_t pid;
+        };
+
+        static_assert(sizeof(SceMbusIpcAddHandleByUserIdMethodArgs) == 0x1c);
+
+        if (dataInfo.size != sizeof(SceMbusIpcAddHandleByUserIdMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceMbusIpcAddHandleByUserIdMethodArgs args;
+        uread(args, ptr<SceMbusIpcAddHandleByUserIdMethodArgs>(dataInfo.data));
+
+        ORBIS_LOG_TODO("impi: SceMbusIpcAddHandleByUserId", args.unk,
+                       args.deviceId, args.userId, args.type, args.index,
+                       args.reserved, args.pid);
+      }
+
+      return uwrite<uint>(result, 1);
+    }
+
+    if (result != nullptr) {
+      return uwrite<uint>(result, 1);
+    }
+
+    return {};
   }
 
   if (op == 0x310) {
     ORBIS_LOG_TODO("IMPI: disconnect?");
-    if (result)
-      uwrite<uint>(result, 0);
+    if (result) {
+      return uwrite<uint>(result, 0);
+    }
+
+    return {};
   }
 
   if (op == 0x252) {
     ORBIS_LOG_TODO("IMPI: try get client message?");
     thread->where();
-    if (result)
-      uwrite<uint>(result, 0x80020003);
+    if (result) {
+      return uwrite<uint>(result, 0x80020003);
+    }
+    return {};
   }
 
   if (op == 0x46b) {
@@ -965,7 +1097,6 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return {};
   }
 
-  thread->retval[0] = 0;
   return {};
 }
 orbis::SysResult orbis::sys_get_gpo(Thread *thread /* TODO */) {
@@ -983,7 +1114,13 @@ orbis::SysResult orbis::sys_opmc_get_hw(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_get_cpu_usage_all(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_mmap_dmem(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
+                                      sint memoryType, sint prot, sint flags,
+                                      off_t directMemoryStart) {
+  if (auto dmem_mmap = thread->tproc->ops->dmem_mmap) {
+    return dmem_mmap(thread, addr, len, memoryType, prot, flags,
+                     directMemoryStart);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_physhm_open(Thread *thread /* TODO */) {
@@ -1096,13 +1233,31 @@ orbis::sys_prepare_to_resume_process(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_process_terminate(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_blockpool_open(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_blockpool_open(Thread *thread) {
+  if (auto blockpool_open = thread->tproc->ops->blockpool_open) {
+    Ref<File> file;
+    auto result = blockpool_open(thread, &file);
+    if (result.isError()) {
+      return result;
+    }
+
+    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
+    return {};
+  }
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_blockpool_map(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_blockpool_map(Thread *thread, caddr_t addr,
+                                          size_t len, sint prot, sint flags) {
+  if (auto blockpool_map = thread->tproc->ops->blockpool_map) {
+    return blockpool_map(thread, addr, len, prot, flags);
+  }
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_blockpool_unmap(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_blockpool_unmap(Thread *thread, caddr_t addr,
+                                            size_t len, sint flags) {
+  if (auto blockpool_unmap = thread->tproc->ops->blockpool_unmap) {
+    return blockpool_unmap(thread, addr, len);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult

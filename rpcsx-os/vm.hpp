@@ -75,6 +75,6 @@ bool protect(void *addr, std::uint64_t size, std::int32_t prot);
 
 bool virtualQuery(const void *addr, std::int32_t flags, VirtualQueryInfo *info);
 bool queryProtection(const void *addr, std::uint64_t *startAddress,
-                     std::uint64_t *endAddress, std::int64_t *prot);
+                     std::uint64_t *endAddress, std::int32_t *prot);
 unsigned getPageProtection(std::uint64_t address);
 } // namespace rx::vm

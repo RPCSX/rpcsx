@@ -4,6 +4,7 @@ add_library(orbis::kernel::config ALIAS standalone-config)
 
 add_executable(rpcsx-os
   iodev/ajm.cpp
+  iodev/blockpool.cpp
   iodev/dce.cpp
   iodev/dipsw.cpp
   iodev/dmem.cpp
@@ -15,9 +16,8 @@ add_executable(rpcsx-os
   iodev/hmd_snsr.cpp
   iodev/null.cpp
   iodev/rng.cpp
-  iodev/stderr.cpp
-  iodev/stdin.cpp
-  iodev/stdout.cpp
+  iodev/sbl_srv.cpp
+  iodev/shm.cpp
   iodev/zero.cpp
 
   main.cpp

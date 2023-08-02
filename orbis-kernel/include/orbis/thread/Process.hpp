@@ -2,15 +2,15 @@
 #include "orbis-config.hpp"
 
 #include "../evf.hpp"
+#include "../ipmi.hpp"
 #include "../osem.hpp"
 #include "../thread/Thread.hpp"
 #include "../thread/types.hpp"
 #include "ProcessState.hpp"
+#include "orbis/file.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
 #include "orbis/utils/SharedMutex.hpp"
-
-#include <mutex>
 
 namespace orbis {
 class KernelContext;
@@ -59,9 +59,10 @@ struct Process final {
 
   utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
   utils::RcIdMap<Semaphore, sint, 4097, 1> semMap;
+  utils::RcIdMap<IpmiClient, sint, 4097, 1> ipmiClientMap;
   utils::RcIdMap<Module, ModuleHandle> modulesMap;
   utils::OwningIdMap<Thread, lwpid_t> threadsMap;
-  utils::RcIdMap<utils::RcBase, sint> fileDescriptors;
+  utils::RcIdMap<orbis::File, sint> fileDescriptors;
 
   // Named objects for debugging
   utils::shared_mutex namedObjMutex;

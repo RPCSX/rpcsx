@@ -78,7 +78,7 @@ void override(std::string originalModuleName,
 orbis::Ref<orbis::Module> loadModule(std::span<std::byte> image,
                                      orbis::Process *process);
 orbis::Ref<orbis::Module> loadModuleFile(std::string_view path,
-                                         orbis::Process *process);
+                                         orbis::Thread *thread);
 orbis::Ref<orbis::Module> loadModuleByName(std::string_view name,
-                                           orbis::Process *process);
+                                           orbis::Thread *thread);
 } // namespace rx::linker
