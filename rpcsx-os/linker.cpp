@@ -401,7 +401,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   if (sceModuleParamIndex >= 0) {
     result->moduleParam =
-        phdrs[sceProcParamIndex].p_vaddr
+        phdrs[sceModuleParamIndex].p_vaddr
             ? reinterpret_cast<void *>(imageBase +
                                        phdrs[sceModuleParamIndex].p_vaddr)
             : nullptr;
