@@ -12,8 +12,6 @@
 </div>
 
 > **Warning** <br/>
-> It's NOT possible to run any games yet, and there is no ETA for when this will change.
-
 > Do not ask for link to games or system files. Piracy is not permitted on the GitHub nor in the Discord.
 
 
