@@ -70,6 +70,52 @@ inline uint64_t computeLinearElementByteOffset(
          (bitsPerElement * fragmentIndex);
 }
 
+inline uint32_t get1dThickElementIndex(uint32_t x, uint32_t y, uint32_t z,
+                                       uint32_t bpp) {
+  uint32_t elem = 0;
+
+  switch (bpp) {
+  case 8:
+  case 16:
+    elem |= ((x >> 0) & 0x1) << 0;
+    elem |= ((y >> 0) & 0x1) << 1;
+    elem |= ((x >> 1) & 0x1) << 2;
+    elem |= ((y >> 1) & 0x1) << 3;
+    elem |= ((z >> 0) & 0x1) << 4;
+    elem |= ((z >> 1) & 0x1) << 5;
+    elem |= ((x >> 2) & 0x1) << 6;
+    elem |= ((y >> 2) & 0x1) << 7;
+    break;
+  case 32:
+    elem |= ((x >> 0) & 0x1) << 0;
+    elem |= ((y >> 0) & 0x1) << 1;
+    elem |= ((x >> 1) & 0x1) << 2;
+    elem |= ((z >> 0) & 0x1) << 3;
+    elem |= ((y >> 1) & 0x1) << 4;
+    elem |= ((z >> 1) & 0x1) << 5;
+    elem |= ((x >> 2) & 0x1) << 6;
+    elem |= ((y >> 2) & 0x1) << 7;
+    break;
+
+  case 64:
+  case 128:
+    elem |= ((x >> 0) & 0x1) << 0;
+    elem |= ((y >> 0) & 0x1) << 1;
+    elem |= ((z >> 0) & 0x1) << 2;
+    elem |= ((x >> 1) & 0x1) << 3;
+    elem |= ((y >> 1) & 0x1) << 4;
+    elem |= ((z >> 1) & 0x1) << 5;
+    elem |= ((x >> 2) & 0x1) << 6;
+    elem |= ((y >> 2) & 0x1) << 7;
+    break;
+
+  default:
+    util::unreachable();
+  }
+
+  return elem;
+}
+
 inline uint32_t getThinElementIndex(uint32_t x, uint32_t y) {
   uint32_t elem = 0;
 
@@ -139,6 +185,29 @@ inline uint64_t computeThin1dThinTileElementOffset(std::uint32_t bpp,
   auto tilesPerSlice = std::max(tilesPerRow * (height / kMicroTileHeight), 1UL);
 
   uint64_t sliceOffset = z * tilesPerSlice * tileBytes;
+
+  uint64_t tileRowIndex = y / kMicroTileHeight;
+  uint64_t tileColumnIndex = x / kMicroTileWidth;
+  uint64_t tileOffset =
+      (tileRowIndex * tilesPerRow + tileColumnIndex) * tileBytes;
+
+  return (sliceOffset + tileOffset) + elementIndex * bpp;
+}
+inline uint64_t computeThick1dThickTileElementOffset(std::uint32_t bpp,
+                                                     uint32_t x, uint32_t y,
+                                                     uint32_t z,
+                                                     std::uint64_t height,
+                                                     std::uint64_t pitch) {
+  uint64_t elementIndex = get1dThickElementIndex(x, y, z, bpp * 8);
+
+  auto tileBytes = (kMicroTileWidth * kMicroTileHeight * bpp * 8 * 4 + 7) / 8;
+
+  auto paddedWidth = pitch;
+
+  auto tilesPerRow = paddedWidth / kMicroTileWidth;
+  auto tilesPerSlice = std::max(tilesPerRow * (height / kMicroTileHeight), 1UL);
+
+  uint64_t sliceOffset = (z / 4) * tilesPerSlice * tileBytes;
 
   uint64_t tileRowIndex = y / kMicroTileHeight;
   uint64_t tileColumnIndex = x / kMicroTileWidth;
@@ -480,7 +549,8 @@ inline uint64_t computeTiledElementByteOffset(
   case kTileModeThin_3dThinPrt:
     util::unreachable();
   case kTileModeThick_1dThick:
-    util::unreachable();
+    return computeThick1dThickTileElementOffset(((bpp + 7) / 8), x, y, z,
+                                                height, pitch);
   case kTileModeThick_2dThick:
     util::unreachable();
   case kTileModeThick_3dThick:
