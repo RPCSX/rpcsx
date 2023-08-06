@@ -2,12 +2,25 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 #include "vm.hpp"
 #include <cstdio>
+#include <mutex>
 #include <sys/mman.h>
 
+struct ComputeQueue {
+  std::uint64_t ringBaseAddress{};
+  std::uint64_t readPtrAddress{};
+  std::uint64_t dingDongPtr{};
+  std::uint64_t offset{};
+  std::uint64_t len{};
+};
+
 struct GcDevice : public IoDevice {
+  orbis::shared_mutex mtx;
+  orbis::kmap<std::uint64_t, ComputeQueue> computeQueues;
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
@@ -19,6 +32,9 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
                                  void *argp, orbis::Thread *thread) {
   // 0xc00c8110
   // 0xc0848119
+
+  auto device = static_cast<GcDevice *>(file->device.get());
+  std::lock_guard lock(device->mtx);
 
   switch (request) {
   case 0xc008811b: // get submit done flag ptr?
@@ -50,11 +66,11 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
       // std::fprintf(stderr, "     %lx\n", cmd[0]);
       // std::fprintf(stderr, "     %lx\n", cmd[1]);
-      std::fprintf(stderr, "  %u:\n", i);
-      std::fprintf(stderr, "    cmdId = %lx\n", cmdId);
-      std::fprintf(stderr, "    address = %lx\n", address);
-      std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
-      std::fprintf(stderr, "    size = %lu\n", size);
+      // std::fprintf(stderr, "  %u:\n", i);
+      // std::fprintf(stderr, "    cmdId = %lx\n", cmdId);
+      // std::fprintf(stderr, "    address = %lx\n", address);
+      // std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
+      // std::fprintf(stderr, "    size = %lu\n", size);
 
       rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
@@ -101,11 +117,11 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
       // std::fprintf(stderr, "     %lx\n", cmd[0]);
       // std::fprintf(stderr, "     %lx\n", cmd[1]);
-      std::fprintf(stderr, "  %u:\n", i);
-      std::fprintf(stderr, "    cmdId = %lx\n", cmdId);
-      std::fprintf(stderr, "    address = %lx\n", address);
-      std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
-      std::fprintf(stderr, "    size = %lu\n", size);
+      // std::fprintf(stderr, "  %u:\n", i);
+      // std::fprintf(stderr, "    cmdId = %lx\n", cmdId);
+      // std::fprintf(stderr, "    address = %lx\n", address);
+      // std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
+      // std::fprintf(stderr, "    size = %lu\n", size);
 
       rx::bridge.sendCommandBuffer(cmdId, address, size);
     }
@@ -117,6 +133,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
   case 0xc0048116: {
     ORBIS_LOG_ERROR("gc ioctl 0xc0048116", *(std::uint32_t *)argp);
+    thread->where();
     break;
   }
 
@@ -163,29 +180,32 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
       std::uint32_t pipeHi;
       std::uint32_t pipeLo;
       std::uint32_t queueId;
-      std::uint32_t queuePipe;
+      std::uint32_t offset;
       std::uint64_t ringBaseAddress;
       std::uint64_t readPtrAddress;
       std::uint64_t dingDongPtr;
-      std::uint32_t count;
+      std::uint32_t lenLog2;
     };
 
     auto args = reinterpret_cast<Args *>(argp);
 
     ORBIS_LOG_ERROR("gc ioctl map compute queue", args->pipeHi, args->pipeLo,
-                    args->queueId, args->queuePipe, args->ringBaseAddress,
-                    args->readPtrAddress, args->dingDongPtr, args->count);
+                    args->queueId, args->offset, args->ringBaseAddress,
+                    args->readPtrAddress, args->dingDongPtr, args->lenLog2);
 
+    auto id = ((args->pipeHi * 4) + args->pipeLo) * 8 + args->queueId;
+    device->computeQueues[id] = {
+        .ringBaseAddress = args->ringBaseAddress,
+        .readPtrAddress = args->readPtrAddress,
+        .dingDongPtr = args->dingDongPtr,
+        .len = static_cast<std::uint64_t>(1) << args->lenLog2,
+    };
     args->pipeHi = 0x769c766;
     args->pipeLo = 0x72e8e3c1;
     args->queueId = -0x248d50d8;
-    args->queuePipe = 0xd245ed58;
+    args->offset = 0xd245ed58;
 
     ((std::uint64_t *)args->dingDongPtr)[0xf0 / sizeof(std::uint64_t)] = 1;
-
-    // TODO: implement
-    // std::fflush(stdout);
-    //__builtin_trap();
     break;
   }
 
@@ -202,8 +222,16 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     ORBIS_LOG_ERROR("gc ioctl ding dong for workload", args->pipeHi,
                     args->pipeLo, args->queueId, args->nextStartOffsetInDw);
 
-    // TODO: implement
+    auto id = ((args->pipeHi * 4) + args->pipeLo) * 8 + args->queueId;
 
+    auto queue = device->computeQueues.at(id);
+    auto address = (queue.ringBaseAddress + queue.offset);
+    auto endOffset = static_cast<std::uint64_t>(args->nextStartOffsetInDw) << 2;
+    auto size = endOffset - queue.offset;
+
+    rx::bridge.sendCommandBuffer(id, address, size);
+
+    queue.offset = endOffset;
     break;
   }
 
@@ -211,6 +239,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     // SetWaveLimitMultipliers
     ORBIS_LOG_WARNING("Unknown gc ioctl", request,
                       (unsigned long)*(std::uint32_t *)argp);
+    thread->where();
     break;
   }
 

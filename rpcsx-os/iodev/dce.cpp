@@ -121,8 +121,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     // 0x21 - adjust color
     auto args = reinterpret_cast<FlipControlArgs *>(argp);
 
-    ORBIS_LOG_NOTICE("dce: FlipControl", args->id, args->arg2, args->ptr,
-                     args->size);
+    // ORBIS_LOG_NOTICE("dce: FlipControl", args->id, args->arg2, args->ptr,
+    //                  args->size);
 
     if (args->id == 6) { // set flip rate?
       ORBIS_LOG_NOTICE("dce: FlipControl: set flip rate", args->arg2, args->ptr,
@@ -218,9 +218,9 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     // flip request
     auto args = reinterpret_cast<FlipRequestArgs *>(argp);
 
-    ORBIS_LOG_ERROR("dce: FlipRequestArgs", args->arg1,
-                    args->displayBufferIndex, args->flipMode, args->flipArg,
-                    args->arg5, args->arg6, args->arg7, args->arg8);
+    // ORBIS_LOG_ERROR("dce: FlipRequestArgs", args->arg1,
+    //                 args->displayBufferIndex, args->flipMode, args->flipArg,
+    //                 args->arg5, args->arg6, args->arg7, args->arg8);
 
     rx::bridge.sendFlip(args->displayBufferIndex,
                         /*args->flipMode,*/ args->flipArg);

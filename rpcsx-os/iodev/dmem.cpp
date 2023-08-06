@@ -17,7 +17,7 @@ struct AllocateDirectMemoryArgs {
   std::uint32_t memoryType;
 };
 
-static constexpr auto dmemSize = 4ul * 1024 * 1024 * 1024;
+static constexpr auto dmemSize = 8ul * 1024 * 1024 * 1024;
 // static const std::uint64_t nextOffset = 0;
 //  static const std::uint64_t memBeginAddress = 0xfe0000000;
 
@@ -25,10 +25,11 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
                                   std::int32_t memoryType, std::int32_t prot,
                                   std::int32_t flags,
                                   std::int64_t directMemoryStart) {
-  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, memoryType);
 
   auto result = rx::vm::map(*address, len, prot, flags);
 
+  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, prot, flags,
+                    memoryType, result);
   if (result == (void *)-1) {
     return orbis::ErrorCode::NOMEM; // TODO
   }
@@ -75,6 +76,9 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                     args->alignment, args->memoryType, alignedOffset);
 
     if (alignedOffset + args->len > dmemSize) {
+      ORBIS_LOG_ERROR("dmem allocateDirectMemory: out of memory", alignedOffset,
+                      args->len, alignedOffset + args->len);
+
       return orbis::ErrorCode::NOMEM;
     }
 
