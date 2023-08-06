@@ -18,7 +18,6 @@ namespace amdgpu::device::vk {
 extern VkDevice g_vkDevice;
 extern VkAllocationCallbacks *g_vkAllocator;
 extern std::vector<std::pair<VkQueue, unsigned>> g_computeQueues;
-extern std::vector<std::pair<VkQueue, unsigned>> g_transferQueues;
 extern std::vector<std::pair<VkQueue, unsigned>> g_graphicsQueues;
 
 std::uint32_t findPhysicalMemoryTypeIndex(std::uint32_t typeBits,

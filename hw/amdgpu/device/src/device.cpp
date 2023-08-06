@@ -52,7 +52,6 @@ namespace amdgpu::device::vk {
 VkDevice g_vkDevice = VK_NULL_HANDLE;
 VkAllocationCallbacks *g_vkAllocator = nullptr;
 std::vector<std::pair<VkQueue, unsigned>> g_computeQueues;
-std::vector<std::pair<VkQueue, unsigned>> g_transferQueues;
 std::vector<std::pair<VkQueue, unsigned>> g_graphicsQueues;
 
 static VkPhysicalDeviceMemoryProperties g_physicalMemoryProperties;
@@ -78,10 +77,6 @@ std::uint32_t findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
 } // namespace amdgpu::device::vk
 
 namespace amdgpu::device {
-GpuScheduler &getTransferQueueScheduler() {
-  static GpuScheduler result{vk::g_transferQueues, "transfer"};
-  return result;
-}
 GpuScheduler &getComputeQueueScheduler() {
   static GpuScheduler result{vk::g_computeQueues, "compute"};
   return result;
@@ -99,7 +94,7 @@ Scheduler &getCpuScheduler() {
 GpuScheduler &getGpuScheduler(ProcessQueue queue) {
   // TODO: compute scheduler load factor
   if ((queue & ProcessQueue::Transfer) == ProcessQueue::Transfer) {
-    return getTransferQueueScheduler();
+    return getComputeQueueScheduler();
   }
 
   if ((queue & ProcessQueue::Compute) == ProcessQueue::Compute) {

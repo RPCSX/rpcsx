@@ -1,6 +1,7 @@
 #include "amdgpu/RemoteMemory.hpp"
 #include "amdgpu/device/gpu-scheduler.hpp"
 #include "amdgpu/device/vk.hpp"
+#include "util/unreachable.hpp"
 #include <algorithm>
 #include <amdgpu/bridge/bridge.hpp>
 #include <amdgpu/device/device.hpp>
@@ -606,7 +607,6 @@ int main(int argc, const char *argv[]) {
   createSwapchain();
 
   std::vector<std::pair<VkQueue, unsigned>> computeQueues;
-  std::vector<std::pair<VkQueue, unsigned>> transferQueues;
   std::vector<std::pair<VkQueue, unsigned>> graphicsQueues;
   VkQueue presentQueue = VK_NULL_HANDLE;
   unsigned presentQueueFamily;
@@ -636,21 +636,14 @@ int main(int argc, const char *argv[]) {
     }
 
     if (queueFamiliesWithComputeSupport.contains(queueInfo.queueFamilyIndex)) {
+      if (!queueFamiliesWithTransferSupport.contains(
+              queueInfo.queueFamilyIndex)) {
+        util::unreachable();
+      }
+
       uint32_t queueIndex = 0;
       for (; queueIndex < queueInfo.queueCount; ++queueIndex) {
         auto &[queue, index] = computeQueues.emplace_back();
-        index = queueInfo.queueFamilyIndex;
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
-                         &queue);
-      }
-
-      continue;
-    }
-
-    if (queueFamiliesWithTransferSupport.contains(queueInfo.queueFamilyIndex)) {
-      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount;
-           ++queueIndex) {
-        auto &[queue, index] = transferQueues.emplace_back();
         index = queueInfo.queueFamilyIndex;
         vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
                          &queue);
@@ -665,12 +658,10 @@ int main(int argc, const char *argv[]) {
   }
 
   Verify() << (computeQueues.size() > 1);
-  Verify() << (transferQueues.size() > 0);
   Verify() << (graphicsQueues.size() > 0);
   Verify() << (presentQueue != VK_NULL_HANDLE);
 
   amdgpu::device::vk::g_computeQueues = computeQueues;
-  amdgpu::device::vk::g_transferQueues = transferQueues;
   amdgpu::device::vk::g_graphicsQueues = graphicsQueues;
 
   VkCommandPoolCreateInfo commandPoolCreateInfo = {
