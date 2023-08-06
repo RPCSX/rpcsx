@@ -1,14 +1,23 @@
 #pragma once
 
+#include "util/unreachable.hpp"
 #include <atomic>
 #include <bit>
+#include <cassert>
+#include <concepts>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
+#include <pthread.h>
 #include <thread>
 #include <utility>
 #include <vector>
 
 namespace amdgpu::device {
+inline void setThreadName(const char *name) {
+  pthread_setname_np(pthread_self(), name);
+}
+
 template <typename T> class Ref {
   T *m_ref = nullptr;
 
@@ -95,11 +104,13 @@ public:
 template <typename T> Ref(T *) -> Ref<T>;
 template <typename T> Ref(Ref<T>) -> Ref<T>;
 
-enum class TaskState { InProgress, Complete, Canceled };
+enum class TaskState { Created, InProgress, Complete, Canceled };
+enum class TaskResult { Complete, Canceled, Reschedule };
 
 struct AsyncTaskCtl {
   std::atomic<unsigned> refs{0};
-  std::atomic<TaskState> stateStorage{TaskState::InProgress};
+  std::atomic<TaskState> stateStorage{TaskState::Created};
+  std::atomic<bool> cancelRequested{false};
 
   virtual ~AsyncTaskCtl() = default;
 
@@ -110,48 +121,29 @@ struct AsyncTaskCtl {
     }
   }
 
-  bool isCanceled() const {
-    return stateStorage.load(std::memory_order::relaxed) == TaskState::Canceled;
+  bool isCancelRequested() const {
+    return cancelRequested.load(std::memory_order::relaxed) == true;
   }
-  bool isComplete() const {
-    return stateStorage.load(std::memory_order::relaxed) == TaskState::Complete;
-  }
-  bool isInProgress() const {
-    return stateStorage.load(std::memory_order::relaxed) ==
-           TaskState::InProgress;
-  }
+  bool isCanceled() const { return getState() == TaskState::Canceled; }
+  bool isComplete() const { return getState() == TaskState::Complete; }
+  bool isInProgress() const { return getState() == TaskState::InProgress; }
 
-  void cancel() {
-    auto state = TaskState::InProgress;
-
-    while (state == TaskState::InProgress) {
-      if (stateStorage.compare_exchange_weak(state, TaskState::Canceled,
-                                             std::memory_order::relaxed)) {
-        break;
-      }
-    }
-
-    stateStorage.notify_all();
+  TaskState getState() const {
+    return stateStorage.load(std::memory_order::relaxed);
   }
 
-  void complete() {
-    auto state = TaskState::InProgress;
-
-    while (state != TaskState::Complete) {
-      if (stateStorage.compare_exchange_weak(state, TaskState::Complete,
-                                             std::memory_order::relaxed)) {
-        break;
-      }
-    }
-
-    stateStorage.notify_all();
-  }
+  void cancel() { cancelRequested.store(true, std::memory_order::relaxed); }
 
   void wait() {
+    if (stateStorage.load(std::memory_order::relaxed) == TaskState::Created) {
+      util::unreachable("attempt to wait task that wasn't scheduled\n");
+    }
     stateStorage.wait(TaskState::InProgress, std::memory_order::relaxed);
   }
+};
 
-  virtual void invoke() = 0;
+struct CpuTaskCtl : AsyncTaskCtl {
+  virtual TaskResult invoke() = 0;
 };
 
 namespace detail {
@@ -159,69 +151,100 @@ template <typename T>
 concept LambdaWithoutClosure = requires(T t) { +t; };
 }
 
-template <typename T> struct AsyncTask;
+template <typename T> struct AsyncCpuTask;
 
 template <typename T>
-  requires(std::is_invocable_r_v<bool, T, const AsyncTaskCtl &> &&
-           detail::LambdaWithoutClosure<T>)
-struct AsyncTask<T> : AsyncTaskCtl {
-  static constexpr bool (*fn)(const AsyncTaskCtl &) = +std::declval<T>();
+  requires requires(T t, const AsyncTaskCtl &ctl) {
+    { t(ctl) } -> std::same_as<TaskResult>;
+    requires detail::LambdaWithoutClosure<T>;
+  }
+struct AsyncCpuTask<T> : CpuTaskCtl {
+  static constexpr TaskResult (*fn)(const AsyncTaskCtl &) = +std::declval<T>();
 
-  AsyncTask() = default;
-  AsyncTask(T &&) {}
+  AsyncCpuTask() = default;
+  AsyncCpuTask(T &&) {}
 
-  void invoke() override {
+  TaskResult invoke() override {
     auto &base = *static_cast<const AsyncTaskCtl *>(this);
 
-    if (fn(base)) {
-      complete();
-    }
+    return fn(base);
   }
 };
 
 template <typename T>
-  requires std::is_invocable_r_v<bool, T, const AsyncTaskCtl &>
-Ref<AsyncTaskCtl> createTask(T &&task) {
-  return Ref<AsyncTaskCtl>(new AsyncTask<T>(std::forward<T>(task)));
+  requires requires(T t, const AsyncTaskCtl &ctl) {
+    { t(ctl) } -> std::same_as<TaskResult>;
+    requires !detail::LambdaWithoutClosure<T>;
+  }
+struct AsyncCpuTask<T> : CpuTaskCtl {
+  alignas(T) std::byte taskStorage[sizeof(T)];
+
+  AsyncCpuTask(T &&t) { new (taskStorage) T(std::forward<T>(t)); }
+  ~AsyncCpuTask() { std::bit_cast<T *>(&taskStorage)->~T(); }
+
+  TaskResult invoke() override {
+    auto &lambda = *std::bit_cast<T *>(&taskStorage);
+    auto &base = *static_cast<const AsyncTaskCtl *>(this);
+    return lambda(base);
+  }
+};
+
+template <typename T>
+  requires requires(T t, const AsyncTaskCtl &ctl) {
+    { t(ctl) } -> std::same_as<TaskResult>;
+  }
+Ref<CpuTaskCtl> createCpuTask(T &&task) {
+  return Ref<CpuTaskCtl>(new AsyncCpuTask<T>(std::forward<T>(task)));
 }
 
 template <typename T>
-  requires(std::is_invocable_r_v<bool, T, const AsyncTaskCtl &> &&
-           !detail::LambdaWithoutClosure<T>)
-struct AsyncTask<T> : AsyncTaskCtl {
-  alignas(T) std::byte taskStorage[sizeof(T)];
-
-  AsyncTask() = default;
-  AsyncTask(T &&t) { new (taskStorage) T(std::forward<T>(t)); }
-  AsyncTask &operator=(T &&t) {
-    new (taskStorage) T(std::forward<T>(t));
-    return *this;
+  requires requires(T t) {
+    { t() } -> std::same_as<TaskResult>;
   }
+Ref<CpuTaskCtl> createCpuTask(T &&task) {
+  return createCpuTask(
+      [task = std::forward<T>(task)](
+          const AsyncTaskCtl &) mutable -> TaskResult { return task(); });
+}
 
-  ~AsyncTask() {
-    if (isInProgress()) {
-      std::bit_cast<T *>(&taskStorage)->~T();
-    }
+template <typename T>
+  requires requires(T t) {
+    { t() } -> std::same_as<void>;
   }
-
-  void invoke() override {
-    auto &lambda = *std::bit_cast<T *>(&taskStorage);
-    auto &base = *static_cast<const AsyncTaskCtl *>(this);
-
-    if (lambda(base)) {
-      complete();
+Ref<CpuTaskCtl> createCpuTask(T &&task) {
+  return createCpuTask([task = std::forward<T>(task)](
+                           const AsyncTaskCtl &ctl) mutable -> TaskResult {
+    if (ctl.isCancelRequested()) {
+      return TaskResult::Canceled;
     }
 
-    std::bit_cast<T *>(&taskStorage)->~T();
+    task();
+    return TaskResult::Complete;
+  });
+}
+
+template <typename T>
+  requires requires(T t, const AsyncTaskCtl &ctl) {
+    { t(ctl) } -> std::same_as<void>;
   }
-};
+Ref<CpuTaskCtl> createCpuTask(T &&task) {
+  return createCpuTask([task = std::forward<T>(task)](const AsyncTaskCtl &ctl) {
+    if (ctl.isCancelRequested()) {
+      return TaskResult::Canceled;
+    }
+
+    task(ctl);
+    return TaskResult::Complete;
+  });
+}
 
 class Scheduler;
-class TaskSet {
-  std::vector<Ref<AsyncTaskCtl>> tasks;
+
+class CpuTaskSet {
+  std::vector<Ref<CpuTaskCtl>> tasks;
 
 public:
-  void append(Ref<AsyncTaskCtl> task) { tasks.push_back(std::move(task)); }
+  void append(Ref<CpuTaskCtl> task) { tasks.push_back(std::move(task)); }
 
   void wait() {
     for (auto task : tasks) {
@@ -234,9 +257,91 @@ public:
   void enqueue(Scheduler &scheduler);
 };
 
+class TaskSet {
+  struct TaskEntry {
+    Ref<AsyncTaskCtl> ctl;
+    std::function<void()> schedule;
+  };
+
+  std::vector<TaskEntry> tasks;
+
+public:
+  template <typename Scheduler, typename Task>
+    requires requires(Scheduler &sched, Ref<Task> task) {
+      sched.enqueue(std::move(task));
+      task->wait();
+      static_cast<Ref<AsyncTaskCtl>>(task);
+    }
+  void append(Scheduler &sched, Ref<Task> task) {
+    Ref<AsyncTaskCtl> rawTask = task;
+    auto schedFn = [sched = &sched, task = std::move(task)] {
+      sched->enqueue(std::move(task));
+    };
+
+    tasks.push_back({
+        .ctl = std::move(rawTask),
+        .schedule = std::move(schedFn),
+    });
+  }
+
+  void schedule() {
+    for (auto &task : tasks) {
+      if (auto schedule = std::exchange(task.schedule, nullptr)) {
+        schedule();
+      }
+    }
+  }
+
+  bool isCanceled() const {
+    for (auto &task : tasks) {
+      if (task.ctl->isCanceled()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool isComplete() const {
+    for (auto &task : tasks) {
+      if (!task.ctl->isComplete()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool isInProgress() const {
+    for (auto &task : tasks) {
+      if (task.ctl->isInProgress()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  void clear() { tasks.clear(); }
+
+  void wait() const {
+    for (auto &task : tasks) {
+      assert(task.schedule == nullptr);
+      task.ctl->wait();
+    }
+  }
+
+  void cancel() {
+    for (auto &task : tasks) {
+      task.ctl->cancel();
+    }
+  }
+};
+
 class Scheduler {
   std::vector<std::thread> workThreads;
-  std::vector<Ref<AsyncTaskCtl>> tasks;
+  std::vector<Ref<CpuTaskCtl>> tasks;
+  std::vector<Ref<CpuTaskCtl>> rescheduleTasks;
   std::mutex taskMtx;
   std::condition_variable taskCv;
   std::atomic<bool> exit{false};
@@ -244,7 +349,10 @@ class Scheduler {
 public:
   explicit Scheduler(std::size_t threadCount) {
     for (std::size_t i = 0; i < threadCount; ++i) {
-      workThreads.push_back(std::thread{[this] { entry(); }});
+      workThreads.push_back(std::thread{[this, i] {
+        setThreadName(("CPU " + std::to_string(i)).c_str());
+        entry();
+      }});
     }
   }
 
@@ -257,53 +365,88 @@ public:
     }
   }
 
-  template <typename T>
-    requires std::is_invocable_r_v<bool, T, const AsyncTaskCtl &>
-  Ref<AsyncTaskCtl> enqueue(T &&task) {
-    auto taskHandle = createTask(std::forward<T>(task));
-    enqueue(taskHandle);
-    return taskHandle;
-  }
-
-  void enqueue(Ref<AsyncTaskCtl> task) {
+  void enqueue(Ref<CpuTaskCtl> task) {
     std::lock_guard lock(taskMtx);
+    TaskState prevState = TaskState::Created;
+    if (!task->stateStorage.compare_exchange_strong(
+            prevState, TaskState::InProgress, std::memory_order::relaxed)) {
+      util::unreachable("attempt to schedule cpu task in wrong state %u",
+                        (unsigned)prevState);
+    }
     tasks.push_back(std::move(task));
     taskCv.notify_one();
   }
 
   template <typename T>
-    requires std::is_invocable_r_v<bool, T, const AsyncTaskCtl &>
-  void enqueue(TaskSet &set, T &&task) {
+    requires requires(T &&task) { createCpuTask(std::forward<T>(task)); }
+  Ref<AsyncTaskCtl> enqueue(T &&task) {
+    auto taskHandle = createCpuTask(std::forward<T>(task));
+    enqueue(taskHandle);
+    return taskHandle;
+  }
+
+  template <typename T>
+    requires requires(T &&task) { createCpuTask(std::forward<T>(task)); }
+  void enqueue(CpuTaskSet &set, T &&task) {
     auto taskCtl = enqueue(std::forward<T>(task));
     set.append(taskCtl);
   }
 
 private:
-  void entry() {
-    while (!exit.load(std::memory_order::relaxed)) {
-      Ref<AsyncTaskCtl> task;
+  Ref<CpuTaskCtl> fetchTask() {
+    std::unique_lock lock(taskMtx);
 
-      {
-        std::unique_lock lock(taskMtx);
-
-        if (tasks.empty()) {
-          taskCv.wait(lock);
-        }
-
-        if (tasks.empty()) {
-          continue;
-        }
-
-        task = std::move(tasks.back());
-        tasks.pop_back();
+    while (tasks.empty()) {
+      if (rescheduleTasks.empty() && tasks.empty()) {
+        taskCv.wait(lock);
       }
 
-      task->invoke();
+      if (tasks.empty()) {
+        std::swap(rescheduleTasks, tasks);
+      }
+    }
+
+    auto result = std::move(tasks.back());
+    tasks.pop_back();
+    return result;
+  }
+
+  Ref<CpuTaskCtl> invokeTask(Ref<CpuTaskCtl> task) {
+    switch (task->invoke()) {
+    case TaskResult::Complete:
+      task->stateStorage.store(TaskState::Complete, std::memory_order::relaxed);
+      task->stateStorage.notify_all();
+      return {};
+
+    case TaskResult::Canceled:
+      task->stateStorage.store(TaskState::Canceled, std::memory_order::relaxed);
+      task->stateStorage.notify_all();
+      return {};
+
+    case TaskResult::Reschedule:
+      return task;
+    }
+
+    std::abort();
+  }
+
+  void entry() {
+    while (!exit.load(std::memory_order::relaxed)) {
+      Ref<CpuTaskCtl> task = fetchTask();
+
+      auto rescheduleTask = invokeTask(std::move(task));
+      if (rescheduleTask == nullptr) {
+        continue;
+      }
+
+      std::unique_lock lock(taskMtx);
+      rescheduleTasks.push_back(std::move(rescheduleTask));
+      taskCv.notify_one();
     }
   }
 };
 
-inline void TaskSet::enqueue(Scheduler &scheduler) {
+inline void CpuTaskSet::enqueue(Scheduler &scheduler) {
   for (auto task : tasks) {
     scheduler.enqueue(std::move(task));
   }

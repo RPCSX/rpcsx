@@ -342,6 +342,89 @@ public:
   bool operator!=(std::nullptr_t) const { return mSemaphore != nullptr; }
 };
 
+struct BinSemaphore {
+  VkSemaphore mSemaphore = VK_NULL_HANDLE;
+
+public:
+  BinSemaphore(const BinSemaphore &) = delete;
+
+  BinSemaphore() = default;
+  BinSemaphore(BinSemaphore &&other) { *this = std::move(other); }
+
+  BinSemaphore &operator=(BinSemaphore &&other) {
+    std::swap(mSemaphore, other.mSemaphore);
+    return *this;
+  }
+
+  ~BinSemaphore() {
+    if (mSemaphore != VK_NULL_HANDLE) {
+      vkDestroySemaphore(g_vkDevice, mSemaphore, nullptr);
+    }
+  }
+
+  static BinSemaphore Create() {
+    VkSemaphoreTypeCreateInfo typeCreateInfo = {
+        VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, nullptr,
+        VK_SEMAPHORE_TYPE_BINARY, 0};
+
+    VkSemaphoreCreateInfo createInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+                                        &typeCreateInfo, 0};
+
+    BinSemaphore result;
+    Verify() << vkCreateSemaphore(g_vkDevice, &createInfo, nullptr,
+                                  &result.mSemaphore);
+    return result;
+  }
+
+  VkSemaphore getHandle() const { return mSemaphore; }
+
+  bool operator==(std::nullptr_t) const { return mSemaphore == nullptr; }
+};
+
+struct Fence {
+  VkFence mFence = VK_NULL_HANDLE;
+
+public:
+  Fence(const Fence &) = delete;
+
+  Fence() = default;
+  Fence(Fence &&other) { *this = std::move(other); }
+
+  Fence &operator=(Fence &&other) {
+    std::swap(mFence, other.mFence);
+    return *this;
+  }
+
+  ~Fence() {
+    if (mFence != VK_NULL_HANDLE) {
+      vkDestroyFence(g_vkDevice, mFence, nullptr);
+    }
+  }
+
+  static Fence Create() {
+    VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                                         nullptr, 0};
+    Fence result;
+    Verify() << vkCreateFence(g_vkDevice, &fenceCreateInfo, nullptr,
+                              &result.mFence);
+    return result;
+  }
+
+  void wait() const {
+    Verify() << vkWaitForFences(g_vkDevice, 1, &mFence, 1, UINT64_MAX);
+  }
+
+  bool isComplete() const {
+    return vkGetFenceStatus(g_vkDevice, mFence) == VK_SUCCESS;
+  }
+
+  void reset() { vkResetFences(g_vkDevice, 1, &mFence); }
+
+  VkFence getHandle() const { return mFence; }
+
+  bool operator==(std::nullptr_t) const { return mFence == nullptr; }
+};
+
 struct CommandBuffer {
   VkCommandBuffer mCmdBuffer = VK_NULL_HANDLE;
 
@@ -641,7 +724,7 @@ public:
   void readFromBuffer(VkCommandBuffer cmdBuffer, VkBuffer buffer,
                       VkImageAspectFlags destAspect,
                       VkDeviceSize bufferOffset = 0) {
-    transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL);
 
     VkBufferImageCopy region{};
     region.bufferOffset = bufferOffset;
@@ -654,13 +737,13 @@ public:
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {mWidth, mHeight, 1};
 
-    vkCmdCopyBufferToImage(cmdBuffer, buffer, mImage,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(cmdBuffer, buffer, mImage, VK_IMAGE_LAYOUT_GENERAL,
+                           1, &region);
   }
 
   void writeToBuffer(VkCommandBuffer cmdBuffer, VkBuffer buffer,
                      VkImageAspectFlags sourceAspect) {
-    transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL);
 
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
@@ -673,9 +756,8 @@ public:
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {mWidth, mHeight, 1};
 
-    vkCmdCopyImageToBuffer(cmdBuffer, mImage,
-                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1,
-                           &region);
+    vkCmdCopyImageToBuffer(cmdBuffer, mImage, VK_IMAGE_LAYOUT_GENERAL, buffer,
+                           1, &region);
   }
 
   [[nodiscard]] Buffer writeToBuffer(VkCommandBuffer cmdBuffer,
@@ -738,6 +820,7 @@ public:
         -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
       switch (layout) {
       case VK_IMAGE_LAYOUT_UNDEFINED:
+      case VK_IMAGE_LAYOUT_GENERAL:
       case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
         return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
 

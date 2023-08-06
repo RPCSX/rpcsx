@@ -1,4 +1,5 @@
 #include "amdgpu/RemoteMemory.hpp"
+#include "amdgpu/device/gpu-scheduler.hpp"
 #include "amdgpu/device/vk.hpp"
 #include <algorithm>
 #include <amdgpu/bridge/bridge.hpp>
@@ -44,6 +45,33 @@ static void usage(std::FILE *out, const char *argv0) {
 }
 
 enum class PresenterMode { Window };
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+              VkDebugUtilsMessageTypeFlagsEXT messageType,
+              const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+              void *pUserData) {
+
+  std::fprintf(stderr, "validation layer: %s\n", pCallbackData->pMessage);
+
+  if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    std::abort();
+  }
+  return VK_FALSE;
+}
+
+static VkResult _vkCreateDebugUtilsMessengerEXT(
+    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDebugUtilsMessengerEXT *pDebugMessenger) {
+  static auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+      instance, "vkCreateDebugUtilsMessengerEXT");
+  if (func != nullptr) {
+    return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+  } else {
+    return VK_ERROR_EXTENSION_NOT_PRESENT;
+  }
+}
 
 int main(int argc, const char *argv[]) {
   if (argc == 2 && (argv[1] == std::string_view("-h") ||
@@ -172,18 +200,38 @@ int main(int argc, const char *argv[]) {
       .apiVersion = VK_API_VERSION_1_3,
   };
 
+  VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+  debugCreateInfo.sType =
+      VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  debugCreateInfo.messageSeverity =
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                                0
+      // VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT
+      ;
+  debugCreateInfo.pfnUserCallback = debugCallback;
+
   VkInstanceCreateInfo instanceCreateInfo = {};
   instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  instanceCreateInfo.pNext = NULL;
+  instanceCreateInfo.pNext = &debugCreateInfo;
   instanceCreateInfo.pApplicationInfo = &appInfo;
   instanceCreateInfo.enabledExtensionCount = requiredInstanceExtensions.size();
   instanceCreateInfo.ppEnabledExtensionNames =
       requiredInstanceExtensions.data();
 
+  std::vector<const char *> enabledLayers;
+  // enabledLayers.push_back("VK_LAYER_KHRONOS_shader_object");
+
   if (enableValidation) {
-    instanceCreateInfo.ppEnabledLayerNames = &validationLayerName;
-    instanceCreateInfo.enabledLayerCount = 1;
+    enabledLayers.push_back(validationLayerName);
   }
+
+  instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
+  instanceCreateInfo.enabledLayerCount = enabledLayers.size();
 
   VkInstance vkInstance;
   Verify() << vkCreateInstance(&instanceCreateInfo, nullptr, &vkInstance);
@@ -194,6 +242,10 @@ int main(int argc, const char *argv[]) {
     Verify() << (index < count);
     return devices[index];
   };
+
+  VkDebugUtilsMessengerEXT debugMessenger;
+  _vkCreateDebugUtilsMessengerEXT(vkInstance, &debugCreateInfo, nullptr,
+                                  &debugMessenger);
 
   auto vkPhysicalDevice = getVkPhyDevice(gpuIndex);
 
@@ -342,7 +394,7 @@ int main(int argc, const char *argv[]) {
   std::vector<VkDeviceQueueCreateInfo> requestedQueues;
 
   std::vector<float> defaultQueuePriorities;
-  defaultQueuePriorities.resize(8);
+  defaultQueuePriorities.resize(32);
 
   for (uint32_t queueFamily = 0; queueFamily < queueFamiliesCount;
        ++queueFamily) {
@@ -350,7 +402,10 @@ int main(int argc, const char *argv[]) {
       requestedQueues.push_back(
           {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
            .queueFamilyIndex = queueFamily,
-           .queueCount = 1,
+           .queueCount =
+               std::min<uint32_t>(queueFamilyProperties[queueFamily]
+                                      .queueFamilyProperties.queueCount,
+                                  defaultQueuePriorities.size()),
            .pQueuePriorities = defaultQueuePriorities.data()});
     } else if (queueFamiliesWithComputeSupport.contains(queueFamily) ||
                queueFamiliesWithTransferSupport.contains(queueFamily)) {
@@ -365,56 +420,6 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  // try to find queue that not graphics queue
-  bool requestedPresentQueue = false;
-  for (auto queueFamily : queueFamiliesWithPresentSupport) {
-    if (queueFamiliesWithGraphicsSupport.contains(queueFamily)) {
-      continue;
-    }
-
-    bool alreadyRequested = false;
-
-    for (auto &requested : requestedQueues) {
-      if (requested.queueFamilyIndex == queueFamily) {
-        alreadyRequested = true;
-        break;
-      }
-    }
-
-    if (!alreadyRequested) {
-      requestedQueues.push_back(
-          {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-           .queueFamilyIndex = queueFamily,
-           .queueCount = 1,
-           .pQueuePriorities = defaultQueuePriorities.data()});
-    }
-
-    requestedPresentQueue = true;
-  }
-
-  if (!requestedPresentQueue) {
-    for (auto queueFamily : queueFamiliesWithPresentSupport) {
-      bool alreadyRequested = false;
-
-      for (auto &requested : requestedQueues) {
-        if (requested.queueFamilyIndex == queueFamily) {
-          alreadyRequested = true;
-          break;
-        }
-      }
-
-      if (!alreadyRequested) {
-        requestedQueues.push_back(
-            {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-             .queueFamilyIndex = queueFamily,
-             .queueCount = 1,
-             .pQueuePriorities = defaultQueuePriorities.data()});
-      }
-
-      requestedPresentQueue = true;
-    }
-  }
-
   VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
       .shaderObject = VK_TRUE};
@@ -422,6 +427,7 @@ int main(int argc, const char *argv[]) {
   VkPhysicalDeviceVulkan13Features phyDevFeatures13{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
       .pNext = &shaderObjectFeatures,
+      .synchronization2 = VK_TRUE,
       .dynamicRendering = VK_TRUE,
       .maintenance4 = VK_TRUE,
   };
@@ -601,26 +607,42 @@ int main(int argc, const char *argv[]) {
   std::vector<std::pair<VkQueue, unsigned>> transferQueues;
   std::vector<std::pair<VkQueue, unsigned>> graphicsQueues;
   VkQueue presentQueue = VK_NULL_HANDLE;
+  unsigned presentQueueFamily;
 
   for (auto &queueInfo : requestedQueues) {
-    if (queueFamiliesWithComputeSupport.contains(queueInfo.queueFamilyIndex)) {
-      for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount;
-           ++queueIndex) {
-        auto &[queue, index] = computeQueues.emplace_back();
-        index = queueInfo.queueFamilyIndex;
-        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
-                         &queue);
-      }
-    }
-
     if (queueFamiliesWithGraphicsSupport.contains(queueInfo.queueFamilyIndex)) {
       for (uint32_t queueIndex = 0; queueIndex < queueInfo.queueCount;
            ++queueIndex) {
+
+        if (presentQueue == VK_NULL_HANDLE &&
+            queueFamiliesWithPresentSupport.contains(
+                queueInfo.queueFamilyIndex)) {
+          presentQueueFamily = queueInfo.queueFamilyIndex;
+          vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, 0,
+                           &presentQueue);
+
+          continue;
+        }
+
         auto &[queue, index] = graphicsQueues.emplace_back();
         index = queueInfo.queueFamilyIndex;
         vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
                          &queue);
       }
+
+      continue;
+    }
+
+    if (queueFamiliesWithComputeSupport.contains(queueInfo.queueFamilyIndex)) {
+      uint32_t queueIndex = 0;
+      for (; queueIndex < queueInfo.queueCount; ++queueIndex) {
+        auto &[queue, index] = computeQueues.emplace_back();
+        index = queueInfo.queueFamilyIndex;
+        vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
+                         &queue);
+      }
+
+      continue;
     }
 
     if (queueFamiliesWithTransferSupport.contains(queueInfo.queueFamilyIndex)) {
@@ -631,12 +653,13 @@ int main(int argc, const char *argv[]) {
         vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, queueIndex,
                          &queue);
       }
-    }
 
-    if (presentQueue == VK_NULL_HANDLE &&
-        queueFamiliesWithPresentSupport.contains(queueInfo.queueFamilyIndex)) {
-      vkGetDeviceQueue(vkDevice, queueInfo.queueFamilyIndex, 0, &presentQueue);
+      continue;
     }
+  }
+
+  if (graphicsQueues.empty() && presentQueue != VK_NULL_HANDLE) {
+    graphicsQueues.push_back({presentQueue, presentQueueFamily});
   }
 
   Verify() << (computeQueues.size() > 1);
@@ -651,19 +674,12 @@ int main(int argc, const char *argv[]) {
   VkCommandPoolCreateInfo commandPoolCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-      .queueFamilyIndex = graphicsQueues.front().second,
+      .queueFamilyIndex = presentQueueFamily,
   };
 
   VkCommandPool commandPool;
   Verify() << vkCreateCommandPool(vkDevice, &commandPoolCreateInfo, nullptr,
                                   &commandPool);
-
-  amdgpu::device::DrawContext dc{
-      // TODO
-      .queue = graphicsQueues.front().first,
-      .commandPool = commandPool,
-  };
-
   std::vector<VkFence> inFlightFences(swapchainImages.size());
 
   for (auto &fence : inFlightFences) {
@@ -734,7 +750,7 @@ int main(int argc, const char *argv[]) {
   g_hostMemory = memory;
 
   {
-    amdgpu::device::AmdgpuDevice device(dc, bridgePuller.header);
+    amdgpu::device::AmdgpuDevice device(bridgePuller.header);
 
     for (std::uint32_t end = bridge->memoryAreaCount, i = 0; i < end; ++i) {
       auto area = bridge->memoryAreas[i];
@@ -747,22 +763,21 @@ int main(int argc, const char *argv[]) {
       VkCommandBufferAllocateInfo allocInfo{};
       allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
       allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-      allocInfo.commandPool = dc.commandPool;
+      allocInfo.commandPool = commandPool;
       allocInfo.commandBufferCount = presentCmdBuffers.size();
       vkAllocateCommandBuffers(vkDevice, &allocInfo, presentCmdBuffers.data());
     }
 
+    std::vector<amdgpu::device::Ref<amdgpu::device::TaskChain>> flipTaskChain(
+        swapchainImages.size());
+
+    for (auto &chain : flipTaskChain) {
+      chain = amdgpu::device::TaskChain::Create();
+    }
     std::printf("Initialization complete\n");
 
     uint32_t imageIndex = 0;
     bool isImageAcquired = false;
-    std::vector<std::vector<VkBuffer>> swapchainBufferHandles;
-    swapchainBufferHandles.resize(swapchainImages.size());
-    std::vector<std::vector<VkImage>> swapchainImageHandles;
-    swapchainImageHandles.resize(swapchainImages.size());
-
-    VkPipelineStageFlags submitPipelineStages =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
@@ -808,54 +823,27 @@ int main(int argc, const char *argv[]) {
 
           vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
 
-          for (auto handle : swapchainBufferHandles[imageIndex]) {
-            vkDestroyBuffer(vkDevice, handle, nullptr);
-          }
-
-          for (auto handle : swapchainImageHandles[imageIndex]) {
-            vkDestroyImage(vkDevice, handle, nullptr);
-          }
-
-          swapchainBufferHandles[imageIndex].clear();
-          swapchainImageHandles[imageIndex].clear();
-
-          if (device.handleFlip(cmd.flip.bufferIndex, cmd.flip.arg,
-                                presentCmdBuffers[imageIndex],
-                                swapchainImages[imageIndex], swapchainExtent,
-                                swapchainBufferHandles[imageIndex],
-                                swapchainImageHandles[imageIndex])) {
-            vkEndCommandBuffer(presentCmdBuffers[imageIndex]);
-
-            VkSubmitInfo submitInfo{};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &presentCmdBuffers[imageIndex];
-            submitInfo.waitSemaphoreCount = 1;
-            submitInfo.signalSemaphoreCount = 1;
-            submitInfo.pSignalSemaphores = &renderCompleteSemaphore;
-            submitInfo.pWaitSemaphores = &presentCompleteSemaphore;
-            submitInfo.pWaitDstStageMask = &submitPipelineStages;
-
-            Verify() << vkQueueSubmit(dc.queue, 1, &submitInfo,
-                                      inFlightFences[imageIndex]);
-
-            VkPresentInfoKHR presentInfo{};
-            presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-            presentInfo.waitSemaphoreCount = 1;
-            presentInfo.pWaitSemaphores = &renderCompleteSemaphore;
-            presentInfo.swapchainCount = 1;
-            presentInfo.pSwapchains = &swapchain;
-            presentInfo.pImageIndices = &imageIndex;
-
+          if (device.handleFlip(
+                  presentQueue, presentCmdBuffers[imageIndex],
+                  *flipTaskChain[imageIndex].get(), cmd.flip.bufferIndex,
+                  cmd.flip.arg, swapchainImages[imageIndex], swapchainExtent,
+                  presentCompleteSemaphore, renderCompleteSemaphore,
+                  inFlightFences[imageIndex])) {
+            VkPresentInfoKHR presentInfo{
+                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores = &renderCompleteSemaphore,
+                .swapchainCount = 1,
+                .pSwapchains = &swapchain,
+                .pImageIndices = &imageIndex,
+            };
             if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
               std::printf("swapchain was invalidated\n");
               createSwapchain();
             }
-            // std::this_thread::sleep_for(std::chrono::seconds(3));
           } else {
             isImageAcquired = true;
           }
-
           break;
         }
 
@@ -876,17 +864,6 @@ int main(int argc, const char *argv[]) {
     vkDestroySemaphore(vkDevice, presentCompleteSemaphore, nullptr);
     vkDestroySemaphore(vkDevice, renderCompleteSemaphore, nullptr);
     vkDestroyCommandPool(vkDevice, commandPool, nullptr);
-
-    for (auto &handles : swapchainImageHandles) {
-      for (auto handle : handles) {
-        vkDestroyImage(vkDevice, handle, nullptr);
-      }
-    }
-    for (auto &handles : swapchainBufferHandles) {
-      for (auto handle : handles) {
-        vkDestroyBuffer(vkDevice, handle, nullptr);
-      }
-    }
   }
 
   vkDestroySwapchainKHR(vkDevice, swapchain, nullptr);

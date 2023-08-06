@@ -2,6 +2,7 @@
 
 #include "amdgpu/bridge/bridge.hpp"
 #include "amdgpu/shader/Instruction.hpp"
+#include "gpu-scheduler.hpp"
 #include "util/area.hpp"
 
 #include <string>
@@ -760,7 +761,7 @@ enum Opcodes {
   kOpcodeDISPATCH_DIRECT = 0x15,
   kOpcodeDISPATCH_INDIRECT = 0x16,
   kOpcodeINDIRECT_BUFFER_END = 0x17,
-  MODE_CONTROL = 0x18,
+  kOpcodeMODE_CONTROL = 0x18,
   kOpcodeATOMIC_GDS = 0x1D,
   kOpcodeATOMIC_MEM = 0x1E,
   kOpcodeOCCLUSION_QUERY = 0x1F,
@@ -773,7 +774,7 @@ enum Opcodes {
   kOpcodeINDEX_BASE = 0x26,
   kOpcodeDRAW_INDEX_2 = 0x27,
   kOpcodeCONTEXT_CONTROL = 0x28,
-  DRAW_INDEX_OFFSET = 0x29,
+  kOpcodeDRAW_INDEX_OFFSET = 0x29,
   kOpcodeINDEX_TYPE = 0x2A,
   kOpcodeDRAW_INDEX = 0x2B,
   kOpcodeDRAW_INDIRECT_MULTI = 0x2C,
@@ -805,11 +806,11 @@ enum Opcodes {
   kOpcodeEVENT_WRITE_EOS = 0x48,
   kOpcodeRELEASE_MEM = 0x49,
   kOpcodePREAMBLE_CNTL = 0x4A,
-  RB_OFFSET = 0x4B,
-  ALU_PS_CONST_BUFFER_COPY = 0x4C,
-  ALU_VS_CONST_BUFFER_COPY = 0x4D,
-  ALU_PS_CONST_UPDATE = 0x4E,
-  ALU_VS_CONST_UPDATE = 0x4F,
+  kOpcodeRB_OFFSET = 0x4B,
+  kOpcodeALU_PS_CONST_BUFFER_COPY = 0x4C,
+  kOpcodeALU_VS_CONST_BUFFER_COPY = 0x4D,
+  kOpcodeALU_PS_CONST_UPDATE = 0x4E,
+  kOpcodeALU_VS_CONST_UPDATE = 0x4F,
   kOpcodeDMA_DATA = 0x50,
   kOpcodeONE_REG_WRITE = 0x57,
   kOpcodeAQUIRE_MEM = 0x58,
@@ -826,12 +827,12 @@ enum Opcodes {
   kOpcodeSET_RESOURCE = 0x6D,
   kOpcodeSET_SAMPLER = 0x6E,
   kOpcodeSET_CTL_CONST = 0x6F,
-  SET_RESOURCE_OFFSET = 0x70,
-  SET_ALU_CONST_VS = 0x71,
-  SET_ALU_CONST_DI = 0x72,
+  kOpcodeSET_RESOURCE_OFFSET = 0x70,
+  kOpcodeSET_ALU_CONST_VS = 0x71,
+  kOpcodeSET_ALU_CONST_DI = 0x72,
   kOpcodeSET_CONTEXT_REG_INDIRECT = 0x73,
-  SET_RESOURCE_INDIRECT = 0x74,
-  SET_APPEND_CNT = 0x75,
+  kOpcodeSET_RESOURCE_INDIRECT = 0x74,
+  kOpcodeSET_APPEND_CNT = 0x75,
   kOpcodeSET_SH_REG = 0x76,
   kOpcodeSET_SH_REG_OFFSET = 0x77,
   kOpcodeSET_QUEUE_REG = 0x78,
@@ -1018,8 +1019,6 @@ inline const std::string opcodeToString(int op) {
 }
 
 inline void dumpShader(const std::uint32_t *data) {
-  int hackExit = 0;
-
   flockfile(stdout);
   while (true) {
     auto instHex = *data;
@@ -1262,29 +1261,22 @@ static_assert(sizeof(GnmTBuffer) == sizeof(std::uint64_t) * 4);
 
 constexpr auto kPageSize = 0x4000;
 
-struct DrawContext {
-  VkQueue queue;
-  VkCommandPool commandPool;
-};
-
 void setVkDevice(VkDevice device,
                  VkPhysicalDeviceMemoryProperties memProperties,
                  VkPhysicalDeviceProperties devProperties);
 
 struct AmdgpuDevice {
-  amdgpu::device::DrawContext dc;
-
   void handleProtectMemory(std::uint64_t address, std::uint64_t size,
                            std::uint32_t prot);
   void handleCommandBuffer(std::uint64_t queueId, std::uint64_t address,
                            std::uint64_t size);
-  bool handleFlip(std::uint32_t bufferIndex, std::uint64_t arg,
-                  VkCommandBuffer cmd, VkImage targetImage,
-                  VkExtent2D targetExtent, std::vector<VkBuffer> &usedBuffers,
-                  std::vector<VkImage> &usedImages);
+  bool handleFlip(VkQueue queue, VkCommandBuffer cmdBuffer,
+                  TaskChain &initTaskChain, std::uint32_t bufferIndex,
+                  std::uint64_t arg, VkImage targetImage,
+                  VkExtent2D targetExtent, VkSemaphore waitSemaphore,
+                  VkSemaphore signalSemaphore, VkFence fence);
 
-  AmdgpuDevice(amdgpu::device::DrawContext dc,
-               amdgpu::bridge::BridgeHeader *bridge);
+  AmdgpuDevice(amdgpu::bridge::BridgeHeader *bridge);
 
   ~AmdgpuDevice();
 };
