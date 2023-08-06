@@ -29,6 +29,7 @@ struct TypeId {
     ArrayFloat32x16,
     Sampler,
     Image2D,
+    StorageImage2D,
     SampledImage2D,
 
     Void // should be last

@@ -231,6 +231,9 @@ public:
   spirv::ImageType getImage2DType() {
     return spirv::cast<spirv::ImageType>(getType(TypeId::Image2D));
   }
+  spirv::ImageType getStorageImage2DType() {
+    return spirv::cast<spirv::ImageType>(getType(TypeId::StorageImage2D));
+  }
   spirv::SampledImageType getSampledImage2DType() {
     return spirv::cast<spirv::SampledImageType>(
         getType(TypeId::SampledImage2D));

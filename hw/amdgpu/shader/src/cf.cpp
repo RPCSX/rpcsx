@@ -1,6 +1,6 @@
 #include "cf.hpp"
 #include <cassert>
-#include <fstream>
+#include <cstdlib>
 #include <unordered_set>
 
 void cf::BasicBlock::split(BasicBlock *target) {

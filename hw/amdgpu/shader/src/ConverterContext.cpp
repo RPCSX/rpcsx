@@ -136,6 +136,10 @@ spirv::Type ConverterContext::getType(TypeId id) {
     return ((type = getBuilder().createTypeImage(getFloat32Type(),
                                                  spv::Dim::Dim2D, 0, 0, 0, 1,
                                                  spv::ImageFormat::Unknown)));
+  case TypeId::StorageImage2D:
+    return ((type = getBuilder().createTypeImage(getFloat32Type(),
+                                                 spv::Dim::Dim2D, 0, 0, 0, 2,
+                                                 spv::ImageFormat::Unknown)));
   case TypeId::SampledImage2D:
     return ((type = getBuilder().createTypeSampledImage(getImage2DType())));
 

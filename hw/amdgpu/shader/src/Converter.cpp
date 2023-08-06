@@ -371,6 +371,8 @@ amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
   builder.createCapability(spv::Capability::UniformAndStorageBuffer8BitAccess);
   builder.createCapability(spv::Capability::UniformAndStorageBuffer16BitAccess);
   builder.createCapability(spv::Capability::Int64);
+  builder.createCapability(spv::Capability::StorageImageWriteWithoutFormat);
+  builder.createCapability(spv::Capability::StorageImageReadWithoutFormat);
   builder.setMemoryModel(spv::AddressingModel::Logical,
                          spv::MemoryModel::GLSL450);
 
@@ -410,6 +412,7 @@ amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
 
   std::size_t samplerCount = 0;
   std::size_t imageCount = 0;
+  std::size_t storageImageCount = 0;
   std::size_t bufferCount = 0;
 
   for (auto &uniform : ctxt.getUniforms()) {
@@ -426,6 +429,11 @@ amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
       newUniform.kind = Shader::UniformKind::Sampler;
       newUniform.binding =
           UniformBindings::getSamplerBinding(stage, samplerCount++);
+      break;
+    case TypeId::StorageImage2D:
+      newUniform.kind = Shader::UniformKind::StorageImage;
+      newUniform.binding =
+          UniformBindings::getStorageImageBinding(stage, storageImageCount++);
       break;
     case TypeId::Image2D:
       newUniform.kind = Shader::UniformKind::Image;
@@ -478,6 +486,14 @@ amdgpu::shader::convert(RemoteMemory memory, Stage stage, std::uint64_t entry,
                                 {{dimX, dimY, dimZ}});
   }
 
-  result.spirv = ctxt.getBuilder().build(SPV_VERSION, 0);
+  // auto maxId = ctxt.getBuilder().getIdGenerator()->bounds;
+  // for (std::size_t i = 1; i < maxId; ++i) {
+  //   spirv::Id id;
+  //   id.id = i;
+  //   if (builder.isIdDefined(id) && !builder.isIdUsed(id)) {
+  //     std::printf("ssa variable %%%zu defined, but not used\n", i);
+  //   }
+  // }
+  result.spirv = builder.build(SPV_VERSION, 0);
   return result;
 }

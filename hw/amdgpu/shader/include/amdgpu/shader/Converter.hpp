@@ -12,7 +12,7 @@
 
 namespace amdgpu::shader {
 struct Shader {
-  enum class UniformKind { Buffer, Sampler, Image };
+  enum class UniformKind { Buffer, Sampler, StorageImage, Image };
 
   struct UniformInfo {
     std::uint32_t binding;

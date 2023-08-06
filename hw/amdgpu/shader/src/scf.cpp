@@ -1,8 +1,5 @@
 #include "scf.hpp"
 #include "cf.hpp"
-#include <cassert>
-#include <fstream>
-#include <unordered_set>
 #include <utility>
 
 void scf::Block::eraseFrom(Node *endBefore) {

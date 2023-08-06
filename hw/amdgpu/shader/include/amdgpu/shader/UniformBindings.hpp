@@ -8,12 +8,14 @@ struct UniformBindings {
   static constexpr auto kBufferSlots = 16;
   static constexpr auto kImageSlots = 16;
   static constexpr auto kSamplerSlots = 16;
+  static constexpr auto kStorageImageSlots = 16;
 
   static constexpr auto kBufferOffset = 0;
   static constexpr auto kImageOffset = kBufferOffset + kBufferSlots;
   static constexpr auto kSamplerOffset = kImageOffset + kImageSlots;
+  static constexpr auto kStorageImageOffset = kSamplerOffset + kSamplerSlots;
 
-  static constexpr auto kStageSize = kSamplerOffset + kSamplerSlots;
+  static constexpr auto kStageSize = kStorageImageOffset + kStorageImageSlots;
 
   static constexpr auto kVertexOffset = 0;
   static constexpr auto kFragmentOffset = kStageSize;
@@ -32,6 +34,14 @@ struct UniformBindings {
     }
 
     return index + getStageOffset(stage) + kImageOffset;
+  }
+
+  static unsigned getStorageImageBinding(Stage stage, unsigned index) {
+    if (index >= kStorageImageSlots) {
+      util::unreachable();
+    }
+
+    return index + getStageOffset(stage) + kStorageImageOffset;
   }
 
   static unsigned getSamplerBinding(Stage stage, unsigned index) {

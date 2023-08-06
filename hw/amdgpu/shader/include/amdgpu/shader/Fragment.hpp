@@ -1,4 +1,5 @@
 #pragma once
+#include "AccessOp.hpp"
 #include "RegisterId.hpp"
 #include "RegisterState.hpp"
 #include "TypeId.hpp"
@@ -36,7 +37,8 @@ struct Fragment {
   // std::optional<RegisterId> findInput(spirv::Value value);
   // Value addInput(RegisterId id, spirv::Type type);
   spirv::SamplerValue createSampler(RegisterId base);
-  spirv::ImageValue createImage(RegisterId base, bool r128); // TODO: params
+  spirv::ImageValue createImage(RegisterId base, bool r128, bool sampled,
+                                AccessOp access); // TODO: params
   Value createCompositeExtract(Value composite, std::uint32_t member);
   Value getOperand(RegisterId id, TypeId type,
                    OperandGetFlags flags = OperandGetFlags::None);

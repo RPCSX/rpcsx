@@ -319,6 +319,9 @@ public:
   Region() = default;
   Region(std::size_t expInstCount) { mData.reserve(expInstCount); }
 
+  bool isIdDefined(Id id) const { return mIdDefs.contains(id.id); }
+  bool isIdUsed(Id id) const { return mIdUses.contains(id.id); }
+
   void clear() { mData.clear(); }
 
   const std::uint32_t *data() const { return mData.data(); }
@@ -409,8 +412,8 @@ public:
   BlockBuilder() = default;
   BlockBuilder(IdGenerator &idGenerator, Block id,
                std::size_t expInstructionsCount)
-      : mIdGenerator(&idGenerator), bodyRegion{expInstructionsCount},
-        terminatorRegion{1}, id(id) {}
+      : mIdGenerator(&idGenerator), id(id), bodyRegion{expInstructionsCount},
+        terminatorRegion{1} {}
 
   void moveBlock(BlockBuilder &&other) {
     prefix.pushRegion(other.prefix);
@@ -1534,6 +1537,53 @@ public:
     return id;
   }
 
+  VectorOfValue<FloatType> createImageRead(
+      VectorOfType<FloatType> resultType, ImageValue image,
+      ScalarOrVectorOfValue<UIntType> coords,
+      spv::ImageOperandsMask operands = spv::ImageOperandsMask::MaskNone,
+      std::span<const Id> args = {}) {
+    auto region = bodyRegion.pushOp(
+        spv::Op::OpImageRead,
+        5 + (operands == spv::ImageOperandsMask::MaskNone ? 0
+                                                          : 1 + args.size()));
+    auto id = newId<VectorOfValue<FloatType>>();
+    region.pushIdUse(resultType);
+    region.pushIdDef(id);
+    region.pushIdUse(image);
+    region.pushIdUse(coords);
+
+    if (operands != spv::ImageOperandsMask::MaskNone) {
+      region.pushWord(static_cast<unsigned>(operands));
+
+      for (auto arg : args) {
+        region.pushIdUse(arg);
+      }
+    }
+
+    return id;
+  }
+
+  void createImageWrite(
+      ImageValue image, ScalarOrVectorOfValue<UIntType> coords, Value texel,
+      spv::ImageOperandsMask operands = spv::ImageOperandsMask::MaskNone,
+      std::span<const Id> args = {}) {
+    auto region = bodyRegion.pushOp(
+        spv::Op::OpImageWrite,
+        4 + (operands == spv::ImageOperandsMask::MaskNone ? 0
+                                                          : 1 + args.size()));
+    region.pushIdUse(image);
+    region.pushIdUse(coords);
+    region.pushIdUse(texel);
+
+    if (operands != spv::ImageOperandsMask::MaskNone) {
+      region.pushWord(static_cast<unsigned>(operands));
+
+      for (auto arg : args) {
+        region.pushIdUse(arg);
+      }
+    }
+  }
+
   Value createImageQuerySizeLod(Type resultType, ImageValue image, Value lod) {
     auto region = bodyRegion.pushOp(spv::Op::OpImageQuerySizeLod, 5);
     auto id = newId<Value>();
@@ -1655,6 +1705,38 @@ private:
   SpirvBuilder &operator=(SpirvBuilder &&) = default;
 
 public:
+  bool isIdDefined(Id id) const {
+    std::array regions = {
+        // &capabilityRegion,   &extensionRegion,  &extInstRegion,
+        // &memoryModelRegion,  &entryPointRegion, &executionModeRegion,
+        // &debugRegion,        &annotationRegion, &globalRegion,
+        &functionRegion,
+    };
+
+    for (auto reg : regions) {
+      if (reg->isIdDefined(id)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+  bool isIdUsed(Id id) const {
+    std::array regions = {
+        &capabilityRegion,   &extensionRegion,  &extInstRegion,
+        &memoryModelRegion,  &entryPointRegion, &executionModeRegion,
+        &debugRegion,        &annotationRegion, &globalRegion,
+        &functionDeclRegion, &functionRegion,
+    };
+
+    for (auto reg : regions) {
+      if (reg->isIdUsed(id)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
   SpirvBuilder() = default;
 
   SpirvBuilder(IdGenerator &idGenerator, std::size_t expInstructionsCount)
@@ -1695,6 +1777,8 @@ public:
     functionDeclRegion.clear();
     functionRegion.clear();
   }
+
+  IdGenerator *getIdGenerator() const { return mIdGenerator; }
 
   std::vector<std::uint32_t> build(std::uint32_t spirvVersion,
                                    std::uint32_t generatorMagic) {

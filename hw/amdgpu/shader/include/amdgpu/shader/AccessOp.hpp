@@ -9,6 +9,9 @@ constexpr AccessOp operator|(AccessOp lhs, AccessOp rhs) {
 constexpr AccessOp operator&(AccessOp lhs, AccessOp rhs) {
   return static_cast<AccessOp>(static_cast<int>(lhs) & static_cast<int>(rhs));
 }
+constexpr AccessOp operator~(AccessOp rhs) {
+  return static_cast<AccessOp>(~static_cast<int>(rhs));
+}
 constexpr AccessOp &operator|=(AccessOp &lhs, AccessOp rhs) {
   return ((lhs = lhs | rhs));
 }

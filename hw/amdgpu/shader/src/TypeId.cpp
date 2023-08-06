@@ -1,6 +1,5 @@
 #include "TypeId.hpp"
 #include "util/unreachable.hpp"
-#include <cstdint>
 
 amdgpu::shader::TypeId amdgpu::shader::TypeId::getBaseType() const {
   switch (raw) {
@@ -19,6 +18,7 @@ amdgpu::shader::TypeId amdgpu::shader::TypeId::getBaseType() const {
   case TypeId::Float64:
   case TypeId::Sampler:
   case TypeId::Image2D:
+  case TypeId::StorageImage2D:
   case TypeId::SampledImage2D:
     return raw;
 
@@ -44,6 +44,7 @@ std::size_t amdgpu::shader::TypeId::getSize() const {
   switch (raw) {
   case TypeId::Void:
   case TypeId::Sampler:
+  case TypeId::StorageImage2D:
   case TypeId::Image2D:
   case TypeId::SampledImage2D:
     return 0;
@@ -124,6 +125,7 @@ std::size_t amdgpu::shader::TypeId::getElementsCount() const {
   case TypeId::Void:
   case TypeId::Sampler:
   case TypeId::Image2D:
+  case TypeId::StorageImage2D:
   case TypeId::SampledImage2D:
     return 0;
   }
