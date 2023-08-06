@@ -147,7 +147,7 @@ public:
 
       if (beginIt->first < beginAddress) {
         this->handleInvalidation(beginIt->first);
-        mAreas.emplace(beginAddress, Kind::X);
+        beginIt = mAreas.emplace(beginAddress, Kind::X).first;
       }
 
       if (prevEnd > endAddress) {
