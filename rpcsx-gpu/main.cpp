@@ -37,7 +37,7 @@ static void usage(std::FILE *out, const char *argv0) {
       "    --gpu <index> - specify physical gpu index to use, default is 0\n");
   std::fprintf(out,
                "    --presenter <presenter mode> - set flip engine target\n");
-  std::fprintf(out, "    --no-validation - disable validation layers\n");
+  std::fprintf(out, "    --validate - enable validation layers\n");
   std::fprintf(out, "    -h, --help - show this message\n");
   std::fprintf(out, "\n");
   std::fprintf(out, "  presenter mode:\n");
@@ -84,7 +84,7 @@ int main(int argc, const char *argv[]) {
   const char *shmName = "/rpcsx-os-memory";
   unsigned long gpuIndex = 0;
   auto presenter = PresenterMode::Window;
-  bool noValidation = false;
+  bool enableValidation = false;
 
   for (int i = 1; i < argc; ++i) {
     if (argv[i] == std::string_view("--cmd-bridge")) {
@@ -139,8 +139,8 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
-    if (argv[i] == std::string_view("--no-validation")) {
-      noValidation = true;
+    if (argv[i] == std::string_view("--validate")) {
+      enableValidation = true;
       continue;
     }
 
@@ -159,8 +159,6 @@ int main(int argc, const char *argv[]) {
 
   auto requiredInstanceExtensions = std::vector<const char *>(
       glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-  bool enableValidation = !noValidation;
 
   if (enableValidation) {
     requiredInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -217,7 +215,9 @@ int main(int argc, const char *argv[]) {
 
   VkInstanceCreateInfo instanceCreateInfo = {};
   instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  instanceCreateInfo.pNext = &debugCreateInfo;
+  if (enableValidation) {
+    instanceCreateInfo.pNext = &debugCreateInfo;
+  }
   instanceCreateInfo.pApplicationInfo = &appInfo;
   instanceCreateInfo.enabledExtensionCount = requiredInstanceExtensions.size();
   instanceCreateInfo.ppEnabledExtensionNames =
@@ -243,9 +243,11 @@ int main(int argc, const char *argv[]) {
     return devices[index];
   };
 
-  VkDebugUtilsMessengerEXT debugMessenger;
-  _vkCreateDebugUtilsMessengerEXT(vkInstance, &debugCreateInfo, nullptr,
-                                  &debugMessenger);
+  if (enableValidation) {
+    VkDebugUtilsMessengerEXT debugMessenger;
+    _vkCreateDebugUtilsMessengerEXT(vkInstance, &debugCreateInfo, nullptr,
+                                    &debugMessenger);
+  }
 
   auto vkPhysicalDevice = getVkPhyDevice(gpuIndex);
 
