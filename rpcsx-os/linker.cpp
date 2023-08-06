@@ -811,10 +811,6 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   // }
   // std::printf("]\n");
 
-  for (auto seg : std::span(result->segments, result->segmentCount)) {
-    rx::vm::protect(seg.addr, seg.size, rx::vm::kMapProtCpuAll);
-  }
-
   result->proc = process;
 
   std::printf("Loaded module '%s' (%lx) from object '%s', address: %p - %p\n",
