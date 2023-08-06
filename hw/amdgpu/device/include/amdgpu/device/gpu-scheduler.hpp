@@ -76,6 +76,38 @@ struct TaskChain {
 
   template <typename T>
     requires requires(T &&t) {
+      { t() } -> std::same_as<TaskResult>;
+    }
+  std::uint64_t add(std::uint64_t waitId, T &&task) {
+    auto prevTaskId = getLastTaskId();
+    auto id = nextTaskId++;
+    auto cpuTask =
+        createCpuTask([=, task = std::forward<T>(task),
+                       self = Ref(this)](const AsyncTaskCtl &) mutable {
+          if (waitId != GpuTaskLayout::kInvalidId) {
+            if (self->semaphore.getCounterValue() < waitId) {
+              return TaskResult::Reschedule;
+            }
+          }
+
+          auto result = task();
+          if (result != TaskResult::Complete) {
+            return result;
+          }
+
+          if (prevTaskId != GpuTaskLayout::kInvalidId && waitId != prevTaskId) {
+            self->wait(prevTaskId);
+          }
+
+          self->semaphore.signal(id);
+          return TaskResult::Complete;
+        });
+    getCpuScheduler().enqueue(std::move(cpuTask));
+    return id;
+  }
+
+  template <typename T>
+    requires requires(T &&t) {
       { t() } -> std::same_as<void>;
     }
   std::uint64_t add(std::uint64_t waitId, T &&task) {
@@ -106,6 +138,14 @@ struct TaskChain {
   template <typename T>
     requires requires(T &&t) {
       { t() } -> std::same_as<void>;
+    }
+  std::uint64_t add(T &&task) {
+    return add(GpuTaskLayout::kInvalidId, std::forward<T>(task));
+  }
+
+  template <typename T>
+    requires requires(T &&t) {
+      { t() } -> std::same_as<TaskResult>;
     }
   std::uint64_t add(T &&task) {
     return add(GpuTaskLayout::kInvalidId, std::forward<T>(task));

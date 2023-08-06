@@ -2726,46 +2726,64 @@ struct CacheLine {
     entry->unlockMutableTask = [=, this] {
       if (entry->cacheMode != CacheMode::None) {
         lockReadWrite(address, size, entry->cacheMode == CacheMode::LazyWrite);
+        entry->syncState.map(address, address + size, tag);
+
+        std::lock_guard lock(hostSyncMtx);
+        hostSyncTable.map(address, address + size,
+                          {.tag = tag, .overlay = entry});
+      } else {
+        std::lock_guard lock(hostSyncMtx);
+        hostSyncTable.map(address, address + size,
+                          {.tag = tag, .overlay = memoryOverlay});
       }
-      entry->syncState.map(address, address + size, tag);
-      std::lock_guard lock(hostSyncMtx);
-      hostSyncTable.map(address, address + size,
-                        {.tag = tag, .overlay = entry});
     };
 
     if (entry->cacheMode != CacheMode::LazyWrite) {
-      auto writeBackTask =
-          createCpuTask([=, this](const AsyncTaskCtl &ctl) mutable {
-            if (ctl.isCancelRequested()) {
-              return TaskResult::Canceled;
-            }
+      auto writeBackTask = createCpuTask([=, this](
+                                             const AsyncTaskCtl &ctl) mutable {
+        if (ctl.isCancelRequested()) {
+          return TaskResult::Canceled;
+        }
 
-            auto tag = writeBackTag.fetch_add(1, std::memory_order::relaxed);
+        auto taskChain = TaskChain::Create();
+        Ref<CacheBufferOverlay> uploadBuffer;
+        auto tag = writeBackTag.fetch_add(1, std::memory_order::relaxed);
 
-            auto updateTaskChain = TaskChain::Create();
-            auto uploadBuffer = getBuffer(tag, *updateTaskChain.get(), address,
-                                          size, 1, 1, shader::AccessOp::Load);
-            updateTaskChain->wait();
+        if (entry->cacheMode == CacheMode::None) {
+          uploadBuffer = static_cast<CacheBufferOverlay *>(entry.get());
+          if (!uploadBuffer->tryLock(tag, shader::AccessOp::None).isLocked) {
+            taskChain->add([&] {
+              return uploadBuffer->tryLock(tag, shader::AccessOp::None).isLocked
+                         ? TaskResult::Complete
+                         : TaskResult::Reschedule;
+            });
+          }
+        } else {
+          uploadBuffer = getBuffer(tag, *taskChain.get(), address, size, 1, 1,
+                                   shader::AccessOp::Load);
+        }
+        taskChain->wait();
 
-            if (ctl.isCancelRequested()) {
-              uploadBuffer->unlock(tag);
-              return TaskResult::Canceled;
-            }
+        if (ctl.isCancelRequested()) {
+          uploadBuffer->unlock(tag);
+          return TaskResult::Canceled;
+        }
 
-            memoryOverlay->writeBuffer(*updateTaskChain.get(), uploadBuffer,
-                                       address, size);
-            uploadBuffer->unlock(tag);
+        memoryOverlay->writeBuffer(*taskChain.get(), uploadBuffer, address,
+                                   size);
+        uploadBuffer->unlock(tag);
 
-            if (ctl.isCancelRequested()) {
-              return TaskResult::Canceled;
-            }
+        if (ctl.isCancelRequested()) {
+          return TaskResult::Canceled;
+        }
 
-            updateTaskChain->wait();
-            if (entry->cacheMode != CacheMode::None) {
-              unlockReadWrite(address, size);
-            }
-            return TaskResult::Complete;
-          });
+        taskChain->wait();
+
+        if (entry->cacheMode != CacheMode::None) {
+          unlockReadWrite(address, size);
+        }
+        return TaskResult::Complete;
+      });
 
       {
         std::lock_guard lock(entry->mtx);
