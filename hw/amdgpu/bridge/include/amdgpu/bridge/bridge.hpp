@@ -45,6 +45,7 @@ enum {
   kPageWriteWatch = 1 << 0,
   kPageReadWriteLock = 1 << 1,
   kPageInvalidated = 1 << 2,
+  kPageLazyLock = 1 << 3
 };
 
 static constexpr auto kHostPageSize = 0x1000;
@@ -71,6 +72,7 @@ struct BridgeHeader {
   // orbis::shared_mutex cacheCommandMtx;
   // orbis::shared_cv cacheCommandCv;
   std::atomic<std::uint64_t> cacheCommands[4];
+  std::atomic<std::uint32_t> gpuCacheCommand;
   std::atomic<std::uint8_t> cachePages[0x100'0000'0000 / kHostPageSize];
 
   volatile std::uint64_t pull;

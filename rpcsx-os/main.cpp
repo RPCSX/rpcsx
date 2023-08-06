@@ -66,6 +66,18 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
         auto flags = bridge->cachePages[page].load(std::memory_order::relaxed);
 
         if ((flags & amdgpu::bridge::kPageReadWriteLock) != 0) {
+          if ((flags & amdgpu::bridge::kPageLazyLock) != 0) {
+            if (std::uint32_t gpuCommand = 0;
+                !bridge->gpuCacheCommand.compare_exchange_weak(gpuCommand,
+                                                               page)) {
+              continue;
+            }
+
+            while (!bridge->cachePages[page].compare_exchange_weak(
+                flags, flags & ~amdgpu::bridge::kPageLazyLock,
+                std::memory_order::relaxed)) {
+            }
+          }
           continue;
         }
 
