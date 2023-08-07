@@ -1,8 +1,11 @@
+#include "amdgpu/bridge/bridge.hpp"
+#include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include <chrono>
 
 struct HidDevice : public IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
@@ -13,8 +16,6 @@ struct HidFile : public orbis::File {};
 
 static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
-  ORBIS_LOG_FATAL("Unhandled hid ioctl", request);
-
   ORBIS_LOG_FATAL("hid ioctl", request);
   switch (request) {
   case 0x800c4802:
@@ -26,16 +27,61 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
     struct ReadStateArgs {
       std::uint32_t hidId;
       std::uint32_t unk0;
-      void *unk1;
+      void *state;
       std::uint32_t unk2;
-      void *unk3;
-      void *unk4;
+      std::uint32_t *connected;
+      std::uint32_t *unk4;
       std::uint64_t unk5;
     };
 
+    // struct PadState {
+    //   std::uint64_t timestamp;
+    //   std::uint32_t unk;
+    //   std::uint32_t buttons;
+    //   std::uint8_t leftStickX;
+    //   std::uint8_t leftStickY;
+    //   std::uint8_t rightStickX;
+    //   std::uint8_t rightStickY;
+    //   std::uint8_t l2;
+    //   std::uint8_t r2;
+    // };
+
+    // enum {
+    //   kPadBtnL3 = 1 << 1,
+    //   kPadBtnR3 = 1 << 2,
+    //   kPadBtnOptions = 1 << 3,
+    //   kPadBtnUp = 1 << 4,
+    //   kPadBtnRight = 1 << 5,
+    //   kPadBtnDown = 1 << 6,
+    //   kPadBtnLeft = 1 << 7,
+    //   kPadBtnL2 = 1 << 8,
+    //   kPadBtnR2 = 1 << 9,
+    //   kPadBtnL1 = 1 << 10,
+    //   kPadBtnR1 = 1 << 11,
+    //   kPadBtnTriangle = 1 << 12,
+    //   kPadBtnCircle = 1 << 13,
+    //   kPadBtnCross = 1 << 14,
+    //   kPadBtnSquare = 1 << 15,
+    //   kPadBtnTouchPad = 1 << 20,
+    //   kPadBtnIntercepted = 1 << 31,
+    // };
+
     auto args = *reinterpret_cast<ReadStateArgs *>(argp);
-    ORBIS_LOG_ERROR("hid read state", args.hidId, args.unk0, args.unk1,
-                    args.unk2, args.unk3, args.unk4, args.unk5);
+    // ORBIS_LOG_ERROR("hid read state", args.hidId, args.unk0, args.state,
+    //                 args.unk2, args.connected, args.unk4, args.unk5);
+
+    auto state = (amdgpu::bridge::PadState *)args.state;
+    *state = rx::bridge.header->kbPadState;
+    *args.connected = 1;
+    *args.unk4 = 1; // is wireless?
+    thread->retval[0] = 1;
+    return {};
+  }
+
+  case 0x8010480e: {
+    // read information
+    ORBIS_LOG_ERROR("hid read information");
+    return {};
   }
 
   default:

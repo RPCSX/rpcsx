@@ -8,6 +8,38 @@
 #include <orbis/utils/SharedCV.hpp>
 
 namespace amdgpu::bridge {
+struct PadState {
+  std::uint64_t timestamp;
+  std::uint32_t unk;
+  std::uint32_t buttons;
+  std::uint8_t leftStickX;
+  std::uint8_t leftStickY;
+  std::uint8_t rightStickX;
+  std::uint8_t rightStickY;
+  std::uint8_t l2;
+  std::uint8_t r2;
+};
+
+enum {
+  kPadBtnL3 = 1 << 1,
+  kPadBtnR3 = 1 << 2,
+  kPadBtnOptions = 1 << 3,
+  kPadBtnUp = 1 << 4,
+  kPadBtnRight = 1 << 5,
+  kPadBtnDown = 1 << 6,
+  kPadBtnLeft = 1 << 7,
+  kPadBtnL2 = 1 << 8,
+  kPadBtnR2 = 1 << 9,
+  kPadBtnL1 = 1 << 10,
+  kPadBtnR1 = 1 << 11,
+  kPadBtnTriangle = 1 << 12,
+  kPadBtnCircle = 1 << 13,
+  kPadBtnCross = 1 << 14,
+  kPadBtnSquare = 1 << 15,
+  kPadBtnTouchPad = 1 << 20,
+  kPadBtnIntercepted = 1 << 31,
+};
+
 enum class CommandId : std::uint32_t {
   Nop,
   ProtectMemory,
@@ -59,6 +91,7 @@ struct BridgeHeader {
   std::uint64_t vmAddress;
   std::uint64_t vmSize;
   char vmName[32];
+  PadState kbPadState;
   volatile std::uint32_t flipBuffer;
   volatile std::uint64_t flipArg;
   volatile std::uint64_t flipCount;

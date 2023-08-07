@@ -778,6 +778,88 @@ int main(int argc, const char *argv[]) {
       std::size_t pulledCount =
           bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
 
+      bridge->kbPadState.leftStickX = 0x80;
+      bridge->kbPadState.leftStickY = 0x80;
+      bridge->kbPadState.rightStickX = 0x80;
+      bridge->kbPadState.rightStickY = 0x80;
+      bridge->kbPadState.buttons = 0;
+
+      if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        bridge->kbPadState.leftStickX = 0;
+      } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        bridge->kbPadState.leftStickX = 0xff;
+      }
+      if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        bridge->kbPadState.leftStickY = 0;
+      } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        bridge->kbPadState.leftStickY = 0xff;
+      }
+
+      if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+        bridge->kbPadState.rightStickX = 0;
+      } else if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+        bridge->kbPadState.rightStickX = 0xff;
+      }
+      if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
+        bridge->kbPadState.rightStickY = 0;
+      } else if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS) {
+        bridge->kbPadState.rightStickY = 0xff;
+      }
+
+      if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnUp;
+      }
+      if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnDown;
+      }
+      if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnLeft;
+      }
+      if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnRight;
+      }
+      if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnSquare;
+      }
+      if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnCross;
+      }
+      if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnCircle;
+      }
+      if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnTriangle;
+      }
+
+      if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL1;
+      }
+      if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL2;
+        bridge->kbPadState.l2 = 0xff;
+      }
+      if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL3;
+      }
+
+      if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR1;
+      }
+      if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR2;
+        bridge->kbPadState.r2 = 0xff;
+      }
+      if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL3;
+      }
+
+      if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnOptions;
+      }
+
+      bridge->kbPadState.timestamp =
+          std::chrono::high_resolution_clock::now().time_since_epoch().count();
+
       if (pulledCount == 0) {
         // std::this_thread::sleep_for(
         //     std::chrono::milliseconds(1)); // Just for testing, should be
