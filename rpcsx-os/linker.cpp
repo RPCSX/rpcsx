@@ -71,6 +71,12 @@ static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
 
   for (std::size_t i = 0; i < header->segmentCount; ++i) {
     auto &segment = segments[i];
+    if ((segment.flags & 0x7fb) != 0 ||
+        segment.decryptedSize != segment.encryptedSize) {
+      std::fprintf(stderr, "Unsupported self segment (%lx)\n", segment.flags);
+      std::abort();
+    }
+
     if (~segment.flags & 0x800) {
       continue;
     }
