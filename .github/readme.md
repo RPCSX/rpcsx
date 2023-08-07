@@ -17,9 +17,9 @@
 
 ## Contributing
 
-If you want to contribute as a developer, please contact us in the [Discord](https://discord.gg/t6dzA4wUdG).
+If you want to contribute as a developer, please contact us in our [Discord](https://discord.gg/t6dzA4wUdG).
 
-## How to Compile the Emulator 
+## Building and Running
 
 * [How to Compile rpcsx](BUILDING.md)
 * [How to Use rpcsx](USAGE.md)
