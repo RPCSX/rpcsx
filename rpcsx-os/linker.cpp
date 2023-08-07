@@ -10,9 +10,7 @@
 #include <bit>
 #include <crypto/sha1.h>
 #include <elf.h>
-#include <fstream>
 #include <map>
-#include <memory>
 #include <orbis/thread/Process.hpp>
 #include <sys/mman.h>
 #include <unordered_map>
@@ -34,10 +32,8 @@ static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
     std::uint16_t unk1;
     std::uint32_t padding3;
   };
-
-  static_assert(0x18 == 24);
-
   static_assert(sizeof(Header) == 0x20);
+
   struct [[gnu::packed]] Segment {
     std::uint64_t flags;
     std::uint64_t offset;

@@ -850,7 +850,7 @@ int main(int argc, const char *argv[]) {
         bridge->kbPadState.r2 = 0xff;
       }
       if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL3;
+        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR3;
       }
 
       if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
