@@ -181,6 +181,10 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
 
   if (eventFlag == nullptr) {
     // HACK :)
+    if (std::string_view(_name).starts_with("SceAppMessaging")) {
+      // change pattern on system window open
+      return sys_evf_create(thread, name, kEvfAttrShared, 1);
+    }
     return sys_evf_create(thread, name, kEvfAttrShared, 0);
     return ErrorCode::SRCH;
   }
@@ -648,6 +652,7 @@ orbis::SysResult orbis::sys_dynlib_dlclose(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_dynlib_dlsym(Thread *thread, SceKernelModule handle,
                                          ptr<const char> symbol,
                                          ptr<ptr<void>> addrp) {
+  ORBIS_LOG_WARNING(__FUNCTION__, symbol);
   if (thread->tproc->ops->dynlib_dlsym) {
     return thread->tproc->ops->dynlib_dlsym(thread, handle, symbol, addrp);
   }
@@ -941,7 +946,10 @@ struct IpmiCreateClientParams {
 
 static_assert(sizeof(IpmiCreateClientParams) == 0x18);
 
-struct IpmiBufferInfo {};
+struct IpmiBufferInfo {
+  orbis::ptr<void> data;
+  orbis::uint64_t size;
+};
 struct IpmiDataInfo {
   orbis::ptr<void> data;
   orbis::uint64_t size;
@@ -1066,6 +1074,68 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
       }
 
       return uwrite<uint>(result, 1);
+    } else if (client->name == "SceUserService") {
+      ORBIS_LOG_TODO("SceUserService");
+      if (syncCallParams.method == 0x30011) { // get initial user id
+        ORBIS_LOG_TODO("SceUserService: get_initial_user_id");
+        auto err = uwrite(syncCallParams.pResult, 0);
+        if (err != ErrorCode{}) {
+          return err;
+        }
+        IpmiBufferInfo bufferInfo;
+        err = uread(bufferInfo, syncCallParams.pBuffers);
+        if (err != ErrorCode{}) {
+          return err;
+        }
+
+        if (bufferInfo.size != sizeof(uint32_t)) {
+          return uwrite<uint>(result, -1);
+        }
+
+        err = uwrite((ptr<uint32_t>)bufferInfo.data, 1u); // initial user id
+        if (err != ErrorCode{}) {
+          return err;
+        }
+        return uwrite<uint>(result, 0);
+      }
+    } else if (client->name == "SceLncService") {
+      if (syncCallParams.method == 0x30010) { // get app status
+                                              // returns pending system events
+        ORBIS_LOG_TODO("SceUserService: get_app_status");
+        auto err = uwrite(syncCallParams.pResult, 0);
+        if (err != ErrorCode{}) {
+          return err;
+        }
+        IpmiBufferInfo bufferInfo;
+        err = uread(bufferInfo, syncCallParams.pBuffers);
+        if (err != ErrorCode{}) {
+          return err;
+        }
+
+        struct Result {
+          std::uint32_t unk0;
+          std::uint32_t unk1;
+          std::uint32_t unk2;
+        };
+
+        static_assert(sizeof(Result) == 0xc);
+
+        if (bufferInfo.size != sizeof(Result)) {
+          return uwrite<uint>(result, -1);
+        }
+
+        Result bufferResult{
+            .unk0 = 1,
+            .unk1 = 1,
+            .unk2 = 1,
+        };
+
+        err = uwrite((ptr<Result>)bufferInfo.data, bufferResult);
+        if (err != ErrorCode{}) {
+          return err;
+        }
+        return uwrite<uint>(result, 0);
+      }
     }
 
     if (result != nullptr) {
@@ -1085,8 +1155,65 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
   }
 
   if (op == 0x252) {
-    ORBIS_LOG_TODO("IMPI: try get client message?");
+    ORBIS_LOG_TODO("IMPI: client:tryGet", client->name);
     thread->where();
+
+    struct SceIpmiClientTryGetArgs {
+      uint32_t unk; // 0
+      uint32_t padding;
+      ptr<void> message;
+      ptr<uint64_t> pSize;
+      uint64_t maxSize;
+    };
+
+    static_assert(sizeof(SceIpmiClientTryGetArgs) == 0x20);
+
+    if (paramsSz != sizeof(SceIpmiClientTryGetArgs)) {
+      return ErrorCode::INVAL;
+    }
+
+    SceIpmiClientTryGetArgs tryGetParams;
+    auto errorCode = uread(tryGetParams, (ptr<SceIpmiClientTryGetArgs>)params);
+    if (errorCode != ErrorCode{}) {
+      return errorCode;
+    }
+
+    ORBIS_LOG_WARNING("IMPI: client: tryGet", tryGetParams.unk,
+                      tryGetParams.message, tryGetParams.pSize,
+                      tryGetParams.maxSize);
+
+    if (client->name == "SceUserService") {
+      static bool isFirst = true; // TODO: implement ipmi hooks at os side
+
+      if (isFirst) {
+        isFirst = false;
+
+        struct SceUserServiceEvent {
+          std::uint32_t eventType; // 0 - login, 1 - logout
+          std::uint32_t user;
+        };
+
+        if (tryGetParams.maxSize < sizeof(SceUserServiceEvent)) {
+          return uwrite<uint>(result, 0x80020003);
+        }
+
+        errorCode = uwrite(tryGetParams.pSize, sizeof(SceUserServiceEvent));
+        if (errorCode != ErrorCode{}) {
+          return errorCode;
+        }
+
+        errorCode = uwrite((ptr<SceUserServiceEvent>)tryGetParams.message,
+                           {.eventType = 0, .user = 1});
+
+        if (errorCode != ErrorCode{}) {
+          return errorCode;
+        }
+
+        return uwrite<uint>(result, 0);
+      } else {
+        return uwrite<uint>(result, 0x80020003);
+      }
+    }
     if (result) {
       return uwrite<uint>(result, 0x80020003);
     }
