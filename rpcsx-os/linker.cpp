@@ -7,8 +7,10 @@
 #include "orbis/uio.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <bit>
 #include <crypto/sha1.h>
 #include <elf.h>
+#include <fstream>
 #include <map>
 #include <memory>
 #include <orbis/thread/Process.hpp>
@@ -16,6 +18,76 @@
 #include <unordered_map>
 
 using orbis::utils::Ref;
+
+static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
+  struct [[gnu::packed]] Header {
+    std::uint32_t magic;
+    std::uint32_t unk;
+    std::uint8_t category;
+    std::uint8_t programType;
+    std::uint16_t padding;
+    std::uint16_t headerSize;
+    std::uint16_t signSize;
+    std::uint32_t fileSize;
+    std::uint32_t padding2;
+    std::uint16_t segmentCount;
+    std::uint16_t unk1;
+    std::uint32_t padding3;
+  };
+
+  static_assert(0x18 == 24);
+
+  static_assert(sizeof(Header) == 0x20);
+  struct [[gnu::packed]] Segment {
+    std::uint64_t flags;
+    std::uint64_t offset;
+    std::uint64_t encryptedSize;
+    std::uint64_t decryptedSize;
+  };
+  static_assert(sizeof(Segment) == 0x20);
+
+  auto header = std::bit_cast<Header *>(image);
+  auto segments = std::bit_cast<Segment *>(image + sizeof(Header));
+
+  auto elfOffset = sizeof(Header) + sizeof(Segment) * header->segmentCount;
+  std::vector<std::byte> result;
+  result.reserve(header->fileSize);
+  result.resize(sizeof(Elf64_Ehdr));
+
+  auto ehdr = std::bit_cast<Elf64_Ehdr *>(image + elfOffset);
+  auto phdrs = std::bit_cast<Elf64_Phdr *>(image + elfOffset + ehdr->e_phoff);
+  std::memcpy(result.data(), ehdr, sizeof(Elf64_Ehdr));
+
+  auto phdrEndOffset = ehdr->e_phoff + ehdr->e_phentsize * ehdr->e_phnum;
+  if (result.size() < phdrEndOffset) {
+    result.resize(phdrEndOffset);
+  }
+
+  for (std::size_t i = 0; i < ehdr->e_phnum; ++i) {
+    std::memcpy(result.data() + ehdr->e_phoff + ehdr->e_phentsize * i,
+                image + elfOffset + ehdr->e_phoff + ehdr->e_phentsize * i,
+                sizeof(Elf64_Phdr));
+  }
+
+  for (std::size_t i = 0; i < header->segmentCount; ++i) {
+    auto &segment = segments[i];
+    if (~segment.flags & 0x800) {
+      continue;
+    }
+
+    auto &phdr = phdrs[segment.flags >> 20];
+
+    auto endOffset = phdr.p_offset + segment.decryptedSize;
+    if (result.size() < endOffset) {
+      result.resize(endOffset);
+    }
+
+    std::memcpy(result.data() + phdr.p_offset, image + segment.offset,
+                segment.decryptedSize);
+  }
+
+  return result;
+}
 
 std::uint64_t rx::linker::encodeFid(std::string_view fid) {
   static const char suffix[] =
@@ -880,6 +952,11 @@ Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
       std::fprintf(stderr, "Module file reading error\n");
       std::abort();
     }
+  }
+
+  if (image[0] != std::byte{'\x7f'} || image[1] != std::byte{'E'} ||
+      image[2] != std::byte{'L'} || image[3] != std::byte{'F'}) {
+    image = unself(image.data(), image.size());
   }
 
   return loadModule(image, thread->tproc);
