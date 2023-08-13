@@ -8,6 +8,10 @@
 #include "osem.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include "orbis/AudioOut.hpp"
 
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
@@ -1136,10 +1140,107 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
         }
         return uwrite<uint>(result, 0);
       }
+    } else if (client->name == "SceSysAudioSystemIpc") {
+      if (syncCallParams.method == 0x12340000) { // check shared memory control
+        struct SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs {
+          uint32_t channelId;
+        };
+
+        static_assert(sizeof(SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs) == 0x4);
+
+        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs args;
+        uread(args, ptr<SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs>(dataInfo.data));
+
+        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs", args.channelId);
+        AudioOut& ao = AudioOut::getInstance();
+        ao.setControlId(args.channelId);
+      }
+      if (syncCallParams.method == 0x1234000f) { // create event flag
+        struct SceSysAudioSystemIpcCreateEventFlagMethodArgs {
+          uint32_t channelId;
+        };
+
+        static_assert(sizeof(SceSysAudioSystemIpcCreateEventFlagMethodArgs) == 0x4);
+
+        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCreateEventFlagMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceSysAudioSystemIpcCreateEventFlagMethodArgs args;
+        uread(args, ptr<SceSysAudioSystemIpcCreateEventFlagMethodArgs>(dataInfo.data));
+
+        // very bad
+        char buffer[32];
+        sprintf(buffer, "sceAudioOutMix%x", args.channelId);
+        // const char* eventName = &buffer;
+        int32_t attrs = 0x100;
+        EventFlag *eventFlag;
+        if (attrs & kEvfAttrShared) {
+          auto [insertedEvf, inserted] =
+              thread->tproc->context->createEventFlag(buffer, attrs, 0);
+
+          if (!inserted) {
+            return ErrorCode::EXIST; // FIXME: verify
+          }
+
+          eventFlag = insertedEvf;
+        } else {
+          eventFlag = knew<EventFlag>(attrs, 0);
+          std::strncpy(eventFlag->name, buffer, 32);
+        }
+
+        int32_t audioOutMixId = thread->tproc->evfMap.insert(eventFlag);
+        AudioOut& ao = AudioOut::getInstance();
+        ao.setEvfId(audioOutMixId);
+      }
+      if (syncCallParams.method == 0x12340001) { // check shared memory audio
+        struct SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs {
+          uint32_t audioPort;
+          uint32_t channelId;
+        };
+
+        static_assert(sizeof(SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs) == 0x8);
+
+        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs args;
+        uread(args, ptr<SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs>(dataInfo.data));
+
+        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs", args.audioPort, args.channelId);
+        AudioOut& ao = AudioOut::getInstance();
+        ao.setPortId(args.audioPort);
+        ao.setAudioId(args.channelId);
+      }
+      if (syncCallParams.method == 0x12340002) { // something something open
+        struct SceSysAudioSystemIpcSomethingMethodArgs {
+          uint32_t arg1;
+          uint32_t arg2;
+        };
+
+        static_assert(sizeof(SceSysAudioSystemIpcSomethingMethodArgs) == 0x8);
+
+        if (dataInfo.size != sizeof(SceSysAudioSystemIpcSomethingMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceSysAudioSystemIpcSomethingMethodArgs args;
+        uread(args, ptr<SceSysAudioSystemIpcSomethingMethodArgs>(dataInfo.data));
+
+        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcSomethingMethodArgs", args.arg1, args.arg2);
+        // here startToListen
+        AudioOut& ao = AudioOut::getInstance();
+        ao.start(thread);
+      }
     }
 
     if (result != nullptr) {
-      return uwrite<uint>(result, 1);
+      return uwrite<uint>(result, 0);
     }
 
     return {};

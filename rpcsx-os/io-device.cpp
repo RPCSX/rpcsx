@@ -210,7 +210,12 @@ static orbis::ErrorCode host_stat(orbis::File *file, orbis::Stat *sb,
 static orbis::ErrorCode host_truncate(orbis::File *file, std::uint64_t len,
                                       orbis::Thread *thread) {
   auto hostFile = static_cast<HostFile *>(file);
-  if (::ftruncate(hostFile->hostFd, len)) {
+  // hack for audio control shared memory
+  std::uint64_t realLen = len;
+  if (len == 3880) {
+    realLen = 0x10000;
+  }
+  if (::ftruncate(hostFile->hostFd, realLen)) {
     return convertErrno();
   }
 
