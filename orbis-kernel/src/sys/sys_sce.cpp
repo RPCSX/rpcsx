@@ -1139,7 +1139,7 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     }
 
     if (result != nullptr) {
-      return uwrite<uint>(result, 1);
+      return uwrite<uint>(result, 0);
     }
 
     return {};
