@@ -239,6 +239,7 @@ struct StackWriter {
 };
 
 static bool g_traceSyscalls = false;
+static bool g_enableAudio = false;
 static const char *getSyscallName(orbis::Thread *thread, int sysno) {
   auto sysvec = thread->tproc->sysent;
 
@@ -341,6 +342,9 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
   rx::vfs::mount("/dev/sbl_srv", createSblSrvCharacterDevice());
   rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
+  if (g_enableAudio) {
+    rx::vfs::mount("/dev/audioHack", createNullCharacterDevice());
+  }
 
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;
@@ -435,6 +439,7 @@ static void usage(const char *argv0) {
   std::printf("%s [<options>...] <virtual path to elf> [args...]\n", argv0);
   std::printf("  options:\n");
   std::printf("    -m, --mount <host path> <virtual path>\n");
+  std::printf("    -a, --enable-audio\n");
   std::printf("    -o, --override <original module name> <virtual path to "
               "overriden module>\n");
   std::printf("    --trace\n");
@@ -564,6 +569,13 @@ int main(int argc, const char *argv[]) {
       rx::linker::override(argv[argIndex + 1], argv[argIndex + 2]);
 
       argIndex += 3;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--enable-audio") ||
+        argv[argIndex] == std::string_view("-a")) {
+      argIndex++;
+      g_enableAudio = true;
       continue;
     }
 
