@@ -14,7 +14,7 @@ rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --
 
 ## Creating a log
 
-### You can use this flag if you encountered a segfault for debugging purposes.
+### You can use this flag if you encountered a segfault for debugging purposes:
 
 ```sh
 --trace
@@ -24,4 +24,10 @@ rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --
 
 ```sh
 &>log.txt
+```
+
+### You can use this flag to have audio:
+
+```sh
+-a
 ```
