@@ -11,6 +11,10 @@ orbis::SysResult orbis::sys_sstk(Thread *, sint) {
 orbis::SysResult orbis::sys_mmap(Thread *thread, caddr_t addr, size_t len,
                                  sint prot, sint flags, sint fd, off_t pos) {
   if (auto impl = thread->tproc->ops->mmap) {
+    // hack for audio control shared memory
+    if (len == 3880) {
+      return impl(thread, addr, 0x10000, prot, flags, fd, pos);
+    }
     return impl(thread, addr, len, prot, flags, fd, pos);
   }
 
