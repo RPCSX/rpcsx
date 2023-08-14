@@ -6,6 +6,7 @@
 #include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
 #include <cerrno>
+#include <dirent.h>
 #include <fcntl.h>
 #include <span>
 #include <string>
@@ -87,6 +88,9 @@ static orbis::ErrorCode convertErrno() {
 static orbis::ErrorCode host_read(orbis::File *file, orbis::Uio *uio,
                                   orbis::Thread *) {
   auto hostFile = static_cast<HostFile *>(file);
+  if (!hostFile->dirEntries.empty())
+    return orbis::ErrorCode::ISDIR;
+
   std::vector<iovec> vec;
   for (auto entry : std::span(uio->iov, uio->iovcnt)) {
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
@@ -116,6 +120,9 @@ static orbis::ErrorCode host_read(orbis::File *file, orbis::Uio *uio,
 static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
                                    orbis::Thread *) {
   auto hostFile = static_cast<HostFile *>(file);
+  if (!hostFile->dirEntries.empty())
+    return orbis::ErrorCode::ISDIR;
+
   std::vector<iovec> vec;
   for (auto entry : std::span(uio->iov, uio->iovcnt)) {
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
@@ -147,6 +154,8 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
                                   std::int32_t flags, std::int64_t offset,
                                   orbis::Thread *thread) {
   auto hostFile = static_cast<HostFile *>(file);
+  if (!hostFile->dirEntries.empty())
+    return orbis::ErrorCode::ISDIR;
 
   auto result =
       rx::vm::map(*address, size, prot, flags, rx::vm::kMapInternalReserveOnly);
@@ -210,6 +219,9 @@ static orbis::ErrorCode host_stat(orbis::File *file, orbis::Stat *sb,
 static orbis::ErrorCode host_truncate(orbis::File *file, std::uint64_t len,
                                       orbis::Thread *thread) {
   auto hostFile = static_cast<HostFile *>(file);
+  if (!hostFile->dirEntries.empty())
+    return orbis::ErrorCode::ISDIR;
+
   // hack for audio control shared memory
   std::uint64_t realLen = len;
   if (len == 3880) {
@@ -321,8 +333,33 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
     return error;
   }
 
+  // Assume the file is a directory and try to read direntries
+  orbis::utils::kvector<orbis::Dirent> dirEntries;
+  while (true) {
+    ::dirent64 hostEntry{};
+    auto r = getdents64(hostFd, &hostEntry, sizeof(hostEntry));
+    if (r <= 0)
+      break;
+
+    auto &entry = dirEntries.emplace_back();
+    entry.fileno = dirEntries.size(); // TODO
+    entry.reclen = sizeof(entry);
+    entry.namlen = std::strlen(hostEntry.d_name);
+    std::strncpy(entry.name, hostEntry.d_name, sizeof(entry.name));
+    if (hostEntry.d_type == DT_REG)
+      entry.type = orbis::kDtReg;
+    else if (hostEntry.d_type == DT_DIR || hostEntry.d_type == DT_LNK)
+      entry.type = orbis::kDtDir; // Assume symlinks to be dirs
+    else {
+      ORBIS_LOG_ERROR("host_open: unknown directory entry d_type", realPath,
+                      hostEntry.d_name, hostEntry.d_type);
+      dirEntries.pop_back();
+    }
+  }
+
   auto newFile = orbis::knew<HostFile>();
   newFile->hostFd = hostFd;
+  newFile->dirEntries = std::move(dirEntries);
   newFile->ops = &hostOps;
   newFile->device = this;
   *file = newFile;

@@ -95,7 +95,8 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] ErrorCode uwrite(ptr<T> pointer, T *data, std::size_t count) {
+[[nodiscard]] ErrorCode uwrite(ptr<T> pointer, const T *data,
+                               std::size_t count) {
   return uwriteRaw(pointer, &data, sizeof(T) * count);
 }
 

@@ -23,4 +23,25 @@ struct Stat {
   int32_t lspare;
   timespec birthtim; // time of file creation
 };
+
+struct Dirent {
+  uint32_t fileno;
+  uint16_t reclen;
+  uint8_t type;
+  uint8_t namlen;
+  char name[256];
+};
+
+enum {
+  kDtUnknown = 0,
+  kDtFifo = 1,
+  kDtChr = 2,
+  kDtDir = 4,
+  kDtBlk = 6,
+  kDtReg = 8,
+  kDtLnk = 10,
+  kDtSock = 12,
+  kDtWht = 14,
+};
+
 } // namespace orbis

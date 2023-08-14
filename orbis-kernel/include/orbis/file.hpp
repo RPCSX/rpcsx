@@ -1,6 +1,8 @@
 #pragma once
 
+#include "KernelAllocator.hpp"
 #include "error/ErrorCode.hpp"
+#include "stat.hpp"
 #include "utils/Rc.hpp"
 #include "utils/SharedMutex.hpp"
 #include <cstdint>
@@ -43,5 +45,6 @@ struct File : RcBase {
   const FileOps *ops = nullptr;
   Ref<RcBase> device;
   std::uint64_t nextOff = 0;
+  utils::kvector<Dirent> dirEntries;
 };
 } // namespace orbis
