@@ -771,6 +771,8 @@ int main(int argc, const char *argv[]) {
 
     uint32_t imageIndex = 0;
     bool isImageAcquired = false;
+    uint32_t gpIndex = -1;
+    GLFWgamepadstate gpState;
 
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
@@ -778,83 +780,141 @@ int main(int argc, const char *argv[]) {
       std::size_t pulledCount =
           bridgePuller.pullCommands(commandsBuffer, std::size(commandsBuffer));
 
-      bridge->kbPadState.leftStickX = 0x80;
-      bridge->kbPadState.leftStickY = 0x80;
-      bridge->kbPadState.rightStickX = 0x80;
-      bridge->kbPadState.rightStickY = 0x80;
-      bridge->kbPadState.buttons = 0;
-
-      if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        bridge->kbPadState.leftStickX = 0;
-      } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        bridge->kbPadState.leftStickX = 0xff;
-      }
-      if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        bridge->kbPadState.leftStickY = 0;
-      } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        bridge->kbPadState.leftStickY = 0xff;
+      if (gpIndex > GLFW_JOYSTICK_LAST) {
+        for (int i = 0; i <= GLFW_JOYSTICK_LAST; ++i) {
+          if (glfwJoystickIsGamepad(i) == GLFW_TRUE) {
+            std::printf("Gamepad \"%s\" actiavated", glfwGetGamepadName(i));
+            gpIndex = i;
+            break;
+          }
+        }
+      } else if (gpIndex <= GLFW_JOYSTICK_LAST) {
+        if (!glfwJoystickIsGamepad(gpIndex)) {
+          gpIndex = -1;
+        }
       }
 
-      if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
-        bridge->kbPadState.rightStickX = 0;
-      } else if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
-        bridge->kbPadState.rightStickX = 0xff;
-      }
-      if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
-        bridge->kbPadState.rightStickY = 0;
-      } else if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS) {
-        bridge->kbPadState.rightStickY = 0xff;
-      }
+      if (gpIndex <= GLFW_JOYSTICK_LAST) {
+        if (glfwGetGamepadState(gpIndex, &gpState) == GLFW_TRUE) {
+          bridge->kbPadState.leftStickX = gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_X] * 127.5f + 127.5f;
+          bridge->kbPadState.leftStickY = gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] * 127.5f + 127.5f;
+          bridge->kbPadState.rightStickX = gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] * 127.5f + 127.5f;
+          bridge->kbPadState.rightStickY = gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] * 127.5f + 127.5f;
+          bridge->kbPadState.l2 = (gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] + 1.0f) * 127.5f;
+          bridge->kbPadState.r2 = (gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] + 1.0f) * 127.5f;
+          bridge->kbPadState.buttons = 0;
 
-      if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnUp;
-      }
-      if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnDown;
-      }
-      if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnLeft;
-      }
-      if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnRight;
-      }
-      if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnSquare;
-      }
-      if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnCross;
-      }
-      if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnCircle;
-      }
-      if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnTriangle;
-      }
+          if (bridge->kbPadState.l2 == 0xFF) {
+            bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL2;
+          }
 
-      if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL1;
-      }
-      if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL2;
-        bridge->kbPadState.l2 = 0xff;
-      }
-      if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL3;
-      }
+          if (bridge->kbPadState.r2 == 0xFF) {
+            bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR2;
+          }
 
-      if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR1;
-      }
-      if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR2;
-        bridge->kbPadState.r2 = 0xff;
-      }
-      if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR3;
-      }
+          static const uint32_t gpmap[GLFW_GAMEPAD_BUTTON_LAST + 1] = {
+            [GLFW_GAMEPAD_BUTTON_A] = amdgpu::bridge::kPadBtnCross,
+            [GLFW_GAMEPAD_BUTTON_B] = amdgpu::bridge::kPadBtnCircle,
+            [GLFW_GAMEPAD_BUTTON_X] = amdgpu::bridge::kPadBtnSquare,
+            [GLFW_GAMEPAD_BUTTON_Y] = amdgpu::bridge::kPadBtnTriangle,
+            [GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] = amdgpu::bridge::kPadBtnL1,
+            [GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] = amdgpu::bridge::kPadBtnR1,
+            [GLFW_GAMEPAD_BUTTON_BACK] = 0,
+            [GLFW_GAMEPAD_BUTTON_START] = amdgpu::bridge::kPadBtnOptions,
+            [GLFW_GAMEPAD_BUTTON_GUIDE] = 0,
+            [GLFW_GAMEPAD_BUTTON_LEFT_THUMB] = amdgpu::bridge::kPadBtnL3,
+            [GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] = amdgpu::bridge::kPadBtnR3,
+            [GLFW_GAMEPAD_BUTTON_DPAD_UP] = amdgpu::bridge::kPadBtnUp,
+            [GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] = amdgpu::bridge::kPadBtnRight,
+            [GLFW_GAMEPAD_BUTTON_DPAD_DOWN] = amdgpu::bridge::kPadBtnDown,
+            [GLFW_GAMEPAD_BUTTON_DPAD_LEFT] = amdgpu::bridge::kPadBtnLeft
+          };
 
-      if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
-        bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnOptions;
+          for (int i = 0; i <= GLFW_GAMEPAD_BUTTON_LAST; ++i) {
+            if (gpState.buttons[i] == GLFW_PRESS) {
+              bridge->kbPadState.buttons |= gpmap[i];
+            }
+          }
+        }
+      } else {
+        bridge->kbPadState.leftStickX = 0x80;
+        bridge->kbPadState.leftStickY = 0x80;
+        bridge->kbPadState.rightStickX = 0x80;
+        bridge->kbPadState.rightStickY = 0x80;
+        bridge->kbPadState.buttons = 0;
+
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+          bridge->kbPadState.leftStickX = 0;
+        } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+          bridge->kbPadState.leftStickX = 0xff;
+        }
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+          bridge->kbPadState.leftStickY = 0;
+        } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+          bridge->kbPadState.leftStickY = 0xff;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+          bridge->kbPadState.rightStickX = 0;
+        } else if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
+          bridge->kbPadState.rightStickX = 0xff;
+        }
+        if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
+          bridge->kbPadState.rightStickY = 0;
+        } else if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS) {
+          bridge->kbPadState.rightStickY = 0xff;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnUp;
+        }
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnDown;
+        }
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnLeft;
+        }
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnRight;
+        }
+        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnSquare;
+        }
+        if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnCross;
+        }
+        if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnCircle;
+        }
+        if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnTriangle;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL2;
+          bridge->kbPadState.l2 = 0xff;
+        }
+        if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL3;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR2;
+          bridge->kbPadState.r2 = 0xff;
+        }
+        if (glfwGetKey(window, GLFW_KEY_APOSTROPHE) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR3;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnOptions;
+        }
       }
 
       bridge->kbPadState.timestamp =
