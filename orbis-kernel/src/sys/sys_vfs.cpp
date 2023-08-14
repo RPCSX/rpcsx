@@ -304,13 +304,36 @@ orbis::SysResult orbis::sys_rmdir(Thread *thread, ptr<char> path) {
 orbis::SysResult orbis::sys_getdirentries(Thread *thread, sint fd,
                                           ptr<char> buf, uint count,
                                           ptr<slong> basep) {
-  ORBIS_LOG_ERROR(__FUNCTION__, fd, (void *)buf, count, basep);
-  thread->where();
+  ORBIS_LOG_WARNING(__FUNCTION__, fd, (void *)buf, count, basep);
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  std::lock_guard lock(file->mtx);
+  const orbis::Dirent *entries = file->dirEntries.data();
+  auto pos = file->nextOff / sizeof(orbis::Dirent); // TODO
+  auto rmax = count / sizeof(orbis::Dirent);
+  auto next = std::min<uint64_t>(file->dirEntries.size(), pos + rmax);
+  file->nextOff = next * sizeof(orbis::Dirent);
+  SysResult result{};
+  result = uwrite((orbis::Dirent *)buf, entries + pos, next - pos);
+  if (result.isError())
+    return result;
+
+  if (basep) {
+    result = uwrite(basep, slong(file->nextOff));
+    if (result.isError())
+      return result;
+  }
+
+  thread->retval[0] = (next - pos) * sizeof(orbis::Dirent);
   return {};
 }
 orbis::SysResult orbis::sys_getdents(Thread *thread, sint fd, ptr<char> buf,
                                      size_t count) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__, fd, (void *)buf, count);
+  return orbis::sys_getdirentries(thread, fd, buf, count, nullptr);
 }
 orbis::SysResult orbis::sys_umask(Thread *thread, sint newmask) {
   return ErrorCode::NOSYS;

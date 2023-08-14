@@ -26,7 +26,7 @@ jobs:
         sudo apt update
         sudo apt install -y cmake build-essential libunwind-dev \
         libglfw3-dev libvulkan-dev vulkan-validationlayers-dev \
-        spirv-tools glslang-tools libspirv-cross-c-shared-dev
+        spirv-tools glslang-tools libspirv-cross-c-shared-dev libsox-dev
         VULKANVER=1.3.259
         curl -sSfLo Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
         tar -xf Vulkan-Headers*.tar.gz
