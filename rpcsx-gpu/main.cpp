@@ -783,7 +783,7 @@ int main(int argc, const char *argv[]) {
       if (gpIndex > GLFW_JOYSTICK_LAST) {
         for (int i = 0; i <= GLFW_JOYSTICK_LAST; ++i) {
           if (glfwJoystickIsGamepad(i) == GLFW_TRUE) {
-            std::printf("Gamepad \"%s\" actiavated", glfwGetGamepadName(i));
+            std::printf("Gamepad \"%s\" activated", glfwGetGamepadName(i));
             gpIndex = i;
             break;
           }
