@@ -90,7 +90,8 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
     // HACK: set default system language and gamepad layout to US/EU region
     // 0x12356328ECF5617B -> language where is 0 is Japanese, 1 is English
     // 0x22666251FE7BECFF -> confirm button layout, 0 is Circle, 1 is Cross
-    if (int_value->encoded_id == 0x12356328ECF5617B || int_value->encoded_id == 0x22666251FE7BECFF) {
+    if (int_value->encoded_id == 0x12356328ECF5617B ||
+        int_value->encoded_id == 0x22666251FE7BECFF) {
       int_value->value = 1;
     }
   }

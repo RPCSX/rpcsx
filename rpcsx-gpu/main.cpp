@@ -796,12 +796,18 @@ int main(int argc, const char *argv[]) {
 
       if (gpIndex <= GLFW_JOYSTICK_LAST) {
         if (glfwGetGamepadState(gpIndex, &gpState) == GLFW_TRUE) {
-          bridge->kbPadState.leftStickX = gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_X] * 127.5f + 127.5f;
-          bridge->kbPadState.leftStickY = gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] * 127.5f + 127.5f;
-          bridge->kbPadState.rightStickX = gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] * 127.5f + 127.5f;
-          bridge->kbPadState.rightStickY = gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] * 127.5f + 127.5f;
-          bridge->kbPadState.l2 = (gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] + 1.0f) * 127.5f;
-          bridge->kbPadState.r2 = (gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] + 1.0f) * 127.5f;
+          bridge->kbPadState.leftStickX =
+              gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_X] * 127.5f + 127.5f;
+          bridge->kbPadState.leftStickY =
+              gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] * 127.5f + 127.5f;
+          bridge->kbPadState.rightStickX =
+              gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] * 127.5f + 127.5f;
+          bridge->kbPadState.rightStickY =
+              gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] * 127.5f + 127.5f;
+          bridge->kbPadState.l2 =
+              (gpState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER] + 1.0f) * 127.5f;
+          bridge->kbPadState.r2 =
+              (gpState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] + 1.0f) * 127.5f;
           bridge->kbPadState.buttons = 0;
 
           if (bridge->kbPadState.l2 == 0xFF) {
@@ -813,22 +819,21 @@ int main(int argc, const char *argv[]) {
           }
 
           static const uint32_t gpmap[GLFW_GAMEPAD_BUTTON_LAST + 1] = {
-            [GLFW_GAMEPAD_BUTTON_A] = amdgpu::bridge::kPadBtnCross,
-            [GLFW_GAMEPAD_BUTTON_B] = amdgpu::bridge::kPadBtnCircle,
-            [GLFW_GAMEPAD_BUTTON_X] = amdgpu::bridge::kPadBtnSquare,
-            [GLFW_GAMEPAD_BUTTON_Y] = amdgpu::bridge::kPadBtnTriangle,
-            [GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] = amdgpu::bridge::kPadBtnL1,
-            [GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] = amdgpu::bridge::kPadBtnR1,
-            [GLFW_GAMEPAD_BUTTON_BACK] = 0,
-            [GLFW_GAMEPAD_BUTTON_START] = amdgpu::bridge::kPadBtnOptions,
-            [GLFW_GAMEPAD_BUTTON_GUIDE] = 0,
-            [GLFW_GAMEPAD_BUTTON_LEFT_THUMB] = amdgpu::bridge::kPadBtnL3,
-            [GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] = amdgpu::bridge::kPadBtnR3,
-            [GLFW_GAMEPAD_BUTTON_DPAD_UP] = amdgpu::bridge::kPadBtnUp,
-            [GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] = amdgpu::bridge::kPadBtnRight,
-            [GLFW_GAMEPAD_BUTTON_DPAD_DOWN] = amdgpu::bridge::kPadBtnDown,
-            [GLFW_GAMEPAD_BUTTON_DPAD_LEFT] = amdgpu::bridge::kPadBtnLeft
-          };
+              [GLFW_GAMEPAD_BUTTON_A] = amdgpu::bridge::kPadBtnCross,
+              [GLFW_GAMEPAD_BUTTON_B] = amdgpu::bridge::kPadBtnCircle,
+              [GLFW_GAMEPAD_BUTTON_X] = amdgpu::bridge::kPadBtnSquare,
+              [GLFW_GAMEPAD_BUTTON_Y] = amdgpu::bridge::kPadBtnTriangle,
+              [GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] = amdgpu::bridge::kPadBtnL1,
+              [GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] = amdgpu::bridge::kPadBtnR1,
+              [GLFW_GAMEPAD_BUTTON_BACK] = 0,
+              [GLFW_GAMEPAD_BUTTON_START] = amdgpu::bridge::kPadBtnOptions,
+              [GLFW_GAMEPAD_BUTTON_GUIDE] = 0,
+              [GLFW_GAMEPAD_BUTTON_LEFT_THUMB] = amdgpu::bridge::kPadBtnL3,
+              [GLFW_GAMEPAD_BUTTON_RIGHT_THUMB] = amdgpu::bridge::kPadBtnR3,
+              [GLFW_GAMEPAD_BUTTON_DPAD_UP] = amdgpu::bridge::kPadBtnUp,
+              [GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] = amdgpu::bridge::kPadBtnRight,
+              [GLFW_GAMEPAD_BUTTON_DPAD_DOWN] = amdgpu::bridge::kPadBtnDown,
+              [GLFW_GAMEPAD_BUTTON_DPAD_LEFT] = amdgpu::bridge::kPadBtnLeft};
 
           for (int i = 0; i <= GLFW_GAMEPAD_BUTTON_LAST; ++i) {
             if (gpState.buttons[i] == GLFW_PRESS) {
