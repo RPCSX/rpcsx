@@ -40,6 +40,9 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
     } else if (name == "/rpcsx-SceNpPlusLogger") {
       realFlags |= O_CREAT;
       size = 0x4400;
+    } else if (name == "/rpcsx-SceAvSetting") {
+      realFlags |= O_CREAT;
+      size = 0x4400;
     } else {
       ORBIS_LOG_ERROR("SHM: unknown shared memory", path);
       thread->where();
