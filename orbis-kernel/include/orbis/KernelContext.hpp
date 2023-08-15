@@ -6,6 +6,7 @@
 #include "utils/SharedCV.hpp"
 #include "utils/SharedMutex.hpp"
 
+#include "AudioOut.hpp"
 #include "KernelAllocator.hpp"
 #include "orbis/thread/types.hpp"
 #include <algorithm>
@@ -150,6 +151,7 @@ public:
   Ref<RcBase> shmDevice;
   Ref<RcBase> dmemDevice;
   Ref<RcBase> blockpoolDevice;
+  AudioOut *audioOut = nullptr;
 
 private:
   mutable pthread_mutex_t m_heap_mtx;

@@ -4,6 +4,7 @@
 #include "evf.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
+#include "orbis/AudioOut.hpp"
 #include "orbis/time.hpp"
 #include "osem.hpp"
 #include "sys/sysproto.hpp"
@@ -11,7 +12,6 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include "orbis/AudioOut.hpp"
 
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
@@ -1146,78 +1146,85 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
           uint32_t channelId;
         };
 
-        static_assert(sizeof(SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs) == 0x4);
+        static_assert(
+            sizeof(SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs) ==
+            0x4);
 
-        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs)) {
+        if (dataInfo.size !=
+            sizeof(SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs)) {
           return ErrorCode::INVAL;
         }
 
         SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs args;
-        uread(args, ptr<SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs>(dataInfo.data));
+        uread(args, ptr<SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs>(
+                        dataInfo.data));
 
-        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs", args.channelId);
-        AudioOut& ao = AudioOut::getInstance();
-        ao.setControlId(args.channelId);
-      }
-      if (syncCallParams.method == 0x1234000f) { // create event flag
+        ORBIS_LOG_TODO(
+            "impi: SceSysAudioSystemIpcCheckSharedMemoryControlMethodArgs",
+            args.channelId);
+        if (auto audioOut = g_context.audioOut) {
+          audioOut->channelInfo.idControl = args.channelId;
+        }
+      } else if (syncCallParams.method == 0x1234000f) { // create event flag
         struct SceSysAudioSystemIpcCreateEventFlagMethodArgs {
           uint32_t channelId;
         };
 
-        static_assert(sizeof(SceSysAudioSystemIpcCreateEventFlagMethodArgs) == 0x4);
+        static_assert(sizeof(SceSysAudioSystemIpcCreateEventFlagMethodArgs) ==
+                      0x4);
 
-        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCreateEventFlagMethodArgs)) {
+        if (dataInfo.size !=
+            sizeof(SceSysAudioSystemIpcCreateEventFlagMethodArgs)) {
           return ErrorCode::INVAL;
         }
 
         SceSysAudioSystemIpcCreateEventFlagMethodArgs args;
-        uread(args, ptr<SceSysAudioSystemIpcCreateEventFlagMethodArgs>(dataInfo.data));
+        uread(args, ptr<SceSysAudioSystemIpcCreateEventFlagMethodArgs>(
+                        dataInfo.data));
 
-        // very bad
-        char buffer[32];
-        sprintf(buffer, "sceAudioOutMix%x", args.channelId);
-        // const char* eventName = &buffer;
-        int32_t attrs = 0x100;
-        EventFlag *eventFlag;
-        if (attrs & kEvfAttrShared) {
-          auto [insertedEvf, inserted] =
-              thread->tproc->context->createEventFlag(buffer, attrs, 0);
+        if (auto audioOut = g_context.audioOut) {
+          // very bad
+          char buffer[32];
+          std::snprintf(buffer, sizeof(buffer), "sceAudioOutMix%x",
+                        args.channelId);
+          // const char* eventName = &buffer;
+          auto [eventFlag, inserted] = thread->tproc->context->createEventFlag(
+              buffer, kEvfAttrShared, 0);
 
           if (!inserted) {
             return ErrorCode::EXIST; // FIXME: verify
           }
 
-          eventFlag = insertedEvf;
-        } else {
-          eventFlag = knew<EventFlag>(attrs, 0);
-          std::strncpy(eventFlag->name, buffer, 32);
+          audioOut->channelInfo.evf = eventFlag;
         }
-
-        int32_t audioOutMixId = thread->tproc->evfMap.insert(eventFlag);
-        AudioOut& ao = AudioOut::getInstance();
-        ao.setEvfId(audioOutMixId);
-      }
-      if (syncCallParams.method == 0x12340001) { // check shared memory audio
+      } else if (syncCallParams.method ==
+                 0x12340001) { // check shared memory audio
         struct SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs {
           uint32_t audioPort;
           uint32_t channelId;
         };
 
-        static_assert(sizeof(SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs) == 0x8);
+        static_assert(
+            sizeof(SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs) ==
+            0x8);
 
-        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs)) {
+        if (dataInfo.size !=
+            sizeof(SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs)) {
           return ErrorCode::INVAL;
         }
 
         SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs args;
-        uread(args, ptr<SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs>(dataInfo.data));
+        uread(args, ptr<SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs>(
+                        dataInfo.data));
 
-        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs", args.audioPort, args.channelId);
-        AudioOut& ao = AudioOut::getInstance();
-        ao.setPortId(args.audioPort);
-        ao.setAudioId(args.channelId);
-      }
-      if (syncCallParams.method == 0x12340002) { // something something open
+        ORBIS_LOG_TODO(
+            "impi: SceSysAudioSystemIpcCheckSharedMemoryAudioMethodArgs",
+            args.audioPort, args.channelId);
+        if (auto audioOut = g_context.audioOut) {
+          audioOut->channelInfo.port = args.audioPort;
+          audioOut->channelInfo.channel = args.channelId;
+        }
+      } else if (syncCallParams.method == 0x12340002) { // something like open
         struct SceSysAudioSystemIpcSomethingMethodArgs {
           uint32_t arg1;
           uint32_t arg2;
@@ -1230,12 +1237,16 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
         }
 
         SceSysAudioSystemIpcSomethingMethodArgs args;
-        uread(args, ptr<SceSysAudioSystemIpcSomethingMethodArgs>(dataInfo.data));
+        uread(args,
+              ptr<SceSysAudioSystemIpcSomethingMethodArgs>(dataInfo.data));
 
-        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcSomethingMethodArgs", args.arg1, args.arg2);
-        // here startToListen
-        AudioOut& ao = AudioOut::getInstance();
-        ao.start(thread);
+        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcSomethingMethodArgs",
+                       args.arg1, args.arg2);
+
+        if (auto audioOut = g_context.audioOut) {
+          // here startToListen
+          audioOut->start();
+        }
       }
     }
 
@@ -1324,6 +1335,10 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
   if (op == 0x46b) {
     thread->retval[0] = -0x40004; // HACK
     return {};
+  }
+
+  if (op == 0x243) {
+    return uwrite<uint>(result, 0);
   }
 
   return {};

@@ -239,7 +239,6 @@ struct StackWriter {
 };
 
 static bool g_traceSyscalls = false;
-static bool g_enableAudio = false;
 static const char *getSyscallName(orbis::Thread *thread, int sysno) {
   auto sysvec = thread->tproc->sysent;
 
@@ -342,9 +341,6 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
   rx::vfs::mount("/dev/sbl_srv", createSblSrvCharacterDevice());
   rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
-  if (g_enableAudio) {
-    rx::vfs::mount("/dev/audioHack", createNullCharacterDevice());
-  }
 
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;
@@ -531,6 +527,8 @@ int main(int argc, const char *argv[]) {
   setupSigHandlers();
   rx::vfs::initialize();
 
+  bool enableAudio = false;
+
   int argIndex = 1;
   while (argIndex < argc) {
     if (argv[argIndex] == std::string_view("--mount") ||
@@ -575,7 +573,7 @@ int main(int argc, const char *argv[]) {
     if (argv[argIndex] == std::string_view("--enable-audio") ||
         argv[argIndex] == std::string_view("-a")) {
       argIndex++;
-      g_enableAudio = true;
+      enableAudio = true;
       continue;
     }
 
@@ -590,6 +588,10 @@ int main(int argc, const char *argv[]) {
   rx::thread::initialize();
   rx::vm::initialize();
   runRpsxGpu();
+
+  if (enableAudio) {
+    orbis::g_context.audioOut = orbis::knew<orbis::AudioOut>();
+  }
 
   // rx::vm::printHostStats();
   auto initProcess = orbis::g_context.createProcess(10);
