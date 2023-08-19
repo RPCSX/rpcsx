@@ -1234,8 +1234,8 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
         }
       } else if (syncCallParams.method == 0x12340002) { // something like open
         struct SceSysAudioSystemIpcSomethingMethodArgs {
-          uint32_t arg1;
-          uint32_t arg2;
+          uint32_t audioPort;
+          uint32_t channelId;
         };
 
         static_assert(sizeof(SceSysAudioSystemIpcSomethingMethodArgs) == 0x8);
@@ -1249,12 +1249,30 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
               ptr<SceSysAudioSystemIpcSomethingMethodArgs>(dataInfo.data));
 
         ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcSomethingMethodArgs",
-                       args.arg1, args.arg2);
+                       args.audioPort, args.channelId);
 
         if (auto audioOut = g_context.audioOut) {
           // here startToListen
           audioOut->start();
         }
+      } else if (syncCallParams.method == 0x12340006) { // close port
+        struct SceSysAudioSystemIpcCloseAudioMethodArgs {
+          uint32_t audioPort;
+          uint32_t channelId;
+        };
+
+        static_assert(sizeof(SceSysAudioSystemIpcCloseAudioMethodArgs) == 0x8);
+
+        if (dataInfo.size != sizeof(SceSysAudioSystemIpcCloseAudioMethodArgs)) {
+          return ErrorCode::INVAL;
+        }
+
+        SceSysAudioSystemIpcCloseAudioMethodArgs args;
+        uread(args,
+              ptr<SceSysAudioSystemIpcCloseAudioMethodArgs>(dataInfo.data));
+
+        ORBIS_LOG_TODO("impi: SceSysAudioSystemIpcCloseAudioMethodArgs",
+                       args.audioPort, args.channelId);
       }
     }
 
