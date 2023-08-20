@@ -977,6 +977,19 @@ struct IpmiSyncCallParams {
   orbis::uint32_t resultCount;
 };
 
+struct IpmiCreateServerParams {
+  orbis::uint64_t arg0;
+  orbis::ptr<char> name;
+  orbis::uint64_t arg2;
+};
+
+struct IpmiClientConnectParams {
+  orbis::ptr<char> arg0;
+  orbis::ptr<char> name;
+  orbis::ptr<char> arg2;
+  orbis::ptr<char> arg3;
+};
+
 static_assert(sizeof(IpmiSyncCallParams) == 0x30);
 
 orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
@@ -984,6 +997,36 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          uint64_t paramsSz, uint64_t arg6) {
   ORBIS_LOG_TODO("sys_ipmimgr_call", op, kid, result, params, paramsSz, arg6);
   thread->where();
+
+  if (op == kImpiCreateServer) {
+    if (paramsSz != sizeof(IpmiCreateServerParams)) {
+      return ErrorCode::INVAL;
+    }
+
+    auto createParams = (ptr<IpmiCreateServerParams>)params;
+
+    ORBIS_LOG_TODO("IPMI: create server", createParams->arg0,
+                   createParams->name, createParams->arg2);
+
+    auto [server, inserted] = g_context.createIpmiServer(createParams->name);
+    if (!inserted) {
+      return ErrorCode::EXIST;
+    }
+
+    auto id = thread->tproc->ipmiServerMap.insert(server);
+    return uwrite<uint>(result, id);
+  }
+
+  if (op == 0x10) {
+    // IPMI server start?
+
+    return uwrite<uint>(result, 0);
+  }
+
+  if (op == 0x201) {
+    // IPMI server receive packet?
+    return uwrite<uint>(result, 0x80020023);
+  }
 
   if (op == kIpmiCreateClient) {
     if (paramsSz != sizeof(IpmiCreateClientParams)) {
@@ -1029,7 +1072,13 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
   }
 
   if (op == 0x400) {
-    ORBIS_LOG_TODO("IMPI: connect?");
+    if (paramsSz != sizeof(IpmiClientConnectParams)) {
+      return ErrorCode::INVAL;
+    }
+
+    auto connectParams = (ptr<IpmiClientConnectParams>)params;
+    ORBIS_LOG_TODO("IMPI: connect?", connectParams->arg0, connectParams->name,
+                   connectParams->arg2, connectParams->arg3);
     if (result) {
       return uwrite<uint>(result, 0);
     }

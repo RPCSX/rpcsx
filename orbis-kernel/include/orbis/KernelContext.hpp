@@ -106,10 +106,7 @@ public:
     return {};
   }
 
-  std::pair<IpmiServer *, bool> createIpmiServer(utils::kstring name,
-                                                 std::uint32_t attrs,
-                                                 std::int32_t initCount,
-                                                 std::int32_t maxCount) {
+  std::pair<IpmiServer *, bool> createIpmiServer(utils::kstring name) {
     std::lock_guard lock(m_sem_mtx);
     auto [it, inserted] = mIpmiServers.try_emplace(std::move(name), nullptr);
     if (inserted) {

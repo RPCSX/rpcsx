@@ -60,6 +60,7 @@ struct Process final {
   utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
   utils::RcIdMap<Semaphore, sint, 4097, 1> semMap;
   utils::RcIdMap<IpmiClient, sint, 4097, 1> ipmiClientMap;
+  utils::RcIdMap<IpmiServer, sint, 4097, 1> ipmiServerMap;
   utils::RcIdMap<Module, ModuleHandle> modulesMap;
   utils::OwningIdMap<Thread, lwpid_t> threadsMap;
   utils::RcIdMap<orbis::File, sint> fileDescriptors;

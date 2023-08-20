@@ -40,6 +40,8 @@ struct ProcessOps {
                     Ref<File> *file);
   SysResult (*shm_open)(Thread *thread, const char *path, sint flags, sint mode,
                         Ref<File> *file);
+  SysResult (*mkdir)(Thread *thread, ptr<const char> path, sint mode);
+  SysResult (*rmdir)(Thread *thread, ptr<const char> path) = nullptr;
   SysResult (*blockpool_open)(Thread *thread, Ref<File> *file);
   SysResult (*blockpool_map)(Thread *thread, caddr_t addr, size_t len,
                              sint prot, sint flags);

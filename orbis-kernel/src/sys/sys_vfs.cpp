@@ -292,13 +292,32 @@ orbis::SysResult orbis::sys_renameat(Thread *thread, sint oldfd, ptr<char> old,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_mkdir(Thread *thread, ptr<char> path, sint mode) {
+  if (auto mkdir = thread->tproc->ops->mkdir) {
+    return mkdir(thread, path, mode);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_mkdirat(Thread *thread, sint fd, ptr<char> path,
                                     mode_t mode) {
-  return ErrorCode::NOSYS;
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto mkdir = file->ops->mkdir;
+
+  if (mkdir == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+  std::lock_guard lock(file->mtx);
+
+  return mkdir(file.get(), path, mode);
 }
+
 orbis::SysResult orbis::sys_rmdir(Thread *thread, ptr<char> path) {
+  if (auto rmdir = thread->tproc->ops->rmdir) {
+    return rmdir(thread, path);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_getdirentries(Thread *thread, sint fd,
