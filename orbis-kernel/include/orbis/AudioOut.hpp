@@ -20,8 +20,32 @@ struct AudioOutChannelInfo {
   Ref<EventFlag> evf;
 };
 
+struct AudioOutParams {
+  std::uint64_t control{};
+  std::uint32_t formatChannels{};
+  float unk0{};
+  float unk1{};
+  float unk2{};
+  float unk3{};
+  float unk4{};
+  float unk5{};
+  float unk6{};
+  float unk7{};
+  std::uint32_t formatIsFloat{};
+  std::uint64_t freq{};
+  std::uint32_t formatIsStd{};
+  std::uint32_t seek{};
+  std::uint32_t seekPart{};
+  std::uint64_t unk8{};
+  std::uint32_t port{};
+  std::uint32_t unk9{};
+  std::uint64_t unk10{};
+  std::uint32_t sampleLength{};
+};
+
 struct AudioOut {
   std::mutex thrMtx;
+  std::mutex soxMtx;
   std::vector<std::thread> threads;
   AudioOutChannelInfo channelInfo;
   std::atomic<bool> exit{false};
@@ -95,87 +119,61 @@ private:
                               MAP_SHARED, bufferFd, 0);
     auto bitPattern = 1u << info.port;
 
-    int firstNonEmptyByteIndex = -1;
+    auto portOffset = 32 + 0x94 * info.port * 4;
 
-    for (std::size_t i = 24; i < controlStat.st_size; ++i) {
-      if (controlPtr[i] != 0) {
-        firstNonEmptyByteIndex = i - 8;
-        break;
-      }
+    auto *params = reinterpret_cast<AudioOutParams *>(controlPtr + portOffset);
 
-      // FIXME: following line triggers error, investigate _C shm layout
-      // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-
-      if (exit.load(std::memory_order::relaxed)) {
-        break;
-      }
+    // samples length will be inited after some time, so we wait for it
+    while (params->sampleLength == 0) {
     }
 
-    if (firstNonEmptyByteIndex < 0) {
-      ORBIS_LOG_ERROR("AudioOut: Failed to find first non zero byte index");
-      std::abort();
-    }
-
-    int outParamFirstByte = controlPtr[firstNonEmptyByteIndex + 8];
-    int isFloat = controlPtr[firstNonEmptyByteIndex + 44];
-
-    // int outParamThirdByte = *((char *)controlPtr + firstNonEmptyByteIndex +
-    // 44); // need to find the third index
+    ORBIS_LOG_NOTICE("AudioOut: params", params->port, params->control,
+                     params->formatChannels, params->formatIsFloat,
+                     params->formatIsStd, params->freq, params->sampleLength);
 
     unsigned inChannels = 2;
-    unsigned inSamples = 256;
+    unsigned inSamples = params->sampleLength;
     sox_rate_t sampleRate = 48000; // probably there is no point to parse
                                    // frequency, because it's always 48000
-    if (outParamFirstByte == 2 && isFloat == 0) {
+    if (params->formatChannels == 2 && !params->formatIsFloat) {
       inChannels = 1;
       ORBIS_LOG_NOTICE(
-          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_MONO");
-    } else if (outParamFirstByte == 4 && isFloat == 0) {
+          "AudioOut: format is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_MONO");
+    } else if (params->formatChannels == 4 && !params->formatIsFloat) {
       inChannels = 2;
       ORBIS_LOG_NOTICE(
-          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_STEREO");
-    } else if (outParamFirstByte == 16 && isFloat == 0) {
+          "AudioOut: format is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_STEREO");
+    } else if (params->formatChannels == 16 && !params->formatIsFloat &&
+               !params->formatIsStd) {
       inChannels = 8;
       ORBIS_LOG_NOTICE(
-          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_8CH");
-    } else if (outParamFirstByte == 4 && isFloat == 1) {
+          "AudioOut: format is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_8CH");
+    } else if (params->formatChannels == 16 && !params->formatIsFloat &&
+               params->formatIsStd) {
+      inChannels = 8;
+      ORBIS_LOG_NOTICE(
+          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_8CH_STD");
+    } else if (params->formatChannels == 4 && params->formatIsFloat) {
       inChannels = 1;
       ORBIS_LOG_NOTICE(
-          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_MONO");
-    } else if (outParamFirstByte == 8 && isFloat == 1) {
+          "AudioOut: format is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_MONO");
+    } else if (params->formatChannels == 8 && params->formatIsFloat) {
       inChannels = 2;
       ORBIS_LOG_NOTICE(
-          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_STEREO");
-    } else if (outParamFirstByte == 32 && isFloat == 1) {
+          "AudioOut: format is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_STEREO");
+    } else if (params->formatChannels == 32 && params->formatIsFloat &&
+               !params->formatIsStd) {
       inChannels = 8;
       ORBIS_LOG_NOTICE(
-          "AudioOut: outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_8CH");
+          "AudioOut: format is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_8CH");
+    } else if (params->formatChannels == 32 && params->formatIsFloat &&
+               params->formatIsStd) {
+      inChannels = 8;
+      ORBIS_LOG_NOTICE("AudioOut: format is "
+                       "ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_8CH_STD");
     } else {
-      ORBIS_LOG_ERROR("AudioOut: unknown output type");
+      ORBIS_LOG_ERROR("AudioOut: unknown format type");
     }
-
-    // it's need third byte
-    // if (outParamFirstByte == 16 && outParamSecondByte == 0 &&
-    // outParamThirdByte
-    // == 1) {
-    //   printf("outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_S16_8CH_STD");
-    // }
-    // if (outParamFirstByte == 32 && outParamSecondByte == 1 &&
-    // outParamThirdByte
-    // == 1) {
-    //   printf("outputParam is ORBIS_AUDIO_OUT_PARAM_FORMAT_FLOAT_8CH_STD");
-    // }
-
-    // length byte will be inited after some time, so we wait for it
-    int samplesLengthByte = 0;
-    while (true) {
-      samplesLengthByte = controlPtr[firstNonEmptyByteIndex + 97];
-      if (samplesLengthByte > 0) {
-        break;
-      }
-    }
-
-    inSamples = samplesLengthByte * 256;
 
     sox_signalinfo_t out_si = {
         .rate = sampleRate,
@@ -183,8 +181,13 @@ private:
         .precision = SOX_SAMPLE_PRECISION,
     };
 
+    // need to be locked because libsox doesn't like simultaneous opening of the
+    // output
+    std::unique_lock lock(soxMtx);
     sox_format_t *output =
         sox_open_write("default", &out_si, NULL, "alsa", NULL, NULL);
+    soxMtx.unlock();
+
     if (!output) {
       std::abort();
     }
@@ -197,7 +200,7 @@ private:
     while (!exit.load(std::memory_order::relaxed)) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-      if (isFloat == 0) {
+      if (!params->formatIsFloat) {
         auto data = reinterpret_cast<const std::int16_t *>(audioBuffer);
         for (std::size_t i = 0; i < samples.size(); i++) {
           samples[i] = SOX_SIGNED_16BIT_TO_SAMPLE(data[i], clips);
@@ -217,9 +220,7 @@ private:
       info.evf->set(bitPattern);
 
       // set zero to freeing audiooutput
-      for (size_t i = 0; i < 8; ++i) {
-        controlPtr[firstNonEmptyByteIndex + i] = 0;
-      }
+      params->control = 0;
     }
 
     sox_close(output);
