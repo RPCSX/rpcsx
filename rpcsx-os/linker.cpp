@@ -1034,6 +1034,11 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
     if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
       return result;
     }
+    filePath.resize(filePath.size() - 5);
+    filePath += ".prx";
+    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
+      return result;
+    }
   }
 
   for (auto path : {"/system/common/lib/", "/system/priv/lib/"}) {
