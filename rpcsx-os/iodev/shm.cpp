@@ -37,6 +37,10 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
       // TODO
       realFlags |= O_CREAT;
       size = 0x4000;
+    } else if (name == "/rpcsx-SceNpTpip") {
+      // TODO
+      realFlags |= O_CREAT;
+      size = 0x4000;
     } else if (name == "/rpcsx-SceNpPlusLogger") {
       realFlags |= O_CREAT;
       size = 0x4400;
