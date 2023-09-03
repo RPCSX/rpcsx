@@ -131,7 +131,10 @@ loadPrx(orbis::Thread *thread, std::string_view path, bool relocate) {
     }
 
     expectedName += tmpExpectedName;
-    expectedName += ".prx";
+
+    if (!expectedName.ends_with(".prx")) {
+      expectedName += ".prx";
+    }
   }
 
   return loadPrx(thread, path, relocate, loadedObjects, loadedModules,
