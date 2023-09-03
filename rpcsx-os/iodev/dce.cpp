@@ -19,17 +19,18 @@ struct VideoOutBuffer {
 };
 
 struct RegisterBuffer {
-  std::uint64_t attributeIndex;
-  std::uint64_t index;
-  std::uint64_t address;
-  std::uint64_t unk;
+  std::uint64_t canary;   //arg5 data in FlipControlArgs:0: *arg5
+  std::uint32_t index;    //buffer index
+  std::uint32_t vid;      //video output port id ?
+  std::uint64_t address;  //left buffer ptr
+  std::uint64_t address2; //right buffer ptr (Stereo)
 };
 
 struct RegisterBufferAttributeArgs {
-  std::uint64_t unk0;
-  std::uint8_t unk1;
-  std::uint8_t unk2_flag;
-  std::uint16_t unk3; // 0
+  std::uint64_t canary; //arg5 data in FlipControlArgs:0: *arg5
+  std::uint8_t  vid;    //video output port id ?
+  std::uint8_t  submit; //0 = RegisterBuffers ; 1 = SubmitChangeBufferAttribute
+  std::uint16_t unk3;   //0
   std::uint32_t pixelFormat;
   std::uint32_t tilingMode; // 1 // tilingMode?
   std::uint32_t pitch;
@@ -37,32 +38,36 @@ struct RegisterBufferAttributeArgs {
   std::uint32_t height;
   std::uint8_t unk4_zero; // 0
   std::uint8_t unk5_zero; // 0
-  std::uint16_t unk6;
-  std::uint64_t unk7; // -1
-  std::uint32_t unk8;
+  std::uint16_t options;
+  std::uint64_t reserved1; // -1
+  std::uint32_t reserved2;
 };
 
-struct FlipRequestArgs {
-  std::uint64_t arg1;
-  std::int32_t displayBufferIndex;
-  std::uint64_t flipMode; // flip mode?
+struct FlipRequestArgs { //submit_flip
+  std::uint64_t canary; //arg5 data in FlipControlArgs:0: *arg5
+  std::uint64_t displayBufferIndex;
+  std::uint32_t flipMode; // flip mode?
+  std::uint32_t unk1;
   std::uint64_t flipArg;
-  std::uint32_t arg5;
-  std::uint32_t arg6;
-  std::uint32_t arg7;
-  std::uint32_t arg8;
+  std::uint64_t flipArg2; //not used
+  std::uint32_t eop_nz;
+  std::uint32_t unk2;
+  std::uint32_t eop_val;
+  std::uint32_t unk3;
+  std::uint64_t unk4;
+  std::uint64_t* rout; //extraout of result error
 };
 
 struct FlipControlStatus {
   std::uint64_t flipArg;
-  std::uint64_t unk0;
+  std::uint64_t flipArg2; //not used
   std::uint64_t count;
   std::uint64_t processTime;
   std::uint64_t tsc;
   std::uint32_t currentBuffer;
-  std::uint32_t unkQueueNum;
+  std::uint32_t flipPendingNum0; //flipPendingNum = flipPendingNum0 + gcQueueNum + flipPendingNum1
   std::uint32_t gcQueueNum;
-  std::uint32_t unk2QueueNum;
+  std::uint32_t flipPendingNum1;
   std::uint32_t submitTsc;
   std::uint64_t unk1;
 };
@@ -73,14 +78,42 @@ struct FlipControlArgs {
   std::uint64_t arg2;
   void *ptr;
   std::uint64_t size; // 0x48 // size?
+  std::uint64_t arg5;
+  std::uint64_t arg6;
 };
 
 struct ResolutionStatus {
   std::uint32_t width;
   std::uint32_t heigth;
-  std::uint32_t x;
-  std::uint32_t y;
+  std::uint32_t paneWidth;
+  std::uint32_t paneHeight;
+  std::uint32_t refreshHz;
+  std::uint32_t screenSizeInInch;
+  std::byte     padding[20];
 };
+
+ //refreshRate =    0                                REFRESH_RATE_UNKNOWN
+ //refreshRate =    3; result.refreshHz = 0x426fc28f REFRESH_RATE_59_94HZ
+ //refreshRate =    2, result.refreshHz = 0x42480000 REFRESH_RATE_50HZ
+ //refreshRate =    1, result.refreshHz = 0x41bfd70a REFRESH_RATE_23_98HZ
+ //refreshRate =    4, result.refreshHz = 0x41c00000
+ //refreshRate =    5, result.refreshHz = 0x41f00000
+ //refreshRate =    6, result.refreshHz = 0x41efc28f REFRESH_RATE_29_97HZ
+ //refreshRate =    7, result.refreshHz = 0x41c80000
+ //refreshRate =    9, result.refreshHz = 0x42700000
+ //refreshRate =   10, result.refreshHz = 0x42400000
+ //refreshRate =  0xb, result.refreshHz = 0x423fcccd
+ //refreshRate =  0xc, result.refreshHz = 0x42c80000
+ //refreshRate =  0xd, result.refreshHz = 0x42efc28f REFRESH_RATE_119_88HZ
+ //refreshRate =  0xe, result.refreshHz = 0x42f00000
+ //refreshRate =  0xf, result.refreshHz = 0x43480000
+ //refreshRate = 0x10, result.refreshHz = 0x436fc28f
+ //refreshRate = 0x11, result.refreshHz = 0x43700000
+ //refreshRate = 0x14, result.refreshHz = 0x413fd70a
+ //refreshRate = 0x15, result.refreshHz = 0x41400000
+ //refreshRate = 0x16, result.refreshHz = 0x416fd70a
+ //refreshRate = 0x17, result.refreshHz = 0x41700000
+ //refreshRate = 0x23, result.refreshHz = 0x42b3d1ec REFRESH_RATE_89_91HZ
 
 struct DceFile : public orbis::File {};
 
@@ -139,10 +172,10 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       flipStatus.processTime = 0; // TODO
       flipStatus.tsc = 0;         // TODO
       flipStatus.currentBuffer = rx::bridge.header->flipBuffer;
-      flipStatus.unkQueueNum = 0;  // TODO
-      flipStatus.gcQueueNum = 0;   // TODO
-      flipStatus.unk2QueueNum = 0; // TODO
-      flipStatus.submitTsc = 0;    // TODO
+      flipStatus.flipPendingNum0 = 0; // TODO
+      flipStatus.gcQueueNum = 0;      // TODO
+      flipStatus.flipPendingNum1 = 0; // TODO
+      flipStatus.submitTsc = 0;       // TODO
 
       std::memcpy(args->ptr, &flipStatus, sizeof(FlipControlStatus));
     } else if (args->id == 12) {
@@ -152,8 +185,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       auto status = (ResolutionStatus *)args->ptr;
       status->width = 1920;
       status->heigth = 1080;
-      status->x = 0;
-      status->y = 0;
+      status->paneWidth = 1920;
+      status->paneHeight = 1080;
     } else if (args->id == 9) {
       ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
                        args->ptr, args->size);
@@ -177,8 +210,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
 
   if (request == 0xc0308206) {
     auto args = reinterpret_cast<RegisterBuffer *>(argp);
-    ORBIS_LOG_ERROR("dce: RegisterBuffer", args->attributeIndex, args->index,
-                    args->address, args->unk);
+    ORBIS_LOG_ERROR("dce: RegisterBuffer", args->canary, args->index,
+                    args->address, args->address2);
 
     if (args->index >= std::size(rx::bridge.header->buffers)) {
       // TODO
@@ -200,11 +233,11 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
   if (request == 0xc0308207) { // SCE_SYS_DCE_IOCTL_REGISTER_BUFFER_ATTRIBUTE
     auto args = reinterpret_cast<RegisterBufferAttributeArgs *>(argp);
 
-    ORBIS_LOG_ERROR("dce: RegisterBufferAttributes", args->unk0, args->unk1,
-                    args->unk2_flag, args->unk3, args->pixelFormat,
+    ORBIS_LOG_ERROR("dce: RegisterBufferAttributes", args->canary, args->vid,
+                    args->submit, args->unk3, args->pixelFormat,
                     args->tilingMode, args->pitch, args->width, args->height,
-                    args->unk4_zero, args->unk5_zero, args->unk6, args->unk7,
-                    args->unk8);
+                    args->unk4_zero, args->unk5_zero, args->options, args->reserved1,
+                    args->reserved2);
 
     device->bufferAttributes.pixelFormat = args->pixelFormat;
     device->bufferAttributes.tilingMode = args->tilingMode;
