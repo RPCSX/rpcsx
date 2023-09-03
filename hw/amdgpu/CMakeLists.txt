@@ -11,6 +11,7 @@ add_subdirectory(lib/libspirv)
 project(amdgpu)
 
 add_library(${PROJECT_NAME} INTERFACE)
+target_link_libraries(${PROJECT_NAME} INTERFACE rx)
 target_include_directories(${PROJECT_NAME} INTERFACE include)
 
 add_library(amdgpu::base ALIAS ${PROJECT_NAME})
