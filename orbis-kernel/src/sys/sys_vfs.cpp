@@ -358,7 +358,8 @@ orbis::SysResult orbis::sys_umask(Thread *thread, sint newmask) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_revoke(Thread *thread, ptr<char> path) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__);
+  return {};
 }
 orbis::SysResult orbis::sys_lgetfh(Thread *thread, ptr<char> fname,
                                    ptr<struct fhandle> fhp) {

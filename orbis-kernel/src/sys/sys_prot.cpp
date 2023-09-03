@@ -1,4 +1,5 @@
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
 
 orbis::SysResult orbis::sys_getpid(Thread *thread) {
   thread->retval[0] = thread->tid;
@@ -20,7 +21,10 @@ orbis::SysResult orbis::sys_getgroups(Thread *thread, uint gidsetsize,
                                       ptr<gid_t> gidset) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_setsid(Thread *thread) { return ErrorCode::NOSYS; }
+orbis::SysResult orbis::sys_setsid(Thread *thread) {
+  ORBIS_LOG_WARNING(__FUNCTION__);
+  return {};
+}
 orbis::SysResult orbis::sys_setpgid(Thread *thread, sint pid, sint pgid) {
   return ErrorCode::NOSYS;
 }
@@ -73,5 +77,6 @@ orbis::SysResult orbis::sys_getlogin(Thread *thread, ptr<char> namebuf,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_setlogin(Thread *thread, ptr<char> namebuf) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__, namebuf);
+  return {};
 }

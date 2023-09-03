@@ -830,7 +830,7 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
 }
 orbis::SysResult orbis::sys_randomized_path(Thread *thread /* TODO */) {
   std::printf("TODO: sys_randomized_path()\n");
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_rdup(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;

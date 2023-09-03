@@ -522,7 +522,8 @@ SysResult thr_wake(orbis::Thread *thread, orbis::slong id) {
 }
 SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
                        orbis::ptr<const char> name) {
-  return ErrorCode::NOTSUP;
+  ORBIS_LOG_WARNING(__FUNCTION__, name, id, thread->tid);
+  return {};
 }
 orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
   std::printf("Requested exit with status %d\n", status);
