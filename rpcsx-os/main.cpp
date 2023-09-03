@@ -323,6 +323,9 @@ static int ps4Exec(orbis::Thread *mainThread,
   orbis::g_context.dmemDevice = dmem1;
 
   rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
+  rx::vfs::mount("/dev/npdrm", createNpdrmCharacterDevice());
+  rx::vfs::mount("/dev/icc_configuration", createIccConfigurationCharacterDevice());
+  rx::vfs::mount("/dev/console", createConsoleCharacterDevice());
   rx::vfs::mount("/dev/dmem1", dmem1);
   rx::vfs::mount("/dev/dmem2", createDmemCharacterDevice(2));
   rx::vfs::mount("/dev/stdout", createFdWrapDevice(STDOUT_FILENO));
