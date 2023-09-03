@@ -531,6 +531,7 @@ int main(int argc, const char *argv[]) {
   rx::vfs::initialize();
 
   bool enableAudio = false;
+  bool asRoot = false;
 
   int argIndex = 1;
   while (argIndex < argc) {
@@ -557,6 +558,12 @@ int main(int argc, const char *argv[]) {
     if (argv[argIndex] == std::string_view("--trace")) {
       argIndex++;
       g_traceSyscalls = true;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--root")) {
+      argIndex++;
+      asRoot = true;
       continue;
     }
 
@@ -597,7 +604,7 @@ int main(int argc, const char *argv[]) {
   }
 
   // rx::vm::printHostStats();
-  auto initProcess = orbis::g_context.createProcess(10);
+  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
   pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   std::thread{[] {
