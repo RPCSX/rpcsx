@@ -19,5 +19,5 @@ jobs:
         cmake_command: cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=on
         split_workflow: true
     - name: Upload review
-      uses: ZedThree/clang-tidy-review/upload@v0.13.1
+      uses: ZedThree/clang-tidy-review/upload@v0.14.0
       id: upload-review
