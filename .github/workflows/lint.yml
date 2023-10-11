@@ -11,10 +11,10 @@ jobs:
       with:
         submodules: recursive
     - name: Run clang-tidy
-      uses: ZedThree/clang-tidy-review@v0.13.1
+      uses: ZedThree/clang-tidy-review@v0.14.0
       id: review
       with:
-        clang_tidy_version: 15
+        clang_tidy_version: 16
         apt_packages: libunwind-dev, libglfw3-dev, libvulkan-dev, vulkan-validationlayers-dev, spirv-tools, glslang-tools, libspirv-cross-c-shared-dev
         cmake_command: cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=on
         split_workflow: true
