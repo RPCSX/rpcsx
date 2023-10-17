@@ -20,6 +20,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     sched_cpusetsize,
     proc_ptc,
     cpu_mode,
+    rng_pseudo,
   };
 
   enum sysctl_hw {
@@ -100,6 +101,14 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
           dest[count++] = kern;
           dest[count++] = sdk_version;
+        } else if (searchName == "kern.rng_pseudo") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = kern;
+          dest[count++] = rng_pseudo;
         } else if (searchName == "kern.sched.cpusetsize") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
             std::fprintf(stderr, "   %s error\n", searchName.data());
@@ -187,6 +196,15 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         *(std::uint32_t *)old = 4;
+        break;
+
+      case sysctl_kern::rng_pseudo:
+        if (*oldlenp != 0x40 || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+
+        std::memset(old, 0, 0x40);
         break;
 
       case sysctl_kern::kern_37: {
