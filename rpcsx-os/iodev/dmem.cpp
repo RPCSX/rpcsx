@@ -59,12 +59,6 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
 
     return device->queryMaxFreeChunkSize(&args->searchStart, args->searchEnd,
                                          args->alignment, &args->size);
-
-    ORBIS_LOG_WARNING("dmem getAvailableSize", device->index, argp, dmemSize);
-    // args->searchStart = device->nextOffset;
-    // args->size = dmemSize - device->nextOffset;
-
-    return {};
   }
 
   case 0xc0288011:

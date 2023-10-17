@@ -87,6 +87,10 @@ static orbis::SysResult doRelocation(orbis::Process *process,
 
     auto &defModule = module->importedModules.at(symbol.moduleIndex);
     if (!defModule) {
+      std::printf(
+        "'%s' ('%s') uses undefined symbol '%llx' in unloaded module\n",
+        module->moduleName, module->soName, (unsigned long long)symbol.id);
+
       return std::pair(module, symbol.address);
     }
 

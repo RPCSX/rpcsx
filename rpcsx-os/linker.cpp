@@ -10,6 +10,7 @@
 #include <bit>
 #include <crypto/sha1.h>
 #include <elf.h>
+#include <fstream>
 #include <map>
 #include <orbis/thread/Process.hpp>
 #include <sys/mman.h>
@@ -959,6 +960,8 @@ Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
   if (image[0] != std::byte{'\x7f'} || image[1] != std::byte{'E'} ||
       image[2] != std::byte{'L'} || image[3] != std::byte{'F'}) {
     image = unself(image.data(), image.size());
+    
+    std::ofstream("a.out", std::ios::binary).write((const char *)image.data(), image.size());
   }
 
   return loadModule(image, thread->tproc);
@@ -1045,6 +1048,17 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
     auto filePath = std::string(path);
     filePath += name;
     filePath += ".sprx";
+
+    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
+      return result;
+    }
+  }
+
+  // HACK: implement lazy bind support
+  for (auto path : { "/app0/Media/Modules/" }) {
+    auto filePath = std::string(path);
+    filePath += name;
+    filePath += ".prx";
 
     if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
       return result;
