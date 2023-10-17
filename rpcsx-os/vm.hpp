@@ -1,4 +1,5 @@
 #pragma once
+#include "io-device.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -50,12 +51,12 @@ enum MapInternalFlags {
 };
 
 struct VirtualQueryInfo {
-  uint64_t start;
-  uint64_t end;
-  uint64_t offset;
-  int32_t protection;
-  int32_t memoryType;
-  uint32_t flags;
+  std::uint64_t start;
+  std::uint64_t end;
+  std::uint64_t offset;
+  std::int32_t protection;
+  std::int32_t memoryType;
+  std::uint32_t flags;
   char name[32];
 };
 
@@ -69,10 +70,12 @@ void printHostStats();
 void initialize();
 void deinitialize();
 void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags,
-          std::int32_t internalFlags = 0);
+          std::int32_t internalFlags = 0, IoDevice *device = nullptr,
+          std::uint64_t offset = 0);
 bool unmap(void *addr, std::uint64_t size);
 bool protect(void *addr, std::uint64_t size, std::int32_t prot);
 
+void setName(std::uint64_t start, std::uint64_t size, const char *name);
 bool virtualQuery(const void *addr, std::int32_t flags, VirtualQueryInfo *info);
 bool queryProtection(const void *addr, std::uint64_t *startAddress,
                      std::uint64_t *endAddress, std::int32_t *prot);

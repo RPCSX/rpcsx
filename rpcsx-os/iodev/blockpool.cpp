@@ -20,9 +20,6 @@ static orbis::ErrorCode blockpool_ioctl(orbis::File *file,
 
   switch (request) {
   case 0xc020a801: {
-    auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
-    std::lock_guard lock(dmem->mtx);
-
     struct Args {
       std::uint64_t len;
       std::uint64_t searchStart;
@@ -33,20 +30,22 @@ static orbis::ErrorCode blockpool_ioctl(orbis::File *file,
     ORBIS_LOG_TODO("blockpool expand", args->len, args->searchStart,
                    args->searchEnd, args->flags);
 
-    std::uint64_t start = args->searchStart;
-    std::uint64_t len = std::min(args->searchEnd - start, args->len);
-    if (dmem->nextOffset > args->searchEnd) {
-      ORBIS_LOG_TODO("blockpool out of allocation", args->len,
-                     args->searchStart, args->searchEnd, args->flags);
-      return orbis::ErrorCode::INVAL;
-    }
+    // auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
+    // std::lock_guard lock(dmem->mtx);
+    // std::uint64_t start = args->searchStart;
+    // std::uint64_t len = std::min(args->searchEnd - start, args->len);
+    // if (dmem->nextOffset > args->searchEnd) {
+    //   ORBIS_LOG_TODO("blockpool out of allocation", args->len,
+    //                  args->searchStart, args->searchEnd, args->flags);
+    //   return orbis::ErrorCode::INVAL;
+    // }
 
-    start = std::max(dmem->nextOffset, start);
-    auto end = std::min(start + len, args->searchEnd);
-    dmem->nextOffset = end;
-    args->searchStart = start;
+    // start = std::max(dmem->nextOffset, start);
+    // auto end = std::min(start + len, args->searchEnd);
+    // dmem->nextOffset = end;
+    // args->searchStart = start;
 
-    blockPool->len += end - start;
+    // blockPool->len += end - start;
     return {};
   }
   }

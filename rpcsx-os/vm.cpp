@@ -1,6 +1,10 @@
 #include "vm.hpp"
 #include "align.hpp"
 #include "bridge.hpp"
+#include "io-device.hpp"
+#include "iodev/dmem.hpp"
+#include "orbis/utils/Logs.hpp"
+#include "orbis/utils/Rc.hpp"
 #include <bit>
 #include <cassert>
 #include <cinttypes>
@@ -11,6 +15,8 @@
 #include <mutex>
 #include <sys/mman.h>
 #include <unistd.h>
+
+#include <rx/MemoryTable.hpp>
 
 namespace utils {
 namespace {
@@ -604,8 +610,16 @@ struct Block {
 
 static Block gBlocks[kBlockCount];
 
-static std::map<std::uint64_t, rx::vm::VirtualQueryInfo, std::greater<>>
-    gVirtualAllocations;
+struct MapInfo {
+  orbis::Ref<IoDevice> device;
+  std::uint64_t offset;
+  std::uint32_t flags;
+  char name[32];
+
+  bool operator==(const MapInfo &) const = default;
+};
+
+static rx::MemoryTableWithPayload<MapInfo> gMapInfo;
 
 static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   auto blockIndex = startAddress >> kBlockShift;
@@ -660,23 +674,9 @@ constexpr auto kFlexibleMemorySize = 448ull * 1024 * 1024;
 constexpr auto kMainDirectMemorySize =
     kPhysicalMemorySize - kFlexibleMemorySize;
 
-/*
-std::uint64_t allocate(std::uint64_t phyAddress, std::uint64_t size,
-                       std::uint64_t align, std::int32_t memType,
-                       std::uint32_t blockFlags) {
-  // TODO
-  return 0;
-}
-
-bool setMemoryRangeName(std::uint64_t phyAddress, std::uint64_t size,
-                        const char *name) {
-  // TODO
-  return false;
-}
-*/
-
 void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
-                  std::int32_t flags, std::int32_t internalFlags) {
+                  std::int32_t flags, std::int32_t internalFlags,
+                  IoDevice *device, std::uint64_t offset) {
   std::fprintf(stderr,
                "rx::vm::map(addr = %p, len = %" PRIu64
                ", prot = %s, flags = %s)\n",
@@ -821,14 +821,17 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     std::fprintf(stderr, "   unhandled flags 0x%" PRIx32 "\n", flags);
   }
 
-  auto &allocInfo = gVirtualAllocations[address];
-  allocInfo.start = address;
-  allocInfo.end = address + len;
-  // allocInfo.offset = offset; // TODO
-  allocInfo.protection = prot;
-  allocInfo.memoryType = 3;                 // TODO
-  allocInfo.flags = kBlockFlagDirectMemory; // TODO
-  allocInfo.name[0] = '\0';                 // TODO
+  {
+    MapInfo info;
+    if (auto it = gMapInfo.queryArea(address); it != gMapInfo.end()) {
+      info = (*it).payload;
+    }
+    info.device = device;
+    info.flags = flags;
+    info.offset = offset;
+
+    gMapInfo.map(address, address + len, info);
+  }
 
   if (internalFlags & kMapInternalReserveOnly) {
     return reinterpret_cast<void *>(address);
@@ -988,24 +991,70 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
   std::lock_guard lock(g_mtx);
 
   auto address = reinterpret_cast<std::uint64_t>(addr);
-  auto it = gVirtualAllocations.lower_bound(address);
+  auto it = gMapInfo.lowerBound(address);
 
-  if (it == gVirtualAllocations.end()) {
+  if (it == gMapInfo.end()) {
     return false;
   }
 
+  auto queryInfo = *it;
+
   if ((flags & 1) == 0) {
-    if (it->second.end <= address) {
+    if (queryInfo.endAddress <= address) {
       return false;
     }
   } else {
-    if (it->second.start > address || it->second.end <= address) {
+    if (queryInfo.beginAddress > address || queryInfo.endAddress <= address) {
       return false;
     }
   }
 
-  *info = it->second;
+  if (queryInfo.payload.device == nullptr) {
+    return false;
+  }
+
+  std::int32_t memoryType = 0;
+  std::uint32_t blockFlags = 0;
+  if (auto dmem = dynamic_cast<DmemDevice *>(queryInfo.payload.device.get())) {
+    auto dmemIt = dmem->allocations.queryArea(queryInfo.payload.offset);
+    if (dmemIt == dmem->allocations.end()) {
+      return false;
+    }
+    auto alloc = *dmemIt;
+    memoryType = alloc.payload.memoryType;
+    blockFlags = kBlockFlagDirectMemory;
+  }
+  // TODO
+
+  std::int32_t prot = getPageProtectionImpl(queryInfo.beginAddress);
+
+  *info = {
+      .start = queryInfo.beginAddress,
+      .end = queryInfo.endAddress,
+      .protection = prot,
+      .memoryType = memoryType,
+      .flags = blockFlags,
+  };
+
+  ORBIS_LOG_ERROR("virtualQuery", addr, flags, info->start, info->end, info->protection,
+                  info->memoryType, info->flags);
+
+  std::memcpy(info->name, queryInfo.payload.name, sizeof(info->name));
   return true;
+}
+
+void rx::vm::setName(std::uint64_t start, std::uint64_t size,
+                     const char *name) {
+  std::lock_guard lock(g_mtx);
+
+  MapInfo info;
+  if (auto it = gMapInfo.queryArea(start); it != gMapInfo.end()) {
+    info = (*it).payload;
+  }
+
+  std::strncpy(info.name, name, sizeof(info.name));
+
+  gMapInfo.map(start, size, info);
 }
 
 void rx::vm::printHostStats() {

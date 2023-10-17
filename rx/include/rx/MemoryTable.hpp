@@ -245,6 +245,26 @@ public:
 
   void clear() { mAreas.clear(); }
 
+  iterator lowerBound(std::uint64_t address) {
+    auto it = mAreas.lower_bound(address);
+
+    if (it == mAreas.end()) {
+      return it;
+    }
+
+    if (it->first == address) {
+      if (it->second.first == Kind::X) {
+        ++it;
+      }
+    } else {
+      if (it->second.first != Kind::O) {
+        --it;
+      }
+    }
+
+    return it;
+  }
+
   iterator queryArea(std::uint64_t address) {
     auto it = mAreas.lower_bound(address);
 

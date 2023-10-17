@@ -183,7 +183,7 @@ orbis::SysResult dmem_mmap(orbis::Thread *thread, orbis::caddr_t addr,
   auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
   void *address = addr;
   auto result =
-      dmem->mmap(&address, len, memoryType, prot, flags, directMemoryStart);
+      dmem->mmap(&address, len, prot, flags, directMemoryStart);
   if (result != ErrorCode{}) {
     return result;
   }
