@@ -57,7 +57,8 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    return device->queryMaxFreeChunkSize(&args->searchStart, args->searchEnd, args->alignment, &args->size);
+    return device->queryMaxFreeChunkSize(&args->searchStart, args->searchEnd,
+                                         args->alignment, &args->size);
 
     ORBIS_LOG_WARNING("dmem getAvailableSize", device->index, argp, dmemSize);
     // args->searchStart = device->nextOffset;
@@ -89,6 +90,76 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                             {.memoryType = 0});
     return {};
   }
+
+  case 0x80288012: { // direct memory query
+    struct DirectMemoryQueryInfo {
+      std::uint64_t start;
+      std::uint64_t end;
+      std::uint32_t memoryType;
+    };
+
+    struct Args {
+      std::uint32_t devIndex;
+      std::uint32_t flags;
+      std::uint32_t unk;
+      std::uint64_t offset;
+      orbis::ptr<DirectMemoryQueryInfo> info;
+      std::uint64_t infoSize;
+    };
+
+    auto args = reinterpret_cast<Args *>(argp);
+
+    ORBIS_LOG_WARNING("dmem directMemoryQuery", device->index, args->devIndex,
+                      args->unk, args->flags, args->offset, args->info,
+                      args->infoSize);
+
+    if (args->devIndex != device->index) {
+      // TODO
+      ORBIS_LOG_ERROR("dmem directMemoryQuery: device mismatch", device->index,
+                      args->devIndex, args->unk, args->flags, args->offset,
+                      args->info, args->infoSize);
+
+      return orbis::ErrorCode::INVAL;
+    }
+
+    if (args->infoSize != sizeof(DirectMemoryQueryInfo)) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    auto it = device->allocations.lowerBound(args->offset);
+
+    if (it == device->allocations.end()) {
+      return orbis::ErrorCode::ACCES;
+    }
+
+    auto queryInfo = *it;
+
+    if (queryInfo.payload.memoryType == 0) {
+      return orbis::ErrorCode::ACCES;
+    }
+
+    if ((args->flags & 1) == 0) {
+      if (queryInfo.endAddress <= args->offset) {
+        return orbis::ErrorCode::ACCES;
+      }
+    } else {
+      if (queryInfo.beginAddress > args->offset ||
+          queryInfo.endAddress <= args->offset) {
+        return orbis::ErrorCode::ACCES;
+      }
+    }
+
+    DirectMemoryQueryInfo info{
+        .start = queryInfo.beginAddress,
+        .end = queryInfo.endAddress,
+        .memoryType = queryInfo.payload.memoryType,
+    };
+
+    ORBIS_LOG_WARNING("dmem directMemoryQuery", device->index, args->devIndex,
+                      args->unk, args->flags, args->offset, args->info,
+                      args->infoSize, info.start, info.end, info.memoryType);
+    return orbis::uwrite(args->info, info);
+  }
   }
 
   thread->where();
@@ -115,6 +186,13 @@ orbis::ErrorCode DmemDevice::allocate(std::uint64_t *start,
                                       std::uint64_t alignment,
                                       std::uint32_t memoryType) {
   std::size_t offset = *start;
+  if (alignment == 0) {
+    alignment = 1;
+  }
+  if (searchEnd == 0) {
+    searchEnd = dmemTotalSize;
+  }
+
   while (offset < searchEnd) {
     offset += alignment - 1;
     offset &= ~(alignment - 1);
@@ -213,7 +291,7 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
   *size = resultSize;
 
   ORBIS_LOG_WARNING("dmem queryMaxFreeChunkSize", resultOffset, resultSize);
-  return{};
+  return {};
 }
 
 orbis::ErrorCode DmemDevice::open(orbis::Ref<orbis::File> *file,
