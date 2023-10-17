@@ -120,8 +120,8 @@ public:
   T *release() { return std::exchange(m_ref, nullptr); }
   T *operator->() const { return m_ref; }
   explicit operator bool() const { return m_ref != nullptr; }
+  bool operator==(const Ref &) const = default;
   bool operator==(std::nullptr_t) const { return m_ref == nullptr; }
-  bool operator!=(std::nullptr_t) const { return m_ref != nullptr; }
   auto operator<=>(const T *other) const { return m_ref <=> other; }
   auto operator<=>(const Ref &other) const = default;
 };
