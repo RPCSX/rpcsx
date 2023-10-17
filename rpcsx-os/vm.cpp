@@ -1009,22 +1009,21 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
     }
   }
 
-  if (queryInfo.payload.device == nullptr) {
-    return false;
-  }
-
   std::int32_t memoryType = 0;
   std::uint32_t blockFlags = 0;
-  if (auto dmem = dynamic_cast<DmemDevice *>(queryInfo.payload.device.get())) {
-    auto dmemIt = dmem->allocations.queryArea(queryInfo.payload.offset);
-    if (dmemIt == dmem->allocations.end()) {
-      return false;
+  if (queryInfo.payload.device != nullptr) {
+    if (auto dmem =
+            dynamic_cast<DmemDevice *>(queryInfo.payload.device.get())) {
+      auto dmemIt = dmem->allocations.queryArea(queryInfo.payload.offset);
+      if (dmemIt == dmem->allocations.end()) {
+        return false;
+      }
+      auto alloc = *dmemIt;
+      memoryType = alloc.payload.memoryType;
+      blockFlags = kBlockFlagDirectMemory;
     }
-    auto alloc = *dmemIt;
-    memoryType = alloc.payload.memoryType;
-    blockFlags = kBlockFlagDirectMemory;
+    // TODO
   }
-  // TODO
 
   std::int32_t prot = getPageProtectionImpl(queryInfo.beginAddress);
 
@@ -1036,8 +1035,8 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
       .flags = blockFlags,
   };
 
-  ORBIS_LOG_ERROR("virtualQuery", addr, flags, info->start, info->end, info->protection,
-                  info->memoryType, info->flags);
+  ORBIS_LOG_ERROR("virtualQuery", addr, flags, info->start, info->end,
+                  info->protection, info->memoryType, info->flags);
 
   std::memcpy(info->name, queryInfo.payload.name, sizeof(info->name));
   return true;
