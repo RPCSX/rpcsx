@@ -344,6 +344,7 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::mount("/dev/rng", createRngCharacterDevice());
   rx::vfs::mount("/dev/sbl_srv", createSblSrvCharacterDevice());
   rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
+  rx::vfs::mount("/dev/urandom", createUrandomCharacterDevice());
 
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;

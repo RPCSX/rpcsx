@@ -21,6 +21,7 @@ add_executable(rpcsx-os
   iodev/rng.cpp
   iodev/sbl_srv.cpp
   iodev/shm.cpp
+  iodev/urandom.cpp
   iodev/zero.cpp
 
   main.cpp

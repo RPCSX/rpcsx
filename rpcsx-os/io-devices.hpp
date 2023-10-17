@@ -21,3 +21,4 @@ IoDevice *createConsoleCharacterDevice();
 IoDevice *createSblSrvCharacterDevice();
 IoDevice *createShmDevice();
 IoDevice *createBlockPoolDevice();
+IoDevice *createUrandomCharacterDevice();
