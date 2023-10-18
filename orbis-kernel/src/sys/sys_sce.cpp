@@ -400,7 +400,15 @@ orbis::SysResult orbis::sys_osem_open(Thread *thread,
   auto sem = thread->tproc->context->findSemaphore(_name);
   if (sem == nullptr) {
     // FIXME: hack :)
-    return sys_osem_create(thread, name, kSemaAttrShared, 0, 10000);
+    if (std::string_view(_name).starts_with("SceLncSuspendBlock")) {
+      auto result = sys_osem_create(thread, name, kSemaAttrShared, 1, 10000);
+      ORBIS_LOG_WARNING(__FUNCTION__, _name, result.value(), thread->retval[0]);
+      return result;
+    } else {
+      auto result = sys_osem_create(thread, name, kSemaAttrShared, 0, 10000);
+      ORBIS_LOG_WARNING(__FUNCTION__, _name, result.value(), thread->retval[0]);
+      return result;
+    }
     return ErrorCode::SRCH;
   }
 
