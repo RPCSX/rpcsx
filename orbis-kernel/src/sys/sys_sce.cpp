@@ -93,7 +93,10 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
     if (int_value->encoded_id == 0x12356328ECF5617B ||
         int_value->encoded_id == 0x22666251FE7BECFF) {
       int_value->value = 1;
+      return {};
     }
+
+    int_value->value = 0;
   }
 
   return {};
@@ -623,14 +626,30 @@ orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
 orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
                                          ptr<void> info) {
   struct authinfo {
-    uint64_t a;
-    uint64_t b;
+    uint64_t unk0;
+    uint64_t caps[4];
+    uint64_t attrs[4];
+    uint64_t unk[8];
+  };
+  static_assert(sizeof(authinfo) == 136);
+
+  authinfo result {
+    .unk0 = 0x3100000000000001,
+    .caps = {
+      0x2000038000000000,
+      0x000000000000FF00,
+      0x0000000000000000,
+      0x0000000000000000,
+    },
+    .attrs = {
+      0x4000400040000000,
+      0x4000000000000000,
+      0x0080000000000002,
+      0xF0000000FFFF4000,
+    },
   };
 
-  std::memset(info, 0, 136);
-  ((authinfo *)info)->b = ~0;
-
-  return {};
+  return uwrite((ptr<authinfo>)info, result);
 }
 orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
                                   ptr<const char[32]> name) {
@@ -688,11 +707,9 @@ orbis::SysResult orbis::sys_dynlib_get_list(Thread *thread,
     if (actualNum >= numArray) {
       break;
     }
-
     pArray[actualNum++] = id;
   }
-  uwrite(pActualNum, actualNum);
-  return {};
+  return uwrite(pActualNum, actualNum);
 }
 orbis::SysResult orbis::sys_dynlib_get_info(Thread *thread,
                                             SceKernelModule handle,
@@ -847,7 +864,8 @@ orbis::SysResult orbis::sys_dl_get_metadata(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_workaround8849(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  thread->retval[0] = 1;
+  return {};
 }
 orbis::SysResult orbis::sys_is_development_mode(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -887,12 +905,12 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
   std::memcpy(result.segments, module->segments,
               sizeof(ModuleSegment) * module->segmentCount);
   result.segmentCount = module->segmentCount;
-  result.refCount = module->references.load(std::memory_order::relaxed);
+  result.refCount = 1;
   ORBIS_LOG_WARNING(__FUNCTION__, result.id, result.name, result.tlsIndex,
                     result.tlsInit, result.tlsInitSize, result.tlsSize,
                     result.tlsOffset, result.tlsAlign, result.initProc,
                     result.finiProc, result.ehFrameHdr, result.ehFrame,
-                    result.ehFrameHdrSize, result.ehFrameSize);
+                    result.ehFrameHdrSize, result.ehFrameSize, result.segmentCount, result.refCount);
   return uwrite(destModuleInfoEx, result);
 }
 orbis::SysResult orbis::sys_budget_getid(Thread *thread) {

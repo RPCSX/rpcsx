@@ -326,6 +326,7 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::mount("/dev/npdrm", createNpdrmCharacterDevice());
   rx::vfs::mount("/dev/icc_configuration", createIccConfigurationCharacterDevice());
   rx::vfs::mount("/dev/console", createConsoleCharacterDevice());
+  rx::vfs::mount("/dev/camera", createCameraCharacterDevice());
   rx::vfs::mount("/dev/dmem1", dmem1);
   rx::vfs::mount("/dev/dmem2", createDmemCharacterDevice(2));
   rx::vfs::mount("/dev/stdout", createFdWrapDevice(STDOUT_FILENO));
@@ -362,6 +363,16 @@ static int ps4Exec(orbis::Thread *mainThread,
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
+
+  auto libSceLibcInternal = rx::linker::loadModuleFile(
+      "/system/common/lib/libSceLibcInternal.sprx", mainThread);
+
+  if (libSceLibcInternal == nullptr) {
+    std::fprintf(stderr, "libSceLibcInternal not found\n");
+    return 1;
+  }
+
+  libSceLibcInternal->id = mainThread->tproc->modulesMap.insert(libSceLibcInternal);
 
   auto libkernel = rx::linker::loadModuleFile(
       "/system/common/lib/libkernel_sys.sprx", mainThread);

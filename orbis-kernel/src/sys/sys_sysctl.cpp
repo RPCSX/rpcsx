@@ -64,6 +64,23 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       memset(old, 0, sizeof(app_info));
       return {};
     }
+
+    if (name[0] == 1 && name[1] == 14 && name[2] == 44) {
+      // GetLibkernelTextLocation
+      if (*oldlenp != 16) {
+        return ErrorCode::INVAL;
+      }
+
+      auto *dest = (uint64_t *)old;
+
+      for (auto [id, mod] : thread->tproc->modulesMap) {
+        if (std::string_view("libkernel") == mod->moduleName) {
+          dest[0] = (uint64_t)mod->segments[0].addr;
+          dest[1] = mod->segments[0].size;
+          return{};
+        }
+      }
+    }
   }
 
   if (namelen == 2) {
@@ -169,7 +186,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         *(uint32_t *)old = 1;
-        break;
+        return{};
 
       case sysctl_kern::sdk_version: {
         if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
@@ -187,7 +204,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         std::printf("Reporting SDK version %x\n",
                     *reinterpret_cast<uint32_t *>(sdkVersion));
         *(uint32_t *)old = *reinterpret_cast<uint32_t *>(sdkVersion);
-        break;
+        return{};
       }
 
       case sysctl_kern::sched_cpusetsize:
@@ -196,7 +213,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         *(std::uint32_t *)old = 4;
-        break;
+        return{};
 
       case sysctl_kern::rng_pseudo:
         if (*oldlenp != 0x40 || new_ != nullptr || newlen != 0) {
@@ -205,7 +222,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
 
         std::memset(old, 0, 0x40);
-        break;
+        return{};
 
       case sysctl_kern::kern_37: {
         struct kern37_value {
@@ -220,7 +237,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
         auto value = (kern37_value *)old;
         value->size = sizeof(kern37_value);
-        break;
+        return{};
       }
 
       case sysctl_kern::proc_ptc: {
@@ -229,7 +246,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         *(std::uint64_t *)old = 1357;
-        break;
+        return{};
       }
 
       case sysctl_kern::cpu_mode: {
@@ -241,7 +258,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         // 1 - 7 cpu, low power
         // 5 - 7 cpu, normal
         *(std::uint32_t *)old = 5;
-        break;
+        return{};
       }
 
       default:
@@ -263,7 +280,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         }
 
         *(uint32_t *)old = 0x4000;
-        break;
+        return{};
 
       default:
         break;
@@ -289,5 +306,15 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     }
   }
 
+  std::string concatName;
+  for (unsigned int i = 0; i < namelen; ++i) {
+    if (i != 0) {
+      concatName += '.';
+    }
+
+    concatName += std::to_string(name[i]);
+  }
+
+  ORBIS_LOG_TODO(__FUNCTION__, concatName);
   return {};
 }

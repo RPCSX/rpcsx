@@ -85,6 +85,7 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
     }
   }
 
+  module->importedModules.clear();
   module->importedModules.reserve(module->neededModules.size());
 
   for (auto mod : module->neededModules) {
@@ -182,8 +183,7 @@ orbis::SysResult dmem_mmap(orbis::Thread *thread, orbis::caddr_t addr,
                            orbis::off_t directMemoryStart) {
   auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
   void *address = addr;
-  auto result =
-      dmem->mmap(&address, len, prot, flags, directMemoryStart);
+  auto result = dmem->mmap(&address, len, prot, flags, directMemoryStart);
   if (result != ErrorCode{}) {
     return result;
   }
@@ -405,6 +405,32 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
     return result;
   }
 
+  {
+    std::map<std::string, Module *, std::less<>> loadedModules;
+
+    for (auto [id, module] : thread->tproc->modulesMap) {
+      // std::fprintf(stderr, "%u: %s\n", (unsigned)id, module->moduleName);
+      loadedModules[module->moduleName] = module;
+    }
+
+    for (auto [id, module] : thread->tproc->modulesMap) {
+      module->importedModules.clear();
+      module->importedModules.reserve(module->neededModules.size());
+
+      for (auto mod : module->neededModules) {
+        if (auto it = loadedModules.find(std::string_view(mod.name));
+            it != loadedModules.end()) {
+          module->importedModules.emplace_back(it->second);
+          continue;
+        }
+
+        module->importedModules.push_back({});
+      }
+
+      module->relocate(thread->tproc);
+    }
+  }
+
   *pHandle = module->id;
   return {};
 }
@@ -554,6 +580,7 @@ SysResult processNeeded(Thread *thread) {
   }
 
   for (auto [id, module] : thread->tproc->modulesMap) {
+    module->importedModules.clear();
     module->importedModules.reserve(module->neededModules.size());
 
     for (auto mod : module->neededModules) {

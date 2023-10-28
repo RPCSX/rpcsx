@@ -659,20 +659,20 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         std::memcpy(result->soName + name.size(), ".prx", sizeof(".prx"));
       }
 
-      if (dyn.d_tag == kElfDynamicTypeNeeded) {
-        auto name = std::string_view(
-            sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
-        if (name == "STREQUAL") {
-          // HACK for broken FWs
-          result->needed.push_back("libSceDolbyVision.prx");
-        } else {
-          name = patchSoName(name);
-          if (name != "libSceFreeTypeOptBm") { // TODO
-            result->needed.emplace_back(name);
-            result->needed.back() += ".prx";
-          }
-        }
-      }
+      // if (dyn.d_tag == kElfDynamicTypeNeeded) {
+      //   auto name = std::string_view(
+      //       sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val));
+      //   if (name == "STREQUAL") {
+      //     // HACK for broken FWs
+      //     result->needed.push_back("libSceDolbyVision.prx");
+      //   } else {
+      //     name = patchSoName(name);
+      //     if (name != "libSceFreeTypeOptBm") { // TODO
+      //       result->needed.emplace_back(name);
+      //       result->needed.back() += ".prx";
+      //     }
+      //   }
+      // }
 
       if (dyn.d_tag == kElfDynamicTypeSceModuleInfo) {
         idToModuleIndex[dyn.d_un.d_val >> 48] = -1;
@@ -1048,17 +1048,6 @@ Ref<orbis::Module> rx::linker::loadModuleByName(std::string_view name,
     auto filePath = std::string(path);
     filePath += name;
     filePath += ".sprx";
-
-    if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
-      return result;
-    }
-  }
-
-  // HACK: implement lazy bind support
-  for (auto path : { "/app0/Media/Modules/" }) {
-    auto filePath = std::string(path);
-    filePath += name;
-    filePath += ".prx";
 
     if (auto result = rx::linker::loadModuleFile(filePath.c_str(), thread)) {
       return result;

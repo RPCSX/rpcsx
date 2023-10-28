@@ -2,15 +2,22 @@
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/thread/Thread.hpp"
 
 struct DipswFile : public orbis::File {};
 
 static orbis::ErrorCode dipsw_ioctl(orbis::File *file, std::uint64_t request,
                                     void *argp, orbis::Thread *thread) {
-  if (request == 0x40048806) { // is connected?
-    ORBIS_LOG_ERROR("dipsw ioctl 0x40048806", argp);
+  if (request == 0x40048806) { // isDevelopmentMode
+    ORBIS_LOG_ERROR("dipsw ioctl isDevelopmentMode", argp);
 
     *reinterpret_cast<std::uint32_t *>(argp) = 0;
+    return {};
+  }
+
+  if (request == 0x40048807) {
+    ORBIS_LOG_ERROR("dipsw ioctl 0x40048807", argp);
+    *reinterpret_cast<std::uint32_t *>(argp) = 1;
     return {};
   }
 
@@ -38,6 +45,7 @@ static orbis::ErrorCode dipsw_ioctl(orbis::File *file, std::uint64_t request,
   }
 
   ORBIS_LOG_FATAL("Unhandled dipsw ioctl", request);
+  thread->where();
   //__builtin_trap();
   return {};
 }

@@ -22,3 +22,4 @@ IoDevice *createSblSrvCharacterDevice();
 IoDevice *createShmDevice();
 IoDevice *createBlockPoolDevice();
 IoDevice *createUrandomCharacterDevice();
+IoDevice *createCameraCharacterDevice();
