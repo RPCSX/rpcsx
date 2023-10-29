@@ -285,6 +285,9 @@ orbis::SysResult orbis::sys_freebsd6_truncate(Thread *thread, ptr<char> path,
 orbis::SysResult orbis::sys_fsync(Thread *thread, sint fd) { return {}; }
 orbis::SysResult orbis::sys_rename(Thread *thread, ptr<char> from,
                                    ptr<char> to) {
+  if (auto rename = thread->tproc->ops->rename) {
+    return rename(thread, from, to);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_renameat(Thread *thread, sint oldfd, ptr<char> old,

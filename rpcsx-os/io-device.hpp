@@ -30,6 +30,15 @@ struct IoDevice : orbis::RcBase {
   virtual orbis::ErrorCode unlink(const char *path, orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
+  virtual orbis::ErrorCode mkdir(const char *path, int mode, orbis::Thread *thread) {
+    return orbis::ErrorCode::NOTSUP;
+  }
+  virtual orbis::ErrorCode rmdir(const char *path, orbis::Thread *thread) {
+    return orbis::ErrorCode::NOTSUP;
+  }
+  virtual orbis::ErrorCode rename(const char *from, const char *to, orbis::Thread *thread) {
+    return orbis::ErrorCode::NOTSUP;
+  }
 };
 
 IoDevice *createHostIoDevice(orbis::kstring hostPath);

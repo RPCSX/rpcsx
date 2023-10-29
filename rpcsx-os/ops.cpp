@@ -274,6 +274,19 @@ orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
   return dev->open(file, path, flags, mode, thread);
 }
 
+orbis::SysResult mkdir(Thread *thread, ptr<const char> path, sint mode) {
+  ORBIS_LOG_TODO(__FUNCTION__, path, mode);
+  return rx::vfs::mkdir(path, mode, thread);
+}
+orbis::SysResult rmdir(Thread *thread, ptr<const char> path) {
+  ORBIS_LOG_TODO(__FUNCTION__, path);
+  return rx::vfs::rmdir(path, thread);
+}
+orbis::SysResult rename(Thread *thread, ptr<const char> from, ptr<const char> to) {
+  ORBIS_LOG_TODO(__FUNCTION__, from, to);
+  return rx::vfs::rename(from, to, thread);
+}
+
 orbis::SysResult blockpool_open(orbis::Thread *thread,
                                 orbis::Ref<orbis::File> *file) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.blockpoolDevice.get());
@@ -633,6 +646,9 @@ ProcessOps rx::procOpsTable = {
     .query_memory_protection = query_memory_protection,
     .open = open,
     .shm_open = shm_open,
+    .mkdir = mkdir,
+    .rmdir = rmdir,
+    .rename = rename,
     .blockpool_open = blockpool_open,
     .blockpool_map = blockpool_map,
     .blockpool_unmap = blockpool_unmap,
