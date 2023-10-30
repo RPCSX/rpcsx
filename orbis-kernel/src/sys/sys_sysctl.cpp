@@ -139,7 +139,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       // std::printf("   kern.14.35.%u\n", name[3]);
       app_info result{
           .appType = 0,
-          // .unk5 = slong(0x80000000'00000000),
+          .unk5 = (thread->tproc->isSystem ? slong(0x80000000'00000000) : 0),
       };
 
       return uwrite((ptr<app_info>)old, result);

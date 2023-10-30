@@ -56,6 +56,7 @@ struct Process final {
 
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
+  bool isSystem = false;
 
   utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
   utils::RcIdMap<Semaphore, sint, 4097, 1> semMap;

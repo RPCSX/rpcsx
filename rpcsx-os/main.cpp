@@ -561,6 +561,7 @@ int main(int argc, const char *argv[]) {
 
   bool enableAudio = false;
   bool asRoot = false;
+  bool isSystem = false;
 
   int argIndex = 1;
   while (argIndex < argc) {
@@ -593,6 +594,12 @@ int main(int argc, const char *argv[]) {
     if (argv[argIndex] == std::string_view("--root")) {
       argIndex++;
       asRoot = true;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--system")) {
+      argIndex++;
+      isSystem = true;
       continue;
     }
 
@@ -704,6 +711,7 @@ int main(int argc, const char *argv[]) {
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
   initProcess->ops = &rx::procOpsTable;
+  initProcess->isSystem = isSystem;
 
   auto [baseId, mainThread] = initProcess->threadsMap.emplace();
   mainThread->tproc = initProcess;
