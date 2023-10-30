@@ -356,9 +356,9 @@ orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
                               orbis::kstring name, int dom, int type,
                               int prot) {
   auto fd = ::socket(dom, type, prot);
-  if (fd < 0) {
-    return convertErrno();
-  }
+  // if (fd < 0) {
+  //   return convertErrno();
+  // }
 
   auto s = orbis::knew<SocketFile>();
   s->name = std::move(name);

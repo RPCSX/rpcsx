@@ -117,9 +117,9 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
                      change.fflags, change.data, change.udata);
 
       if (change.flags & kEvAdd) {
-        if (change.filter != kEvFiltDisplay && change.filter != kEvFiltGraphicsCore) {
-          std::abort();
-        }
+        // if (change.filter != kEvFiltDisplay && change.filter != kEvFiltGraphicsCore) {
+        //   std::abort();
+        // }
 
         kq->notes.push_back({
          .event = change,
