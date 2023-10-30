@@ -250,7 +250,7 @@ static const char *getSyscallName(orbis::Thread *thread, int sysno) {
 }
 static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
                        int argsCount) {
-  if (true || !g_traceSyscalls) {
+  if (!g_traceSyscalls) {
     return;
   }
   flockfile(stderr);
@@ -400,8 +400,8 @@ static int ps4Exec(orbis::Thread *mainThread,
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
 
-  *reinterpret_cast<std::uint32_t *>(
-      reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
+  // *reinterpret_cast<std::uint32_t *>(
+  //     reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
 
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
@@ -731,7 +731,8 @@ int main(int argc, const char *argv[]) {
   initProcess->processParamSize = executableModule->processParamSize;
 
   if (executableModule->type == rx::linker::kElfTypeSceDynExec ||
-      executableModule->type == rx::linker::kElfTypeSceExec) {
+      executableModule->type == rx::linker::kElfTypeSceExec ||
+      executableModule->type == rx::linker::kElfTypeExec) {
     status = ps4Exec(mainThread, std::move(executableModule),
                      std::span(argv + argIndex, argc - argIndex),
                      std::span<const char *>());
