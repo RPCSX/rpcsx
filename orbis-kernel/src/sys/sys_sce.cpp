@@ -53,19 +53,7 @@ orbis::SysResult orbis::sys_socketclose(Thread *thread, sint fd) {
 orbis::SysResult orbis::sys_netgetiflist(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-struct KQueueEx : orbis::File {};
 
-orbis::SysResult orbis::sys_kqueueex(Thread *thread /* TODO */) {
-  ORBIS_LOG_TODO(__FUNCTION__);
-  auto queue = knew<KQueueEx>();
-  if (queue == nullptr) {
-    return ErrorCode::NOMEM;
-  }
-
-  thread->retval[0] = thread->tproc->fileDescriptors.insert(queue);
-  thread->where();
-  return {};
-}
 orbis::SysResult orbis::sys_mtypeprotect(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }

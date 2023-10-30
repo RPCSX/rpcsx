@@ -607,7 +607,7 @@ SysResult sys_socketex(Thread *thread, ptr<const char> name, sint domain,
                        sint type, sint protocol);
 SysResult sys_socketclose(Thread *thread, sint fd);
 SysResult sys_netgetiflist(Thread *thread /* TODO */);
-SysResult sys_kqueueex(Thread *thread /* TODO */);
+SysResult sys_kqueueex(Thread *thread, ptr<char> name, sint flags);
 SysResult sys_mtypeprotect(Thread *thread /* TODO */);
 SysResult sys_regmgr_call(Thread *thread, uint32_t op, uint32_t id,
                           ptr<void> result, ptr<void> value, uint64_t type);
