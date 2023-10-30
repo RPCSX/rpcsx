@@ -23,3 +23,5 @@ IoDevice *createShmDevice();
 IoDevice *createBlockPoolDevice();
 IoDevice *createUrandomCharacterDevice();
 IoDevice *createCameraCharacterDevice();
+IoDevice *createNotificationCharacterDevice(int index);
+IoDevice *createMBusCharacterDevice();

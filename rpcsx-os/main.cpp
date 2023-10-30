@@ -322,6 +322,9 @@ static int ps4Exec(orbis::Thread *mainThread,
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
+  auto stdoutFd = ::open("stdout.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  auto stderrFd = ::open("stderr.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
+
   rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
   rx::vfs::addDevice("icc_configuration", createIccConfigurationCharacterDevice());
@@ -329,8 +332,11 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::addDevice("camera", createCameraCharacterDevice());
   rx::vfs::addDevice("dmem1", dmem1);
   rx::vfs::addDevice("dmem2", createDmemCharacterDevice(2));
-  rx::vfs::addDevice("stdout", createFdWrapDevice(STDOUT_FILENO));
-  rx::vfs::addDevice("stderr", createFdWrapDevice(STDERR_FILENO));
+  rx::vfs::addDevice("stdout", createFdWrapDevice(stdoutFd));
+  rx::vfs::addDevice("stderr", createFdWrapDevice(stderrFd));
+  rx::vfs::addDevice("deci_stdin", createFdWrapDevice(STDIN_FILENO));
+  rx::vfs::addDevice("deci_stdout", createFdWrapDevice(stdoutFd));
+  rx::vfs::addDevice("deci_stderr", createFdWrapDevice(stderrFd));
   rx::vfs::addDevice("stdin", createFdWrapDevice(STDIN_FILENO));
   rx::vfs::addDevice("zero", createZeroCharacterDevice());
   rx::vfs::addDevice("null", createNullCharacterDevice());
@@ -346,6 +352,13 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::addDevice("sbl_srv", createSblSrvCharacterDevice());
   rx::vfs::addDevice("ajm", createAjmCharacterDevice());
   rx::vfs::addDevice("urandom", createUrandomCharacterDevice());
+  rx::vfs::addDevice("mbus", createMBusCharacterDevice());
+  rx::vfs::addDevice("notification0", createNotificationCharacterDevice(0));
+  rx::vfs::addDevice("notification1", createNotificationCharacterDevice(1));
+  rx::vfs::addDevice("notification2", createNotificationCharacterDevice(2));
+  rx::vfs::addDevice("notification3", createNotificationCharacterDevice(3));
+  rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
+  rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
 
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;
@@ -386,6 +399,10 @@ static int ps4Exec(orbis::Thread *mainThread,
 
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
+
+  *reinterpret_cast<std::uint32_t *>(
+      reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
+
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 

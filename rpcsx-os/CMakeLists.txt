@@ -17,6 +17,8 @@ add_executable(rpcsx-os
   iodev/hmd_mmap.cpp
   iodev/hmd_snsr.cpp
   iodev/icc_configuration.cpp
+  iodev/mbus.cpp
+  iodev/notification.cpp
   iodev/npdrm.cpp
   iodev/null.cpp
   iodev/rng.cpp

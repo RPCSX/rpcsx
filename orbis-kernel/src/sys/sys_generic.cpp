@@ -415,7 +415,7 @@ static std::string ioctlToString(unsigned long arg) {
 orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com,
                                   caddr_t data) {
   auto str = ioctlToString(com);
-  ORBIS_LOG_WARNING(__FUNCTION__, fd, com, str);
+  // ORBIS_LOG_WARNING(__FUNCTION__, fd, com, str);
   Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;

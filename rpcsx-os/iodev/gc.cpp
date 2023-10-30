@@ -87,7 +87,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    ORBIS_LOG_ERROR("gc ioctl 0xc0088101\n", args->arg0, args->arg1);
+    ORBIS_LOG_ERROR("gc ioctl 0xc0088101", args->arg0, args->arg1);
     break;
   }
 
