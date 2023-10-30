@@ -20,7 +20,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
                                    ptr<KEvent> changelist, sint nchanges,
                                    ptr<KEvent> eventlist, sint nevents,
                                    ptr<const timespec> timeout) {
-  // ORBIS_LOG_TODO(__FUNCTION__, fd);
-  thread->retval[0] = 1;
+  // ORBIS_LOG_TODO(__FUNCTION__, fd, changelist, nchanges, eventlist, nevents, timeout);
+  thread->retval[0] = nevents;
   return {};
 }
