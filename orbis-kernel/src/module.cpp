@@ -203,12 +203,12 @@ static orbis::SysResult doRelocation(orbis::Process *process,
 
     auto &defModule = module->importedModules.at(symbol.moduleIndex);
     if (!defModule) {
-      std::printf("'%s' ('%s') uses undefined symbol '%llx' in unloaded module "
-                  "'%s', rel %u\n",
-                  module->moduleName, module->soName,
-                  (unsigned long long)symbol.id,
-                  module->neededModules.at(symbol.moduleIndex).name.c_str(),
-                  rel.relType);
+      // std::printf("'%s' ('%s') uses undefined symbol '%llx' in unloaded module "
+      //             "'%s', rel %u\n",
+      //             module->moduleName, module->soName,
+      //             (unsigned long long)symbol.id,
+      //             module->neededModules.at(symbol.moduleIndex).name.c_str(),
+      //             rel.relType);
 
       return {};
     }
