@@ -126,11 +126,15 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
         false);
   }
   case 12:
-    return umtx_rw_rdlock(thread, obj, val, uaddr1, uaddr2);
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_rw_rdlock(thread, (ptr<urwlock>)obj, val, ut);
+    });
   case 13:
-    return umtx_rw_wrlock(thread, obj, val, uaddr1, uaddr2);
+    return with_timeout([&](std::uint64_t ut) {
+      return umtx_rw_wrlock(thread, (ptr<urwlock>)obj, ut);
+    });
   case 14:
-    return umtx_rw_unlock(thread, obj, val, uaddr1, uaddr2);
+    return umtx_rw_unlock(thread, (ptr<urwlock>)obj);
   case 15: {
     return with_timeout(
         [&](std::uint64_t ut) {
@@ -159,6 +163,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
     return umtx_nwake_private(thread, (ptr<void *>)obj, val);
   case 22:
     return umtx_wake2_umutex(thread, obj, val, uaddr1, uaddr2);
+  case 23:
+    ORBIS_LOG_ERROR("sys__umtx_op: unknown wake operation", op);
+    return umtx_wake_umutex(thread, (orbis::ptr<orbis::umutex>)obj);
   }
 
   return ErrorCode::INVAL;
