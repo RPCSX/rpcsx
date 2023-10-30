@@ -30,7 +30,6 @@ orbis::SysResult orbis::sys_chroot(Thread *thread, ptr<char> path) {
 }
 orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
                                  sint mode) {
-  ORBIS_LOG_NOTICE("sys_open", path, flags, mode);
   if (auto open = thread->tproc->ops->open) {
     Ref<File> file;
     auto result = open(thread, path, flags, mode, &file);
@@ -38,7 +37,9 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
       return result;
     }
 
-    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
+    auto fd = thread->tproc->fileDescriptors.insert(file);
+    thread->retval[0] = fd;
+    ORBIS_LOG_NOTICE(__FUNCTION__, path, flags, mode, fd);
     return {};
   }
 
