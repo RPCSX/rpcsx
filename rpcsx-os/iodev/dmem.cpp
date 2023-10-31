@@ -156,8 +156,8 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
   }
   }
 
-  thread->where();
   ORBIS_LOG_FATAL("Unhandled dmem ioctl", device->index, request);
+  thread->where();
   return {};
 }
 

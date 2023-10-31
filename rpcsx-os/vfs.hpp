@@ -8,6 +8,7 @@
 struct IoDevice;
 
 namespace rx::vfs {
+void fork();
 void initialize();
 void deinitialize();
 void addDevice(std::string name, IoDevice *device);

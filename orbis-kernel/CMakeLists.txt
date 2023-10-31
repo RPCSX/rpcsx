@@ -6,6 +6,7 @@ add_library(obj.orbis-utils-ipc OBJECT
 )
 add_library(obj.orbis-kernel OBJECT
   src/module.cpp
+  src/pipe.cpp
   src/sysvec.cpp
   src/evf.cpp
   src/KernelContext.cpp

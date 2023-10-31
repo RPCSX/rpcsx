@@ -634,6 +634,45 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated);
 }
 
+void rx::vm::fork(std::uint64_t pid) {
+  gMemoryShm = ::shm_open(("/rpcsx-os-memory-" + std::to_string(pid)).c_str(),
+                          O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+
+  if (gMemoryShm == -1) {
+    std::fprintf(stderr, "Memory: failed to open /rpcsx-os-memory\n");
+    std::abort();
+  }
+
+  if (::ftruncate64(gMemoryShm, kMemorySize) < 0) {
+    std::fprintf(stderr, "Memory: failed to allocate /rpcsx-os-memory\n");
+    std::abort();
+  }
+
+  for (auto address = kMinAddress; address < kMaxAddress;
+       address += kPageSize) {
+    auto prot = gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
+        (address & kBlockMask) >> rx::vm::kPageShift);
+
+    if (prot & kMapProtCpuAll) {
+      auto mapping = utils::map(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
+                                gMemoryShm, address - kMinAddress);
+      assert(mapping != MAP_FAILED);
+
+      utils::protect(reinterpret_cast<void *>(address), kPageSize, PROT_READ);
+      std::memcpy(mapping, reinterpret_cast<void *>(address), kPageSize);
+      utils::unmap(mapping, kPageSize);
+      utils::unmap(reinterpret_cast<void *>(address), kPageSize);
+
+      mapping = utils::map(reinterpret_cast<void *>(address), kPageSize,
+                           prot & kMapProtCpuAll, MAP_FIXED | MAP_SHARED,
+                           gMemoryShm, address - kMinAddress);
+      assert(mapping != MAP_FAILED);
+    }
+
+    // TODO: copy gpu memory?
+  }
+}
+
 void rx::vm::initialize() {
   std::printf("Memory: initialization\n");
 

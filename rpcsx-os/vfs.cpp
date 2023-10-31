@@ -9,8 +9,6 @@
 #include <optional>
 #include <string_view>
 
-static std::map<std::string, orbis::Ref<IoDevice>, std::greater<>> sMountsMap;
-
 struct DevFs : IoDevice {
   std::map<std::string, orbis::Ref<IoDevice>> devices;
 
@@ -25,7 +23,6 @@ struct DevFs : IoDevice {
     return orbis::ErrorCode::NOENT;
   }
 };
-static orbis::Ref<DevFs> sDevFs;
 
 struct ProcFs : IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
@@ -37,19 +34,43 @@ struct ProcFs : IoDevice {
   }
 };
 
+static orbis::shared_mutex gMountMtx;
+static std::map<std::string, orbis::Ref<IoDevice>, std::greater<>> gMountsMap;
+static orbis::Ref<DevFs> gDevFs;
+
+void rx::vfs::fork() {
+  std::lock_guard lock(gMountMtx);
+
+  // NOTE: do not decrease reference counter, it managed by parent process
+  auto parentDevFs = gDevFs.release();
+
+  for (auto &mount : gMountsMap) {
+    mount.second->incRef(); // increase reference for new process
+  }
+
+  gDevFs = orbis::knew<DevFs>();
+  gMountsMap.emplace("/dev/", gDevFs);
+  gMountsMap.emplace("/proc/", orbis::knew<ProcFs>());
+
+  for (auto &fs : parentDevFs->devices) {
+    gDevFs->devices[fs.first] = fs.second;
+  }
+}
+
 void rx::vfs::initialize() {
-  sDevFs = orbis::knew<DevFs>();
-  sMountsMap.emplace("/dev/", sDevFs);
-  sMountsMap.emplace("/proc/", orbis::knew<ProcFs>());
+  gDevFs = orbis::knew<DevFs>();
+  gMountsMap.emplace("/dev/", gDevFs);
+  gMountsMap.emplace("/proc/", orbis::knew<ProcFs>());
 }
 
 void rx::vfs::deinitialize() {
-  sDevFs = nullptr;
-  sMountsMap.clear();
+  gDevFs = nullptr;
+  gMountsMap.clear();
 }
 
 void rx::vfs::addDevice(std::string name, IoDevice *device) {
-  sDevFs->devices[std::move(name)] = device;
+  std::lock_guard lock(gMountMtx);
+  gDevFs->devices[std::move(name)] = device;
 }
 
 static std::pair<orbis::Ref<IoDevice>, std::string>
@@ -59,7 +80,9 @@ get(const std::filesystem::path &guestPath) {
   orbis::Ref<IoDevice> device;
   std::string_view prefix;
 
-  for (auto &mount : sMountsMap) {
+  std::lock_guard lock(gMountMtx);
+
+  for (auto &mount : gMountsMap) {
     if (!path.starts_with(mount.first)) {
       continue;
     }
@@ -79,7 +102,9 @@ orbis::SysResult rx::vfs::mount(const std::filesystem::path &guestPath,
     mp += "/";
   }
 
-  auto [it, inserted] = sMountsMap.emplace(std::move(mp), dev);
+  std::lock_guard lock(gMountMtx);
+
+  auto [it, inserted] = gMountsMap.emplace(std::move(mp), dev);
 
   if (!inserted) {
     return orbis::ErrorCode::EXIST;

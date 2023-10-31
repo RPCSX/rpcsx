@@ -11,7 +11,7 @@ struct UrandomDevice : public IoDevice {
 };
 struct UrandomFile : public orbis::File {};
 
-static orbis::ErrorCode zero_read(orbis::File *file, orbis::Uio *uio,
+static orbis::ErrorCode urandom_read(orbis::File *file, orbis::Uio *uio,
                                   orbis::Thread *) {
   for (auto entry : std::span(uio->iov, uio->iovcnt)) {
     std::memset(entry.base, 0, entry.len);
@@ -22,7 +22,7 @@ static orbis::ErrorCode zero_read(orbis::File *file, orbis::Uio *uio,
 }
 
 static const orbis::FileOps ops = {
-    .read = zero_read,
+    .read = urandom_read,
 };
 
 orbis::ErrorCode UrandomDevice::open(orbis::Ref<orbis::File> *file,

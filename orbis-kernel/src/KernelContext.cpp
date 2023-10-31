@@ -14,7 +14,7 @@ KernelContext &g_context = *[]() -> KernelContext * {
   auto ptr = mmap(reinterpret_cast<void *>(0x200'0000'0000), 0x1'0000'0000,
                   PROT_READ | PROT_WRITE,
                   MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-  if (!ptr)
+  if (ptr == MAP_FAILED)
     std::abort();
 
   return new (ptr) KernelContext;
@@ -163,6 +163,9 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
          ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
   if (!size)
     std::abort();
+  if ((uintptr_t)ptr == 0x2000001a2b0) {
+    std::fprintf(stderr, "free %p-%p (%zu)\n", ptr, (char *)ptr + size, size);
+  }
   std::memset(ptr, 0xcc, size);
 
   pthread_mutex_lock(&m_heap_mtx);

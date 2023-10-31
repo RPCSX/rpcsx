@@ -7,7 +7,7 @@
 namespace orbis {
 inline namespace utils {
 // IPC-ready lightweight condition variable
-class shared_cv {
+class shared_cv final {
   enum : unsigned {
     c_waiter_mask = 0xffff,
     c_signal_mask = 0x7fff0000,

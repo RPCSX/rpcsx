@@ -355,6 +355,7 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::addDevice("ajm", createAjmCharacterDevice());
   rx::vfs::addDevice("urandom", createUrandomCharacterDevice());
   rx::vfs::addDevice("mbus", createMBusCharacterDevice());
+  rx::vfs::addDevice("metadbg", createMetaDbgCharacterDevice());
   rx::vfs::addDevice("bt", createBtCharacterDevice());
   rx::vfs::addDevice("xpt0", createXptCharacterDevice());
   rx::vfs::addDevice("cd0", createXptCharacterDevice());
@@ -645,8 +646,9 @@ int main(int argc, const char *argv[]) {
   }
 
   // rx::vm::printHostStats();
-  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
-  pthread_setname_np(pthread_self(), "10.MAINTHREAD");
+  orbis::g_context.allocatePid();
+  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 11);
+  pthread_setname_np(pthread_self(), "11.MAINTHREAD");
 
   std::thread{[] {
     pthread_setname_np(pthread_self(), "Bridge");

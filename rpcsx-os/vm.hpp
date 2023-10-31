@@ -67,6 +67,7 @@ std::string mapFlagsToString(std::int32_t flags);
 std::string mapProtToString(std::int32_t prot);
 
 void printHostStats();
+void fork(std::uint64_t pid);
 void initialize();
 void deinitialize();
 void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags,

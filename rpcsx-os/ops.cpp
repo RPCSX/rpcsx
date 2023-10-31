@@ -12,6 +12,8 @@
 #include "orbis/umtx.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
+#include "orbis/utils/SharedCV.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 #include "orbis/vm.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
@@ -19,15 +21,19 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
+#include <linux/prctl.h>
 #include <map>
 #include <optional>
 #include <set>
+#include <sys/prctl.h>
 #include <thread>
 #include <unistd.h>
 
 using namespace orbis;
 
 extern "C" void __register_frame(const void *);
+void setupSigHandlers();
 
 namespace {
 static std::pair<SysResult, Ref<Module>>
@@ -617,6 +623,95 @@ SysResult processNeeded(Thread *thread) {
   return {};
 }
 
+SysResult fork(Thread *thread, slong flags) {
+  ORBIS_LOG_TODO(__FUNCTION__, flags);
+
+  auto childPid = g_context.allocatePid() * 10000 + 1;
+  auto mtx = knew<shared_mutex>();
+  auto cv = knew<shared_cv>();
+
+  int hostPid = ::fork();
+
+  if (hostPid) {
+    mtx->lock();
+    cv->wait(*mtx);
+
+    kdelete(cv);
+    kdelete(mtx);
+
+    thread->retval[0] = childPid;
+    thread->retval[1] = 0;
+    return{};
+  }
+
+  auto process = g_context.createProcess(childPid);
+  process->sysent = thread->tproc->sysent;
+  process->onSysEnter = thread->tproc->onSysEnter;
+  process->onSysExit = thread->tproc->onSysExit;
+  process->ops = thread->tproc->ops;
+  process->isSystem = thread->tproc->isSystem;
+  process->parentProcess = thread->tproc;
+  for (auto [id, mod] : thread->tproc->modulesMap) {
+    if (!process->modulesMap.insert(id, mod)) {
+      std::abort();
+    }
+  }
+
+  if (false) {
+    std::lock_guard lock(thread->tproc->fileDescriptors.mutex);
+    for (auto [id, mod] : thread->tproc->fileDescriptors) {
+      if (!process->fileDescriptors.insert(id, mod)) {
+        std::abort();
+      }
+    }
+  }
+
+  rx::vm::fork(thread->tproc->pid);
+  rx::vfs::fork();
+
+  cv->notify_one(*mtx);
+
+  auto [baseId, newThread] = process->threadsMap.emplace();
+  newThread->tproc = process;
+  newThread->tid = process->pid + baseId;
+  newThread->state = orbis::ThreadState::RUNNING;
+  newThread->context = thread->context;
+  newThread->fsBase = thread->fsBase;
+
+  orbis::g_currentThread = newThread;
+  newThread->retval[0] = 0;
+  newThread->retval[1] = 1;
+
+  thread = orbis::g_currentThread;
+
+  setupSigHandlers();
+  rx::thread::initialize();
+
+  if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
+            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
+    perror("prctl failed\n");
+    std::exit(-1);
+  }
+
+  auto ttyFd =
+      ::open(("tty-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
+             O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  auto logFd =
+      ::open(("log-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
+             O_CREAT | O_TRUNC | O_WRONLY, 0666);
+
+  dup2(logFd, 1);
+  dup2(logFd, 2);
+
+  auto tty = createFdWrapDevice(ttyFd);
+
+  rx::vfs::addDevice("stdout", tty);
+  rx::vfs::addDevice("stderr", tty);
+  rx::vfs::addDevice("deci_stdout", tty);
+  rx::vfs::addDevice("deci_stderr", tty);
+  return{};
+}
+
 SysResult registerEhFrames(Thread *thread) {
   for (auto [id, module] : thread->tproc->modulesMap) {
     if (module->ehFrame != nullptr) {
@@ -670,6 +765,7 @@ ProcessOps rx::procOpsTable = {
     .thr_suspend = thr_suspend,
     .thr_wake = thr_wake,
     .thr_set_name = thr_set_name,
+    .fork = fork,
     .exit = exit,
     .processNeeded = processNeeded,
     .registerEhFrames = registerEhFrames,

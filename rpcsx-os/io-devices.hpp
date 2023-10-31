@@ -28,3 +28,4 @@ IoDevice *createMBusCharacterDevice();
 IoDevice *createBtCharacterDevice();
 IoDevice *createXptCharacterDevice();
 IoDevice *createCdCharacterDevice();
+IoDevice *createMetaDbgCharacterDevice();

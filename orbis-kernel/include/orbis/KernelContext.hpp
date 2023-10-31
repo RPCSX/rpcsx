@@ -1,6 +1,7 @@
 #pragma once
 #include "evf.hpp"
 #include "ipmi.hpp"
+#include "orbis/utils/IdMap.hpp"
 #include "osem.hpp"
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedCV.hpp"
@@ -53,6 +54,15 @@ public:
   Process *createProcess(pid_t pid);
   void deleteProcess(Process *proc);
   Process *findProcessById(pid_t pid) const;
+
+  utils::LinkedNode<Process> *getProcessList() {
+    return m_processes;
+  }
+
+  long allocatePid() {
+    std::lock_guard lock(m_thread_id_mtx);
+    return m_thread_id_map.emplace(0).first;
+  }
 
   long getTscFreq();
 
@@ -161,6 +171,8 @@ private:
 
   std::atomic<long> m_tsc_freq{0};
 
+  shared_mutex m_thread_id_mtx;
+  OwningIdMap<char, long, 256, 0> m_thread_id_map;
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;
 
