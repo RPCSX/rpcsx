@@ -6,10 +6,27 @@ orbis::SysResult orbis::sys_getdtablesize(Thread *thread) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_dup2(Thread *thread, uint from, uint to) {
-  return ErrorCode::NOSYS;
+  if (to == 1 || to == 2) { // HACK: ignore setup /dev/console to stdout/stderr
+    return {};
+  }
+
+  std::lock_guard lock(thread->tproc->fileDescriptors.mutex);
+
+  auto file = thread->tproc->fileDescriptors.get(from);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+  thread->tproc->fileDescriptors.close(to);
+  thread->tproc->fileDescriptors.insert(to, file);
+  return {};
 }
 orbis::SysResult orbis::sys_dup(Thread *thread, uint fd) {
-  return ErrorCode::NOSYS;
+  auto file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+  thread->retval[0] = thread->tproc->fileDescriptors.insert(std::move(file));
+  return {};
 }
 orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
                                   slong arg) {
