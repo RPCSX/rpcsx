@@ -11,7 +11,7 @@ orbis::SysResult orbis::sys_getpgid(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_getsid(Thread *thread, pid_t pid) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_getuid(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_geteuid(Thread *thread) { return ErrorCode::NOSYS; }

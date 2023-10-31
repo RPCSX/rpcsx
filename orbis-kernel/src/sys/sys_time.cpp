@@ -157,7 +157,7 @@ orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
 }
 orbis::SysResult orbis::sys_settimeofday(Thread *thread, ptr<struct timeval> tp,
                                          ptr<orbis::timezone> tzp) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_getitimer(Thread *thread, uint which,
                                       ptr<struct itimerval> itv) {
