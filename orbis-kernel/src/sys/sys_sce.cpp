@@ -215,8 +215,11 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
       return sys_evf_create(thread, name, kEvfAttrShared, 0x400000);
     }
 
-    if (std::string_view("SceShellCoreUtilAppFocus") == _name ||
-        std::string_view("SceBootStatusFlags") == _name) {
+    if (std::string_view("SceShellCoreUtilAppFocus") == _name) {
+      return sys_evf_create(thread, name, kEvfAttrShared, 1);
+    }
+
+    if (std::string_view("SceBootStatusFlags") == _name) {
       return sys_evf_create(thread, name, kEvfAttrShared, 0x2408);
     }
     return sys_evf_create(thread, name, kEvfAttrShared, 0);

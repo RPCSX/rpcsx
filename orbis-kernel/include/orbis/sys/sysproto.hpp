@@ -701,7 +701,7 @@ SysResult sys_sandbox_path(Thread *thread /* TODO */);
 SysResult sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> arg0,
                            ptr<void> arg1);
 SysResult sys_randomized_path(Thread *thread /* TODO */);
-SysResult sys_rdup(Thread *thread /* TODO */);
+SysResult sys_rdup(Thread *thread, sint a, sint b);
 SysResult sys_dl_get_metadata(Thread *thread /* TODO */);
 SysResult sys_workaround8849(Thread *thread /* TODO */);
 SysResult sys_is_development_mode(Thread *thread /* TODO */);
