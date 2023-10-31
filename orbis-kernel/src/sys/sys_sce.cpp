@@ -885,8 +885,23 @@ orbis::SysResult orbis::sys_randomized_path(Thread *thread /* TODO */) {
   std::printf("TODO: sys_randomized_path()\n");
   return {};
 }
-orbis::SysResult orbis::sys_rdup(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_rdup(Thread *thread, sint pid, sint fd) {
+  ORBIS_LOG_TODO(__FUNCTION__, pid, fd);
+  for (auto it = g_context.getProcessList(); it != nullptr; it = it->next) {
+    auto &p = it->object;
+    if (p.pid != pid) {
+      continue;
+    }
+
+    auto file = p.fileDescriptors.get(fd);
+    if (file == nullptr) {
+      return ErrorCode::BADF;
+    }
+
+    thread->retval[0] = thread->tproc->fileDescriptors.insert(std::move(file));
+    return{};
+  }
+  return ErrorCode::SRCH;
 }
 orbis::SysResult orbis::sys_dl_get_metadata(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
