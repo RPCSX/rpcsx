@@ -71,6 +71,8 @@ struct ProcessOps {
   SysResult (*thr_set_name)(Thread *thread, slong id, ptr<const char> name);
 
   SysResult (*fork)(Thread *thread, slong status);
+  SysResult (*execve)(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
+                      ptr<ptr<char>> envv);
   SysResult (*exit)(Thread *thread, sint status);
 
   SysResult (*processNeeded)(Thread *thread);

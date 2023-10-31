@@ -4,8 +4,10 @@
 #include "thread/Process.hpp"
 #include "utils/Logs.hpp"
 #include "utils/SharedMutex.hpp"
+#include <chrono>
 #include <list>
 #include <span>
+#include <thread>
 
 namespace orbis {
 struct KEvent {
@@ -110,7 +112,6 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
     return orbis::ErrorCode::BADF;
   }
 
-
   if (nchanges != 0) {
     for (auto change : std::span(changelist, nchanges)) {
       ORBIS_LOG_TODO(__FUNCTION__, change.ident, change.filter, change.flags,
@@ -146,6 +147,12 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
     }
 
     if (note.event.filter == kEvFiltDisplay || note.event.filter == kEvFiltGraphicsCore) {
+      result.push_back(note.event);
+    }
+    if (note.event.filter == kEvFiltProc) {
+      // TODO
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      note.event.data = 0;
       result.push_back(note.event);
     }
   }

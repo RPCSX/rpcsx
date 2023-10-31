@@ -7,6 +7,7 @@
 #include "../thread/Thread.hpp"
 #include "../thread/types.hpp"
 #include "ProcessState.hpp"
+#include "orbis/AppInfo.hpp"
 #include "orbis/file.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
@@ -53,10 +54,10 @@ struct Process final {
   ptr<void> processParam = nullptr;
   uint64_t processParamSize = 0;
   const ProcessOps *ops = nullptr;
+  AppInfo appInfo{};
 
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
-  bool isSystem = false;
 
   utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
   utils::RcIdMap<Semaphore, sint, 4097, 1> semMap;

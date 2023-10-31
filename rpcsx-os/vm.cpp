@@ -673,6 +673,23 @@ void rx::vm::fork(std::uint64_t pid) {
   }
 }
 
+void rx::vm::reset() {
+  std::memset(gBlocks, 0, sizeof(gBlocks));
+
+  utils::unmap(reinterpret_cast<void *>(kMinAddress),
+               kMaxAddress - kMinAddress);
+  if (::ftruncate64(gMemoryShm, 0) < 0) {
+    std::abort();
+  }
+  if (::ftruncate64(gMemoryShm, kMemorySize) < 0) {
+    std::abort();
+  }
+
+  reserve(0, kMinAddress);
+  utils::reserve(reinterpret_cast<void *>(kMinAddress),
+                 kMaxAddress - kMinAddress);
+}
+
 void rx::vm::initialize() {
   std::printf("Memory: initialization\n");
 

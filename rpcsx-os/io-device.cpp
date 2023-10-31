@@ -20,9 +20,10 @@
 
 struct HostFile : orbis::File {
   int hostFd = -1;
+  bool closeOnExit = true;
 
   ~HostFile() {
-    if (hostFd > 0) {
+    if (hostFd > 0 && closeOnExit) {
       ::close(hostFd);
     }
   }
@@ -46,86 +47,157 @@ struct HostFsDevice : IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
-  orbis::ErrorCode mkdir(const char *path, int mode, orbis::Thread *thread) override;
+  orbis::ErrorCode mkdir(const char *path, int mode,
+                         orbis::Thread *thread) override;
   orbis::ErrorCode rmdir(const char *path, orbis::Thread *thread) override;
-  orbis::ErrorCode rename(const char *from, const char *to, orbis::Thread *thread) override;
+  orbis::ErrorCode rename(const char *from, const char *to,
+                          orbis::Thread *thread) override;
 };
 
 static orbis::ErrorCode convertErrc(std::errc errc) {
   if (errc == std::errc{}) {
-    return{};
+    return {};
   }
 
   switch (errc) {
-  case std::errc::address_family_not_supported: return orbis::ErrorCode::AFNOSUPPORT;
-  case std::errc::address_in_use: return orbis::ErrorCode::ADDRINUSE;
-  case std::errc::address_not_available: return orbis::ErrorCode::ADDRNOTAVAIL;
-  case std::errc::already_connected: return orbis::ErrorCode::ISCONN;
-  case std::errc::argument_out_of_domain: return orbis::ErrorCode::DOM;
-  case std::errc::bad_address: return orbis::ErrorCode::FAULT;
-  case std::errc::bad_file_descriptor: return orbis::ErrorCode::BADF;
-  case std::errc::bad_message: return orbis::ErrorCode::BADMSG;
-  case std::errc::broken_pipe: return orbis::ErrorCode::PIPE;
-  case std::errc::connection_aborted: return orbis::ErrorCode::CONNABORTED;
-  case std::errc::connection_already_in_progress: return orbis::ErrorCode::ALREADY;
-  case std::errc::connection_refused: return orbis::ErrorCode::CONNREFUSED;
-  case std::errc::connection_reset: return orbis::ErrorCode::CONNRESET;
-  case std::errc::cross_device_link: return orbis::ErrorCode::XDEV;
-  case std::errc::destination_address_required: return orbis::ErrorCode::DESTADDRREQ;
-  case std::errc::device_or_resource_busy: return orbis::ErrorCode::BUSY;
-  case std::errc::directory_not_empty: return orbis::ErrorCode::NOTEMPTY;
-  case std::errc::executable_format_error: return orbis::ErrorCode::NOEXEC;
-  case std::errc::file_exists: return orbis::ErrorCode::EXIST;
-  case std::errc::file_too_large: return orbis::ErrorCode::FBIG;
-  case std::errc::filename_too_long: return orbis::ErrorCode::NAMETOOLONG;
-  case std::errc::function_not_supported: return orbis::ErrorCode::NOSYS;
-  case std::errc::host_unreachable: return orbis::ErrorCode::HOSTUNREACH;
-  case std::errc::identifier_removed: return orbis::ErrorCode::IDRM;
-  case std::errc::illegal_byte_sequence: return orbis::ErrorCode::ILSEQ;
-  case std::errc::inappropriate_io_control_operation: return orbis::ErrorCode::NOTTY;
-  case std::errc::interrupted: return orbis::ErrorCode::INTR;
-  case std::errc::invalid_argument: return orbis::ErrorCode::INVAL;
-  case std::errc::invalid_seek: return orbis::ErrorCode::SPIPE;
-  case std::errc::io_error: return orbis::ErrorCode::IO;
-  case std::errc::is_a_directory: return orbis::ErrorCode::ISDIR;
-  case std::errc::message_size: return orbis::ErrorCode::MSGSIZE;
-  case std::errc::network_down: return orbis::ErrorCode::NETDOWN;
-  case std::errc::network_reset: return orbis::ErrorCode::NETRESET;
-  case std::errc::network_unreachable: return orbis::ErrorCode::NETUNREACH;
-  case std::errc::no_buffer_space: return orbis::ErrorCode::NOBUFS;
-  case std::errc::no_child_process: return orbis::ErrorCode::CHILD;
-  case std::errc::no_link: return orbis::ErrorCode::NOLINK;
-  case std::errc::no_lock_available: return orbis::ErrorCode::NOLCK;
-  case std::errc::no_message: return orbis::ErrorCode::NOMSG;
-  case std::errc::no_protocol_option: return orbis::ErrorCode::NOPROTOOPT;
-  case std::errc::no_space_on_device: return orbis::ErrorCode::NOSPC;
-  case std::errc::no_such_device_or_address: return orbis::ErrorCode::NXIO;
-  case std::errc::no_such_device: return orbis::ErrorCode::NODEV;
-  case std::errc::no_such_file_or_directory: return orbis::ErrorCode::NOENT;
-  case std::errc::no_such_process: return orbis::ErrorCode::SRCH;
-  case std::errc::not_a_directory: return orbis::ErrorCode::NOTDIR;
-  case std::errc::not_a_socket: return orbis::ErrorCode::NOTSOCK;
-  case std::errc::not_connected: return orbis::ErrorCode::NOTCONN;
-  case std::errc::not_enough_memory: return orbis::ErrorCode::NOMEM;
-  case std::errc::not_supported: return orbis::ErrorCode::NOTSUP;
-  case std::errc::operation_canceled: return orbis::ErrorCode::CANCELED;
-  case std::errc::operation_in_progress: return orbis::ErrorCode::INPROGRESS;
-  case std::errc::operation_not_permitted: return orbis::ErrorCode::PERM;
-  case std::errc::operation_would_block: return orbis::ErrorCode::WOULDBLOCK;
-  case std::errc::permission_denied: return orbis::ErrorCode::ACCES;
-  case std::errc::protocol_error: return orbis::ErrorCode::PROTO;
-  case std::errc::protocol_not_supported: return orbis::ErrorCode::PROTONOSUPPORT;
-  case std::errc::read_only_file_system: return orbis::ErrorCode::ROFS;
-  case std::errc::resource_deadlock_would_occur: return orbis::ErrorCode::DEADLK;
-  case std::errc::result_out_of_range: return orbis::ErrorCode::RANGE;
-  case std::errc::text_file_busy: return orbis::ErrorCode::TXTBSY;
-  case std::errc::timed_out: return orbis::ErrorCode::TIMEDOUT;
-  case std::errc::too_many_files_open_in_system: return orbis::ErrorCode::NFILE;
-  case std::errc::too_many_files_open: return orbis::ErrorCode::MFILE;
-  case std::errc::too_many_links: return orbis::ErrorCode::MLINK;
-  case std::errc::too_many_symbolic_link_levels: return orbis::ErrorCode::LOOP;
-  case std::errc::value_too_large: return orbis::ErrorCode::OVERFLOW;
-  case std::errc::wrong_protocol_type: return orbis::ErrorCode::PROTOTYPE;
+  case std::errc::address_family_not_supported:
+    return orbis::ErrorCode::AFNOSUPPORT;
+  case std::errc::address_in_use:
+    return orbis::ErrorCode::ADDRINUSE;
+  case std::errc::address_not_available:
+    return orbis::ErrorCode::ADDRNOTAVAIL;
+  case std::errc::already_connected:
+    return orbis::ErrorCode::ISCONN;
+  case std::errc::argument_out_of_domain:
+    return orbis::ErrorCode::DOM;
+  case std::errc::bad_address:
+    return orbis::ErrorCode::FAULT;
+  case std::errc::bad_file_descriptor:
+    return orbis::ErrorCode::BADF;
+  case std::errc::bad_message:
+    return orbis::ErrorCode::BADMSG;
+  case std::errc::broken_pipe:
+    return orbis::ErrorCode::PIPE;
+  case std::errc::connection_aborted:
+    return orbis::ErrorCode::CONNABORTED;
+  case std::errc::connection_already_in_progress:
+    return orbis::ErrorCode::ALREADY;
+  case std::errc::connection_refused:
+    return orbis::ErrorCode::CONNREFUSED;
+  case std::errc::connection_reset:
+    return orbis::ErrorCode::CONNRESET;
+  case std::errc::cross_device_link:
+    return orbis::ErrorCode::XDEV;
+  case std::errc::destination_address_required:
+    return orbis::ErrorCode::DESTADDRREQ;
+  case std::errc::device_or_resource_busy:
+    return orbis::ErrorCode::BUSY;
+  case std::errc::directory_not_empty:
+    return orbis::ErrorCode::NOTEMPTY;
+  case std::errc::executable_format_error:
+    return orbis::ErrorCode::NOEXEC;
+  case std::errc::file_exists:
+    return orbis::ErrorCode::EXIST;
+  case std::errc::file_too_large:
+    return orbis::ErrorCode::FBIG;
+  case std::errc::filename_too_long:
+    return orbis::ErrorCode::NAMETOOLONG;
+  case std::errc::function_not_supported:
+    return orbis::ErrorCode::NOSYS;
+  case std::errc::host_unreachable:
+    return orbis::ErrorCode::HOSTUNREACH;
+  case std::errc::identifier_removed:
+    return orbis::ErrorCode::IDRM;
+  case std::errc::illegal_byte_sequence:
+    return orbis::ErrorCode::ILSEQ;
+  case std::errc::inappropriate_io_control_operation:
+    return orbis::ErrorCode::NOTTY;
+  case std::errc::interrupted:
+    return orbis::ErrorCode::INTR;
+  case std::errc::invalid_argument:
+    return orbis::ErrorCode::INVAL;
+  case std::errc::invalid_seek:
+    return orbis::ErrorCode::SPIPE;
+  case std::errc::io_error:
+    return orbis::ErrorCode::IO;
+  case std::errc::is_a_directory:
+    return orbis::ErrorCode::ISDIR;
+  case std::errc::message_size:
+    return orbis::ErrorCode::MSGSIZE;
+  case std::errc::network_down:
+    return orbis::ErrorCode::NETDOWN;
+  case std::errc::network_reset:
+    return orbis::ErrorCode::NETRESET;
+  case std::errc::network_unreachable:
+    return orbis::ErrorCode::NETUNREACH;
+  case std::errc::no_buffer_space:
+    return orbis::ErrorCode::NOBUFS;
+  case std::errc::no_child_process:
+    return orbis::ErrorCode::CHILD;
+  case std::errc::no_link:
+    return orbis::ErrorCode::NOLINK;
+  case std::errc::no_lock_available:
+    return orbis::ErrorCode::NOLCK;
+  case std::errc::no_message:
+    return orbis::ErrorCode::NOMSG;
+  case std::errc::no_protocol_option:
+    return orbis::ErrorCode::NOPROTOOPT;
+  case std::errc::no_space_on_device:
+    return orbis::ErrorCode::NOSPC;
+  case std::errc::no_such_device_or_address:
+    return orbis::ErrorCode::NXIO;
+  case std::errc::no_such_device:
+    return orbis::ErrorCode::NODEV;
+  case std::errc::no_such_file_or_directory:
+    return orbis::ErrorCode::NOENT;
+  case std::errc::no_such_process:
+    return orbis::ErrorCode::SRCH;
+  case std::errc::not_a_directory:
+    return orbis::ErrorCode::NOTDIR;
+  case std::errc::not_a_socket:
+    return orbis::ErrorCode::NOTSOCK;
+  case std::errc::not_connected:
+    return orbis::ErrorCode::NOTCONN;
+  case std::errc::not_enough_memory:
+    return orbis::ErrorCode::NOMEM;
+  case std::errc::not_supported:
+    return orbis::ErrorCode::NOTSUP;
+  case std::errc::operation_canceled:
+    return orbis::ErrorCode::CANCELED;
+  case std::errc::operation_in_progress:
+    return orbis::ErrorCode::INPROGRESS;
+  case std::errc::operation_not_permitted:
+    return orbis::ErrorCode::PERM;
+  case std::errc::operation_would_block:
+    return orbis::ErrorCode::WOULDBLOCK;
+  case std::errc::permission_denied:
+    return orbis::ErrorCode::ACCES;
+  case std::errc::protocol_error:
+    return orbis::ErrorCode::PROTO;
+  case std::errc::protocol_not_supported:
+    return orbis::ErrorCode::PROTONOSUPPORT;
+  case std::errc::read_only_file_system:
+    return orbis::ErrorCode::ROFS;
+  case std::errc::resource_deadlock_would_occur:
+    return orbis::ErrorCode::DEADLK;
+  case std::errc::result_out_of_range:
+    return orbis::ErrorCode::RANGE;
+  case std::errc::text_file_busy:
+    return orbis::ErrorCode::TXTBSY;
+  case std::errc::timed_out:
+    return orbis::ErrorCode::TIMEDOUT;
+  case std::errc::too_many_files_open_in_system:
+    return orbis::ErrorCode::NFILE;
+  case std::errc::too_many_files_open:
+    return orbis::ErrorCode::MFILE;
+  case std::errc::too_many_links:
+    return orbis::ErrorCode::MLINK;
+  case std::errc::too_many_symbolic_link_levels:
+    return orbis::ErrorCode::LOOP;
+  case std::errc::value_too_large:
+    return orbis::ErrorCode::OVERFLOW;
+  case std::errc::wrong_protocol_type:
+    return orbis::ErrorCode::PROTOTYPE;
   default:
     return orbis::ErrorCode::FAULT;
   }
@@ -133,7 +205,7 @@ static orbis::ErrorCode convertErrc(std::errc errc) {
 
 static orbis::ErrorCode convertErrorCode(const std::error_code &code) {
   if (!code) {
-    return{};
+    return {};
   }
   return convertErrc(static_cast<std::errc>(code.value()));
 }
@@ -219,20 +291,21 @@ static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
   }
 
-  ssize_t cnt = 0;
-  if (hostFile->hostFd == 1 || hostFile->hostFd == 2) {
+  ssize_t cnt = ::pwritev(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
+
+  if (cnt < 0) {
     for (auto io : vec) {
-      cnt += ::write(hostFile->hostFd, io.iov_base, io.iov_len);
+      auto result = ::write(hostFile->hostFd, io.iov_base, io.iov_len);
+      if (result < 0) {
+        return convertErrno();
+      }
+
+      cnt += result;
 
       if (cnt != io.iov_len) {
         break;
       }
     }
-  } else {
-    cnt = ::pwritev(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
-  }
-  if (cnt < 0) {
-    return convertErrno();
   }
 
   uio->resid -= cnt;
@@ -461,7 +534,8 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
   return {};
 }
 
-orbis::ErrorCode HostFsDevice::mkdir(const char *path, int mode, orbis::Thread *thread) {
+orbis::ErrorCode HostFsDevice::mkdir(const char *path, int mode,
+                                     orbis::Thread *thread) {
   std::error_code ec;
   std::filesystem::create_directories(hostPath + "/" + path, ec);
   return convertErrorCode(ec);
@@ -471,7 +545,8 @@ orbis::ErrorCode HostFsDevice::rmdir(const char *path, orbis::Thread *thread) {
   std::filesystem::remove(hostPath + "/" + path, ec);
   return convertErrorCode(ec);
 }
-orbis::ErrorCode HostFsDevice::rename(const char *from, const char *to, orbis::Thread *thread) {
+orbis::ErrorCode HostFsDevice::rename(const char *from, const char *to,
+                                      orbis::Thread *thread) {
   std::error_code ec;
   std::filesystem::rename(hostPath + "/" + from, hostPath + "/" + to, ec);
   return convertErrorCode(ec);
@@ -492,6 +567,7 @@ struct FdWrapDevice : public IoDevice {
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override {
     *file = createHostFile(fd, this);
+    static_cast<HostFile *>(file->get())->closeOnExit = false;
     return {};
   }
 };

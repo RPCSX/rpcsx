@@ -49,8 +49,8 @@ void rx::vfs::fork() {
   }
 
   gDevFs = orbis::knew<DevFs>();
-  gMountsMap.emplace("/dev/", gDevFs);
-  gMountsMap.emplace("/proc/", orbis::knew<ProcFs>());
+  gMountsMap["/dev/"] = gDevFs;
+  gMountsMap["/proc/"] = orbis::knew<ProcFs>();
 
   for (auto &fs : parentDevFs->devices) {
     gDevFs->devices[fs.first] = fs.second;

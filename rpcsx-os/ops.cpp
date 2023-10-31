@@ -5,7 +5,9 @@
 #include "iodev/blockpool.hpp"
 #include "iodev/dmem.hpp"
 #include "linker.hpp"
+#include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
+#include "orbis/file.hpp"
 #include "orbis/module/ModuleHandle.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
@@ -34,6 +36,9 @@ using namespace orbis;
 
 extern "C" void __register_frame(const void *);
 void setupSigHandlers();
+int ps4Exec(orbis::Thread *mainThread,
+            orbis::utils::Ref<orbis::Module> executableModule,
+            std::span<std::string> argv, std::span<std::string> envp);
 
 namespace {
 static std::pair<SysResult, Ref<Module>>
@@ -629,19 +634,20 @@ SysResult fork(Thread *thread, slong flags) {
   auto childPid = g_context.allocatePid() * 10000 + 1;
   auto mtx = knew<shared_mutex>();
   auto cv = knew<shared_cv>();
+  mtx->lock();
 
   int hostPid = ::fork();
 
   if (hostPid) {
-    mtx->lock();
     cv->wait(*mtx);
+    mtx->unlock();
 
     kdelete(cv);
     kdelete(mtx);
 
     thread->retval[0] = childPid;
     thread->retval[1] = 0;
-    return{};
+    return {};
   }
 
   auto process = g_context.createProcess(childPid);
@@ -649,7 +655,6 @@ SysResult fork(Thread *thread, slong flags) {
   process->onSysEnter = thread->tproc->onSysEnter;
   process->onSysExit = thread->tproc->onSysExit;
   process->ops = thread->tproc->ops;
-  process->isSystem = thread->tproc->isSystem;
   process->parentProcess = thread->tproc;
   for (auto [id, mod] : thread->tproc->modulesMap) {
     if (!process->modulesMap.insert(id, mod)) {
@@ -669,7 +674,7 @@ SysResult fork(Thread *thread, slong flags) {
   rx::vm::fork(thread->tproc->pid);
   rx::vfs::fork();
 
-  cv->notify_one(*mtx);
+  cv->notify_all(*mtx);
 
   auto [baseId, newThread] = process->threadsMap.emplace();
   newThread->tproc = process;
@@ -693,8 +698,11 @@ SysResult fork(Thread *thread, slong flags) {
     std::exit(-1);
   }
 
-  auto ttyFd =
-      ::open(("tty-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
+  auto stdoutFd =
+      ::open(("stdout-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
+             O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  auto stderrFd =
+      ::open(("stderr-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
              O_CREAT | O_TRUNC | O_WRONLY, 0666);
   auto logFd =
       ::open(("log-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
@@ -703,13 +711,65 @@ SysResult fork(Thread *thread, slong flags) {
   dup2(logFd, 1);
   dup2(logFd, 2);
 
-  auto tty = createFdWrapDevice(ttyFd);
+  auto stdoutDev = createFdWrapDevice(stdoutFd);
+  auto stderrDev = createFdWrapDevice(stderrFd);
 
-  rx::vfs::addDevice("stdout", tty);
-  rx::vfs::addDevice("stderr", tty);
-  rx::vfs::addDevice("deci_stdout", tty);
-  rx::vfs::addDevice("deci_stderr", tty);
-  return{};
+  rx::vfs::addDevice("stdout", stdoutDev);
+  rx::vfs::addDevice("stderr", stderrDev);
+  rx::vfs::addDevice("deci_stdout", stdoutDev);
+  rx::vfs::addDevice("deci_stderr", stderrDev);
+  return {};
+}
+
+SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
+                 ptr<ptr<char>> envv) {
+  ORBIS_LOG_ERROR(__FUNCTION__, fname);
+
+  std::vector<std::string> _argv;
+  std::vector<std::string> _envv;
+
+  if (auto ptr = argv) {
+    char *p;
+    while (uread(p, ptr) == ErrorCode{} && p != nullptr) {
+      ORBIS_LOG_ERROR(" argv ", p);
+      _argv.push_back(p);
+      ++ptr;
+    }
+  }
+
+  if (auto ptr = envv) {
+    char *p;
+    while (uread(p, ptr) == ErrorCode{} && p != nullptr) {
+      ORBIS_LOG_ERROR(" envv ", p);
+      _envv.push_back(p);
+      ++ptr;
+    }
+  }
+
+  {
+    orbis::Ref<File> file;
+    auto result = rx::vfs::open(fname, kOpenFlagReadOnly, 0, &file, thread);
+    if (result.isError()) {
+      return result;
+    }
+  }
+
+  std::string path = fname;
+  rx::vm::reset();
+
+  thread->tproc->nextTlsSlot = 1;
+  for (auto [id, mod] : thread->tproc->modulesMap) {
+    thread->tproc->modulesMap.close(id);
+  }
+
+  auto executableModule = rx::linker::loadModuleFile(path, thread);
+
+  executableModule->id = thread->tproc->modulesMap.insert(executableModule);
+  thread->tproc->processParam = executableModule->processParam;
+  thread->tproc->processParamSize = executableModule->processParamSize;
+
+  ps4Exec(thread, executableModule, _argv, _envv);
+  std::abort();
 }
 
 SysResult registerEhFrames(Thread *thread) {
@@ -766,6 +826,7 @@ ProcessOps rx::procOpsTable = {
     .thr_wake = thr_wake,
     .thr_set_name = thr_set_name,
     .fork = fork,
+    .execve = execve,
     .exit = exit,
     .processNeeded = processNeeded,
     .registerEhFrames = registerEhFrames,

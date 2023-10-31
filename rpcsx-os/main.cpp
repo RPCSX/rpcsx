@@ -251,7 +251,7 @@ static const char *getSyscallName(orbis::Thread *thread, int sysno) {
 }
 static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
                        int argsCount) {
-  if (!g_traceSyscalls && thread->tid < 10000) {
+  if (!g_traceSyscalls) {
     return;
   }
   flockfile(stderr);
@@ -277,7 +277,7 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
 
 static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
                       int argsCount, orbis::SysResult result) {
-  if (!result.isError() && !g_traceSyscalls && thread->tid < 10000) {
+  if (!result.isError() && !g_traceSyscalls) {
     return;
   }
 
@@ -305,26 +305,13 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   funlockfile(stderr);
 }
 
-static int ps4Exec(orbis::Thread *mainThread,
-                   orbis::utils::Ref<orbis::Module> executableModule,
-                   std::span<const char *> argv, std::span<const char *> envp) {
-  const auto stackEndAddress = 0x7'ffff'c000ull;
-  const auto stackSize = 0x40000 * 16;
-  auto stackStartAddress = stackEndAddress - stackSize;
-  mainThread->stackStart =
-      rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
-                  rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
-                  rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
-                      rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
-
-  mainThread->stackEnd =
-      reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
-
+static void ps4InitDev() {
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
-  auto stdoutFd = ::open("stdout.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
-  auto stderrFd = ::open("stderr.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  auto stdoutDev = createFdWrapDevice(::open("stdout.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
+  auto stderrDev = createFdWrapDevice(::open("stderr.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
+  auto stdinDev = createFdWrapDevice(STDIN_FILENO);
 
   rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
@@ -334,12 +321,12 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::addDevice("camera", createCameraCharacterDevice());
   rx::vfs::addDevice("dmem1", dmem1);
   rx::vfs::addDevice("dmem2", createDmemCharacterDevice(2));
-  rx::vfs::addDevice("stdout", createFdWrapDevice(stdoutFd));
-  rx::vfs::addDevice("stderr", createFdWrapDevice(stderrFd));
-  rx::vfs::addDevice("deci_stdin", createFdWrapDevice(STDIN_FILENO));
-  rx::vfs::addDevice("deci_stdout", createFdWrapDevice(stdoutFd));
-  rx::vfs::addDevice("deci_stderr", createFdWrapDevice(stderrFd));
-  rx::vfs::addDevice("stdin", createFdWrapDevice(STDIN_FILENO));
+  rx::vfs::addDevice("stdout", stdoutDev);
+  rx::vfs::addDevice("stderr", stderrDev);
+  rx::vfs::addDevice("deci_stdin", stdinDev);
+  rx::vfs::addDevice("deci_stdout", stdoutDev);
+  rx::vfs::addDevice("deci_stderr", stderrDev);
+  rx::vfs::addDevice("stdin", stdinDev);
   rx::vfs::addDevice("zero", createZeroCharacterDevice());
   rx::vfs::addDevice("null", createNullCharacterDevice());
   rx::vfs::addDevice("dipsw", createDipswCharacterDevice());
@@ -366,6 +353,11 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
   rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
 
+  orbis::g_context.shmDevice = createShmDevice();
+  orbis::g_context.blockpoolDevice = createBlockPoolDevice();
+}
+
+static void ps4InitFd(orbis::Thread *mainThread) {
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;
   orbis::Ref<orbis::File> stderrFile;
@@ -376,9 +368,22 @@ static int ps4Exec(orbis::Thread *mainThread,
   mainThread->tproc->fileDescriptors.insert(stdinFile);
   mainThread->tproc->fileDescriptors.insert(stdoutFile);
   mainThread->tproc->fileDescriptors.insert(stderrFile);
+}
 
-  orbis::g_context.shmDevice = createShmDevice();
-  orbis::g_context.blockpoolDevice = createBlockPoolDevice();
+int ps4Exec(orbis::Thread *mainThread,
+            orbis::utils::Ref<orbis::Module> executableModule,
+            std::span<std::string> argv, std::span<std::string> envp) {
+  const auto stackEndAddress = 0x7'ffff'c000ull;
+  const auto stackSize = 0x40000 * 16;
+  auto stackStartAddress = stackEndAddress - stackSize;
+  mainThread->stackStart =
+      rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
+                  rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
+                  rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
+                      rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
+
+  mainThread->stackEnd =
+      reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
@@ -412,14 +417,14 @@ static int ps4Exec(orbis::Thread *mainThread,
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 
-  for (auto elem : argv) {
-    argvOffsets.push_back(stack.pushString(elem));
+  for (auto &elem : argv) {
+    argvOffsets.push_back(stack.pushString(elem.data()));
   }
 
   argvOffsets.push_back(0);
 
-  for (auto elem : envp) {
-    envpOffsets.push_back(stack.pushString(elem));
+  for (auto &elem : envp) {
+    envpOffsets.push_back(stack.pushString(elem.data()));
   }
 
   envpOffsets.push_back(0);
@@ -647,8 +652,8 @@ int main(int argc, const char *argv[]) {
 
   // rx::vm::printHostStats();
   orbis::g_context.allocatePid();
-  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 11);
-  pthread_setname_np(pthread_self(), "11.MAINTHREAD");
+  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
+  pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   std::thread{[] {
     pthread_setname_np(pthread_self(), "Bridge");
@@ -718,7 +723,9 @@ int main(int argc, const char *argv[]) {
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
   initProcess->ops = &rx::procOpsTable;
-  initProcess->isSystem = isSystem;
+  initProcess->appInfo = {
+      .unk4 = (isSystem ? orbis::slong(0x80000000'00000000) : 0),
+  };
 
   auto [baseId, mainThread] = initProcess->threadsMap.emplace();
   mainThread->tproc = initProcess;
@@ -740,9 +747,11 @@ int main(int argc, const char *argv[]) {
   if (executableModule->type == rx::linker::kElfTypeSceDynExec ||
       executableModule->type == rx::linker::kElfTypeSceExec ||
       executableModule->type == rx::linker::kElfTypeExec) {
-    status = ps4Exec(mainThread, std::move(executableModule),
-                     std::span(argv + argIndex, argc - argIndex),
-                     std::span<const char *>());
+    ps4InitDev();
+    ps4InitFd(mainThread);
+    std::vector<std::string> ps4Argv(argv + argIndex,
+                                     argv + argIndex + argc - argIndex);
+    status = ps4Exec(mainThread, std::move(executableModule), ps4Argv, {});
   } else {
     std::fprintf(stderr, "Unexpected executable type\n");
     status = 1;
