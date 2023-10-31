@@ -167,7 +167,8 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
   }
 
   void *maddr = addr;
-  auto result = file->ops->mmap(file, &maddr, len, prot, flags, pos, thread);
+  auto result =
+      file->ops->mmap(file.get(), &maddr, len, prot, flags, pos, thread);
 
   if (result != ErrorCode{}) {
     return result;
@@ -282,7 +283,8 @@ orbis::SysResult rmdir(Thread *thread, ptr<const char> path) {
   ORBIS_LOG_TODO(__FUNCTION__, path);
   return rx::vfs::rmdir(path, thread);
 }
-orbis::SysResult rename(Thread *thread, ptr<const char> from, ptr<const char> to) {
+orbis::SysResult rename(Thread *thread, ptr<const char> from,
+                        ptr<const char> to) {
   ORBIS_LOG_TODO(__FUNCTION__, from, to);
   return rx::vfs::rename(from, to, thread);
 }
@@ -317,7 +319,7 @@ orbis::SysResult blockpool_unmap(orbis::Thread *thread, orbis::caddr_t addr,
 orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
                         orbis::sint domain, orbis::sint type,
                         orbis::sint protocol, Ref<File> *file) {
-  return createSocket(file, name, domain, type, protocol);
+  return createSocket(file, name ? name : "", domain, type, protocol);
 }
 
 orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
@@ -376,7 +378,7 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
   std::string_view symView(symbol);
 
   if (auto nid = rx::linker::decodeNid(symView)) {
-    if (auto addr = findSymbolById(module, *nid)) {
+    if (auto addr = findSymbolById(module.get(), *nid)) {
       *addrp = addr;
       return {};
     }
@@ -386,7 +388,8 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
               module->moduleName,
               rx::linker::encodeNid(rx::linker::encodeFid(symView)).string);
 
-  if (auto addr = findSymbolById(module, rx::linker::encodeFid(symView))) {
+  if (auto addr =
+          findSymbolById(module.get(), rx::linker::encodeFid(symView))) {
     *addrp = addr;
     return {};
   }
@@ -486,7 +489,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
                    childThread->stackStart);
 
   auto stdthr = std::thread{[=, childThread = Ref<Thread>(childThread)] {
-    stack_t ss;
+    stack_t ss{};
 
     auto sigStackSize = std::max<std::size_t>(
         SIGSTKSZ, ::utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
@@ -498,7 +501,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
     }
 
     ss.ss_size = sigStackSize;
-    ss.ss_flags = 0;
+    ss.ss_flags = 1 << 31;
 
     if (sigaltstack(&ss, NULL) == -1) {
       perror("sigaltstack");

@@ -39,4 +39,6 @@ struct Thread {
   void incRef() {}
   void decRef() {}
 };
+
+extern thread_local Thread *g_currentThread;
 } // namespace orbis

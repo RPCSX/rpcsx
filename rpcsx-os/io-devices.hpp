@@ -25,3 +25,6 @@ IoDevice *createUrandomCharacterDevice();
 IoDevice *createCameraCharacterDevice();
 IoDevice *createNotificationCharacterDevice(int index);
 IoDevice *createMBusCharacterDevice();
+IoDevice *createBtCharacterDevice();
+IoDevice *createXptCharacterDevice();
+IoDevice *createCdCharacterDevice();

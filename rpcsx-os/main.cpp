@@ -41,7 +41,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   auto signalAddress = reinterpret_cast<std::uintptr_t>(info->si_addr);
 
-  if (rx::thread::g_current != nullptr && sig == SIGSEGV &&
+  if (orbis::g_currentThread != nullptr && sig == SIGSEGV &&
       signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
     bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
@@ -103,7 +103,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
         std::abort();
       }
 
-      _writefsbase_u64(rx::thread::g_current->fsBase);
+      _writefsbase_u64(orbis::g_currentThread->fsBase);
       return;
     }
 
@@ -120,22 +120,22 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (sig != SIGINT) {
     char buf[128] = "";
     int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
-                       rx::thread::g_current ? "guest" : "host",
-                       rx::thread::g_current ? rx::thread::g_current->tid
-                                             : ::gettid(),
+                       orbis::g_currentThread ? "guest" : "host",
+                       orbis::g_currentThread ? orbis::g_currentThread->tid
+                                              : ::gettid(),
                        info->si_addr);
     write(2, buf, len);
 
     if (std::size_t printed =
-            rx::printAddressLocation(buf, sizeof(buf), rx::thread::g_current,
+            rx::printAddressLocation(buf, sizeof(buf), orbis::g_currentThread,
                                      (std::uint64_t)info->si_addr)) {
       printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
       write(2, buf, printed);
     }
 
-    if (rx::thread::g_current) {
+    if (orbis::g_currentThread) {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
-                          rx::thread::g_current, 2);
+                          orbis::g_currentThread, 2);
     } else {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
     }
@@ -159,10 +159,11 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   }
 }
 
-static void setupSigHandlers() {
-  stack_t ss;
+void setupSigHandlers() {
   auto sigStackSize = std::max<std::size_t>(
       SIGSTKSZ, utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+
+  stack_t ss{};
   ss.ss_sp = malloc(sigStackSize);
   if (ss.ss_sp == NULL) {
     perror("malloc");
@@ -170,7 +171,7 @@ static void setupSigHandlers() {
   }
 
   ss.ss_size = sigStackSize;
-  ss.ss_flags = 0;
+  ss.ss_flags = 1 << 31;
 
   if (sigaltstack(&ss, NULL) == -1) {
     perror("sigaltstack");
@@ -250,7 +251,7 @@ static const char *getSyscallName(orbis::Thread *thread, int sysno) {
 }
 static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
                        int argsCount) {
-  if (!g_traceSyscalls) {
+  if (!g_traceSyscalls && thread->tid < 10000) {
     return;
   }
   flockfile(stderr);
@@ -276,7 +277,7 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
 
 static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
                       int argsCount, orbis::SysResult result) {
-  if (!result.isError() && !g_traceSyscalls) {
+  if (!result.isError() && !g_traceSyscalls && thread->tid < 10000) {
     return;
   }
 
@@ -327,7 +328,8 @@ static int ps4Exec(orbis::Thread *mainThread,
 
   rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
-  rx::vfs::addDevice("icc_configuration", createIccConfigurationCharacterDevice());
+  rx::vfs::addDevice("icc_configuration",
+                     createIccConfigurationCharacterDevice());
   rx::vfs::addDevice("console", createConsoleCharacterDevice());
   rx::vfs::addDevice("camera", createCameraCharacterDevice());
   rx::vfs::addDevice("dmem1", dmem1);
@@ -353,6 +355,9 @@ static int ps4Exec(orbis::Thread *mainThread,
   rx::vfs::addDevice("ajm", createAjmCharacterDevice());
   rx::vfs::addDevice("urandom", createUrandomCharacterDevice());
   rx::vfs::addDevice("mbus", createMBusCharacterDevice());
+  rx::vfs::addDevice("bt", createBtCharacterDevice());
+  rx::vfs::addDevice("xpt0", createXptCharacterDevice());
+  rx::vfs::addDevice("cd0", createXptCharacterDevice());
   rx::vfs::addDevice("notification0", createNotificationCharacterDevice(0));
   rx::vfs::addDevice("notification1", createNotificationCharacterDevice(1));
   rx::vfs::addDevice("notification2", createNotificationCharacterDevice(2));
@@ -385,7 +390,8 @@ static int ps4Exec(orbis::Thread *mainThread,
     return 1;
   }
 
-  libSceLibcInternal->id = mainThread->tproc->modulesMap.insert(libSceLibcInternal);
+  libSceLibcInternal->id =
+      mainThread->tproc->modulesMap.insert(libSceLibcInternal);
 
   auto libkernel = rx::linker::loadModuleFile(
       "/system/common/lib/libkernel_sys.sprx", mainThread);
@@ -402,7 +408,6 @@ static int ps4Exec(orbis::Thread *mainThread,
 
   // *reinterpret_cast<std::uint32_t *>(
   //     reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
-
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 

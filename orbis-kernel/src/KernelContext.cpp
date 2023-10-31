@@ -6,11 +6,14 @@
 #include <sys/unistd.h>
 
 namespace orbis {
+thread_local Thread *g_currentThread;
+
 KernelContext &g_context = *[]() -> KernelContext * {
   // Allocate global shared kernel memory
   // TODO: randomize for hardening and reduce size
   auto ptr = mmap(reinterpret_cast<void *>(0x200'0000'0000), 0x1'0000'0000,
-                  PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
+                  PROT_READ | PROT_WRITE,
+                  MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
   if (!ptr)
     std::abort();
 

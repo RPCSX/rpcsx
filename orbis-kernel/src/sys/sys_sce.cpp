@@ -51,7 +51,7 @@ orbis::SysResult orbis::sys_socketclose(Thread *thread, sint fd) {
   return ErrorCode::BADF;
 }
 orbis::SysResult orbis::sys_netgetiflist(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 
 orbis::SysResult orbis::sys_mtypeprotect(Thread *thread /* TODO */) {
@@ -215,8 +215,9 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
       return sys_evf_create(thread, name, kEvfAttrShared, 0x400000);
     }
 
-    if (std::string_view("SceShellCoreUtilAppFocus") == _name) {
-      return sys_evf_create(thread, name, kEvfAttrShared, 1);
+    if (std::string_view("SceShellCoreUtilAppFocus") == _name ||
+        std::string_view("SceBootStatusFlags") == _name) {
+      return sys_evf_create(thread, name, kEvfAttrShared, 0x2408);
     }
     return sys_evf_create(thread, name, kEvfAttrShared, 0);
     return ErrorCode::SRCH;
@@ -290,7 +291,7 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
 
   auto result = evf->tryWait(thread, mode, patternSet);
   ORBIS_LOG_TRACE(__FUNCTION__, evf->name, thread->tid, id, patternSet, mode,
-                    pPatternSet, result);
+                  pPatternSet, result);
 
   if (pPatternSet != nullptr) {
     uwrite(pPatternSet, thread->evfResultPattern);
@@ -332,7 +333,7 @@ orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
   }
 
   ORBIS_LOG_TRACE(__FUNCTION__, evf->name, thread->tid, id, value,
-                    pNumWaitThreads);
+                  pNumWaitThreads);
 
   auto numWaitThreads = evf->cancel(value);
   if (pNumWaitThreads != 0) {
@@ -403,7 +404,7 @@ orbis::SysResult orbis::sys_osem_create(Thread *thread,
   return {};
 }
 orbis::SysResult orbis::sys_osem_delete(Thread *thread, sint id) {
-  ORBIS_LOG_WARNING(__FUNCTION__, id);
+  ORBIS_LOG_TRACE(__FUNCTION__, id);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
   if (sem == nullptr) {
     return ErrorCode::SRCH;
@@ -444,7 +445,7 @@ orbis::SysResult orbis::sys_osem_open(Thread *thread,
   return {};
 }
 orbis::SysResult orbis::sys_osem_close(Thread *thread, sint id) {
-  ORBIS_LOG_WARNING(__FUNCTION__, id);
+  ORBIS_LOG_TRACE(__FUNCTION__, id);
   if (!thread->tproc->semMap.close(id)) {
     return ErrorCode::SRCH;
   }
@@ -473,7 +474,7 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
   return {};
 }
 orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, need);
+  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, need);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
   if (need < 1 || need > sem->maxValue)
     return ErrorCode::INVAL;
@@ -485,7 +486,7 @@ orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
   return {};
 }
 orbis::SysResult orbis::sys_osem_post(Thread *thread, sint id, sint count) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, count);
+  ORBIS_LOG_WARNING(__FUNCTION__, thread, id, count);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
   if (count < 1 || count > sem->maxValue - sem->value)
     return ErrorCode::INVAL;
@@ -500,6 +501,7 @@ orbis::SysResult orbis::sys_osem_post(Thread *thread, sint id, sint count) {
 orbis::SysResult orbis::sys_osem_cancel(Thread *thread, sint id, sint set,
                                         ptr<uint> pNumWaitThreads) {
   ORBIS_LOG_TODO(__FUNCTION__, thread, id, set, pNumWaitThreads);
+  std::abort();
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_namedobj_create(Thread *thread,
@@ -589,8 +591,9 @@ orbis::SysResult orbis::sys_budget_delete(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_budget_get(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_budget_set(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_budget_set(Thread *thread, slong budget) {
+  ORBIS_LOG_TODO(__FUNCTION__, budget);
+  return {};
 }
 orbis::SysResult orbis::sys_virtual_query(Thread *thread, ptr<void> addr,
                                           uint64_t unk, ptr<void> info,
@@ -601,9 +604,7 @@ orbis::SysResult orbis::sys_virtual_query(Thread *thread, ptr<void> addr,
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_mdbg_call(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
-}
+orbis::SysResult orbis::sys_mdbg_call(Thread *thread /* TODO */) { return {}; }
 orbis::SysResult orbis::sys_obs_sblock_create(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
@@ -942,7 +943,8 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
   return uwrite(destModuleInfoEx, result);
 }
 orbis::SysResult orbis::sys_budget_getid(Thread *thread) {
-  return ErrorCode::NOSYS;
+  thread->retval[0] = 1;
+  return {};
 }
 orbis::SysResult orbis::sys_budget_get_ptype(Thread *thread, sint budgetId) {
   thread->retval[0] = 1;

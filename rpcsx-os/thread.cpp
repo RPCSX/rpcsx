@@ -1,6 +1,7 @@
 #include "thread.hpp"
 #include "backtrace.hpp"
 #include "orbis/sys/sysentry.hpp"
+#include "orbis/thread/Thread.hpp"
 #include <asm/prctl.h>
 #include <csignal>
 #include <immintrin.h>
@@ -11,8 +12,6 @@
 #include <ucontext.h>
 #include <unistd.h>
 #include <xbyak/xbyak.h>
-
-thread_local orbis::Thread *rx::thread::g_current = nullptr;
 
 static auto setContext = [] {
   struct SetContext : Xbyak::CodeGenerator {
@@ -34,6 +33,8 @@ static auto setContext = [] {
   return setContextStorage.getCode<void (*)(const mcontext_t &)>();
 }();
 
+void setupSigHandlers();
+
 static __attribute__((no_stack_protector)) void
 handleSigSys(int sig, siginfo_t *info, void *ucontext) {
   if (auto hostFs = _readgsbase_u64()) {
@@ -42,10 +43,24 @@ handleSigSys(int sig, siginfo_t *info, void *ucontext) {
 
   // rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
   // rx::thread::g_current, 1);
-  auto prevContext = std::exchange(rx::thread::g_current->context, ucontext);
-  orbis::syscall_entry(rx::thread::g_current);
-  rx::thread::g_current->context = prevContext;
-  _writefsbase_u64(rx::thread::g_current->fsBase);
+  auto thread = orbis::g_currentThread;
+  auto prevContext = std::exchange(thread->context, ucontext);
+  orbis::syscall_entry(thread);
+  if (thread != orbis::g_currentThread) {
+    thread = orbis::g_currentThread;
+
+    setupSigHandlers();
+    rx::thread::initialize();
+
+    if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
+              (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
+      perror("prctl failed\n");
+      exit(-1);
+    }
+  }
+
+  thread->context = prevContext;
+  _writefsbase_u64(thread->fsBase);
 }
 
 void rx::thread::initialize() {
@@ -62,7 +77,7 @@ void rx::thread::initialize() {
 void rx::thread::deinitialize() {}
 
 void rx::thread::invoke(orbis::Thread *thread) {
-  g_current = thread;
+  orbis::g_currentThread = thread;
 
   sigset_t unblockSigs{};
   sigset_t oldSigmask{};

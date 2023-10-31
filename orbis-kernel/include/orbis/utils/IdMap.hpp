@@ -33,6 +33,16 @@ class RcIdMap {
       }
     }
 
+    bool insert(std::size_t index, T *object) {
+      if (mask.test(index)) {
+        return false;
+      }
+
+      mask.set(index);
+      objects[index] = object;
+      return true;
+    }
+
     std::size_t insert(T *object) {
       std::size_t index = mask.countr_one();
       mask.set(index);
@@ -117,6 +127,28 @@ public:
   end_iterator end() const { return {}; }
 
 private:
+  bool insert_impl(IdT id, T *object) {
+    std::lock_guard lock(mutex);
+
+    auto raw = static_cast<std::size_t>(id);
+    auto page = (raw - MinId) / ChunkSize;
+    auto index = (raw - MinId) % ChunkSize;
+
+    if (page >= ChunkCount) {
+      return false;
+    }
+
+    if (!m_chunks[page].insert(index, object)) {
+      return false;
+    }
+
+    if (m_chunks[page].mask.full()) {
+      m_fullChunks.set(page);
+    }
+
+    return true;
+  }
+
   IdT insert_impl(T *object) {
     std::lock_guard lock(mutex);
 
@@ -159,7 +191,29 @@ public:
     return result;
   }
 
-  T *get(IdT id) {
+  bool insert(IdT id, T *object) {
+    if (insert_impl(id, object)) {
+      object->incRef();
+      return true;
+    }
+
+    return false;
+  }
+
+  bool insert(IdT id, const Ref<T> &ref) { return insert(id, ref.get()); }
+
+  bool insert(IdT id, Ref<T> &&ref) {
+    auto object = ref.release();
+
+    if (!insert_impl(id, object)) {
+      object->decRef();
+      return false;
+    }
+
+    return true;
+  }
+
+  Ref<T> get(IdT id) {
     const auto rawId = static_cast<std::size_t>(id) - MinId;
 
     if (rawId >= MaxId - MinId) {
