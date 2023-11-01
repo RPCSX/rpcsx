@@ -23,6 +23,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     cpu_mode,
     rng_pseudo,
     backup_restore_mode,
+    console,
+    init_safe_mode
   };
 
   enum sysctl_hw {
@@ -121,28 +123,48 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
   if (namelen == 4) {
     if (name[0] == 1 && name[1] == 14 && name[2] == 35) {
-      // sceKernelGetAppInfo
-      struct app_info {
-        uint32_t appId;
-        uint32_t unk0;
-        uint32_t unk1;
-        uint32_t appType;
-        char titleId[10];
-        uint16_t unk3;
-        slong unk5;
-        uint32_t unk6;
-        uint16_t unk7;
-        char unk_[26];
-      };
+      // AppInfo get/set
 
       // 1 - 14 - 35 - pid
-      // std::printf("   kern.14.35.%u\n", name[3]);
-      app_info result{
-          .appType = 0,
-          .unk5 = (thread->tproc->isSystem ? slong(0x80000000'00000000) : 0),
-      };
 
-      return uwrite((ptr<app_info>)old, result);
+      if (old) {
+        size_t oldlen;
+        if (auto errc = uread(oldlen, oldlenp); errc != ErrorCode{}) {
+          return errc;
+        }
+
+        if (oldlen < sizeof(AppInfo)) {
+          return ErrorCode::INVAL;
+        }
+
+        if (auto errc = uwrite((ptr<AppInfo>)old, thread->tproc->appInfo);
+            errc != ErrorCode{}) {
+          return errc;
+        }
+
+        if (auto errc = uwrite(oldlenp, sizeof(AppInfo)); errc != ErrorCode{}) {
+          return errc;
+        }
+      }
+
+      if (new_) {
+        if (newlen != sizeof(AppInfo)) {
+          return ErrorCode::INVAL;
+        }
+
+        auto result = uread(thread->tproc->appInfo, (ptr<AppInfo>)new_);
+        if (result == ErrorCode{}) {
+          auto appInfo = thread->tproc->appInfo;
+          ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
+                          appInfo.unk1, appInfo.appType, appInfo.titleId,
+                          appInfo.unk2, appInfo.unk3, appInfo.unk5, appInfo.unk6,
+                          appInfo.unk7, appInfo.unk8);
+        }
+
+        return result;
+      }
+
+      return {};
     }
 
     if (name[0] == 1 && name[1] == 14 && name[2] == 44) {
@@ -238,6 +260,22 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
           dest[count++] = kern;
           dest[count++] = backup_restore_mode;
+        } else if (searchName == "kern.console") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = kern;
+          dest[count++] = console;
+        } else if (searchName == "kern.init_safe_mode") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = kern;
+          dest[count++] = init_safe_mode;
         } else if (searchName == "hw.config.chassis_info") {
           if (*oldlenp < 3 * sizeof(uint32_t)) {
             std::fprintf(stderr, "   %s error\n", searchName.data());
