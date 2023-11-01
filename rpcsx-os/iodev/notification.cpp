@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstddef>
 #include <mutex>
+#include <span>
 #include <thread>
 
 struct NotificationFile : orbis::File {};
