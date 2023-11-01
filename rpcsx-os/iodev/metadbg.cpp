@@ -2,7 +2,7 @@
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
-#include <bits/chrono.h>
+#include <chrono>
 #include <thread>
 
 struct MetaDbgFile : orbis::File {};
