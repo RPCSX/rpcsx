@@ -60,6 +60,14 @@ orbis::SysResult orbis::sys_mtypeprotect(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
                                         uint32_t id, ptr<void> result,
                                         ptr<void> value, uint64_t type) {
+  ORBIS_LOG_ERROR(__FUNCTION__, op, id, type);
+  thread->where();
+
+  if (op == 2) {
+    if (id == 0x2010000) {
+      return uwrite((ptr<uint>)value, 0u);
+    }
+  }
   if (op == 25) {
     struct nonsys_int {
       union {

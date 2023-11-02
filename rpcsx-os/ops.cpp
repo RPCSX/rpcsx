@@ -2,6 +2,7 @@
 #include "align.hpp"
 #include "backtrace.hpp"
 #include "io-device.hpp"
+#include "io-devices.hpp"
 #include "iodev/blockpool.hpp"
 #include "iodev/dmem.hpp"
 #include "linker.hpp"
@@ -28,6 +29,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
 #include <sys/prctl.h>
 #include <thread>
 #include <unistd.h>
@@ -500,25 +502,6 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
                    childThread->stackStart);
 
   auto stdthr = std::thread{[=, childThread = Ref<Thread>(childThread)] {
-    stack_t ss{};
-
-    auto sigStackSize = std::max<std::size_t>(
-        SIGSTKSZ, ::utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
-
-    ss.ss_sp = malloc(sigStackSize);
-    if (ss.ss_sp == NULL) {
-      perror("malloc");
-      ::exit(EXIT_FAILURE);
-    }
-
-    ss.ss_size = sigStackSize;
-    ss.ss_flags = 1 << 31;
-
-    if (sigaltstack(&ss, NULL) == -1) {
-      perror("sigaltstack");
-      ::exit(EXIT_FAILURE);
-    }
-
     static_cast<void>(
         uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
     auto context = new ucontext_t{};
@@ -534,6 +517,9 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 
     childThread->context = context;
     childThread->state = orbis::ThreadState::RUNNING;
+
+    rx::thread::setupSignalStack();
+    rx::thread::setupThisThread();
     rx::thread::invoke(childThread.get());
   }};
 
@@ -632,18 +618,17 @@ SysResult fork(Thread *thread, slong flags) {
   ORBIS_LOG_TODO(__FUNCTION__, flags);
 
   auto childPid = g_context.allocatePid() * 10000 + 1;
-  auto mtx = knew<shared_mutex>();
-  auto cv = knew<shared_cv>();
-  mtx->lock();
+  auto flag = knew<std::atomic<bool>>();
+  *flag = false;
 
   int hostPid = ::fork();
 
   if (hostPid) {
-    cv->wait(*mtx);
-    mtx->unlock();
+    while (*flag == false) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
-    kdelete(cv);
-    kdelete(mtx);
+    kfree(flag, sizeof(*flag));
 
     thread->retval[0] = childPid;
     thread->retval[1] = 0;
@@ -674,7 +659,7 @@ SysResult fork(Thread *thread, slong flags) {
   rx::vm::fork(thread->tproc->pid);
   rx::vfs::fork();
 
-  cv->notify_all(*mtx);
+  *flag = true;
 
   auto [baseId, newThread] = process->threadsMap.emplace();
   newThread->tproc = process;
@@ -691,33 +676,14 @@ SysResult fork(Thread *thread, slong flags) {
 
   setupSigHandlers();
   rx::thread::initialize();
+  rx::thread::setupThisThread();
 
-  if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
-            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
-    perror("prctl failed\n");
-    std::exit(-1);
-  }
-
-  auto stdoutFd =
-      ::open(("stdout-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
-             O_CREAT | O_TRUNC | O_WRONLY, 0666);
-  auto stderrFd =
-      ::open(("stderr-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
-             O_CREAT | O_TRUNC | O_WRONLY, 0666);
   auto logFd =
       ::open(("log-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
              O_CREAT | O_TRUNC | O_WRONLY, 0666);
 
   dup2(logFd, 1);
   dup2(logFd, 2);
-
-  auto stdoutDev = createFdWrapDevice(stdoutFd);
-  auto stderrDev = createFdWrapDevice(stderrFd);
-
-  rx::vfs::addDevice("stdout", stdoutDev);
-  rx::vfs::addDevice("stderr", stderrDev);
-  rx::vfs::addDevice("deci_stdout", stdoutDev);
-  rx::vfs::addDevice("deci_stderr", stderrDev);
   return {};
 }
 
@@ -768,7 +734,18 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   thread->tproc->processParam = executableModule->processParam;
   thread->tproc->processParamSize = executableModule->processParamSize;
 
-  ps4Exec(thread, executableModule, _argv, _envv);
+  auto name = path;
+  if (auto slashP = name.rfind('/'); slashP != std::string::npos) {
+    name = name.substr(slashP + 1);
+  }
+
+  pthread_setname_np(pthread_self(), name.c_str());
+
+  std::thread([&] {
+    rx::thread::setupSignalStack();
+    rx::thread::setupThisThread();
+    ps4Exec(thread, executableModule, _argv, _envv);
+  }).join();
   std::abort();
 }
 

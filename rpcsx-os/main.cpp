@@ -13,6 +13,7 @@
 #include <atomic>
 #include <elf.h>
 #include <filesystem>
+#include <linux/prctl.h>
 #include <orbis/KernelContext.hpp>
 #include <orbis/module.hpp>
 #include <orbis/module/Module.hpp>
@@ -25,6 +26,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/mman.h>
+#include <sys/prctl.h>
 #include <ucontext.h>
 
 #include <csignal>
@@ -160,23 +162,29 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 }
 
 void setupSigHandlers() {
-  auto sigStackSize = std::max<std::size_t>(
-      SIGSTKSZ, utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+  stack_t oss{};
 
-  stack_t ss{};
-  ss.ss_sp = malloc(sigStackSize);
-  if (ss.ss_sp == NULL) {
-    perror("malloc");
-    exit(EXIT_FAILURE);
-  }
+  // if (sigaltstack(nullptr, &oss) < 0 || oss.ss_size == 0) {
+    auto sigStackSize = std::max<std::size_t>(
+        SIGSTKSZ, utils::alignUp(64 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
 
-  ss.ss_size = sigStackSize;
-  ss.ss_flags = 1 << 31;
+    stack_t ss{};
+    ss.ss_sp = malloc(sigStackSize);
+    if (ss.ss_sp == NULL) {
+      perror("malloc");
+      exit(EXIT_FAILURE);
+    }
 
-  if (sigaltstack(&ss, NULL) == -1) {
-    perror("sigaltstack");
-    exit(EXIT_FAILURE);
-  }
+    ss.ss_size = sigStackSize;
+    ss.ss_flags = 1 << 31;
+
+    std::fprintf(stderr, "installing sp [%p, %p]\n", ss.ss_sp, (char *)ss.ss_sp + ss.ss_size);
+
+    if (sigaltstack(&ss, NULL) == -1) {
+      perror("sigaltstack");
+      exit(EXIT_FAILURE);
+    }
+  // }
 
   struct sigaction act {};
   act.sa_sigaction = handle_signal;
@@ -309,24 +317,23 @@ static void ps4InitDev() {
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
-  auto stdoutDev = createFdWrapDevice(::open("stdout.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
-  auto stderrDev = createFdWrapDevice(::open("stderr.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
-  auto stdinDev = createFdWrapDevice(STDIN_FILENO);
+  auto consoleDev = createConsoleCharacterDevice(
+      STDIN_FILENO, ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
 
   rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
   rx::vfs::addDevice("icc_configuration",
                      createIccConfigurationCharacterDevice());
-  rx::vfs::addDevice("console", createConsoleCharacterDevice());
+  rx::vfs::addDevice("console", consoleDev);
   rx::vfs::addDevice("camera", createCameraCharacterDevice());
   rx::vfs::addDevice("dmem1", dmem1);
   rx::vfs::addDevice("dmem2", createDmemCharacterDevice(2));
-  rx::vfs::addDevice("stdout", stdoutDev);
-  rx::vfs::addDevice("stderr", stderrDev);
-  rx::vfs::addDevice("deci_stdin", stdinDev);
-  rx::vfs::addDevice("deci_stdout", stdoutDev);
-  rx::vfs::addDevice("deci_stderr", stderrDev);
-  rx::vfs::addDevice("stdin", stdinDev);
+  rx::vfs::addDevice("stdout", consoleDev);
+  rx::vfs::addDevice("stderr", consoleDev);
+  rx::vfs::addDevice("deci_stdin", consoleDev);
+  rx::vfs::addDevice("deci_stdout", consoleDev);
+  rx::vfs::addDevice("deci_stderr", consoleDev);
+  rx::vfs::addDevice("stdin", consoleDev);
   rx::vfs::addDevice("zero", createZeroCharacterDevice());
   rx::vfs::addDevice("null", createNullCharacterDevice());
   rx::vfs::addDevice("dipsw", createDipswCharacterDevice());
@@ -346,6 +353,20 @@ static void ps4InitDev() {
   rx::vfs::addDevice("bt", createBtCharacterDevice());
   rx::vfs::addDevice("xpt0", createXptCharacterDevice());
   rx::vfs::addDevice("cd0", createXptCharacterDevice());
+  rx::vfs::addDevice("da0x0.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x1.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x2.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x3.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x4.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x5.crypt", createHddCharacterDevice());
+  // rx::vfs::addDevice("da0x6x0", createHddCharacterDevice()); // boot log
+  rx::vfs::addDevice("da0x6x2.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x8", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x9.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x12.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x13.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x14.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x15", createHddCharacterDevice());
   rx::vfs::addDevice("notification0", createNotificationCharacterDevice(0));
   rx::vfs::addDevice("notification1", createNotificationCharacterDevice(1));
   rx::vfs::addDevice("notification2", createNotificationCharacterDevice(2));
@@ -374,7 +395,7 @@ int ps4Exec(orbis::Thread *mainThread,
             orbis::utils::Ref<orbis::Module> executableModule,
             std::span<std::string> argv, std::span<std::string> envp) {
   const auto stackEndAddress = 0x7'ffff'c000ull;
-  const auto stackSize = 0x40000 * 16;
+  const auto stackSize = 0x40000 * 32;
   auto stackStartAddress = stackEndAddress - stackSize;
   mainThread->stackStart =
       rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
@@ -388,32 +409,39 @@ int ps4Exec(orbis::Thread *mainThread,
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
 
-  auto libSceLibcInternal = rx::linker::loadModuleFile(
-      "/system/common/lib/libSceLibcInternal.sprx", mainThread);
+  std::uint64_t interpBase = 0;
+  std::uint64_t entryPoint = executableModule->entryPoint;
 
-  if (libSceLibcInternal == nullptr) {
-    std::fprintf(stderr, "libSceLibcInternal not found\n");
-    return 1;
+  if (executableModule->type != rx::linker::kElfTypeExec) {
+    auto libSceLibcInternal = rx::linker::loadModuleFile(
+        "/system/common/lib/libSceLibcInternal.sprx", mainThread);
+
+    if (libSceLibcInternal == nullptr) {
+      std::fprintf(stderr, "libSceLibcInternal not found\n");
+      return 1;
+    }
+
+    libSceLibcInternal->id =
+        mainThread->tproc->modulesMap.insert(libSceLibcInternal);
+
+    auto libkernel = rx::linker::loadModuleFile(
+        "/system/common/lib/libkernel_sys.sprx", mainThread);
+
+    if (libkernel == nullptr) {
+      std::fprintf(stderr, "libkernel not found\n");
+      return 1;
+    }
+
+    libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
+    interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
+    entryPoint = libkernel->entryPoint;
+
+    // *reinterpret_cast<std::uint32_t *>(
+    //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
+
+    // *reinterpret_cast<std::uint32_t *>(
+    //     reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
   }
-
-  libSceLibcInternal->id =
-      mainThread->tproc->modulesMap.insert(libSceLibcInternal);
-
-  auto libkernel = rx::linker::loadModuleFile(
-      "/system/common/lib/libkernel_sys.sprx", mainThread);
-
-  if (libkernel == nullptr) {
-    std::fprintf(stderr, "libkernel not found\n");
-    return 1;
-  }
-
-  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
-
-  // *reinterpret_cast<std::uint32_t *>(
-  //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
-
-  // *reinterpret_cast<std::uint32_t *>(
-  //     reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 
@@ -432,7 +460,7 @@ int ps4Exec(orbis::Thread *mainThread,
   // clang-format off
   std::uint64_t auxv[] = {
       AT_ENTRY, executableModule->entryPoint,
-      AT_BASE, reinterpret_cast<std::uint64_t>(libkernel->base),
+      AT_BASE, interpBase,
       AT_NULL, 0
   };
   // clang-format on
@@ -466,8 +494,7 @@ int ps4Exec(orbis::Thread *mainThread,
   // FIXME: should be at guest user space
   context->uc_mcontext.gregs[REG_RDX] =
       reinterpret_cast<std::uint64_t>(+[] { std::printf("At exit\n"); });
-  ;
-  context->uc_mcontext.gregs[REG_RIP] = libkernel->entryPoint;
+  context->uc_mcontext.gregs[REG_RIP] = entryPoint;
 
   mainThread->context = context;
   rx::thread::invoke(mainThread);
@@ -743,6 +770,12 @@ int main(int argc, const char *argv[]) {
   executableModule->id = initProcess->modulesMap.insert(executableModule);
   initProcess->processParam = executableModule->processParam;
   initProcess->processParamSize = executableModule->processParamSize;
+
+  if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
+            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
+    perror("prctl failed\n");
+    exit(-1);
+  }
 
   if (executableModule->type == rx::linker::kElfTypeSceDynExec ||
       executableModule->type == rx::linker::kElfTypeSceExec ||

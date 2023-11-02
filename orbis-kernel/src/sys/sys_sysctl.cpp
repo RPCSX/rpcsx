@@ -8,8 +8,6 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
                                      size_t newlen) {
   enum sysctl_ctl { unspec, kern, vm, vfs, net, debug, hw, machdep, user };
 
-  // machdep.tsc_freq
-
   enum sysctl_kern {
     usrstack = 33,
     kern_14 = 14,
@@ -154,11 +152,14 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
         auto result = uread(thread->tproc->appInfo, (ptr<AppInfo>)new_);
         if (result == ErrorCode{}) {
-          auto appInfo = thread->tproc->appInfo;
+          auto &appInfo = thread->tproc->appInfo;
           ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
                           appInfo.unk1, appInfo.appType, appInfo.titleId,
                           appInfo.unk2, appInfo.unk3, appInfo.unk5, appInfo.unk6,
                           appInfo.unk7, appInfo.unk8);
+
+          // HACK
+          appInfo.unk4 = orbis::slong(0x80000000'00000000);
         }
 
         return result;

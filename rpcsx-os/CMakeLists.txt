@@ -9,6 +9,7 @@ add_executable(rpcsx-os
   iodev/camera.cpp
   iodev/cd.cpp
   iodev/console.cpp
+  iodev/hdd.cpp
   iodev/dce.cpp
   iodev/dipsw.cpp
   iodev/dmem.cpp

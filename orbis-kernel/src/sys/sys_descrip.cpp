@@ -6,16 +6,12 @@ orbis::SysResult orbis::sys_getdtablesize(Thread *thread) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_dup2(Thread *thread, uint from, uint to) {
-  if (to == 1 || to == 2) { // HACK: ignore setup /dev/console to stdout/stderr
-    return {};
-  }
-
-  std::lock_guard lock(thread->tproc->fileDescriptors.mutex);
-
   auto file = thread->tproc->fileDescriptors.get(from);
+
   if (file == nullptr) {
     return ErrorCode::BADF;
   }
+
   thread->tproc->fileDescriptors.close(to);
   thread->tproc->fileDescriptors.insert(to, file);
   return {};
