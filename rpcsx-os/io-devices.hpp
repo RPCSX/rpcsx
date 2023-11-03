@@ -30,3 +30,8 @@ IoDevice *createXptCharacterDevice();
 IoDevice *createCdCharacterDevice();
 IoDevice *createMetaDbgCharacterDevice();
 IoDevice *createHddCharacterDevice();
+IoDevice *createAoutCharacterDevice();
+IoDevice *createAVControlCharacterDevice();
+IoDevice *createHDMICharacterDevice();
+IoDevice *createMBusAVCharacterDevice();
+IoDevice *createScaninCharacterDevice();

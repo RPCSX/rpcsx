@@ -373,6 +373,11 @@ static void ps4InitDev() {
   rx::vfs::addDevice("notification3", createNotificationCharacterDevice(3));
   rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
   rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
+  rx::vfs::addDevice("aout0", createAoutCharacterDevice());
+  rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
+  rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
+  rx::vfs::addDevice("mbus_av", createMBusAVCharacterDevice());
+  rx::vfs::addDevice("scanin", createScaninCharacterDevice());
 
   orbis::g_context.shmDevice = createShmDevice();
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();

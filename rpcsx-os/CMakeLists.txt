@@ -31,6 +31,11 @@ add_executable(rpcsx-os
   iodev/urandom.cpp
   iodev/xpt.cpp
   iodev/zero.cpp
+  iodev/aout.cpp
+  iodev/av_control.cpp
+  iodev/hdmi.cpp
+  iodev/mbus_av.cpp
+  iodev/scanin.cpp
 
   main.cpp
   backtrace.cpp
