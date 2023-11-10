@@ -15,6 +15,12 @@ void *kalloc(std::size_t size, std::size_t align);
 void kfree(void *ptr, std::size_t size);
 template <typename T> struct kallocator {
   using value_type = T;
+  using size_type = std::size_t;
+  using difference_type = std::ptrdiff_t;
+  using propagate_on_container_move_assignment = std::true_type;
+
+  constexpr kallocator() = default;
+  template <typename U> constexpr kallocator(const kallocator<U> &) noexcept {}
 
   template <typename U> struct rebind {
     using other = kallocator<U>;
