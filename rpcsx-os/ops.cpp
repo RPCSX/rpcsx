@@ -656,7 +656,7 @@ SysResult fork(Thread *thread, slong flags) {
     }
   }
 
-  rx::vm::fork(thread->tproc->pid);
+  rx::vm::fork(childPid);
   rx::vfs::fork();
 
   *flag = true;
