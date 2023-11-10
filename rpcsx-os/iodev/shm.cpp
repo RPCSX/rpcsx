@@ -32,31 +32,7 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
   auto realFlags = O_RDWR; // TODO
 
   std::size_t size = 0;
-  if (~flags & 0x200) {
-    if (name == "/rpcsx-SceShellCoreUtil") {
-      // TODO
-      realFlags |= O_CREAT;
-      size = 0x4000;
-    } else if (name == "/rpcsx-vmicDdShmAin") {
-      // TODO
-      realFlags |= O_CREAT;
-      size = 0x4000;
-    } else if (name == "/rpcsx-SceNpTpip") {
-      // TODO
-      realFlags |= O_CREAT;
-      size = 0x4000;
-    } else if (name == "/rpcsx-SceNpPlusLogger") {
-      realFlags |= O_CREAT;
-      size = 0x4400;
-    } else if (name == "/rpcsx-SceAvSetting") {
-      realFlags |= O_CREAT;
-      size = 0x4400;
-    } else {
-      ORBIS_LOG_ERROR("SHM: unknown shared memory", path);
-      thread->where();
-      std::abort();
-    }
-  } else {
+  if (flags & 0x200) {
     realFlags |= O_CREAT;
   }
 
