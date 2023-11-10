@@ -723,7 +723,7 @@ SysResult sys_test_debug_rwmem(Thread *thread /* TODO */);
 SysResult sys_free_stack(Thread *thread /* TODO */);
 SysResult sys_suspend_system(Thread *thread /* TODO */);
 SysResult sys_ipmimgr_call(Thread *thread, uint op, uint kid, ptr<uint> result,
-                           ptr<void> params, uint64_t paramsz, uint64_t arg6);
+                           ptr<void> params, uint64_t paramsz);
 SysResult sys_get_gpo(Thread *thread /* TODO */);
 SysResult sys_get_vm_map_timestamp(Thread *thread /* TODO */);
 SysResult sys_opmc_set_hw(Thread *thread /* TODO */);

@@ -116,14 +116,22 @@ public:
     return {};
   }
 
-  std::pair<IpmiServer *, bool> createIpmiServer(utils::kstring name) {
+  std::pair<Ref<IpmiServer>, ErrorCode> createIpmiServer(utils::kstring name) {
     std::lock_guard lock(m_sem_mtx);
     auto [it, inserted] = mIpmiServers.try_emplace(std::move(name), nullptr);
-    if (inserted) {
-      it->second = knew<IpmiServer>(it->first);
+
+    if (!inserted) {
+      return {it->second, ErrorCode::EXIST};
     }
 
-    return {it->second.get(), inserted};
+    it->second = knew<IpmiServer>(it->first);
+
+    if (it->second == nullptr) {
+      mIpmiServers.erase(it);
+      return {nullptr, ErrorCode::NOMEM};
+    }
+
+    return {it->second, {}};
   }
 
   Ref<IpmiServer> findIpmiServer(std::string_view name) {

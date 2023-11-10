@@ -9,6 +9,7 @@ add_library(obj.orbis-kernel OBJECT
   src/pipe.cpp
   src/sysvec.cpp
   src/evf.cpp
+  src/ipmi.cpp
   src/KernelContext.cpp
   src/umtx.cpp
   src/sys/sys_acct.cpp

@@ -2,6 +2,7 @@
 #include "KernelContext.hpp"
 #include "error.hpp"
 #include "evf.hpp"
+#include "ipmi.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
 #include "orbis/AudioOut.hpp"
@@ -1023,64 +1024,42 @@ orbis::SysResult orbis::sys_suspend_system(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 
-enum ImpiOpcode {
-  kImpiCreateServer = 0,
-  kImpiDestroyServer = 1,
-  kIpmiCreateClient = 2,
-  kImpiDestroyClient = 3,
-  kImpiCreateSession = 4,
-  kImpiDestroySession = 5,
-};
-
-struct IpmiCreateClientParams {
-  orbis::ptr<void> arg0;
-  orbis::ptr<char> name;
-  orbis::ptr<void> arg2;
-};
-
-static_assert(sizeof(IpmiCreateClientParams) == 0x18);
-
-struct IpmiBufferInfo {
-  orbis::ptr<void> data;
-  orbis::uint64_t size;
-};
-struct IpmiDataInfo {
-  orbis::ptr<void> data;
-  orbis::uint64_t size;
-};
-
-struct IpmiSyncCallParams {
-  orbis::uint32_t method;
-  orbis::uint32_t dataCount;
-  orbis::uint64_t flags; // ?
-  orbis::ptr<IpmiDataInfo> pData;
-  orbis::ptr<IpmiBufferInfo> pBuffers;
-  orbis::ptr<orbis::sint> pResult;
-  orbis::uint32_t resultCount;
-};
-
-struct IpmiCreateServerParams {
-  orbis::uint64_t arg0;
-  orbis::ptr<char> name;
-  orbis::uint64_t arg2;
-};
-
-struct IpmiClientConnectParams {
-  orbis::ptr<char> arg0;
-  orbis::ptr<char> name;
-  orbis::ptr<char> arg2;
-  orbis::ptr<char> arg3;
-};
-
-static_assert(sizeof(IpmiSyncCallParams) == 0x30);
-
 orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
-                                         uint64_t paramsSz, uint64_t arg6) {
-  ORBIS_LOG_TODO("sys_ipmimgr_call", thread->tid, op, kid, result, params,
-                 paramsSz, arg6);
-  thread->where();
-  return ErrorCode::NOSYS;
+                                         uint64_t paramsSz) {
+  ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);
+  switch (op) {
+  case 0:
+    return sysIpmiCreateServer(thread, result, params, paramsSz);
+  case 1:
+    return sysIpmiDestroyServer(thread, result, kid, params, paramsSz);
+  case 2:
+    return sysIpmiCreateClient(thread, result, params, paramsSz);
+  case 3:
+    return sysIpmiDestroyClient(thread, result, kid, params, paramsSz);
+  case 4:
+    return sysIpmiCreateSession(thread, result, params, paramsSz);
+  case 5:
+    return sysIpmiDestroySession(thread, result, kid, params, paramsSz);
+  case 0x10: // trace
+    return uwrite(result, 0u);
+  case 0x201:
+    return sysIpmiServerReceivePacket(thread, result, kid, params, paramsSz);
+  case 0x212:
+    return sysIpmiSessionConnectResult(thread, result, kid, params, paramsSz);
+  case 0x232:
+    return sysIpmiSessionRespondSync(thread, result, kid, params, paramsSz);
+  case 0x302:
+    return sysIpmiSessionGetClientPid(thread, result, kid, params, paramsSz);
+  case 0x320:
+    return sysIpmiClientInvokeSyncMethod(thread, result, kid, params, paramsSz);
+  case 0x400:
+    return sysIpmiClientConnect(thread, result, kid, params, paramsSz);
+  case 0x46a:
+    return sysIpmiServerGetName(thread, result, kid, params, paramsSz);
+  }
+
+  return ErrorCode::INVAL;
 }
 orbis::SysResult orbis::sys_get_gpo(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
