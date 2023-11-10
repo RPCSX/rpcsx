@@ -418,7 +418,7 @@ orbis::SysResult orbis::sys_osem_delete(Thread *thread, sint id) {
   ORBIS_LOG_TRACE(__FUNCTION__, id);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
   if (sem == nullptr) {
-    return ErrorCode::SRCH;
+    return ErrorCode::NOENT;
   }
 
   thread->tproc->semMap.destroy(id);
@@ -449,7 +449,7 @@ orbis::SysResult orbis::sys_osem_open(Thread *thread,
       ORBIS_LOG_WARNING(__FUNCTION__, _name, result.value(), thread->retval[0]);
       return result;
     }
-    return ErrorCode::SRCH;
+    return ErrorCode::NOENT;
   }
 
   thread->retval[0] = thread->tproc->semMap.insert(sem);
@@ -458,7 +458,7 @@ orbis::SysResult orbis::sys_osem_open(Thread *thread,
 orbis::SysResult orbis::sys_osem_close(Thread *thread, sint id) {
   ORBIS_LOG_TRACE(__FUNCTION__, id);
   if (!thread->tproc->semMap.close(id)) {
-    return ErrorCode::SRCH;
+    return ErrorCode::NOENT;
   }
 
   return {};
@@ -467,12 +467,17 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
                                       ptr<uint> pTimeout) {
   ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, need, pTimeout);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
-  if (pTimeout)
-    ORBIS_LOG_FATAL("sys_osem_wait timeout is not implemented!");
   if (need < 1 || need > sem->maxValue)
     return ErrorCode::INVAL;
 
+  auto deadline = std::chrono::steady_clock::time_point::max();
+  if (pTimeout != nullptr) {
+    deadline =
+        std::chrono::steady_clock::now() + std::chrono::microseconds(*pTimeout);
+  }
+
   std::lock_guard lock(sem->mtx);
+  bool timedout = false;
   while (true) {
     if (sem->isDeleted)
       return ErrorCode::ACCES;
@@ -480,7 +485,37 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
       sem->value -= need;
       break;
     }
-    sem->cond.wait(sem->mtx);
+    long ut = -1;
+    if (deadline != std::chrono::steady_clock::time_point::max()) {
+      ut = std::chrono::duration_cast<std::chrono::microseconds>(
+               deadline - std::chrono::steady_clock::now())
+               .count();
+      if (ut < 0) {
+        timedout = true;
+        break;
+      }
+    }
+    sem->cond.wait(sem->mtx, ut);
+  }
+
+  if (pTimeout) {
+    if (timedout) {
+      *pTimeout = 0;
+    } else {
+      auto timeout = std::chrono::duration_cast<std::chrono::microseconds>(
+                         deadline - std::chrono::steady_clock::now())
+                         .count();
+
+      if (timeout > 0) {
+        *pTimeout = timeout;
+      } else {
+        *pTimeout = 0;
+      }
+    }
+  }
+
+  if (timedout) {
+    return ErrorCode::TIMEDOUT;
   }
   return {};
 }
@@ -910,7 +945,7 @@ orbis::SysResult orbis::sys_rdup(Thread *thread, sint pid, sint fd) {
     }
 
     thread->retval[0] = thread->tproc->fileDescriptors.insert(std::move(file));
-    return{};
+    return {};
   }
   return ErrorCode::SRCH;
 }
