@@ -29,8 +29,8 @@ KernelContext::KernelContext() {
   pthread_mutex_init(&m_heap_mtx, &mtx_attr);
   pthread_mutexattr_destroy(&mtx_attr);
 
-  std::printf("orbis::KernelContext initialized, addr=%p\n", this);
-  std::printf("TSC frequency: %lu\n", getTscFreq());
+  // std::printf("orbis::KernelContext initialized, addr=%p\n", this);
+  // std::printf("TSC frequency: %lu\n", getTscFreq());
 }
 KernelContext::~KernelContext() {}
 
