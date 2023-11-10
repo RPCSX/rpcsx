@@ -372,17 +372,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        auto processParam =
-            reinterpret_cast<std::byte *>(thread->tproc->processParam);
-
-        auto sdkVersion = processParam        //
-                          + sizeof(uint64_t)  // size
-                          + sizeof(uint32_t)  // magic
-                          + sizeof(uint32_t); // entryCount
-
-        std::printf("Reporting SDK version %x\n",
-                    *reinterpret_cast<uint32_t *>(sdkVersion));
-        *(uint32_t *)old = *reinterpret_cast<uint32_t *>(sdkVersion);
+        std::printf("Reporting SDK version %x\n", g_context.sdkVersion);
+        *(uint32_t *)old = g_context.sdkVersion;
         return {};
       }
 

@@ -417,6 +417,18 @@ int ps4Exec(orbis::Thread *mainThread,
   std::uint64_t interpBase = 0;
   std::uint64_t entryPoint = executableModule->entryPoint;
 
+  if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->processParam) {
+    auto processParam =
+        reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
+
+    auto sdkVersion = processParam        //
+                      + sizeof(uint64_t)  // size
+                      + sizeof(uint32_t)  // magic
+                      + sizeof(uint32_t); // entryCount
+
+    orbis::g_context.sdkVersion = *(uint32_t *)sdkVersion;
+  }
+
   if (executableModule->type != rx::linker::kElfTypeExec) {
     auto libSceLibcInternal = rx::linker::loadModuleFile(
         "/system/common/lib/libSceLibcInternal.sprx", mainThread);

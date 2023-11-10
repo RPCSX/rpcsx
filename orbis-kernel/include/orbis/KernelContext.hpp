@@ -159,6 +159,7 @@ public:
   Ref<RcBase> dmemDevice;
   Ref<RcBase> blockpoolDevice;
   AudioOut *audioOut = nullptr;
+  uint sdkVersion{};
 
 private:
   mutable pthread_mutex_t m_heap_mtx;
