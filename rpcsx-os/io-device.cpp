@@ -509,6 +509,10 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
     if (r <= 0)
       break;
 
+    if (hostEntry.d_name == std::string_view("..")) {
+      continue;
+    }
+
     auto &entry = dirEntries.emplace_back();
     entry.fileno = dirEntries.size(); // TODO
     entry.reclen = sizeof(entry);
