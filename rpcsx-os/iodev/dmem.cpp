@@ -81,7 +81,7 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                       args->size);
 
     device->allocations.map(args->address, args->address + args->size,
-                            {.memoryType = 0});
+                            {.memoryType = -1u});
     return {};
   }
 
@@ -128,7 +128,7 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
 
     auto queryInfo = *it;
 
-    if (queryInfo.payload.memoryType == 0) {
+    if (queryInfo.payload.memoryType == -1u) {
       return orbis::ErrorCode::ACCES;
     }
 
@@ -201,7 +201,7 @@ orbis::ErrorCode DmemDevice::allocate(std::uint64_t *start,
 
     if (it != allocations.end()) {
       auto allocation = *it;
-      if (allocation.payload.memoryType == 0) {
+      if (allocation.payload.memoryType == -1u) {
         if (offset < allocation.beginAddress) {
           offset = allocation.beginAddress + alignment - 1;
           offset &= ~(alignment - 1);
@@ -261,7 +261,7 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
     }
 
     auto allocation = *it;
-    if (allocation.payload.memoryType == 0) {
+    if (allocation.payload.memoryType == -1u) {
       if (offset < allocation.beginAddress) {
         offset = allocation.beginAddress + alignment - 1;
         offset &= ~(alignment - 1);
