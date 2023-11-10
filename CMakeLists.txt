@@ -14,6 +14,6 @@ add_subdirectory(hw/amdgpu)
 add_subdirectory(rx)
 
 target_compile_definitions(rx PRIVATE
-    RX_TAG=0
+    RX_TAG=2
     RX_TAG_VERSION=0
 )
