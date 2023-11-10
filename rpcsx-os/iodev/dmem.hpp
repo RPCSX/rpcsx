@@ -1,6 +1,7 @@
 #pragma once
 
 #include "io-device.hpp"
+#include "orbis/KernelAllocator.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "orbis/file.hpp"
 #include "orbis/utils/Rc.hpp"
@@ -21,7 +22,7 @@ struct DmemDevice : public IoDevice {
     auto operator<=>(const AllocationInfo &) const = default;
   };
 
-  rx::MemoryTableWithPayload<AllocationInfo> allocations;
+  rx::MemoryTableWithPayload<AllocationInfo, orbis::kallocator> allocations;
 
   orbis::ErrorCode allocate(std::uint64_t *start, std::uint64_t searchEnd,
                             std::uint64_t len, std::uint64_t alignment,

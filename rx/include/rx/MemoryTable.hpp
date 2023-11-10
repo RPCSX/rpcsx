@@ -202,9 +202,13 @@ public:
   }
 };
 
-template <typename PayloadT> class MemoryTableWithPayload {
+template <typename PayloadT,
+          template <typename> typename Allocator = std::allocator>
+class MemoryTableWithPayload {
   enum class Kind { O, X, XO };
-  std::map<std::uint64_t, std::pair<Kind, PayloadT>> mAreas;
+  std::map<std::uint64_t, std::pair<Kind, PayloadT>, std::less<>,
+           Allocator<std::pair<const std::uint64_t, std::pair<Kind, PayloadT>>>>
+      mAreas;
 
 public:
   struct AreaInfo {
