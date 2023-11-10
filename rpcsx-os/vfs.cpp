@@ -10,13 +10,23 @@
 #include <string_view>
 
 struct DevFs : IoDevice {
-  std::map<std::string, orbis::Ref<IoDevice>> devices;
+  std::map<std::string, orbis::Ref<IoDevice>, std::less<>> devices;
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override {
-    if (auto it = devices.find(path); it != devices.end()) {
-      return it->second->open(file, path, flags, mode, thread);
+    std::string_view devPath = path;
+    if (auto pos = devPath.find('/'); pos != std::string_view::npos) {
+      auto deviceName = devPath.substr(0, pos);
+      devPath.remove_prefix(pos + 1);
+
+      if (auto it = devices.find(deviceName); it != devices.end()) {
+        return it->second->open(file, std::string(devPath).c_str(), flags, mode, thread);
+      }
+    } else {
+      if (auto it = devices.find(devPath); it != devices.end()) {
+        return it->second->open(file, "", flags, mode, thread);
+      }
     }
 
     std::fprintf(stderr, "device %s not exists\n", path);
