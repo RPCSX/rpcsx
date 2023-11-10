@@ -739,6 +739,10 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     name = name.substr(slashP + 1);
   }
 
+  if (name.size() > 15) {
+    name.resize(15);
+  }
+
   pthread_setname_np(pthread_self(), name.c_str());
 
   std::thread([&] {
