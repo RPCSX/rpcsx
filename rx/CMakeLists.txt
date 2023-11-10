@@ -17,7 +17,7 @@ execute_process(COMMAND git log --pretty=format:'%h' -n 1
     OUTPUT_VARIABLE GIT_REV)
 
 execute_process(
-    COMMAND bash git diff --quiet --exit-code
+    COMMAND git diff --quiet --exit-code
     RESULT_VARIABLE GIT_DIRTY ERROR_QUIET)
 
 execute_process(
