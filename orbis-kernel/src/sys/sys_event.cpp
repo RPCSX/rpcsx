@@ -76,6 +76,11 @@ static constexpr auto kNoteFFCopy = 0xc0000000;
 static constexpr auto kNoteFFCtrlMask = 0xc0000000;
 static constexpr auto kNoteFFlagsMask = 0x00ffffff;
 static constexpr auto kNoteTrigger = 0x01000000;
+
+// kEvFiltProc
+static constexpr auto kNoteExit = 0x80000000;
+static constexpr auto kNoteFork = 0x40000000;
+static constexpr auto kNoteExec = 0x20000000;
 } // namespace orbis
 
 orbis::SysResult orbis::sys_kqueue(Thread *thread) {
@@ -124,9 +129,9 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
 
   if (change.flags & kEvAdd) {
     if (nodeIt == kq->notes.end()) {
-      KNote note {
-        .event = change,
-        .enabled = true,
+      KNote note{
+          .event = change,
+          .enabled = true,
       };
 
       note.event.flags &= ~(kEvAdd | kEvDelete | kEvDisable | kEvEnable);
@@ -137,7 +142,7 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
 
   if (nodeIt == kq->notes.end()) {
     if (change.flags & kEvDelete) {
-      return{};
+      return {};
     }
 
     return orbis::ErrorCode::NOENT;
@@ -153,12 +158,19 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
   if (change.filter == kEvFiltUser) {
     auto fflags = 0;
     switch (change.fflags & kNoteFFCtrlMask) {
-    case kNoteFFAnd: fflags = nodeIt->event.fflags & change.fflags; break;
-    case kNoteFFOr: fflags = nodeIt->event.fflags | change.fflags; break;
-    case kNoteFFCopy: fflags = change.fflags; break;
+    case kNoteFFAnd:
+      fflags = nodeIt->event.fflags & change.fflags;
+      break;
+    case kNoteFFOr:
+      fflags = nodeIt->event.fflags | change.fflags;
+      break;
+    case kNoteFFCopy:
+      fflags = change.fflags;
+      break;
     }
 
-    nodeIt->event.fflags = (nodeIt->event.fflags & ~kNoteFFlagsMask) | (fflags & kNoteFFlagsMask);
+    nodeIt->event.fflags =
+        (nodeIt->event.fflags & ~kNoteFFlagsMask) | (fflags & kNoteFFlagsMask);
 
     if (change.fflags & kNoteTrigger) {
       nodeIt->event.fflags |= kNoteTrigger;
@@ -169,7 +181,7 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
     }
   }
 
-  return{};
+  return {};
 }
 
 static orbis::ErrorCode ureadTimespec(orbis::timespec &ts,
@@ -196,27 +208,29 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
     return orbis::ErrorCode::BADF;
   }
 
-  std::lock_guard lock(kqf->mtx);
-
   auto kq = dynamic_cast<KQueue *>(kqf.get());
 
   if (kq == nullptr) {
     return orbis::ErrorCode::BADF;
   }
 
-  if (nchanges != 0) {
-    for (auto change : std::span(changelist, nchanges)) {
-      ORBIS_LOG_TODO(__FUNCTION__, change.ident, change.filter, change.flags,
-                     change.fflags, change.data, change.udata);
+  {
+    std::lock_guard lock(kqf->mtx);
 
-      if (auto result = keventChange(kq, change); result.value() != 0) {
-        return result;
+    if (nchanges != 0) {
+      for (auto change : std::span(changelist, nchanges)) {
+        ORBIS_LOG_TODO(__FUNCTION__, change.ident, change.filter, change.flags,
+                       change.fflags, change.data, change.udata);
+
+        if (auto result = keventChange(kq, change); result.value() != 0) {
+          return result;
+        }
       }
     }
   }
 
   if (nevents == 0) {
-    return{};
+    return {};
   }
 
   using clock = std::chrono::high_resolution_clock;
@@ -246,52 +260,63 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
   result.reserve(nevents);
 
   while (result.empty()) {
-    for (auto it = kq->notes.begin(); it != kq->notes.end();) {
-      if (result.size() >= nevents) {
-        break;
-      }
+    {
+      std::lock_guard lock(kqf->mtx);
+      for (auto it = kq->notes.begin(); it != kq->notes.end();) {
+        if (result.size() >= nevents) {
+          break;
+        }
 
-      auto &note = *it;
+        auto &note = *it;
 
-      if (!note.enabled) {
-        ++it;
-        continue;
-      }
-
-      if (note.event.filter == kEvFiltUser) {
-        if ((note.event.fflags & kNoteTrigger) == 0) {
+        if (!note.enabled) {
           ++it;
           continue;
         }
 
-        auto event = note.event;
-        event.fflags &= kNoteFFlagsMask;
-        result.push_back(event);
-      } else if (note.event.filter == kEvFiltDisplay ||
-          note.event.filter == kEvFiltGraphicsCore) {
-        result.push_back(note.event);
-      } else if (note.event.filter == kEvFiltProc) {
-        // TODO
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        note.event.data = 0;
-        result.push_back(note.event);
-      } else {
-        ++it;
-        continue;
-      }
+        if (note.event.filter == kEvFiltUser) {
+          if ((note.event.fflags & kNoteTrigger) == 0) {
+            ++it;
+            continue;
+          }
 
-      if (note.event.flags & kEvOneshot) {
-        it = kq->notes.erase(it);
-      } else {
-        ++it;
+          auto event = note.event;
+          event.fflags &= kNoteFFlagsMask;
+          result.push_back(event);
+        } else if (note.event.filter == kEvFiltDisplay ||
+                   note.event.filter == kEvFiltGraphicsCore) {
+          result.push_back(note.event);
+        } else if (note.event.filter == kEvFiltProc) {
+          // TODO
+          if (note.event.fflags & kNoteExec) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            note.event.data = 0;
+            result.push_back(note.event);
+          }
+        } else {
+          ++it;
+          continue;
+        }
+
+        if (note.event.flags & kEvOneshot) {
+          it = kq->notes.erase(it);
+        } else {
+          ++it;
+        }
       }
     }
 
-    if (result.empty() && timeoutPoint != clock::time_point::max()) {
+    if (!result.empty()) {
+      break;
+    }
+
+    if (timeoutPoint != clock::time_point::max()) {
       if (clock::now() >= timeoutPoint) {
         break;
       }
     }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   std::memcpy(eventlist, result.data(), result.size() * sizeof(KEvent));
