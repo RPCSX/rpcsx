@@ -19,10 +19,14 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
   ORBIS_LOG_WARNING("shm_open", path, flags, mode);
 
   std::string name = "/rpcsx-";
-  if (std::string_view{path}.starts_with("/")) {
+  if (path[0] == '/') {
     name += path + 1;
   } else {
     name += path;
+  }
+
+  for (auto pos = name.find('/', 1); pos != std::string::npos; pos = name.find('/', pos + 1)) {
+    name[pos] = '$';
   }
 
   auto realFlags = O_RDWR; // TODO
