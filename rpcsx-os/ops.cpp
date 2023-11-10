@@ -429,6 +429,14 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
     return errorCode;
   }
 
+  {
+    orbis::Ref<orbis::File> file;
+    if (auto result = rx::vfs::open(_name, 0, 0, &file, thread);
+        result.isError()) {
+      return result;
+    }
+  }
+
   auto [result, module] = loadPrx(thread, _name, true);
   if (result.isError()) {
     return result;
