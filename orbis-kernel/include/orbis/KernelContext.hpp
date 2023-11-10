@@ -120,7 +120,7 @@ public:
     std::lock_guard lock(m_sem_mtx);
     auto [it, inserted] = mIpmiServers.try_emplace(std::move(name), nullptr);
     if (inserted) {
-      it->second = knew<IpmiServer>(name);
+      it->second = knew<IpmiServer>(it->first);
     }
 
     return {it->second.get(), inserted};
