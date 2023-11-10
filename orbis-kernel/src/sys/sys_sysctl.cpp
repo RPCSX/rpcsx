@@ -6,7 +6,28 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
                                      uint namelen, ptr<void> old,
                                      ptr<size_t> oldlenp, ptr<void> new_,
                                      size_t newlen) {
-  enum sysctl_ctl { unspec, kern, vm, vfs, net, debug, hw, machdep, user };
+
+  enum class ctl : int {
+    sysctl = 0,
+    kern = 1,
+    vm = 2,
+    vfs = 3,
+    net = 4,
+    debug = 5,
+    hw = 6,
+    machdep = 7,
+    user = 8
+  };
+  enum class ctl_sysctl : int {
+    debug = 0,
+    name = 1,
+    next = 2,
+    name2oid = 3,
+    oidfmt = 4,
+    oiddescr = 5,
+    oidlabel = 6,
+    nextnoskip = 7
+  };
 
   enum sysctl_kern {
     usrstack = 33,
@@ -56,7 +77,9 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   if (namelen == 3) {
     // 1 - 14 - 41 - debug flags?
 
-    if (name[0] == kern && name[1] == 14 && name[2] == 41) {
+    ctl name0 = (ctl)name[0];
+
+    if (name0 == ctl::kern && name[1] == 14 && name[2] == 41) {
       // std::printf("   kern.14.41\n");
 
       if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
@@ -67,7 +90,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    if (name[0] == kern && name[1] == 14 && name[2] == 42) {
+    if (name0 == ctl::kern && name[1] == 14 && name[2] == 42) {
       // std::printf("   kern.14.42\n");
 
       if ((oldlenp != nullptr && *oldlenp != 0) || new_ == nullptr ||
@@ -81,7 +104,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    if (name[0] == kern && name[1] == 14 && name[2] == 8) {
+    if (name0 == ctl::kern && name[1] == 14 && name[2] == 8) {
       // KERN_PROC_PROC
 
       struct ProcInfo {
@@ -92,7 +115,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    if (name[0] == machdep && name[1] == liverpool && name[2] == telemetry) {
+    if (name0 == ctl::machdep && name[1] == liverpool && name[2] == telemetry) {
       if (*oldlenp != 8 || new_ != nullptr || newlen != 0) {
         return ErrorCode::INVAL;
       }
@@ -100,7 +123,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       *(uint64_t *)old = 0;
       return {};
     }
-    if (name[0] == machdep && name[1] == liverpool && name[2] == icc_max) {
+    if (name0 == ctl::machdep && name[1] == liverpool && name[2] == icc_max) {
       if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
         return ErrorCode::INVAL;
       }
@@ -109,7 +132,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    if (name[0] == hw && name[1] == config && name[2] == chassis_info) {
+    if (name0 == ctl::hw && name[1] == config && name[2] == chassis_info) {
       if (*oldlenp != 8 || new_ != nullptr || newlen != 0) {
         return ErrorCode::INVAL;
       }
@@ -155,8 +178,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           auto &appInfo = thread->tproc->appInfo;
           ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
                           appInfo.unk1, appInfo.appType, appInfo.titleId,
-                          appInfo.unk2, appInfo.unk3, appInfo.unk5, appInfo.unk6,
-                          appInfo.unk7, appInfo.unk8);
+                          appInfo.unk2, appInfo.unk3, appInfo.unk5,
+                          appInfo.unk6, appInfo.unk7, appInfo.unk8);
 
           // HACK
           appInfo.unk4 = orbis::slong(0x80000000'00000000);
@@ -187,12 +210,10 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   }
 
   if (namelen == 2) {
-    switch (name[0]) {
-    case sysctl_ctl::unspec: {
-      switch (name[1]) {
-      case 3: {
-        std::fprintf(stderr, "   unspec - get name of '%s'\n",
-                     std::string((char *)new_, newlen).c_str());
+    switch ((ctl)name[0]) {
+    case ctl::sysctl: {
+      switch ((ctl_sysctl)name[1]) {
+      case ctl_sysctl::name2oid: {
         auto searchName = std::string_view((char *)new_, newlen);
         auto *dest = (std::uint32_t *)old;
         std::uint32_t count = 0;
@@ -203,7 +224,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = smp_cpus;
         } else if (searchName == "machdep.tsc_freq") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -211,7 +232,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = machdep;
+          dest[count++] = (int)ctl::machdep;
           dest[count++] = tsc_freq;
         } else if (searchName == "kern.sdk_version") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -219,7 +240,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = sdk_version;
         } else if (searchName == "kern.rng_pseudo") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -227,7 +248,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = rng_pseudo;
         } else if (searchName == "kern.sched.cpusetsize") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -235,7 +256,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = sched_cpusetsize;
         } else if (searchName == "kern.proc.ptc") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -243,7 +264,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = proc_ptc;
         } else if (searchName == "kern.cpumode") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -251,7 +272,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = cpu_mode;
         } else if (searchName == "kern.backup_restore_mode") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -259,7 +280,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = backup_restore_mode;
         } else if (searchName == "kern.console") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -267,7 +288,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = console;
         } else if (searchName == "kern.init_safe_mode") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -275,7 +296,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = kern;
+          dest[count++] = (int)ctl::kern;
           dest[count++] = init_safe_mode;
         } else if (searchName == "hw.config.chassis_info") {
           if (*oldlenp < 3 * sizeof(uint32_t)) {
@@ -283,7 +304,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = hw;
+          dest[count++] = (int)ctl::hw;
           dest[count++] = config;
           dest[count++] = chassis_info;
         } else if (searchName == "machdep.liverpool.telemetry") {
@@ -292,7 +313,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = machdep;
+          dest[count++] = (int)ctl::machdep;
           dest[count++] = liverpool;
           dest[count++] = telemetry;
         } else if (searchName == "machdep.liverpool.icc_max") {
@@ -301,7 +322,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = machdep;
+          dest[count++] = (int)ctl::machdep;
           dest[count++] = liverpool;
           dest[count++] = icc_max;
         } else if (searchName == "vm.swap_avail") {
@@ -310,7 +331,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = vm;
+          dest[count++] = (int)ctl::vm;
           dest[count++] = swap_avail;
         } else if (searchName == "vm.kern_heap_size") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -318,7 +339,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = vm;
+          dest[count++] = (int)ctl::vm;
           dest[count++] = kern_heap_size;
         } else if (searchName == "vm.swap_total") {
           if (*oldlenp < 2 * sizeof(uint32_t)) {
@@ -326,8 +347,11 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
             return ErrorCode::INVAL;
           }
 
-          dest[count++] = vm;
+          dest[count++] = (int)ctl::vm;
           dest[count++] = swap_total;
+        } else {
+          std::fprintf(stderr, "   unspec - get name of '%s'\n",
+                       std::string((char *)new_, newlen).c_str());
         }
 
         if (count == 0) {
@@ -347,7 +371,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    case sysctl_ctl::kern:
+    case ctl::kern:
       switch (name[1]) {
       case sysctl_kern::usrstack: {
         if (*oldlenp != 8 || new_ != nullptr || newlen != 0) {
@@ -455,7 +479,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       }
       break;
 
-    case sysctl_ctl::vm:
+    case ctl::vm:
       switch (name[1]) {
       case sysctl_vm::kern_heap_size:
         if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
@@ -484,12 +508,12 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       default:
         break;
       }
-    case sysctl_ctl::vfs:
-    case sysctl_ctl::net:
-    case sysctl_ctl::debug:
+    case ctl::vfs:
+    case ctl::net:
+    case ctl::debug:
       return ErrorCode::INVAL;
 
-    case sysctl_ctl::hw:
+    case ctl::hw:
       switch (name[1]) {
       case sysctl_hw::pagesize:
         if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
@@ -504,7 +528,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       }
       break;
 
-    case sysctl_ctl::machdep:
+    case ctl::machdep:
       switch (name[1]) {
       case sysctl_machdep::tsc_freq: {
         if (*oldlenp != 8 || new_ != nullptr || newlen != 0) {
@@ -518,7 +542,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         break;
       }
       }
-    case sysctl_ctl::user:
+    case ctl::user:
       break;
     }
   }
