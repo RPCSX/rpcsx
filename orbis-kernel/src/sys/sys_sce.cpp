@@ -406,6 +406,7 @@ orbis::SysResult orbis::sys_osem_create(Thread *thread,
       return ErrorCode::EXIST; // FIXME: verify
     }
 
+    std::strncpy(insertedSem->name, _name, 32);
     sem = insertedSem;
   } else {
     sem = knew<Semaphore>(attrs, initCount, maxCount);
