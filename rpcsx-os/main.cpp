@@ -9,6 +9,7 @@
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <rx/Version.hpp>
 
 #include <atomic>
 #include <elf.h>
@@ -165,25 +166,26 @@ void setupSigHandlers() {
   stack_t oss{};
 
   // if (sigaltstack(nullptr, &oss) < 0 || oss.ss_size == 0) {
-    auto sigStackSize = std::max<std::size_t>(
-        SIGSTKSZ, utils::alignUp(64 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+  auto sigStackSize = std::max<std::size_t>(
+      SIGSTKSZ, utils::alignUp(64 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
 
-    stack_t ss{};
-    ss.ss_sp = malloc(sigStackSize);
-    if (ss.ss_sp == NULL) {
-      perror("malloc");
-      exit(EXIT_FAILURE);
-    }
+  stack_t ss{};
+  ss.ss_sp = malloc(sigStackSize);
+  if (ss.ss_sp == NULL) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
 
-    ss.ss_size = sigStackSize;
-    ss.ss_flags = 1 << 31;
+  ss.ss_size = sigStackSize;
+  ss.ss_flags = 1 << 31;
 
-    std::fprintf(stderr, "installing sp [%p, %p]\n", ss.ss_sp, (char *)ss.ss_sp + ss.ss_size);
+  std::fprintf(stderr, "installing sp [%p, %p]\n", ss.ss_sp,
+               (char *)ss.ss_sp + ss.ss_size);
 
-    if (sigaltstack(&ss, NULL) == -1) {
-      perror("sigaltstack");
-      exit(EXIT_FAILURE);
-    }
+  if (sigaltstack(&ss, NULL) == -1) {
+    perror("sigaltstack");
+    exit(EXIT_FAILURE);
+  }
   // }
 
   struct sigaction act {};
@@ -521,6 +523,7 @@ int ps4Exec(orbis::Thread *mainThread,
 static void usage(const char *argv0) {
   std::printf("%s [<options>...] <virtual path to elf> [args...]\n", argv0);
   std::printf("  options:\n");
+  std::printf("  --version, -v - print version\n");
   std::printf("    -m, --mount <host path> <virtual path>\n");
   std::printf("    -a, --enable-audio\n");
   std::printf("    -o, --override <original module name> <virtual path to "
@@ -603,6 +606,12 @@ int main(int argc, const char *argv[]) {
         std::strcmp(argv[1], "--help") == 0) {
       usage(argv[0]);
       return 1;
+    }
+
+    if (argv[1] == std::string_view("-v") ||
+        argv[1] == std::string_view("--version")) {
+      std::printf("v%s\n", rx::getVersion().toString().c_str());
+      return 0;
     }
   }
 

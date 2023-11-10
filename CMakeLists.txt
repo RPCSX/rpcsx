@@ -12,3 +12,8 @@ add_subdirectory(rpcsx-os)
 add_subdirectory(rpcsx-gpu)
 add_subdirectory(hw/amdgpu)
 add_subdirectory(rx)
+
+target_compile_definitions(rx PRIVATE
+    RX_TAG=0
+    RX_TAG_VERSION=0
+)

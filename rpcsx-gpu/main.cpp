@@ -1,6 +1,7 @@
 #include "amdgpu/RemoteMemory.hpp"
 #include "amdgpu/device/gpu-scheduler.hpp"
 #include "amdgpu/device/vk.hpp"
+#include "rx/Version.hpp"
 #include "util/unreachable.hpp"
 #include <algorithm>
 #include <amdgpu/bridge/bridge.hpp>
@@ -30,6 +31,7 @@ extern amdgpu::RemoteMemory g_hostMemory;
 static void usage(std::FILE *out, const char *argv0) {
   std::fprintf(out, "usage: %s [options...]\n", argv0);
   std::fprintf(out, "  options:\n");
+  std::fprintf(out, "  --version, -v - print version\n");
   std::fprintf(out,
                "    --cmd-bridge <name> - setup command queue bridge name\n");
   std::fprintf(out, "    --shm <name> - setup shared memory name\n");
@@ -75,10 +77,18 @@ static VkResult _vkCreateDebugUtilsMessengerEXT(
 }
 
 int main(int argc, const char *argv[]) {
-  if (argc == 2 && (argv[1] == std::string_view("-h") ||
-                    argv[1] == std::string_view("--help"))) {
-    usage(stdout, argv[0]);
-    return 0;
+  if (argc == 2) {
+    if (argv[1] == std::string_view("-h") ||
+        argv[1] == std::string_view("--help")) {
+      usage(stdout, argv[0]);
+      return 0;
+    }
+
+    if (argv[1] == std::string_view("-v") ||
+        argv[1] == std::string_view("--version")) {
+      std::printf("v%s\n", rx::getVersion().toString().c_str());
+      return 0;
+    }
   }
 
   const char *cmdBridgeName = "/rpcsx-gpu-cmds";
