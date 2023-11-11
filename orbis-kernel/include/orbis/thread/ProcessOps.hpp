@@ -11,6 +11,7 @@ struct Module;
 struct timespec;
 struct File;
 struct MemoryProtection;
+struct IoVec;
 
 struct ProcessOps {
   SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
@@ -40,6 +41,7 @@ struct ProcessOps {
                     Ref<File> *file);
   SysResult (*shm_open)(Thread *thread, const char *path, sint flags, sint mode,
                         Ref<File> *file);
+  SysResult (*unlink)(Thread *thread, ptr<const char> path);
   SysResult (*mkdir)(Thread *thread, ptr<const char> path, sint mode);
   SysResult (*rmdir)(Thread *thread, ptr<const char> path);
   SysResult (*rename)(Thread *thread, ptr<const char> from, ptr<const char> to);
@@ -69,6 +71,9 @@ struct ProcessOps {
   SysResult (*thr_suspend)(Thread *thread, ptr<const timespec> timeout);
   SysResult (*thr_wake)(Thread *thread, slong id);
   SysResult (*thr_set_name)(Thread *thread, slong id, ptr<const char> name);
+
+  SysResult (*unmount)(Thread *thread, ptr<char> path, sint flags);
+  SysResult (*nmount)(Thread *thread, ptr<IoVec> iovp, uint iovcnt, sint flags);
 
   SysResult (*fork)(Thread *thread, slong status);
   SysResult (*execve)(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,

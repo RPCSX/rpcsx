@@ -47,6 +47,10 @@ struct HostFsDevice : IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
+  orbis::ErrorCode unlink(const char *path, bool recursive,
+                          orbis::Thread *thread) override;
+  orbis::ErrorCode createSymlink(const char *target, const char *linkPath,
+                                 orbis::Thread *thread) override;
   orbis::ErrorCode mkdir(const char *path, int mode,
                          orbis::Thread *thread) override;
   orbis::ErrorCode rmdir(const char *path, orbis::Thread *thread) override;
@@ -291,7 +295,8 @@ static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
   }
 
-  ssize_t cnt = ::pwritev(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
+  ssize_t cnt =
+      ::pwritev(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
 
   if (cnt < 0) {
     for (auto io : vec) {
@@ -536,6 +541,29 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
   newFile->device = this;
   *file = newFile;
   return {};
+}
+
+orbis::ErrorCode HostFsDevice::unlink(const char *path, bool recursive,
+                                      orbis::Thread *thread) {
+  std::error_code ec;
+
+  if (recursive) {
+    std::filesystem::remove_all(hostPath + "/" + path, ec);
+  } else {
+    std::filesystem::remove(hostPath + "/" + path, ec);
+  }
+
+  return convertErrorCode(ec);
+}
+
+orbis::ErrorCode HostFsDevice::createSymlink(const char *linkPath,
+                                             const char *target,
+                                             orbis::Thread *thread) {
+  std::error_code ec;
+  std::filesystem::create_symlink(
+      std::filesystem::absolute(hostPath + "/" + linkPath),
+      hostPath + "/" + target, ec);
+  return convertErrorCode(ec);
 }
 
 orbis::ErrorCode HostFsDevice::mkdir(const char *path, int mode,

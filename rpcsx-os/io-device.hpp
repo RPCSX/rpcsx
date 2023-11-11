@@ -27,16 +27,23 @@ struct IoDevice : orbis::RcBase {
   virtual orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                                 std::uint32_t flags, std::uint32_t mode,
                                 orbis::Thread *thread) = 0;
-  virtual orbis::ErrorCode unlink(const char *path, orbis::Thread *thread) {
+  virtual orbis::ErrorCode unlink(const char *path, bool recursive,
+                                  orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
-  virtual orbis::ErrorCode mkdir(const char *path, int mode, orbis::Thread *thread) {
+  virtual orbis::ErrorCode createSymlink(const char *target, const char *linkPath,
+                                         orbis::Thread *thread) {
+    return orbis::ErrorCode::NOTSUP;
+  }
+  virtual orbis::ErrorCode mkdir(const char *path, int mode,
+                                 orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
   virtual orbis::ErrorCode rmdir(const char *path, orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
-  virtual orbis::ErrorCode rename(const char *from, const char *to, orbis::Thread *thread) {
+  virtual orbis::ErrorCode rename(const char *from, const char *to,
+                                  orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
 };

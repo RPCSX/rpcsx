@@ -12,6 +12,7 @@
 #include "orbis/module/ModuleHandle.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/uio.hpp"
 #include "orbis/umtx.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
@@ -30,6 +31,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <sys/prctl.h>
 #include <thread>
 #include <unistd.h>
@@ -287,7 +289,9 @@ orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
   return dev->open(file, path, flags, mode, thread);
 }
-
+orbis::SysResult unlink(orbis::Thread *thread, orbis::ptr<const char> path) {
+  return rx::vfs::unlink(path, thread);
+}
 orbis::SysResult mkdir(Thread *thread, ptr<const char> path, sint mode) {
   ORBIS_LOG_TODO(__FUNCTION__, path, mode);
   return rx::vfs::mkdir(path, mode, thread);
@@ -337,7 +341,7 @@ orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
 
 orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
-  return dev->unlink(path, thread);
+  return dev->unlink(path, false, thread);
 }
 
 orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
@@ -572,6 +576,50 @@ SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
   ORBIS_LOG_WARNING(__FUNCTION__, name, id, thread->tid);
   return {};
 }
+
+orbis::SysResult unmount(orbis::Thread *thread, orbis::ptr<char> path,
+                         orbis::sint flags) {
+  // TODO: support other that nullfs
+  return rx::vfs::unlink(path, thread);
+}
+orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
+                        orbis::uint iovcnt, orbis::sint flags) {
+  ORBIS_LOG_ERROR(__FUNCTION__, iovp, iovcnt, flags);
+
+  std::string_view fstype;
+  std::string_view fspath;
+  std::string_view target;
+
+  for (auto it = iovp; it < iovp + iovcnt; it += 2) {
+    IoVec a;
+    IoVec b;
+    ORBIS_RET_ON_ERROR(uread(a, it));
+    ORBIS_RET_ON_ERROR(uread(b, it + 1));
+
+    std::string_view key((char *)a.base, a.len - 1);
+    std::string_view value((char *)b.base, b.len - 1);
+
+    if (key == "fstype") {
+      fstype = value;
+    } else if (key == "fspath") {
+      fspath = value;
+    } else if (key == "target") {
+      target = value;
+    }
+
+    std::fprintf(stderr, "%s: '%s':'%s'\n", __FUNCTION__, key.data(),
+                 value.data());
+  }
+
+  if (fstype == "nullfs") {
+    ORBIS_RET_ON_ERROR(rx::vfs::unlink(fspath, thread));
+    return rx::vfs::createSymlink(target, fspath, thread);
+  }
+
+  // TODO
+  return {};
+}
+
 orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
   std::printf("Requested exit with status %d\n", status);
   std::exit(status);
@@ -794,6 +842,7 @@ ProcessOps rx::procOpsTable = {
     .query_memory_protection = query_memory_protection,
     .open = open,
     .shm_open = shm_open,
+    .unlink = unlink,
     .mkdir = mkdir,
     .rmdir = rmdir,
     .rename = rename,
@@ -815,6 +864,8 @@ ProcessOps rx::procOpsTable = {
     .thr_suspend = thr_suspend,
     .thr_wake = thr_wake,
     .thr_set_name = thr_set_name,
+    .unmount = unmount,
+    .nmount = nmount,
     .fork = fork,
     .execve = execve,
     .exit = exit,

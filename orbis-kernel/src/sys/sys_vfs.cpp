@@ -84,6 +84,9 @@ orbis::SysResult orbis::sys_undelete(Thread *thread, ptr<char> path) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_unlink(Thread *thread, ptr<char> path) {
+  if (auto unlink = thread->tproc->ops->unlink) {
+    return unlink(thread, path);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_unlinkat(Thread *thread, sint fd, ptr<char> path,

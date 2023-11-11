@@ -17,5 +17,11 @@ orbis::SysResult open(std::string_view path, int flags, int mode,
                       orbis::Ref<orbis::File> *file, orbis::Thread *thread);
 orbis::SysResult mkdir(std::string_view path, int mode, orbis::Thread *thread);
 orbis::SysResult rmdir(std::string_view path, orbis::Thread *thread);
-orbis::SysResult rename(std::string_view from, std::string_view to, orbis::Thread *thread);
+orbis::SysResult rename(std::string_view from, std::string_view to,
+                        orbis::Thread *thread);
+orbis::ErrorCode unlink(std::string_view path, orbis::Thread *thread);
+orbis::ErrorCode unlinkAll(std::string_view path, orbis::Thread *thread);
+orbis::ErrorCode createSymlink(std::string_view target,
+                               std::string_view linkPath,
+                               orbis::Thread *thread);
 } // namespace rx::vfs

@@ -21,7 +21,8 @@ struct DevFs : IoDevice {
       devPath.remove_prefix(pos + 1);
 
       if (auto it = devices.find(deviceName); it != devices.end()) {
-        return it->second->open(file, std::string(devPath).c_str(), flags, mode, thread);
+        return it->second->open(file, std::string(devPath).c_str(), flags, mode,
+                                thread);
       }
     } else {
       if (auto it = devices.find(devPath); it != devices.end()) {
@@ -169,4 +170,46 @@ orbis::SysResult rx::vfs::rename(std::string_view from, std::string_view to,
   }
 
   return fromDevice->rename(fromDevPath.c_str(), toDevPath.c_str(), thread);
+}
+
+orbis::ErrorCode rx::vfs::unlink(std::string_view path, orbis::Thread *thread) {
+  auto [device, devPath] = get(path);
+  if (device == nullptr) {
+    return orbis::ErrorCode::NOENT;
+  }
+
+  return device->unlink(devPath.c_str(), false, thread);
+}
+
+orbis::ErrorCode rx::vfs::unlinkAll(std::string_view path,
+                                    orbis::Thread *thread) {
+  auto [device, devPath] = get(path);
+  if (device == nullptr) {
+    return orbis::ErrorCode::NOENT;
+  }
+
+  return device->unlink(devPath.c_str(), true, thread);
+}
+
+orbis::ErrorCode rx::vfs::createSymlink(std::string_view target,
+                                        std::string_view linkPath,
+                                        orbis::Thread *thread) {
+  auto [fromDevice, fromDevPath] = get(target);
+  if (fromDevice == nullptr) {
+    return orbis::ErrorCode::NOENT;
+  }
+
+  auto [targetDevice, toDevPath] = get(linkPath);
+  if (targetDevice == nullptr) {
+    return orbis::ErrorCode::NOENT;
+  }
+
+  if (fromDevice != targetDevice) {
+    std::fprintf(stderr, "cross fs operation: %s -> %s\n",
+                 std::string(target).c_str(), std::string(linkPath).c_str());
+    std::abort();
+  }
+
+  return fromDevice->createSymlink(fromDevPath.c_str(), toDevPath.c_str(),
+                                   thread);
 }
