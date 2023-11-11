@@ -38,8 +38,7 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
 
   int fd = shm_open(name.c_str(), realFlags, S_IRUSR | S_IWUSR);
   if (fd < 0) {
-    std::printf("shm_open: error %u\n", errno);
-    return orbis::ErrorCode::ACCES;
+    return convertErrno();
   }
   auto hostFile = createHostFile(fd, this);
   if (size != 0) {

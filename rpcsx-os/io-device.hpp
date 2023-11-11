@@ -48,6 +48,7 @@ struct IoDevice : orbis::RcBase {
   }
 };
 
+orbis::ErrorCode convertErrno();
 IoDevice *createHostIoDevice(orbis::kstring hostPath);
 orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
                               orbis::kstring name, int dom, int type, int prot);

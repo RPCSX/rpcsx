@@ -214,7 +214,7 @@ static orbis::ErrorCode convertErrorCode(const std::error_code &code) {
   return convertErrc(static_cast<std::errc>(code.value()));
 }
 
-static orbis::ErrorCode convertErrno() {
+orbis::ErrorCode convertErrno() {
   switch (auto error = errno) {
   case EPERM:
     return orbis::ErrorCode::PERM;
