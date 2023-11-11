@@ -611,7 +611,7 @@ SysResult sys_netgetiflist(Thread *thread /* TODO */);
 SysResult sys_kqueueex(Thread *thread, ptr<char> name, sint flags);
 SysResult sys_mtypeprotect(Thread *thread /* TODO */);
 SysResult sys_regmgr_call(Thread *thread, uint32_t op, uint32_t id,
-                          ptr<void> result, ptr<void> value, uint64_t type);
+                          ptr<void> result, ptr<void> value, uint64_t len);
 SysResult sys_jitshm_create(Thread *thread /* TODO */);
 SysResult sys_jitshm_alias(Thread *thread /* TODO */);
 SysResult sys_dl_get_list(Thread *thread /* TODO */);

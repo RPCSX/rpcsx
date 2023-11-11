@@ -59,15 +59,45 @@ orbis::SysResult orbis::sys_mtypeprotect(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
                                         uint32_t id, ptr<void> result,
-                                        ptr<void> value, uint64_t type) {
-  ORBIS_LOG_ERROR(__FUNCTION__, op, id, type);
-  thread->where();
+                                        ptr<void> value, uint64_t len) {
+  // ORBIS_LOG_ERROR(__FUNCTION__, op, id, len);
+  // thread->where();
 
   if (op == 2) {
+    // get int
+    if (len != sizeof(uint32_t)) {
+      return ErrorCode::INVAL;
+    }
+
     if (id == 0x2010000) {
       return uwrite((ptr<uint>)value, 0u);
     }
+    if (id == 0x7802c000) {
+      return uwrite((ptr<uint>)value, 0u);
+    }
+    if (id == 0x78020500) {
+      return uwrite((ptr<uint>)value, 0u);
+    }
+    if (id == 0x78020b00) {
+      return uwrite((ptr<uint>)value, 0u);
+    }
+
+    return{};
   }
+
+  if (op == 4) {
+    // get string
+
+    if (id == 0x7802e601) {
+      // std::strcpy((ptr<char>)value, "Application/app.exe.self");
+      return ErrorCode::INVAL;
+    }
+
+    ORBIS_LOG_ERROR(__FUNCTION__, op, id, len);
+    thread->where();
+    return {};
+  }
+
   if (op == 25) {
     struct nonsys_int {
       union {
