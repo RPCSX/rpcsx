@@ -1,6 +1,7 @@
 #include "stat.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
+#include <filesystem>
 
 orbis::SysResult orbis::sys_sync(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_quotactl(Thread *thread, ptr<char> path, sint cmd,
@@ -23,10 +24,14 @@ orbis::SysResult orbis::sys_fchdir(Thread *thread, sint fd) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_chdir(Thread *thread, ptr<char> path) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__, path);
+  thread->tproc->cwd = std::filesystem::path(path).lexically_normal().string();
+  return {};
 }
 orbis::SysResult orbis::sys_chroot(Thread *thread, ptr<char> path) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__, path);
+  thread->tproc->root = path;
+  return {};
 }
 orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
                                  sint mode) {

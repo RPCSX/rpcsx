@@ -82,7 +82,7 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
       return uwrite((ptr<uint>)value, 0u);
     }
 
-    return{};
+    return {};
   }
 
   if (op == 4) {
@@ -1028,7 +1028,8 @@ orbis::SysResult orbis::sys_suspend_system(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
                                          uint64_t paramsSz) {
-  // ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);
+  // ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params,
+  // paramsSz);
 
   switch (op) {
   case 0:

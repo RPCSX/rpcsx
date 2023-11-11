@@ -157,6 +157,21 @@ loadPrx(orbis::Thread *thread, std::string_view path, bool relocate) {
                  expectedName);
 }
 
+std::string getAbsolutePath(std::string path, Thread *thread) {
+  if (!path.starts_with('/')) {
+    path = "/" + std::string(thread->tproc->cwd) + "/" + path;
+  }
+
+  path = std::filesystem::path(path).lexically_normal().string();
+
+  if (!path.starts_with("/dev") &&
+      !path.starts_with("/system")) { // fixme: implement devfs mount
+    path = std::string(thread->tproc->root) + "/" + path;
+  }
+
+  return std::filesystem::path(path).lexically_normal().string();
+}
+
 orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
                       orbis::size_t len, orbis::sint prot, orbis::sint flags,
                       orbis::sint fd, orbis::off_t pos) {
@@ -280,30 +295,33 @@ query_memory_protection(orbis::Thread *thread, orbis::ptr<void> address,
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
                       orbis::sint flags, orbis::sint mode,
                       orbis::Ref<orbis::File> *file) {
-  return rx::vfs::open(path, flags, mode, file, thread);
+  return rx::vfs::open(getAbsolutePath(path, thread), flags, mode, file,
+                       thread);
 }
 
 orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
                           orbis::sint flags, orbis::sint mode,
                           orbis::Ref<orbis::File> *file) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
-  return dev->open(file, path, flags, mode, thread);
+  return dev->open(file, getAbsolutePath(path, thread).c_str(), flags, mode,
+                   thread);
 }
 orbis::SysResult unlink(orbis::Thread *thread, orbis::ptr<const char> path) {
-  return rx::vfs::unlink(path, thread);
+  return rx::vfs::unlink(getAbsolutePath(path, thread), thread);
 }
 orbis::SysResult mkdir(Thread *thread, ptr<const char> path, sint mode) {
   ORBIS_LOG_TODO(__FUNCTION__, path, mode);
-  return rx::vfs::mkdir(path, mode, thread);
+  return rx::vfs::mkdir(getAbsolutePath(path, thread), mode, thread);
 }
 orbis::SysResult rmdir(Thread *thread, ptr<const char> path) {
   ORBIS_LOG_TODO(__FUNCTION__, path);
-  return rx::vfs::rmdir(path, thread);
+  return rx::vfs::rmdir(getAbsolutePath(path, thread), thread);
 }
 orbis::SysResult rename(Thread *thread, ptr<const char> from,
                         ptr<const char> to) {
   ORBIS_LOG_TODO(__FUNCTION__, from, to);
-  return rx::vfs::rename(from, to, thread);
+  return rx::vfs::rename(getAbsolutePath(from, thread),
+                         getAbsolutePath(to, thread), thread);
 }
 
 orbis::SysResult blockpool_open(orbis::Thread *thread,
@@ -341,7 +359,7 @@ orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
 
 orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
-  return dev->unlink(path, false, thread);
+  return dev->unlink(getAbsolutePath(path, thread).c_str(), false, thread);
 }
 
 orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
@@ -433,15 +451,17 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
     return errorCode;
   }
 
+  auto path = getAbsolutePath(_name, thread);
+
   {
     orbis::Ref<orbis::File> file;
-    if (auto result = rx::vfs::open(_name, 0, 0, &file, thread);
+    if (auto result = rx::vfs::open(path, 0, 0, &file, thread);
         result.isError()) {
       return result;
     }
   }
 
-  auto [result, module] = loadPrx(thread, _name, true);
+  auto [result, module] = loadPrx(thread, path, true);
   if (result.isError()) {
     return result;
   }
@@ -580,15 +600,15 @@ SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
 orbis::SysResult unmount(orbis::Thread *thread, orbis::ptr<char> path,
                          orbis::sint flags) {
   // TODO: support other that nullfs
-  return rx::vfs::unlink(path, thread);
+  return rx::vfs::unlink(getAbsolutePath(path, thread), thread);
 }
 orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
                         orbis::uint iovcnt, orbis::sint flags) {
   ORBIS_LOG_ERROR(__FUNCTION__, iovp, iovcnt, flags);
 
-  std::string_view fstype;
-  std::string_view fspath;
-  std::string_view target;
+  std::string fstype;
+  std::string fspath;
+  std::string target;
 
   for (auto it = iovp; it < iovp + iovcnt; it += 2) {
     IoVec a;
@@ -600,11 +620,11 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
     std::string_view value((char *)b.base, b.len - 1);
 
     if (key == "fstype") {
-      fstype = value;
+      fstype = getAbsolutePath(std::string(value), thread);
     } else if (key == "fspath") {
-      fspath = value;
+      fspath = getAbsolutePath(std::string(value), thread);
     } else if (key == "target") {
-      target = value;
+      target = getAbsolutePath(std::string(value), thread);
     }
 
     std::fprintf(stderr, "%s: '%s':'%s'\n", __FUNCTION__, key.data(),
@@ -771,7 +791,8 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
 
   {
     orbis::Ref<File> file;
-    auto result = rx::vfs::open(fname, kOpenFlagReadOnly, 0, &file, thread);
+    auto result = rx::vfs::open(getAbsolutePath(fname, thread),
+                                kOpenFlagReadOnly, 0, &file, thread);
     if (result.isError()) {
       return result;
     }

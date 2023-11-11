@@ -57,6 +57,10 @@ struct Process final {
   const ProcessOps *ops = nullptr;
   AppInfo appInfo{};
   AuthInfo authInfo{};
+  kstring cwd;
+  kstring root = "/";
+  sint memoryContainer{1};
+  bool isInSandbox = false;
 
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
