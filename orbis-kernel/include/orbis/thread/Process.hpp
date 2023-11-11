@@ -60,6 +60,7 @@ struct Process final {
   kstring cwd;
   kstring root = "/";
   sint memoryContainer{1};
+  sint budgetId{1};
   bool isInSandbox = false;
 
   std::uint64_t nextTlsSlot = 1;

@@ -44,6 +44,12 @@ static orbis::ErrorCode dipsw_ioctl(orbis::File *file, std::uint64_t request,
     return {};
   }
 
+  if (request == 0xc0088803) {
+    // TODO
+    *reinterpret_cast<std::uint32_t *>(argp) = 0;
+    return{};
+  }
+
   ORBIS_LOG_FATAL("Unhandled dipsw ioctl", request);
   thread->where();
   //__builtin_trap();

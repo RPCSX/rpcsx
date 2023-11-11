@@ -303,8 +303,7 @@ orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
                           orbis::sint flags, orbis::sint mode,
                           orbis::Ref<orbis::File> *file) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
-  return dev->open(file, getAbsolutePath(path, thread).c_str(), flags, mode,
-                   thread);
+  return dev->open(file, path, flags, mode, thread);
 }
 orbis::SysResult unlink(orbis::Thread *thread, orbis::ptr<const char> path) {
   return rx::vfs::unlink(getAbsolutePath(path, thread), thread);
@@ -606,7 +605,7 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
                         orbis::uint iovcnt, orbis::sint flags) {
   ORBIS_LOG_ERROR(__FUNCTION__, iovp, iovcnt, flags);
 
-  std::string fstype;
+  std::string_view fstype;
   std::string fspath;
   std::string target;
 
@@ -620,7 +619,7 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
     std::string_view value((char *)b.base, b.len - 1);
 
     if (key == "fstype") {
-      fstype = getAbsolutePath(std::string(value), thread);
+      fstype = value;
     } else if (key == "fspath") {
       fspath = getAbsolutePath(std::string(value), thread);
     } else if (key == "target") {
@@ -789,28 +788,38 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     }
   }
 
+  std::string path = getAbsolutePath(fname, thread);
+  ORBIS_LOG_ERROR(__FUNCTION__, path);
+
   {
     orbis::Ref<File> file;
-    auto result = rx::vfs::open(getAbsolutePath(fname, thread),
-                                kOpenFlagReadOnly, 0, &file, thread);
+    auto result = rx::vfs::open(path, kOpenFlagReadOnly, 0, &file, thread);
     if (result.isError()) {
       return result;
     }
   }
 
-  std::string path = fname;
+  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
+
   rx::vm::reset();
+
+  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   thread->tproc->nextTlsSlot = 1;
   for (auto [id, mod] : thread->tproc->modulesMap) {
     thread->tproc->modulesMap.close(id);
   }
 
+  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
+
   auto executableModule = rx::linker::loadModuleFile(path, thread);
+
+  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   executableModule->id = thread->tproc->modulesMap.insert(executableModule);
   thread->tproc->processParam = executableModule->processParam;
   thread->tproc->processParamSize = executableModule->processParamSize;
+  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   auto name = path;
   if (auto slashP = name.rfind('/'); slashP != std::string::npos) {
@@ -821,11 +830,15 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     name.resize(15);
   }
 
+  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
+
   pthread_setname_np(pthread_self(), name.c_str());
 
+  ORBIS_LOG_ERROR(__FUNCTION__, "done");
   std::thread([&] {
     rx::thread::setupSignalStack();
     rx::thread::setupThisThread();
+    ORBIS_LOG_ERROR(__FUNCTION__, "exec");
     ps4Exec(thread, executableModule, _argv, _envv);
   }).join();
   std::abort();

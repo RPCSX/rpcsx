@@ -218,7 +218,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
 
     if (args->index >= std::size(rx::bridge.header->buffers)) {
       // TODO
-      ORBIS_LOG_FATAL("dce: out of buffers!");
+      ORBIS_LOG_FATAL("dce: out of buffers!", args->index);
       return orbis::ErrorCode::NOMEM;
     }
 

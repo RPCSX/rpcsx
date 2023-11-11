@@ -30,7 +30,7 @@ orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
   return {};
 }
 orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, fd);
+  // ORBIS_LOG_NOTICE(__FUNCTION__, fd);
   if (thread->tproc->fileDescriptors.close(fd)) {
     return {};
   }

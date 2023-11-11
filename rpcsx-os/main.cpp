@@ -808,6 +808,8 @@ int main(int argc, const char *argv[]) {
                 0xF0000000FFFF4000,
             },
     };
+    initProcess->budgetId = 0;
+    initProcess->isInSandbox = false;
   } else {
     initProcess->authInfo = {
         .unk0 = 0x3100000000000001,
@@ -826,6 +828,8 @@ int main(int argc, const char *argv[]) {
                 0xF0000000FFFF4000,
             },
     };
+    initProcess->budgetId = 1;
+    initProcess->isInSandbox = true;
   }
 
   auto [baseId, mainThread] = initProcess->threadsMap.emplace();

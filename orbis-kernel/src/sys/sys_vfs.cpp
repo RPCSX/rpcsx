@@ -44,7 +44,7 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
 
     auto fd = thread->tproc->fileDescriptors.insert(file);
     thread->retval[0] = fd;
-    ORBIS_LOG_NOTICE(__FUNCTION__, path, flags, mode, fd);
+    // ORBIS_LOG_NOTICE(__FUNCTION__, path, flags, mode, fd);
     return {};
   }
 
@@ -208,7 +208,7 @@ orbis::SysResult orbis::sys_lpathconf(Thread *thread, ptr<char> path,
 }
 orbis::SysResult orbis::sys_readlink(Thread *thread, ptr<char> path,
                                      ptr<char> buf, size_t count) {
-  return ErrorCode::NOSYS;
+  return ErrorCode::INVAL;
 }
 orbis::SysResult orbis::sys_readlinkat(Thread *thread, sint fd, ptr<char> path,
                                        ptr<char> buf, size_t bufsize) {

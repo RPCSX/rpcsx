@@ -49,6 +49,10 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
   enum sysctl_machdep_liverpool { telemetry = 1000, icc_max };
 
+  struct ProcInfo {
+    char data[0x448];
+  };
+
   // for (unsigned int i = 0; i < namelen; ++i) {
   //   std::fprintf(stderr, "   name[%u] = %u\n", i, name[i]);
   // }
@@ -83,12 +87,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
     if (name[0] == kern && name[1] == 14 && name[2] == 8) {
       // KERN_PROC_PROC
-
-      struct ProcInfo {
-        char data[0x448];
-      };
-
-      *oldlenp = 0;
+      std::memset(old, 0, sizeof(ProcInfo));
+      *oldlenp = sizeof(ProcInfo);
       return {};
     }
 
@@ -120,6 +120,12 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   }
 
   if (namelen == 4) {
+    if (name[0] == kern && name[1] == 14 && name[2] == 1) {
+      std::memset(old, 0, sizeof(ProcInfo));
+      *oldlenp = sizeof(ProcInfo);
+      return {};
+    }
+
     if (name[0] == 1 && name[1] == 14 && name[2] == 35) {
       // AppInfo get/set
 
@@ -129,7 +135,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       if (process->pid != name[3] && name[3] != -1) {
         process = g_context.findProcessById(name[3]);
         if (process == nullptr) {
-          ORBIS_LOG_ERROR("appinfo process not found", name[3], thread->tproc->pid);
+          ORBIS_LOG_ERROR("appinfo process not found", name[3],
+                          thread->tproc->pid);
           return ErrorCode::SRCH;
         }
       }
@@ -164,8 +171,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           auto &appInfo = process->appInfo;
           ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
                           appInfo.unk1, appInfo.appType, appInfo.titleId,
-                          appInfo.unk2, appInfo.unk3, appInfo.unk5, appInfo.unk6,
-                          appInfo.unk7, appInfo.unk8);
+                          appInfo.unk2, appInfo.unk3, appInfo.unk5,
+                          appInfo.unk6, appInfo.unk7, appInfo.unk8);
 
           // HACK
           if (appInfo.appId == 0 && appInfo.unk4 == 0) {

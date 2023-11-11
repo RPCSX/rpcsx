@@ -101,7 +101,7 @@ struct BridgeHeader {
   std::uint32_t bufferCount;
   CmdMemoryProt memoryAreas[128];
   CmdCommandBuffer commandBuffers[32];
-  CmdBuffer buffers[8];
+  CmdBuffer buffers[10];
   // orbis::shared_mutex cacheCommandMtx;
   // orbis::shared_cv cacheCommandCv;
   std::atomic<std::uint64_t> cacheCommands[4];

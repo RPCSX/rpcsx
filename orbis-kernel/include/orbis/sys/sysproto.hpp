@@ -659,7 +659,8 @@ SysResult sys_opmc_set_ctr(Thread *thread /* TODO */);
 SysResult sys_opmc_get_ctr(Thread *thread /* TODO */);
 SysResult sys_budget_create(Thread *thread /* TODO */);
 SysResult sys_budget_delete(Thread *thread /* TODO */);
-SysResult sys_budget_get(Thread *thread /* TODO */);
+SysResult sys_budget_get(Thread *thread, sint id, ptr<void> a,
+                         ptr<uint32_t> count);
 SysResult sys_budget_set(Thread *thread, slong budget);
 SysResult sys_virtual_query(Thread *thread, ptr<void> addr, uint64_t unk,
                             ptr<void> info, size_t infosz);

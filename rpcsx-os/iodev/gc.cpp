@@ -259,7 +259,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   default:
     ORBIS_LOG_FATAL("Unhandled gc ioctl", request);
     std::fflush(stdout);
-    __builtin_trap();
+    // __builtin_trap();
     break;
   }
   return {};

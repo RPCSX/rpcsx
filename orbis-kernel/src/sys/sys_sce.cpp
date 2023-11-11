@@ -629,8 +629,9 @@ orbis::SysResult orbis::sys_budget_create(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_budget_delete(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_budget_get(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_budget_get(Thread *thread, sint id, ptr<void> a,
+                                       ptr<uint32_t> count) {
+  return {};
 }
 orbis::SysResult orbis::sys_budget_set(Thread *thread, slong budget) {
   ORBIS_LOG_TODO(__FUNCTION__, budget);
@@ -1013,11 +1014,11 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
   return uwrite(destModuleInfoEx, result);
 }
 orbis::SysResult orbis::sys_budget_getid(Thread *thread) {
-  thread->retval[0] = 1;
+  thread->retval[0] = thread->tproc->budgetId;
   return {};
 }
 orbis::SysResult orbis::sys_budget_get_ptype(Thread *thread, sint budgetId) {
-  thread->retval[0] = 1;
+  thread->retval[0] = budgetId;
   return {};
 }
 orbis::SysResult
