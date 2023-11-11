@@ -780,6 +780,44 @@ int main(int argc, const char *argv[]) {
       .unk4 = (isSystem ? orbis::slong(0x80000000'00000000) : 0),
   };
 
+  if (isSystem) {
+    initProcess->authInfo = {
+        .unk0 = 0x3100000000000001,
+        .caps =
+            {
+                -1u,
+                -1u,
+                -1u,
+                -1u,
+            },
+        .attrs =
+            {
+                0x4000400040000000,
+                0x4000000000000000,
+                0x0080000000000002,
+                0xF0000000FFFF4000,
+            },
+    };
+  } else {
+    initProcess->authInfo = {
+        .unk0 = 0x3100000000000001,
+        .caps =
+            {
+                0x2000038000000000,
+                0x000000000000FF00,
+                0x0000000000000000,
+                0x0000000000000000,
+            },
+        .attrs =
+            {
+                0x4000400040000000,
+                0x4000000000000000,
+                0x0080000000000002,
+                0xF0000000FFFF4000,
+            },
+    };
+  }
+
   auto [baseId, mainThread] = initProcess->threadsMap.emplace();
   mainThread->tproc = initProcess;
   mainThread->tid = initProcess->pid + baseId;

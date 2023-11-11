@@ -11,6 +11,7 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
+struct AuthInfo;
 struct MemoryProtection;
 struct ModuleInfo;
 struct ModuleInfoEx;
@@ -676,7 +677,7 @@ SysResult sys_obs_eport_open(Thread *thread /* TODO */);
 SysResult sys_obs_eport_close(Thread *thread /* TODO */);
 SysResult sys_is_in_sandbox(Thread *thread /* TODO */);
 SysResult sys_dmem_container(Thread *thread, uint id);
-SysResult sys_get_authinfo(Thread *thread, pid_t pid, ptr<void> info);
+SysResult sys_get_authinfo(Thread *thread, pid_t pid, ptr<AuthInfo> info);
 SysResult sys_mname(Thread *thread, uint64_t address, uint64_t length,
                     ptr<const char[32]> name);
 SysResult sys_dynlib_dlopen(Thread *thread /* TODO */);

@@ -661,34 +661,8 @@ orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
   return {};
 }
 orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
-                                         ptr<void> info) {
-  struct authinfo {
-    uint64_t unk0;
-    uint64_t caps[4];
-    uint64_t attrs[4];
-    uint64_t unk[8];
-  };
-  static_assert(sizeof(authinfo) == 136);
-
-  authinfo result{
-      .unk0 = 0x3100000000000001,
-      .caps =
-          {
-              0x2000038000000000,
-              0x000000000000FF00,
-              0x0000000000000000,
-              0x0000000000000000,
-          },
-      .attrs =
-          {
-              0x4000400040000000,
-              0x4000000000000000,
-              0x0080000000000002,
-              0xF0000000FFFF4000,
-          },
-  };
-
-  return uwrite((ptr<authinfo>)info, result);
+                                         ptr<AuthInfo> info) {
+  return uwrite(info, thread->tproc->authInfo);
 }
 orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
                                   ptr<const char[32]> name) {

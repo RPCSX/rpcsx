@@ -8,6 +8,7 @@
 #include "../thread/types.hpp"
 #include "ProcessState.hpp"
 #include "orbis/AppInfo.hpp"
+#include "orbis/AuthInfo.hpp"
 #include "orbis/file.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
@@ -55,6 +56,7 @@ struct Process final {
   uint64_t processParamSize = 0;
   const ProcessOps *ops = nullptr;
   AppInfo appInfo{};
+  AuthInfo authInfo{};
 
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;

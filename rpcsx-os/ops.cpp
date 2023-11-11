@@ -649,6 +649,7 @@ SysResult fork(Thread *thread, slong flags) {
   process->onSysExit = thread->tproc->onSysExit;
   process->ops = thread->tproc->ops;
   process->parentProcess = thread->tproc;
+  process->authInfo = thread->tproc->authInfo;
   for (auto [id, mod] : thread->tproc->modulesMap) {
     if (!process->modulesMap.insert(id, mod)) {
       std::abort();
