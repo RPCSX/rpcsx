@@ -26,7 +26,8 @@ orbis::SysResult orbis::sys_dup(Thread *thread, uint fd) {
 }
 orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
                                   slong arg) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__, fd, cmd, arg);
+  return {};
 }
 orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {
   ORBIS_LOG_NOTICE(__FUNCTION__, fd);
