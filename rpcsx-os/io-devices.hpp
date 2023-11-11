@@ -35,3 +35,8 @@ IoDevice *createAVControlCharacterDevice();
 IoDevice *createHDMICharacterDevice();
 IoDevice *createMBusAVCharacterDevice();
 IoDevice *createScaninCharacterDevice();
+IoDevice *createS3DACharacterDevice();
+IoDevice *createGbaseCharacterDevice();
+IoDevice *createDevStatCharacterDevice();
+IoDevice *createDevCtlCharacterDevice();
+IoDevice *createDevActCharacterDevice();

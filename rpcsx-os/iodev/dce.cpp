@@ -198,6 +198,9 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     } else if (args->id == 33) { // adjust color
       std::printf("adjust color\n");
       return {};
+    } else if (args->id == 0x1e) {
+      // TODO
+      return{};
     } else if (args->id != 0 && args->id != 1) { // used during open/close
       ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
                        args->ptr, args->size);

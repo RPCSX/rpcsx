@@ -369,6 +369,7 @@ static void ps4InitDev() {
   rx::vfs::addDevice("da0x13.crypt", createHddCharacterDevice());
   rx::vfs::addDevice("da0x14.crypt", createHddCharacterDevice());
   rx::vfs::addDevice("da0x15", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x15.crypt", createHddCharacterDevice());
   rx::vfs::addDevice("notification0", createNotificationCharacterDevice(0));
   rx::vfs::addDevice("notification1", createNotificationCharacterDevice(1));
   rx::vfs::addDevice("notification2", createNotificationCharacterDevice(2));
@@ -376,12 +377,21 @@ static void ps4InitDev() {
   rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
   rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
   rx::vfs::addDevice("aout0", createAoutCharacterDevice());
+  rx::vfs::addDevice("aout1", createAoutCharacterDevice());
+  rx::vfs::addDevice("aout2", createAoutCharacterDevice());
   rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
   rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
   rx::vfs::addDevice("mbus_av", createMBusAVCharacterDevice());
   rx::vfs::addDevice("scanin", createScaninCharacterDevice());
+  rx::vfs::addDevice("s3da", createS3DACharacterDevice());
+  rx::vfs::addDevice("gbase", createGbaseCharacterDevice());
+  rx::vfs::addDevice("devstat", createDevStatCharacterDevice());
+  rx::vfs::addDevice("devact", createDevActCharacterDevice());
+  rx::vfs::addDevice("devctl", createDevCtlCharacterDevice());
 
-  orbis::g_context.shmDevice = createShmDevice();
+  auto shm = createShmDevice();
+  rx::vfs::addDevice("shm", shm);
+  orbis::g_context.shmDevice = shm;
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();
 }
 
