@@ -785,10 +785,10 @@ int main(int argc, const char *argv[]) {
         .unk0 = 0x3100000000000001,
         .caps =
             {
-                -1u,
-                -1u,
-                -1u,
-                -1u,
+                -1ul,
+                -1ul,
+                -1ul,
+                -1ul,
             },
         .attrs =
             {
