@@ -2,17 +2,20 @@
 #include "utils/Logs.hpp"
 
 orbis::SysResult orbis::sys_getpid(Thread *thread) {
-  thread->retval[0] = thread->tid;
+  thread->retval[0] = thread->tproc->pid;
   return {};
 }
-orbis::SysResult orbis::sys_getppid(Thread *thread) { return ErrorCode::NOSYS; }
+orbis::SysResult orbis::sys_getppid(Thread *thread) {
+  thread->retval[0] = thread->tproc->parentProcess
+                          ? thread->tproc->parentProcess->pid
+                          : thread->tproc->pid;
+  return {};
+}
 orbis::SysResult orbis::sys_getpgrp(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_getpgid(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_getsid(Thread *thread, pid_t pid) {
-  return {};
-}
+orbis::SysResult orbis::sys_getsid(Thread *thread, pid_t pid) { return {}; }
 orbis::SysResult orbis::sys_getuid(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_geteuid(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_getgid(Thread *thread) { return ErrorCode::NOSYS; }
