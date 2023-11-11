@@ -698,10 +698,11 @@ SysResult sys_dynlib_prepare_dlclose(Thread *thread /* TODO */);
 SysResult sys_dynlib_get_proc_param(Thread *thread, ptr<ptr<void>> procParam,
                                     ptr<uint64_t> procParamSize);
 SysResult sys_dynlib_process_needed_and_relocate(Thread *thread);
-SysResult sys_sandbox_path(Thread *thread /* TODO */);
+SysResult sys_sandbox_path(Thread *thread, ptr<const char> path);
 SysResult sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> arg0,
                            ptr<void> arg1);
-SysResult sys_randomized_path(Thread *thread /* TODO */);
+SysResult sys_randomized_path(Thread *thread, sint type, ptr<char> path,
+                              ptr<sint> length);
 SysResult sys_rdup(Thread *thread, sint a, sint b);
 SysResult sys_dl_get_metadata(Thread *thread /* TODO */);
 SysResult sys_workaround8849(Thread *thread /* TODO */);

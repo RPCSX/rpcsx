@@ -680,7 +680,8 @@ orbis::SysResult orbis::sys_obs_eport_close(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_is_in_sandbox(Thread *thread /* TODO */) {
-  std::printf("sys_is_in_sandbox() -> 0\n");
+  ORBIS_LOG_ERROR(__FUNCTION__, thread->tproc->isInSandbox);
+  thread->retval[0] = thread->tproc->isInSandbox ? 1 : 0;
   return {};
 }
 orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
@@ -843,8 +844,10 @@ orbis::SysResult orbis::sys_dynlib_process_needed_and_relocate(Thread *thread) {
   ORBIS_LOG_WARNING(__FUNCTION__);
   return {};
 }
-orbis::SysResult orbis::sys_sandbox_path(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_sandbox_path(Thread *thread, ptr<const char> path) {
+  ORBIS_LOG_ERROR(__FUNCTION__, path);
+  thread->tproc->isInSandbox = true;
+  return {};
 }
 
 struct mdbg_property {
@@ -895,8 +898,21 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
 
   return {};
 }
-orbis::SysResult orbis::sys_randomized_path(Thread *thread /* TODO */) {
-  std::printf("TODO: sys_randomized_path()\n");
+orbis::SysResult orbis::sys_randomized_path(Thread *thread, sint type,
+                                            ptr<char> path, ptr<sint> length) {
+  ORBIS_LOG_TODO(__FUNCTION__, type, (ptr<void>)path, length ? *length : 0);
+  if (type == 0) {
+    if (thread->tproc->isInSandbox) {
+      std::strcpy(path, "system");
+      *length = sizeof("system") - 1;
+      return {};
+    }
+
+    *path = '\0';
+    *length = 0;
+  } else {
+    thread->where();
+  }
   return {};
 }
 orbis::SysResult orbis::sys_rdup(Thread *thread, sint pid, sint fd) {
