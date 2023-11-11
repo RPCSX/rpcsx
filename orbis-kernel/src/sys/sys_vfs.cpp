@@ -146,6 +146,11 @@ orbis::SysResult orbis::sys_freebsd6_lseek(Thread *thread, sint fd, sint,
   return sys_lseek(thread, fd, offset, whence);
 }
 orbis::SysResult orbis::sys_access(Thread *thread, ptr<char> path, sint flags) {
+  if (auto open = thread->tproc->ops->open) {
+    Ref<File> file;
+    return open(thread, path, flags, 0, &file);
+  }
+
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_faccessat(Thread *thread, sint fd, ptr<char> path,

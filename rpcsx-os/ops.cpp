@@ -358,7 +358,7 @@ orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
 
 orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
-  return dev->unlink(getAbsolutePath(path, thread).c_str(), false, thread);
+  return dev->unlink(path, false, thread);
 }
 
 orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
