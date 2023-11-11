@@ -5,7 +5,6 @@
 #include "ipmi.hpp"
 #include "module/ModuleInfo.hpp"
 #include "module/ModuleInfoEx.hpp"
-#include "orbis/AudioOut.hpp"
 #include "orbis/time.hpp"
 #include "osem.hpp"
 #include "sys/sysproto.hpp"
@@ -250,11 +249,11 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
   ORBIS_LOG_TRACE("sys_evf_wait wakeup", thread->tid, thread->evfResultPattern);
 
   if (pPatternSet != nullptr) {
-    uwrite(pPatternSet, thread->evfResultPattern);
+    ORBIS_RET_ON_ERROR(uwrite(pPatternSet, thread->evfResultPattern));
   }
 
   if (pTimeout != nullptr) {
-    uwrite(pTimeout, resultTimeout);
+    ORBIS_RET_ON_ERROR(uwrite(pTimeout, resultTimeout));
   }
 
   if (result == ErrorCode::TIMEDOUT)
@@ -284,7 +283,7 @@ orbis::SysResult orbis::sys_evf_trywait(Thread *thread, sint id,
                   pPatternSet, result);
 
   if (pPatternSet != nullptr) {
-    uwrite(pPatternSet, thread->evfResultPattern);
+    ORBIS_RET_ON_ERROR(uwrite(pPatternSet, thread->evfResultPattern));
   }
 
   if (result == ErrorCode::BUSY) {
@@ -772,8 +771,7 @@ orbis::SysResult orbis::sys_dynlib_get_info(Thread *thread,
   result.segmentCount = module->segmentCount;
   std::memcpy(result.fingerprint, module->fingerprint,
               sizeof(result.fingerprint));
-  uwrite(pInfo, result);
-  return {};
+  return uwrite(pInfo, result);
 }
 orbis::SysResult orbis::sys_dynlib_load_prx(Thread *thread,
                                             ptr<const char> name, uint64_t arg1,
@@ -991,8 +989,7 @@ orbis::SysResult orbis::sys_get_proc_type_info(Thread *thread,
     uint32_t pflags;
   } args = {.ptype = 1, .pflags = 0};
 
-  uwrite((ptr<dargs>)destProcessInfo, args);
-  return {};
+  return uwrite((ptr<dargs>)destProcessInfo, args);
 }
 orbis::SysResult orbis::sys_get_resident_count(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
@@ -1129,8 +1126,8 @@ orbis::SysResult orbis::sys_utc_to_localtime(Thread *thread, int64_t time,
   auto result = ::mktime(::localtime_r(&time, &tp));
   if (auto e = uwrite(localtime, result); e != ErrorCode{})
     return e;
-  uwrite(_sec, {});
-  uwrite(_dst_sec, 0);
+  ORBIS_RET_ON_ERROR(uwrite(_sec, {}));
+  ORBIS_RET_ON_ERROR(uwrite(_dst_sec, 0));
   return {};
 }
 orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread, int64_t time,
@@ -1146,8 +1143,8 @@ orbis::SysResult orbis::sys_localtime_to_utc(Thread *thread, int64_t time,
   auto result = time - ::mktime(::localtime_r(&timez, &tp));
   if (auto e = uwrite(ptime, result); e != ErrorCode{})
     return e;
-  uwrite(_sec, {});
-  uwrite(_dst_sec, 0);
+  ORBIS_RET_ON_ERROR(uwrite(_sec, {}));
+  ORBIS_RET_ON_ERROR(uwrite(_dst_sec, 0));
   return {};
 }
 orbis::SysResult orbis::sys_set_uevt(Thread *thread /* TODO */) {
