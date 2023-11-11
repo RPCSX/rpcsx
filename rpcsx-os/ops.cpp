@@ -799,27 +799,18 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     }
   }
 
-  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
-
   rx::vm::reset();
-
-  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   thread->tproc->nextTlsSlot = 1;
   for (auto [id, mod] : thread->tproc->modulesMap) {
     thread->tproc->modulesMap.close(id);
   }
 
-  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
-
   auto executableModule = rx::linker::loadModuleFile(path, thread);
-
-  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   executableModule->id = thread->tproc->modulesMap.insert(executableModule);
   thread->tproc->processParam = executableModule->processParam;
   thread->tproc->processParamSize = executableModule->processParamSize;
-  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   auto name = path;
   if (auto slashP = name.rfind('/'); slashP != std::string::npos) {
@@ -829,8 +820,6 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   if (name.size() > 15) {
     name.resize(15);
   }
-
-  ORBIS_LOG_ERROR(__FUNCTION__, __LINE__);
 
   pthread_setname_np(pthread_self(), name.c_str());
 

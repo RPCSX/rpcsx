@@ -1697,7 +1697,7 @@ static bool isPrimRequiresConversion(PrimitiveType primType) {
     return true;
 
   default:
-    util::unreachable();
+    util::unreachable("prim type: %u\n", (unsigned)primType);
   }
 }
 
@@ -3731,6 +3731,12 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
     return;
   }
 
+  auto primType = static_cast<PrimitiveType>(regs.vgtPrimitiveType);
+
+  if (primType == PrimitiveType::kPrimitiveTypeNone) {
+    return;
+  }
+
   regs.depthClearEnable = true;
 
   auto resources = Ref(new GpuActionResources());
@@ -3749,8 +3755,6 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
 
   shaderLoadTaskSet.schedule();
   shaderLoadTaskSet.wait();
-
-  auto primType = static_cast<PrimitiveType>(regs.vgtPrimitiveType);
 
   std::vector<VkRenderingAttachmentInfo> colorAttachments;
 

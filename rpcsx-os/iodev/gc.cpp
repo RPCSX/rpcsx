@@ -2,6 +2,7 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedMutex.hpp"
@@ -72,7 +73,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
       // std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
       // std::fprintf(stderr, "    size = %lu\n", size);
 
-      rx::bridge.sendCommandBuffer(cmdId, address, size);
+      rx::bridge.sendCommandBuffer(thread->tproc->pid, cmdId, address, size);
     }
     funlockfile(stderr);
 
@@ -123,7 +124,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
       // std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
       // std::fprintf(stderr, "    size = %lu\n", size);
 
-      rx::bridge.sendCommandBuffer(cmdId, address, size);
+      rx::bridge.sendCommandBuffer(thread->tproc->pid, cmdId, address, size);
     }
     funlockfile(stderr);
 
@@ -229,7 +230,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     auto endOffset = static_cast<std::uint64_t>(args->nextStartOffsetInDw) << 2;
     auto size = endOffset - queue.offset;
 
-    rx::bridge.sendCommandBuffer(id, address, size);
+    rx::bridge.sendCommandBuffer(thread->tproc->pid, id, address, size);
 
     queue.offset = endOffset;
     break;

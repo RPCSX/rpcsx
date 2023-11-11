@@ -3,6 +3,8 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
+#include "orbis/thread/Thread.hpp"
+#include "orbis/thread/Process.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
 #include <bit>
@@ -908,7 +910,12 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     }
   }
 
-  rx::bridge.sendMemoryProtect(address, len, prot);
+  if (auto thr = orbis::g_currentThread) {
+    std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address, address + len, thr->tproc->pid);
+    rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
+  }
   return result;
 }
 
@@ -938,7 +945,11 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
   std::lock_guard lock(g_mtx);
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
       (address & kBlockMask) >> kPageShift, pages, ~0);
-  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, 0);
+  if (auto thr = orbis::g_currentThread) {
+    rx::bridge.sendMemoryProtect(thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size, 0);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
+  }
   return utils::unmap(addr, size);
 }
 
@@ -970,8 +981,12 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
       (address & kBlockMask) >> kPageShift, pages,
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
 
-  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size,
-                               prot);
+  if (auto thr = orbis::g_currentThread) {
+    rx::bridge.sendMemoryProtect(thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size,
+                                 prot);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
+  }
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
 }
 

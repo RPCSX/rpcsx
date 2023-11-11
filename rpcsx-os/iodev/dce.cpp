@@ -5,6 +5,8 @@
 #include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedMutex.hpp"
+#include "orbis/thread/Thread.hpp"
+#include "orbis/thread/Process.hpp"
 #include "vm.hpp"
 #include <cstdio>
 #include <cstring>
@@ -258,7 +260,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     //                 args->displayBufferIndex, args->flipMode, args->flipArg,
     //                 args->arg5, args->arg6, args->arg7, args->arg8);
 
-    rx::bridge.sendFlip(args->displayBufferIndex,
+    rx::bridge.sendFlip(thread->tproc->pid, args->displayBufferIndex,
                         /*args->flipMode,*/ args->flipArg);
     return {};
   }
