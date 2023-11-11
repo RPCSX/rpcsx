@@ -147,18 +147,25 @@ struct BridgePusher {
         header->flags | static_cast<std::uint64_t>(BridgeFlags::VmConfigured);
   }
 
-  void sendMemoryProtect(std::uint32_t pid, std::uint64_t address, std::uint64_t size,
-                         std::uint32_t prot) {
-    sendCommand(CommandId::ProtectMemory, {pid, address, size, prot});
+  void sendMemoryProtect(std::uint32_t pid, std::uint64_t address,
+                         std::uint64_t size, std::uint32_t prot) {
+    if (pid == 50001) {
+      sendCommand(CommandId::ProtectMemory, {pid, address, size, prot});
+    }
   }
 
-  void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue, std::uint64_t address,
-                         std::uint64_t size) {
-    sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
+  void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue,
+                         std::uint64_t address, std::uint64_t size) {
+    if (pid == 50001) {
+      sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
+    }
   }
 
-  void sendFlip(std::uint32_t pid, std::uint32_t bufferIndex, std::uint64_t arg) {
-    sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
+  void sendFlip(std::uint32_t pid, std::uint32_t bufferIndex,
+                std::uint64_t arg) {
+    if (pid == 50001) {
+      sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
+    }
   }
 
   void wait() {
