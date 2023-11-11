@@ -927,8 +927,33 @@ orbis::SysResult orbis::sys_workaround8849(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_is_development_mode(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_get_self_auth_info(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_get_self_auth_info(Thread *thread,
+                                               ptr<const char> path,
+                                               ptr<AuthInfo> result) {
+  ORBIS_LOG_ERROR(__FUNCTION__, path, result);
+  thread->where();
+
+  return uwrite(
+      result, {
+                  .unk0 = 0x3100000000000001,
+                  .caps =
+                      {
+                          ~0ull, ~0ull, ~0ull, ~0ull,
+                          // 0x2000038000000000,
+                          // 0x000000000000FF00,
+                          // 0x0000000000000000,
+                          // 0x0000000000000000,
+                      },
+                  .attrs =
+                      {
+                          0x4000400040000000,
+                          0x4000000000000000,
+                          0x0080000000000004, // lower byte is application type
+                          0xF0000000FFFF4000,
+                      },
+              });
+
+  return {};
 }
 orbis::SysResult
 orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,

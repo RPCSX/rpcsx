@@ -706,7 +706,8 @@ SysResult sys_rdup(Thread *thread, sint a, sint b);
 SysResult sys_dl_get_metadata(Thread *thread /* TODO */);
 SysResult sys_workaround8849(Thread *thread /* TODO */);
 SysResult sys_is_development_mode(Thread *thread /* TODO */);
-SysResult sys_get_self_auth_info(Thread *thread /* TODO */);
+SysResult sys_get_self_auth_info(Thread *thread, ptr<const char> path,
+                                 ptr<AuthInfo> result);
 SysResult sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
                                  ptr<struct Unk> unk,
                                  ptr<ModuleInfoEx> destModuleInfoEx);
@@ -729,7 +730,8 @@ SysResult sys_get_gpo(Thread *thread /* TODO */);
 SysResult sys_get_vm_map_timestamp(Thread *thread /* TODO */);
 SysResult sys_opmc_set_hw(Thread *thread /* TODO */);
 SysResult sys_opmc_get_hw(Thread *thread /* TODO */);
-SysResult sys_get_cpu_usage_all(Thread *thread, uint32_t unk, ptr<uint32_t> result);
+SysResult sys_get_cpu_usage_all(Thread *thread, uint32_t unk,
+                                ptr<uint32_t> result);
 SysResult sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
                         sint memoryType, sint prot, sint flags,
                         off_t directMemoryStart);
