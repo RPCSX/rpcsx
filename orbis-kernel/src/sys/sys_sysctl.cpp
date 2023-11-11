@@ -125,6 +125,15 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
       // 1 - 14 - 35 - pid
 
+      Process *process = thread->tproc;
+      if (process->pid != name[3] && name[3] != -1) {
+        process = g_context.findProcessById(name[3]);
+        if (process == nullptr) {
+          ORBIS_LOG_ERROR("appinfo process not found", name[3], thread->tproc->pid);
+          return ErrorCode::SRCH;
+        }
+      }
+
       if (old) {
         size_t oldlen;
         if (auto errc = uread(oldlen, oldlenp); errc != ErrorCode{}) {
@@ -135,7 +144,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        if (auto errc = uwrite((ptr<AppInfo>)old, thread->tproc->appInfo);
+        if (auto errc = uwrite((ptr<AppInfo>)old, process->appInfo);
             errc != ErrorCode{}) {
           return errc;
         }
@@ -150,16 +159,18 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        auto result = uread(thread->tproc->appInfo, (ptr<AppInfo>)new_);
+        auto result = uread(process->appInfo, (ptr<AppInfo>)new_);
         if (result == ErrorCode{}) {
-          auto &appInfo = thread->tproc->appInfo;
+          auto &appInfo = process->appInfo;
           ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
                           appInfo.unk1, appInfo.appType, appInfo.titleId,
                           appInfo.unk2, appInfo.unk3, appInfo.unk5, appInfo.unk6,
                           appInfo.unk7, appInfo.unk8);
 
           // HACK
-          appInfo.unk4 = orbis::slong(0x80000000'00000000);
+          if (appInfo.appId == 0 && appInfo.unk4 == 0) {
+            appInfo.unk4 = orbis::slong(0x80000000'00000000);
+          }
         }
 
         return result;
