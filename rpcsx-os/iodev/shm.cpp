@@ -11,13 +11,11 @@ struct ShmDevice : IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
+  orbis::ErrorCode unlink(const char *path, bool recursive,
+                          orbis::Thread *thread) override;
 };
 
-orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
-                                 const char *path, std::uint32_t flags,
-                                 std::uint32_t mode, orbis::Thread *thread) {
-  ORBIS_LOG_WARNING("shm_open", path, flags, mode);
-
+static std::string realShmPath(const char *path) {
   std::string name = "/rpcsx-";
   if (path[0] == '/') {
     name += path + 1;
@@ -25,10 +23,19 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
     name += path;
   }
 
-  for (auto pos = name.find('/', 1); pos != std::string::npos; pos = name.find('/', pos + 1)) {
+  for (auto pos = name.find('/', 1); pos != std::string::npos;
+       pos = name.find('/', pos + 1)) {
     name[pos] = '$';
   }
 
+  return name;
+}
+
+orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
+                                 const char *path, std::uint32_t flags,
+                                 std::uint32_t mode, orbis::Thread *thread) {
+  ORBIS_LOG_WARNING("shm_open", path, flags, mode);
+  auto name = realShmPath(path);
   auto realFlags = O_RDWR; // TODO
 
   std::size_t size = 0;
@@ -49,4 +56,15 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
   return {};
 }
 
+orbis::ErrorCode ShmDevice::unlink(const char *path, bool recursive,
+                          orbis::Thread *thread) {
+  ORBIS_LOG_WARNING("shm_unlink", path);
+  auto name = realShmPath(path);
+
+  if (shm_unlink(name.c_str())) {
+    return convertErrno();
+  }
+
+  return{};
+}
 IoDevice *createShmDevice() { return orbis::knew<ShmDevice>(); }
