@@ -1021,6 +1021,9 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiSendConnectResult(thread, result, kid, params, paramsSz);
   case 0x232:
     return sysIpmiSessionRespondSync(thread, result, kid, params, paramsSz);
+  case 0x252:
+    // TODO: try get message
+    return uwrite<uint>(result, 0x80020023);
   case 0x302:
     return sysIpmiSessionGetClientPid(thread, result, kid, params, paramsSz);
   case 0x320:
@@ -1033,7 +1036,9 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiServerGetName(thread, result, kid, params, paramsSz);
   }
 
-  return ErrorCode::INVAL;
+  ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);
+  thread->where();
+  return uwrite(result, 0u);
 }
 orbis::SysResult orbis::sys_get_gpo(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
