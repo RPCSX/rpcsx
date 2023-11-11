@@ -1027,7 +1027,8 @@ orbis::SysResult orbis::sys_suspend_system(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
                                          ptr<uint> result, ptr<void> params,
                                          uint64_t paramsSz) {
-  ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);
+  // ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);
+
   switch (op) {
   case 0:
     return sysIpmiCreateServer(thread, result, params, paramsSz);
@@ -1046,7 +1047,7 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
   case 0x201:
     return sysIpmiServerReceivePacket(thread, result, kid, params, paramsSz);
   case 0x212:
-    return sysIpmiSessionConnectResult(thread, result, kid, params, paramsSz);
+    return sysIpmiSendConnectResult(thread, result, kid, params, paramsSz);
   case 0x232:
     return sysIpmiSessionRespondSync(thread, result, kid, params, paramsSz);
   case 0x302:
@@ -1055,6 +1056,8 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiClientInvokeSyncMethod(thread, result, kid, params, paramsSz);
   case 0x400:
     return sysIpmiClientConnect(thread, result, kid, params, paramsSz);
+  case 0x468:
+    return sysIpmiSessionGetUserData(thread, result, kid, params, paramsSz);
   case 0x46a:
     return sysIpmiServerGetName(thread, result, kid, params, paramsSz);
   }

@@ -55,6 +55,7 @@ struct IpmiClient : RcBase {
   ptr<void> userData;
   Ref<IpmiSession> session;
   shared_mutex mutex;
+  shared_cv sessionCv;
   sint pid;
 
   explicit IpmiClient(kstring name) : name(std::move(name)) {}
@@ -74,7 +75,10 @@ struct IpmiSession : RcBase {
   shared_cv responseCv;
   kdeque<MessageResponse> messageResponses;
   EventFlag evf{0, 0};
-  bool connection = false; // TODO: implement more states
+  shared_cv connectCv;
+  bool expectedOutput = false; // TODO: verify
+  bool connected = false; // TODO: implement more states
+  sint connectionStatus{0};
 };
 
 struct IpmiCreateServerConfig {
@@ -116,7 +120,7 @@ SysResult sysIpmiDestroySession(Thread *thread, ptr<uint> result, uint kid,
 
 SysResult sysIpmiServerReceivePacket(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
-SysResult sysIpmiSessionConnectResult(Thread *thread, ptr<uint> result,
+SysResult sysIpmiSendConnectResult(Thread *thread, ptr<uint> result,
                                       uint kid, ptr<void> params,
                                       uint64_t paramsSz);
 SysResult sysIpmiSessionRespondSync(Thread *thread, ptr<uint> result, uint kid,
@@ -128,6 +132,8 @@ SysResult sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result,
                                         uint64_t paramsSz);
 SysResult sysIpmiClientConnect(Thread *thread, ptr<uint> result, uint kid,
                                ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiSessionGetUserData(Thread *thread, ptr<uint> result, uint kid,
+                                    ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiServerGetName(Thread *thread, ptr<uint> result, uint kid,
                                ptr<void> params, uint64_t paramsSz);
 } // namespace orbis
