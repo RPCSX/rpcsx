@@ -124,6 +124,13 @@ public:
   bool operator==(std::nullptr_t) const { return m_ref == nullptr; }
   auto operator<=>(const T *other) const { return m_ref <=> other; }
   auto operator<=>(const Ref &other) const = default;
+
+  template <typename OtherT> Ref<OtherT> cast() {
+    return Ref<OtherT>(dynamic_cast<OtherT *>(m_ref));
+  }
+  template <typename OtherT> Ref<OtherT> staticCast() {
+    return Ref<OtherT>(static_cast<OtherT *>(m_ref));
+  }
 };
 
 // template <WithRc T, typename... ArgsT>
