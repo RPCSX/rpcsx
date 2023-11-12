@@ -55,9 +55,7 @@ public:
   void deleteProcess(Process *proc);
   Process *findProcessById(pid_t pid) const;
 
-  utils::LinkedNode<Process> *getProcessList() {
-    return m_processes;
-  }
+  utils::LinkedNode<Process> *getProcessList() { return m_processes; }
 
   long allocatePid() {
     std::lock_guard lock(m_thread_id_mtx);
@@ -143,6 +141,13 @@ public:
     return {};
   }
 
+  std::tuple<utils::kmap<utils::kstring, char[128]> &,
+             std::unique_lock<shared_mutex>>
+  getKernelEnv() {
+    std::unique_lock lock(m_kenv_mtx);
+    return {m_kenv, std::move(lock)};
+  }
+
   enum {
     c_golden_ratio_prime = 2654404609u,
     c_umtx_chains = 512,
@@ -193,6 +198,9 @@ private:
 
   shared_mutex mIpmiServerMtx;
   utils::kmap<utils::kstring, Ref<IpmiServer>> mIpmiServers;
+
+  shared_mutex m_kenv_mtx;
+  utils::kmap<utils::kstring, char[128]> m_kenv; // max size: 127 + '\0'
 };
 
 extern KernelContext &g_context;
