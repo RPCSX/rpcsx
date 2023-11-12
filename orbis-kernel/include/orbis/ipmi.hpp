@@ -7,6 +7,7 @@
 #include "orbis/utils/SharedMutex.hpp"
 #include "utils/Rc.hpp"
 #include <list>
+#include <span>
 
 namespace orbis {
 struct IpmiSession;
