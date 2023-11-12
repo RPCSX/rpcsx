@@ -1,6 +1,7 @@
 #include "stat.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
+#include <filesystem>
 
 orbis::SysResult orbis::sys_sync(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_quotactl(Thread *thread, ptr<char> path, sint cmd,
@@ -23,14 +24,17 @@ orbis::SysResult orbis::sys_fchdir(Thread *thread, sint fd) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_chdir(Thread *thread, ptr<char> path) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__, path);
+  thread->tproc->cwd = std::filesystem::path(path).lexically_normal().string();
+  return {};
 }
 orbis::SysResult orbis::sys_chroot(Thread *thread, ptr<char> path) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__, path);
+  thread->tproc->root = path;
+  return {};
 }
 orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
                                  sint mode) {
-  ORBIS_LOG_NOTICE("sys_open", path, flags, mode);
   if (auto open = thread->tproc->ops->open) {
     Ref<File> file;
     auto result = open(thread, path, flags, mode, &file);
@@ -38,7 +42,9 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
       return result;
     }
 
-    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
+    auto fd = thread->tproc->fileDescriptors.insert(file);
+    thread->retval[0] = fd;
+    // ORBIS_LOG_NOTICE(__FUNCTION__, path, flags, mode, fd);
     return {};
   }
 
@@ -83,6 +89,9 @@ orbis::SysResult orbis::sys_undelete(Thread *thread, ptr<char> path) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_unlink(Thread *thread, ptr<char> path) {
+  if (auto unlink = thread->tproc->ops->unlink) {
+    return unlink(thread, path);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_unlinkat(Thread *thread, sint fd, ptr<char> path,
@@ -137,6 +146,11 @@ orbis::SysResult orbis::sys_freebsd6_lseek(Thread *thread, sint fd, sint,
   return sys_lseek(thread, fd, offset, whence);
 }
 orbis::SysResult orbis::sys_access(Thread *thread, ptr<char> path, sint flags) {
+  if (auto open = thread->tproc->ops->open) {
+    Ref<File> file;
+    return open(thread, path, flags, 0, &file);
+  }
+
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_faccessat(Thread *thread, sint fd, ptr<char> path,
@@ -199,7 +213,7 @@ orbis::SysResult orbis::sys_lpathconf(Thread *thread, ptr<char> path,
 }
 orbis::SysResult orbis::sys_readlink(Thread *thread, ptr<char> path,
                                      ptr<char> buf, size_t count) {
-  return ErrorCode::NOSYS;
+  return ErrorCode::INVAL;
 }
 orbis::SysResult orbis::sys_readlinkat(Thread *thread, sint fd, ptr<char> path,
                                        ptr<char> buf, size_t bufsize) {
@@ -285,6 +299,9 @@ orbis::SysResult orbis::sys_freebsd6_truncate(Thread *thread, ptr<char> path,
 orbis::SysResult orbis::sys_fsync(Thread *thread, sint fd) { return {}; }
 orbis::SysResult orbis::sys_rename(Thread *thread, ptr<char> from,
                                    ptr<char> to) {
+  if (auto rename = thread->tproc->ops->rename) {
+    return rename(thread, from, to);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_renameat(Thread *thread, sint oldfd, ptr<char> old,
@@ -292,13 +309,32 @@ orbis::SysResult orbis::sys_renameat(Thread *thread, sint oldfd, ptr<char> old,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_mkdir(Thread *thread, ptr<char> path, sint mode) {
+  if (auto mkdir = thread->tproc->ops->mkdir) {
+    return mkdir(thread, path, mode);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_mkdirat(Thread *thread, sint fd, ptr<char> path,
                                     mode_t mode) {
-  return ErrorCode::NOSYS;
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  auto mkdir = file->ops->mkdir;
+
+  if (mkdir == nullptr) {
+    return ErrorCode::NOTSUP;
+  }
+  std::lock_guard lock(file->mtx);
+
+  return mkdir(file.get(), path, mode);
 }
+
 orbis::SysResult orbis::sys_rmdir(Thread *thread, ptr<char> path) {
+  if (auto rmdir = thread->tproc->ops->rmdir) {
+    return rmdir(thread, path);
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_getdirentries(Thread *thread, sint fd,
@@ -339,7 +375,8 @@ orbis::SysResult orbis::sys_umask(Thread *thread, sint newmask) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_revoke(Thread *thread, ptr<char> path) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_WARNING(__FUNCTION__);
+  return {};
 }
 orbis::SysResult orbis::sys_lgetfh(Thread *thread, ptr<char> fname,
                                    ptr<struct fhandle> fhp) {

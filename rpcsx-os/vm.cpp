@@ -1,6 +1,12 @@
 #include "vm.hpp"
 #include "align.hpp"
 #include "bridge.hpp"
+#include "io-device.hpp"
+#include "iodev/dmem.hpp"
+#include "orbis/thread/Thread.hpp"
+#include "orbis/thread/Process.hpp"
+#include "orbis/utils/Logs.hpp"
+#include "orbis/utils/Rc.hpp"
 #include <bit>
 #include <cassert>
 #include <cinttypes>
@@ -11,6 +17,8 @@
 #include <mutex>
 #include <sys/mman.h>
 #include <unistd.h>
+
+#include <rx/MemoryTable.hpp>
 
 namespace utils {
 namespace {
@@ -604,8 +612,16 @@ struct Block {
 
 static Block gBlocks[kBlockCount];
 
-static std::map<std::uint64_t, rx::vm::VirtualQueryInfo, std::greater<>>
-    gVirtualAllocations;
+struct MapInfo {
+  orbis::Ref<IoDevice> device;
+  std::uint64_t offset;
+  std::uint32_t flags;
+  char name[32];
+
+  bool operator==(const MapInfo &) const = default;
+};
+
+static rx::MemoryTableWithPayload<MapInfo> gMapInfo;
 
 static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   auto blockIndex = startAddress >> kBlockShift;
@@ -618,6 +634,62 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
                     rx::vm::kPageShift;
 
   gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated);
+}
+
+void rx::vm::fork(std::uint64_t pid) {
+  gMemoryShm = ::shm_open(("/rpcsx-os-memory-" + std::to_string(pid)).c_str(),
+                          O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+
+  if (gMemoryShm == -1) {
+    std::fprintf(stderr, "Memory: failed to open /rpcsx-os-memory\n");
+    std::abort();
+  }
+
+  if (::ftruncate64(gMemoryShm, kMemorySize) < 0) {
+    std::fprintf(stderr, "Memory: failed to allocate /rpcsx-os-memory\n");
+    std::abort();
+  }
+
+  for (auto address = kMinAddress; address < kMaxAddress;
+       address += kPageSize) {
+    auto prot = gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
+        (address & kBlockMask) >> rx::vm::kPageShift);
+
+    if (prot & kMapProtCpuAll) {
+      auto mapping = utils::map(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
+                                gMemoryShm, address - kMinAddress);
+      assert(mapping != MAP_FAILED);
+
+      utils::protect(reinterpret_cast<void *>(address), kPageSize, PROT_READ);
+      std::memcpy(mapping, reinterpret_cast<void *>(address), kPageSize);
+      utils::unmap(mapping, kPageSize);
+      utils::unmap(reinterpret_cast<void *>(address), kPageSize);
+
+      mapping = utils::map(reinterpret_cast<void *>(address), kPageSize,
+                           prot & kMapProtCpuAll, MAP_FIXED | MAP_SHARED,
+                           gMemoryShm, address - kMinAddress);
+      assert(mapping != MAP_FAILED);
+    }
+
+    // TODO: copy gpu memory?
+  }
+}
+
+void rx::vm::reset() {
+  std::memset(gBlocks, 0, sizeof(gBlocks));
+
+  utils::unmap(reinterpret_cast<void *>(kMinAddress),
+               kMaxAddress - kMinAddress);
+  if (::ftruncate64(gMemoryShm, 0) < 0) {
+    std::abort();
+  }
+  if (::ftruncate64(gMemoryShm, kMemorySize) < 0) {
+    std::abort();
+  }
+
+  reserve(0, kMinAddress);
+  utils::reserve(reinterpret_cast<void *>(kMinAddress),
+                 kMaxAddress - kMinAddress);
 }
 
 void rx::vm::initialize() {
@@ -660,23 +732,9 @@ constexpr auto kFlexibleMemorySize = 448ull * 1024 * 1024;
 constexpr auto kMainDirectMemorySize =
     kPhysicalMemorySize - kFlexibleMemorySize;
 
-/*
-std::uint64_t allocate(std::uint64_t phyAddress, std::uint64_t size,
-                       std::uint64_t align, std::int32_t memType,
-                       std::uint32_t blockFlags) {
-  // TODO
-  return 0;
-}
-
-bool setMemoryRangeName(std::uint64_t phyAddress, std::uint64_t size,
-                        const char *name) {
-  // TODO
-  return false;
-}
-*/
-
 void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
-                  std::int32_t flags, std::int32_t internalFlags) {
+                  std::int32_t flags, std::int32_t internalFlags,
+                  IoDevice *device, std::uint64_t offset) {
   std::fprintf(stderr,
                "rx::vm::map(addr = %p, len = %" PRIu64
                ", prot = %s, flags = %s)\n",
@@ -821,14 +879,17 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     std::fprintf(stderr, "   unhandled flags 0x%" PRIx32 "\n", flags);
   }
 
-  auto &allocInfo = gVirtualAllocations[address];
-  allocInfo.start = address;
-  allocInfo.end = address + len;
-  // allocInfo.offset = offset; // TODO
-  allocInfo.protection = prot;
-  allocInfo.memoryType = 3;                 // TODO
-  allocInfo.flags = kBlockFlagDirectMemory; // TODO
-  allocInfo.name[0] = '\0';                 // TODO
+  {
+    MapInfo info;
+    if (auto it = gMapInfo.queryArea(address); it != gMapInfo.end()) {
+      info = (*it).payload;
+    }
+    info.device = device;
+    info.flags = flags;
+    info.offset = offset;
+
+    gMapInfo.map(address, address + len, info);
+  }
 
   if (internalFlags & kMapInternalReserveOnly) {
     return reinterpret_cast<void *>(address);
@@ -849,7 +910,12 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     }
   }
 
-  rx::bridge.sendMemoryProtect(address, len, prot);
+  if (auto thr = orbis::g_currentThread) {
+    std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address, address + len, thr->tproc->pid);
+    rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
+  }
   return result;
 }
 
@@ -879,7 +945,11 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
   std::lock_guard lock(g_mtx);
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
       (address & kBlockMask) >> kPageShift, pages, ~0);
-  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size, 0);
+  if (auto thr = orbis::g_currentThread) {
+    rx::bridge.sendMemoryProtect(thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size, 0);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
+  }
   return utils::unmap(addr, size);
 }
 
@@ -911,8 +981,12 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
       (address & kBlockMask) >> kPageShift, pages,
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
 
-  rx::bridge.sendMemoryProtect(reinterpret_cast<std::uint64_t>(addr), size,
-                               prot);
+  if (auto thr = orbis::g_currentThread) {
+    rx::bridge.sendMemoryProtect(thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size,
+                                 prot);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
+  }
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
 }
 
@@ -988,24 +1062,69 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
   std::lock_guard lock(g_mtx);
 
   auto address = reinterpret_cast<std::uint64_t>(addr);
-  auto it = gVirtualAllocations.lower_bound(address);
+  auto it = gMapInfo.lowerBound(address);
 
-  if (it == gVirtualAllocations.end()) {
+  if (it == gMapInfo.end()) {
     return false;
   }
 
+  auto queryInfo = *it;
+
   if ((flags & 1) == 0) {
-    if (it->second.end <= address) {
+    if (queryInfo.endAddress <= address) {
       return false;
     }
   } else {
-    if (it->second.start > address || it->second.end <= address) {
+    if (queryInfo.beginAddress > address || queryInfo.endAddress <= address) {
       return false;
     }
   }
 
-  *info = it->second;
+  std::int32_t memoryType = 0;
+  std::uint32_t blockFlags = 0;
+  if (queryInfo.payload.device != nullptr) {
+    if (auto dmem =
+            dynamic_cast<DmemDevice *>(queryInfo.payload.device.get())) {
+      auto dmemIt = dmem->allocations.queryArea(queryInfo.payload.offset);
+      if (dmemIt == dmem->allocations.end()) {
+        return false;
+      }
+      auto alloc = *dmemIt;
+      memoryType = alloc.payload.memoryType;
+      blockFlags = kBlockFlagDirectMemory;
+    }
+    // TODO
+  }
+
+  std::int32_t prot = getPageProtectionImpl(queryInfo.beginAddress);
+
+  *info = {
+      .start = queryInfo.beginAddress,
+      .end = queryInfo.endAddress,
+      .protection = prot,
+      .memoryType = memoryType,
+      .flags = blockFlags,
+  };
+
+  ORBIS_LOG_ERROR("virtualQuery", addr, flags, info->start, info->end,
+                  info->protection, info->memoryType, info->flags);
+
+  std::memcpy(info->name, queryInfo.payload.name, sizeof(info->name));
   return true;
+}
+
+void rx::vm::setName(std::uint64_t start, std::uint64_t size,
+                     const char *name) {
+  std::lock_guard lock(g_mtx);
+
+  MapInfo info;
+  if (auto it = gMapInfo.queryArea(start); it != gMapInfo.end()) {
+    info = (*it).payload;
+  }
+
+  std::strncpy(info.name, name, sizeof(info.name));
+
+  gMapInfo.map(start, size, info);
 }
 
 void rx::vm::printHostStats() {

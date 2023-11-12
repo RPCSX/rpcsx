@@ -1243,20 +1243,77 @@ void convertSop2(Fragment &fragment, Sop2 inst) {
   };
 
   switch (inst.op) {
+  case Sop2::Op::S_ADDC_U32: {
+    auto src0 = fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value;
+    auto src1 = fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value;
+    auto uintT = fragment.context->getType(TypeId::UInt32);
+    auto scc = fragment.getScc();
+
+    auto src0Value = fragment.context->findUint32Value(src0);
+    auto src1Value = fragment.context->findUint32Value(src1);
+
+    if (src0Value && src1Value &&
+        (scc == context->getTrue() || scc == context->getFalse())) {
+      std::uint64_t result = *src0Value;
+      result += *src1Value;
+      result += (scc == context->getTrue() ? 1 : 0);
+
+      std::fprintf(stderr, "saddc result: %lx\n", result);
+
+      fragment.setScalarOperand(inst.sdst,
+                                {uintT, fragment.context->getUInt32(result)});
+      fragment.setScc(
+          {uintT, fragment.context->getUInt32(result > 0xffff'ffff ? 1 : 0)});
+    } else {
+      auto resultStruct =
+          fragment.context->getStructType(std::array{uintT, uintT});
+      auto tmpResult =
+          fragment.builder.createIAddCarry(resultStruct, src0, src1);
+      auto tmpVal =
+          fragment.builder.createCompositeExtract(uintT, tmpResult, {{0u}});
+      auto tmpCarry =
+          fragment.builder.createCompositeExtract(uintT, tmpResult, {{1u}});
+      auto result = fragment.builder.createIAddCarry(resultStruct, tmpVal, scc);
+
+      auto value =
+          fragment.builder.createCompositeExtract(uintT, result, {{0u}});
+      auto carry =
+          fragment.builder.createCompositeExtract(uintT, result, {{1u}});
+
+      fragment.setScalarOperand(inst.sdst, {uintT, value});
+      fragment.setScc({uintT, builder.createBitwiseOr(uintT, tmpCarry, carry)});
+    }
+    break;
+  }
   case Sop2::Op::S_ADD_U32: {
     auto src0 = fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32).value;
     auto src1 = fragment.getScalarOperand(inst.ssrc1, TypeId::UInt32).value;
     auto uintT = fragment.context->getType(TypeId::UInt32);
-    auto resultStruct =
-        fragment.context->getStructType(std::array{uintT, uintT});
-    auto result = fragment.builder.createIAddCarry(resultStruct, src0, src1);
-    fragment.setScalarOperand(
-        inst.sdst,
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, {{static_cast<std::uint32_t>(0)}})});
-    fragment.setScc(
-        {uintT, fragment.builder.createCompositeExtract(
-                    uintT, result, {{static_cast<std::uint32_t>(1)}})});
+
+    auto src0Value = fragment.context->findUint32Value(src0);
+    auto src1Value = fragment.context->findUint32Value(src1);
+    if (src0Value && src1Value) {
+      std::uint64_t result = *src0Value;
+      result += *src1Value;
+
+      std::fprintf(stderr, "sadd result: %lx\n", result);
+
+      fragment.setScalarOperand(inst.sdst,
+                                {uintT, fragment.context->getUInt32(result)});
+      fragment.setScc(
+          {uintT, fragment.context->getUInt32(result > 0xffff'ffff ? 1 : 0)});
+    } else {
+      auto resultStruct =
+          fragment.context->getStructType(std::array{uintT, uintT});
+      auto result = fragment.builder.createIAddCarry(resultStruct, src0, src1);
+      fragment.setScalarOperand(
+          inst.sdst,
+          {uintT, fragment.builder.createCompositeExtract(
+                      uintT, result, {{static_cast<std::uint32_t>(0)}})});
+      fragment.setScc(
+          {uintT, fragment.builder.createCompositeExtract(
+                      uintT, result, {{static_cast<std::uint32_t>(1)}})});
+    }
     break;
   }
   case Sop2::Op::S_ADD_I32: {
@@ -3407,6 +3464,7 @@ void convertMtbuf(Fragment &fragment, Mtbuf inst) {
                                      *optVBuffer2Value, *optVBuffer3Value};
 
       auto vbuffer = reinterpret_cast<GnmVBuffer *>(vBufferData);
+      std::fprintf(stderr, "address0: %lx\n", vbuffer->getAddress());
       auto base = spirv::cast<spirv::UIntValue>(
           fragment.getScalarOperand(inst.soffset, TypeId::UInt32).value);
 
@@ -5052,6 +5110,17 @@ void convertSop1(Fragment &fragment, Sop1 inst) {
     }
     return;
 
+  case Sop1::Op::S_GETPC_B64: {
+    auto pc = fragment.registers->pc;
+    std::fprintf(stderr, "getpc result: %lx\n", pc);
+    fragment.setScalarOperand(inst.sdst, {fragment.context->getUInt32Type(),
+                                          fragment.context->getUInt32(pc)});
+    fragment.setScalarOperand(inst.sdst + 1,
+                              {fragment.context->getUInt32Type(),
+                               fragment.context->getUInt32(pc >> 32)});
+    return;
+  }
+
   case Sop1::Op::S_SWAPPC_B64: {
     if (auto ssrc0 = fragment.getScalarOperand(inst.ssrc0, TypeId::UInt32),
         ssrc1 = fragment.getScalarOperand(inst.ssrc0 + 1, TypeId::UInt32);
@@ -5769,8 +5838,12 @@ void Fragment::setOperand(RegisterId id, Value value) {
     auto boolT = context->getBoolType();
     if (value.type != boolT) {
       if (value.type == context->getUInt32Type()) {
-        value.value =
-            builder.createINotEqual(boolT, value.value, context->getUInt32(0));
+        if (auto imm = context->findUint32Value(value.value)) {
+          value.value = *imm ? context->getTrue() : context->getFalse();
+        } else {
+          value.value = builder.createINotEqual(boolT, value.value,
+                                                context->getUInt32(0));
+        }
       } else if (value.type == context->getSint32Type()) {
         value.value =
             builder.createINotEqual(boolT, value.value, context->getSInt32(0));

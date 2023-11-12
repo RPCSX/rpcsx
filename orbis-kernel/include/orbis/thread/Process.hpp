@@ -7,6 +7,8 @@
 #include "../thread/Thread.hpp"
 #include "../thread/types.hpp"
 #include "ProcessState.hpp"
+#include "orbis/AppInfo.hpp"
+#include "orbis/AuthInfo.hpp"
 #include "orbis/file.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
@@ -53,13 +55,20 @@ struct Process final {
   ptr<void> processParam = nullptr;
   uint64_t processParamSize = 0;
   const ProcessOps *ops = nullptr;
+  AppInfo appInfo{};
+  AuthInfo authInfo{};
+  kstring cwd;
+  kstring root = "/";
+  sint memoryContainer{1};
+  sint budgetId{1};
+  bool isInSandbox = false;
 
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
 
   utils::RcIdMap<EventFlag, sint, 4097, 1> evfMap;
   utils::RcIdMap<Semaphore, sint, 4097, 1> semMap;
-  utils::RcIdMap<IpmiClient, sint, 4097, 1> ipmiClientMap;
+  utils::RcIdMap<RcBase, sint, 4097, 1> ipmiMap;
   utils::RcIdMap<Module, ModuleHandle> modulesMap;
   utils::OwningIdMap<Thread, lwpid_t> threadsMap;
   utils::RcIdMap<orbis::File, sint> fileDescriptors;

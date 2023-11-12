@@ -6,8 +6,10 @@ add_library(obj.orbis-utils-ipc OBJECT
 )
 add_library(obj.orbis-kernel OBJECT
   src/module.cpp
+  src/pipe.cpp
   src/sysvec.cpp
   src/evf.cpp
+  src/ipmi.cpp
   src/KernelContext.cpp
   src/umtx.cpp
   src/sys/sys_acct.cpp
@@ -68,7 +70,7 @@ add_library(obj.orbis-kernel OBJECT
   src/utils/Logs.cpp
 )
 
-target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config $<TARGET_OBJECTS:obj.orbis-utils-ipc>)
+target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config $<TARGET_OBJECTS:obj.orbis-utils-ipc> sox)
 
 target_include_directories(obj.orbis-kernel
     PUBLIC

@@ -79,12 +79,10 @@ ErrorCode umtx_cv_wait(Thread *thread, ptr<ucond> cv, ptr<umutex> m,
                        std::uint64_t ut, ulong wflags);
 ErrorCode umtx_cv_signal(Thread *thread, ptr<ucond> cv);
 ErrorCode umtx_cv_broadcast(Thread *thread, ptr<ucond> cv);
-ErrorCode umtx_rw_rdlock(Thread *thread, ptr<void> obj, std::int64_t val,
-                         ptr<void> uaddr1, ptr<void> uaddr2);
-ErrorCode umtx_rw_wrlock(Thread *thread, ptr<void> obj, std::int64_t val,
-                         ptr<void> uaddr1, ptr<void> uaddr2);
-ErrorCode umtx_rw_unlock(Thread *thread, ptr<void> obj, std::int64_t val,
-                         ptr<void> uaddr1, ptr<void> uaddr2);
+ErrorCode umtx_rw_rdlock(Thread *thread, ptr<urwlock> rwlock, slong fflag,
+                         ulong ut);
+ErrorCode umtx_rw_wrlock(Thread *thread, ptr<urwlock> rwlock, ulong ut);
+ErrorCode umtx_rw_unlock(Thread *thread, ptr<urwlock> rwlock);
 ErrorCode umtx_wake_private(Thread *thread, ptr<void> uaddr, sint n_wake);
 ErrorCode umtx_wait_umutex(Thread *thread, ptr<umutex> m, std::uint64_t ut);
 ErrorCode umtx_wake_umutex(Thread *thread, ptr<umutex> m);

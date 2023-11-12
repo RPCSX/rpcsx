@@ -73,7 +73,7 @@ uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
   return {};
 }
 
-template <typename T> [[nodiscard]] ErrorCode uread(T &result, ptr<T> pointer) {
+template <typename T> [[nodiscard]] ErrorCode uread(T &result, ptr<const T> pointer) {
   return ureadRaw(&result, pointer, sizeof(T));
 }
 
@@ -90,7 +90,7 @@ template <typename T, typename U>
 }
 
 template <typename T>
-[[nodiscard]] ErrorCode uread(T *result, ptr<T> pointer, std::size_t count) {
+[[nodiscard]] ErrorCode uread(T *result, ptr<const T> pointer, std::size_t count) {
   return ureadRaw(&result, pointer, sizeof(T) * count);
 }
 

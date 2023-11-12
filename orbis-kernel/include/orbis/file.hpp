@@ -30,6 +30,8 @@ struct FileOps {
 
   ErrorCode (*stat)(File *file, Stat *sb, Thread *thread) = nullptr;
 
+  ErrorCode (*mkdir)(File *file, const char *path, std::int32_t mode) = nullptr;
+
   // TODO: chown
   // TODO: chmod
 

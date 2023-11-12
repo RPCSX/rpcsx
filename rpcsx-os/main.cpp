@@ -9,10 +9,12 @@
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <rx/Version.hpp>
 
 #include <atomic>
 #include <elf.h>
 #include <filesystem>
+#include <linux/prctl.h>
 #include <orbis/KernelContext.hpp>
 #include <orbis/module.hpp>
 #include <orbis/module/Module.hpp>
@@ -25,6 +27,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/mman.h>
+#include <sys/prctl.h>
 #include <ucontext.h>
 
 #include <csignal>
@@ -41,7 +44,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   auto signalAddress = reinterpret_cast<std::uintptr_t>(info->si_addr);
 
-  if (rx::thread::g_current != nullptr && sig == SIGSEGV &&
+  if (orbis::g_currentThread != nullptr && sig == SIGSEGV &&
       signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
     bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
@@ -103,7 +106,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
         std::abort();
       }
 
-      _writefsbase_u64(rx::thread::g_current->fsBase);
+      _writefsbase_u64(orbis::g_currentThread->fsBase);
       return;
     }
 
@@ -120,22 +123,22 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (sig != SIGINT) {
     char buf[128] = "";
     int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
-                       rx::thread::g_current ? "guest" : "host",
-                       rx::thread::g_current ? rx::thread::g_current->tid
-                                             : ::gettid(),
+                       orbis::g_currentThread ? "guest" : "host",
+                       orbis::g_currentThread ? orbis::g_currentThread->tid
+                                              : ::gettid(),
                        info->si_addr);
     write(2, buf, len);
 
     if (std::size_t printed =
-            rx::printAddressLocation(buf, sizeof(buf), rx::thread::g_current,
+            rx::printAddressLocation(buf, sizeof(buf), orbis::g_currentThread,
                                      (std::uint64_t)info->si_addr)) {
       printed += std::snprintf(buf + printed, sizeof(buf) - printed, "\n");
       write(2, buf, printed);
     }
 
-    if (rx::thread::g_current) {
+    if (orbis::g_currentThread) {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
-                          rx::thread::g_current, 2);
+                          orbis::g_currentThread, 2);
     } else {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
     }
@@ -159,10 +162,14 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   }
 }
 
-static void setupSigHandlers() {
-  stack_t ss;
+void setupSigHandlers() {
+  stack_t oss{};
+
+  // if (sigaltstack(nullptr, &oss) < 0 || oss.ss_size == 0) {
   auto sigStackSize = std::max<std::size_t>(
-      SIGSTKSZ, utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+      SIGSTKSZ, utils::alignUp(64 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+
+  stack_t ss{};
   ss.ss_sp = malloc(sigStackSize);
   if (ss.ss_sp == NULL) {
     perror("malloc");
@@ -170,12 +177,16 @@ static void setupSigHandlers() {
   }
 
   ss.ss_size = sigStackSize;
-  ss.ss_flags = 0;
+  ss.ss_flags = 1 << 31;
+
+  std::fprintf(stderr, "installing sp [%p, %p]\n", ss.ss_sp,
+               (char *)ss.ss_sp + ss.ss_size);
 
   if (sigaltstack(&ss, NULL) == -1) {
     perror("sigaltstack");
     exit(EXIT_FAILURE);
   }
+  // }
 
   struct sigaction act {};
   act.sa_sigaction = handle_signal;
@@ -239,7 +250,6 @@ struct StackWriter {
 };
 
 static bool g_traceSyscalls = false;
-static bool g_enableAudio = false;
 static const char *getSyscallName(orbis::Thread *thread, int sysno) {
   auto sysvec = thread->tproc->sysent;
 
@@ -251,7 +261,7 @@ static const char *getSyscallName(orbis::Thread *thread, int sysno) {
 }
 static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
                        int argsCount) {
-  if (true || !g_traceSyscalls) {
+  if (!g_traceSyscalls) {
     return;
   }
   flockfile(stderr);
@@ -305,47 +315,87 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   funlockfile(stderr);
 }
 
-static int ps4Exec(orbis::Thread *mainThread,
-                   orbis::utils::Ref<orbis::Module> executableModule,
-                   std::span<const char *> argv, std::span<const char *> envp) {
-  const auto stackEndAddress = 0x7'ffff'c000ull;
-  const auto stackSize = 0x40000 * 16;
-  auto stackStartAddress = stackEndAddress - stackSize;
-  mainThread->stackStart =
-      rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
-                  rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
-                  rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
-                      rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
-
-  mainThread->stackEnd =
-      reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
-
+static void ps4InitDev() {
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
-  rx::vfs::mount("/dev/dmem0", createDmemCharacterDevice(0));
-  rx::vfs::mount("/dev/dmem1", dmem1);
-  rx::vfs::mount("/dev/dmem2", createDmemCharacterDevice(2));
-  rx::vfs::mount("/dev/stdout", createFdWrapDevice(STDOUT_FILENO));
-  rx::vfs::mount("/dev/stderr", createFdWrapDevice(STDERR_FILENO));
-  rx::vfs::mount("/dev/stdin", createFdWrapDevice(STDIN_FILENO));
-  rx::vfs::mount("/dev/zero", createZeroCharacterDevice());
-  rx::vfs::mount("/dev/null", createNullCharacterDevice());
-  rx::vfs::mount("/dev/dipsw", createDipswCharacterDevice());
-  rx::vfs::mount("/dev/dce", createDceCharacterDevice());
-  rx::vfs::mount("/dev/hmd_cmd", createHmdCmdCharacterDevice());
-  rx::vfs::mount("/dev/hmd_snsr", createHmdSnsrCharacterDevice());
-  rx::vfs::mount("/dev/hmd_3da", createHmd3daCharacterDevice());
-  rx::vfs::mount("/dev/hmd_dist", createHmdMmapCharacterDevice());
-  rx::vfs::mount("/dev/hid", createHidCharacterDevice());
-  rx::vfs::mount("/dev/gc", createGcCharacterDevice());
-  rx::vfs::mount("/dev/rng", createRngCharacterDevice());
-  rx::vfs::mount("/dev/sbl_srv", createSblSrvCharacterDevice());
-  rx::vfs::mount("/dev/ajm", createAjmCharacterDevice());
-  if (g_enableAudio) {
-    rx::vfs::mount("/dev/audioHack", createNullCharacterDevice());
-  }
+  auto consoleDev = createConsoleCharacterDevice(
+      STDIN_FILENO, ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
 
+  rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
+  rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
+  rx::vfs::addDevice("icc_configuration",
+                     createIccConfigurationCharacterDevice());
+  rx::vfs::addDevice("console", consoleDev);
+  rx::vfs::addDevice("camera", createCameraCharacterDevice());
+  rx::vfs::addDevice("dmem1", dmem1);
+  rx::vfs::addDevice("dmem2", createDmemCharacterDevice(2));
+  rx::vfs::addDevice("stdout", consoleDev);
+  rx::vfs::addDevice("stderr", consoleDev);
+  rx::vfs::addDevice("deci_stdin", consoleDev);
+  rx::vfs::addDevice("deci_stdout", consoleDev);
+  rx::vfs::addDevice("deci_stderr", consoleDev);
+  rx::vfs::addDevice("stdin", consoleDev);
+  rx::vfs::addDevice("zero", createZeroCharacterDevice());
+  rx::vfs::addDevice("null", createNullCharacterDevice());
+  rx::vfs::addDevice("dipsw", createDipswCharacterDevice());
+  rx::vfs::addDevice("dce", createDceCharacterDevice());
+  rx::vfs::addDevice("hmd_cmd", createHmdCmdCharacterDevice());
+  rx::vfs::addDevice("hmd_snsr", createHmdSnsrCharacterDevice());
+  rx::vfs::addDevice("hmd_3da", createHmd3daCharacterDevice());
+  rx::vfs::addDevice("hmd_dist", createHmdMmapCharacterDevice());
+  rx::vfs::addDevice("hid", createHidCharacterDevice());
+  rx::vfs::addDevice("gc", createGcCharacterDevice());
+  rx::vfs::addDevice("rng", createRngCharacterDevice());
+  rx::vfs::addDevice("sbl_srv", createSblSrvCharacterDevice());
+  rx::vfs::addDevice("ajm", createAjmCharacterDevice());
+  rx::vfs::addDevice("urandom", createUrandomCharacterDevice());
+  rx::vfs::addDevice("mbus", createMBusCharacterDevice());
+  rx::vfs::addDevice("metadbg", createMetaDbgCharacterDevice());
+  rx::vfs::addDevice("bt", createBtCharacterDevice());
+  rx::vfs::addDevice("xpt0", createXptCharacterDevice());
+  rx::vfs::addDevice("cd0", createXptCharacterDevice());
+  rx::vfs::addDevice("da0x0.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x1.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x2.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x3.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x4.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x5.crypt", createHddCharacterDevice());
+  // rx::vfs::addDevice("da0x6x0", createHddCharacterDevice()); // boot log
+  rx::vfs::addDevice("da0x6x2.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x8", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x9.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x12.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x13.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x14.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x15", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x15.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("notification0", createNotificationCharacterDevice(0));
+  rx::vfs::addDevice("notification1", createNotificationCharacterDevice(1));
+  rx::vfs::addDevice("notification2", createNotificationCharacterDevice(2));
+  rx::vfs::addDevice("notification3", createNotificationCharacterDevice(3));
+  rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
+  rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
+  rx::vfs::addDevice("aout0", createAoutCharacterDevice());
+  rx::vfs::addDevice("aout1", createAoutCharacterDevice());
+  rx::vfs::addDevice("aout2", createAoutCharacterDevice());
+  rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
+  rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
+  rx::vfs::addDevice("mbus_av", createMBusAVCharacterDevice());
+  rx::vfs::addDevice("scanin", createScaninCharacterDevice());
+  rx::vfs::addDevice("s3da", createS3DACharacterDevice());
+  rx::vfs::addDevice("gbase", createGbaseCharacterDevice());
+  rx::vfs::addDevice("devstat", createDevStatCharacterDevice());
+  rx::vfs::addDevice("devact", createDevActCharacterDevice());
+  rx::vfs::addDevice("devctl", createDevCtlCharacterDevice());
+
+  auto shm = createShmDevice();
+  rx::vfs::addDevice("shm", shm);
+  orbis::g_context.shmDevice = shm;
+  orbis::g_context.blockpoolDevice = createBlockPoolDevice();
+}
+
+static void ps4InitFd(orbis::Thread *mainThread) {
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;
   orbis::Ref<orbis::File> stderrFile;
@@ -356,36 +406,82 @@ static int ps4Exec(orbis::Thread *mainThread,
   mainThread->tproc->fileDescriptors.insert(stdinFile);
   mainThread->tproc->fileDescriptors.insert(stdoutFile);
   mainThread->tproc->fileDescriptors.insert(stderrFile);
+}
 
-  orbis::g_context.shmDevice = createShmDevice();
-  orbis::g_context.blockpoolDevice = createBlockPoolDevice();
+int ps4Exec(orbis::Thread *mainThread,
+            orbis::utils::Ref<orbis::Module> executableModule,
+            std::span<std::string> argv, std::span<std::string> envp) {
+  const auto stackEndAddress = 0x7'ffff'c000ull;
+  const auto stackSize = 0x40000 * 32;
+  auto stackStartAddress = stackEndAddress - stackSize;
+  mainThread->stackStart =
+      rx::vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
+                  rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead,
+                  rx::vm::kMapFlagAnonymous | rx::vm::kMapFlagFixed |
+                      rx::vm::kMapFlagPrivate | rx::vm::kMapFlagStack);
+
+  mainThread->stackEnd =
+      reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
 
-  auto libkernel = rx::linker::loadModuleFile(
-      "/system/common/lib/libkernel_sys.sprx", mainThread);
+  std::uint64_t interpBase = 0;
+  std::uint64_t entryPoint = executableModule->entryPoint;
 
-  if (libkernel == nullptr) {
-    std::fprintf(stderr, "libkernel not found\n");
-    return 1;
+  if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->processParam) {
+    auto processParam =
+        reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
+
+    auto sdkVersion = processParam        //
+                      + sizeof(uint64_t)  // size
+                      + sizeof(uint32_t)  // magic
+                      + sizeof(uint32_t); // entryCount
+
+    orbis::g_context.sdkVersion = *(uint32_t *)sdkVersion;
   }
 
-  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
+  if (executableModule->type != rx::linker::kElfTypeExec) {
+    auto libSceLibcInternal = rx::linker::loadModuleFile(
+        "/system/common/lib/libSceLibcInternal.sprx", mainThread);
 
-  // *reinterpret_cast<std::uint32_t *>(
-  //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
+    if (libSceLibcInternal == nullptr) {
+      std::fprintf(stderr, "libSceLibcInternal not found\n");
+      return 1;
+    }
+
+    libSceLibcInternal->id =
+        mainThread->tproc->modulesMap.insert(libSceLibcInternal);
+
+    auto libkernel = rx::linker::loadModuleFile(
+        "/system/common/lib/libkernel_sys.sprx", mainThread);
+
+    if (libkernel == nullptr) {
+      std::fprintf(stderr, "libkernel not found\n");
+      return 1;
+    }
+
+    libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
+    interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
+    entryPoint = libkernel->entryPoint;
+
+    // *reinterpret_cast<std::uint32_t *>(
+    //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
+
+    // *reinterpret_cast<std::uint32_t *>(
+    //     reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
+  }
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 
-  for (auto elem : argv) {
-    argvOffsets.push_back(stack.pushString(elem));
+  for (auto &elem : argv) {
+    argvOffsets.push_back(stack.pushString(elem.data()));
   }
 
   argvOffsets.push_back(0);
 
-  for (auto elem : envp) {
-    envpOffsets.push_back(stack.pushString(elem));
+  for (auto &elem : envp) {
+    envpOffsets.push_back(stack.pushString(elem.data()));
   }
 
   envpOffsets.push_back(0);
@@ -393,7 +489,7 @@ static int ps4Exec(orbis::Thread *mainThread,
   // clang-format off
   std::uint64_t auxv[] = {
       AT_ENTRY, executableModule->entryPoint,
-      AT_BASE, reinterpret_cast<std::uint64_t>(libkernel->base),
+      AT_BASE, interpBase,
       AT_NULL, 0
   };
   // clang-format on
@@ -427,8 +523,7 @@ static int ps4Exec(orbis::Thread *mainThread,
   // FIXME: should be at guest user space
   context->uc_mcontext.gregs[REG_RDX] =
       reinterpret_cast<std::uint64_t>(+[] { std::printf("At exit\n"); });
-  ;
-  context->uc_mcontext.gregs[REG_RIP] = libkernel->entryPoint;
+  context->uc_mcontext.gregs[REG_RIP] = entryPoint;
 
   mainThread->context = context;
   rx::thread::invoke(mainThread);
@@ -438,6 +533,7 @@ static int ps4Exec(orbis::Thread *mainThread,
 static void usage(const char *argv0) {
   std::printf("%s [<options>...] <virtual path to elf> [args...]\n", argv0);
   std::printf("  options:\n");
+  std::printf("  --version, -v - print version\n");
   std::printf("    -m, --mount <host path> <virtual path>\n");
   std::printf("    -a, --enable-audio\n");
   std::printf("    -o, --override <original module name> <virtual path to "
@@ -521,6 +617,12 @@ int main(int argc, const char *argv[]) {
       usage(argv[0]);
       return 1;
     }
+
+    if (argv[1] == std::string_view("-v") ||
+        argv[1] == std::string_view("--version")) {
+      std::printf("v%s\n", rx::getVersion().toString().c_str());
+      return 0;
+    }
   }
 
   if (argc < 2) {
@@ -530,6 +632,10 @@ int main(int argc, const char *argv[]) {
 
   setupSigHandlers();
   rx::vfs::initialize();
+
+  bool enableAudio = false;
+  bool asRoot = false;
+  bool isSystem = false;
 
   int argIndex = 1;
   while (argIndex < argc) {
@@ -559,6 +665,18 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
+    if (argv[argIndex] == std::string_view("--root")) {
+      argIndex++;
+      asRoot = true;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--system")) {
+      argIndex++;
+      isSystem = true;
+      continue;
+    }
+
     if (argv[argIndex] == std::string_view("--override") ||
         argv[argIndex] == std::string_view("-o")) {
       if (argc <= argIndex + 2) {
@@ -575,7 +693,7 @@ int main(int argc, const char *argv[]) {
     if (argv[argIndex] == std::string_view("--enable-audio") ||
         argv[argIndex] == std::string_view("-a")) {
       argIndex++;
-      g_enableAudio = true;
+      enableAudio = true;
       continue;
     }
 
@@ -591,8 +709,13 @@ int main(int argc, const char *argv[]) {
   rx::vm::initialize();
   runRpsxGpu();
 
+  if (enableAudio) {
+    orbis::g_context.audioOut = orbis::knew<orbis::AudioOut>();
+  }
+
   // rx::vm::printHostStats();
-  auto initProcess = orbis::g_context.createProcess(10);
+  orbis::g_context.allocatePid();
+  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
   pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   std::thread{[] {
@@ -663,6 +786,51 @@ int main(int argc, const char *argv[]) {
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
   initProcess->ops = &rx::procOpsTable;
+  initProcess->appInfo = {
+      .unk4 = (isSystem ? orbis::slong(0x80000000'00000000) : 0),
+  };
+
+  if (isSystem) {
+    initProcess->authInfo = {
+        .unk0 = 0x3100000000000001,
+        .caps =
+            {
+                -1ul,
+                -1ul,
+                -1ul,
+                -1ul,
+            },
+        .attrs =
+            {
+                0x4000400040000000,
+                0x4000000000000000,
+                0x0080000000000002,
+                0xF0000000FFFF4000,
+            },
+    };
+    initProcess->budgetId = 0;
+    initProcess->isInSandbox = false;
+  } else {
+    initProcess->authInfo = {
+        .unk0 = 0x3100000000000001,
+        .caps =
+            {
+                0x2000038000000000,
+                0x000000000000FF00,
+                0x0000000000000000,
+                0x0000000000000000,
+            },
+        .attrs =
+            {
+                0x4000400040000000,
+                0x4000000000000000,
+                0x0080000000000002,
+                0xF0000000FFFF4000,
+            },
+    };
+    initProcess->budgetId = 1;
+    initProcess->isInSandbox = true;
+  }
 
   auto [baseId, mainThread] = initProcess->threadsMap.emplace();
   mainThread->tproc = initProcess;
@@ -681,11 +849,20 @@ int main(int argc, const char *argv[]) {
   initProcess->processParam = executableModule->processParam;
   initProcess->processParamSize = executableModule->processParamSize;
 
+  if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
+            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
+    perror("prctl failed\n");
+    exit(-1);
+  }
+
   if (executableModule->type == rx::linker::kElfTypeSceDynExec ||
-      executableModule->type == rx::linker::kElfTypeSceExec) {
-    status = ps4Exec(mainThread, std::move(executableModule),
-                     std::span(argv + argIndex, argc - argIndex),
-                     std::span<const char *>());
+      executableModule->type == rx::linker::kElfTypeSceExec ||
+      executableModule->type == rx::linker::kElfTypeExec) {
+    ps4InitDev();
+    ps4InitFd(mainThread);
+    std::vector<std::string> ps4Argv(argv + argIndex,
+                                     argv + argIndex + argc - argIndex);
+    status = ps4Exec(mainThread, std::move(executableModule), ps4Argv, {});
   } else {
     std::fprintf(stderr, "Unexpected executable type\n");
     status = 1;

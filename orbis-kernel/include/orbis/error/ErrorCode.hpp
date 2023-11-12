@@ -109,3 +109,10 @@ enum class ErrorCode : int {
   CAPMODE = 94,    // Not permitted in capability mode
 };
 } // namespace orbis
+
+#define ORBIS_RET_ON_ERROR(...) \
+  do { \
+    if (auto errc___ = (__VA_ARGS__); errc___ != ::orbis::ErrorCode{}) { \
+      return errc___; \
+    } \
+  } while (false)

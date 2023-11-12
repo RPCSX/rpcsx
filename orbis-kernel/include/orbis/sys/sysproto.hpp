@@ -11,6 +11,7 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
+struct AuthInfo;
 struct MemoryProtection;
 struct ModuleInfo;
 struct ModuleInfoEx;
@@ -607,10 +608,10 @@ SysResult sys_socketex(Thread *thread, ptr<const char> name, sint domain,
                        sint type, sint protocol);
 SysResult sys_socketclose(Thread *thread, sint fd);
 SysResult sys_netgetiflist(Thread *thread /* TODO */);
-SysResult sys_kqueueex(Thread *thread /* TODO */);
+SysResult sys_kqueueex(Thread *thread, ptr<char> name, sint flags);
 SysResult sys_mtypeprotect(Thread *thread /* TODO */);
 SysResult sys_regmgr_call(Thread *thread, uint32_t op, uint32_t id,
-                          ptr<void> result, ptr<void> value, uint64_t type);
+                          ptr<void> result, ptr<void> value, uint64_t len);
 SysResult sys_jitshm_create(Thread *thread /* TODO */);
 SysResult sys_jitshm_alias(Thread *thread /* TODO */);
 SysResult sys_dl_get_list(Thread *thread /* TODO */);
@@ -658,8 +659,9 @@ SysResult sys_opmc_set_ctr(Thread *thread /* TODO */);
 SysResult sys_opmc_get_ctr(Thread *thread /* TODO */);
 SysResult sys_budget_create(Thread *thread /* TODO */);
 SysResult sys_budget_delete(Thread *thread /* TODO */);
-SysResult sys_budget_get(Thread *thread /* TODO */);
-SysResult sys_budget_set(Thread *thread /* TODO */);
+SysResult sys_budget_get(Thread *thread, sint id, ptr<void> a,
+                         ptr<uint32_t> count);
+SysResult sys_budget_set(Thread *thread, slong budget);
 SysResult sys_virtual_query(Thread *thread, ptr<void> addr, uint64_t unk,
                             ptr<void> info, size_t infosz);
 SysResult sys_mdbg_call(Thread *thread /* TODO */);
@@ -676,7 +678,7 @@ SysResult sys_obs_eport_open(Thread *thread /* TODO */);
 SysResult sys_obs_eport_close(Thread *thread /* TODO */);
 SysResult sys_is_in_sandbox(Thread *thread /* TODO */);
 SysResult sys_dmem_container(Thread *thread, uint id);
-SysResult sys_get_authinfo(Thread *thread, pid_t pid, ptr<void> info);
+SysResult sys_get_authinfo(Thread *thread, pid_t pid, ptr<AuthInfo> info);
 SysResult sys_mname(Thread *thread, uint64_t address, uint64_t length,
                     ptr<const char[32]> name);
 SysResult sys_dynlib_dlopen(Thread *thread /* TODO */);
@@ -697,15 +699,17 @@ SysResult sys_dynlib_prepare_dlclose(Thread *thread /* TODO */);
 SysResult sys_dynlib_get_proc_param(Thread *thread, ptr<ptr<void>> procParam,
                                     ptr<uint64_t> procParamSize);
 SysResult sys_dynlib_process_needed_and_relocate(Thread *thread);
-SysResult sys_sandbox_path(Thread *thread /* TODO */);
+SysResult sys_sandbox_path(Thread *thread, ptr<const char> path);
 SysResult sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> arg0,
                            ptr<void> arg1);
-SysResult sys_randomized_path(Thread *thread /* TODO */);
-SysResult sys_rdup(Thread *thread /* TODO */);
+SysResult sys_randomized_path(Thread *thread, sint type, ptr<char> path,
+                              ptr<sint> length);
+SysResult sys_rdup(Thread *thread, sint a, sint b);
 SysResult sys_dl_get_metadata(Thread *thread /* TODO */);
 SysResult sys_workaround8849(Thread *thread /* TODO */);
 SysResult sys_is_development_mode(Thread *thread /* TODO */);
-SysResult sys_get_self_auth_info(Thread *thread /* TODO */);
+SysResult sys_get_self_auth_info(Thread *thread, ptr<const char> path,
+                                 ptr<AuthInfo> result);
 SysResult sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
                                  ptr<struct Unk> unk,
                                  ptr<ModuleInfoEx> destModuleInfoEx);
@@ -723,12 +727,13 @@ SysResult sys_test_debug_rwmem(Thread *thread /* TODO */);
 SysResult sys_free_stack(Thread *thread /* TODO */);
 SysResult sys_suspend_system(Thread *thread /* TODO */);
 SysResult sys_ipmimgr_call(Thread *thread, uint op, uint kid, ptr<uint> result,
-                           ptr<void> params, uint64_t paramsz, uint64_t arg6);
+                           ptr<void> params, uint64_t paramsz);
 SysResult sys_get_gpo(Thread *thread /* TODO */);
 SysResult sys_get_vm_map_timestamp(Thread *thread /* TODO */);
 SysResult sys_opmc_set_hw(Thread *thread /* TODO */);
 SysResult sys_opmc_get_hw(Thread *thread /* TODO */);
-SysResult sys_get_cpu_usage_all(Thread *thread /* TODO */);
+SysResult sys_get_cpu_usage_all(Thread *thread, uint32_t unk,
+                                ptr<uint32_t> result);
 SysResult sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
                         sint memoryType, sint prot, sint flags,
                         off_t directMemoryStart);

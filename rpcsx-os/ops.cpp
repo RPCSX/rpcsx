@@ -2,16 +2,22 @@
 #include "align.hpp"
 #include "backtrace.hpp"
 #include "io-device.hpp"
+#include "io-devices.hpp"
 #include "iodev/blockpool.hpp"
 #include "iodev/dmem.hpp"
 #include "linker.hpp"
+#include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
+#include "orbis/file.hpp"
 #include "orbis/module/ModuleHandle.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/uio.hpp"
 #include "orbis/umtx.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
+#include "orbis/utils/SharedCV.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 #include "orbis/vm.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
@@ -19,15 +25,24 @@
 #include <chrono>
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
+#include <linux/prctl.h>
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
+#include <string_view>
+#include <sys/prctl.h>
 #include <thread>
 #include <unistd.h>
 
 using namespace orbis;
 
 extern "C" void __register_frame(const void *);
+void setupSigHandlers();
+int ps4Exec(orbis::Thread *mainThread,
+            orbis::utils::Ref<orbis::Module> executableModule,
+            std::span<std::string> argv, std::span<std::string> envp);
 
 namespace {
 static std::pair<SysResult, Ref<Module>>
@@ -85,6 +100,7 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
     }
   }
 
+  module->importedModules.clear();
   module->importedModules.reserve(module->neededModules.size());
 
   for (auto mod : module->neededModules) {
@@ -131,11 +147,29 @@ loadPrx(orbis::Thread *thread, std::string_view path, bool relocate) {
     }
 
     expectedName += tmpExpectedName;
-    expectedName += ".prx";
+
+    if (!expectedName.ends_with(".prx")) {
+      expectedName += ".prx";
+    }
   }
 
   return loadPrx(thread, path, relocate, loadedObjects, loadedModules,
                  expectedName);
+}
+
+std::string getAbsolutePath(std::string path, Thread *thread) {
+  if (!path.starts_with('/')) {
+    path = "/" + std::string(thread->tproc->cwd) + "/" + path;
+  }
+
+  path = std::filesystem::path(path).lexically_normal().string();
+
+  if (!path.starts_with("/dev") &&
+      !path.starts_with("/system")) { // fixme: implement devfs mount
+    path = std::string(thread->tproc->root) + "/" + path;
+  }
+
+  return std::filesystem::path(path).lexically_normal().string();
 }
 
 orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
@@ -163,7 +197,8 @@ orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
   }
 
   void *maddr = addr;
-  auto result = file->ops->mmap(file, &maddr, len, prot, flags, pos, thread);
+  auto result =
+      file->ops->mmap(file.get(), &maddr, len, prot, flags, pos, thread);
 
   if (result != ErrorCode{}) {
     return result;
@@ -179,8 +214,7 @@ orbis::SysResult dmem_mmap(orbis::Thread *thread, orbis::caddr_t addr,
                            orbis::off_t directMemoryStart) {
   auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
   void *address = addr;
-  auto result =
-      dmem->mmap(&address, len, memoryType, prot, flags, directMemoryStart);
+  auto result = dmem->mmap(&address, len, prot, flags, directMemoryStart);
   if (result != ErrorCode{}) {
     return result;
   }
@@ -261,7 +295,8 @@ query_memory_protection(orbis::Thread *thread, orbis::ptr<void> address,
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
                       orbis::sint flags, orbis::sint mode,
                       orbis::Ref<orbis::File> *file) {
-  return rx::vfs::open(path, flags, mode, file, thread);
+  return rx::vfs::open(getAbsolutePath(path, thread), flags, mode, file,
+                       thread);
 }
 
 orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
@@ -269,6 +304,23 @@ orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
                           orbis::Ref<orbis::File> *file) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
   return dev->open(file, path, flags, mode, thread);
+}
+orbis::SysResult unlink(orbis::Thread *thread, orbis::ptr<const char> path) {
+  return rx::vfs::unlink(getAbsolutePath(path, thread), thread);
+}
+orbis::SysResult mkdir(Thread *thread, ptr<const char> path, sint mode) {
+  ORBIS_LOG_TODO(__FUNCTION__, path, mode);
+  return rx::vfs::mkdir(getAbsolutePath(path, thread), mode, thread);
+}
+orbis::SysResult rmdir(Thread *thread, ptr<const char> path) {
+  ORBIS_LOG_TODO(__FUNCTION__, path);
+  return rx::vfs::rmdir(getAbsolutePath(path, thread), thread);
+}
+orbis::SysResult rename(Thread *thread, ptr<const char> from,
+                        ptr<const char> to) {
+  ORBIS_LOG_TODO(__FUNCTION__, from, to);
+  return rx::vfs::rename(getAbsolutePath(from, thread),
+                         getAbsolutePath(to, thread), thread);
 }
 
 orbis::SysResult blockpool_open(orbis::Thread *thread,
@@ -301,12 +353,12 @@ orbis::SysResult blockpool_unmap(orbis::Thread *thread, orbis::caddr_t addr,
 orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
                         orbis::sint domain, orbis::sint type,
                         orbis::sint protocol, Ref<File> *file) {
-  return createSocket(file, name, domain, type, protocol);
+  return createSocket(file, name ? name : "", domain, type, protocol);
 }
 
 orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
   auto dev = static_cast<IoDevice *>(orbis::g_context.shmDevice.get());
-  return dev->unlink(path, thread);
+  return dev->unlink(path, false, thread);
 }
 
 orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
@@ -360,7 +412,7 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
   std::string_view symView(symbol);
 
   if (auto nid = rx::linker::decodeNid(symView)) {
-    if (auto addr = findSymbolById(module, *nid)) {
+    if (auto addr = findSymbolById(module.get(), *nid)) {
       *addrp = addr;
       return {};
     }
@@ -370,7 +422,8 @@ orbis::SysResult dynlib_dlsym(orbis::Thread *thread, orbis::ModuleHandle handle,
               module->moduleName,
               rx::linker::encodeNid(rx::linker::encodeFid(symView)).string);
 
-  if (auto addr = findSymbolById(module, rx::linker::encodeFid(symView))) {
+  if (auto addr =
+          findSymbolById(module.get(), rx::linker::encodeFid(symView))) {
     *addrp = addr;
     return {};
   }
@@ -397,9 +450,45 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
     return errorCode;
   }
 
-  auto [result, module] = loadPrx(thread, _name, true);
+  auto path = getAbsolutePath(_name, thread);
+
+  {
+    orbis::Ref<orbis::File> file;
+    if (auto result = rx::vfs::open(path, 0, 0, &file, thread);
+        result.isError()) {
+      return result;
+    }
+  }
+
+  auto [result, module] = loadPrx(thread, path, true);
   if (result.isError()) {
     return result;
+  }
+
+  {
+    std::map<std::string, Module *, std::less<>> loadedModules;
+
+    for (auto [id, module] : thread->tproc->modulesMap) {
+      // std::fprintf(stderr, "%u: %s\n", (unsigned)id, module->moduleName);
+      loadedModules[module->moduleName] = module;
+    }
+
+    for (auto [id, module] : thread->tproc->modulesMap) {
+      module->importedModules.clear();
+      module->importedModules.reserve(module->neededModules.size());
+
+      for (auto mod : module->neededModules) {
+        if (auto it = loadedModules.find(std::string_view(mod.name));
+            it != loadedModules.end()) {
+          module->importedModules.emplace_back(it->second);
+          continue;
+        }
+
+        module->importedModules.push_back({});
+      }
+
+      module->relocate(thread->tproc);
+    }
   }
 
   *pHandle = module->id;
@@ -444,25 +533,6 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
                    childThread->stackStart);
 
   auto stdthr = std::thread{[=, childThread = Ref<Thread>(childThread)] {
-    stack_t ss;
-
-    auto sigStackSize = std::max<std::size_t>(
-        SIGSTKSZ, ::utils::alignUp(8 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
-
-    ss.ss_sp = malloc(sigStackSize);
-    if (ss.ss_sp == NULL) {
-      perror("malloc");
-      ::exit(EXIT_FAILURE);
-    }
-
-    ss.ss_size = sigStackSize;
-    ss.ss_flags = 0;
-
-    if (sigaltstack(&ss, NULL) == -1) {
-      perror("sigaltstack");
-      ::exit(EXIT_FAILURE);
-    }
-
     static_cast<void>(
         uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
     auto context = new ucontext_t{};
@@ -478,6 +548,9 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 
     childThread->context = context;
     childThread->state = orbis::ThreadState::RUNNING;
+
+    rx::thread::setupSignalStack();
+    rx::thread::setupThisThread();
     rx::thread::invoke(childThread.get());
   }};
 
@@ -519,8 +592,53 @@ SysResult thr_wake(orbis::Thread *thread, orbis::slong id) {
 }
 SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
                        orbis::ptr<const char> name) {
-  return ErrorCode::NOTSUP;
+  ORBIS_LOG_WARNING(__FUNCTION__, name, id, thread->tid);
+  return {};
 }
+
+orbis::SysResult unmount(orbis::Thread *thread, orbis::ptr<char> path,
+                         orbis::sint flags) {
+  // TODO: support other that nullfs
+  return rx::vfs::unlink(getAbsolutePath(path, thread), thread);
+}
+orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
+                        orbis::uint iovcnt, orbis::sint flags) {
+  ORBIS_LOG_ERROR(__FUNCTION__, iovp, iovcnt, flags);
+
+  std::string_view fstype;
+  std::string fspath;
+  std::string target;
+
+  for (auto it = iovp; it < iovp + iovcnt; it += 2) {
+    IoVec a;
+    IoVec b;
+    ORBIS_RET_ON_ERROR(uread(a, it));
+    ORBIS_RET_ON_ERROR(uread(b, it + 1));
+
+    std::string_view key((char *)a.base, a.len - 1);
+    std::string_view value((char *)b.base, b.len - 1);
+
+    if (key == "fstype") {
+      fstype = value;
+    } else if (key == "fspath") {
+      fspath = getAbsolutePath(std::string(value), thread);
+    } else if (key == "target") {
+      target = getAbsolutePath(std::string(value), thread);
+    }
+
+    std::fprintf(stderr, "%s: '%s':'%s'\n", __FUNCTION__, key.data(),
+                 value.data());
+  }
+
+  if (fstype == "nullfs") {
+    ORBIS_RET_ON_ERROR(rx::vfs::unlink(fspath, thread));
+    return rx::vfs::createSymlink(target, fspath, thread);
+  }
+
+  // TODO
+  return {};
+}
+
 orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
   std::printf("Requested exit with status %d\n", status);
   std::exit(status);
@@ -550,6 +668,7 @@ SysResult processNeeded(Thread *thread) {
   }
 
   for (auto [id, module] : thread->tproc->modulesMap) {
+    module->importedModules.clear();
     module->importedModules.reserve(module->neededModules.size());
 
     for (auto mod : module->neededModules) {
@@ -568,6 +687,150 @@ SysResult processNeeded(Thread *thread) {
   }
 
   return {};
+}
+
+SysResult fork(Thread *thread, slong flags) {
+  ORBIS_LOG_TODO(__FUNCTION__, flags);
+
+  auto childPid = g_context.allocatePid() * 10000 + 1;
+  auto flag = knew<std::atomic<bool>>();
+  *flag = false;
+
+  int hostPid = ::fork();
+
+  if (hostPid) {
+    while (*flag == false) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    kfree(flag, sizeof(*flag));
+
+    thread->retval[0] = childPid;
+    thread->retval[1] = 0;
+    return {};
+  }
+
+  auto process = g_context.createProcess(childPid);
+  process->sysent = thread->tproc->sysent;
+  process->onSysEnter = thread->tproc->onSysEnter;
+  process->onSysExit = thread->tproc->onSysExit;
+  process->ops = thread->tproc->ops;
+  process->parentProcess = thread->tproc;
+  process->authInfo = thread->tproc->authInfo;
+  for (auto [id, mod] : thread->tproc->modulesMap) {
+    if (!process->modulesMap.insert(id, mod)) {
+      std::abort();
+    }
+  }
+
+  if (false) {
+    std::lock_guard lock(thread->tproc->fileDescriptors.mutex);
+    for (auto [id, mod] : thread->tproc->fileDescriptors) {
+      if (!process->fileDescriptors.insert(id, mod)) {
+        std::abort();
+      }
+    }
+  }
+
+  rx::vm::fork(childPid);
+  rx::vfs::fork();
+
+  *flag = true;
+
+  auto [baseId, newThread] = process->threadsMap.emplace();
+  newThread->tproc = process;
+  newThread->tid = process->pid + baseId;
+  newThread->state = orbis::ThreadState::RUNNING;
+  newThread->context = thread->context;
+  newThread->fsBase = thread->fsBase;
+
+  orbis::g_currentThread = newThread;
+  newThread->retval[0] = 0;
+  newThread->retval[1] = 1;
+
+  thread = orbis::g_currentThread;
+
+  setupSigHandlers();
+  rx::thread::initialize();
+  rx::thread::setupThisThread();
+
+  auto logFd =
+      ::open(("log-" + std::to_string(thread->tproc->pid) + ".txt").c_str(),
+             O_CREAT | O_TRUNC | O_WRONLY, 0666);
+
+  dup2(logFd, 1);
+  dup2(logFd, 2);
+  return {};
+}
+
+SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
+                 ptr<ptr<char>> envv) {
+  ORBIS_LOG_ERROR(__FUNCTION__, fname);
+
+  std::vector<std::string> _argv;
+  std::vector<std::string> _envv;
+
+  if (auto ptr = argv) {
+    char *p;
+    while (uread(p, ptr) == ErrorCode{} && p != nullptr) {
+      ORBIS_LOG_ERROR(" argv ", p);
+      _argv.push_back(p);
+      ++ptr;
+    }
+  }
+
+  if (auto ptr = envv) {
+    char *p;
+    while (uread(p, ptr) == ErrorCode{} && p != nullptr) {
+      ORBIS_LOG_ERROR(" envv ", p);
+      _envv.push_back(p);
+      ++ptr;
+    }
+  }
+
+  std::string path = getAbsolutePath(fname, thread);
+  ORBIS_LOG_ERROR(__FUNCTION__, path);
+
+  {
+    orbis::Ref<File> file;
+    auto result = rx::vfs::open(path, kOpenFlagReadOnly, 0, &file, thread);
+    if (result.isError()) {
+      return result;
+    }
+  }
+
+  rx::vm::reset();
+
+  thread->tproc->nextTlsSlot = 1;
+  for (auto [id, mod] : thread->tproc->modulesMap) {
+    thread->tproc->modulesMap.close(id);
+  }
+
+  auto executableModule = rx::linker::loadModuleFile(path, thread);
+
+  executableModule->id = thread->tproc->modulesMap.insert(executableModule);
+  thread->tproc->processParam = executableModule->processParam;
+  thread->tproc->processParamSize = executableModule->processParamSize;
+
+  auto name = path;
+  if (auto slashP = name.rfind('/'); slashP != std::string::npos) {
+    name = name.substr(slashP + 1);
+  }
+
+  if (name.size() > 15) {
+    name.resize(15);
+  }
+
+  pthread_setname_np(pthread_self(), name.c_str());
+
+  ORBIS_LOG_ERROR(__FUNCTION__, "done");
+  std::thread([&] {
+    rx::thread::setupSignalStack();
+    rx::thread::setupThisThread();
+    ORBIS_LOG_ERROR(__FUNCTION__, "exec");
+    ps4Exec(thread, executableModule, _argv, _envv);
+  }).join();
+  std::abort();
 }
 
 SysResult registerEhFrames(Thread *thread) {
@@ -602,6 +865,10 @@ ProcessOps rx::procOpsTable = {
     .query_memory_protection = query_memory_protection,
     .open = open,
     .shm_open = shm_open,
+    .unlink = unlink,
+    .mkdir = mkdir,
+    .rmdir = rmdir,
+    .rename = rename,
     .blockpool_open = blockpool_open,
     .blockpool_map = blockpool_map,
     .blockpool_unmap = blockpool_unmap,
@@ -620,6 +887,10 @@ ProcessOps rx::procOpsTable = {
     .thr_suspend = thr_suspend,
     .thr_wake = thr_wake,
     .thr_set_name = thr_set_name,
+    .unmount = unmount,
+    .nmount = nmount,
+    .fork = fork,
+    .execve = execve,
     .exit = exit,
     .processNeeded = processNeeded,
     .registerEhFrames = registerEhFrames,

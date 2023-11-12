@@ -5,7 +5,8 @@
 namespace rx::thread {
 void initialize();
 void deinitialize();
+void setupSignalStack();
+void setupThisThread();
 
-extern thread_local orbis::Thread *g_current;
 void invoke(orbis::Thread *thread);
 } // namespace rx::thread

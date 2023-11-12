@@ -51,12 +51,14 @@ struct CmdMemoryProt {
   std::uint64_t address;
   std::uint64_t size;
   std::uint32_t prot;
+  std::uint32_t pid;
 };
 
 struct CmdCommandBuffer {
   std::uint64_t queue;
   std::uint64_t address;
-  std::uint64_t size;
+  std::uint32_t size;
+  std::uint32_t pid;
 };
 
 struct CmdBuffer {
@@ -69,6 +71,7 @@ struct CmdBuffer {
 };
 
 struct CmdFlip {
+  std::uint32_t pid;
   std::uint32_t bufferIndex;
   std::uint64_t arg;
 };
@@ -101,7 +104,7 @@ struct BridgeHeader {
   std::uint32_t bufferCount;
   CmdMemoryProt memoryAreas[128];
   CmdCommandBuffer commandBuffers[32];
-  CmdBuffer buffers[8];
+  CmdBuffer buffers[10];
   // orbis::shared_mutex cacheCommandMtx;
   // orbis::shared_cv cacheCommandCv;
   std::atomic<std::uint64_t> cacheCommands[4];
@@ -144,18 +147,25 @@ struct BridgePusher {
         header->flags | static_cast<std::uint64_t>(BridgeFlags::VmConfigured);
   }
 
-  void sendMemoryProtect(std::uint64_t address, std::uint64_t size,
-                         std::uint32_t prot) {
-    sendCommand(CommandId::ProtectMemory, {address, size, prot});
+  void sendMemoryProtect(std::uint32_t pid, std::uint64_t address,
+                         std::uint64_t size, std::uint32_t prot) {
+    if (pid == 50001) {
+      sendCommand(CommandId::ProtectMemory, {pid, address, size, prot});
+    }
   }
 
-  void sendCommandBuffer(std::uint64_t queue, std::uint64_t address,
-                         std::uint64_t size) {
-    sendCommand(CommandId::CommandBuffer, {queue, address, size});
+  void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue,
+                         std::uint64_t address, std::uint64_t size) {
+    if (pid == 50001) {
+      sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
+    }
   }
 
-  void sendFlip(std::uint32_t bufferIndex, std::uint64_t arg) {
-    sendCommand(CommandId::Flip, {bufferIndex, arg});
+  void sendFlip(std::uint32_t pid, std::uint32_t bufferIndex,
+                std::uint64_t arg) {
+    if (pid == 50001) {
+      sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
+    }
   }
 
   void wait() {
@@ -250,20 +260,23 @@ private:
       return result;
 
     case CommandId::ProtectMemory:
-      result.memoryProt.address = args[0];
-      result.memoryProt.size = args[1];
-      result.memoryProt.prot = args[2];
+      result.memoryProt.pid = args[0];
+      result.memoryProt.address = args[1];
+      result.memoryProt.size = args[2];
+      result.memoryProt.prot = args[3];
       return result;
 
     case CommandId::CommandBuffer:
-      result.commandBuffer.queue = args[0];
-      result.commandBuffer.address = args[1];
-      result.commandBuffer.size = args[2];
+      result.commandBuffer.pid = args[0];
+      result.commandBuffer.queue = args[1];
+      result.commandBuffer.address = args[2];
+      result.commandBuffer.size = args[3];
       return result;
 
     case CommandId::Flip:
-      result.flip.bufferIndex = args[0];
-      result.flip.arg = args[1];
+      result.flip.pid = args[0];
+      result.flip.bufferIndex = args[1];
+      result.flip.arg = args[2];
       return result;
     }
 

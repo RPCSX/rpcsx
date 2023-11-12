@@ -1,11 +1,13 @@
 #pragma once
 #include "evf.hpp"
 #include "ipmi.hpp"
+#include "orbis/utils/IdMap.hpp"
 #include "osem.hpp"
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedCV.hpp"
 #include "utils/SharedMutex.hpp"
 
+#include "AudioOut.hpp"
 #include "KernelAllocator.hpp"
 #include "orbis/thread/types.hpp"
 #include <algorithm>
@@ -52,6 +54,15 @@ public:
   Process *createProcess(pid_t pid);
   void deleteProcess(Process *proc);
   Process *findProcessById(pid_t pid) const;
+
+  utils::LinkedNode<Process> *getProcessList() {
+    return m_processes;
+  }
+
+  long allocatePid() {
+    std::lock_guard lock(m_thread_id_mtx);
+    return m_thread_id_map.emplace(0).first;
+  }
 
   long getTscFreq();
 
@@ -105,17 +116,22 @@ public:
     return {};
   }
 
-  std::pair<IpmiServer *, bool> createIpmiServer(utils::kstring name,
-                                                 std::uint32_t attrs,
-                                                 std::int32_t initCount,
-                                                 std::int32_t maxCount) {
+  std::pair<Ref<IpmiServer>, ErrorCode> createIpmiServer(utils::kstring name) {
     std::lock_guard lock(m_sem_mtx);
     auto [it, inserted] = mIpmiServers.try_emplace(std::move(name), nullptr);
-    if (inserted) {
-      it->second = knew<IpmiServer>(name);
+
+    if (!inserted) {
+      return {it->second, ErrorCode::EXIST};
     }
 
-    return {it->second.get(), inserted};
+    it->second = knew<IpmiServer>(it->first);
+
+    if (it->second == nullptr) {
+      mIpmiServers.erase(it);
+      return {nullptr, ErrorCode::NOMEM};
+    }
+
+    return {it->second, {}};
   }
 
   Ref<IpmiServer> findIpmiServer(std::string_view name) {
@@ -150,6 +166,8 @@ public:
   Ref<RcBase> shmDevice;
   Ref<RcBase> dmemDevice;
   Ref<RcBase> blockpoolDevice;
+  AudioOut *audioOut = nullptr;
+  uint sdkVersion{};
 
 private:
   mutable pthread_mutex_t m_heap_mtx;
@@ -162,6 +180,8 @@ private:
 
   std::atomic<long> m_tsc_freq{0};
 
+  shared_mutex m_thread_id_mtx;
+  OwningIdMap<char, long, 256, 0> m_thread_id_map;
   mutable shared_mutex m_proc_mtx;
   utils::LinkedNode<Process> *m_processes = nullptr;
 

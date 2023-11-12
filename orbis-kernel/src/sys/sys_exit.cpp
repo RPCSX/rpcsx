@@ -1,4 +1,7 @@
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
+#include <chrono>
+#include <thread>
 
 orbis::SysResult orbis::sys_exit(Thread *thread, sint status) {
   if (auto exit = thread->tproc->ops->exit) {
@@ -13,5 +16,8 @@ orbis::SysResult orbis::sys_abort2(Thread *thread, ptr<const char> why,
 }
 orbis::SysResult orbis::sys_wait4(Thread *thread, sint pid, ptr<sint> status,
                                   sint options, ptr<struct rusage> rusage) {
-  return ErrorCode::NOSYS;
+  // TODO
+  ORBIS_LOG_ERROR(__FUNCTION__, pid, status, options, rusage);
+  std::this_thread::sleep_for(std::chrono::days(1));
+  return {};
 }

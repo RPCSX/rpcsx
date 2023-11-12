@@ -6,12 +6,15 @@
 #include <sys/unistd.h>
 
 namespace orbis {
+thread_local Thread *g_currentThread;
+
 KernelContext &g_context = *[]() -> KernelContext * {
   // Allocate global shared kernel memory
   // TODO: randomize for hardening and reduce size
   auto ptr = mmap(reinterpret_cast<void *>(0x200'0000'0000), 0x1'0000'0000,
-                  PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
-  if (!ptr)
+                  PROT_READ | PROT_WRITE,
+                  MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+  if (ptr == MAP_FAILED)
     std::abort();
 
   return new (ptr) KernelContext;
@@ -26,8 +29,8 @@ KernelContext::KernelContext() {
   pthread_mutex_init(&m_heap_mtx, &mtx_attr);
   pthread_mutexattr_destroy(&mtx_attr);
 
-  std::printf("orbis::KernelContext initialized, addr=%p\n", this);
-  std::printf("TSC frequency: %lu\n", getTscFreq());
+  // std::printf("orbis::KernelContext initialized, addr=%p\n", this);
+  // std::printf("TSC frequency: %lu\n", getTscFreq());
 }
 KernelContext::~KernelContext() {}
 
@@ -160,6 +163,9 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
          ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
   if (!size)
     std::abort();
+  if ((uintptr_t)ptr == 0x2000001a2b0) {
+    std::fprintf(stderr, "free %p-%p (%zu)\n", ptr, (char *)ptr + size, size);
+  }
   std::memset(ptr, 0xcc, size);
 
   pthread_mutex_lock(&m_heap_mtx);

@@ -57,6 +57,8 @@ void orbis::syscall_entry(Thread *thread) {
 
       auto result = sysent.call(thread, args);
 
+      thread = orbis::g_currentThread;
+
       if (thread->tproc->onSysExit != nullptr) {
         thread->tproc->onSysExit(thread, syscall_num, args, sysent.narg,
                                  result);

@@ -1,20 +1,43 @@
+#include "pipe.hpp"
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
+#include <chrono>
+#include <sys/socket.h>
+#include <thread>
 
 orbis::SysResult orbis::sys_socket(Thread *thread, sint domain, sint type,
                                    sint protocol) {
+  ORBIS_LOG_TODO(__FUNCTION__, domain, type, protocol);
+  if (auto socket = thread->tproc->ops->socket) {
+    Ref<File> file;
+    auto result = socket(thread, nullptr, domain, type, protocol, &file);
+
+    if (result.isError()) {
+      return result;
+    }
+
+    auto fd = thread->tproc->fileDescriptors.insert(file);
+    ORBIS_LOG_WARNING("Socket opened", fd);
+    thread->retval[0] = fd;
+    return {};
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_bind(Thread *thread, sint s, caddr_t name,
                                  sint namelen) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, s, name, namelen);
+  return {};
 }
 orbis::SysResult orbis::sys_listen(Thread *thread, sint s, sint backlog) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, s, backlog);
+  return {};
 }
 orbis::SysResult orbis::sys_accept(Thread *thread, sint s,
                                    ptr<struct sockaddr> from,
                                    ptr<uint32_t> fromlenaddr) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, s, from, fromlenaddr);
+  std::this_thread::sleep_for(std::chrono::days(1));
+  return SysResult::notAnError(ErrorCode::WOULDBLOCK);
 }
 orbis::SysResult orbis::sys_connect(Thread *thread, sint s, caddr_t name,
                                     sint namelen) {
@@ -22,12 +45,20 @@ orbis::SysResult orbis::sys_connect(Thread *thread, sint s, caddr_t name,
 }
 orbis::SysResult orbis::sys_socketpair(Thread *thread, sint domain, sint type,
                                        sint protocol, ptr<sint> rsv) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, domain, type, protocol, rsv);
+
+  auto pipe = createPipe();
+  auto a = thread->tproc->fileDescriptors.insert(pipe);
+  auto b = thread->tproc->fileDescriptors.insert(pipe);
+  if (auto errc = uwrite(rsv, a); errc != ErrorCode{}) {
+    return errc;
+  }
+  return uwrite(rsv + 1, b);
 }
 orbis::SysResult orbis::sys_sendto(Thread *thread, sint s, caddr_t buf,
                                    size_t len, sint flags, caddr_t to,
                                    sint tolen) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_sendmsg(Thread *thread, sint s,
                                     ptr<struct msghdr> msg, sint flags) {
@@ -48,12 +79,14 @@ orbis::SysResult orbis::sys_shutdown(Thread *thread, sint s, sint how) {
 }
 orbis::SysResult orbis::sys_setsockopt(Thread *thread, sint s, sint level,
                                        sint name, caddr_t val, sint valsize) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__, s, level, name, val, valsize);
+  return {};
 }
 orbis::SysResult orbis::sys_getsockopt(Thread *thread, sint s, sint level,
                                        sint name, caddr_t val,
                                        ptr<sint> avalsize) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__, s, level, name, val, avalsize);
+  return {};
 }
 orbis::SysResult orbis::sys_getsockname(Thread *thread, sint fdes,
                                         ptr<struct sockaddr> asa,
