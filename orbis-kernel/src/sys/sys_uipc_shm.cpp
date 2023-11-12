@@ -30,13 +30,10 @@ orbis::SysResult orbis::sys_shm_unlink(Thread *thread, ptr<const char> path) {
   }
 
   if (auto shm_unlink = thread->tproc->ops->shm_unlink) {
-    Ref<File> file;
     auto result = shm_unlink(thread, path);
     if (result.isError()) {
       return result;
     }
-
-    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
     return {};
   }
 
