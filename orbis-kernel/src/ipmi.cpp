@@ -211,17 +211,20 @@ orbis::SysResult orbis::sysIpmiCreateSession(Thread *thread, ptr<uint> result,
 orbis::SysResult orbis::sysIpmiDestroyClient(Thread *thread, ptr<uint> result,
                                              uint kid, ptr<void> params,
                                              uint64_t paramsSz) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__);
+  return uwrite<uint>(result, 0);
 }
 orbis::SysResult orbis::sysIpmiDestroyServer(Thread *thread, ptr<uint> result,
                                              uint kid, ptr<void> params,
                                              uint64_t paramsSz) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__);
+  return uwrite<uint>(result, 0);
 }
 orbis::SysResult orbis::sysIpmiDestroySession(Thread *thread, ptr<uint> result,
                                               uint kid, ptr<void> params,
                                               uint64_t paramsSz) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__);
+  return uwrite<uint>(result, 0);
 }
 
 orbis::SysResult orbis::sysIpmiServerReceivePacket(Thread *thread,
@@ -342,6 +345,8 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   }
 
   std::lock_guard lock(session->mutex);
+
+  ORBIS_LOG_ERROR(__FUNCTION__, _params.errorCode);
 
   session->messageResponses.push_front({
       .errorCode = _params.errorCode,
@@ -502,7 +507,7 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
     session->expectedOutput = _params.numOutData > 0;
     server->packets.push_back(
         {{.type = type, .clientKid = kid}, std::move(message)});
-    server->receiveCv.notify_one(server->mutex);
+    server->receiveCv.notify_all(server->mutex);
   }
 
   while (session->messageResponses.empty()) {
@@ -523,8 +528,8 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
     _params.pOutData->size = response.data.size();
   }
 
-  ORBIS_LOG_TODO(__FUNCTION__, "sync message response", client->name, _params.method,
-                 response.errorCode, response.data.size());
+  ORBIS_LOG_TODO(__FUNCTION__, "sync message response", client->name,
+                 _params.method, response.errorCode, response.data.size());
   return uwrite<uint>(result, 0);
 }
 
