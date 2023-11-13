@@ -3,8 +3,8 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
-#include "orbis/thread/Thread.hpp"
 #include "orbis/thread/Process.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
 #include <bit>
@@ -273,6 +273,7 @@ static int gMemoryShm = -1;
 
 struct Group {
   std::uint64_t allocated;
+  std::uint64_t shared;
   std::uint64_t readable;
   std::uint64_t writable;
   std::uint64_t executable;
@@ -288,6 +289,7 @@ enum {
   kGpuWritable = rx::vm::kMapProtGpuWrite,
 
   kAllocated = 1 << 3,
+  kShared = 1 << 6,
 };
 
 inline constexpr std::uint64_t makePagesMask(std::uint64_t page,
@@ -334,6 +336,7 @@ struct Block {
 
     result |= (group.gpuReadable & mask) == mask ? kGpuReadable : 0;
     result |= (group.gpuWritable & mask) == mask ? kGpuWritable : 0;
+    result |= (group.shared & mask) == mask ? kShared : 0;
 
     return result;
   }
@@ -344,6 +347,8 @@ struct Block {
 
     std::uint64_t addAllocatedFlags =
         (addFlags & kAllocated) ? ~static_cast<std::uint64_t>(0) : 0;
+    std::uint64_t addSharedFlags =
+        (addFlags & kShared) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addReadableFlags =
         (addFlags & kReadable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t addWritableFlags =
@@ -357,6 +362,8 @@ struct Block {
 
     std::uint64_t removeAllocatedFlags =
         (removeFlags & kAllocated) ? ~static_cast<std::uint64_t>(0) : 0;
+    std::uint64_t removeSharedFlags =
+        (removeFlags & kShared) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeReadableFlags =
         (removeFlags & kReadable) ? ~static_cast<std::uint64_t>(0) : 0;
     std::uint64_t removeWritableFlags =
@@ -382,6 +389,8 @@ struct Block {
 
       group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
                         (addAllocatedFlags & mask);
+      group.shared = (group.shared & ~(removeSharedFlags & mask)) |
+                     (addSharedFlags & mask);
       group.readable = (group.readable & ~(removeReadableFlags & mask)) |
                        (addReadableFlags & mask);
       group.writable = (group.writable & ~(removeWritableFlags & mask)) |
@@ -403,6 +412,7 @@ struct Block {
 
       group.allocated =
           (group.allocated & ~removeAllocatedFlags) | addAllocatedFlags;
+      group.shared = (group.shared & ~removeSharedFlags) | addSharedFlags;
       group.readable =
           (group.readable & ~removeReadableFlags) | addReadableFlags;
       group.writable =
@@ -421,6 +431,8 @@ struct Block {
 
       group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
                         (addAllocatedFlags & mask);
+      group.shared = (group.shared & ~(removeSharedFlags & mask)) |
+                     (addSharedFlags & mask);
       group.readable = (group.readable & ~(removeReadableFlags & mask)) |
                        (addReadableFlags & mask);
       group.writable = (group.writable & ~(removeWritableFlags & mask)) |
@@ -640,6 +652,9 @@ void rx::vm::fork(std::uint64_t pid) {
   gMemoryShm = ::shm_open(("/rpcsx-os-memory-" + std::to_string(pid)).c_str(),
                           O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
+  (void)g_mtx.try_lock();
+  g_mtx.unlock(); // release mutex
+
   if (gMemoryShm == -1) {
     std::fprintf(stderr, "Memory: failed to open /rpcsx-os-memory\n");
     std::abort();
@@ -654,6 +669,10 @@ void rx::vm::fork(std::uint64_t pid) {
        address += kPageSize) {
     auto prot = gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
         (address & kBlockMask) >> rx::vm::kPageShift);
+
+    if (prot & kShared) {
+      continue;
+    }
 
     if (prot & kMapProtCpuAll) {
       auto mapping = utils::map(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
@@ -857,13 +876,14 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     std::abort();
   }
 
-  gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
-      (address & kBlockMask) >> kPageShift, pagesCount,
-      (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated);
-
   int realFlags = MAP_FIXED | MAP_SHARED;
   bool isAnon = (flags & kMapFlagAnonymous) == kMapFlagAnonymous;
-  flags &= ~(kMapFlagFixed | kMapFlagAnonymous);
+  bool isShared = (flags & kMapFlagShared) == kMapFlagShared;
+  flags &= ~(kMapFlagFixed | kMapFlagAnonymous | kMapFlagShared);
+
+  gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
+      (address & kBlockMask) >> kPageShift, pagesCount,
+      (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated | (isShared ? kShared : 0));
 
   /*
     if (flags & kMapFlagStack) {
@@ -911,7 +931,8 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (auto thr = orbis::g_currentThread) {
-    std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address, address + len, thr->tproc->pid);
+    std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address,
+                 address + len, thr->tproc->pid);
     rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
@@ -946,7 +967,8 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
       (address & kBlockMask) >> kPageShift, pages, ~0);
   if (auto thr = orbis::g_currentThread) {
-    rx::bridge.sendMemoryProtect(thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size, 0);
+    rx::bridge.sendMemoryProtect(
+        thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size, 0);
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
   }
@@ -982,8 +1004,8 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
 
   if (auto thr = orbis::g_currentThread) {
-    rx::bridge.sendMemoryProtect(thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size,
-                                 prot);
+    rx::bridge.sendMemoryProtect(
+        thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size, prot);
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
   }
@@ -992,7 +1014,7 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
 
 static std::int32_t getPageProtectionImpl(std::uint64_t address) {
   return gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
-      (address & kBlockMask) >> rx::vm::kPageShift);
+      (address & kBlockMask) >> rx::vm::kPageShift) & ~kShared;
 }
 
 bool rx::vm::queryProtection(const void *addr, std::uint64_t *startAddress,
