@@ -1,6 +1,7 @@
 #pragma once
 #include "orbis-config.hpp"
 
+#include "../event.hpp"
 #include "../evf.hpp"
 #include "../ipmi.hpp"
 #include "../osem.hpp"
@@ -62,6 +63,7 @@ struct Process final {
   sint memoryContainer{1};
   sint budgetId{1};
   bool isInSandbox = false;
+  EventEmitter event;
 
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;

@@ -1,87 +1,12 @@
 #include "KernelAllocator.hpp"
+#include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
 
 #include "thread/Process.hpp"
 #include "utils/Logs.hpp"
-#include "utils/SharedMutex.hpp"
 #include <chrono>
 #include <list>
 #include <span>
-#include <thread>
-
-namespace orbis {
-struct KEvent {
-  uintptr_t ident;
-  sshort filter;
-  ushort flags;
-  uint fflags;
-  intptr_t data;
-  ptr<void> udata;
-};
-
-struct KNote {
-  KEvent event;
-  bool enabled;
-};
-
-struct KQueue : orbis::File {
-  std::list<KNote, kallocator<KNote>> notes;
-};
-
-static constexpr auto kEvFiltRead = -1;
-static constexpr auto kEvFiltWrite = -2;
-static constexpr auto kEvFiltAio = -3;
-static constexpr auto kEvFiltVnode = -4;
-static constexpr auto kEvFiltProc = -5;
-static constexpr auto kEvFiltSignal = -6;
-static constexpr auto kEvFiltTimer = -7;
-static constexpr auto kEvFiltFs = -9;
-static constexpr auto kEvFiltLio = -10;
-static constexpr auto kEvFiltUser = -11;
-static constexpr auto kEvFiltPolling = -12;
-static constexpr auto kEvFiltDisplay = -13;
-static constexpr auto kEvFiltGraphicsCore = -14;
-static constexpr auto kEvFiltHrTimer = -15;
-static constexpr auto kEvFiltUvdTrap = -16;
-static constexpr auto kEvFiltVceTrap = -17;
-static constexpr auto kEvFiltSdmaTrap = -18;
-static constexpr auto kEvFiltRegEv = -19;
-static constexpr auto kEvFiltGpuException = -20;
-static constexpr auto kEvFiltGpuSystemException = -21;
-static constexpr auto kEvFiltGpuDbgGcEv = -22;
-static constexpr auto kEvFiltSysCount = 22;
-
-// actions
-static constexpr auto kEvAdd = 0x0001;
-static constexpr auto kEvDelete = 0x0002;
-static constexpr auto kEvEnable = 0x0004;
-static constexpr auto kEvDisable = 0x0008;
-
-// flags
-static constexpr auto kEvOneshot = 0x0010;
-static constexpr auto kEvClear = 0x0020;
-static constexpr auto kEvReceipt = 0x0040;
-static constexpr auto kEvDispatch = 0x0080;
-static constexpr auto kEvSysFlags = 0xf000;
-static constexpr auto kEvFlag1 = 0x2000;
-
-static constexpr auto kEvEof = 0x8000;
-static constexpr auto kEvError = 0x4000;
-
-// kEvFiltUser
-static constexpr auto kNoteFFNop = 0x00000000;
-static constexpr auto kNoteFFAnd = 0x40000000;
-static constexpr auto kNoteFFOr = 0x80000000;
-static constexpr auto kNoteFFCopy = 0xc0000000;
-static constexpr auto kNoteFFCtrlMask = 0xc0000000;
-static constexpr auto kNoteFFlagsMask = 0x00ffffff;
-static constexpr auto kNoteTrigger = 0x01000000;
-
-// kEvFiltProc
-static constexpr auto kNoteExit = 0x80000000;
-static constexpr auto kNoteFork = 0x40000000;
-static constexpr auto kNoteExec = 0x20000000;
-} // namespace orbis
 
 orbis::SysResult orbis::sys_kqueue(Thread *thread) {
   auto queue = knew<KQueue>();
@@ -127,16 +52,28 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
     nodeIt = kq->notes.end();
   }
 
+  std::unique_lock<shared_mutex> noteLock;
   if (change.flags & kEvAdd) {
     if (nodeIt == kq->notes.end()) {
-      KNote note{
-          .event = change,
-          .enabled = true,
-      };
-
+      auto &note = kq->notes.emplace_front();
       note.event.flags &= ~(kEvAdd | kEvDelete | kEvDisable | kEvEnable);
-      kq->notes.push_front(note);
+      note.queue = kq;
+      note.event = change;
+      note.enabled = true;
       nodeIt = kq->notes.begin();
+
+      if (change.filter == kEvFiltProc) {
+        auto process = g_context.findProcessById(change.ident);
+        if (process == nullptr) {
+          return ErrorCode::SRCH;
+        }
+
+        noteLock = std::unique_lock(nodeIt->mutex);
+
+        std::unique_lock lock(process->event.mutex);
+        process->event.notes.insert(&*nodeIt);
+        nodeIt->linked = process;
+      }
     }
   }
 
@@ -148,11 +85,18 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
     return orbis::ErrorCode::NOENT;
   }
 
+  if (!noteLock.owns_lock()) {
+    noteLock = std::unique_lock(nodeIt->mutex);
+  }
+
   if (change.flags & kEvDisable) {
     nodeIt->enabled = false;
   }
   if (change.flags & kEvEnable) {
     nodeIt->enabled = true;
+  }
+  if (change.flags & kEvClear) {
+    nodeIt->triggered = false;
   }
 
   if (change.filter == kEvFiltUser) {
@@ -173,12 +117,13 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
         (nodeIt->event.fflags & ~kNoteFFlagsMask) | (fflags & kNoteFFlagsMask);
 
     if (change.fflags & kNoteTrigger) {
-      nodeIt->event.fflags |= kNoteTrigger;
+      nodeIt->triggered = true;
+      kq->cv.notify_all(kq->mtx);
     }
-
-    if (change.flags & kEvClear) {
-      nodeIt->event.fflags &= ~kNoteTrigger;
-    }
+  } else if (change.filter == kEvFiltGraphicsCore ||
+             change.filter == kEvFiltDisplay) {
+    nodeIt->triggered = true;
+    kq->cv.notify_all(kq->mtx);
   }
 
   return {};
@@ -203,26 +148,22 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
                                    ptr<const timespec> timeout) {
   // ORBIS_LOG_TODO(__FUNCTION__, fd, changelist, nchanges, eventlist, nevents,
   //                timeout);
-  Ref<File> kqf = thread->tproc->fileDescriptors.get(fd);
-  if (kqf == nullptr) {
-    return orbis::ErrorCode::BADF;
-  }
-
-  auto kq = dynamic_cast<KQueue *>(kqf.get());
-
+  auto kq = thread->tproc->fileDescriptors.get(fd).cast<KQueue>();
   if (kq == nullptr) {
     return orbis::ErrorCode::BADF;
   }
 
   {
-    std::lock_guard lock(kqf->mtx);
+    std::lock_guard lock(kq->mtx);
 
     if (nchanges != 0) {
-      for (auto change : std::span(changelist, nchanges)) {
+      for (auto &changePtr : std::span(changelist, nchanges)) {
+        KEvent change;
+        ORBIS_RET_ON_ERROR(uread(change, &changePtr));
         ORBIS_LOG_TODO(__FUNCTION__, change.ident, change.filter, change.flags,
                        change.fflags, change.data, change.udata);
 
-        if (auto result = keventChange(kq, change); result.value() != 0) {
+        if (auto result = keventChange(kq.get(), change); result.value() != 0) {
           return result;
         }
       }
@@ -259,51 +200,25 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
   std::vector<KEvent> result;
   result.reserve(nevents);
 
-  while (result.empty()) {
-    {
-      std::lock_guard lock(kqf->mtx);
-      for (auto it = kq->notes.begin(); it != kq->notes.end();) {
-        if (result.size() >= nevents) {
-          break;
-        }
+  while (true) {
+    std::lock_guard lock(kq->mtx);
+    for (auto it = kq->notes.begin(); it != kq->notes.end();) {
+      if (result.size() >= nevents) {
+        break;
+      }
 
-        auto &note = *it;
+      auto &note = *it;
 
-        if (!note.enabled) {
-          ++it;
-          continue;
-        }
-
-        if (note.event.filter == kEvFiltUser) {
-          if ((note.event.fflags & kNoteTrigger) == 0) {
-            ++it;
-            continue;
-          }
-
-          auto event = note.event;
-          event.fflags &= kNoteFFlagsMask;
-          result.push_back(event);
-        } else if (note.event.filter == kEvFiltDisplay ||
-                   note.event.filter == kEvFiltGraphicsCore) {
-          result.push_back(note.event);
-        } else if (note.event.filter == kEvFiltProc) {
-          // TODO
-          if (note.event.fflags & kNoteExec) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            note.event.data = 0;
-            result.push_back(note.event);
-          }
-        } else {
-          ++it;
-          continue;
-        }
+      if (note.enabled && note.triggered) {
+        result.push_back(note.event);
 
         if (note.event.flags & kEvOneshot) {
           it = kq->notes.erase(it);
-        } else {
-          ++it;
+          continue;
         }
       }
+
+      ++it;
     }
 
     if (!result.empty()) {
@@ -311,15 +226,24 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
     }
 
     if (timeoutPoint != clock::time_point::max()) {
-      if (clock::now() >= timeoutPoint) {
+      auto now = clock::now();
+
+      if (now >= timeoutPoint) {
         break;
       }
-    }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      auto waitTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+          timeoutPoint - now);
+      kq->cv.wait(kq->mtx, waitTimeout.count());
+    } else {
+      kq->cv.wait(kq->mtx);
+    }
   }
 
-  std::memcpy(eventlist, result.data(), result.size() * sizeof(KEvent));
+  // ORBIS_LOG_TODO(__FUNCTION__, "kevent wakeup", fd);
+
+  ORBIS_RET_ON_ERROR(
+      uwriteRaw(eventlist, result.data(), result.size() * sizeof(KEvent)));
   thread->retval[0] = result.size();
   return {};
 }

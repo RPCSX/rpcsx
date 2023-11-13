@@ -13,8 +13,6 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    std::lock_guard lock(pipe->mtx);
-
     if (pipe->data.empty()) {
       continue;
     }
@@ -41,7 +39,6 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
 static orbis::ErrorCode pipe_write(orbis::File *file, orbis::Uio *uio,
                                    orbis::Thread *thread) {
   auto pipe = static_cast<orbis::Pipe *>(file);
-  std::lock_guard lock(pipe->mtx);
 
   for (auto vec : std::span(uio->iov, uio->iovcnt)) {
     auto offset = pipe->data.size();

@@ -27,6 +27,10 @@ orbis::SysResult orbis::sys_dup(Thread *thread, uint fd) {
 orbis::SysResult orbis::sys_fcntl(Thread *thread, sint fd, sint cmd,
                                   slong arg) {
   ORBIS_LOG_TODO(__FUNCTION__, fd, cmd, arg);
+  if (cmd == 0xb) {
+    // TODO: hack
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+  }
   return {};
 }
 orbis::SysResult orbis::sys_close(Thread *thread, sint fd) {

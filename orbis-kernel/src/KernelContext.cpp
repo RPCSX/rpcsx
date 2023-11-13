@@ -188,11 +188,11 @@ std::tuple<UmtxChain &, UmtxKey, std::unique_lock<shared_mutex>>
 KernelContext::getUmtxChainIndexed(int i, Thread *t, uint32_t flags,
                                    void *ptr) {
   auto pid = t->tproc->pid;
+  auto p = reinterpret_cast<std::uintptr_t>(ptr);
   if (flags & 1) {
     pid = 0; // Process shared (TODO)
-    ORBIS_LOG_WARNING("Using process-shared umtx", t->tid, ptr);
+    ORBIS_LOG_WARNING("Using process-shared umtx", t->tid, ptr, (p % 0x4000));
   }
-  auto p = reinterpret_cast<std::uintptr_t>(ptr);
   auto n = p + pid;
   if (flags & 1)
     n %= 0x4000;
