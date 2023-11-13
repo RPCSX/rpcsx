@@ -53,8 +53,8 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    flockfile(stderr);
-    ORBIS_LOG_ERROR("gc ioctl 0xc0108102", args->arg0, args->count, args->cmds);
+    // flockfile(stderr);
+    // ORBIS_LOG_ERROR("gc ioctl 0xc0108102", args->arg0, args->count, args->cmds);
 
     for (unsigned i = 0; i < args->count; ++i) {
       auto cmd = args->cmds + (i * 2);
@@ -75,7 +75,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
       rx::bridge.sendCommandBuffer(thread->tproc->pid, cmdId, address, size);
     }
-    funlockfile(stderr);
+    // funlockfile(stderr);
 
     break;
   }
@@ -88,7 +88,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    ORBIS_LOG_ERROR("gc ioctl 0xc0088101", args->arg0, args->arg1);
+    // ORBIS_LOG_ERROR("gc ioctl 0xc0088101", args->arg0, args->arg1);
     break;
   }
 
@@ -257,9 +257,22 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     break;
   }
 
+  case 0xc0048113: {
+    // get client number
+    *(std::uint32_t *)argp = 0;
+    break;
+  }
+
+  case 0xc0048115: {
+    // is game closed
+    *(std::uint32_t *)argp = 0;
+    break;
+  }
+
   default:
     ORBIS_LOG_FATAL("Unhandled gc ioctl", request);
     std::fflush(stdout);
+    thread->where();
     // __builtin_trap();
     break;
   }

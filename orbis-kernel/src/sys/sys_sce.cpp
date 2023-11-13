@@ -460,7 +460,7 @@ orbis::SysResult orbis::sys_osem_close(Thread *thread, sint id) {
 }
 orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
                                       ptr<uint> pTimeout) {
-  ORBIS_LOG_NOTICE(__FUNCTION__, thread, id, need, pTimeout);
+  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, need, pTimeout);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
   if (need < 1 || need > sem->maxValue)
     return ErrorCode::INVAL;
@@ -510,7 +510,7 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
   }
 
   if (timedout) {
-    return ErrorCode::TIMEDOUT;
+    return SysResult::notAnError(ErrorCode::TIMEDOUT);
   }
   return {};
 }
@@ -863,8 +863,8 @@ struct mdbg_property {
 
 orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
                                          ptr<void> arg0, ptr<void> arg1) {
-  ORBIS_LOG_NOTICE("sys_mdbg_service", thread->tid, op, arg0, arg1);
-  thread->where();
+  // ORBIS_LOG_NOTICE("sys_mdbg_service", thread->tid, op, arg0, arg1);
+  // thread->where();
 
   switch (op) {
   case 1: {

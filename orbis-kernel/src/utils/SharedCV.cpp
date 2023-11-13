@@ -8,46 +8,56 @@ namespace orbis::utils {
 void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
                           std::uint64_t usec_timeout) noexcept {
   // Not supposed to fail
-  if (!_val)
+  if (!_val) {
     std::abort();
+  }
 
   // Wait with timeout
   struct timespec timeout {};
   timeout.tv_nsec = (usec_timeout % 1000'000) * 1000;
   timeout.tv_sec = (usec_timeout / 1000'000);
-again:
-  auto result = syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
-                        usec_timeout + 1 ? &timeout : nullptr, 0, 0);
-  if (result < 0)
-    result = errno;
 
-  // Cleanup
-  const auto old = atomic_fetch_op(m_value, [&](unsigned &value) {
-    // Remove waiter if no signals
-    if (!(value & ~c_waiter_mask) && result != EAGAIN)
-      value -= 1;
+  while (true) {
+    auto result = syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
+                          usec_timeout + 1 ? &timeout : nullptr, 0, 0);
+    if (result < 0) {
+      result = errno;
+    }
 
-    // Try to remove signal
-    if (value & c_signal_mask)
-      value -= c_signal_one;
-    if (value & c_locked_mask)
-      value -= c_locked_mask;
-  });
+    // Cleanup
+    const auto old = atomic_fetch_op(m_value, [&](unsigned &value) {
+      // Remove waiter if no signals
+      if (!(value & ~c_waiter_mask) && result != EAGAIN && result != EINTR) {
+        value -= 1;
+      }
 
-  // Lock is already acquired
-  if (old & c_locked_mask) {
-    return;
+      // Try to remove signal
+      if (value & c_signal_mask) {
+        value -= c_signal_one;
+      }
+
+      if (value & c_locked_mask) {
+        value -= c_locked_mask;
+      }
+    });
+
+    // Lock is already acquired
+    if (old & c_locked_mask) {
+      return;
+    }
+
+    // Wait directly (waiter has been added)
+    if (old & c_signal_mask) {
+      mutex.impl_wait();
+      return;
+    }
+
+    // Possibly spurious wakeup
+    if (result != EAGAIN && result != EINTR) {
+      break;
+    }
   }
 
-  // Wait directly (waiter has been added)
-  if (old & c_signal_mask) {
-    mutex.impl_wait();
-    return;
-  }
-
-  // Possibly spurious wakeup
-  if (result == EAGAIN)
-    goto again;
   mutex.lock();
 }
 

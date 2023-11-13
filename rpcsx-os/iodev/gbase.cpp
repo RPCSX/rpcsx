@@ -2,6 +2,7 @@
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/thread/Thread.hpp"
 
 struct GbaseFile : orbis::File {};
 
@@ -9,6 +10,7 @@ static orbis::ErrorCode gbase_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled gbase ioctl", request);
+  thread->where();
   return {};
 }
 

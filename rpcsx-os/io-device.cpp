@@ -574,7 +574,7 @@ orbis::ErrorCode HostFsDevice::mkdir(const char *path, int mode,
 }
 orbis::ErrorCode HostFsDevice::rmdir(const char *path, orbis::Thread *thread) {
   std::error_code ec;
-  std::filesystem::remove(hostPath + "/" + path, ec);
+  std::filesystem::remove_all(hostPath + "/" + path, ec);
   return convertErrorCode(ec);
 }
 orbis::ErrorCode HostFsDevice::rename(const char *from, const char *to,

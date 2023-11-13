@@ -82,16 +82,24 @@ orbis::SysResult orbis::sys_clock_gettime(Thread *, clockid_t clock_id,
     result = getHostClock(CLOCK_PROCESS_CPUTIME_ID);
     break;
   case ClockId::Network:
-    ORBIS_LOG_ERROR("Unimplemented ClockId::Network\n");
+    // TODO
+    // ORBIS_LOG_ERROR("Unimplemented ClockId::Network");
+    result = getHostClock(CLOCK_PROCESS_CPUTIME_ID);
     break;
   case ClockId::DebugNetwork:
-    ORBIS_LOG_ERROR("Unimplemented ClockId::DebugNetwork\n");
+    // TODO
+    // ORBIS_LOG_ERROR("Unimplemented ClockId::DebugNetwork");
+    result = getHostClock(CLOCK_PROCESS_CPUTIME_ID);
     break;
   case ClockId::AdNetwork:
-    ORBIS_LOG_ERROR("Unimplemented ClockId::AdNetwork\n");
+    // TODO
+    // ORBIS_LOG_ERROR("Unimplemented ClockId::AdNetwork");
+    result = getHostClock(CLOCK_PROCESS_CPUTIME_ID);
     break;
   case ClockId::RawNetwork:
-    ORBIS_LOG_ERROR("Unimplemented ClockId::RawNetwork\n");
+    // TODO
+    // ORBIS_LOG_ERROR("Unimplemented ClockId::RawNetwork");
+    result = getHostClock(CLOCK_PROCESS_CPUTIME_ID);
     break;
 
   default:

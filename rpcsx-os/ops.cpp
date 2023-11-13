@@ -641,6 +641,7 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
 
 orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
   std::printf("Requested exit with status %d\n", status);
+  thread->tproc->event.emit(orbis::kNoteExit, status);
   std::exit(status);
 }
 
@@ -705,6 +706,7 @@ SysResult fork(Thread *thread, slong flags) {
 
     kfree(flag, sizeof(*flag));
 
+    thread->tproc->event.emit(orbis::kNoteFork, childPid);
     thread->retval[0] = childPid;
     thread->retval[1] = 0;
     return {};
@@ -792,6 +794,20 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   ORBIS_LOG_ERROR(__FUNCTION__, path);
 
   {
+    auto name = path;
+    if (auto slashP = name.rfind('/'); slashP != std::string::npos) {
+      name = name.substr(slashP + 1);
+    }
+
+    if (name.size() > 15) {
+      name.resize(15);
+    }
+
+    pthread_setname_np(pthread_self(), name.c_str());
+  }
+
+  std::printf("pid: %u\n", ::getpid());
+  {
     orbis::Ref<File> file;
     auto result = rx::vfs::open(path, kOpenFlagReadOnly, 0, &file, thread);
     if (result.isError()) {
@@ -812,16 +828,7 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   thread->tproc->processParam = executableModule->processParam;
   thread->tproc->processParamSize = executableModule->processParamSize;
 
-  auto name = path;
-  if (auto slashP = name.rfind('/'); slashP != std::string::npos) {
-    name = name.substr(slashP + 1);
-  }
-
-  if (name.size() > 15) {
-    name.resize(15);
-  }
-
-  pthread_setname_np(pthread_self(), name.c_str());
+  thread->tproc->event.emit(orbis::kNoteExec);
 
   ORBIS_LOG_ERROR(__FUNCTION__, "done");
   std::thread([&] {
