@@ -23,7 +23,7 @@ If you want to contribute as a developer, please contact us in the [Discord](htt
 
 * [How to Compile rpcsx](BUILDING.md)
 * [How to Use rpcsx](USAGE.md)
-* [Faq](Faqs.md)
+* [Faq](Faq.md)
 
 ## License
 
