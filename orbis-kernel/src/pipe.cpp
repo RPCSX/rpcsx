@@ -3,17 +3,13 @@
 #include "file.hpp"
 #include "uio.hpp"
 #include <span>
-#include <thread>
 
 static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
                                   orbis::Thread *thread) {
   auto pipe = static_cast<orbis::Pipe *>(file);
   while (true) {
     if (pipe->data.empty()) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    if (pipe->data.empty()) {
+      pipe->cv.wait(file->mtx);
       continue;
     }
 
@@ -33,6 +29,8 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
 
     break;
   }
+
+  file->event.emit(orbis::kEvFiltWrite);
   return {};
 }
 
@@ -45,6 +43,9 @@ static orbis::ErrorCode pipe_write(orbis::File *file, orbis::Uio *uio,
     pipe->data.resize(offset + vec.len);
     std::memcpy(pipe->data.data(), vec.base, vec.len);
   }
+
+  file->event.emit(orbis::kEvFiltRead);
+  pipe->cv.notify_one(file->mtx);
   uio->resid = 0;
   return {};
 }

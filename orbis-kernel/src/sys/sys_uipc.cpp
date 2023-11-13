@@ -1,5 +1,6 @@
 #include "pipe.hpp"
 #include "sys/sysproto.hpp"
+#include "uio.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
 #include <sys/socket.h>
@@ -68,7 +69,26 @@ orbis::SysResult orbis::sys_recvfrom(Thread *thread, sint s, caddr_t buf,
                                      size_t len, sint flags,
                                      ptr<struct sockaddr> from,
                                      ptr<uint32_t> fromlenaddr) {
-  return ErrorCode::NOSYS;
+  auto pipe = thread->tproc->fileDescriptors.get(s).cast<Pipe>();
+  if (pipe == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  std::lock_guard lock(pipe->mtx);
+  IoVec io = {
+      .base = buf,
+      .len = len,
+  };
+  Uio uio{
+      .iov = &io,
+      .iovcnt = 1,
+      .segflg = UioSeg::UserSpace,
+      .rw = UioRw::Read,
+      .td = thread,
+  };
+  pipe->ops->read(pipe.get(), &uio, thread);
+  thread->retval[0] = uio.offset;
+  return {};
 }
 orbis::SysResult orbis::sys_recvmsg(Thread *thread, sint s,
                                     ptr<struct msghdr> msg, sint flags) {

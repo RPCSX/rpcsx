@@ -641,7 +641,7 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
 
 orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
   std::printf("Requested exit with status %d\n", status);
-  thread->tproc->event.emit(orbis::kNoteExit, status);
+  thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExit, status);
   std::exit(status);
 }
 
@@ -706,7 +706,7 @@ SysResult fork(Thread *thread, slong flags) {
 
     kfree(flag, sizeof(*flag));
 
-    thread->tproc->event.emit(orbis::kNoteFork, childPid);
+    thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteFork, childPid);
     thread->retval[0] = childPid;
     thread->retval[1] = 0;
     return {};
@@ -828,7 +828,7 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   thread->tproc->processParam = executableModule->processParam;
   thread->tproc->processParamSize = executableModule->processParamSize;
 
-  thread->tproc->event.emit(orbis::kNoteExec);
+  thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExec);
 
   ORBIS_LOG_ERROR(__FUNCTION__, "done");
   std::thread([&] {

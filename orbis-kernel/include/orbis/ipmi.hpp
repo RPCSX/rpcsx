@@ -78,7 +78,7 @@ struct IpmiSession : RcBase {
   EventFlag evf{0, 0};
   shared_cv connectCv;
   bool expectedOutput = false; // TODO: verify
-  bool connected = false; // TODO: implement more states
+  bool connected = false;      // TODO: implement more states
   sint connectionStatus{0};
 };
 
@@ -121,9 +121,8 @@ SysResult sysIpmiDestroySession(Thread *thread, ptr<uint> result, uint kid,
 
 SysResult sysIpmiServerReceivePacket(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
-SysResult sysIpmiSendConnectResult(Thread *thread, ptr<uint> result,
-                                      uint kid, ptr<void> params,
-                                      uint64_t paramsSz);
+SysResult sysIpmiSendConnectResult(Thread *thread, ptr<uint> result, uint kid,
+                                   ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionRespondSync(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionGetClientPid(Thread *thread, ptr<uint> result, uint kid,
@@ -137,4 +136,13 @@ SysResult sysIpmiSessionGetUserData(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiServerGetName(Thread *thread, ptr<uint> result, uint kid,
                                ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiClientPollEventFlag(Thread *thread, ptr<uint> result,
+                                      uint kid, ptr<void> params,
+                                      uint64_t paramsSz);
+SysResult sysIpmiSessionWaitEventFlag(Thread *thread, ptr<uint> result,
+                                      uint kid, ptr<void> params,
+                                      uint64_t paramsSz);
+SysResult sysIpmiSessionSetEventFlag(Thread *thread, ptr<uint> result, uint kid,
+                                     ptr<void> params, uint64_t paramsSz);
+
 } // namespace orbis

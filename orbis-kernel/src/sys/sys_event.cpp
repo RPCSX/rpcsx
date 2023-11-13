@@ -34,7 +34,7 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
 }
 
 namespace orbis {
-static SysResult keventChange(KQueue *kq, KEvent &change) {
+static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
   auto nodeIt = kq->notes.end();
   for (auto it = kq->notes.begin(); it != kq->notes.end(); ++it) {
     if (it->event.ident == change.ident && it->event.filter == change.filter) {
@@ -73,6 +73,22 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
         std::unique_lock lock(process->event.mutex);
         process->event.notes.insert(&*nodeIt);
         nodeIt->linked = process;
+      } else if (change.filter == kEvFiltRead ||
+                 change.filter == kEvFiltWrite) {
+        auto fd = thread->tproc->fileDescriptors.get(change.ident);
+
+        if (fd == nullptr) {
+          return ErrorCode::BADF;
+        }
+
+        std::unique_lock lock(fd->event.mutex);
+
+        if (change.filter == kEvFiltWrite) {
+          nodeIt->triggered = true;
+          kq->cv.notify_all(kq->mtx);
+        }
+
+        fd->event.notes.insert(&*nodeIt);
       }
     }
   }
@@ -121,7 +137,7 @@ static SysResult keventChange(KQueue *kq, KEvent &change) {
       kq->cv.notify_all(kq->mtx);
     }
   } else if (change.filter == kEvFiltGraphicsCore ||
-             change.filter == kEvFiltDisplay) {
+             change.filter == kEvFiltDisplay || change.filter == kEvFiltRegEv) {
     nodeIt->triggered = true;
     kq->cv.notify_all(kq->mtx);
   }
@@ -163,7 +179,8 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
         ORBIS_LOG_TODO(__FUNCTION__, change.ident, change.filter, change.flags,
                        change.fflags, change.data, change.udata);
 
-        if (auto result = keventChange(kq.get(), change); result.value() != 0) {
+        if (auto result = keventChange(kq.get(), change, thread);
+            result.value() != 0) {
           return result;
         }
       }
@@ -208,9 +225,14 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       }
 
       auto &note = *it;
+      std::lock_guard lock(note.mutex);
 
       if (note.enabled && note.triggered) {
         result.push_back(note.event);
+
+        if (note.event.flags & kEvDispatch) {
+          note.enabled = false;
+        }
 
         if (note.event.flags & kEvOneshot) {
           it = kq->notes.erase(it);

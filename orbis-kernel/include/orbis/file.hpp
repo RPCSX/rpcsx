@@ -2,6 +2,7 @@
 
 #include "KernelAllocator.hpp"
 #include "error/ErrorCode.hpp"
+#include "note.hpp"
 #include "stat.hpp"
 #include "utils/Rc.hpp"
 #include "utils/SharedMutex.hpp"
@@ -44,6 +45,7 @@ struct FileOps {
 
 struct File : RcBase {
   shared_mutex mtx;
+  EventEmitter event;
   const FileOps *ops = nullptr;
   Ref<RcBase> device;
   std::uint64_t nextOff = 0;

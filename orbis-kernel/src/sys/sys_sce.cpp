@@ -1107,6 +1107,10 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiSessionGetUserData(thread, result, kid, params, paramsSz);
   case 0x46a:
     return sysIpmiServerGetName(thread, result, kid, params, paramsSz);
+  case 0x491:
+    return sysIpmiClientPollEventFlag(thread, result, kid, params, paramsSz);
+  case 0x493:
+    return sysIpmiSessionSetEventFlag(thread, result, kid, params, paramsSz);
   }
 
   ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);

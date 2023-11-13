@@ -704,3 +704,73 @@ orbis::SysResult orbis::sysIpmiServerGetName(Thread *thread, ptr<uint> result,
 
   return uwrite<uint>(result, 0);
 }
+
+orbis::SysResult orbis::sysIpmiClientPollEventFlag(Thread *thread,
+                                                    ptr<uint> result, uint kid,
+                                                    ptr<void> params,
+                                                    uint64_t paramsSz) {
+  struct IpmiPollEventFlagParam {
+    uint64_t index;
+    uint64_t patternSet;
+    uint64_t mode;
+    ptr<uint64_t> pPatternSet;
+  };
+
+  static_assert(sizeof(IpmiPollEventFlagParam) == 0x20);
+
+  if (paramsSz != sizeof(IpmiPollEventFlagParam)) {
+    return ErrorCode::INVAL;
+  }
+
+  IpmiPollEventFlagParam _params;
+  ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiPollEventFlagParam>(params)));
+
+  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  ORBIS_LOG_TODO(__FUNCTION__, client->name, _params.index, _params.patternSet, _params.mode, _params.pPatternSet);
+  ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, 0u));
+  // client->evf.set(_params.a);
+  return ErrorCode::BUSY;
+}
+
+orbis::SysResult orbis::sysIpmiSessionWaitEventFlag(Thread *thread,
+                                                    ptr<uint> result, uint kid,
+                                                    ptr<void> params,
+                                                    uint64_t paramsSz) {
+  ORBIS_LOG_TODO(__FUNCTION__, paramsSz);
+  thread->where();
+  return uwrite<uint>(result, 0);
+}
+
+orbis::SysResult orbis::sysIpmiSessionSetEventFlag(Thread *thread,
+                                                   ptr<uint> result, uint kid,
+                                                   ptr<void> params,
+                                                   uint64_t paramsSz) {
+  struct IpmiSetEventFlagParam {
+    uint64_t patternSet;
+    uint64_t index;
+  };
+
+  static_assert(sizeof(IpmiSetEventFlagParam) == 0x10);
+
+  if (paramsSz != sizeof(IpmiSetEventFlagParam)) {
+    return ErrorCode::INVAL;
+  }
+
+  IpmiSetEventFlagParam _params;
+  ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiSetEventFlagParam>(params)));
+
+  auto session = thread->tproc->ipmiMap.get(kid).cast<IpmiSession>();
+
+  if (session == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  ORBIS_LOG_TODO(__FUNCTION__, session->client->name, _params.patternSet, _params.index);
+  session->evf.set(_params.patternSet);
+  return uwrite<uint>(result, 0);
+}
