@@ -97,9 +97,34 @@ struct IpmiCreateServerConfig {
 
 static_assert(sizeof(IpmiCreateServerConfig) == 0x38);
 
-ErrorCode ipmiCreateClient(Thread *thread, void *clientImpl, const char *name,
+struct IpmiBufferInfo {
+  ptr<void> data;
+  uint64_t size;
+};
+
+static_assert(sizeof(IpmiBufferInfo) == 0x10);
+
+struct IpmiDataInfo {
+  ptr<void> data;
+  uint64_t size;
+  uint64_t capacity; //?
+};
+
+static_assert(sizeof(IpmiDataInfo) == 0x18);
+
+struct IpmiSyncMessageHeader {
+  orbis::ptr<void> sessionImpl;
+  orbis::uint pid;
+  orbis::uint methodId;
+  orbis::uint numInData;
+  orbis::uint numOutData;
+};
+
+static_assert(sizeof(IpmiSyncMessageHeader) == 0x18);
+
+ErrorCode ipmiCreateClient(Process *proc, void *clientImpl, const char *name,
                            void *config, Ref<IpmiClient> &result);
-ErrorCode ipmiCreateServer(Thread *thread, void *serverImpl, const char *name,
+ErrorCode ipmiCreateServer(Process *proc, void *serverImpl, const char *name,
                            const IpmiCreateServerConfig &config,
                            Ref<IpmiServer> &result);
 ErrorCode ipmiCreateSession(Thread *thread, void *sessionImpl,

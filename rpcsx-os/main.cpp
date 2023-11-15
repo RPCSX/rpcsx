@@ -11,9 +11,7 @@
 #include "vm.hpp"
 #include <rx/Version.hpp>
 
-#include <atomic>
 #include <elf.h>
-#include <filesystem>
 #include <linux/prctl.h>
 #include <orbis/KernelContext.hpp>
 #include <orbis/module.hpp>
@@ -30,9 +28,13 @@
 #include <sys/prctl.h>
 #include <ucontext.h>
 
+#include <atomic>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <functional>
+#include <sstream>
 
 static int g_gpuPid;
 
@@ -610,6 +612,268 @@ static void runRpsxGpu() {
   }
 }
 
+static orbis::Semaphore *createSemaphore(std::string_view name, uint32_t attrs,
+                                         uint64_t initCount,
+                                         uint64_t maxCount) {
+  return orbis::g_context
+      .createSemaphore(orbis::kstring(name), attrs, initCount, maxCount)
+      .first;
+}
+
+static orbis::EventFlag *createEventFlag(std::string_view name, uint32_t attrs,
+                                         uint64_t initPattern) {
+  return orbis::g_context
+      .createEventFlag(orbis::kstring(name), attrs, initPattern)
+      .first;
+}
+
+static void createShm(const char *name, uint32_t flags, uint32_t mode,
+                      uint64_t size) {
+  orbis::Ref<orbis::File> shm;
+  auto shmDevice = orbis::g_context.shmDevice.staticCast<IoDevice>();
+  shmDevice->open(&shm, "/SceAvSetting", flags, mode, nullptr);
+  shm->ops->truncate(shm.get(), 4096, nullptr);
+}
+
+static orbis::Ref<orbis::IpmiServer> createIpmiServer(
+    orbis::Process *process, const char *name,
+    std::function<void(orbis::IpmiSession *, orbis::IpmiSyncMessageHeader *)>
+        packetHandler) {
+  orbis::IpmiCreateServerConfig config{};
+  orbis::Ref<orbis::IpmiServer> server;
+  orbis::ipmiCreateServer(process, nullptr, name, config, server);
+  std::thread{[server, packetHandler = std::move(packetHandler)] {
+    while (true) {
+      orbis::IpmiServer::Packet packet;
+      {
+        std::lock_guard lock(server->mutex);
+
+        while (server->packets.empty()) {
+          server->receiveCv.wait(server->mutex);
+        }
+
+        packet = std::move(server->packets.front());
+        server->packets.pop_front();
+      }
+
+      if (packet.info.type == 1) {
+        std::lock_guard serverLock(server->mutex);
+
+        for (auto it = server->connectionRequests.begin();
+             it != server->connectionRequests.end(); ++it) {
+          auto &conReq = *it;
+          std::lock_guard clientLock(conReq.client->mutex);
+          if (conReq.client->session != nullptr) {
+            continue;
+          }
+
+          auto session = orbis::knew<orbis::IpmiSession>();
+          if (session == nullptr) {
+            break;
+          }
+
+          session->client = conReq.client;
+          session->server = server;
+          conReq.client->session = session;
+          conReq.client->sessionCv.notify_all(conReq.client->mutex);
+          // server->connectionRequests.erase(it);
+          break;
+        }
+
+        continue;
+      }
+
+      if ((packet.info.type & ~0x8010) == 0x41) {
+        auto msgHeader = std::bit_cast<orbis::IpmiSyncMessageHeader *>(
+            packet.message.data());
+        auto process = orbis::g_context.findProcessById(msgHeader->pid);
+        if (process == nullptr) {
+          continue;
+        }
+        auto client = process->ipmiMap.get(packet.info.clientKid)
+                          .cast<orbis::IpmiClient>();
+        if (client == nullptr) {
+          continue;
+        }
+        auto session = client->session;
+        if (session == nullptr) {
+          continue;
+        }
+
+        packetHandler(client->session.get(), msgHeader);
+        continue;
+      }
+
+      std::fprintf(stderr, "IPMI: Unhandled packet %s::%u\n",
+                   server->name.c_str(), packet.info.type);
+    }
+  }}.detach();
+  return server;
+}
+
+static std::uint32_t
+unimplementedIpmiServer(orbis::IpmiSession *session,
+                        orbis::IpmiSyncMessageHeader *message) {
+  std::fprintf(
+      stderr,
+      "Unimplemented sync method %s::%x(inBufCount=%x, outBufCount=%x)\n",
+      session->server->name.c_str(), message->methodId, message->numInData,
+      message->numOutData);
+
+  std::size_t inBufferOffset = 0;
+  auto bufLoc = std::bit_cast<char *>(message + 1);
+  for (unsigned i = 0; i < message->numInData; ++i) {
+    bufLoc += *std::bit_cast<orbis::uint *>(bufLoc) + sizeof(orbis::uint);
+  }
+
+  auto outSize = *std::bit_cast<orbis::uint *>(bufLoc);
+  orbis::kvector<std::byte> output(outSize);
+
+  std::lock_guard lock(session->mutex);
+
+  session->messageResponses.push_front({
+      .errorCode = 0,
+      .data = std::move(output),
+  });
+
+  session->responseCv.notify_one(session->mutex);
+  return 0;
+}
+
+static void createSysAvControlObjects(orbis::Process *process) {
+  createIpmiServer(process, "SceAvSettingIpc", unimplementedIpmiServer);
+
+  createEventFlag("SceAvSettingEvf", 0x121, 0xffff00000000);
+
+  createShm("/SceAvSetting", 0xa02, 0x1a4, 4096);
+}
+
+static void createSysCoreObjects(orbis::Process *process) {
+  createIpmiServer(process, "SceMbusIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceSysCoreApp", unimplementedIpmiServer);
+  createIpmiServer(process, "SceSysCoreApp2", unimplementedIpmiServer);
+  createIpmiServer(process, "SceMDBG0SRV", unimplementedIpmiServer);
+
+  createSemaphore("SceSysCoreProcSpawnSema", 0x101, 0, 1);
+  createSemaphore("SceTraceMemorySem", 0x100, 1, 1);
+  createSemaphore("SceSysCoreEventSemaphore", 0x101, 0, 0x2d2);
+  createSemaphore("SceSysCoreProcSema", 0x101, 0, 1);
+  createSemaphore("AppmgrCoredumpHandlingEventSema", 0x101, 0, 4);
+
+  createEventFlag("SceMdbgVrTriggerDump", 0x121, 0);
+}
+
+static void createGnmCompositorObjects(orbis::Process *process) {
+  createEventFlag("SceCompositorCrashEventFlags", 0x122, 0);
+  createEventFlag("SceCompositorEventflag", 0x122, 0);
+  createEventFlag("SceCompositorResetStatusEVF", 0x122, 0);
+
+  createShm("/tmp/SceHmd/Vr2d_shm_pass", 0xa02, 0x1b6, 16384);
+}
+
+static void createShellCoreObjects(orbis::Process *process) {
+
+  // FIXME: replace with fmt library
+  auto fmtHex = [](auto value, bool upperCase = false) {
+    std::stringstream ss;
+    ss << std::hex << std::setw(8) << std::setfill('0');
+    if (upperCase) {
+      ss << std::uppercase;
+    }
+    ss << value;
+    return std::move(ss).str();
+  };
+
+  createIpmiServer(process, "SceSystemLoggerService", unimplementedIpmiServer);
+  createIpmiServer(process, "SceLoginMgrServer", unimplementedIpmiServer);
+  createIpmiServer(process, "SceLncService", unimplementedIpmiServer);
+  createIpmiServer(process, "SceAppMessaging", unimplementedIpmiServer);
+  createIpmiServer(process, "SceShellCoreUtil", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNetCtl", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpMgrIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpService", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpTrophyIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpUdsIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceLibNpRifMgrIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpPartner001", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpPartnerSubs", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpGameIntent", unimplementedIpmiServer);
+  createIpmiServer(process, "SceBgft", unimplementedIpmiServer);
+  createIpmiServer(process, "SceCntMgrService", unimplementedIpmiServer);
+  createIpmiServer(process, "ScePlayGo", unimplementedIpmiServer);
+  createIpmiServer(process, "SceCompAppProxyUtil", unimplementedIpmiServer);
+  createIpmiServer(process, "SceShareSpIpcService", unimplementedIpmiServer);
+  createIpmiServer(process, "SceRnpsAppMgr", unimplementedIpmiServer);
+  createIpmiServer(process, "SceUpdateService", unimplementedIpmiServer);
+  createIpmiServer(process, "ScePatchChecker", unimplementedIpmiServer);
+  createIpmiServer(process, "SceMorpheusUpdService", unimplementedIpmiServer);
+  createIpmiServer(process, "ScePsmSharedDmem", unimplementedIpmiServer);
+  createIpmiServer(process, "SceSaveData", unimplementedIpmiServer);
+  createIpmiServer(process, "SceStickerCoreServer", unimplementedIpmiServer);
+  createIpmiServer(process, "SceDbRecoveryShellCore", unimplementedIpmiServer);
+  createIpmiServer(process, "SceUserService", unimplementedIpmiServer);
+  createIpmiServer(process, "SceDbPreparationServer", unimplementedIpmiServer);
+  createIpmiServer(process, "SceScreenShot", unimplementedIpmiServer);
+  createIpmiServer(process, "SceAppDbIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceAppInst", unimplementedIpmiServer);
+  createIpmiServer(process, "SceAppContent", unimplementedIpmiServer);
+  createIpmiServer(process, "SceNpEntAccess", unimplementedIpmiServer);
+  createIpmiServer(process, "SceMwIPMIServer", unimplementedIpmiServer);
+  createIpmiServer(process, "SceAutoMounterIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceBackupRestoreUtil", unimplementedIpmiServer);
+  createIpmiServer(process, "SceDataTransfer", unimplementedIpmiServer);
+  createIpmiServer(process, "SceEventService", unimplementedIpmiServer);
+  createIpmiServer(process, "SceShareFactoryUtil", unimplementedIpmiServer);
+  createIpmiServer(process, "SceCloudConnectManager", unimplementedIpmiServer);
+  createIpmiServer(process, "SceHubAppUtil", unimplementedIpmiServer);
+  createIpmiServer(process, "SceTcIPMIServer", unimplementedIpmiServer);
+
+  createSemaphore("SceLncSuspendBlock00000001", 0x101, 1, 1);
+  createSemaphore("SceAppMessaging00000001", 0x100, 0, 0x7fffffff);
+
+  createEventFlag("SceAutoMountUsbMass", 0x120, 0);
+  createEventFlag("SceLoginMgrUtilityEventFlag", 0x112, 0);
+  createEventFlag("SceLoginMgrSharePlayEventFlag", 0x112, 0);
+  createEventFlag("SceLoginMgrServerHmdConnect", 0x112, 0);
+  createEventFlag("SceLoginMgrServerDialogRequest", 0x112, 0);
+  createEventFlag("SceLoginMgrServerDialogResponse", 0x112, 0);
+  createEventFlag("SceGameLiveStreamingSpectator", 0x120, 0x8000000000000000);
+  createEventFlag("SceGameLiveStreamingUserId", 0x120, 0x8000000000000000);
+  createEventFlag("SceGameLiveStreamingMsgCount", 0x120, 0x8000000000000000);
+  createEventFlag("SceGameLiveStreamingBCCtrl", 0x120, 0);
+  createEventFlag("SceGameLiveStreamingEvntArg", 0x120, 0);
+  createEventFlag("SceLncUtilSystemStatus", 0x120, 0);
+  createEventFlag("SceShellCoreUtilRunLevel", 0x100, 0);
+  createEventFlag("SceSystemStateMgrInfo", 0x120, 0x10000000a);
+  createEventFlag("SceSystemStateMgrStatus", 0x120, 0);
+  createEventFlag("SceAppInstallerEventFlag", 0x120, 0);
+  createEventFlag("SceShellCoreUtilPowerControl", 0x120, 0xffff);
+  createEventFlag("SceShellCoreUtilAppFocus", 0x120, -1);
+  createEventFlag("SceShellCoreUtilCtrlFocus", 0x120, -1);
+  createEventFlag("SceShellCoreUtilUIStatus", 0x120, 0x20001);
+  createEventFlag("SceShellCoreUtilDevIdxBehavior", 0x120, 0);
+  createEventFlag("SceNpMgrVshReq", 0x121, 0);
+  createEventFlag("SceNpIdMapperVshReq", 0x121, 0);
+  createEventFlag("SceRtcUtilTzdataUpdateFlag", 0x120, 0);
+  createEventFlag("SceDataTransfer", 0x120, 0);
+  createEventFlag("SceShellCoreUtilffffffff", 0x120, 0x3f8c);
+
+  createEventFlag("SceSysLogPullEvt_" + fmtHex(process->pid, true), 0x110, 0);
+  createEventFlag("SceNpIdMapperEvf00" + fmtHex(process->pid), 0x121, 0);
+  createEventFlag("SceNpBasicPreseEvf00" + fmtHex(process->pid), 0x121, 0);
+  createEventFlag("SceNpPresenceEvf00" + fmtHex(process->pid), 0x121, 0);
+  createEventFlag("SceNpInGameMsgEvf00" + fmtHex(process->pid), 0x121, 0);
+  createEventFlag("SceNpPush2Evf00" + fmtHex(process->pid), 0x121, 0);
+  createEventFlag("SceUserServiceGetEvent_" + fmtHex(process->pid), 0x110, 0);
+
+  createEventFlag("SceLncUtilAppStatus00000001", 0x100, 0);
+  createEventFlag("SceAppMessaging00000001", 0x120, 0);
+
+  createShm("SceGlsSharedMemory", 0x202, 0x1a4, 262144);
+  createShm("SceShellCoreUtil", 0x202, 0x1a4, 16384);
+  createShm("SceNpTpip", 0x202, 0x1ff, 43008);
+}
+
 int main(int argc, const char *argv[]) {
   if (argc == 2) {
     if (std::strcmp(argv[1], "-h") == 0 ||
@@ -860,6 +1124,14 @@ int main(int argc, const char *argv[]) {
       executableModule->type == rx::linker::kElfTypeExec) {
     ps4InitDev();
     ps4InitFd(mainThread);
+
+    if (!isSystem) {
+      createSysAvControlObjects(initProcess);
+      createSysCoreObjects(initProcess);
+      createGnmCompositorObjects(initProcess);
+      createShellCoreObjects(initProcess);
+    }
+
     std::vector<std::string> ps4Argv(argv + argIndex,
                                      argv + argIndex + argc - argIndex);
     status = ps4Exec(mainThread, std::move(executableModule), ps4Argv, {});

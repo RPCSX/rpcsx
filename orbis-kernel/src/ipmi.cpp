@@ -3,24 +3,7 @@
 #include "thread/Process.hpp"
 #include "utils/Logs.hpp"
 
-namespace orbis {
-struct IpmiBufferInfo {
-  ptr<void> data;
-  uint64_t size;
-};
-
-static_assert(sizeof(IpmiBufferInfo) == 0x10);
-
-struct IpmiDataInfo {
-  ptr<void> data;
-  uint64_t size;
-  uint64_t capacity; //?
-};
-
-static_assert(sizeof(IpmiDataInfo) == 0x18);
-} // namespace orbis
-
-orbis::ErrorCode orbis::ipmiCreateClient(Thread *thread, void *clientImpl,
+orbis::ErrorCode orbis::ipmiCreateClient(Process *proc, void *clientImpl,
                                          const char *name, void *config,
                                          Ref<IpmiClient> &result) {
   auto client = knew<IpmiClient>(name);
@@ -30,12 +13,12 @@ orbis::ErrorCode orbis::ipmiCreateClient(Thread *thread, void *clientImpl,
 
   client->clientImpl = clientImpl;
   client->name = name;
-  client->pid = thread->tproc->pid;
+  client->pid = proc->pid;
   result = client;
   return {};
 }
 
-orbis::ErrorCode orbis::ipmiCreateServer(Thread *thread, void *serverImpl,
+orbis::ErrorCode orbis::ipmiCreateServer(Process *proc, void *serverImpl,
                                          const char *name,
                                          const IpmiCreateServerConfig &config,
                                          Ref<IpmiServer> &result) {
@@ -45,7 +28,7 @@ orbis::ErrorCode orbis::ipmiCreateServer(Thread *thread, void *serverImpl,
   server->serverImpl = serverImpl;
   server->userData = config.userData;
   server->eventHandler = config.eventHandler;
-  server->pid = thread->tproc->pid;
+  server->pid = proc->pid;
   result = server;
   return {};
 }
@@ -116,7 +99,7 @@ orbis::SysResult orbis::sysIpmiCreateClient(Thread *thread, ptr<uint> result,
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiCreateClientParams>(params)));
   ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), _params.name));
   ORBIS_RET_ON_ERROR(
-      ipmiCreateClient(thread, _params.clientImpl, _name, nullptr, client));
+      ipmiCreateClient(thread->tproc, _params.clientImpl, _name, nullptr, client));
 
   auto kid = thread->tproc->ipmiMap.insert(std::move(client));
 
@@ -152,7 +135,7 @@ orbis::SysResult orbis::sysIpmiCreateServer(Thread *thread, ptr<uint> result,
   ORBIS_RET_ON_ERROR(uread(_config, _params.config));
   ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), _params.name));
   ORBIS_RET_ON_ERROR(
-      ipmiCreateServer(thread, _params.serverImpl, _name, _config, server));
+      ipmiCreateServer(thread->tproc, _params.serverImpl, _name, _config, server));
   auto kid = thread->tproc->ipmiMap.insert(std::move(server));
 
   if (kid == -1) {
@@ -396,16 +379,6 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
 
   static_assert(sizeof(IpmiSyncCallParams) == 0x30);
 
-  struct MessageHeader {
-    ptr<void> sessionImpl;
-    uint pid;
-    uint methodId;
-    uint numInData;
-    uint numOutData;
-  };
-
-  static_assert(sizeof(MessageHeader) == 0x18);
-
   if (paramsSz != sizeof(IpmiSyncCallParams)) {
     return ErrorCode::INVAL;
   }
@@ -463,12 +436,12 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
       outSize += data.size;
     }
 
-    auto size = sizeof(MessageHeader) + inSize + outSize +
+    auto size = sizeof(IpmiSyncMessageHeader) + inSize + outSize +
                 _params.numInData * sizeof(uint32_t) +
                 _params.numOutData * sizeof(uint32_t);
 
     kvector<std::byte> message(size);
-    auto msg = new (message.data()) MessageHeader;
+    auto msg = new (message.data()) IpmiSyncMessageHeader;
     msg->sessionImpl = session->sessionImpl;
     msg->pid = thread->tproc->pid;
     msg->methodId = _params.method;
