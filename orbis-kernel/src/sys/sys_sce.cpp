@@ -1226,8 +1226,10 @@ orbis::sys_get_kernel_mem_statistics(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult
-orbis::sys_get_sdk_compiled_version(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::sys_get_sdk_compiled_version(Thread *thread, ptr<const char> path) {
+  ORBIS_LOG_ERROR(__FUNCTION__, path);
+  thread->retval[0] = g_context.sdkVersion;
+  return {};
 }
 orbis::SysResult orbis::sys_app_state_change(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -1243,8 +1245,10 @@ orbis::SysResult orbis::sys_dynlib_get_obj_member(Thread *thread,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult
-orbis::sys_budget_get_ptype_of_budget(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::sys_budget_get_ptype_of_budget(Thread *thread, sint budgetId) {
+  ORBIS_LOG_WARNING(__FUNCTION__, budgetId);
+  thread->retval[0] = budgetId;
+  return {};
 }
 orbis::SysResult
 orbis::sys_prepare_to_resume_process(Thread *thread /* TODO */) {

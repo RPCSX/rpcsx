@@ -758,11 +758,11 @@ SysResult sys_set_chicken_switches(Thread *thread /* TODO */);
 SysResult sys_extend_page_table_pool(Thread *thread);
 SysResult sys_extend_page_table_pool2(Thread *thread);
 SysResult sys_get_kernel_mem_statistics(Thread *thread /* TODO */);
-SysResult sys_get_sdk_compiled_version(Thread *thread /* TODO */);
+SysResult sys_get_sdk_compiled_version(Thread *thread, ptr<const char> path);
 SysResult sys_app_state_change(Thread *thread /* TODO */);
 SysResult sys_dynlib_get_obj_member(Thread *thread, SceKernelModule handle,
                                     uint64_t index, ptr<ptr<void>> addrp);
-SysResult sys_budget_get_ptype_of_budget(Thread *thread /* TODO */);
+SysResult sys_budget_get_ptype_of_budget(Thread *thread, sint budgetId);
 SysResult sys_prepare_to_resume_process(Thread *thread /* TODO */);
 SysResult sys_process_terminate(Thread *thread /* TODO */);
 SysResult sys_blockpool_open(Thread *thread);
