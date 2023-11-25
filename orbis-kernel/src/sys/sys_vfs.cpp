@@ -193,7 +193,7 @@ orbis::SysResult orbis::sys_fstatat(Thread *thread, sint fd, ptr<char> path,
 }
 orbis::SysResult orbis::sys_lstat(Thread *thread, ptr<char> path,
                                   ptr<Stat> ub) {
-  return ErrorCode::NOSYS;
+  return sys_stat(thread, path, ub);
 }
 orbis::SysResult orbis::sys_nstat(Thread *thread, ptr<char> path,
                                   ptr<struct nstat> ub) {
