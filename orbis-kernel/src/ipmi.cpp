@@ -47,7 +47,8 @@ orbis::ErrorCode orbis::ipmiCreateSession(Thread *thread, void *sessionImpl,
     std::lock_guard serverLock(server->mutex);
     for (auto &conReq : server->connectionRequests) {
       if (conReq.serverTid != thread->tid ||
-          conReq.client->session != nullptr) {
+          conReq.client->session != nullptr ||
+          conReq.client->name != server->name) {
         continue;
       }
 
@@ -98,8 +99,8 @@ orbis::SysResult orbis::sysIpmiCreateClient(Thread *thread, ptr<uint> result,
 
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiCreateClientParams>(params)));
   ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), _params.name));
-  ORBIS_RET_ON_ERROR(
-      ipmiCreateClient(thread->tproc, _params.clientImpl, _name, nullptr, client));
+  ORBIS_RET_ON_ERROR(ipmiCreateClient(thread->tproc, _params.clientImpl, _name,
+                                      nullptr, client));
 
   auto kid = thread->tproc->ipmiMap.insert(std::move(client));
 
@@ -134,8 +135,8 @@ orbis::SysResult orbis::sysIpmiCreateServer(Thread *thread, ptr<uint> result,
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiCreateServerParams>(params)));
   ORBIS_RET_ON_ERROR(uread(_config, _params.config));
   ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), _params.name));
-  ORBIS_RET_ON_ERROR(
-      ipmiCreateServer(thread->tproc, _params.serverImpl, _name, _config, server));
+  ORBIS_RET_ON_ERROR(ipmiCreateServer(thread->tproc, _params.serverImpl, _name,
+                                      _config, server));
   auto kid = thread->tproc->ipmiMap.insert(std::move(server));
 
   if (kid == -1) {
@@ -679,9 +680,9 @@ orbis::SysResult orbis::sysIpmiServerGetName(Thread *thread, ptr<uint> result,
 }
 
 orbis::SysResult orbis::sysIpmiClientPollEventFlag(Thread *thread,
-                                                    ptr<uint> result, uint kid,
-                                                    ptr<void> params,
-                                                    uint64_t paramsSz) {
+                                                   ptr<uint> result, uint kid,
+                                                   ptr<void> params,
+                                                   uint64_t paramsSz) {
   struct IpmiPollEventFlagParam {
     uint64_t index;
     uint64_t patternSet;
@@ -704,7 +705,8 @@ orbis::SysResult orbis::sysIpmiClientPollEventFlag(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  ORBIS_LOG_TODO(__FUNCTION__, client->name, _params.index, _params.patternSet, _params.mode, _params.pPatternSet);
+  ORBIS_LOG_TODO(__FUNCTION__, client->name, _params.index, _params.patternSet,
+                 _params.mode, _params.pPatternSet);
   ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, 0u));
   // client->evf.set(_params.a);
   return ErrorCode::BUSY;
@@ -743,7 +745,8 @@ orbis::SysResult orbis::sysIpmiSessionSetEventFlag(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  ORBIS_LOG_TODO(__FUNCTION__, session->client->name, _params.patternSet, _params.index);
+  ORBIS_LOG_TODO(__FUNCTION__, session->client->name, _params.patternSet,
+                 _params.index);
   session->evf.set(_params.patternSet);
   return uwrite<uint>(result, 0);
 }
