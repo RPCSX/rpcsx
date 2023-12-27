@@ -1013,16 +1013,15 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceDbRecoveryShellCore");
   createIpmiServer(process, "SceUserService")
       .sendMsg(SceUserServiceEvent{.eventType = 0, .user = 1})
-      .createSyncHandler<uint32_t>(
+      .createSyncHandler(
           0x30011,
-          [](void *ptr, std::uint64_t size, uint32_t data) -> std::int32_t {
-            ORBIS_LOG_TODO("SceUserService: get_initial_user_id");
-
-            if (size != sizeof(orbis::uint32_t)) {
+          [](void *ptr, std::uint64_t &size) -> std::int32_t {
+            if (size < sizeof(orbis::uint32_t)) {
               return 0x8000'0000;
             }
 
-            *(uint32_t *)ptr = 1;
+            *(orbis::uint32_t *)ptr = 1;
+            size = sizeof(orbis::uint32_t);
             return 0;
           });
   createIpmiServer(process, "SceDbPreparationServer");
