@@ -92,7 +92,7 @@ int main(int argc, const char *argv[]) {
   }
 
   const char *cmdBridgeName = "/rpcsx-gpu-cmds";
-  const char *shmName = "/rpcsx-os-memory-50001";
+  const char *shmName = "/rpcsx-os-memory";
   unsigned long gpuIndex = 0;
   auto presenter = PresenterMode::Window;
   bool enableValidation = false;
@@ -945,25 +945,15 @@ int main(int argc, const char *argv[]) {
       for (auto cmd : std::span(commandsBuffer, pulledCount)) {
         switch (cmd.id) {
         case amdgpu::bridge::CommandId::ProtectMemory:
-          if (cmd.memoryProt.pid != 50001) {
-            continue;
-          }
           device.handleProtectMemory(cmd.memoryProt.address,
                                      cmd.memoryProt.size, cmd.memoryProt.prot);
           break;
         case amdgpu::bridge::CommandId::CommandBuffer:
-          if (cmd.memoryProt.pid != 50001) {
-            continue;
-          }
           device.handleCommandBuffer(cmd.commandBuffer.queue,
                                      cmd.commandBuffer.address,
                                      cmd.commandBuffer.size);
           break;
         case amdgpu::bridge::CommandId::Flip: {
-          if (cmd.memoryProt.pid != 50001) {
-            continue;
-          }
-
           if (!isImageAcquired) {
             Verify() << vkAcquireNextImageKHR(vkDevice, swapchain, UINT64_MAX,
                                               presentCompleteSemaphore, nullptr,

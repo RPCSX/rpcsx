@@ -35,6 +35,7 @@
 #include <filesystem>
 #include <functional>
 #include <sstream>
+#include <unordered_map>
 
 static int g_gpuPid;
 
@@ -631,36 +632,201 @@ static void createShm(const char *name, uint32_t flags, uint32_t mode,
                       uint64_t size) {
   orbis::Ref<orbis::File> shm;
   auto shmDevice = orbis::g_context.shmDevice.staticCast<IoDevice>();
-  shmDevice->open(&shm, "/SceAvSetting", flags, mode, nullptr);
+  shmDevice->open(&shm, name, flags, mode, nullptr);
   shm->ops->truncate(shm.get(), 4096, nullptr);
 }
 
-static orbis::Ref<orbis::IpmiServer> createIpmiServer(
-    orbis::Process *process, const char *name,
-    std::function<void(orbis::IpmiSession *, orbis::IpmiSyncMessageHeader *)>
-        packetHandler) {
+struct IpmiServer {
+  orbis::Ref<orbis::IpmiServer> serverImpl;
+
+  std::unordered_map<
+      std::uint32_t,
+      std::function<orbis::ErrorCode(
+          std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+          const std::vector<std::span<std::byte>> &inData)>>
+      syncHandlers;
+  std::vector<std::vector<std::byte>> messages;
+
+  IpmiServer &createSyncHandler(std::uint32_t methodId,
+                                std::function<std::int32_t()> handler) {
+    syncHandlers[methodId] =
+        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      if (!outData.empty() || !inData.empty()) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      errorCode = handler();
+      return {};
+    };
+    return *this;
+  }
+
+  IpmiServer &createSyncHandler(
+      std::uint32_t methodId,
+      std::function<std::int32_t(void *out, std::uint64_t &outSize)> handler) {
+    syncHandlers[methodId] =
+        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      if (outData.size() != 1) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      std::uint64_t size = outData[0].size();
+      errorCode = handler(outData[0].data(), size);
+      outData[0] = outData[0].subspan(0, size);
+      return {};
+    };
+    return *this;
+  }
+
+  template <typename T>
+  IpmiServer &createSyncHandler(
+      std::uint32_t methodId,
+      std::function<std::int32_t(void *out, std::uint64_t &outSize,
+                                 const T &param)>
+          handler) {
+    syncHandlers[methodId] =
+        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      if (outData.size() != 1 || inData.size() != 1) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      if (inData[0].size() != sizeof(T)) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      std::uint64_t size = outData[0].size();
+      errorCode = handler(outData[0].data(), size,
+                          *reinterpret_cast<T *>(inData[0].data()));
+      outData[0] = outData[0].subspan(0, size);
+      return {};
+    };
+    return *this;
+  }
+
+  template <typename T>
+  IpmiServer &
+  createSyncHandler(std::uint32_t methodId,
+                    std::function<std::int32_t(const T &param)> handler) {
+    syncHandlers[methodId] =
+        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      if (inData.size() != 1 || !outData.empty()) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      if (inData[0].size() != sizeof(T)) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      errorCode = handler(*reinterpret_cast<T *>(inData[0].data()));
+      return {};
+    };
+    return *this;
+  }
+
+  template <typename T> IpmiServer &sendMsg(const T &data) {
+    std::vector<std::byte> message(sizeof(T));
+    std::memcpy(message.data(), &data, sizeof(T));
+    messages.push_back(std::move(message));
+    return *this;
+  }
+
+  orbis::ErrorCode handle(orbis::IpmiSession *session,
+                          orbis::IpmiSyncMessageHeader *message) {
+    std::size_t inBufferOffset = 0;
+    auto bufLoc = std::bit_cast<std::byte *>(message + 1);
+    std::vector<std::span<std::byte>> inData;
+    std::vector<std::span<std::byte>> outData;
+    for (unsigned i = 0; i < message->numInData; ++i) {
+      auto size = *std::bit_cast<orbis::uint *>(bufLoc);
+      bufLoc += sizeof(orbis::uint);
+      inData.push_back({bufLoc, size});
+      bufLoc += size;
+    }
+
+    for (unsigned i = 0; i < message->numOutData; ++i) {
+      auto size = *std::bit_cast<orbis::uint *>(bufLoc);
+      bufLoc += sizeof(orbis::uint);
+      outData.push_back({bufLoc, size});
+      bufLoc += size;
+    }
+
+    if (auto it = syncHandlers.find(message->methodId);
+        it != syncHandlers.end()) {
+      auto &handler = it->second;
+
+      std::int32_t errorCode = 0;
+      auto result = handler(errorCode, outData, inData);
+
+      if (outData.empty()) {
+        session->messageResponses.push_front({
+            .errorCode = errorCode,
+            .data = {},
+        });
+      } else {
+        session->messageResponses.push_front({
+            .errorCode = errorCode,
+            .data = orbis::kvector<std::byte>(
+                outData[0].data(), outData[0].data() + outData[0].size()),
+        });
+      }
+
+      session->responseCv.notify_one(session->mutex);
+      return {};
+    }
+
+    std::fprintf(
+        stderr,
+        "Unimplemented sync method %s::%x(inBufCount=%x, outBufCount=%x)\n",
+        session->server->name.c_str(), message->methodId, message->numInData,
+        message->numOutData);
+
+    std::lock_guard lock(session->mutex);
+
+    session->messageResponses.push_front({
+        .errorCode = 0,
+        .data = orbis::kvector<std::byte>(
+            message->numOutData ? outData[0].size() : 0),
+    });
+
+    session->responseCv.notify_one(session->mutex);
+    return {};
+  }
+};
+
+static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
   orbis::IpmiCreateServerConfig config{};
-  orbis::Ref<orbis::IpmiServer> server;
-  orbis::ipmiCreateServer(process, nullptr, name, config, server);
-  std::thread{[server, packetHandler = std::move(packetHandler)] {
+  orbis::Ref<orbis::IpmiServer> serverImpl;
+  orbis::ipmiCreateServer(process, nullptr, name, config, serverImpl);
+  auto server = std::make_shared<IpmiServer>();
+  server->serverImpl = serverImpl;
+
+  std::thread{[server, serverImpl] {
     while (true) {
       orbis::IpmiServer::Packet packet;
       {
-        std::lock_guard lock(server->mutex);
+        std::lock_guard lock(serverImpl->mutex);
 
-        while (server->packets.empty()) {
-          server->receiveCv.wait(server->mutex);
+        while (serverImpl->packets.empty()) {
+          serverImpl->receiveCv.wait(serverImpl->mutex);
         }
 
-        packet = std::move(server->packets.front());
-        server->packets.pop_front();
+        packet = std::move(serverImpl->packets.front());
+        serverImpl->packets.pop_front();
       }
 
       if (packet.info.type == 1) {
-        std::lock_guard serverLock(server->mutex);
+        std::lock_guard serverLock(serverImpl->mutex);
 
-        for (auto it = server->connectionRequests.begin();
-             it != server->connectionRequests.end(); ++it) {
+        for (auto it = serverImpl->connectionRequests.begin();
+             it != serverImpl->connectionRequests.end(); ++it) {
           auto &conReq = *it;
           std::lock_guard clientLock(conReq.client->mutex);
           if (conReq.client->session != nullptr) {
@@ -673,8 +839,13 @@ static orbis::Ref<orbis::IpmiServer> createIpmiServer(
           }
 
           session->client = conReq.client;
-          session->server = server;
+          session->server = serverImpl;
           conReq.client->session = session;
+
+          for (auto &message : server->messages) {
+            conReq.client->messages.push_back(orbis::kvector<std::byte>(message.data(), message.data() + message.size()));
+          }
+
           conReq.client->sessionCv.notify_all(conReq.client->mutex);
           // server->connectionRequests.erase(it);
           break;
@@ -700,59 +871,59 @@ static orbis::Ref<orbis::IpmiServer> createIpmiServer(
           continue;
         }
 
-        packetHandler(client->session.get(), msgHeader);
+        server->handle(client->session.get(), msgHeader);
         continue;
       }
 
       std::fprintf(stderr, "IPMI: Unhandled packet %s::%u\n",
-                   server->name.c_str(), packet.info.type);
+                   serverImpl->name.c_str(), packet.info.type);
     }
   }}.detach();
-  return server;
+
+  return *server;
 }
 
-static std::uint32_t
-unimplementedIpmiServer(orbis::IpmiSession *session,
-                        orbis::IpmiSyncMessageHeader *message) {
-  std::fprintf(
-      stderr,
-      "Unimplemented sync method %s::%x(inBufCount=%x, outBufCount=%x)\n",
-      session->server->name.c_str(), message->methodId, message->numInData,
-      message->numOutData);
-
-  std::size_t inBufferOffset = 0;
-  auto bufLoc = std::bit_cast<char *>(message + 1);
-  for (unsigned i = 0; i < message->numInData; ++i) {
-    bufLoc += *std::bit_cast<orbis::uint *>(bufLoc) + sizeof(orbis::uint);
-  }
-
-  auto outSize = *std::bit_cast<orbis::uint *>(bufLoc);
-  orbis::kvector<std::byte> output(outSize);
-
-  std::lock_guard lock(session->mutex);
-
-  session->messageResponses.push_front({
-      .errorCode = 0,
-      .data = std::move(output),
-  });
-
-  session->responseCv.notify_one(session->mutex);
-  return 0;
+static void createMiniSysCoreObjects(orbis::Process *process) {
+  createEventFlag("SceBootStatusFlags", 0x121, 0x2408);
 }
 
 static void createSysAvControlObjects(orbis::Process *process) {
-  createIpmiServer(process, "SceAvSettingIpc", unimplementedIpmiServer);
+  createIpmiServer(process, "SceAvSettingIpc");
 
   createEventFlag("SceAvSettingEvf", 0x121, 0xffff00000000);
 
   createShm("/SceAvSetting", 0xa02, 0x1a4, 4096);
 }
 
+struct SceMbusIpcAddHandleByUserIdMethodArgs {
+  orbis::uint32_t unk; // 0
+  orbis::uint32_t deviceId;
+  orbis::uint32_t userId;
+  orbis::uint32_t type;
+  orbis::uint32_t index;
+  orbis::uint32_t reserved;
+  orbis::uint32_t pid;
+};
+
+static_assert(sizeof(SceMbusIpcAddHandleByUserIdMethodArgs) == 0x1c);
+
+struct SceUserServiceEvent {
+  std::uint32_t eventType; // 0 - login, 1 - logout
+  std::uint32_t user;
+};
+
 static void createSysCoreObjects(orbis::Process *process) {
-  createIpmiServer(process, "SceMbusIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceSysCoreApp", unimplementedIpmiServer);
-  createIpmiServer(process, "SceSysCoreApp2", unimplementedIpmiServer);
-  createIpmiServer(process, "SceMDBG0SRV", unimplementedIpmiServer);
+  createIpmiServer(process, "SceMbusIpc")
+      .createSyncHandler<SceMbusIpcAddHandleByUserIdMethodArgs>(
+          0xce110007, [](const auto &args) -> std::int32_t {
+            ORBIS_LOG_TODO("IPMI: SceMbusIpcAddHandleByUserId", args.unk,
+                           args.deviceId, args.userId, args.type, args.index,
+                           args.reserved, args.pid);
+            return 1;
+          });
+  createIpmiServer(process, "SceSysCoreApp");
+  createIpmiServer(process, "SceSysCoreApp2");
+  createIpmiServer(process, "SceMDBG0SRV");
 
   createSemaphore("SceSysCoreProcSpawnSema", 0x101, 0, 1);
   createSemaphore("SceTraceMemorySem", 0x100, 1, 1);
@@ -784,52 +955,94 @@ static void createShellCoreObjects(orbis::Process *process) {
     return std::move(ss).str();
   };
 
-  createIpmiServer(process, "SceSystemLoggerService", unimplementedIpmiServer);
-  createIpmiServer(process, "SceLoginMgrServer", unimplementedIpmiServer);
-  createIpmiServer(process, "SceLncService", unimplementedIpmiServer);
-  createIpmiServer(process, "SceAppMessaging", unimplementedIpmiServer);
-  createIpmiServer(process, "SceShellCoreUtil", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNetCtl", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpMgrIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpService", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpTrophyIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpUdsIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceLibNpRifMgrIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpPartner001", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpPartnerSubs", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpGameIntent", unimplementedIpmiServer);
-  createIpmiServer(process, "SceBgft", unimplementedIpmiServer);
-  createIpmiServer(process, "SceCntMgrService", unimplementedIpmiServer);
-  createIpmiServer(process, "ScePlayGo", unimplementedIpmiServer);
-  createIpmiServer(process, "SceCompAppProxyUtil", unimplementedIpmiServer);
-  createIpmiServer(process, "SceShareSpIpcService", unimplementedIpmiServer);
-  createIpmiServer(process, "SceRnpsAppMgr", unimplementedIpmiServer);
-  createIpmiServer(process, "SceUpdateService", unimplementedIpmiServer);
-  createIpmiServer(process, "ScePatchChecker", unimplementedIpmiServer);
-  createIpmiServer(process, "SceMorpheusUpdService", unimplementedIpmiServer);
-  createIpmiServer(process, "ScePsmSharedDmem", unimplementedIpmiServer);
-  createIpmiServer(process, "SceSaveData", unimplementedIpmiServer);
-  createIpmiServer(process, "SceStickerCoreServer", unimplementedIpmiServer);
-  createIpmiServer(process, "SceDbRecoveryShellCore", unimplementedIpmiServer);
-  createIpmiServer(process, "SceUserService", unimplementedIpmiServer);
-  createIpmiServer(process, "SceDbPreparationServer", unimplementedIpmiServer);
-  createIpmiServer(process, "SceScreenShot", unimplementedIpmiServer);
-  createIpmiServer(process, "SceAppDbIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceAppInst", unimplementedIpmiServer);
-  createIpmiServer(process, "SceAppContent", unimplementedIpmiServer);
-  createIpmiServer(process, "SceNpEntAccess", unimplementedIpmiServer);
-  createIpmiServer(process, "SceMwIPMIServer", unimplementedIpmiServer);
-  createIpmiServer(process, "SceAutoMounterIpc", unimplementedIpmiServer);
-  createIpmiServer(process, "SceBackupRestoreUtil", unimplementedIpmiServer);
-  createIpmiServer(process, "SceDataTransfer", unimplementedIpmiServer);
-  createIpmiServer(process, "SceEventService", unimplementedIpmiServer);
-  createIpmiServer(process, "SceShareFactoryUtil", unimplementedIpmiServer);
-  createIpmiServer(process, "SceCloudConnectManager", unimplementedIpmiServer);
-  createIpmiServer(process, "SceHubAppUtil", unimplementedIpmiServer);
-  createIpmiServer(process, "SceTcIPMIServer", unimplementedIpmiServer);
+  createIpmiServer(process, "SceSystemLoggerService");
+  createIpmiServer(process, "SceLoginMgrServer");
+  createIpmiServer(process, "SceLncService")
+      .createSyncHandler(0x30013,
+                         [](void *out, std::uint64_t &size) -> std::int32_t {
+                           struct SceLncServiceAppStatus {
+                             std::uint32_t unk0;
+                             std::uint32_t unk1;
+                             std::uint32_t unk2;
+                           };
+
+                           if (size < sizeof(SceLncServiceAppStatus)) {
+                             return -1;
+                           }
+
+                           *(SceLncServiceAppStatus *)out = {
+                               .unk0 = 1,
+                               .unk1 = 1,
+                               .unk2 = 1,
+                           };
+
+                           size = sizeof(SceLncServiceAppStatus);
+                           return 0;
+                         });
+  createIpmiServer(process, "SceAppMessaging");
+  createIpmiServer(process, "SceShellCoreUtil");
+  createIpmiServer(process, "SceNetCtl");
+  createIpmiServer(process, "SceNpMgrIpc")
+      .createSyncHandler(
+          0, [=](void *out, std::uint64_t &size) -> std::int32_t {
+            std::string_view result = "SceNpMgrEvf";
+            std::strncpy((char *)out, result.data(), result.size() + 1);
+            size = result.size() + 1;
+            orbis::g_context.createEventFlag("SceNpMgrEvf", 0x200, 0);
+            return 0;
+          });
+  createIpmiServer(process, "SceNpService");
+  createIpmiServer(process, "SceNpTrophyIpc");
+  createIpmiServer(process, "SceNpUdsIpc");
+  createIpmiServer(process, "SceLibNpRifMgrIpc");
+  createIpmiServer(process, "SceNpPartner001");
+  createIpmiServer(process, "SceNpPartnerSubs");
+  createIpmiServer(process, "SceNpGameIntent");
+  createIpmiServer(process, "SceBgft");
+  createIpmiServer(process, "SceCntMgrService");
+  createIpmiServer(process, "ScePlayGo");
+  createIpmiServer(process, "SceCompAppProxyUtil");
+  createIpmiServer(process, "SceShareSpIpcService");
+  createIpmiServer(process, "SceRnpsAppMgr");
+  createIpmiServer(process, "SceUpdateService");
+  createIpmiServer(process, "ScePatchChecker");
+  createIpmiServer(process, "SceMorpheusUpdService");
+  createIpmiServer(process, "ScePsmSharedDmem");
+  createIpmiServer(process, "SceSaveData");
+  createIpmiServer(process, "SceStickerCoreServer");
+  createIpmiServer(process, "SceDbRecoveryShellCore");
+  createIpmiServer(process, "SceUserService")
+      .sendMsg(SceUserServiceEvent{.eventType = 0, .user = 1})
+      .createSyncHandler<uint32_t>(
+          0x30011,
+          [](void *ptr, std::uint64_t size, uint32_t data) -> std::int32_t {
+            ORBIS_LOG_TODO("SceUserService: get_initial_user_id");
+
+            if (size != sizeof(orbis::uint32_t)) {
+              return 0x8000'0000;
+            }
+
+            *(uint32_t *)ptr = 1;
+            return 0;
+          });
+  createIpmiServer(process, "SceDbPreparationServer");
+  createIpmiServer(process, "SceScreenShot");
+  createIpmiServer(process, "SceAppDbIpc");
+  createIpmiServer(process, "SceAppInst");
+  createIpmiServer(process, "SceAppContent");
+  createIpmiServer(process, "SceNpEntAccess");
+  createIpmiServer(process, "SceMwIPMIServer");
+  createIpmiServer(process, "SceAutoMounterIpc");
+  createIpmiServer(process, "SceBackupRestoreUtil");
+  createIpmiServer(process, "SceDataTransfer");
+  createIpmiServer(process, "SceEventService");
+  createIpmiServer(process, "SceShareFactoryUtil");
+  createIpmiServer(process, "SceCloudConnectManager");
+  createIpmiServer(process, "SceHubAppUtil");
+  createIpmiServer(process, "SceTcIPMIServer");
 
   createSemaphore("SceLncSuspendBlock00000001", 0x101, 1, 1);
-  createSemaphore("SceAppMessaging00000001", 0x100, 0, 0x7fffffff);
+  createSemaphore("SceAppMessaging00000001", 0x100, 1, 0x7fffffff);
 
   createEventFlag("SceAutoMountUsbMass", 0x120, 0);
   createEventFlag("SceLoginMgrUtilityEventFlag", 0x112, 0);
@@ -847,31 +1060,132 @@ static void createShellCoreObjects(orbis::Process *process) {
   createEventFlag("SceSystemStateMgrInfo", 0x120, 0x10000000a);
   createEventFlag("SceSystemStateMgrStatus", 0x120, 0);
   createEventFlag("SceAppInstallerEventFlag", 0x120, 0);
-  createEventFlag("SceShellCoreUtilPowerControl", 0x120, 0xffff);
-  createEventFlag("SceShellCoreUtilAppFocus", 0x120, -1);
-  createEventFlag("SceShellCoreUtilCtrlFocus", 0x120, -1);
+  createEventFlag("SceShellCoreUtilPowerControl", 0x120, 0x400000);
+  createEventFlag("SceShellCoreUtilAppFocus", 0x120, 1);
+  createEventFlag("SceShellCoreUtilCtrlFocus", 0x120, 0);
   createEventFlag("SceShellCoreUtilUIStatus", 0x120, 0x20001);
   createEventFlag("SceShellCoreUtilDevIdxBehavior", 0x120, 0);
   createEventFlag("SceNpMgrVshReq", 0x121, 0);
   createEventFlag("SceNpIdMapperVshReq", 0x121, 0);
   createEventFlag("SceRtcUtilTzdataUpdateFlag", 0x120, 0);
   createEventFlag("SceDataTransfer", 0x120, 0);
-  createEventFlag("SceShellCoreUtilffffffff", 0x120, 0x3f8c);
 
-  createEventFlag("SceSysLogPullEvt_" + fmtHex(process->pid, true), 0x110, 0);
-  createEventFlag("SceNpIdMapperEvf00" + fmtHex(process->pid), 0x121, 0);
-  createEventFlag("SceNpBasicPreseEvf00" + fmtHex(process->pid), 0x121, 0);
-  createEventFlag("SceNpPresenceEvf00" + fmtHex(process->pid), 0x121, 0);
-  createEventFlag("SceNpInGameMsgEvf00" + fmtHex(process->pid), 0x121, 0);
-  createEventFlag("SceNpPush2Evf00" + fmtHex(process->pid), 0x121, 0);
-  createEventFlag("SceUserServiceGetEvent_" + fmtHex(process->pid), 0x110, 0);
+  createEventFlag("SceLncUtilAppStatus1", 0x100, 0);
+  createEventFlag("SceAppMessaging1", 0x120, 1);
+  createEventFlag("SceShellCoreUtil1", 0x120, 0x3f8c);
 
-  createEventFlag("SceLncUtilAppStatus00000001", 0x100, 0);
-  createEventFlag("SceAppMessaging00000001", 0x120, 0);
+  createSemaphore("SceAppMessaging1", 0x101, 1, 0x7fffffff);
+  createSemaphore("SceLncSuspendBlock1", 0x101, 1, 10000);
 
   createShm("SceGlsSharedMemory", 0x202, 0x1a4, 262144);
   createShm("SceShellCoreUtil", 0x202, 0x1a4, 16384);
   createShm("SceNpTpip", 0x202, 0x1ff, 43008);
+
+  createShm("vmicDdShmAin", 0x202, 0x1b6, 43008);
+
+  createSemaphore("SceNpTpip 0", 0x101, 0, 1);
+}
+
+static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
+                                     std::vector<std::string> argv,
+                                     std::vector<std::string> envv) {
+  auto childPid = orbis::g_context.allocatePid() * 10000 + 1;
+  auto flag = orbis::knew<std::atomic<bool>>();
+  *flag = false;
+
+  int hostPid = ::fork();
+
+  if (hostPid) {
+    while (*flag == false) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    orbis::kfree(flag, sizeof(*flag));
+    return {};
+  }
+
+  auto process = orbis::g_context.createProcess(childPid);
+  auto logFd = ::open(("log-" + std::to_string(childPid) + ".txt").c_str(),
+                      O_CREAT | O_TRUNC | O_WRONLY, 0666);
+
+  dup2(logFd, 1);
+  dup2(logFd, 2);
+
+  process->sysent = thread->tproc->sysent;
+  process->onSysEnter = thread->tproc->onSysEnter;
+  process->onSysExit = thread->tproc->onSysExit;
+  process->ops = thread->tproc->ops;
+  process->parentProcess = thread->tproc;
+  process->appInfo = {
+      .unk4 = orbis::slong(0x80000000'00000000),
+  };
+
+  process->authInfo = {
+      .unk0 = 0x3100000000000001,
+      .caps =
+          {
+              -1ul,
+              -1ul,
+              -1ul,
+              -1ul,
+          },
+      .attrs =
+          {
+              0x4000400040000000,
+              0x4000000000000000,
+              0x0080000000000002,
+              0xF0000000FFFF4000,
+          },
+  };
+  process->budgetId = 0;
+  process->isInSandbox = false;
+
+  rx::vm::fork(childPid);
+  rx::vfs::fork();
+
+  *flag = true;
+
+  auto [baseId, newThread] = process->threadsMap.emplace();
+  newThread->tproc = process;
+  newThread->tid = process->pid + baseId;
+  newThread->state = orbis::ThreadState::RUNNING;
+  newThread->context = thread->context;
+  newThread->fsBase = thread->fsBase;
+
+  orbis::g_currentThread = newThread;
+  thread = orbis::g_currentThread;
+
+  setupSigHandlers();
+  rx::thread::initialize();
+  rx::thread::setupThisThread();
+
+  ORBIS_LOG_ERROR(__FUNCTION__, path);
+
+  {
+    orbis::Ref<orbis::File> file;
+    auto result = rx::vfs::open(path, kOpenFlagReadOnly, 0, &file, thread);
+    if (result.isError()) {
+      return result;
+    }
+  }
+
+  rx::vm::reset();
+
+  thread->tproc->nextTlsSlot = 1;
+  auto executableModule = rx::linker::loadModuleFile(path, thread);
+
+  executableModule->id = thread->tproc->modulesMap.insert(executableModule);
+  thread->tproc->processParam = executableModule->processParam;
+  thread->tproc->processParamSize = executableModule->processParamSize;
+
+  thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExec);
+
+  std::thread([&] {
+    rx::thread::setupSignalStack();
+    rx::thread::setupThisThread();
+    ps4Exec(thread, executableModule, argv, envv);
+  }).join();
+  std::abort();
 }
 
 int main(int argc, const char *argv[]) {
@@ -1055,6 +1369,7 @@ int main(int argc, const char *argv[]) {
   };
 
   if (isSystem) {
+    amdgpu::bridge::expGpuPid = 50001;
     initProcess->authInfo = {
         .unk0 = 0x3100000000000001,
         .caps =
@@ -1075,6 +1390,7 @@ int main(int argc, const char *argv[]) {
     initProcess->budgetId = 0;
     initProcess->isInSandbox = false;
   } else {
+    amdgpu::bridge::expGpuPid = initProcess->pid;
     initProcess->authInfo = {
         .unk0 = 0x3100000000000001,
         .caps =
@@ -1126,10 +1442,14 @@ int main(int argc, const char *argv[]) {
     ps4InitFd(mainThread);
 
     if (!isSystem) {
+      createMiniSysCoreObjects(initProcess);
       createSysAvControlObjects(initProcess);
       createSysCoreObjects(initProcess);
       createGnmCompositorObjects(initProcess);
       createShellCoreObjects(initProcess);
+
+      launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
+                   {"/system/sys/orbis_audiod.elf"}, {});
     }
 
     std::vector<std::string> ps4Argv(argv + argIndex,

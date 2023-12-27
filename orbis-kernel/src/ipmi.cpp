@@ -341,6 +341,54 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   return uwrite(result, 0u);
 }
 
+orbis::SysResult orbis::sysIpmiClientTryGetMessage(Thread *thread,
+                                                   ptr<uint> result, uint kid,
+                                                   ptr<void> params,
+                                                   uint64_t paramsSz) {
+  struct SceIpmiClientTryGetArgs {
+    uint32_t unk; // 0
+    uint32_t padding;
+    ptr<std::byte> message;
+    ptr<uint64_t> pSize;
+    uint64_t maxSize;
+  };
+
+  static_assert(sizeof(SceIpmiClientTryGetArgs) == 0x20);
+
+  if (paramsSz != sizeof(SceIpmiClientTryGetArgs)) {
+    return ErrorCode::INVAL;
+  }
+
+  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  SceIpmiClientTryGetArgs _params;
+  ORBIS_RET_ON_ERROR(uread(_params, ptr<SceIpmiClientTryGetArgs>(params)));
+
+  std::lock_guard lock(client->mutex);
+  if (client->messages.empty()) {
+    return uwrite<uint>(result,
+                        0x80020000 + static_cast<int>(ErrorCode::AGAIN));
+  }
+
+  auto &message = client->messages.front();
+
+  if (_params.maxSize < message.size()) {
+    ORBIS_LOG_ERROR(__FUNCTION__, "too small buffer");
+    return uwrite<uint>(result,
+                        0x80020000 + static_cast<int>(ErrorCode::INVAL));
+  }
+
+  ORBIS_RET_ON_ERROR(uwrite(_params.pSize, message.size()));
+  ORBIS_RET_ON_ERROR(
+      uwriteRaw(_params.message, message.data(), message.size()));
+  client->messages.pop_front();
+  return uwrite<uint>(result, 0);
+}
+
 orbis::SysResult orbis::sysIpmiSessionGetClientPid(Thread *thread,
                                                    ptr<uint> result, uint kid,
                                                    ptr<void> params,

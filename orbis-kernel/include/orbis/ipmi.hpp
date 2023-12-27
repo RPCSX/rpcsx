@@ -58,6 +58,8 @@ struct IpmiClient : RcBase {
   shared_mutex mutex;
   shared_cv sessionCv;
   sint pid;
+  kdeque<kvector<std::byte>> messages;
+  shared_cv messageCv;
 
   explicit IpmiClient(kstring name) : name(std::move(name)) {}
 };
@@ -150,6 +152,8 @@ SysResult sysIpmiSendConnectResult(Thread *thread, ptr<uint> result, uint kid,
                                    ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionRespondSync(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiClientTryGetMessage(Thread *thread, ptr<uint> result, uint kid,
+                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionGetClientPid(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result,
@@ -161,9 +165,8 @@ SysResult sysIpmiSessionGetUserData(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiServerGetName(Thread *thread, ptr<uint> result, uint kid,
                                ptr<void> params, uint64_t paramsSz);
-SysResult sysIpmiClientPollEventFlag(Thread *thread, ptr<uint> result,
-                                      uint kid, ptr<void> params,
-                                      uint64_t paramsSz);
+SysResult sysIpmiClientPollEventFlag(Thread *thread, ptr<uint> result, uint kid,
+                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionWaitEventFlag(Thread *thread, ptr<uint> result,
                                       uint kid, ptr<void> params,
                                       uint64_t paramsSz);

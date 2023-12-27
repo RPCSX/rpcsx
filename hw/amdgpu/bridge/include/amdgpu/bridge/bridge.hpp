@@ -1,6 +1,5 @@
 #pragma once
 
-#include "orbis/utils/SharedMutex.hpp"
 #include <atomic>
 #include <cstdint>
 #include <cstring>
@@ -8,6 +7,8 @@
 #include <orbis/utils/SharedCV.hpp>
 
 namespace amdgpu::bridge {
+extern std::uint32_t expGpuPid;
+
 struct PadState {
   std::uint64_t timestamp;
   std::uint32_t unk;
@@ -149,21 +150,21 @@ struct BridgePusher {
 
   void sendMemoryProtect(std::uint32_t pid, std::uint64_t address,
                          std::uint64_t size, std::uint32_t prot) {
-    if (pid == 50001) {
+    if (pid == expGpuPid) {
       sendCommand(CommandId::ProtectMemory, {pid, address, size, prot});
     }
   }
 
   void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue,
                          std::uint64_t address, std::uint64_t size) {
-    if (pid == 50001) {
+    if (pid == expGpuPid) {
       sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
     }
   }
 
   void sendFlip(std::uint32_t pid, std::uint32_t bufferIndex,
                 std::uint64_t arg) {
-    if (pid == 50001) {
+    if (pid == expGpuPid) {
       sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
     }
   }

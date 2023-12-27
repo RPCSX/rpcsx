@@ -834,7 +834,6 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   std::thread([&] {
     rx::thread::setupSignalStack();
     rx::thread::setupThisThread();
-    ORBIS_LOG_ERROR(__FUNCTION__, "exec");
     ps4Exec(thread, executableModule, _argv, _envv);
   }).join();
   std::abort();

@@ -950,25 +950,26 @@ orbis::SysResult orbis::sys_get_self_auth_info(Thread *thread,
   ORBIS_LOG_ERROR(__FUNCTION__, path, result);
   thread->where();
 
-  return uwrite(
-      result, {
-                  .unk0 = 0x3100000000000001,
-                  .caps =
-                      {
-                          ~0ull, ~0ull, ~0ull, ~0ull,
-                          // 0x2000038000000000,
-                          // 0x000000000000FF00,
-                          // 0x0000000000000000,
-                          // 0x0000000000000000,
-                      },
-                  .attrs =
-                      {
-                          0x4000400040000000,
-                          0x4000000000000000,
-                          0x0080000000000004, // lower byte is application type
-                          0xF0000000FFFF4000,
-                      },
-              });
+  char _path[512];
+  ORBIS_RET_ON_ERROR(ureadString(_path, sizeof(_path), path));
+
+  struct Result {
+    std::uint64_t authorityId;
+    std::uint64_t programType;
+    std::uint64_t programVersion;
+    std::uint64_t systemVersion;
+    char contentId[32];
+    char hash[32];
+  };
+
+  Result _result{};
+  _result.authorityId = 0x1000;
+  _result.programType = 1;
+  _result.programVersion = 1;
+  _result.systemVersion = 1;
+  _result.contentId[24] = 4;
+
+  return uwrite((ptr<Result>)result, _result);
 
   return {};
 }
@@ -1095,8 +1096,7 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
   case 0x232:
     return sysIpmiSessionRespondSync(thread, result, kid, params, paramsSz);
   case 0x252:
-    // TODO: try get message
-    return uwrite<uint>(result, 0x80020023);
+    return sysIpmiClientTryGetMessage(thread, result, kid, params, paramsSz);
   case 0x302:
     return sysIpmiSessionGetClientPid(thread, result, kid, params, paramsSz);
   case 0x320:
@@ -1225,8 +1225,8 @@ orbis::SysResult
 orbis::sys_get_kernel_mem_statistics(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_get_sdk_compiled_version(Thread *thread, ptr<const char> path) {
+orbis::SysResult orbis::sys_get_sdk_compiled_version(Thread *thread,
+                                                     ptr<const char> path) {
   ORBIS_LOG_ERROR(__FUNCTION__, path);
   thread->retval[0] = g_context.sdkVersion;
   return {};
@@ -1244,8 +1244,8 @@ orbis::SysResult orbis::sys_dynlib_get_obj_member(Thread *thread,
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult
-orbis::sys_budget_get_ptype_of_budget(Thread *thread, sint budgetId) {
+orbis::SysResult orbis::sys_budget_get_ptype_of_budget(Thread *thread,
+                                                       sint budgetId) {
   ORBIS_LOG_WARNING(__FUNCTION__, budgetId);
   thread->retval[0] = budgetId;
   return {};
