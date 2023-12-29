@@ -173,6 +173,7 @@ public:
   Ref<RcBase> blockpoolDevice;
   AudioOut *audioOut = nullptr;
   uint sdkVersion{};
+  uint fwSdkVersion{};
 
 private:
   mutable pthread_mutex_t m_heap_mtx;

@@ -411,7 +411,12 @@ static void ps4InitFd(orbis::Thread *mainThread) {
   mainThread->tproc->fileDescriptors.insert(stderrFile);
 }
 
-int ps4Exec(orbis::Thread *mainThread,
+struct ExecEnv {
+  std::uint64_t entryPoint;
+  std::uint64_t interpBase;
+};
+
+int ps4Exec(orbis::Thread *mainThread, ExecEnv execEnv,
             orbis::utils::Ref<orbis::Module> executableModule,
             std::span<std::string> argv, std::span<std::string> envp) {
   const auto stackEndAddress = 0x7'ffff'c000ull;
@@ -428,52 +433,6 @@ int ps4Exec(orbis::Thread *mainThread,
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
-
-  std::uint64_t interpBase = 0;
-  std::uint64_t entryPoint = executableModule->entryPoint;
-
-  if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->processParam) {
-    auto processParam =
-        reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
-
-    auto sdkVersion = processParam        //
-                      + sizeof(uint64_t)  // size
-                      + sizeof(uint32_t)  // magic
-                      + sizeof(uint32_t); // entryCount
-
-    orbis::g_context.sdkVersion = *(uint32_t *)sdkVersion;
-  }
-
-  if (executableModule->type != rx::linker::kElfTypeExec) {
-    auto libSceLibcInternal = rx::linker::loadModuleFile(
-        "/system/common/lib/libSceLibcInternal.sprx", mainThread);
-
-    if (libSceLibcInternal == nullptr) {
-      std::fprintf(stderr, "libSceLibcInternal not found\n");
-      return 1;
-    }
-
-    libSceLibcInternal->id =
-        mainThread->tproc->modulesMap.insert(libSceLibcInternal);
-
-    auto libkernel = rx::linker::loadModuleFile(
-        "/system/common/lib/libkernel_sys.sprx", mainThread);
-
-    if (libkernel == nullptr) {
-      std::fprintf(stderr, "libkernel not found\n");
-      return 1;
-    }
-
-    libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
-    interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
-    entryPoint = libkernel->entryPoint;
-
-    // *reinterpret_cast<std::uint32_t *>(
-    //     reinterpret_cast<std::byte *>(libkernel->base) + 0x6c2e4) = ~0;
-
-    // *reinterpret_cast<std::uint32_t *>(
-    //     reinterpret_cast<std::byte *>(libkernel->base) + 0x71300) = ~0;
-  }
 
   StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
 
@@ -492,7 +451,7 @@ int ps4Exec(orbis::Thread *mainThread,
   // clang-format off
   std::uint64_t auxv[] = {
       AT_ENTRY, executableModule->entryPoint,
-      AT_BASE, interpBase,
+      AT_BASE, execEnv.interpBase,
       AT_NULL, 0
   };
   // clang-format on
@@ -526,11 +485,75 @@ int ps4Exec(orbis::Thread *mainThread,
   // FIXME: should be at guest user space
   context->uc_mcontext.gregs[REG_RDX] =
       reinterpret_cast<std::uint64_t>(+[] { std::printf("At exit\n"); });
-  context->uc_mcontext.gregs[REG_RIP] = entryPoint;
+  context->uc_mcontext.gregs[REG_RIP] = execEnv.entryPoint;
 
   mainThread->context = context;
   rx::thread::invoke(mainThread);
   std::abort();
+}
+
+ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
+                         orbis::Ref<orbis::Module> executableModule,
+                         bool isSystem) {
+  std::uint64_t interpBase = 0;
+  std::uint64_t entryPoint = executableModule->entryPoint;
+
+  if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->processParam) {
+    auto processParam =
+        reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
+
+    auto sdkVersion = processParam        //
+                      + sizeof(uint64_t)  // size
+                      + sizeof(uint32_t)  // magic
+                      + sizeof(uint32_t); // entryCount
+
+    orbis::g_context.sdkVersion = *(uint32_t *)sdkVersion;
+  }
+
+  if (executableModule->type != rx::linker::kElfTypeExec) {
+    auto libSceLibcInternal = rx::linker::loadModuleFile(
+        "/system/common/lib/libSceLibcInternal.sprx", mainThread);
+
+    if (libSceLibcInternal == nullptr) {
+      std::fprintf(stderr, "libSceLibcInternal not found\n");
+      std::abort();
+    }
+
+    libSceLibcInternal->id =
+        mainThread->tproc->modulesMap.insert(libSceLibcInternal);
+
+    auto libkernel = rx::linker::loadModuleFile(
+        (isSystem ? "/system/common/lib/libkernel_sys.sprx"
+                  : "/system/common/lib/libkernel.sprx"),
+        mainThread);
+
+    if (libkernel == nullptr) {
+      std::fprintf(stderr, "libkernel not found\n");
+      std::abort();
+    }
+
+    if (orbis::g_context.fwSdkVersion == 0) {
+      auto moduleParam = reinterpret_cast<std::byte *>(libkernel->moduleParam);
+      auto fwSdkVersion = moduleParam         //
+                          + sizeof(uint64_t)  // size
+                          + sizeof(uint64_t); // magic
+      orbis::g_context.fwSdkVersion = *(uint32_t *)fwSdkVersion;
+      std::printf("fw sdk version: %x\n", orbis::g_context.fwSdkVersion);
+    }
+
+    libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
+    interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
+    entryPoint = libkernel->entryPoint;
+  }
+
+  return {.entryPoint = entryPoint, .interpBase = interpBase};
+}
+
+int ps4Exec(orbis::Thread *mainThread,
+            orbis::utils::Ref<orbis::Module> executableModule,
+            std::span<std::string> argv, std::span<std::string> envp) {
+  auto execEnv = ps4CreateExecEnv(mainThread, executableModule, true);
+  return ps4Exec(mainThread, execEnv, std::move(executableModule), argv, envp);
 }
 
 static void usage(const char *argv0) {
@@ -843,7 +866,8 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
           conReq.client->session = session;
 
           for (auto &message : server->messages) {
-            conReq.client->messages.push_back(orbis::kvector<std::byte>(message.data(), message.data() + message.size()));
+            conReq.client->messages.push_back(orbis::kvector<std::byte>(
+                message.data(), message.data() + message.size()));
           }
 
           conReq.client->sessionCv.notify_all(conReq.client->mutex);
@@ -884,7 +908,7 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
 }
 
 static void createMiniSysCoreObjects(orbis::Process *process) {
-  createEventFlag("SceBootStatusFlags", 0x121, 0x2408);
+  createEventFlag("SceBootStatusFlags", 0x121, ~0ull);
 }
 
 static void createSysAvControlObjects(orbis::Process *process) {
@@ -919,7 +943,7 @@ static void createSysCoreObjects(orbis::Process *process) {
             ORBIS_LOG_TODO("IPMI: SceMbusIpcAddHandleByUserId", args.unk,
                            args.deviceId, args.userId, args.type, args.index,
                            args.reserved, args.pid);
-            return 1;
+            return 0;
           });
   createIpmiServer(process, "SceSysCoreApp");
   createIpmiServer(process, "SceSysCoreApp2");
@@ -958,7 +982,8 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceSystemLoggerService");
   createIpmiServer(process, "SceLoginMgrServer");
   createIpmiServer(process, "SceLncService")
-      .createSyncHandler(0x30013,
+      .createSyncHandler(orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30013
+                                                                   : 0x30010,
                          [](void *out, std::uint64_t &size) -> std::int32_t {
                            struct SceLncServiceAppStatus {
                              std::uint32_t unk0;
@@ -1013,17 +1038,16 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceDbRecoveryShellCore");
   createIpmiServer(process, "SceUserService")
       .sendMsg(SceUserServiceEvent{.eventType = 0, .user = 1})
-      .createSyncHandler(
-          0x30011,
-          [](void *ptr, std::uint64_t &size) -> std::int32_t {
-            if (size < sizeof(orbis::uint32_t)) {
-              return 0x8000'0000;
-            }
+      .createSyncHandler(0x30011,
+                         [](void *ptr, std::uint64_t &size) -> std::int32_t {
+                           if (size < sizeof(orbis::uint32_t)) {
+                             return 0x8000'0000;
+                           }
 
-            *(orbis::uint32_t *)ptr = 1;
-            size = sizeof(orbis::uint32_t);
-            return 0;
-          });
+                           *(orbis::uint32_t *)ptr = 1;
+                           size = sizeof(orbis::uint32_t);
+                           return 0;
+                         });
   createIpmiServer(process, "SceDbPreparationServer");
   createIpmiServer(process, "SceScreenShot");
   createIpmiServer(process, "SceAppDbIpc");
@@ -1157,6 +1181,12 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   setupSigHandlers();
   rx::thread::initialize();
   rx::thread::setupThisThread();
+
+  ps4InitFd(newThread);
+
+  orbis::Ref<orbis::File> socket;
+  createSocket(&socket, "", 1, 1, 0);
+  process->fileDescriptors.insert(socket);
 
   ORBIS_LOG_ERROR(__FUNCTION__, path);
 
@@ -1440,6 +1470,11 @@ int main(int argc, const char *argv[]) {
     ps4InitDev();
     ps4InitFd(mainThread);
 
+    std::vector<std::string> ps4Argv(argv + argIndex,
+                                     argv + argIndex + argc - argIndex);
+
+    auto execEnv = ps4CreateExecEnv(mainThread, executableModule, isSystem);
+
     if (!isSystem) {
       createMiniSysCoreObjects(initProcess);
       createSysAvControlObjects(initProcess);
@@ -1449,11 +1484,11 @@ int main(int argc, const char *argv[]) {
 
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {});
+      status = ps4Exec(mainThread, execEnv, std::move(executableModule),
+                       ps4Argv, {});
     }
-
-    std::vector<std::string> ps4Argv(argv + argIndex,
-                                     argv + argIndex + argc - argIndex);
-    status = ps4Exec(mainThread, std::move(executableModule), ps4Argv, {});
+    status =
+        ps4Exec(mainThread, execEnv, std::move(executableModule), ps4Argv, {});
   } else {
     std::fprintf(stderr, "Unexpected executable type\n");
     status = 1;
