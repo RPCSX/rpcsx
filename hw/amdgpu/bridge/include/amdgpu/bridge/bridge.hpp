@@ -223,13 +223,13 @@ private:
       }
 
       position = 0;
-      waitPuller(cmdSize);
+      waitPuller(0);
     }
 
     return position;
   }
   void waitPuller(std::uint64_t pullValue) {
-    while (header->pull < pullValue) {
+    while (header->pull != pullValue) {
       ;
     }
   }
