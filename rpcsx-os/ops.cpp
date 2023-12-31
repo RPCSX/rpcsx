@@ -734,6 +734,7 @@ SysResult fork(Thread *thread, slong flags) {
   }
 
   auto process = g_context.createProcess(childPid);
+  process->hostPid = ::getpid();
   process->sysent = thread->tproc->sysent;
   process->onSysEnter = thread->tproc->onSysEnter;
   process->onSysExit = thread->tproc->onSysExit;

@@ -1,5 +1,7 @@
+#include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
+#include <csignal>
 
 orbis::SysResult orbis::sys_sigaction(Thread *thread, sint sig,
                                       ptr<struct sigaction> act,
@@ -67,8 +69,26 @@ orbis::SysResult orbis::sys_sigaltstack(Thread *thread, ptr<struct stack_t> ss,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_kill(Thread *thread, sint pid, sint signum) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, pid, signum);
+
+  int hostPid = pid;
+  if (pid > 0) {
+    auto process = g_context.findProcessById(pid);
+    if (process == nullptr) {
+      return ErrorCode::SRCH;
+    }
+    hostPid = process->hostPid;
+  }
+
+  // TODO: wrap signal
+  int result = ::kill(hostPid, signum);
+  if (result < 0) {
+    return static_cast<ErrorCode>(errno);
+  }
+
+  return {};
 }
+
 orbis::SysResult orbis::sys_pdkill(Thread *thread, sint fd, sint signum) {
   return ErrorCode::NOSYS;
 }

@@ -2,8 +2,10 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/ProcessOps.hpp"
 #include "orbis/utils/Logs.hpp"
+#include <chrono>
 #include <sys/mman.h>
 #include <sys/unistd.h>
+#include <thread>
 
 namespace orbis {
 thread_local Thread *g_currentThread;
@@ -69,11 +71,32 @@ void KernelContext::deleteProcess(Process *proc) {
 }
 
 Process *KernelContext::findProcessById(pid_t pid) const {
-  std::lock_guard lock(m_proc_mtx);
-  for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
-    if (proc->object.pid == pid) {
-      return &proc->object;
+  for (std::size_t i = 0; i < 5; ++i) {
+    {
+      std::lock_guard lock(m_proc_mtx);
+      for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
+        if (proc->object.pid == pid) {
+          return &proc->object;
+        }
+      }
     }
+    std::this_thread::sleep_for(std::chrono::microseconds(50));
+  }
+
+  return nullptr;
+}
+
+Process *KernelContext::findProcessByHostId(std::uint64_t pid) const {
+  for (std::size_t i = 0; i < 5; ++i) {
+    {
+      std::lock_guard lock(m_proc_mtx);
+      for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
+        if (proc->object.hostPid == pid) {
+          return &proc->object;
+        }
+      }
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(50));
   }
 
   return nullptr;

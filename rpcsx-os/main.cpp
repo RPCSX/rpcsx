@@ -405,9 +405,9 @@ static void ps4InitDev() {
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();
 
   mbusAv->emitEvent({
-    .unk0 = 9,
-    .unk1 = 1,
-    .unk2 = 1,
+      .unk0 = 9,
+      .unk1 = 1,
+      .unk2 = 1,
   });
 }
 
@@ -548,16 +548,20 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
     for (auto sym : libkernel->symbols) {
       if (sym.id == 0xd2f4e7e480cc53d0) {
         auto address = (uint64_t)libkernel->base + sym.address;
-        ::mprotect((void *)utils::alignDown(address, 0x1000), utils::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
+        ::mprotect((void *)utils::alignDown(address, 0x1000),
+                   utils::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
         std::printf("patching sceKernelGetMainSocId\n");
         struct GetMainSocId : Xbyak::CodeGenerator {
-          GetMainSocId(std::uint64_t address, std::uint64_t size) : Xbyak::CodeGenerator(size, (void *)address) {
+          GetMainSocId(std::uint64_t address, std::uint64_t size)
+              : Xbyak::CodeGenerator(size, (void *)address) {
             mov(eax, 0x710f00);
             ret();
           }
-        } gen{ address, sym.size };
+        } gen{address, sym.size};
 
-        ::mprotect((void *)utils::alignDown(address, 0x1000), utils::alignUp(sym.size + sym.address, 0x1000), PROT_READ | PROT_EXEC);
+        ::mprotect((void *)utils::alignDown(address, 0x1000),
+                   utils::alignUp(sym.size + sym.address, 0x1000),
+                   PROT_READ | PROT_EXEC);
         break;
       }
     }
@@ -1297,6 +1301,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   dup2(logFd, 1);
   dup2(logFd, 2);
 
+  process->hostPid = ::getpid();
   process->sysent = thread->tproc->sysent;
   process->onSysEnter = thread->tproc->onSysEnter;
   process->onSysExit = thread->tproc->onSysExit;

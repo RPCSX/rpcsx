@@ -54,6 +54,7 @@ public:
   Process *createProcess(pid_t pid);
   void deleteProcess(Process *proc);
   Process *findProcessById(pid_t pid) const;
+  Process *findProcessByHostId(std::uint64_t pid) const;
 
   utils::LinkedNode<Process> *getProcessList() { return m_processes; }
 

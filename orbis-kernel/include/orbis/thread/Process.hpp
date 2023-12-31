@@ -45,6 +45,7 @@ struct NamedMemoryRange {
 struct Process final {
   KernelContext *context = nullptr;
   pid_t pid = -1;
+  std::uint64_t hostPid = -1;
   sysentvec *sysent = nullptr;
   ProcessState state = ProcessState::NEW;
   Process *parentProcess = nullptr;

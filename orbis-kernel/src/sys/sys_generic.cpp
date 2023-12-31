@@ -29,6 +29,10 @@ orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
 
   auto error = read(file.get(), &io, thread);
   if (error != ErrorCode{} && error != ErrorCode::AGAIN) {
+    if (error == ErrorCode::BUSY) {
+      return SysResult::notAnError(error);
+    }
+
     return error;
   }
 
@@ -286,6 +290,7 @@ orbis::SysResult orbis::sys_ftruncate(Thread *thread, sint fd, off_t length) {
     return ErrorCode::NOTSUP;
   }
 
+  ORBIS_LOG_WARNING(__FUNCTION__, fd, length);
   std::lock_guard lock(file->mtx);
   return truncate(file.get(), length, thread);
 }
