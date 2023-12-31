@@ -12,6 +12,8 @@ void fork();
 void initialize();
 void deinitialize();
 void addDevice(std::string name, IoDevice *device);
+std::pair<orbis::Ref<IoDevice>, std::string>
+get(const std::filesystem::path &guestPath);
 orbis::SysResult mount(const std::filesystem::path &guestPath, IoDevice *dev);
 orbis::SysResult open(std::string_view path, int flags, int mode,
                       orbis::Ref<orbis::File> *file, orbis::Thread *thread);

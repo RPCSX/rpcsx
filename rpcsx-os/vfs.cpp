@@ -84,8 +84,8 @@ void rx::vfs::addDevice(std::string name, IoDevice *device) {
   gDevFs->devices[std::move(name)] = device;
 }
 
-static std::pair<orbis::Ref<IoDevice>, std::string>
-get(const std::filesystem::path &guestPath) {
+std::pair<orbis::Ref<IoDevice>, std::string>
+rx::vfs::get(const std::filesystem::path &guestPath) {
   std::string normalPath = std::filesystem::path(guestPath).lexically_normal();
   std::string_view path = normalPath;
   orbis::Ref<IoDevice> device;
@@ -95,11 +95,18 @@ get(const std::filesystem::path &guestPath) {
 
   for (auto &mount : gMountsMap) {
     if (!path.starts_with(mount.first)) {
-      continue;
+      if (mount.first.size() - 1 != path.size() ||
+          !std::string_view(mount.first).starts_with(path)) {
+        continue;
+      }
     }
 
     device = mount.second;
-    path.remove_prefix(mount.first.length());
+    if (path.size() > mount.first.length()) {
+      path.remove_prefix(mount.first.length());
+    } else {
+      path = {};
+    }
     return {mount.second, std::string(path)};
   }
 
@@ -131,6 +138,7 @@ orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
   if (device == nullptr) {
     return orbis::ErrorCode::NOENT;
   }
+  // std::fprintf(stderr, "sys_open %s\n", std::string(path).c_str());
   return device->open(file, devPath.c_str(), flags, mode, thread);
 }
 

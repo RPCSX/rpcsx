@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <span>
 
 namespace orbis {
 struct IoVec {
@@ -25,5 +28,27 @@ struct Uio {
   UioSeg segflg;
   UioRw rw;
   void *td;
+
+  std::size_t write(const void *data, std::size_t size) {
+    auto pos = reinterpret_cast<const std::byte *>(data);
+    auto end = pos + size;
+
+    for (auto vec : std::span(iov, iovcnt)) {
+      if (pos >= end) {
+        break;
+      }
+
+      auto nextPos = std::min(pos + vec.len, end);
+      std::memcpy(vec.base, pos, nextPos - pos);
+      pos = nextPos;
+    }
+
+    return size - (end - pos);
+  }
+
+  template<typename T>
+  std::size_t write(const T &object) {
+    return write(&object, sizeof(T));
+  }
 };
 } // namespace orbis

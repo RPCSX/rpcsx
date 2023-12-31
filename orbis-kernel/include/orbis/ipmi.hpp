@@ -80,7 +80,6 @@ struct IpmiSession : RcBase {
   EventFlag evf{0, 0};
   shared_cv connectCv;
   bool expectedOutput = false; // TODO: verify
-  bool connected = false;      // TODO: implement more states
   sint connectionStatus{0};
 };
 
@@ -152,8 +151,16 @@ SysResult sysIpmiSendConnectResult(Thread *thread, ptr<uint> result, uint kid,
                                    ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionRespondSync(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiClientGetMessage(Thread *thread, ptr<uint> result, uint kid,
+                                  ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiClientTryGetMessage(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiSessionTrySendMessage(Thread *thread, ptr<uint> result,
+                                      uint kid, ptr<void> params,
+                                      uint64_t paramsSz);
+SysResult sysIpmiClientDisconnect(Thread *thread, ptr<uint> result,
+                                        uint kid, ptr<void> params,
+                                        uint64_t paramsSz);
 SysResult sysIpmiSessionGetClientPid(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result,

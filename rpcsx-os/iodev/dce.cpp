@@ -207,6 +207,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
                        args->ptr, args->size);
 
+      thread->where();
       std::fflush(stdout);
       //__builtin_trap();
     }

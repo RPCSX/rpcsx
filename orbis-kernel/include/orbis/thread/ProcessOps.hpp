@@ -51,6 +51,8 @@ struct ProcessOps {
   SysResult (*blockpool_unmap)(Thread *thread, caddr_t addr, size_t len);
   SysResult (*socket)(Thread *thread, ptr<const char> name, sint domain,
                       sint type, sint protocol, Ref<File> *file);
+  SysResult (*socketpair)(Thread *thread, sint domain, sint type, sint protocol,
+                          Ref<File> *a, Ref<File> *b);
   SysResult (*shm_unlink)(Thread *thread, const char *path);
   SysResult (*dynlib_get_obj_member)(Thread *thread, ModuleHandle handle,
                                      uint64_t index, ptr<ptr<void>> addrp);

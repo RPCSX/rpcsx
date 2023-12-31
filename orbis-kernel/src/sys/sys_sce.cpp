@@ -137,6 +137,11 @@ orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
       return {};
     }
 
+    if (int_value->encoded_id == 0x29b56169422aa3dd) {
+      int_value->value = 2;
+      return {};
+    }
+
     // 0x503f69bde385a6ac // allow loading from dev machine?
     // 0x2d946f62aef8f878
 
@@ -162,7 +167,6 @@ orbis::SysResult orbis::sys_dl_notify_event(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
                                        sint attrs, uint64_t initPattern) {
-  ORBIS_LOG_WARNING(__FUNCTION__, name, attrs, initPattern);
   if (name == nullptr) {
     return ErrorCode::INVAL;
   }
@@ -215,7 +219,9 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
     std::strncpy(eventFlag->name, _name, 32);
   }
 
-  thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
+  auto fd = thread->tproc->evfMap.insert(eventFlag);
+  thread->retval[0] = fd;
+  ORBIS_LOG_WARNING(__FUNCTION__, name, attrs, initPattern, fd);
   return {};
 }
 orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
@@ -229,7 +235,6 @@ orbis::SysResult orbis::sys_evf_delete(Thread *thread, sint id) {
   return {};
 }
 orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
-  ORBIS_LOG_WARNING(__FUNCTION__, name);
   char _name[32];
   if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
       result != ErrorCode{}) {
@@ -239,10 +244,13 @@ orbis::SysResult orbis::sys_evf_open(Thread *thread, ptr<const char[32]> name) {
   auto eventFlag = thread->tproc->context->findEventFlag(_name);
 
   if (eventFlag == nullptr) {
+    ORBIS_LOG_ERROR(__FUNCTION__, _name, "not exists");
     return ErrorCode::NOENT;
   }
 
-  thread->retval[0] = thread->tproc->evfMap.insert(eventFlag);
+  auto fd = thread->tproc->evfMap.insert(eventFlag);
+  thread->retval[0] = fd;
+  ORBIS_LOG_WARNING(__FUNCTION__, name, fd);
   return {};
 }
 orbis::SysResult orbis::sys_evf_close(Thread *thread, sint id) {
@@ -370,8 +378,70 @@ orbis::sys_query_memory_protection(Thread *thread, ptr<void> address,
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_batch_map(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+
+namespace orbis {
+struct BatchMapEntry {
+  ptr<char> start;
+  off_t offset;
+  size_t length;
+  char protection;
+  char type;
+  short reserved;
+  sint operation; // 0 - map direct
+                  // 1 - unmap
+                  // 2 - protect
+                  // 3 - map flexible
+                  // 4 - type protect
+};
+} // namespace orbis
+
+orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk, sint flags,
+                                      ptr<BatchMapEntry> entries,
+                                      sint entriesCount,
+                                      ptr<sint> processedCount) {
+  auto ops = thread->tproc->ops;
+  SysResult result = ErrorCode{};
+  ORBIS_LOG_ERROR(__FUNCTION__, unk, flags, entries, entriesCount,
+                  processedCount);
+
+  int processed = 0;
+  for (int i = 0; i < entriesCount; ++i) {
+    BatchMapEntry _entry;
+    ORBIS_RET_ON_ERROR(uread(_entry, entries + i));
+    ORBIS_LOG_ERROR(__FUNCTION__, _entry.operation, ptr<void>(_entry.start),
+                    _entry.length, int(_entry.type), int(_entry.protection),
+                    _entry.offset);
+
+    switch (_entry.operation) {
+    case 0:
+      result = ops->dmem_mmap(thread, _entry.start, _entry.length, _entry.type,
+                              _entry.protection, flags, _entry.offset);
+      break;
+    case 1:
+      result = ops->munmap(thread, _entry.start, _entry.length);
+      break;
+    case 2:
+      result =
+          ops->mprotect(thread, _entry.start, _entry.length, _entry.protection);
+      break;
+    default:
+      result = ErrorCode::INVAL;
+      break;
+    }
+
+    ORBIS_LOG_ERROR(__FUNCTION__, result.value());
+
+    if (result.value()) {
+      ORBIS_LOG_ERROR(__FUNCTION__, result.value());
+      break;
+    }
+
+    ++processed;
+  }
+
+  thread->retval[0] = 0;
+  ORBIS_RET_ON_ERROR(uwrite(processedCount, processed));
+  return result;
 }
 orbis::SysResult orbis::sys_osem_create(Thread *thread,
                                         ptr<const char[32]> name, uint attrs,
@@ -418,6 +488,7 @@ orbis::SysResult orbis::sys_osem_create(Thread *thread,
     sem = insertedSem;
   } else {
     sem = knew<Semaphore>(attrs, initCount, maxCount);
+    std::strncpy(sem->name, _name, 32);
   }
 
   thread->retval[0] = thread->tproc->semMap.insert(sem);
@@ -1048,8 +1119,26 @@ orbis::SysResult orbis::sys_prepare_to_suspend_process(Thread *thread,
 orbis::SysResult orbis::sys_get_resident_fmem_count(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_thr_get_name(Thread *thread, lwpid_t lwpid) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_thr_get_name(Thread *thread, lwpid_t lwpid,
+                                         char *buf, size_t buflen) {
+  Thread *searchThread;
+  if (thread->tid == lwpid) {
+    searchThread = thread;
+  } else {
+    searchThread = thread->tproc->threadsMap.get(lwpid);
+    if (searchThread == nullptr) {
+      return ErrorCode::SRCH;
+    }
+  }
+
+  auto namelen = std::strlen(searchThread->name);
+
+  if (namelen >= buflen) {
+    return ErrorCode::INVAL;
+  }
+
+  ORBIS_RET_ON_ERROR(uwriteRaw(buf, searchThread->name, namelen));
+  return {};
 }
 orbis::SysResult orbis::sys_set_gpo(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -1095,10 +1184,16 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiSendConnectResult(thread, result, kid, params, paramsSz);
   case 0x232:
     return sysIpmiSessionRespondSync(thread, result, kid, params, paramsSz);
+  case 0x251:
+    return sysIpmiClientGetMessage(thread, result, kid, params, paramsSz);
   case 0x252:
     return sysIpmiClientTryGetMessage(thread, result, kid, params, paramsSz);
+  case 0x254:
+    return sysIpmiSessionTrySendMessage(thread, result, kid, params, paramsSz);
   case 0x302:
     return sysIpmiSessionGetClientPid(thread, result, kid, params, paramsSz);
+  case 0x310:
+    return sysIpmiClientDisconnect(thread, result, kid, params, paramsSz);
   case 0x320:
     return sysIpmiClientInvokeSyncMethod(thread, result, kid, params, paramsSz);
   case 0x400:

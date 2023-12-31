@@ -1,7 +1,9 @@
 #include "pipe.hpp"
 #include "error/ErrorCode.hpp"
 #include "file.hpp"
+#include "thread/Thread.hpp"
 #include "uio.hpp"
+#include "utils/Logs.hpp"
 #include <span>
 
 static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
@@ -9,16 +11,31 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
   auto pipe = static_cast<orbis::Pipe *>(file);
   while (true) {
     if (pipe->data.empty()) {
-      pipe->cv.wait(file->mtx);
-      continue;
+      // pipe->cv.wait(file->mtx);
+      // ORBIS_LOG_ERROR(__FUNCTION__, "wakeup", thread->name, thread->tid, file);
+      // continue;
+      return orbis::ErrorCode::WOULDBLOCK;
     }
 
     for (auto vec : std::span(uio->iov, uio->iovcnt)) {
       auto size = std::min<std::size_t>(pipe->data.size(), vec.len);
+
+      if (size == 0) {
+        pipe->data.clear();
+        continue;
+      }
+
+      if (size > pipe->data.size()) {
+        size = pipe->data.size();
+      }
+
       uio->offset += size;
       std::memcpy(vec.base, pipe->data.data(), size);
 
+      ORBIS_LOG_ERROR(__FUNCTION__, thread->name, thread->tid, file, size, pipe->data.size(), uio->offset, file->nextOff);
+
       if (pipe->data.size() == size) {
+        pipe->data.clear();
         break;
       }
 
@@ -37,20 +54,30 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
 static orbis::ErrorCode pipe_write(orbis::File *file, orbis::Uio *uio,
                                    orbis::Thread *thread) {
   auto pipe = static_cast<orbis::Pipe *>(file);
+  ORBIS_LOG_ERROR(__FUNCTION__, thread->name, thread->tid, file);
 
+  std::size_t cnt = 0;
   for (auto vec : std::span(uio->iov, uio->iovcnt)) {
     auto offset = pipe->data.size();
     pipe->data.resize(offset + vec.len);
-    std::memcpy(pipe->data.data(), vec.base, vec.len);
+    ORBIS_RET_ON_ERROR(orbis::ureadRaw(pipe->data.data(), vec.base, vec.len));
+    cnt += vec.len;
   }
 
   file->event.emit(orbis::kEvFiltRead);
   pipe->cv.notify_one(file->mtx);
-  uio->resid = 0;
-  return {};
+  uio->resid -= cnt;
+  uio->offset += cnt;
+
+  ORBIS_LOG_ERROR(__FUNCTION__, thread->name, thread->tid, file, uio->resid, uio->offset, file->nextOff, cnt);
+  thread->where();
+  return{};
 }
 
-static orbis::FileOps pipe_ops = {.read = pipe_read, .write = pipe_write};
+static orbis::FileOps pipe_ops = {
+    .read = pipe_read,
+    .write = pipe_write,
+};
 
 orbis::Ref<orbis::Pipe> orbis::createPipe() {
   auto result = knew<Pipe>();

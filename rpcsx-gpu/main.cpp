@@ -23,7 +23,7 @@
 #include <GLFW/glfw3.h> // TODO: make in optional
 
 // TODO
-extern void *g_rwMemory;
+// extern void *g_rwMemory;
 extern std::size_t g_memorySize;
 extern std::uint64_t g_memoryBase;
 extern amdgpu::RemoteMemory g_hostMemory;
@@ -739,16 +739,36 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
+  int dmemFd[3];
+
+  for (std::size_t i = 0; i < std::size(dmemFd); ++i) {
+    auto path = "/dev/shm/rpcsx-dmem-" + std::to_string(i);
+    if (!std::filesystem::exists(path)) {
+      std::printf("Waiting for dmem %zu\n", i);
+      while (!std::filesystem::exists(path)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      }
+    }
+
+    dmemFd[i] = ::shm_open(("/rpcsx-dmem-" + std::to_string(i)).c_str(), O_RDWR,
+                           S_IRUSR | S_IWUSR);
+
+    if (dmemFd[i] < 0) {
+      std::printf("failed to open dmem shared memory %zu\n", i);
+      return 1;
+    }
+  }
+
   struct stat memoryStat;
   ::fstat(memoryFd, &memoryStat);
   amdgpu::RemoteMemory memory{(char *)::mmap(
       nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0)};
 
-  extern void *g_rwMemory;
+  // extern void *g_rwMemory;
   g_memorySize = memoryStat.st_size;
   g_memoryBase = 0x40000;
-  g_rwMemory = ::mmap(nullptr, g_memorySize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                      memoryFd, 0);
+  // g_rwMemory = ::mmap(nullptr, g_memorySize, PROT_READ | PROT_WRITE, MAP_SHARED,
+  //                     memoryFd, 0);
 
   g_hostMemory = memory;
 
@@ -994,6 +1014,16 @@ int main(int argc, const char *argv[]) {
           } else {
             isImageAcquired = true;
           }
+          break;
+        }
+
+        case amdgpu::bridge::CommandId::MapDmem: {
+          auto addr = g_hostMemory.getPointer(cmd.mapDmem.address);
+          auto mapping = ::mmap(addr, cmd.mapDmem.size,
+                 PROT_READ | PROT_WRITE /*TODO: cmd.mapDmem.prot >> 4*/,
+                 MAP_FIXED | MAP_SHARED, dmemFd[cmd.mapDmem.dmemIndex],
+                 cmd.mapDmem.offset);
+          device.handleProtectMemory(cmd.mapDmem.address, cmd.mapDmem.size, 0x33 /*TODO: cmd.mapDmem.prot*/);
           break;
         }
 

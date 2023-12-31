@@ -7,6 +7,7 @@
 #include <chrono>
 #include <list>
 #include <span>
+#include <sys/select.h>
 
 orbis::SysResult orbis::sys_kqueue(Thread *thread) {
   auto queue = knew<KQueue>();
@@ -31,6 +32,28 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
   ORBIS_LOG_TODO(__FUNCTION__, name, flags, fd);
   thread->retval[0] = fd;
   return {};
+}
+
+static bool isReadEventTriggered(int hostFd) {
+  fd_set fds{};
+  FD_SET(hostFd, &fds);
+  timeval timeout{};
+  if (::select(hostFd + 1, &fds, nullptr, nullptr, &timeout) < 0) {
+    return false;
+  }
+
+  return FD_ISSET(hostFd, &fds);
+}
+
+static bool isWriteEventTriggered(int hostFd) {
+  fd_set fds{};
+  FD_SET(hostFd, &fds);
+  timeval timeout{};
+  if (::select(hostFd + 1, nullptr, &fds, nullptr, &timeout) < 0) {
+    return false;
+  }
+
+  return FD_ISSET(hostFd, &fds);
 }
 
 namespace orbis {
@@ -82,11 +105,11 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
         }
 
         std::unique_lock lock(fd->event.mutex);
-
-        if (change.filter == kEvFiltWrite) {
-          nodeIt->triggered = true;
-          kq->cv.notify_all(kq->mtx);
-        }
+        nodeIt->file = fd;
+        // if (change.filter == kEvFiltWrite) {
+        // nodeIt->triggered = true;
+        // kq->cv.notify_all(kq->mtx);
+        // }
 
         fd->event.notes.insert(&*nodeIt);
       }
@@ -176,14 +199,16 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       for (auto &changePtr : std::span(changelist, nchanges)) {
         KEvent change;
         ORBIS_RET_ON_ERROR(uread(change, &changePtr));
-        ORBIS_LOG_TODO(__FUNCTION__, change.ident, change.filter, change.flags,
-                       change.fflags, change.data, change.udata);
+        ORBIS_LOG_TODO(__FUNCTION__, fd, change.ident, change.filter,
+                       change.flags, change.fflags, change.data, change.udata);
 
         if (auto result = keventChange(kq.get(), change, thread);
             result.value() != 0) {
           return result;
         }
       }
+
+      kq->cv.notify_all(kq->mtx);
     }
   }
 
@@ -217,7 +242,17 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
   std::vector<KEvent> result;
   result.reserve(nevents);
 
+  if (kq->notes.empty()) {
+    // ORBIS_LOG_ERROR(__FUNCTION__, "attempt to wait empty kqueue", fd,
+    // nevents, timeoutPoint.time_since_epoch().count()); thread->where();
+    // return{};
+    // std::abort();
+    return {};
+  }
+
   while (true) {
+    bool waitHack = false;
+    bool canSleep = true;
     std::lock_guard lock(kq->mtx);
     for (auto it = kq->notes.begin(); it != kq->notes.end();) {
       if (result.size() >= nevents) {
@@ -227,8 +262,31 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       auto &note = *it;
       std::lock_guard lock(note.mutex);
 
+      if (!note.triggered) {
+        if (note.event.filter == kEvFiltRead) {
+          if (note.file->hostFd < 0 ||
+              isReadEventTriggered(note.file->hostFd)) {
+            note.triggered = true;
+          } else {
+            canSleep = false;
+          }
+        } else if (note.event.filter == kEvFiltWrite) {
+          if (note.file->hostFd < 0 ||
+              isWriteEventTriggered(note.file->hostFd)) {
+            note.triggered = true;
+          } else {
+            canSleep = false;
+          }
+        }
+      }
+
       if (note.enabled && note.triggered) {
         result.push_back(note.event);
+
+        if (note.event.filter == kEvFiltGraphicsCore ||
+            note.event.filter == kEvFiltDisplay) {
+          waitHack = true;
+        }
 
         if (note.event.flags & kEvDispatch) {
           note.enabled = false;
@@ -244,6 +302,9 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
     }
 
     if (!result.empty()) {
+      // if (waitHack) {
+      //   std::this_thread::sleep_for(std::chrono::milliseconds(3));
+      // }
       break;
     }
 
@@ -256,9 +317,13 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
 
       auto waitTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
           timeoutPoint - now);
-      kq->cv.wait(kq->mtx, waitTimeout.count());
+      if (canSleep) {
+        kq->cv.wait(kq->mtx, waitTimeout.count());
+      }
     } else {
-      kq->cv.wait(kq->mtx);
+      if (canSleep) {
+        kq->cv.wait(kq->mtx);
+      }
     }
   }
 

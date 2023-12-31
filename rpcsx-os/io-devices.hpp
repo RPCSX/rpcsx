@@ -40,3 +40,5 @@ IoDevice *createGbaseCharacterDevice();
 IoDevice *createDevStatCharacterDevice();
 IoDevice *createDevCtlCharacterDevice();
 IoDevice *createDevActCharacterDevice();
+IoDevice *createUVDCharacterDevice();
+IoDevice *createVCECharacterDevice();

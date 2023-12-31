@@ -49,9 +49,10 @@ static orbis::ErrorCode console_write(orbis::File *file, orbis::Uio *uio,
   auto dev = dynamic_cast<ConsoleDevice *>(file->device.get());
 
   for (auto vec : std::span(uio->iov, uio->iovcnt)) {
+    uio->offset += vec.len;
     ::write(dev->outputFd, vec.base, vec.len);
+    ::write(2, vec.base, vec.len);
   }
-  uio->resid = 0;
   return {};
 }
 

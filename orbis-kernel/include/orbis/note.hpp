@@ -7,7 +7,7 @@
 #include <set>
 
 namespace orbis {
-
+struct File;
 static constexpr auto kEvFiltRead = -1;
 static constexpr auto kEvFiltWrite = -2;
 static constexpr auto kEvFiltAio = -3;
@@ -75,6 +75,7 @@ struct KQueue;
 struct KNote {
   shared_mutex mutex;
   Ref<KQueue> queue;
+  Ref<File> file;
   KEvent event{};
   bool enabled = true;
   bool triggered = false;

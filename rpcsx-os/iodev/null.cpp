@@ -1,6 +1,7 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/uio.hpp"
+#include <span>
 
 struct NullDevice : public IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
@@ -11,7 +12,9 @@ struct NullFile : public orbis::File {};
 
 static orbis::ErrorCode null_write(orbis::File *file, orbis::Uio *uio,
                                    orbis::Thread *) {
-  uio->resid = 0;
+  for (auto entry : std::span(uio->iov, uio->iovcnt)) {
+    uio->offset += entry.len;
+  }
   return {};
 }
 

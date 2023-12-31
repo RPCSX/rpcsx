@@ -132,8 +132,9 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     break;
   }
 
-  case 0xc0048116: {
+  case 0xc0048116: { // submit done?
     ORBIS_LOG_ERROR("gc ioctl 0xc0048116", *(std::uint32_t *)argp);
+    *(std::uint32_t *)argp = 1;
     thread->where();
     break;
   }

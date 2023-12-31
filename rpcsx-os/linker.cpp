@@ -10,6 +10,7 @@
 #include <bit>
 #include <crypto/sha1.h>
 #include <elf.h>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <orbis/thread/Process.hpp>
@@ -968,7 +969,7 @@ Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
       image[2] != std::byte{'L'} || image[3] != std::byte{'F'}) {
     image = unself(image.data(), image.size());
 
-    std::ofstream("a.out", std::ios::binary)
+    std::ofstream(std::filesystem::path(path).filename().replace_extension("elf"), std::ios::binary)
         .write((const char *)image.data(), image.size());
   }
 

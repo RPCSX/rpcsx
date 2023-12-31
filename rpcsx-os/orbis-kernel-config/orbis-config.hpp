@@ -43,19 +43,23 @@ using caddr_t = ptr<char>;
 
 [[nodiscard]] inline ErrorCode
 ureadRaw(void *kernelAddress, ptr<const void> userAddress, size_t size) {
-  auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
-  if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
-    return ErrorCode::FAULT;
-  std::memcpy(kernelAddress, userAddress, size);
+  if (size != 0) {
+    auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
+    if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+      return ErrorCode::FAULT;
+    std::memcpy(kernelAddress, userAddress, size);
+  }
   return {};
 }
 
 [[nodiscard]] inline ErrorCode
 uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
-  auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
-  if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
-    return ErrorCode::FAULT;
-  std::memcpy(userAddress, kernelAddress, size);
+  if (size != 0) {
+    auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
+    if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+      return ErrorCode::FAULT;
+    std::memcpy(userAddress, kernelAddress, size);
+  }
   return {};
 }
 
@@ -73,7 +77,8 @@ uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
   return {};
 }
 
-template <typename T> [[nodiscard]] ErrorCode uread(T &result, ptr<const T> pointer) {
+template <typename T>
+[[nodiscard]] ErrorCode uread(T &result, ptr<const T> pointer) {
   return ureadRaw(&result, pointer, sizeof(T));
 }
 
@@ -90,14 +95,15 @@ template <typename T, typename U>
 }
 
 template <typename T>
-[[nodiscard]] ErrorCode uread(T *result, ptr<const T> pointer, std::size_t count) {
+[[nodiscard]] ErrorCode uread(T *result, ptr<const T> pointer,
+                              std::size_t count) {
   return ureadRaw(&result, pointer, sizeof(T) * count);
 }
 
 template <typename T>
 [[nodiscard]] ErrorCode uwrite(ptr<T> pointer, const T *data,
                                std::size_t count) {
-  return uwriteRaw(pointer, &data, sizeof(T) * count);
+  return uwriteRaw(pointer, data, sizeof(T) * count);
 }
 
 inline uint64_t readRegister(void *context, RegisterId id) {

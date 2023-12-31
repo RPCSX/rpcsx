@@ -1,26 +1,36 @@
 #include "io-device.hpp"
+#include "align.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/SocketAddress.hpp"
 #include "orbis/file.hpp"
+#include "orbis/pipe.hpp"
 #include "orbis/stat.hpp"
+#include "orbis/thread/Process.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "vfs.hpp"
 #include "vm.hpp"
 #include <cerrno>
 #include <dirent.h>
 #include <fcntl.h>
 #include <filesystem>
+#include <netinet/in.h>
 #include <span>
 #include <string>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <sys/un.h>
+#include <thread>
 #include <unistd.h>
+#include <unordered_map>
 #include <vector>
 
 struct HostFile : orbis::File {
-  int hostFd = -1;
   bool closeOnExit = true;
+  bool alignTruncate = false;
 
   ~HostFile() {
     if (hostFd > 0 && closeOnExit) {
@@ -31,31 +41,17 @@ struct HostFile : orbis::File {
 
 struct SocketFile : orbis::File {
   orbis::utils::kstring name;
-  int hostFd = -1;
+  int dom = -1;
+  int type = -1;
+  int prot = -1;
+
+  orbis::kmap<int, orbis::kvector<std::byte>> options;
 
   ~SocketFile() {
     if (hostFd > 0) {
       ::close(hostFd);
     }
   }
-};
-
-struct HostFsDevice : IoDevice {
-  orbis::kstring hostPath;
-
-  explicit HostFsDevice(orbis::kstring path) : hostPath(std::move(path)) {}
-  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode,
-                        orbis::Thread *thread) override;
-  orbis::ErrorCode unlink(const char *path, bool recursive,
-                          orbis::Thread *thread) override;
-  orbis::ErrorCode createSymlink(const char *target, const char *linkPath,
-                                 orbis::Thread *thread) override;
-  orbis::ErrorCode mkdir(const char *path, int mode,
-                         orbis::Thread *thread) override;
-  orbis::ErrorCode rmdir(const char *path, orbis::Thread *thread) override;
-  orbis::ErrorCode rename(const char *from, const char *to,
-                          orbis::Thread *thread) override;
 };
 
 static orbis::ErrorCode convertErrc(std::errc errc) {
@@ -252,57 +248,22 @@ orbis::ErrorCode convertErrno() {
   return orbis::ErrorCode::IO;
 }
 
-static orbis::ErrorCode host_read(orbis::File *file, orbis::Uio *uio,
-                                  orbis::Thread *) {
-  auto hostFile = static_cast<HostFile *>(file);
-  if (!hostFile->dirEntries.empty())
-    return orbis::ErrorCode::ISDIR;
-
+static orbis::ErrorCode host_fd_read(int hostFd, orbis::Uio *uio) {
   std::vector<iovec> vec;
   for (auto entry : std::span(uio->iov, uio->iovcnt)) {
     vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
   }
 
-  ssize_t cnt = 0;
-  if (hostFile->hostFd == 0) {
-    for (auto io : vec) {
-      cnt += ::read(hostFile->hostFd, io.iov_base, io.iov_len);
-
-      if (cnt != io.iov_len) {
-        break;
-      }
-    }
-  } else {
-    cnt = ::preadv(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
-  }
+  auto cnt = ::preadv(hostFd, vec.data(), vec.size(), uio->offset);
   if (cnt < 0) {
-    return convertErrno();
-  }
-
-  uio->resid -= cnt;
-  uio->offset += cnt;
-  return {};
-}
-
-static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
-                                   orbis::Thread *) {
-  auto hostFile = static_cast<HostFile *>(file);
-  if (!hostFile->dirEntries.empty())
-    return orbis::ErrorCode::ISDIR;
-
-  std::vector<iovec> vec;
-  for (auto entry : std::span(uio->iov, uio->iovcnt)) {
-    vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
-  }
-
-  ssize_t cnt =
-      ::pwritev(hostFile->hostFd, vec.data(), vec.size(), uio->offset);
-
-  if (cnt < 0) {
+    cnt = 0;
     for (auto io : vec) {
-      auto result = ::write(hostFile->hostFd, io.iov_base, io.iov_len);
+      auto result = ::read(hostFd, io.iov_base, io.iov_len);
       if (result < 0) {
-        return convertErrno();
+        if (cnt == 0) {
+          return convertErrno();
+        }
+        break;
       }
 
       cnt += result;
@@ -316,6 +277,58 @@ static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
   uio->resid -= cnt;
   uio->offset += cnt;
   return {};
+}
+
+static orbis::ErrorCode host_fd_write(int hostFd, orbis::Uio *uio) {
+  std::vector<iovec> vec;
+  for (auto entry : std::span(uio->iov, uio->iovcnt)) {
+    vec.push_back({.iov_base = entry.base, .iov_len = entry.len});
+  }
+
+  ssize_t cnt = ::pwritev(hostFd, vec.data(), vec.size(), uio->offset);
+
+  if (cnt < 0) {
+    cnt = 0;
+
+    for (auto io : vec) {
+      auto result = ::write(hostFd, io.iov_base, io.iov_len);
+      if (result < 0) {
+        if (cnt == 0) {
+          return convertErrno();
+        }
+
+        break;
+      }
+
+      cnt += result;
+
+      if (cnt != io.iov_len) {
+        break;
+      }
+    }
+  }
+
+  uio->resid -= cnt;
+  uio->offset += cnt;
+  return {};
+}
+
+static orbis::ErrorCode host_read(orbis::File *file, orbis::Uio *uio,
+                                  orbis::Thread *) {
+  auto hostFile = static_cast<HostFile *>(file);
+  if (!hostFile->dirEntries.empty())
+    return orbis::ErrorCode::ISDIR;
+
+  return host_fd_read(hostFile->hostFd, uio);
+}
+
+static orbis::ErrorCode host_write(orbis::File *file, orbis::Uio *uio,
+                                   orbis::Thread *) {
+  auto hostFile = static_cast<HostFile *>(file);
+  if (!hostFile->dirEntries.empty())
+    return orbis::ErrorCode::ISDIR;
+
+  return host_fd_write(hostFile->hostFd, uio);
 }
 
 static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
@@ -388,15 +401,15 @@ static orbis::ErrorCode host_stat(orbis::File *file, orbis::Stat *sb,
 static orbis::ErrorCode host_truncate(orbis::File *file, std::uint64_t len,
                                       orbis::Thread *thread) {
   auto hostFile = static_cast<HostFile *>(file);
-  if (!hostFile->dirEntries.empty())
+  if (!hostFile->dirEntries.empty()) {
     return orbis::ErrorCode::ISDIR;
-
-  // hack for audio control shared memory
-  std::uint64_t realLen = len;
-  if (len == 3880) {
-    realLen = 0x10000;
   }
-  if (::ftruncate(hostFile->hostFd, realLen)) {
+
+  if (hostFile->alignTruncate) {
+    len = utils::alignUp(len, rx::vm::kPageSize);
+  }
+
+  if (::ftruncate(hostFile->hostFd, len)) {
     return convertErrno();
   }
 
@@ -410,6 +423,221 @@ static orbis::ErrorCode socket_ioctl(orbis::File *file, std::uint64_t request,
   return {};
 }
 
+static orbis::ErrorCode socket_read(orbis::File *file, orbis::Uio *uio,
+                                    orbis::Thread *) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    while (true) {
+      std::this_thread::sleep_for(std::chrono::days(1));
+    }
+    return orbis::ErrorCode::INVAL;
+  }
+
+  return host_fd_read(socket->hostFd, uio);
+}
+
+static orbis::ErrorCode socket_write(orbis::File *file, orbis::Uio *uio,
+                                     orbis::Thread *) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    for (auto io : std::span(uio->iov, uio->iovcnt)) {
+      uio->offset += io.len;
+    }
+    return {};
+  }
+
+  return host_fd_write(socket->hostFd, uio);
+}
+
+static orbis::ErrorCode socket_bind(orbis::File *file,
+                                    orbis::SocketAddress *address,
+                                    std::size_t addressLen,
+                                    orbis::Thread *thread) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    return {};
+  }
+
+  if (address->family == 1) {
+    auto vfsPath = std::string_view((const char *)address->data);
+    auto [device, path] = rx::vfs::get(vfsPath);
+
+    if (auto hostDev = device.cast<HostFsDevice>()) {
+      auto socketPath = std::filesystem::path(hostDev->hostPath);
+      socketPath /= path;
+
+      if (socketPath.native().size() >= sizeof(sockaddr_un::sun_path)) {
+        return orbis::ErrorCode::NAMETOOLONG;
+      }
+
+      ORBIS_LOG_ERROR(__FUNCTION__, vfsPath, socketPath.native());
+
+      sockaddr_un un{.sun_family = AF_UNIX};
+      std::strncpy(un.sun_path, socketPath.c_str(), sizeof(un.sun_path));
+      if (::bind(socket->hostFd, reinterpret_cast<::sockaddr *>(&un),
+                 sizeof(un)) < 0) {
+        return convertErrno();
+      }
+
+      return {};
+    }
+  }
+
+  return orbis::ErrorCode::NOTSUP;
+}
+
+static orbis::ErrorCode socket_listen(orbis::File *file, int backlog,
+                                      orbis::Thread *thread) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    return {};
+  }
+
+  if (::listen(socket->hostFd, backlog) < 0) {
+    return convertErrno();
+  }
+
+  return {};
+}
+
+static orbis::ErrorCode socket_accept(orbis::File *file,
+                                      orbis::SocketAddress *address,
+                                      std::uint32_t *addressLen,
+                                      orbis::Thread *thread) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    ORBIS_LOG_ERROR(__FUNCTION__, socket->name, "wait forever");
+
+    while (true) {
+      std::this_thread::sleep_for(std::chrono::days(1));
+    }
+  }
+
+  ORBIS_LOG_ERROR(__FUNCTION__, socket->name);
+
+  if (socket->dom == 1 && socket->type == 1 && socket->prot == 0) {
+    sockaddr_un un{.sun_family = AF_UNIX};
+    socklen_t len = sizeof(un);
+    int result =
+        ::accept(socket->hostFd, reinterpret_cast<sockaddr *>(&un), &len);
+
+    if (result < 0) {
+      return convertErrno();
+    }
+
+    if (addressLen && address) {
+      *addressLen = 2;
+    }
+
+    auto guestSocket = wrapSocket(result, "", 1, 1, 0);
+    auto guestFd = thread->tproc->fileDescriptors.insert(guestSocket);
+    thread->retval[0] = guestFd;
+    ORBIS_LOG_ERROR(__FUNCTION__, socket->name, guestFd);
+    return {};
+  }
+
+  return orbis::ErrorCode::NOTSUP;
+}
+
+static orbis::ErrorCode socket_connect(orbis::File *file,
+                                       orbis::SocketAddress *address,
+                                       std::uint32_t addressLen,
+                                       orbis::Thread *thread) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    return orbis::ErrorCode::CONNREFUSED;
+  }
+
+  if (address->family == 1) {
+    auto vfsPath = std::string_view((const char *)address->data);
+    auto [device, path] = rx::vfs::get(vfsPath);
+
+    if (auto hostDev = device.cast<HostFsDevice>()) {
+      auto socketPath = std::filesystem::path(hostDev->hostPath);
+      socketPath /= path;
+      ORBIS_LOG_ERROR(__FUNCTION__, vfsPath, socketPath.native());
+
+      if (socketPath.native().size() >= sizeof(sockaddr_un::sun_path)) {
+        return orbis::ErrorCode::NAMETOOLONG;
+      }
+
+      sockaddr_un un{.sun_family = AF_UNIX};
+      std::strncpy(un.sun_path, socketPath.c_str(), sizeof(un.sun_path));
+      if (::connect(socket->hostFd, reinterpret_cast<::sockaddr *>(&un),
+                    sizeof(un)) < 0) {
+        return convertErrno();
+      }
+
+      return {};
+    }
+  }
+
+  return orbis::ErrorCode::NOTSUP;
+}
+
+orbis::ErrorCode socket_setsockopt(orbis::File *file, orbis::sint level,
+                                   orbis::sint name, const void *val,
+                                   orbis::sint valsize, orbis::Thread *thread) {
+  ORBIS_LOG_ERROR(__FUNCTION__, level, name);
+  auto socket = static_cast<SocketFile *>(file);
+  orbis::kvector<std::byte> option(valsize);
+  std::memcpy(option.data(), val, valsize);
+  socket->options[name] = std::move(option);
+  return {};
+}
+
+orbis::ErrorCode socket_getsockopt(orbis::File *file, orbis::sint level,
+                                   orbis::sint name, void *val,
+                                   orbis::sint *avalsize,
+                                   orbis::Thread *thread) {
+  ORBIS_LOG_ERROR(__FUNCTION__, level, name);
+  auto socket = static_cast<SocketFile *>(file);
+  auto &option = socket->options[name];
+  if (option.size() > *avalsize) {
+    return orbis::ErrorCode::INVAL;
+  }
+
+  *avalsize = option.size();
+  std::memcpy(val, option.data(), option.size());
+  return {};
+}
+
+orbis::ErrorCode socket_recvfrom(orbis::File *file, void *buf,
+                                 orbis::size_t len, orbis::sint flags,
+                                 orbis::SocketAddress *from,
+                                 orbis::uint32_t *fromlenaddr,
+                                 orbis::Thread *thread) {
+  auto socket = static_cast<SocketFile *>(file);
+
+  if (socket->hostFd < 0) {
+    return orbis::ErrorCode::CONNREFUSED;
+  }
+
+  if (socket->dom == 1 && socket->type == 1 && socket->prot == 0) {
+    auto count = ::recvfrom(socket->hostFd, buf, len, flags, nullptr, nullptr);
+    if (count < 0) {
+      return convertErrno();
+    }
+    thread->retval[0] = count;
+
+    if (from && fromlenaddr) {
+      from->len = 0;
+      from->family = 1;
+      *fromlenaddr = 2;
+    }
+
+    return {};
+  }
+
+  return orbis::ErrorCode::NOTSUP;
+}
+
 static const orbis::FileOps hostOps = {
     .read = host_read,
     .write = host_write,
@@ -420,29 +648,55 @@ static const orbis::FileOps hostOps = {
 
 static const orbis::FileOps socketOps = {
     .ioctl = socket_ioctl,
+    .read = socket_read,
+    .write = socket_write,
+    .bind = socket_bind,
+    .listen = socket_listen,
+    .accept = socket_accept,
+    .connect = socket_connect,
+    .recvfrom = socket_recvfrom,
+    .setsockopt = socket_setsockopt,
+    .getsockopt = socket_getsockopt,
 };
 
-IoDevice *createHostIoDevice(orbis::kstring hostPath) {
-  while (hostPath.size() > 1 && hostPath.ends_with("/")) {
+IoDevice *createHostIoDevice(orbis::kstring hostPath,
+                             orbis::kstring virtualPath) {
+  while (hostPath.size() > 0 && hostPath.ends_with("/")) {
     hostPath.resize(hostPath.size() - 1);
   }
 
-  return orbis::knew<HostFsDevice>(std::move(hostPath));
+  return orbis::knew<HostFsDevice>(std::move(hostPath), std::move(virtualPath));
+}
+
+orbis::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom,
+                                   int type, int prot) {
+  auto s = orbis::knew<SocketFile>();
+  s->name = std::move(name);
+  s->dom = dom;
+  s->type = type;
+  s->prot = prot;
+  s->hostFd = hostFd;
+  s->ops = &socketOps;
+  return s;
 }
 
 orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
                               orbis::kstring name, int dom, int type,
                               int prot) {
-  auto fd = ::socket(dom, type, prot);
-  // if (fd < 0) {
-  //   return convertErrno();
-  // }
+  // ORBIS_LOG_ERROR(__FUNCTION__, name, dom, type, prot);
+  // *file = orbis::createPipe();
+  // return {};
+  int fd = -1;
 
-  auto s = orbis::knew<SocketFile>();
-  s->name = std::move(name);
-  s->hostFd = fd;
-  s->ops = &socketOps;
-  *file = s;
+  if (dom == 1 && type == 1 && prot == 0) {
+    fd = ::socket(dom, type, prot);
+
+    if (fd < 0) {
+      return convertErrno();
+    }
+  }
+
+  *file = wrapSocket(fd, std::move(name), dom, type, prot);
   return {};
 }
 
@@ -502,36 +756,49 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
 
   if (hostFd < 0) {
     auto error = convertErrno();
-    ORBIS_LOG_ERROR("host_open failed", path, realPath, error);
+    ORBIS_LOG_ERROR("host_open failed", path, realPath.c_str(), error);
     return error;
   }
 
   // Assume the file is a directory and try to read direntries
   orbis::utils::kvector<orbis::Dirent> dirEntries;
+  char hostEntryBuffer[sizeof(dirent64) * 4];
   while (true) {
-    ::dirent64 hostEntry{};
-    auto r = getdents64(hostFd, &hostEntry, sizeof(hostEntry));
+    auto r = getdents64(hostFd, hostEntryBuffer, sizeof(hostEntryBuffer));
     if (r <= 0)
       break;
 
-    if (hostEntry.d_name == std::string_view("..") ||
-        hostEntry.d_name == std::string_view(".")) {
-      continue;
-    }
+    std::size_t offset = 0;
 
-    auto &entry = dirEntries.emplace_back();
-    entry.fileno = dirEntries.size(); // TODO
-    entry.reclen = sizeof(entry);
-    entry.namlen = std::strlen(hostEntry.d_name);
-    std::strncpy(entry.name, hostEntry.d_name, sizeof(entry.name));
-    if (hostEntry.d_type == DT_REG)
-      entry.type = orbis::kDtReg;
-    else if (hostEntry.d_type == DT_DIR || hostEntry.d_type == DT_LNK)
-      entry.type = orbis::kDtDir; // Assume symlinks to be dirs
-    else {
-      ORBIS_LOG_ERROR("host_open: unknown directory entry d_type", realPath,
-                      hostEntry.d_name, hostEntry.d_type);
-      dirEntries.pop_back();
+    while (offset < r) {
+      ::dirent64 *entryPtr =
+          reinterpret_cast<dirent64 *>(hostEntryBuffer + offset);
+      offset += entryPtr->d_reclen;
+
+      if (entryPtr->d_name == std::string_view("..") ||
+          entryPtr->d_name == std::string_view(".") ||
+          entryPtr->d_name == std::string_view(".rpcsx")) {
+        continue;
+      }
+
+      // auto entryPath = (std::filesystem::path(virtualPath) / path /
+      // entryPtr->d_name).lexically_normal().string();
+      std::string entryPath = entryPtr->d_name;
+
+      auto &entry = dirEntries.emplace_back();
+      entry.fileno = dirEntries.size(); // TODO
+      entry.reclen = sizeof(entry);
+      entry.namlen = entryPath.length();
+      std::strncpy(entry.name, entryPath.c_str(), sizeof(entry.name));
+      if (entryPtr->d_type == DT_REG)
+        entry.type = orbis::kDtReg;
+      else if (entryPtr->d_type == DT_DIR || entryPtr->d_type == DT_LNK)
+        entry.type = orbis::kDtDir; // Assume symlinks to be dirs
+      else {
+        ORBIS_LOG_ERROR("host_open: unknown directory entry d_type",
+                        realPath.c_str(), entryPtr->d_name, entryPtr->d_type);
+        dirEntries.pop_back();
+      }
     }
   }
 
@@ -585,11 +852,12 @@ orbis::ErrorCode HostFsDevice::rename(const char *from, const char *to,
   return convertErrorCode(ec);
 }
 
-orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device) {
+orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device, bool alignTruncate) {
   auto newFile = orbis::knew<HostFile>();
   newFile->hostFd = hostFd;
   newFile->ops = &hostOps;
   newFile->device = device;
+  newFile->alignTruncate = alignTruncate;
   return newFile;
 }
 

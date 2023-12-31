@@ -20,7 +20,7 @@ struct RcBase {
   void incRef() {
     if (!_total_size)
       std::abort();
-    if (references.fetch_add(1, std::memory_order::relaxed) > 512) {
+    if (references.fetch_add(1, std::memory_order::relaxed) > 4096) {
       assert(!"too many references");
     }
   }
@@ -81,7 +81,7 @@ public:
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
   Ref &operator=(Ref<OT> &&other) {
-    other.swap(*this);
+    other.template cast<T>().swap(*this);
     return *this;
   }
 

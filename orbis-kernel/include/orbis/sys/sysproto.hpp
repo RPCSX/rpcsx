@@ -20,6 +20,7 @@ struct timespec;
 struct Stat;
 struct stack_t;
 struct IoVec;
+struct BatchMapEntry;
 
 SysResult nosys(Thread *thread);
 
@@ -53,13 +54,13 @@ SysResult sys_recvmsg(Thread *thread, sint s, ptr<struct msghdr> msg,
 SysResult sys_sendmsg(Thread *thread, sint s, ptr<struct msghdr> msg,
                       sint flags);
 SysResult sys_recvfrom(Thread *thread, sint s, caddr_t buf, size_t len,
-                       sint flags, ptr<struct sockaddr> from,
+                       sint flags, ptr<SocketAddress> from,
                        ptr<uint32_t> fromlenaddr);
-SysResult sys_accept(Thread *thread, sint s, ptr<struct sockaddr> from,
+SysResult sys_accept(Thread *thread, sint s, ptr<SocketAddress> from,
                      ptr<uint32_t> fromlenaddr);
-SysResult sys_getpeername(Thread *thread, sint fdes, ptr<struct sockaddr> asa,
+SysResult sys_getpeername(Thread *thread, sint fdes, ptr<SocketAddress> asa,
                           ptr<uint32_t> alen);
-SysResult sys_getsockname(Thread *thread, sint fdes, ptr<struct sockaddr> asa,
+SysResult sys_getsockname(Thread *thread, sint fdes, ptr<SocketAddress> asa,
                           ptr<uint32_t> alen);
 SysResult sys_access(Thread *thread, ptr<char> path, sint flags);
 SysResult sys_chflags(Thread *thread, ptr<char> path, sint flags);
@@ -634,7 +635,8 @@ SysResult sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                          ptr<sint> pNumWaitThreads);
 SysResult sys_query_memory_protection(Thread *thread, ptr<void> address,
                                       ptr<MemoryProtection> protection);
-SysResult sys_batch_map(Thread *thread /* TODO */);
+SysResult sys_batch_map(Thread *thread, sint unk, sint flags, ptr<BatchMapEntry> entries,
+                        sint entriesCount, ptr<sint> processedCount);
 SysResult sys_osem_create(Thread *thread, ptr<const char[32]> name, uint attrs,
                           sint initCount, sint maxCount);
 SysResult sys_osem_delete(Thread *thread, sint id);
@@ -720,7 +722,8 @@ SysResult sys_get_proc_type_info(Thread *thread, ptr<sint> destProcessInfo);
 SysResult sys_get_resident_count(Thread *thread, pid_t pid);
 SysResult sys_prepare_to_suspend_process(Thread *thread, pid_t pid);
 SysResult sys_get_resident_fmem_count(Thread *thread, pid_t pid);
-SysResult sys_thr_get_name(Thread *thread, lwpid_t lwpid);
+SysResult sys_thr_get_name(Thread *thread, lwpid_t lwpid, char *buf,
+                           size_t buflen);
 SysResult sys_set_gpo(Thread *thread /* TODO */);
 SysResult sys_get_paging_stats_of_all_objects(Thread *thread /* TODO */);
 SysResult sys_test_debug_rwmem(Thread *thread /* TODO */);

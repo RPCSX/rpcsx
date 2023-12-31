@@ -9,6 +9,7 @@
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include "xbyak/xbyak.h"
 #include <rx/Version.hpp>
 
 #include <elf.h>
@@ -120,7 +121,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   if (g_gpuPid > 0) {
     // stop gpu thread
-    ::kill(g_gpuPid, SIGINT);
+    // ::kill(g_gpuPid, SIGINT);
   }
 
   if (sig != SIGINT) {
@@ -314,7 +315,9 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   std::fprintf(stderr, ") -> Status %d, Value %lx:%lx\n", result.value(),
                thread->retval[0], thread->retval[1]);
 
-  thread->where();
+  if (result.isError()) {
+    thread->where();
+  }
   funlockfile(stderr);
 }
 
@@ -391,6 +394,8 @@ static void ps4InitDev() {
   rx::vfs::addDevice("devstat", createDevStatCharacterDevice());
   rx::vfs::addDevice("devact", createDevActCharacterDevice());
   rx::vfs::addDevice("devctl", createDevCtlCharacterDevice());
+  rx::vfs::addDevice("uvd", createUVDCharacterDevice());
+  rx::vfs::addDevice("vce", createVCECharacterDevice());
 
   auto shm = createShmDevice();
   rx::vfs::addDevice("shm", shm);
@@ -532,6 +537,23 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
       std::abort();
     }
 
+    for (auto sym : libkernel->symbols) {
+      if (sym.id == 0xd2f4e7e480cc53d0) {
+        auto address = (uint64_t)libkernel->base + sym.address;
+        ::mprotect((void *)utils::alignDown(address, 0x1000), utils::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
+        std::printf("patching sceKernelGetMainSocId\n");
+        struct GetMainSocId : Xbyak::CodeGenerator {
+          GetMainSocId(std::uint64_t address, std::uint64_t size) : Xbyak::CodeGenerator(size, (void *)address) {
+            mov(eax, 0x710f00);
+            ret();
+          }
+        } gen{ address, sym.size };
+
+        ::mprotect((void *)utils::alignDown(address, 0x1000), utils::alignUp(sym.size + sym.address, 0x1000), PROT_READ | PROT_EXEC);
+        break;
+      }
+    }
+
     if (orbis::g_context.fwSdkVersion == 0) {
       auto moduleParam = reinterpret_cast<std::byte *>(libkernel->moduleParam);
       auto fwSdkVersion = moduleParam         //
@@ -607,7 +629,7 @@ static void runRpsxGpu() {
       isRpsxGpuPid(bridgeHeader->pullerPid)) {
     bridgeHeader->pusherPid = ::getpid();
     g_gpuPid = bridgeHeader->pullerPid;
-    rx::bridge = bridgeHeader;
+    rx::bridge.header = bridgeHeader;
     return;
   }
 
@@ -617,7 +639,7 @@ static void runRpsxGpu() {
     bridgeHeader = amdgpu::bridge::createShmCommandBuffer(cmdBufferName);
   }
   bridgeHeader->pusherPid = ::getpid();
-  rx::bridge = bridgeHeader;
+  rx::bridge.header = bridgeHeader;
 
   auto rpcsxGpuPath = getSelfDir() / "rpcsx-gpu";
 
@@ -686,6 +708,22 @@ struct IpmiServer {
     return *this;
   }
 
+  IpmiServer &createSyncHandlerStub(std::uint32_t methodId,
+                                    std::function<std::int32_t()> handler) {
+    syncHandlers[methodId] =
+        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      if (!outData.empty()) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      errorCode = handler();
+      return {};
+    };
+    return *this;
+  }
+
   IpmiServer &createSyncHandler(
       std::uint32_t methodId,
       std::function<std::int32_t(void *out, std::uint64_t &outSize)> handler) {
@@ -693,7 +731,7 @@ struct IpmiServer {
         [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
             const std::vector<std::span<std::byte>> &inData)
         -> orbis::ErrorCode {
-      if (outData.size() != 1) {
+      if (outData.size() < 1) {
         return orbis::ErrorCode::INVAL;
       }
 
@@ -727,6 +765,34 @@ struct IpmiServer {
       errorCode = handler(outData[0].data(), size,
                           *reinterpret_cast<T *>(inData[0].data()));
       outData[0] = outData[0].subspan(0, size);
+      return {};
+    };
+    return *this;
+  }
+
+  template <typename OutT, typename InT>
+  IpmiServer &createSyncHandler(
+      std::uint32_t methodId,
+      std::function<std::int32_t(OutT &out, const InT &param)> handler) {
+    syncHandlers[methodId] =
+        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      if (outData.size() != 1 || inData.size() != 1) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      if (inData[0].size() != sizeof(InT)) {
+        return orbis::ErrorCode::INVAL;
+      }
+      if (outData[0].size() < sizeof(OutT)) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      OutT out;
+      errorCode = handler(out, *reinterpret_cast<InT *>(inData[0].data()));
+      std::memcpy(outData[0].data(), &out, sizeof(out));
+      outData[0] = outData[0].subspan(0, sizeof(OutT));
       return {};
     };
     return *this;
@@ -811,9 +877,22 @@ struct IpmiServer {
         session->server->name.c_str(), message->methodId, message->numInData,
         message->numOutData);
 
+    // for (auto in : inData) {
+    //   std::fprintf(stderr, "in %zx\n", in.size());
+    // }
+
+    // for (auto out : outData) {
+    //   std::fprintf(stderr, "out %zx\n", out.size());
+    // }
+
     std::lock_guard lock(session->mutex);
 
     session->messageResponses.push_front({
+        // TODO:
+        // .errorCode = message->numOutData == 0 ||
+        //                      (message->numOutData == 1 && outData[0].empty())
+        //                  ? 0
+        //                  : -1,
         .errorCode = 0,
         .data = orbis::kvector<std::byte>(
             message->numOutData ? outData[0].size() : 0),
@@ -914,6 +993,8 @@ static void createMiniSysCoreObjects(orbis::Process *process) {
 static void createSysAvControlObjects(orbis::Process *process) {
   createIpmiServer(process, "SceAvSettingIpc");
 
+  createIpmiServer(process, "SceAvCaptureIpc");
+  createEventFlag("SceAvCaptureIpc", 0x121, 0);
   createEventFlag("SceAvSettingEvf", 0x121, 0xffff00000000);
 
   createShm("/SceAvSetting", 0xa02, 0x1a4, 4096);
@@ -1009,14 +1090,48 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceNetCtl");
   createIpmiServer(process, "SceNpMgrIpc")
       .createSyncHandler(
-          0, [=](void *out, std::uint64_t &size) -> std::int32_t {
+          0,
+          [=](void *out, std::uint64_t &size) -> std::int32_t {
             std::string_view result = "SceNpMgrEvf";
+            if (size < result.size() + 1) {
+              return 0x8002'0000 + static_cast<int>(orbis::ErrorCode::INVAL);
+            }
             std::strncpy((char *)out, result.data(), result.size() + 1);
             size = result.size() + 1;
-            orbis::g_context.createEventFlag("SceNpMgrEvf", 0x200, 0);
+            orbis::g_context.createEventFlag(orbis::kstring(result), 0x200, 0);
+            return 0;
+          })
+      .createSyncHandlerStub(0xd, [=] -> std::int32_t { return 0; });
+  createIpmiServer(process, "SceNpService")
+      .createSyncHandler<std::uint32_t>(0, [=](void *out, std::uint64_t &size,
+                                               std::uint32_t val) { return 0; })
+      .createSyncHandler(0xa0001,
+                         [=](void *out, std::uint64_t &size) -> std::int32_t {
+                           if (size < 1) {
+                             return 0x8002'0000 +
+                                    static_cast<int>(orbis::ErrorCode::INVAL);
+                           }
+                           size = 1;
+                           *reinterpret_cast<std::uint8_t *>(out) = 1;
+                           return 0;
+                         })
+      .createSyncHandler(0xa0002,
+                         [=](void *out, std::uint64_t &size) -> std::int32_t {
+                           if (size < 1) {
+                             return 0x8002'0000 +
+                                    static_cast<int>(orbis::ErrorCode::INVAL);
+                           }
+                           size = 1;
+                           *reinterpret_cast<std::uint8_t *>(out) = 1;
+                           return 0;
+                         })
+      .createSyncHandler<std::uint32_t, std::uint32_t>(
+          0xd0000, // sceNpTpipIpcClientGetShmIndex
+          [=](std::uint32_t &shmIndex, std::uint32_t appId) -> std::int32_t {
+            shmIndex = 0;
             return 0;
           });
-  createIpmiServer(process, "SceNpService");
+
   createIpmiServer(process, "SceNpTrophyIpc");
   createIpmiServer(process, "SceNpUdsIpc");
   createIpmiServer(process, "SceLibNpRifMgrIpc");
@@ -1033,7 +1148,45 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "ScePatchChecker");
   createIpmiServer(process, "SceMorpheusUpdService");
   createIpmiServer(process, "ScePsmSharedDmem");
-  createIpmiServer(process, "SceSaveData");
+  createIpmiServer(process, "SceSaveData")
+      .createSyncHandler(
+          0x12340001,
+          [](void *out, std::uint64_t &size) -> std::int32_t {
+            {
+              auto [dev, devPath] = rx::vfs::get("/app0");
+              if (auto hostFs = dev.cast<HostFsDevice>()) {
+                std::error_code ec;
+                auto saveDir = hostFs->hostPath + "/.rpcsx/saves/";
+                if (!std::filesystem::exists(saveDir)) {
+                  return 0x8002'0000 +
+                         static_cast<int>(orbis::ErrorCode::NOENT);
+                }
+              }
+            }
+            std::string_view result = "/saves";
+            if (size < result.size() + 1) {
+              return 0x8002'0000 + static_cast<int>(orbis::ErrorCode::INVAL);
+            }
+            std::strncpy((char *)out, result.data(), result.size() + 1);
+            size = result.size() + 1;
+            orbis::g_context.createEventFlag(orbis::kstring(result), 0x200, 0);
+            return 0;
+          })
+      .createSyncHandler(
+          0x12340002, [](void *out, std::uint64_t &size) -> std::int32_t {
+            {
+              auto [dev, devPath] = rx::vfs::get("/app0");
+              if (auto hostFs = dev.cast<HostFsDevice>()) {
+                std::error_code ec;
+                auto saveDir = hostFs->hostPath + "/.rpcsx/saves/";
+                std::filesystem::create_directories(saveDir, ec);
+                rx::vfs::mount("/saves/",
+                               createHostIoDevice(saveDir, "/saves/"));
+              }
+            }
+            return 0;
+          });
+
   createIpmiServer(process, "SceStickerCoreServer");
   createIpmiServer(process, "SceDbRecoveryShellCore");
   createIpmiServer(process, "SceUserService")
@@ -1096,6 +1249,8 @@ static void createShellCoreObjects(orbis::Process *process) {
   createEventFlag("SceLncUtilAppStatus1", 0x100, 0);
   createEventFlag("SceAppMessaging1", 0x120, 1);
   createEventFlag("SceShellCoreUtil1", 0x120, 0x3f8c);
+  createEventFlag("SceNpScoreIpc_" + fmtHex(process->pid), 0x120, 0);
+  createEventFlag("/vmicDdEvfAin", 0x120, 0);
 
   createSemaphore("SceAppMessaging1", 0x101, 1, 0x7fffffff);
   createSemaphore("SceLncSuspendBlock1", 0x101, 1, 10000);
@@ -1144,7 +1299,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   };
 
   process->authInfo = {
-      .unk0 = 0x3100000000000001,
+      .unk0 = 0x380000000000000f,
       .caps =
           {
               -1ul,
@@ -1207,6 +1362,8 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   thread->tproc->processParam = executableModule->processParam;
   thread->tproc->processParamSize = executableModule->processParamSize;
 
+  g_traceSyscalls = false;
+
   thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExec);
 
   std::thread([&] {
@@ -1260,8 +1417,9 @@ int main(int argc, const char *argv[]) {
         return 1;
       }
 
-      rx::vfs::mount(argv[argIndex + 2],
-                     createHostIoDevice(argv[argIndex + 1]));
+      rx::vfs::mount(
+          argv[argIndex + 2],
+          createHostIoDevice(argv[argIndex + 1], argv[argIndex + 2]));
       argIndex += 3;
       continue;
     }
@@ -1323,7 +1481,7 @@ int main(int argc, const char *argv[]) {
   // rx::vm::printHostStats();
   orbis::g_context.allocatePid();
   auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
-  pthread_setname_np(pthread_self(), "10.MAINTHREAD");
+  // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   std::thread{[] {
     pthread_setname_np(pthread_self(), "Bridge");
@@ -1400,7 +1558,7 @@ int main(int argc, const char *argv[]) {
   if (isSystem) {
     amdgpu::bridge::expGpuPid = 50001;
     initProcess->authInfo = {
-        .unk0 = 0x3100000000000001,
+        .unk0 = 0x380000000000000f,
         .caps =
             {
                 -1ul,
@@ -1481,6 +1639,9 @@ int main(int argc, const char *argv[]) {
       createSysCoreObjects(initProcess);
       createGnmCompositorObjects(initProcess);
       createShellCoreObjects(initProcess);
+
+      createIpmiServer(initProcess, "SceCdlgRichProf"); // ?
+      initProcess->cwd = "/app0/";
 
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {});

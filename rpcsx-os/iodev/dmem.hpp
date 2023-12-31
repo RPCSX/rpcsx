@@ -13,7 +13,10 @@
 struct DmemDevice : public IoDevice {
   orbis::shared_mutex mtx;
   int index;
+  int shmFd = -1;
   std::size_t dmemTotalSize;
+
+  ~DmemDevice();
 
   struct AllocationInfo {
     std::uint32_t memoryType;

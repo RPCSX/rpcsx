@@ -72,8 +72,8 @@ static orbis::ErrorCode notification_write(orbis::File *file, orbis::Uio *uio, o
     auto offset = dev->data.size();
     dev->data.resize(offset + vec.len);
     std::memcpy(dev->data.data(), vec.base, vec.len);
+    uio->offset += vec.len;
   }
-  uio->resid = 0;
   return {};
 }
 

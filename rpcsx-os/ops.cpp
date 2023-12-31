@@ -33,6 +33,7 @@
 #include <string>
 #include <string_view>
 #include <sys/prctl.h>
+#include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
 
@@ -354,6 +355,26 @@ orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
                         orbis::sint domain, orbis::sint type,
                         orbis::sint protocol, Ref<File> *file) {
   return createSocket(file, name ? name : "", domain, type, protocol);
+}
+
+orbis::SysResult socketPair(orbis::Thread *thread, orbis::sint domain,
+                            orbis::sint type, orbis::sint protocol,
+                            Ref<File> *a, Ref<File> *b) {
+
+  if (domain == 1 && type == 1 && protocol == 0) {
+    int fds[2];
+    if (::socketpair(domain, type, protocol, fds)) {
+      return convertErrno();
+    }
+
+    *a = wrapSocket(fds[0], "", domain, type, protocol);
+    *b = wrapSocket(fds[1], "", domain, type, protocol);
+  }
+
+  auto result = wrapSocket(-1, "", domain, type, protocol);
+  *a = result;
+  *b = result;
+  return {};
 }
 
 orbis::SysResult shm_unlink(orbis::Thread *thread, const char *path) {
@@ -879,6 +900,7 @@ ProcessOps rx::procOpsTable = {
     .blockpool_map = blockpool_map,
     .blockpool_unmap = blockpool_unmap,
     .socket = socket,
+    .socketpair = socketPair,
     .shm_unlink = shm_unlink,
     .dynlib_get_obj_member = dynlib_get_obj_member,
     .dynlib_dlsym = dynlib_dlsym,

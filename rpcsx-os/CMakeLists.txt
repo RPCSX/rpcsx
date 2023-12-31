@@ -41,6 +41,8 @@ add_executable(rpcsx-os
   iodev/devstat.cpp
   iodev/devact.cpp
   iodev/devctl.cpp
+  iodev/uvd.cpp
+  iodev/vce.cpp
 
   main.cpp
   backtrace.cpp

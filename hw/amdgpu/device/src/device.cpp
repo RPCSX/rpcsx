@@ -43,7 +43,7 @@ using namespace amdgpu::device;
 static const bool kUseDirectMemory = false;
 static amdgpu::bridge::BridgeHeader *g_bridge;
 
-void *g_rwMemory;
+// void *g_rwMemory;
 std::size_t g_memorySize;
 std::uint64_t g_memoryBase;
 RemoteMemory g_hostMemory;
@@ -4577,6 +4577,9 @@ static auto g_commandHandlers = [] {
 static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
                                 std::span<std::uint32_t> &packets) {
   while (!packets.empty()) {
+    // std::uint64_t address =
+    //     (char *)packets.data() - g_hostMemory.shmPointer + 0x40000;
+    // std::fprintf(stderr, "address = %lx\n", address);
     auto cmd = packets[0];
     auto type = getBits(cmd, 31, 30);
 
@@ -4637,28 +4640,28 @@ void amdgpu::device::AmdgpuDevice::handleProtectMemory(std::uint64_t address,
       break;
 
     case PROT_WRITE | PROT_READ:
-      protStr = "W";
+      protStr = "RW";
       break;
 
     default:
       protStr = "unknown";
       break;
     }
-    std::printf("Allocated area at %zx, size %lx, prot %s\n", address, size,
-                protStr);
+    std::fprintf(stderr, "Allocated area at %zx, size %lx, prot %s\n", address,
+                 size, protStr);
   } else {
     memoryAreaTable.unmap(beginPage, endPage);
-    std::printf("Unmapped area at %zx, size %lx\n", address, size);
+    std::fprintf(stderr, "Unmapped area at %zx, size %lx\n", address, size);
   }
 
   std::size_t index = 0;
   for (auto area : memoryAreaTable) {
+    // std::printf("area %lx-%lx\n", area.beginAddress * kPageSize,
+    //             area.endAddress * kPageSize);
+
     if (index >= std::size(g_bridge->memoryAreas)) {
       util::unreachable("too many memory areas");
     }
-
-    // std::printf("area %lx-%lx\n", area.beginAddress * kPageSize,
-    //             area.endAddress * kPageSize);
 
     g_bridge->memoryAreas[index++] = {
         .address = area.beginAddress * kPageSize,
@@ -4685,11 +4688,16 @@ void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t queueId,
 
   if (inserted) {
     std::printf("creation queue %lx\n", queueId);
-    it->second.sched.enqueue([=, queue = &it->second] {
-      if (queueId == 0xc0023f00) {
-        setThreadName("Graphics queue");
-      } else {
-        setThreadName(("Compute queue" + std::to_string(queueId)).c_str());
+    it->second.sched.enqueue([=, queue = &it->second,
+                              initialized = false] mutable {
+      if (!initialized) {
+        initialized = true;
+
+        if (queueId == 0xc0023f00) {
+          setThreadName("Graphics queue");
+        } else {
+          setThreadName(("Compute queue" + std::to_string(queueId)).c_str());
+        }
       }
 
       Queue::CommandBuffer *commandBuffer;
@@ -4715,7 +4723,7 @@ void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t queueId,
     });
   }
 
-  // std::printf("address = %lx, count = %lx\n", address, count);
+  // std::fprintf(stderr, "address = %lx, count = %lx\n", address, count);
 
   std::lock_guard lock(it->second.mtx);
   it->second.commandBuffers.push_back(

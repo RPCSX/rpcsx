@@ -304,8 +304,8 @@ struct Block {
   Group groups[kGroupsInBlock];
 
   void setFlags(std::uint64_t firstPage, std::uint64_t pagesCount,
-                std::uint32_t flags) {
-    modifyFlags(firstPage, pagesCount, flags, ~static_cast<std::uint32_t>(0));
+                std::uint32_t flags, bool noOverwrite) {
+    modifyFlags(firstPage, pagesCount, flags, ~static_cast<std::uint32_t>(0), noOverwrite);
   }
 
   void addFlags(std::uint64_t firstPage, std::uint64_t pagesCount,
@@ -342,7 +342,8 @@ struct Block {
   }
 
   void modifyFlags(std::uint64_t firstPage, std::uint64_t pagesCount,
-                   std::uint32_t addFlags, std::uint32_t removeFlags) {
+                   std::uint32_t addFlags, std::uint32_t removeFlags,
+                   bool noOverwrite = false) {
     std::uint64_t groupIndex = firstPage / kGroupSize;
 
     std::uint64_t addAllocatedFlags =
@@ -387,6 +388,10 @@ struct Block {
 
       auto &group = groups[groupIndex++];
 
+      if (noOverwrite) {
+        mask &= ~group.allocated;
+      }
+
       group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
                         (addAllocatedFlags & mask);
       group.shared = (group.shared & ~(removeSharedFlags & mask)) |
@@ -405,29 +410,60 @@ struct Block {
           (addGpuWritableFlags & mask);
     }
 
-    while (pagesCount >= kGroupSize) {
-      pagesCount -= kGroupSize;
+    if (noOverwrite) {
+      while (pagesCount >= kGroupSize) {
+        pagesCount -= kGroupSize;
 
-      auto &group = groups[groupIndex++];
+        auto &group = groups[groupIndex++];
+        auto mask = ~group.allocated;
 
-      group.allocated =
-          (group.allocated & ~removeAllocatedFlags) | addAllocatedFlags;
-      group.shared = (group.shared & ~removeSharedFlags) | addSharedFlags;
-      group.readable =
-          (group.readable & ~removeReadableFlags) | addReadableFlags;
-      group.writable =
-          (group.writable & ~removeWritableFlags) | addWritableFlags;
-      group.executable =
-          (group.executable & ~removeExecutableFlags) | addExecutableFlags;
-      group.gpuReadable =
-          (group.gpuReadable & ~removeGpuReadableFlags) | addGpuReadableFlags;
-      group.gpuWritable =
-          (group.gpuWritable & ~removeGpuWritableFlags) | addGpuWritableFlags;
+        group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
+                          (addAllocatedFlags & mask);
+        group.shared = (group.shared & ~(removeSharedFlags & mask)) |
+                       (addSharedFlags & mask);
+        group.readable = (group.readable & ~(removeReadableFlags & mask)) |
+                         (addReadableFlags & mask);
+        group.writable = (group.writable & ~(removeWritableFlags & mask)) |
+                         (addWritableFlags & mask);
+        group.executable =
+            (group.executable & ~(removeExecutableFlags & mask)) |
+            (addExecutableFlags & mask);
+        group.gpuReadable =
+            (group.gpuReadable & ~(removeGpuReadableFlags & mask)) |
+            (addGpuReadableFlags & mask);
+        group.gpuWritable =
+            (group.gpuWritable & ~(removeGpuWritableFlags & mask)) |
+            (addGpuWritableFlags & mask);
+      }
+    } else {
+      while (pagesCount >= kGroupSize) {
+        pagesCount -= kGroupSize;
+
+        auto &group = groups[groupIndex++];
+
+        group.allocated =
+            (group.allocated & ~removeAllocatedFlags) | addAllocatedFlags;
+        group.shared = (group.shared & ~removeSharedFlags) | addSharedFlags;
+        group.readable =
+            (group.readable & ~removeReadableFlags) | addReadableFlags;
+        group.writable =
+            (group.writable & ~removeWritableFlags) | addWritableFlags;
+        group.executable =
+            (group.executable & ~removeExecutableFlags) | addExecutableFlags;
+        group.gpuReadable =
+            (group.gpuReadable & ~removeGpuReadableFlags) | addGpuReadableFlags;
+        group.gpuWritable =
+            (group.gpuWritable & ~removeGpuWritableFlags) | addGpuWritableFlags;
+      }
     }
 
     if (pagesCount > 0) {
       auto mask = makePagesMask(0, pagesCount);
       auto &group = groups[groupIndex++];
+
+      if (noOverwrite) {
+        mask &= ~group.allocated;
+      }
 
       group.allocated = (group.allocated & ~(removeAllocatedFlags & mask)) |
                         (addAllocatedFlags & mask);
@@ -645,7 +681,7 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   auto pagesCount = (endAddress - startAddress + (rx::vm::kPageSize - 1)) >>
                     rx::vm::kPageShift;
 
-  gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated);
+  gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated, false);
 }
 
 void rx::vm::fork(std::uint64_t pid) {
@@ -784,6 +820,12 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   flags &= ~kMapFlagsAlignMask;
 
+  bool noOverwrite = addr != 0 && (flags & kMapFlagNoOverwrite) == kMapFlagNoOverwrite;
+  if (noOverwrite) {
+    flags |= kMapFlagFixed;
+  }
+  flags &= ~kMapFlagNoOverwrite;
+
   if (hitAddress & (alignment - 1)) {
     if (flags & kMapFlagStack) {
       hitAddress = utils::alignDown(hitAddress - 1, alignment);
@@ -844,18 +886,17 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (address == 0) {
-    // for (auto blockIndex = kFirstUserBlock; blockIndex <= kLastUserBlock;
-    //      ++blockIndex) {
-    std::size_t blockIndex = 0; // system managed block
+    for (auto blockIndex = kFirstBlock; blockIndex <= 2; ++blockIndex) {
+      // std::size_t blockIndex = 0; // system managed block
 
-    auto pageAddress =
-        gBlocks[blockIndex - kFirstBlock].findFreePages(pagesCount, alignment);
+      auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
+          pagesCount, alignment);
 
-    if (pageAddress != kBadAddress) {
-      address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
-      // break;
+      if (pageAddress != kBadAddress) {
+        address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
+        break;
+      }
     }
-    // }
   }
 
   if (address == 0) {
@@ -881,9 +922,19 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   bool isShared = (flags & kMapFlagShared) == kMapFlagShared;
   flags &= ~(kMapFlagFixed | kMapFlagAnonymous | kMapFlagShared);
 
-  gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
-      (address & kBlockMask) >> kPageShift, pagesCount,
-      (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated | (isShared ? kShared : 0));
+  auto &block = gBlocks[(address >> kBlockShift) - kFirstBlock];
+  if (noOverwrite) {
+    auto firstPage = (address & kBlockMask) >> kPageShift;
+    for (std::size_t i = 0; i < pagesCount; ++i) {
+      if (block.getProtection(firstPage + i)) {
+        return (void *)-1;
+      }
+    }
+  }
+
+  block.setFlags((address & kBlockMask) >> kPageShift, pagesCount,
+                   (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated |
+                       (isShared ? kShared : 0), false);
 
   /*
     if (flags & kMapFlagStack) {
@@ -933,7 +984,9 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   if (auto thr = orbis::g_currentThread) {
     std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address,
                  address + len, thr->tproc->pid);
-    rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
+    if (!noOverwrite) {
+      rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
+    }
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
   }
@@ -1001,7 +1054,7 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
 
   gBlocks[(address >> kBlockShift) - kFirstBlock].setFlags(
       (address & kBlockMask) >> kPageShift, pages,
-      kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)));
+      kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)), false);
 
   if (auto thr = orbis::g_currentThread) {
     rx::bridge.sendMemoryProtect(
@@ -1014,7 +1067,8 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
 
 static std::int32_t getPageProtectionImpl(std::uint64_t address) {
   return gBlocks[(address >> kBlockShift) - kFirstBlock].getProtection(
-      (address & kBlockMask) >> rx::vm::kPageShift) & ~kShared;
+             (address & kBlockMask) >> rx::vm::kPageShift) &
+         ~kShared;
 }
 
 bool rx::vm::queryProtection(const void *addr, std::uint64_t *startAddress,

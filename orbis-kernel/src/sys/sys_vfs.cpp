@@ -2,19 +2,52 @@
 #include "sys/sysproto.hpp"
 #include "utils/Logs.hpp"
 #include <filesystem>
+#include <span>
 
 orbis::SysResult orbis::sys_sync(Thread *thread) { return ErrorCode::NOSYS; }
 orbis::SysResult orbis::sys_quotactl(Thread *thread, ptr<char> path, sint cmd,
                                      sint uid, caddr_t arg) {
   return ErrorCode::NOSYS;
 }
+
+namespace orbis {
+struct statfs {
+  char pad[0x118];
+  char f_fstypename[16];  /* filesystem type name */
+  char f_mntfromname[88]; /* mounted filesystem */
+  char f_mntonname[88];   /* directory	on which mounted */
+};
+} // namespace orbis
+
 orbis::SysResult orbis::sys_statfs(Thread *thread, ptr<char> path,
                                    ptr<struct statfs> buf) {
-  return ErrorCode::NOSYS;
+  if (buf == 0) {
+    thread->retval[0] = 1;
+    return {};
+  }
+
+  std::strncpy(buf->f_fstypename, "exfatfs", sizeof(buf->f_fstypename));
+  std::strncpy(buf->f_mntfromname, "/dev/super-hdd",
+               sizeof(buf->f_mntfromname));
+  std::strncpy(buf->f_mntonname, "/system/", sizeof(buf->f_mntonname));
+
+  thread->retval[0] = 1;
+  return {};
 }
 orbis::SysResult orbis::sys_fstatfs(Thread *thread, sint fd,
                                     ptr<struct statfs> buf) {
-  return ErrorCode::NOSYS;
+  if (buf == 0) {
+    thread->retval[0] = 1;
+    return {};
+  }
+
+  std::strncpy(buf->f_fstypename, "exfatfs", sizeof(buf->f_fstypename));
+  std::strncpy(buf->f_mntfromname, "/dev/super-hdd",
+               sizeof(buf->f_mntfromname));
+  std::strncpy(buf->f_mntonname, "/system/", sizeof(buf->f_mntonname));
+
+  thread->retval[0] = 1;
+  return {};
 }
 orbis::SysResult orbis::sys_getfsstat(Thread *thread, ptr<struct statfs> buf,
                                       slong bufsize, sint flags) {
@@ -231,7 +264,7 @@ orbis::SysResult orbis::sys_fchflags(Thread *thread, sint fd, sint flags) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_chmod(Thread *thread, ptr<char> path, sint mode) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_fchmodat(Thread *thread, sint fd, ptr<char> path,
                                      mode_t mode, sint flag) {
@@ -353,7 +386,7 @@ orbis::SysResult orbis::sys_getdirentries(Thread *thread, sint fd,
   auto next = std::min<uint64_t>(file->dirEntries.size(), pos + rmax);
   file->nextOff = next * sizeof(orbis::Dirent);
   SysResult result{};
-  result = uwrite((orbis::Dirent *)buf, entries + pos, next - pos);
+  result = uwrite(ptr<orbis::Dirent>(buf), entries + pos, next - pos);
   if (result.isError())
     return result;
 

@@ -1,11 +1,16 @@
 #include "dmem.hpp"
+#include "bridge.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
+#include <fcntl.h>
 #include <mutex>
+#include <sys/mman.h>
+#include <unistd.h>
 
 struct DmemFile : public orbis::File {};
 
@@ -21,18 +26,46 @@ static constexpr auto dmemSize = 8ull * 1024 * 1024 * 1024;
 // static const std::uint64_t nextOffset = 0;
 //  static const std::uint64_t memBeginAddress = 0xfe0000000;
 
+DmemDevice::~DmemDevice() {
+  if (shmFd > 0) {
+    close(shmFd);
+  }
+
+  shm_unlink(("/rpcsx-dmem-" + std::to_string(index)).c_str());
+}
+
 orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
                                   std::int32_t prot, std::int32_t flags,
                                   std::int64_t directMemoryStart) {
-  auto result =
-      rx::vm::map(*address, len, prot, flags, 0, this, directMemoryStart);
+  if (prot == 0) {
+    // hack
+    // fixme: implement protect for pid
+    prot = rx::vm::kMapProtCpuWrite | rx::vm::kMapProtCpuRead |
+           rx::vm::kMapProtGpuAll;
+  }
 
-  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, prot, flags, result);
+  auto result =
+      rx::vm::map(*address, len, prot, flags, rx::vm::kMapInternalReserveOnly,
+                  this, directMemoryStart);
+
+  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, prot, flags, result,
+                    *address);
   if (result == (void *)-1) {
     return orbis::ErrorCode::NOMEM; // TODO
   }
 
+  if (::mmap(result, len, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, shmFd,
+             directMemoryStart) == (void *)-1) {
+    std::abort();
+    return orbis::ErrorCode::INVAL;
+  }
+
+  rx::bridge.sendMapDmem(orbis::g_currentThread->tproc->pid, index,
+                         reinterpret_cast<std::uint64_t>(result), len, prot,
+                         directMemoryStart);
+
   *address = result;
+
   return {};
 }
 
@@ -61,6 +94,7 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                                          args->alignment, &args->size);
   }
 
+  case 0xc0288010: // sceKernelAllocateDirectMemoryForMiniApp
   case 0xc0288011:
   case 0xc0288001: { // sceKernelAllocateDirectMemory
     auto args = reinterpret_cast<AllocateDirectMemoryArgs *>(argp);
@@ -69,6 +103,21 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
                             args->alignment, args->memoryType);
   }
 
+  case 0xc018800d: { // transfer budget
+    return {};
+  }
+
+  case 0xc018800f: { // protect memory for pid
+    struct Args {
+      std::uint64_t address;
+      std::uint64_t size;
+      std::uint32_t pid; // 0 if all
+      std::uint32_t prot;
+    };
+    return {};
+  }
+
+  case 0x80108015:   // sceKernelCheckedReleaseDirectMemory
   case 0x80108002: { // sceKernelReleaseDirectMemory
     struct Args {
       std::uint64_t address;
@@ -302,5 +351,14 @@ IoDevice *createDmemCharacterDevice(int index) {
   auto *newDevice = orbis::knew<DmemDevice>();
   newDevice->index = index;
   newDevice->dmemTotalSize = dmemSize;
+  auto shmFd = ::shm_open(("/rpcsx-dmem-" + std::to_string(index)).c_str(),
+                          O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+
+  if (ftruncate(shmFd, dmemSize) < 0) {
+    ::close(shmFd);
+    std::abort();
+  }
+
+  newDevice->shmFd = shmFd;
   return newDevice;
 }

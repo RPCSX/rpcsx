@@ -38,7 +38,6 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
   auto name = realShmPath(path);
   auto realFlags = O_RDWR; // TODO
 
-  std::size_t size = 0;
   if (flags & 0x200) {
     realFlags |= O_CREAT;
   }
@@ -47,11 +46,8 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
   if (fd < 0) {
     return convertErrno();
   }
-  auto hostFile = createHostFile(fd, this);
-  if (size != 0) {
-    hostFile->ops->truncate(hostFile, size, thread);
-  }
 
+  auto hostFile = createHostFile(fd, this, true);
   *file = hostFile;
   return {};
 }
