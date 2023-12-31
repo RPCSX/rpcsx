@@ -1,5 +1,7 @@
 #pragma once
 
+#include "orbis-config.hpp"
+#include "error/ErrorCode.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -29,7 +31,7 @@ struct Uio {
   UioRw rw;
   void *td;
 
-  std::size_t write(const void *data, std::size_t size) {
+  ErrorCode write(const void *data, std::size_t size) {
     auto pos = reinterpret_cast<const std::byte *>(data);
     auto end = pos + size;
 
@@ -39,15 +41,16 @@ struct Uio {
       }
 
       auto nextPos = std::min(pos + vec.len, end);
-      std::memcpy(vec.base, pos, nextPos - pos);
+      ORBIS_RET_ON_ERROR(uwriteRaw(vec.base, pos, nextPos - pos));
+      offset += nextPos - pos;
       pos = nextPos;
     }
 
-    return size - (end - pos);
+    return {};
   }
 
   template<typename T>
-  std::size_t write(const T &object) {
+  ErrorCode write(const T &object) {
     return write(&object, sizeof(T));
   }
 };

@@ -4,6 +4,7 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
+#include "iodev/mbus_av.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
 #include "thread.hpp"
@@ -387,7 +388,8 @@ static void ps4InitDev() {
   rx::vfs::addDevice("aout2", createAoutCharacterDevice());
   rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
   rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
-  rx::vfs::addDevice("mbus_av", createMBusAVCharacterDevice());
+  auto mbusAv = static_cast<MBusAVDevice *>(createMBusAVCharacterDevice());
+  rx::vfs::addDevice("mbus_av", mbusAv);
   rx::vfs::addDevice("scanin", createScaninCharacterDevice());
   rx::vfs::addDevice("s3da", createS3DACharacterDevice());
   rx::vfs::addDevice("gbase", createGbaseCharacterDevice());
@@ -401,6 +403,12 @@ static void ps4InitDev() {
   rx::vfs::addDevice("shm", shm);
   orbis::g_context.shmDevice = shm;
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();
+
+  mbusAv->emitEvent({
+    .unk0 = 9,
+    .unk1 = 1,
+    .unk2 = 1,
+  });
 }
 
 static void ps4InitFd(orbis::Thread *mainThread) {
