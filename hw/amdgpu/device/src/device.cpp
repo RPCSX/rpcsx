@@ -28,7 +28,6 @@
 #include <set>
 #include <shaders/rect_list.geom.h>
 #include <span>
-#include <spirv_cross/spirv_glsl.hpp>
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -36,6 +35,10 @@
 #include <util/VerifyVulkan.hpp>
 #include <utility>
 #include <vulkan/vulkan_core.h>
+
+#ifndef NDEBUG
+#include <spirv_cross/spirv_glsl.hpp>
+#endif
 
 using namespace amdgpu;
 using namespace amdgpu::device;
@@ -1715,6 +1718,7 @@ static bool validateSpirv(const std::vector<uint32_t> &bin) {
 }
 
 static void printSpirv(const std::vector<uint32_t> &bin) {
+#ifndef NDEBUG
   spv_target_env target_env = SPV_ENV_VULKAN_1_3;
   spv_context spvContext = spvContextCreate(target_env);
   spv_diagnostic diagnostic = nullptr;
@@ -1745,6 +1749,7 @@ static void printSpirv(const std::vector<uint32_t> &bin) {
   options.vulkan_semantics = true;
   glsl.set_common_options(options);
   std::printf("%s\n", glsl.compile().c_str());
+#endif
 }
 
 static std::optional<std::vector<uint32_t>>
@@ -4415,7 +4420,9 @@ static void handleRELEASE_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
 }
 
 static void handleEVENT_WRITE(TaskChain &waitTaskSet, QueueRegisters &regs,
-                              std::span<std::uint32_t> packet) {}
+                              std::span<std::uint32_t> packet) {
+  // std::printf("event write\n");
+}
 
 static void handleINDIRECT_BUFFER_3F(TaskChain &waitTaskSet,
                                      QueueRegisters &regs,
@@ -4564,7 +4571,7 @@ static auto g_commandHandlers = [] {
   handlers[kOpcodeEVENT_WRITE_EOS] = handleEVENT_WRITE_EOS;
   handlers[kOpcodeRELEASE_MEM] = handleRELEASE_MEM;
   handlers[kOpcodeDMA_DATA] = handleDMA_DATA;
-  handlers[kOpcodeAQUIRE_MEM] = handleAQUIRE_MEM;
+  handlers[kOpcodeACQUIRE_MEM] = handleAQUIRE_MEM;
 
   handlers[kOpcodeSET_CONTEXT_REG] = handleSET_CONTEXT_REG;
   handlers[kOpcodeSET_SH_REG] = handleSET_SH_REG;
@@ -4588,6 +4595,7 @@ static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
       // auto shaderType = getBit(cmd, 1);
       auto op = getBits(cmd, 15, 8);
       auto len = getBits(cmd, 29, 16) + 2;
+      // std::printf("cmd: %s:%x, %x, %x\n", opcodeToString(op).c_str(), len, predicate, shaderType);
 
       g_commandHandlers[op](waitTaskSet, regs, packets.subspan(0, len));
       packets = packets.subspan(len);

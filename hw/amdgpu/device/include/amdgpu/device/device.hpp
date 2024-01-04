@@ -813,7 +813,7 @@ enum Opcodes {
   kOpcodeALU_VS_CONST_UPDATE = 0x4F,
   kOpcodeDMA_DATA = 0x50,
   kOpcodeONE_REG_WRITE = 0x57,
-  kOpcodeAQUIRE_MEM = 0x58,
+  kOpcodeACQUIRE_MEM = 0x58,
   kOpcodeREWIND = 0x59,
   kOpcodeLOAD_UCONFIG_REG = 0x5E,
   kOpcodeLOAD_SH_REG = 0x5F,
@@ -955,8 +955,8 @@ inline const std::string opcodeToString(int op) {
     return "IT_DMA_DATA";
   case kOpcodeONE_REG_WRITE:
     return "IT_ONE_REG_WRITE";
-  case kOpcodeAQUIRE_MEM:
-    return "IT_AQUIRE_MEM";
+  case kOpcodeACQUIRE_MEM:
+    return "IT_ACQUIRE_MEM";
   case kOpcodeREWIND:
     return "IT_REWIND";
   case kOpcodeLOAD_UCONFIG_REG:
