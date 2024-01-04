@@ -369,6 +369,7 @@ orbis::SysResult socketPair(orbis::Thread *thread, orbis::sint domain,
 
     *a = wrapSocket(fds[0], "", domain, type, protocol);
     *b = wrapSocket(fds[1], "", domain, type, protocol);
+    return {};
   }
 
   auto result = wrapSocket(-1, "", domain, type, protocol);
@@ -551,8 +552,13 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   // FIXME: implement scheduler
 
   ORBIS_LOG_NOTICE("Starting child thread", childThread->tid,
-                   childThread->stackStart);
-
+                   childThread->stackStart, _param.rtp, _param.name,
+                   _param.spare[0], _param.spare[1]);
+  if (_param.rtp != 0) {
+    rtprio _rtp;
+    ORBIS_RET_ON_ERROR(uread(_rtp, _param.rtp));
+    ORBIS_LOG_NOTICE("  rtp: ", _rtp.type, _rtp.prio);
+  }
   auto stdthr = std::thread{[=, childThread = Ref<Thread>(childThread)] {
     static_cast<void>(
         uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
@@ -712,9 +718,9 @@ SysResult processNeeded(Thread *thread) {
 }
 
 SysResult fork(Thread *thread, slong flags) {
-  ORBIS_LOG_TODO(__FUNCTION__, flags);
-
   auto childPid = g_context.allocatePid() * 10000 + 1;
+  ORBIS_LOG_TODO(__FUNCTION__, flags, childPid, thread->tid);
+  thread->where();
   auto flag = knew<std::atomic<bool>>();
   *flag = false;
 
@@ -790,6 +796,7 @@ SysResult fork(Thread *thread, slong flags) {
 SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
                  ptr<ptr<char>> envv) {
   ORBIS_LOG_ERROR(__FUNCTION__, fname);
+  thread->where();
 
   std::vector<std::string> _argv;
   std::vector<std::string> _envv;

@@ -59,6 +59,7 @@ struct IpmiClient : RcBase {
   shared_cv sessionCv;
   sint pid;
   kdeque<kvector<std::byte>> messages;
+  kdeque<EventFlag> eventFlags;
   shared_cv messageCv;
 
   explicit IpmiClient(kstring name) : name(std::move(name)) {}
@@ -77,7 +78,6 @@ struct IpmiSession : RcBase {
   shared_mutex mutex;
   shared_cv responseCv;
   kdeque<MessageResponse> messageResponses;
-  EventFlag evf{0, 0};
   shared_cv connectCv;
   bool expectedOutput = false; // TODO: verify
   sint connectionStatus{0};
@@ -98,12 +98,19 @@ struct IpmiCreateServerConfig {
 
 static_assert(sizeof(IpmiCreateServerConfig) == 0x38);
 
+struct IpmiCreateClientConfig {
+  orbis::uint64_t size;
+  orbis::uint32_t unk[80];
+  orbis::ptr<void> userData;
+};
+
+static_assert(sizeof(IpmiCreateClientConfig) == 0x150);
+
 struct IpmiBufferInfo {
   ptr<void> data;
   uint64_t size;
 };
 
-static_assert(sizeof(IpmiBufferInfo) == 0x10);
 
 struct IpmiDataInfo {
   ptr<void> data;
@@ -111,6 +118,7 @@ struct IpmiDataInfo {
   uint64_t capacity; //?
 };
 
+static_assert(sizeof(IpmiBufferInfo) == 0x10);
 static_assert(sizeof(IpmiDataInfo) == 0x18);
 
 struct IpmiSyncMessageHeader {
@@ -124,7 +132,7 @@ struct IpmiSyncMessageHeader {
 static_assert(sizeof(IpmiSyncMessageHeader) == 0x18);
 
 ErrorCode ipmiCreateClient(Process *proc, void *clientImpl, const char *name,
-                           void *config, Ref<IpmiClient> &result);
+                           const IpmiCreateClientConfig &config, Ref<IpmiClient> &result);
 ErrorCode ipmiCreateServer(Process *proc, void *serverImpl, const char *name,
                            const IpmiCreateServerConfig &config,
                            Ref<IpmiServer> &result);
@@ -151,16 +159,21 @@ SysResult sysIpmiSendConnectResult(Thread *thread, ptr<uint> result, uint kid,
                                    ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionRespondSync(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiClientInvokeAsyncMethod(Thread *thread, ptr<uint> result,
+                                         uint kid, ptr<void> params,
+                                         uint64_t paramsSz);
+SysResult sysIpmiClientTryGetResult(Thread *thread, ptr<uint> result,
+                                          uint kid, ptr<void> params,
+                                          uint64_t paramsSz);
 SysResult sysIpmiClientGetMessage(Thread *thread, ptr<uint> result, uint kid,
                                   ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiClientTryGetMessage(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionTrySendMessage(Thread *thread, ptr<uint> result,
-                                      uint kid, ptr<void> params,
-                                      uint64_t paramsSz);
-SysResult sysIpmiClientDisconnect(Thread *thread, ptr<uint> result,
-                                        uint kid, ptr<void> params,
-                                        uint64_t paramsSz);
+                                       uint kid, ptr<void> params,
+                                       uint64_t paramsSz);
+SysResult sysIpmiClientDisconnect(Thread *thread, ptr<uint> result, uint kid,
+                                  ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiSessionGetClientPid(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result,
@@ -172,11 +185,10 @@ SysResult sysIpmiSessionGetUserData(Thread *thread, ptr<uint> result, uint kid,
                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiServerGetName(Thread *thread, ptr<uint> result, uint kid,
                                ptr<void> params, uint64_t paramsSz);
+SysResult sysIpmiClientWaitEventFlag(Thread *thread, ptr<uint> result, uint kid,
+                                     ptr<void> params, uint64_t paramsSz);
 SysResult sysIpmiClientPollEventFlag(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
-SysResult sysIpmiSessionWaitEventFlag(Thread *thread, ptr<uint> result,
-                                      uint kid, ptr<void> params,
-                                      uint64_t paramsSz);
 SysResult sysIpmiSessionSetEventFlag(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz);
 

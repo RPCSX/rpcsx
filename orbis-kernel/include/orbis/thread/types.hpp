@@ -27,5 +27,7 @@ struct thr_param {
                    // following flags:
   ptr<rtprio> rtp; // Real-time scheduling priority for the new thread. May be
                    // NULL to inherit the priority from the creating	thread
+  ptr<char> name;
+  ptr<void> spare[2];
 };
 } // namespace orbis

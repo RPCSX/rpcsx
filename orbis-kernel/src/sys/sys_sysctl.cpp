@@ -10,8 +10,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
   enum sysctl_kern {
     usrstack = 33,
-    kern_14 = 14,
-    kern_37 = 37,
+    proc = 14,
+    arnd = 37,
 
     // FIXME
     smp_cpus = 1000,
@@ -39,15 +39,25 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     kern_heap_size,
   };
 
-  enum sysctl_hw_config { chassis_info };
+  enum sysctl_hw_config {
+    chassis_info,
+    optical_out = 1000,
+  };
 
   enum sysctl_machdep {
     // FIXME
     tsc_freq = 1000,
     liverpool,
+    bootparams,
   };
 
-  enum sysctl_machdep_liverpool { telemetry = 1000, icc_max };
+  enum sysctl_machdep_liverpool {
+    telemetry = 1000,
+    icc_max,
+  };
+  enum sysctl_machdep_bootparams {
+    is_main_on_standby = 1000,
+  };
 
   struct ProcInfo {
     char data[0x448];
@@ -60,7 +70,17 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   if (namelen == 3) {
     // 1 - 14 - 41 - debug flags?
 
-    if (name[0] == kern && name[1] == 14 && name[2] == 41) {
+    if (name[0] == machdep && name[1] == bootparams &&
+        name[2] == is_main_on_standby) {
+      if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+        return ErrorCode::INVAL;
+      }
+
+      *(uint32_t *)old = 0;
+      return {};
+    }
+
+    if (name[0] == kern && name[1] == proc && name[2] == 41) {
       // std::printf("   kern.14.41\n");
 
       if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
@@ -71,7 +91,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    if (name[0] == kern && name[1] == 14 && name[2] == 42) {
+    if (name[0] == kern && name[1] == proc && name[2] == 42) {
       // std::printf("   kern.14.42\n");
 
       if ((oldlenp != nullptr && *oldlenp != 0) || new_ == nullptr ||
@@ -85,8 +105,10 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       return {};
     }
 
-    if (name[0] == kern && name[1] == 14 && name[2] == 8) {
+    if (name[0] == kern && name[1] == proc && name[2] == 8) {
       // KERN_PROC_PROC
+      ORBIS_LOG_ERROR("KERN_PROC_PROC");
+      thread->where();
       std::memset(old, 0, sizeof(ProcInfo));
       *oldlenp = sizeof(ProcInfo);
       return {};
@@ -120,13 +142,15 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   }
 
   if (namelen == 4) {
-    if (name[0] == kern && name[1] == 14 && name[2] == 1) {
+    if (name[0] == kern && name[1] == proc && name[2] == 1) {
+      ORBIS_LOG_ERROR("KERN_PROC_PROC 2");
+
       std::memset(old, 0, sizeof(ProcInfo));
       *oldlenp = sizeof(ProcInfo);
       return {};
     }
 
-    if (name[0] == 1 && name[1] == 14 && name[2] == 35) {
+    if (name[0] == 1 && name[1] == proc && name[2] == 35) {
       // AppInfo get/set
 
       // 1 - 14 - 35 - pid
@@ -346,6 +370,24 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
           dest[count++] = vm;
           dest[count++] = swap_total;
+        } else if (searchName == "machdep.bootparams.is_main_on_standby") {
+          if (*oldlenp < 3 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = machdep;
+          dest[count++] = bootparams;
+          dest[count++] = is_main_on_standby;
+        } else if (searchName == "hw.config.optical_out") {
+          if (*oldlenp < 3 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = hw;
+          dest[count++] = config;
+          dest[count++] = optical_out;
         }
 
         if (count == 0) {
@@ -411,7 +453,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         std::memset(old, 0, 0x40);
         return {};
 
-      case sysctl_kern::kern_37: {
+      case sysctl_kern::arnd: {
         struct kern37_value {
           std::uint64_t size;
           std::uint64_t unk[7];

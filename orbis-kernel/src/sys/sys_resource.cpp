@@ -1,4 +1,5 @@
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
 
 namespace orbis {
 struct rlimit {
@@ -6,7 +7,6 @@ struct rlimit {
   int64_t hardLimit;
 };
 } // namespace orbis
-
 
 orbis::SysResult orbis::sys_getpriority(Thread *thread, sint which, sint who) {
   return ErrorCode::NOSYS;
@@ -18,7 +18,12 @@ orbis::SysResult orbis::sys_setpriority(Thread *thread, sint which, sint who,
 orbis::SysResult orbis::sys_rtprio_thread(Thread *thread, sint function,
                                           lwpid_t lwpid,
                                           ptr<struct rtprio> rtp) {
-  std::printf("sys_rtprio_thread: unimplemented\n");
+  ORBIS_LOG_ERROR(__FUNCTION__, function, lwpid, rtp->prio, rtp->type);
+  thread->where();
+  if (function == 0) {
+    rtp->type = 2;
+    rtp->prio = 10;
+  }
   return {};
 }
 orbis::SysResult orbis::sys_rtprio(Thread *thread, sint function, pid_t pid,

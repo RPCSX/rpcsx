@@ -223,7 +223,8 @@ private:
       }
 
       position = 0;
-      waitPuller(0);
+      header->push = position;
+      waitPuller(position);
     }
 
     return position;

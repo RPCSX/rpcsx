@@ -187,12 +187,12 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
 }
 static ErrorCode do_lock_pi(Thread *thread, ptr<umutex> m, uint flags,
                             std::uint64_t ut, umutex_lock_mode mode) {
-  ORBIS_LOG_TODO(__FUNCTION__, m, flags, ut, mode);
+  // ORBIS_LOG_TODO(__FUNCTION__, m, flags, ut, mode);
   return do_lock_normal(thread, m, flags, ut, mode);
 }
 static ErrorCode do_lock_pp(Thread *thread, ptr<umutex> m, uint flags,
                             std::uint64_t ut, umutex_lock_mode mode) {
-  ORBIS_LOG_TODO(__FUNCTION__, m, flags, ut, mode);
+  // ORBIS_LOG_TODO(__FUNCTION__, m, flags, ut, mode);
   return do_lock_normal(thread, m, flags, ut, mode);
 }
 static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
@@ -576,17 +576,18 @@ orbis::ErrorCode orbis::umtx_rw_unlock(Thread *thread, ptr<urwlock> rwlock) {
 
   auto state = rwlock->state.load(std::memory_order::relaxed);
   if (state & kUrwLockWriteOwner) {
-		while (true) {
-      if (rwlock->state.compare_exchange_weak(state, state & ~kUrwLockWriteOwner)) {
+    while (true) {
+      if (rwlock->state.compare_exchange_weak(state,
+                                              state & ~kUrwLockWriteOwner)) {
         break;
       }
 
       if (!(state & kUrwLockWriteOwner)) {
         return ErrorCode::PERM;
       }
-		}
-	} else if ((state & kUrwLockMaxReaders) != 0) {
-		while (true) {
+    }
+  } else if ((state & kUrwLockMaxReaders) != 0) {
+    while (true) {
       if (rwlock->state.compare_exchange_weak(state, state - 1)) {
         break;
       }
@@ -594,26 +595,26 @@ orbis::ErrorCode orbis::umtx_rw_unlock(Thread *thread, ptr<urwlock> rwlock) {
       if ((state & kUrwLockMaxReaders) == 0) {
         return ErrorCode::PERM;
       }
-		}
-	} else {
-		return ErrorCode::PERM;
-	}
+    }
+  } else {
+    return ErrorCode::PERM;
+  }
 
   unsigned count = 0;
 
   if (!(flags & kUrwLockPreferReader)) {
-		if (state & kUrwLockWriteWaiters) {
-			count = 1;
-		} else if (state & kUrwLockReadWaiters) {
-			count = UINT_MAX;
-		}
-	} else {
-		if (state & kUrwLockReadWaiters) {
-			count = UINT_MAX;
-		} else if (state & kUrwLockWriteWaiters) {
-			count = 1;
-		}
-	}
+    if (state & kUrwLockWriteWaiters) {
+      count = 1;
+    } else if (state & kUrwLockReadWaiters) {
+      count = UINT_MAX;
+    }
+  } else {
+    if (state & kUrwLockReadWaiters) {
+      count = UINT_MAX;
+    } else if (state & kUrwLockWriteWaiters) {
+      count = 1;
+    }
+  }
 
   if (count == 1) {
     chain.notify_one(key);
@@ -655,7 +656,8 @@ orbis::ErrorCode orbis::umtx_wait_umutex(Thread *thread, ptr<umutex> m,
   return ErrorCode::INVAL;
 }
 
-orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<umutex> m) {
+orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<umutex> m,
+                                         sint wakeFlags) {
   ORBIS_LOG_TRACE(__FUNCTION__, m);
   int owner = m->owner.load(std::memory_order::acquire);
   if ((owner & ~kUmutexContested) != 0)
@@ -671,8 +673,13 @@ orbis::ErrorCode orbis::umtx_wake_umutex(Thread *thread, ptr<umutex> m) {
     owner = kUmutexContested;
     m->owner.compare_exchange_strong(owner, kUmutexUnowned);
   }
-  if (count != 0 && (owner & ~kUmutexContested) == 0)
-    chain.notify_one(key);
+  if (count != 0 && (owner & ~kUmutexContested) == 0) {
+    if ((wakeFlags & 0x400) || (flags & 1)) {
+      chain.notify_all(key);
+    } else {
+      chain.notify_one(key);
+    }
+  }
   return {};
 }
 

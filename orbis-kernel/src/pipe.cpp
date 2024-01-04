@@ -53,7 +53,7 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
 
 static orbis::ErrorCode pipe_write(orbis::File *file, orbis::Uio *uio,
                                    orbis::Thread *thread) {
-  auto pipe = static_cast<orbis::Pipe *>(file);
+  auto pipe = static_cast<orbis::Pipe *>(file)->other;
   ORBIS_LOG_ERROR(__FUNCTION__, thread->name, thread->tid, file);
 
   std::size_t cnt = 0;
@@ -79,8 +79,12 @@ static orbis::FileOps pipe_ops = {
     .write = pipe_write,
 };
 
-orbis::Ref<orbis::Pipe> orbis::createPipe() {
-  auto result = knew<Pipe>();
-  result->ops = &pipe_ops;
-  return result;
+std::pair<orbis::Ref<orbis::Pipe>, orbis::Ref<orbis::Pipe>> orbis::createPipe() {
+  auto a = knew<Pipe>();
+  auto b = knew<Pipe>();
+  a->ops = &pipe_ops;
+  b->ops = &pipe_ops;
+  a->other = b;
+  b->other = a;
+  return {a, b};
 }

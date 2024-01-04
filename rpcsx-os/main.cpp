@@ -120,6 +120,10 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
                  rx::vm::mapProtToString(origVmProt).c_str());
   }
 
+  if (orbis::g_currentThread != nullptr) {
+    orbis::g_currentThread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExit, sig);
+  }
+
   if (g_gpuPid > 0) {
     // stop gpu thread
     // ::kill(g_gpuPid, SIGINT);
@@ -673,9 +677,12 @@ static void runRpsxGpu() {
 static orbis::Semaphore *createSemaphore(std::string_view name, uint32_t attrs,
                                          uint64_t initCount,
                                          uint64_t maxCount) {
-  return orbis::g_context
+  auto result = orbis::g_context
       .createSemaphore(orbis::kstring(name), attrs, initCount, maxCount)
       .first;
+  std::memcpy(result->name, name.data(), name.size());
+  result->name[name.size()] = 0;
+  return result;
 }
 
 static orbis::EventFlag *createEventFlag(std::string_view name, uint32_t attrs,
@@ -1653,7 +1660,10 @@ int main(int argc, const char *argv[]) {
       createGnmCompositorObjects(initProcess);
       createShellCoreObjects(initProcess);
 
-      createIpmiServer(initProcess, "SceCdlgRichProf"); // ?
+      // ?
+      createIpmiServer(initProcess, "SceCdlgRichProf");
+      createIpmiServer(initProcess, "SceRemoteplayIpc"); 
+      createIpmiServer(initProcess, "SceGlsIpc");
       initProcess->cwd = "/app0/";
 
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",

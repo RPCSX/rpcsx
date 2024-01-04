@@ -281,10 +281,12 @@ orbis::SysResult orbis::sys_evf_wait(Thread *thread, sint id,
   }
 
   std::uint32_t resultTimeout{};
+  if (pTimeout != nullptr) {
+    ORBIS_RET_ON_ERROR(uread(resultTimeout, pTimeout));
+  }
+
   auto result = evf->wait(thread, mode, patternSet,
                           pTimeout != nullptr ? &resultTimeout : nullptr);
-
-  ORBIS_LOG_TRACE("sys_evf_wait wakeup", thread->tid, thread->evfResultPattern);
 
   if (pPatternSet != nullptr) {
     ORBIS_RET_ON_ERROR(uwrite(pPatternSet, thread->evfResultPattern));
@@ -336,7 +338,7 @@ orbis::SysResult orbis::sys_evf_set(Thread *thread, sint id, uint64_t value) {
     return ErrorCode::SRCH;
   }
 
-  ORBIS_LOG_TRACE(__FUNCTION__, evf->name, thread->tid, id, value);
+  // ORBIS_LOG_TRACE(__FUNCTION__, evf->name, thread->tid, id, value);
   evf->set(value);
   return {};
 }
@@ -960,7 +962,7 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
   }
 
   case 0x14: {
-    std::this_thread::sleep_for(std::chrono::years(1));
+    // std::this_thread::sleep_for(std::chrono::years(1));
     break;
   }
 
@@ -1184,6 +1186,11 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiSendConnectResult(thread, result, kid, params, paramsSz);
   case 0x232:
     return sysIpmiSessionRespondSync(thread, result, kid, params, paramsSz);
+  case 0x241:
+    return sysIpmiClientInvokeAsyncMethod(thread, result, kid, params,
+                                          paramsSz);
+  case 0x243:
+    return sysIpmiClientTryGetResult(thread, result, kid, params, paramsSz);
   case 0x251:
     return sysIpmiClientGetMessage(thread, result, kid, params, paramsSz);
   case 0x252:
@@ -1202,10 +1209,33 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiSessionGetUserData(thread, result, kid, params, paramsSz);
   case 0x46a:
     return sysIpmiServerGetName(thread, result, kid, params, paramsSz);
+  case 0x490:
+    return sysIpmiClientWaitEventFlag(thread, result, kid, params, paramsSz);
   case 0x491:
     return sysIpmiClientPollEventFlag(thread, result, kid, params, paramsSz);
   case 0x493:
     return sysIpmiSessionSetEventFlag(thread, result, kid, params, paramsSz);
+  }
+
+  if (auto ipmi = thread->tproc->ipmiMap.get(kid)) {
+    if (auto client = ipmi.cast<IpmiClient>()) {
+      ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, client->name, result,
+                     params, paramsSz);
+      thread->where();
+      return uwrite(result, 0u);
+    }
+    if (auto server = ipmi.cast<IpmiServer>()) {
+      ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, server->name, result,
+                     params, paramsSz);
+      thread->where();
+      return uwrite(result, 0u);
+    }
+    if (auto session = ipmi.cast<IpmiSession>(); session && session->client) {
+      ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, session->client->name,
+                     result, params, paramsSz);
+      thread->where();
+      return uwrite(result, 0u);
+    }
   }
 
   ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, kid, result, params, paramsSz);
@@ -1247,16 +1277,22 @@ orbis::SysResult orbis::sys_physhm_unlink(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_resume_internal_hdd(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_thr_suspend_ucontext(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid) {
+  // ORBIS_LOG_FATAL(__FUNCTION__, tid);
+  return {};
 }
-orbis::SysResult orbis::sys_thr_resume_ucontext(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_thr_resume_ucontext(Thread *thread, lwpid_t tid) {
+  // ORBIS_LOG_FATAL(__FUNCTION__, tid);
+  return {};
 }
-orbis::SysResult orbis::sys_thr_get_ucontext(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_thr_get_ucontext(Thread *thread, lwpid_t tid,
+                                             ptr<UContext> context) {
+  // ORBIS_LOG_FATAL(__FUNCTION__, tid, context);
+  return {};
 }
-orbis::SysResult orbis::sys_thr_set_ucontext(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_thr_set_ucontext(Thread *thread, lwpid_t tid,
+                                             ptr<UContext> context) {
+  ORBIS_LOG_FATAL(__FUNCTION__, tid, context);
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_set_timezone_info(Thread *thread /* TODO */) {

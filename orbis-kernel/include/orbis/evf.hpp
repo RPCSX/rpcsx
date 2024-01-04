@@ -24,9 +24,9 @@ struct EventFlag final {
   char name[32];
 
   bool isDeleted = false;
-  std::uint8_t attrs;
+  std::uint8_t attrs = kEvfAttrMulti | kEvfAttrThFifo;
   std::atomic<unsigned> references{0};
-  std::atomic<std::uint64_t> value;
+  std::atomic<std::uint64_t> value{0};
 
   struct WaitingThread {
     Thread *thread;
@@ -61,7 +61,8 @@ struct EventFlag final {
 
   enum class NotifyType { Set, Cancel, Destroy };
 
-  explicit EventFlag(std::int32_t attrs, std::uint64_t initPattern)
+  EventFlag() = default;
+  EventFlag(std::int32_t attrs, std::uint64_t initPattern)
       : attrs(attrs), value(initPattern) {}
 
   ErrorCode wait(Thread *thread, std::uint8_t waitMode,

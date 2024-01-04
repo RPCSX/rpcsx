@@ -1,4 +1,5 @@
 #include "sys/sysproto.hpp"
+#include "utils/Logs.hpp"
 #include <thread>
 
 orbis::SysResult
@@ -24,11 +25,15 @@ orbis::SysResult orbis::sys_sched_yield(Thread *thread) {
 }
 orbis::SysResult orbis::sys_sched_get_priority_max(Thread *thread,
                                                    sint policy) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, policy);
+  thread->retval[0] = 90;
+  return {};
 }
 orbis::SysResult orbis::sys_sched_get_priority_min(Thread *thread,
                                                    sint policy) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_ERROR(__FUNCTION__, policy);
+  thread->retval[0] = 10;
+  return {};
 }
 orbis::SysResult orbis::sys_sched_rr_get_interval(Thread *thread, pid_t pid,
                                                   ptr<timespec> interval) {

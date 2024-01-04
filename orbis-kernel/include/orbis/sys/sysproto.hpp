@@ -21,6 +21,7 @@ struct Stat;
 struct stack_t;
 struct IoVec;
 struct BatchMapEntry;
+struct UContext;
 
 SysResult nosys(Thread *thread);
 
@@ -743,10 +744,10 @@ SysResult sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
 SysResult sys_physhm_open(Thread *thread /* TODO */);
 SysResult sys_physhm_unlink(Thread *thread /* TODO */);
 SysResult sys_resume_internal_hdd(Thread *thread /* TODO */);
-SysResult sys_thr_suspend_ucontext(Thread *thread /* TODO */);
-SysResult sys_thr_resume_ucontext(Thread *thread /* TODO */);
-SysResult sys_thr_get_ucontext(Thread *thread /* TODO */);
-SysResult sys_thr_set_ucontext(Thread *thread /* TODO */);
+SysResult sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid);
+SysResult sys_thr_resume_ucontext(Thread *thread, lwpid_t tid);
+SysResult sys_thr_get_ucontext(Thread *thread, lwpid_t tid, ptr<UContext> context);
+SysResult sys_thr_set_ucontext(Thread *thread, lwpid_t tid, ptr<UContext> context);
 SysResult sys_set_timezone_info(Thread *thread /* TODO */);
 SysResult sys_set_phys_fmem_limit(Thread *thread /* TODO */);
 SysResult sys_utc_to_localtime(Thread *thread, int64_t time, int64_t *localtime,

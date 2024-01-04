@@ -7,7 +7,7 @@
 
 static int gShmFd = -1;
 static constexpr std::size_t kShmSize = sizeof(amdgpu::bridge::BridgeHeader) +
-                                        (sizeof(std::uint64_t) * (1024 * 1024));
+                                        (sizeof(std::uint64_t) * 256);
 std::uint32_t amdgpu::bridge::expGpuPid = 0;
 
 amdgpu::bridge::BridgeHeader *

@@ -85,7 +85,7 @@ ErrorCode umtx_rw_wrlock(Thread *thread, ptr<urwlock> rwlock, ulong ut);
 ErrorCode umtx_rw_unlock(Thread *thread, ptr<urwlock> rwlock);
 ErrorCode umtx_wake_private(Thread *thread, ptr<void> uaddr, sint n_wake);
 ErrorCode umtx_wait_umutex(Thread *thread, ptr<umutex> m, std::uint64_t ut);
-ErrorCode umtx_wake_umutex(Thread *thread, ptr<umutex> m);
+ErrorCode umtx_wake_umutex(Thread *thread, ptr<umutex> m, sint wakeFlags);
 ErrorCode umtx_sem_wait(Thread *thread, ptr<usem> sem, std::uint64_t ut);
 ErrorCode umtx_sem_wake(Thread *thread, ptr<usem> sem);
 ErrorCode umtx_nwake_private(Thread *thread, ptr<void *> uaddrs,

@@ -2,9 +2,11 @@
 #include "KernelContext.hpp"
 #include "thread/Process.hpp"
 #include "utils/Logs.hpp"
+#include <chrono>
 
 orbis::ErrorCode orbis::ipmiCreateClient(Process *proc, void *clientImpl,
-                                         const char *name, void *config,
+                                         const char *name,
+                                         const IpmiCreateClientConfig &config,
                                          Ref<IpmiClient> &result) {
   auto client = knew<IpmiClient>(name);
   if (client == nullptr) {
@@ -14,6 +16,8 @@ orbis::ErrorCode orbis::ipmiCreateClient(Process *proc, void *clientImpl,
   client->clientImpl = clientImpl;
   client->name = name;
   client->pid = proc->pid;
+  client->userData = config.userData;
+  client->eventFlags.resize(32);
   result = client;
   return {};
 }
@@ -84,7 +88,7 @@ orbis::SysResult orbis::sysIpmiCreateClient(Thread *thread, ptr<uint> result,
   struct IpmiCreateClientParams {
     ptr<void> clientImpl;
     ptr<const char> name;
-    ptr<void> config; // FIXME: describe
+    ptr<IpmiCreateClientConfig> config;
   };
 
   static_assert(sizeof(IpmiCreateClientParams) == 0x18);
@@ -94,13 +98,15 @@ orbis::SysResult orbis::sysIpmiCreateClient(Thread *thread, ptr<uint> result,
   }
 
   IpmiCreateClientParams _params;
+  IpmiCreateClientConfig _config;
   char _name[25];
   Ref<IpmiClient> client;
 
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiCreateClientParams>(params)));
+  ORBIS_RET_ON_ERROR(uread(_config, _params.config));
   ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), _params.name));
   ORBIS_RET_ON_ERROR(ipmiCreateClient(thread->tproc, _params.clientImpl, _name,
-                                      nullptr, client));
+                                      _config, client));
 
   auto kid = thread->tproc->ipmiMap.insert(std::move(client));
 
@@ -316,6 +322,7 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   }
 
   ORBIS_LOG_ERROR(__FUNCTION__, session->client->name);
+  thread->where();
 
   kvector<std::byte> data;
 
@@ -340,22 +347,181 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   session->responseCv.notify_one(session->mutex);
   return uwrite(result, 0u);
 }
-orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
-                                                ptr<uint> result, uint kid,
-                                                ptr<void> params,
-                                                uint64_t paramsSz) {
+orbis::SysResult orbis::sysIpmiClientInvokeAsyncMethod(Thread *thread,
+                                                       ptr<uint> result,
+                                                       uint kid,
+                                                       ptr<void> params,
+                                                       uint64_t paramsSz) {
+  struct IpmiAsyncCallParams {
+    uint32_t method;
+    uint32_t unkNotifee0;
+    uint64_t unkNotifee1;
+    uint32_t numInData;
+    uint32_t padding1;
+    ptr<IpmiDataInfo> pInData;
+    ptr<sint> pResult;
+    uint32_t flags;
+  };
+
+  static_assert(sizeof(IpmiAsyncCallParams) == 0x30);
+
+  if (paramsSz != sizeof(IpmiAsyncCallParams)) {
+    return ErrorCode::INVAL;
+  }
+
   auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
   }
 
-  ORBIS_LOG_ERROR(__FUNCTION__, client->name, client->messages.size(),
-                  paramsSz);
-  while (true) {
-    std::this_thread::sleep_for(std::chrono::days(1));
+  IpmiAsyncCallParams _params;
+  ORBIS_RET_ON_ERROR(uread(_params, (ptr<IpmiAsyncCallParams>)params));
+
+  ORBIS_LOG_TODO(__FUNCTION__, thread->tid, client->name, _params.method,
+                 _params.unkNotifee0, _params.unkNotifee1, _params.numInData,
+                 _params.padding1, _params.pInData, _params.pResult,
+                 _params.flags);
+  thread->where();
+
+  if (_params.unkNotifee0 != -1) {
+    client->eventFlags[_params.unkNotifee0].set(1);
+  }  
+
+  ORBIS_RET_ON_ERROR(uwrite(_params.pResult, 0));
+  return uwrite(result, 0u);
+}
+
+orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
+                                                  ptr<uint> result, uint kid,
+                                                  ptr<void> params,
+                                                  uint64_t paramsSz) {
+  struct IpmiTryGetResultParams {
+    uint32_t method;
+    uint32_t unk;
+    ptr<sint> pResult;
+    uint32_t numOutData;
+    uint32_t padding;
+    ptr<IpmiBufferInfo> pOutData;
+    uint64_t padding2;
+  };
+
+  static_assert(sizeof(IpmiTryGetResultParams) == 0x28);
+
+  if (paramsSz != sizeof(IpmiTryGetResultParams)) {
+    return ErrorCode::INVAL;
   }
-  return uwrite<uint>(result, 0x80020000 + static_cast<int>(ErrorCode::AGAIN));
+
+  IpmiTryGetResultParams _params;
+  ORBIS_RET_ON_ERROR(uread(_params, (ptr<IpmiTryGetResultParams>)params));
+
+  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  ORBIS_LOG_TODO(__FUNCTION__, thread->tid, client->name, _params.method,
+                 _params.unk, _params.pResult, _params.numOutData,
+                 _params.padding, _params.pOutData, _params.padding2);
+  thread->where();
+  ORBIS_RET_ON_ERROR(uwrite(_params.pResult, 0));
+  return uwrite(result, 0u);
+}
+orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
+                                                ptr<uint> result, uint kid,
+                                                ptr<void> params,
+                                                uint64_t paramsSz) {
+  struct SceIpmiClientGetArgs {
+    uint32_t unk; // 0
+    uint32_t padding;
+    ptr<std::byte> message;
+    ptr<uint64_t> pSize;
+    uint64_t maxSize;
+    ptr<uint> pTimeout;
+  };
+
+  static_assert(sizeof(SceIpmiClientGetArgs) == 0x28);
+
+  if (paramsSz != sizeof(SceIpmiClientGetArgs)) {
+    return ErrorCode::INVAL;
+  }
+
+  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  SceIpmiClientGetArgs _params;
+  ORBIS_RET_ON_ERROR(uread(_params, ptr<SceIpmiClientGetArgs>(params)));
+
+  ORBIS_LOG_ERROR(__FUNCTION__, client->name, client->messages.size(),
+                  _params.unk, _params.padding, _params.message, _params.pSize,
+                  _params.maxSize, _params.pTimeout);
+
+  std::lock_guard lock(client->mutex);
+
+  using clock = std::chrono::high_resolution_clock;
+
+  clock::time_point timeoutPoint = clock::time_point::max();
+  if (_params.pTimeout != nullptr) {
+    std::uint32_t timeout{};
+    ORBIS_LOG_ERROR(__FUNCTION__, timeout);
+    ORBIS_RET_ON_ERROR(uread(timeout, _params.pTimeout));
+    timeoutPoint = clock::now() + std::chrono::microseconds(timeout);
+  }
+
+  if (client->messages.empty()) {
+    if (timeoutPoint != clock::time_point::max()) {
+      while (true) {
+        auto now = clock::now();
+        if (now >= timeoutPoint) {
+          ORBIS_RET_ON_ERROR(uwrite(_params.pTimeout, 0u));
+          return uwrite<uint>(
+              result, 0x80020000 + static_cast<int>(ErrorCode::TIMEDOUT));
+        }
+
+        auto waitTime = std::chrono::duration_cast<std::chrono::microseconds>(
+            timeoutPoint - now);
+        client->messageCv.wait(client->mutex, waitTime.count());
+
+        if (!client->messages.empty()) {
+          now = clock::now();
+
+          if (now >= timeoutPoint) {
+            ORBIS_RET_ON_ERROR(uwrite(_params.pTimeout, 0u));
+          } else {
+            std::uint32_t restTime =
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    timeoutPoint - now)
+                    .count();
+            ORBIS_RET_ON_ERROR(uwrite(_params.pTimeout, restTime));
+          }
+
+          break;
+        }
+      }
+    } else {
+      while (client->messages.empty()) {
+        client->messageCv.wait(client->mutex);
+      }
+    }
+  }
+
+  auto &message = client->messages.front();
+
+  if (_params.maxSize < message.size()) {
+    ORBIS_LOG_ERROR(__FUNCTION__, "too small buffer");
+    return uwrite<uint>(result,
+                        0x80020000 + static_cast<int>(ErrorCode::INVAL));
+  }
+
+  ORBIS_RET_ON_ERROR(uwrite(_params.pSize, message.size()));
+  ORBIS_RET_ON_ERROR(
+      uwriteRaw(_params.message, message.data(), message.size()));
+  client->messages.pop_front();
+  return uwrite<uint>(result, 0);
 }
 
 orbis::SysResult orbis::sysIpmiClientTryGetMessage(Thread *thread,
@@ -543,16 +709,18 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
   auto session = client->session;
 
   if (session == nullptr) {
-    ORBIS_LOG_TODO(__FUNCTION__, "waiting for connection", client->name,
-                   _params.method);
+    // ORBIS_LOG_TODO(__FUNCTION__, "waiting for connection", client->name,
+    //                _params.method);
 
-    while (session == nullptr) {
-      client->sessionCv.wait(client->mutex);
-      session = client->session;
-    }
+    // while (session == nullptr) {
+    //   client->sessionCv.wait(client->mutex);
+    //   session = client->session;
+    // }
+    return ErrorCode::INVAL;
   }
 
   ORBIS_LOG_ERROR(__FUNCTION__, client->name, "sync call", _params.method);
+  // thread->where();
 
   std::lock_guard sessionLock(session->mutex);
   auto server = session->server;
@@ -822,14 +990,70 @@ orbis::SysResult orbis::sysIpmiServerGetName(Thread *thread, ptr<uint> result,
   return uwrite<uint>(result, 0);
 }
 
+orbis::SysResult orbis::sysIpmiClientWaitEventFlag(Thread *thread,
+                                                   ptr<uint> result, uint kid,
+                                                   ptr<void> params,
+                                                   uint64_t paramsSz) {
+  struct IpmiWaitEventFlagParam {
+    uint32_t index;
+    uint32_t padding0;
+    uint64_t patternSet;
+    uint32_t mode;
+    uint32_t padding1;
+    ptr<uint64_t> pPatternSet;
+    ptr<uint32_t> pTimeout;
+  };
+
+  static_assert(sizeof(IpmiWaitEventFlagParam) == 0x28);
+
+  IpmiWaitEventFlagParam _params;
+  ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiWaitEventFlagParam>(params)));
+
+  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  ORBIS_LOG_TODO(__FUNCTION__, thread->tid, kid, client->name, _params.index,
+                 _params.padding0, _params.patternSet, _params.mode,
+                 _params.padding1, _params.pPatternSet, _params.pTimeout);
+
+  if (client->eventFlags.size() <= _params.index) {
+    return ErrorCode::INVAL;
+  }
+
+  std::uint32_t resultTimeout{};
+
+  if (_params.pTimeout != nullptr) {
+    ORBIS_RET_ON_ERROR(uread(resultTimeout, _params.pTimeout));
+  }
+
+  auto &evf = client->eventFlags[_params.index];
+  auto waitResult =
+      evf.wait(thread, _params.mode, _params.patternSet, &resultTimeout);
+
+  // FIXME
+  // if (_params.pPatternSet != nullptr) {
+  //   ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, thread->evfResultPattern));
+  // }
+  ORBIS_RET_ON_ERROR(uwrite(result, 0u));
+  if (_params.pTimeout != nullptr) {
+    ORBIS_RET_ON_ERROR(uwrite(_params.pTimeout, resultTimeout));
+  }
+  return waitResult;
+}
+
 orbis::SysResult orbis::sysIpmiClientPollEventFlag(Thread *thread,
                                                    ptr<uint> result, uint kid,
                                                    ptr<void> params,
                                                    uint64_t paramsSz) {
   struct IpmiPollEventFlagParam {
-    uint64_t index;
+    uint32_t index;
+    uint32_t padding0;
     uint64_t patternSet;
-    uint64_t mode;
+    uint32_t mode;
+    uint32_t padding1;
     ptr<uint64_t> pPatternSet;
   };
 
@@ -848,21 +1072,23 @@ orbis::SysResult orbis::sysIpmiClientPollEventFlag(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  // ORBIS_LOG_TODO(__FUNCTION__, client->name, _params.index,
-  // _params.patternSet,
-  //                _params.mode, _params.pPatternSet);
-  ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, 0u));
-  // client->evf.set(_params.a);
-  return SysResult::notAnError(ErrorCode::BUSY);
-}
+  // ORBIS_LOG_TODO(__FUNCTION__, thread->tid, kid, client->name, _params.index,
+  //                _params.padding0, _params.patternSet, _params.mode,
+  //                _params.padding1, _params.pPatternSet);
 
-orbis::SysResult orbis::sysIpmiSessionWaitEventFlag(Thread *thread,
-                                                    ptr<uint> result, uint kid,
-                                                    ptr<void> params,
-                                                    uint64_t paramsSz) {
-  ORBIS_LOG_TODO(__FUNCTION__, paramsSz);
-  thread->where();
-  return uwrite<uint>(result, 0);
+  if (client->eventFlags.size() <= _params.index) {
+    return ErrorCode::INVAL;
+  }
+
+  uint64_t patternSet;
+  ORBIS_RET_ON_ERROR(uread(patternSet, _params.pPatternSet));
+  auto &evf = client->eventFlags[_params.index];
+  auto waitResult = evf.tryWait(thread, _params.mode, patternSet);
+
+  ORBIS_RET_ON_ERROR(uread(patternSet, _params.pPatternSet));
+  ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, thread->evfResultPattern));
+  ORBIS_RET_ON_ERROR(uwrite(result, 0u));
+  return SysResult::notAnError(waitResult);
 }
 
 orbis::SysResult orbis::sysIpmiSessionSetEventFlag(Thread *thread,
@@ -870,8 +1096,9 @@ orbis::SysResult orbis::sysIpmiSessionSetEventFlag(Thread *thread,
                                                    ptr<void> params,
                                                    uint64_t paramsSz) {
   struct IpmiSetEventFlagParam {
+    uint32_t index;
+    uint32_t padding;
     uint64_t patternSet;
-    uint64_t index;
   };
 
   static_assert(sizeof(IpmiSetEventFlagParam) == 0x10);
@@ -891,6 +1118,16 @@ orbis::SysResult orbis::sysIpmiSessionSetEventFlag(Thread *thread,
 
   ORBIS_LOG_TODO(__FUNCTION__, session->client->name, _params.patternSet,
                  _params.index);
-  session->evf.set(_params.patternSet);
+  auto client = session->client;
+  if (client == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  if (client->eventFlags.size() <= _params.index) {
+    return ErrorCode::INVAL;
+  }
+
+  auto &evf = client->eventFlags[_params.index];
+  evf.set(_params.patternSet);
   return uwrite<uint>(result, 0);
 }
