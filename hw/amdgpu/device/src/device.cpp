@@ -2413,15 +2413,15 @@ struct CacheImageOverlay : CacheOverlayBase {
     taskChain.add(
         ProcessQueue::Graphics, transferBufferReadId,
         [=, self = Ref(this)](VkCommandBuffer commandBuffer) {
-          vk::ImageRef imageRef(self->image);
-          imageRef.transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_GENERAL);
-          imageRef.readFromBuffer(
+      vk::ImageRef imageRef(self->image);
+      imageRef.transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_GENERAL);
+      imageRef.readFromBuffer(
               commandBuffer, self->trasferBuffer.getHandle(), self->aspect);
 
-          auto tag = *srcBuffer->getSyncTag(address, size);
-          std::lock_guard lock(self->mtx);
-          self->syncState.map(address, address + size, tag.payload);
-        });
+      auto tag = *srcBuffer->getSyncTag(address, size);
+      std::lock_guard lock(self->mtx);
+      self->syncState.map(address, address + size, tag.payload);
+    });
   }
 
   void readBuffer(TaskChain &taskChain, Ref<CacheBufferOverlay> targetBuffer,
@@ -2499,8 +2499,8 @@ struct MemoryOverlay : CacheOverlayBase {
 
   void
   writeBuffer(TaskChain &taskChain, Ref<CacheBufferOverlay> sourceBuffer,
-              std::uint64_t address, std::uint64_t size,
-              std::uint64_t waitTask = GpuTaskLayout::kInvalidId) override {
+                   std::uint64_t address, std::uint64_t size,
+                   std::uint64_t waitTask = GpuTaskLayout::kInvalidId) override {
     auto writeTask = [=] {
       auto offset = address - sourceBuffer->bufferAddress;
       auto sourceData = (char *)sourceBuffer->buffer.getData() + offset;
@@ -2840,11 +2840,12 @@ struct CacheLine {
   getImage(std::uint64_t tag, TaskChain &initTaskChain, std::uint64_t address,
            SurfaceFormat dataFormat, TextureChannelType channelType,
            TileMode tileMode, std::uint32_t width, std::uint32_t height,
-           std::uint32_t depth, std::uint32_t pitch, shader::AccessOp access,
-           bool isColor, bool isStorage) {
-    auto result =
-        getImageInternal(address, dataFormat, channelType, tileMode, width,
-                         height, depth, pitch, isColor, isStorage);
+           std::uint32_t depth, std::uint32_t pitch, int selX, int selY,
+           int selZ, int selW, shader::AccessOp access, bool isColor,
+           bool isStorage) {
+    auto result = getImageInternal(address, dataFormat, channelType, tileMode,
+                                   width, height, depth, pitch, selX, selY,
+                                   selZ, selW, isColor, isStorage);
 
     auto size = result->bpp * result->dataHeight * result->dataPitch;
 
@@ -3020,8 +3021,8 @@ private:
   getImageInternal(std::uint64_t address, SurfaceFormat dataFormat,
                    TextureChannelType channelType, TileMode tileMode,
                    std::uint32_t width, std::uint32_t height,
-                   std::uint32_t depth, std::uint32_t pitch, bool isColor,
-                   bool isStorage) {
+                   std::uint32_t depth, std::uint32_t pitch, int selX, int selY,
+                   int selZ, int selW, bool isColor, bool isStorage) {
     ImageKey key{
         .address = address,
         .dataFormat = dataFormat,
@@ -3124,7 +3125,7 @@ private:
         .image = newOverlay->image.getHandle(),
         .viewType = VK_IMAGE_VIEW_TYPE_2D,
         .format = colorFormat,
-        .components = {}, // TODO
+        .components = {},
         .subresourceRange =
             {
                 .aspectMask = static_cast<VkImageAspectFlags>(
@@ -3137,6 +3138,33 @@ private:
                 .layerCount = 1,
             },
     };
+
+    if (isColor) {
+      auto selToVkSwizzle = [](int sel) {
+        switch (sel) {
+        case 0:
+          return VK_COMPONENT_SWIZZLE_ZERO;
+        case 1:
+          return VK_COMPONENT_SWIZZLE_ONE;
+        case 4:
+          return VK_COMPONENT_SWIZZLE_R;
+        case 5:
+          return VK_COMPONENT_SWIZZLE_G;
+        case 6:
+          return VK_COMPONENT_SWIZZLE_B;
+        case 7:
+          return VK_COMPONENT_SWIZZLE_A;
+        }
+        util::unreachable("unknown channel swizzle %u\n", sel);
+      };
+
+      viewInfo.components = {
+          .r = selToVkSwizzle(selZ),
+          .g = selToVkSwizzle(selY),
+          .b = selToVkSwizzle(selX),
+          .a = selToVkSwizzle(selW),
+      };
+    }
 
     Verify() << vkCreateImageView(vk::g_vkDevice, &viewInfo, nullptr,
                                   &newOverlay->view);
@@ -3495,12 +3523,13 @@ struct Cache {
   getImage(std::uint64_t tag, TaskChain &initTaskChain, std::uint64_t address,
            SurfaceFormat dataFormat, TextureChannelType channelType,
            TileMode tileMode, std::uint32_t width, std::uint32_t height,
-           std::uint32_t depth, std::uint32_t pitch, shader::AccessOp access,
-           bool isColor = true, bool isStorage = false) {
+           std::uint32_t depth, std::uint32_t pitch, int selX, int selY,
+           int selZ, int selW, shader::AccessOp access, bool isColor = true,
+           bool isStorage = false) {
     auto &line = getLine(address, pitch * height * depth);
     return line.getImage(tag, initTaskChain, address, dataFormat, channelType,
-                         tileMode, width, height, depth, pitch, access, isColor,
-                         isStorage);
+                         tileMode, width, height, depth, pitch, selX, selY,
+                         selZ, selW, access, isColor, isStorage);
   }
 
   Ref<CacheBufferOverlay>
@@ -3636,9 +3665,29 @@ struct GpuActionResources {
         std::size_t pitch = tbuffer.pitch + 1;
         auto tileMode = (TileMode)tbuffer.tiling_idx;
 
+        // std::printf(
+        //     "image: mtype_L2 = %u, min_lod = %u, dfmt = %u, nfmt = %u,
+        //     mtype01 "
+        //     "= %u, width = %u, height = %u, perfMod = %u, interlaced = %u, "
+        //     "dst_sel_x = %u, dst_sel_y = %u, dst_sel_z = %u, dst_sel_w = %u,
+        //     " "base_level = %u, last_level = %u, tiling_idx = %u, pow2pad =
+        //     %u, " "mtype2 = %u, type = %u, depth = %u, pitch = %u, base_array
+        //     = %u, " "last_array = %u, min_lod_warn = %u, counter_bank_id =
+        //     %u, " "LOD_hdw_cnt_en = %u\n", tbuffer.mtype_L2, tbuffer.min_lod,
+        //     tbuffer.dfmt, tbuffer.nfmt, tbuffer.mtype01, tbuffer.width,
+        //     tbuffer.height, tbuffer.perfMod, tbuffer.interlaced,
+        //     tbuffer.dst_sel_x, tbuffer.dst_sel_y, tbuffer.dst_sel_z,
+        //     tbuffer.dst_sel_w, tbuffer.base_level, tbuffer.last_level,
+        //     tbuffer.tiling_idx, tbuffer.pow2pad, tbuffer.mtype2,
+        //     (unsigned)tbuffer.type, tbuffer.depth, tbuffer.pitch,
+        //     tbuffer.base_array, tbuffer.last_array, tbuffer.min_lod_warn,
+        //     tbuffer.counter_bank_id, tbuffer.LOD_hdw_cnt_en);
+
         auto image = getCache().getImage(
             tag, initTaskChain, tbuffer.getAddress(), dataFormat, channelType,
-            tileMode, width, height, depth, pitch, uniform.accessOp, true,
+            tileMode, width, height, depth, pitch, tbuffer.dst_sel_x,
+            tbuffer.dst_sel_y, tbuffer.dst_sel_z, tbuffer.dst_sel_w,
+            uniform.accessOp, true,
             uniform.kind == shader::Shader::UniformKind::StorageImage);
 
         VkDescriptorImageInfo imageInfo{
@@ -3790,7 +3839,7 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
         (TileMode)colorBuffer.tileModeIndex,
         regs.screenScissorW + regs.screenScissorX,
         regs.screenScissorH + regs.screenScissorY, 1,
-        regs.screenScissorW + regs.screenScissorX, access);
+        regs.screenScissorW + regs.screenScissorX, 4, 5, 6, 7, access);
 
     colorAttachments.push_back({
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -3841,8 +3890,9 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
     depthAccess |= shader::AccessOp::Store;
   }
 
-  if (regs.zReadBase != regs.zWriteBase) {
-    util::unreachable();
+  if (regs.zReadBase != regs.zWriteBase && regs.zWriteBase) {
+    util::unreachable("zWriteBase = %zx, zReadBase = %zx", regs.zWriteBase,
+                      regs.zReadBase);
   }
 
   Ref<CacheImageOverlay> depthImage;
@@ -3854,7 +3904,8 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
         kTextureChannelTypeUNorm, kTileModeDisplay_LinearAligned,
         regs.screenScissorW + regs.screenScissorX,
         regs.screenScissorH + regs.screenScissorY, 1,
-        regs.screenScissorW + regs.screenScissorX, depthAccess, false);
+        regs.screenScissorW + regs.screenScissorX, 0, 0, 0, 0, depthAccess,
+        false);
 
     depthAttachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -4589,13 +4640,15 @@ static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
     // std::fprintf(stderr, "address = %lx\n", address);
     auto cmd = packets[0];
     auto type = getBits(cmd, 31, 30);
+    // std::printf("cmd: %x, %u\n", cmd, type);
 
     if (type == 3) {
       // auto predicate = getBit(cmd, 0);
       // auto shaderType = getBit(cmd, 1);
       auto op = getBits(cmd, 15, 8);
       auto len = getBits(cmd, 29, 16) + 2;
-      // std::printf("cmd: %s:%x, %x, %x\n", opcodeToString(op).c_str(), len, predicate, shaderType);
+      // std::printf("cmd: %s:%x, %x, %x\n", opcodeToString(op).c_str(), len,
+      // predicate, shaderType);
 
       g_commandHandlers[op](waitTaskSet, regs, packets.subspan(0, len));
       packets = packets.subspan(len);
@@ -4618,7 +4671,8 @@ static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
     }
 
     if (type == 2) {
-      std::printf("!packet type 2!\n");
+      // std::printf("!packet type 2!\n");
+      packets = packets.subspan(1);
     }
 
     if (type == 1) {
@@ -4811,7 +4865,8 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
       tag, taskChain, buffer.address, surfFormat, channelType,
       buffer.tilingMode == 1 ? kTileModeDisplay_2dThin
                              : kTileModeDisplay_LinearAligned,
-      buffer.width, buffer.height, 1, buffer.pitch, shader::AccessOp::Load);
+      buffer.width, buffer.height, 1, buffer.pitch, 4, 5, 6, 7,
+      shader::AccessOp::Load);
 
   auto initTask = taskChain.getLastTaskId();
 

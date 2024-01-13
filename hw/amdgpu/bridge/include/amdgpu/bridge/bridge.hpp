@@ -37,6 +37,7 @@ enum {
   kPadBtnCircle = 1 << 13,
   kPadBtnCross = 1 << 14,
   kPadBtnSquare = 1 << 15,
+  kPadBtnPs = 1 << 16,
   kPadBtnTouchPad = 1 << 20,
   kPadBtnIntercepted = 1 << 31,
 };

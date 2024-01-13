@@ -935,7 +935,9 @@ int main(int argc, const char *argv[]) {
         if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
           bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnL3;
         }
-
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+          bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnPs;
+        }
         if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS) {
           bridge->kbPadState.buttons |= amdgpu::bridge::kPadBtnR1;
         }
