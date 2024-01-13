@@ -14,37 +14,38 @@ struct HidDevice : public IoDevice {
 };
 struct HidFile : public orbis::File {};
 
+struct PadState {
+  std::uint64_t timestamp;
+  std::uint32_t unk;
+  std::uint32_t buttons;
+  std::uint8_t leftStickX;
+  std::uint8_t leftStickY;
+  std::uint8_t rightStickX;
+  std::uint8_t rightStickY;
+  std::uint8_t l2;
+  std::uint8_t r2;
+};
+
 static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
-  ORBIS_LOG_FATAL("hid ioctl", request);
   switch (request) {
   case 0x800c4802:
+    ORBIS_LOG_FATAL("hid ioctl", request);
     thread->retval[0] = 1; // hid id
     return {};
 
   case 0x8030482e: {
+    ORBIS_LOG_FATAL("hid ioctl", request);
     // read state
     struct ReadStateArgs {
       std::uint32_t hidId;
       std::uint32_t unk0;
-      void *state;
+      amdgpu::bridge::PadState *state;
       std::uint32_t unk2;
       std::uint32_t *connected;
       std::uint32_t *unk4;
       std::uint64_t unk5;
     };
-
-    // struct PadState {
-    //   std::uint64_t timestamp;
-    //   std::uint32_t unk;
-    //   std::uint32_t buttons;
-    //   std::uint8_t leftStickX;
-    //   std::uint8_t leftStickY;
-    //   std::uint8_t rightStickX;
-    //   std::uint8_t rightStickY;
-    //   std::uint8_t l2;
-    //   std::uint8_t r2;
-    // };
 
     // enum {
     //   kPadBtnL3 = 1 << 1,
@@ -70,8 +71,7 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
     // ORBIS_LOG_ERROR("hid read state", args.hidId, args.unk0, args.state,
     //                 args.unk2, args.connected, args.unk4, args.unk5);
 
-    auto state = (amdgpu::bridge::PadState *)args.state;
-    *state = rx::bridge.header->kbPadState;
+    *args.state = rx::bridge.header->kbPadState;
     *args.connected = 1;
     *args.unk4 = 1; // is wireless?
     thread->retval[0] = 1;
@@ -84,8 +84,25 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
     return {};
   }
 
+  case 0x80204829: {
+    struct MiniReadStateArgs {
+      orbis::uint hidId;
+      orbis::uint unk0;
+      orbis::ptr<amdgpu::bridge::PadState> state;
+      orbis::uint count;
+      orbis::uint padding;
+      orbis::ptr<orbis::uint> unk5;
+    };
+
+    auto args = *reinterpret_cast<MiniReadStateArgs *>(argp);
+    *args.state = rx::bridge.header->kbPadState;
+    thread->retval[0] = 1;
+    return{};
+  }
+
   default:
     ORBIS_LOG_FATAL("Unhandled hid ioctl", request);
+    thread->where();
   }
 
   return {};

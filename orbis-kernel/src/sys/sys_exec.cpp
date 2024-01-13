@@ -1,4 +1,7 @@
 #include "sys/sysproto.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
+#include "thread/ProcessOps.hpp"
 
 orbis::SysResult orbis::sys_execve(Thread *thread, ptr<char> fname,
                                    ptr<ptr<char>> argv, ptr<ptr<char>> envv) {

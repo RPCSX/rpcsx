@@ -57,8 +57,8 @@ struct FileOps {
                       Thread *thread) = nullptr;
   ErrorCode (*sendmsg)(orbis::File *file, msghdr *msg, sint flags,
                        Thread *thread) = nullptr;
-  ErrorCode (*recvfrom)(orbis::File *file, void *buf, size_t len,
-                        sint flags, SocketAddress *from, uint32_t *fromlenaddr,
+  ErrorCode (*recvfrom)(orbis::File *file, void *buf, size_t len, sint flags,
+                        SocketAddress *from, uint32_t *fromlenaddr,
                         Thread *thread) = nullptr;
   ErrorCode (*recvmsg)(orbis::File *file, msghdr *msg, sint flags,
                        Thread *thread) = nullptr;
@@ -75,11 +75,15 @@ struct FileOps {
 
 struct File : RcBase {
   shared_mutex mtx;
-  EventEmitter event;
+  Ref<EventEmitter> event;
   const FileOps *ops = nullptr;
   Ref<RcBase> device;
   std::uint64_t nextOff = 0;
+  int flags = 0;
+  int mode = 0;
   int hostFd = -1;
   utils::kvector<Dirent> dirEntries;
+
+  bool noBlock() const { return (flags & 4) != 0; }
 };
 } // namespace orbis

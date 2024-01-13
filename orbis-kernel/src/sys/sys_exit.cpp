@@ -1,11 +1,11 @@
 #include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/ProcessOps.hpp"
 #include "utils/Logs.hpp"
-#include <chrono>
 #include <sys/resource.h>
 #include <sys/wait.h>
-#include <thread>
 #include <unistd.h>
+#include "thread/Process.hpp"
 
 orbis::SysResult orbis::sys_exit(Thread *thread, sint status) {
   if (auto exit = thread->tproc->ops->exit) {

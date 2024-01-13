@@ -1,4 +1,8 @@
+#include "file.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/ProcessOps.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
 #include "uio.hpp"
 #include "utils/Logs.hpp"
 #include <sys/socket.h>

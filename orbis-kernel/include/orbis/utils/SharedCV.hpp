@@ -34,7 +34,7 @@ protected:
   }
 
   // Internal waiting function
-  void impl_wait(shared_mutex &mutex, unsigned _val,
+  int impl_wait(shared_mutex &mutex, unsigned _val,
                  std::uint64_t usec_timeout) noexcept;
 
   // Try to notify up to _count threads
@@ -43,14 +43,14 @@ protected:
 public:
   constexpr shared_cv() = default;
 
-  void wait(shared_mutex &mutex, std::uint64_t usec_timeout = -1) noexcept {
+  int wait(shared_mutex &mutex, std::uint64_t usec_timeout = -1) noexcept {
     const unsigned _val = add_waiter();
     if (!_val) {
-      return;
+      return 0;
     }
 
     mutex.unlock();
-    impl_wait(mutex, _val, usec_timeout);
+    return impl_wait(mutex, _val, usec_timeout);
   }
 
   // Wake one thread

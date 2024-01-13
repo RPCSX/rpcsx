@@ -1,16 +1,20 @@
 #include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
+#include "time.hpp"
 #include "utils/Logs.hpp"
 
-orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
-                                     uint namelen, ptr<void> old,
-                                     ptr<size_t> oldlenp, ptr<void> new_,
-                                     size_t newlen) {
+namespace orbis {
+SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
+                      ptr<void> old, ptr<size_t> oldlenp, ptr<void> new_,
+                      size_t newlen) {
   enum sysctl_ctl { unspec, kern, vm, vfs, net, debug, hw, machdep, user };
 
   enum sysctl_kern {
-    usrstack = 33,
     proc = 14,
+    boottime = 21,
+    usrstack = 33,
     arnd = 37,
 
     // FIXME
@@ -22,10 +26,12 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     rng_pseudo,
     backup_restore_mode,
     console,
-    init_safe_mode
+    init_safe_mode,
+    geom,
   };
 
   enum sysctl_hw {
+    ncpu = 3,
     pagesize = 7,
 
     // FIXME
@@ -49,6 +55,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
     tsc_freq = 1000,
     liverpool,
     bootparams,
+    idps,
+    openpsid_for_sys,
   };
 
   enum sysctl_machdep_liverpool {
@@ -57,6 +65,10 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   };
   enum sysctl_machdep_bootparams {
     is_main_on_standby = 1000,
+  };
+
+  enum sysctl_kern_geom {
+    updtfmt = 1000,
   };
 
   struct ProcInfo {
@@ -139,9 +151,47 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
       *(uint64_t *)old = 0;
       return {};
     }
+
+    if (name[0] == kern && name[1] == geom && name[2] == updtfmt) {
+      if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+        return ErrorCode::INVAL;
+      }
+
+      *(uint32_t *)old = 0;
+      return {};
+    }
   }
 
   if (namelen == 4) {
+    if (name[0] == kern && name[1] == proc && name[2] == 37) {
+      if (oldlenp && old && *oldlenp == 4) {
+        return uwrite(ptr<uint32_t>(old), ~0u);
+      }
+    }
+
+    if (name[0] == kern && name[1] == proc && name[2] == 36) {
+      Process *process = thread->tproc;
+      if (process->pid != name[3]) {
+        process = g_context.findProcessById(name[3]);
+        if (process == nullptr) {
+          ORBIS_LOG_ERROR("get sdk version by pid: process not found", name[3],
+                          thread->tproc->pid);
+          return ErrorCode::SRCH;
+        }
+      }
+
+      size_t oldlen;
+      ORBIS_RET_ON_ERROR(uread(oldlen, oldlenp));
+
+      if (oldlen < sizeof(uint32_t)) {
+        return ErrorCode::INVAL;
+      }
+
+      ORBIS_RET_ON_ERROR(uwrite(ptr<uint32_t>(old), process->sdkVersion));
+      ORBIS_LOG_ERROR("get sdk version by pid", name[3], process->sdkVersion);
+      return uwrite(oldlenp, sizeof(uint32_t));
+    }
+
     if (name[0] == kern && name[1] == proc && name[2] == 1) {
       ORBIS_LOG_ERROR("KERN_PROC_PROC 2");
 
@@ -388,6 +438,31 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           dest[count++] = hw;
           dest[count++] = config;
           dest[count++] = optical_out;
+        } else if (searchName == "machdep.idps") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = machdep;
+          dest[count++] = idps;
+        } else if (searchName == "kern.geom.updtfmt") {
+          if (*oldlenp < 3 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = kern;
+          dest[count++] = geom;
+          dest[count++] = updtfmt;
+        } else if (searchName == "machdep.openpsid_for_sys") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = machdep;
+          dest[count++] = openpsid_for_sys;
         }
 
         if (count == 0) {
@@ -409,6 +484,19 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
 
     case sysctl_ctl::kern:
       switch (name[1]) {
+      case sysctl_kern::boottime: {
+        // FIXME: implement boottime support
+        if (*oldlenp < sizeof(timeval) || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+        *oldlenp = sizeof(timeval);
+        *ptr<timeval>(old) = {
+            .tv_sec = 60,
+            .tv_usec = 0,
+        };
+        return {};
+      }
       case sysctl_kern::usrstack: {
         if (*oldlenp != 8 || new_ != nullptr || newlen != 0) {
           return ErrorCode::INVAL;
@@ -424,7 +512,7 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        *(uint32_t *)old = 1;
+        *(uint32_t *)old = 6;
         return {};
 
       case sysctl_kern::sdk_version: {
@@ -432,8 +520,8 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        std::printf("Reporting SDK version %x\n", g_context.sdkVersion);
-        *(uint32_t *)old = g_context.sdkVersion;
+        std::printf("Reporting SDK version %x\n", thread->tproc->sdkVersion);
+        *(uint32_t *)old = thread->tproc->sdkVersion;
         return {};
       }
 
@@ -501,6 +589,22 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         *(std::uint32_t *)old = 0;
         return {};
 
+      case sysctl_kern::init_safe_mode:
+        if (old && oldlenp) {
+          ORBIS_LOG_ERROR("sysctl: get kern.init_safe_mode", oldlenp, new_,
+                          newlen);
+          if (*oldlenp != 4) {
+            return ErrorCode::INVAL;
+          }
+
+          *(std::uint32_t *)old = g_context.safeMode;
+        }
+        if (new_ != nullptr && newlen == 4) {
+          ORBIS_LOG_ERROR("sysctl: set kern.init_safe_mode",
+                          *(std::uint32_t *)new_, newlen);
+        }
+        return {};
+
       default:
         return ErrorCode::INVAL;
       }
@@ -550,6 +654,15 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
         *(uint32_t *)old = 0x4000;
         return {};
 
+      case sysctl_hw::ncpu:
+        if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+
+        } else {
+
+          *(uint32_t *)old = 7;
+          return {};
+        }
+
       default:
         break;
       }
@@ -562,12 +675,36 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
           return ErrorCode::INVAL;
         }
 
-        *(uint64_t *)old = g_context.getTscFreq();
+        if (std::string_view((char *)thread->tproc->appInfo.titleId) ==
+            "NPXS20973") {
+          ORBIS_LOG_ERROR("get tsc freq: returning patched value");
+          *(uint64_t *)old = 1000000;
+        } else {
+          *(uint64_t *)old = g_context.getTscFreq();
+        }
         return {};
+      }
+
+      case sysctl_machdep::idps: {
+        if (*oldlenp != 16 || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+        std::memset(old, 0, 16);
+        return uwrite<short>((short *)((char *)old + 4), 0x8401);
+      }
+
+      case sysctl_machdep::openpsid_for_sys: {
+        if (*oldlenp != 16 || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+        std::memset(old, 0, 16);
+        return {};
+      }
 
       default:
         break;
-      }
       }
     case sysctl_ctl::user:
       break;
@@ -587,4 +724,30 @@ orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
   ORBIS_LOG_TODO(__FUNCTION__, concatName, oldLen, new_, newlen);
   thread->where();
   return {};
+}
+} // namespace orbis
+
+orbis::SysResult orbis::sys___sysctl(Thread *thread, ptr<sint> name,
+                                     uint namelen, ptr<void> old,
+                                     ptr<size_t> oldlenp, ptr<void> new_,
+                                     size_t newlen) {
+
+  auto result = kern_sysctl(thread, name, namelen, old, oldlenp, new_, newlen);
+
+  if (result.isError()) {
+    std::string concatName;
+    for (unsigned int i = 0; i < namelen; ++i) {
+      if (i != 0) {
+        concatName += '.';
+      }
+
+      concatName += std::to_string(name[i]);
+    }
+
+    std::size_t oldLen = oldlenp ? *oldlenp : 0;
+    ORBIS_LOG_TODO(__FUNCTION__, concatName, oldLen, new_, newlen);
+    thread->where();
+  }
+
+  return result;
 }

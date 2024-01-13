@@ -1,6 +1,8 @@
+#include "orbis-config.hpp"
 #include <orbis/error.hpp>
-#include <orbis/thread.hpp>
-#include <orbis/time.hpp>
+#include <orbis/module/ModuleHandle.hpp>
+#include <orbis/thread/cpuset.hpp>
+#include <orbis/thread/types.hpp>
 
 namespace orbis {
 using acl_type_t = sint;
@@ -11,17 +13,24 @@ using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
 
+struct Thread;
 struct AuthInfo;
 struct MemoryProtection;
 struct ModuleInfo;
 struct ModuleInfoEx;
 struct KEvent;
 struct timespec;
+struct timesec;
+struct timezone;
+struct timeval;
 struct Stat;
 struct stack_t;
 struct IoVec;
 struct BatchMapEntry;
 struct UContext;
+struct SigSet;
+struct SigAction;
+struct SocketAddress;
 
 SysResult nosys(Thread *thread);
 
@@ -29,7 +38,7 @@ SysResult sys_exit(Thread *thread, sint status);
 SysResult sys_fork(Thread *thread);
 SysResult sys_read(Thread *thread, sint fd, ptr<void> buf, size_t nbyte);
 SysResult sys_write(Thread *thread, sint fd, ptr<const void> buf, size_t nbyte);
-SysResult sys_open(Thread *thread, ptr<char> path, sint flags, sint mode);
+SysResult sys_open(Thread *thread, ptr<const char> path, sint flags, sint mode);
 SysResult sys_close(Thread *thread, sint fd);
 SysResult sys_wait4(Thread *thread, sint pid, ptr<sint> status, sint options,
                     ptr<struct rusage> rusage);
@@ -125,15 +134,14 @@ SysResult sys_bind(Thread *thread, sint s, caddr_t name, sint namelen);
 SysResult sys_setsockopt(Thread *thread, sint s, sint level, sint name,
                          caddr_t val, sint valsize);
 SysResult sys_listen(Thread *thread, sint s, sint backlog);
-SysResult sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
-                           ptr<orbis::timezone> tzp);
+SysResult sys_gettimeofday(Thread *thread, ptr<timeval> tp, ptr<timezone> tzp);
 SysResult sys_getrusage(Thread *thread, sint who, ptr<struct rusage> rusage);
 SysResult sys_getsockopt(Thread *thread, sint s, sint level, sint name,
                          caddr_t val, ptr<sint> avalsize);
 SysResult sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
 SysResult sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
 SysResult sys_settimeofday(Thread *thread, ptr<struct timeval> tp,
-                           ptr<orbis::timezone> tzp);
+                           ptr<timezone> tzp);
 SysResult sys_fchown(Thread *thread, sint fd, sint uid, sint gid);
 SysResult sys_fchmod(Thread *thread, sint fd, sint mode);
 SysResult sys_setreuid(Thread *thread, sint ruid, sint euid);
@@ -230,8 +238,8 @@ SysResult sys_ktimer_settime(Thread *thread, sint timerid, sint flags,
 SysResult sys_ktimer_gettime(Thread *thread, sint timerid,
                              ptr<struct itimerspec> value);
 SysResult sys_ktimer_getoverrun(Thread *thread, sint timerid);
-SysResult sys_nanosleep(Thread *thread, cptr<orbis::timespec> rqtp,
-                        ptr<orbis::timespec> rmtp);
+SysResult sys_nanosleep(Thread *thread, cptr<timespec> rqtp,
+                        ptr<timespec> rmtp);
 SysResult sys_ntp_gettime(Thread *thread, ptr<struct ntptimeval> ntvp);
 SysResult sys_minherit(Thread *thread, ptr<void> addr, size_t len,
                        sint inherit);
@@ -305,14 +313,14 @@ SysResult sys_jail(Thread *thread, ptr<struct jail> jail);
 SysResult sys_nnpfs_syscall(Thread *thread, sint operation, ptr<char> a_pathP,
                             sint opcode, ptr<void> a_paramsP,
                             sint a_followSymlinks);
-SysResult sys_sigprocmask(Thread *thread, sint how, ptr<uint64_t> set,
-                          ptr<uint64_t> oset);
-SysResult sys_sigsuspend(Thread *thread, ptr<const struct sigset> set);
-SysResult sys_sigpending(Thread *thread, ptr<struct sigset> set);
-SysResult sys_sigtimedwait(Thread *thread, ptr<const struct sigset> set,
+SysResult sys_sigprocmask(Thread *thread, sint how, ptr<SigSet> set,
+                          ptr<SigSet> oset);
+SysResult sys_sigsuspend(Thread *thread, ptr<const SigSet> set);
+SysResult sys_sigpending(Thread *thread, ptr<SigSet> set);
+SysResult sys_sigtimedwait(Thread *thread, ptr<const SigSet> set,
                            ptr<struct siginfo> info,
                            ptr<const timespec> timeout);
-SysResult sys_sigwaitinfo(Thread *thread, ptr<const struct sigset> set,
+SysResult sys_sigwaitinfo(Thread *thread, ptr<const SigSet> set,
                           ptr<struct siginfo> info);
 SysResult sys___acl_get_file(Thread *thread, ptr<char> path, acl_type_t type,
                              ptr<struct acl> aclp);
@@ -412,13 +420,13 @@ SysResult sys_extattr_delete_link(Thread *thread, ptr<const char> path,
                                   sint attrnamespace, ptr<const char> attrname);
 SysResult sys___mac_execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
                            ptr<ptr<char>> envv, ptr<struct mac> mac_p);
-SysResult sys_sigaction(Thread *thread, sint sig, ptr<struct sigaction> act,
-                        ptr<struct sigaction> oact);
-SysResult sys_sigreturn(Thread *thread, ptr<struct ucontext> sigcntxp);
-SysResult sys_getcontext(Thread *thread, ptr<struct ucontext> ucp);
-SysResult sys_setcontext(Thread *thread, ptr<struct ucontext> ucp);
-SysResult sys_swapcontext(Thread *thread, ptr<struct ucontext> oucp,
-                          ptr<struct ucontext> ucp);
+SysResult sys_sigaction(Thread *thread, sint sig, ptr<SigAction> act,
+                        ptr<SigAction> oact);
+SysResult sys_sigreturn(Thread *thread, ptr<UContext> sigcntxp);
+SysResult sys_getcontext(Thread *thread, ptr<UContext> ucp);
+SysResult sys_setcontext(Thread *thread, ptr<UContext> ucp);
+SysResult sys_swapcontext(Thread *thread, ptr<UContext> oucp,
+                          ptr<UContext> ucp);
 SysResult sys_swapoff(Thread *thread, ptr<const char> name);
 SysResult sys___acl_get_link(Thread *thread, ptr<const char> path,
                              acl_type_t type, ptr<struct acl> aclp);
@@ -428,10 +436,9 @@ SysResult sys___acl_delete_link(Thread *thread, ptr<const char> path,
                                 acl_type_t type);
 SysResult sys___acl_aclcheck_link(Thread *thread, ptr<const char> path,
                                   acl_type_t type, ptr<struct acl> aclp);
-SysResult sys_sigwait(Thread *thread, ptr<const struct sigset> set,
-                      ptr<sint> sig);
-SysResult sys_thr_create(Thread *thread, ptr<struct ucontext> ctxt,
-                         ptr<slong> arg, sint flags);
+SysResult sys_sigwait(Thread *thread, ptr<const SigSet> set, ptr<sint> sig);
+SysResult sys_thr_create(Thread *thread, ptr<UContext> ctxt, ptr<slong> arg,
+                         sint flags);
 SysResult sys_thr_exit(Thread *thread, ptr<slong> state);
 SysResult sys_thr_self(Thread *thread, ptr<slong> id);
 SysResult sys_thr_kill(Thread *thread, slong id, sint sig);
@@ -636,8 +643,9 @@ SysResult sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                          ptr<sint> pNumWaitThreads);
 SysResult sys_query_memory_protection(Thread *thread, ptr<void> address,
                                       ptr<MemoryProtection> protection);
-SysResult sys_batch_map(Thread *thread, sint unk, sint flags, ptr<BatchMapEntry> entries,
-                        sint entriesCount, ptr<sint> processedCount);
+SysResult sys_batch_map(Thread *thread, sint unk, sint flags,
+                        ptr<BatchMapEntry> entries, sint entriesCount,
+                        ptr<sint> processedCount);
 SysResult sys_osem_create(Thread *thread, ptr<const char[32]> name, uint attrs,
                           sint initCount, sint maxCount);
 SysResult sys_osem_delete(Thread *thread, sint id);
@@ -746,15 +754,16 @@ SysResult sys_physhm_unlink(Thread *thread /* TODO */);
 SysResult sys_resume_internal_hdd(Thread *thread /* TODO */);
 SysResult sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid);
 SysResult sys_thr_resume_ucontext(Thread *thread, lwpid_t tid);
-SysResult sys_thr_get_ucontext(Thread *thread, lwpid_t tid, ptr<UContext> context);
-SysResult sys_thr_set_ucontext(Thread *thread, lwpid_t tid, ptr<UContext> context);
+SysResult sys_thr_get_ucontext(Thread *thread, lwpid_t tid,
+                               ptr<UContext> context);
+SysResult sys_thr_set_ucontext(Thread *thread, lwpid_t tid,
+                               ptr<UContext> context);
 SysResult sys_set_timezone_info(Thread *thread /* TODO */);
 SysResult sys_set_phys_fmem_limit(Thread *thread /* TODO */);
 SysResult sys_utc_to_localtime(Thread *thread, int64_t time, int64_t *localtime,
-                               orbis::timesec *_sec, int *_dst_sec);
+                               timesec *_sec, int *_dst_sec);
 SysResult sys_localtime_to_utc(Thread *thread, int64_t time, uint unk,
-                               int64_t *ptime, orbis::timesec *_sec,
-                               int *_dst_sec);
+                               int64_t *ptime, timesec *_sec, int *_dst_sec);
 SysResult sys_set_uevt(Thread *thread /* TODO */);
 SysResult sys_get_cpu_usage_proc(Thread *thread /* TODO */);
 SysResult sys_get_map_statistics(Thread *thread /* TODO */);

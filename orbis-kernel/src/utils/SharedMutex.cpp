@@ -48,7 +48,7 @@ void shared_mutex::impl_lock_shared(unsigned val) {
   if ((old % c_sig) + c_one >= c_sig)
     std::abort(); // "shared_mutex overflow"
 
-  impl_wait();
+  while (impl_wait() != 0) {}
   lock_downgrade();
 }
 void shared_mutex::impl_unlock_shared(unsigned old) {
@@ -60,7 +60,7 @@ void shared_mutex::impl_unlock_shared(unsigned old) {
     impl_signal();
   }
 }
-void shared_mutex::impl_wait() {
+int shared_mutex::impl_wait() {
   while (true) {
     const auto [old, ok] = atomic_fetch_op(m_value, [](unsigned &value) {
       if (value >= c_sig) {
@@ -75,8 +75,15 @@ void shared_mutex::impl_wait() {
       break;
     }
 
-    syscall(SYS_futex, &m_value, FUTEX_WAIT, old, 0, 0, 0);
+    int result = syscall(SYS_futex, &m_value, FUTEX_WAIT, old, 0, 0, 0);
+    if (result < 0) {
+      result = errno;
+    }
+    if (result == EINTR) {
+      return EINTR;
+    }
   }
+  return{};
 }
 void shared_mutex::impl_signal() {
   m_value += c_sig;
@@ -116,7 +123,7 @@ void shared_mutex::impl_lock(unsigned val) {
 
   if ((old % c_sig) + c_one >= c_sig)
     std::abort(); // "shared_mutex overflow"
-  impl_wait();
+  while (impl_wait() != 0) {}
 }
 void shared_mutex::impl_unlock(unsigned old) {
   if (old - c_one >= c_err)
@@ -148,7 +155,7 @@ void shared_mutex::impl_lock_upgrade() {
     return;
   }
 
-  impl_wait();
+  while (impl_wait() != 0) {}
 }
 bool shared_mutex::lock_forced(int count) {
   if (count == 0)

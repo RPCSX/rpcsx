@@ -33,6 +33,7 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
   thread->evfIsCancelled = -1;
 
   std::unique_lock lock(queueMtx);
+  int result = 0;
   while (true) {
     if (isDeleted) {
       if (thread->evfIsCancelled == UINT64_MAX)
@@ -77,10 +78,10 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
     waitingThreads.emplace_back(waitingThread);
 
     if (timeout) {
-      thread->sync_cv.wait(queueMtx, *timeout);
+      result = thread->sync_cv.wait(queueMtx, *timeout);
       update_timeout();
     } else {
-      thread->sync_cv.wait(queueMtx);
+      result = thread->sync_cv.wait(queueMtx);
     }
 
     if (thread->evfIsCancelled == UINT64_MAX) {
@@ -89,7 +90,7 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
   }
 
   // TODO: update thread state
-  return {};
+  return ErrorCode{result};
 }
 
 orbis::ErrorCode orbis::EventFlag::tryWait(Thread *thread,
@@ -137,7 +138,7 @@ std::size_t orbis::EventFlag::notify(NotifyType type, std::uint64_t bits) {
 
     // TODO: update thread state
     // release wait on waiter thread
-    thread->thread->sync_cv.notify_one(queueMtx);
+    thread->thread->sync_cv.notify_all(queueMtx);
     return true;
   };
 

@@ -1,7 +1,7 @@
 #include "sys/sysproto.hpp"
 #include "time.hpp"
 #include "utils/Logs.hpp"
-#include <ctime>
+#include <sys/time.h>
 
 enum class ClockId {
   Realtime = 0,

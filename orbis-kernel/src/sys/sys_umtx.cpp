@@ -1,5 +1,6 @@
 #include "orbis/utils/Logs.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Thread.hpp"
 #include "time.hpp"
 #include "umtx.hpp"
 #include <chrono>

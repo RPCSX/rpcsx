@@ -43,6 +43,11 @@ add_executable(rpcsx-os
   iodev/devctl.cpp
   iodev/uvd.cpp
   iodev/vce.cpp
+  iodev/evlg.cpp
+  iodev/srtc.cpp
+  iodev/sshot.cpp
+  iodev/lvdctl.cpp
+  iodev/icc_power.cpp
 
   main.cpp
   backtrace.cpp

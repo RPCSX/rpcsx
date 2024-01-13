@@ -172,7 +172,7 @@ static orbis::SysResult doPltRelocation(orbis::Process *process,
         return orbis::ErrorCode::INVAL;
       }
 
-      *where = reinterpret_cast<std::uintptr_t>(defObj->base) + S;
+      *where = S ? reinterpret_cast<std::uintptr_t>(defObj->base) + S : 0;
     }
     return {};
   }
@@ -285,7 +285,7 @@ static orbis::SysResult doRelocation(orbis::Process *process,
     if (defObj == nullptr) {
       return orbis::ErrorCode::INVAL;
     }
-    *where = reinterpret_cast<std::uintptr_t>(defObj->base) + S + A;
+    *where = S ? reinterpret_cast<std::uintptr_t>(defObj->base) + S + A : 0;
     return {};
   }
     return {};
@@ -295,7 +295,7 @@ static orbis::SysResult doRelocation(orbis::Process *process,
     if (defObj == nullptr) {
       return orbis::ErrorCode::INVAL;
     }
-    *where32 = reinterpret_cast<std::uintptr_t>(defObj->base) + S + A - P;
+    *where32 = S ? reinterpret_cast<std::uintptr_t>(defObj->base) + S + A - P : 0;
     return {};
   }
   // case kRelCopy:
@@ -306,7 +306,7 @@ static orbis::SysResult doRelocation(orbis::Process *process,
     if (defObj == nullptr) {
       return orbis::ErrorCode::INVAL;
     }
-    *where = reinterpret_cast<std::uintptr_t>(defObj->base) + S;
+    *where = S ? reinterpret_cast<std::uintptr_t>(defObj->base) + S : 0;
     return {};
   }
   case kRelRelative:

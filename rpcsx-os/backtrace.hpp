@@ -1,8 +1,12 @@
 #pragma once
 
-#include "orbis/thread/Thread.hpp"
 #include <cstddef>
-#include <sys/ucontext.h>
+#include <cstdint>
+#include <ucontext.h>
+
+namespace orbis {
+struct Thread;
+}
 
 namespace rx {
 std::size_t printAddressLocation(char *dest, std::size_t destLen,

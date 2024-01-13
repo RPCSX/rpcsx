@@ -47,7 +47,7 @@ static orbis::ErrorCode pipe_read(orbis::File *file, orbis::Uio *uio,
     break;
   }
 
-  file->event.emit(orbis::kEvFiltWrite);
+  pipe->event->emit(orbis::kEvFiltWrite);
   return {};
 }
 
@@ -64,7 +64,7 @@ static orbis::ErrorCode pipe_write(orbis::File *file, orbis::Uio *uio,
     cnt += vec.len;
   }
 
-  file->event.emit(orbis::kEvFiltRead);
+  pipe->event->emit(orbis::kEvFiltRead);
   pipe->cv.notify_one(file->mtx);
   uio->resid -= cnt;
   uio->offset += cnt;
@@ -82,6 +82,8 @@ static orbis::FileOps pipe_ops = {
 std::pair<orbis::Ref<orbis::Pipe>, orbis::Ref<orbis::Pipe>> orbis::createPipe() {
   auto a = knew<Pipe>();
   auto b = knew<Pipe>();
+  a->event = knew<EventEmitter>();
+  b->event = knew<EventEmitter>();
   a->ops = &pipe_ops;
   b->ops = &pipe_ops;
   a->other = b;

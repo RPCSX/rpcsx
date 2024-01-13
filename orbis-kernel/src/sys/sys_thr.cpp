@@ -1,7 +1,11 @@
 #include "sys/sysproto.hpp"
+#include "thread/ProcessOps.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
+#include "ucontext.hpp"
 
 orbis::SysResult orbis::sys_thr_create(Thread *thread,
-                                       ptr<struct ucontext> ctxt,
+                                       ptr<UContext> ctxt,
                                        ptr<slong> arg, sint flags) {
   if (auto thr_create = thread->tproc->ops->thr_create) {
     return thr_create(thread, ctxt, arg, flags);

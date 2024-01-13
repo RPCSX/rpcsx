@@ -1,5 +1,8 @@
+#include "file.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
 #include "uio.hpp"
 #include <sstream>
 
@@ -39,11 +42,13 @@ orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
   auto cnt = io.offset - file->nextOff;
   file->nextOff = io.offset;
 
+  // ORBIS_LOG_ERROR(__FUNCTION__, fd, buf, nbyte, cnt);
   thread->retval[0] = cnt;
   return {};
 }
 orbis::SysResult orbis::sys_pread(Thread *thread, sint fd, ptr<void> buf,
                                   size_t nbyte, off_t offset) {
+  // ORBIS_LOG_ERROR(__FUNCTION__, fd, buf, nbyte, offset);
   Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;

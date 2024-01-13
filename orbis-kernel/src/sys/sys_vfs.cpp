@@ -1,5 +1,8 @@
 #include "stat.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/ProcessOps.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
 #include "utils/Logs.hpp"
 #include <filesystem>
 #include <span>
@@ -26,7 +29,7 @@ orbis::SysResult orbis::sys_statfs(Thread *thread, ptr<char> path,
     return {};
   }
 
-  std::strncpy(buf->f_fstypename, "exfatfs", sizeof(buf->f_fstypename));
+  std::strncpy(buf->f_fstypename, "unionfs", sizeof(buf->f_fstypename));
   std::strncpy(buf->f_mntfromname, "/dev/super-hdd",
                sizeof(buf->f_mntfromname));
   std::strncpy(buf->f_mntonname, "/system/", sizeof(buf->f_mntonname));
@@ -41,7 +44,7 @@ orbis::SysResult orbis::sys_fstatfs(Thread *thread, sint fd,
     return {};
   }
 
-  std::strncpy(buf->f_fstypename, "exfatfs", sizeof(buf->f_fstypename));
+  std::strncpy(buf->f_fstypename, "unionfs", sizeof(buf->f_fstypename));
   std::strncpy(buf->f_mntfromname, "/dev/super-hdd",
                sizeof(buf->f_mntfromname));
   std::strncpy(buf->f_mntonname, "/system/", sizeof(buf->f_mntonname));
@@ -66,7 +69,9 @@ orbis::SysResult orbis::sys_chroot(Thread *thread, ptr<char> path) {
   thread->tproc->root = path;
   return {};
 }
-orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
+
+// volatile bool debuggerPresent = false;
+orbis::SysResult orbis::sys_open(Thread *thread, ptr<const char> path, sint flags,
                                  sint mode) {
   if (auto open = thread->tproc->ops->open) {
     Ref<File> file;
@@ -77,7 +82,17 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
 
     auto fd = thread->tproc->fileDescriptors.insert(file);
     thread->retval[0] = fd;
-    // ORBIS_LOG_NOTICE(__FUNCTION__, path, flags, mode, fd);
+    // if (path == std::string_view{"/app0/psm/Application/resource/Sce.Vsh.ShellUI.SystemMessage.rco"}) {
+    ORBIS_LOG_SUCCESS(__FUNCTION__, thread->tid, path, flags, mode, fd);
+    if (path == std::string_view{"/app0/wave/wave1.fbxd"}) {
+      thread->where();
+    }
+
+      // while (debuggerPresent == false) {
+      //   std::this_thread::sleep_for(std::chrono::seconds(1));
+      // }
+      // // thread->where();
+    // }
     return {};
   }
 
@@ -85,6 +100,23 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<char> path, sint flags,
 }
 orbis::SysResult orbis::sys_openat(Thread *thread, sint fd, ptr<char> path,
                                    sint flag, mode_t mode) {
+  ORBIS_LOG_WARNING(__FUNCTION__, fd, path, flag, mode);
+
+  if (fd == -100) {
+    std::string cwd;
+    {
+      std::lock_guard lock(thread->tproc->mtx);
+      cwd = std::string(thread->tproc->cwd);
+    }
+
+    return sys_open(thread, (cwd + "/" + path).c_str(), flag, mode);
+  }
+
+  Ref<File> file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_mknod(Thread *thread, ptr<char> path, sint mode,
@@ -171,6 +203,7 @@ orbis::SysResult orbis::sys_lseek(Thread *thread, sint fd, off_t offset,
     return ErrorCode::NOSYS;
   }
 
+  ORBIS_LOG_ERROR(__FUNCTION__, fd, offset, whence, file->nextOff);
   thread->retval[0] = file->nextOff;
   return {};
 }
@@ -195,6 +228,7 @@ orbis::SysResult orbis::sys_eaccess(Thread *thread, ptr<char> path,
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub) {
+  ORBIS_LOG_WARNING(__FUNCTION__, path);
   Ref<File> file;
   auto result = thread->tproc->ops->open(thread, path, 0, 0, &file);
   if (result.isError()) {
@@ -246,7 +280,21 @@ orbis::SysResult orbis::sys_lpathconf(Thread *thread, ptr<char> path,
 }
 orbis::SysResult orbis::sys_readlink(Thread *thread, ptr<char> path,
                                      ptr<char> buf, size_t count) {
-  return ErrorCode::INVAL;
+  char _path[1024];
+  ORBIS_RET_ON_ERROR(ureadString(_path, sizeof(_path), path));
+  auto pathLen = std::strlen(_path);
+  if (pathLen > count) {
+    return ErrorCode::NAMETOOLONG;
+  }
+
+  Ref<File> file;
+  if (auto error = thread->tproc->ops->open(thread, path, 0, 0, &file); error.value()) {
+    return error;
+  }
+
+  ORBIS_RET_ON_ERROR(uwriteRaw(buf, _path, pathLen));
+  thread->retval[0] = pathLen;
+  return{};
 }
 orbis::SysResult orbis::sys_readlinkat(Thread *thread, sint fd, ptr<char> path,
                                        ptr<char> buf, size_t bufsize) {
@@ -389,6 +437,10 @@ orbis::SysResult orbis::sys_getdirentries(Thread *thread, sint fd,
   result = uwrite(ptr<orbis::Dirent>(buf), entries + pos, next - pos);
   if (result.isError())
     return result;
+
+  for (auto &entry : std::span(entries + pos, next - pos)) {
+    ORBIS_LOG_ERROR(__FUNCTION__, entry.name);
+  }
 
   if (basep) {
     result = uwrite(basep, slong(file->nextOff));

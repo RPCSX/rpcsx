@@ -1,5 +1,9 @@
+#include "file.hpp"
 #include "orbis-config.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/ProcessOps.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
 
 orbis::SysResult orbis::sys_shm_open(Thread *thread, ptr<const char> path,
                                      sint flags, mode_t mode) {

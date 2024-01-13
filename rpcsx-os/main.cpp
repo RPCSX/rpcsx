@@ -4,6 +4,7 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
+#include "iodev/mbus.hpp"
 #include "iodev/mbus_av.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
@@ -40,6 +41,72 @@
 #include <unordered_map>
 
 static int g_gpuPid;
+
+void runBridge() {
+  std::thread{[] {
+    pthread_setname_np(pthread_self(), "Bridge");
+    auto bridge = rx::bridge.header;
+
+    std::vector<std::uint64_t> fetchedCommands;
+    fetchedCommands.reserve(std::size(bridge->cacheCommands));
+
+    while (true) {
+      for (auto &command : bridge->cacheCommands) {
+        std::uint64_t value = command.load(std::memory_order::relaxed);
+
+        if (value != 0) {
+          fetchedCommands.push_back(value);
+          command.store(0, std::memory_order::relaxed);
+        }
+      }
+
+      if (fetchedCommands.empty()) {
+        continue;
+      }
+
+      for (auto command : fetchedCommands) {
+        auto page = static_cast<std::uint32_t>(command);
+        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
+
+        auto pageFlags =
+            bridge->cachePages[page].load(std::memory_order::relaxed);
+
+        auto address =
+            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
+        auto origVmProt = rx::vm::getPageProtection(address);
+        int prot = 0;
+
+        if (origVmProt & rx::vm::kMapProtCpuRead) {
+          prot |= PROT_READ;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuWrite) {
+          prot |= PROT_WRITE;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuExec) {
+          prot |= PROT_EXEC;
+        }
+
+        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
+          prot &= ~(PROT_READ | PROT_WRITE);
+        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
+          prot &= ~PROT_WRITE;
+        }
+
+        // std::fprintf(stderr, "protection %lx-%lx\n", address,
+        //              address + amdgpu::bridge::kHostPageSize * count);
+        if (::mprotect(reinterpret_cast<void *>(address),
+                       amdgpu::bridge::kHostPageSize * count, prot)) {
+          perror("protection failed");
+          std::abort();
+        }
+      }
+
+      fetchedCommands.clear();
+    }
+  }}.detach();
+}
+
+extern bool allowMonoDebug;
 
 __attribute__((no_stack_protector)) static void
 handle_signal(int sig, siginfo_t *info, void *ucontext) {
@@ -121,7 +188,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   }
 
   if (orbis::g_currentThread != nullptr) {
-    orbis::g_currentThread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExit, sig);
+    orbis::g_currentThread->tproc->event.emit(orbis::kEvFiltProc,
+                                              orbis::kNoteExit, sig);
   }
 
   if (g_gpuPid > 0) {
@@ -129,6 +197,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
     // ::kill(g_gpuPid, SIGINT);
   }
 
+  allowMonoDebug = true;
   if (sig != SIGINT) {
     char buf[128] = "";
     int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
@@ -172,34 +241,11 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 }
 
 void setupSigHandlers() {
-  stack_t oss{};
-
-  // if (sigaltstack(nullptr, &oss) < 0 || oss.ss_size == 0) {
-  auto sigStackSize = std::max<std::size_t>(
-      SIGSTKSZ, utils::alignUp(64 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
-
-  stack_t ss{};
-  ss.ss_sp = malloc(sigStackSize);
-  if (ss.ss_sp == NULL) {
-    perror("malloc");
-    exit(EXIT_FAILURE);
-  }
-
-  ss.ss_size = sigStackSize;
-  ss.ss_flags = 1 << 31;
-
-  std::fprintf(stderr, "installing sp [%p, %p]\n", ss.ss_sp,
-               (char *)ss.ss_sp + ss.ss_size);
-
-  if (sigaltstack(&ss, NULL) == -1) {
-    perror("sigaltstack");
-    exit(EXIT_FAILURE);
-  }
-  // }
+  rx::thread::setupSignalStack();
 
   struct sigaction act {};
   act.sa_sigaction = handle_signal;
-  act.sa_flags = SA_SIGINFO | SA_ONSTACK;
+  act.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;
 
   if (sigaction(SIGSYS, &act, NULL)) {
     perror("Error sigaction:");
@@ -227,6 +273,11 @@ void setupSigHandlers() {
   }
 
   if (sigaction(SIGINT, &act, NULL)) {
+    perror("Error sigaction:");
+    exit(-1);
+  }
+
+  if (sigaction(SIGFPE, &act, NULL)) {
     perror("Error sigaction:");
     exit(-1);
   }
@@ -330,8 +381,10 @@ static void ps4InitDev() {
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
-  auto consoleDev = createConsoleCharacterDevice(
-      STDIN_FILENO, ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666));
+  auto ttyFd = ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  auto consoleDev = createConsoleCharacterDevice(STDIN_FILENO, ttyFd);
+  auto mbus = static_cast<MBusDevice *>(createMBusCharacterDevice());
+  auto mbusAv = static_cast<MBusAVDevice *>(createMBusAVCharacterDevice());
 
   rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
@@ -346,6 +399,13 @@ static void ps4InitDev() {
   rx::vfs::addDevice("deci_stdin", consoleDev);
   rx::vfs::addDevice("deci_stdout", consoleDev);
   rx::vfs::addDevice("deci_stderr", consoleDev);
+  rx::vfs::addDevice("deci_tty1", consoleDev);
+  rx::vfs::addDevice("deci_tty2", consoleDev);
+  rx::vfs::addDevice("deci_tty3", consoleDev);
+  rx::vfs::addDevice("deci_tty4", consoleDev);
+  rx::vfs::addDevice("deci_tty5", consoleDev);
+  rx::vfs::addDevice("deci_tty6", consoleDev);
+  rx::vfs::addDevice("deci_tty7", consoleDev);
   rx::vfs::addDevice("stdin", consoleDev);
   rx::vfs::addDevice("zero", createZeroCharacterDevice());
   rx::vfs::addDevice("null", createNullCharacterDevice());
@@ -361,26 +421,33 @@ static void ps4InitDev() {
   rx::vfs::addDevice("sbl_srv", createSblSrvCharacterDevice());
   rx::vfs::addDevice("ajm", createAjmCharacterDevice());
   rx::vfs::addDevice("urandom", createUrandomCharacterDevice());
-  rx::vfs::addDevice("mbus", createMBusCharacterDevice());
+  rx::vfs::addDevice("mbus", mbus);
   rx::vfs::addDevice("metadbg", createMetaDbgCharacterDevice());
   rx::vfs::addDevice("bt", createBtCharacterDevice());
   rx::vfs::addDevice("xpt0", createXptCharacterDevice());
-  rx::vfs::addDevice("cd0", createXptCharacterDevice());
-  rx::vfs::addDevice("da0x0.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x1.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x2.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x3.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x4.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x5.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("cd0", createCdCharacterDevice());
+  rx::vfs::addDevice("da0",
+                     createHddCharacterDevice(250ull * 1024 * 1024 * 1024));
+  rx::vfs::addDevice("da0x0.crypt", createHddCharacterDevice(0x20000000));
+  rx::vfs::addDevice("da0x1.crypt", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x2", createHddCharacterDevice(0x1000000));
+  rx::vfs::addDevice("da0x2.crypt", createHddCharacterDevice(0x1000000));
+  rx::vfs::addDevice("da0x3.crypt", createHddCharacterDevice(0x8000000));
+  rx::vfs::addDevice("da0x4.crypt", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x4b.crypt", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x5.crypt", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x5b.crypt", createHddCharacterDevice(0x40000000));
   // rx::vfs::addDevice("da0x6x0", createHddCharacterDevice()); // boot log
-  rx::vfs::addDevice("da0x6x2.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x8", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x9.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x12.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x13.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x14.crypt", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x15", createHddCharacterDevice());
-  rx::vfs::addDevice("da0x15.crypt", createHddCharacterDevice());
+  rx::vfs::addDevice("da0x6", createHddCharacterDevice(0x200000000));
+  rx::vfs::addDevice("da0x6x2.crypt", createHddCharacterDevice(0x200000000));
+  rx::vfs::addDevice("da0x8", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x8.crypt", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x9.crypt", createHddCharacterDevice(0x200000000));
+  rx::vfs::addDevice("da0x12.crypt", createHddCharacterDevice(0x180000000));
+  rx::vfs::addDevice("da0x13.crypt", createHddCharacterDevice(0));
+  rx::vfs::addDevice("da0x14.crypt", createHddCharacterDevice(0x40000000));
+  rx::vfs::addDevice("da0x15", createHddCharacterDevice(0));
+  rx::vfs::addDevice("da0x15.crypt", createHddCharacterDevice(0x400000000));
   rx::vfs::addDevice("notification0", createNotificationCharacterDevice(0));
   rx::vfs::addDevice("notification1", createNotificationCharacterDevice(1));
   rx::vfs::addDevice("notification2", createNotificationCharacterDevice(2));
@@ -392,7 +459,6 @@ static void ps4InitDev() {
   rx::vfs::addDevice("aout2", createAoutCharacterDevice());
   rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
   rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
-  auto mbusAv = static_cast<MBusAVDevice *>(createMBusAVCharacterDevice());
   rx::vfs::addDevice("mbus_av", mbusAv);
   rx::vfs::addDevice("scanin", createScaninCharacterDevice());
   rx::vfs::addDevice("s3da", createS3DACharacterDevice());
@@ -402,17 +468,35 @@ static void ps4InitDev() {
   rx::vfs::addDevice("devctl", createDevCtlCharacterDevice());
   rx::vfs::addDevice("uvd", createUVDCharacterDevice());
   rx::vfs::addDevice("vce", createVCECharacterDevice());
+  rx::vfs::addDevice("evlg1", createEvlgCharacterDevice(ttyFd));
+  rx::vfs::addDevice("srtc", createSrtcCharacterDevice());
+  rx::vfs::addDevice("sshot", createScreenShotCharacterDevice());
+  rx::vfs::addDevice("lvdctl", createLvdCtlCharacterDevice());
+  rx::vfs::addDevice("lvd0", createHddCharacterDevice(0x100000000));
+  rx::vfs::addDevice("icc_power", createIccPowerCharacterDevice());
+
+  // mbus->emitEvent({
+  //     .system = 2,
+  //     .eventId = 1,
+  //     .deviceId = 0,
+  // });
+
+  // mbus->emitEvent({
+  //     .system = 9,
+  //     .eventId = 1,
+  //     .deviceId = 100,
+  // });
+
+  mbusAv->emitEvent({
+      .system = 9,
+      .eventId = 1,
+      .deviceId = 100,
+  });
 
   auto shm = createShmDevice();
   rx::vfs::addDevice("shm", shm);
   orbis::g_context.shmDevice = shm;
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();
-
-  mbusAv->emitEvent({
-      .unk0 = 9,
-      .unk1 = 1,
-      .unk2 = 1,
-  });
 }
 
 static void ps4InitFd(orbis::Thread *mainThread) {
@@ -515,7 +599,7 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
   std::uint64_t interpBase = 0;
   std::uint64_t entryPoint = executableModule->entryPoint;
 
-  if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->processParam) {
+  if (mainThread->tproc->processParam != nullptr) {
     auto processParam =
         reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
 
@@ -524,7 +608,14 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
                       + sizeof(uint32_t)  // magic
                       + sizeof(uint32_t); // entryCount
 
-    orbis::g_context.sdkVersion = *(uint32_t *)sdkVersion;
+    mainThread->tproc->sdkVersion = *(uint32_t *)sdkVersion;
+  }
+
+  if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->sdkVersion != 0) {
+    orbis::g_context.sdkVersion = mainThread->tproc->sdkVersion;
+  }
+  if (mainThread->tproc->sdkVersion == 0) {
+    mainThread->tproc->sdkVersion = orbis::g_context.sdkVersion;
   }
 
   if (executableModule->type != rx::linker::kElfTypeExec) {
@@ -677,9 +768,10 @@ static void runRpsxGpu() {
 static orbis::Semaphore *createSemaphore(std::string_view name, uint32_t attrs,
                                          uint64_t initCount,
                                          uint64_t maxCount) {
-  auto result = orbis::g_context
-      .createSemaphore(orbis::kstring(name), attrs, initCount, maxCount)
-      .first;
+  auto result =
+      orbis::g_context
+          .createSemaphore(orbis::kstring(name), attrs, initCount, maxCount)
+          .first;
   std::memcpy(result->name, name.data(), name.size());
   result->name[name.size()] = 0;
   return result;
@@ -697,7 +789,7 @@ static void createShm(const char *name, uint32_t flags, uint32_t mode,
   orbis::Ref<orbis::File> shm;
   auto shmDevice = orbis::g_context.shmDevice.staticCast<IoDevice>();
   shmDevice->open(&shm, name, flags, mode, nullptr);
-  shm->ops->truncate(shm.get(), 4096, nullptr);
+  shm->ops->truncate(shm.get(), size, nullptr);
 }
 
 struct IpmiServer {
@@ -866,59 +958,50 @@ struct IpmiServer {
       bufLoc += size;
     }
 
+    orbis::IpmiSession::SyncResponse response;
+    response.errorCode = 0;
+    orbis::ErrorCode result{};
+
     if (auto it = syncHandlers.find(message->methodId);
         it != syncHandlers.end()) {
       auto &handler = it->second;
 
-      std::int32_t errorCode = 0;
-      auto result = handler(errorCode, outData, inData);
+      result = handler(response.errorCode, outData, inData);
+    } else {
+      std::fprintf(
+          stderr,
+          "Unimplemented sync method %s::%x(inBufCount=%x, outBufCount=%x)\n",
+          session->server->name.c_str(), message->methodId, message->numInData,
+          message->numOutData);
 
-      if (outData.empty()) {
-        session->messageResponses.push_front({
-            .errorCode = errorCode,
-            .data = {},
-        });
-      } else {
-        session->messageResponses.push_front({
-            .errorCode = errorCode,
-            .data = orbis::kvector<std::byte>(
-                outData[0].data(), outData[0].data() + outData[0].size()),
-        });
+      // for (auto in : inData) {
+      //   std::fprintf(stderr, "in %zx\n", in.size());
+      // }
+
+      // for (auto out : outData) {
+      //   std::fprintf(stderr, "out %zx\n", out.size());
+      // }
+
+      for (auto out : outData) {
+        std::memset(out.data(), 0, out.size());
       }
-
-      session->responseCv.notify_one(session->mutex);
-      return {};
+      // TODO:
+      // response.errorCode = message->numOutData == 0 ||
+      //                      (message->numOutData == 1 && outData[0].empty())
+      //                  ? 0
+      //                  : -1,
     }
 
-    std::fprintf(
-        stderr,
-        "Unimplemented sync method %s::%x(inBufCount=%x, outBufCount=%x)\n",
-        session->server->name.c_str(), message->methodId, message->numInData,
-        message->numOutData);
-
-    // for (auto in : inData) {
-    //   std::fprintf(stderr, "in %zx\n", in.size());
-    // }
-
-    // for (auto out : outData) {
-    //   std::fprintf(stderr, "out %zx\n", out.size());
-    // }
+    for (auto out : outData) {
+      response.data.push_back(orbis::kvector<std::byte>(
+          (std::byte *)out.data(), (std::byte *)out.data() + out.size()));
+    }
 
     std::lock_guard lock(session->mutex);
-
-    session->messageResponses.push_front({
-        // TODO:
-        // .errorCode = message->numOutData == 0 ||
-        //                      (message->numOutData == 1 && outData[0].empty())
-        //                  ? 0
-        //                  : -1,
-        .errorCode = 0,
-        .data = orbis::kvector<std::byte>(
-            message->numOutData ? outData[0].size() : 0),
-    });
-
+    session->syncResponses.push_front(std::move(response));
     session->responseCv.notify_one(session->mutex);
-    return {};
+
+    return result;
   }
 };
 
@@ -929,7 +1012,8 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
   auto server = std::make_shared<IpmiServer>();
   server->serverImpl = serverImpl;
 
-  std::thread{[server, serverImpl] {
+  std::thread{[server, serverImpl, name] {
+    pthread_setname_np(pthread_self(), name);
     while (true) {
       orbis::IpmiServer::Packet packet;
       {
@@ -964,8 +1048,9 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
           conReq.client->session = session;
 
           for (auto &message : server->messages) {
-            conReq.client->messages.push_back(orbis::kvector<std::byte>(
-                message.data(), message.data() + message.size()));
+            conReq.client->messageQueues[0].messages.push_back(
+                orbis::kvector<std::byte>(message.data(),
+                                          message.data() + message.size()));
           }
 
           conReq.client->sessionCv.notify_all(conReq.client->mutex);
@@ -1420,6 +1505,7 @@ int main(int argc, const char *argv[]) {
   bool enableAudio = false;
   bool asRoot = false;
   bool isSystem = false;
+  bool isSafeMode = false;
 
   int argIndex = 1;
   while (argIndex < argc) {
@@ -1459,6 +1545,14 @@ int main(int argc, const char *argv[]) {
     if (argv[argIndex] == std::string_view("--system")) {
       argIndex++;
       isSystem = true;
+      asRoot = true;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--safemode")) {
+      argIndex++;
+      isSafeMode = true;
+      asRoot = true;
       continue;
     }
 
@@ -1503,80 +1597,20 @@ int main(int argc, const char *argv[]) {
   auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
   // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
-  std::thread{[] {
-    pthread_setname_np(pthread_self(), "Bridge");
-    auto bridge = rx::bridge.header;
-
-    std::vector<std::uint64_t> fetchedCommands;
-    fetchedCommands.reserve(std::size(bridge->cacheCommands));
-
-    while (true) {
-      for (auto &command : bridge->cacheCommands) {
-        std::uint64_t value = command.load(std::memory_order::relaxed);
-
-        if (value != 0) {
-          fetchedCommands.push_back(value);
-          command.store(0, std::memory_order::relaxed);
-        }
-      }
-
-      if (fetchedCommands.empty()) {
-        continue;
-      }
-
-      for (auto command : fetchedCommands) {
-        auto page = static_cast<std::uint32_t>(command);
-        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
-
-        auto pageFlags =
-            bridge->cachePages[page].load(std::memory_order::relaxed);
-
-        auto address =
-            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
-        auto origVmProt = rx::vm::getPageProtection(address);
-        int prot = 0;
-
-        if (origVmProt & rx::vm::kMapProtCpuRead) {
-          prot |= PROT_READ;
-        }
-        if (origVmProt & rx::vm::kMapProtCpuWrite) {
-          prot |= PROT_WRITE;
-        }
-        if (origVmProt & rx::vm::kMapProtCpuExec) {
-          prot |= PROT_EXEC;
-        }
-
-        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
-          prot &= ~(PROT_READ | PROT_WRITE);
-        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
-          prot &= ~PROT_WRITE;
-        }
-
-        // std::fprintf(stderr, "protection %lx-%lx\n", address,
-        //              address + amdgpu::bridge::kHostPageSize * count);
-        if (::mprotect(reinterpret_cast<void *>(address),
-                       amdgpu::bridge::kHostPageSize * count, prot)) {
-          perror("protection failed");
-          std::abort();
-        }
-      }
-
-      fetchedCommands.clear();
-    }
-  }}.detach();
-
   int status = 0;
 
   initProcess->sysent = &orbis::ps4_sysvec;
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
   initProcess->ops = &rx::procOpsTable;
+  initProcess->hostPid = ::getpid();
   initProcess->appInfo = {
       .unk4 = (isSystem ? orbis::slong(0x80000000'00000000) : 0),
   };
 
   if (isSystem) {
-    amdgpu::bridge::expGpuPid = 50001;
+    amdgpu::bridge::expGpuPid = isSafeMode ? 20001 : 60001;
+    orbis::g_context.safeMode = isSafeMode ? 1 : 0;
     initProcess->authInfo = {
         .unk0 = 0x380000000000000f,
         .caps =
@@ -1623,6 +1657,7 @@ int main(int argc, const char *argv[]) {
   mainThread->tproc = initProcess;
   mainThread->tid = initProcess->pid + baseId;
   mainThread->state = orbis::ThreadState::RUNNING;
+  mainThread->hostTid = ::gettid();
 
   auto executableModule =
       rx::linker::loadModuleFile(argv[argIndex], mainThread);
@@ -1653,6 +1688,47 @@ int main(int argc, const char *argv[]) {
 
     auto execEnv = ps4CreateExecEnv(mainThread, executableModule, isSystem);
 
+    // data transfer mode
+    // 0 - normal
+    // 1 - source
+    // 2 - ?
+    orbis::g_context.regMgrInt[0x2110000] = 0;
+
+    orbis::g_context.regMgrInt[0x20b0000] = 1; // prefer X
+    orbis::g_context.regMgrInt[0x2020000] = 1; // region
+
+    // orbis::g_context.regMgrInt[0x2130000] = 0x1601;
+    orbis::g_context.regMgrInt[0x2130000] = 0;
+    orbis::g_context.regMgrInt[0x73800200] = 1;
+    orbis::g_context.regMgrInt[0x73800300] = 0;
+    orbis::g_context.regMgrInt[0x73800400] = 0;
+    orbis::g_context.regMgrInt[0x73800500] = 0; // enable log
+
+    // user settings
+    orbis::g_context.regMgrInt[0x7800100] = 0;
+    orbis::g_context.regMgrInt[0x7810100] = 0;
+    orbis::g_context.regMgrInt[0x7820100] = 0;
+    orbis::g_context.regMgrInt[0x7830100] = 0;
+    orbis::g_context.regMgrInt[0x7840100] = 0;
+    orbis::g_context.regMgrInt[0x7850100] = 0;
+    orbis::g_context.regMgrInt[0x7860100] = 0;
+    orbis::g_context.regMgrInt[0x7870100] = 0;
+    orbis::g_context.regMgrInt[0x7880100] = 0;
+    orbis::g_context.regMgrInt[0x7890100] = 0;
+    orbis::g_context.regMgrInt[0x78a0100] = 0;
+    orbis::g_context.regMgrInt[0x78b0100] = 0;
+    orbis::g_context.regMgrInt[0x78c0100] = 0;
+    orbis::g_context.regMgrInt[0x78d0100] = 0;
+    orbis::g_context.regMgrInt[0x78e0100] = 0;
+    orbis::g_context.regMgrInt[0x78f0100] = 0;
+
+    orbis::g_context.regMgrInt[0x2040000] = 0; // do not require initial setup
+    orbis::g_context.regMgrInt[0x2800600] = 0; // IDU version
+    orbis::g_context.regMgrInt[0x2860100] = 0; // IDU mode
+    orbis::g_context.regMgrInt[0x2860300] = 0; // Arcade mode
+    orbis::g_context.regMgrInt[0x7010000] = 0; // auto login
+    orbis::g_context.regMgrInt[0x9010000] = 0; // video out color effect
+
     if (!isSystem) {
       createMiniSysCoreObjects(initProcess);
       createSysAvControlObjects(initProcess);
@@ -1662,12 +1738,26 @@ int main(int argc, const char *argv[]) {
 
       // ?
       createIpmiServer(initProcess, "SceCdlgRichProf");
-      createIpmiServer(initProcess, "SceRemoteplayIpc"); 
+      createIpmiServer(initProcess, "SceRemoteplayIpc");
       createIpmiServer(initProcess, "SceGlsIpc");
+      createIpmiServer(initProcess, "SceImeService");
+      createIpmiServer(initProcess, "SceErrorDlgServ");
+
+      createEventFlag("SceNpTusIpc_0000000a", 0x120, 0);
+      createSemaphore("SceLncSuspendBlock00000000", 0x101, 1, 1);
+      createSemaphore("SceNpPlusLogger 0", 0x101, 0, 0x7fffffff);
+
+      createSemaphore("SceSaveData0000000000000001", 0x101, 0, 1);
+      createSemaphore("SceSaveData0000000000000001_0", 0x101, 0, 1);
+      createShm("SceSaveData0000000000000001_0", 0x202, 0x1b6, 0x40000);
+      createShm("SceSaveDataI0000000000000001", 0x202, 0x1b6, 43008);
+      createShm("SceSaveDataI0000000000000001_0", 0x202, 0x1b6, 43008);
+      createEventFlag("SceSaveDataMemoryRUI00000010", 0x120, 1);
       initProcess->cwd = "/app0/";
 
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {});
+      runBridge();
       status = ps4Exec(mainThread, execEnv, std::move(executableModule),
                        ps4Argv, {});
     }

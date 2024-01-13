@@ -1,5 +1,8 @@
 #include "error.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/ProcessOps.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
 
 orbis::SysResult orbis::sys_sbrk(Thread *, sint) {
   return ErrorCode::OPNOTSUPP;

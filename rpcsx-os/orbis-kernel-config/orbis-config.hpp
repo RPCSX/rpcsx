@@ -143,6 +143,8 @@ inline uint64_t readRegister(void *context, RegisterId id) {
     return c->gregs[REG_RSP];
   case RegisterId::rflags:
     return c->gregs[REG_EFL];
+  case RegisterId::rip:
+    return c->gregs[REG_RIP];
   }
   std::fprintf(stderr, "***ERROR*** Unhandled RegisterId %d\n",
                static_cast<int>(id));
@@ -202,6 +204,9 @@ inline void writeRegister(void *context, RegisterId id, uint64_t value) {
     return;
   case RegisterId::rflags:
     c->gregs[REG_EFL] = value;
+    return;
+  case RegisterId::rip:
+    c->gregs[REG_RIP] = value;
     return;
   }
 }

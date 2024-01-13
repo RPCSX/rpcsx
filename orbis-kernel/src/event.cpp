@@ -21,8 +21,12 @@ void orbis::EventEmitter::emit(uint filter, uint fflags, intptr_t data) {
     if (note->event.filter != filter) {
       continue;
     }
-    if (fflags != 0 && ((note->event.fflags & fflags) == 0)) {
-      continue;
+    if (fflags != 0) {
+      if ((note->event.fflags & fflags) == 0) {
+        continue;
+      }
+
+      note->event.fflags = fflags;
     }
 
     std::lock_guard lock(note->mutex);

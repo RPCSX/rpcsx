@@ -1,5 +1,6 @@
 #include "ops.hpp"
 #include "align.hpp"
+#include "amdgpu/bridge/bridge.hpp"
 #include "backtrace.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
@@ -39,7 +40,10 @@
 
 using namespace orbis;
 
+extern bool allowMonoDebug;
+
 extern "C" void __register_frame(const void *);
+void runBridge();
 void setupSigHandlers();
 int ps4Exec(orbis::Thread *mainThread,
             orbis::utils::Ref<orbis::Module> executableModule,
@@ -252,7 +256,7 @@ orbis::SysResult minherit(orbis::Thread *thread, orbis::ptr<void> addr,
 
 orbis::SysResult madvise(orbis::Thread *thread, orbis::ptr<void> addr,
                          orbis::size_t len, orbis::sint behav) {
-  return ErrorCode::INVAL;
+  return {};
 }
 
 orbis::SysResult mincore(orbis::Thread *thread, orbis::ptr<const void> addr,
@@ -402,6 +406,10 @@ orbis::SysResult dynlib_get_obj_member(orbis::Thread *thread,
   case 8:
     *addrp = module->moduleParam;
     return {};
+
+  default:
+    ORBIS_LOG_ERROR(__FUNCTION__, index);
+    thread->where();
   }
 
   return ErrorCode::INVAL;
@@ -521,8 +529,9 @@ orbis::SysResult dynlib_unload_prx(orbis::Thread *thread,
   return ErrorCode::NOTSUP;
 }
 
-SysResult thr_create(orbis::Thread *thread, orbis::ptr<struct ucontext> ctxt,
+SysResult thr_create(orbis::Thread *thread, orbis::ptr<orbis::UContext> ctxt,
                      ptr<orbis::slong> arg, orbis::sint flags) {
+  ORBIS_LOG_FATAL(__FUNCTION__, ctxt, arg, flags);
   return ErrorCode::NOTSUP;
 }
 SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
@@ -551,9 +560,10 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
 
   // FIXME: implement scheduler
 
-  ORBIS_LOG_NOTICE("Starting child thread", childThread->tid,
+  ORBIS_LOG_NOTICE("Starting child thread", thread->tid, childThread->tid,
                    childThread->stackStart, _param.rtp, _param.name,
                    _param.spare[0], _param.spare[1]);
+
   if (_param.rtp != 0) {
     rtprio _rtp;
     ORBIS_RET_ON_ERROR(uread(_rtp, _param.rtp));
@@ -573,6 +583,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
     context->uc_mcontext.gregs[REG_RIP] =
         reinterpret_cast<std::uintptr_t>(_param.start_func);
 
+    childThread->hostTid = ::gettid();
     childThread->context = context;
     childThread->state = orbis::ThreadState::RUNNING;
 
@@ -598,23 +609,38 @@ SysResult thr_exit(orbis::Thread *thread, orbis::ptr<orbis::slong> state) {
   }
 
   // FIXME: implement exit
+  pthread_setname_np(pthread_self(), "dead");
   while (true) {
     std::this_thread::sleep_for(std::chrono::seconds(60));
   }
   return ErrorCode::NOTSUP;
 }
 SysResult thr_kill(orbis::Thread *thread, orbis::slong id, orbis::sint sig) {
-  return ErrorCode::NOTSUP;
+  auto t = (std::lock_guard(thread->tproc->mtx),
+            thread->tproc->threadsMap.get(id - thread->tproc->pid));
+  if (t == nullptr) {
+    return ErrorCode::SRCH;
+  }
+
+  ORBIS_LOG_FATAL(__FUNCTION__, id, sig, t->hostTid);
+  std::lock_guard lock(t->tproc->mtx);
+  t->signalQueue.push_back(sig);
+  ::tgkill(t->tproc->hostPid, t->hostTid, SIGUSR1);
+  return {};
 }
+
 SysResult thr_kill2(orbis::Thread *thread, orbis::pid_t pid, orbis::slong id,
                     orbis::sint sig) {
+  ORBIS_LOG_FATAL(__FUNCTION__, pid, id, sig);
   return ErrorCode::NOTSUP;
 }
 SysResult thr_suspend(orbis::Thread *thread,
                       orbis::ptr<const orbis::timespec> timeout) {
+  ORBIS_LOG_FATAL(__FUNCTION__, timeout);
   return ErrorCode::NOTSUP;
 }
 SysResult thr_wake(orbis::Thread *thread, orbis::slong id) {
+  ORBIS_LOG_FATAL(__FUNCTION__, id);
   return ErrorCode::NOTSUP;
 }
 SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
@@ -626,7 +652,10 @@ SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
 orbis::SysResult unmount(orbis::Thread *thread, orbis::ptr<char> path,
                          orbis::sint flags) {
   // TODO: support other that nullfs
-  return rx::vfs::unlink(getAbsolutePath(path, thread), thread);
+  ORBIS_LOG_WARNING(__FUNCTION__, path);
+  thread->where();
+  rx::vfs::unlink(getAbsolutePath(path, thread), thread);
+  return {};
 }
 orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
                         orbis::uint iovcnt, orbis::sint flags) {
@@ -747,6 +776,7 @@ SysResult fork(Thread *thread, slong flags) {
   process->ops = thread->tproc->ops;
   process->parentProcess = thread->tproc;
   process->authInfo = thread->tproc->authInfo;
+  process->sdkVersion = thread->tproc->sdkVersion;
   for (auto [id, mod] : thread->tproc->modulesMap) {
     if (!process->modulesMap.insert(id, mod)) {
       std::abort();
@@ -769,6 +799,7 @@ SysResult fork(Thread *thread, slong flags) {
 
   auto [baseId, newThread] = process->threadsMap.emplace();
   newThread->tproc = process;
+  newThread->hostTid = ::gettid();
   newThread->tid = process->pid + baseId;
   newThread->state = orbis::ThreadState::RUNNING;
   newThread->context = thread->context;
@@ -790,8 +821,14 @@ SysResult fork(Thread *thread, slong flags) {
 
   dup2(logFd, 1);
   dup2(logFd, 2);
+
+  if (childPid == amdgpu::bridge::expGpuPid) {
+    runBridge();
+  }
   return {};
 }
+
+volatile bool debuggerPresent = false;
 
 SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
                  ptr<ptr<char>> envv) {
@@ -835,7 +872,21 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     pthread_setname_np(pthread_self(), name.c_str());
   }
 
+  if (fname == std::string_view{"/app0/eboot.bin"}) {
+    // FIXME: remove hack
+    // _envv.push_back("MONO_LOG_LEVEL=debug");
+    _envv.push_back("MONO_GC_PARAMS=nursery-size=128m");
+    // _envv.push_back("MONO_GC_DEBUG=2,heap-dump=/app0/mono.dump");
+    // _envv.push_back("GC_DONT_GC");
+  }
+
   std::printf("pid: %u\n", ::getpid());
+
+  // if (thread->tid == 60001) {
+  //     while (debuggerPresent == false) {
+  //       std::this_thread::sleep_for(std::chrono::seconds(1));
+  //     }
+  // }
   {
     orbis::Ref<File> file;
     auto result = rx::vfs::open(path, kOpenFlagReadOnly, 0, &file, thread);

@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 namespace orbis::utils {
-void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
+int shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
                           std::uint64_t usec_timeout) noexcept {
   // Not supposed to fail
   if (!_val) {
@@ -17,8 +17,10 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
   timeout.tv_nsec = (usec_timeout % 1000'000) * 1000;
   timeout.tv_sec = (usec_timeout / 1000'000);
 
+  int result = 0;
+
   while (true) {
-    auto result = syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
+    result = syscall(SYS_futex, &m_value, FUTEX_WAIT, _val,
                           usec_timeout + 1 ? &timeout : nullptr, 0, 0);
     if (result < 0) {
       result = errno;
@@ -27,7 +29,7 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
     // Cleanup
     const auto old = atomic_fetch_op(m_value, [&](unsigned &value) {
       // Remove waiter if no signals
-      if (!(value & ~c_waiter_mask) && result != EAGAIN && result != EINTR) {
+      if (!(value & ~c_waiter_mask) && result != EAGAIN) {
         value -= 1;
       }
 
@@ -43,22 +45,24 @@ void shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
 
     // Lock is already acquired
     if (old & c_locked_mask) {
-      return;
+      return 0;
     }
 
     // Wait directly (waiter has been added)
     if (old & c_signal_mask) {
-      mutex.impl_wait();
-      return;
+      return mutex.impl_wait();
     }
 
     // Possibly spurious wakeup
-    if (result != EAGAIN && result != EINTR) {
+    if (result != EAGAIN) {
       break;
     }
+
+    _val = old;
   }
 
   mutex.lock();
+  return result;
 }
 
 void shared_cv::impl_wake(shared_mutex &mutex, int _count) noexcept {
