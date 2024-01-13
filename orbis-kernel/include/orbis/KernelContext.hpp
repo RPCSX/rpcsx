@@ -1,16 +1,15 @@
 #pragma once
+#include "AudioOut.hpp"
+#include "KernelAllocator.hpp"
 #include "evf.hpp"
 #include "ipmi.hpp"
-#include "orbis/utils/IdMap.hpp"
 #include "osem.hpp"
+#include "thread/types.hpp"
+#include "utils/IdMap.hpp"
 #include "utils/LinkedNode.hpp"
 #include "utils/SharedCV.hpp"
 #include "utils/SharedMutex.hpp"
 
-#include "AudioOut.hpp"
-#include "KernelAllocator.hpp"
-#include "orbis/thread/types.hpp"
-#include <algorithm>
 #include <cstdint>
 #include <mutex>
 #include <pthread.h>
@@ -175,6 +174,10 @@ public:
   AudioOut *audioOut = nullptr;
   uint sdkVersion{};
   uint fwSdkVersion{};
+  uint safeMode{};
+
+  shared_mutex regMgrMtx;
+  kmap<std::uint32_t, std::uint32_t> regMgrInt;
 
 private:
   mutable pthread_mutex_t m_heap_mtx;

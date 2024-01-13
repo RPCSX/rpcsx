@@ -54,7 +54,9 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     auto args = reinterpret_cast<Args *>(argp);
 
     // flockfile(stderr);
-    // ORBIS_LOG_ERROR("gc ioctl 0xc0108102", args->arg0, args->count, args->cmds);
+    // if (thread->tproc->pid != amdgpu::bridge::expGpuPid) {
+      // ORBIS_LOG_ERROR("gc ioctl submit", args->arg0, args->count, args->cmds);
+    // }
 
     for (unsigned i = 0; i < args->count; ++i) {
       auto cmd = args->cmds + (i * 2);
@@ -72,6 +74,11 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
       // std::fprintf(stderr, "    address = %lx\n", address);
       // std::fprintf(stderr, "    unkPreservedVal = %lx\n", unkPreservedVal);
       // std::fprintf(stderr, "    size = %lu\n", size);
+
+      // for (std::size_t i = 0; i < std::min<std::size_t>(size, 64); i += 4) {
+      //   std::fprintf(stderr, "%08x ", *(unsigned *)(address + i));
+      // }
+      // std::fprintf(stderr, "\n");
 
       rx::bridge.sendCommandBuffer(thread->tproc->pid, cmdId, address, size);
     }
@@ -133,9 +140,8 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   }
 
   case 0xc0048116: { // submit done?
-    ORBIS_LOG_ERROR("gc ioctl 0xc0048116", *(std::uint32_t *)argp);
-    *(std::uint32_t *)argp = 1;
-    thread->where();
+    // ORBIS_LOG_ERROR("gc ioctl 0xc0048116", *(std::uint32_t *)argp);
+    // thread->where();
     break;
   }
 

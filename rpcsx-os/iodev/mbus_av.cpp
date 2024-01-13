@@ -2,6 +2,7 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/note.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedCV.hpp"
@@ -12,7 +13,6 @@ struct MBusAVFile : orbis::File {};
 
 static orbis::ErrorCode mbus_av_ioctl(orbis::File *file, std::uint64_t request,
                                       void *argp, orbis::Thread *thread) {
-
   ORBIS_LOG_FATAL("Unhandled mbus_av ioctl", request);
   return {};
 }
@@ -21,7 +21,7 @@ static orbis::ErrorCode mbus_av_read(orbis::File *file, orbis::Uio *uio,
                                      orbis::Thread *thread) {
   auto mbusAv = file->device.staticCast<MBusAVDevice>();
 
-  MBusAVEvent event;
+  MBusEvent event;
   {
     std::lock_guard lock(mbusAv->mtx);
 
@@ -53,15 +53,18 @@ orbis::ErrorCode MBusAVDevice::open(orbis::Ref<orbis::File> *file,
   auto newFile = orbis::knew<MBusAVFile>();
   newFile->ops = &fileOps;
   newFile->device = this;
+  newFile->event = eventEmitter;
 
   *file = newFile;
   return {};
 }
 
-void MBusAVDevice::emitEvent(const MBusAVEvent &event) {
+void MBusAVDevice::emitEvent(const MBusEvent &event) {
   std::lock_guard lock(mtx);
   events.push_back(event);
   cv.notify_one(mtx);
+
+  eventEmitter->emit(orbis::kEvFiltRead);
 }
 
 IoDevice *createMBusAVCharacterDevice() { return orbis::knew<MBusAVDevice>(); }

@@ -1,22 +1,19 @@
 #include "io-device.hpp"
+#include "iodev/mbus_av.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Process.hpp"
+#include "orbis/thread/ProcessOps.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
 #include <bits/types/struct_iovec.h>
-#include <chrono>
-#include <thread>
 
 struct AoutFile : orbis::File {};
 
 static orbis::ErrorCode aout_ioctl(orbis::File *file, std::uint64_t request,
                                    void *argp, orbis::Thread *thread) {
-
   ORBIS_LOG_FATAL("Unhandled aout ioctl", request);
-  if (request == 0xc004500a) {
-    std::this_thread::sleep_for(std::chrono::days(1));
-  }
   thread->where();
   return {};
 }

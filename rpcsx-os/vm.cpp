@@ -820,11 +820,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   flags &= ~kMapFlagsAlignMask;
 
-  bool noOverwrite = addr != 0 && (flags & kMapFlagNoOverwrite) == kMapFlagNoOverwrite;
-  if (noOverwrite) {
-    flags |= kMapFlagFixed;
-  }
-  flags &= ~kMapFlagNoOverwrite;
+  bool noOverwrite = (flags & (kMapFlagNoOverwrite | kMapFlagFixed)) == (kMapFlagNoOverwrite | kMapFlagFixed);
 
   if (hitAddress & (alignment - 1)) {
     if (flags & kMapFlagStack) {
@@ -982,11 +978,11 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (auto thr = orbis::g_currentThread) {
-    std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address,
-                 address + len, thr->tproc->pid);
-    if (!noOverwrite) {
-      rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
-    }
+    // std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address,
+    //              address + len, thr->tproc->pid);
+    // if (!noOverwrite) {
+    //   rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
+    // }
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
   }
@@ -1168,6 +1164,8 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
       auto alloc = *dmemIt;
       memoryType = alloc.payload.memoryType;
       blockFlags = kBlockFlagDirectMemory;
+      std::fprintf(stderr, "virtual query %p", addr);
+      std::fprintf(stderr, "memory type: %u\n", memoryType);
     }
     // TODO
   }

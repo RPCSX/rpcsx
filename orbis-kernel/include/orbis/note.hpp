@@ -84,7 +84,7 @@ struct KNote {
   ~KNote();
 };
 
-struct EventEmitter {
+struct EventEmitter : orbis::RcBase {
   shared_mutex mutex;
   std::set<KNote *, std::less<>, kallocator<KNote *>> notes;
 

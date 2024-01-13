@@ -1,6 +1,7 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedMutex.hpp"
@@ -22,19 +23,24 @@ struct NotificationDevice : IoDevice {
                         orbis::Thread *thread) override;
 };
 
-static orbis::ErrorCode notification_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+static orbis::ErrorCode notification_ioctl(orbis::File *file,
+                                           std::uint64_t request, void *argp,
+                                           orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled notification ioctl", request);
   return {};
 }
 
-static orbis::ErrorCode notification_read(orbis::File *file, orbis::Uio *uio, orbis::Thread *thread) {
+static orbis::ErrorCode notification_read(orbis::File *file, orbis::Uio *uio,
+                                          orbis::Thread *thread) {
   auto dev = dynamic_cast<NotificationDevice *>(file->device.get());
-  ORBIS_LOG_FATAL(__FUNCTION__, dev->index);
 
   while (true) {
     if (dev->data.empty()) {
+      if (file->noBlock()) {
+        return orbis::ErrorCode::WOULDBLOCK;
+      }
+
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
@@ -53,7 +59,8 @@ static orbis::ErrorCode notification_read(orbis::File *file, orbis::Uio *uio, or
         break;
       }
 
-      std::memmove(dev->data.data(), dev->data.data() + size, dev->data.size() - size);
+      std::memmove(dev->data.data(), dev->data.data() + size,
+                   dev->data.size() - size);
       dev->data.resize(dev->data.size() - size);
     }
 
@@ -62,9 +69,9 @@ static orbis::ErrorCode notification_read(orbis::File *file, orbis::Uio *uio, or
   return {};
 }
 
-static orbis::ErrorCode notification_write(orbis::File *file, orbis::Uio *uio, orbis::Thread *thread) {
+static orbis::ErrorCode notification_write(orbis::File *file, orbis::Uio *uio,
+                                           orbis::Thread *thread) {
   auto dev = dynamic_cast<NotificationDevice *>(file->device.get());
-  ORBIS_LOG_FATAL(__FUNCTION__, dev->index);
 
   std::lock_guard lock(dev->mutex);
 
@@ -83,15 +90,20 @@ static const orbis::FileOps fileOps = {
     .write = notification_write,
 };
 
-orbis::ErrorCode NotificationDevice::open(orbis::Ref<orbis::File> *file, const char *path,
-                      std::uint32_t flags, std::uint32_t mode,
-                      orbis::Thread *thread) {
+orbis::ErrorCode NotificationDevice::open(orbis::Ref<orbis::File> *file,
+                                          const char *path, std::uint32_t flags,
+                                          std::uint32_t mode,
+                                          orbis::Thread *thread) {
   auto newFile = orbis::knew<NotificationFile>();
   newFile->ops = &fileOps;
   newFile->device = this;
+  newFile->flags = flags;
+  newFile->mode = mode;
 
   *file = newFile;
   return {};
 }
 
-IoDevice *createNotificationCharacterDevice(int index) { return orbis::knew<NotificationDevice>(index); }
+IoDevice *createNotificationCharacterDevice(int index) {
+  return orbis::knew<NotificationDevice>(index);
+}

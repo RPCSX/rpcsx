@@ -20,7 +20,7 @@ class shared_mutex final {
 
   void impl_lock_shared(unsigned val);
   void impl_unlock_shared(unsigned old);
-  void impl_wait();
+  int impl_wait();
   void impl_signal();
   void impl_lock(unsigned val);
   void impl_unlock(unsigned old);

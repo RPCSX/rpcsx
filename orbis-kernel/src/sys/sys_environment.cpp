@@ -1,6 +1,7 @@
 #include "sys/sysproto.hpp"
 
 #include "KernelContext.hpp"
+#include "thread/Process.hpp"
 
 orbis::SysResult orbis::sys_kenv(Thread *thread, sint what,
                                  ptr<const char> name, ptr<char> value,

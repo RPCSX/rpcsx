@@ -19,5 +19,6 @@ enum class RegisterId {
   rax,
   rsp,
   rflags,
+  rip,
 };
 } // namespace orbis

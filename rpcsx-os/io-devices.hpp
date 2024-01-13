@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 struct IoDevice;
 
 IoDevice *createDceCharacterDevice();
@@ -29,7 +30,7 @@ IoDevice *createBtCharacterDevice();
 IoDevice *createXptCharacterDevice();
 IoDevice *createCdCharacterDevice();
 IoDevice *createMetaDbgCharacterDevice();
-IoDevice *createHddCharacterDevice();
+IoDevice *createHddCharacterDevice(std::uint64_t size);
 IoDevice *createAoutCharacterDevice();
 IoDevice *createAVControlCharacterDevice();
 IoDevice *createHDMICharacterDevice();
@@ -42,3 +43,8 @@ IoDevice *createDevCtlCharacterDevice();
 IoDevice *createDevActCharacterDevice();
 IoDevice *createUVDCharacterDevice();
 IoDevice *createVCECharacterDevice();
+IoDevice *createEvlgCharacterDevice(int outputFd);
+IoDevice *createSrtcCharacterDevice();
+IoDevice *createScreenShotCharacterDevice();
+IoDevice *createLvdCtlCharacterDevice();
+IoDevice *createIccPowerCharacterDevice();

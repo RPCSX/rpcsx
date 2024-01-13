@@ -9,12 +9,39 @@
 #include <optional>
 #include <string_view>
 
+
+static orbis::ErrorCode devfs_stat(orbis::File *file, orbis::Stat *sb,
+                                  orbis::Thread *thread) {
+  *sb = {}; // TODO
+  return {};
+}
+
+
+static orbis::FileOps devfs_ops = {
+  .stat = devfs_stat,
+};
+
 struct DevFs : IoDevice {
   std::map<std::string, orbis::Ref<IoDevice>, std::less<>> devices;
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override {
+    if (path[0] == '\0') {
+      auto result = orbis::knew<orbis::File>();
+      for (auto &[name, dev] : devices) {
+        auto &entry = result->dirEntries.emplace_back();
+        entry.fileno = result->dirEntries.size();
+        entry.reclen = sizeof(orbis::Dirent);
+        entry.type = orbis::kDtBlk;
+        entry.namlen = name.size();
+        std::strncpy(entry.name, name.c_str(), sizeof(entry.name));
+      }
+
+      result->ops = &devfs_ops;
+      *file = result;
+      return{};
+    }
     std::string_view devPath = path;
     if (auto pos = devPath.find('/'); pos != std::string_view::npos) {
       auto deviceName = devPath.substr(0, pos);
@@ -92,6 +119,20 @@ rx::vfs::get(const std::filesystem::path &guestPath) {
   std::string_view prefix;
 
   std::lock_guard lock(gMountMtx);
+
+  if (gDevFs != nullptr) {
+    std::string_view devPath = "/dev/";
+    if (path.starts_with(devPath) ||
+        path == devPath.substr(0, devPath.size() - 1)) {
+      if (path.size() > devPath.size()) {
+        path.remove_prefix(devPath.size());
+      } else {
+        path = {};
+      }
+
+      return { gDevFs, std::string(path) };
+    }
+  }
 
   for (auto &mount : gMountsMap) {
     if (!path.starts_with(mount.first)) {

@@ -66,6 +66,7 @@ struct Process final {
   bool isInSandbox = false;
   EventEmitter event;
 
+  std::uint32_t sdkVersion = -1;
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
 
@@ -80,6 +81,8 @@ struct Process final {
   utils::shared_mutex namedObjMutex;
   utils::kmap<void *, utils::kstring> namedObjNames;
   utils::OwningIdMap<NamedObjInfo, uint, 65535, 1> namedObjIds;
+
+  utils::kmap<std::int32_t, SigAction> sigActions;
 
   // Named memory ranges for debugging
   utils::shared_mutex namedMemMutex;

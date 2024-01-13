@@ -12,6 +12,7 @@ struct timespec;
 struct File;
 struct MemoryProtection;
 struct IoVec;
+struct UContext;
 
 struct ProcessOps {
   SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
@@ -64,7 +65,7 @@ struct ProcessOps {
                                uint64_t arg3);
   SysResult (*dynlib_unload_prx)(Thread *thread, ModuleHandle handle);
 
-  SysResult (*thr_create)(Thread *thread, ptr<struct ucontext> ctxt,
+  SysResult (*thr_create)(Thread *thread, ptr<UContext> ctxt,
                           ptr<slong> arg, sint flags);
   SysResult (*thr_new)(Thread *thread, ptr<thr_param> param, sint param_size);
   SysResult (*thr_exit)(Thread *thread, ptr<slong> state);

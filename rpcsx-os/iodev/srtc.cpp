@@ -1,27 +1,27 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 
-struct DevCtlFile : orbis::File {};
+struct SrtcFile : orbis::File {};
 
-static orbis::ErrorCode devctl_ioctl(orbis::File *file, std::uint64_t request,
+static orbis::ErrorCode srtc_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
-
-  ORBIS_LOG_FATAL("Unhandled devctl ioctl", request);
+  ORBIS_LOG_FATAL("Unhandled srtc ioctl", request);
+  thread->where();
   return {};
 }
 
 static const orbis::FileOps fileOps = {
-    .ioctl = devctl_ioctl,
+    .ioctl = srtc_ioctl,
 };
 
-struct DevCtlDevice : IoDevice {
-  orbis::kstring data;
+struct SrtcDevice : IoDevice {
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override {
-    auto newFile = orbis::knew<DevCtlFile>();
+    auto newFile = orbis::knew<SrtcFile>();
     newFile->ops = &fileOps;
     newFile->device = this;
 
@@ -30,4 +30,4 @@ struct DevCtlDevice : IoDevice {
   }
 };
 
-IoDevice *createDevCtlCharacterDevice() { return orbis::knew<DevCtlDevice>(); }
+IoDevice *createSrtcCharacterDevice() { return orbis::knew<SrtcDevice>(); }

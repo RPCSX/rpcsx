@@ -1,4 +1,5 @@
 #include "sys/sysproto.hpp"
+#include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
 
 namespace orbis {
@@ -88,5 +89,5 @@ orbis::SysResult orbis::sys_getrlimit(Thread *thread, uint which,
 }
 orbis::SysResult orbis::sys_getrusage(Thread *thread, sint who,
                                       ptr<struct rusage> rusage) {
-  return ErrorCode::NOSYS;
+  return {};
 }

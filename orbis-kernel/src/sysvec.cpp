@@ -1,6 +1,8 @@
 #include "sys/syscall.hpp"
 #include "sys/sysentry.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Thread.hpp"
+#include "thread/Process.hpp"
 #include <algorithm>
 #include <unordered_map>
 

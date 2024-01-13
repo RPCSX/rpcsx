@@ -104,14 +104,20 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
           return ErrorCode::BADF;
         }
 
-        std::unique_lock lock(fd->event.mutex);
         nodeIt->file = fd;
-        // if (change.filter == kEvFiltWrite) {
-        // nodeIt->triggered = true;
-        // kq->cv.notify_all(kq->mtx);
-        // }
 
-        fd->event.notes.insert(&*nodeIt);
+        if (auto eventEmitter = fd->event) {
+          std::unique_lock lock(eventEmitter->mutex);
+          // if (change.filter == kEvFiltWrite) {
+          // nodeIt->triggered = true;
+          // kq->cv.notify_all(kq->mtx);
+          // }
+          nodeIt->triggered = true;
+          eventEmitter->notes.insert(&*nodeIt);
+          kq->cv.notify_all(kq->mtx);
+        } else if (note.file->hostFd < 0) {
+          ORBIS_LOG_ERROR("Unimplemented event emitter", change.ident);
+        }
       }
     }
   }
@@ -156,13 +162,23 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
         (nodeIt->event.fflags & ~kNoteFFlagsMask) | (fflags & kNoteFFlagsMask);
 
     if (change.fflags & kNoteTrigger) {
+      nodeIt->event.udata = change.udata;
       nodeIt->triggered = true;
       kq->cv.notify_all(kq->mtx);
     }
-  } else if (change.filter == kEvFiltGraphicsCore ||
-             change.filter == kEvFiltDisplay || change.filter == kEvFiltRegEv) {
+  } else if (change.filter == kEvFiltGraphicsCore) {
     nodeIt->triggered = true;
+    
+    if (change.ident == 0x84) {
+      // clock change event
+      nodeIt->event.data |= 1000ull << 16; // clock
+    }
     kq->cv.notify_all(kq->mtx);
+  } else if (change.filter == kEvFiltDisplay) {
+    if (change.ident != 0x51000100000000 && change.ident != 0x63010100000000) {
+      nodeIt->triggered = true;
+      kq->cv.notify_all(kq->mtx);
+    }
   }
 
   return {};
@@ -233,7 +249,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       auto now = clock::now();
       auto nowValue = now.time_since_epoch().count();
 
-      if (nowValue < nowValue + nsec) {
+      if (nowValue <= nowValue + nsec) {
         timeoutPoint = now + std::chrono::nanoseconds(nsec);
       }
     }
@@ -242,76 +258,101 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
   std::vector<KEvent> result;
   result.reserve(nevents);
 
+  ErrorCode errorCode{};
+
   if (kq->notes.empty()) {
     // ORBIS_LOG_ERROR(__FUNCTION__, "attempt to wait empty kqueue", fd,
-    // nevents, timeoutPoint.time_since_epoch().count()); thread->where();
+    // nevents,
+    //                 timeoutPoint.time_since_epoch().count());
+    // thread->where();
+
     // return{};
     // std::abort();
     return {};
   }
 
+  // ORBIS_LOG_TODO(__FUNCTION__, "kevent wait", fd);
+
   while (true) {
     bool waitHack = false;
     bool canSleep = true;
-    std::lock_guard lock(kq->mtx);
-    for (auto it = kq->notes.begin(); it != kq->notes.end();) {
-      if (result.size() >= nevents) {
-        break;
-      }
 
-      auto &note = *it;
-      std::lock_guard lock(note.mutex);
+    {
+      std::lock_guard lock(kq->mtx);
+      for (auto it = kq->notes.begin(); it != kq->notes.end();) {
+        if (result.size() >= nevents) {
+          break;
+        }
 
-      if (!note.triggered) {
-        if (note.event.filter == kEvFiltRead) {
-          if (note.file->hostFd < 0 ||
-              isReadEventTriggered(note.file->hostFd)) {
-            note.triggered = true;
-          } else {
-            canSleep = false;
+        auto &note = *it;
+        bool erase = false;
+        {
+          std::lock_guard lock(note.mutex);
+
+          if (!note.triggered) {
+            if (note.event.filter == kEvFiltRead) {
+              if (note.file->hostFd >= 0 ) {
+                if (isReadEventTriggered(note.file->hostFd)) {
+                  note.triggered = true;
+                } else {
+                  canSleep = false;
+                }
+              }
+            } else if (note.event.filter == kEvFiltWrite) {
+              if (note.file->hostFd >= 0) {
+                if (isWriteEventTriggered(note.file->hostFd)) {
+                  note.triggered = true;
+                } else {
+                  canSleep = false;
+                }
+              }
+            }
           }
-        } else if (note.event.filter == kEvFiltWrite) {
-          if (note.file->hostFd < 0 ||
-              isWriteEventTriggered(note.file->hostFd)) {
-            note.triggered = true;
-          } else {
-            canSleep = false;
+
+          if (note.enabled && note.triggered) {
+            result.push_back(note.event);
+
+            if (note.event.filter == kEvFiltGraphicsCore ||
+                note.event.filter == kEvFiltDisplay) {
+              waitHack = true;
+            }
+
+            if (note.event.flags & kEvDispatch) {
+              note.enabled = false;
+            }
+
+            if (note.event.flags & kEvOneshot) {
+              erase = true;
+            }
+
+            if (note.event.filter == kEvFiltRead || note.event.filter == kEvFiltWrite) {
+              note.triggered = false;
+            }
           }
         }
-      }
 
-      if (note.enabled && note.triggered) {
-        result.push_back(note.event);
-
-        if (note.event.filter == kEvFiltGraphicsCore ||
-            note.event.filter == kEvFiltDisplay) {
-          waitHack = true;
-        }
-
-        if (note.event.flags & kEvDispatch) {
-          note.enabled = false;
-        }
-
-        if (note.event.flags & kEvOneshot) {
+        if (erase) {
           it = kq->notes.erase(it);
-          continue;
+        } else {
+          ++it;
         }
       }
-
-      ++it;
     }
 
     if (!result.empty()) {
       // if (waitHack) {
-      //   std::this_thread::sleep_for(std::chrono::milliseconds(3));
+      //   std::this_thread::sleep_for(std::chrono::milliseconds(30));
       // }
       break;
     }
 
+
     if (timeoutPoint != clock::time_point::max()) {
+      std::lock_guard lock(kq->mtx);
       auto now = clock::now();
 
       if (now >= timeoutPoint) {
+        errorCode = ErrorCode::TIMEDOUT;
         break;
       }
 
@@ -322,12 +363,26 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       }
     } else {
       if (canSleep) {
+        std::lock_guard lock(kq->mtx);
         kq->cv.wait(kq->mtx);
+      } else {
+        std::this_thread::sleep_for(std::chrono::microseconds(30));
       }
     }
   }
 
   // ORBIS_LOG_TODO(__FUNCTION__, "kevent wakeup", fd);
+
+  // for (auto evt : result) {
+  //   ORBIS_LOG_TODO(__FUNCTION__,
+  //     evt.ident,
+  //     evt.filter,
+  //     evt.flags,
+  //     evt.fflags,
+  //     evt.data,
+  //     evt.udata
+  //   );
+  // }
 
   ORBIS_RET_ON_ERROR(
       uwriteRaw(eventlist, result.data(), result.size() * sizeof(KEvent)));

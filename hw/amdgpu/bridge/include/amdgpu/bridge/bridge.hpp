@@ -166,23 +166,23 @@ struct BridgePusher {
   }
 
   void sendMapDmem(std::uint32_t pid, std::uint32_t dmemIndex, std::uint64_t address, std::uint64_t size, std::uint32_t prot, std::uint64_t offset) {
-    if (pid == expGpuPid) {
+    // if (pid == expGpuPid) {
       sendCommand(CommandId::MapDmem, {pid, dmemIndex, address, size, prot, offset});
-    }
+    // }
   }
 
   void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue,
                          std::uint64_t address, std::uint64_t size) {
-    if (pid == expGpuPid) {
+    // if (pid == expGpuPid) {
       sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
-    }
+    // }
   }
 
   void sendFlip(std::uint32_t pid, std::uint32_t bufferIndex,
                 std::uint64_t arg) {
-    if (pid == expGpuPid) {
+    // if (pid == expGpuPid) {
       sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
-    }
+    // }
   }
 
   void wait() {

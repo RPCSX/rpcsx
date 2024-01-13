@@ -434,6 +434,7 @@ static orbis::ErrorCode socket_read(orbis::File *file, orbis::Uio *uio,
     return orbis::ErrorCode::INVAL;
   }
 
+  ORBIS_LOG_FATAL(__FUNCTION__, file, uio->iov->len);
   return host_fd_read(socket->hostFd, uio);
 }
 
@@ -448,6 +449,7 @@ static orbis::ErrorCode socket_write(orbis::File *file, orbis::Uio *uio,
     return {};
   }
 
+  ORBIS_LOG_FATAL(__FUNCTION__, file, uio->iov->len);
   return host_fd_write(socket->hostFd, uio);
 }
 
@@ -700,6 +702,39 @@ orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
   return {};
 }
 
+static std::optional<std::string> findFileInDir(const std::filesystem::path &dir, const char *name) {
+  for (auto entry : std::filesystem::directory_iterator(dir)) {
+    auto entryName = entry.path().filename();
+    if (strcasecmp(entryName.c_str(), name) == 0) {
+      return entryName;
+    }
+  }
+  return{};
+}
+
+static std::optional<std::filesystem::path> toRealPath(const std::filesystem::path &inp) {
+  if (inp.empty()) {
+    return{};
+  }
+
+  std::filesystem::path result;
+  for (auto elem : inp) {
+    if (result.empty() || std::filesystem::exists(result / elem)) {
+      result /= elem;
+      continue;
+    }
+
+    auto icaseElem = findFileInDir(result, elem.c_str());
+    if (!icaseElem) {
+      return{};
+    }
+
+    result /= *icaseElem;
+  }
+
+  return result;
+}
+
 orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
                                     const char *path, std::uint32_t flags,
                                     std::uint32_t mode, orbis::Thread *thread) {
@@ -754,8 +789,21 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
 
   int hostFd = ::open(realPath.c_str(), realFlags, 0777);
 
+  orbis::ErrorCode error{};
   if (hostFd < 0) {
-    auto error = convertErrno();
+    error = convertErrno();
+
+    if (auto icaseRealPath = toRealPath(realPath)) {
+      ORBIS_LOG_WARNING(__FUNCTION__, path, realPath.c_str(), icaseRealPath->c_str());
+      hostFd = ::open(icaseRealPath->c_str(), realFlags, 0777);
+
+      if (hostFd < 0) {
+        ORBIS_LOG_ERROR("host_open failed", path, realPath.c_str(), icaseRealPath->c_str(), error);
+        return convertErrno();
+      }
+    }
+  }
+  if (hostFd < 0) {
     ORBIS_LOG_ERROR("host_open failed", path, realPath.c_str(), error);
     return error;
   }

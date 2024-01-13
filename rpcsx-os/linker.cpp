@@ -19,6 +19,8 @@
 
 using orbis::utils::Ref;
 
+std::uint64_t monoPimpAddress;
+
 static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
   struct [[gnu::packed]] Header {
     std::uint32_t magic;
@@ -500,13 +502,15 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     result->tlsAlign = phdrs[tlsPhdrIndex].p_align;
     result->tlsSize = phdrs[tlsPhdrIndex].p_memsz;
     result->tlsInitSize = phdrs[tlsPhdrIndex].p_filesz;
-    result->tlsInit = phdrs[tlsPhdrIndex].p_vaddr
-                          ? imageBase - baseAddress + phdrs[tlsPhdrIndex].p_vaddr
-                          : nullptr;
+    result->tlsInit =
+        phdrs[tlsPhdrIndex].p_vaddr
+            ? imageBase - baseAddress + phdrs[tlsPhdrIndex].p_vaddr
+            : nullptr;
   }
 
   if (gnuEhFramePhdrIndex >= 0 && phdrs[gnuEhFramePhdrIndex].p_vaddr > 0) {
-    result->ehFrameHdr = imageBase - baseAddress + phdrs[gnuEhFramePhdrIndex].p_vaddr;
+    result->ehFrameHdr =
+        imageBase - baseAddress + phdrs[gnuEhFramePhdrIndex].p_vaddr;
     result->ehFrameHdrSize = phdrs[gnuEhFramePhdrIndex].p_memsz;
 
     struct GnuExceptionInfo {
@@ -725,10 +729,10 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
       switch (dyn.d_tag) {
       case kElfDynamicTypeScePltGot:
-        result->pltGot =
-            dyn.d_un.d_ptr
-                ? reinterpret_cast<std::uint64_t *>(imageBase - baseAddress + dyn.d_un.d_ptr)
-                : nullptr;
+        result->pltGot = dyn.d_un.d_ptr
+                             ? reinterpret_cast<std::uint64_t *>(
+                                   imageBase - baseAddress + dyn.d_un.d_ptr)
+                             : nullptr;
         break;
 
       case kElfDynamicTypeSceJmpRel:
@@ -781,6 +785,10 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             .type = static_cast<orbis::SymbolType>(type),
         };
 
+        if (symbol.address) {
+          symbol.address -= baseAddress;
+        }
+
         if (sceStrtab != nullptr && sym.st_name != 0) {
           auto fullName = std::string_view(sceStrtab + sym.st_name);
           if (auto hashPos = fullName.find('#');
@@ -807,6 +815,10 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             symbol.libraryIndex = idToLibraryIndex.at(libaryNid);
             symbol.moduleIndex = idToModuleIndex.at(moduleNid);
             symbol.id = *decodeNid(name);
+            if (name == "5JrIq4tzVIo") {
+              monoPimpAddress = symbol.address + (std::uint64_t)imageBase;
+              std::fprintf(stderr, "mono_pimp address = %lx\n", monoPimpAddress);
+            }
           } else if (auto nid = decodeNid(fullName)) {
             symbol.id = *nid;
             symbol.libraryIndex = -1;
@@ -869,8 +881,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     }
   }
 
-  result->base = imageBase;
-  result->size = imageSize;
+  result->base = imageBase - baseAddress;
+  result->size = imageSize + baseAddress;
   // std::printf("Needed modules: [");
   // for (bool isFirst = true; auto &module : result->neededModules) {
   //   if (isFirst) {
@@ -898,9 +910,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   std::printf("Loaded module '%s' (%lx) from object '%s', address: %p - %p\n",
               result->moduleName, (unsigned long)result->attributes,
-              result->soName, result->base,
-              (char *)result->base + result->size);
-
+              result->soName, imageBase, (char *)imageBase + result->size);
   for (auto mod : result->neededModules) {
     std::printf("  needed module '%s' (%lx)\n", mod.name.c_str(),
                 (unsigned long)mod.attr);
@@ -969,8 +979,10 @@ Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,
       image[2] != std::byte{'L'} || image[3] != std::byte{'F'}) {
     image = unself(image.data(), image.size());
 
-    std::ofstream(std::filesystem::path(path).filename().replace_extension("elf"), std::ios::binary)
-        .write((const char *)image.data(), image.size());
+    // std::ofstream(
+    //     std::filesystem::path(path).filename().replace_extension("elf"),
+    //     std::ios::binary)
+    //     .write((const char *)image.data(), image.size());
   }
 
   return loadModule(image, thread->tproc);

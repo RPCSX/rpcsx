@@ -1,5 +1,7 @@
 #include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Process.hpp"
+#include "thread/ProcessOps.hpp"
 #include <cstdlib>
 #include <unistd.h>
 

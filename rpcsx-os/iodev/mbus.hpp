@@ -6,7 +6,7 @@
 #include "orbis/utils/SharedMutex.hpp"
 
 
-struct MBusAVDevice : IoDevice {
+struct MBusDevice : IoDevice {
   orbis::shared_mutex mtx;
   orbis::shared_cv cv;
   orbis::kdeque<MBusEvent> events;

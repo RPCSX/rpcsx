@@ -4,8 +4,9 @@
 #include "orbis/utils/Logs.hpp"
 #include <chrono>
 #include <sys/mman.h>
-#include <sys/unistd.h>
+#include <unistd.h>
 #include <thread>
+#include <csignal>
 
 namespace orbis {
 thread_local Thread *g_currentThread;
@@ -13,7 +14,7 @@ thread_local Thread *g_currentThread;
 KernelContext &g_context = *[]() -> KernelContext * {
   // Allocate global shared kernel memory
   // TODO: randomize for hardening and reduce size
-  auto ptr = mmap(reinterpret_cast<void *>(0x200'0000'0000), 0x1'0000'0000,
+  auto ptr = mmap(reinterpret_cast<void *>(0x200'0000'0000), 0x2'0000'0000,
                   PROT_READ | PROT_WRITE,
                   MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
   if (ptr == MAP_FAILED)
@@ -32,7 +33,7 @@ KernelContext::KernelContext() {
   pthread_mutexattr_destroy(&mtx_attr);
 
   // std::printf("orbis::KernelContext initialized, addr=%p\n", this);
-  // std::printf("TSC frequency: %lu\n", getTscFreq());
+  std::printf("TSC frequency: %lu\n", getTscFreq());
 }
 KernelContext::~KernelContext() {}
 
@@ -71,7 +72,7 @@ void KernelContext::deleteProcess(Process *proc) {
 }
 
 Process *KernelContext::findProcessById(pid_t pid) const {
-  for (std::size_t i = 0; i < 5; ++i) {
+  for (std::size_t i = 0; i < 20; ++i) {
     {
       std::lock_guard lock(m_proc_mtx);
       for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
@@ -87,7 +88,7 @@ Process *KernelContext::findProcessById(pid_t pid) const {
 }
 
 Process *KernelContext::findProcessByHostId(std::uint64_t pid) const {
-  for (std::size_t i = 0; i < 5; ++i) {
+  for (std::size_t i = 0; i < 20; ++i) {
     {
       std::lock_guard lock(m_proc_mtx);
       for (auto proc = m_processes; proc != nullptr; proc = proc->next) {
@@ -215,6 +216,7 @@ KernelContext::getUmtxChainIndexed(int i, Thread *t, uint32_t flags,
   if (flags & 1) {
     pid = 0; // Process shared (TODO)
     ORBIS_LOG_WARNING("Using process-shared umtx", t->tid, ptr, (p % 0x4000));
+    t->where();
   }
   auto n = p + pid;
   if (flags & 1)
@@ -237,6 +239,22 @@ void log_class_string<kstring>::format(std::string &out, const void *arg) {
   out += get_object(arg);
 }
 } // namespace logs
+
+void Thread::suspend() {
+  sendSignal(-1);
+}
+
+void Thread::resume() {
+  sendSignal(-2);
+}
+
+void Thread::sendSignal(int signo) {
+  std::lock_guard lock(mtx);
+  signalQueue.push_back(signo);
+  if (::tgkill(tproc->hostPid, hostTid, SIGUSR1) < 0) {
+    perror("tgkill");
+  }
+}
 
 void Thread::where() { tproc->ops->where(this); }
 } // namespace orbis

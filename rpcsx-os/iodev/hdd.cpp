@@ -9,11 +9,30 @@
 
 struct HddFile : orbis::File {};
 
+struct HddDevice : IoDevice {
+  std::uint64_t size;
+  HddDevice(std::uint64_t size) : size(size) {}
+
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *fs, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+};
+
+static_assert(0x120 - 24 == 0x108);
 static orbis::ErrorCode hdd_ioctl(orbis::File *fs, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
 
+  auto device = fs->device.cast<HddDevice>();
   if (request == 0x40046480) { // DIOCGSECTORSIZE
     return orbis::uwrite(orbis::ptr<orbis::uint>(argp), 0x1000u);
+  }
+
+  if (request == 0x40086481) { // hdd size
+    if (device->size == 0) {
+      ORBIS_LOG_FATAL("Unknown hdd size request", request);
+      thread->where();
+    }
+    return orbis::uwrite(orbis::ptr<orbis::ulong>(argp), device->size);
   }
 
   ORBIS_LOG_FATAL("Unhandled hdd ioctl", request);
@@ -22,7 +41,7 @@ static orbis::ErrorCode hdd_ioctl(orbis::File *fs, std::uint64_t request,
 }
 
 static orbis::ErrorCode hdd_read(orbis::File *file, orbis::Uio *uio,
-                                     orbis::Thread *thread) {
+                                 orbis::Thread *thread) {
   auto dev = file->device.get();
 
   ORBIS_LOG_ERROR(__FUNCTION__, uio->offset);
@@ -41,10 +60,12 @@ static orbis::ErrorCode hdd_read(orbis::File *file, orbis::Uio *uio,
   return {};
 }
 
-
 static orbis::ErrorCode hdd_stat(orbis::File *fs, orbis::Stat *sb,
                                  orbis::Thread *thread) {
   // TODO
+  ORBIS_LOG_ERROR(__FUNCTION__);
+  *sb = {};
+  sb->mode = 0x2000;
   return {};
 }
 
@@ -54,17 +75,17 @@ static const orbis::FileOps fsOps = {
     .stat = hdd_stat,
 };
 
-struct HddDevice : IoDevice {
-  orbis::ErrorCode open(orbis::Ref<orbis::File> *fs, const char *path,
-                        std::uint32_t flags, std::uint32_t mode,
-                        orbis::Thread *thread) override {
-    auto newFile = orbis::knew<HddFile>();
-    newFile->ops = &fsOps;
-    newFile->device = this;
+orbis::ErrorCode HddDevice::open(orbis::Ref<orbis::File> *fs, const char *path,
+                                 std::uint32_t flags, std::uint32_t mode,
+                                 orbis::Thread *thread) {
+  auto newFile = orbis::knew<HddFile>();
+  newFile->ops = &fsOps;
+  newFile->device = this;
 
-    *fs = newFile;
-    return {};
-  }
-};
+  *fs = newFile;
+  return {};
+}
 
-IoDevice *createHddCharacterDevice() { return orbis::knew<HddDevice>(); }
+IoDevice *createHddCharacterDevice(std::uint64_t size) {
+  return orbis::knew<HddDevice>(size);
+}
