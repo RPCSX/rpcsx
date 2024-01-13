@@ -11,7 +11,12 @@ You can run the emulator with some samples using this command:
 ```sh
 rm -f /dev/shm/rpcsx-* && ./rpcsx-os --mount  "<path to fw>/system" "/system" --mount "<path to 'game' root>" /app0 /app0/some-test-sample.elf [<args for test elf>...]
 ```
+### You can now enter safe mode 
 
+```sh
+./rpcsx-os --system --safemode --mount $PATH_TO_YOUR_FW_ROOT / /mini-syscore.elf
+```
+drop ```--safemode``` to have normal mode (not expected to produce graphics yet)
 ## Creating a log
 
 ### You can use this flag if you encountered a segfault for debugging purposes.
