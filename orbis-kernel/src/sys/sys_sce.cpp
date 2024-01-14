@@ -1317,7 +1317,6 @@ orbis::SysResult orbis::sys_resume_internal_hdd(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid) {
-  // ORBIS_LOG_FATAL(__FUNCTION__, tid);
   auto t = tid == thread->tid ? thread
                               : thread->tproc->threadsMap.get(tid % 10000 - 1);
   if (t == nullptr) {
@@ -1327,6 +1326,7 @@ orbis::SysResult orbis::sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid) {
   while (true) {
     unsigned prevSuspend = 0;
     if (t->suspended.compare_exchange_strong(prevSuspend, 1)) {
+      t->suspended.fetch_sub(1);
       t->suspend();
 
       while (t->suspended == 0) {
@@ -1344,7 +1344,6 @@ orbis::SysResult orbis::sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid) {
   return {};
 }
 orbis::SysResult orbis::sys_thr_resume_ucontext(Thread *thread, lwpid_t tid) {
-  // ORBIS_LOG_FATAL(__FUNCTION__, tid);
   auto t = tid == thread->tid ? thread
                               : thread->tproc->threadsMap.get(tid % 10000 - 1);
   if (t == nullptr) {
@@ -1352,14 +1351,9 @@ orbis::SysResult orbis::sys_thr_resume_ucontext(Thread *thread, lwpid_t tid) {
   }
 
   while (true) {
-    unsigned prevSuspend = 1;
-    if (t->suspended.compare_exchange_strong(prevSuspend, 0)) {
+    unsigned prevSuspend = t->suspended.load();
+    if (t->suspended == prevSuspend) {
       t->resume();
-
-      while (t->suspended != 0) {
-        std::this_thread::yield();
-      }
-
       break;
     }
 
@@ -1375,7 +1369,6 @@ orbis::SysResult orbis::sys_thr_resume_ucontext(Thread *thread, lwpid_t tid) {
 }
 orbis::SysResult orbis::sys_thr_get_ucontext(Thread *thread, lwpid_t tid,
                                              ptr<UContext> context) {
-  // ORBIS_LOG_FATAL(__FUNCTION__, tid, context);
 
   auto t = tid == thread->tid ? thread
                               : thread->tproc->threadsMap.get(tid % 10000 - 1);
@@ -1390,12 +1383,12 @@ orbis::SysResult orbis::sys_thr_get_ucontext(Thread *thread, lwpid_t tid,
   }
 
   for (auto it = t->sigReturns.rbegin(); it != t->sigReturns.rend(); ++it) {
-    auto &savedContext = t->sigReturns.back();
+    auto &savedContext = *it;
     if (savedContext.mcontext.rip < 0x100'0000'0000) {
       return uwrite(context, savedContext);
     }
   }
-  ORBIS_LOG_FATAL(__FUNCTION__, "not found guest context");
+  ORBIS_LOG_FATAL(__FUNCTION__, tid, "not found guest context");
   *context = {};
   return {};
 }

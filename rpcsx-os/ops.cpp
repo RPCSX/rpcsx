@@ -871,15 +871,6 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
 
     pthread_setname_np(pthread_self(), name.c_str());
   }
-
-  if (fname == std::string_view{"/app0/eboot.bin"}) {
-    // FIXME: remove hack
-    // _envv.push_back("MONO_LOG_LEVEL=debug");
-    _envv.push_back("MONO_GC_PARAMS=nursery-size=128m");
-    // _envv.push_back("MONO_GC_DEBUG=2,heap-dump=/app0/mono.dump");
-    // _envv.push_back("GC_DONT_GC");
-  }
-
   std::printf("pid: %u\n", ::getpid());
 
   // if (thread->tid == 60001) {
