@@ -4116,9 +4116,14 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
                             pipelineLayout, 0, 1, &descSet, 0, nullptr);
 
     VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_VERTEX_BIT,
+                                   VK_SHADER_STAGE_GEOMETRY_BIT,
                                    VK_SHADER_STAGE_FRAGMENT_BIT};
-    _vkCmdBindShadersEXT(drawCommandBuffer, 1, stages + 0, &vertexShader);
-    _vkCmdBindShadersEXT(drawCommandBuffer, 1, stages + 1, &fragmentShader);
+    VkShaderEXT shaders[]{vertexShader, VK_NULL_HANDLE, fragmentShader};
+
+    if (primType == kPrimitiveTypeRectList) {
+      shaders[1] = getPrimTypeRectGeomShader();
+    }
+    _vkCmdBindShadersEXT(drawCommandBuffer, std::size(stages), stages, shaders);
 
     if (primType == kPrimitiveTypeRectList) {
       VkShaderStageFlagBits stage = VK_SHADER_STAGE_GEOMETRY_BIT;
