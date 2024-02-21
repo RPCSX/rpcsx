@@ -89,8 +89,8 @@ struct ResolutionStatus {
   std::uint32_t heigth;
   std::uint32_t paneWidth;
   std::uint32_t paneHeight;
-  std::uint32_t refreshHz;
-  std::uint32_t screenSizeInInch;
+  std::uint32_t refreshHz;        //float
+  std::uint32_t screenSizeInInch; //float
   std::byte padding[20];
 };
 
@@ -194,8 +194,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       status->heigth = 1080;
       status->paneWidth = 1920;
       status->paneHeight = 1080;
-      status->refreshHz = 0x426fc28f;
-      status->screenSizeInInch = 867;
+      status->refreshHz = 0x426fc28f; //( 59.94)
+      status->screenSizeInInch = 0x42500000; //( 52.00)
     } else if (args->id == 9) {
       ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
                        args->ptr, args->size);
