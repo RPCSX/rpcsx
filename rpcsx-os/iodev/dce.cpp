@@ -22,15 +22,15 @@ struct VideoOutBuffer {
 
 struct RegisterBuffer {
   std::uint64_t canary;   // arg5 data in FlipControlArgs:0: *arg5
-  std::uint32_t index;    // buffer index
-  std::uint32_t vid;      // video output port id ?
+  std::uint32_t index;    // buffer index [0..15]
+  std::uint32_t attrid;   // attribute id [0..3]
   std::uint64_t address;  // left buffer ptr
   std::uint64_t address2; // right buffer ptr (Stereo)
 };
 
 struct RegisterBufferAttributeArgs {
   std::uint64_t canary; // arg5 data in FlipControlArgs:0: *arg5
-  std::uint8_t vid;     // video output port id ?
+  std::uint8_t attrid;  // attribute id [0..3]
   std::uint8_t submit;  // 0 = RegisterBuffers ; 1 = SubmitChangeBufferAttribute
   std::uint16_t unk3;   // 0
   std::uint32_t pixelFormat;
@@ -47,16 +47,15 @@ struct RegisterBufferAttributeArgs {
 
 struct FlipRequestArgs { // submit_flip
   std::uint64_t canary;  // arg5 data in FlipControlArgs:0: *arg5
-  std::uint64_t displayBufferIndex;
+  std::uint64_t displayBufferIndex; //[0..15]
   std::uint32_t flipMode; // flip mode?
   std::uint32_t unk1;
   std::uint64_t flipArg;
   std::uint64_t flipArg2; // not used
   std::uint32_t eop_nz;
   std::uint32_t unk2;
-  std::uint32_t eop_val;
-  std::uint32_t unk3;
-  std::uint64_t unk4;
+  std::uint64_t *eop_val; // reply with eop token if eop_nz=1 and send to wait eop
+  std::uint64_t unk3;
   std::uint64_t *rout; // extraout of result error
 };
 
@@ -71,7 +70,7 @@ struct FlipControlStatus {
                                  // gcQueueNum + flipPendingNum1
   std::uint32_t gcQueueNum;
   std::uint32_t flipPendingNum1;
-  std::uint32_t submitTsc;
+  std::uint64_t submitTsc;
   std::uint64_t unk1;
 };
 
@@ -90,33 +89,33 @@ struct ResolutionStatus {
   std::uint32_t heigth;
   std::uint32_t paneWidth;
   std::uint32_t paneHeight;
-  std::uint32_t refreshHz;
-  std::uint32_t screenSizeInInch;
+  std::uint32_t refreshHz;        //float
+  std::uint32_t screenSizeInInch; //float
   std::byte padding[20];
 };
 
-// refreshRate =    0                                REFRESH_RATE_UNKNOWN
-// refreshRate =    3; result.refreshHz = 0x426fc28f REFRESH_RATE_59_94HZ
-// refreshRate =    2, result.refreshHz = 0x42480000 REFRESH_RATE_50HZ
-// refreshRate =    1, result.refreshHz = 0x41bfd70a REFRESH_RATE_23_98HZ
-// refreshRate =    4, result.refreshHz = 0x41c00000
-// refreshRate =    5, result.refreshHz = 0x41f00000
-// refreshRate =    6, result.refreshHz = 0x41efc28f REFRESH_RATE_29_97HZ
-// refreshRate =    7, result.refreshHz = 0x41c80000
-// refreshRate =    9, result.refreshHz = 0x42700000
-// refreshRate =   10, result.refreshHz = 0x42400000
-// refreshRate =  0xb, result.refreshHz = 0x423fcccd
-// refreshRate =  0xc, result.refreshHz = 0x42c80000
-// refreshRate =  0xd, result.refreshHz = 0x42efc28f REFRESH_RATE_119_88HZ
-// refreshRate =  0xe, result.refreshHz = 0x42f00000
-// refreshRate =  0xf, result.refreshHz = 0x43480000
-// refreshRate = 0x10, result.refreshHz = 0x436fc28f
-// refreshRate = 0x11, result.refreshHz = 0x43700000
-// refreshRate = 0x14, result.refreshHz = 0x413fd70a
-// refreshRate = 0x15, result.refreshHz = 0x41400000
-// refreshRate = 0x16, result.refreshHz = 0x416fd70a
-// refreshRate = 0x17, result.refreshHz = 0x41700000
-// refreshRate = 0x23, result.refreshHz = 0x42b3d1ec REFRESH_RATE_89_91HZ
+// refreshRate =    0                                        REFRESH_RATE_UNKNOWN
+// refreshRate =    3; result.refreshHz = 0x426fc28f( 59.94) REFRESH_RATE_59_94HZ
+// refreshRate =    2, result.refreshHz = 0x42480000( 50.00) REFRESH_RATE_50HZ
+// refreshRate =    1, result.refreshHz = 0x41bfd70a( 23.98) REFRESH_RATE_23_98HZ
+// refreshRate =    4, result.refreshHz = 0x41c00000( 24.00)
+// refreshRate =    5, result.refreshHz = 0x41f00000( 30.00)
+// refreshRate =    6, result.refreshHz = 0x41efc28f( 29.97) REFRESH_RATE_29_97HZ
+// refreshRate =    7, result.refreshHz = 0x41c80000( 25.00)
+// refreshRate =    9, result.refreshHz = 0x42700000( 60.00)
+// refreshRate =   10, result.refreshHz = 0x42400000( 48.00)
+// refreshRate =  0xb, result.refreshHz = 0x423fcccd( 47.95)
+// refreshRate =  0xc, result.refreshHz = 0x42c80000(100.00)
+// refreshRate =  0xd, result.refreshHz = 0x42efc28f(119.88) REFRESH_RATE_119_88HZ
+// refreshRate =  0xe, result.refreshHz = 0x42f00000(120.00)
+// refreshRate =  0xf, result.refreshHz = 0x43480000(200.00)
+// refreshRate = 0x10, result.refreshHz = 0x436fc28f(239.76)
+// refreshRate = 0x11, result.refreshHz = 0x43700000(240.00)
+// refreshRate = 0x14, result.refreshHz = 0x413fd70a( 11.99)
+// refreshRate = 0x15, result.refreshHz = 0x41400000( 12.00)
+// refreshRate = 0x16, result.refreshHz = 0x416fd70a( 14.99)
+// refreshRate = 0x17, result.refreshHz = 0x41700000( 15.00)
+// refreshRate = 0x23, result.refreshHz = 0x42b3d1ec( 89.91) REFRESH_RATE_89_91HZ
 
 struct DceFile : public orbis::File {};
 
@@ -195,8 +194,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       status->heigth = 1080;
       status->paneWidth = 1920;
       status->paneHeight = 1080;
-      status->refreshHz = 0x426fc28f;
-      status->screenSizeInInch = 867;
+      status->refreshHz = 0x426fc28f; //( 59.94)
+      status->screenSizeInInch = 0x42500000; //( 52.00)
     } else if (args->id == 9) {
       ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
                        args->ptr, args->size);
@@ -253,7 +252,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
   if (request == 0xc0308207) { // SCE_SYS_DCE_IOCTL_REGISTER_BUFFER_ATTRIBUTE
     auto args = reinterpret_cast<RegisterBufferAttributeArgs *>(argp);
 
-    ORBIS_LOG_ERROR("dce: RegisterBufferAttributes", args->canary, args->vid,
+    ORBIS_LOG_ERROR("dce: RegisterBufferAttributes", args->canary, args->attrid,
                     args->submit, args->unk3, args->pixelFormat,
                     args->tilingMode, args->pitch, args->width, args->height,
                     args->unk4_zero, args->unk5_zero, args->options,
