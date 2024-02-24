@@ -26,14 +26,13 @@ sudo pacman -S --needed git base-devel && git clone https://aur.archlinux.org/ya
 ```
 yay -S spirv-cross
 ```
-## Getting spriv-cross on Fedora and Arch Linux
+## Getting spriv-cross on Fedora
 
 ```
 git clone https://github.com/KhronosGroup/SPIRV-Cross && cd SPIRV-Cross && mkdir build && cd build && cmake .. && cmake --build . && sudo make install
 ```
-> **Warning** <br/>
+> [!WARNING]
 > Fedora will compile to a point and then error out
-> Arch will have to use xbyak from the aur for now
 
 ## Cloning the Repo
 
