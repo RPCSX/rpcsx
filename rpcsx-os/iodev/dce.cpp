@@ -201,9 +201,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     //                  args->size);
 
     if (args->id == 0) {
-      ORBIS_LOG_NOTICE("dce: FlipControl: open",
-                        args->padding, args->arg2, args->ptr, args->size,
-                        args->arg5, args->arg6);
+      ORBIS_LOG_NOTICE("dce: FlipControl: open", args->padding, args->arg2,
+                       args->ptr, args->size, args->arg5, args->arg6);
       ORBIS_RET_ON_ERROR(
           orbis::uwrite(orbis::ptr<orbis::ulong>(args->arg5 + 0), 1));
       return orbis::uwrite(orbis::ptr<orbis::sint>(args->arg5 + 8), 0);
@@ -249,8 +248,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     } else if (args->id == 9) {
       ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
                        args->ptr, args->size);
-      *(std::uint64_t *)args->ptr = 0;         // dev offset
-      *(std::uint64_t *)args->size = 0x100000; // size
+      *(std::uint64_t *)args->ptr = kDceControlMemoryOffset; // dev offset
+      *(std::uint64_t *)args->size = kDceControlMemorySize;  // size
     } else if (args->id == 31) {
       // if ((std::uint64_t)args->ptr == 0xc) {
       //   rx::bridge.header->bufferInUseAddress = args->size;
