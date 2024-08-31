@@ -148,6 +148,13 @@ public:
     return {m_kenv, std::move(lock)};
   }
 
+  void setKernelEnv(std::string_view key, std::string_view value) {
+    auto &kenvValue = m_kenv[utils::kstring(key)];
+    auto len = std::min(sizeof(kenvValue) - 1, value.size());
+    std::memcpy(kenvValue, value.data(), len);
+    kenvValue[len] = '0';
+  }
+
   enum {
     c_golden_ratio_prime = 2654404609u,
     c_umtx_chains = 512,
