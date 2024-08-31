@@ -180,9 +180,10 @@ public:
   kmap<std::uint32_t, std::uint32_t> regMgrInt;
 
 private:
-  mutable pthread_mutex_t m_heap_mtx;
+  shared_mutex m_heap_mtx;
+  shared_mutex m_heap_map_mtx;
   void *m_heap_next = this + 1;
-  bool m_heap_is_freeing = false;
+
   utils::kmultimap<std::size_t, void *> m_free_heap;
   utils::kmultimap<std::size_t, void *> m_used_node;
 

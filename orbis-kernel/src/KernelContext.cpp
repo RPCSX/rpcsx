@@ -3,10 +3,12 @@
 #include "orbis/thread/ProcessOps.hpp"
 #include "orbis/utils/Logs.hpp"
 #include <chrono>
-#include <sys/mman.h>
-#include <unistd.h>
-#include <thread>
 #include <csignal>
+#include <sys/mman.h>
+#include <thread>
+#include <unistd.h>
+
+static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
 
 namespace orbis {
 thread_local Thread *g_currentThread;
@@ -24,16 +26,8 @@ KernelContext &g_context = *[]() -> KernelContext * {
 }();
 
 KernelContext::KernelContext() {
-  // Initialize recursive heap mutex
-  pthread_mutexattr_t mtx_attr;
-  pthread_mutexattr_init(&mtx_attr);
-  pthread_mutexattr_settype(&mtx_attr, PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutexattr_setpshared(&mtx_attr, PTHREAD_PROCESS_SHARED);
-  pthread_mutex_init(&m_heap_mtx, &mtx_attr);
-  pthread_mutexattr_destroy(&mtx_attr);
-
   // std::printf("orbis::KernelContext initialized, addr=%p\n", this);
-  std::printf("TSC frequency: %lu\n", getTscFreq());
+  // std::printf("TSC frequency: %lu\n", getTscFreq());
 }
 KernelContext::~KernelContext() {}
 
@@ -152,33 +146,35 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
   if (!size)
     std::abort();
 
-  pthread_mutex_lock(&m_heap_mtx);
-  if (!m_heap_is_freeing) {
+  if (m_heap_map_mtx.try_lock()) {
+    std::lock_guard lock(m_heap_map_mtx, std::adopt_lock);
+
     // Try to reuse previously freed block
-    for (auto [it, end] = m_free_heap.equal_range(size); it != end; it++) {
+    for (auto [it, end] = m_free_heap.equal_range(size); it != end; ++it) {
       auto result = it->second;
       if (!(reinterpret_cast<std::uintptr_t>(result) & (align - 1))) {
         auto node = m_free_heap.extract(it);
         node.key() = 0;
         node.mapped() = nullptr;
         m_used_node.insert(m_used_node.begin(), std::move(node));
-        pthread_mutex_unlock(&m_heap_mtx);
         return result;
       }
     }
   }
 
+  std::lock_guard lock(m_heap_mtx);
   align = std::max<std::size_t>(align, __STDCPP_DEFAULT_NEW_ALIGNMENT__);
   auto heap = reinterpret_cast<std::uintptr_t>(m_heap_next);
   heap = (heap + (align - 1)) & ~(align - 1);
   auto result = reinterpret_cast<void *>(heap);
-  m_heap_next = reinterpret_cast<void *>(heap + size);
+  std::memcpy(std::bit_cast<std::byte *>(result) + size, &g_allocProtWord,
+              sizeof(g_allocProtWord));
+  m_heap_next = reinterpret_cast<void *>(heap + size + sizeof(g_allocProtWord));
   // Check overflow
   if (heap + size < heap)
     std::abort();
   if (heap + size > (uintptr_t)&g_context + 0x1'0000'0000)
     std::abort();
-  pthread_mutex_unlock(&m_heap_mtx);
   return result;
 }
 
@@ -187,15 +183,16 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
          ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
   if (!size)
     std::abort();
-  if ((uintptr_t)ptr == 0x2000001a2b0) {
-    std::fprintf(stderr, "free %p-%p (%zu)\n", ptr, (char *)ptr + size, size);
-  }
+
   std::memset(ptr, 0xcc, size);
 
-  pthread_mutex_lock(&m_heap_mtx);
-  if (m_heap_is_freeing)
+  if (std::memcmp(std::bit_cast<std::byte *>(ptr) + size, &g_allocProtWord,
+                  sizeof(g_allocProtWord)) != 0) {
+    std::fprintf(stderr, "kernel heap corruption\n");
     std::abort();
-  m_heap_is_freeing = true;
+  }
+
+  std::lock_guard lock(m_heap_map_mtx);
   if (!m_used_node.empty()) {
     auto node = m_used_node.extract(m_used_node.begin());
     node.key() = size;
@@ -204,8 +201,6 @@ void KernelContext::kfree(void *ptr, std::size_t size) {
   } else {
     m_free_heap.emplace(size, ptr);
   }
-  m_heap_is_freeing = false;
-  pthread_mutex_unlock(&m_heap_mtx);
 }
 
 std::tuple<UmtxChain &, UmtxKey, std::unique_lock<shared_mutex>>
@@ -240,13 +235,9 @@ void log_class_string<kstring>::format(std::string &out, const void *arg) {
 }
 } // namespace logs
 
-void Thread::suspend() {
-  sendSignal(-1);
-}
+void Thread::suspend() { sendSignal(-1); }
 
-void Thread::resume() {
-  sendSignal(-2);
-}
+void Thread::resume() { sendSignal(-2); }
 
 void Thread::sendSignal(int signo) {
   std::lock_guard lock(mtx);
