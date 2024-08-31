@@ -14,6 +14,7 @@
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
 #include "orbis/utils/SharedMutex.hpp"
+#include <optional>
 
 namespace orbis {
 class KernelContext;
