@@ -103,6 +103,7 @@ struct Module final {
 
   bool isTlsDone = false;
 
+  utils::kstring interp;
   utils::kvector<Symbol> symbols;
   utils::kvector<Relocation> pltRelocations;
   utils::kvector<Relocation> nonPltRelocations;

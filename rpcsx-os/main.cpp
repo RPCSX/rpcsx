@@ -222,7 +222,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
     }
   }
 
-  struct sigaction act {};
+  struct sigaction act{};
   sigset_t mask;
   sigemptyset(&mask);
 
@@ -243,7 +243,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 void setupSigHandlers() {
   rx::thread::setupSignalStack();
 
-  struct sigaction act {};
+  struct sigaction act{};
   act.sa_sigaction = handle_signal;
   act.sa_flags = SA_SIGINFO | SA_ONSTACK | SA_NODEFER;
 
@@ -553,6 +553,9 @@ int ps4Exec(orbis::Thread *mainThread, ExecEnv execEnv,
   std::uint64_t auxv[] = {
       AT_ENTRY, executableModule->entryPoint,
       AT_BASE, execEnv.interpBase,
+      AT_PHDR, executableModule->phdrAddress,
+      AT_PHENT, sizeof(Elf64_Phdr),
+      AT_PHNUM, executableModule->phNum,
       AT_NULL, 0
   };
   // clang-format on
@@ -593,13 +596,27 @@ int ps4Exec(orbis::Thread *mainThread, ExecEnv execEnv,
   std::abort();
 }
 
+struct Ps4ProcessParam {
+  orbis::size_t size;
+  orbis::uint32_t magic;
+  orbis::uint32_t version;
+  orbis::uint32_t sdkVersion;
+  orbis::uint32_t reserved;
+  orbis::ptr<char> processName;
+  orbis::ptr<char> userMainThreadName;
+  orbis::ptr<orbis::uint> userMainThreadPriority;
+  orbis::ptr<orbis::uint> userMainThreadStackSize;
+  orbis::ptr<void> libcParam;
+};
+
 ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
                          orbis::Ref<orbis::Module> executableModule,
                          bool isSystem) {
   std::uint64_t interpBase = 0;
   std::uint64_t entryPoint = executableModule->entryPoint;
 
-  if (mainThread->tproc->processParam != nullptr) {
+  if (mainThread->tproc->processParam != nullptr &&
+      mainThread->tproc->processParamSize <= sizeof(Ps4ProcessParam)) {
     auto processParam =
         reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
 
@@ -618,62 +635,74 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
     mainThread->tproc->sdkVersion = orbis::g_context.sdkVersion;
   }
 
-  if (executableModule->type != rx::linker::kElfTypeExec) {
-    auto libSceLibcInternal = rx::linker::loadModuleFile(
-        "/system/common/lib/libSceLibcInternal.sprx", mainThread);
-
-    if (libSceLibcInternal == nullptr) {
-      std::fprintf(stderr, "libSceLibcInternal not found\n");
-      std::abort();
-    }
-
-    libSceLibcInternal->id =
-        mainThread->tproc->modulesMap.insert(libSceLibcInternal);
-
-    auto libkernel = rx::linker::loadModuleFile(
-        (isSystem ? "/system/common/lib/libkernel_sys.sprx"
-                  : "/system/common/lib/libkernel.sprx"),
-        mainThread);
-
-    if (libkernel == nullptr) {
-      std::fprintf(stderr, "libkernel not found\n");
-      std::abort();
-    }
-
-    for (auto sym : libkernel->symbols) {
-      if (sym.id == 0xd2f4e7e480cc53d0) {
-        auto address = (uint64_t)libkernel->base + sym.address;
-        ::mprotect((void *)utils::alignDown(address, 0x1000),
-                   utils::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
-        std::printf("patching sceKernelGetMainSocId\n");
-        struct GetMainSocId : Xbyak::CodeGenerator {
-          GetMainSocId(std::uint64_t address, std::uint64_t size)
-              : Xbyak::CodeGenerator(size, (void *)address) {
-            mov(eax, 0x710f00);
-            ret();
-          }
-        } gen{address, sym.size};
-
-        ::mprotect((void *)utils::alignDown(address, 0x1000),
-                   utils::alignUp(sym.size + sym.address, 0x1000),
-                   PROT_READ | PROT_EXEC);
-        break;
-      }
-    }
-
-    if (orbis::g_context.fwSdkVersion == 0) {
-      auto moduleParam = reinterpret_cast<std::byte *>(libkernel->moduleParam);
-      auto fwSdkVersion = moduleParam         //
-                          + sizeof(uint64_t)  // size
-                          + sizeof(uint64_t); // magic
-      orbis::g_context.fwSdkVersion = *(uint32_t *)fwSdkVersion;
-      std::printf("fw sdk version: %x\n", orbis::g_context.fwSdkVersion);
-    }
-
-    libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
-    interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
-    entryPoint = libkernel->entryPoint;
+  if (executableModule->interp.empty()) {
+    return {.entryPoint = entryPoint, .interpBase = interpBase};
   }
+
+  if (rx::vfs::exists(executableModule->interp, mainThread)) {
+    auto loader =
+        rx::linker::loadModuleFile(executableModule->interp, mainThread);
+    loader->id = mainThread->tproc->modulesMap.insert(loader);
+    interpBase = reinterpret_cast<std::uint64_t>(loader->base);
+    entryPoint = loader->entryPoint;
+
+    return {.entryPoint = entryPoint, .interpBase = interpBase};
+  }
+
+  auto libSceLibcInternal = rx::linker::loadModuleFile(
+      "/system/common/lib/libSceLibcInternal.sprx", mainThread);
+
+  if (libSceLibcInternal == nullptr) {
+    std::fprintf(stderr, "libSceLibcInternal not found\n");
+    std::abort();
+  }
+
+  libSceLibcInternal->id =
+      mainThread->tproc->modulesMap.insert(libSceLibcInternal);
+
+  auto libkernel = rx::linker::loadModuleFile(
+      (isSystem ? "/system/common/lib/libkernel_sys.sprx"
+                : "/system/common/lib/libkernel.sprx"),
+      mainThread);
+
+  if (libkernel == nullptr) {
+    std::fprintf(stderr, "libkernel not found\n");
+    std::abort();
+  }
+
+  for (auto sym : libkernel->symbols) {
+    if (sym.id == 0xd2f4e7e480cc53d0) {
+      auto address = (uint64_t)libkernel->base + sym.address;
+      ::mprotect((void *)utils::alignDown(address, 0x1000),
+                 utils::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
+      std::printf("patching sceKernelGetMainSocId\n");
+      struct GetMainSocId : Xbyak::CodeGenerator {
+        GetMainSocId(std::uint64_t address, std::uint64_t size)
+            : Xbyak::CodeGenerator(size, (void *)address) {
+          mov(eax, 0x710f00);
+          ret();
+        }
+      } gen{address, sym.size};
+
+      ::mprotect((void *)utils::alignDown(address, 0x1000),
+                 utils::alignUp(sym.size + sym.address, 0x1000),
+                 PROT_READ | PROT_EXEC);
+      break;
+    }
+  }
+
+  if (orbis::g_context.fwSdkVersion == 0) {
+    auto moduleParam = reinterpret_cast<std::byte *>(libkernel->moduleParam);
+    auto fwSdkVersion = moduleParam         //
+                        + sizeof(uint64_t)  // size
+                        + sizeof(uint64_t); // magic
+    orbis::g_context.fwSdkVersion = *(uint32_t *)fwSdkVersion;
+    std::printf("fw sdk version: %x\n", orbis::g_context.fwSdkVersion);
+  }
+
+  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
+  interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
+  entryPoint = libkernel->entryPoint;
 
   return {.entryPoint = entryPoint, .interpBase = interpBase};
 }

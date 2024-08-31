@@ -79,6 +79,4 @@ orbis::Ref<orbis::Module> loadModule(std::span<std::byte> image,
                                      orbis::Process *process);
 orbis::Ref<orbis::Module> loadModuleFile(std::string_view path,
                                          orbis::Thread *thread);
-orbis::Ref<orbis::Module> loadModuleByName(std::string_view name,
-                                           orbis::Thread *thread);
 } // namespace rx::linker
