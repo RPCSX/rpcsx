@@ -1,7 +1,7 @@
 #include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
-#include "thread/Thread.hpp"
 #include "thread/Process.hpp"
+#include "thread/Thread.hpp"
 #include "time.hpp"
 #include "utils/Logs.hpp"
 
@@ -14,6 +14,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
   enum sysctl_kern {
     proc = 14,
     boottime = 21,
+    os_rel_date = 24,
     usrstack = 33,
     arnd = 37,
 
@@ -57,6 +58,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
     bootparams,
     idps,
     openpsid_for_sys,
+    sceKernelIsCavern,
   };
 
   enum sysctl_machdep_liverpool {
@@ -79,6 +81,14 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
   //   std::fprintf(stderr, "   name[%u] = %u\n", i, name[i]);
   // }
 
+  if (namelen == 6) {
+    // 4.17.0.0.3.0
+    if (name[0] == net && name[1] == 17 && name[2] == 0 && name[3] == 0 &&
+        name[4] == 3 && name[5] == 0) {
+      return ErrorCode::OPNOTSUPP;
+    }
+  }
+
   if (namelen == 3) {
     // 1 - 14 - 41 - debug flags?
 
@@ -89,6 +99,15 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       }
 
       *(uint32_t *)old = 0;
+      return {};
+    }
+
+    if (name[0] == kern && name[1] == os_rel_date) {
+      if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+        return ErrorCode::INVAL;
+      }
+
+      *(uint32_t *)old = 0xaae93; // FIXME
       return {};
     }
 
@@ -463,6 +482,14 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
           dest[count++] = machdep;
           dest[count++] = openpsid_for_sys;
+        } else if (searchName == "machdep.sceKernelIsCavern") {
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = machdep;
+          dest[count++] = sceKernelIsCavern;
         }
 
         if (count == 0) {
@@ -700,6 +727,15 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         }
 
         std::memset(old, 0, 16);
+        return {};
+      }
+
+      case sysctl_machdep::sceKernelIsCavern: {
+        if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+        *(uint32_t *)old = 1;
         return {};
       }
 
