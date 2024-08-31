@@ -564,6 +564,11 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
                    childThread->stackStart, _param.rtp, _param.name,
                    _param.spare[0], _param.spare[1]);
 
+  if (_param.name != 0) {
+    ORBIS_RET_ON_ERROR(
+        ureadString(childThread->name, sizeof(childThread->name), _param.name));
+  }
+
   if (_param.rtp != 0) {
     rtprio _rtp;
     ORBIS_RET_ON_ERROR(uread(_rtp, _param.rtp));
