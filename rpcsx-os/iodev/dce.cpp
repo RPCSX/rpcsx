@@ -200,6 +200,15 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     // ORBIS_LOG_NOTICE("dce: FlipControl", args->id, args->arg2, args->ptr,
     //                  args->size);
 
+    if (args->id == 0) {
+      ORBIS_LOG_NOTICE("dce: FlipControl: open",
+                        args->padding, args->arg2, args->ptr, args->size,
+                        args->arg5, args->arg6);
+      ORBIS_RET_ON_ERROR(
+          orbis::uwrite(orbis::ptr<orbis::ulong>(args->arg5 + 0), 1));
+      return orbis::uwrite(orbis::ptr<orbis::sint>(args->arg5 + 8), 0);
+    }
+
     if (args->id == 6) { // set flip rate?
       ORBIS_LOG_NOTICE("dce: FlipControl: set flip rate", args->arg2, args->ptr,
                        args->size);
