@@ -4,9 +4,18 @@ find_package(Git)
 
 
 add_library(${PROJECT_NAME} OBJECT
+    src/mem.cpp
     src/Version.cpp
 )
-target_include_directories(${PROJECT_NAME} PUBLIC include)
+
+target_include_directories(${PROJECT_NAME}
+PUBLIC
+    include
+
+PRIVATE
+    include/${PROJECT_NAME}
+)
+
 
 execute_process(COMMAND date +%+4Y%m%d OUTPUT_VARIABLE RAW_VERSION)
 string(STRIP "${RAW_VERSION}" RAW_VERSION)

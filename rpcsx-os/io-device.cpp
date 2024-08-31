@@ -8,6 +8,7 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "rx/mem.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
 #include <cerrno>
@@ -15,6 +16,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <netinet/in.h>
+#include <optional>
 #include <span>
 #include <string>
 #include <sys/mman.h>
@@ -25,7 +27,6 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
-#include <optional>
 
 struct HostFile : orbis::File {
   bool closeOnExit = true;
@@ -339,20 +340,54 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
     return orbis::ErrorCode::ISDIR;
 
   auto result =
-      rx::vm::map(*address, size, prot, flags, rx::vm::kMapInternalReserveOnly);
+      rx::vm::map(*address, size, prot, flags, rx::vm::kMapInternalReserveOnly,
+                  hostFile->device.cast<IoDevice>().get(), offset);
 
   if (result == (void *)-1) {
     return orbis::ErrorCode::NOMEM;
   }
 
-  result = ::mmap(result, size, prot & rx::vm::kMapProtCpuAll,
-                  MAP_SHARED | MAP_FIXED, hostFile->hostFd, offset);
+  size = utils::alignUp(size, rx::vm::kPageSize);
+
+  result = ::mmap(
+      result, size, prot & rx::vm::kMapProtCpuAll,
+      ((prot & rx::vm::kMapFlagPrivate) != 0 ? MAP_PRIVATE : MAP_SHARED) |
+          MAP_FIXED,
+      hostFile->hostFd, offset);
   if (result == (void *)-1) {
-    auto result = convertErrno();
-    return result;
+    auto errc = convertErrno();
+    std::printf("Failed to map file at %p-%p\n", *address,
+                (char *)*address + size);
+    return errc;
   }
 
-  std::printf("shm mapped at %p-%p\n", result, (char *)result + size);
+  std::printf("file mapped at %p-%p:%lx\n", result, (char *)result + size,
+              offset);
+
+  struct stat stat;
+  fstat(hostFile->hostFd, &stat);
+  if (stat.st_size < offset + size) {
+    std::size_t rest =
+        std::min(offset + size - stat.st_size, rx::vm::kPageSize);
+
+    if (rest > rx::mem::pageSize) {
+      auto fillSize =
+          utils::alignUp(rest, rx::mem::pageSize) - rx::mem::pageSize;
+
+      std::printf("adding dummy mapping %p-%p, file ends at %p\n",
+                  (char *)result + size - fillSize, (char *)result + size,
+                  (char *)result + (stat.st_size - offset));
+
+      auto ptr = ::mmap((char *)result + size - fillSize, fillSize,
+                        prot & rx::vm::kMapProtCpuAll,
+                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+
+      if (ptr == (void *)-1) {
+        std::printf("failed to add dummy mapping %p-%p\n", result,
+                    (char *)result + size);
+      }
+    }
+  }
 
   *address = result;
   return {};
@@ -701,19 +736,21 @@ orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
   return {};
 }
 
-static std::optional<std::string> findFileInDir(const std::filesystem::path &dir, const char *name) {
+static std::optional<std::string>
+findFileInDir(const std::filesystem::path &dir, const char *name) {
   for (auto entry : std::filesystem::directory_iterator(dir)) {
     auto entryName = entry.path().filename();
     if (strcasecmp(entryName.c_str(), name) == 0) {
       return entryName;
     }
   }
-  return{};
+  return {};
 }
 
-static std::optional<std::filesystem::path> toRealPath(const std::filesystem::path &inp) {
+static std::optional<std::filesystem::path>
+toRealPath(const std::filesystem::path &inp) {
   if (inp.empty()) {
-    return{};
+    return {};
   }
 
   std::filesystem::path result;
@@ -725,7 +762,7 @@ static std::optional<std::filesystem::path> toRealPath(const std::filesystem::pa
 
     auto icaseElem = findFileInDir(result, elem.c_str());
     if (!icaseElem) {
-      return{};
+      return {};
     }
 
     result /= *icaseElem;
@@ -793,11 +830,13 @@ orbis::ErrorCode HostFsDevice::open(orbis::Ref<orbis::File> *file,
     error = convertErrno();
 
     if (auto icaseRealPath = toRealPath(realPath)) {
-      ORBIS_LOG_WARNING(__FUNCTION__, path, realPath.c_str(), icaseRealPath->c_str());
+      ORBIS_LOG_WARNING(__FUNCTION__, path, realPath.c_str(),
+                        icaseRealPath->c_str());
       hostFd = ::open(icaseRealPath->c_str(), realFlags, 0777);
 
       if (hostFd < 0) {
-        ORBIS_LOG_ERROR("host_open failed", path, realPath.c_str(), icaseRealPath->c_str(), error);
+        ORBIS_LOG_ERROR("host_open failed", path, realPath.c_str(),
+                        icaseRealPath->c_str(), error);
         return convertErrno();
       }
     }
@@ -899,7 +938,8 @@ orbis::ErrorCode HostFsDevice::rename(const char *from, const char *to,
   return convertErrorCode(ec);
 }
 
-orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device, bool alignTruncate) {
+orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device,
+                            bool alignTruncate) {
   auto newFile = orbis::knew<HostFile>();
   newFile->hostFd = hostFd;
   newFile->ops = &hostOps;

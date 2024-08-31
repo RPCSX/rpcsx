@@ -7,6 +7,7 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
+#include "rx/mem.hpp"
 #include <bit>
 #include <cassert>
 #include <cinttypes>
@@ -19,32 +20,6 @@
 #include <unistd.h>
 
 #include <rx/MemoryTable.hpp>
-
-namespace utils {
-namespace {
-void *map(void *address, std::size_t size, int prot, int flags, int fd = -1,
-          off_t offset = 0) {
-  return ::mmap(address, size, prot, flags, fd, offset);
-}
-
-void *reserve(std::size_t size) {
-  return map(nullptr, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS);
-}
-
-bool reserve(void *address, std::size_t size) {
-  return map(address, size, PROT_NONE,
-             MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED) != MAP_FAILED;
-}
-
-bool protect(void *address, std::size_t size, int prot) {
-  return ::mprotect(address, size, prot) == 0;
-}
-
-bool unmap(void *address, std::size_t size) {
-  return ::munmap(address, size) == 0;
-}
-} // namespace
-} // namespace utils
 
 static std::mutex g_mtx;
 
@@ -305,7 +280,8 @@ struct Block {
 
   void setFlags(std::uint64_t firstPage, std::uint64_t pagesCount,
                 std::uint32_t flags, bool noOverwrite) {
-    modifyFlags(firstPage, pagesCount, flags, ~static_cast<std::uint32_t>(0), noOverwrite);
+    modifyFlags(firstPage, pagesCount, flags, ~static_cast<std::uint32_t>(0),
+                noOverwrite);
   }
 
   void addFlags(std::uint64_t firstPage, std::uint64_t pagesCount,
@@ -681,7 +657,8 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
   auto pagesCount = (endAddress - startAddress + (rx::vm::kPageSize - 1)) >>
                     rx::vm::kPageShift;
 
-  gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated, false);
+  gBlocks[blockIndex - kFirstBlock].setFlags(firstPage, pagesCount, kAllocated,
+                                             false);
 }
 
 void rx::vm::fork(std::uint64_t pid) {
@@ -711,18 +688,18 @@ void rx::vm::fork(std::uint64_t pid) {
     }
 
     if (prot & kMapProtCpuAll) {
-      auto mapping = utils::map(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
-                                gMemoryShm, address - kMinAddress);
+      auto mapping = rx::mem::map(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
+                                  gMemoryShm, address - kMinAddress);
       assert(mapping != MAP_FAILED);
 
-      utils::protect(reinterpret_cast<void *>(address), kPageSize, PROT_READ);
+      rx::mem::protect(reinterpret_cast<void *>(address), kPageSize, PROT_READ);
       std::memcpy(mapping, reinterpret_cast<void *>(address), kPageSize);
-      utils::unmap(mapping, kPageSize);
-      utils::unmap(reinterpret_cast<void *>(address), kPageSize);
+      rx::mem::unmap(mapping, kPageSize);
+      rx::mem::unmap(reinterpret_cast<void *>(address), kPageSize);
 
-      mapping = utils::map(reinterpret_cast<void *>(address), kPageSize,
-                           prot & kMapProtCpuAll, MAP_FIXED | MAP_SHARED,
-                           gMemoryShm, address - kMinAddress);
+      mapping = rx::mem::map(reinterpret_cast<void *>(address), kPageSize,
+                             prot & kMapProtCpuAll, MAP_FIXED | MAP_SHARED,
+                             gMemoryShm, address - kMinAddress);
       assert(mapping != MAP_FAILED);
     }
 
@@ -733,8 +710,8 @@ void rx::vm::fork(std::uint64_t pid) {
 void rx::vm::reset() {
   std::memset(gBlocks, 0, sizeof(gBlocks));
 
-  utils::unmap(reinterpret_cast<void *>(kMinAddress),
-               kMaxAddress - kMinAddress);
+  rx::mem::unmap(reinterpret_cast<void *>(kMinAddress),
+                 kMaxAddress - kMinAddress);
   if (::ftruncate64(gMemoryShm, 0) < 0) {
     std::abort();
   }
@@ -743,8 +720,8 @@ void rx::vm::reset() {
   }
 
   reserve(0, kMinAddress);
-  utils::reserve(reinterpret_cast<void *>(kMinAddress),
-                 kMaxAddress - kMinAddress);
+  rx::mem::reserve(reinterpret_cast<void *>(kMinAddress),
+                   kMaxAddress - kMinAddress);
 }
 
 void rx::vm::initialize() {
@@ -765,8 +742,8 @@ void rx::vm::initialize() {
 
   reserve(0, kMinAddress); // unmapped area
 
-  utils::reserve(reinterpret_cast<void *>(kMinAddress),
-                 kMaxAddress - kMinAddress);
+  rx::mem::reserve(reinterpret_cast<void *>(kMinAddress),
+                   kMaxAddress - kMinAddress);
 
   // orbis::bridge.setUpSharedMemory(kMinAddress, kMemorySize, "/orbis-memory");
 }
@@ -796,6 +773,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
                addr, len, mapProtToString(prot).c_str(),
                mapFlagsToString(flags).c_str());
 
+  len = utils::alignUp(len, kPageSize);
   auto pagesCount = (len + (kPageSize - 1)) >> kPageShift;
   auto hitAddress = reinterpret_cast<std::uint64_t>(addr);
 
@@ -820,7 +798,8 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   flags &= ~kMapFlagsAlignMask;
 
-  bool noOverwrite = (flags & (kMapFlagNoOverwrite | kMapFlagFixed)) == (kMapFlagNoOverwrite | kMapFlagFixed);
+  bool noOverwrite = (flags & (kMapFlagNoOverwrite | kMapFlagFixed)) ==
+                     (kMapFlagNoOverwrite | kMapFlagFixed);
 
   if (hitAddress & (alignment - 1)) {
     if (flags & kMapFlagStack) {
@@ -929,8 +908,9 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   block.setFlags((address & kBlockMask) >> kPageShift, pagesCount,
-                   (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated |
-                       (isShared ? kShared : 0), false);
+                 (prot & (kMapProtCpuAll | kMapProtGpuAll)) | kAllocated |
+                     (isShared ? kShared : 0),
+                 false);
 
   /*
     if (flags & kMapFlagStack) {
@@ -962,9 +942,9 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     return reinterpret_cast<void *>(address);
   }
 
-  auto result =
-      utils::map(reinterpret_cast<void *>(address), len, prot & kMapProtCpuAll,
-                 realFlags, gMemoryShm, address - kMinAddress);
+  auto result = rx::mem::map(reinterpret_cast<void *>(address), len,
+                             prot & kMapProtCpuAll, realFlags, gMemoryShm,
+                             address - kMinAddress);
 
   if (result != MAP_FAILED && isAnon) {
     bool needReprotect = (prot & PROT_WRITE) == 0;
@@ -990,6 +970,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 }
 
 bool rx::vm::unmap(void *addr, std::uint64_t size) {
+  size = utils::alignUp(size, kPageSize);
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
 
@@ -1021,13 +1002,14 @@ bool rx::vm::unmap(void *addr, std::uint64_t size) {
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + size);
   }
-  return utils::unmap(addr, size);
+  return rx::mem::unmap(addr, size);
 }
 
 bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   std::printf("rx::vm::protect(addr = %p, len = %" PRIu64 ", prot = %s)\n",
               addr, size, mapProtToString(prot).c_str());
 
+  size = utils::alignUp(size, kPageSize);
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
   if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
