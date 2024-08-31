@@ -5555,7 +5555,16 @@ spirv::SamplerValue Fragment::createSampler(RegisterId base) {
         sbuffer, std::size(sbuffer), TypeId::Sampler);
     return builder.createLoad(context->getSamplerType(), uniform->variable);
   } else {
-    util::unreachable();
+    std::uint32_t sbuffer[] = {
+        0,
+        0,
+        0,
+        0,
+    };
+
+    auto uniform = context->getOrCreateUniformConstant(
+        sbuffer, std::size(sbuffer), TypeId::Sampler);
+    return builder.createLoad(context->getSamplerType(), uniform->variable);
   }
 }
 
