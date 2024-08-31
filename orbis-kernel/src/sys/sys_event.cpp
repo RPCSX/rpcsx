@@ -96,7 +96,8 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
         std::unique_lock lock(process->event.mutex);
         process->event.notes.insert(&*nodeIt);
         nodeIt->linked = process;
-        if ((change.fflags & orbis::kNoteExit) != 0 && process->exitStatus.has_value()) {
+        if ((change.fflags & orbis::kNoteExit) != 0 &&
+            process->exitStatus.has_value()) {
           note.event.data = *process->exitStatus;
           note.triggered = true;
           kq->cv.notify_all(kq->mtx);
@@ -173,7 +174,7 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     }
   } else if (change.filter == kEvFiltGraphicsCore) {
     nodeIt->triggered = true;
-    
+
     if (change.ident == 0x84) {
       // clock change event
       nodeIt->event.data |= 1000ull << 16; // clock
@@ -265,19 +266,6 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
 
   ErrorCode errorCode{};
 
-  if (kq->notes.empty()) {
-    // ORBIS_LOG_ERROR(__FUNCTION__, "attempt to wait empty kqueue", fd,
-    // nevents,
-    //                 timeoutPoint.time_since_epoch().count());
-    // thread->where();
-
-    // return{};
-    // std::abort();
-    return {};
-  }
-
-  // ORBIS_LOG_TODO(__FUNCTION__, "kevent wait", fd);
-
   while (true) {
     bool waitHack = false;
     bool canSleep = true;
@@ -296,7 +284,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
 
           if (!note.triggered) {
             if (note.event.filter == kEvFiltRead) {
-              if (note.file->hostFd >= 0 ) {
+              if (note.file->hostFd >= 0) {
                 if (isReadEventTriggered(note.file->hostFd)) {
                   note.triggered = true;
                 } else {
@@ -330,7 +318,8 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
               erase = true;
             }
 
-            if (note.event.filter == kEvFiltRead || note.event.filter == kEvFiltWrite) {
+            if (note.event.filter == kEvFiltRead ||
+                note.event.filter == kEvFiltWrite) {
               note.triggered = false;
             }
           }
@@ -350,7 +339,6 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       // }
       break;
     }
-
 
     if (timeoutPoint != clock::time_point::max()) {
       std::lock_guard lock(kq->mtx);
