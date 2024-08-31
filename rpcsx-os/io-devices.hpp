@@ -48,3 +48,4 @@ IoDevice *createSrtcCharacterDevice();
 IoDevice *createScreenShotCharacterDevice();
 IoDevice *createLvdCtlCharacterDevice();
 IoDevice *createIccPowerCharacterDevice();
+IoDevice *createCaymanRegCharacterDevice();

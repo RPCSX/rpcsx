@@ -48,6 +48,7 @@ add_executable(rpcsx-os
   iodev/sshot.cpp
   iodev/lvdctl.cpp
   iodev/icc_power.cpp
+  iodev/cayman_reg.cpp
 
   main.cpp
   backtrace.cpp

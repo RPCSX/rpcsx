@@ -474,6 +474,7 @@ static void ps4InitDev() {
   rx::vfs::addDevice("lvdctl", createLvdCtlCharacterDevice());
   rx::vfs::addDevice("lvd0", createHddCharacterDevice(0x100000000));
   rx::vfs::addDevice("icc_power", createIccPowerCharacterDevice());
+  rx::vfs::addDevice("cayman/reg", createCaymanRegCharacterDevice());
 
   // mbus->emitEvent({
   //     .system = 2,
