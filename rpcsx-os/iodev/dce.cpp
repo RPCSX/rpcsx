@@ -1,6 +1,8 @@
 #include "bridge.hpp"
 #include "io-device.hpp"
+#include "iodev/dmem.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/KernelContext.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "orbis/file.hpp"
 #include "orbis/thread/Process.hpp"
@@ -11,6 +13,9 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+
+static constexpr auto kDceControlMemoryOffset = 0;
+static constexpr auto kDceControlMemorySize = 0x10000;
 
 struct VideoOutBuffer {
   std::uint32_t pixelFormat;
@@ -45,16 +50,17 @@ struct RegisterBufferAttributeArgs {
   std::uint32_t reserved2;
 };
 
-struct FlipRequestArgs { // submit_flip
-  std::uint64_t canary;  // arg5 data in FlipControlArgs:0: *arg5
+struct FlipRequestArgs {            // submit_flip
+  std::uint64_t canary;             // arg5 data in FlipControlArgs:0: *arg5
   std::uint64_t displayBufferIndex; //[0..15]
-  std::uint32_t flipMode; // flip mode?
+  std::uint32_t flipMode;           // flip mode?
   std::uint32_t unk1;
   std::uint64_t flipArg;
   std::uint64_t flipArg2; // not used
   std::uint32_t eop_nz;
   std::uint32_t unk2;
-  std::uint64_t *eop_val; // reply with eop token if eop_nz=1 and send to wait eop
+  std::uint64_t
+      *eop_val; // reply with eop token if eop_nz=1 and send to wait eop
   std::uint64_t unk3;
   std::uint64_t *rout; // extraout of result error
 };
@@ -89,11 +95,12 @@ struct ResolutionStatus {
   std::uint32_t heigth;
   std::uint32_t paneWidth;
   std::uint32_t paneHeight;
-  std::uint32_t refreshHz;        //float
-  std::uint32_t screenSizeInInch; //float
+  std::uint32_t refreshHz;        // float
+  std::uint32_t screenSizeInInch; // float
   std::byte padding[20];
 };
 
+// clang-format off
 // refreshRate =    0                                        REFRESH_RATE_UNKNOWN
 // refreshRate =    3; result.refreshHz = 0x426fc28f( 59.94) REFRESH_RATE_59_94HZ
 // refreshRate =    2, result.refreshHz = 0x42480000( 50.00) REFRESH_RATE_50HZ
@@ -116,16 +123,50 @@ struct ResolutionStatus {
 // refreshRate = 0x16, result.refreshHz = 0x416fd70a( 14.99)
 // refreshRate = 0x17, result.refreshHz = 0x41700000( 15.00)
 // refreshRate = 0x23, result.refreshHz = 0x42b3d1ec( 89.91) REFRESH_RATE_89_91HZ
+// clang-format on
 
 struct DceFile : public orbis::File {};
 
 struct DceDevice : IoDevice {
   orbis::shared_mutex mtx;
+  orbis::uint64_t dmemOffset = ~static_cast<std::uint64_t>(0);
   VideoOutBuffer bufferAttributes{}; // TODO
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
 };
+
+static void initDceMemory(DceDevice *device) {
+  if (device->dmemOffset + 1) {
+    return;
+  }
+
+  std::lock_guard lock(device->mtx);
+  if (device->dmemOffset + 1) {
+    return;
+  }
+
+  auto dmem = orbis::g_context.dmemDevice.cast<DmemDevice>();
+  std::uint64_t start = 0;
+  if (dmem->allocate(&start, ~0ull, kDceControlMemorySize, 0x100000, 1) !=
+      orbis::ErrorCode{}) {
+    std::abort();
+  }
+
+  void *address = nullptr;
+  if (dmem->mmap(&address, kDceControlMemorySize, rx::vm::kMapProtCpuWrite, 0,
+                 start) != orbis::ErrorCode{}) {
+    std::abort();
+  }
+
+  auto dceControl = reinterpret_cast<std::byte *>(address);
+  *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x130) = 0;
+  *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x138) = 1;
+  *reinterpret_cast<orbis::uint16_t *>(dceControl + 0x140) =
+      orbis::kEvFiltDisplay;
+  rx::vm::unmap(address, kDceControlMemorySize);
+  device->dmemOffset = start;
+}
 
 static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
@@ -194,7 +235,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       status->heigth = 1080;
       status->paneWidth = 1920;
       status->paneHeight = 1080;
-      status->refreshHz = 0x426fc28f; //( 59.94)
+      status->refreshHz = 0x426fc28f;        //( 59.94)
       status->screenSizeInInch = 0x42500000; //( 52.00)
     } else if (args->id == 9) {
       ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
@@ -308,14 +349,10 @@ static orbis::ErrorCode dce_mmap(orbis::File *file, void **address,
                                  std::int32_t flags, std::int64_t offset,
                                  orbis::Thread *thread) {
   ORBIS_LOG_FATAL("dce mmap", address, size, offset);
-  auto result = rx::vm::map(*address, size, prot, flags);
-
-  if (result == (void *)-1) {
-    return orbis::ErrorCode::INVAL; // TODO
-  }
-
-  *address = result;
-  return {};
+  auto dce = file->device.cast<DceDevice>();
+  initDceMemory(dce.get());
+  auto dmem = orbis::g_context.dmemDevice.cast<DmemDevice>();
+  return dmem->mmap(address, size, prot, flags, dce->dmemOffset + offset);
 }
 
 static const orbis::FileOps ops = {
