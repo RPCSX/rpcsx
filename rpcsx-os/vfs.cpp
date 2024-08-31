@@ -6,7 +6,6 @@
 #include "orbis/error/SysResult.hpp"
 #include <filesystem>
 #include <map>
-#include <optional>
 #include <string_view>
 
 
@@ -181,6 +180,20 @@ orbis::SysResult rx::vfs::open(std::string_view path, int flags, int mode,
   }
   // std::fprintf(stderr, "sys_open %s\n", std::string(path).c_str());
   return device->open(file, devPath.c_str(), flags, mode, thread);
+}
+
+bool rx::vfs::exists(std::string_view path, orbis::Thread *thread) {
+  auto [device, devPath] = get(path);
+  if (device == nullptr) {
+    return false;
+  }
+
+  orbis::Ref<orbis::File> file;
+  if (device->open(&file, devPath.c_str(), 0, 0, thread) !=
+      orbis::ErrorCode{}) {
+    return false;
+  }
+  return true;
 }
 
 orbis::SysResult rx::vfs::mkdir(std::string_view path, int mode,
