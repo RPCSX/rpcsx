@@ -8,16 +8,14 @@
 #include <map>
 #include <string_view>
 
-
 static orbis::ErrorCode devfs_stat(orbis::File *file, orbis::Stat *sb,
-                                  orbis::Thread *thread) {
+                                   orbis::Thread *thread) {
   *sb = {}; // TODO
   return {};
 }
 
-
 static orbis::FileOps devfs_ops = {
-  .stat = devfs_stat,
+    .stat = devfs_stat,
 };
 
 struct DevFs : IoDevice {
@@ -39,21 +37,12 @@ struct DevFs : IoDevice {
 
       result->ops = &devfs_ops;
       *file = result;
-      return{};
+      return {};
     }
-    std::string_view devPath = path;
-    if (auto pos = devPath.find('/'); pos != std::string_view::npos) {
-      auto deviceName = devPath.substr(0, pos);
-      devPath.remove_prefix(pos + 1);
 
-      if (auto it = devices.find(deviceName); it != devices.end()) {
-        return it->second->open(file, std::string(devPath).c_str(), flags, mode,
-                                thread);
-      }
-    } else {
-      if (auto it = devices.find(devPath); it != devices.end()) {
-        return it->second->open(file, "", flags, mode, thread);
-      }
+    std::string_view devPath = path;
+    if (auto it = devices.find(devPath); it != devices.end()) {
+      return it->second->open(file, "", flags, mode, thread);
     }
 
     std::fprintf(stderr, "device %s not exists\n", path);
@@ -115,7 +104,6 @@ rx::vfs::get(const std::filesystem::path &guestPath) {
   std::string normalPath = std::filesystem::path(guestPath).lexically_normal();
   std::string_view path = normalPath;
   orbis::Ref<IoDevice> device;
-  std::string_view prefix;
 
   std::lock_guard lock(gMountMtx);
 
@@ -129,7 +117,7 @@ rx::vfs::get(const std::filesystem::path &guestPath) {
         path = {};
       }
 
-      return { gDevFs, std::string(path) };
+      return {gDevFs, std::string(path)};
     }
   }
 
