@@ -65,6 +65,7 @@ struct Process final {
   sint budgetId{1};
   bool isInSandbox = false;
   EventEmitter event;
+  std::optional<sint> exitStatus;
 
   std::uint32_t sdkVersion = -1;
   std::uint64_t nextTlsSlot = 1;

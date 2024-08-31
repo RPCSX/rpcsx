@@ -96,6 +96,11 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
         std::unique_lock lock(process->event.mutex);
         process->event.notes.insert(&*nodeIt);
         nodeIt->linked = process;
+        if ((change.fflags & orbis::kNoteExit) != 0 && process->exitStatus.has_value()) {
+          note.event.data = *process->exitStatus;
+          note.triggered = true;
+          kq->cv.notify_all(kq->mtx);
+        }
       } else if (change.filter == kEvFiltRead ||
                  change.filter == kEvFiltWrite) {
         auto fd = thread->tproc->fileDescriptors.get(change.ident);

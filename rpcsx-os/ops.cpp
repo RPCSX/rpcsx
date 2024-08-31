@@ -702,6 +702,7 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
 
 orbis::SysResult exit(orbis::Thread *thread, orbis::sint status) {
   std::printf("Requested exit with status %d\n", status);
+  thread->tproc->exitStatus = status;
   thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExit, status);
   std::exit(status);
 }
