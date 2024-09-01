@@ -5,6 +5,7 @@
 #include <atomic>
 #include <concepts>
 #include <cstdint>
+#include <deque>
 #include <list>
 #include <source_location>
 #include <thread>
@@ -203,8 +204,8 @@ struct TaskChain {
 
 class GpuScheduler {
   std::list<std::thread> workThreads;
-  std::vector<GpuTaskLayout> tasks;
-  std::vector<GpuTaskLayout> delayedTasks;
+  std::deque<GpuTaskLayout> tasks;
+  std::deque<GpuTaskLayout> delayedTasks;
   std::mutex taskMtx;
   std::condition_variable taskCv;
   std::atomic<bool> exit{false};
@@ -339,14 +340,14 @@ private:
           }
         }
 
-        task = std::move(tasks.back());
-        tasks.pop_back();
+        task = std::move(tasks.front());
+        tasks.pop_front();
       }
 
       if (task.waitId != GpuTaskLayout::kInvalidId &&
           !task.chain->isComplete(task.waitId)) {
         std::unique_lock lock(taskMtx);
-        delayedTasks.push_back(std::move(task));
+        delayedTasks.push_front(std::move(task));
         taskCv.notify_one();
         continue;
       }
