@@ -504,13 +504,16 @@ orbis::SysResult orbis::sysImpiSessionRespondAsync(Thread *thread,
     ORBIS_RET_ON_ERROR(ureadRaw(elem.data(), data.data, data.size));
   }
 
-  std::lock_guard clientLock(client->mutex);
-  client->asyncResponses.push_back({
-      .methodId = _params.method,
-      .errorCode = _params.result,
-      .data = std::move(outData),
-  });
+  {
+    std::lock_guard clientLock(client->mutex);
+    client->asyncResponses.push_back({
+        .methodId = _params.method,
+        .errorCode = _params.result,
+        .data = std::move(outData),
+    });
+  }
 
+  client->asyncResponseCv.notify_all(client->mutex);
   return uwrite(result, 0u);
 }
 
@@ -591,7 +594,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
       }
     }
 
-    std::this_thread::sleep_for(std::chrono::microseconds(200));
+    client->asyncResponseCv.wait(client->mutex);
   }
 
   // return uwrite(result, 0x80020000 + static_cast<int>(ErrorCode::AGAIN));

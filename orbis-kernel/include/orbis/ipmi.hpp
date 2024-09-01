@@ -71,6 +71,7 @@ struct IpmiClient : RcBase {
   Ref<IpmiSession> session;
   shared_mutex mutex;
   shared_cv sessionCv;
+  shared_cv asyncResponseCv;
   Process *process;
   kdeque<MessageQueue> messageQueues;
   kdeque<EventFlag> eventFlags;
