@@ -1364,6 +1364,17 @@ static int getBitWidthOfSurfaceFormat(SurfaceFormat format) {
 static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
                                         TextureChannelType channel) {
   switch (surface) {
+  case kSurfaceFormat4_4_4_4: {
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
+    default:
+      break;
+    }
+
+    break;
+  }
+
   case kSurfaceFormat8: {
     switch (channel) {
     case kTextureChannelTypeUNorm:
@@ -1407,6 +1418,15 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
       return VK_FORMAT_R8G8_UINT;
     case kTextureChannelTypeSInt:
       return VK_FORMAT_R8G8_SINT;
+    default:
+      break;
+    }
+    break;
+
+  case kSurfaceFormat5_9_9_9:
+    switch (channel) {
+    case kTextureChannelTypeFloat:
+      return VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
     default:
       break;
     }
@@ -1542,19 +1562,36 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
 
   case kSurfaceFormatBc1:
     switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
     case kTextureChannelTypeSrgb:
       return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
     default:
       break;
     }
+    break;
+
+  case kSurfaceFormatBc2:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC2_UNORM_BLOCK;
+    case kTextureChannelTypeSrgb:
+      return VK_FORMAT_BC2_SRGB_BLOCK;
+    default:
+      break;
+    }
+    break;
 
   case kSurfaceFormatBc3:
     switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC3_UNORM_BLOCK;
     case kTextureChannelTypeSrgb:
       return VK_FORMAT_BC3_SRGB_BLOCK;
     default:
       break;
     }
+    break;
 
   case kSurfaceFormatBc4:
     switch (channel) {
@@ -1567,6 +1604,7 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
     default:
       break;
     }
+    break;
   case kSurfaceFormatBc5:
     switch (channel) {
     case kTextureChannelTypeUNorm:
@@ -1578,6 +1616,20 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
     default:
       break;
     }
+    break;
+
+  case kSurfaceFormatBc6:
+    switch (channel) {
+    case kTextureChannelTypeUNorm:
+      return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+
+    case kTextureChannelTypeSNorm:
+      return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+
+    default:
+      break;
+    }
+    break;
 
   case kSurfaceFormatBc7:
     switch (channel) {
@@ -1590,6 +1642,7 @@ static VkFormat surfaceFormatToVkFormat(SurfaceFormat surface,
     default:
       break;
     }
+    break;
 
   default:
     break;
