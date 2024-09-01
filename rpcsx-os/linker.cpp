@@ -865,7 +865,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         phdr.p_flags |= vm::kMapProtCpuWrite; // TODO: reprotect on relocations
       }
 
-      vm::protect(imageBase + segmentBegin, segmentSize, phdr.p_flags);
+      vm::protect(imageBase + segmentBegin, segmentSize, phdr.p_flags & (vm::kMapProtCpuAll | vm::kMapProtGpuAll));
 
       if (phdr.p_type == kElfProgramTypeLoad) {
         if (result->segmentCount >= std::size(result->segments)) {
