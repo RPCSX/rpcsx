@@ -15,7 +15,7 @@ jobs:
       id: review
       with:
         clang_tidy_version: 18
-        apt_packages: libunwind-dev, libglfw3-dev, libvulkan-dev, vulkan-validationlayers-dev, spirv-tools, glslang-tools, libspirv-cross-c-shared-dev
+        apt_packages: libunwind-dev, libglfw3-dev, libvulkan-dev, vulkan-validationlayers, spirv-tools, glslang-tools, libspirv-cross-c-shared-dev
         cmake_command: cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=on
         split_workflow: true
     - name: Upload review
