@@ -1747,7 +1747,7 @@ int main(int argc, const char *argv[]) {
   auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
   // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
-  rx::vm::initialize();
+  rx::vm::initialize(initProcess->pid);
   runRpsxGpu();
 
   if (enableAudio) {

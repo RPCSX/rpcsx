@@ -69,7 +69,7 @@ std::string mapProtToString(std::int32_t prot);
 void printHostStats();
 void fork(std::uint64_t pid);
 void reset();
-void initialize();
+void initialize(std::uint64_t pid);
 void deinitialize();
 void *map(void *addr, std::uint64_t len, std::int32_t prot, std::int32_t flags,
           std::int32_t internalFlags = 0, IoDevice *device = nullptr,

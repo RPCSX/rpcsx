@@ -724,11 +724,11 @@ void rx::vm::reset() {
                    kMaxAddress - kMinAddress);
 }
 
-void rx::vm::initialize() {
+void rx::vm::initialize(std::uint64_t pid) {
   std::printf("Memory: initialization\n");
 
-  gMemoryShm =
-      ::shm_open("/rpcsx-os-memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+  gMemoryShm = ::shm_open(("/rpcsx-os-memory-" + std::to_string(pid)).c_str(),
+                          O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
   if (gMemoryShm == -1) {
     std::fprintf(stderr, "Memory: failed to open /rpcsx-os-memory\n");
@@ -938,6 +938,16 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     gMapInfo.map(address, address + len, info);
   }
 
+  // if (device == nullptr) {
+    if (auto thr = orbis::g_currentThread) {
+      rx::bridge.sendMapMemory(thr->tproc->pid, -1, -1, address, len, prot,
+                               address - kMinAddress);
+    } else {
+      std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address,
+                   address + len);
+    }
+  // }
+
   if (internalFlags & kMapInternalReserveOnly) {
     return reinterpret_cast<void *>(address);
   }
@@ -957,12 +967,6 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     }
   }
 
-  if (auto thr = orbis::g_currentThread) {
-    rx::bridge.sendMapMemory(thr->tproc->pid, -1, -1, address, len, prot,
-                             address - kMinAddress);
-  } else {
-    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
-  }
   return result;
 }
 
@@ -1032,6 +1036,7 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
       kAllocated | (prot & (kMapProtCpuAll | kMapProtGpuAll)), false);
 
   if (auto thr = orbis::g_currentThread) {
+    std::printf("memory prot: %x\n", prot);
     rx::bridge.sendMemoryProtect(
         thr->tproc->pid, reinterpret_cast<std::uint64_t>(addr), size, prot);
   } else {

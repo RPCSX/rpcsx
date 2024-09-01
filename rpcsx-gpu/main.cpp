@@ -1032,8 +1032,8 @@ int main(int argc, const char *argv[]) {
             auto memory = amdgpu::RemoteMemory{process.vmId};
             rx::mem::protect(memory.getPointer(cmd.memoryProt.address),
                              cmd.memoryProt.size, cmd.memoryProt.prot >> 4);
-            device.handleProtectMemory(memory, cmd.mapMemory.address,
-                                       cmd.mapMemory.size, cmd.mapMemory.prot);
+            device.handleProtectMemory(memory, cmd.memoryProt.address,
+                                       cmd.memoryProt.size, cmd.memoryProt.prot);
           }
           break;
         }
