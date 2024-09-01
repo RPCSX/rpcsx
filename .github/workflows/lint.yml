@@ -7,11 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
     - name: Run clang-tidy
-      uses: ZedThree/clang-tidy-review@v0.14.0
+      uses: ZedThree/clang-tidy-review@v0.19.0
       id: review
       with:
         clang_tidy_version: 16
@@ -19,5 +19,5 @@ jobs:
         cmake_command: cmake . -DCMAKE_EXPORT_COMPILE_COMMANDS=on
         split_workflow: true
     - name: Upload review
-      uses: ZedThree/clang-tidy-review/upload@v0.14.0
+      uses: ZedThree/clang-tidy-review/upload@v0.19.0
       id: upload-review
