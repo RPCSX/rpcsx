@@ -547,51 +547,49 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
   }
 
   while (true) {
-    {
-      std::lock_guard clientLock(client->mutex);
+    std::lock_guard clientLock(client->mutex);
 
-      for (auto it = client->asyncResponses.begin();
-           it != client->asyncResponses.end(); ++it) {
-        if (it->methodId != _params.method) {
+    for (auto it = client->asyncResponses.begin();
+        it != client->asyncResponses.end(); ++it) {
+      if (it->methodId != _params.method) {
+        continue;
+      }
+
+      auto response = std::move(*it);
+      client->asyncResponses.erase(it);
+
+      ORBIS_RET_ON_ERROR(uwrite(_params.pResult, it->errorCode));
+
+      if (response.data.size() != _params.numOutData) {
+        ORBIS_LOG_ERROR(__FUNCTION__, "responses count mismatch",
+                        response.data.size(), _params.numOutData);
+      }
+
+      for (std::size_t i = 0; i < response.data.size(); ++i) {
+        if (response.data.size() > _params.numOutData) {
+          ORBIS_LOG_ERROR(__FUNCTION__, "too many responses",
+                          response.data.size(), _params.numOutData);
+          break;
+        }
+
+        IpmiBufferInfo _outData;
+        ORBIS_RET_ON_ERROR(uread(_outData, _params.pOutData + i));
+
+        auto &data = response.data[i];
+
+        if (_outData.capacity < data.size()) {
+          ORBIS_LOG_ERROR(__FUNCTION__, "too big response", _outData.capacity,
+                          data.size());
           continue;
         }
 
-        auto response = std::move(*it);
-        client->asyncResponses.erase(it);
-
-        ORBIS_RET_ON_ERROR(uwrite(_params.pResult, it->errorCode));
-
-        if (response.data.size() != _params.numOutData) {
-          ORBIS_LOG_ERROR(__FUNCTION__, "responses count mismatch",
-                          response.data.size(), _params.numOutData);
-        }
-
-        for (std::size_t i = 0; i < response.data.size(); ++i) {
-          if (response.data.size() > _params.numOutData) {
-            ORBIS_LOG_ERROR(__FUNCTION__, "too many responses",
-                            response.data.size(), _params.numOutData);
-            break;
-          }
-
-          IpmiBufferInfo _outData;
-          ORBIS_RET_ON_ERROR(uread(_outData, _params.pOutData + i));
-
-          auto &data = response.data[i];
-
-          if (_outData.capacity < data.size()) {
-            ORBIS_LOG_ERROR(__FUNCTION__, "too big response", _outData.capacity,
-                            data.size());
-            continue;
-          }
-
-          _outData.size = data.size();
-          ORBIS_RET_ON_ERROR(
-              uwriteRaw(_outData.data, data.data(), data.size()));
-          ORBIS_RET_ON_ERROR(uwrite(_params.pOutData + i, _outData));
-        }
-
-        return uwrite(result, 0u);
+        _outData.size = data.size();
+        ORBIS_RET_ON_ERROR(
+            uwriteRaw(_outData.data, data.data(), data.size()));
+        ORBIS_RET_ON_ERROR(uwrite(_params.pOutData + i, _outData));
       }
+
+      return uwrite(result, 0u);
     }
 
     client->asyncResponseCv.wait(client->mutex);
