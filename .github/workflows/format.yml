@@ -24,4 +24,4 @@ jobs:
       uses: jidicula/clang-format-action@v4.13.0
       with:
         exclude-regex: (libspirv|3rdparty)
-        clang-format-version: 16
+        clang-format-version: 18
