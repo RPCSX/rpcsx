@@ -125,15 +125,95 @@ struct ResolutionStatus {
 // refreshRate = 0x23, result.refreshHz = 0x42b3d1ec( 89.91) REFRESH_RATE_89_91HZ
 // clang-format on
 
+static void runBridge(int vmId) {
+  std::thread{[=] {
+    pthread_setname_np(pthread_self(), "Bridge");
+    auto bridge = rx::bridge.header;
+
+    std::vector<std::uint64_t> fetchedCommands;
+    fetchedCommands.reserve(std::size(bridge->cacheCommands));
+
+    while (true) {
+      for (auto &command : bridge->cacheCommands) {
+        std::uint64_t value = command[vmId].load(std::memory_order::relaxed);
+
+        if (value != 0) {
+          fetchedCommands.push_back(value);
+          command[vmId].store(0, std::memory_order::relaxed);
+        }
+      }
+
+      if (fetchedCommands.empty()) {
+        continue;
+      }
+
+      for (auto command : fetchedCommands) {
+        auto page = static_cast<std::uint32_t>(command);
+        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
+
+        auto pageFlags =
+            bridge->cachePages[vmId][page].load(std::memory_order::relaxed);
+
+        auto address =
+            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
+        auto origVmProt = rx::vm::getPageProtection(address);
+        int prot = 0;
+
+        if (origVmProt & rx::vm::kMapProtCpuRead) {
+          prot |= PROT_READ;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuWrite) {
+          prot |= PROT_WRITE;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuExec) {
+          prot |= PROT_EXEC;
+        }
+
+        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
+          prot &= ~(PROT_READ | PROT_WRITE);
+        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
+          prot &= ~PROT_WRITE;
+        }
+
+        // std::fprintf(stderr, "protection %lx-%lx\n", address,
+        //              address + amdgpu::bridge::kHostPageSize * count);
+        if (::mprotect(reinterpret_cast<void *>(address),
+                       amdgpu::bridge::kHostPageSize * count, prot)) {
+          perror("protection failed");
+          std::abort();
+        }
+      }
+
+      fetchedCommands.clear();
+    }
+  }}.detach();
+}
+
+static constexpr auto kVmIdCount = 6;
 struct DceFile : public orbis::File {};
 
 struct DceDevice : IoDevice {
   orbis::shared_mutex mtx;
+  std::uint32_t freeVmIds = (1 << (kVmIdCount + 1)) - 1;
   orbis::uint64_t dmemOffset = ~static_cast<std::uint64_t>(0);
   VideoOutBuffer bufferAttributes{}; // TODO
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
+
+  int allocateVmId() {
+    int id = std::countr_zero(freeVmIds);
+
+    if (id >= kVmIdCount) {
+      std::fprintf(stderr, "out of vm slots\n");
+      std::abort();
+    }
+
+    freeVmIds &= ~(1 << id);
+    return id;
+  };
+
+  void deallocateVmId(int vmId) { freeVmIds |= (1 << vmId); };
 };
 
 static void initDceMemory(DceDevice *device) {
@@ -375,6 +455,14 @@ orbis::ErrorCode DceDevice::open(orbis::Ref<orbis::File> *file,
   newFile->device = this;
   newFile->ops = &ops;
   *file = newFile;
+
+  if (thread->tproc->vmId == -1) {
+    auto vmId = allocateVmId();
+    rx::bridge.sendMapProcess(thread->tproc->pid, vmId);
+    thread->tproc->vmId = vmId;
+
+    runBridge(vmId);
+  }
   return {};
 }
 
