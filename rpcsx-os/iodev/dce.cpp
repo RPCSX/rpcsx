@@ -251,12 +251,12 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       *(std::uint64_t *)args->ptr = kDceControlMemoryOffset; // dev offset
       *(std::uint64_t *)args->size = kDceControlMemorySize;  // size
     } else if (args->id == 31) {
-      // if ((std::uint64_t)args->ptr == 0xc) {
-      //   rx::bridge.header->bufferInUseAddress = args->size;
-      // } else {
-      //   ORBIS_LOG_ERROR("buffer in use", args->ptr, args->size);
-      //   thread->where();
-      // }
+      if ((std::uint64_t)args->ptr == 0xc) {
+        rx::bridge.header->bufferInUseAddress = args->size;
+      } else {
+        ORBIS_LOG_ERROR("buffer in use", args->ptr, args->size);
+        thread->where();
+      }
       // std::abort();
       return {};
     } else if (args->id == 33) { // adjust color
