@@ -4,6 +4,7 @@ find_package(Git)
 
 
 add_library(${PROJECT_NAME} OBJECT
+    src/hexdump.cpp
     src/mem.cpp
     src/Version.cpp
 )
