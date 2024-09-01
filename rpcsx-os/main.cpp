@@ -8,6 +8,7 @@
 #include "iodev/mbus_av.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
+#include "rx/hexdump.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
@@ -43,6 +44,12 @@
 static int g_gpuPid;
 extern bool allowMonoDebug;
 
+template <typename T> std::vector<std::byte> toBytes(const T &value) {
+  std::vector<std::byte> result(sizeof(T));
+  std::memcpy(result.data(), &value, sizeof(value));
+  return result;
+}
+
 __attribute__((no_stack_protector)) static void
 handle_signal(int sig, siginfo_t *info, void *ucontext) {
   if (auto hostFs = _readgsbase_u64()) {
@@ -51,7 +58,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   auto signalAddress = reinterpret_cast<std::uintptr_t>(info->si_addr);
 
-  if (orbis::g_currentThread != nullptr && orbis::g_currentThread->tproc->vmId >= 0 && sig == SIGSEGV &&
+  if (orbis::g_currentThread != nullptr &&
+      orbis::g_currentThread->tproc->vmId >= 0 && sig == SIGSEGV &&
       signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
     auto vmid = orbis::g_currentThread->tproc->vmId;
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
@@ -74,13 +82,14 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
       auto bridge = rx::bridge.header;
 
       while (true) {
-        auto flags = bridge->cachePages[vmid][page].load(std::memory_order::relaxed);
+        auto flags =
+            bridge->cachePages[vmid][page].load(std::memory_order::relaxed);
 
         if ((flags & amdgpu::bridge::kPageReadWriteLock) != 0) {
           if ((flags & amdgpu::bridge::kPageLazyLock) != 0) {
             if (std::uint32_t gpuCommand = 0;
                 !bridge->gpuCacheCommand[vmid].compare_exchange_weak(gpuCommand,
-                                                               page)) {
+                                                                     page)) {
               continue;
             }
 
@@ -763,35 +772,29 @@ static void createShm(const char *name, uint32_t flags, uint32_t mode,
 struct IpmiServer {
   orbis::Ref<orbis::IpmiServer> serverImpl;
 
-  std::unordered_map<
-      std::uint32_t,
-      std::function<orbis::ErrorCode(
-          std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-          const std::vector<std::span<std::byte>> &inData)>>
-      syncHandlers;
+  std::unordered_map<std::uint32_t,
+                     std::function<orbis::ErrorCode(
+                         orbis::IpmiSession &session, std::int32_t &errorCode,
+                         std::vector<std::vector<std::byte>> &outData,
+                         const std::vector<std::span<std::byte>> &inData)>>
+      syncMethods;
+  std::unordered_map<std::uint32_t,
+                     std::function<orbis::ErrorCode(
+                         orbis::IpmiSession &session, std::int32_t &errorCode,
+                         std::vector<std::vector<std::byte>> &outData,
+                         const std::vector<std::span<std::byte>> &inData)>>
+      asyncMethods;
   std::vector<std::vector<std::byte>> messages;
 
-  IpmiServer &createSyncHandler(std::uint32_t methodId,
-                                std::function<std::int32_t()> handler) {
-    syncHandlers[methodId] =
-        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-            const std::vector<std::span<std::byte>> &inData)
-        -> orbis::ErrorCode {
-      if (!outData.empty() || !inData.empty()) {
-        return orbis::ErrorCode::INVAL;
-      }
-
-      errorCode = handler();
-      return {};
-    };
-    return *this;
-  }
-
-  IpmiServer &createSyncHandlerStub(std::uint32_t methodId,
-                                    std::function<std::int32_t()> handler) {
-    syncHandlers[methodId] =
-        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-            const std::vector<std::span<std::byte>> &inData)
+  IpmiServer &addSyncMethodStub(
+      std::uint32_t methodId,
+      std::function<std::int32_t()> handler = [] -> std::int32_t {
+        return 0;
+      }) {
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
         -> orbis::ErrorCode {
       if (!outData.empty()) {
         return orbis::ErrorCode::INVAL;
@@ -803,12 +806,13 @@ struct IpmiServer {
     return *this;
   }
 
-  IpmiServer &createSyncHandler(
+  IpmiServer &addSyncMethod(
       std::uint32_t methodId,
       std::function<std::int32_t(void *out, std::uint64_t &outSize)> handler) {
-    syncHandlers[methodId] =
-        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-            const std::vector<std::span<std::byte>> &inData)
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
         -> orbis::ErrorCode {
       if (outData.size() < 1) {
         return orbis::ErrorCode::INVAL;
@@ -816,21 +820,22 @@ struct IpmiServer {
 
       std::uint64_t size = outData[0].size();
       errorCode = handler(outData[0].data(), size);
-      outData[0] = outData[0].subspan(0, size);
+      outData[0].resize(size);
       return {};
     };
     return *this;
   }
 
   template <typename T>
-  IpmiServer &createSyncHandler(
-      std::uint32_t methodId,
-      std::function<std::int32_t(void *out, std::uint64_t &outSize,
-                                 const T &param)>
-          handler) {
-    syncHandlers[methodId] =
-        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-            const std::vector<std::span<std::byte>> &inData)
+  IpmiServer &
+  addSyncMethod(std::uint32_t methodId,
+                std::function<std::int32_t(void *out, std::uint64_t &outSize,
+                                           const T &param)>
+                    handler) {
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
         -> orbis::ErrorCode {
       if (outData.size() != 1 || inData.size() != 1) {
         return orbis::ErrorCode::INVAL;
@@ -843,19 +848,20 @@ struct IpmiServer {
       std::uint64_t size = outData[0].size();
       errorCode = handler(outData[0].data(), size,
                           *reinterpret_cast<T *>(inData[0].data()));
-      outData[0] = outData[0].subspan(0, size);
+      outData[0].resize(size);
       return {};
     };
     return *this;
   }
 
   template <typename OutT, typename InT>
-  IpmiServer &createSyncHandler(
+  IpmiServer &addSyncMethod(
       std::uint32_t methodId,
       std::function<std::int32_t(OutT &out, const InT &param)> handler) {
-    syncHandlers[methodId] =
-        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-            const std::vector<std::span<std::byte>> &inData)
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
         -> orbis::ErrorCode {
       if (outData.size() != 1 || inData.size() != 1) {
         return orbis::ErrorCode::INVAL;
@@ -871,7 +877,7 @@ struct IpmiServer {
       OutT out;
       errorCode = handler(out, *reinterpret_cast<InT *>(inData[0].data()));
       std::memcpy(outData[0].data(), &out, sizeof(out));
-      outData[0] = outData[0].subspan(0, sizeof(OutT));
+      outData[0].resize(sizeof(OutT));
       return {};
     };
     return *this;
@@ -879,11 +885,12 @@ struct IpmiServer {
 
   template <typename T>
   IpmiServer &
-  createSyncHandler(std::uint32_t methodId,
-                    std::function<std::int32_t(const T &param)> handler) {
-    syncHandlers[methodId] =
-        [=](std::int32_t &errorCode, std::vector<std::span<std::byte>> &outData,
-            const std::vector<std::span<std::byte>> &inData)
+  addSyncMethod(std::uint32_t methodId,
+                std::function<std::int32_t(const T &param)> handler) {
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
         -> orbis::ErrorCode {
       if (inData.size() != 1 || !outData.empty()) {
         return orbis::ErrorCode::INVAL;
@@ -899,6 +906,67 @@ struct IpmiServer {
     return *this;
   }
 
+  IpmiServer &
+  addSyncMethod(std::uint32_t methodId,
+                std::function<std::int32_t(
+                    std::vector<std::vector<std::byte>> &outData,
+                    const std::vector<std::span<std::byte>> &inData)>
+                    handler) {
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode {
+      errorCode = handler(outData, inData);
+      return {};
+    };
+    return *this;
+  }
+
+  IpmiServer &
+  addSyncMethod(std::uint32_t methodId,
+                std::function<orbis::ErrorCode(
+                    std::vector<std::vector<std::byte>> &outData,
+                    const std::vector<std::span<std::byte>> &inData)>
+                    handler) {
+    syncMethods[methodId] = [=](orbis::IpmiSession &session,
+                                std::int32_t &errorCode,
+                                std::vector<std::vector<std::byte>> &outData,
+                                const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode { return handler(outData, inData); };
+    return *this;
+  }
+
+  IpmiServer &
+  addAsyncMethod(std::uint32_t methodId,
+                 std::function<orbis::ErrorCode(
+                     orbis::IpmiSession &session,
+                     std::vector<std::vector<std::byte>> &outData,
+                     const std::vector<std::span<std::byte>> &inData)>
+                     handler) {
+    asyncMethods[methodId] =
+        [=](orbis::IpmiSession &session, std::int32_t &errorCode,
+            std::vector<std::vector<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode { return handler(session, outData, inData); };
+    return *this;
+  }
+
+  IpmiServer &
+  addSyncMethod(std::uint32_t methodId,
+                std::function<orbis::ErrorCode(
+                    orbis::IpmiSession &session,
+                    std::vector<std::vector<std::byte>> &outData,
+                    const std::vector<std::span<std::byte>> &inData)>
+                    handler) {
+    asyncMethods[methodId] =
+        [=](orbis::IpmiSession &session, std::int32_t &errorCode,
+            std::vector<std::vector<std::byte>> &outData,
+            const std::vector<std::span<std::byte>> &inData)
+        -> orbis::ErrorCode { return handler(session, outData, inData); };
+    return *this;
+  }
+
   template <typename T> IpmiServer &sendMsg(const T &data) {
     std::vector<std::byte> message(sizeof(T));
     std::memcpy(message.data(), &data, sizeof(T));
@@ -907,11 +975,58 @@ struct IpmiServer {
   }
 
   orbis::ErrorCode handle(orbis::IpmiSession *session,
+                          orbis::IpmiAsyncMessageHeader *message) {
+    std::vector<std::span<std::byte>> inData;
+    std::vector<std::vector<std::byte>> outData;
+    auto bufLoc = std::bit_cast<std::byte *>(message + 1);
+
+    for (unsigned i = 0; i < message->numInData; ++i) {
+      auto size = *std::bit_cast<orbis::uint *>(bufLoc);
+      bufLoc += sizeof(orbis::uint);
+      inData.push_back({bufLoc, size});
+      bufLoc += size;
+    }
+
+    orbis::IpmiClient::AsyncResponse response;
+    response.methodId = message->methodId + 1;
+    response.errorCode = 0;
+    orbis::ErrorCode result{};
+
+    if (auto it = asyncMethods.find(message->methodId);
+        it != asyncMethods.end()) {
+      auto &handler = it->second;
+
+      result = handler(*session, response.errorCode, outData, inData);
+    } else {
+      std::fprintf(stderr, "Unimplemented async method %s::%x(inBufCount=%u)\n",
+                   session->server->name.c_str(), message->methodId,
+                   message->numInData);
+
+      for (auto in : inData) {
+        std::fprintf(stderr, "in %zu\n", in.size());
+        rx::hexdump(in);
+      }
+    }
+
+    for (auto out : outData) {
+      response.data.push_back({out.data(), out.data() + out.size()});
+    }
+
+    std::lock_guard clientLock(session->client->mutex);
+    session->client->asyncResponses.push_front(std::move(response));
+    std::fprintf(stderr, "%s:%x: sending async response\n",
+                 session->client->name.c_str(), message->methodId);
+    session->client->asyncResponseCv.notify_all(session->client->mutex);
+    return result;
+  }
+
+  orbis::ErrorCode handle(orbis::IpmiSession *session,
+                          orbis::IpmiServer::Packet &packet,
                           orbis::IpmiSyncMessageHeader *message) {
     std::size_t inBufferOffset = 0;
     auto bufLoc = std::bit_cast<std::byte *>(message + 1);
     std::vector<std::span<std::byte>> inData;
-    std::vector<std::span<std::byte>> outData;
+    std::vector<std::vector<std::byte>> outData;
     for (unsigned i = 0; i < message->numInData; ++i) {
       auto size = *std::bit_cast<orbis::uint *>(bufLoc);
       bufLoc += sizeof(orbis::uint);
@@ -922,33 +1037,33 @@ struct IpmiServer {
     for (unsigned i = 0; i < message->numOutData; ++i) {
       auto size = *std::bit_cast<orbis::uint *>(bufLoc);
       bufLoc += sizeof(orbis::uint);
-      outData.push_back({bufLoc, size});
-      bufLoc += size;
+      outData.push_back(std::vector<std::byte>(size));
     }
 
     orbis::IpmiSession::SyncResponse response;
     response.errorCode = 0;
     orbis::ErrorCode result{};
 
-    if (auto it = syncHandlers.find(message->methodId);
-        it != syncHandlers.end()) {
+    if (auto it = syncMethods.find(message->methodId);
+        it != syncMethods.end()) {
       auto &handler = it->second;
 
-      result = handler(response.errorCode, outData, inData);
+      result = handler(*session, response.errorCode, outData, inData);
     } else {
       std::fprintf(
           stderr,
-          "Unimplemented sync method %s::%x(inBufCount=%x, outBufCount=%x)\n",
+          "Unimplemented sync method %s::%x(inBufCount=%u, outBufCount=%u)\n",
           session->server->name.c_str(), message->methodId, message->numInData,
           message->numOutData);
 
-      // for (auto in : inData) {
-      //   std::fprintf(stderr, "in %zx\n", in.size());
-      // }
+      for (auto in : inData) {
+        std::fprintf(stderr, "in %zu\n", in.size());
+        rx::hexdump(in);
+      }
 
-      // for (auto out : outData) {
-      //   std::fprintf(stderr, "out %zx\n", out.size());
-      // }
+      for (auto out : outData) {
+        std::fprintf(stderr, "out %zx\n", out.size());
+      }
 
       for (auto out : outData) {
         std::memset(out.data(), 0, out.size());
@@ -960,14 +1075,14 @@ struct IpmiServer {
       //                  : -1,
     }
 
+    response.callerTid = packet.clientTid;
     for (auto out : outData) {
-      response.data.push_back(orbis::kvector<std::byte>(
-          (std::byte *)out.data(), (std::byte *)out.data() + out.size()));
+      response.data.push_back({out.data(), out.data() + out.size()});
     }
 
     std::lock_guard lock(session->mutex);
     session->syncResponses.push_front(std::move(response));
-    session->responseCv.notify_one(session->mutex);
+    session->responseCv.notify_all(session->mutex);
 
     return result;
   }
@@ -1046,6 +1161,27 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
           continue;
         }
 
+        server->handle(client->session.get(), packet, msgHeader);
+        packet = {};
+        continue;
+      }
+
+      if ((packet.info.type & ~0x10) == 0x43) {
+        auto msgHeader = (orbis::IpmiAsyncMessageHeader *)packet.message.data();
+        auto process = orbis::g_context.findProcessById(msgHeader->pid);
+        if (process == nullptr) {
+          continue;
+        }
+        auto client = process->ipmiMap.get(packet.info.clientKid)
+                          .cast<orbis::IpmiClient>();
+        if (client == nullptr) {
+          continue;
+        }
+        auto session = client->session;
+        if (session == nullptr) {
+          continue;
+        }
+
         server->handle(client->session.get(), msgHeader);
         continue;
       }
@@ -1091,7 +1227,7 @@ struct SceUserServiceEvent {
 
 static void createSysCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceMbusIpc")
-      .createSyncHandler<SceMbusIpcAddHandleByUserIdMethodArgs>(
+      .addSyncMethod<SceMbusIpcAddHandleByUserIdMethodArgs>(
           0xce110007, [](const auto &args) -> std::int32_t {
             ORBIS_LOG_TODO("IPMI: SceMbusIpcAddHandleByUserId", args.unk,
                            args.deviceId, args.userId, args.type, args.index,
@@ -1135,33 +1271,33 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceSystemLoggerService");
   createIpmiServer(process, "SceLoginMgrServer");
   createIpmiServer(process, "SceLncService")
-      .createSyncHandler(orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30013
-                                                                   : 0x30010,
-                         [](void *out, std::uint64_t &size) -> std::int32_t {
-                           struct SceLncServiceAppStatus {
-                             std::uint32_t unk0;
-                             std::uint32_t unk1;
-                             std::uint32_t unk2;
-                           };
+      .addSyncMethod(orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30013
+                                                               : 0x30010,
+                     [](void *out, std::uint64_t &size) -> std::int32_t {
+                       struct SceLncServiceAppStatus {
+                         std::uint32_t unk0;
+                         std::uint32_t unk1;
+                         std::uint32_t unk2;
+                       };
 
-                           if (size < sizeof(SceLncServiceAppStatus)) {
-                             return -1;
-                           }
+                       if (size < sizeof(SceLncServiceAppStatus)) {
+                         return -1;
+                       }
 
-                           *(SceLncServiceAppStatus *)out = {
-                               .unk0 = 1,
-                               .unk1 = 1,
-                               .unk2 = 1,
-                           };
+                       *(SceLncServiceAppStatus *)out = {
+                           .unk0 = 1,
+                           .unk1 = 1,
+                           .unk2 = 1,
+                       };
 
-                           size = sizeof(SceLncServiceAppStatus);
-                           return 0;
-                         });
+                       size = sizeof(SceLncServiceAppStatus);
+                       return 0;
+                     });
   createIpmiServer(process, "SceAppMessaging");
   createIpmiServer(process, "SceShellCoreUtil");
   createIpmiServer(process, "SceNetCtl");
   createIpmiServer(process, "SceNpMgrIpc")
-      .createSyncHandler(
+      .addSyncMethod(
           0,
           [=](void *out, std::uint64_t &size) -> std::int32_t {
             std::string_view result = "SceNpMgrEvf";
@@ -1173,38 +1309,89 @@ static void createShellCoreObjects(orbis::Process *process) {
             orbis::g_context.createEventFlag(orbis::kstring(result), 0x200, 0);
             return 0;
           })
-      .createSyncHandlerStub(0xd, [=] -> std::int32_t { return 0; });
+      .addSyncMethodStub(0xd);
   createIpmiServer(process, "SceNpService")
-      .createSyncHandler<std::uint32_t>(0, [=](void *out, std::uint64_t &size,
-                                               std::uint32_t val) { return 0; })
-      .createSyncHandler(0xa0001,
-                         [=](void *out, std::uint64_t &size) -> std::int32_t {
-                           if (size < 1) {
-                             return 0x8002'0000 +
-                                    static_cast<int>(orbis::ErrorCode::INVAL);
-                           }
-                           size = 1;
-                           *reinterpret_cast<std::uint8_t *>(out) = 1;
-                           return 0;
-                         })
-      .createSyncHandler(0xa0002,
-                         [=](void *out, std::uint64_t &size) -> std::int32_t {
-                           if (size < 1) {
-                             return 0x8002'0000 +
-                                    static_cast<int>(orbis::ErrorCode::INVAL);
-                           }
-                           size = 1;
-                           *reinterpret_cast<std::uint8_t *>(out) = 1;
-                           return 0;
-                         })
-      .createSyncHandler<std::uint32_t, std::uint32_t>(
+      .addSyncMethod<std::uint32_t>(0, [=](void *out, std::uint64_t &size,
+                                           std::uint32_t val) { return 0; })
+      .addSyncMethod(0xa0001,
+                     [=](void *out, std::uint64_t &size) -> std::int32_t {
+                       if (size < 1) {
+                         return 0x8002'0000 +
+                                static_cast<int>(orbis::ErrorCode::INVAL);
+                       }
+                       size = 1;
+                       *reinterpret_cast<std::uint8_t *>(out) = 1;
+                       return 0;
+                     })
+      .addSyncMethod(0xa0002,
+                     [=](void *out, std::uint64_t &size) -> std::int32_t {
+                       if (size < 1) {
+                         return 0x8002'0000 +
+                                static_cast<int>(orbis::ErrorCode::INVAL);
+                       }
+                       size = 1;
+                       *reinterpret_cast<std::uint8_t *>(out) = 1;
+                       return 0;
+                     })
+      .addSyncMethod<std::uint32_t, std::uint32_t>(
           0xd0000, // sceNpTpipIpcClientGetShmIndex
           [=](std::uint32_t &shmIndex, std::uint32_t appId) -> std::int32_t {
             shmIndex = 0;
             return 0;
           });
 
-  createIpmiServer(process, "SceNpTrophyIpc");
+  createIpmiServer(process, "SceNpTrophyIpc")
+      .addSyncMethod(2,
+                     [](std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &in) {
+                       if (out.size() != 1 ||
+                           out[0].size() < sizeof(std::uint32_t)) {
+                         return orbis::ErrorCode::INVAL;
+                       }
+                       out = {toBytes<std::uint32_t>(0)};
+                       return orbis::ErrorCode{};
+                     })
+      .addAsyncMethod(0x30040,
+                      [](orbis::IpmiSession &session,
+                         std::vector<std::vector<std::byte>> &out,
+                         const std::vector<std::span<std::byte>> &in) {
+                        session.client->eventFlags[0].set(1);
+                        return orbis::ErrorCode{};
+                      })
+      .addSyncMethod(0x90000,
+                     [](std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &in) {
+                       if (out.size() != 1 ||
+                           out[0].size() < sizeof(std::uint32_t)) {
+                         return orbis::ErrorCode::INVAL;
+                       }
+                       out = {toBytes<std::uint32_t>(1)};
+                       return orbis::ErrorCode{};
+                     })
+      .addSyncMethod(0x90003,
+                     [](std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &in) {
+                       if (out.size() != 1 ||
+                           out[0].size() < sizeof(std::uint32_t)) {
+                         return orbis::ErrorCode::INVAL;
+                       }
+                       out = {toBytes<std::uint32_t>(1)};
+                       return orbis::ErrorCode{};
+                     })
+      .addAsyncMethod(0x90024,
+                      [](orbis::IpmiSession &session,
+                         std::vector<std::vector<std::byte>> &out,
+                         const std::vector<std::span<std::byte>> &in) {
+                        out.push_back(toBytes<std::uint32_t>(0));
+                        // session.client->eventFlags[0].set(1);
+                        return orbis::ErrorCode{};
+                      })
+      .addAsyncMethod(0x90026, [](orbis::IpmiSession &session,
+                                  std::vector<std::vector<std::byte>> &out,
+                                  const std::vector<std::span<std::byte>> &in) {
+        session.client->eventFlags[0].set(1);
+        return orbis::ErrorCode{};
+      });
   createIpmiServer(process, "SceNpUdsIpc");
   createIpmiServer(process, "SceLibNpRifMgrIpc");
   createIpmiServer(process, "SceNpPartner001");
@@ -1221,7 +1408,7 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceMorpheusUpdService");
   createIpmiServer(process, "ScePsmSharedDmem");
   createIpmiServer(process, "SceSaveData")
-      .createSyncHandler(
+      .addSyncMethod(
           0x12340001,
           [](void *out, std::uint64_t &size) -> std::int32_t {
             {
@@ -1244,7 +1431,7 @@ static void createShellCoreObjects(orbis::Process *process) {
             orbis::g_context.createEventFlag(orbis::kstring(result), 0x200, 0);
             return 0;
           })
-      .createSyncHandler(
+      .addSyncMethod(
           0x12340002, [](void *out, std::uint64_t &size) -> std::int32_t {
             {
               auto [dev, devPath] = rx::vfs::get("/app0");
@@ -1263,16 +1450,17 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceDbRecoveryShellCore");
   createIpmiServer(process, "SceUserService")
       .sendMsg(SceUserServiceEvent{.eventType = 0, .user = 1})
-      .createSyncHandler(0x30011,
-                         [](void *ptr, std::uint64_t &size) -> std::int32_t {
-                           if (size < sizeof(orbis::uint32_t)) {
-                             return 0x8000'0000;
-                           }
+      .addSyncMethod(0x30011,
+                     [](void *ptr, std::uint64_t &size) -> std::int32_t {
+                       if (size < sizeof(orbis::uint32_t)) {
+                         return 0x8000'0000;
+                       }
 
-                           *(orbis::uint32_t *)ptr = 1;
-                           size = sizeof(orbis::uint32_t);
-                           return 0;
-                         });
+                       *(orbis::uint32_t *)ptr = 1;
+                       size = sizeof(orbis::uint32_t);
+                       return 0;
+                     });
+
   createIpmiServer(process, "SceDbPreparationServer");
   createIpmiServer(process, "SceScreenShot");
   createIpmiServer(process, "SceAppDbIpc");
@@ -1553,17 +1741,18 @@ int main(int argc, const char *argv[]) {
   }
 
   rx::thread::initialize();
+
+  // rx::vm::printHostStats();
+  orbis::g_context.allocatePid();
+  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
+  // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
+
   rx::vm::initialize();
   runRpsxGpu();
 
   if (enableAudio) {
     orbis::g_context.audioOut = orbis::knew<orbis::AudioOut>();
   }
-
-  // rx::vm::printHostStats();
-  orbis::g_context.allocatePid();
-  auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
-  // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   int status = 0;
 
@@ -1725,6 +1914,7 @@ int main(int argc, const char *argv[]) {
       createShm("SceSaveData0000000000000001_0", 0x202, 0x1b6, 0x40000);
       createShm("SceSaveDataI0000000000000001", 0x202, 0x1b6, 43008);
       createShm("SceSaveDataI0000000000000001_0", 0x202, 0x1b6, 43008);
+      createShm("SceNpPlusLogger", 0x202, 0x1b6, 0x40000);
       createEventFlag("SceSaveDataMemoryRUI00000010", 0x120, 1);
       initProcess->cwd = "/app0/";
 
