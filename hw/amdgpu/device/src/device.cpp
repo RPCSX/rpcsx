@@ -46,11 +46,6 @@ using namespace amdgpu::device;
 static const bool kUseDirectMemory = false;
 static amdgpu::bridge::BridgeHeader *g_bridge;
 
-// void *g_rwMemory;
-std::size_t g_memorySize;
-std::uint64_t g_memoryBase;
-RemoteMemory g_hostMemory;
-
 namespace amdgpu::device::vk {
 VkDevice g_vkDevice = VK_NULL_HANDLE;
 VkAllocationCallbacks *g_vkAllocator = nullptr;
@@ -287,7 +282,7 @@ _vkCmdSetColorWriteMaskEXT(VkCommandBuffer commandBuffer,
   return fn(commandBuffer, firstAttachment, attachmentCount, pColorWriteMasks);
 }
 
-static util::MemoryAreaTable<util::StdSetInvalidationHandle> memoryAreaTable;
+static util::MemoryAreaTable<util::StdSetInvalidationHandle> memoryAreaTable[6];
 
 void device::setVkDevice(VkDevice device,
                          VkPhysicalDeviceMemoryProperties memProperties,
@@ -2089,6 +2084,7 @@ enum class CacheMode { None, AsyncWrite, LazyWrite };
 
 struct CacheOverlayBase {
   std::mutex mtx;
+  RemoteMemory memory;
   Ref<CpuTaskCtl> writeBackTaskCtl;
   std::function<void()> unlockMutableTask;
   std::uint64_t lockTag = 0;
@@ -2413,15 +2409,15 @@ struct CacheImageOverlay : CacheOverlayBase {
     taskChain.add(
         ProcessQueue::Graphics, transferBufferReadId,
         [=, self = Ref(this)](VkCommandBuffer commandBuffer) {
-      vk::ImageRef imageRef(self->image);
-      imageRef.transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_GENERAL);
-      imageRef.readFromBuffer(
+          vk::ImageRef imageRef(self->image);
+          imageRef.transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_GENERAL);
+          imageRef.readFromBuffer(
               commandBuffer, self->trasferBuffer.getHandle(), self->aspect);
 
-      auto tag = *srcBuffer->getSyncTag(address, size);
-      std::lock_guard lock(self->mtx);
-      self->syncState.map(address, address + size, tag.payload);
-    });
+          auto tag = *srcBuffer->getSyncTag(address, size);
+          std::lock_guard lock(self->mtx);
+          self->syncState.map(address, address + size, tag.payload);
+        });
   }
 
   void readBuffer(TaskChain &taskChain, Ref<CacheBufferOverlay> targetBuffer,
@@ -2483,11 +2479,11 @@ struct MemoryOverlay : CacheOverlayBase {
   void readBuffer(TaskChain &taskChain, Ref<CacheBufferOverlay> targetBuffer,
                   std::uint64_t address, std::uint64_t size,
                   std::uint64_t waitTask = GpuTaskLayout::kInvalidId) override {
-    auto readTask = [=] {
+    auto readTask = [=, this] {
       auto offset = address - targetBuffer->bufferAddress;
       auto targetData = (char *)targetBuffer->buffer.getData() + offset;
 
-      std::memcpy(targetData, g_hostMemory.getPointer(address), size);
+      std::memcpy(targetData, memory.getPointer(address), size);
     };
 
     if (size < bridge::kHostPageSize && waitTask == GpuTaskLayout::kInvalidId) {
@@ -2499,13 +2495,13 @@ struct MemoryOverlay : CacheOverlayBase {
 
   void
   writeBuffer(TaskChain &taskChain, Ref<CacheBufferOverlay> sourceBuffer,
-                   std::uint64_t address, std::uint64_t size,
-                   std::uint64_t waitTask = GpuTaskLayout::kInvalidId) override {
-    auto writeTask = [=] {
+              std::uint64_t address, std::uint64_t size,
+              std::uint64_t waitTask = GpuTaskLayout::kInvalidId) override {
+    auto writeTask = [=, this] {
       auto offset = address - sourceBuffer->bufferAddress;
       auto sourceData = (char *)sourceBuffer->buffer.getData() + offset;
 
-      std::memcpy(g_hostMemory.getPointer(address), sourceData, size);
+      std::memcpy(memory.getPointer(address), sourceData, size);
     };
 
     if (size < bridge::kHostPageSize && waitTask == GpuTaskLayout::kInvalidId) {
@@ -2516,7 +2512,7 @@ struct MemoryOverlay : CacheOverlayBase {
   }
 };
 
-static void notifyPageChanges(std::uint32_t firstPage,
+static void notifyPageChanges(int vmId, std::uint32_t firstPage,
                               std::uint32_t pageCount) {
   std::uint64_t command =
       (static_cast<std::uint64_t>(pageCount - 1) << 32) | firstPage;
@@ -2524,7 +2520,7 @@ static void notifyPageChanges(std::uint32_t firstPage,
   while (true) {
     for (std::size_t i = 0; i < std::size(g_bridge->cacheCommands); ++i) {
       std::uint64_t expCommand = 0;
-      if (g_bridge->cacheCommands[i].compare_exchange_strong(
+      if (g_bridge->cacheCommands[vmId][i].compare_exchange_strong(
               expCommand, command, std::memory_order::acquire,
               std::memory_order::relaxed)) {
         return;
@@ -2533,22 +2529,23 @@ static void notifyPageChanges(std::uint32_t firstPage,
   }
 }
 
-static void modifyWatchFlags(std::uint64_t address, std::uint64_t size,
-                             std::uint8_t addFlags, std::uint8_t removeFlags) {
+static void modifyWatchFlags(int vmId, std::uint64_t address,
+                             std::uint64_t size, std::uint8_t addFlags,
+                             std::uint8_t removeFlags) {
   auto firstPage = address / bridge::kHostPageSize;
   auto lastPage =
       (address + size + bridge::kHostPageSize - 1) / bridge::kHostPageSize;
   bool hasChanges = false;
   for (auto page = firstPage; page < lastPage; ++page) {
     auto prevValue =
-        g_bridge->cachePages[page].load(std::memory_order::relaxed);
+        g_bridge->cachePages[vmId][page].load(std::memory_order::relaxed);
     auto newValue = (prevValue & ~removeFlags) | addFlags;
 
     if (newValue == prevValue) {
       continue;
     }
 
-    while (!g_bridge->cachePages[page].compare_exchange_weak(
+    while (!g_bridge->cachePages[vmId][page].compare_exchange_weak(
         prevValue, newValue, std::memory_order::relaxed)) {
       newValue = (prevValue & ~removeFlags) | addFlags;
     }
@@ -2559,23 +2556,24 @@ static void modifyWatchFlags(std::uint64_t address, std::uint64_t size,
   }
 
   if (hasChanges) {
-    notifyPageChanges(firstPage, lastPage - firstPage);
+    notifyPageChanges(vmId, firstPage, lastPage - firstPage);
   }
 }
 
-static void watchWrites(std::uint64_t address, std::uint64_t size) {
-  modifyWatchFlags(address, size, bridge::kPageWriteWatch,
+static void watchWrites(int vmId, std::uint64_t address, std::uint64_t size) {
+  modifyWatchFlags(vmId, address, size, bridge::kPageWriteWatch,
                    bridge::kPageInvalidated);
 }
-static void lockReadWrite(std::uint64_t address, std::uint64_t size,
+static void lockReadWrite(int vmId, std::uint64_t address, std::uint64_t size,
                           bool isLazy) {
-  modifyWatchFlags(address, size,
+  modifyWatchFlags(vmId, address, size,
                    bridge::kPageReadWriteLock |
                        (isLazy ? bridge::kPageLazyLock : 0),
                    bridge::kPageInvalidated);
 }
-static void unlockReadWrite(std::uint64_t address, std::uint64_t size) {
-  modifyWatchFlags(address, size, bridge::kPageWriteWatch,
+static void unlockReadWrite(int vmId, std::uint64_t address,
+                            std::uint64_t size) {
+  modifyWatchFlags(vmId, address, size, bridge::kPageWriteWatch,
                    bridge::kPageReadWriteLock | bridge::kPageLazyLock);
 }
 
@@ -2600,6 +2598,7 @@ struct CacheLine {
     auto operator<=>(const ImageKey &other) const = default;
   };
 
+  RemoteMemory memory;
   std::mutex hostSyncMtx;
   util::MemoryTableWithPayload<CacheSyncEntry> hostSyncTable;
 
@@ -2637,14 +2636,14 @@ struct CacheLine {
     bool hasInvalidations = false;
 
     for (auto page = firstPage; page < lastPage; ++page) {
-      auto prevValue =
-          g_bridge->cachePages[page].load(std::memory_order::relaxed);
+      auto prevValue = g_bridge->cachePages[memory.vmId][page].load(
+          std::memory_order::relaxed);
 
       if (~prevValue & bridge::kPageInvalidated) {
         continue;
       }
 
-      while (!g_bridge->cachePages[page].compare_exchange_weak(
+      while (!g_bridge->cachePages[memory.vmId][page].compare_exchange_weak(
           prevValue, prevValue & ~bridge::kPageInvalidated,
           std::memory_order::relaxed)) {
       }
@@ -2658,7 +2657,7 @@ struct CacheLine {
   }
 
   void trackCacheRead(std::uint64_t address, std::uint64_t size) {
-    watchWrites(address, size);
+    watchWrites(memory.vmId, address, size);
   }
 
   void setWriteBackTask(std::uint64_t address, std::uint64_t size,
@@ -2721,7 +2720,7 @@ struct CacheLine {
                                area.beginAddress, areaSize);
     updateTaskChain->wait();
     uploadBuffer->unlock(tag);
-    unlockReadWrite(area.beginAddress, areaSize);
+    unlockReadWrite(memory.vmId, area.beginAddress, areaSize);
     // std::printf("memory lazy update, %lx finish\n", address);
   }
 
@@ -2730,7 +2729,8 @@ struct CacheLine {
 
     entry->unlockMutableTask = [=, this] {
       if (entry->cacheMode != CacheMode::None) {
-        lockReadWrite(address, size, entry->cacheMode == CacheMode::LazyWrite);
+        lockReadWrite(memory.vmId, address, size,
+                      entry->cacheMode == CacheMode::LazyWrite);
         entry->syncState.map(address, address + size, tag);
 
         std::lock_guard lock(hostSyncMtx);
@@ -2785,7 +2785,7 @@ struct CacheLine {
         taskChain->wait();
 
         if (entry->cacheMode != CacheMode::None) {
-          unlockReadWrite(address, size);
+          unlockReadWrite(memory.vmId, address, size);
         }
         return TaskResult::Complete;
       });
@@ -3001,6 +3001,7 @@ private:
     }
 
     auto bufferOverlay = new CacheBufferOverlay();
+    bufferOverlay->memory = memory;
     bufferOverlay->buffer = vk::Buffer::Allocate(
         getHostVisibleMemory(), size,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
@@ -3085,6 +3086,7 @@ private:
     }
 
     auto newOverlay = new CacheImageOverlay();
+    newOverlay->memory = memory;
 
     newOverlay->image = vk::Image2D::Allocate(getDeviceLocalMemory(), width,
                                               height, colorFormat, usage);
@@ -3103,8 +3105,8 @@ private:
     } else */
     if (isCompressed) {
       dataWidth = (width + 3) / 4;
-      dataPitch = (height + 3) / 4;
-      dataHeight = (pitch + 3) / 4;
+      dataPitch = (pitch + 3) / 4;
+      dataHeight = (height + 3) / 4;
       bpp = 16;
     }
 
@@ -3196,8 +3198,8 @@ struct Cache {
     auto operator<=>(const DetachedImageKey &other) const = default;
   };
 
-  // TODO: read S#
-  VkSampler sampler{};
+  RemoteMemory memory;
+  std::map<GnmSSampler, VkSampler> samplers;
   std::map<DetachedImageKey, Ref<CacheImageOverlay>> datachedImages;
   std::map<std::uint64_t, CacheLine, std::greater<>> cacheLines;
   std::atomic<std::uint64_t> nextTag{2};
@@ -3205,14 +3207,15 @@ struct Cache {
 
   std::mutex mtx;
 
-  Cache() {
-    getCpuScheduler().enqueue([this] {
-      auto page = g_bridge->gpuCacheCommand.load(std::memory_order::relaxed);
+  Cache(int vmId) : memory({vmId}) {
+    getCpuScheduler().enqueue([this, vmId] {
+      auto page =
+          g_bridge->gpuCacheCommand[vmId].load(std::memory_order::relaxed);
       if (page == 0) {
         return TaskResult::Reschedule;
       }
 
-      g_bridge->gpuCacheCommand.store(0, std::memory_order::relaxed);
+      g_bridge->gpuCacheCommand[vmId].store(0, std::memory_order::relaxed);
       auto address = static_cast<std::uint64_t>(page) * bridge::kHostPageSize;
 
       auto &line = getLine(address, bridge::kHostPageSize);
@@ -3226,10 +3229,12 @@ struct Cache {
                             vk::g_vkAllocator);
     vkDestroyDescriptorPool(vk::g_vkDevice, computeDescriptorPool,
                             vk::g_vkAllocator);
-    vkDestroySampler(vk::g_vkDevice, sampler, vk::g_vkAllocator);
+    for (auto &[s, handle] : samplers) {
+      vkDestroySampler(vk::g_vkDevice, handle, vk::g_vkAllocator);
+    }
     graphicsDescriptorPool = VK_NULL_HANDLE;
     computeDescriptorPool = VK_NULL_HANDLE;
-    sampler = VK_NULL_HANDLE;
+    samplers.clear();
 
     graphicsDecsriptorSets.clear();
     computeDecsriptorSets.clear();
@@ -3241,7 +3246,7 @@ struct Cache {
   void syncLines() {
     std::lock_guard lock(mtx);
 
-    auto areas = std::exchange(memoryAreaTable.invalidated, {});
+    auto areas = std::exchange(memoryAreaTable[memory.vmId].invalidated, {});
     auto it = cacheLines.begin();
 
     if (it == cacheLines.end()) {
@@ -3322,32 +3327,48 @@ struct Cache {
 
   std::uint64_t createTag() { return nextTag.fetch_add(2); }
 
-  VkSampler getSampler() {
-    if (sampler != VK_NULL_HANDLE) {
-      return sampler;
+  VkSampler getSampler(const GnmSSampler &ssampler) {
+    std::lock_guard lock(mtx);
+    auto [it, inserted] = samplers.try_emplace(ssampler, VK_NULL_HANDLE);
+
+    if (!inserted) {
+      return it->second;
     }
 
-    std::lock_guard lock(mtx);
+    auto clampToVkAddressMode = [](int clamp) {
+      switch (clamp) {
+      case 0:
+        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+      case 1:
+        return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+      case 2:
+        return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+      case 4:
+        return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+      }
+      return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+    };
+
     VkSamplerCreateInfo samplerInfo{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = VK_FILTER_LINEAR,
         .minFilter = VK_FILTER_LINEAR,
         .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+        .addressModeU = clampToVkAddressMode(ssampler.clamp_x),
+        .addressModeV = clampToVkAddressMode(ssampler.clamp_y),
+        .addressModeW = clampToVkAddressMode(ssampler.clamp_z),
         .mipLodBias = 0.0f,
         .anisotropyEnable = VK_FALSE,
         .maxAnisotropy = 1.0,
-        .compareOp = VK_COMPARE_OP_NEVER,
-        .minLod = 0.0f,
-        .maxLod = 0.0f,
+        .compareOp = (VkCompareOp)ssampler.depth_compare_func,
+        .minLod = 0.f,
+        .maxLod = 1.f,
         .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
     };
 
     Verify() << vkCreateSampler(vk::g_vkDevice, &samplerInfo, nullptr,
-                                &sampler);
-    return sampler;
+                                &it->second);
+    return it->second;
   }
 
   VkDescriptorSet getGraphicsDescriptorSet() {
@@ -3445,7 +3466,7 @@ struct Cache {
         for (auto &shader : emplacedIt->second) {
           bool isAllSame = true;
           for (auto &[startAddress, bytes] : shader.cachedData) {
-            if (std::memcmp(g_hostMemory.getPointer(startAddress), bytes.data(),
+            if (std::memcmp(memory.getPointer(startAddress), bytes.data(),
                             bytes.size()) != 0) {
               isAllSame = false;
               break;
@@ -3465,17 +3486,17 @@ struct Cache {
     }
 
     taskSet.append(
-        getCpuScheduler(), createCpuTask([=](const AsyncTaskCtl &) {
+        getCpuScheduler(), createCpuTask([=, this](const AsyncTaskCtl &) {
           util::MemoryAreaTable<> dependencies;
           flockfile(stdout);
           auto info = shader::convert(
-              g_hostMemory, stage, address,
+              memory, stage, address,
               std::span<const std::uint32_t>(userSgprs, userSgprsCount), dimX,
               dimY, dimZ, dependencies);
 
           if (!validateSpirv(info.spirv)) {
             printSpirv(info.spirv);
-            dumpShader(g_hostMemory.getPointer<std::uint32_t>(address));
+            dumpShader(memory.getPointer<std::uint32_t>(address));
             util::unreachable();
           }
 
@@ -3487,7 +3508,7 @@ struct Cache {
           funlockfile(stdout);
 
           for (auto [startAddress, endAddress] : dependencies) {
-            auto ptr = g_hostMemory.getPointer(startAddress);
+            auto ptr = memory.getPointer(startAddress);
             auto &target = entry->cachedData[startAddress];
             target.resize(endAddress - startAddress);
 
@@ -3550,7 +3571,7 @@ private:
     if (it == cacheLines.end() ||
         address >= it->second.areaAddress + it->second.areaSize ||
         it->second.areaAddress >= address + size) {
-      auto area = memoryAreaTable.queryArea(address / kPageSize);
+      auto area = memoryAreaTable[memory.vmId].queryArea(address / kPageSize);
       area.beginAddress *= kPageSize;
       area.endAddress *= kPageSize;
 
@@ -3558,15 +3579,16 @@ private:
       it = cacheLines.emplace_hint(
           it, std::piecewise_construct, std::tuple{area.beginAddress},
           std::tuple{area.beginAddress, area.endAddress});
+      it->second.memory = memory;
     }
 
     return it->second;
   }
 };
 
-static Cache &getCache() {
-  static Cache result;
-  return result;
+static Cache &getCache(RemoteMemory memory) {
+  static Cache caches[6]{0, 1, 2, 3, 4, 5};
+  return caches[memory.vmId];
 }
 
 static VkShaderEXT getPrimTypeRectGeomShader() {
@@ -3596,11 +3618,14 @@ static VkShaderEXT getPrimTypeRectGeomShader() {
 
 struct GpuActionResources {
   std::atomic<unsigned> refs{0};
+  RemoteMemory memory;
   // GpuTaskHandle taskHandle;
   // QueueRegisters &regs;
-  std::uint64_t tag = getCache().createTag();
+  std::uint64_t tag = getCache(memory).createTag();
   std::vector<Ref<CacheImageOverlay>> usedImages;
   std::vector<Ref<CacheBufferOverlay>> usedBuffers;
+
+  GpuActionResources(RemoteMemory memory) : memory(memory) {}
 
   void release() {
     for (auto image : usedImages) {
@@ -3627,7 +3652,7 @@ struct GpuActionResources {
       case shader::Shader::UniformKind::Buffer: {
         auto &vbuffer = *reinterpret_cast<const GnmVBuffer *>(uniform.buffer);
 
-        auto bufferRef = getCache().getBuffer(
+        auto bufferRef = getCache(memory).getBuffer(
             tag, initTaskChain, vbuffer.getAddress(), vbuffer.getNumRecords(),
             vbuffer.getStride(), vbuffer.getElementSize(), uniform.accessOp);
 
@@ -3683,7 +3708,7 @@ struct GpuActionResources {
         //     tbuffer.base_array, tbuffer.last_array, tbuffer.min_lod_warn,
         //     tbuffer.counter_bank_id, tbuffer.LOD_hdw_cnt_en);
 
-        auto image = getCache().getImage(
+        auto image = getCache(memory).getImage(
             tag, initTaskChain, tbuffer.getAddress(), dataFormat, channelType,
             tileMode, width, height, depth, pitch, tbuffer.dst_sel_x,
             tbuffer.dst_sel_y, tbuffer.dst_sel_z, tbuffer.dst_sel_w,
@@ -3714,8 +3739,8 @@ struct GpuActionResources {
       }
 
       case shader::Shader::UniformKind::Sampler: {
-        // TODO: load S# sampler
-        auto sampler = getCache().getSampler();
+        auto &ssampler = *reinterpret_cast<const GnmSSampler *>(uniform.buffer);
+        auto sampler = getCache(memory).getSampler(ssampler);
 
         VkDescriptorImageInfo imageInfo{
             .sampler = sampler,
@@ -3739,20 +3764,20 @@ struct GpuActionResources {
   }
 };
 
-static void eliminateFastClear() {
+static void eliminateFastClear(RemoteMemory memory) {
   // TODO
   // util::unreachable();
 }
 
-static void resolve() {
+static void resolve(RemoteMemory memory) {
   // TODO: when texture cache will be implemented it MSAA should be done by
   // GPU
   util::unreachable();
   // auto srcBuffer = regs.colorBuffers[0];
   // auto dstBuffer = regs.colorBuffers[1];
 
-  // const auto src = g_hostMemory.getPointer(srcBuffer.base);
-  // auto dst = g_hostMemory.getPointer(dstBuffer.base);
+  // const auto src = memory.getPointer(srcBuffer.base);
+  // auto dst = memory.getPointer(dstBuffer.base);
 
   // if (src == nullptr || dst == nullptr) {
   //   return;
@@ -3761,19 +3786,20 @@ static void resolve() {
   // std::memcpy(dst, src, regs.screenScissorH * regs.screenScissorW * 4);
 }
 
-static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
-                 std::uint64_t indeciesAddress, std::uint32_t indexCount) {
+static void draw(RemoteMemory memory, TaskChain &taskSet, QueueRegisters &regs,
+                 std::uint32_t count, std::uint64_t indeciesAddress,
+                 std::uint32_t indexCount) {
   if (regs.cbColorFormat == CbColorFormat::Disable) {
     return;
   }
 
   if (regs.cbColorFormat == CbColorFormat::EliminateFastClear) {
-    eliminateFastClear();
+    eliminateFastClear(memory);
     return;
   }
 
   if (regs.cbColorFormat == CbColorFormat::Resolve) {
-    resolve();
+    resolve(memory);
     return;
   }
 
@@ -3793,17 +3819,18 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
 
   regs.depthClearEnable = true;
 
-  auto resources = Ref(new GpuActionResources());
+  auto resources = Ref(new GpuActionResources(memory));
+  auto &cache = getCache(memory);
 
   // std::printf("draw action, tag %lu\n", resources->tag);
 
   TaskSet shaderLoadTaskSet;
   auto [desriptorSetLayout, pipelineLayout] = getGraphicsLayout();
-  auto &vertexShader = getCache().getShader(
-      shaderLoadTaskSet, desriptorSetLayout, shader::Stage::Vertex,
-      regs.pgmVsAddress, regs.userVsData, regs.vsUserSpgrs);
+  auto &vertexShader = cache.getShader(shaderLoadTaskSet, desriptorSetLayout,
+                                       shader::Stage::Vertex, regs.pgmVsAddress,
+                                       regs.userVsData, regs.vsUserSpgrs);
 
-  auto &fragmentShader = getCache().getShader(
+  auto &fragmentShader = cache.getShader(
       shaderLoadTaskSet, desriptorSetLayout, shader::Stage::Fragment,
       regs.pgmPsAddress, regs.userPsData, regs.psUserSpgrs);
 
@@ -3834,7 +3861,7 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
     auto dataFormat = (SurfaceFormat)colorBuffer.format;
     auto channelType = kTextureChannelTypeSrgb; // TODO
 
-    auto colorImage = getCache().getImage(
+    auto colorImage = getCache(memory).getImage(
         resources->tag, taskSet, colorBuffer.base, dataFormat, channelType,
         (TileMode)colorBuffer.tileModeIndex,
         regs.screenScissorW + regs.screenScissorX,
@@ -3866,7 +3893,10 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
             regs.blendSeparateAlpha
                 ? blendMultiplierToVkBlendFactor(regs.blendAlphaDst)
                 : blendMultiplierToVkBlendFactor(regs.blendColorDst),
-        .alphaBlendOp = blendFuncToVkBlendOp(regs.blendAlphaFn),
+        .alphaBlendOp = regs.blendSeparateAlpha
+                            ? blendFuncToVkBlendOp(regs.blendAlphaFn)
+                            : blendFuncToVkBlendOp(regs.blendColorFn),
+
     });
 
     colorWriteMask.push_back(((mask & 1) ? VK_COLOR_COMPONENT_R_BIT : 0) |
@@ -3875,7 +3905,7 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
                              ((mask & 8) ? VK_COLOR_COMPONENT_A_BIT : 0));
   }
 
-  auto descSet = getCache().getGraphicsDescriptorSet();
+  auto descSet = cache.getGraphicsDescriptorSet();
 
   resources->loadShaderBindings(taskSet, descSet, vertexShader.info);
   resources->loadShaderBindings(taskSet, descSet, fragmentShader.info);
@@ -3899,13 +3929,13 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
   VkRenderingAttachmentInfo depthAttachment;
 
   if (regs.depthEnable) {
-    depthImage = getCache().getImage(
-        resources->tag, taskSet, regs.zReadBase, kSurfaceFormat24_8,
-        kTextureChannelTypeUNorm, kTileModeDisplay_LinearAligned,
-        regs.screenScissorW + regs.screenScissorX,
-        regs.screenScissorH + regs.screenScissorY, 1,
-        regs.screenScissorW + regs.screenScissorX, 0, 0, 0, 0, depthAccess,
-        false);
+    depthImage = cache.getImage(resources->tag, taskSet, regs.zReadBase,
+                                kSurfaceFormat24_8, kTextureChannelTypeUNorm,
+                                kTileModeDisplay_LinearAligned,
+                                regs.screenScissorW + regs.screenScissorX,
+                                regs.screenScissorH + regs.screenScissorY, 1,
+                                regs.screenScissorW + regs.screenScissorX, 0, 0,
+                                0, 0, depthAccess, false);
 
     depthAttachment = {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -3930,7 +3960,7 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
                                                          : VK_INDEX_TYPE_UINT32;
 
   if (needConversion) {
-    auto indecies = g_hostMemory.getPointer(indeciesAddress);
+    auto indecies = memory.getPointer(indeciesAddress);
     if (indecies == nullptr) {
       indexCount = count;
     }
@@ -3993,8 +4023,8 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
     unsigned indexSize = vkIndexType == VK_INDEX_TYPE_UINT16 ? 2 : 4;
 
     auto bufferRef =
-        getCache().getBuffer(resources->tag, taskSet, indeciesAddress,
-                             indexCount, 0, indexSize, shader::AccessOp::Load);
+        cache.getBuffer(resources->tag, taskSet, indeciesAddress, indexCount, 0,
+                        indexSize, shader::AccessOp::Load);
     indexBuffer = {
         .buffer = bufferRef->buffer.getHandle(),
         .offset = indeciesAddress - bufferRef->bufferAddress,
@@ -4125,12 +4155,6 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
     }
     _vkCmdBindShadersEXT(drawCommandBuffer, std::size(stages), stages, shaders);
 
-    if (primType == kPrimitiveTypeRectList) {
-      VkShaderStageFlagBits stage = VK_SHADER_STAGE_GEOMETRY_BIT;
-      auto shader = getPrimTypeRectGeomShader();
-      _vkCmdBindShadersEXT(drawCommandBuffer, 1, &stage, &shader);
-    }
-
     if (indexBuffer.buffer == nullptr) {
       vkCmdDraw(drawCommandBuffer, count, 1, 0, 0);
     } else {
@@ -4147,22 +4171,24 @@ static void draw(TaskChain &taskSet, QueueRegisters &regs, std::uint32_t count,
 
   taskSet.add(drawTaskId, [=] {
     // std::printf("releasing draw action, tag %lu\n", resources->tag);
-    getCache().releaseGraphicsDescriptorSet(descSet);
+    getCache(memory).releaseGraphicsDescriptorSet(descSet);
     resources->release();
   });
 
   taskSet.wait();
 }
 
-static void dispatch(TaskChain &taskSet, QueueRegisters &regs, std::size_t dimX,
-                     std::size_t dimY, std::size_t dimZ) {
+static void dispatch(RemoteMemory memory, TaskChain &taskSet,
+                     QueueRegisters &regs, std::size_t dimX, std::size_t dimY,
+                     std::size_t dimZ) {
   if (regs.pgmComputeAddress == 0) {
     std::fprintf(stderr, "attempt to invoke dispatch without compute shader\n");
     return;
   }
 
-  auto resources = Ref(new GpuActionResources());
-  auto descSet = getCache().getComputeDescriptorSet();
+  auto resources = Ref(new GpuActionResources(memory));
+  auto &cache = getCache(memory);
+  auto descSet = cache.getComputeDescriptorSet();
 
   // std::printf("dispatch action, tag %lu\n", resources->tag);
 
@@ -4170,7 +4196,7 @@ static void dispatch(TaskChain &taskSet, QueueRegisters &regs, std::size_t dimX,
 
   TaskSet loadShaderTaskSet;
 
-  auto &computeShader = getCache().getShader(
+  auto &computeShader = cache.getShader(
       loadShaderTaskSet, desriptorSetLayout, shader::Stage::Compute,
       regs.pgmComputeAddress, regs.userComputeData, regs.computeUserSpgrs,
       regs.computeNumThreadX, regs.computeNumThreadY, regs.computeNumThreadZ);
@@ -4196,7 +4222,7 @@ static void dispatch(TaskChain &taskSet, QueueRegisters &regs, std::size_t dimX,
 
   taskSet.add(computeTaskId, [=] {
     // std::printf("releasing dispatch action, tag %lu\n", resources->tag);
-    getCache().releaseComputeDescriptorSet(descSet);
+    getCache(memory).releaseComputeDescriptorSet(descSet);
     resources->release();
   });
 }
@@ -4228,7 +4254,7 @@ static std::uint64_t gpuCoreClock() {
   return 0x0;
 }
 
-static void writeEop(EopData data) {
+static void writeEop(RemoteMemory memory, EopData data) {
   // std::printf("write eop: dstSel=%x, intSel=%x,eventIndex=%x, address =
   // %#lx,
   // "
@@ -4237,33 +4263,33 @@ static void writeEop(EopData data) {
   //             data.value, (unsigned)data.eventSource);
   switch (data.eventSource) {
   case EventWriteSource::Immediate32: {
-    *g_hostMemory.getPointer<std::uint32_t>(data.address) = data.value;
+    *memory.getPointer<std::uint32_t>(data.address) = data.value;
     break;
   }
   case EventWriteSource::Immediate64: {
-    *g_hostMemory.getPointer<std::uint64_t>(data.address) = data.value;
+    *memory.getPointer<std::uint64_t>(data.address) = data.value;
     break;
   }
   case EventWriteSource::GlobalClockCounter: {
-    *g_hostMemory.getPointer<std::uint64_t>(data.address) = globalClock();
+    *memory.getPointer<std::uint64_t>(data.address) = globalClock();
     break;
   }
   case EventWriteSource::GpuCoreClockCounter: {
-    *g_hostMemory.getPointer<std::uint64_t>(data.address) = gpuCoreClock();
+    *memory.getPointer<std::uint64_t>(data.address) = gpuCoreClock();
     break;
   }
   }
 }
 
-static void drawIndexAuto(TaskChain &waitTaskSet, QueueRegisters &regs,
-                          std::uint32_t count) {
-  draw(waitTaskSet, regs, count, 0, 0);
+static void drawIndexAuto(RemoteMemory memory, TaskChain &waitTaskSet,
+                          QueueRegisters &regs, std::uint32_t count) {
+  draw(memory, waitTaskSet, regs, count, 0, 0);
 }
 
-static void drawIndex2(TaskChain &waitTaskSet, QueueRegisters &regs,
-                       std::uint32_t maxSize, std::uint64_t address,
-                       std::uint32_t count) {
-  draw(waitTaskSet, regs, count, address, maxSize);
+static void drawIndex2(RemoteMemory memory, TaskChain &waitTaskSet,
+                       QueueRegisters &regs, std::uint32_t maxSize,
+                       std::uint64_t address, std::uint32_t count) {
+  draw(memory, waitTaskSet, regs, count, address, maxSize);
 }
 
 struct Queue {
@@ -4278,9 +4304,11 @@ struct Queue {
   std::deque<CommandBuffer> commandBuffers;
 };
 
-static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleCommandBuffer(RemoteMemory memory, TaskChain &waitTaskSet,
+                                QueueRegisters &regs,
                                 std::span<std::uint32_t> &packets);
-static void handleLoadConstRam(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleLoadConstRam(RemoteMemory memory, TaskChain &waitTaskSet,
+                               QueueRegisters &regs,
                                std::span<std::uint32_t> packet) {
   std::uint64_t addressLo = packet[1];
   std::uint64_t addressHi = packet[2];
@@ -4289,7 +4317,8 @@ static void handleLoadConstRam(TaskChain &waitTaskSet, QueueRegisters &regs,
   auto address = addressLo | (addressHi << 32);
 }
 
-static void handleSET_UCONFIG_REG(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleSET_UCONFIG_REG(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
 
   std::uint32_t regId = 0xc000 + packet[1];
@@ -4299,7 +4328,8 @@ static void handleSET_UCONFIG_REG(TaskChain &waitTaskSet, QueueRegisters &regs,
   }
 }
 
-static void handleSET_CONTEXT_REG(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleSET_CONTEXT_REG(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
   std::uint32_t regId = 0xa000 + packet[1];
 
@@ -4308,7 +4338,8 @@ static void handleSET_CONTEXT_REG(TaskChain &waitTaskSet, QueueRegisters &regs,
   }
 }
 
-static void handleSET_SH_REG(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleSET_SH_REG(RemoteMemory memory, TaskChain &waitTaskSet,
+                             QueueRegisters &regs,
                              std::span<std::uint32_t> packet) {
 
   std::uint32_t regId = 0x2c00 + packet[1];
@@ -4318,7 +4349,8 @@ static void handleSET_SH_REG(TaskChain &waitTaskSet, QueueRegisters &regs,
   }
 }
 
-static void handleDMA_DATA(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleDMA_DATA(RemoteMemory memory, TaskChain &waitTaskSet,
+                           QueueRegisters &regs,
                            std::span<std::uint32_t> packet) {
   auto srcAddrLo = packet[2];
   auto srcAddrHi = packet[3];
@@ -4332,12 +4364,14 @@ static void handleDMA_DATA(TaskChain &waitTaskSet, QueueRegisters &regs,
   // dstAddr);
 }
 
-static void handleAQUIRE_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleAQUIRE_MEM(RemoteMemory memory, TaskChain &waitTaskSet,
+                             QueueRegisters &regs,
                              std::span<std::uint32_t> packet) {
   // std::printf("aquire mem\n");
 }
 
-static void handleWRITE_DATA(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleWRITE_DATA(RemoteMemory memory, TaskChain &waitTaskSet,
+                             QueueRegisters &regs,
                              std::span<std::uint32_t> packet) {
   auto control = packet[1];
   auto destAddrLo = packet[2];
@@ -4371,19 +4405,21 @@ static void handleWRITE_DATA(TaskChain &waitTaskSet, QueueRegisters &regs,
   auto gdsOffset = getBits(destAddrLo, 15, 0);
 
   auto address = destAddrLo | (static_cast<std::uint64_t>(destAddrHi) << 32);
-  auto dest = g_hostMemory.getPointer<std::uint32_t>(address);
+  auto dest = memory.getPointer<std::uint32_t>(address);
   // std::printf("write data: address=%lx\n", address);
   for (unsigned i = 0; i < size; ++i) {
     dest[i] = data[i];
   }
 }
 
-static void handleINDEX_TYPE(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleINDEX_TYPE(RemoteMemory memory, TaskChain &waitTaskSet,
+                             QueueRegisters &regs,
                              std::span<std::uint32_t> packet) {
   regs.indexType = packet[1];
 }
 
-static void handleINDEX_BASE(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleINDEX_BASE(RemoteMemory memory, TaskChain &waitTaskSet,
+                             QueueRegisters &regs,
                              std::span<std::uint32_t> packet) {
   // std::printf("INDEX_BASE:\n");
   // for (auto cmd : packet) {
@@ -4396,12 +4432,14 @@ static void handleINDEX_BASE(TaskChain &waitTaskSet, QueueRegisters &regs,
   regs.indexBase = (addressHi << 32) | addressLo;
 }
 
-static void handleDRAW_INDEX_AUTO(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleDRAW_INDEX_AUTO(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
-  drawIndexAuto(waitTaskSet, regs, packet[1]);
+  drawIndexAuto(memory, waitTaskSet, regs, packet[1]);
 }
 
-static void handleDRAW_INDEX_OFFSET_2(TaskChain &waitTaskSet,
+static void handleDRAW_INDEX_OFFSET_2(RemoteMemory memory,
+                                      TaskChain &waitTaskSet,
                                       QueueRegisters &regs,
                                       std::span<std::uint32_t> packet) {
   auto maxSize = packet[1];
@@ -4409,38 +4447,44 @@ static void handleDRAW_INDEX_OFFSET_2(TaskChain &waitTaskSet,
   auto count = packet[3];
   auto drawInitiator = packet[4];
 
-  drawIndex2(waitTaskSet, regs, maxSize, regs.indexBase + offset, count);
+  drawIndex2(memory, waitTaskSet, regs, maxSize, regs.indexBase + offset,
+             count);
 }
 
-static void handleDRAW_INDEX_2(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleDRAW_INDEX_2(RemoteMemory memory, TaskChain &waitTaskSet,
+                               QueueRegisters &regs,
                                std::span<std::uint32_t> packet) {
   auto maxSize = packet[1];
   auto address = packet[2] | (static_cast<std::uint64_t>(packet[3]) << 32);
   auto count = packet[4];
 
-  drawIndex2(waitTaskSet, regs, maxSize, address, count);
+  drawIndex2(memory, waitTaskSet, regs, maxSize, address, count);
 }
 
-static void handleDISPATCH_DIRECT(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleDISPATCH_DIRECT(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
   auto dimX = packet[1];
   auto dimY = packet[2];
   auto dimZ = packet[3];
 
-  dispatch(waitTaskSet, regs, dimX, dimY, dimZ);
+  dispatch(memory, waitTaskSet, regs, dimX, dimY, dimZ);
 }
 
-static void handleCONTEXT_CONTROL(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleCONTEXT_CONTROL(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
   // std::printf("context control\n");
 }
 
-static void handleCLEAR_STATE(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleCLEAR_STATE(RemoteMemory memory, TaskChain &waitTaskSet,
+                              QueueRegisters &regs,
                               std::span<std::uint32_t> packet) {
   // std::printf("clear state\n");
 }
 
-static void handleRELEASE_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleRELEASE_MEM(RemoteMemory memory, TaskChain &waitTaskSet,
+                              QueueRegisters &regs,
                               std::span<std::uint32_t> packet) {
   auto writeSource = static_cast<EventWriteSource>(getBits(packet[2], 32, 29));
   auto addressLo = packet[3];
@@ -4457,30 +4501,32 @@ static void handleRELEASE_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
 
   switch (writeSource) {
   case EventWriteSource::Immediate32: {
-    *g_hostMemory.getPointer<std::uint32_t>(address) = data;
+    *memory.getPointer<std::uint32_t>(address) = data;
     break;
   }
   case EventWriteSource::Immediate64: {
-    *g_hostMemory.getPointer<std::uint64_t>(address) = data;
+    *memory.getPointer<std::uint64_t>(address) = data;
     break;
   }
   case EventWriteSource::GlobalClockCounter: {
-    *g_hostMemory.getPointer<std::uint64_t>(address) = globalClock();
+    *memory.getPointer<std::uint64_t>(address) = globalClock();
     break;
   }
   case EventWriteSource::GpuCoreClockCounter: {
-    *g_hostMemory.getPointer<std::uint64_t>(address) = gpuCoreClock();
+    *memory.getPointer<std::uint64_t>(address) = gpuCoreClock();
     break;
   }
   }
 }
 
-static void handleEVENT_WRITE(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleEVENT_WRITE(RemoteMemory memory, TaskChain &waitTaskSet,
+                              QueueRegisters &regs,
                               std::span<std::uint32_t> packet) {
   // std::printf("event write\n");
 }
 
-static void handleINDIRECT_BUFFER_3F(TaskChain &waitTaskSet,
+static void handleINDIRECT_BUFFER_3F(RemoteMemory memory,
+                                     TaskChain &waitTaskSet,
                                      QueueRegisters &regs,
                                      std::span<std::uint32_t> packet) {
   auto swapFn = getBits(packet[1], 1, 0);
@@ -4492,12 +4538,11 @@ static void handleINDIRECT_BUFFER_3F(TaskChain &waitTaskSet,
   std::printf("indirect buffer: address=%lx, size = %x, vmid=%x\n", address,
               count, vmid);
 
-  auto commands =
-      std::span(g_hostMemory.getPointer<std::uint32_t>(address), count);
+  auto commands = std::span(memory.getPointer<std::uint32_t>(address), count);
 
   waitTaskSet.add([=, waitTaskSet = TaskChain::Create()] mutable {
     while (!commands.empty()) {
-      handleCommandBuffer(*waitTaskSet.get(), regs, commands);
+      handleCommandBuffer(memory, *waitTaskSet.get(), regs, commands);
       waitTaskSet->wait();
     }
     std::printf("indirect buffer end\n");
@@ -4505,7 +4550,8 @@ static void handleINDIRECT_BUFFER_3F(TaskChain &waitTaskSet,
   });
 }
 
-static void handleEVENT_WRITE_EOP(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleEVENT_WRITE_EOP(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
   EopData eopData{};
   eopData.eventType = getBits(packet[1], 6, 0);
@@ -4517,10 +4563,11 @@ static void handleEVENT_WRITE_EOP(TaskChain &waitTaskSet, QueueRegisters &regs,
   eopData.intSel = getBits(packet[3], 26, 24);
   eopData.eventSource =
       static_cast<EventWriteSource>(getBits(packet[3], 32, 29));
-  writeEop(eopData);
+  writeEop(memory, eopData);
 }
 
-static void handleEVENT_WRITE_EOS(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleEVENT_WRITE_EOS(RemoteMemory memory, TaskChain &waitTaskSet,
+                                  QueueRegisters &regs,
                                   std::span<std::uint32_t> packet) {
   std::uint32_t eventType = getBits(packet[1], 6, 0);
   std::uint32_t eventIndex = getBits(packet[1], 12, 8);
@@ -4531,13 +4578,14 @@ static void handleEVENT_WRITE_EOS(TaskChain &waitTaskSet, QueueRegisters &regs,
   //             "address = %#lx, command = %#x\n",
   //             eventType, eventIndex, address, command);
   if (command == 0x4000) { // store 32bit data
-    *g_hostMemory.getPointer<std::uint32_t>(address) = packet[4];
+    *memory.getPointer<std::uint32_t>(address) = packet[4];
   } else {
     util::unreachable();
   }
 }
 
-static void handleWAIT_REG_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleWAIT_REG_MEM(RemoteMemory memory, TaskChain &waitTaskSet,
+                               QueueRegisters &regs,
                                std::span<std::uint32_t> packet) {
   auto function = packet[1] & 7;
   auto pollAddressLo = packet[2];
@@ -4548,7 +4596,7 @@ static void handleWAIT_REG_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
 
   auto pollAddress =
       pollAddressLo | (static_cast<std::uint64_t>(pollAddressHi) << 32);
-  auto pointer = g_hostMemory.getPointer<volatile std::uint32_t>(pollAddress);
+  auto pointer = memory.getPointer<volatile std::uint32_t>(pollAddress);
 
   auto compare = [&](std::uint32_t value, std::uint32_t reference,
                      int function) {
@@ -4591,10 +4639,11 @@ static void handleWAIT_REG_MEM(TaskChain &waitTaskSet, QueueRegisters &regs,
   });
 }
 
-static void handleNOP(TaskChain &waitTaskSet, QueueRegisters &regs,
-                      std::span<std::uint32_t> packet) {}
+static void handleNOP(RemoteMemory memory, TaskChain &waitTaskSet,
+                      QueueRegisters &regs, std::span<std::uint32_t> packet) {}
 
-static void handleUnknownCommand(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleUnknownCommand(RemoteMemory memory, TaskChain &waitTaskSet,
+                                 QueueRegisters &regs,
                                  std::span<std::uint32_t> packet) {
   auto op = getBits(packet[0], 15, 8);
   auto len = getBits(packet[0], 29, 16) + 1;
@@ -4602,7 +4651,8 @@ static void handleUnknownCommand(TaskChain &waitTaskSet, QueueRegisters &regs,
   //             opcodeToString(op).c_str(), len);
 }
 
-using CommandHandler = void (*)(TaskChain &waitTaskSet, QueueRegisters &regs,
+using CommandHandler = void (*)(RemoteMemory memory, TaskChain &waitTaskSet,
+                                QueueRegisters &regs,
                                 std::span<std::uint32_t> packet);
 static auto g_commandHandlers = [] {
   std::array<CommandHandler, 255> handlers;
@@ -4637,11 +4687,12 @@ static auto g_commandHandlers = [] {
   return handlers;
 }();
 
-static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
+static void handleCommandBuffer(RemoteMemory memory, TaskChain &waitTaskSet,
+                                QueueRegisters &regs,
                                 std::span<std::uint32_t> &packets) {
   while (!packets.empty()) {
     // std::uint64_t address =
-    //     (char *)packets.data() - g_hostMemory.shmPointer + 0x40000;
+    //     (char *)packets.data() - memory.shmPointer + 0x40000;
     // std::fprintf(stderr, "address = %lx\n", address);
     auto cmd = packets[0];
     auto type = getBits(cmd, 31, 30);
@@ -4655,7 +4706,7 @@ static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
       // std::printf("cmd: %s:%x, %x, %x\n", opcodeToString(op).c_str(), len,
       // predicate, shaderType);
 
-      g_commandHandlers[op](waitTaskSet, regs, packets.subspan(0, len));
+      g_commandHandlers[op](memory, waitTaskSet, regs, packets.subspan(0, len));
       packets = packets.subspan(len);
 
       if (!waitTaskSet.empty()) {
@@ -4686,16 +4737,15 @@ static void handleCommandBuffer(TaskChain &waitTaskSet, QueueRegisters &regs,
   }
 }
 
-void amdgpu::device::AmdgpuDevice::handleProtectMemory(std::uint64_t address,
+void amdgpu::device::AmdgpuDevice::handleProtectMemory(RemoteMemory memory,
+                                                       std::uint64_t address,
                                                        std::uint64_t size,
                                                        std::uint32_t prot) {
   auto beginPage = address / kPageSize;
   auto endPage = (address + size + kPageSize - 1) / kPageSize;
 
-  ::mprotect(g_hostMemory.getPointer(address), size, prot >> 4);
-
   if (prot >> 4) {
-    memoryAreaTable.map(beginPage, endPage);
+    memoryAreaTable[memory.vmId].map(beginPage, endPage);
     const char *protStr;
     switch (prot >> 4) {
     case PROT_READ:
@@ -4717,32 +4767,15 @@ void amdgpu::device::AmdgpuDevice::handleProtectMemory(std::uint64_t address,
     std::fprintf(stderr, "Allocated area at %zx, size %lx, prot %s\n", address,
                  size, protStr);
   } else {
-    memoryAreaTable.unmap(beginPage, endPage);
+    memoryAreaTable[memory.vmId].unmap(beginPage, endPage);
     std::fprintf(stderr, "Unmapped area at %zx, size %lx\n", address, size);
   }
-
-  std::size_t index = 0;
-  for (auto area : memoryAreaTable) {
-    // std::printf("area %lx-%lx\n", area.beginAddress * kPageSize,
-    //             area.endAddress * kPageSize);
-
-    if (index >= std::size(g_bridge->memoryAreas)) {
-      util::unreachable("too many memory areas");
-    }
-
-    g_bridge->memoryAreas[index++] = {
-        .address = area.beginAddress * kPageSize,
-        .size = (area.endAddress - area.beginAddress) * kPageSize,
-        .prot = (PROT_READ | PROT_WRITE) << 4 // TODO
-    };
-  }
-
-  g_bridge->memoryAreaCount = index;
 }
 
 static std::map<std::uint64_t, Queue> queues;
 
-void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t queueId,
+void amdgpu::device::AmdgpuDevice::handleCommandBuffer(RemoteMemory memory,
+                                                       std::uint64_t queueId,
                                                        std::uint64_t address,
                                                        std::uint64_t size) {
   auto count = size / sizeof(std::uint32_t);
@@ -4783,7 +4816,7 @@ void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t queueId,
       }
 
       auto taskChain = TaskChain::Create();
-      ::handleCommandBuffer(*taskChain.get(), queue->regs,
+      ::handleCommandBuffer(memory, *taskChain.get(), queue->regs,
                             commandBuffer->commands);
       taskChain->wait();
       return TaskResult::Reschedule;
@@ -4795,15 +4828,14 @@ void amdgpu::device::AmdgpuDevice::handleCommandBuffer(std::uint64_t queueId,
   std::lock_guard lock(it->second.mtx);
   it->second.commandBuffers.push_back(
       {.commands =
-           std::span(g_hostMemory.getPointer<std::uint32_t>(address), count)});
+           std::span(memory.getPointer<std::uint32_t>(address), count)});
 }
 
 bool amdgpu::device::AmdgpuDevice::handleFlip(
-    VkQueue queue, VkCommandBuffer cmdBuffer, TaskChain &taskChain,
-    std::uint32_t bufferIndex, std::uint64_t arg, VkImage targetImage,
-    VkExtent2D targetExtent, VkSemaphore waitSemaphore,
+    RemoteMemory memory, VkQueue queue, VkCommandBuffer cmdBuffer,
+    TaskChain &taskChain, std::uint32_t bufferIndex, std::uint64_t arg,
+    VkImage targetImage, VkExtent2D targetExtent, VkSemaphore waitSemaphore,
     VkSemaphore signalSemaphore, VkFence fence) {
-  // std::printf("requested flip %d\n", bufferIndex);
 
   if (bufferIndex == ~static_cast<std::uint32_t>(0)) {
     g_bridge->flipBuffer = bufferIndex;
@@ -4864,14 +4896,15 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
                       buffer.pixelFormat);
   }
 
-  auto tag = getCache().createTag();
+  auto &cache = getCache(memory);
+  auto tag = cache.createTag();
 
-  imageRef = getCache().getImage(
-      tag, taskChain, buffer.address, surfFormat, channelType,
-      buffer.tilingMode == 1 ? kTileModeDisplay_2dThin
-                             : kTileModeDisplay_LinearAligned,
-      buffer.width, buffer.height, 1, buffer.pitch, 4, 5, 6, 7,
-      shader::AccessOp::Load);
+  imageRef =
+      cache.getImage(tag, taskChain, buffer.address, surfFormat, channelType,
+                     buffer.tilingMode == 1 ? kTileModeDisplay_2dThin
+                                            : kTileModeDisplay_LinearAligned,
+                     buffer.width, buffer.height, 1, buffer.pitch, 4, 5, 6, 7,
+                     shader::AccessOp::Load);
 
   auto initTask = taskChain.getLastTaskId();
 
@@ -4982,7 +5015,7 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
     g_bridge->flipArg = arg;
     g_bridge->flipCount = g_bridge->flipCount + 1;
     auto bufferInUse =
-        g_hostMemory.getPointer<std::uint64_t>(g_bridge->bufferInUseAddress);
+        memory.getPointer<std::uint64_t>(g_bridge->bufferInUseAddress);
     if (bufferInUse != nullptr) {
       bufferInUse[bufferIndex] = 0;
     }
@@ -4998,7 +5031,9 @@ AmdgpuDevice::AmdgpuDevice(amdgpu::bridge::BridgeHeader *bridge) {
 }
 
 AmdgpuDevice::~AmdgpuDevice() {
-  getCache().clear();
+  for (int vmid = 0; vmid < 6; ++vmid) {
+    getCache(RemoteMemory{vmid}).clear();
+  }
 
   auto [gSetLayout, gPipelineLayout] = getGraphicsLayout();
   auto [cSetLayout, cPipelineLayout] = getComputeLayout();

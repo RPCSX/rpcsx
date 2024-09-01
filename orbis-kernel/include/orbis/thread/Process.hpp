@@ -51,6 +51,7 @@ struct Process final {
   ProcessState state = ProcessState::NEW;
   Process *parentProcess = nullptr;
   shared_mutex mtx;
+  int vmId = -1;
   void (*onSysEnter)(Thread *thread, int id, uint64_t *args,
                      int argsCount) = nullptr;
   void (*onSysExit)(Thread *thread, int id, uint64_t *args, int argsCount,

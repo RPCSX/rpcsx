@@ -41,71 +41,6 @@
 #include <unordered_map>
 
 static int g_gpuPid;
-
-void runBridge() {
-  std::thread{[] {
-    pthread_setname_np(pthread_self(), "Bridge");
-    auto bridge = rx::bridge.header;
-
-    std::vector<std::uint64_t> fetchedCommands;
-    fetchedCommands.reserve(std::size(bridge->cacheCommands));
-
-    while (true) {
-      for (auto &command : bridge->cacheCommands) {
-        std::uint64_t value = command.load(std::memory_order::relaxed);
-
-        if (value != 0) {
-          fetchedCommands.push_back(value);
-          command.store(0, std::memory_order::relaxed);
-        }
-      }
-
-      if (fetchedCommands.empty()) {
-        continue;
-      }
-
-      for (auto command : fetchedCommands) {
-        auto page = static_cast<std::uint32_t>(command);
-        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
-
-        auto pageFlags =
-            bridge->cachePages[page].load(std::memory_order::relaxed);
-
-        auto address =
-            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
-        auto origVmProt = rx::vm::getPageProtection(address);
-        int prot = 0;
-
-        if (origVmProt & rx::vm::kMapProtCpuRead) {
-          prot |= PROT_READ;
-        }
-        if (origVmProt & rx::vm::kMapProtCpuWrite) {
-          prot |= PROT_WRITE;
-        }
-        if (origVmProt & rx::vm::kMapProtCpuExec) {
-          prot |= PROT_EXEC;
-        }
-
-        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
-          prot &= ~(PROT_READ | PROT_WRITE);
-        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
-          prot &= ~PROT_WRITE;
-        }
-
-        // std::fprintf(stderr, "protection %lx-%lx\n", address,
-        //              address + amdgpu::bridge::kHostPageSize * count);
-        if (::mprotect(reinterpret_cast<void *>(address),
-                       amdgpu::bridge::kHostPageSize * count, prot)) {
-          perror("protection failed");
-          std::abort();
-        }
-      }
-
-      fetchedCommands.clear();
-    }
-  }}.detach();
-}
-
 extern bool allowMonoDebug;
 
 __attribute__((no_stack_protector)) static void
@@ -116,8 +51,9 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   auto signalAddress = reinterpret_cast<std::uintptr_t>(info->si_addr);
 
-  if (orbis::g_currentThread != nullptr && sig == SIGSEGV &&
+  if (orbis::g_currentThread != nullptr && orbis::g_currentThread->tproc->vmId >= 0 && sig == SIGSEGV &&
       signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
+    auto vmid = orbis::g_currentThread->tproc->vmId;
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
     bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
     auto origVmProt = rx::vm::getPageProtection(signalAddress);
@@ -138,17 +74,17 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
       auto bridge = rx::bridge.header;
 
       while (true) {
-        auto flags = bridge->cachePages[page].load(std::memory_order::relaxed);
+        auto flags = bridge->cachePages[vmid][page].load(std::memory_order::relaxed);
 
         if ((flags & amdgpu::bridge::kPageReadWriteLock) != 0) {
           if ((flags & amdgpu::bridge::kPageLazyLock) != 0) {
             if (std::uint32_t gpuCommand = 0;
-                !bridge->gpuCacheCommand.compare_exchange_weak(gpuCommand,
+                !bridge->gpuCacheCommand[vmid].compare_exchange_weak(gpuCommand,
                                                                page)) {
               continue;
             }
 
-            while (!bridge->cachePages[page].compare_exchange_weak(
+            while (!bridge->cachePages[vmid][page].compare_exchange_weak(
                 flags, flags & ~amdgpu::bridge::kPageLazyLock,
                 std::memory_order::relaxed)) {
             }
@@ -165,7 +101,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
           break;
         }
 
-        if (bridge->cachePages[page].compare_exchange_weak(
+        if (bridge->cachePages[vmid][page].compare_exchange_weak(
                 flags, amdgpu::bridge::kPageInvalidated,
                 std::memory_order::relaxed)) {
           break;
@@ -188,6 +124,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   }
 
   if (orbis::g_currentThread != nullptr) {
+    orbis::g_currentThread->tproc->exitStatus = sig;
     orbis::g_currentThread->tproc->event.emit(orbis::kEvFiltProc,
                                               orbis::kNoteExit, sig);
   }
@@ -1640,29 +1577,34 @@ int main(int argc, const char *argv[]) {
   };
 
   if (isSystem) {
-    amdgpu::bridge::expGpuPid = isSafeMode ? 20001 : 60001;
     orbis::g_context.safeMode = isSafeMode ? 1 : 0;
-    initProcess->authInfo = {
-        .unk0 = 0x380000000000000f,
-        .caps =
-            {
-                -1ul,
-                -1ul,
-                -1ul,
-                -1ul,
-            },
-        .attrs =
-            {
-                0x4000400040000000,
-                0x4000000000000000,
-                0x0080000000000002,
-                0xF0000000FFFF4000,
-            },
-    };
+    initProcess->authInfo = {.unk0 = 0x380000000000000f,
+                             .caps =
+                                 {
+                                     -1ul,
+                                     -1ul,
+                                     -1ul,
+                                     -1ul,
+                                 },
+                             .attrs =
+                                 {
+                                     0x4000400040000000,
+                                     0x4000000000000000,
+                                     0x0080000000000002,
+                                     0xF0000000FFFF4000,
+                                 },
+                             .ucred = {
+                                 -1ul,
+                                 -1ul,
+                                 0x3800000000000022,
+                                 -1ul,
+                                 (1ul << 0x3a),
+                                 -1ul,
+                                 -1ul,
+                             }};
     initProcess->budgetId = 0;
     initProcess->isInSandbox = false;
   } else {
-    amdgpu::bridge::expGpuPid = initProcess->pid;
     initProcess->authInfo = {
         .unk0 = 0x3100000000000001,
         .caps =
@@ -1788,7 +1730,6 @@ int main(int argc, const char *argv[]) {
 
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {});
-      runBridge();
       status = ps4Exec(mainThread, execEnv, std::move(executableModule),
                        ps4Argv, {});
     }

@@ -3,10 +3,11 @@
 
 namespace amdgpu {
 struct RemoteMemory {
-  char *shmPointer;
+  int vmId;
 
   template <typename T = void> T *getPointer(std::uint64_t address) const {
-    return address ? reinterpret_cast<T *>(shmPointer + address - 0x40000)
+    return address ? reinterpret_cast<T *>(
+                         static_cast<std::uint64_t>(vmId) << 40 | address)
                    : nullptr;
   }
 };

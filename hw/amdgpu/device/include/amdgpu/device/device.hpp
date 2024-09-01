@@ -1,5 +1,6 @@
 #pragma once
 
+#include "amdgpu/RemoteMemory.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "amdgpu/shader/Instruction.hpp"
 #include "gpu-scheduler.hpp"
@@ -1259,6 +1260,42 @@ struct GnmTBuffer {
 
 static_assert(sizeof(GnmTBuffer) == sizeof(std::uint64_t) * 4);
 
+struct GnmSSampler {
+  int32_t clamp_x : 3;
+  int32_t clamp_y : 3;
+  int32_t clamp_z : 3;
+  int32_t max_aniso_ratio : 3;
+  int32_t depth_compare_func : 3;
+  int32_t force_unorm_coords : 1;
+  int32_t aniso_threshold : 3;
+  int32_t mc_coord_trunc : 1;
+  int32_t force_degamma : 1;
+  int32_t aniso_bias : 6;
+  int32_t trunc_coord : 1;
+  int32_t disable_cube_wrap : 1;
+  int32_t filter_mode : 2;
+  int32_t : 1;
+  int32_t min_lod : 12;
+  int32_t max_lod : 12;
+  int32_t perf_mip : 4;
+  int32_t perf_z : 4;
+  int32_t lod_bias : 14;
+  int32_t lod_bias_sec : 6;
+  int32_t xy_mag_filter : 2;
+  int32_t xy_min_filter : 2;
+  int32_t z_filter : 2;
+  int32_t mip_filter : 2;
+  int32_t : 4;
+  int32_t border_color_ptr : 12;
+  int32_t : 18;
+  int32_t border_color_type : 2;
+
+  auto operator<=>(const GnmSSampler &) const = default;
+  bool operator==(const GnmSSampler &) const = default;
+};
+
+static_assert(sizeof(GnmSSampler) == sizeof(std::uint32_t) * 4);
+
 constexpr auto kPageSize = 0x4000;
 
 void setVkDevice(VkDevice device,
@@ -1266,11 +1303,11 @@ void setVkDevice(VkDevice device,
                  VkPhysicalDeviceProperties devProperties);
 
 struct AmdgpuDevice {
-  void handleProtectMemory(std::uint64_t address, std::uint64_t size,
-                           std::uint32_t prot);
-  void handleCommandBuffer(std::uint64_t queueId, std::uint64_t address,
-                           std::uint64_t size);
-  bool handleFlip(VkQueue queue, VkCommandBuffer cmdBuffer,
+  void handleProtectMemory(RemoteMemory memory, std::uint64_t address,
+                           std::uint64_t size, std::uint32_t prot);
+  void handleCommandBuffer(RemoteMemory memory, std::uint64_t queueId,
+                           std::uint64_t address, std::uint64_t size);
+  bool handleFlip(RemoteMemory memory, VkQueue queue, VkCommandBuffer cmdBuffer,
                   TaskChain &initTaskChain, std::uint32_t bufferIndex,
                   std::uint64_t arg, VkImage targetImage,
                   VkExtent2D targetExtent, VkSemaphore waitSemaphore,

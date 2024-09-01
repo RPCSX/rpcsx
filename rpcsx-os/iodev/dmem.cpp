@@ -44,6 +44,12 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
            rx::vm::kMapProtGpuAll;
   }
 
+  auto allocationInfoIt = allocations.queryArea(directMemoryStart);
+  if (allocationInfoIt == allocations.end()) {
+    std::abort();
+  }
+  auto allocationInfo = *allocationInfoIt;
+
   auto result =
       rx::vm::map(*address, len, prot, flags, rx::vm::kMapInternalReserveOnly,
                   this, directMemoryStart);
@@ -60,9 +66,10 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
     return orbis::ErrorCode::INVAL;
   }
 
-  rx::bridge.sendMapDmem(orbis::g_currentThread->tproc->pid, index,
-                         reinterpret_cast<std::uint64_t>(result), len, prot,
-                         directMemoryStart);
+  rx::bridge.sendMapMemory(orbis::g_currentThread->tproc->pid,
+                           allocationInfo.payload.memoryType, index,
+                           reinterpret_cast<std::uint64_t>(result), len, prot,
+                           directMemoryStart);
 
   *address = result;
 

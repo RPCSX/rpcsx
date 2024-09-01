@@ -958,11 +958,8 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (auto thr = orbis::g_currentThread) {
-    // std::fprintf(stderr, "sending mapping %lx-%lx, pid %lx\n", address,
-    //              address + len, thr->tproc->pid);
-    // if (!noOverwrite) {
-    //   rx::bridge.sendMemoryProtect(thr->tproc->pid, address, len, prot);
-    // }
+    rx::bridge.sendMapMemory(thr->tproc->pid, -1, -1, address, len, prot,
+                             address - kMinAddress);
   } else {
     std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
   }

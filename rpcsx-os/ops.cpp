@@ -43,7 +43,6 @@ using namespace orbis;
 extern bool allowMonoDebug;
 
 extern "C" void __register_frame(const void *);
-void runBridge();
 void setupSigHandlers();
 int ps4Exec(orbis::Thread *mainThread,
             orbis::utils::Ref<orbis::Module> executableModule,
@@ -828,9 +827,6 @@ SysResult fork(Thread *thread, slong flags) {
   dup2(logFd, 1);
   dup2(logFd, 2);
 
-  if (childPid == amdgpu::bridge::expGpuPid) {
-    runBridge();
-  }
   return {};
 }
 

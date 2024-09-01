@@ -1,7 +1,9 @@
 #include "amdgpu/RemoteMemory.hpp"
 #include "amdgpu/device/gpu-scheduler.hpp"
 #include "amdgpu/device/vk.hpp"
+#include "rx/MemoryTable.hpp"
 #include "rx/Version.hpp"
+#include "rx/mem.hpp"
 #include "util/unreachable.hpp"
 #include <algorithm>
 #include <amdgpu/bridge/bridge.hpp>
@@ -16,17 +18,13 @@
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
+#include <unordered_map>
+#include <unordered_set>
 #include <util/VerifyVulkan.hpp>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 #include <GLFW/glfw3.h> // TODO: make in optional
-
-// TODO
-// extern void *g_rwMemory;
-extern std::size_t g_memorySize;
-extern std::uint64_t g_memoryBase;
-extern amdgpu::RemoteMemory g_hostMemory;
 
 static void usage(std::FILE *out, const char *argv0) {
   std::fprintf(out, "usage: %s [options...]\n", argv0);
@@ -156,6 +154,11 @@ int main(int argc, const char *argv[]) {
     }
 
     usage(stderr, argv[0]);
+    return 1;
+  }
+
+  if (!rx::mem::reserve((void *)0x40000, 0x60000000000 - 0x40000)) {
+    std::fprintf(stderr, "failed to reserve virtual memory\n");
     return 1;
   }
 
@@ -725,20 +728,6 @@ int main(int argc, const char *argv[]) {
   amdgpu::bridge::BridgePuller bridgePuller{bridge};
   amdgpu::bridge::Command commandsBuffer[1];
 
-  if (!std::filesystem::exists(std::string("/dev/shm") + shmName)) {
-    std::printf("Waiting for OS\n");
-    while (!std::filesystem::exists(std::string("/dev/shm") + shmName)) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    }
-  }
-
-  int memoryFd = ::shm_open(shmName, O_RDWR, S_IRUSR | S_IWUSR);
-
-  if (memoryFd < 0) {
-    std::printf("failed to open shared memory\n");
-    return 1;
-  }
-
   int dmemFd[3];
 
   for (std::size_t i = 0; i < std::size(dmemFd); ++i) {
@@ -759,26 +748,80 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  struct stat memoryStat;
-  ::fstat(memoryFd, &memoryStat);
-  amdgpu::RemoteMemory memory{(char *)::mmap(
-      nullptr, memoryStat.st_size, PROT_NONE, MAP_SHARED, memoryFd, 0)};
-
-  // extern void *g_rwMemory;
-  g_memorySize = memoryStat.st_size;
-  g_memoryBase = 0x40000;
-  // g_rwMemory = ::mmap(nullptr, g_memorySize, PROT_READ | PROT_WRITE, MAP_SHARED,
-  //                     memoryFd, 0);
-
-  g_hostMemory = memory;
-
   {
     amdgpu::device::AmdgpuDevice device(bridgePuller.header);
 
-    for (std::uint32_t end = bridge->memoryAreaCount, i = 0; i < end; ++i) {
-      auto area = bridge->memoryAreas[i];
-      device.handleProtectMemory(area.address, area.size, area.prot);
-    }
+    struct VmMapSlot {
+      int memoryType;
+      int prot;
+      std::int64_t offset;
+      std::uint64_t baseAddress;
+
+      auto operator<=>(const VmMapSlot &) const = default;
+    };
+
+    struct ProcessInfo {
+      int vmId = -1;
+      int vmFd = -1;
+      rx::MemoryTableWithPayload<VmMapSlot> vmTable;
+    };
+
+    auto mapProcess = [&](std::int64_t pid, int vmId, ProcessInfo &process) {
+      process.vmId = vmId;
+
+      auto memory = amdgpu::RemoteMemory{vmId};
+
+      std::string pidVmName = shmName;
+      pidVmName += '-';
+      pidVmName += std::to_string(pid);
+      int memoryFd = ::shm_open(pidVmName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
+      process.vmFd = memoryFd;
+
+      if (memoryFd < 0) {
+        std::printf("failed to process %x shared memory\n", (int)pid);
+        std::abort();
+      }
+
+      for (auto [startAddress, endAddress, slot] : process.vmTable) {
+        auto gpuProt = slot.prot >> 4;
+        if (gpuProt == 0) {
+          continue;
+        }
+
+        auto devOffset = slot.offset + startAddress - slot.baseAddress;
+        int mapFd = memoryFd;
+
+        if (slot.memoryType >= 0) {
+          mapFd = dmemFd[slot.memoryType];
+        }
+
+        auto mmapResult =
+            ::mmap(memory.getPointer(startAddress), endAddress - startAddress,
+                   gpuProt, MAP_FIXED | MAP_SHARED, mapFd, devOffset);
+
+        if (mmapResult == MAP_FAILED) {
+          std::printf(
+              "failed to map process %x memory, address %lx-%lx, type %x\n",
+              (int)pid, startAddress, endAddress, slot.memoryType);
+          std::abort();
+        }
+
+        device.handleProtectMemory(memory, startAddress,
+                                   endAddress - startAddress, slot.prot);
+      }
+    };
+
+    auto unmapProcess = [&](ProcessInfo &process) {
+      auto startAddress = static_cast<std::uint64_t>(process.vmId) << 40;
+      auto size = static_cast<std::uint64_t>(1) << 40;
+      rx::mem::reserve(reinterpret_cast<void *>(startAddress), size);
+
+      ::close(process.vmFd);
+      process.vmFd = -1;
+      process.vmId = -1;
+    };
+
+    std::unordered_map<std::int64_t, ProcessInfo> processInfo;
 
     std::vector<VkCommandBuffer> presentCmdBuffers(swapchainImages.size());
 
@@ -966,66 +1009,141 @@ int main(int argc, const char *argv[]) {
 
       for (auto cmd : std::span(commandsBuffer, pulledCount)) {
         switch (cmd.id) {
-        case amdgpu::bridge::CommandId::ProtectMemory:
-          device.handleProtectMemory(cmd.memoryProt.address,
-                                     cmd.memoryProt.size, cmd.memoryProt.prot);
-          break;
-        case amdgpu::bridge::CommandId::CommandBuffer:
-          device.handleCommandBuffer(cmd.commandBuffer.queue,
-                                     cmd.commandBuffer.address,
-                                     cmd.commandBuffer.size);
-          break;
-        case amdgpu::bridge::CommandId::Flip: {
-          if (!isImageAcquired) {
-            Verify() << vkAcquireNextImageKHR(vkDevice, swapchain, UINT64_MAX,
-                                              presentCompleteSemaphore, nullptr,
-                                              &imageIndex);
+        case amdgpu::bridge::CommandId::ProtectMemory: {
+          auto &process = processInfo[cmd.memoryProt.pid];
 
-            vkWaitForFences(vkDevice, 1, &inFlightFences[imageIndex], VK_TRUE,
-                            UINT64_MAX);
-            vkResetFences(vkDevice, 1, &inFlightFences[imageIndex]);
+          auto vmSlotIt = process.vmTable.queryArea(cmd.memoryProt.address);
+          if (vmSlotIt == process.vmTable.end()) {
+            std::abort();
           }
 
-          isImageAcquired = false;
+          auto vmSlot = (*vmSlotIt).payload;
 
-          vkResetCommandBuffer(presentCmdBuffers[imageIndex], 0);
-          VkCommandBufferBeginInfo beginInfo{};
-          beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-          beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+          process.vmTable.map(cmd.memoryProt.address,
+                              cmd.memoryProt.address + cmd.memoryProt.size,
+                              VmMapSlot{
+                                  .memoryType = vmSlot.memoryType,
+                                  .prot = static_cast<int>(cmd.memoryProt.prot),
+                                  .offset = vmSlot.offset,
+                                  .baseAddress = vmSlot.baseAddress,
+                              });
 
-          vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
+          if (process.vmId >= 0) {
+            auto memory = amdgpu::RemoteMemory{process.vmId};
+            rx::mem::protect(memory.getPointer(cmd.memoryProt.address),
+                             cmd.memoryProt.size, cmd.memoryProt.prot >> 4);
+            device.handleProtectMemory(memory, cmd.mapMemory.address,
+                                       cmd.mapMemory.size, cmd.mapMemory.prot);
+          }
+          break;
+        }
+        case amdgpu::bridge::CommandId::CommandBuffer: {
+          auto &process = processInfo[cmd.commandBuffer.pid];
+          if (process.vmId >= 0) {
+            device.handleCommandBuffer(
+                amdgpu::RemoteMemory{process.vmId}, cmd.commandBuffer.queue,
+                cmd.commandBuffer.address, cmd.commandBuffer.size);
+          }
+          break;
+        }
+        case amdgpu::bridge::CommandId::Flip: {
+          auto &process = processInfo[cmd.flip.pid];
 
-          if (device.handleFlip(
-                  presentQueue, presentCmdBuffers[imageIndex],
-                  *flipTaskChain[imageIndex].get(), cmd.flip.bufferIndex,
-                  cmd.flip.arg, swapchainImages[imageIndex], swapchainExtent,
-                  presentCompleteSemaphore, renderCompleteSemaphore,
-                  inFlightFences[imageIndex])) {
-            VkPresentInfoKHR presentInfo{
-                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-                .waitSemaphoreCount = 1,
-                .pWaitSemaphores = &renderCompleteSemaphore,
-                .swapchainCount = 1,
-                .pSwapchains = &swapchain,
-                .pImageIndices = &imageIndex,
-            };
-            if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
-              std::printf("swapchain was invalidated\n");
-              createSwapchain();
+          if (process.vmId >= 0) {
+            if (!isImageAcquired) {
+              Verify() << vkAcquireNextImageKHR(vkDevice, swapchain, UINT64_MAX,
+                                                presentCompleteSemaphore,
+                                                nullptr, &imageIndex);
+
+              vkWaitForFences(vkDevice, 1, &inFlightFences[imageIndex], VK_TRUE,
+                              UINT64_MAX);
+              vkResetFences(vkDevice, 1, &inFlightFences[imageIndex]);
             }
-          } else {
-            isImageAcquired = true;
+
+            isImageAcquired = false;
+
+            vkResetCommandBuffer(presentCmdBuffers[imageIndex], 0);
+            VkCommandBufferBeginInfo beginInfo{};
+            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+            vkBeginCommandBuffer(presentCmdBuffers[imageIndex], &beginInfo);
+
+            if (device.handleFlip(
+                    amdgpu::RemoteMemory{process.vmId}, presentQueue,
+                    presentCmdBuffers[imageIndex],
+                    *flipTaskChain[imageIndex].get(), cmd.flip.bufferIndex,
+                    cmd.flip.arg, swapchainImages[imageIndex], swapchainExtent,
+                    presentCompleteSemaphore, renderCompleteSemaphore,
+                    inFlightFences[imageIndex])) {
+              VkPresentInfoKHR presentInfo{
+                  .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                  .waitSemaphoreCount = 1,
+                  .pWaitSemaphores = &renderCompleteSemaphore,
+                  .swapchainCount = 1,
+                  .pSwapchains = &swapchain,
+                  .pImageIndices = &imageIndex,
+              };
+              if (vkQueuePresentKHR(presentQueue, &presentInfo) != VK_SUCCESS) {
+                std::printf("swapchain was invalidated\n");
+                createSwapchain();
+              }
+            } else {
+              isImageAcquired = true;
+            }
           }
           break;
         }
 
-        case amdgpu::bridge::CommandId::MapDmem: {
-          auto addr = g_hostMemory.getPointer(cmd.mapDmem.address);
-          auto mapping = ::mmap(addr, cmd.mapDmem.size,
-                 PROT_READ | PROT_WRITE /*TODO: cmd.mapDmem.prot >> 4*/,
-                 MAP_FIXED | MAP_SHARED, dmemFd[cmd.mapDmem.dmemIndex],
-                 cmd.mapDmem.offset);
-          device.handleProtectMemory(cmd.mapDmem.address, cmd.mapDmem.size, 0x33 /*TODO: cmd.mapDmem.prot*/);
+        case amdgpu::bridge::CommandId::MapProcess: {
+          mapProcess(cmd.mapProcess.pid, cmd.mapProcess.vmId, processInfo[cmd.mapProcess.pid]);
+          break;
+        }
+        case amdgpu::bridge::CommandId::UnmapProcess: {
+          unmapProcess(processInfo[cmd.mapProcess.pid]);
+          break;
+        }
+
+        case amdgpu::bridge::CommandId::MapMemory: {
+          auto &process = processInfo[cmd.mapMemory.pid];
+
+          process.vmTable.map(
+              cmd.mapMemory.address, cmd.mapMemory.address + cmd.mapMemory.size,
+              VmMapSlot{
+                  .memoryType = static_cast<int>(cmd.mapMemory.memoryType >= 0
+                                                     ? cmd.mapMemory.dmemIndex
+                                                     : -1),
+                  .prot = static_cast<int>(cmd.mapMemory.prot),
+                  .offset = cmd.mapMemory.offset,
+                  .baseAddress = cmd.mapMemory.address,
+              });
+
+          if (process.vmId >= 0) {
+            auto memory = amdgpu::RemoteMemory{process.vmId};
+
+            int mapFd = process.vmFd;
+
+            if (cmd.mapMemory.memoryType >= 0) {
+              mapFd = dmemFd[cmd.mapMemory.dmemIndex];
+            }
+
+            auto mmapResult =
+                ::mmap(memory.getPointer(cmd.mapMemory.address),
+                       cmd.mapMemory.size, cmd.mapMemory.prot >> 4,
+                       MAP_FIXED | MAP_SHARED, mapFd, cmd.mapMemory.offset);
+
+            if (mmapResult == MAP_FAILED) {
+              std::printf(
+                  "failed to map process %x memory, address %lx-%lx, type %x\n",
+                  (int)cmd.mapMemory.pid, cmd.mapMemory.address,
+                  cmd.mapMemory.address + cmd.mapMemory.size,
+                  cmd.mapMemory.memoryType);
+              std::abort();
+            }
+
+            device.handleProtectMemory(memory, cmd.mapMemory.address,
+                                       cmd.mapMemory.size, cmd.mapMemory.prot);
+          }
           break;
         }
 

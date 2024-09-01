@@ -1,14 +1,12 @@
 #pragma once
 
-#include <orbis/utils/SharedMutex.hpp>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
+#include <orbis/utils/SharedMutex.hpp>
 
 namespace amdgpu::bridge {
-extern std::uint32_t expGpuPid;
-
 struct PadState {
   std::uint64_t timestamp;
   std::uint32_t unk;
@@ -47,7 +45,9 @@ enum class CommandId : std::uint32_t {
   ProtectMemory,
   CommandBuffer,
   Flip,
-  MapDmem,
+  MapMemory,
+  MapProcess,
+  UnmapProcess,
 };
 
 struct CmdMemoryProt {
@@ -79,13 +79,23 @@ struct CmdFlip {
   std::uint64_t arg;
 };
 
-struct CmdMapDmem {
-  std::uint64_t offset;
+struct CmdMapMemory {
+  std::int64_t offset;
   std::uint64_t address;
   std::uint64_t size;
   std::uint32_t prot;
   std::uint32_t pid;
+  std::int32_t memoryType;
   std::uint32_t dmemIndex;
+};
+
+struct CmdMapProcess {
+  std::uint64_t pid;
+  int vmId;
+};
+
+struct CmdUnmapProcess {
+  std::uint64_t pid;
 };
 
 enum {
@@ -112,17 +122,15 @@ struct BridgeHeader {
   volatile std::uint64_t flipArg;
   volatile std::uint64_t flipCount;
   volatile std::uint64_t bufferInUseAddress;
-  std::uint32_t memoryAreaCount;
   std::uint32_t commandBufferCount;
   std::uint32_t bufferCount;
-  CmdMemoryProt memoryAreas[512];
   CmdCommandBuffer commandBuffers[32];
   CmdBuffer buffers[10];
   // orbis::shared_mutex cacheCommandMtx;
   // orbis::shared_cv cacheCommandCv;
-  std::atomic<std::uint64_t> cacheCommands[4];
-  std::atomic<std::uint32_t> gpuCacheCommand;
-  std::atomic<std::uint8_t> cachePages[0x100'0000'0000 / kHostPageSize];
+  std::atomic<std::uint64_t> cacheCommands[6][4];
+  std::atomic<std::uint32_t> gpuCacheCommand[6];
+  std::atomic<std::uint8_t> cachePages[6][0x100'0000'0000 / kHostPageSize];
 
   volatile std::uint64_t pull;
   volatile std::uint64_t push;
@@ -137,7 +145,9 @@ struct Command {
     CmdCommandBuffer commandBuffer;
     CmdBuffer buffer;
     CmdFlip flip;
-    CmdMapDmem mapDmem;
+    CmdMapMemory mapMemory;
+    CmdMapProcess mapProcess;
+    CmdUnmapProcess unmapProcess;
   };
 };
 
@@ -160,29 +170,32 @@ struct BridgePusher {
 
   void sendMemoryProtect(std::uint32_t pid, std::uint64_t address,
                          std::uint64_t size, std::uint32_t prot) {
-    if (pid == expGpuPid) {
-      sendCommand(CommandId::ProtectMemory, {pid, address, size, prot});
-    }
+    sendCommand(CommandId::ProtectMemory, {pid, address, size, prot});
   }
 
-  void sendMapDmem(std::uint32_t pid, std::uint32_t dmemIndex, std::uint64_t address, std::uint64_t size, std::uint32_t prot, std::uint64_t offset) {
-    // if (pid == expGpuPid) {
-      sendCommand(CommandId::MapDmem, {pid, dmemIndex, address, size, prot, offset});
-    // }
+  void sendMapMemory(std::uint32_t pid, std::uint32_t memoryType,
+                     std::uint32_t dmemIndex, std::uint64_t address,
+                     std::uint64_t size, std::uint32_t prot,
+                     std::uint64_t offset) {
+    sendCommand(CommandId::MapMemory,
+                {pid, memoryType, dmemIndex, address, size, prot, offset});
   }
 
   void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue,
                          std::uint64_t address, std::uint64_t size) {
-    // if (pid == expGpuPid) {
-      sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
-    // }
+    sendCommand(CommandId::CommandBuffer, {pid, queue, address, size});
   }
 
   void sendFlip(std::uint32_t pid, std::uint32_t bufferIndex,
                 std::uint64_t arg) {
-    // if (pid == expGpuPid) {
-      sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
-    // }
+    sendCommand(CommandId::Flip, {pid, bufferIndex, arg});
+  }
+
+  void sendMapProcess(std::uint32_t pid, unsigned vmId) {
+    sendCommand(CommandId::MapProcess, {pid, vmId});
+  }
+  void sendUnmapProcess(std::uint32_t pid) {
+    sendCommand(CommandId::UnmapProcess, {pid});
   }
 
   void wait() {
@@ -198,7 +211,8 @@ private:
 
   void sendCommand(CommandId id, std::initializer_list<std::uint64_t> args) {
     std::uint64_t exp = 0;
-    while (!header->lock.compare_exchange_weak(exp, 1, std::memory_order::acquire, std::memory_order::relaxed)) {
+    while (!header->lock.compare_exchange_weak(
+        exp, 1, std::memory_order::acquire, std::memory_order::relaxed)) {
       exp = 0;
     }
 
@@ -303,13 +317,23 @@ private:
       result.flip.arg = args[2];
       return result;
 
-    case CommandId::MapDmem:
-      result.mapDmem.pid = args[0];
-      result.mapDmem.dmemIndex = args[1];
-      result.mapDmem.address = args[2];
-      result.mapDmem.size = args[3];
-      result.mapDmem.prot = args[4];
-      result.mapDmem.offset = args[5];
+    case CommandId::MapMemory:
+      result.mapMemory.pid = args[0];
+      result.mapMemory.memoryType = args[1];
+      result.mapMemory.dmemIndex = args[2];
+      result.mapMemory.address = args[3];
+      result.mapMemory.size = args[4];
+      result.mapMemory.prot = args[5];
+      result.mapMemory.offset = args[6];
+      return result;
+
+    case CommandId::MapProcess:
+      result.mapProcess.pid = args[0];
+      result.mapProcess.vmId = args[1];
+      return result;
+
+    case CommandId::UnmapProcess:
+      result.unmapProcess.pid = args[0];
       return result;
     }
 

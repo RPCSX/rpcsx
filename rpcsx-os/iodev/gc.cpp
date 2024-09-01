@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <mutex>
 #include <sys/mman.h>
+#include <unordered_map>
 
 struct ComputeQueue {
   std::uint64_t ringBaseAddress{};
@@ -19,14 +20,104 @@ struct ComputeQueue {
   std::uint64_t len{};
 };
 
+static void runBridge(int vmId) {
+  std::thread{[=] {
+    pthread_setname_np(pthread_self(), "Bridge");
+    auto bridge = rx::bridge.header;
+
+    std::vector<std::uint64_t> fetchedCommands;
+    fetchedCommands.reserve(std::size(bridge->cacheCommands));
+
+    while (true) {
+      for (auto &command : bridge->cacheCommands) {
+        std::uint64_t value = command[vmId].load(std::memory_order::relaxed);
+
+        if (value != 0) {
+          fetchedCommands.push_back(value);
+          command[vmId].store(0, std::memory_order::relaxed);
+        }
+      }
+
+      if (fetchedCommands.empty()) {
+        continue;
+      }
+
+      for (auto command : fetchedCommands) {
+        auto page = static_cast<std::uint32_t>(command);
+        auto count = static_cast<std::uint32_t>(command >> 32) + 1;
+
+        auto pageFlags =
+            bridge->cachePages[vmId][page].load(std::memory_order::relaxed);
+
+        auto address =
+            static_cast<std::uint64_t>(page) * amdgpu::bridge::kHostPageSize;
+        auto origVmProt = rx::vm::getPageProtection(address);
+        int prot = 0;
+
+        if (origVmProt & rx::vm::kMapProtCpuRead) {
+          prot |= PROT_READ;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuWrite) {
+          prot |= PROT_WRITE;
+        }
+        if (origVmProt & rx::vm::kMapProtCpuExec) {
+          prot |= PROT_EXEC;
+        }
+
+        if (pageFlags & amdgpu::bridge::kPageReadWriteLock) {
+          prot &= ~(PROT_READ | PROT_WRITE);
+        } else if (pageFlags & amdgpu::bridge::kPageWriteWatch) {
+          prot &= ~PROT_WRITE;
+        }
+
+        // std::fprintf(stderr, "protection %lx-%lx\n", address,
+        //              address + amdgpu::bridge::kHostPageSize * count);
+        if (::mprotect(reinterpret_cast<void *>(address),
+                       amdgpu::bridge::kHostPageSize * count, prot)) {
+          perror("protection failed");
+          std::abort();
+        }
+      }
+
+      fetchedCommands.clear();
+    }
+  }}.detach();
+}
+
+static constexpr auto kVmIdCount = 6;
+
 struct GcDevice : public IoDevice {
+  std::uint32_t freeVmIds = (1 << (kVmIdCount + 1)) - 1;
   orbis::shared_mutex mtx;
+  orbis::kmap<orbis::pid_t, int> clients;
   orbis::kmap<std::uint64_t, ComputeQueue> computeQueues;
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
+
+  void addClient(orbis::Process *process);
+  void removeClient(orbis::Process *process);
+
+  int allocateVmId() {
+    int id = std::countr_zero(freeVmIds);
+
+    if (id >= kVmIdCount) {
+      std::fprintf(stderr, "out of vm slots\n");
+      std::abort();
+    }
+
+    freeVmIds &= ~(1 << id);
+    return id;
+  };
+
+  void deallocateVmId(int vmId) { freeVmIds |= (1 << vmId); };
 };
-struct GcFile : public orbis::File {};
+
+struct GcFile : public orbis::File {
+  orbis::Process *process = nullptr;
+  ~GcFile() { device.staticCast<GcDevice>()->removeClient(process); }
+};
+
 static std::uint64_t g_submitDoneFlag;
 
 static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
@@ -34,7 +125,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   // 0xc00c8110
   // 0xc0848119
 
-  auto device = static_cast<GcDevice *>(file->device.get());
+  auto device = file->device.staticCast<GcDevice>();
   std::lock_guard lock(device->mtx);
 
   switch (request) {
@@ -55,7 +146,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     // flockfile(stderr);
     // if (thread->tproc->pid != amdgpu::bridge::expGpuPid) {
-      // ORBIS_LOG_ERROR("gc ioctl submit", args->arg0, args->count, args->cmds);
+    // ORBIS_LOG_ERROR("gc ioctl submit", args->arg0, args->count, args->cmds);
     // }
 
     for (unsigned i = 0; i < args->count; ++i) {
@@ -172,14 +263,20 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     break;
   }
 
-  case 0xc010810b: { // something like stats masks?
+  case 0xc010810b: { // get cu masks param
     struct Args {
-      std::uint64_t arg1;
-      std::uint64_t arg2;
+      std::uint32_t se0sh0;
+      std::uint32_t se0sh1;
+      std::uint32_t se1sh0;
+      std::uint32_t se1sh1;
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    ORBIS_LOG_ERROR("gc ioctl stats mask", args->arg1, args->arg2);
+    // ORBIS_LOG_ERROR("gc ioctl stats mask", args->arg1, args->arg2);
+    args->se0sh0 = ~0;
+    args->se0sh1 = ~0;
+    args->se1sh0 = ~0;
+    args->se1sh1 = ~0;
     break;
   }
 
@@ -265,8 +362,14 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   }
 
   case 0xc0048113: {
-    // get client number
-    *(std::uint32_t *)argp = 0;
+    // get num clients
+
+    struct Args {
+      std::uint32_t numClients;
+    };
+
+    auto *args = reinterpret_cast<Args *>(argp);
+    args->numClients = device->clients.size();
     break;
   }
 
@@ -312,8 +415,38 @@ orbis::ErrorCode GcDevice::open(orbis::Ref<orbis::File> *file, const char *path,
   auto newFile = orbis::knew<GcFile>();
   newFile->device = this;
   newFile->ops = &ops;
+  newFile->process = thread->tproc;
+  addClient(thread->tproc);
   *file = newFile;
   return {};
+}
+
+void GcDevice::addClient(orbis::Process *process) {
+  std::lock_guard lock(mtx);
+  auto &client = clients[process->pid];
+  ++client;
+
+  if (client == 1) {
+    auto vmId = allocateVmId();
+    rx::bridge.sendMapProcess(process->pid, vmId);
+    process->vmId = vmId;
+
+    runBridge(vmId);
+  }
+}
+
+void GcDevice::removeClient(orbis::Process *process) {
+  std::lock_guard lock(mtx);
+  auto clientIt = clients.find(process->pid);
+  assert(clientIt != clients.end());
+  assert(clientIt->second != 0);
+  --clientIt->second;
+  if (clientIt->second == 0) {
+    clients.erase(clientIt);
+    rx::bridge.sendUnmapProcess(process->pid);
+    deallocateVmId(process->vmId);
+    process->vmId = -1;
+  }
 }
 
 IoDevice *createGcCharacterDevice() { return orbis::knew<GcDevice>(); }
