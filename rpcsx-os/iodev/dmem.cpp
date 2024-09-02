@@ -22,7 +22,7 @@ struct AllocateDirectMemoryArgs {
   std::uint32_t memoryType;
 };
 
-static constexpr auto dmemSize = 8ull * 1024 * 1024 * 1024;
+static constexpr auto dmemSize = 0x5000000000;
 // static const std::uint64_t nextOffset = 0;
 //  static const std::uint64_t memBeginAddress = 0xfe0000000;
 
@@ -44,32 +44,31 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
            rx::vm::kMapProtGpuAll;
   }
 
-  auto allocationInfoIt = allocations.queryArea(directMemoryStart);
-  if (allocationInfoIt == allocations.end()) {
-    std::abort();
+  int memoryType = 0;
+  if (auto allocationInfoIt = allocations.queryArea(directMemoryStart);
+      allocationInfoIt != allocations.end()) {
+    auto allocationInfo = *allocationInfoIt;
+    memoryType = allocationInfo.payload.memoryType;
   }
-  auto allocationInfo = *allocationInfoIt;
 
   auto result =
       rx::vm::map(*address, len, prot, flags, rx::vm::kMapInternalReserveOnly,
                   this, directMemoryStart);
 
-  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, prot, flags, result,
-                    *address);
+  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, len, prot, flags,
+                    result, *address);
   if (result == (void *)-1) {
     return orbis::ErrorCode::NOMEM; // TODO
   }
 
   if (::mmap(result, len, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, shmFd,
              directMemoryStart) == (void *)-1) {
-    std::abort();
     return orbis::ErrorCode::INVAL;
   }
 
-  rx::bridge.sendMapMemory(orbis::g_currentThread->tproc->pid,
-                           allocationInfo.payload.memoryType, index,
-                           reinterpret_cast<std::uint64_t>(result), len, prot,
-                           directMemoryStart);
+  rx::bridge.sendMapMemory(orbis::g_currentThread->tproc->pid, memoryType,
+                           index, reinterpret_cast<std::uint64_t>(result), len,
+                           prot, directMemoryStart);
 
   *address = result;
 
