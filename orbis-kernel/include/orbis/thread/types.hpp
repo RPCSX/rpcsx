@@ -30,4 +30,22 @@ struct thr_param {
   ptr<char> name;
   ptr<void> spare[2];
 };
+
+static constexpr auto RFFDG = 1 << 2;    // copy fd table
+static constexpr auto RFPROC = 1 << 4;   // change child (else changes curproc)
+static constexpr auto RFMEM = 1 << 5;    // share `address space'
+static constexpr auto RFNOWAIT = 1 << 6; // give child to init
+static constexpr auto RFCFDG = 1 << 12;  // close all fds, zero fd table
+static constexpr auto RFSIGSHARE = 1 << 14; // share signal handlers
+static constexpr auto RFLINUXTHPN =
+    1 << 16; // do linux clone exit parent notification
+static constexpr auto RFTSIGZMB =
+    1 << 19; // select signal for exit parent notification
+static constexpr auto RFTSIGSHIFT =
+    20; // selected signal number is in bits 20-27
+static constexpr auto RFTSIGMASK = 0xFF;
+static constexpr auto RFPROCDESC = 1 << 28; // return a process descriptor
+static constexpr auto RFPPWAIT =
+    1 << 31; // parent sleeps until child exits (vfork)
+
 } // namespace orbis

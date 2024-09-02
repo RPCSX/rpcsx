@@ -691,7 +691,7 @@ orbis::SysResult nmount(orbis::Thread *thread, orbis::ptr<orbis::IoVec> iovp,
   }
 
   if (fstype == "nullfs") {
-    ORBIS_RET_ON_ERROR(rx::vfs::unlink(fspath, thread));
+    rx::vfs::unlinkAll(fspath, thread);
     return rx::vfs::createSymlink(target, fspath, thread);
   }
 
@@ -788,7 +788,7 @@ SysResult fork(Thread *thread, slong flags) {
     }
   }
 
-  if (false) {
+  if (flags & RFFDG) {
     std::lock_guard lock(thread->tproc->fileDescriptors.mutex);
     for (auto [id, mod] : thread->tproc->fileDescriptors) {
       if (!process->fileDescriptors.insert(id, mod)) {
@@ -826,6 +826,8 @@ SysResult fork(Thread *thread, slong flags) {
 
   dup2(logFd, 1);
   dup2(logFd, 2);
+
+  ::close(logFd);
 
   return {};
 }
