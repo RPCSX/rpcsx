@@ -1136,8 +1136,9 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
                                           message.data() + message.size()));
           }
 
+          conReq.client->connectionStatus = 0;
           conReq.client->sessionCv.notify_all(conReq.client->mutex);
-          // server->connectionRequests.erase(it);
+          conReq.client->connectCv.notify_all(conReq.client->mutex);
           break;
         }
 
