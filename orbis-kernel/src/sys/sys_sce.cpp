@@ -786,7 +786,12 @@ orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
 }
 orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
                                          ptr<AuthInfo> info) {
-  return uwrite(info, thread->tproc->authInfo);
+
+  auto process = pid > 0 ? g_context.findProcessById(pid) : thread->tproc;
+  if (process == nullptr) {
+    return ErrorCode::SRCH;
+  }
+  return uwrite(info, process->authInfo);
 }
 orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
                                   ptr<const char[32]> name) {
