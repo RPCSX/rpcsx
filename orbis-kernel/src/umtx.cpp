@@ -348,10 +348,8 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
       while (true) {
-        ORBIS_LOG_WARNING(__FUNCTION__, ut - udiff);
         result = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
         if (node->second.thr != thread) {
-          ORBIS_LOG_WARNING(__FUNCTION__, "wakeup");
           break;
         }
         udiff = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -359,7 +357,6 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
                     .count();
         if (udiff >= ut) {
           result = ErrorCode::TIMEDOUT;
-          ORBIS_LOG_WARNING(__FUNCTION__, "timeout");
           break;
         }
 

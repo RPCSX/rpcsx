@@ -617,7 +617,7 @@ orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
   return {};
 }
 orbis::SysResult orbis::sys_osem_post(Thread *thread, sint id, sint count) {
-  ORBIS_LOG_WARNING(__FUNCTION__, thread, id, count);
+  ORBIS_LOG_TRACE(__FUNCTION__, thread, id, count);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
   if (count < 1 || count > sem->maxValue - sem->value)
     return ErrorCode::INVAL;

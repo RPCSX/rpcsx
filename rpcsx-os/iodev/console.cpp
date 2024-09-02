@@ -51,10 +51,6 @@ static orbis::ErrorCode console_write(orbis::File *file, orbis::Uio *uio,
 
   for (auto vec : std::span(uio->iov, uio->iovcnt)) {
     uio->offset += vec.len;
-    if (std::string_view((char *)vec.base, vec.len).contains("begin_setControllerFocus")) {
-      ORBIS_LOG_ERROR(__FUNCTION__, thread->tid);
-      thread->where();
-    }
 
     ::write(dev->outputFd, vec.base, vec.len);
     ::write(2, vec.base, vec.len);
