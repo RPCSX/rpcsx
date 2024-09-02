@@ -27,7 +27,7 @@ struct Version {
         if (digit >= 10) {
           buf[i] = 'a' + (digit - 10);
         } else {
-          buf[i] += '0' + digit;
+          buf[i] = '0' + digit;
         }
       }
 
