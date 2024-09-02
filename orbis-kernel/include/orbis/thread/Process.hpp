@@ -69,7 +69,7 @@ struct Process final {
   EventEmitter event;
   std::optional<sint> exitStatus;
 
-  std::uint32_t sdkVersion = -1;
+  std::uint32_t sdkVersion = 0;
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
 

@@ -206,8 +206,13 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         return ErrorCode::INVAL;
       }
 
-      ORBIS_RET_ON_ERROR(uwrite(ptr<uint32_t>(old), process->sdkVersion));
-      ORBIS_LOG_ERROR("get sdk version by pid", name[3], process->sdkVersion);
+      auto sdkVersion = process->sdkVersion;
+      if (sdkVersion == 0) {
+        sdkVersion = g_context.fwSdkVersion;
+      }
+
+      ORBIS_RET_ON_ERROR(uwrite(ptr<uint32_t>(old), sdkVersion));
+      ORBIS_LOG_ERROR("get sdk version by pid", name[3], sdkVersion);
       return uwrite(oldlenp, sizeof(uint32_t));
     }
 

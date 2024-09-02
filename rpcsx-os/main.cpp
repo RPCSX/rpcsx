@@ -564,7 +564,7 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
   std::uint64_t entryPoint = executableModule->entryPoint;
 
   if (mainThread->tproc->processParam != nullptr &&
-      mainThread->tproc->processParamSize <= sizeof(Ps4ProcessParam)) {
+      mainThread->tproc->processParamSize >= sizeof(Ps4ProcessParam)) {
     auto processParam =
         reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
 
