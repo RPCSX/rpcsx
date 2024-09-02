@@ -1256,7 +1256,7 @@ orbis::SysResult orbis::sys_ipmimgr_call(Thread *thread, uint op, uint kid,
     return sysIpmiSessionSetEventFlag(thread, result, kid, params, paramsSz);
   }
 
-  if (auto ipmi = thread->tproc->ipmiMap.get(kid)) {
+  if (auto ipmi = g_context.ipmiMap.get(kid)) {
     if (auto client = ipmi.cast<IpmiClient>()) {
       ORBIS_LOG_TODO(__FUNCTION__, thread->tid, op, client->name, result,
                      params, paramsSz);

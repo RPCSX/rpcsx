@@ -182,6 +182,7 @@ public:
   uint sdkVersion{};
   uint fwSdkVersion{};
   uint safeMode{};
+  utils::RcIdMap<RcBase, sint, 4097, 1> ipmiMap;
 
   shared_mutex regMgrMtx;
   kmap<std::uint32_t, std::uint32_t> regMgrInt;

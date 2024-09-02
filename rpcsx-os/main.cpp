@@ -1151,7 +1151,7 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
         if (process == nullptr) {
           continue;
         }
-        auto client = process->ipmiMap.get(packet.info.clientKid)
+        auto client = orbis::g_context.ipmiMap.get(packet.info.clientKid)
                           .cast<orbis::IpmiClient>();
         if (client == nullptr) {
           continue;
@@ -1172,7 +1172,7 @@ static IpmiServer &createIpmiServer(orbis::Process *process, const char *name) {
         if (process == nullptr) {
           continue;
         }
-        auto client = process->ipmiMap.get(packet.info.clientKid)
+        auto client = orbis::g_context.ipmiMap.get(packet.info.clientKid)
                           .cast<orbis::IpmiClient>();
         if (client == nullptr) {
           continue;

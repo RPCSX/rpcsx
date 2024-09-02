@@ -42,9 +42,9 @@ orbis::ErrorCode orbis::ipmiCreateServer(Process *proc, void *serverImpl,
 orbis::ErrorCode orbis::ipmiCreateSession(Thread *thread, void *sessionImpl,
                                           ptr<void> userData,
                                           Ref<IpmiSession> &result) {
-  std::unique_lock ipmiMapLock(thread->tproc->ipmiMap.mutex);
+  std::unique_lock ipmiMapLock(g_context.ipmiMap.mutex);
 
-  for (auto [kid, obj] : thread->tproc->ipmiMap) {
+  for (auto [kid, obj] : g_context.ipmiMap) {
     auto server = dynamic_cast<IpmiServer *>(obj);
     if (server == nullptr) {
       continue;
@@ -110,7 +110,7 @@ orbis::SysResult orbis::sysIpmiCreateClient(Thread *thread, ptr<uint> result,
   ORBIS_RET_ON_ERROR(ipmiCreateClient(thread->tproc, _params.clientImpl, _name,
                                       _config, client));
 
-  auto kid = thread->tproc->ipmiMap.insert(std::move(client));
+  auto kid = g_context.ipmiMap.insert(std::move(client));
 
   if (kid == -1) {
     return ErrorCode::MFILE;
@@ -145,7 +145,7 @@ orbis::SysResult orbis::sysIpmiCreateServer(Thread *thread, ptr<uint> result,
   ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), _params.name));
   ORBIS_RET_ON_ERROR(ipmiCreateServer(thread->tproc, _params.serverImpl, _name,
                                       _config, server));
-  auto kid = thread->tproc->ipmiMap.insert(std::move(server));
+  auto kid = g_context.ipmiMap.insert(std::move(server));
 
   if (kid == -1) {
     return ErrorCode::MFILE;
@@ -190,7 +190,7 @@ orbis::SysResult orbis::sysIpmiCreateSession(Thread *thread, ptr<uint> result,
   ORBIS_RET_ON_ERROR(
       ipmiCreateSession(thread, _params.sessionImpl, _userData.data, session));
 
-  auto kid = thread->tproc->ipmiMap.insert(std::move(session));
+  auto kid = g_context.ipmiMap.insert(std::move(session));
 
   if (kid == -1) {
     return ErrorCode::MFILE;
@@ -235,7 +235,7 @@ orbis::SysResult orbis::sysIpmiServerReceivePacket(Thread *thread,
   ORBIS_RET_ON_ERROR(
       uread(_params, ptr<IpmiServerReceivePacketParams>(params)));
 
-  auto server = thread->tproc->ipmiMap.get(kid).cast<IpmiServer>();
+  auto server = g_context.ipmiMap.get(kid).cast<IpmiServer>();
 
   if (server == nullptr) {
     return ErrorCode::INVAL;
@@ -303,10 +303,39 @@ orbis::SysResult orbis::sysIpmiSendConnectResult(Thread *thread,
     return ErrorCode::INVAL;
   }
 
+  ORBIS_LOG_NOTICE(__FUNCTION__, kid);
+
+  auto ipmiObject = g_context.ipmiMap.get(kid);
+  if (ipmiObject == nullptr) {
+    return ErrorCode::INVAL;
+  }
+
+  Ref<IpmiClient> client;
+  if (auto result = ipmiObject.cast<IpmiSession>()) {
+    client = result->client;
+  } else if (auto result = ipmiObject.cast<IpmiClient>()) {
+    client = result;
+  } else if (auto result = ipmiObject.cast<IpmiServer>()) {
+    for (auto &request : result->connectionRequests) {
+      if (request.serverTid == thread->tid) {
+        client = request.client;
+        break;
+      }
+    }
+  }
+
+  if (client == nullptr) {
+    ORBIS_LOG_FATAL(__FUNCTION__);
+    std::abort();
+  }
+
   sint status;
   ORBIS_RET_ON_ERROR(uread(status, ptr<sint>(params)));
 
   ORBIS_LOG_NOTICE(__FUNCTION__, kid, status);
+  std::lock_guard lock(client->mutex);
+  client->connectionStatus = status;
+  client->connectCv.notify_all(client->mutex);
   return uwrite(result, 0u);
 }
 orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
@@ -326,7 +355,7 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto session = thread->tproc->ipmiMap.get(kid).cast<IpmiSession>();
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;
@@ -337,19 +366,18 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
 
   kvector<kvector<std::byte>> buffers;
 
-  if ((_params.flags & 1) || _params.bufferCount != 1) {
-    auto count = _params.bufferCount;
-    buffers.reserve(count);
-    for (uint32_t i = 0; i < count; ++i) {
-      IpmiBufferInfo _buffer;
-      ORBIS_RET_ON_ERROR(uread(_buffer, _params.buffers + i));
+  // if ((_params.flags & 1) || _params.bufferCount != 1) {
+  auto count = _params.bufferCount;
+  buffers.reserve(count);
+  for (uint32_t i = 0; i < count; ++i) {
+    IpmiBufferInfo _buffer;
+    ORBIS_RET_ON_ERROR(uread(_buffer, _params.buffers + i));
 
-      auto &bufferData = buffers.emplace_back();
-      bufferData.resize(_buffer.size);
-      ORBIS_RET_ON_ERROR(
-          ureadRaw(bufferData.data(), _buffer.data, _buffer.size));
-    }
+    auto &bufferData = buffers.emplace_back();
+    bufferData.resize(_buffer.size);
+    ORBIS_RET_ON_ERROR(ureadRaw(bufferData.data(), _buffer.data, _buffer.size));
   }
+  // }
 
   std::lock_guard lock(session->mutex);
 
@@ -357,6 +385,17 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   {
     std::lock_guard serverLock(session->server->mutex);
     clientTid = session->server->tidToClientTid.at(thread->tid);
+  }
+
+  if (_params.errorCode != 0) {
+    ORBIS_LOG_ERROR(__FUNCTION__, session->client->name, _params.errorCode);
+    thread->where();
+
+    // HACK: completely broken audio audio support should not be visible
+    if (session->client->name == "SceSysAudioSystemIpc" &&
+        _params.errorCode == -1) {
+      _params.errorCode = 0;
+    }
   }
 
   session->syncResponses.push_front({
@@ -390,7 +429,7 @@ orbis::SysResult orbis::sysIpmiClientInvokeAsyncMethod(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -481,7 +520,7 @@ orbis::SysResult orbis::sysImpiSessionRespondAsync(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto session = thread->tproc->ipmiMap.get(kid).cast<IpmiSession>();
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;
@@ -540,7 +579,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
   IpmiTryGetResultParams _params;
   ORBIS_RET_ON_ERROR(uread(_params, (ptr<IpmiTryGetResultParams>)params));
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -550,7 +589,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
     std::lock_guard clientLock(client->mutex);
 
     for (auto it = client->asyncResponses.begin();
-        it != client->asyncResponses.end(); ++it) {
+         it != client->asyncResponses.end(); ++it) {
       if (it->methodId != _params.method) {
         continue;
       }
@@ -584,8 +623,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
         }
 
         _outData.size = data.size();
-        ORBIS_RET_ON_ERROR(
-            uwriteRaw(_outData.data, data.data(), data.size()));
+        ORBIS_RET_ON_ERROR(uwriteRaw(_outData.data, data.data(), data.size()));
         ORBIS_RET_ON_ERROR(uwrite(_params.pOutData + i, _outData));
       }
 
@@ -617,7 +655,7 @@ orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -713,7 +751,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetMessage(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -767,7 +805,7 @@ orbis::SysResult orbis::sysIpmiSessionTrySendMessage(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto session = thread->tproc->ipmiMap.get(kid).cast<IpmiSession>();
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;
@@ -810,7 +848,7 @@ orbis::SysResult orbis::sysIpmiClientDisconnect(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -836,7 +874,7 @@ orbis::SysResult orbis::sysIpmiSessionGetClientPid(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto session = thread->tproc->ipmiMap.get(kid).cast<IpmiSession>();
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;
@@ -875,7 +913,7 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -1024,7 +1062,7 @@ orbis::SysResult orbis::sysIpmiClientConnect(Thread *thread, ptr<uint> result,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -1129,12 +1167,17 @@ orbis::SysResult orbis::sysIpmiClientConnect(Thread *thread, ptr<uint> result,
     client->sessionCv.wait(client->mutex);
   }
 
-  ORBIS_RET_ON_ERROR(uwrite(_params.status, 0)); // TODO
+  while (!client->connectionStatus) {
+    client->connectCv.wait(client->mutex);
+  }
+
+  ORBIS_RET_ON_ERROR(uwrite(_params.status, *client->connectionStatus));
 
   {
     std::lock_guard serverLock(server->mutex);
     server->connectionRequests.erase(requestIt);
   }
+
   return uwrite(result, 0u);
 }
 
@@ -1150,8 +1193,7 @@ orbis::SysResult orbis::sysIpmiSessionGetClientAppId(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto session =
-      dynamic_cast<IpmiSession *>(thread->tproc->ipmiMap.get(kid).get());
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;
@@ -1176,8 +1218,7 @@ orbis::SysResult orbis::sysIpmiSessionGetUserData(Thread *thread,
     return ErrorCode::INVAL;
   }
 
-  auto session =
-      dynamic_cast<IpmiSession *>(thread->tproc->ipmiMap.get(kid).get());
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;
@@ -1200,7 +1241,7 @@ orbis::SysResult orbis::sysIpmiServerGetName(Thread *thread, ptr<uint> result,
     return ErrorCode::INVAL;
   }
 
-  auto server = thread->tproc->ipmiMap.get(kid).cast<IpmiServer>();
+  auto server = g_context.ipmiMap.get(kid).cast<IpmiServer>();
 
   if (server == nullptr) {
     return ErrorCode::INVAL;
@@ -1225,7 +1266,7 @@ orbis::SysResult orbis::sysIpmiClientGetName(Thread *thread, ptr<uint> result,
     return ErrorCode::INVAL;
   }
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -1258,7 +1299,7 @@ orbis::SysResult orbis::sysIpmiClientWaitEventFlag(Thread *thread,
   IpmiWaitEventFlagParam _params;
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiWaitEventFlagParam>(params)));
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -1314,7 +1355,7 @@ orbis::SysResult orbis::sysIpmiClientPollEventFlag(Thread *thread,
   IpmiPollEventFlagParam _params;
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiPollEventFlagParam>(params)));
 
-  auto client = thread->tproc->ipmiMap.get(kid).cast<IpmiClient>();
+  auto client = g_context.ipmiMap.get(kid).cast<IpmiClient>();
 
   if (client == nullptr) {
     return ErrorCode::INVAL;
@@ -1354,7 +1395,7 @@ orbis::SysResult orbis::sysIpmiSessionSetEventFlag(Thread *thread,
   IpmiSetEventFlagParam _params;
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiSetEventFlagParam>(params)));
 
-  auto session = thread->tproc->ipmiMap.get(kid).cast<IpmiSession>();
+  auto session = g_context.ipmiMap.get(kid).cast<IpmiSession>();
 
   if (session == nullptr) {
     return ErrorCode::INVAL;

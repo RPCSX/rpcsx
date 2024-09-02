@@ -7,7 +7,7 @@
 #include "orbis/utils/SharedMutex.hpp"
 #include "utils/Rc.hpp"
 #include <list>
-#include <span>
+#include <optional>
 
 namespace orbis {
 struct IpmiSession;
@@ -72,6 +72,8 @@ struct IpmiClient : RcBase {
   shared_mutex mutex;
   shared_cv sessionCv;
   shared_cv asyncResponseCv;
+  shared_cv connectCv;
+  std::optional<sint> connectionStatus{};
   Process *process;
   kdeque<MessageQueue> messageQueues;
   kdeque<EventFlag> eventFlags;
@@ -94,9 +96,7 @@ struct IpmiSession : RcBase {
   shared_mutex mutex;
   shared_cv responseCv;
   kdeque<SyncResponse> syncResponses;
-  shared_cv connectCv;
   uint expectedOutput{0};
-  sint connectionStatus{0};
 };
 
 struct IpmiCreateServerConfig {
