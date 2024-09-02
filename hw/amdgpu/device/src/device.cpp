@@ -2666,9 +2666,10 @@ struct CacheLine {
   std::mutex writeBackTableMtx;
   util::MemoryTableWithPayload<Ref<AsyncTaskCtl>> writeBackTable;
 
-  CacheLine(std::uint64_t areaAddress, std::uint64_t areaSize)
-      : areaAddress(areaAddress), areaSize(areaSize) {
+  CacheLine(RemoteMemory memory, std::uint64_t areaAddress, std::uint64_t areaSize)
+      :memory(memory), areaAddress(areaAddress), areaSize(areaSize) {
     memoryOverlay = new MemoryOverlay();
+    memoryOverlay->memory = memory;
     hostSyncTable.map(areaAddress, areaAddress + areaSize, {1, memoryOverlay});
   }
 
@@ -3631,8 +3632,7 @@ private:
       assert(address >= area.beginAddress && address + size < area.endAddress);
       it = cacheLines.emplace_hint(
           it, std::piecewise_construct, std::tuple{area.beginAddress},
-          std::tuple{area.beginAddress, area.endAddress});
-      it->second.memory = memory;
+          std::tuple{memory, area.beginAddress, area.endAddress});
     }
 
     return it->second;
@@ -4817,8 +4817,8 @@ void amdgpu::device::AmdgpuDevice::handleProtectMemory(RemoteMemory memory,
       protStr = "unknown";
       break;
     }
-    std::fprintf(stderr, "Allocated area at %zx, size %lx, prot %s\n", address,
-                 size, protStr);
+    std::fprintf(stderr, "Allocated area at %zx, size %lx, prot %s, vmid %u\n", address,
+                 size, protStr, memory.vmId);
   } else {
     memoryAreaTable[memory.vmId].unmap(beginPage, endPage);
     std::fprintf(stderr, "Unmapped area at %zx, size %lx\n", address, size);
@@ -4888,12 +4888,13 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
     RemoteMemory memory, VkQueue queue, VkCommandBuffer cmdBuffer,
     TaskChain &taskChain, std::uint32_t bufferIndex, std::uint64_t arg,
     VkImage targetImage, VkExtent2D targetExtent, VkSemaphore waitSemaphore,
-    VkSemaphore signalSemaphore, VkFence fence) {
+    VkSemaphore signalSemaphore, VkFence fence, bridge::CmdBuffer *buffers,
+    bridge::CmdBufferAttribute *bufferAttributes) {
 
   if (bufferIndex == ~static_cast<std::uint32_t>(0)) {
-    g_bridge->flipBuffer = bufferIndex;
-    g_bridge->flipArg = arg;
-    g_bridge->flipCount = g_bridge->flipCount + 1;
+    g_bridge->flipBuffer[memory.vmId] = bufferIndex;
+    g_bridge->flipArg[memory.vmId] = arg;
+    g_bridge->flipCount[memory.vmId] = g_bridge->flipCount[memory.vmId] + 1;
 
     // black surface, ignore for now
     return false;
@@ -4904,9 +4905,10 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
   // std::fprintf(stderr, "host visible memory: ");
   // getHostVisibleMemory().dump();
 
-  auto buffer = g_bridge->buffers[bufferIndex];
+  auto buffer = buffers[bufferIndex];
+  auto bufferAttr = bufferAttributes[buffer.attrId];
 
-  if (buffer.pitch == 0 || buffer.height == 0 || buffer.address == 0) {
+  if (bufferAttr.pitch == 0 || bufferAttr.height == 0 || buffer.address == 0) {
     std::printf("Attempt to flip unallocated buffer\n");
     return false;
   }
@@ -4925,7 +4927,7 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
   SurfaceFormat surfFormat;
   TextureChannelType channelType;
 
-  switch (buffer.pixelFormat) {
+  switch (bufferAttr.pixelFormat) {
   case 0x80000000:
     // bgra
     surfFormat = kSurfaceFormat8_8_8_8;
@@ -4946,18 +4948,18 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
 
   default:
     util::unreachable("unimplemented color buffer format %x",
-                      buffer.pixelFormat);
+                      bufferAttr.pixelFormat);
   }
 
   auto &cache = getCache(memory);
   auto tag = cache.createTag();
 
-  imageRef =
-      cache.getImage(tag, taskChain, buffer.address, surfFormat, channelType,
-                     buffer.tilingMode == 1 ? kTileModeDisplay_2dThin
-                                            : kTileModeDisplay_LinearAligned,
-                     buffer.width, buffer.height, 1, buffer.pitch, 4, 5, 6, 7,
-                     shader::AccessOp::Load);
+  imageRef = cache.getImage(
+      tag, taskChain, buffer.address, surfFormat, channelType,
+      bufferAttr.tilingMode == 1 ? kTileModeDisplay_2dThin
+                                 : kTileModeDisplay_LinearAligned,
+      bufferAttr.width, bufferAttr.height, 1, bufferAttr.pitch, 4, 5, 6, 7,
+      shader::AccessOp::Load);
 
   auto initTask = taskChain.getLastTaskId();
 
@@ -4972,8 +4974,8 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
                            .baseArrayLayer = 0,
                            .layerCount = 1},
         .srcOffsets = {{},
-                       {static_cast<int32_t>(buffer.width),
-                        static_cast<int32_t>(buffer.height), 1}},
+                       {static_cast<int32_t>(bufferAttr.width),
+                        static_cast<int32_t>(bufferAttr.height), 1}},
         .dstSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                            .mipLevel = 0,
                            .baseArrayLayer = 0,
@@ -5064,11 +5066,11 @@ bool amdgpu::device::AmdgpuDevice::handleFlip(
   taskChain.add(submitCompleteTask, [=] {
     imageRef->unlock(tag);
 
-    g_bridge->flipBuffer = bufferIndex;
-    g_bridge->flipArg = arg;
-    g_bridge->flipCount = g_bridge->flipCount + 1;
+    g_bridge->flipBuffer[memory.vmId] = bufferIndex;
+    g_bridge->flipArg[memory.vmId] = arg;
+    g_bridge->flipCount[memory.vmId] = g_bridge->flipCount[memory.vmId] + 1;
     auto bufferInUse =
-        memory.getPointer<std::uint64_t>(g_bridge->bufferInUseAddress);
+        memory.getPointer<std::uint64_t>(g_bridge->bufferInUseAddress[memory.vmId]);
     if (bufferInUse != nullptr) {
       bufferInUse[bufferIndex] = 0;
     }

@@ -48,6 +48,8 @@ enum class CommandId : std::uint32_t {
   MapMemory,
   MapProcess,
   UnmapProcess,
+  RegisterBuffer,
+  RegisterBufferAttribute,
 };
 
 struct CmdMemoryProt {
@@ -64,13 +66,25 @@ struct CmdCommandBuffer {
   std::uint32_t pid;
 };
 
-struct CmdBuffer {
-  std::uint32_t width;
-  std::uint32_t height;
-  std::uint32_t pitch;
-  std::uint64_t address;
+struct CmdBufferAttribute {
+  std::uint32_t pid;
+  std::uint8_t attrId;
+  std::uint8_t submit;
+  std::uint64_t canary;
   std::uint32_t pixelFormat;
   std::uint32_t tilingMode;
+  std::uint32_t pitch;
+  std::uint32_t width;
+  std::uint32_t height;
+};
+
+struct CmdBuffer {
+  std::uint64_t canary;
+  std::uint32_t index;
+  std::uint32_t attrId;
+  std::uint64_t address;
+  std::uint64_t address2;
+  std::uint32_t pid;
 };
 
 struct CmdFlip {
@@ -118,14 +132,14 @@ struct BridgeHeader {
   std::uint64_t vmSize;
   char vmName[32];
   PadState kbPadState;
-  volatile std::uint32_t flipBuffer;
-  volatile std::uint64_t flipArg;
-  volatile std::uint64_t flipCount;
-  volatile std::uint64_t bufferInUseAddress;
+  volatile std::uint32_t flipBuffer[6];
+  volatile std::uint64_t flipArg[6];
+  volatile std::uint64_t flipCount[6];
+  volatile std::uint64_t bufferInUseAddress[6];
   std::uint32_t commandBufferCount;
   std::uint32_t bufferCount;
   CmdCommandBuffer commandBuffers[32];
-  CmdBuffer buffers[10];
+  // CmdBuffer buffers[10];
   // orbis::shared_mutex cacheCommandMtx;
   // orbis::shared_cv cacheCommandCv;
   std::atomic<std::uint64_t> cacheCommands[6][4];
@@ -144,6 +158,7 @@ struct Command {
     CmdMemoryProt memoryProt;
     CmdCommandBuffer commandBuffer;
     CmdBuffer buffer;
+    CmdBufferAttribute bufferAttribute;
     CmdFlip flip;
     CmdMapMemory mapMemory;
     CmdMapProcess mapProcess;
@@ -179,6 +194,23 @@ struct BridgePusher {
                      std::uint64_t offset) {
     sendCommand(CommandId::MapMemory,
                 {pid, memoryType, dmemIndex, address, size, prot, offset});
+  }
+
+  void sendRegisterBuffer(std::uint32_t pid, std::uint64_t canary,
+                          std::uint32_t index, std::uint32_t attrId,
+                          std::uint64_t address, std::uint64_t address2) {
+    sendCommand(CommandId::RegisterBuffer,
+                {pid, canary, index, attrId, address, address2});
+  }
+  void sendRegisterBufferAttribute(std::uint32_t pid, std::uint8_t attrId,
+                                   std::uint8_t submit, std::uint64_t canary,
+                                   std::uint32_t pixelFormat,
+                                   std::uint32_t tilingMode,
+                                   std::uint32_t pitch, std::uint32_t width,
+                                   std::uint32_t height) {
+    sendCommand(CommandId::RegisterBufferAttribute,
+                {pid, attrId, submit, canary, pixelFormat, tilingMode, pitch,
+                 width, height});
   }
 
   void sendCommandBuffer(std::uint32_t pid, std::uint64_t queue,
@@ -334,6 +366,27 @@ private:
 
     case CommandId::UnmapProcess:
       result.unmapProcess.pid = args[0];
+      return result;
+
+    case CommandId::RegisterBufferAttribute:
+      result.bufferAttribute.pid = args[0];
+      result.bufferAttribute.attrId = args[1];
+      result.bufferAttribute.submit = args[2];
+      result.bufferAttribute.canary = args[3];
+      result.bufferAttribute.pixelFormat = args[4];
+      result.bufferAttribute.tilingMode = args[5];
+      result.bufferAttribute.pitch = args[6];
+      result.bufferAttribute.width = args[7];
+      result.bufferAttribute.height = args[8];
+      return result;
+
+    case CommandId::RegisterBuffer:
+      result.buffer.pid = args[0];
+      result.buffer.canary = args[1];
+      result.buffer.index = args[2];
+      result.buffer.attrId = args[3];
+      result.buffer.address = args[4];
+      result.buffer.address2 = args[5];
       return result;
     }
 

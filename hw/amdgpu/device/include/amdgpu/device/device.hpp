@@ -1311,7 +1311,9 @@ struct AmdgpuDevice {
                   TaskChain &initTaskChain, std::uint32_t bufferIndex,
                   std::uint64_t arg, VkImage targetImage,
                   VkExtent2D targetExtent, VkSemaphore waitSemaphore,
-                  VkSemaphore signalSemaphore, VkFence fence);
+                  VkSemaphore signalSemaphore, VkFence fence,
+                  bridge::CmdBuffer *buffers,
+                  bridge::CmdBufferAttribute *bufferAttributes);
 
   AmdgpuDevice(amdgpu::bridge::BridgeHeader *bridge);
 

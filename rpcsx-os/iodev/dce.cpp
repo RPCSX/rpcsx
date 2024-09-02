@@ -252,8 +252,6 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
   auto device = static_cast<DceDevice *>(file->device.get());
 
-  std::lock_guard lock(device->mtx);
-
   if (request == 0xc0308203) {
     // returns:
     // PERM
@@ -298,11 +296,11 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
 
       FlipControlStatus flipStatus{};
       // TODO: lock bridge header
-      flipStatus.flipArg = rx::bridge.header->flipArg;
-      flipStatus.count = rx::bridge.header->flipCount;
+      flipStatus.flipArg = rx::bridge.header->flipArg[thread->tproc->vmId];
+      flipStatus.count = rx::bridge.header->flipCount[thread->tproc->vmId];
       flipStatus.processTime = 0; // TODO
       flipStatus.tsc = 0;         // TODO
-      flipStatus.currentBuffer = rx::bridge.header->flipBuffer;
+      flipStatus.currentBuffer = rx::bridge.header->flipBuffer[thread->tproc->vmId];
       flipStatus.flipPendingNum0 = 0; // TODO
       flipStatus.gcQueueNum = 0;      // TODO
       flipStatus.flipPendingNum1 = 0; // TODO
@@ -332,8 +330,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       *(std::uint64_t *)args->size = kDceControlMemorySize;  // size
     } else if (args->id == 31) {
       if ((std::uint64_t)args->ptr == 0xc) {
-        rx::bridge.header->bufferInUseAddress = args->size;
-      } else {
+        rx::bridge.header->bufferInUseAddress[thread->tproc->vmId] = args->size;
+      } else if ((std::uint64_t)args->ptr != 1) {
         ORBIS_LOG_ERROR("buffer in use", args->ptr, args->size);
         thread->where();
       }
@@ -361,20 +359,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     ORBIS_LOG_ERROR("dce: RegisterBuffer", args->canary, args->index,
                     args->address, args->address2);
 
-    if (args->index >= std::size(rx::bridge.header->buffers)) {
-      // TODO
-      ORBIS_LOG_FATAL("dce: out of buffers!", args->index);
-      return orbis::ErrorCode::NOMEM;
-    }
-
-    // TODO: lock bridge header
-    rx::bridge.header->buffers[args->index] = {
-        .width = device->bufferAttributes.width,
-        .height = device->bufferAttributes.height,
-        .pitch = device->bufferAttributes.pitch,
-        .address = args->address,
-        .pixelFormat = device->bufferAttributes.pixelFormat,
-        .tilingMode = device->bufferAttributes.tilingMode};
+    rx::bridge.sendRegisterBuffer(thread->tproc->pid, args->canary, args->index,
+                                  args->attrid, args->address, args->address2);
     return {};
   }
 
@@ -387,11 +373,11 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                     args->unk4_zero, args->unk5_zero, args->options,
                     args->reserved1, args->reserved2);
 
-    device->bufferAttributes.pixelFormat = args->pixelFormat;
-    device->bufferAttributes.tilingMode = args->tilingMode;
-    device->bufferAttributes.pitch = args->pitch;
-    device->bufferAttributes.width = args->width;
-    device->bufferAttributes.height = args->height;
+    rx::bridge.sendRegisterBufferAttribute(
+        thread->tproc->pid, args->attrid, args->submit, args->canary,
+        args->pixelFormat, args->tilingMode, args->pitch, args->width,
+        args->height);
+
     return {};
   }
 

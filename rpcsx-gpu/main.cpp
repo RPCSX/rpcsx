@@ -763,6 +763,8 @@ int main(int argc, const char *argv[]) {
     struct ProcessInfo {
       int vmId = -1;
       int vmFd = -1;
+      amdgpu::bridge::CmdBufferAttribute bufferAttributes[10];
+      amdgpu::bridge::CmdBuffer buffers[10];
       rx::MemoryTableWithPayload<VmMapSlot> vmTable;
     };
 
@@ -1033,7 +1035,8 @@ int main(int argc, const char *argv[]) {
             rx::mem::protect(memory.getPointer(cmd.memoryProt.address),
                              cmd.memoryProt.size, cmd.memoryProt.prot >> 4);
             device.handleProtectMemory(memory, cmd.memoryProt.address,
-                                       cmd.memoryProt.size, cmd.memoryProt.prot);
+                                       cmd.memoryProt.size,
+                                       cmd.memoryProt.prot);
           }
           break;
         }
@@ -1075,7 +1078,8 @@ int main(int argc, const char *argv[]) {
                     *flipTaskChain[imageIndex].get(), cmd.flip.bufferIndex,
                     cmd.flip.arg, swapchainImages[imageIndex], swapchainExtent,
                     presentCompleteSemaphore, renderCompleteSemaphore,
-                    inFlightFences[imageIndex])) {
+                    inFlightFences[imageIndex], process.buffers,
+                    process.bufferAttributes)) {
               VkPresentInfoKHR presentInfo{
                   .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
                   .waitSemaphoreCount = 1,
@@ -1096,7 +1100,8 @@ int main(int argc, const char *argv[]) {
         }
 
         case amdgpu::bridge::CommandId::MapProcess: {
-          mapProcess(cmd.mapProcess.pid, cmd.mapProcess.vmId, processInfo[cmd.mapProcess.pid]);
+          mapProcess(cmd.mapProcess.pid, cmd.mapProcess.vmId,
+                     processInfo[cmd.mapProcess.pid]);
           break;
         }
         case amdgpu::bridge::CommandId::UnmapProcess: {
@@ -1144,6 +1149,28 @@ int main(int argc, const char *argv[]) {
             device.handleProtectMemory(memory, cmd.mapMemory.address,
                                        cmd.mapMemory.size, cmd.mapMemory.prot);
           }
+          break;
+        }
+
+        case amdgpu::bridge::CommandId::RegisterBuffer: {
+          auto &process = processInfo[cmd.buffer.pid];
+
+          if (cmd.buffer.attrId >= 10 || cmd.buffer.index >= 10) {
+            std::abort();
+          }
+
+          process.buffers[cmd.buffer.index] = cmd.buffer;
+          break;
+        }
+
+        case amdgpu::bridge::CommandId::RegisterBufferAttribute: {
+          auto &process = processInfo[cmd.bufferAttribute.pid];
+          if (cmd.bufferAttribute.attrId >= 10) {
+            std::abort();
+          }
+
+          process.bufferAttributes[cmd.bufferAttribute.attrId] =
+              cmd.bufferAttribute;
           break;
         }
 
