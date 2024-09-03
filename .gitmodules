@@ -13,3 +13,6 @@
 [submodule "3rdparty/glslang"]
 	path = 3rdparty/glslang
 	url = ../../KhronosGroup/glslang.git
+[submodule "3rdparty/json"]
+	path = 3rdparty/json
+	url = ../../nlohmann/json.git

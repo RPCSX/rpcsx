@@ -18,3 +18,4 @@ set(SPIRV_CROSS_SKIP_INSTALL on)
 add_subdirectory(SPIRV-Cross)
 
 add_subdirectory(glslang)
+add_subdirectory(json)
