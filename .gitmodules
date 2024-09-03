@@ -1,3 +1,15 @@
 [submodule "3rdparty/xbyak"]
 	path = 3rdparty/xbyak
 	url = ../../RPCSX/xbyak.git
+[submodule "3rdparty/SPIRV-Tools"]
+	path = 3rdparty/SPIRV-Tools
+	url = ../../KhronosGroup/SPIRV-Tools.git
+[submodule "3rdparty/SPIRV-Headers"]
+	path = 3rdparty/SPIRV-Headers
+	url = ../../KhronosGroup/SPIRV-Headers.git
+[submodule "3rdparty/SPIRV-Cross"]
+	path = 3rdparty/SPIRV-Cross
+	url = ../../KhronosGroup/SPIRV-Cross.git
+[submodule "3rdparty/glslang"]
+	path = 3rdparty/glslang
+	url = ../../KhronosGroup/glslang.git
