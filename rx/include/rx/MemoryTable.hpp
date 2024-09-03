@@ -214,7 +214,9 @@ public:
   struct AreaInfo {
     std::uint64_t beginAddress;
     std::uint64_t endAddress;
-    PayloadT payload;
+    PayloadT &payload;
+
+    std::size_t size() const { return endAddress - beginAddress; }
   };
 
   class iterator {
@@ -230,6 +232,12 @@ public:
       return {it->first, std::next(it)->first, it->second.second};
     }
 
+    std::uint64_t beginAddress() const { return it->first; }
+    std::uint64_t endAddress() const { return std::next(it)->first; }
+    std::uint64_t size() const { return endAddress() - beginAddress(); }
+
+    PayloadT &get() const { return it->second.second; }
+    PayloadT *operator->() const { return &it->second.second; }
     iterator &operator++() {
       ++it;
 
@@ -242,6 +250,8 @@ public:
 
     bool operator==(iterator other) const { return it == other.it; }
     bool operator!=(iterator other) const { return it != other.it; }
+
+    friend MemoryTableWithPayload;
   };
 
   iterator begin() { return iterator(mAreas.begin()); }
@@ -252,18 +262,14 @@ public:
   iterator lowerBound(std::uint64_t address) {
     auto it = mAreas.lower_bound(address);
 
-    if (it == mAreas.end()) {
+    if (it == mAreas.end() || it->second.first != Kind::X) {
       return it;
     }
 
     if (it->first == address) {
-      if (it->second.first == Kind::X) {
-        ++it;
-      }
+      ++it;
     } else {
-      if (it->second.first != Kind::O) {
-        --it;
-      }
+      --it;
     }
 
     return it;
@@ -296,8 +302,8 @@ public:
     return endAddress < address ? mAreas.end() : it;
   }
 
-  void map(std::uint64_t beginAddress, std::uint64_t endAddress,
-           PayloadT payload, bool merge = true) {
+  iterator map(std::uint64_t beginAddress, std::uint64_t endAddress,
+               PayloadT payload, bool merge = true) {
     assert(beginAddress < endAddress);
     auto [beginIt, beginInserted] =
         mAreas.emplace(beginAddress, std::pair{Kind::O, payload});
@@ -370,7 +376,7 @@ public:
     }
 
     if (!merge) {
-      return;
+      return origBegin;
     }
 
     if (origBegin->second.first == Kind::XO) {
@@ -378,6 +384,7 @@ public:
 
       if (prevBegin->second.second == origBegin->second.second) {
         mAreas.erase(origBegin);
+        origBegin = prevBegin;
       }
     }
 
@@ -386,6 +393,32 @@ public:
         mAreas.erase(endIt);
       }
     }
+
+    return origBegin;
+  }
+
+  void unmap(iterator it) {
+    auto openIt = it.it;
+    auto closeIt = openIt;
+    ++closeIt;
+
+    if (openIt->second.first == Kind::XO) {
+      openIt->second.first = Kind::X;
+      openIt->second.second = {};
+    } else {
+      mAreas.erase(openIt);
+    }
+
+    if (closeIt->second.first == Kind::XO) {
+      closeIt->second.first = Kind::O;
+    } else {
+      mAreas.erase(closeIt);
+    }
+  }
+
+  void unmap(std::uint64_t beginAddress, std::uint64_t endAddress) {
+    // FIXME: can be optimized
+    unmap(map(beginAddress, endAddress, PayloadT{}, false));
   }
 };
 } // namespace rx

@@ -47,8 +47,7 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
   int memoryType = 0;
   if (auto allocationInfoIt = allocations.queryArea(directMemoryStart);
       allocationInfoIt != allocations.end()) {
-    auto allocationInfo = *allocationInfoIt;
-    memoryType = allocationInfo.payload.memoryType;
+    memoryType = allocationInfoIt->memoryType;
   }
 
   auto result =
@@ -183,25 +182,24 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
 
     auto queryInfo = *it;
 
-    if (queryInfo.payload.memoryType == -1u) {
+    if (it->memoryType == -1u) {
       return orbis::ErrorCode::ACCES;
     }
 
     if ((args->flags & 1) == 0) {
-      if (queryInfo.endAddress <= args->offset) {
+      if (it.endAddress() <= args->offset) {
         return orbis::ErrorCode::ACCES;
       }
     } else {
-      if (queryInfo.beginAddress > args->offset ||
-          queryInfo.endAddress <= args->offset) {
+      if (it.beginAddress() > args->offset || it.endAddress() <= args->offset) {
         return orbis::ErrorCode::ACCES;
       }
     }
 
     DirectMemoryQueryInfo info{
-        .start = queryInfo.beginAddress,
-        .end = queryInfo.endAddress,
-        .memoryType = queryInfo.payload.memoryType,
+        .start = it.beginAddress(),
+        .end = it.endAddress(),
+        .memoryType = it->memoryType,
     };
 
     ORBIS_LOG_WARNING("dmem directMemoryQuery", device->index, args->devIndex,
@@ -255,20 +253,19 @@ orbis::ErrorCode DmemDevice::allocate(std::uint64_t *start,
     auto it = allocations.lowerBound(offset);
 
     if (it != allocations.end()) {
-      auto allocation = *it;
-      if (allocation.payload.memoryType == -1u) {
-        if (offset < allocation.beginAddress) {
-          offset = allocation.beginAddress + alignment - 1;
+      if (it->memoryType == -1u) {
+        if (offset < it.beginAddress()) {
+          offset = it.beginAddress() + alignment - 1;
           offset &= ~(alignment - 1);
         }
 
-        if (offset + len >= allocation.endAddress) {
-          offset = allocation.endAddress;
+        if (offset + len >= it.endAddress()) {
+          offset = it.endAddress();
           continue;
         }
       } else {
-        if (offset + len > allocation.beginAddress) {
-          offset = allocation.endAddress;
+        if (offset + len > it.beginAddress()) {
+          offset = it.endAddress();
           continue;
         }
       }
@@ -315,25 +312,23 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
       break;
     }
 
-    auto allocation = *it;
-    if (allocation.payload.memoryType == -1u) {
-      if (offset < allocation.beginAddress) {
-        offset = allocation.beginAddress + alignment - 1;
+    if (it->memoryType == -1u) {
+      if (offset < it.beginAddress()) {
+        offset = it.beginAddress() + alignment - 1;
         offset &= ~(alignment - 1);
       }
 
-      if (allocation.endAddress > offset &&
-          resultSize < allocation.endAddress - offset) {
-        resultSize = allocation.endAddress - offset;
+      if (it.endAddress() > offset && resultSize < it.endAddress() - offset) {
+        resultSize = it.endAddress() - offset;
         resultOffset = offset;
       }
-    } else if (offset > allocation.beginAddress &&
-               resultSize < offset - allocation.beginAddress) {
-      resultSize = offset - allocation.beginAddress;
+    } else if (offset > it.beginAddress() &&
+               resultSize < offset - it.beginAddress()) {
+      resultSize = offset - it.beginAddress();
       resultOffset = offset;
     }
 
-    offset = allocation.endAddress;
+    offset = it.endAddress();
   }
 
   *start = resultOffset;
