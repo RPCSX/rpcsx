@@ -1,5 +1,4 @@
 #include "vm.hpp"
-#include "align.hpp"
 #include "bridge.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
@@ -7,19 +6,18 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
-#include "rx/mem.hpp"
 #include <bit>
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
-#include <map>
 #include <mutex>
+#include <rx/MemoryTable.hpp>
+#include <rx/align.hpp>
+#include <rx/mem.hpp>
 #include <sys/mman.h>
 #include <unistd.h>
-
-#include <rx/MemoryTable.hpp>
 
 static std::mutex g_mtx;
 
@@ -564,7 +562,7 @@ struct Block {
 
               while (auto usedCount = std::countr_one(tmpAllocatedBits)) {
                 auto nextProcessedPages =
-                    utils::alignUp(processedPages + usedCount, groupAlignment);
+                    rx::alignUp(processedPages + usedCount, groupAlignment);
                 if (nextProcessedPages - processedPages >= 64) {
                   tmpAllocatedBits = 0;
                 } else {
@@ -578,7 +576,7 @@ struct Block {
             // searching on next iterations
             auto freeCount = std::countl_zero(allocatedBits);
             auto alignedPageIndex =
-                utils::alignUp(kGroupSize - freeCount, groupAlignment);
+                rx::alignUp(kGroupSize - freeCount, groupAlignment);
             freeCount =
                 kGroupSize - alignedPageIndex; // calc aligned free pages
 
@@ -594,7 +592,7 @@ struct Block {
       for (std::uint64_t groupIndex = 0;
            groupIndex < kGroupsInBlock && foundCount < count; ++groupIndex) {
         if (foundCount == 0) {
-          groupIndex = utils::alignUp(groupIndex, blockAlignment);
+          groupIndex = rx::alignUp(groupIndex, blockAlignment);
 
           if (groupIndex >= kGroupsInBlock) {
             break;
@@ -773,7 +771,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
                addr, len, mapProtToString(prot).c_str(),
                mapFlagsToString(flags).c_str());
 
-  len = utils::alignUp(len, kPageSize);
+  len = rx::alignUp(len, kPageSize);
   auto pagesCount = (len + (kPageSize - 1)) >> kPageShift;
   auto hitAddress = reinterpret_cast<std::uint64_t>(addr);
 
@@ -803,11 +801,11 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   if (hitAddress & (alignment - 1)) {
     if (flags & kMapFlagStack) {
-      hitAddress = utils::alignDown(hitAddress - 1, alignment);
+      hitAddress = rx::alignDown(hitAddress - 1, alignment);
       flags |= kMapFlagFixed;
       flags &= ~kMapFlagStack;
     } else {
-      hitAddress = utils::alignUp(hitAddress, alignment);
+      hitAddress = rx::alignUp(hitAddress, alignment);
     }
   }
 
@@ -939,13 +937,12 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   // if (device == nullptr) {
-    if (auto thr = orbis::g_currentThread) {
-      rx::bridge.sendMapMemory(thr->tproc->pid, -1, -1, address, len, prot,
-                               address - kMinAddress);
-    } else {
-      std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address,
-                   address + len);
-    }
+  if (auto thr = orbis::g_currentThread) {
+    rx::bridge.sendMapMemory(thr->tproc->pid, -1, -1, address, len, prot,
+                             address - kMinAddress);
+  } else {
+    std::fprintf(stderr, "ignoring mapping %lx-%lx\n", address, address + len);
+  }
   // }
 
   if (internalFlags & kMapInternalReserveOnly) {
@@ -971,7 +968,7 @@ void *rx::vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 }
 
 bool rx::vm::unmap(void *addr, std::uint64_t size) {
-  size = utils::alignUp(size, kPageSize);
+  size = rx::alignUp(size, kPageSize);
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
 
@@ -1010,7 +1007,7 @@ bool rx::vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   std::printf("rx::vm::protect(addr = %p, len = %" PRIu64 ", prot = %s)\n",
               addr, size, mapProtToString(prot).c_str());
 
-  size = utils::alignUp(size, kPageSize);
+  size = rx::alignUp(size, kPageSize);
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
   if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
@@ -1124,7 +1121,6 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
     return false;
   }
 
-
   if ((flags & 1) == 0) {
     if (it.endAddress() <= address) {
       return false;
@@ -1138,8 +1134,7 @@ bool rx::vm::virtualQuery(const void *addr, std::int32_t flags,
   std::int32_t memoryType = 0;
   std::uint32_t blockFlags = 0;
   if (it->device != nullptr) {
-    if (auto dmem =
-            dynamic_cast<DmemDevice *>(it->device.get())) {
+    if (auto dmem = dynamic_cast<DmemDevice *>(it->device.get())) {
       auto dmemIt = dmem->allocations.queryArea(it->offset);
       if (dmemIt == dmem->allocations.end()) {
         return false;

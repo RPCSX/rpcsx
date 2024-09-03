@@ -1,4 +1,3 @@
-#include "align.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "backtrace.hpp"
 #include "bridge.hpp"
@@ -8,12 +7,13 @@
 #include "iodev/mbus_av.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
-#include "rx/hexdump.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
 #include "xbyak/xbyak.h"
 #include <rx/Version.hpp>
+#include <rx/align.hpp>
+#include <rx/hexdump.hpp>
 
 #include <elf.h>
 #include <linux/prctl.h>
@@ -621,8 +621,8 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
   for (auto sym : libkernel->symbols) {
     if (sym.id == 0xd2f4e7e480cc53d0) {
       auto address = (uint64_t)libkernel->base + sym.address;
-      ::mprotect((void *)utils::alignDown(address, 0x1000),
-                 utils::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
+      ::mprotect((void *)rx::alignDown(address, 0x1000),
+                 rx::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
       std::printf("patching sceKernelGetMainSocId\n");
       struct GetMainSocId : Xbyak::CodeGenerator {
         GetMainSocId(std::uint64_t address, std::uint64_t size)
@@ -632,8 +632,8 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
         }
       } gen{address, sym.size};
 
-      ::mprotect((void *)utils::alignDown(address, 0x1000),
-                 utils::alignUp(sym.size + sym.address, 0x1000),
+      ::mprotect((void *)rx::alignDown(address, 0x1000),
+                 rx::alignUp(sym.size + sym.address, 0x1000),
                  PROT_READ | PROT_EXEC);
       break;
     }

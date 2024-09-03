@@ -1,5 +1,4 @@
 #include "linker.hpp"
-#include "align.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/module/Module.hpp"
@@ -13,6 +12,7 @@
 #include <filesystem>
 #include <map>
 #include <orbis/thread/Process.hpp>
+#include <rx/align.hpp>
 #include <sys/mman.h>
 #include <unordered_map>
 
@@ -400,10 +400,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       break;
     case kElfProgramTypeLoad:
       baseAddress =
-          std::min(baseAddress, utils::alignDown(phdr.p_vaddr, phdr.p_align));
-      endAddress =
-          std::max(endAddress,
-                   utils::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize));
+          std::min(baseAddress, rx::alignDown(phdr.p_vaddr, phdr.p_align));
+      endAddress = std::max(
+          endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize));
       break;
     case kElfProgramTypeDynamic:
       dynamicPhdrIndex = index;
@@ -435,10 +434,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     case kElfProgramTypeSceRelRo:
       sceRelRoPhdrIndex = index;
       baseAddress =
-          std::min(baseAddress, utils::alignDown(phdr.p_vaddr, phdr.p_align));
-      endAddress =
-          std::max(endAddress,
-                   utils::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize));
+          std::min(baseAddress, rx::alignDown(phdr.p_vaddr, phdr.p_align));
+      endAddress = std::max(
+          endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize));
       break;
     case kElfProgramTypeGnuEhFrame:
       gnuEhFramePhdrIndex = index;
@@ -459,7 +457,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   auto imageBase = reinterpret_cast<std::byte *>(
       rx::vm::map(reinterpret_cast<void *>(baseAddress),
-                  utils::alignUp(imageSize, rx::vm::kPageSize), 0,
+                  rx::alignUp(imageSize, rx::vm::kPageSize), 0,
                   rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous |
                       (baseAddress ? rx::vm::kMapFlagFixed : 0)));
 
@@ -852,10 +850,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   for (auto phdr : phdrs) {
     if (phdr.p_type == kElfProgramTypeLoad ||
         phdr.p_type == kElfProgramTypeSceRelRo) {
-      auto segmentEnd =
-          utils::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize);
+      auto segmentEnd = rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize);
       auto segmentBegin =
-          utils::alignDown(phdr.p_vaddr - baseAddress, phdr.p_align);
+          rx::alignDown(phdr.p_vaddr - baseAddress, phdr.p_align);
       auto segmentSize = segmentEnd - segmentBegin;
       ::mprotect(imageBase + segmentBegin, segmentSize, PROT_WRITE);
       std::memcpy(imageBase + phdr.p_vaddr - baseAddress,
@@ -865,7 +862,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         phdr.p_flags |= vm::kMapProtCpuWrite; // TODO: reprotect on relocations
       }
 
-      vm::protect(imageBase + segmentBegin, segmentSize, phdr.p_flags & (vm::kMapProtCpuAll | vm::kMapProtGpuAll));
+      vm::protect(imageBase + segmentBegin, segmentSize,
+                  phdr.p_flags & (vm::kMapProtCpuAll | vm::kMapProtGpuAll));
 
       if (phdr.p_type == kElfProgramTypeLoad) {
         if (result->segmentCount >= std::size(result->segments)) {

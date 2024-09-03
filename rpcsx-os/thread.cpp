@@ -1,14 +1,15 @@
 #include "thread.hpp"
-#include "align.hpp"
 #include "orbis/sys/sysentry.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "rx/mem.hpp"
 #include <asm/prctl.h>
 #include <csignal>
 #include <immintrin.h>
 #include <link.h>
 #include <linux/prctl.h>
+#include <rx/align.hpp>
 #include <sys/prctl.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -16,7 +17,7 @@
 
 static std::size_t getSigStackSize() {
   static auto sigStackSize = std::max<std::size_t>(
-      SIGSTKSZ, ::utils::alignUp(64 * 1024 * 1024, sysconf(_SC_PAGE_SIZE)));
+      SIGSTKSZ, ::rx::alignUp(64 * 1024 * 1024, rx::mem::pageSize));
   return sigStackSize;
 }
 
@@ -204,7 +205,7 @@ handleSigUser(int sig, siginfo_t *info, void *ucontext) {
 }
 
 void rx::thread::initialize() {
-  struct sigaction act {};
+  struct sigaction act{};
   act.sa_sigaction = handleSigSys;
   act.sa_flags = SA_SIGINFO | SA_ONSTACK;
 

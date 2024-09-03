@@ -1,4 +1,3 @@
-#pragma once
 #include "die.hpp"
 
 #include <cstdarg>

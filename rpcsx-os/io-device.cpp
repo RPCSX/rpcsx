@@ -1,5 +1,4 @@
 #include "io-device.hpp"
-#include "align.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/SocketAddress.hpp"
 #include "orbis/file.hpp"
@@ -8,7 +7,6 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "rx/mem.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
 #include <cerrno>
@@ -17,6 +15,8 @@
 #include <filesystem>
 #include <netinet/in.h>
 #include <optional>
+#include <rx/align.hpp>
+#include <rx/mem.hpp>
 #include <span>
 #include <string>
 #include <sys/mman.h>
@@ -347,7 +347,7 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
     return orbis::ErrorCode::NOMEM;
   }
 
-  size = utils::alignUp(size, rx::vm::kPageSize);
+  size = rx::alignUp(size, rx::vm::kPageSize);
 
   result = ::mmap(
       result, size, prot & rx::vm::kMapProtCpuAll,
@@ -371,8 +371,7 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
         std::min(offset + size - stat.st_size, rx::vm::kPageSize);
 
     if (rest > rx::mem::pageSize) {
-      auto fillSize =
-          utils::alignUp(rest, rx::mem::pageSize) - rx::mem::pageSize;
+      auto fillSize = rx::alignUp(rest, rx::mem::pageSize) - rx::mem::pageSize;
 
       std::printf("adding dummy mapping %p-%p, file ends at %p\n",
                   (char *)result + size - fillSize, (char *)result + size,
@@ -440,7 +439,7 @@ static orbis::ErrorCode host_truncate(orbis::File *file, std::uint64_t len,
   }
 
   if (hostFile->alignTruncate) {
-    len = utils::alignUp(len, rx::vm::kPageSize);
+    len = rx::alignUp(len, rx::vm::kPageSize);
   }
 
   if (::ftruncate(hostFile->hostFd, len)) {
