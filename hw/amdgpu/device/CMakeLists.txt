@@ -27,8 +27,8 @@ function(add_precompiled_vulkan_spirv target)
 
         add_custom_command(
             OUTPUT ${outputpath}
-            COMMAND glslang -V --target-env vulkan1.3 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+            COMMAND $<TARGET_FILE:glslang-standalone> -V --target-env vulkan1.3 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}" glslang-standalone
             COMMENT "Generating ${outputname}..."
         )
 
