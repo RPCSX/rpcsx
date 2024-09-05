@@ -36,7 +36,8 @@ amdgpu::bridge::createShmCommandBuffer(const char *name) {
   }
 
   gShmFd = fd;
-  auto result = new (memory) amdgpu::bridge::BridgeHeader();
+  auto result = new (memory) amdgpu::bridge::BridgeHeader;
+  std::memset(result, 0, sizeof(*result));
   result->size =
       (kShmSize - sizeof(amdgpu::bridge::BridgeHeader)) / sizeof(std::uint64_t);
   return result;

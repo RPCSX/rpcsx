@@ -1821,6 +1821,7 @@ int main(int argc, const char *argv[]) {
   mainThread->tid = initProcess->pid + baseId;
   mainThread->state = orbis::ThreadState::RUNNING;
   mainThread->hostTid = ::gettid();
+  orbis::g_currentThread = mainThread;
 
   auto executableModule =
       rx::linker::loadModuleFile(argv[argIndex], mainThread);

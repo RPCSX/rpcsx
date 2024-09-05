@@ -1790,13 +1790,13 @@ static void printSpirv(const std::vector<uint32_t> &bin) {
     return;
   }
 
-  spirv_cross::CompilerGLSL glsl(bin);
-  spirv_cross::CompilerGLSL::Options options;
-  options.version = 460;
-  options.es = false;
-  options.vulkan_semantics = true;
-  glsl.set_common_options(options);
-  std::printf("%s\n", glsl.compile().c_str());
+  // spirv_cross::CompilerGLSL glsl(bin);
+  // spirv_cross::CompilerGLSL::Options options;
+  // options.version = 460;
+  // options.es = false;
+  // options.vulkan_semantics = true;
+  // glsl.set_common_options(options);
+  // std::printf("%s\n", glsl.compile().c_str());
 #endif
 }
 

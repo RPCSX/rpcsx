@@ -243,7 +243,7 @@ private:
 
   void sendCommand(CommandId id, std::initializer_list<std::uint64_t> args) {
     std::uint64_t exp = 0;
-    while (!header->lock.compare_exchange_weak(
+    while (!header->lock.compare_exchange_strong(
         exp, 1, std::memory_order::acquire, std::memory_order::relaxed)) {
       exp = 0;
     }
@@ -263,6 +263,8 @@ private:
     std::uint64_t position = header->push;
 
     if (position + cmdSize > header->size) {
+      waitPuller(position);
+
       if (position < header->size) {
         header->commands[position] =
             static_cast<std::uint64_t>(CommandId::Nop) |
@@ -271,7 +273,6 @@ private:
 
       position = 0;
       header->push = position;
-      waitPuller(position);
     }
 
     return position;
@@ -298,6 +299,12 @@ struct BridgePuller {
       }
 
       auto pos = header->pull;
+
+      if (pos >= header->size) {
+        header->pull = 0;
+        continue;
+      }
+
       auto cmd = header->commands[pos];
       CommandId cmdId = static_cast<CommandId>(cmd);
       std::uint32_t argsCount = cmd >> 32;
@@ -307,13 +314,7 @@ struct BridgePuller {
             unpackCommand(cmdId, header->commands + pos + 1, argsCount);
       }
 
-      auto newPull = pos + argsCount + 1;
-
-      if (newPull >= header->size) {
-        newPull = 0;
-      }
-
-      header->pull = newPull;
+      header->pull = pos + argsCount + 1;
     }
 
     return processed;
