@@ -266,7 +266,7 @@ private:
       if (position < header->size) {
         header->commands[position] =
             static_cast<std::uint64_t>(CommandId::Nop) |
-            ((header->size - position - 1) << 32);
+            ((header->size - position + cmdSize) << 32);
       }
 
       position = 0;

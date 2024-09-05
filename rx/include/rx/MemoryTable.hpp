@@ -262,14 +262,18 @@ public:
   iterator lowerBound(std::uint64_t address) {
     auto it = mAreas.lower_bound(address);
 
-    if (it == mAreas.end() || it->second.first != Kind::X) {
+    if (it == mAreas.end()) {
       return it;
     }
 
     if (it->first == address) {
-      ++it;
+      if (it->second.first == Kind::X) {
+        ++it;
+      }
     } else {
-      --it;
+      if (it->second.first != Kind::O) {
+        --it;
+      }
     }
 
     return it;

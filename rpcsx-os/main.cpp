@@ -684,7 +684,7 @@ static std::filesystem::path getSelfDir() {
   return std::filesystem::path(path).parent_path();
 }
 
-static bool isRpsxGpuPid(int pid) {
+static bool isRpcsxGpuPid(int pid) {
   if (pid <= 0 || ::kill(pid, 0) != 0) {
     return false;
   }
@@ -702,15 +702,15 @@ static bool isRpsxGpuPid(int pid) {
   std::printf("filename is '%s'\n",
               std::filesystem::path(path).filename().c_str());
 
-  return std::filesystem::path(path).filename() == "rpcsx-gpu";
+  return std::filesystem::path(path).filename().string().starts_with("rpcsx-gpu");
 }
-static void runRpsxGpu() {
+static void runRpcsxGpu() {
   const char *cmdBufferName = "/rpcsx-gpu-cmds";
   amdgpu::bridge::BridgeHeader *bridgeHeader =
       amdgpu::bridge::openShmCommandBuffer(cmdBufferName);
 
   if (bridgeHeader != nullptr && bridgeHeader->pullerPid > 0 &&
-      isRpsxGpuPid(bridgeHeader->pullerPid)) {
+      isRpcsxGpuPid(bridgeHeader->pullerPid)) {
     bridgeHeader->pusherPid = ::getpid();
     g_gpuPid = bridgeHeader->pullerPid;
     rx::bridge.header = bridgeHeader;
@@ -1749,7 +1749,7 @@ int main(int argc, const char *argv[]) {
   // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   rx::vm::initialize(initProcess->pid);
-  runRpsxGpu();
+  runRpcsxGpu();
 
   if (enableAudio) {
     orbis::g_context.audioOut = orbis::knew<orbis::AudioOut>();
