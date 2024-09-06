@@ -64,7 +64,7 @@ add_executable(rpcsx-os
 target_include_directories(rpcsx-os PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(rpcsx-os PUBLIC orbis::kernel amdgpu::bridge rx libcrypto unwind unwind-x86_64 xbyak)
 target_link_options(rpcsx-os PUBLIC "LINKER:-Ttext-segment,0x0000010000000000")
-target_compile_options(rpcsx-os PRIVATE "-march=native")
+target_compile_options(rpcsx-os PRIVATE "-mfsgsbase")
 
 set_target_properties(rpcsx-os PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 install(TARGETS rpcsx-os RUNTIME DESTINATION bin)
