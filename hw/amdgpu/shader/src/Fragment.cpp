@@ -6,7 +6,7 @@
 
 #include <spirv/GLSL.std.450.h>
 #include <spirv/spirv-instruction.hpp>
-#include <spirv_cross/spirv.hpp>
+#include <spirv.hpp>
 #include <util/unreachable.hpp>
 
 #include <bit>

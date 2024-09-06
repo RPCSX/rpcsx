@@ -15,7 +15,7 @@ set(SRC
 )
 
 add_library(${PROJECT_NAME} STATIC ${INCLUDE} ${SRC})
-target_link_libraries(${PROJECT_NAME} PUBLIC spirv amdgpu::base)
+target_link_libraries(${PROJECT_NAME} PUBLIC spirv amdgpu::base spirv-cross-core)
 target_include_directories(${PROJECT_NAME} PUBLIC include PRIVATE include/${PROJECT_PATH})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 add_library(amdgpu::shader ALIAS ${PROJECT_NAME})
