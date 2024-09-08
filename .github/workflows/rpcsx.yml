@@ -38,7 +38,7 @@ jobs:
 
     - name: Build RPCSX
       run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release && \
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_INIT="-march=native" && \
         cmake --build build -j4
 
     - name: Upload RPCSX
