@@ -52,6 +52,14 @@ function(add_precompiled_vulkan_spirv target)
     endforeach()
 endfunction()
 
+function(target_base_address target address)
+    if(CMAKE_CXX_COMPILER_LINKER_ID MATCHES "^(LLD|MOLD)$")
+        target_link_options(${target} PUBLIC "LINKER:--image-base=${address}")
+    else()
+        target_link_options(${target} PUBLIC "LINKER:-Ttext-segment,${address}")
+    endif()
+endfunction()
+
 add_subdirectory(tools)
 
 add_subdirectory(orbis-kernel)

@@ -8,5 +8,5 @@ add_executable(rpcsx-gpu
 target_include_directories(rpcsx-gpu PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(rpcsx-gpu PUBLIC amdgpu::bridge amdgpu::device glfw Vulkan::Vulkan rx)
 set_target_properties(rpcsx-gpu PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-target_link_options(rpcsx-os PUBLIC "LINKER:-Ttext-segment,0x0000060000000000")
+target_base_address(rpcsx-os 0x0000060000000000)
 install(TARGETS rpcsx-gpu RUNTIME DESTINATION bin)
