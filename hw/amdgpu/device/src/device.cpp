@@ -37,7 +37,7 @@
 #include <vulkan/vulkan_core.h>
 
 #ifndef NDEBUG
-#include <spirv_cross/spirv_glsl.hpp>
+#include <spirv_glsl.hpp>
 #endif
 
 using namespace amdgpu;

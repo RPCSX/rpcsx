@@ -1,5 +1,7 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE on)
 
+find_package(sox REQUIRED)
+
 add_library(obj.orbis-utils-ipc OBJECT
   src/utils/SharedMutex.cpp
   src/utils/SharedCV.cpp
@@ -71,7 +73,7 @@ add_library(obj.orbis-kernel OBJECT
   src/utils/Logs.cpp
 )
 
-target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config $<TARGET_OBJECTS:obj.orbis-utils-ipc> sox)
+target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config $<TARGET_OBJECTS:obj.orbis-utils-ipc> sox::sox)
 
 target_include_directories(obj.orbis-kernel
     PUBLIC

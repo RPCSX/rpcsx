@@ -5,6 +5,18 @@ set(CMAKE_CXX_EXTENSIONS off)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+find_package(nlohmann_json CONFIG)
+find_package(SPIRV-Cross 1.6 MODULE)
+find_package(SPIRV-Tools-opt MODULE)
+find_package(xbyak CONFIG)
+
+if(SPIRV-Tools-opt_FOUND)
+    find_package(glslang CONFIG)
+    find_package(SPIRV-Headers CONFIG)
+endif()
+
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 
 function(add_precompiled_vulkan_spirv target)
@@ -29,8 +41,8 @@ function(add_precompiled_vulkan_spirv target)
 
         add_custom_command(
             OUTPUT ${outputpath}
-            COMMAND $<TARGET_FILE:glslang-standalone> -V --target-env vulkan1.3 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}" glslang-standalone
+            COMMAND $<TARGET_FILE:glslang::glslang-standalone> -V --target-env vulkan1.3 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}" glslang::glslang-standalone
             COMMENT "Generating ${outputname}..."
         )
 

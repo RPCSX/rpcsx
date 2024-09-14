@@ -9,11 +9,6 @@ add_precompiled_vulkan_spirv(${PROJECT_NAME}-shaders
     src/rect_list.geom.glsl
 )
 
-find_package(SPIRV-Tools REQUIRED CONFIG)
-find_package(SPIRV-Tools-opt REQUIRED CONFIG)
-find_package(spirv_cross_core REQUIRED CONFIG)
-find_package(spirv_cross_glsl REQUIRED CONFIG)
-
 add_library(${PROJECT_NAME} STATIC ${INCLUDE} ${SRC})
 target_link_libraries(${PROJECT_NAME}
 PUBLIC
@@ -24,7 +19,7 @@ PUBLIC
     util
     SPIRV-Tools
     SPIRV-Tools-opt
-    spirv-cross-glsl
+    $<$<CONFIG:Debug>:spirv-cross-glsl>
 
 PRIVATE
     ${PROJECT_NAME}-shaders
