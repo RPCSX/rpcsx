@@ -198,7 +198,10 @@ private:
     SOX_SAMPLE_LOCALS;
 
     while (!exit.load(std::memory_order::relaxed)) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      if (params->control == 0) {
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+        continue;
+      }
 
       if (!params->formatIsFloat) {
         auto data = reinterpret_cast<const std::int16_t *>(audioBuffer);
@@ -216,11 +219,11 @@ private:
         ORBIS_LOG_ERROR("AudioOut: sox_write failed");
       }
 
-      // skip sceAudioOutMix%x event
-      info.evf->set(bitPattern);
-
       // set zero to freeing audiooutput
       params->control = 0;
+
+      // skip sceAudioOutMix%x event
+      info.evf->set(bitPattern);
     }
 
     sox_close(output);
