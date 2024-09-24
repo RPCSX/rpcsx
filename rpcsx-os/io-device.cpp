@@ -351,7 +351,7 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
 
   result = ::mmap(
       result, size, prot & rx::vm::kMapProtCpuAll,
-      ((prot & rx::vm::kMapFlagPrivate) != 0 ? MAP_PRIVATE : MAP_SHARED) |
+      ((flags & rx::vm::kMapFlagPrivate) != 0 ? MAP_PRIVATE : MAP_SHARED) |
           MAP_FIXED,
       hostFile->hostFd, offset);
   if (result == (void *)-1) {
