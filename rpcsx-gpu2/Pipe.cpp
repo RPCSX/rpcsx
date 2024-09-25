@@ -398,7 +398,25 @@ bool GraphicsPipe::setBase(Queue &queue) {
 }
 
 bool GraphicsPipe::clearState(Queue &queue) {
+  auto paScClipRectRule = context.paScClipRectRule.value;
+  auto cbTargetMask = context.cbTargetMask.raw;
+  auto cbShaderMask = context.cbShaderMask.raw;
+  auto vgtMaxVtxIndx = context.vgtMaxVtxIndx.value;
+  auto vgtMinVtxIndx = context.vgtMinVtxIndx.value;
+  auto vgtIndxOffset = context.vgtIndxOffset.value;
+  auto paScAaMaskX0Y0_X1Y0 = context.paScAaMaskX0Y0_X1Y0.value;
+  auto paScAaMaskX0Y1_X1Y1 = context.paScAaMaskX0Y1_X1Y1.value;
+
   context = Registers::Context::Default;
+
+  context.paScClipRectRule.value = paScClipRectRule;
+  context.cbTargetMask.raw = cbTargetMask;
+  context.cbShaderMask.raw = cbShaderMask;
+  context.vgtMaxVtxIndx.value = vgtMaxVtxIndx;
+  context.vgtMinVtxIndx.value = vgtMinVtxIndx;
+  context.vgtIndxOffset.value = vgtIndxOffset;
+  context.paScAaMaskX0Y0_X1Y0.value = paScAaMaskX0Y0_X1Y0;
+  context.paScAaMaskX0Y1_X1Y1.value = paScAaMaskX0Y1_X1Y1;
   return true;
 }
 
