@@ -42,7 +42,7 @@ PRIVATE
     glslang::SPIRV
     SPIRV-Tools
     SPIRV-Tools-opt
-    spirv-cross-c-shared
+    spirv-cross-glsl
 )
 
 add_subdirectory(shaders)

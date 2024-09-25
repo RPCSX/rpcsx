@@ -9,15 +9,6 @@ set(CMAKE_BUILD_RPATH_USE_ORIGIN on)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(nlohmann_json CONFIG)
-find_package(SPIRV-Cross 1.6 MODULE)
-find_package(SPIRV-Tools-opt MODULE)
-find_package(xbyak CONFIG)
-
-if(SPIRV-Tools-opt_FOUND)
-    find_package(glslang CONFIG)
-    find_package(SPIRV-Headers CONFIG)
-endif()
-
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 
 function(add_precompiled_vulkan_spirv target)

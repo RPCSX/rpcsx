@@ -5,7 +5,8 @@
 #include <filesystem>
 #include <fstream>
 #include <glslang/Public/ShaderLang.h>
-#include <spirv_cross_c.h>
+#include <spirv_cross.hpp>
+#include <spirv_glsl.hpp>
 
 static constexpr auto g_glslangLimit = 100;
 
@@ -294,41 +295,11 @@ shader::glsl::parseSource(ir::Context &context, Stage stage,
 }
 
 std::string shader::glsl::decompile(std::span<const std::uint32_t> spv) {
-  spvc_context context = nullptr;
-  spvc_parsed_ir ir = nullptr;
-  spvc_compiler compiler_glsl = nullptr;
-  spvc_compiler_options options = nullptr;
-  const char *result = nullptr;
-
-  spvc_context_create(&context);
-
-  spvc_context_set_error_callback(
-      context,
-      [](void *, const char *message) {
-        std::fprintf(stderr, "%s\n", message);
-      },
-      nullptr);
-
-  spvc_context_parse_spirv(context, spv.data(), spv.size(), &ir);
-  spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir,
-                               SPVC_CAPTURE_MODE_TAKE_OWNERSHIP,
-                               &compiler_glsl);
-
-  spvc_compiler_create_compiler_options(compiler_glsl, &options);
-  spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION,
-                                 460);
-  spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES,
-                                 SPVC_FALSE);
-  spvc_compiler_options_set_bool(
-      options, SPVC_COMPILER_OPTION_GLSL_VULKAN_SEMANTICS, SPVC_TRUE);
-  spvc_compiler_install_compiler_options(compiler_glsl, options);
-
-  if (spvc_compiler_compile(compiler_glsl, &result) != SPVC_SUCCESS) {
-    spvc_context_destroy(context);
-    return {};
-  }
-  std::string resultStr = result;
-  spvc_context_destroy(context);
-
-  return resultStr;
+  spirv_cross::CompilerGLSL glsl(spv.data(), spv.size());
+  spirv_cross::CompilerGLSL::Options options;
+  options.version = 460;
+  options.es = false;
+  options.vulkan_semantics = true;
+  glsl.set_common_options(options);
+  return glsl.compile();
 }
