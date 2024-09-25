@@ -5,7 +5,6 @@
 #include "ir/RegionImpl.hpp"
 #include <optional>
 #include <span>
-#include <spirv-tools/optimizer.hpp>
 
 namespace shader::spv {
 

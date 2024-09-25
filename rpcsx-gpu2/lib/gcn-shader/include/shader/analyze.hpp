@@ -10,6 +10,7 @@
 #include "rx/TypeId.hpp"
 #include <map>
 #include <ostream>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 

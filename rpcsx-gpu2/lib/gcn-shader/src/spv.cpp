@@ -1,6 +1,7 @@
 #include "spv.hpp"
 #include "dialect.hpp"
 #include "ir/Kind.hpp"
+#include <spirv-tools/optimizer.hpp>
 #include <iostream>
 
 using namespace shader;
