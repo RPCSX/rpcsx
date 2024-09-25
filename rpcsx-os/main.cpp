@@ -1209,6 +1209,68 @@ static void createSysAvControlObjects(orbis::Process *process) {
   createShm("/SceAvSetting", 0xa02, 0x1a4, 4096);
 }
 
+struct SceSysAudioSystemThreadArgs {
+  uint32_t threadId;
+};
+
+struct SceSysAudioSystemPortAndThreadArgs {
+  uint32_t audioPort;
+  uint32_t threadId;
+};
+
+static void createAudioSystemObjects(orbis::Process *process) {
+  createIpmiServer(process, "SceSysAudioSystemIpc")
+      .addSyncMethod<SceSysAudioSystemThreadArgs>(
+          0x12340000, [](const auto &args) -> std::int32_t {
+            ORBIS_LOG_TODO("IPMI: SceSysAudioSystemCreateControl", args.threadId);
+            if (auto audioOut = orbis::g_context.audioOut) {
+              audioOut->channelInfo.idControl = args.threadId;
+            }
+            return 0;
+          })
+      .addSyncMethod<SceSysAudioSystemThreadArgs>(
+          0x1234000f, [](const auto &args) -> std::int32_t {
+            ORBIS_LOG_TODO("IPMI: SceSysAudioSystemOpenMixFlag", args.threadId);
+            if (auto audioOut = orbis::g_context.audioOut) {
+              // very bad
+              char buffer[32];
+              std::snprintf(buffer, sizeof(buffer), "sceAudioOutMix%x",
+                            args.threadId);
+              auto [eventFlag, inserted] = orbis::g_context.createEventFlag(buffer, 0x100, 0);
+
+              if (!inserted) {
+                return 17; // FIXME: verify
+              }
+
+              audioOut->channelInfo.evf = eventFlag;
+            }
+            return 0;
+          })
+      .addSyncMethod<SceSysAudioSystemPortAndThreadArgs>(
+          0x12340001, [](const auto &args) -> std::int32_t {
+            ORBIS_LOG_TODO("IPMI: SceSysAudioSystemOpenPort", args.threadId, args.audioPort);
+            if (auto audioOut = orbis::g_context.audioOut) {
+              audioOut->channelInfo.port = args.audioPort;
+              audioOut->channelInfo.channel = args.threadId;
+            }
+            return 0;
+          })
+      .addSyncMethod<SceSysAudioSystemPortAndThreadArgs>(
+          0x12340002, [](const auto &args) -> std::int32_t {
+            ORBIS_LOG_TODO("IPMI: SceSysAudioSystemStartListening", args.threadId, args.audioPort);
+             if (auto audioOut = orbis::g_context.audioOut) {
+              audioOut->start();
+            }
+            return 0;
+          })
+      .addSyncMethod<SceSysAudioSystemPortAndThreadArgs>(
+          0x12340006, [](const auto &args) -> std::int32_t {
+            ORBIS_LOG_TODO("IPMI: SceSysAudioSystemStopListening", args.audioPort, args.threadId);
+            // TODO: implement
+            return 0;
+          });
+}
+
 struct SceMbusIpcAddHandleByUserIdMethodArgs {
   orbis::uint32_t unk; // 0
   orbis::uint32_t deviceId;
@@ -1899,6 +1961,9 @@ int main(int argc, const char *argv[]) {
       createSysCoreObjects(initProcess);
       createGnmCompositorObjects(initProcess);
       createShellCoreObjects(initProcess);
+      if (enableAudio) {
+        createAudioSystemObjects(initProcess);
+      }
 
       // ?
       createIpmiServer(initProcess, "SceCdlgRichProf");
@@ -1920,8 +1985,10 @@ int main(int argc, const char *argv[]) {
       createEventFlag("SceSaveDataMemoryRUI00000010", 0x120, 1);
       initProcess->cwd = "/app0/";
 
-      launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
+      if (!enableAudio) {
+        launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {});
+      }
       status = ps4Exec(mainThread, execEnv, std::move(executableModule),
                        ps4Argv, {});
     }
