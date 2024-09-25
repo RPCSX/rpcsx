@@ -8,7 +8,7 @@ add_subdirectory(SPIRV-Headers)
 
 add_subdirectory(SPIRV-Tools)
 
-option(SPIRV_CROSS_SHARED "" on)
+option(SPIRV_CROSS_SHARED "" off)
 option(SPIRV_CROSS_STATIC "" on)
 option(SPIRV_CROSS_ENABLE_GLSL "" on)
 option(SPIRV_CROSS_ENABLE_HLSL "" off)
@@ -21,9 +21,6 @@ option(SPIRV_CROSS_CLI "" off)
 option(SPIRV_CROSS_ENABLE_TESTS "" off)
 option(SPIRV_CROSS_SKIP_INSTALL "" on)
 add_subdirectory(SPIRV-Cross)
-
-install(TARGETS spirv-cross-c-shared LIBRARY DESTINATION bin)
-set_target_properties(spirv-cross-c-shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_subdirectory(glslang)
 if(NOT TARGET glslang::glslang-standalone)
