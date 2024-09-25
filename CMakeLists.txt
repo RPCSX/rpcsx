@@ -45,6 +45,8 @@ function(add_precompiled_vulkan_spirv target)
 endfunction()
 
 function(target_base_address target address)
+    set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE off)
+
     if(CMAKE_CXX_COMPILER_LINKER_ID MATCHES "^(LLD|MOLD)$")
         target_link_options(${target} PUBLIC "LINKER:--image-base=${address}")
     else()
