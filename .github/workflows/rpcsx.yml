@@ -26,7 +26,7 @@ jobs:
         sudo apt update
         sudo apt install -y cmake build-essential libunwind-dev \
         libglfw3-dev libvulkan-dev vulkan-validationlayers \
-        libsox-dev
+        libsox-dev ninja-build
         echo "deb http://azure.archive.ubuntu.com/ubuntu noble main universe" | sudo tee /etc/apt/sources.list
         sudo apt update
         sudo apt install g++-14
@@ -35,13 +35,13 @@ jobs:
         tar -xf Vulkan-Headers*.tar.gz
         cd Vulkan-Headers*/ 
         cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_INSTALL_PREFIX=/usr
-        cmake --build build -j$(nproc)
+        cmake --build build -j$(($(nproc) + 2))
         sudo cmake --build build --target install
 
     - name: Build RPCSX
       run: |
         cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14  -DCMAKE_CXX_FLAGS_INIT="-march=native" && \
-        cmake --build build -j$(nproc)
+        cmake --build build -j$(($(nproc) + 2))
 
     - name: Upload RPCSX
       uses: actions/upload-artifact@v4
