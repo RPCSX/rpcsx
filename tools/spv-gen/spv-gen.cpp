@@ -466,6 +466,13 @@ inline void generateInstructions(std::set<std::string> &composites,
         instructionDecoderBody += std::to_string(opcode);
         instructionDecoderBody += ");\n";
       }
+      if (inst["opname"] == "OpTypeVoid") {
+        instructionDecoderBody += "      if (voidType != nullptr) {\n";
+        instructionDecoderBody += "        voidType.replaceAllUsesWith(inst);\n";
+        instructionDecoderBody += "        voidType.remove();\n";
+        instructionDecoderBody += "      }\n";
+        instructionDecoderBody += "      voidType = inst;\n";
+      }
       instructionDecoderBody += "      break;\n";
       instructionDecoderBody += "    }\n";
     }
@@ -593,10 +600,21 @@ inline bool deserialize(Context &context, Location loc, auto &layout, std::span<
     return value;
   };
 
+  ir::Value voidType;
+
+  auto getVoidType = [&] {
+    if (voidType == nullptr) {
+      auto builder = ir::Builder<Builder>::createAppend(context, layout.getOrCreateGlobals(context));
+      voidType = builder.createSpvTypeVoid(loc);
+    }
+    return voidType;
+  };
+
   auto findValue = [&](std::uint32_t id) {
     auto [it, inserted] = values.emplace(id, nullptr);
     if (inserted) {
-      it->second = ir::Builder<Builder>::createAppend(context, layout.getOrCreateFunctions(context)).createSpvUndef(loc, nullptr);
+      auto builder = ir::Builder<Builder>::createAppend(context, layout.getOrCreateFunctions(context));
+      it->second = builder.createSpvUndef(loc, getVoidType());
     }
     return it->second;
   };
@@ -633,6 +651,8 @@ inline bool deserialize(Context &context, Location loc, auto &layout, std::span<
             std::printf("std::bit_cast<float>(instWords[wordIndex++])");
           } else if (param == "std::string") {
             std::printf("readString(instWords[wordIndex++])");
+          } else if (param == "IdRef") {
+            std::printf("findValue(instWords[wordIndex++])");
           } else {
             std::printf("instWords[wordIndex++]");
           }
@@ -648,6 +668,8 @@ inline bool deserialize(Context &context, Location loc, auto &layout, std::span<
             std::printf("std::bit_cast<float>(instWords[wordIndex++])");
           } else if (param == "std::string") {
             std::printf("readString(instWords[wordIndex++])");
+          } else if (param == "IdRef") {
+            std::printf("findValue(instWords[wordIndex++])");
           } else {
             std::printf("instWords[wordIndex++]");
           }

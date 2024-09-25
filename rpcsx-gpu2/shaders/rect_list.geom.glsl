@@ -23,7 +23,6 @@ void main(void)
       topLeft.w
   );
 
-
   gl_Position = topLeft;
   EmitVertex();
 

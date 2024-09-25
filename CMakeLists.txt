@@ -3,7 +3,8 @@ project(rpcsx)
 
 set(CMAKE_CXX_EXTENSIONS off)
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+set(CMAKE_BUILD_RPATH_USE_ORIGIN on)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -41,7 +42,7 @@ function(add_precompiled_vulkan_spirv target)
 
         add_custom_command(
             OUTPUT ${outputpath}
-            COMMAND $<TARGET_FILE:glslang::glslang-standalone> -V --target-env vulkan1.3 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+            COMMAND $<TARGET_FILE:glslang::glslang-standalone> -V --target-env vulkan1.2 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
             DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}" glslang::glslang-standalone
             COMMENT "Generating ${outputname}..."
         )
@@ -65,6 +66,7 @@ add_subdirectory(tools)
 add_subdirectory(orbis-kernel)
 add_subdirectory(rpcsx-os)
 add_subdirectory(rpcsx-gpu)
+add_subdirectory(rpcsx-gpu2)
 add_subdirectory(hw/amdgpu)
 add_subdirectory(rx)
 
