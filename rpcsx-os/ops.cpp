@@ -23,6 +23,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <fcntl.h>
 #include <linux/prctl.h>
 #include <map>
 #include <optional>

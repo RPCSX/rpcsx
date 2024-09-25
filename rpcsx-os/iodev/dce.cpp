@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <sys/mman.h>
 
 static constexpr auto kDceControlMemoryOffset = 0;
 static constexpr auto kDceControlMemorySize = 0x10000;

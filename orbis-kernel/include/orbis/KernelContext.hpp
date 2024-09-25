@@ -1,5 +1,4 @@
 #pragma once
-#include "AudioOut.hpp"
 #include "KernelAllocator.hpp"
 #include "evf.hpp"
 #include "ipmi.hpp"
@@ -178,7 +177,6 @@ public:
   Ref<RcBase> shmDevice;
   Ref<RcBase> dmemDevice;
   Ref<RcBase> blockpoolDevice;
-  AudioOut *audioOut = nullptr;
   uint sdkVersion{};
   uint fwSdkVersion{};
   uint safeMode{};

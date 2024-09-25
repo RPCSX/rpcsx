@@ -1,4 +1,5 @@
 find_package(libunwind REQUIRED)
+find_package(sox REQUIRED)
 
 add_library(standalone-config INTERFACE)
 target_include_directories(standalone-config INTERFACE orbis-kernel-config)
@@ -53,6 +54,7 @@ add_executable(rpcsx-os
   iodev/cayman_reg.cpp
 
   main.cpp
+  AudioOut.cpp
   backtrace.cpp
   bridge.cpp
   vm.cpp
@@ -64,7 +66,7 @@ add_executable(rpcsx-os
 )
 
 target_include_directories(rpcsx-os PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(rpcsx-os PUBLIC orbis::kernel amdgpu::bridge rx libcrypto libunwind::unwind-x86_64 xbyak::xbyak)
+target_link_libraries(rpcsx-os PUBLIC orbis::kernel amdgpu::bridge rx libcrypto libunwind::unwind-x86_64 xbyak::xbyak sox::sox)
 target_base_address(rpcsx-os 0x0000010000000000)
 target_compile_options(rpcsx-os PRIVATE "-mfsgsbase")
 
