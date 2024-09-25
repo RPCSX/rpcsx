@@ -1,11 +1,11 @@
 #include "gnm/constants.hpp"
 #include <amdgpu/tiler.hpp>
-#include <gnm/gnm.hpp>
 #include <bit>
+#include <gnm/gnm.hpp>
 
 using namespace amdgpu;
 
-static constexpr SurfaceInfo
+static SurfaceInfo
 computeTexture1dInfo(ArrayMode arrayMode, gnm::TextureType type,
                      gnm::DataFormat dfmt, std::uint32_t width,
                      std::uint32_t height, std::uint32_t depth,
@@ -167,7 +167,7 @@ computeTexture1dInfo(ArrayMode arrayMode, gnm::TextureType type,
   return result;
 }
 
-static constexpr SurfaceInfo computeTextureLinearInfo(
+static SurfaceInfo computeTextureLinearInfo(
     ArrayMode arrayMode, gnm::TextureType type, gnm::DataFormat dfmt,
     std::uint32_t width, std::uint32_t height, std::uint32_t depth,
     std::uint32_t pitch, int baseArrayLayer, int arrayCount, int baseMipLevel,

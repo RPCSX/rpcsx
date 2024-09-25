@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <gnm/constants.hpp>
 #include <gnm/descriptors.hpp>
+#include <bit>
 
 namespace amdgpu {
 inline constexpr uint32_t kMicroTileWidth = 8;

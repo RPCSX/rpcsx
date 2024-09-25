@@ -25,7 +25,7 @@ constexpr int getTexelsPerElement(gnm::DataFormat dfmt) {
   }
 }
 
-inline int getBitsPerElement(DataFormat dfmt) {
+constexpr int getBitsPerElement(DataFormat dfmt) {
   switch (dfmt) {
   case kDataFormatInvalid:
     return 0;

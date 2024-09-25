@@ -49,4 +49,3 @@ amdgpu::Registers::Context amdgpu::Registers::Context::Default = [] {
   result.vgtOutDeallocCntl = 0x10;
   return result;
 }();
-

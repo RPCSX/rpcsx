@@ -3,7 +3,7 @@
 	url = ../../RPCSX/xbyak.git
 [submodule "3rdparty/SPIRV-Tools"]
 	path = 3rdparty/SPIRV-Tools
-	url = ../../KhronosGroup/SPIRV-Tools.git
+	url = ../../RPCSX/SPIRV-Tools.git
 [submodule "3rdparty/SPIRV-Headers"]
 	path = 3rdparty/SPIRV-Headers
 	url = ../../KhronosGroup/SPIRV-Headers.git
