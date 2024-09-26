@@ -1698,6 +1698,7 @@ struct IpmiClient {
         .pInData = guestInDataArray,
         .pOutData = guestOutBufArray,
         .pResult = serverResult,
+        .flags = (inData.size() > 1 || outBuf.size() > 1) ? 1u : 0u,
     };
 
     GuestAlloc<orbis::uint> errorCode;
@@ -1771,7 +1772,8 @@ static IpmiClient createIpmiClient(orbis::Thread *thread, const char *name) {
 
 static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
                                      std::vector<std::string> argv,
-                                     std::vector<std::string> envv) {
+                                     std::vector<std::string> envv,
+                                     orbis::AppInfo appInfo) {
   auto childPid = orbis::g_context.allocatePid() * 10000 + 1;
   auto flag = orbis::knew<std::atomic<bool>>();
   *flag = false;
@@ -1800,9 +1802,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   process->onSysExit = thread->tproc->onSysExit;
   process->ops = thread->tproc->ops;
   process->parentProcess = thread->tproc;
-  process->appInfo = {
-      .unk4 = orbis::slong(0x80000000'00000000),
-  };
+  process->appInfo = appInfo;
 
   process->authInfo = {
       .unk0 = 0x380000000000000f,
@@ -2165,11 +2165,14 @@ int main(int argc, const char *argv[]) {
 
       if (!enableAudio) {
         launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
-                     {"/system/sys/orbis_audiod.elf"}, {});
+                     {"/system/sys/orbis_audiod.elf"}, {},
+                     {
+                         .titleId = "NPXS20973",
+                         .unk4 = orbis::slong(0x80000000'00000000),
+                     });
       }
-      status = ps4Exec(mainThread, execEnv, std::move(executableModule),
-                       ps4Argv, {});
     }
+
     status =
         ps4Exec(mainThread, execEnv, std::move(executableModule), ps4Argv, {});
   } else {
