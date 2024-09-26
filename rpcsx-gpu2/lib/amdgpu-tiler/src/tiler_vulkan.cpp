@@ -74,7 +74,7 @@ struct TilerShader {
 struct amdgpu::GpuTiler::Impl {
   TilerDecriptorSetLayout descriptorSetLayout;
   std::mutex descriptorMtx;
-  VkDescriptorSet descriptorSets[4]{};
+  VkDescriptorSet descriptorSets[32]{};
   VkDescriptorPool descriptorPool;
   std::uint32_t inUseDescriptorSets = 0;
 
@@ -119,12 +119,12 @@ struct amdgpu::GpuTiler::Impl {
     {
       VkDescriptorPoolSize poolSizes[]{{
           .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-          .descriptorCount = 1,
+          .descriptorCount = static_cast<std::uint32_t>(std::size(descriptorSets)) * 2,
       }};
 
       VkDescriptorPoolCreateInfo info{
           .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-          .maxSets = static_cast<std::uint32_t>(std::size(descriptorSets)) * 4,
+          .maxSets = static_cast<std::uint32_t>(std::size(descriptorSets)) * 2,
           .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
           .pPoolSizes = poolSizes,
       };

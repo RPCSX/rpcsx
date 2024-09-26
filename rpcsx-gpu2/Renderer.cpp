@@ -639,9 +639,6 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         .supportsBarycentric = vk::context->supportsBarycentric,
         .supportsInt8 = vk::context->supportsInt8,
         .supportsInt64Atomics = vk::context->supportsInt64Atomics,
-        // .supportsBarycentric = false,
-        // .supportsInt8 = false,
-        // .supportsInt64Atomics = false,
     };
 
     auto shader = cacheTag.getShader({

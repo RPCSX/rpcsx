@@ -103,7 +103,7 @@ static VkShaderStageFlagBits shaderStageToVk(shader::gcn::Stage stage) {
 }
 
 static void fillStageBindings(VkDescriptorSetLayoutBinding *bindings,
-                              VkShaderStageFlagBits stage, int setIndex) {
+                              VkShaderStageFlagBits stage, int setIndex, std::uint32_t setCount) {
 
   auto createDescriptorBinding = [&](VkDescriptorType type, uint32_t count,
                                      int dim = 0) {
@@ -112,7 +112,7 @@ static void fillStageBindings(VkDescriptorSetLayoutBinding *bindings,
     bindings[binding] = VkDescriptorSetLayoutBinding{
         .binding = static_cast<std::uint32_t>(binding),
         .descriptorType = type,
-        .descriptorCount = count,
+        .descriptorCount = count * setCount,
         .stageFlags = VkShaderStageFlags(
             stage | (binding > 0 && stage != VK_SHADER_STAGE_COMPUTE_BIT
                          ? VK_SHADER_STAGE_ALL_GRAPHICS
@@ -690,9 +690,9 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       key.pitch, key.baseArrayLayer, key.arrayLayerCount, key.baseMipLevel,
       key.mipCount, key.pow2pad);
 
-  VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-              VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-              VK_IMAGE_USAGE_SAMPLED_BIT // | VK_IMAGE_USAGE_STORAGE_BIT
+  VkImageUsageFlags usage =
+      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+      VK_IMAGE_USAGE_SAMPLED_BIT // | VK_IMAGE_USAGE_STORAGE_BIT
       ;
 
   bool isCompressed =
@@ -875,7 +875,7 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {
                                          [kDescriptorBindings.size()];
 
     for (std::size_t index = 0; auto stage : kGraphicsStages) {
-      fillStageBindings(bindings[index], stage, index);
+      fillStageBindings(bindings[index], stage, index, 128);
       ++index;
     }
 
@@ -898,7 +898,7 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {
   {
     VkDescriptorSetLayoutBinding bindings[kDescriptorBindings.size()];
 
-    fillStageBindings(bindings, VK_SHADER_STAGE_COMPUTE_BIT, 0);
+    fillStageBindings(bindings, VK_SHADER_STAGE_COMPUTE_BIT, 0, 128);
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -1009,29 +1009,31 @@ Cache::createGraphicsDescriptorSets() {
     return result;
   }
 
+  constexpr auto maxSets = Cache::kGraphicsStages.size() * 128;
+
   if (mGraphicsDescriptorPool == nullptr) {
     VkDescriptorPoolSize poolSizes[]{
         {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
+            .descriptorCount = 1 * (maxSets / 4),
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 16 * 3,
+            .descriptorCount = 3 * 16 * (maxSets / 4),
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = 16,
+            .descriptorCount = 16 * (maxSets / 4),
         },
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = 16,
+            .descriptorCount = 16 * (maxSets / 4),
         },
     };
 
     VkDescriptorPoolCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = Cache::kGraphicsStages.size() * 100,
+        .maxSets = maxSets,
         .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
         .pPoolSizes = poolSizes,
     };
@@ -1064,29 +1066,31 @@ VkDescriptorSet Cache::createComputeDescriptorSet() {
     return result;
   }
 
+  constexpr auto maxSets = 128;
+
   if (mComputeDescriptorPool == nullptr) {
     VkDescriptorPoolSize poolSizes[]{
         {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
+            .descriptorCount = 1 * (maxSets / 4),
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 16 * 3,
+            .descriptorCount = 3 * 16 * (maxSets / 4),
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = 16,
+            .descriptorCount = 16 * (maxSets / 4),
         },
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = 16,
+            .descriptorCount = 16 * (maxSets / 4),
         },
     };
 
     VkDescriptorPoolCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = 8,
+        .maxSets = maxSets,
         .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
         .pPoolSizes = poolSizes,
     };
