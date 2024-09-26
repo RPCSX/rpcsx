@@ -1609,6 +1609,36 @@ static orbis::Thread *createGuestThread() {
   return thread;
 }
 
+template <typename T = std::byte> struct GuestAlloc {
+  orbis::ptr<T> guestAddress;
+
+  GuestAlloc(std::size_t size) {
+    guestAddress = orbis::ptr<T>(rx::vm::map(
+        nullptr, size, rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
+        rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
+  }
+
+  GuestAlloc() : GuestAlloc(sizeof(T)) {}
+
+  GuestAlloc(const T &data) : GuestAlloc() {
+    if (orbis::uwrite(guestAddress, data) != orbis::ErrorCode{}) {
+      std::abort();
+    }
+  }
+
+  GuestAlloc(const void *data, std::size_t size) : GuestAlloc(size) {
+    if (orbis::uwriteRaw(guestAddress, data, size) != orbis::ErrorCode{}) {
+      std::abort();
+    }
+  }
+
+  ~GuestAlloc() { rx::vm::unmap(guestAddress, sizeof(T)); }
+
+  operator orbis::ptr<T>() { return guestAddress; }
+  T *operator->() { return guestAddress; }
+  operator T &() { return *guestAddress; }
+};
+
 struct IpmiClient {
   orbis::Ref<orbis::IpmiClient> clientImpl;
   orbis::uint kid;
@@ -1617,31 +1647,33 @@ struct IpmiClient {
   orbis::sint sendSyncMessage(std::uint32_t method, const void *data,
                               std::size_t size,
                               std::vector<std::byte> &outData) {
-    orbis::sint serverResult;
-    orbis::IpmiBufferInfo outBufferInfo = {
+    GuestAlloc<orbis::sint> serverResult;
+    GuestAlloc outBufferInfo = orbis::IpmiBufferInfo{
         .data = outData.data(),
         .capacity = outData.size(),
     };
 
-    orbis::IpmiDataInfo inDataInfo = {
-        .data = orbis::ptr<void>(data),
+    auto guestData = GuestAlloc{data, size};
+
+    GuestAlloc inDataInfo = orbis::IpmiDataInfo{
+        .data = guestData,
         .size = size,
     };
 
-    orbis::IpmiSyncCallParams params{
+    GuestAlloc params = orbis::IpmiSyncCallParams{
         .method = method,
         .numInData = 1,
         .numOutData = 1,
-        .pInData = &inDataInfo,
-        .pOutData = &outBufferInfo,
-        .pResult = &serverResult,
+        .pInData = inDataInfo,
+        .pOutData = outBufferInfo,
+        .pResult = serverResult,
     };
 
-    orbis::uint errorCode;
-    orbis::sysIpmiClientInvokeSyncMethod(thread, &errorCode, kid, &params,
-                                         sizeof(params));
+    GuestAlloc<orbis::uint> errorCode;
+    orbis::sysIpmiClientInvokeSyncMethod(thread, errorCode, kid, params,
+                                         sizeof(orbis::IpmiSyncCallParams));
 
-    outData.resize(outBufferInfo.size);
+    outData.resize(outBufferInfo->size);
     return serverResult;
   }
 
@@ -1669,27 +1701,35 @@ struct IpmiClient {
 
 static IpmiClient createIpmiClient(orbis::Thread *thread, const char *name) {
   orbis::Ref<orbis::IpmiClient> client;
-  orbis::IpmiCreateClientConfig config{
+  GuestAlloc config = orbis::IpmiCreateClientConfig{
       .size = sizeof(orbis::IpmiCreateClientConfig),
   };
 
   orbis::uint kid;
 
   {
-    orbis::IpmiCreateClientParams params{
-        .name = name,
-        .config = &config,
+    GuestAlloc<char> guestName{name, std::strlen(name)};
+    GuestAlloc params = orbis::IpmiCreateClientParams{
+        .name = guestName,
+        .config = config,
     };
 
-    orbis::sysIpmiCreateClient(thread, &kid, &params, sizeof(params));
+    GuestAlloc<orbis::uint> result;
+    GuestAlloc<orbis::uint> guestKid;
+    orbis::sysIpmiCreateClient(thread, guestKid, params,
+                               sizeof(orbis::IpmiCreateClientParams));
+    kid = guestKid;
   }
-  {
-    orbis::sint status;
-    orbis::IpmiClientConnectParams params{.status = &status};
 
-    orbis::uint result;
-    orbis::sysIpmiClientConnect(thread, &result, kid, &params, sizeof(params));
+  {
+    GuestAlloc<orbis::sint> status;
+    GuestAlloc params = orbis::IpmiClientConnectParams{.status = status};
+
+    GuestAlloc<orbis::uint> result;
+    orbis::sysIpmiClientConnect(thread, result, kid, params,
+                                sizeof(orbis::IpmiClientConnectParams));
   }
+
   return {std::move(client), kid, thread};
 }
 
