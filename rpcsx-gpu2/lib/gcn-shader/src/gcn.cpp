@@ -1381,10 +1381,13 @@ static ir::Value deserializeGcnRegion(
       createOperandWrite(loc, builder, injectExecTest, *resultOperand, inst);
     }
 
+    bool hasDestination = resultOperand != nullptr;
+
     for (std::size_t index = 0; auto &op : operands) {
       auto opIndex = index++;
+      auto &paramInfo = params[opIndex];
 
-      if ((op.access & GcnOperand::W) != GcnOperand::W) {
+      if ((paramInfo.access & Access::Write) != Access::Write) {
         continue;
       }
 
@@ -1393,6 +1396,24 @@ static ir::Value deserializeGcnRegion(
 
       auto value = builder.createSpvLoad(loc, paramType, arg);
       createOperandWrite(loc, builder, injectExecTest, op, value);
+      hasDestination = true;
+    }
+
+    if (!hasDestination && injectExecTest) {
+      auto mergeBlock = builder.createSpvLabel(loc);
+      gcn::Builder::createInsertBefore(converter, mergeBlock)
+          .createSpvBranch(loc, mergeBlock);
+      auto instBlock = gcn::Builder::createInsertAfter(converter, instrBegin)
+                           .createSpvLabel(loc);
+      auto prependInstBuilder =
+          gcn::Builder::createInsertBefore(converter, instBlock);
+      auto exec = prependInstBuilder.createValue(
+          loc, ir::amdgpu::EXEC_TEST,
+          converter.getType(execTestSem->returnType));
+      prependInstBuilder.createSpvSelectionMerge(
+          loc, mergeBlock, ir::spv::SelectionControl::None);
+      prependInstBuilder.createSpvBranchConditional(loc, exec, instBlock,
+                                                    mergeBlock);
     }
   }
 
