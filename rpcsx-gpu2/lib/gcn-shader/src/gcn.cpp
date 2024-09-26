@@ -1,29 +1,27 @@
 #include "gcn.hpp"
-
 #include "Evaluator.hpp"
+#include "GcnInstruction.hpp"
 #include "SemanticInfo.hpp"
 #include "SpvConverter.hpp"
 #include "analyze.hpp"
+#include "dialect.hpp"
 #include "ir.hpp"
+#include "spv.hpp"
+#include "transform.hpp"
+
+#include <rx/die.hpp>
+
+#include <SPIRV/GlslangToSpv.h>
+#include <glslang/Include/ResourceLimits.h>
+#include <glslang/Public/ShaderLang.h>
+#include <spirv-tools/libspirv.h>
 
 #include <bit>
 #include <functional>
 #include <iostream>
-
-#include "GcnInstruction.hpp"
-#include "dialect.hpp"
-#include "ir/Region.hpp"
-#include "ir/Value.hpp"
-
-#include "spv.hpp"
-#include "transform.hpp"
-#include <glslang/Include/ResourceLimits.h>
-#include <glslang/Public/ShaderLang.h>
-#include <SPIRV/GlslangToSpv.h>
 #include <map>
 #include <optional>
 #include <print>
-#include <spirv-tools/libspirv.h>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -716,6 +714,13 @@ static ir::Value deserializeGcnRegion(
   ir::Value uint64TV = converter.getTypeUInt64();
   ir::Value sint64TV = converter.getTypeSInt64();
 
+  auto execTestSem =
+      semInfo.findSemantic(ir::getInstructionId(ir::amdgpu::EXEC_TEST));
+
+  if (execTestSem == nullptr) {
+    rx::die("Failed to find semantic of EXEC_TEST");
+  }
+
   unsigned currentOp = 0;
 
   auto createOperandReadImpl = [&](ir::Location loc, gcn::Builder &builder,
@@ -917,14 +922,9 @@ static ir::Value deserializeGcnRegion(
     }
   };
 
-  auto createOperandWrite = [&](ir::Location loc, gcn::Builder &builder,
-                                const GcnOperand &op, ir::Value value,
-                                ir::Value lane = nullptr) {
-    if (op.clamp || op.omod != 0) {
-      value = builder.createValue(loc, ir::amdgpu::OMOD, value.getOperand(0),
-                                  op.clamp, op.omod, value);
-    }
-
+  auto createOperandWriteImpl = [&](ir::Location loc, gcn::Builder &builder,
+                                    const GcnOperand &op, ir::Value value,
+                                    ir::Value lane) {
     switch (op.kind) {
     case GcnOperand::Kind::Constant:
     case GcnOperand::Kind::Immediate:
@@ -966,6 +966,33 @@ static ir::Value deserializeGcnRegion(
     std::abort();
   };
 
+  auto createOperandWrite = [&](ir::Location loc, gcn::Builder &builder,
+                                bool injectExecTest, const GcnOperand &op,
+                                ir::Value value, ir::Value lane = nullptr) {
+    if (op.clamp || op.omod != 0) {
+      value = builder.createValue(loc, ir::amdgpu::OMOD, value.getOperand(0),
+                                  op.clamp, op.omod, value);
+    }
+
+    if (injectExecTest) {
+      ir::Value testFailureValue;
+      auto type = value.getOperand(0).getAsValue();
+      if (op.kind == GcnOperand::Kind::Sgpr) {
+        testFailureValue = converter.getNull(type);
+      } else {
+        testFailureValue = createOperandRead(loc, builder, type, op);
+      }
+
+      auto exec =
+          builder.createValue(loc, ir::amdgpu::EXEC_TEST,
+                              converter.getType(execTestSem->returnType));
+
+      value = builder.createSpvSelect(loc, type, exec, value, testFailureValue);
+    }
+
+    return createOperandWriteImpl(loc, builder, op, value, lane);
+  };
+
   if (converter.body == nullptr) {
     converter.body =
         converter.create<ir::Region>(locBuilder.getLocation(address));
@@ -978,33 +1005,27 @@ static ir::Value deserializeGcnRegion(
                                            bodyRegion, address)
                          .first;
 
-  auto execTestSem =
-      semInfo.findSemantic(ir::getInstructionId(ir::amdgpu::EXEC_TEST));
+  auto requiresExecTest = [&](ir::InstructionId instId) {
+    switch (ir::getInstructionKind(instId)) {
+    case ir::Kind::Sop2:
+    case ir::Kind::Smrd:
+    case ir::Kind::Sopc:
+    case ir::Kind::Sopk:
+    case ir::Kind::Sop1:
+    case ir::Kind::Sopp:
+      return false;
+    default:
+      break;
+    }
 
-  if (execTestSem == nullptr) {
-    std::fprintf(stderr, "Failed to find semantic of EXEC_TEST\n");
-    std::abort();
-  }
+    if (instId == ir::vop1::READFIRSTLANE_B32 ||
+        instId == ir::vop2::READLANE_B32 || instId == ir::vop2::WRITELANE_B32 ||
+        instId == ir::vop3::READFIRSTLANE_B32 ||
+        instId == ir::vop3::READLANE_B32 || instId == ir::vop3::WRITELANE_B32) {
+      return false;
+    }
 
-  auto injectExecTest = [&](ir::Location loc, gcn::Builder &builder,
-                            ir::Instruction point) {
-    return;
-    auto mergeBlock = builder.createSpvLabel(loc);
-    gcn::Builder::createInsertBefore(converter, mergeBlock)
-        .createSpvBranch(loc, mergeBlock);
-
-    auto instBlock =
-        gcn::Builder::createInsertAfter(converter, point).createSpvLabel(loc);
-    auto prependInstBuilder =
-        gcn::Builder::createInsertBefore(converter, instBlock);
-
-    auto exec = prependInstBuilder.createValue(
-        loc, ir::amdgpu::EXEC_TEST, converter.getType(execTestSem->returnType));
-
-    prependInstBuilder.createSpvSelectionMerge(loc, mergeBlock,
-                                               ir::spv::SelectionControl::None);
-    prependInstBuilder.createSpvBranchConditional(loc, exec, instBlock,
-                                                  mergeBlock);
+    return true;
   };
 
   std::vector<std::uint64_t> workList;
@@ -1050,6 +1071,9 @@ static ir::Value deserializeGcnRegion(
     auto builder = converter.createBuilder(instRegion, bodyRegion, instStart);
     auto instrBegin = builder.getInsertionPoint();
 
+    auto injectExecTest =
+        requiresExecTest(ir::getInstructionId(isaInst.kind, isaInst.op));
+
     auto variablesBuilder =
         gcn::Builder::createAppend(converter, converter.localVariables);
 
@@ -1085,7 +1109,7 @@ static ir::Value deserializeGcnRegion(
       if (isaInst == ir::sop1::SWAPPC_B64) {
         auto target =
             createOperandRead(loc, builder, uint64TV, isaInst.getOperand(1));
-        createOperandWrite(loc, builder, isaInst.getOperand(0),
+        createOperandWrite(loc, builder, injectExecTest, isaInst.getOperand(0),
                            converter.imm64(instAddress));
         branchesToUnknown.push_back(builder.createInstruction(
             loc, ir::Kind::AmdGpu, ir::amdgpu::BRANCH, target));
@@ -1093,7 +1117,7 @@ static ir::Value deserializeGcnRegion(
       }
 
       if (isaInst == ir::sop1::GETPC_B64) {
-        createOperandWrite(loc, builder, isaInst.getOperand(0),
+        createOperandWrite(loc, builder, injectExecTest, isaInst.getOperand(0),
                            converter.imm64(instAddress));
         continue;
       }
@@ -1164,7 +1188,7 @@ static ir::Value deserializeGcnRegion(
         srcIndex = builder.createSpvSelect(loc, uint32TV, srcInBounds, srcIndex,
                                            converter.imm32(0));
         createOperandWrite(
-            loc, builder, isaInst.getOperand(0),
+            loc, builder, injectExecTest, isaInst.getOperand(0),
             converter.readReg(
                 loc, builder,
                 (isaInst == ir::sop1::MOVRELS_B64 ? uint64TV : uint32TV),
@@ -1224,12 +1248,7 @@ static ir::Value deserializeGcnRegion(
           auto regTypeValue = is64Bit ? uint64TV : uint32TV;
           auto value =
               createOperandRead(loc, builder, regTypeValue, operands[1]);
-          createOperandWrite(loc, builder, operands[0], value);
-
-          if (isaInst.kind == ir::Kind::Vop1 ||
-              isaInst.kind == ir::Kind::Vop3) {
-            injectExecTest(loc, builder, instrBegin);
-          }
+          createOperandWrite(loc, builder, injectExecTest, operands[0], value);
           continue;
         }
 
@@ -1249,7 +1268,6 @@ static ir::Value deserializeGcnRegion(
         inst.addOperand(createOperandRead(loc, paramBuilder, uint32TV, op));
       }
 
-      injectExecTest(loc, builder, instrBegin);
       continue;
     }
 
@@ -1297,7 +1315,8 @@ static ir::Value deserializeGcnRegion(
             loc, float32TV,
             createOperandRead(loc, builder, float32TV, isaInst.getOperand(2)));
 
-        createOperandWrite(loc, builder, isaInst.getOperand(0), rawValue);
+        createOperandWrite(loc, builder, injectExecTest, isaInst.getOperand(0),
+                           rawValue);
       }
 
       continue;
@@ -1359,7 +1378,7 @@ static ir::Value deserializeGcnRegion(
     }
 
     if (resultOperand) {
-      createOperandWrite(loc, builder, *resultOperand, inst);
+      createOperandWrite(loc, builder, injectExecTest, *resultOperand, inst);
     }
 
     for (std::size_t index = 0; auto &op : operands) {
@@ -1373,25 +1392,8 @@ static ir::Value deserializeGcnRegion(
       auto paramType = converter.getType(params[opIndex].type);
 
       auto value = builder.createSpvLoad(loc, paramType, arg);
-      createOperandWrite(loc, builder, op, value);
+      createOperandWrite(loc, builder, injectExecTest, op, value);
     }
-
-    if (isaInst.kind == ir::Kind::Sop2 || isaInst.kind == ir::Kind::Sopk ||
-        isaInst.kind == ir::Kind::Smrd || isaInst.kind == ir::Kind::Sop1 ||
-        isaInst.kind == ir::Kind::Sopc || isaInst.kind == ir::Kind::Sopp) {
-      continue;
-    }
-
-    if (isaInst == ir::vop1::READFIRSTLANE_B32 ||
-        isaInst == ir::vop2::READLANE_B32 ||
-        isaInst == ir::vop2::WRITELANE_B32 ||
-        isaInst == ir::vop3::READFIRSTLANE_B32 ||
-        isaInst == ir::vop3::READLANE_B32 ||
-        isaInst == ir::vop3::WRITELANE_B32) {
-      continue;
-    }
-
-    injectExecTest(loc, builder, instrBegin);
   }
 
   converter.analysis.invalidateAll();

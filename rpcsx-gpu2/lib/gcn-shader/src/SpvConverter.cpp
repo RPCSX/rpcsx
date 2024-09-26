@@ -321,15 +321,19 @@ void spv::Context::setConstantName(ir::Value constant) {
 }
 
 ir::Value spv::Context::getOrCreateConstant(ir::Value typeValue,
-                                                     const ir::Operand &value) {
+                                            const ir::Operand &value) {
   if (typeValue == getTypeBool()) {
     return *value.getAsBool() ? getTrue() : getFalse();
   }
   return getOrCreateGlobal(ir::spv::OpConstant, {{typeValue, value}});
 }
 
+ir::Value spv::Context::getNull(ir::Value typeValue) {
+  return getOrCreateGlobal(ir::spv::OpConstantNull, {{typeValue}});
+}
+
 ir::Value spv::Context::getType(ir::spv::Op baseType, int width,
-                                         bool isSigned) {
+                                bool isSigned) {
   switch (baseType) {
   case ir::spv::OpTypeInt:
     return getTypeInt(width, isSigned);
@@ -377,7 +381,7 @@ void spv::Context::setTypeName(ir::Value type) {
 
 ir::Value
 spv::Context::findGlobal(ir::spv::Op op,
-                                  std::span<const ir::Operand> operands) const {
+                         std::span<const ir::Operand> operands) const {
   auto it = globals.find(ir::getInstructionId(ir::Kind::Spv, op));
 
   if (it == globals.end()) {
@@ -407,9 +411,8 @@ spv::Context::findGlobal(ir::spv::Op op,
   return nullptr;
 }
 
-ir::Value
-spv::Context::createGlobal(ir::spv::Op op,
-                                    std::span<const ir::Operand> operands) {
+ir::Value spv::Context::createGlobal(ir::spv::Op op,
+                                     std::span<const ir::Operand> operands) {
   auto builder = Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
   auto result =
       builder.createValue(getUnknownLocation(), ir::Kind::Spv, op, operands);
@@ -423,8 +426,9 @@ spv::Context::createGlobal(ir::spv::Op op,
   return result;
 }
 
-ir::Value spv::Context::getOrCreateGlobal(
-    ir::spv::Op op, std::span<const ir::Operand> operands) {
+ir::Value
+spv::Context::getOrCreateGlobal(ir::spv::Op op,
+                                std::span<const ir::Operand> operands) {
   if (auto result = findGlobal(op, operands)) {
     return result;
   }
@@ -432,8 +436,7 @@ ir::Value spv::Context::getOrCreateGlobal(
   return createGlobal(op, operands);
 }
 
-ir::Value spv::Context::getOperandValue(const ir::Operand &op,
-                                                 ir::Value type) {
+ir::Value spv::Context::getOperandValue(const ir::Operand &op, ir::Value type) {
   if (auto result = op.getAsValue()) {
     return result;
   }
@@ -504,9 +507,8 @@ void spv::Context::createPerVertex() {
                                         ir::spv::StorageClass::Output);
 }
 
-ir::Value spv::Context::createUniformBuffer(int descriptorSet,
-                                                     int binding,
-                                                     ir::Value structType) {
+ir::Value spv::Context::createUniformBuffer(int descriptorSet, int binding,
+                                            ir::Value structType) {
   auto globals = Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
   auto annotations =
       Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
@@ -526,8 +528,9 @@ ir::Value spv::Context::createUniformBuffer(int descriptorSet,
   return blockVariable;
 }
 
-ir::Value spv::Context::createRuntimeArrayUniformBuffer(
-    int descriptorSet, int binding, ir::Value elementType) {
+ir::Value spv::Context::createRuntimeArrayUniformBuffer(int descriptorSet,
+                                                        int binding,
+                                                        ir::Value elementType) {
   auto globals = Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
   auto annotations =
       Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
@@ -602,8 +605,8 @@ ir::Value spv::Context::createInput(ir::Location loc, int index) {
   return result;
 }
 
-ir::Value spv::Context::createAttr(ir::Location loc, int attrId,
-                                            bool perVertex, bool flat) {
+ir::Value spv::Context::createAttr(ir::Location loc, int attrId, bool perVertex,
+                                   bool flat) {
   auto &result = inputs[attrId];
 
   if (result == nullptr) {

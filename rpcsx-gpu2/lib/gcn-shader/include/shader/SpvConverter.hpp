@@ -33,6 +33,7 @@ struct Context : ir::Context {
   void setConstantName(ir::Value constant);
 
   ir::Value getOrCreateConstant(ir::Value typeValue, const ir::Operand &value);
+  ir::Value getNull(ir::Value typeValue);
 
   ir::Value getType(ir::spv::Op baseType, int width, bool isSigned);
   ir::Value getType(const TypeInfo &info);
