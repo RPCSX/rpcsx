@@ -1595,6 +1595,104 @@ static void createShellCoreObjects(orbis::Process *process) {
   createSemaphore("SceNpTpip 0", 0x101, 0, 1);
 }
 
+static orbis::Process *createGuestProcess() {
+  auto pid = orbis::g_context.allocatePid() * 10000 + 1;
+  return orbis::g_context.createProcess(pid);
+}
+
+static orbis::Thread *createGuestThread() {
+  auto process = createGuestProcess();
+  auto [baseId, thread] = process->threadsMap.emplace();
+  thread->tproc = process;
+  thread->tid = process->pid + baseId;
+  thread->state = orbis::ThreadState::RUNNING;
+  return thread;
+}
+
+struct IpmiClient {
+  orbis::Ref<orbis::IpmiClient> clientImpl;
+  orbis::uint kid;
+  orbis::Thread *thread;
+
+  orbis::sint sendSyncMessage(std::uint32_t method, const void *data,
+                              std::size_t size,
+                              std::vector<std::byte> &outData) {
+    orbis::sint serverResult;
+    orbis::IpmiBufferInfo outBufferInfo = {
+        .data = outData.data(),
+        .capacity = outData.size(),
+    };
+
+    orbis::IpmiDataInfo inDataInfo = {
+        .data = orbis::ptr<void>(data),
+        .size = size,
+    };
+
+    orbis::IpmiSyncCallParams params{
+        .method = method,
+        .numInData = 1,
+        .numOutData = 1,
+        .pInData = &inDataInfo,
+        .pOutData = &outBufferInfo,
+        .pResult = &serverResult,
+    };
+
+    orbis::uint errorCode;
+    orbis::sysIpmiClientInvokeSyncMethod(thread, &errorCode, kid, &params,
+                                         sizeof(params));
+
+    outData.resize(outBufferInfo.size);
+    return serverResult;
+  }
+
+  template <typename T>
+  orbis::sint sendSyncMessage(std::uint32_t method, const T &data,
+                              std::vector<std::byte> &outData) {
+    return sendSyncMessage(method, &data, sizeof(data), outData);
+  }
+
+  template <typename T>
+  orbis::sint sendSyncMessage(std::uint32_t method, const T &data) {
+    std::vector<std::byte> outData;
+    return sendSyncMessage(method, &data, sizeof(data), outData);
+  }
+
+  template <typename T>
+  std::vector<std::byte> sendSyncMessage(std::uint32_t method, const T &data,
+                                         std::size_t outputCapacity) {
+    std::vector<std::byte> outData;
+    outData.resize(outputCapacity);
+    sendSyncMessage(method, &data, sizeof(data), outData);
+    return outData;
+  }
+};
+
+static IpmiClient createIpmiClient(orbis::Thread *thread, const char *name) {
+  orbis::Ref<orbis::IpmiClient> client;
+  orbis::IpmiCreateClientConfig config{
+      .size = sizeof(orbis::IpmiCreateClientConfig),
+  };
+
+  orbis::uint kid;
+
+  {
+    orbis::IpmiCreateClientParams params{
+        .name = name,
+        .config = &config,
+    };
+
+    orbis::sysIpmiCreateClient(thread, &kid, &params, sizeof(params));
+  }
+  {
+    orbis::sint status;
+    orbis::IpmiClientConnectParams params{.status = &status};
+
+    orbis::uint result;
+    orbis::sysIpmiClientConnect(thread, &result, kid, &params, sizeof(params));
+  }
+  return {std::move(client), kid, thread};
+}
+
 static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
                                      std::vector<std::string> argv,
                                      std::vector<std::string> envv) {

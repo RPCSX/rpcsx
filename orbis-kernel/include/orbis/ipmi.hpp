@@ -133,8 +133,21 @@ struct IpmiDataInfo {
   uint64_t size;
 };
 
-// static_assert(sizeof(IpmiBufferInfo) == 0x18);
-// static_assert(sizeof(IpmiDataInfo) == 0x10);
+static_assert(sizeof(IpmiBufferInfo) == 0x18);
+static_assert(sizeof(IpmiDataInfo) == 0x10);
+
+struct IpmiSyncCallParams {
+  uint32_t method;
+  uint32_t numInData;
+  uint32_t numOutData;
+  uint32_t unk;
+  ptr<IpmiDataInfo> pInData;
+  ptr<IpmiBufferInfo> pOutData;
+  ptr<sint> pResult;
+  uint32_t flags;
+};
+
+static_assert(sizeof(IpmiSyncCallParams) == 0x30);
 
 struct [[gnu::packed]] IpmiSyncMessageHeader {
   orbis::ptr<void> sessionImpl;
@@ -152,6 +165,23 @@ struct [[gnu::packed]] IpmiAsyncMessageHeader {
 };
 
 static_assert(sizeof(IpmiSyncMessageHeader) == 0x18);
+
+struct IpmiCreateClientParams {
+  ptr<void> clientImpl;
+  ptr<const char> name;
+  ptr<IpmiCreateClientConfig> config;
+};
+
+static_assert(sizeof(IpmiCreateClientParams) == 0x18);
+
+struct IpmiClientConnectParams {
+  ptr<void> userData;
+  ulong userDataLen;
+  ptr<sint> status;
+  ptr<sint> arg3;
+};
+
+static_assert(sizeof(IpmiClientConnectParams) == 0x20);
 
 ErrorCode ipmiCreateClient(Process *proc, void *clientImpl, const char *name,
                            const IpmiCreateClientConfig &config,

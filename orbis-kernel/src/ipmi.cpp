@@ -3,8 +3,8 @@
 #include "thread/Process.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
-#include <sys/mman.h>
 #include <span>
+#include <sys/mman.h>
 
 orbis::ErrorCode orbis::ipmiCreateClient(Process *proc, void *clientImpl,
                                          const char *name,
@@ -88,14 +88,6 @@ orbis::ErrorCode orbis::ipmiCreateSession(Thread *thread, void *sessionImpl,
 orbis::SysResult orbis::sysIpmiCreateClient(Thread *thread, ptr<uint> result,
                                             ptr<void> params,
                                             uint64_t paramsSz) {
-  struct IpmiCreateClientParams {
-    ptr<void> clientImpl;
-    ptr<const char> name;
-    ptr<IpmiCreateClientConfig> config;
-  };
-
-  static_assert(sizeof(IpmiCreateClientParams) == 0x18);
-
   if (paramsSz != sizeof(IpmiCreateClientParams)) {
     return ErrorCode::INVAL;
   }
@@ -887,22 +879,10 @@ orbis::SysResult orbis::sysIpmiSessionGetClientPid(Thread *thread,
       uwrite<uint32_t>(_params.pid, session->client->process->pid));
   return uwrite<uint>(result, 0);
 }
+
 orbis::SysResult
 orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
                                      ptr<void> params, uint64_t paramsSz) {
-  struct IpmiSyncCallParams {
-    uint32_t method;
-    uint32_t numInData;
-    uint32_t numOutData;
-    uint32_t unk;
-    ptr<IpmiDataInfo> pInData;
-    ptr<IpmiBufferInfo> pOutData;
-    ptr<sint> pResult;
-    uint32_t flags;
-  };
-
-  static_assert(sizeof(IpmiSyncCallParams) == 0x30);
-
   if (paramsSz != sizeof(IpmiSyncCallParams)) {
     return ErrorCode::INVAL;
   }
@@ -1050,15 +1030,6 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
 orbis::SysResult orbis::sysIpmiClientConnect(Thread *thread, ptr<uint> result,
                                              uint kid, ptr<void> params,
                                              uint64_t paramsSz) {
-  struct IpmiClientConnectParams {
-    ptr<void> userData;
-    ulong userDataLen;
-    ptr<sint> status;
-    ptr<sint> arg3;
-  };
-
-  static_assert(sizeof(IpmiClientConnectParams) == 0x20);
-
   if (paramsSz != sizeof(IpmiClientConnectParams)) {
     return ErrorCode::INVAL;
   }
