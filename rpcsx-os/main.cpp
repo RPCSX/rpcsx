@@ -33,6 +33,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
+#include <tuple>
 #include <ucontext.h>
 
 #include <atomic>
@@ -1613,9 +1614,13 @@ template <typename T = std::byte> struct GuestAlloc {
   orbis::ptr<T> guestAddress;
 
   GuestAlloc(std::size_t size) {
-    guestAddress = orbis::ptr<T>(rx::vm::map(
-        nullptr, size, rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
-        rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
+    if (size == 0) {
+      guestAddress = nullptr;
+    } else {
+      guestAddress = orbis::ptr<T>(rx::vm::map(
+          nullptr, size, rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
+          rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
+    }
   }
 
   GuestAlloc() : GuestAlloc(sizeof(T)) {}
@@ -1632,7 +1637,20 @@ template <typename T = std::byte> struct GuestAlloc {
     }
   }
 
-  ~GuestAlloc() { rx::vm::unmap(guestAddress, sizeof(T)); }
+  GuestAlloc(const GuestAlloc &) = delete;
+
+  GuestAlloc(GuestAlloc &&other) : guestAddress(other.guestAddress) {
+    other.guestAddress = 0;
+  }
+  GuestAlloc &operator=(GuestAlloc &&other) {
+    std::swap(guestAddress, other.guestAddress);
+  }
+
+  ~GuestAlloc() {
+    if (guestAddress != 0) {
+      rx::vm::unmap(guestAddress, sizeof(T));
+    }
+  }
 
   operator orbis::ptr<T>() { return guestAddress; }
   T *operator->() { return guestAddress; }
@@ -1644,28 +1662,41 @@ struct IpmiClient {
   orbis::uint kid;
   orbis::Thread *thread;
 
-  orbis::sint sendSyncMessage(std::uint32_t method, const void *data,
-                              std::size_t size,
-                              std::vector<std::byte> &outData) {
+  orbis::sint
+  sendSyncMessageRaw(std::uint32_t method,
+                     const std::vector<std::vector<std::byte>> &inData,
+                     std::vector<std::vector<std::byte>> &outBuf) {
     GuestAlloc<orbis::sint> serverResult;
-    GuestAlloc outBufferInfo = orbis::IpmiBufferInfo{
-        .data = outData.data(),
-        .capacity = outData.size(),
-    };
+    GuestAlloc<orbis::IpmiDataInfo> guestInDataArray{
+        sizeof(orbis::IpmiDataInfo) * inData.size()};
+    GuestAlloc<orbis::IpmiBufferInfo> guestOutBufArray{
+        sizeof(orbis::IpmiBufferInfo) * outBuf.size()};
 
-    auto guestData = GuestAlloc{data, size};
+    std::vector<GuestAlloc<std::byte>> guestAllocs;
+    guestAllocs.reserve(inData.size() + outBuf.size());
 
-    GuestAlloc inDataInfo = orbis::IpmiDataInfo{
-        .data = guestData,
-        .size = size,
-    };
+    for (auto &data : inData) {
+      auto pointer =
+          guestAllocs.emplace_back(data.data(), data.size()).guestAddress;
+
+      guestInDataArray.guestAddress[&data - inData.data()] = {
+          .data = pointer, .size = data.size()};
+    }
+
+    for (auto &buf : outBuf) {
+      auto pointer =
+          guestAllocs.emplace_back(buf.data(), buf.size()).guestAddress;
+
+      guestOutBufArray.guestAddress[&buf - outBuf.data()] = {
+          .data = pointer, .capacity = buf.size()};
+    }
 
     GuestAlloc params = orbis::IpmiSyncCallParams{
         .method = method,
-        .numInData = 1,
-        .numOutData = 1,
-        .pInData = inDataInfo,
-        .pOutData = outBufferInfo,
+        .numInData = static_cast<orbis::uint32_t>(inData.size()),
+        .numOutData = static_cast<orbis::uint32_t>(outBuf.size()),
+        .pInData = guestInDataArray,
+        .pOutData = guestOutBufArray,
         .pResult = serverResult,
     };
 
@@ -1673,29 +1704,34 @@ struct IpmiClient {
     orbis::sysIpmiClientInvokeSyncMethod(thread, errorCode, kid, params,
                                          sizeof(orbis::IpmiSyncCallParams));
 
-    outData.resize(outBufferInfo->size);
+    for (auto &buf : outBuf) {
+      auto size = guestOutBufArray.guestAddress[inData.data() - &buf].size;
+      buf.resize(size);
+    }
     return serverResult;
   }
 
-  template <typename T>
-  orbis::sint sendSyncMessage(std::uint32_t method, const T &data,
-                              std::vector<std::byte> &outData) {
-    return sendSyncMessage(method, &data, sizeof(data), outData);
+  template <typename... InputTypes>
+  orbis::sint sendSyncMessage(std::uint32_t method,
+                              const InputTypes &...input) {
+    std::vector<std::vector<std::byte>> outBuf;
+    return sendSyncMessageRaw(method, {toBytes(input)...}, outBuf);
   }
 
-  template <typename T>
-  orbis::sint sendSyncMessage(std::uint32_t method, const T &data) {
-    std::vector<std::byte> outData;
-    return sendSyncMessage(method, &data, sizeof(data), outData);
-  }
+  template <typename... OutputTypes, typename... InputTypes>
+    requires((sizeof...(OutputTypes) > 0) || sizeof...(InputTypes) == 0)
+  std::tuple<OutputTypes...> sendSyncMessage(std::uint32_t method,
+                                             InputTypes... input) {
+    std::vector<std::vector<std::byte>> outBuf{sizeof(OutputTypes)...};
+    sendSyncMessageRaw(method, {toBytes(input)...}, outBuf);
+    std::tuple<OutputTypes...> output;
 
-  template <typename T>
-  std::vector<std::byte> sendSyncMessage(std::uint32_t method, const T &data,
-                                         std::size_t outputCapacity) {
-    std::vector<std::byte> outData;
-    outData.resize(outputCapacity);
-    sendSyncMessage(method, &data, sizeof(data), outData);
-    return outData;
+    auto unpack = [&]<std::size_t... I>(std::index_sequence<I...>) {
+      ((std::get<I>(output) = *reinterpret_cast<OutputTypes *>(outBuf.data())),
+       ...);
+    };
+    unpack(std::make_index_sequence<sizeof...(OutputTypes)>{});
+    return output;
   }
 };
 
