@@ -1,10 +1,10 @@
 #include "vk.hpp"
 #include <algorithm>
+#include <bit>
 #include <cstdarg>
 #include <cstdio>
 #include <rx/die.hpp>
 #include <vulkan/vulkan_core.h>
-#include <bit>
 
 vk::Context *vk::context;
 static vk::MemoryResource g_hostVisibleMemory;
@@ -729,6 +729,25 @@ vk::Context vk::Context::create(std::vector<const char *> requiredLayers,
   instanceCreateInfo.ppEnabledLayerNames = requiredLayers.data();
   instanceCreateInfo.enabledLayerCount = requiredLayers.size();
 
+  std::vector<VkValidationFeatureEnableEXT> validation_feature_enables = {
+      VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
+  VkValidationFeaturesEXT validationFeatures{
+      .sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT,
+      .enabledValidationFeatureCount =
+          static_cast<uint32_t>(validation_feature_enables.size()),
+      .pEnabledValidationFeatures = validation_feature_enables.data(),
+  };
+
+  bool validationPresent =
+      std::find_if(
+          requiredLayers.begin(), requiredLayers.end(), [](const char *layer) {
+            return layer == std::string_view("VK_LAYER_KHRONOS_validation");
+          }) != requiredLayers.end();
+
+  if (validationPresent) {
+    instanceCreateInfo.pNext = &validationFeatures;
+  }
+
   Context result;
   VK_VERIFY(vkCreateInstance(&instanceCreateInfo, nullptr, &result.instance));
   return result;
@@ -756,10 +775,17 @@ vk::Context::findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
 vk::MemoryResource &vk::getHostVisibleMemory() { return g_hostVisibleMemory; }
 vk::MemoryResource &vk::getDeviceLocalMemory() { return g_deviceLocalMemory; }
 
-static auto importVkProc(VkDevice device, const char *name) {
+static auto importDeviceVkProc(VkDevice device, const char *name) {
   auto result = vkGetDeviceProcAddr(device, name);
   rx::dieIf(result == nullptr,
             "vkGetDeviceProcAddr: failed to get address of '%s'", name);
+  return result;
+}
+
+static auto importInstanceVkProc(VkInstance instance, const char *name) {
+  auto result = vkGetInstanceProcAddr(instance, name);
+  rx::dieIf(result == nullptr,
+            "vkGetInstanceProcAddr: failed to get address of '%s'", name);
   return result;
 }
 
@@ -767,15 +793,15 @@ VkResult vk::CreateShadersEXT(VkDevice device, uint32_t createInfoCount,
                               const VkShaderCreateInfoEXT *pCreateInfos,
                               const VkAllocationCallbacks *pAllocator,
                               VkShaderEXT *pShaders) {
-  static auto fn = (PFN_vkCreateShadersEXT)importVkProc(context->device,
-                                                        "vkCreateShadersEXT");
+  static auto fn = (PFN_vkCreateShadersEXT)importDeviceVkProc(
+      context->device, "vkCreateShadersEXT");
   return fn(device, createInfoCount, pCreateInfos, pAllocator, pShaders);
 }
 
 void vk::DestroyShaderEXT(VkDevice device, VkShaderEXT shader,
                           const VkAllocationCallbacks *pAllocator) {
-  static auto fn = (PFN_vkDestroyShaderEXT)importVkProc(context->device,
-                                                        "vkDestroyShaderEXT");
+  static auto fn = (PFN_vkDestroyShaderEXT)importDeviceVkProc(
+      context->device, "vkDestroyShaderEXT");
 
   fn(device, shader, pAllocator);
 }
@@ -783,8 +809,9 @@ void vk::DestroyShaderEXT(VkDevice device, VkShaderEXT shader,
 void vk::CmdBindShadersEXT(VkCommandBuffer commandBuffer, uint32_t stageCount,
                            const VkShaderStageFlagBits *pStages,
                            const VkShaderEXT *pShaders) {
-  static PFN_vkCmdBindShadersEXT fn = (PFN_vkCmdBindShadersEXT)importVkProc(
-      context->device, "vkCmdBindShadersEXT");
+  static PFN_vkCmdBindShadersEXT fn =
+      (PFN_vkCmdBindShadersEXT)importDeviceVkProc(context->device,
+                                                  "vkCmdBindShadersEXT");
 
   return fn(commandBuffer, stageCount, pStages, pShaders);
 }
@@ -793,7 +820,7 @@ void vk::CmdSetColorBlendEnableEXT(VkCommandBuffer commandBuffer,
                                    uint32_t firstAttachment,
                                    uint32_t attachmentCount,
                                    const VkBool32 *pColorBlendEnables) {
-  static auto fn = (PFN_vkCmdSetColorBlendEnableEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetColorBlendEnableEXT)importDeviceVkProc(
       context->device, "vkCmdSetColorBlendEnableEXT");
 
   return fn(commandBuffer, firstAttachment, attachmentCount,
@@ -803,7 +830,7 @@ void vk::CmdSetColorBlendEquationEXT(
     VkCommandBuffer commandBuffer, uint32_t firstAttachment,
     uint32_t attachmentCount,
     const VkColorBlendEquationEXT *pColorBlendEquations) {
-  static auto fn = (PFN_vkCmdSetColorBlendEquationEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetColorBlendEquationEXT)importDeviceVkProc(
       context->device, "vkCmdSetColorBlendEquationEXT");
 
   return fn(commandBuffer, firstAttachment, attachmentCount,
@@ -812,22 +839,22 @@ void vk::CmdSetColorBlendEquationEXT(
 
 void vk::CmdSetDepthClampEnableEXT(VkCommandBuffer commandBuffer,
                                    VkBool32 depthClampEnable) {
-  static auto fn = (PFN_vkCmdSetDepthClampEnableEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetDepthClampEnableEXT)importDeviceVkProc(
       context->device, "vkCmdSetDepthClampEnableEXT");
 
   return fn(commandBuffer, depthClampEnable);
 }
 
 void vk::CmdSetLogicOpEXT(VkCommandBuffer commandBuffer, VkLogicOp logicOp) {
-  static auto fn = (PFN_vkCmdSetLogicOpEXT)importVkProc(context->device,
-                                                        "vkCmdSetLogicOpEXT");
+  static auto fn = (PFN_vkCmdSetLogicOpEXT)importDeviceVkProc(
+      context->device, "vkCmdSetLogicOpEXT");
 
   return fn(commandBuffer, logicOp);
 }
 
 void vk::CmdSetPolygonModeEXT(VkCommandBuffer commandBuffer,
                               VkPolygonMode polygonMode) {
-  static auto fn = (PFN_vkCmdSetPolygonModeEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetPolygonModeEXT)importDeviceVkProc(
       context->device, "vkCmdSetPolygonModeEXT");
 
   return fn(commandBuffer, polygonMode);
@@ -835,7 +862,7 @@ void vk::CmdSetPolygonModeEXT(VkCommandBuffer commandBuffer,
 
 void vk::CmdSetAlphaToOneEnableEXT(VkCommandBuffer commandBuffer,
                                    VkBool32 alphaToOneEnable) {
-  static auto fn = (PFN_vkCmdSetAlphaToOneEnableEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetAlphaToOneEnableEXT)importDeviceVkProc(
       context->device, "vkCmdSetAlphaToOneEnableEXT");
 
   return fn(commandBuffer, alphaToOneEnable);
@@ -843,14 +870,14 @@ void vk::CmdSetAlphaToOneEnableEXT(VkCommandBuffer commandBuffer,
 
 void vk::CmdSetLogicOpEnableEXT(VkCommandBuffer commandBuffer,
                                 VkBool32 logicOpEnable) {
-  static auto fn = (PFN_vkCmdSetLogicOpEnableEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetLogicOpEnableEXT)importDeviceVkProc(
       context->device, "vkCmdSetLogicOpEnableEXT");
 
   return fn(commandBuffer, logicOpEnable);
 }
 void vk::CmdSetRasterizationSamplesEXT(
     VkCommandBuffer commandBuffer, VkSampleCountFlagBits rasterizationSamples) {
-  static auto fn = (PFN_vkCmdSetRasterizationSamplesEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetRasterizationSamplesEXT)importDeviceVkProc(
       context->device, "vkCmdSetRasterizationSamplesEXT");
 
   return fn(commandBuffer, rasterizationSamples);
@@ -858,21 +885,21 @@ void vk::CmdSetRasterizationSamplesEXT(
 void vk::CmdSetSampleMaskEXT(VkCommandBuffer commandBuffer,
                              VkSampleCountFlagBits samples,
                              const VkSampleMask *pSampleMask) {
-  static auto fn = (PFN_vkCmdSetSampleMaskEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetSampleMaskEXT)importDeviceVkProc(
       context->device, "vkCmdSetSampleMaskEXT");
 
   return fn(commandBuffer, samples, pSampleMask);
 }
 void vk::CmdSetTessellationDomainOriginEXT(
     VkCommandBuffer commandBuffer, VkTessellationDomainOrigin domainOrigin) {
-  static auto fn = (PFN_vkCmdSetTessellationDomainOriginEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetTessellationDomainOriginEXT)importDeviceVkProc(
       context->device, "vkCmdSetTessellationDomainOriginEXT");
 
   return fn(commandBuffer, domainOrigin);
 }
 void vk::CmdSetAlphaToCoverageEnableEXT(VkCommandBuffer commandBuffer,
                                         VkBool32 alphaToCoverageEnable) {
-  static auto fn = (PFN_vkCmdSetAlphaToCoverageEnableEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetAlphaToCoverageEnableEXT)importDeviceVkProc(
       context->device, "vkCmdSetAlphaToCoverageEnableEXT");
 
   return fn(commandBuffer, alphaToCoverageEnable);
@@ -882,7 +909,7 @@ void vk::CmdSetVertexInputEXT(
     const VkVertexInputBindingDescription2EXT *pVertexBindingDescriptions,
     uint32_t vertexAttributeDescriptionCount,
     const VkVertexInputAttributeDescription2EXT *pVertexAttributeDescriptions) {
-  static auto fn = (PFN_vkCmdSetVertexInputEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetVertexInputEXT)importDeviceVkProc(
       context->device, "vkCmdSetVertexInputEXT");
 
   return fn(commandBuffer, vertexBindingDescriptionCount,
@@ -892,7 +919,7 @@ void vk::CmdSetVertexInputEXT(
 void vk::CmdSetColorWriteMaskEXT(
     VkCommandBuffer commandBuffer, uint32_t firstAttachment,
     uint32_t attachmentCount, const VkColorComponentFlags *pColorWriteMasks) {
-  static auto fn = (PFN_vkCmdSetColorWriteMaskEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetColorWriteMaskEXT)importDeviceVkProc(
       context->device, "vkCmdSetColorWriteMaskEXT");
 
   return fn(commandBuffer, firstAttachment, attachmentCount, pColorWriteMasks);
@@ -901,7 +928,7 @@ void vk::CmdSetColorWriteMaskEXT(
 void vk::GetDescriptorSetLayoutSizeEXT(VkDevice device,
                                        VkDescriptorSetLayout layout,
                                        VkDeviceSize *pLayoutSizeInBytes) {
-  static auto fn = (PFN_vkGetDescriptorSetLayoutSizeEXT)importVkProc(
+  static auto fn = (PFN_vkGetDescriptorSetLayoutSizeEXT)importDeviceVkProc(
       context->device, "vkGetDescriptorSetLayoutSizeEXT");
 
   return fn(device, layout, pLayoutSizeInBytes);
@@ -911,16 +938,17 @@ void vk::GetDescriptorSetLayoutBindingOffsetEXT(VkDevice device,
                                                 VkDescriptorSetLayout layout,
                                                 uint32_t binding,
                                                 VkDeviceSize *pOffset) {
-  static auto fn = (PFN_vkGetDescriptorSetLayoutBindingOffsetEXT)importVkProc(
-      context->device, "vkGetDescriptorSetLayoutBindingOffsetEXT");
+  static auto fn =
+      (PFN_vkGetDescriptorSetLayoutBindingOffsetEXT)importDeviceVkProc(
+          context->device, "vkGetDescriptorSetLayoutBindingOffsetEXT");
 
   return fn(device, layout, binding, pOffset);
 }
 void vk::GetDescriptorEXT(VkDevice device,
                           const VkDescriptorGetInfoEXT *pDescriptorInfo,
                           size_t dataSize, void *pDescriptor) {
-  static auto fn = (PFN_vkGetDescriptorEXT)importVkProc(context->device,
-                                                        "vkGetDescriptorEXT");
+  static auto fn = (PFN_vkGetDescriptorEXT)importDeviceVkProc(
+      context->device, "vkGetDescriptorEXT");
 
   return fn(device, pDescriptorInfo, dataSize, pDescriptor);
 }
@@ -928,7 +956,7 @@ void vk::GetDescriptorEXT(VkDevice device,
 void vk::CmdBindDescriptorBuffersEXT(
     VkCommandBuffer commandBuffer, uint32_t bufferCount,
     const VkDescriptorBufferBindingInfoEXT *pBindingInfos) {
-  static auto fn = (PFN_vkCmdBindDescriptorBuffersEXT)importVkProc(
+  static auto fn = (PFN_vkCmdBindDescriptorBuffersEXT)importDeviceVkProc(
       context->device, "vkCmdBindDescriptorBuffersEXT");
 
   return fn(commandBuffer, bufferCount, pBindingInfos);
@@ -940,7 +968,7 @@ void vk::CmdSetDescriptorBufferOffsetsEXT(VkCommandBuffer commandBuffer,
                                           uint32_t firstSet, uint32_t setCount,
                                           const uint32_t *pBufferIndices,
                                           const VkDeviceSize *pOffsets) {
-  static auto fn = (PFN_vkCmdSetDescriptorBufferOffsetsEXT)importVkProc(
+  static auto fn = (PFN_vkCmdSetDescriptorBufferOffsetsEXT)importDeviceVkProc(
       context->device, "vkCmdSetDescriptorBufferOffsetsEXT");
 
   return fn(commandBuffer, pipelineBindPoint, layout, firstSet, setCount,
@@ -951,8 +979,27 @@ void vk::CmdBindDescriptorBufferEmbeddedSamplersEXT(
     VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
     VkPipelineLayout layout, uint32_t set) {
   static auto fn =
-      (PFN_vkCmdBindDescriptorBufferEmbeddedSamplersEXT)importVkProc(
+      (PFN_vkCmdBindDescriptorBufferEmbeddedSamplersEXT)importDeviceVkProc(
           context->device, "vkCmdBindDescriptorBufferEmbeddedSamplersEXT");
 
   return fn(commandBuffer, pipelineBindPoint, layout, set);
+}
+
+VkResult vk::CreateDebugUtilsMessengerEXT(
+    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDebugUtilsMessengerEXT *pMessenger) {
+  static auto fn = (PFN_vkCreateDebugUtilsMessengerEXT)importInstanceVkProc(
+      instance, "vkCreateDebugUtilsMessengerEXT");
+
+  return fn(instance, pCreateInfo, pAllocator, pMessenger);
+}
+
+void vk::DestroyDebugUtilsMessengerEXT(
+    VkInstance instance, VkDebugUtilsMessengerEXT messenger,
+    const VkAllocationCallbacks *pAllocator) {
+  static auto fn = (PFN_vkDestroyDebugUtilsMessengerEXT)importInstanceVkProc(
+      instance, "vkDestroyDebugUtilsMessengerEXT");
+
+  return fn(instance, messenger, pAllocator);
 }

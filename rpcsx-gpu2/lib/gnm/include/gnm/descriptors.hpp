@@ -33,7 +33,9 @@ struct VBuffer {
   std::uint32_t type : 2;
 
   std::uint64_t address() const { return base; }
-  std::uint64_t size() const { return stride ? num_records * stride : num_records; }
+  std::uint64_t size() const {
+    return stride ? num_records * stride : num_records;
+  }
 
   auto operator<=>(const VBuffer &) const = default;
 };
@@ -101,8 +103,8 @@ struct SSampler {
   int32_t disable_cube_wrap : 1;
   FilterMode filter_mode : 2;
   int32_t : 1;
-  int32_t min_lod : 12;
-  int32_t max_lod : 12;
+  uint32_t min_lod : 12;
+  uint32_t max_lod : 12;
   int32_t perf_mip : 4;
   int32_t perf_z : 4;
   int32_t lod_bias : 14;

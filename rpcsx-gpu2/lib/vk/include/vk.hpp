@@ -994,7 +994,7 @@ void CmdSetLogicOpEXT(VkCommandBuffer commandBuffer, VkLogicOp logicOp);
 void CmdSetPolygonModeEXT(VkCommandBuffer commandBuffer,
                           VkPolygonMode polygonMode);
 void CmdSetAlphaToOneEnableEXT(VkCommandBuffer commandBuffer,
-                            VkBool32 alphaToOneEnable);
+                               VkBool32 alphaToOneEnable);
 void CmdSetLogicOpEnableEXT(VkCommandBuffer commandBuffer,
                             VkBool32 logicOpEnable);
 void CmdSetRasterizationSamplesEXT(VkCommandBuffer commandBuffer,
@@ -1040,4 +1040,12 @@ void CmdSetDescriptorBufferOffsetsEXT(VkCommandBuffer commandBuffer,
 void CmdBindDescriptorBufferEmbeddedSamplersEXT(
     VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint,
     VkPipelineLayout layout, uint32_t set);
+
+VkResult CreateDebugUtilsMessengerEXT(
+    VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDebugUtilsMessengerEXT *pMessenger);
+void DestroyDebugUtilsMessengerEXT(VkInstance instance,
+                                   VkDebugUtilsMessengerEXT messenger,
+                                   const VkAllocationCallbacks *pAllocator);
 } // namespace vk

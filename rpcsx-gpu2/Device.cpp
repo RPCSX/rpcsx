@@ -291,7 +291,7 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
 
   auto cacheTag = getCacheTag(process.vmId, scheduler);
 
-  if (true) {
+  if (false) {
     transitionImageLayout(commandBuffer, swapchainImage,
                           VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,

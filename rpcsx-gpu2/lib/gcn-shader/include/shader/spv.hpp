@@ -16,6 +16,7 @@ struct BinaryLayout {
     kMemoryModels,
     kEntryPoints,
     kExecutionModes,
+    kDebugStrings,
     kDebugs,
     kAnnotations,
     kGlobals,
@@ -52,6 +53,9 @@ struct BinaryLayout {
   }
   ir::Region getOrCreateExecutionModes(ir::Context &context) {
     return getOrCreateRegion(context, kExecutionModes);
+  }
+  ir::Region getOrCreateDebugStrings(ir::Context &context) {
+    return getOrCreateRegion(context, kDebugStrings);
   }
   ir::Region getOrCreateDebugs(ir::Context &context) {
     return getOrCreateRegion(context, kDebugs);

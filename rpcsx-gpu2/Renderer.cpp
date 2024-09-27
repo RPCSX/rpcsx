@@ -6,6 +6,7 @@
 #include <amdgpu/tiler.hpp>
 #include <gnm/constants.hpp>
 #include <gnm/vulkan.hpp>
+#include <print>
 #include <shader/Evaluator.hpp>
 #include <shader/dialect.hpp>
 #include <shader/gcn.hpp>
@@ -201,6 +202,7 @@ struct ShaderResources : eval::Evaluator {
   std::map<std::uint32_t, std::uint32_t> slotResources;
   std::span<const std::uint32_t> userSgprs;
 
+  std::uint32_t slotOffset = 0;
   rx::MemoryTableWithPayload<Access> bufferMemoryTable;
   std::vector<std::pair<std::uint32_t, std::uint64_t>> resourceSlotToAddress;
   std::vector<amdgpu::Cache::Sampler> samplerResources;
@@ -225,7 +227,7 @@ struct ShaderResources : eval::Evaluator {
       bufferMemoryTable.map(*pointerBase,
                             *pointerBase + *pointerOffset + pointer.size,
                             Access::Read);
-      resourceSlotToAddress.push_back({pointer.resourceSlot, *pointerBase});
+      resourceSlotToAddress.push_back({slotOffset + pointer.resourceSlot, *pointerBase});
     }
 
     for (auto &bufferRes : res.buffers) {
@@ -252,7 +254,7 @@ struct ShaderResources : eval::Evaluator {
       bufferMemoryTable.map(buffer.address(), buffer.address() + buffer.size(),
                             bufferRes.access);
       resourceSlotToAddress.push_back(
-          {bufferRes.resourceSlot, buffer.address()});
+          {slotOffset + bufferRes.resourceSlot, buffer.address()});
     }
 
     for (auto &texture : res.textures) {
@@ -320,7 +322,7 @@ struct ShaderResources : eval::Evaluator {
                 "ShaderResources: unexpected texture type %u",
                 static_cast<unsigned>(buffer.type));
 
-      slotResources[texture.resourceSlot] = resources->size();
+      slotResources[slotOffset + texture.resourceSlot] = resources->size();
       resources->push_back(cacheTag->getImageView(
           amdgpu::ImageViewKey::createFrom(buffer), texture.access));
     }
@@ -350,10 +352,12 @@ struct ShaderResources : eval::Evaluator {
         sSampler.force_unorm_coords = true;
       }
 
-      slotResources[sampler.resourceSlot] = samplerResources.size();
+      slotResources[slotOffset + sampler.resourceSlot] = samplerResources.size();
       samplerResources.push_back(
           cacheTag->getSampler(amdgpu::SamplerKey::createFrom(sSampler)));
     }
+
+    slotOffset += res.slots;
   }
 
   void buildMemoryTable(MemoryTable &memoryTable) {
@@ -474,6 +478,20 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     return;
   }
 
+  if (pipe.context.cbColorControl.mode == gnm::CbMode::Disable) {
+    return;
+  }
+
+  if (pipe.context.cbColorControl.mode != gnm::CbMode::Normal) {
+    std::println("unimplemented context.cbColorControl.mode = {}",
+                 static_cast<int>(pipe.context.cbColorControl.mode));
+    return;
+  }
+
+  if (pipe.context.cbTargetMask.raw == 0) {
+    return;
+  }
+
   auto cacheTag = pipe.device->getCacheTag(vmId, pipe.scheduler);
   auto targetMask = pipe.context.cbTargetMask.raw;
 
@@ -515,7 +533,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     ImageViewKey renderTargetInfo{};
     renderTargetInfo.type = gnm::TextureType::Dim2D;
     renderTargetInfo.pitch = vkViewPortScissor.extent.width;
-    renderTargetInfo.address = cbColor.base << 8;
+    renderTargetInfo.address = static_cast<std::uint64_t>(cbColor.base) << 8;
     renderTargetInfo.extent.width = vkViewPortScissor.extent.width;
     renderTargetInfo.extent.height = vkViewPortScissor.extent.height;
     renderTargetInfo.extent.depth = 1;
@@ -646,6 +664,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         .stage = stage,
         .env = env,
     });
+
+    std::uint32_t slotOffset = shaderResources.slotOffset;
 
     shaderResources.loadResources(
         shader.info->resources,
@@ -780,7 +800,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         memoryTableConfigSlots.push_back({
             .bufferIndex = static_cast<std::uint32_t>(descriptorBuffers.size()),
             .configIndex = static_cast<std::uint32_t>(index),
-            .resourceSlot = static_cast<std::uint32_t>(slot.data),
+            .resourceSlot = static_cast<std::uint32_t>(slotOffset + slot.data),
         });
         break;
 

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <print>
 #include <rx/MemoryTable.hpp>
 
 #include <shader/gcn.hpp>
@@ -145,6 +146,17 @@ static void usage(std::FILE *out, const char *argv0) {
   std::fprintf(out, "     window - create and use native window (default)\n");
 }
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_message_callback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+    void *pUserData) {
+  if (pCallbackData->pMessage) {
+    std::println("{}", pCallbackData->pMessage);
+  }
+  return VK_FALSE;
+}
+
 int main(int argc, const char *argv[]) {
   const char *cmdBridgeName = "/rpcsx-gpu-cmds";
   const char *shmName = "/rpcsx-os-memory";
@@ -266,11 +278,35 @@ int main(int argc, const char *argv[]) {
 
   if (enableValidation) {
     optionalLayers.push_back("VK_LAYER_KHRONOS_validation");
+    requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
 
   auto vkContext =
       vk::Context::create({}, optionalLayers, requiredExtensions, {});
   vk::context = &vkContext;
+
+  VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+
+  if (enableValidation) {
+    VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    debug_utils_messenger_create_info.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+    debug_utils_messenger_create_info.messageType =
+        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    debug_utils_messenger_create_info.pfnUserCallback =
+        debug_utils_message_callback;
+    VK_VERIFY(vk::CreateDebugUtilsMessengerEXT(
+        vkContext.instance, &debug_utils_messenger_create_info,
+        vk::context->allocator, &debugMessenger));
+  }
+
+  rx::atScopeExit _debugMessenger{[=] {
+    if (debugMessenger != VK_NULL_HANDLE) {
+      vk::DestroyDebugUtilsMessengerEXT(vk::context->instance, debugMessenger,
+                                        vk::context->allocator);
+    }
+  }};
 
   VkSurfaceKHR vkSurface;
   glfwCreateWindowSurface(vkContext.instance, window, nullptr, &vkSurface);
@@ -289,6 +325,7 @@ int main(int argc, const char *argv[]) {
                              VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                              VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
                              VK_EXT_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+                             VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
                          },
                          {VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME});
 
@@ -315,7 +352,8 @@ int main(int argc, const char *argv[]) {
 
   vk::getHostVisibleMemory().initHostVisible(
       std::min(hostVisibleMemoryTotalSize / 2, 1ul * 1024 * 1024 * 1024));
-  vk::getDeviceLocalMemory().initDeviceLocal(std::min(localMemoryTotalSize / 2, 4ul * 1024 * 1024 * 1024));
+  vk::getDeviceLocalMemory().initDeviceLocal(
+      std::min(localMemoryTotalSize / 2, 4ul * 1024 * 1024 * 1024));
 
   auto commandPool =
       vk::CommandPool::Create(vkContext.presentQueueFamily,

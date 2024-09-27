@@ -103,7 +103,8 @@ static VkShaderStageFlagBits shaderStageToVk(shader::gcn::Stage stage) {
 }
 
 static void fillStageBindings(VkDescriptorSetLayoutBinding *bindings,
-                              VkShaderStageFlagBits stage, int setIndex, std::uint32_t setCount) {
+                              VkShaderStageFlagBits stage, int setIndex,
+                              std::uint32_t setCount) {
 
   auto createDescriptorBinding = [&](VkDescriptorType type, uint32_t count,
                                      int dim = 0) {
@@ -728,15 +729,39 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
         .layerCount = key.arrayLayerCount,
     };
 
+    bool isLinear = key.tileMode.arrayMode() == kArrayModeLinearGeneral ||
+                    key.tileMode.arrayMode() == kArrayModeLinearAligned;
+
     std::vector<VkBufferImageCopy> regions;
     regions.reserve(key.mipCount);
+    std::vector<VkBufferCopy> bufferRegions;
+
+    std::uint64_t dstAddress = 0;
+    std::uint64_t srcAddress = 0;
+
+    if (isLinear) {
+      regions.reserve(key.mipCount);
+    } else {
+      dstAddress = detiledBuffer.getAddress();
+      srcAddress = tiledBuffer.deviceAddress;
+    }
 
     for (unsigned mipLevel = key.baseMipLevel;
          mipLevel < key.baseMipLevel + key.mipCount; ++mipLevel) {
-      tiler.detile(*mScheduler, surfaceInfo, key.tileMode,
-                   tiledBuffer.deviceAddress, detiledBuffer.getAddress(),
-                   mipLevel, key.baseArrayLayer, key.arrayLayerCount);
+      auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
+      if (isLinear) {
+        bufferRegions.push_back({
+            .srcOffset = info.offset,
+            .dstOffset = dstAddress,
+            .size = info.linearSize * key.arrayLayerCount,
+        });
+      } else {
+        tiler.detile(*mScheduler, surfaceInfo, key.tileMode, srcAddress,
+                     dstAddress, mipLevel, 0, key.arrayLayerCount);
+      }
+
       regions.push_back({
+          .bufferOffset = info.offset,
           .bufferRowLength =
               mipLevel > 0 ? 0 : std::max(key.pitch >> mipLevel, 1u),
           .imageSubresource =
@@ -753,6 +778,15 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                   .depth = std::max(key.extent.depth >> mipLevel, 1u),
               },
       });
+
+      dstAddress += info.linearSize * key.arrayLayerCount;
+      srcAddress += info.tiledSize * key.arrayLayerCount;
+    }
+
+    if (!bufferRegions.empty()) {
+      vkCmdCopyBuffer(mScheduler->getCommandBuffer(), tiledBuffer.handle,
+                      detiledBuffer.getHandle(), bufferRegions.size(),
+                      bufferRegions.data());
     }
 
     transitionImageLayout(
@@ -765,8 +799,8 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                            regions.data());
 
     transitionImageLayout(mScheduler->getCommandBuffer(), image,
-                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                          subresourceRange);
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                          VK_IMAGE_LAYOUT_GENERAL, subresourceRange);
 
     mScheduler->afterSubmit([detiledBuffer = std::move(detiledBuffer)] {});
   }

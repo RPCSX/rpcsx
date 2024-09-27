@@ -253,6 +253,14 @@ ir::Node spv::Import::getOrCloneImpl(ir::Context &context, ir::Node node,
     return redefine(result);
   }
 
+  if (isOperand && inst == ir::spv::OpString) {
+    auto debugs = spvContext.layout.getOrCreateDebugStrings(context);
+    auto result = CloneMap::getOrCloneImpl(context, node, isOperand);
+    debugs.addChild(result.staticCast<ir::Instruction>());
+    cloneDecorationsAndDebugs();
+    return result;
+  }
+
   if (isOperand && inst == ir::spv::OpVariable) {
     if (inst == ir::spv::OpVariable) {
       auto storage = inst.getOperand(1).getAsInt32();

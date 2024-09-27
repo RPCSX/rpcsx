@@ -1223,7 +1223,8 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
   }
 
   if (!toAnalyze.empty()) {
-    auto &cfg = context.analysis.get<CFG>([&] { return buildCFG(body.getFirst()); });
+    auto &cfg =
+        context.analysis.get<CFG>([&] { return buildCFG(body.getFirst()); });
 
     ModuleInfo moduleInfo;
     collectModuleInfo(moduleInfo, context.layout);
@@ -1618,6 +1619,8 @@ gcn::convertToSpv(Context &context, ir::Region body,
 
   extensions.createSpvExtension(context.getUnknownLocation(),
                                 "SPV_EXT_physical_storage_buffer");
+  extensions.createSpvExtension(context.getUnknownLocation(),
+                                "SPV_KHR_non_semantic_info");
 
   auto merged = context.layout.merge(context);
   result.spv = spv::serialize(merged);
