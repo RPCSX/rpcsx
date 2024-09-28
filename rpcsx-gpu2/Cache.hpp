@@ -151,11 +151,13 @@ struct Cache {
 
   struct Image {
     VkImage handle;
+    VkImageSubresourceRange subresource;
   };
 
   struct ImageView {
     VkImageView handle;
     VkImage imageHandle;
+    VkImageSubresourceRange subresource;
   };
 
   class Tag {
@@ -184,6 +186,8 @@ struct Cache {
       mScheduler->submit();
       mScheduler->wait();
     }
+
+    Scheduler &getScheduler() const { return *mScheduler; }
 
     ~Tag() { release(); }
 

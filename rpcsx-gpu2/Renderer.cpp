@@ -12,8 +12,6 @@
 #include <shader/dialect.hpp>
 #include <shader/gcn.hpp>
 #include <shaders/fill_red.frag.h>
-#include <shaders/flip.frag.h>
-#include <shaders/flip.vert.h>
 #include <shaders/rect_list.geom.h>
 
 #include <bit>
@@ -104,50 +102,6 @@ static VkShaderEXT getFillRedFragShader(amdgpu::Cache &cache) {
       .codeType = VK_SHADER_CODE_TYPE_SPIRV_EXT,
       .codeSize = sizeof(spirv_fill_red_frag),
       .pCode = spirv_fill_red_frag,
-      .pName = "main",
-      .setLayoutCount =
-          static_cast<uint32_t>(cache.getGraphicsDescriptorSetLayouts().size()),
-      .pSetLayouts = cache.getGraphicsDescriptorSetLayouts().data()};
-
-  VK_VERIFY(vk::CreateShadersEXT(vk::context->device, 1, &createInfo,
-                                 vk::context->allocator, &shader));
-  return shader;
-}
-
-static VkShaderEXT getFlipVertexShader(amdgpu::Cache &cache) {
-  static VkShaderEXT shader = VK_NULL_HANDLE;
-  if (shader != VK_NULL_HANDLE) {
-    return shader;
-  }
-
-  VkShaderCreateInfoEXT createInfo{
-      .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT,
-      .stage = VK_SHADER_STAGE_VERTEX_BIT,
-      .codeType = VK_SHADER_CODE_TYPE_SPIRV_EXT,
-      .codeSize = sizeof(spirv_flip_vert),
-      .pCode = spirv_flip_vert,
-      .pName = "main",
-      .setLayoutCount =
-          static_cast<uint32_t>(cache.getGraphicsDescriptorSetLayouts().size()),
-      .pSetLayouts = cache.getGraphicsDescriptorSetLayouts().data()};
-
-  VK_VERIFY(vk::CreateShadersEXT(vk::context->device, 1, &createInfo,
-                                 vk::context->allocator, &shader));
-  return shader;
-}
-
-static VkShaderEXT getFlipFragmentShader(amdgpu::Cache &cache) {
-  static VkShaderEXT shader = VK_NULL_HANDLE;
-  if (shader != VK_NULL_HANDLE) {
-    return shader;
-  }
-
-  VkShaderCreateInfoEXT createInfo{
-      .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO_EXT,
-      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-      .codeType = VK_SHADER_CODE_TYPE_SPIRV_EXT,
-      .codeSize = sizeof(spirv_flip_frag),
-      .pCode = spirv_flip_frag,
       .pName = "main",
       .setLayoutCount =
           static_cast<uint32_t>(cache.getGraphicsDescriptorSetLayouts().size()),
@@ -728,7 +682,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         .vgprCount = pgm.rsrc1.getVGprCount(),
         .sgprCount = pgm.rsrc1.getSGprCount(),
         .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
-        // .supportsBarycentric = vk::context->supportsBarycentric,
+        .supportsBarycentric = vk::context->supportsBarycentric,
         .supportsInt8 = vk::context->supportsInt8,
         .supportsInt64Atomics = vk::context->supportsInt64Atomics,
     };
@@ -1162,50 +1116,20 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
 void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
                   VkExtent2D targetExtent, std::uint64_t address,
                   VkImageView target, VkExtent2D imageExtent,
-                  CbCompSwap compSwap, TileMode tileMode, gnm::DataFormat dfmt,
+                  FlipType type, TileMode tileMode, gnm::DataFormat dfmt,
                   gnm::NumericFormat nfmt) {
-  auto pipelineLayout = cacheTag.getGraphicsPipelineLayout();
-  auto descriptorSets = cacheTag.createGraphicsDescriptorSets();
-
   ImageViewKey framebuffer{};
-  framebuffer.type = gnm::TextureType::Dim2D;
-  framebuffer.pitch = imageExtent.width;
   framebuffer.readAddress = address;
+  framebuffer.type = gnm::TextureType::Dim2D;
+  framebuffer.dfmt = dfmt;
+  framebuffer.nfmt = nfmt;
+  framebuffer.tileMode = tileMode;
   framebuffer.extent.width = imageExtent.width;
   framebuffer.extent.height = imageExtent.height;
   framebuffer.extent.depth = 1;
-  framebuffer.dfmt = dfmt;
-  framebuffer.nfmt = nfmt;
+  framebuffer.pitch = imageExtent.width;
   framebuffer.mipCount = 1;
   framebuffer.arrayLayerCount = 1;
-  framebuffer.tileMode = tileMode;
-
-  switch (compSwap) {
-  case CbCompSwap::Std:
-    framebuffer.R = gnm::Swizzle::R;
-    framebuffer.G = gnm::Swizzle::G;
-    framebuffer.B = gnm::Swizzle::B;
-    framebuffer.A = gnm::Swizzle::A;
-    break;
-  case CbCompSwap::Alt:
-    framebuffer.R = gnm::Swizzle::B;
-    framebuffer.G = gnm::Swizzle::G;
-    framebuffer.B = gnm::Swizzle::R;
-    framebuffer.A = gnm::Swizzle::A;
-    break;
-  case CbCompSwap::StdRev:
-    framebuffer.R = gnm::Swizzle::A;
-    framebuffer.G = gnm::Swizzle::B;
-    framebuffer.B = gnm::Swizzle::G;
-    framebuffer.A = gnm::Swizzle::R;
-    break;
-  case CbCompSwap::AltRev:
-    framebuffer.R = gnm::Swizzle::A;
-    framebuffer.G = gnm::Swizzle::R;
-    framebuffer.B = gnm::Swizzle::G;
-    framebuffer.A = gnm::Swizzle::B;
-    break;
-  }
 
   SamplerKey framebufferSampler = {
       .magFilter = VK_FILTER_LINEAR,
@@ -1215,35 +1139,11 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
   auto imageView = cacheTag.getImageView(framebuffer, Access::Read);
   auto sampler = cacheTag.getSampler(framebufferSampler);
 
-  cacheTag.submitAndWait();
-
   VkDescriptorImageInfo imageInfo{
       .sampler = sampler.handle,
       .imageView = imageView.handle,
       .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
   };
-
-  VkWriteDescriptorSet writeDescSet[]{
-      {
-          .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-          .dstSet = descriptorSets[0],
-          .dstBinding =
-              Cache::getDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 2),
-          .descriptorCount = 1,
-          .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-          .pImageInfo = &imageInfo,
-      },
-      {
-          .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-          .dstSet = descriptorSets[0],
-          .dstBinding = Cache::getDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLER),
-          .descriptorCount = 1,
-          .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-          .pImageInfo = &imageInfo,
-      }};
-
-  vkUpdateDescriptorSets(vk::context->device, std::size(writeDescSet),
-                         writeDescSet, 0, nullptr);
 
   VkRenderingAttachmentInfo colorAttachments[1]{{
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -1251,13 +1151,8 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
       .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-      .clearValue = {},
   }};
-  VkBool32 colorBlendEnable[1]{VK_FALSE};
-  VkColorBlendEquationEXT colorBlendEquation[1]{};
-  VkColorComponentFlags colorWriteMask[1]{
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT};
+
   VkViewport viewPorts[1]{
       {
           .width = float(targetExtent.width),
@@ -1282,87 +1177,16 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
       .pColorAttachments = colorAttachments,
   };
 
+  commandBuffer = cacheTag.getScheduler().getCommandBuffer();
+
   vkCmdBeginRendering(commandBuffer, &renderInfo);
-  vkCmdSetRasterizerDiscardEnable(commandBuffer, VK_FALSE);
+
+  cacheTag.getDevice()->flipPipeline.bind(cacheTag.getScheduler(), type, imageView.handle, sampler.handle);
 
   vkCmdSetViewportWithCount(commandBuffer, 1, viewPorts);
   vkCmdSetScissorWithCount(commandBuffer, 1, viewPortScissors);
 
-  vk::CmdSetColorBlendEnableEXT(commandBuffer, 0, 1, colorBlendEnable);
-  vk::CmdSetColorBlendEquationEXT(commandBuffer, 0, 1, colorBlendEquation);
-
-  vk::CmdSetDepthClampEnableEXT(commandBuffer, VK_FALSE);
-  vkCmdSetDepthTestEnable(commandBuffer, VK_FALSE);
-  vkCmdSetDepthWriteEnable(commandBuffer, VK_FALSE);
-  vkCmdSetDepthBounds(commandBuffer, 0.0f, 1.0f);
-  vkCmdSetDepthBoundsTestEnable(commandBuffer, VK_FALSE);
-
-  vkCmdSetDepthBiasEnable(commandBuffer, VK_FALSE);
-  vkCmdSetDepthBias(commandBuffer, 0, 1, 1);
-  vkCmdSetPrimitiveRestartEnable(commandBuffer, VK_FALSE);
-
-  vk::CmdSetAlphaToOneEnableEXT(commandBuffer, VK_FALSE);
-
-  vk::CmdSetLogicOpEnableEXT(commandBuffer, VK_FALSE);
-  vk::CmdSetLogicOpEXT(commandBuffer, VK_LOGIC_OP_AND);
-  vk::CmdSetPolygonModeEXT(commandBuffer, VK_POLYGON_MODE_FILL);
-  vk::CmdSetRasterizationSamplesEXT(commandBuffer, VK_SAMPLE_COUNT_1_BIT);
-  VkSampleMask sampleMask = ~0;
-  vk::CmdSetSampleMaskEXT(commandBuffer, VK_SAMPLE_COUNT_1_BIT, &sampleMask);
-  vk::CmdSetTessellationDomainOriginEXT(
-      commandBuffer, VK_TESSELLATION_DOMAIN_ORIGIN_LOWER_LEFT);
-  vk::CmdSetAlphaToCoverageEnableEXT(commandBuffer, VK_FALSE);
-  vk::CmdSetVertexInputEXT(commandBuffer, 0, nullptr, 0, nullptr);
-  vk::CmdSetColorWriteMaskEXT(commandBuffer, 0, 1, colorWriteMask);
-
-  vkCmdSetStencilCompareMask(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-  vkCmdSetStencilWriteMask(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-  vkCmdSetStencilReference(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
-
-  vkCmdSetCullMode(commandBuffer, VK_CULL_MODE_NONE);
-  vkCmdSetFrontFace(commandBuffer, VK_FRONT_FACE_CLOCKWISE);
-
-  vkCmdSetPrimitiveTopology(commandBuffer, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-  vkCmdSetStencilTestEnable(commandBuffer, VK_FALSE);
-
-  auto stages = Cache::kGraphicsStages;
-  VkShaderEXT shaders[stages.size()]{};
-
-  shaders[Cache::getStageIndex(VK_SHADER_STAGE_VERTEX_BIT)] =
-      getFlipVertexShader(*cacheTag.getCache());
-
-  shaders[Cache::getStageIndex(VK_SHADER_STAGE_FRAGMENT_BIT)] =
-      getFlipFragmentShader(*cacheTag.getCache());
-
-  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          pipelineLayout, 0, descriptorSets.size(),
-                          descriptorSets.data(), 0, nullptr);
-
-  vk::CmdBindShadersEXT(commandBuffer, stages.size(), stages.data(), shaders);
-
   vkCmdDraw(commandBuffer, 6, 1, 0, 0);
-
   vkCmdEndRendering(commandBuffer);
-
-  // {
-  //   VkImageMemoryBarrier barrier{
-  //       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-  //       .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-  //       .dstAccessMask = VK_ACCESS_NONE,
-  //       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  //       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-  //       .image = imageView.imageHandle,
-  //       .subresourceRange =
-  //           {
-  //               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-  //               .levelCount = 1,
-  //               .layerCount = 1,
-  //           },
-  //   };
-
-  //   vkCmdPipelineBarrier(commandBuffer,
-  //   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-  //                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr,
-  //                        0, nullptr, 1, &barrier);
-  // }
+  cacheTag.getScheduler().submit();
 }

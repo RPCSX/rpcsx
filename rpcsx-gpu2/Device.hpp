@@ -3,7 +3,7 @@
 #include "Pipe.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "amdgpu/tiler_vulkan.hpp"
-#include "gnm/descriptors.hpp"
+#include "FlipPipeline.hpp"
 #include "rx/MemoryTable.hpp"
 #include "shader/SemanticInfo.hpp"
 #include "shader/SpvConverter.hpp"
@@ -52,9 +52,9 @@ struct Device {
   Registers::Config config;
 
   GpuTiler tiler;
-
   GraphicsPipe graphicsPipes[kGfxPipeCount]{0, 1};
   // ComputePipe computePipes[kComputePipeCount]{0, 1, 2, 3, 4, 5, 6, 7};
+  FlipPipeline flipPipeline;
 
   int dmemFd[3] = {-1, -1, -1};
   std::unordered_map<std::int64_t, ProcessInfo> processInfo;

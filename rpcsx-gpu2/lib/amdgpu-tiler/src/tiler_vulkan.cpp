@@ -190,9 +190,8 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
                                                  configOffset);
 
   auto &subresource = info.getSubresourceInfo(mipLevel);
-  config->srcAddress = srcTiledAddress + subresource.offset +
-                       (subresource.tiledSize * baseArray);
-  config->dstAddress = dstLinearAddress + (subresource.linearSize * baseArray);
+  config->srcAddress = srcTiledAddress + subresource.offset;
+  config->dstAddress = dstLinearAddress;
   config->dataWidth = subresource.dataWidth;
   config->dataHeight = subresource.dataHeight;
   config->tileMode = tileMode.raw;
@@ -287,9 +286,8 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
                                                  configOffset);
 
   auto &subresource = info.getSubresourceInfo(mipLevel);
-  config->srcAddress = srcLinearAddress + subresource.offset +
-                       subresource.linearSize * baseArray;
-  config->dstAddress = dstTiledAddress;
+  config->srcAddress = srcLinearAddress;
+  config->dstAddress = dstTiledAddress + subresource.offset;
   config->dataWidth = subresource.dataWidth;
   config->dataHeight = subresource.dataHeight;
   config->tileMode = tileMode.raw;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Cache.hpp"
+#include "FlipPipeline.hpp"
 #include "Pipe.hpp"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
@@ -12,6 +13,6 @@ void draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
           std::uint32_t indexCount);
 void flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
           VkExtent2D targetExtent, std::uint64_t address, VkImageView target,
-          VkExtent2D imageExtent, CbCompSwap compSwap, TileMode tileMode,
+          VkExtent2D imageExtent, FlipType type, TileMode tileMode,
           gnm::DataFormat dfmt, gnm::NumericFormat nfmt);
 } // namespace amdgpu

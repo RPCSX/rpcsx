@@ -2542,6 +2542,22 @@ int findTexture3DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
     return textureIndexHint;
 }
 
+float32_t swizzle(f32vec4 comp, int sel) {
+    switch (sel) {
+    case 0: return 0;
+    case 1: return 1;
+    case 4: return comp.x;
+    case 5: return comp.y;
+    case 6: return comp.z;
+    case 7: return comp.w;
+    }
+
+    return 1;
+}
+
+f32vec4 swizzle(f32vec4 comp, int selX, int selY, int selZ, int selW) {
+    return f32vec4(swizzle(comp, selX), swizzle(comp, selY), swizzle(comp, selZ), swizzle(comp, selW));
+}
 
 void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
     uint8_t textureType = tbuffer_type(tbuffer);
@@ -2581,6 +2597,14 @@ void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, 
     }
 
     // debugPrintfEXT("image_sample: textureType: %u, coord: %v3f, result: %v4f, dmask: %u", textureType, vaddr, result, dmask);
+
+    
+    result = swizzle(result,
+        tbuffer_dst_sel_x(tbuffer),
+        tbuffer_dst_sel_y(tbuffer),
+        tbuffer_dst_sel_z(tbuffer),
+        tbuffer_dst_sel_w(tbuffer));
+
 
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {

@@ -1,4 +1,5 @@
 #include "Device.hpp"
+#include "FlipPipeline.hpp"
 #include "Renderer.hpp"
 #include "amdgpu/tiler.hpp"
 #include "gnm/constants.hpp"
@@ -255,27 +256,28 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
 
   gnm::DataFormat dfmt;
   gnm::NumericFormat nfmt;
-  CbCompSwap compSwap;
+  auto flipType = FlipType::Alt;
   switch (bufferAttr.pixelFormat) {
   case 0x80000000:
-    // bgra
     dfmt = gnm::kDataFormat8_8_8_8;
-    nfmt = gnm::kNumericFormatSNormNoZero;
-    compSwap = CbCompSwap::Alt;
+    nfmt = gnm::kNumericFormatSrgb;
     break;
 
   case 0x80002200:
-    // rgba
     dfmt = gnm::kDataFormat8_8_8_8;
-    nfmt = gnm::kNumericFormatSNormNoZero;
-    compSwap = CbCompSwap::Std;
+    nfmt = gnm::kNumericFormatUNorm;
+    flipType = FlipType::Std;
     break;
 
+  case 0x88740000:
   case 0x88060000:
-    // bgra
     dfmt = gnm::kDataFormat2_10_10_10;
-    nfmt = gnm::kNumericFormatSNormNoZero;
-    compSwap = CbCompSwap::Alt;
+    nfmt = gnm::kNumericFormatUNorm;
+    break;
+
+  case 0xc1060000:
+    dfmt = gnm::kDataFormat16_16_16_16;
+    nfmt = gnm::kNumericFormatSrgb;
     break;
 
   default:
@@ -291,92 +293,28 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
 
   auto cacheTag = getCacheTag(process.vmId, scheduler);
 
-  if (false) {
-    transitionImageLayout(commandBuffer, swapchainImage,
-                          VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                          {
-                              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                              .levelCount = 1,
-                              .layerCount = 1,
-                          });
+  transitionImageLayout(commandBuffer, swapchainImage,
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        {
+                            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                            .levelCount = 1,
+                            .layerCount = 1,
+                        });
 
-    amdgpu::flip(
-        cacheTag, commandBuffer, vk::context->swapchainExtent, buffer.address,
-        swapchainImageView, {bufferAttr.width, bufferAttr.height}, compSwap,
-        getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8], dfmt, nfmt);
+  amdgpu::flip(
+      cacheTag, commandBuffer, vk::context->swapchainExtent, buffer.address,
+      swapchainImageView, {bufferAttr.width, bufferAttr.height}, flipType,
+      getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8], dfmt, nfmt);
 
-    transitionImageLayout(commandBuffer, swapchainImage,
-                          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                          VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                          {
-                              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                              .levelCount = 1,
-                              .layerCount = 1,
-                          });
-  } else {
-    ImageKey frameKey{
-        .readAddress = buffer.address,
-        .type = gnm::TextureType::Dim2D,
-        .dfmt = dfmt,
-        .nfmt = nfmt,
-        .tileMode = getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8],
-        .extent =
-            {
-                .width = bufferAttr.width,
-                .height = bufferAttr.height,
-                .depth = 1,
-            },
-        .pitch = bufferAttr.width,
-        .mipCount = 1,
-        .arrayLayerCount = 1,
-    };
-
-    auto image = cacheTag.getImage(frameKey, Access::Read);
-
-    scheduler.submit();
-    scheduler.wait();
-
-    transitionImageLayout(commandBuffer, swapchainImage,
-                          VK_IMAGE_LAYOUT_UNDEFINED,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                          {
-                              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                              .levelCount = 1,
-                              .layerCount = 1,
-                          });
-
-    VkImageBlit region{
-        .srcSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                           .mipLevel = 0,
-                           .baseArrayLayer = 0,
-                           .layerCount = 1},
-        .srcOffsets = {{},
-                       {static_cast<int32_t>(bufferAttr.width),
-                        static_cast<int32_t>(bufferAttr.height), 1}},
-        .dstSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                           .mipLevel = 0,
-                           .baseArrayLayer = 0,
-                           .layerCount = 1},
-        .dstOffsets =
-            {{},
-             {static_cast<int32_t>(vk::context->swapchainExtent.width),
-              static_cast<int32_t>(vk::context->swapchainExtent.height), 1}},
-    };
-
-    vkCmdBlitImage(commandBuffer, image.handle, VK_IMAGE_LAYOUT_GENERAL,
-                   swapchainImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                   &region, VK_FILTER_LINEAR);
-
-    transitionImageLayout(commandBuffer, swapchainImage,
-                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                          VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                          {
-                              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                              .levelCount = 1,
-                              .layerCount = 1,
-                          });
-  }
+  transitionImageLayout(commandBuffer, swapchainImage,
+                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                        {
+                            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                            .levelCount = 1,
+                            .layerCount = 1,
+                        });
 
   auto submitCompleteTask = scheduler.createExternalSubmit();
 

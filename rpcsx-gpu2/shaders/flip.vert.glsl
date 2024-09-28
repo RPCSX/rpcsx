@@ -2,7 +2,6 @@
 
 layout(location = 0) out vec2 coord;
 
-
 void main()
 {
   float x = float(((gl_VertexIndex + 2) / 3) & 1) * 2 - 1; 

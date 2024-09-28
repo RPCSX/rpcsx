@@ -263,7 +263,7 @@ int main(int argc, const char *argv[]) {
 
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  auto window = glfwCreateWindow(1280, 720, "RPCSX", nullptr, nullptr);
+  auto window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
 
   rx::atScopeExit _{[window] { glfwDestroyWindow(window); }};
 
