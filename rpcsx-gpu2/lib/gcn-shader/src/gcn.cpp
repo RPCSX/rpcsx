@@ -1081,6 +1081,23 @@ static ir::Value deserializeGcnRegion(
     auto instSem =
         semInfo.findSemantic(ir::getInstructionId(isaInst.kind, isaInst.op));
 
+    auto createExecTest = [&] {
+      auto mergeBlock = builder.createSpvLabel(loc);
+      gcn::Builder::createInsertBefore(converter, mergeBlock)
+          .createSpvBranch(loc, mergeBlock);
+      auto instBlock = gcn::Builder::createInsertAfter(converter, instrBegin)
+                           .createSpvLabel(loc);
+      auto prependInstBuilder =
+          gcn::Builder::createInsertBefore(converter, instBlock);
+      auto exec = prependInstBuilder.createValue(
+          loc, ir::amdgpu::EXEC_TEST,
+          converter.getType(execTestSem->returnType));
+      prependInstBuilder.createSpvSelectionMerge(
+          loc, mergeBlock, ir::spv::SelectionControl::None);
+      prependInstBuilder.createSpvBranchConditional(loc, exec, instBlock,
+                                                    mergeBlock);
+    };
+
     if (instSem == nullptr) {
       if (isaInst == ir::sopp::BRANCH) {
         auto target =
@@ -1268,6 +1285,9 @@ static ir::Value deserializeGcnRegion(
         inst.addOperand(createOperandRead(loc, paramBuilder, uint32TV, op));
       }
 
+      if (isaInst == ir::exp::EXP) {
+        createExecTest();
+      }
       continue;
     }
 
@@ -1400,20 +1420,7 @@ static ir::Value deserializeGcnRegion(
     }
 
     if (!hasDestination && injectExecTest) {
-      auto mergeBlock = builder.createSpvLabel(loc);
-      gcn::Builder::createInsertBefore(converter, mergeBlock)
-          .createSpvBranch(loc, mergeBlock);
-      auto instBlock = gcn::Builder::createInsertAfter(converter, instrBegin)
-                           .createSpvLabel(loc);
-      auto prependInstBuilder =
-          gcn::Builder::createInsertBefore(converter, instBlock);
-      auto exec = prependInstBuilder.createValue(
-          loc, ir::amdgpu::EXEC_TEST,
-          converter.getType(execTestSem->returnType));
-      prependInstBuilder.createSpvSelectionMerge(
-          loc, mergeBlock, ir::spv::SelectionControl::None);
-      prependInstBuilder.createSpvBranchConditional(loc, exec, instBlock,
-                                                    mergeBlock);
+      createExecTest();
     }
   }
 

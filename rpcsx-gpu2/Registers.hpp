@@ -405,6 +405,20 @@ struct DbRenderControl {
   };
 };
 
+struct DbDepthView {
+  union {
+    struct {
+      std::uint32_t sliceStart : 11;
+      std::uint32_t : 2;
+      std::uint32_t sliceMax : 11;
+      bool zReadOnly : 1;
+      bool stencilReadOnly : 1;
+    };
+
+    std::uint32_t raw;
+  };
+};
+
 struct CbBlendControl {
   union {
     struct {
@@ -574,7 +588,7 @@ struct Registers {
     union {
       Register<0x0, DbRenderControl> dbRenderControl;
       Register<0x1> dbCountControl;
-      Register<0x2> dbDepthView;
+      Register<0x2, DbDepthView> dbDepthView;
       Register<0x3> dbRenderOverride;
       Register<0x4> dbRenderOverride2;
       Register<0x5> dbHTileDataBase;

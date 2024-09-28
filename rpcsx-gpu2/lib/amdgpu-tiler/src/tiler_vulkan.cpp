@@ -93,10 +93,13 @@ struct amdgpu::GpuTiler::Impl {
     uint32_t dataWidth;
     uint32_t dataHeight;
     uint32_t tileMode;
+    uint32_t macroTileMode;
+    uint32_t dfmt;
     uint32_t numFragments;
     uint32_t bitsPerElement;
     uint32_t tiledSurfaceSize;
     uint32_t linearSurfaceSize;
+    uint32_t padding[2];
   };
 
   Impl() {
@@ -119,7 +122,8 @@ struct amdgpu::GpuTiler::Impl {
     {
       VkDescriptorPoolSize poolSizes[]{{
           .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-          .descriptorCount = static_cast<std::uint32_t>(std::size(descriptorSets)) * 2,
+          .descriptorCount =
+              static_cast<std::uint32_t>(std::size(descriptorSets)) * 2,
       }};
 
       VkDescriptorPoolCreateInfo info{
@@ -174,7 +178,7 @@ amdgpu::GpuTiler::~GpuTiler() = default;
 
 void amdgpu::GpuTiler::detile(Scheduler &scheduler,
                               const amdgpu::SurfaceInfo &info,
-                              amdgpu::TileMode tileMode,
+                              amdgpu::TileMode tileMode, gnm::DataFormat dfmt,
                               std::uint64_t srcTiledAddress,
                               std::uint64_t dstLinearAddress, int mipLevel,
                               int baseArray, int arrayCount) {
@@ -192,6 +196,7 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
   config->dataWidth = subresource.dataWidth;
   config->dataHeight = subresource.dataHeight;
   config->tileMode = tileMode.raw;
+  config->dfmt = dfmt;
   config->numFragments = info.numFragments;
   config->bitsPerElement = info.bitsPerElement;
   uint32_t groupCountZ = subresource.dataDepth;
@@ -231,8 +236,13 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
   case amdgpu::kArrayMode3dTiledThick:
   case amdgpu::kArrayMode3dTiledXThick:
   case amdgpu::kArrayMode3dTiledThickPrt:
-    std::abort();
-    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->detiler2d.shader);
+    config->macroTileMode =
+        getDefaultMacroTileModes()[computeMacroTileIndex(
+                                       tileMode, info.bitsPerElement,
+                                       1 << info.numFragments)]
+            .raw;
+
+    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->detiler1d.shader);
     break;
   }
 
@@ -265,7 +275,7 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
 
 void amdgpu::GpuTiler::tile(Scheduler &scheduler,
                             const amdgpu::SurfaceInfo &info,
-                            amdgpu::TileMode tileMode,
+                            amdgpu::TileMode tileMode, gnm::DataFormat dfmt,
                             std::uint64_t srcLinearAddress,
                             std::uint64_t dstTiledAddress, int mipLevel,
                             int baseArray, int arrayCount) {
@@ -283,6 +293,7 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
   config->dataWidth = subresource.dataWidth;
   config->dataHeight = subresource.dataHeight;
   config->tileMode = tileMode.raw;
+  config->dfmt = dfmt;
   config->numFragments = info.numFragments;
   config->bitsPerElement = info.bitsPerElement;
   uint32_t groupCountZ = subresource.dataDepth;
@@ -321,8 +332,12 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
   case amdgpu::kArrayMode3dTiledThick:
   case amdgpu::kArrayMode3dTiledXThick:
   case amdgpu::kArrayMode3dTiledThickPrt:
-    std::abort();
-    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->tiler2d.shader);
+    config->macroTileMode =
+        getDefaultMacroTileModes()[computeMacroTileIndex(
+                                       tileMode, info.bitsPerElement,
+                                       1 << info.numFragments)]
+            .raw;
+    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->tiler1d.shader);
     break;
   }
 

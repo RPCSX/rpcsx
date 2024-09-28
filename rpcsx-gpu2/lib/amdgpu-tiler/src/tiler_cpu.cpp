@@ -175,9 +175,9 @@ getTiledOffset2D(gnm::TextureType texType, bool isPow2Padded,
 
   bool isCubemap = texType == gnm::TextureType::Cube;
   bool isVolume = texType == gnm::TextureType::Dim3D;
-  auto m_bitsPerFragment = getBitsPerElement(dfmt);
+  auto bitsPerFragment = getBitsPerElement(dfmt);
 
-  auto m_isBlockCompressed = getTexelsPerElement(dfmt) > 1;
+  auto isBlockCompressed = getTexelsPerElement(dfmt) > 1;
   auto tileSwizzleMask = 0;
   auto numFragmentsPerPixel = 1 << numFragments;
   auto arrayMode = tileMode.arrayMode();
@@ -208,12 +208,12 @@ getTiledOffset2D(gnm::TextureType texType, bool isPow2Padded,
     break;
   }
 
-  auto bitsPerElement = m_bitsPerFragment;
+  auto bitsPerElement = bitsPerFragment;
   auto paddedWidth = pitch;
   auto paddedHeight = height;
 
-  if (m_isBlockCompressed) {
-    switch (m_bitsPerFragment) {
+  if (isBlockCompressed) {
+    switch (bitsPerFragment) {
     case 1:
       bitsPerElement *= 8;
       paddedWidth = std::max((paddedWidth + 7) / 8, 1);

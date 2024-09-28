@@ -301,10 +301,10 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
                               .layerCount = 1,
                           });
 
-    amdgpu::flip(cacheTag, commandBuffer, vk::context->swapchainExtent,
-                 buffer.address, swapchainImageView,
-                 {bufferAttr.width, bufferAttr.height}, compSwap,
-                 getDefaultTileModes()[13], dfmt, nfmt);
+    amdgpu::flip(
+        cacheTag, commandBuffer, vk::context->swapchainExtent, buffer.address,
+        swapchainImageView, {bufferAttr.width, bufferAttr.height}, compSwap,
+        getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8], dfmt, nfmt);
 
     transitionImageLayout(commandBuffer, swapchainImage,
                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -316,11 +316,11 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
                           });
   } else {
     ImageKey frameKey{
-        .address = buffer.address,
+        .readAddress = buffer.address,
         .type = gnm::TextureType::Dim2D,
         .dfmt = dfmt,
         .nfmt = nfmt,
-        .tileMode = getDefaultTileModes()[13],
+        .tileMode = getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8],
         .extent =
             {
                 .width = bufferAttr.width,
@@ -429,7 +429,7 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
     };
 
     vkQueueSubmit2(vk::context->presentQueue, 1, &submitInfo, fence);
-    // vkQueueWaitIdle(queue);
+    vkQueueWaitIdle(vk::context->presentQueue);
   }
 
   scheduler.then([=, this, cacheTag = std::move(cacheTag)] {

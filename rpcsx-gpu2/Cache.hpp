@@ -22,8 +22,15 @@ struct ShaderKey {
   shader::gcn::Environment env;
 };
 
+enum class ImageKind {
+  Color,
+  Depth,
+  Stencil
+};
+
 struct ImageKey {
-  std::uint64_t address;
+  std::uint64_t readAddress;
+  std::uint64_t writeAddress;
   gnm::TextureType type;
   gnm::DataFormat dfmt;
   gnm::NumericFormat nfmt;
@@ -35,6 +42,7 @@ struct ImageKey {
   unsigned mipCount = 1;
   unsigned baseArrayLayer = 0;
   unsigned arrayLayerCount = 1;
+  ImageKind kind = ImageKind::Color;
   bool pow2pad = false;
 
   static ImageKey createFrom(const gnm::TBuffer &tbuffer);

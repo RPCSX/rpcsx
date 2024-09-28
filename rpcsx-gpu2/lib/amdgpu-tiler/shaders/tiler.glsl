@@ -537,6 +537,86 @@ uint32_t tileMode_getSampleSplit(uint32_t tileMode) {
     return (tileMode & 0x06000000) >> 25;
 }
 
+uint32_t macroTileMode_getBankWidth(uint32_t tileMode) {
+    return (tileMode & 0x00000003) >> 0;
+}
+uint32_t macroTileMode_getBankHeight(uint32_t tileMode) {
+    return (tileMode & 0x0000000c) >> 2;
+}
+uint32_t macroTileMode_getMacroTileAspect(uint32_t tileMode) {
+    return (tileMode & 0x00000030) >> 4;
+}
+uint32_t macroTileMode_getNumBanks(uint32_t tileMode) {
+    return (tileMode & 0x000000c0) >> 6;
+}
+
+uint32_t getPipeCount(uint32_t pipeConfig) {
+  switch (pipeConfig) {
+  case kPipeConfigP8_32x32_8x16:
+  case kPipeConfigP8_32x32_16x16:
+    return 8;
+  case kPipeConfigP16:
+    return 16;
+  default:
+    return 0;
+  }
+}
+
+uint32_t getPipeIndex(uint32_t x, uint32_t y, uint32_t pipeCfg) {
+  uint32_t pipe = 0;
+  switch (pipeCfg) {
+  case kPipeConfigP8_32x32_8x16:
+    pipe |= (((x >> 4) ^ (y >> 3) ^ (x >> 5)) & 0x1) << 0;
+    pipe |= (((x >> 3) ^ (y >> 4)) & 0x1) << 1;
+    pipe |= (((x >> 5) ^ (y >> 5)) & 0x1) << 2;
+    break;
+  case kPipeConfigP8_32x32_16x16:
+    pipe |= (((x >> 3) ^ (y >> 3) ^ (x >> 4)) & 0x1) << 0;
+    pipe |= (((x >> 4) ^ (y >> 4)) & 0x1) << 1;
+    pipe |= (((x >> 5) ^ (y >> 5)) & 0x1) << 2;
+    break;
+  case kPipeConfigP16:
+    pipe |= (((x >> 3) ^ (y >> 3) ^ (x >> 4)) & 0x1) << 0;
+    pipe |= (((x >> 4) ^ (y >> 4)) & 0x1) << 1;
+    pipe |= (((x >> 5) ^ (y >> 5)) & 0x1) << 2;
+    pipe |= (((x >> 6) ^ (y >> 5)) & 0x1) << 3;
+    break;
+  }
+  return pipe;
+}
+
+uint32_t getBankIndex(uint32_t x, uint32_t y, uint32_t bank_width, uint32_t bank_height, uint32_t num_banks, uint32_t num_pipes) {
+  uint32_t x_shift_offset = findLSB(bank_width * num_pipes);
+  uint32_t y_shift_offset = findLSB(bank_height);
+  uint32_t xs = x >> x_shift_offset;
+  uint32_t ys = y >> y_shift_offset;
+  uint32_t bank = 0;
+  switch (num_banks) {
+  case 2:
+    bank |= (((xs >> 3) ^ (ys >> 3)) & 0x1) << 0;
+    break;
+  case 4:
+    bank |= (((xs >> 3) ^ (ys >> 4)) & 0x1) << 0;
+    bank |= (((xs >> 4) ^ (ys >> 3)) & 0x1) << 1;
+    break;
+  case 8:
+    bank |= (((xs >> 3) ^ (ys >> 5)) & 0x1) << 0;
+    bank |= (((xs >> 4) ^ (ys >> 4) ^ (ys >> 5)) & 0x1) << 1;
+    bank |= (((xs >> 5) ^ (ys >> 3)) & 0x1) << 2;
+    break;
+  case 16:
+    bank |= (((xs >> 3) ^ (ys >> 6)) & 0x1) << 0;
+    bank |= (((xs >> 4) ^ (ys >> 5) ^ (ys >> 6)) & 0x1) << 1;
+    bank |= (((xs >> 5) ^ (ys >> 4)) & 0x1) << 2;
+    bank |= (((xs >> 6) ^ (ys >> 3)) & 0x1) << 3;
+    break;
+  default:
+    break;
+  }
+
+  return bank;
+}
+
 uint32_t bit_ceil(uint32_t x) {
   x = x - 1;
 	x |= x >> 1;
@@ -704,13 +784,223 @@ uint64_t getTiledBitOffset1D(uint32_t tileMode, uvec3 pos, uvec2 dataSize, uint3
     return (sliceOffset + tileOffset) * 8 + elementOffset;
 }
 
+
+uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTileMode,
+                            uvec2 dataSize, int arraySlice, uint32_t numFragments, u32vec3 pos, int fragmentIndex) {
+  uint32_t bitsPerFragment = getBitsPerElement(dfmt);
+
+  bool isBlockCompressed = getTexelsPerElement(dfmt) > 1;
+  uint32_t tileSwizzleMask = 0;
+  uint32_t numFragmentsPerPixel = 1 << numFragments;
+  uint32_t arrayMode = tileMode_getArrayMode(tileMode);
+
+  uint32_t tileThickness = 1;
+
+  switch (arrayMode) {
+  case kArrayMode2dTiledThin:
+  case kArrayMode3dTiledThin:
+  case kArrayModeTiledThinPrt:
+  case kArrayMode2dTiledThinPrt:
+  case kArrayMode3dTiledThinPrt:
+    tileThickness = 1;
+    break;
+  case kArrayMode1dTiledThick:
+  case kArrayMode2dTiledThick:
+  case kArrayMode3dTiledThick:
+  case kArrayModeTiledThickPrt:
+  case kArrayMode2dTiledThickPrt:
+  case kArrayMode3dTiledThickPrt:
+    tileThickness = 4;
+    break;
+  case kArrayMode2dTiledXThick:
+  case kArrayMode3dTiledXThick:
+    tileThickness = 8;
+    break;
+  default:
+    break;
+  }
+
+  uint32_t bitsPerElement = bitsPerFragment;
+  uint32_t paddedWidth = dataSize.x;
+  uint32_t paddedHeight = dataSize.y;
+
+  uint32_t bankWidthHW = macroTileMode_getBankWidth(macroTileMode);
+  uint32_t bankHeightHW = macroTileMode_getBankHeight(macroTileMode);
+  uint32_t macroAspectHW = macroTileMode_getMacroTileAspect(macroTileMode);
+  uint32_t numBanksHW = macroTileMode_getNumBanks(macroTileMode);
+
+  uint32_t bankWidth = 1 << bankWidthHW;
+  uint32_t bankHeight = 1 << bankHeightHW;
+  uint32_t numBanks = 2 << numBanksHW;
+  uint32_t macroTileAspect = 1 << macroAspectHW;
+
+  uint32_t tileBytes1x =
+      (tileThickness * bitsPerElement * kMicroTileWidth * kMicroTileHeight +
+       7) /
+      8;
+
+  uint32_t sampleSplitHw = tileMode_getSampleSplit(tileMode);
+  uint32_t tileSplitHw = tileMode_getTileSplit(tileMode);
+  uint32_t sampleSplit = 1 << sampleSplitHw;
+  uint32_t tileSplitC =
+      (tileMode_getMicroTileMode(tileMode) == kMicroTileModeDepth)
+          ? (64 << tileSplitHw)
+          : max(256U, tileBytes1x * sampleSplit);
+
+  uint32_t tileSplitBytes = min(kDramRowSize, tileSplitC);
+
+  uint32_t numPipes = getPipeCount(tileMode_getPipeConfig(tileMode));
+  uint32_t pipeInterleaveBits = findLSB(kPipeInterleaveBytes);
+  uint32_t pipeInterleaveMask = (1 << pipeInterleaveBits) - 1;
+  uint32_t pipeBits = findLSB(numPipes);
+  uint32_t bankBits = findLSB(numBanks);
+  uint32_t bankSwizzleMask = tileSwizzleMask;
+  uint32_t pipeSwizzleMask = 0;
+  uint32_t macroTileWidth =
+      (kMicroTileWidth * bankWidth * numPipes) * macroTileAspect;
+  uint32_t macroTileHeight =
+      (kMicroTileHeight * bankHeight * numBanks) / macroTileAspect;
+
+  uint32_t microTileMode = tileMode_getMicroTileMode(tileMode);
+
+  uint64_t elementIndex =
+      getElementIndex(pos, bitsPerElement, microTileMode, arrayMode);
+
+  uint32_t xh = pos.x;
+  uint32_t yh = pos.y;
+  if (arrayMode == kArrayModeTiledThinPrt ||
+      arrayMode == kArrayModeTiledThickPrt) {
+    xh %= macroTileWidth;
+    yh %= macroTileHeight;
+  }
+  uint64_t pipe = getPipeIndex(xh, yh, tileMode_getPipeConfig(tileMode));
+  uint64_t bank =
+      getBankIndex(xh, yh, bankWidth, bankHeight, numBanks, numPipes);
+
+  uint32_t tileBytes = (kMicroTileWidth * kMicroTileHeight * tileThickness *
+                            bitsPerElement * numFragmentsPerPixel +
+                        7) /
+                       8;
+
+  uint64_t elementOffset = 0;
+  if (microTileMode == kMicroTileModeDepth) {
+    uint64_t pixelOffset = elementIndex * bitsPerElement * numFragmentsPerPixel;
+    elementOffset = pixelOffset + (fragmentIndex * bitsPerElement);
+  } else {
+    uint64_t fragmentOffset =
+        fragmentIndex * (tileBytes / numFragmentsPerPixel) * 8;
+    elementOffset = fragmentOffset + (elementIndex * bitsPerElement);
+  }
+
+  uint64_t slicesPerTile = 1;
+  uint64_t tileSplitSlice = 0;
+  if (tileBytes > tileSplitBytes && tileThickness == 1) {
+    slicesPerTile = tileBytes / tileSplitBytes;
+    tileSplitSlice = elementOffset / (tileSplitBytes * 8);
+    elementOffset %= (tileSplitBytes * 8);
+    tileBytes = tileSplitBytes;
+  }
+
+  uint64_t macroTileBytes = (macroTileWidth / kMicroTileWidth) *
+                            (macroTileHeight / kMicroTileHeight) * tileBytes /
+                            (numPipes * numBanks);
+  uint64_t macroTilesPerRow = paddedWidth / macroTileWidth;
+  uint64_t macroTileRowIndex = pos.y / macroTileHeight;
+  uint64_t macroTileColumnIndex = pos.x / macroTileWidth;
+  uint64_t macroTileIndex =
+      (macroTileRowIndex * macroTilesPerRow) + macroTileColumnIndex;
+  uint64_t macro_tile_offset = macroTileIndex * macroTileBytes;
+  uint64_t macroTilesPerSlice =
+      macroTilesPerRow * (paddedHeight / macroTileHeight);
+  uint64_t sliceBytes = macroTilesPerSlice * macroTileBytes;
+
+  uint32_t slice = pos.z;
+  uint64_t sliceOffset =
+      (tileSplitSlice + slicesPerTile * slice / tileThickness) * sliceBytes;
+  if (arraySlice != 0) {
+    slice = arraySlice;
+  }
+
+  uint64_t tileRowIndex = (pos.y / kMicroTileHeight) % bankHeight;
+  uint64_t tileColumnIndex = ((pos.x / kMicroTileWidth) / numPipes) % bankWidth;
+  uint64_t tileIndex = (tileRowIndex * bankWidth) + tileColumnIndex;
+  uint64_t tileOffset = tileIndex * tileBytes;
+
+  uint64_t bankSwizzle = bankSwizzleMask;
+  uint64_t pipeSwizzle = pipeSwizzleMask;
+
+  uint64_t pipeSliceRotation = 0;
+  switch (arrayMode) {
+  case kArrayMode3dTiledThin:
+  case kArrayMode3dTiledThick:
+  case kArrayMode3dTiledXThick:
+    pipeSliceRotation =
+        max(1UL, (numPipes / 2UL) - 1UL) * (slice / tileThickness);
+    break;
+  default:
+    break;
+  }
+  pipeSwizzle += pipeSliceRotation;
+  pipeSwizzle &= (numPipes - 1);
+  pipe = pipe ^ pipeSwizzle;
+
+  uint64_t sliceRotation = 0;
+  switch (arrayMode) {
+  case kArrayMode2dTiledThin:
+  case kArrayMode2dTiledThick:
+  case kArrayMode2dTiledXThick:
+    sliceRotation = ((numBanks / 2) - 1) * (slice / tileThickness);
+    break;
+  case kArrayMode3dTiledThin:
+  case kArrayMode3dTiledThick:
+  case kArrayMode3dTiledXThick:
+    sliceRotation = max(1UL, (numPipes / 2UL) - 1UL) * (slice / tileThickness) / numPipes;
+    break;
+  default:
+    break;
+  }
+  uint64_t tileSplitSliceRotation = 0;
+  switch (arrayMode) {
+  case kArrayMode2dTiledThin:
+  case kArrayMode3dTiledThin:
+  case kArrayMode2dTiledThinPrt:
+  case kArrayMode3dTiledThinPrt:
+    tileSplitSliceRotation = ((numBanks / 2) + 1) * tileSplitSlice;
+    break;
+  default:
+    break;
+  }
+  bank ^= bankSwizzle + sliceRotation;
+  bank ^= tileSplitSliceRotation;
+  bank &= (numBanks - 1);
+
+  uint64_t totalOffset =
+      (sliceOffset + macro_tile_offset + tileOffset) * 8 + elementOffset;
+  uint64_t bitOffset = totalOffset & 0x7;
+  totalOffset /= 8;
+
+  uint64_t pipeInterleaveOffset = totalOffset & pipeInterleaveMask;
+  uint64_t offset = totalOffset >> pipeInterleaveBits;
+
+  uint64_t finalByteOffset =
+      pipeInterleaveOffset | (pipe << (pipeInterleaveBits)) |
+      (bank << (pipeInterleaveBits + pipeBits)) |
+      (offset << (pipeInterleaveBits + pipeBits + bankBits));
+  return (finalByteOffset << 3) | bitOffset;
+}
+
+
 layout(binding=0) uniform Config {
     uint64_t srcAddress;
     uint64_t dstAddress;
     uvec2 dataSize;
     uint32_t tileMode;
+    uint32_t macroTileMode;
+    uint32_t dfmt;
     uint32_t numFragments;
     uint32_t bitsPerElement;
     uint32_t tiledSurfaceSize;
     uint32_t linearSurfaceSize;
+    uint32_t padding0;
+    uint32_t padding1;
 } config;

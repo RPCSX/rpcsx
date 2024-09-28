@@ -252,5 +252,56 @@ constexpr ZFormat getZFormat(DataFormat dfmt) {
 constexpr StencilFormat getStencilFormat(DataFormat dfmt) {
   return dfmt == kDataFormat8 ? kStencil8 : kStencilInvalid;
 }
-} // namespace gnm
 
+constexpr DataFormat getDataFormat(ZFormat format) {
+  switch (format) {
+  case kZFormat32Float:
+    return kDataFormat32;
+  case kZFormat16:
+    return kDataFormat16;
+
+  case kZFormatInvalid:
+    break;
+  }
+
+  return kDataFormatInvalid;
+}
+
+constexpr NumericFormat getNumericFormat(ZFormat format) {
+  switch (format) {
+  case kZFormat32Float:
+    return kNumericFormatFloat;
+  case kZFormat16:
+    return kNumericFormatUInt;
+
+  case kZFormatInvalid:
+    break;
+  }
+
+  return kNumericFormatUNorm;
+}
+
+constexpr DataFormat getDataFormat(StencilFormat format) {
+  switch (format) {
+  case kStencil8:
+    return kDataFormat8;
+
+  case kStencilInvalid:
+    break;
+  }
+
+  return kDataFormatInvalid;
+}
+
+constexpr NumericFormat getNumericFormat(StencilFormat format) {
+  switch (format) {
+  case kStencil8:
+    return kNumericFormatSInt;
+
+  case kStencilInvalid:
+    break;
+  }
+
+  return kNumericFormatUNorm;
+}
+} // namespace gnm

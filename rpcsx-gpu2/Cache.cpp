@@ -232,10 +232,25 @@ struct CachedIndexBuffer : Cache::Entry {
   gnm::PrimitiveType primType;
 };
 
+constexpr VkImageAspectFlags toAspect(ImageKind kind) {
+  switch (kind) {
+  case ImageKind::Color:
+    return VK_IMAGE_ASPECT_COLOR_BIT;
+  case ImageKind::Depth:
+    return VK_IMAGE_ASPECT_DEPTH_BIT;
+  case ImageKind::Stencil:
+    return VK_IMAGE_ASPECT_STENCIL_BIT;
+  }
+
+  return VK_IMAGE_ASPECT_NONE;
+}
+
 struct CachedImage : Cache::Entry {
   vk::Image image;
+  ImageKind kind;
   SurfaceInfo info;
   TileMode acquiredTileMode;
+  gnm::DataFormat acquiredDfmt{};
 
   void flush(Cache::Tag &tag, Scheduler &scheduler, std::uint64_t beginAddress,
              std::uint64_t endAddress) override {
@@ -246,7 +261,7 @@ struct CachedImage : Cache::Entry {
     // std::printf("writing image to buffer to %lx\n", baseAddress);
 
     VkImageSubresourceRange subresourceRange{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .aspectMask = toAspect(kind),
         .baseMipLevel = 0,
         .levelCount = image.getMipLevels(),
         .baseArrayLayer = 0,
@@ -270,7 +285,7 @@ struct CachedImage : Cache::Entry {
               mipLevel > 0 ? 0 : std::max(info.pitch >> mipLevel, 1u),
           .imageSubresource =
               {
-                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                  .aspectMask = toAspect(kind),
                   .mipLevel = mipLevel,
                   .baseArrayLayer = 0,
                   .layerCount = image.getArrayLayers(),
@@ -287,9 +302,9 @@ struct CachedImage : Cache::Entry {
                              VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                              transferBuffer.getHandle(), 1, &region);
 
-      tiler.tile(scheduler, info, acquiredTileMode, transferBuffer.getAddress(),
-                 tiledBuffer.deviceAddress, mipLevel, 0,
-                 image.getArrayLayers());
+      tiler.tile(scheduler, info, acquiredTileMode, acquiredDfmt,
+                 transferBuffer.getAddress(), tiledBuffer.deviceAddress,
+                 mipLevel, 0, image.getArrayLayers());
     }
 
     transitionImageLayout(scheduler.getCommandBuffer(), image,
@@ -307,7 +322,8 @@ struct CachedImageView : Cache::Entry {
 
 ImageKey ImageKey::createFrom(const gnm::TBuffer &buffer) {
   return {
-      .address = buffer.address(),
+      .readAddress = buffer.address(),
+      .writeAddress = buffer.address(),
       .type = buffer.type,
       .dfmt = buffer.dfmt,
       .nfmt = buffer.nfmt,
@@ -324,6 +340,7 @@ ImageKey ImageKey::createFrom(const gnm::TBuffer &buffer) {
       .mipCount = buffer.last_level - buffer.base_level + 1u,
       .baseArrayLayer = static_cast<std::uint32_t>(buffer.base_array),
       .arrayLayerCount = buffer.last_array - buffer.base_array + 1u,
+      .kind = ImageKind::Color,
       .pow2pad = buffer.pow2pad != 0,
   };
 }
@@ -714,7 +731,7 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
   if ((access & Access::Read) != Access::None) {
     auto tiledBuffer =
-        getBuffer(key.address, surfaceInfo.totalSize, Access::Read);
+        getBuffer(key.readAddress, surfaceInfo.totalSize, Access::Read);
 
     auto &tiler = mParent->mDevice->tiler;
     auto detiledBuffer =
@@ -722,7 +739,7 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                              VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR |
                                  VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR);
     VkImageSubresourceRange subresourceRange{
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .aspectMask = toAspect(key.kind),
         .baseMipLevel = key.baseMipLevel,
         .levelCount = key.mipCount,
         .baseArrayLayer = key.baseArrayLayer,
@@ -756,8 +773,8 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
             .size = info.linearSize * key.arrayLayerCount,
         });
       } else {
-        tiler.detile(*mScheduler, surfaceInfo, key.tileMode, srcAddress,
-                     dstAddress, mipLevel, 0, key.arrayLayerCount);
+        tiler.detile(*mScheduler, surfaceInfo, key.tileMode, key.dfmt,
+                     srcAddress, dstAddress, mipLevel, 0, key.arrayLayerCount);
       }
 
       regions.push_back({
@@ -766,7 +783,7 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
               mipLevel > 0 ? 0 : std::max(key.pitch >> mipLevel, 1u),
           .imageSubresource =
               {
-                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                  .aspectMask = toAspect(key.kind),
                   .mipLevel = mipLevel,
                   .baseArrayLayer = key.baseArrayLayer,
                   .layerCount = key.arrayLayerCount,
@@ -808,8 +825,13 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
   auto cached = std::make_shared<CachedImage>();
   cached->image = std::move(image);
   cached->info = std::move(surfaceInfo);
-  cached->baseAddress = key.address;
+  cached->baseAddress = (access & Access::Write) != Access::None
+                            ? key.writeAddress
+                            : key.readAddress;
+  cached->kind = key.kind;
   cached->acquiredAccess = access;
+  cached->acquiredTileMode = key.tileMode;
+  cached->acquiredDfmt = key.dfmt;
   mAcquiredResources.push_back(cached);
 
   return {.handle = cached->image.getHandle()};
@@ -827,14 +849,16 @@ Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
                                   .a = gnm::toVkComponentSwizzle(key.A),
                               },
                               {
-                                  .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                  .aspectMask = toAspect(key.kind),
                                   .baseMipLevel = key.baseMipLevel,
                                   .levelCount = key.mipCount,
                                   .baseArrayLayer = key.baseArrayLayer,
                                   .layerCount = key.arrayLayerCount,
                               });
   auto cached = std::make_shared<CachedImageView>();
-  cached->baseAddress = key.address;
+  cached->baseAddress = (access & Access::Write) != Access::None
+                            ? key.writeAddress
+                            : key.readAddress;
   cached->acquiredAccess = access;
   cached->view = std::move(result);
 

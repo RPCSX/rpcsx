@@ -127,8 +127,6 @@ readVop2Inst(GcnInstruction &inst, std::uint64_t &address,
 
   if (op == ir::vop2::MADMK_F32 || op == ir::vop2::MADAK_F32) {
     inst.addOperand(createImmediateGcnOperand(address));
-  } else if (op == ir::vop2::MAC_F32) {
-    inst.addOperand(createVgprGcnOperand(vdst).withR());
   }
 }
 
@@ -343,8 +341,6 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
                           .withNeg(((neg >> 2) & 1) != 0));
     } else if (op == ir::vop3::MADMK_F32 || op == ir::vop3::MADAK_F32) {
       inst.addOperand(createImmediateGcnOperand(address));
-    } else if (op == ir::vop3::MAC_F32) {
-      inst.addOperand(createSgprGcnOperand(address, vdst).withRW());
     }
   } else if (op >= 384 && op < ir::vop1::OpCount + 384) {
     // vop1
@@ -527,14 +523,14 @@ readMtbufInst(GcnInstruction &inst, std::uint64_t &address,
   inst.op = op;
   inst.addOperand(createVgprGcnOperand(vdata).withAccess(dataAccess));
 
-  if (idxen) {
-    inst.addOperand(createVgprGcnOperand(vaddr).withR());
+  if (offen) {
+    inst.addOperand(createVgprGcnOperand(vaddr + (idxen ? 1 : 0)).withR());
   } else {
     inst.addOperand(GcnOperand::createConstant(0u));
   }
 
-  if (offen) {
-    inst.addOperand(createVgprGcnOperand(vaddr + (idxen ? 1 : 0)).withR());
+  if (idxen) {
+    inst.addOperand(createVgprGcnOperand(vaddr).withR());
   } else {
     inst.addOperand(GcnOperand::createConstant(0u));
   }

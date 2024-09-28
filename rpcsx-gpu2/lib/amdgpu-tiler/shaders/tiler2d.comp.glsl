@@ -18,17 +18,23 @@ void main() {
     uvec3 pos = gl_GlobalInvocationID;
     uint64_t tiledSliceOffset = 0;
     uint64_t linearSliceOffset = 0;
+    int arraySlice = 0;
+    int fragmentIndex = 0;
     if (config.tiledSurfaceSize != 0) {
         tiledSliceOffset = pos.z * config.tiledSurfaceSize;
         linearSliceOffset = pos.z * config.linearSurfaceSize;
         pos.z = 0;
     }
 
-    uint64_t tiledByteOffset = getTiledBitOffset1D(
+    uint64_t tiledByteOffset = getTiledBitOffset2D(
+        config.dfmt,
         config.tileMode,
-        pos,
+        config.macroTileMode,
         config.dataSize,
-        config.bitsPerElement
+        arraySlice,
+        config.numFragments,
+        pos,
+        fragmentIndex
     ) / 8;
 
     tiledByteOffset += tiledSliceOffset;

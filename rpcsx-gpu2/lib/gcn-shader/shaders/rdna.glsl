@@ -15,6 +15,7 @@
 #extension GL_EXT_shader_atomic_float2 : require
 #extension GL_EXT_nonuniform_qualifier: require
 #extension GL_EXT_samplerless_texture_functions : require
+#extension GL_EXT_debug_printf : enable
 
 #define FLT_MAX 3.402823466e+38
 #define FLT_MIN 1.175494351e-38
@@ -235,6 +236,8 @@ float32_t ps_input_vgpr(int32_t index, f32vec4 fragCoord, bool frontFace) {
     case kPsVGprInputPosFixed:
         return 0;
     }
+
+    // debugPrintfEXT("ps_input_vgpr: invalid index %d", index);
     return 0;
 }
 
@@ -385,8 +388,10 @@ uint32_t v_cndmask_b32(uint32_t x, uint32_t y, uint64_t mask) {
 float32_t v_add_f32(float32_t x, float32_t y) { return x + y; }
 float32_t v_sub_f32(float32_t x, float32_t y) { return x - y; }
 float32_t v_subrev_f32(float32_t x, float32_t y) { return y - x; }
-float32_t v_mac_legacy_f32(float32_t x, float32_t y, float32_t dst) {
-    return x == 0 || y == 0 ? dst : fma(x, y, dst);
+void v_mac_legacy_f32(inout float32_t dst, float32_t x, float32_t y) {
+    if (!(x == 0 || y == 0)) {
+        dst = fma(x, y, dst);
+    }
 }
 float32_t v_mul_legacy_f32(float32_t x, float32_t y) {
     return x == 0 || y == 0 ? 0 : x * y;
@@ -425,7 +430,7 @@ uint32_t v_and_b32(uint32_t x, uint32_t y) { return x & y; }
 uint32_t v_or_b32(uint32_t x, uint32_t y) { return x | y; }
 uint32_t v_xor_b32(uint32_t x, uint32_t y) { return x ^ y; }
 uint32_t v_bfm_b32(uint32_t x, uint32_t y) { return ((1 << (x & 0x1f)) - 1) << (y & 0x1f); }
-float32_t v_mac_f32(float32_t x, float32_t y, float32_t dst) { return fma(x, y, dst); }
+void v_mac_f32(inout float32_t dst, float32_t x, float32_t y) { dst = fma(x, y, dst); }
 float32_t v_madmk_f32(float32_t x, float32_t y, float32_t k) { return fma(x, k, y); }
 float32_t v_madak_f32(float32_t x, float32_t y, float32_t k) { return fma(x, y, k); }
 uint32_t v_bcnt_u32_b32(uint32_t x) { return bitCount(x); }
@@ -2574,6 +2579,8 @@ void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, 
     default:
         return;
     }
+
+    // debugPrintfEXT("image_sample: textureType: %u, coord: %v3f, result: %v4f, dmask: %u", textureType, vaddr, result, dmask);
 
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {

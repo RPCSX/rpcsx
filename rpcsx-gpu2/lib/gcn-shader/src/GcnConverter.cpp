@@ -1422,12 +1422,6 @@ static void createInitialValues(GcnConverter &converter,
 
   if (stage != gcn::Stage::Cs) {
     context.writeReg(loc, builder, gcn::RegId::Exec, 0, context.imm64(1));
-    // context.writeReg(loc, builder, gcn::RegId::ThreadId, 0,
-    // context.imm32(0));
-
-    replaceVariableWithConstant(
-        context.getOrCreateRegisterVariable(gcn::RegId::ThreadId),
-        context.imm32(0));
   }
 
   if (stage == gcn::Stage::VsVs || stage == gcn::Stage::GsVs ||
@@ -1561,6 +1555,12 @@ gcn::convertToSpv(Context &context, ir::Region body,
   createInitialValues(converter, env, stage, result.info, body);
   instructionsToSpv(converter, importer, stage, env, semanticInfo, result.info,
                     body);
+  if (stage != gcn::Stage::Cs) {
+    replaceVariableWithConstant(
+        context.getOrCreateRegisterVariable(gcn::RegId::ThreadId),
+        context.imm32(0));
+  }
+
   createEntryPoint(context, stage, std::move(body));
 
   for (int userSgpr = std::countr_zero(context.requiredUserSgprs);

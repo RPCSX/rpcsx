@@ -1,6 +1,7 @@
 #include "Renderer.hpp"
 #include "Device.hpp"
 #include "gnm/descriptors.hpp"
+#include "gnm/gnm.hpp"
 #include "rx/MemoryTable.hpp"
 
 #include <amdgpu/tiler.hpp>
@@ -227,7 +228,8 @@ struct ShaderResources : eval::Evaluator {
       bufferMemoryTable.map(*pointerBase,
                             *pointerBase + *pointerOffset + pointer.size,
                             Access::Read);
-      resourceSlotToAddress.push_back({slotOffset + pointer.resourceSlot, *pointerBase});
+      resourceSlotToAddress.push_back(
+          {slotOffset + pointer.resourceSlot, *pointerBase});
     }
 
     for (auto &bufferRes : res.buffers) {
@@ -352,7 +354,8 @@ struct ShaderResources : eval::Evaluator {
         sSampler.force_unorm_coords = true;
       }
 
-      slotResources[slotOffset + sampler.resourceSlot] = samplerResources.size();
+      slotResources[slotOffset + sampler.resourceSlot] =
+          samplerResources.size();
       samplerResources.push_back(
           cacheTag->getSampler(amdgpu::SamplerKey::createFrom(sSampler)));
     }
@@ -503,9 +506,76 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   VkRect2D viewPortScissors[8]{};
   unsigned renderTargets = 0;
 
+  VkRenderingAttachmentInfo depthAttachment{};
+  VkRenderingAttachmentInfo stencilAttachment{};
+
+  auto depthAccess = Access::None;
+  auto stencilAccess = Access::None;
+
+  if (pipe.context.dbDepthControl.depthEnable) {
+    if (!pipe.context.dbRenderControl.depthClearEnable) {
+      depthAccess |= Access::Read;
+    }
+    if (!pipe.context.dbDepthView.zReadOnly) {
+      depthAccess |= Access::Write;
+    }
+  }
+
+  if (pipe.context.dbDepthControl.stencilEnable) {
+    if (!pipe.context.dbRenderControl.stencilClearEnable) {
+      stencilAccess |= Access::Read;
+    }
+    if (!pipe.context.dbDepthView.stencilReadOnly) {
+      stencilAccess |= Access::Write;
+    }
+  }
+
+  if (depthAccess != Access::None) {
+    auto viewPortScissor = pipe.context.paScScreenScissor;
+    auto viewPortRect = gnm::toVkRect2D(viewPortScissor);
+
+    auto imageView = cacheTag.getImageView(
+        {{
+            .readAddress = pipe.context.dbZReadBase,
+            .writeAddress = pipe.context.dbZWriteBase,
+            .dfmt = gnm::getDataFormat(pipe.context.dbZInfo.format),
+            .nfmt = gnm::getNumericFormat(pipe.context.dbZInfo.format),
+            .extent =
+                {
+                    .width = viewPortRect.extent.width,
+                    .height = viewPortRect.extent.height,
+                    .depth = 1,
+                },
+            .pitch = viewPortRect.extent.width,
+            .kind = ImageKind::Depth,
+        }},
+        depthAccess);
+
+    depthAttachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = imageView.handle,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+    };
+
+    if ((depthAccess & Access::Read) == Access::None) {
+      depthAttachment.clearValue.depthStencil.depth = pipe.context.dbDepthClear;
+      depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
+
+    if ((depthAccess & Access::Write) == Access::None) {
+      depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
+    }
+  }
+
   for (auto &cbColor : pipe.context.cbColor) {
     if (targetMask == 0) {
       break;
+    }
+
+    if (cbColor.info.dfmt == gnm::kDataFormatInvalid) {
+      continue;
     }
 
     auto viewPortScissor = pipe.context.paScScreenScissor;
@@ -533,7 +603,9 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     ImageViewKey renderTargetInfo{};
     renderTargetInfo.type = gnm::TextureType::Dim2D;
     renderTargetInfo.pitch = vkViewPortScissor.extent.width;
-    renderTargetInfo.address = static_cast<std::uint64_t>(cbColor.base) << 8;
+    renderTargetInfo.readAddress = static_cast<std::uint64_t>(cbColor.base)
+                                   << 8;
+    renderTargetInfo.writeAddress = renderTargetInfo.readAddress;
     renderTargetInfo.extent.width = vkViewPortScissor.extent.width;
     renderTargetInfo.extent.height = vkViewPortScissor.extent.height;
     renderTargetInfo.extent.depth = 1;
@@ -545,9 +617,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     renderTargetInfo.tileMode =
         cbColor.info.linearGeneral
             ? TileMode{.raw = 0}
-            : getDefaultTileModes()[/*cbColor.attrib.tileModeIndex*/
-                                    13];
-
+            : getDefaultTileModes()[cbColor.attrib.tileModeIndex];
     // std::printf("draw to %lx\n", renderTargetInfo.address);
 
     auto access = Access::None;
@@ -613,6 +683,10 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     targetMask >>= 4;
   }
 
+  if (renderTargets == 0) {
+    return;
+  }
+
   //   if (pipe.context.cbTargetMask == 0) {
   //     return;
   //   }
@@ -654,7 +728,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         .vgprCount = pgm.rsrc1.getVGprCount(),
         .sgprCount = pgm.rsrc1.getSGprCount(),
         .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
-        .supportsBarycentric = vk::context->supportsBarycentric,
+        // .supportsBarycentric = vk::context->supportsBarycentric,
         .supportsInt8 = vk::context->supportsInt8,
         .supportsInt64Atomics = vk::context->supportsInt64Atomics,
     };
@@ -754,29 +828,33 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         break;
       case shader::gcn::ConfigType::ViewPortOffsetX:
         configPtr[index] = std::bit_cast<std::uint32_t>(
-            pipe.context.paClVports[0].xOffset / (viewPorts[0].width / 2.f) -
+            pipe.context.paClVports[slot.data].xOffset /
+                (viewPorts[0].width / 2.f) -
             1);
         break;
       case shader::gcn::ConfigType::ViewPortOffsetY:
         configPtr[index] = std::bit_cast<std::uint32_t>(
-            pipe.context.paClVports[0].yOffset / (viewPorts[0].height / 2.f) -
+            pipe.context.paClVports[slot.data].yOffset /
+                (viewPorts[slot.data].height / 2.f) -
             1);
         break;
       case shader::gcn::ConfigType::ViewPortOffsetZ:
-        configPtr[index] =
-            std::bit_cast<std::uint32_t>(pipe.context.paClVports[0].zOffset);
+        configPtr[index] = std::bit_cast<std::uint32_t>(
+            pipe.context.paClVports[slot.data].zOffset);
         break;
       case shader::gcn::ConfigType::ViewPortScaleX:
         configPtr[index] = std::bit_cast<std::uint32_t>(
-            pipe.context.paClVports[0].xScale / (viewPorts[0].width / 2.f));
+            pipe.context.paClVports[slot.data].xScale /
+            (viewPorts[slot.data].width / 2.f));
         break;
       case shader::gcn::ConfigType::ViewPortScaleY:
         configPtr[index] = std::bit_cast<std::uint32_t>(
-            pipe.context.paClVports[0].yScale / (viewPorts[0].height / 2.f));
+            pipe.context.paClVports[slot.data].yScale /
+            (viewPorts[slot.data].height / 2.f));
         break;
       case shader::gcn::ConfigType::ViewPortScaleZ:
-        configPtr[index] =
-            std::bit_cast<std::uint32_t>(pipe.context.paClVports[0].zScale);
+        configPtr[index] = std::bit_cast<std::uint32_t>(
+            pipe.context.paClVports[slot.data].zScale);
         break;
       case shader::gcn::ConfigType::PsInputVGpr:
         if (slot.data > psVgprInputs) {
@@ -882,8 +960,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
       .layerCount = 1,
       .colorAttachmentCount = renderTargets,
       .pColorAttachments = colorAttachments,
-      //   .pDepthAttachment = &depthAttachment,
-      //   .pStencilAttachment = &stencilAttachment,
+      .pDepthAttachment = &depthAttachment,
+      // .pStencilAttachment = &stencilAttachment,
   };
 
   vkCmdBeginRendering(commandBuffer, &renderInfo);
@@ -1092,7 +1170,7 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
   ImageViewKey framebuffer{};
   framebuffer.type = gnm::TextureType::Dim2D;
   framebuffer.pitch = imageExtent.width;
-  framebuffer.address = address;
+  framebuffer.readAddress = address;
   framebuffer.extent.width = imageExtent.width;
   framebuffer.extent.height = imageExtent.height;
   framebuffer.extent.depth = 1;

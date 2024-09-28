@@ -1,11 +1,11 @@
 #pragma once
 
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <cstdlib>
 #include <gnm/constants.hpp>
 #include <gnm/descriptors.hpp>
-#include <bit>
 
 namespace amdgpu {
 inline constexpr uint32_t kMicroTileWidth = 8;
@@ -494,6 +494,28 @@ constexpr std::uint32_t getPipeCount(PipeConfig pipeConfig) {
   default:
     std::abort();
   }
+}
+
+constexpr int computeMacroTileIndex(amdgpu::TileMode tileMode,
+                                    uint32_t bitsPerElement,
+                                    uint32_t numFragmentsPerPixel) {
+  auto arrayMode = tileMode.arrayMode();
+  auto microTileMode = tileMode.microTileMode();
+  auto sampleSplitHw = tileMode.sampleSplit();
+  auto tileSplitHw = tileMode.tileSplit();
+
+  uint32_t tileThickness = getMicroTileThickness(arrayMode);
+  uint32_t tileBytes1x =
+      bitsPerElement * kMicroTileWidth * kMicroTileHeight * tileThickness / 8;
+  uint32_t sampleSplit = 1 << sampleSplitHw;
+  uint32_t colorTileSplit = std::max(256U, sampleSplit * tileBytes1x);
+  uint32_t tileSplit = (microTileMode == amdgpu::kMicroTileModeDepth)
+                           ? (64UL << tileSplitHw)
+                           : colorTileSplit;
+  uint32_t tileSplitC = std::min(kDramRowSize, tileSplit);
+  uint32_t tileBytes = std::min(tileSplitC, numFragmentsPerPixel * tileBytes1x);
+  uint32_t mtmIndex = std::countr_zero(tileBytes / 64);
+  return isPrt(arrayMode) ? mtmIndex + 8 : mtmIndex;
 }
 
 SurfaceInfo computeSurfaceInfo(TileMode tileMode, gnm::TextureType type,
