@@ -34,5 +34,5 @@ PUBLIC
 
 install(TARGETS rpcsx-gpu2 RUNTIME DESTINATION bin)
 set_target_properties(rpcsx-gpu2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
+target_base_address(rpcsx-gpu2 0x0000060000000000)
 add_subdirectory(lib)
