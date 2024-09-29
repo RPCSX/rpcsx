@@ -4,6 +4,7 @@
 #include "gnm/vulkan.hpp"
 #include "rx/MemoryTable.hpp"
 #include "rx/die.hpp"
+#include "shader/Evaluator.hpp"
 #include "shader/GcnConverter.hpp"
 #include "shader/dialect.hpp"
 #include "shader/glsl.hpp"
@@ -12,10 +13,12 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
+#include <print>
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
 using namespace amdgpu;
+using namespace shader;
 
 static bool isPrimRequiresConversion(gnm::PrimitiveType primType) {
   switch (primType) {
@@ -81,21 +84,274 @@ static ConverterFn *getPrimConverterFn(gnm::PrimitiveType primType,
   }
 }
 
-static VkShaderStageFlagBits shaderStageToVk(shader::gcn::Stage stage) {
+void Cache::ShaderResources::loadResources(
+    gcn::Resources &res, std::span<const std::uint32_t> userSgprs) {
+  this->userSgprs = userSgprs;
+  for (auto &pointer : res.pointers) {
+    auto pointerBase = eval(pointer.base).zExtScalar();
+    auto pointerOffset = eval(pointer.offset).zExtScalar();
+
+    if (!pointerBase || !pointerOffset) {
+      res.dump();
+      rx::die("failed to evaluate pointer");
+    }
+
+    bufferMemoryTable.map(*pointerBase,
+                          *pointerBase + *pointerOffset + pointer.size,
+                          Access::Read);
+    resourceSlotToAddress.push_back(
+        {slotOffset + pointer.resourceSlot, *pointerBase});
+  }
+
+  for (auto &bufferRes : res.buffers) {
+    auto word0 = eval(bufferRes.words[0]).zExtScalar();
+    auto word1 = eval(bufferRes.words[1]).zExtScalar();
+    auto word2 = eval(bufferRes.words[2]).zExtScalar();
+    auto word3 = eval(bufferRes.words[3]).zExtScalar();
+
+    if (!word0 || !word1 || !word2 || !word3) {
+      res.dump();
+      rx::die("failed to evaluate V#");
+    }
+
+    gnm::VBuffer buffer{};
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer), &*word0,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 1, &*word1,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 2, &*word2,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 3, &*word3,
+                sizeof(std::uint32_t));
+
+    bufferMemoryTable.map(buffer.address(), buffer.address() + buffer.size(),
+                          bufferRes.access);
+    resourceSlotToAddress.push_back(
+        {slotOffset + bufferRes.resourceSlot, buffer.address()});
+  }
+
+  for (auto &texture : res.textures) {
+    auto word0 = eval(texture.words[0]).zExtScalar();
+    auto word1 = eval(texture.words[1]).zExtScalar();
+    auto word2 = eval(texture.words[2]).zExtScalar();
+    auto word3 = eval(texture.words[3]).zExtScalar();
+
+    if (!word0 || !word1 || !word2 || !word3) {
+      res.dump();
+      rx::die("failed to evaluate 128 bit T#");
+    }
+
+    gnm::TBuffer buffer{};
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer), &*word0,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 1, &*word1,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 2, &*word2,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 3, &*word3,
+                sizeof(std::uint32_t));
+
+    if (texture.words[4] != nullptr) {
+      auto word4 = eval(texture.words[4]).zExtScalar();
+      auto word5 = eval(texture.words[5]).zExtScalar();
+      auto word6 = eval(texture.words[6]).zExtScalar();
+      auto word7 = eval(texture.words[7]).zExtScalar();
+
+      if (!word4 || !word5 || !word6 || !word7) {
+        res.dump();
+        rx::die("failed to evaluate 256 bit T#");
+      }
+
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 4, &*word4,
+                  sizeof(std::uint32_t));
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 5, &*word5,
+                  sizeof(std::uint32_t));
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 6, &*word6,
+                  sizeof(std::uint32_t));
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 7, &*word7,
+                  sizeof(std::uint32_t));
+    }
+
+    std::vector<amdgpu::Cache::ImageView> *resources = nullptr;
+
+    switch (buffer.type) {
+    case gnm::TextureType::Array1D:
+    case gnm::TextureType::Dim1D:
+      resources = &imageResources[0];
+      break;
+    case gnm::TextureType::Dim2D:
+    case gnm::TextureType::Array2D:
+    case gnm::TextureType::Msaa2D:
+    case gnm::TextureType::MsaaArray2D:
+    case gnm::TextureType::Cube:
+      resources = &imageResources[1];
+      break;
+    case gnm::TextureType::Dim3D:
+      resources = &imageResources[2];
+      break;
+    }
+
+    rx::dieIf(resources == nullptr,
+              "ShaderResources: unexpected texture type %u",
+              static_cast<unsigned>(buffer.type));
+
+    slotResources[slotOffset + texture.resourceSlot] = resources->size();
+    resources->push_back(cacheTag->getImageView(
+        amdgpu::ImageKey::createFrom(buffer), texture.access));
+  }
+
+  for (auto &sampler : res.samplers) {
+    auto word0 = eval(sampler.words[0]).zExtScalar();
+    auto word1 = eval(sampler.words[1]).zExtScalar();
+    auto word2 = eval(sampler.words[2]).zExtScalar();
+    auto word3 = eval(sampler.words[3]).zExtScalar();
+
+    if (!word0 || !word1 || !word2 || !word3) {
+      res.dump();
+      rx::die("failed to evaluate S#");
+    }
+
+    gnm::SSampler sSampler{};
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&sSampler), &*word0,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&sSampler) + 1, &*word1,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&sSampler) + 2, &*word2,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&sSampler) + 3, &*word3,
+                sizeof(std::uint32_t));
+
+    if (sampler.unorm) {
+      sSampler.force_unorm_coords = true;
+    }
+
+    slotResources[slotOffset + sampler.resourceSlot] = samplerResources.size();
+    samplerResources.push_back(
+        cacheTag->getSampler(amdgpu::SamplerKey::createFrom(sSampler)));
+  }
+
+  slotOffset += res.slots;
+}
+
+void Cache::ShaderResources::buildMemoryTable(MemoryTable &memoryTable) {
+  memoryTable.count = 0;
+
+  for (auto p : bufferMemoryTable) {
+    auto size = p.endAddress - p.beginAddress;
+    auto buffer = cacheTag->getBuffer(p.beginAddress, size, p.payload);
+
+    auto memoryTableSlot = memoryTable.count;
+    memoryTable.slots[memoryTable.count++] = {
+        .address = p.beginAddress,
+        .size = size,
+        .flags = static_cast<uint8_t>(p.payload),
+        .deviceAddress = buffer.deviceAddress,
+    };
+
+    for (auto [slot, address] : resourceSlotToAddress) {
+      if (address >= p.beginAddress && address < p.endAddress) {
+        slotResources[slot] = memoryTableSlot;
+      }
+    }
+  }
+}
+
+std::uint32_t Cache::ShaderResources::getResourceSlot(std::uint32_t id) {
+  if (auto it = slotResources.find(id); it != slotResources.end()) {
+    return it->second;
+  }
+  return -1;
+}
+
+eval::Value
+Cache::ShaderResources::eval(ir::InstructionId instId,
+                             std::span<const ir::Operand> operands) {
+  if (instId == ir::amdgpu::POINTER) {
+    auto type = operands[0].getAsValue();
+    auto loadSize = *operands[1].getAsInt32();
+    auto base = eval(operands[2]).zExtScalar();
+    auto offset = eval(operands[3]).zExtScalar();
+
+    if (!base || !offset) {
+      rx::die("failed to evaluate pointer dependency");
+    }
+
+    eval::Value result;
+    auto address = *base + *offset;
+
+    switch (loadSize) {
+    case 1:
+      result = readPointer<std::uint8_t>(address);
+      break;
+    case 2:
+      result = readPointer<std::uint16_t>(address);
+      break;
+    case 4:
+      result = readPointer<std::uint32_t>(address);
+      break;
+    case 8:
+      result = readPointer<std::uint64_t>(address);
+      break;
+    case 12:
+      result = readPointer<u32vec3>(address);
+      break;
+    case 16:
+      result = readPointer<u32vec4>(address);
+      break;
+    case 32:
+      result = readPointer<std::array<std::uint32_t, 8>>(address);
+      break;
+    default:
+      rx::die("unexpected pointer load size");
+    }
+
+    return result;
+  }
+
+  if (instId == ir::amdgpu::VBUFFER) {
+    rx::die("resource depends on buffer value");
+  }
+
+  if (instId == ir::amdgpu::TBUFFER) {
+    rx::die("resource depends on texture value");
+  }
+
+  if (instId == ir::amdgpu::SAMPLER) {
+    rx::die("resource depends on sampler value");
+  }
+
+  if (instId == ir::amdgpu::USER_SGPR) {
+    auto index = static_cast<std::uint32_t>(*operands[1].getAsInt32());
+    rx::dieIf(index >= userSgprs.size(), "out of user sgprs");
+    return userSgprs[index];
+  }
+
+  if (instId == ir::amdgpu::IMM) {
+    auto address = static_cast<std::uint64_t>(*operands[1].getAsInt64());
+
+    std::uint32_t result;
+    cacheTag->readMemory(&result, address, sizeof(result));
+    return result;
+  }
+
+  return Evaluator::eval(instId, operands);
+}
+
+static VkShaderStageFlagBits shaderStageToVk(gcn::Stage stage) {
   switch (stage) {
-  case shader::gcn::Stage::Ps:
+  case gcn::Stage::Ps:
     return VK_SHADER_STAGE_FRAGMENT_BIT;
-  case shader::gcn::Stage::VsVs:
+  case gcn::Stage::VsVs:
     return VK_SHADER_STAGE_VERTEX_BIT;
-  // case shader::gcn::Stage::VsEs:
-  // case shader::gcn::Stage::VsLs:
-  case shader::gcn::Stage::Cs:
+  // case gcn::Stage::VsEs:
+  // case gcn::Stage::VsLs:
+  case gcn::Stage::Cs:
     return VK_SHADER_STAGE_COMPUTE_BIT;
-    // case shader::gcn::Stage::Gs:
-    // case shader::gcn::Stage::GsVs:
-    // case shader::gcn::Stage::Hs:
-    // case shader::gcn::Stage::DsVs:
-    // case shader::gcn::Stage::DsEs:
+    // case gcn::Stage::Gs:
+    // case gcn::Stage::GsVs:
+    // case gcn::Stage::Hs:
+    // case gcn::Stage::DsVs:
+    // case gcn::Stage::DsEs:
 
   default:
     rx::die("unsupported shader stage %u", int(stage));
@@ -200,7 +456,7 @@ struct Cache::Entry {
 struct CachedShader : Cache::Entry {
   std::uint64_t magic;
   VkShaderEXT handle;
-  shader::gcn::ShaderInfo info;
+  gcn::ShaderInfo info;
   std::vector<std::pair<std::uint64_t, std::vector<std::byte>>> usedMemory;
 
   ~CachedShader() {
@@ -395,16 +651,6 @@ ImageKey ImageKey::createFrom(const gnm::TBuffer &buffer) {
   };
 }
 
-ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &buffer) {
-  ImageViewKey result{};
-  static_cast<ImageKey &>(result) = ImageKey::createFrom(buffer);
-  result.R = buffer.dst_sel_x;
-  result.G = buffer.dst_sel_y;
-  result.B = buffer.dst_sel_z;
-  result.A = buffer.dst_sel_w;
-  return result;
-}
-
 SamplerKey SamplerKey::createFrom(const gnm::SSampler &sampler) {
   float lodBias = ((std::int16_t(sampler.lod_bias) << 2) >> 2) / float(256.f);
   // FIXME: lodBias can be scaled by gnm::TBuffer
@@ -433,17 +679,17 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
   auto stage = shaderStageToVk(key.stage);
   if (auto result = findShader(key, dependedKey)) {
     auto cachedShader = static_cast<CachedShader *>(result.get());
-    mAcquiredResources.push_back(result);
+    mStorage->mAcquiredResources.push_back(result);
     return {cachedShader->handle, &cachedShader->info, stage};
   }
 
   auto vmId = mParent->mVmIm;
 
-  std::optional<shader::gcn::ConvertedShader> converted;
+  std::optional<gcn::ConvertedShader> converted;
 
   {
-    shader::gcn::Context context;
-    auto deserialized = shader::gcn::deserialize(
+    gcn::Context context;
+    auto deserialized = gcn::deserialize(
         context, key.env, mParent->mDevice->gcnSemantic, key.address,
         [vmId](std::uint64_t address) -> std::uint32_t {
           return *RemoteMemory{vmId}.getPointer<std::uint32_t>(address);
@@ -451,9 +697,9 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
 
     // deserialized.print(std::cerr, context.ns);
 
-    converted = shader::gcn::convertToSpv(
-        context, deserialized, mParent->mDevice->gcnSemanticModuleInfo,
-        key.stage, key.env);
+    converted = gcn::convertToSpv(context, deserialized,
+                                  mParent->mDevice->gcnSemanticModuleInfo,
+                                  key.stage, key.env);
     if (!converted) {
       return {};
     }
@@ -510,7 +756,7 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
   }
 
   mParent->mShaders.map(key.address, key.address + 8, result);
-  mAcquiredResources.push_back(result);
+  mStorage->mAcquiredResources.push_back(result);
   return {handle, &result->info, stage};
 }
 
@@ -602,7 +848,7 @@ Cache::Buffer Cache::Tag::getBuffer(std::uint64_t address, std::uint64_t size,
   cached->tagId =
       (access & Access::Write) != Access::Write ? getWriteId() : getReadId();
 
-  mAcquiredResources.push_back(cached);
+  mStorage->mAcquiredResources.push_back(cached);
 
   return {
       .handle = cached->buffer.getHandle(),
@@ -613,15 +859,12 @@ Cache::Buffer Cache::Tag::getBuffer(std::uint64_t address, std::uint64_t size,
   };
 }
 
-Cache::Buffer Cache::Tag::getInternalBuffer(std::uint64_t size) {
-  auto buffer = vk::Buffer::Allocate(
-      vk::getHostVisibleMemory(), size,
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-          VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-          VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
-          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-          VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+Cache::Buffer Cache::Tag::getInternalHostVisibleBuffer(std::uint64_t size) {
+  auto buffer = vk::Buffer::Allocate(vk::getHostVisibleMemory(), size,
+                                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
   auto cached = std::make_shared<CachedBuffer>();
   cached->baseAddress = 0;
@@ -630,7 +873,7 @@ Cache::Buffer Cache::Tag::getInternalBuffer(std::uint64_t size) {
   cached->size = size;
   cached->tagId = getReadId();
 
-  mAcquiredResources.push_back(cached);
+  mStorage->mAcquiredResources.push_back(cached);
 
   return {
       .handle = cached->buffer.getHandle(),
@@ -639,6 +882,89 @@ Cache::Buffer Cache::Tag::getInternalBuffer(std::uint64_t size) {
       .tagId = getReadId(),
       .data = cached->buffer.getData(),
   };
+}
+
+Cache::Buffer Cache::Tag::getInternalDeviceLocalBuffer(std::uint64_t size) {
+  auto buffer = vk::Buffer::Allocate(vk::getDeviceLocalMemory(), size,
+                                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+                                         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+
+  auto cached = std::make_shared<CachedBuffer>();
+  cached->baseAddress = 0;
+  cached->acquiredAccess = Access::None;
+  cached->buffer = std::move(buffer);
+  cached->size = size;
+  cached->tagId = getReadId();
+
+  mStorage->mAcquiredResources.push_back(cached);
+
+  return {
+      .handle = cached->buffer.getHandle(),
+      .offset = 0,
+      .deviceAddress = cached->buffer.getAddress(),
+      .tagId = getReadId(),
+      .data = cached->buffer.getData(),
+  };
+}
+
+void Cache::Tag::buildDescriptors(VkDescriptorSet descriptorSet) {
+  auto memoryTableBuffer = getMemoryTable();
+  auto memoryTable = std::bit_cast<MemoryTable *>(memoryTableBuffer.data);
+  mStorage->shaderResources.buildMemoryTable(*memoryTable);
+
+  for (auto &sampler : mStorage->shaderResources.samplerResources) {
+    uint32_t index =
+        &sampler - mStorage->shaderResources.samplerResources.data();
+
+    VkDescriptorImageInfo samplerInfo{.sampler = sampler.handle};
+
+    VkWriteDescriptorSet writeDescSet{
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = descriptorSet,
+        .dstBinding = Cache::getDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLER),
+        .dstArrayElement = index,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+        .pImageInfo = &samplerInfo,
+    };
+
+    vkUpdateDescriptorSets(vk::context->device, 1, &writeDescSet, 0, nullptr);
+  }
+
+  for (auto &imageResources : mStorage->shaderResources.imageResources) {
+    auto dim = (&imageResources - mStorage->shaderResources.imageResources) + 1;
+    auto binding = static_cast<uint32_t>(
+        Cache::getDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, dim));
+
+    for (auto &image : imageResources) {
+      uint32_t index = &image - imageResources.data();
+
+      VkDescriptorImageInfo imageInfo{
+          .imageView = image.handle,
+          .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+      };
+
+      VkWriteDescriptorSet writeDescSet{
+          .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+          .dstSet = descriptorSet,
+          .dstBinding = binding,
+          .dstArrayElement = index,
+          .descriptorCount = 1,
+          .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          .pImageInfo = &imageInfo,
+      };
+
+      vkUpdateDescriptorSets(vk::context->device, 1, &writeDescSet, 0, nullptr);
+    }
+  }
+
+  for (auto &mtConfig : mStorage->memoryTableConfigSlots) {
+    auto config = mStorage->descriptorBuffers[mtConfig.bufferIndex];
+    config[mtConfig.configIndex] =
+        mStorage->shaderResources.getResourceSlot(mtConfig.resourceSlot);
+  }
 }
 
 Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
@@ -682,7 +1008,8 @@ Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
     auto &resource = it.get();
     auto indexBuffer = static_cast<CachedIndexBuffer *>(resource.get());
     if (indexBuffer->size == size && resource->tagId == indexBuffer->tagId) {
-      mAcquiredResources.push_back(resource);
+      mStorage->mAcquiredResources.push_back(resource);
+
       return {
           .handle = indexBuffer->buffer.getHandle(),
           .offset = 0,
@@ -739,15 +1066,17 @@ Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
   cached->primType = primType;
   cached->indexType = indexType;
 
+  auto handle = cached->buffer.getHandle();
+
   mParent->mIndexBuffers.map(address, address + size, cached);
-  mAcquiredResources.push_back(cached);
+  mStorage->mAcquiredResources.push_back(std::move(cached));
 
   return {
-      .handle = cached->buffer.getHandle(),
+      .handle = handle,
       .offset = 0,
       .indexCount = indexCount,
-      .primType = cached->primType,
-      .indexType = cached->indexType,
+      .primType = primType,
+      .indexType = indexType,
   };
 }
 
@@ -882,7 +1211,6 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
       mScheduler->afterSubmit([detiledBuffer = std::move(detiledBuffer)] {});
 
-
       for (unsigned mipLevel = key.baseMipLevel;
            mipLevel < key.baseMipLevel + key.mipCount; ++mipLevel) {
         auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
@@ -918,22 +1246,15 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
   cached->acquiredAccess = access;
   cached->acquiredTileMode = key.tileMode;
   cached->acquiredDfmt = key.dfmt;
-  mAcquiredResources.push_back(cached);
+  mStorage->mAcquiredResources.push_back(cached);
 
   return {.handle = cached->image.getHandle(), .subresource = subresourceRange};
 }
 
-Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
-                                          Access access) {
+Cache::ImageView Cache::Tag::getImageView(const ImageKey &key, Access access) {
   auto image = getImage(key, access);
   auto result = vk::ImageView(gnm::toVkImageViewType(key.type), image.handle,
-                              gnm::toVkFormat(key.dfmt, key.nfmt),
-                              {
-                                  .r = gnm::toVkComponentSwizzle(key.R),
-                                  .g = gnm::toVkComponentSwizzle(key.G),
-                                  .b = gnm::toVkComponentSwizzle(key.B),
-                                  .a = gnm::toVkComponentSwizzle(key.A),
-                              },
+                              gnm::toVkFormat(key.dfmt, key.nfmt), {},
                               {
                                   .aspectMask = toAspect(key.kind),
                                   .baseMipLevel = key.baseMipLevel,
@@ -948,7 +1269,7 @@ Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
   cached->acquiredAccess = access;
   cached->view = std::move(result);
 
-  mAcquiredResources.push_back(cached);
+  mStorage->mAcquiredResources.push_back(cached);
 
   return {
       .handle = cached->view.getHandle(),
@@ -978,41 +1299,289 @@ int Cache::Tag::compareMemory(const void *source, std::uint64_t address,
   return std::memcmp(memoryPtr, source, size);
 }
 
+void Cache::GraphicsTag::release() {
+  if (mAcquiredGraphicsDescriptorSet + 1 != 0) {
+    getCache()->mGraphicsDescriptorSetPool.release(
+        mAcquiredGraphicsDescriptorSet);
+    mAcquiredGraphicsDescriptorSet = -1;
+  }
+
+  Tag::release();
+}
+
+void Cache::ComputeTag::release() {
+  if (mAcquiredComputeDescriptorSet + 1 != 0) {
+    getCache()->mComputeDescriptorSetPool.release(
+        mAcquiredComputeDescriptorSet);
+    mAcquiredComputeDescriptorSet = -1;
+  }
+
+  Tag::release();
+}
+
 void Cache::Tag::release() {
-  for (auto ds : mGraphicsDescriptorSets) {
-    getCache()->destroyGraphicsDescriptorSets(ds);
+  if (mAcquiredMemoryTable + 1 != 0) {
+    getCache()->mMemoryTablePool.release(mAcquiredMemoryTable);
+    mAcquiredMemoryTable = -1;
   }
 
-  for (auto ds : mComputeDescriptorSets) {
-    getCache()->destroyComputeDescriptorSet(ds);
-  }
-
-  mGraphicsDescriptorSets.clear();
-  mComputeDescriptorSets.clear();
-
-  if (mAcquiredResources.empty()) {
+  if (mStorage == nullptr) {
     return;
   }
 
-  while (!mAcquiredResources.empty()) {
-    auto resource = std::move(mAcquiredResources.back());
-    mAcquiredResources.pop_back();
+  while (!mStorage->mAcquiredResources.empty()) {
+    auto resource = std::move(mStorage->mAcquiredResources.back());
+    mStorage->mAcquiredResources.pop_back();
     resource->flush(*this, *mScheduler, 0, ~static_cast<std::uint64_t>(0));
   }
 
   mScheduler->submit();
-  mScheduler->then([mAcquiredResources = std::move(mAcquiredResources)] {});
+  mScheduler->wait();
+
+  mStorage->clear();
+  auto storageIndex = mStorage - mParent->mTagStorages;
+  // std::println("release tag storage {}", storageIndex);
+  mStorage = nullptr;
+  mParent->mTagStoragePool.release(storageIndex);
 }
 
-Cache::Tag Cache::createTag(Scheduler &scheduler) {
-  auto tag = Tag{this, scheduler, mNextTagId};
-  mNextTagId = static_cast<TagId>(static_cast<std::uint64_t>(mNextTagId) + 2);
-  return tag;
+Cache::Shader
+Cache::GraphicsTag::getPixelShader(const SpiShaderPgm &pgm,
+                                   const Registers::Context &context,
+                                   std::span<const VkViewport> viewPorts) {
+  gcn::PsVGprInput
+      psVgprInput[static_cast<std::size_t>(gcn::PsVGprInput::Count)];
+  std::size_t psVgprInputs = 0;
+
+  SpiPsInput spiInputAddr = context.spiPsInputAddr;
+
+  if (spiInputAddr.perspSampleEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::IPerspSample;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JPerspSample;
+  }
+  if (spiInputAddr.perspCenterEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::IPerspCenter;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JPerspCenter;
+  }
+  if (spiInputAddr.perspCentroidEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::IPerspCentroid;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JPerspCentroid;
+  }
+  if (spiInputAddr.perspPullModelEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::IW;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JW;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::_1W;
+  }
+  if (spiInputAddr.linearSampleEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::ILinearSample;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JLinearSample;
+  }
+  if (spiInputAddr.linearCenterEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::ILinearCenter;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JLinearCenter;
+  }
+  if (spiInputAddr.linearCentroidEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::ILinearCentroid;
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::JLinearCentroid;
+  }
+  if (spiInputAddr.posXFloatEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::X;
+  }
+  if (spiInputAddr.posYFloatEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::Y;
+  }
+  if (spiInputAddr.posZFloatEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::Z;
+  }
+  if (spiInputAddr.posWFloatEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::W;
+  }
+  if (spiInputAddr.frontFaceEna) {
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::FrontFace;
+  }
+  if (spiInputAddr.ancillaryEna) {
+    rx::die("unimplemented ancillary fs input");
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::Ancillary;
+  }
+  if (spiInputAddr.sampleCoverageEna) {
+    rx::die("unimplemented sample coverage fs input");
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::SampleCoverage;
+  }
+  if (spiInputAddr.posFixedPtEna) {
+    rx::die("unimplemented pos fixed fs input");
+    psVgprInput[psVgprInputs++] = gcn::PsVGprInput::PosFixed;
+  }
+
+  return getShader(gcn::Stage::Ps, pgm, context, {}, viewPorts,
+                   {psVgprInput, psVgprInputs});
+}
+
+Cache::Shader
+Cache::GraphicsTag::getVertexShader(gcn::Stage stage, const SpiShaderPgm &pgm,
+                                    const Registers::Context &context,
+                                    gnm::PrimitiveType vsPrimType,
+                                    std::span<const VkViewport> viewPorts) {
+  return getShader(stage, pgm, context, vsPrimType, viewPorts, {});
+}
+
+Cache::Shader
+Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
+                              const Registers::Context &context,
+                              gnm::PrimitiveType vsPrimType,
+                              std::span<const VkViewport> viewPorts,
+                              std::span<const gcn::PsVGprInput> psVgprInput) {
+  auto descriptorSets = getDescriptorSets();
+  gcn::Environment env{
+      .vgprCount = pgm.rsrc1.getVGprCount(),
+      .sgprCount = pgm.rsrc1.getSGprCount(),
+      .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
+      .supportsBarycentric = vk::context->supportsBarycentric,
+      .supportsInt8 = vk::context->supportsInt8,
+      .supportsInt64Atomics = vk::context->supportsInt64Atomics,
+  };
+
+  auto shader = Tag::getShader({
+      .address = pgm.address << 8,
+      .stage = stage,
+      .env = env,
+  });
+
+  if (!shader.handle) {
+    return shader;
+  }
+
+  std::uint64_t memoryTableAddress = getMemoryTable().deviceAddress;
+
+  std::uint64_t gdsAddress = mParent->getGdsBuffer().getAddress();
+  mStorage->shaderResources.cacheTag = this;
+
+  std::uint32_t slotOffset = mStorage->shaderResources.slotOffset;
+
+  mStorage->shaderResources.loadResources(
+      shader.info->resources,
+      std::span(pgm.userData.data(), pgm.rsrc2.userSgpr));
+
+  const auto &configSlots = shader.info->configSlots;
+
+  auto configSize = configSlots.size() * sizeof(std::uint32_t);
+  auto configBuffer = getInternalHostVisibleBuffer(configSize);
+
+  auto configPtr = reinterpret_cast<std::uint32_t *>(configBuffer.data);
+
+  for (std::size_t index = 0; const auto &slot : configSlots) {
+    switch (slot.type) {
+    case gcn::ConfigType::Imm:
+      readMemory(&configPtr[index], slot.data, sizeof(std::uint32_t));
+      break;
+    case gcn::ConfigType::UserSgpr:
+      configPtr[index] = pgm.userData[slot.data];
+      break;
+    case gcn::ConfigType::ViewPortOffsetX:
+      configPtr[index] =
+          std::bit_cast<std::uint32_t>(context.paClVports[slot.data].xOffset /
+                                           (viewPorts[slot.data].width / 2.f) -
+                                       1);
+      break;
+    case gcn::ConfigType::ViewPortOffsetY:
+      configPtr[index] =
+          std::bit_cast<std::uint32_t>(context.paClVports[slot.data].yOffset /
+                                           (viewPorts[slot.data].height / 2.f) -
+                                       1);
+      break;
+    case gcn::ConfigType::ViewPortOffsetZ:
+      configPtr[index] =
+          std::bit_cast<std::uint32_t>(context.paClVports[slot.data].zOffset);
+      break;
+    case gcn::ConfigType::ViewPortScaleX:
+      configPtr[index] =
+          std::bit_cast<std::uint32_t>(context.paClVports[slot.data].xScale /
+                                       (viewPorts[slot.data].width / 2.f));
+      break;
+    case gcn::ConfigType::ViewPortScaleY:
+      configPtr[index] =
+          std::bit_cast<std::uint32_t>(context.paClVports[slot.data].yScale /
+                                       (viewPorts[slot.data].height / 2.f));
+      break;
+    case gcn::ConfigType::ViewPortScaleZ:
+      configPtr[index] =
+          std::bit_cast<std::uint32_t>(context.paClVports[slot.data].zScale);
+      break;
+    case gcn::ConfigType::PsInputVGpr:
+      if (slot.data > psVgprInput.size()) {
+        configPtr[index] = ~0;
+      } else {
+        configPtr[index] = std::bit_cast<std::uint32_t>(psVgprInput[slot.data]);
+      }
+      break;
+    case gcn::ConfigType::VsPrimType:
+      configPtr[index] = static_cast<std::uint32_t>(vsPrimType);
+      break;
+
+    case gcn::ConfigType::ResourceSlot:
+      mStorage->memoryTableConfigSlots.push_back({
+          .bufferIndex =
+              static_cast<std::uint32_t>(mStorage->descriptorBuffers.size()),
+          .configIndex = static_cast<std::uint32_t>(index),
+          .resourceSlot = static_cast<std::uint32_t>(slotOffset + slot.data),
+      });
+      break;
+
+    case gcn::ConfigType::MemoryTable:
+      if (slot.data == 0) {
+        configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress);
+      } else {
+        configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress >> 32);
+      }
+      break;
+    case gcn::ConfigType::Gds:
+      if (slot.data == 0) {
+        configPtr[index] = static_cast<std::uint32_t>(gdsAddress);
+      } else {
+        configPtr[index] = static_cast<std::uint32_t>(gdsAddress >> 32);
+      }
+      break;
+
+    case gcn::ConfigType::CbCompSwap:
+      configPtr[index] = std::bit_cast<std::uint32_t>(
+          context.cbColor[slot.data].info.compSwap);
+      break;
+    }
+
+    ++index;
+  }
+
+  mStorage->descriptorBuffers.push_back(configPtr);
+
+  VkDescriptorBufferInfo bufferInfo{
+      .buffer = configBuffer.handle,
+      .offset = configBuffer.offset,
+      .range = configSize,
+  };
+
+  auto stageIndex = Cache::getStageIndex(shader.stage);
+
+  VkWriteDescriptorSet writeDescSet{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = descriptorSets[stageIndex],
+      .dstBinding = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .pBufferInfo = &bufferInfo,
+  };
+
+  vkUpdateDescriptorSets(vk::context->device, 1, &writeDescSet, 0, nullptr);
+  return shader;
+}
+
+Cache::Shader
+Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
+  return {};
 }
 
 Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {
-  mMemoryTableBuffer =
-      vk::Buffer::Allocate(vk::getHostVisibleMemory(), 0x10000);
+  mMemoryTableBuffer = vk::Buffer::Allocate(
+      vk::getHostVisibleMemory(), kMemoryTableSize * kMemoryTableCount);
+
   mGdsBuffer = vk::Buffer::Allocate(vk::getHostVisibleMemory(), 0x40000);
 
   {
@@ -1080,8 +1649,82 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {
                                      vk::context->allocator,
                                      &mComputePipelineLayout));
   }
+
+  {
+    VkDescriptorPoolSize descriptorPoolSizes[]{
+        {
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 4 * (kDescriptorSetCount * 2 / 4),
+        },
+        {
+            .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .descriptorCount = 3 * 32 * (kDescriptorSetCount * 2 / 4),
+        },
+        {
+            .type = VK_DESCRIPTOR_TYPE_SAMPLER,
+            .descriptorCount = 32 * (kDescriptorSetCount * 2 / 4),
+        },
+        {
+            .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            .descriptorCount = 32 * (kDescriptorSetCount * 2 / 4),
+        },
+    };
+
+    VkDescriptorPoolCreateInfo info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = kDescriptorSetCount * 2,
+        .poolSizeCount = static_cast<uint32_t>(std::size(descriptorPoolSizes)),
+        .pPoolSizes = descriptorPoolSizes,
+    };
+
+    VK_VERIFY(vkCreateDescriptorPool(vk::context->device, &info,
+                                     vk::context->allocator, &mDescriptorPool));
+  }
+
+  {
+    VkDescriptorSetAllocateInfo info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = mDescriptorPool,
+        .descriptorSetCount =
+            static_cast<uint32_t>(mGraphicsDescriptorSetLayouts.size()),
+        .pSetLayouts = mGraphicsDescriptorSetLayouts.data(),
+    };
+
+    for (auto &graphicsSet : mGraphicsDescriptorSets) {
+      vkAllocateDescriptorSets(vk::context->device, &info, graphicsSet.data());
+    }
+  }
+
+  {
+    VkDescriptorSetAllocateInfo info{
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = mDescriptorPool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &mComputeDescriptorSetLayout,
+    };
+
+    for (auto &computeSet : mComputeDescriptorSets) {
+      vkAllocateDescriptorSets(vk::context->device, &info, &computeSet);
+    }
+  }
 }
-Cache::~Cache() {}
+
+Cache::~Cache() {
+  vkDestroyDescriptorPool(vk::context->device, mDescriptorPool,
+                          vk::context->allocator);
+
+  vkDestroyPipelineLayout(vk::context->device, mGraphicsPipelineLayout,
+                          vk::context->allocator);
+  vkDestroyPipelineLayout(vk::context->device, mComputePipelineLayout,
+                          vk::context->allocator);
+
+  for (auto &layout : mGraphicsDescriptorSetLayouts) {
+    vkDestroyDescriptorSetLayout(vk::context->device, layout,
+                                 vk::context->allocator);
+  }
+  vkDestroyDescriptorSetLayout(vk::context->device, mComputeDescriptorSetLayout,
+                               vk::context->allocator);
+}
 
 void Cache::addFrameBuffer(Scheduler &scheduler, int index,
                            std::uint64_t address, std::uint32_t width,
@@ -1142,117 +1785,6 @@ void Cache::flush(Scheduler &scheduler, std::uint64_t address,
   // flushCacheImpl(scheduler, tag, mShaders, beginAddress, endAddress);
 
   flushCacheImpl(scheduler, tag, mSyncTable, beginAddress, endAddress);
-}
-
-std::array<VkDescriptorSet, Cache::kGraphicsStages.size()>
-Cache::createGraphicsDescriptorSets() {
-  std::lock_guard lock(mDescriptorMtx);
-
-  if (!mGraphicsDescriptorSets.empty()) {
-    auto result = mGraphicsDescriptorSets.back();
-    mGraphicsDescriptorSets.pop_back();
-    return result;
-  }
-
-  constexpr auto maxSets = Cache::kGraphicsStages.size() * 128;
-
-  if (mGraphicsDescriptorPool == nullptr) {
-    VkDescriptorPoolSize poolSizes[]{
-        {
-            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1 * (maxSets / 4),
-        },
-        {
-            .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 3 * 16 * (maxSets / 4),
-        },
-        {
-            .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = 16 * (maxSets / 4),
-        },
-        {
-            .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = 16 * (maxSets / 4),
-        },
-    };
-
-    VkDescriptorPoolCreateInfo info{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = maxSets,
-        .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
-        .pPoolSizes = poolSizes,
-    };
-
-    VK_VERIFY(vkCreateDescriptorPool(vk::context->device, &info,
-                                     vk::context->allocator,
-                                     &mGraphicsDescriptorPool));
-  }
-
-  VkDescriptorSetAllocateInfo info{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .descriptorPool = mGraphicsDescriptorPool,
-      .descriptorSetCount =
-          static_cast<uint32_t>(mGraphicsDescriptorSetLayouts.size()),
-      .pSetLayouts = mGraphicsDescriptorSetLayouts.data(),
-  };
-
-  std::array<VkDescriptorSet, Cache::kGraphicsStages.size()> result;
-  VK_VERIFY(
-      vkAllocateDescriptorSets(vk::context->device, &info, result.data()));
-  return result;
-}
-
-VkDescriptorSet Cache::createComputeDescriptorSet() {
-  std::lock_guard lock(mDescriptorMtx);
-
-  if (!mComputeDescriptorSets.empty()) {
-    auto result = mComputeDescriptorSets.back();
-    mComputeDescriptorSets.pop_back();
-    return result;
-  }
-
-  constexpr auto maxSets = 128;
-
-  if (mComputeDescriptorPool == nullptr) {
-    VkDescriptorPoolSize poolSizes[]{
-        {
-            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1 * (maxSets / 4),
-        },
-        {
-            .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 3 * 16 * (maxSets / 4),
-        },
-        {
-            .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = 16 * (maxSets / 4),
-        },
-        {
-            .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = 16 * (maxSets / 4),
-        },
-    };
-
-    VkDescriptorPoolCreateInfo info{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = maxSets,
-        .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
-        .pPoolSizes = poolSizes,
-    };
-
-    VK_VERIFY(vkCreateDescriptorPool(vk::context->device, &info,
-                                     vk::context->allocator,
-                                     &mComputeDescriptorPool));
-  }
-
-  VkDescriptorSetAllocateInfo info{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-      .descriptorPool = mComputeDescriptorPool,
-      .descriptorSetCount = 1,
-      .pSetLayouts = &mComputeDescriptorSetLayout,
-  };
-
-  VkDescriptorSet result;
-  VK_VERIFY(vkAllocateDescriptorSets(vk::context->device, &info, &result));
-  return result;
+  scheduler.submit();
+  scheduler.wait();
 }

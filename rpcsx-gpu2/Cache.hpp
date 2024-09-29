@@ -5,12 +5,17 @@
 #include "gnm/constants.hpp"
 #include "rx/die.hpp"
 #include "shader/Access.hpp"
+#include "shader/Evaluator.hpp"
 #include "shader/GcnConverter.hpp"
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <ostream>
+#include <print>
+#include <rx/ConcurrentBitPool.hpp>
 #include <rx/MemoryTable.hpp>
 #include <shader/gcn.hpp>
+#include <utility>
 #include <vulkan/vulkan_core.h>
 
 namespace amdgpu {
@@ -22,11 +27,7 @@ struct ShaderKey {
   shader::gcn::Environment env;
 };
 
-enum class ImageKind {
-  Color,
-  Depth,
-  Stencil
-};
+enum class ImageKind { Color, Depth, Stencil };
 
 struct ImageKey {
   std::uint64_t readAddress;
@@ -46,15 +47,6 @@ struct ImageKey {
   bool pow2pad = false;
 
   static ImageKey createFrom(const gnm::TBuffer &tbuffer);
-};
-
-struct ImageViewKey : ImageKey {
-  gnm::Swizzle R = gnm::Swizzle::R;
-  gnm::Swizzle G = gnm::Swizzle::G;
-  gnm::Swizzle B = gnm::Swizzle::B;
-  gnm::Swizzle A = gnm::Swizzle::A;
-
-  static ImageViewKey createFrom(const gnm::TBuffer &tbuffer);
 };
 
 struct SamplerKey {
@@ -98,6 +90,10 @@ struct Cache {
   };
 
   static constexpr int getStageIndex(VkShaderStageFlagBits stage) {
+    if (stage == VK_SHADER_STAGE_COMPUTE_BIT) {
+      return 0;
+    }
+
     auto it = std::find(kGraphicsStages.begin(), kGraphicsStages.end(), stage);
 
     if (it == kGraphicsStages.end()) {
@@ -107,9 +103,10 @@ struct Cache {
     return it - kGraphicsStages.begin();
   }
 
-  static constexpr int getDescriptorBinding(VkDescriptorType type, int dim = 0) {
-    auto it =
-        std::find(kDescriptorBindings.begin(), kDescriptorBindings.end(), type + dim * 1000);
+  static constexpr int getDescriptorBinding(VkDescriptorType type,
+                                            int dim = 0) {
+    auto it = std::find(kDescriptorBindings.begin(), kDescriptorBindings.end(),
+                        type + dim * 1000);
 
     if (it == kDescriptorBindings.end()) {
       return -1;
@@ -124,17 +121,17 @@ struct Cache {
   int vmId = -1;
 
   struct Shader {
-    VkShaderEXT handle;
+    VkShaderEXT handle = VK_NULL_HANDLE;
     shader::gcn::ShaderInfo *info;
     VkShaderStageFlagBits stage;
   };
 
   struct Sampler {
-    VkSampler handle;
+    VkSampler handle = VK_NULL_HANDLE;
   };
 
   struct Buffer {
-    VkBuffer handle;
+    VkBuffer handle = VK_NULL_HANDLE;
     std::uint64_t offset;
     std::uint64_t deviceAddress;
     TagId tagId;
@@ -142,7 +139,7 @@ struct Cache {
   };
 
   struct IndexBuffer {
-    VkBuffer handle;
+    VkBuffer handle = VK_NULL_HANDLE;
     std::uint64_t offset;
     std::uint32_t indexCount;
     gnm::PrimitiveType primType;
@@ -150,73 +147,150 @@ struct Cache {
   };
 
   struct Image {
-    VkImage handle;
+    VkImage handle = VK_NULL_HANDLE;
     VkImageSubresourceRange subresource;
   };
 
   struct ImageView {
-    VkImageView handle;
+    VkImageView handle = VK_NULL_HANDLE;
     VkImage imageHandle;
     VkImageSubresourceRange subresource;
   };
 
-  class Tag {
-    Cache *mParent = nullptr;
-    Scheduler *mScheduler = nullptr;
-    TagId mTagId{};
+  class Tag;
+
+private:
+  struct MemoryTableSlot {
+    std::uint64_t address;
+    union {
+      struct {
+        std::uint64_t size : 40;
+        std::uint64_t flags : 4;
+      };
+      std::uint64_t sizeAndFlags;
+    };
+    std::uint64_t deviceAddress;
+  };
+
+  struct MemoryTable {
+    std::uint32_t count;
+    std::uint32_t pad;
+    MemoryTableSlot slots[];
+  };
+
+  struct ShaderResources : shader::eval::Evaluator {
+    std::map<std::uint32_t, std::uint32_t> slotResources;
+    std::span<const std::uint32_t> userSgprs;
+    Tag *cacheTag = nullptr;
+
+    std::uint32_t slotOffset = 0;
+    rx::MemoryTableWithPayload<Access> bufferMemoryTable;
+    std::vector<std::pair<std::uint32_t, std::uint64_t>> resourceSlotToAddress;
+    std::vector<Cache::Sampler> samplerResources;
+    std::vector<Cache::ImageView> imageResources[3];
+
+    using Evaluator::eval;
+
+    void clear() {
+      slotResources.clear();
+      userSgprs = {};
+      cacheTag = nullptr;
+      slotOffset = 0;
+      bufferMemoryTable.clear();
+      resourceSlotToAddress.clear();
+      samplerResources.clear();
+      for (auto &res : imageResources) {
+        res.clear();
+      }
+
+      Evaluator::invalidate();
+    }
+
+    void loadResources(shader::gcn::Resources &res,
+                       std::span<const std::uint32_t> userSgprs);
+    void buildMemoryTable(MemoryTable &memoryTable);
+    std::uint32_t getResourceSlot(std::uint32_t id);
+
+    template <typename T> T readPointer(std::uint64_t address) {
+      T result{};
+      cacheTag->readMemory(&result, address, sizeof(result));
+      return result;
+    }
+
+    shader::eval::Value
+    eval(shader::ir::InstructionId instId,
+         std::span<const shader::ir::Operand> operands) override;
+  };
+
+  struct TagStorage {
+    struct MemoryTableConfigSlot {
+      std::uint32_t bufferIndex;
+      std::uint32_t configIndex;
+      std::uint32_t resourceSlot;
+    };
 
     std::vector<std::shared_ptr<Entry>> mAcquiredResources;
-    std::vector<std::array<VkDescriptorSet, kGraphicsStages.size()>>
-        mGraphicsDescriptorSets;
+    std::vector<MemoryTableConfigSlot> memoryTableConfigSlots;
+    std::vector<std::uint32_t *> descriptorBuffers;
+    ShaderResources shaderResources;
 
-    std::vector<VkDescriptorSet> mComputeDescriptorSets;
+    TagStorage() = default;
+    TagStorage(const TagStorage &) = delete;
 
-  public:
-    Tag() = default;
-    Tag(Cache *parent, Scheduler &scheduler, TagId id)
-        : mParent(parent), mScheduler(&scheduler), mTagId(id) {}
+    void clear() {
+      mAcquiredResources.clear();
+      memoryTableConfigSlots.clear();
+      descriptorBuffers.clear();
+      shaderResources.clear();
+    }
+  };
+
+  struct TagData {
+    TagStorage *mStorage = nullptr;
+    Scheduler *mScheduler = nullptr;
+    Cache *mParent = nullptr;
+    TagId mTagId{};
+    std::uint32_t mAcquiredMemoryTable = -1;
+  };
+
+public:
+  struct Tag : protected TagData {
     Tag(const Tag &) = delete;
-    Tag(Tag &&other) { other.swap(*this); }
-    Tag &operator=(Tag &&other) {
-      other.swap(*this);
+    Tag() noexcept = default;
+    Tag(Tag &&other) noexcept { swap(other); }
+    Tag &operator=(Tag &&other) noexcept {
+      swap(other);
       return *this;
     }
+    ~Tag() { release(); }
 
-    void submitAndWait() {
-      mScheduler->submit();
-      mScheduler->wait();
+    void swap(Tag &other) {
+      std::swap(static_cast<TagData &>(*this), static_cast<TagData &>(other));
     }
 
-    Scheduler &getScheduler() const { return *mScheduler; }
-
-    ~Tag() { release(); }
+    Shader getShader(const ShaderKey &key,
+                     const ShaderKey *dependedKey = nullptr);
 
     TagId getReadId() const { return TagId{std::uint64_t(mTagId) - 1}; }
     TagId getWriteId() const { return mTagId; }
 
-    void swap(Tag &other) {
-      std::swap(mParent, other.mParent);
-      std::swap(mScheduler, other.mScheduler);
-      std::swap(mTagId, other.mTagId);
-      std::swap(mAcquiredResources, other.mAcquiredResources);
-      std::swap(mGraphicsDescriptorSets, other.mGraphicsDescriptorSets);
-      std::swap(mComputeDescriptorSets, other.mComputeDescriptorSets);
-    }
-
     Cache *getCache() const { return mParent; }
     Device *getDevice() const { return mParent->mDevice; }
+    Scheduler &getScheduler() const { return *mScheduler; }
     int getVmId() const { return mParent->mVmIm; }
 
-    Shader getShader(const ShaderKey &key,
-                     const ShaderKey *dependedKey = nullptr);
+    Buffer getInternalHostVisibleBuffer(std::uint64_t size);
+    Buffer getInternalDeviceLocalBuffer(std::uint64_t size);
+
+    void buildDescriptors(VkDescriptorSet descriptorSet);
+
     Sampler getSampler(const SamplerKey &key);
     Buffer getBuffer(std::uint64_t address, std::uint64_t size, Access access);
-    Buffer getInternalBuffer(std::uint64_t size);
     IndexBuffer getIndexBuffer(std::uint64_t address, std::uint32_t indexCount,
                                gnm::PrimitiveType primType,
                                gnm::IndexType indexType);
     Image getImage(const ImageKey &key, Access access);
-    ImageView getImageView(const ImageViewKey &key, Access access);
+    ImageView getImageView(const ImageKey &key, Access access);
     void readMemory(void *target, std::uint64_t address, std::uint64_t size);
     void writeMemory(const void *source, std::uint64_t address,
                      std::uint64_t size);
@@ -232,28 +306,138 @@ struct Cache {
       return getCache()->getComputePipelineLayout();
     }
 
-    std::array<VkDescriptorSet, kGraphicsStages.size()>
-    createGraphicsDescriptorSets() {
-      auto result = getCache()->createGraphicsDescriptorSets();
-      mGraphicsDescriptorSets.push_back(result);
-      return result;
-    }
+    Buffer getMemoryTable() {
+      if (mAcquiredMemoryTable + 1 == 0) {
+        mAcquiredMemoryTable = mParent->mMemoryTablePool.acquire();
+      }
 
-    VkDescriptorSet createComputeDescriptorSet() {
-      auto result = getCache()->createComputeDescriptorSet();
-      mComputeDescriptorSets.push_back(result);
+      auto &buffer = mParent->mMemoryTableBuffer;
+      auto offset = mAcquiredMemoryTable * kMemoryTableSize;
+
+      Buffer result{
+          .offset = offset,
+          .deviceAddress = buffer.getAddress() + offset,
+          .tagId = getReadId(),
+          .data = buffer.getData() + offset,
+      };
+
       return result;
     }
 
     std::shared_ptr<Entry> findShader(const ShaderKey &key,
                                       const ShaderKey *dependedKey = nullptr);
+    friend Cache;
   };
 
+  struct GraphicsTag : Tag {
+    GraphicsTag() = default;
+    GraphicsTag(GraphicsTag &&other) noexcept { swap(other); }
+    GraphicsTag &operator=(GraphicsTag &&other) noexcept {
+      swap(other);
+      return *this;
+    }
+    ~GraphicsTag() { release(); }
+
+    std::array<VkDescriptorSet, kGraphicsStages.size()> getDescriptorSets() {
+      if (mAcquiredGraphicsDescriptorSet + 1 == 0) {
+        mAcquiredGraphicsDescriptorSet =
+            mParent->mGraphicsDescriptorSetPool.acquire();
+      }
+
+      return mParent->mGraphicsDescriptorSets[mAcquiredGraphicsDescriptorSet];
+    }
+
+    Shader getShader(shader::gcn::Stage stage, const SpiShaderPgm &pgm,
+                     const Registers::Context &context,
+                     gnm::PrimitiveType vsPrimType,
+                     std::span<const VkViewport> viewPorts,
+                     std::span<const shader::gcn::PsVGprInput> psVgprInput);
+
+    Shader getPixelShader(const SpiShaderPgm &pgm,
+                          const Registers::Context &context,
+                          std::span<const VkViewport> viewPorts);
+
+    Shader getVertexShader(shader::gcn::Stage stage, const SpiShaderPgm &pgm,
+                           const Registers::Context &context,
+                           gnm::PrimitiveType vsPrimType,
+                           std::span<const VkViewport> viewPorts);
+    void release();
+
+    void swap(GraphicsTag &other) {
+      Tag::swap(other);
+      std::swap(mAcquiredGraphicsDescriptorSet,
+                other.mAcquiredGraphicsDescriptorSet);
+    }
+
+  private:
+    std::uint32_t mAcquiredGraphicsDescriptorSet = -1;
+  };
+
+  struct ComputeTag : Tag {
+    ComputeTag() = default;
+    ComputeTag(ComputeTag &&other) noexcept { swap(other); }
+    ComputeTag &operator=(ComputeTag &&other) noexcept {
+      swap(other);
+      return *this;
+    }
+    ~ComputeTag() { release(); }
+
+    Shader getShader(const Registers::ComputeConfig &pgm);
+
+    VkDescriptorSet getDescriptorSet() {
+      if (mAcquiredComputeDescriptorSet + 1 == 0) {
+        mAcquiredComputeDescriptorSet =
+            mParent->mComputeDescriptorSetPool.acquire();
+      }
+
+      return mParent->mComputeDescriptorSets[mAcquiredComputeDescriptorSet];
+    }
+
+    void release();
+
+    void swap(ComputeTag &other) {
+      Tag::swap(other);
+      std::swap(mAcquiredComputeDescriptorSet,
+                other.mAcquiredComputeDescriptorSet);
+    }
+
+  private:
+    std::uint32_t mAcquiredComputeDescriptorSet = -1;
+  };
+
+private:
+  template <typename T> T createTagImpl(Scheduler &scheduler) {
+    T result;
+
+    auto id = mNextTagId.load(std::memory_order::acquire);
+    while (!mNextTagId.compare_exchange_weak(
+        id, TagId{static_cast<std::uint64_t>(id) + 2},
+        std::memory_order::release, std::memory_order::relaxed)) {
+    }
+
+    auto storageIndex = mTagStoragePool.acquire();
+
+    // std::println("acquire tag storage {}", storageIndex);
+    result.mStorage = mTagStorages + storageIndex;
+    result.mTagId = id;
+    result.mParent = this;
+    result.mScheduler = &scheduler;
+
+    return result;
+  }
+
+public:
   Cache(Device *device, int vmId);
   ~Cache();
-  Tag createTag(Scheduler &scheduler);
 
-  vk::Buffer &getMemoryTableBuffer() { return mMemoryTableBuffer; }
+  Tag createTag(Scheduler &scheduler) { return createTagImpl<Tag>(scheduler); }
+  GraphicsTag createGraphicsTag(Scheduler &scheduler) {
+    return createTagImpl<GraphicsTag>(scheduler);
+  }
+  ComputeTag createComputeTag(Scheduler &scheduler) {
+    return createTagImpl<ComputeTag>(scheduler);
+  }
+
   vk::Buffer &getGdsBuffer() { return mGdsBuffer; }
 
   void addFrameBuffer(Scheduler &scheduler, int index, std::uint64_t address,
@@ -273,21 +457,6 @@ struct Cache {
     flush(scheduler, 0, ~static_cast<std::uint64_t>(0));
   }
 
-  const std::array<VkDescriptorSetLayout, kGraphicsStages.size()> &
-  getGraphicsDescriptorSetLayouts() const {
-    return mGraphicsDescriptorSetLayouts;
-  }
-
-  VkDescriptorSetLayout
-  getGraphicsDescriptorSetLayout(VkShaderStageFlagBits stage) const {
-    int index = getStageIndex(stage);
-    rx::dieIf(index < 0, "getGraphicsDescriptorSetLayout: unexpected stage");
-    return mGraphicsDescriptorSetLayouts[index];
-  }
-
-  VkDescriptorSetLayout getComputeDescriptorSetLayout() const {
-    return mComputeDescriptorSetLayout;
-  }
   VkPipelineLayout getGraphicsPipelineLayout() const {
     return mGraphicsPipelineLayout;
   }
@@ -296,19 +465,8 @@ struct Cache {
     return mComputePipelineLayout;
   }
 
-  std::array<VkDescriptorSet, kGraphicsStages.size()>
-  createGraphicsDescriptorSets();
-  VkDescriptorSet createComputeDescriptorSet();
-
-  void destroyGraphicsDescriptorSets(
-      const std::array<VkDescriptorSet, kGraphicsStages.size()> &set) {
-    std::lock_guard lock(mDescriptorMtx);
-    mGraphicsDescriptorSets.push_back(set);
-  }
-
-  void destroyComputeDescriptorSet(VkDescriptorSet set) {
-    std::lock_guard lock(mDescriptorMtx);
-    mComputeDescriptorSets.push_back(set);
+  auto &getGraphicsDescriptorSetLayouts() const {
+    return mGraphicsDescriptorSetLayouts;
   }
 
 private:
@@ -316,21 +474,31 @@ private:
 
   Device *mDevice;
   int mVmIm;
-  TagId mNextTagId{2};
-  vk::Buffer mMemoryTableBuffer;
+  std::atomic<TagId> mNextTagId{TagId{2}};
   vk::Buffer mGdsBuffer;
 
-  std::mutex mDescriptorMtx;
+  static constexpr auto kMemoryTableSize = 0x10000;
+  static constexpr auto kMemoryTableCount = 64;
+  static constexpr auto kDescriptorSetCount = 128;
+  static constexpr auto kTagStorageCount = 128;
+
+  rx::ConcurrentBitPool<kMemoryTableCount> mMemoryTablePool;
+  vk::Buffer mMemoryTableBuffer;
+
   std::array<VkDescriptorSetLayout, kGraphicsStages.size()>
       mGraphicsDescriptorSetLayouts{};
   VkDescriptorSetLayout mComputeDescriptorSetLayout{};
   VkPipelineLayout mGraphicsPipelineLayout{};
   VkPipelineLayout mComputePipelineLayout{};
-  VkDescriptorPool mGraphicsDescriptorPool{};
-  VkDescriptorPool mComputeDescriptorPool{};
-  std::vector<std::array<VkDescriptorSet, kGraphicsStages.size()>>
-      mGraphicsDescriptorSets;
-  std::vector<VkDescriptorSet> mComputeDescriptorSets;
+  VkDescriptorPool mDescriptorPool{};
+
+  rx::ConcurrentBitPool<kDescriptorSetCount> mGraphicsDescriptorSetPool;
+  rx::ConcurrentBitPool<kDescriptorSetCount> mComputeDescriptorSetPool;
+  rx::ConcurrentBitPool<kTagStorageCount> mTagStoragePool;
+  std::array<VkDescriptorSet, kGraphicsStages.size()>
+      mGraphicsDescriptorSets[kDescriptorSetCount];
+  VkDescriptorSet mComputeDescriptorSets[kDescriptorSetCount];
+  TagStorage mTagStorages[kTagStorageCount];
   std::map<SamplerKey, VkSampler> mSamplers;
 
   std::shared_ptr<Entry> mFrameBuffers[10];

@@ -1,9 +1,9 @@
 #pragma once
 #include "Cache.hpp"
+#include "FlipPipeline.hpp"
 #include "Pipe.hpp"
 #include "amdgpu/bridge/bridge.hpp"
 #include "amdgpu/tiler_vulkan.hpp"
-#include "FlipPipeline.hpp"
 #include "rx/MemoryTable.hpp"
 #include "shader/SemanticInfo.hpp"
 #include "shader/SpvConverter.hpp"
@@ -68,6 +68,14 @@ struct Device {
 
   Cache::Tag getCacheTag(int vmId, Scheduler &scheduler) {
     return caches[vmId].createTag(scheduler);
+  }
+
+  Cache::GraphicsTag getGraphicsTag(int vmId, Scheduler &scheduler) {
+    return caches[vmId].createGraphicsTag(scheduler);
+  }
+
+  Cache::ComputeTag getComputeTag(int vmId, Scheduler &scheduler) {
+    return caches[vmId].createComputeTag(scheduler);
   }
 
   void mapProcess(std::int64_t pid, int vmId, const char *shmName);

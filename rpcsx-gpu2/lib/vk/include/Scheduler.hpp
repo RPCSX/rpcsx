@@ -98,11 +98,11 @@ public:
 
     wait();
 
-    for (auto &&fn : mAfterSubmitTasks) {
-      fn();
+    while (!mAfterSubmitTasks.empty()) {
+      auto task = std::move(mAfterSubmitTasks.back());
+      mAfterSubmitTasks.pop_back();
+      std::move(task)();
     }
-
-    mAfterSubmitTasks.clear();
 
     std::vector<std::move_only_function<void()>> taskList;
 

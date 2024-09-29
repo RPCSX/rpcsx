@@ -1,9 +1,9 @@
 #include "amdgpu/tiler_vulkan.hpp"
 #include "Scheduler.hpp"
 #include "amdgpu/tiler.hpp"
-#include <bit>
 #include <cstring>
 #include <memory>
+#include <rx/ConcurrentBitPool.hpp>
 #include <vk.hpp>
 
 #include <shaders/detiler1d.comp.h>
@@ -72,11 +72,11 @@ struct TilerShader {
 };
 
 struct amdgpu::GpuTiler::Impl {
+  static constexpr auto kDescriptorSetCount = 32;
   TilerDecriptorSetLayout descriptorSetLayout;
-  std::mutex descriptorMtx;
-  VkDescriptorSet descriptorSets[32]{};
+  rx::ConcurrentBitPool<kDescriptorSetCount, std::uint32_t> descriptorSetPool;
+  VkDescriptorSet descriptorSets[kDescriptorSetCount]{};
   VkDescriptorPool descriptorPool;
-  std::uint32_t inUseDescriptorSets = 0;
 
   vk::Buffer configData;
   TilerShader detilerLinear{descriptorSetLayout, spirv_detilerLinear_comp};
@@ -156,20 +156,10 @@ struct amdgpu::GpuTiler::Impl {
                             vk::context->allocator);
   }
 
-  std::uint32_t allocateDescriptorSlot() {
-    std::lock_guard lock(descriptorMtx);
-
-    auto result = std::countl_one(inUseDescriptorSets);
-    rx::dieIf(result >= std::size(descriptorSets),
-              "out of tiler descriptor sets");
-    inUseDescriptorSets |= (1 << result);
-
-    return result;
-  }
+  std::uint32_t allocateDescriptorSlot() { return descriptorSetPool.acquire(); }
 
   void releaseDescriptorSlot(std::uint32_t slot) {
-    std::lock_guard lock(descriptorMtx);
-    inUseDescriptorSets &= ~(1u << slot);
+    descriptorSetPool.release(slot);
   }
 };
 

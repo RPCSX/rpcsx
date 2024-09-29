@@ -242,37 +242,10 @@ FlipPipeline::FlipPipeline() {
 void FlipPipeline::bind(Scheduler &sched, FlipType type, VkImageView imageView,
                         VkSampler sampler) {
   auto cmdBuffer = sched.getCommandBuffer();
+  auto descriptorIndex = descriptorSetPool.acquire();
 
-  auto allocateDescriptorSetIndex = [this] {
-    auto mask = freeDescriptorSets.load(std::memory_order::acquire);
-
-    while (true) {
-      auto index = std::countr_one(mask);
-      if (index >= std::size(descriptorSets)) {
-        mask = freeDescriptorSets.load(std::memory_order::relaxed);
-        continue;
-      }
-
-      if (!freeDescriptorSets.compare_exchange_weak(
-              mask, mask | (1 << index), std::memory_order::release,
-              std::memory_order::relaxed)) {
-        continue;
-      }
-
-      return index;
-    }
-  };
-
-  auto descriptorIndex = allocateDescriptorSetIndex();
-
-  sched.afterSubmit([this, descriptorIndex] {
-    decltype(freeDescriptorSets)::value_type mask = 1 << descriptorIndex;
-
-    while (!freeDescriptorSets.compare_exchange_weak(
-        mask, mask & ~(1 << descriptorIndex), std::memory_order::release,
-        std::memory_order::acquire)) {
-    }
-  });
+  sched.afterSubmit(
+      [this, descriptorIndex] { descriptorSetPool.release(descriptorIndex); });
 
   auto descriptorSet = descriptorSets[descriptorIndex];
   VkDescriptorImageInfo imageInfo = {

@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Scheduler.hpp"
-#include <atomic>
-#include <cstdint>
+#include <rx/ConcurrentBitPool.hpp>
 #include <vulkan/vulkan.h>
 
 enum class FlipType {
@@ -11,6 +10,7 @@ enum class FlipType {
 };
 
 struct FlipPipeline {
+  static constexpr auto kDescriptorSetCount = 16;
   VkShaderModule flipVertShaderModule{};
   VkShaderModule flipFragStdShaderModule{};
   VkShaderModule flipFragAltShaderModule{};
@@ -18,8 +18,8 @@ struct FlipPipeline {
   VkDescriptorSetLayout descriptorSetLayout{};
   VkPipeline pipelines[2]{};
   VkDescriptorPool descriptorPool{};
-  VkDescriptorSet descriptorSets[8]{};
-  std::atomic<std::uint8_t> freeDescriptorSets{0};
+  VkDescriptorSet descriptorSets[kDescriptorSetCount]{};
+  rx::ConcurrentBitPool<kDescriptorSetCount, std::uint8_t> descriptorSetPool;
 
   FlipPipeline(const FlipPipeline &) = delete;
   FlipPipeline();

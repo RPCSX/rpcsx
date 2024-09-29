@@ -74,7 +74,7 @@ VkFormat gnm::toVkFormat(DataFormat dfmt, NumericFormat nfmt) {
   case kDataFormat5_6_5:
     switch (nfmt) {
     case kNumericFormatUNorm:
-      return VK_FORMAT_R5G6B5_UNORM_PACK16;
+      return VK_FORMAT_B5G6R5_UNORM_PACK16;
 
     default:
       break;

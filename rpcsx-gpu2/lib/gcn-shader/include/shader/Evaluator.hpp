@@ -10,6 +10,7 @@ public:
   virtual ~Evaluator() = default;
 
   void invalidate(ir::Value node) { values.erase(node); }
+  void invalidate() { values.clear(); }
   void setValue(ir::Value node, Value value) { values[node] = value; }
 
   Value eval(const ir::Operand &op, ir::Value type = nullptr);

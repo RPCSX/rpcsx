@@ -203,6 +203,8 @@ struct PaScRect {
   std::uint16_t top;
   std::uint16_t right;
   std::uint16_t bottom;
+
+  bool isValid() const { return left < right && top < bottom; }
 };
 
 struct SpiShaderPgm {
