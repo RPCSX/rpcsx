@@ -1479,7 +1479,23 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "ScePatchChecker");
   createIpmiServer(process, "SceMorpheusUpdService");
   createIpmiServer(process, "ScePsmSharedDmem");
+
+  auto saveDataSem = createSemaphore("SceSaveData0000000000000001", 0x101, 0, 1);
+  createSemaphore("SceSaveData0000000000000001_0", 0x101, 0, 1);
+  createShm("SceSaveData0000000000000001_0", 0x202, 0x1b6, 0x40000);
+  createShm("SceSaveDataI0000000000000001", 0x202, 0x1b6, 43008);
+  createShm("SceSaveDataI0000000000000001_0", 0x202, 0x1b6, 43008);
+  createShm("SceNpPlusLogger", 0x202, 0x1b6, 0x40000);
+  auto ruiEvf = createEventFlag("SceSaveDataMemoryRUI00000010", 0x120, 0x1000000100010000);
+
   createIpmiServer(process, "SceSaveData")
+      .addSyncMethod(
+          0x12340000,
+          [=](void *out, std::uint64_t &size) -> std::int32_t {
+            ruiEvf->set(~0ull);
+            saveDataSem->value++;
+            return 0;
+          })
       .addSyncMethod(
           0x12340001,
           [](void *out, std::uint64_t &size) -> std::int32_t {
@@ -2154,13 +2170,6 @@ int main(int argc, const char *argv[]) {
       createSemaphore("SceLncSuspendBlock00000000", 0x101, 1, 1);
       createSemaphore("SceNpPlusLogger 0", 0x101, 0, 0x7fffffff);
 
-      createSemaphore("SceSaveData0000000000000001", 0x101, 0, 1);
-      createSemaphore("SceSaveData0000000000000001_0", 0x101, 0, 1);
-      createShm("SceSaveData0000000000000001_0", 0x202, 0x1b6, 0x40000);
-      createShm("SceSaveDataI0000000000000001", 0x202, 0x1b6, 43008);
-      createShm("SceSaveDataI0000000000000001_0", 0x202, 0x1b6, 43008);
-      createShm("SceNpPlusLogger", 0x202, 0x1b6, 0x40000);
-      createEventFlag("SceSaveDataMemoryRUI00000010", 0x120, 1);
       initProcess->cwd = "/app0/";
 
       if (!enableAudio) {
