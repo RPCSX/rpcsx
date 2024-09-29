@@ -14,6 +14,44 @@ VkFormat gnm::toVkFormat(DataFormat dfmt, NumericFormat nfmt) {
     break;
   }
 
+  case kDataFormat2_10_10_10:
+    switch (nfmt) {
+    case kNumericFormatUNorm:
+      return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+    case kNumericFormatSNorm:
+      return VK_FORMAT_A2B10G10R10_SNORM_PACK32;
+    case kNumericFormatSInt:
+      return VK_FORMAT_A2B10G10R10_SINT_PACK32;
+    case kNumericFormatUInt:
+      return VK_FORMAT_A2B10G10R10_UINT_PACK32;
+    case kNumericFormatUScaled:
+      return VK_FORMAT_A2B10G10R10_USCALED_PACK32;
+    case kNumericFormatSScaled:
+      return VK_FORMAT_A2B10G10R10_SSCALED_PACK32;
+    default:
+      break;
+    }
+    break;
+
+  case kDataFormat10_10_10_2:
+    switch (nfmt) {
+    case kNumericFormatUNorm:
+      return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+    case kNumericFormatSNorm:
+      return VK_FORMAT_A2R10G10B10_SNORM_PACK32;
+    case kNumericFormatSInt:
+      return VK_FORMAT_A2R10G10B10_SINT_PACK32;
+    case kNumericFormatUInt:
+      return VK_FORMAT_A2R10G10B10_UINT_PACK32;
+    case kNumericFormatUScaled:
+      return VK_FORMAT_A2R10G10B10_USCALED_PACK32;
+    case kNumericFormatSScaled:
+      return VK_FORMAT_A2R10G10B10_SSCALED_PACK32;
+    default:
+      break;
+    }
+    break;
+
   case kDataFormat8: {
     switch (nfmt) {
     case kNumericFormatUNorm:
