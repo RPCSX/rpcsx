@@ -182,7 +182,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     if (!pipe.context.dbRenderControl.depthClearEnable) {
       depthAccess |= Access::Read;
     }
-    if (!pipe.context.dbDepthView.zReadOnly) {
+    if (!pipe.context.dbDepthView.zReadOnly &&
+        pipe.context.dbDepthControl.depthWriteEnable) {
       depthAccess |= Access::Write;
     }
   }
@@ -205,8 +206,11 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
     auto imageView = cacheTag.getImageView(
         {
-            .readAddress = pipe.context.dbZReadBase,
-            .writeAddress = pipe.context.dbZWriteBase,
+            .readAddress = static_cast<std::uint64_t>(pipe.context.dbZReadBase)
+                           << 8,
+            .writeAddress =
+                static_cast<std::uint64_t>(pipe.context.dbZWriteBase) << 8,
+            .type = gnm::TextureType::Dim2D,
             .dfmt = gnm::getDataFormat(pipe.context.dbZInfo.format),
             .nfmt = gnm::getNumericFormat(pipe.context.dbZInfo.format),
             .extent =

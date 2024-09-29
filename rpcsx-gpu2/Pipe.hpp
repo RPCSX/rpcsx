@@ -6,7 +6,7 @@
 #include <vulkan/vulkan_core.h>
 
 namespace amdgpu {
-class Device;
+struct Device;
 
 struct Queue {
   int vmId = -1;

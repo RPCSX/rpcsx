@@ -240,8 +240,8 @@ void GraphicsPipe::setCeQueue(Queue queue) {
 
 void GraphicsPipe::setDeQueue(Queue queue, int ring) {
   rx::dieIf(ring > 2, "out of indirect gfx rings, %u", ring);
-  queue.indirectLevel = 2 - ring;
-  deQueues[ring] = queue;
+  queue.indirectLevel = ring;
+  deQueues[2 - ring] = queue;
 }
 
 std::uint32_t *GraphicsPipe::getMmRegister(std::uint32_t dwAddress) {
@@ -290,6 +290,11 @@ bool GraphicsPipe::processAllRings() {
 
   for (int i = 0; i < 3; ++i) {
     auto &queue = deQueues[i];
+
+    if (queue.rptr == queue.wptr) {
+      continue;
+    }
+
     processRing(queue);
 
     if (queue.rptr != queue.wptr) {
@@ -536,8 +541,8 @@ bool GraphicsPipe::drawIndirect(Queue &queue) {
   std::uint32_t startVertexLocation = buffer[2];
   std::uint32_t startInstanceLocation = buffer[3];
 
-  // FIXME
-  rx::die("drawIndirect");
+  draw(*this, queue.vmId, startVertexLocation, vertexCountPerInstance,
+       startInstanceLocation, instanceCount, 0, 0);
   return true;
 }
 bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
@@ -556,8 +561,9 @@ bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
   std::uint32_t baseVertexLocation = buffer[3];
   std::uint32_t startInstanceLocation = buffer[4];
 
-  // FIXME
-  rx::die("drawIndexIndirect");
+  draw(*this, queue.vmId, baseVertexLocation, indexCountPerInstance,
+       startInstanceLocation, instanceCount, vgtIndexBase + startIndexLocation,
+       indexCountPerInstance);
   return true;
 }
 bool GraphicsPipe::indexBase(Queue &queue) {
@@ -611,7 +617,8 @@ bool GraphicsPipe::drawIndexMultiAuto(Queue &queue) {
   uConfig.vgtPrimitiveType = static_cast<gnm::PrimitiveType>(primType);
   uConfig.vgtNumIndices = indexCount;
 
-  // FIXME
+  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
+       vgtIndexBase + indexOffset, primCount);
   return true;
 }
 bool GraphicsPipe::drawIndexOffset2(Queue &queue) {
@@ -621,7 +628,8 @@ bool GraphicsPipe::drawIndexOffset2(Queue &queue) {
   auto drawInitiator = queue.rptr[4];
 
   context.vgtDrawInitiator = drawInitiator;
-  // FIXME
+  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
+       vgtIndexBase + indexOffset, maxSize);
   return true;
 }
 bool GraphicsPipe::writeData(Queue &queue) {
@@ -865,12 +873,12 @@ bool GraphicsPipe::setConfigReg(Queue &queue) {
             queue.indirectLevel);
 
   auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1];
+  auto offset = queue.rptr[1] & 0xffff;
   auto data = queue.rptr + 2;
 
   rx::dieIf(
       (offset + len) * sizeof(std::uint32_t) > sizeof(device->config),
-      "out of Config regs, offset: %u, count %u, %s\n", offset, len,
+      "out of Config regs, offset: %x, count %u, %s\n", offset, len,
       gnm::mmio::registerName(decltype(device->config)::kMmioOffset + offset));
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&device->config) + offset, data,
@@ -881,11 +889,12 @@ bool GraphicsPipe::setConfigReg(Queue &queue) {
 
 bool GraphicsPipe::setShReg(Queue &queue) {
   auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1];
+  auto offset = queue.rptr[1] & 0xffff;
+  auto index = queue.rptr[1] >> 26;
   auto data = queue.rptr + 2;
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(sh),
-            "out of SH regs, offset: %u, count %u, %s\n", offset, len,
+            "out of SH regs, offset: %x, count %u, %s\n", offset, len,
             gnm::mmio::registerName(decltype(sh)::kMmioOffset + offset));
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&sh) + offset, data,
@@ -896,10 +905,26 @@ bool GraphicsPipe::setShReg(Queue &queue) {
 
 bool GraphicsPipe::setUConfigReg(Queue &queue) {
   auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1];
+  auto offset = queue.rptr[1] & 0xffff;
+  auto index = queue.rptr[1] >> 26;
   auto data = queue.rptr + 2;
 
-  rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(uConfig),
+  if (index != 0) {
+    std::fprintf(
+        stderr,
+        "set UConfig regs with index, offset: %x, count %u, index %u, %s\n",
+        offset, len, index,
+        gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
+
+    for (std::size_t i = 0; i < len; ++i) {
+      std::fprintf(
+          stderr, "writing to %s value %x\n",
+          gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset + i),
+          data[i]);
+    }
+  }
+
+  rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
             "out of UConfig regs, offset: %u, count %u, %s\n", offset, len,
             gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
 
@@ -911,8 +936,24 @@ bool GraphicsPipe::setUConfigReg(Queue &queue) {
 
 bool GraphicsPipe::setContextReg(Queue &queue) {
   auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1];
+  auto offset = queue.rptr[1] & 0xffff;
+  auto index = queue.rptr[1] >> 26;
   auto data = queue.rptr + 2;
+
+  if (index != 0) {
+    std::fprintf(
+        stderr,
+        "set Context regs with index, offset: %x, count %u, index %u, %s\n",
+        offset, len, index,
+        gnm::mmio::registerName(decltype(context)::kMmioOffset + offset));
+
+    for (std::size_t i = 0; i < len; ++i) {
+      std::fprintf(
+          stderr, "writing to %s value %x\n",
+          gnm::mmio::registerName(decltype(context)::kMmioOffset + offset + i),
+          data[i]);
+    }
+  }
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
             "out of Context regs, offset: %u, count %u, %s\n", offset, len,
@@ -952,12 +993,12 @@ bool GraphicsPipe::waitOnDeCounterDiff(Queue &queue) {
   return diff < waitDiff;
 }
 
-bool GraphicsPipe::incrementCeCounter(Queue &queue) {
+bool GraphicsPipe::incrementCeCounter(Queue &) {
   ceCounter++;
   return true;
 }
 
-bool GraphicsPipe::incrementDeCounter(Queue &queue) {
+bool GraphicsPipe::incrementDeCounter(Queue &) {
   deCounter++;
   return true;
 }
