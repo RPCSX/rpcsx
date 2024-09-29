@@ -735,7 +735,7 @@ float32_t v_med3_f32(float32_t a, float32_t b, float32_t c) {
     }
 
     if (v_max3_f32(a, b, c) == a) {
-        return v_max_f32(a, b);
+        return v_max_f32(b, c);
     }
 
     if (v_max3_f32(a, b, c) == b) {
