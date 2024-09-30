@@ -516,6 +516,7 @@ void amdgpu::dispatch(Cache &cache, Scheduler &sched,
                       Registers::ComputeConfig &computeConfig,
                       std::uint32_t groupCountX, std::uint32_t groupCountY,
                       std::uint32_t groupCountZ) {
+  return; // FIXME
   auto tag = cache.createComputeTag(sched);
   auto descriptorSet = tag.getDescriptorSet();
   auto shader = tag.getShader(computeConfig);
