@@ -5,6 +5,7 @@
 #include "gnm/mmio.hpp"
 #include "gnm/pm4.hpp"
 #include "vk.hpp"
+#include <bit>
 #include <cstdio>
 #include <rx/bits.hpp>
 #include <rx/die.hpp>
@@ -874,7 +875,131 @@ bool GraphicsPipe::eventWriteEos(Queue &queue) {
 }
 
 bool GraphicsPipe::dmaData(Queue &queue) {
-  // FIXME
+  auto control = queue.rptr[1];
+  auto srcAddressLo = queue.rptr[2];
+  auto data = srcAddressLo;
+  auto srcAddressHi = queue.rptr[3];
+  auto dstAddressLo = queue.rptr[4];
+  auto dstAddressHi = queue.rptr[5];
+  auto cmdSize = queue.rptr[6];
+  auto size = rx::getBits(cmdSize, 20, 0);
+
+  auto engine = rx::getBit(control, 0);
+  auto srcVolatile = rx::getBit(control, 15);
+
+  // 0 - dstAddress using das
+  // 1 - gds
+  // 3 - dstAddress using L2
+  auto dstSel = rx::getBits(control, 21, 20);
+
+  // 0 - LRU
+  // 1 - Stream
+  // 2 - Bypass
+  auto dstCachePolicy = rx::getBits(control, 26, 25);
+
+  auto dstVolatile = rx::getBit(control, 27);
+
+  // 0 - srcAddress using sas
+  // 1 - gds
+  // 2 - data
+  // 3 - srcAddress using L2
+  auto srcSel = rx::getBits(control, 30, 29);
+
+  auto cpSync = rx::getBit(control, 31);
+
+  auto dataDisWc = rx::getBit(cmdSize, 21);
+
+  // 0 - none
+  // 1 - 8 in 16
+  // 2 - 8 in 32
+  // 3 - 8 in 64
+  auto dstSwap = rx::getBits(cmdSize, 25, 24);
+
+  // 0 - memory
+  // 1 - register
+  auto sas = rx::getBit(cmdSize, 26);
+
+  // 0 - memory
+  // 1 - register
+  auto das = rx::getBit(cmdSize, 27);
+
+  auto saic = rx::getBit(cmdSize, 28);
+  auto daic = rx::getBit(cmdSize, 29);
+  auto rawWait = rx::getBit(cmdSize, 30);
+
+  void *dst = nullptr;
+  switch (dstSel) {
+  case 3:
+  case 0:
+    if (dstSel == 3 || das == 0) {
+      auto dstAddress =
+          dstAddressLo | (static_cast<std::uint64_t>(dstAddressHi) << 32);
+      dst = amdgpu::RemoteMemory{queue.vmId}.getPointer(dstAddress);
+      device->caches[queue.vmId].invalidate(scheduler, dstAddress, size);
+    } else {
+      dst = getMmRegister(dstAddressLo / sizeof(std::uint32_t));
+    }
+    break;
+
+  case 1:
+    dst = device->caches[queue.vmId].getGdsBuffer().getData() + dstAddressLo;
+    break;
+
+  default:
+    rx::die("IT_DMA_DATA: unexpected dstSel %u", dstSel);
+  }
+
+  void *src = nullptr;
+  std::uint32_t srcSize = 0;
+  switch (srcSel) {
+  case 3:
+  case 0:
+    if (srcSel == 3 || sas == 0) {
+      auto srcAddress =
+          srcAddressLo | (static_cast<std::uint64_t>(srcAddressHi) << 32);
+      src = amdgpu::RemoteMemory{queue.vmId}.getPointer(srcAddress);
+      device->caches[queue.vmId].flush(scheduler, srcAddress, size);
+    } else {
+      src = getMmRegister(srcAddressLo / sizeof(std::uint32_t));
+    }
+
+    srcSize = ~0;
+    break;
+  case 1:
+    src = device->caches[queue.vmId].getGdsBuffer().getData() + srcAddressLo;
+    srcSize = ~0;
+    break;
+
+  case 2:
+    src = &data;
+    srcSize = sizeof(data);
+    break;
+
+  default:
+    rx::die("IT_DMA_DATA: unexpected srcSel %u", srcSel);
+  }
+
+  rx::dieIf(size > srcSize,
+            "IT_DMA_DATA: out of source size srcSel %u, dstSel %u, size %u",
+            srcSel, dstSel, size);
+
+  if (saic != 0 && srcSel == 0 && sas == 0) {
+    if (daic != 0 && dstSel == 0 && das == 0) {
+      std::memcpy(dst, src, sizeof(std::uint32_t));
+    } else {
+      for (std::uint32_t i = 0; i < size / sizeof(std::uint32_t); ++i) {
+        std::memcpy(std::bit_cast<std::uint32_t *>(dst) + i, src,
+                    sizeof(std::uint32_t));
+      }
+    }
+  } else if (daic != 0 && dstSel == 0 && das == 0) {
+    for (std::uint32_t i = 0; i < size / sizeof(std::uint32_t); ++i) {
+      std::memcpy(dst, std::bit_cast<std::uint32_t *>(src) + i,
+                  sizeof(std::uint32_t));
+    }
+  } else {
+    std::memcpy(dst, src, size);
+  }
   return true;
 }
 
