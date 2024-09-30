@@ -983,8 +983,8 @@ bool GraphicsPipe::dmaData(Queue &queue) {
             "IT_DMA_DATA: out of source size srcSel %u, dstSel %u, size %u",
             srcSel, dstSel, size);
 
-  if (saic != 0 && srcSel == 0 && sas == 0) {
-    if (daic != 0 && dstSel == 0 && das == 0) {
+  if (saic != 0 && srcSel == 0 && sas == 1) {
+    if (daic != 0 && dstSel == 0 && das == 1) {
       std::memcpy(dst, src, sizeof(std::uint32_t));
     } else {
       for (std::uint32_t i = 0; i < size / sizeof(std::uint32_t); ++i) {
@@ -992,7 +992,7 @@ bool GraphicsPipe::dmaData(Queue &queue) {
                     sizeof(std::uint32_t));
       }
     }
-  } else if (daic != 0 && dstSel == 0 && das == 0) {
+  } else if (daic != 0 && dstSel == 0 && das == 1) {
     for (std::uint32_t i = 0; i < size / sizeof(std::uint32_t); ++i) {
       std::memcpy(dst, std::bit_cast<std::uint32_t *>(src) + i,
                   sizeof(std::uint32_t));
