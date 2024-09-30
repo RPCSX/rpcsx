@@ -251,6 +251,13 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
     return false;
   }
 
+  if (bufferIndex < 0) {
+    bridge->flipBuffer[process.vmId] = bufferIndex;
+    bridge->flipArg[process.vmId] = arg;
+    bridge->flipCount[process.vmId] = bridge->flipCount[process.vmId] + 1;
+    return false;
+  }
+
   auto &buffer = process.buffers[bufferIndex];
   auto &bufferAttr = process.bufferAttributes[buffer.attrId];
 
