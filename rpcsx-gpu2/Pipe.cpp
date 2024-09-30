@@ -846,16 +846,24 @@ bool GraphicsPipe::eventWriteEos(Queue &queue) {
   auto pointer = RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(address);
 
   context.vgtEventInitiator = eventType;
+  auto &cache = device->caches[queue.vmId];
 
   switch (cmd) {
   case 1: { // store GDS data to memory
     auto sizeDw = rx::getBits(dataInfo, 31, 16);
     auto gdsIndexDw = rx::getBits(dataInfo, 15, 0);
-    rx::die("unimplemented event write eos gds data");
+    std::println("event write eos: gds data {:x}-{:x}", gdsIndexDw,
+                 gdsIndexDw + sizeDw);
+    auto size = sizeof(std::uint32_t) * sizeDw;
+
+    auto gds = cache.getGdsBuffer().getData();
+    cache.invalidate(scheduler, address, size);
+    std::memcpy(pointer, gds + gdsIndexDw * sizeof(std::uint32_t), size);
     break;
   }
 
   case 2: // after GDS writes confirm, store 32 bit DATA to memory as fence
+    cache.invalidate(scheduler, address, sizeof(std::uint32_t));
     *pointer = dataInfo;
     break;
 
