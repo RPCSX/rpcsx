@@ -485,7 +485,8 @@ bool GraphicsPipe::dispatchDirect(Queue &queue) {
   auto dispatchInitiator = queue.rptr[4];
   sh.compute.computeDispatchInitiator = dispatchInitiator;
 
-  // FIXME
+  amdgpu::dispatch(device->caches[queue.vmId], scheduler, sh.compute, dimX,
+                   dimY, dimZ);
   return true;
 }
 bool GraphicsPipe::dispatchIndirect(Queue &queue) {
@@ -500,7 +501,8 @@ bool GraphicsPipe::dispatchIndirect(Queue &queue) {
   auto dimY = buffer[1];
   auto dimZ = buffer[2];
 
-  // FIXME
+  amdgpu::dispatch(device->caches[queue.vmId], scheduler, sh.compute, dimX,
+                   dimY, dimZ);
   return true;
 }
 

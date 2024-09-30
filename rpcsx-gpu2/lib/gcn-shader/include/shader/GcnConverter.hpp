@@ -7,6 +7,70 @@
 #include <vector>
 
 namespace shader::gcn {
+enum class VsSGprInput {
+  State,
+  StreamOutWriteIndex,
+  StreamOutBaseOffset0,
+  StreamOutBaseOffset1,
+  StreamOutBaseOffset2,
+  StreamOutBaseOffset3,
+  OffchipLds,
+  WaveId,
+  Scratch,
+
+  Count,
+};
+
+enum class PsSGprInput {
+  State,
+  WaveCount,
+  Scratch,
+
+  Count,
+};
+
+enum class GsSGprInput {
+  GsVsOffset,
+  GsWaveId,
+  Scratch,
+
+  Count,
+};
+
+enum class EsSGprInput {
+  OffchipLds,
+  IsOffchip,
+  EsGsOffset,
+  Scratch,
+
+  Count,
+};
+
+enum class HsSGprInput {
+  OffchipLds,
+  ThreadGroupSize,
+  TesselationFactorBase,
+  Scratch,
+
+  Count,
+};
+
+enum class LsSGprInput {
+  Scratch,
+
+  Count,
+};
+
+enum class CsSGprInput {
+  ThreadGroupIdX,
+  ThreadGroupIdY,
+  ThreadGroupIdZ,
+  ThreadGroupSize,
+  Scratch,
+
+  Count,
+};
+
 enum class PsVGprInput {
   IPerspSample,
   JPerspSample,
@@ -34,6 +98,7 @@ enum class PsVGprInput {
 
   Count
 };
+
 enum class ConfigType {
   Imm,
   UserSgpr,
@@ -41,7 +106,20 @@ enum class ConfigType {
   MemoryTable,
   Gds,
   PsInputVGpr,
+  VsInputSGpr,
+  PsInputSGpr,
+  GsInputSGpr,
+  EsInputSGpr,
+  HsInputSGpr,
+  LsInputSGpr,
+  CsInputSGpr,
+  GsPrimType,
+  GsInstanceEn,
+  InstanceEn,
   VsPrimType,
+  PsPrimType,
+  CsTgIdCompCnt,
+  VsInputVgprCount,
   CbCompSwap,
   ViewPortOffsetX,
   ViewPortOffsetY,

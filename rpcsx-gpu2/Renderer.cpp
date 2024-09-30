@@ -512,70 +512,23 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   pipe.scheduler.submit();
 }
 
-// void amdgpu::dispatch(Scheduler &sched,
-//                       amdgpu::Registers::ComputeConfig &computeConfig, int
-//                       vmId, std::uint32_t groupCountX, std::uint32_t
-//                       groupCountY, std::uint32_t groupCountZ) {
+void amdgpu::dispatch(Cache &cache, Scheduler &sched,
+                      Registers::ComputeConfig &computeConfig,
+                      std::uint32_t groupCountX, std::uint32_t groupCountY,
+                      std::uint32_t groupCountZ) {
+  auto tag = cache.createComputeTag(sched);
+  auto descriptorSet = tag.getDescriptorSet();
+  auto shader = tag.getShader(computeConfig);
+  auto pipelineLayout = tag.getComputePipelineLayout();
+  tag.buildDescriptors(descriptorSet);
 
-//   vkCmdDispatch(sched.getCommandBuffer(), groupCountX, groupCountY,
-//                 groupCountZ);
-
-//   sched.submit();
-// }
-
-static void
-transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
-                      VkImageLayout oldLayout, VkImageLayout newLayout,
-                      const VkImageSubresourceRange &subresourceRange) {
-  VkImageMemoryBarrier barrier{};
-  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout = oldLayout;
-  barrier.newLayout = newLayout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image = image;
-  barrier.subresourceRange = subresourceRange;
-
-  auto layoutToStageAccess = [](VkImageLayout layout)
-      -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
-    switch (layout) {
-    case VK_IMAGE_LAYOUT_UNDEFINED:
-    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-    case VK_IMAGE_LAYOUT_GENERAL:
-      return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
-
-    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-      return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
-
-    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-      return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_READ_BIT};
-
-    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-      return {VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT};
-
-    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-      return {VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-              VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-                  VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT};
-
-    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-      return {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                  VK_ACCESS_COLOR_ATTACHMENT_READ_BIT};
-
-    default:
-      std::abort();
-    }
-  };
-
-  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout);
-  auto [destinationStage, destinationAccess] = layoutToStageAccess(newLayout);
-
-  barrier.srcAccessMask = sourceAccess;
-  barrier.dstAccessMask = destinationAccess;
-
-  vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
-                       nullptr, 0, nullptr, 1, &barrier);
+  auto commandBuffer = sched.getCommandBuffer();
+  VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_COMPUTE_BIT};
+  vk::CmdBindShadersEXT(commandBuffer, 1, stages, &shader.handle);
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+  vkCmdDispatch(commandBuffer, groupCountX, groupCountY, groupCountZ);
+  sched.submit();
 }
 
 void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
@@ -603,12 +556,6 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
 
   auto imageView = cacheTag.getImageView(framebuffer, Access::Read);
   auto sampler = cacheTag.getSampler(framebufferSampler);
-
-  VkDescriptorImageInfo imageInfo{
-      .sampler = sampler.handle,
-      .imageView = imageView.handle,
-      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-  };
 
   VkRenderingAttachmentInfo colorAttachments[1]{{
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,

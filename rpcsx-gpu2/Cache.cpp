@@ -762,8 +762,6 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
 
 std::shared_ptr<Cache::Entry>
 Cache::Tag::findShader(const ShaderKey &key, const ShaderKey *dependedKey) {
-  auto data = RemoteMemory{mParent->mVmIm}.getPointer(key.address);
-
   auto cacheIt = mParent->mShaders.queryArea(key.address);
 
   if (cacheIt == mParent->mShaders.end() ||
@@ -1088,10 +1086,9 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       key.mipCount, key.pow2pad);
 
   VkImageUsageFlags usage =
-      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-      VK_IMAGE_USAGE_SAMPLED_BIT // | VK_IMAGE_USAGE_STORAGE_BIT
-      ;
-
+      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  if (key.kind == ImageKind::Color) {
+    usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
   bool isCompressed =
       key.dfmt == gnm::kDataFormatBc1 || key.dfmt == gnm::kDataFormatBc2 ||
       key.dfmt == gnm::kDataFormatBc3 || key.dfmt == gnm::kDataFormatBc4 ||
@@ -1101,6 +1098,9 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
   if (!isCompressed) {
     usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
+  } else {
+    usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   }
 
   auto image = vk::Image::Allocate(
@@ -1133,25 +1133,6 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       for (unsigned mipLevel = key.baseMipLevel;
            mipLevel < key.baseMipLevel + key.mipCount; ++mipLevel) {
         auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
-        regions.push_back({
-            .bufferOffset = info.offset,
-            .bufferRowLength =
-                mipLevel > 0 ? 0 : std::max(key.pitch >> mipLevel, 1u),
-            .imageSubresource =
-                {
-                    .aspectMask = toAspect(key.kind),
-                    .mipLevel = mipLevel,
-                    .baseArrayLayer = key.baseArrayLayer,
-                    .layerCount = key.arrayLayerCount,
-                },
-            .imageExtent =
-                {
-                    .width = std::max(key.extent.width >> mipLevel, 1u),
-                    .height = std::max(key.extent.height >> mipLevel, 1u),
-                    .depth = std::max(key.extent.depth >> mipLevel, 1u),
-                },
-        });
-
         regions.push_back({
             .bufferOffset = info.offset,
             .bufferRowLength =
@@ -1434,10 +1415,10 @@ Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
   gcn::Environment env{
       .vgprCount = pgm.rsrc1.getVGprCount(),
       .sgprCount = pgm.rsrc1.getSGprCount(),
-      .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
       .supportsBarycentric = vk::context->supportsBarycentric,
       .supportsInt8 = vk::context->supportsInt8,
       .supportsInt64Atomics = vk::context->supportsInt64Atomics,
+      .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
   };
 
   auto shader = Tag::getShader({
@@ -1545,6 +1526,10 @@ Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
       configPtr[index] = std::bit_cast<std::uint32_t>(
           context.cbColor[slot.data].info.compSwap);
       break;
+
+    default:
+      rx::die("unexpected resource slot in graphics shader %u, stage %u",
+              int(slot.type), int(stage));
     }
 
     ++index;
@@ -1575,7 +1560,140 @@ Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
 
 Cache::Shader
 Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
-  return {};
+  auto descriptorSet = getDescriptorSet();
+  gcn::Environment env{
+      .vgprCount = pgm.rsrc1.getVGprCount(),
+      .sgprCount = pgm.rsrc1.getSGprCount(),
+      .numThreadX = static_cast<std::uint8_t>(pgm.numThreadX),
+      .numThreadY = static_cast<std::uint8_t>(pgm.numThreadY),
+      .numThreadZ = static_cast<std::uint8_t>(pgm.numThreadZ),
+      .supportsBarycentric = vk::context->supportsBarycentric,
+      .supportsInt8 = vk::context->supportsInt8,
+      .supportsInt64Atomics = vk::context->supportsInt64Atomics,
+      .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
+  };
+
+  auto shader = Tag::getShader({
+      .address = pgm.address << 8,
+      .stage = gcn::Stage::Cs,
+      .env = env,
+  });
+
+  if (!shader.handle) {
+    return shader;
+  }
+
+  std::uint64_t memoryTableAddress = getMemoryTable().deviceAddress;
+
+  std::uint64_t gdsAddress = mParent->getGdsBuffer().getAddress();
+  mStorage->shaderResources.cacheTag = this;
+
+  std::uint32_t slotOffset = mStorage->shaderResources.slotOffset;
+
+  mStorage->shaderResources.loadResources(
+      shader.info->resources,
+      std::span(pgm.userData.data(), pgm.rsrc2.userSgpr));
+
+  const auto &configSlots = shader.info->configSlots;
+
+  auto configSize = configSlots.size() * sizeof(std::uint32_t);
+  auto configBuffer = getInternalHostVisibleBuffer(configSize);
+
+  auto configPtr = reinterpret_cast<std::uint32_t *>(configBuffer.data);
+
+  std::uint32_t sgprInput[static_cast<std::size_t>(gcn::CsSGprInput::Count)];
+  std::uint32_t sgprInputCount = 0;
+
+  if (pgm.rsrc2.tgIdXEn) {
+    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdX);
+  }
+
+  if (pgm.rsrc2.tgIdYEn) {
+    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdY);
+  }
+
+  if (pgm.rsrc2.tgIdZEn) {
+    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdZ);
+  }
+
+  if (pgm.rsrc2.tgSizeEn) {
+    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupSize);
+  }
+
+  if (pgm.rsrc2.scratchEn) {
+    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::Scratch);
+  }
+
+  for (std::size_t index = 0; const auto &slot : configSlots) {
+    switch (slot.type) {
+    case gcn::ConfigType::Imm:
+      readMemory(&configPtr[index], slot.data, sizeof(std::uint32_t));
+      break;
+    case gcn::ConfigType::UserSgpr:
+      configPtr[index] = pgm.userData[slot.data];
+      break;
+    case gcn::ConfigType::ResourceSlot:
+      mStorage->memoryTableConfigSlots.push_back({
+          .bufferIndex =
+              static_cast<std::uint32_t>(mStorage->descriptorBuffers.size()),
+          .configIndex = static_cast<std::uint32_t>(index),
+          .resourceSlot = static_cast<std::uint32_t>(slotOffset + slot.data),
+      });
+      break;
+
+    case gcn::ConfigType::MemoryTable:
+      if (slot.data == 0) {
+        configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress);
+      } else {
+        configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress >> 32);
+      }
+      break;
+    case gcn::ConfigType::Gds:
+      if (slot.data == 0) {
+        configPtr[index] = static_cast<std::uint32_t>(gdsAddress);
+      } else {
+        configPtr[index] = static_cast<std::uint32_t>(gdsAddress >> 32);
+      }
+      break;
+
+    case gcn::ConfigType::CsTgIdCompCnt:
+      configPtr[index] = pgm.rsrc2.tidIgCompCount;
+      break;
+
+    case gcn::ConfigType::CsInputSGpr:
+      if (slot.data < sgprInputCount) {
+        configPtr[index] = sgprInput[slot.data];
+      } else {
+        configPtr[index] = -1;
+      }
+      break;
+
+    default:
+      rx::die("unexpected resource slot in compute shader %u", int(slot.type));
+    }
+
+    ++index;
+  }
+
+  mStorage->descriptorBuffers.push_back(configPtr);
+
+  VkDescriptorBufferInfo bufferInfo{
+      .buffer = configBuffer.handle,
+      .offset = configBuffer.offset,
+      .range = configSize,
+  };
+
+  VkWriteDescriptorSet writeDescSet{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = descriptorSet,
+      .dstBinding = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .pBufferInfo = &bufferInfo,
+  };
+
+  vkUpdateDescriptorSets(vk::context->device, 1, &writeDescSet, 0, nullptr);
+  return shader;
 }
 
 Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {

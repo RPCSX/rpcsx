@@ -551,20 +551,71 @@ struct Registers {
 
     std::uint32_t computeDispatchInitiator;
     std::uint32_t _pad0[6];
-    std::uint32_t computeNumThreadX;
-    std::uint32_t computeNumThreadY;
-    std::uint32_t computeNumThreadZ;
+    std::uint32_t numThreadX;
+    std::uint32_t numThreadY;
+    std::uint32_t numThreadZ;
     std::uint32_t _pad1[2];
-    std::uint32_t computePgmLo;
-    std::uint32_t computePgmHi;
+    std::uint64_t address;
     std::uint32_t _pad2[4];
-    std::uint32_t computePgmRsrc1;
-    std::uint32_t computePgmRsrc2;
+    struct {
+      union {
+        std::uint32_t raw;
+
+        struct {
+          std::uint32_t vgprs : 6;
+          std::uint32_t sgprs : 4;
+          std::uint32_t priority : 2;
+          std::uint32_t floatMode : 8;
+          std::uint32_t priv : 1;
+          std::uint32_t dx10Clamp : 1;
+          std::uint32_t debugMode : 1;
+          std::uint32_t ieeeMode : 1;
+        };
+      };
+
+      std::uint8_t getVGprCount() const { return (vgprs + 1) * 4; }
+      std::uint8_t getSGprCount() const { return (sgprs + 1) * 8; }
+    } rsrc1;
+    struct {
+      union {
+        std::uint32_t raw;
+
+        struct {
+          bool scratchEn : 1;
+          std::uint32_t userSgpr : 5;
+          bool trapPresent : 1;
+          bool tgIdXEn : 1;
+          bool tgIdYEn : 1;
+          bool tgIdZEn : 1;
+          bool tgSizeEn : 1;
+          std::uint32_t tidIgCompCount : 2;
+          std::uint32_t : 2;
+          std::uint32_t ldsSize : 9;
+          std::uint32_t excpEn : 7;
+        };
+      };
+
+      std::uint32_t getLdsDwordsCount() const { return ldsSize * 64; }
+    } rsrc2;
     std::uint32_t _pad3[1];
-    std::uint32_t computeResourceLimits;
-    std::uint32_t computeStaticThreadMgmtSe0;
-    std::uint32_t computeStaticThreadMgmtSe1;
-    std::uint32_t computeTmpRingSize;
+
+    struct {
+      union {
+        std::uint32_t raw;
+        struct {
+          std::uint32_t wavesPerSh : 6;
+          std::uint32_t : 6;
+          std::uint32_t tgPerCu : 4;
+          std::uint32_t lockThreshold: 6;
+          std::uint32_t simdDestCntl : 1;
+        };
+
+      };
+      std::uint32_t getWavesPerSh() const { return wavesPerSh << 4; }
+    } resourceLimits;
+    std::uint32_t staticThreadMgmtSe0;
+    std::uint32_t staticThreadMgmtSe1;
+    std::uint32_t tmpRingSize;
     std::uint32_t _pad4[39];
     std::array<std::uint32_t, 16> userData;
   };

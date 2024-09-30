@@ -27,6 +27,23 @@ enum class Stage {
   Invalid,
 };
 
+enum RegId {
+  Sgpr,
+  Vgpr,
+  M0,
+  Scc,
+  Vcc,
+  Exec,
+  VccZ,
+  ExecZ,
+  LdsDirect,
+  SgprCount,
+  VgprCount,
+  ThreadId,
+  MemoryTable,
+  Gds,
+};
+
 struct Import : spv::Import {
   ir::Node getOrCloneImpl(ir::Context &context, ir::Node node,
                           bool isOperand) override;
@@ -53,23 +70,6 @@ struct InstructionRegion : ir::RegionLikeImpl {
 
     base.insertAfter(point, node);
   }
-};
-
-enum RegId {
-  Sgpr,
-  Vgpr,
-  M0,
-  Scc,
-  Vcc,
-  Exec,
-  VccZ,
-  ExecZ,
-  LdsDirect,
-  SgprCount,
-  VgprCount,
-  ThreadId,
-  MemoryTable,
-  Gds,
 };
 
 struct Context : spv::Context {
@@ -113,10 +113,13 @@ struct Context : spv::Context {
 struct Environment {
   std::uint8_t vgprCount;
   std::uint8_t sgprCount;
-  std::span<const std::uint32_t> userSgprs;
+  std::uint8_t numThreadX;
+  std::uint8_t numThreadY;
+  std::uint8_t numThreadZ;
   bool supportsBarycentric = true;
   bool supportsInt8 = false;
   bool supportsInt64Atomics = false;
+  std::span<const std::uint32_t> userSgprs;
 };
 
 ir::Region deserialize(Context &context, const Environment &environment,

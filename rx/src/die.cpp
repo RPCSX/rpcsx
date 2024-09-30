@@ -10,6 +10,9 @@ void rx::die(const char *message, ...) {
   std::vfprintf(stderr, message, args);
   std::fprintf(stderr, "\n");
   va_end(args);
+
+  std::fflush(stdout);
+  std::fflush(stderr);
   std::abort();
 }
 
@@ -20,6 +23,9 @@ void rx::dieIf(bool condition, const char *message, ...) {
     std::vfprintf(stderr, message, args);
     std::fprintf(stderr, "\n");
     va_end(args);
+
+    std::fflush(stdout);
+    std::fflush(stderr);
     std::abort();
   }
 }

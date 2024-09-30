@@ -157,7 +157,7 @@ struct Cache {
     VkImageSubresourceRange subresource;
   };
 
-  class Tag;
+  struct Tag;
 
 private:
   struct MemoryTableSlot {

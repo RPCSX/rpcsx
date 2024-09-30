@@ -3,8 +3,7 @@
 #include "shaders/flip_alt.frag.h"
 #include "shaders/flip_std.frag.h"
 #include "vk.hpp"
-#include <atomic>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 FlipPipeline::~FlipPipeline() {
   vkDestroyPipeline(vk::context->device, pipelines[0], vk::context->allocator);
