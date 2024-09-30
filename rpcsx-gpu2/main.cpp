@@ -1,23 +1,26 @@
-#include "rx/atScopeExit.hpp"
-#include "rx/die.hpp"
+#include "vk.hpp"
+
 #include <amdgpu/bridge/bridge.hpp>
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <print>
 #include <rx/MemoryTable.hpp>
+#include <rx/atScopeExit.hpp>
+#include <rx/die.hpp>
+#include <rx/mem.hpp>
 
 #include <shader/gcn.hpp>
 #include <shader/glsl.hpp>
 #include <shader/spv.hpp>
 #include <vulkan/vulkan.h>
 
+#include <chrono>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <print>
 #include <span>
 #include <thread>
 #include <unordered_map>
@@ -31,7 +34,6 @@
 #include <gnm/pm4.hpp>
 #include <vulkan/vulkan_core.h>
 
-#include "vk.hpp"
 #include <amdgpu/tiler.hpp>
 #include <shaders/rdna-semantic-spirv.hpp>
 
@@ -146,7 +148,7 @@ static void usage(std::FILE *out, const char *argv0) {
   std::fprintf(out, "     window - create and use native window (default)\n");
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_message_callback(
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessageCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
@@ -227,6 +229,11 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
+  if (!rx::mem::reserve((void *)0x40000, 0x60000000000 - 0x40000)) {
+    std::fprintf(stderr, "failed to reserve virtual memory\n");
+    return 1;
+  }
+
   auto bridge = amdgpu::bridge::openShmCommandBuffer(cmdBridgeName);
   if (bridge == nullptr) {
     bridge = amdgpu::bridge::createShmCommandBuffer(cmdBridgeName);
@@ -288,16 +295,22 @@ int main(int argc, const char *argv[]) {
   VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 
   if (enableValidation) {
-    VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info{
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-    debug_utils_messenger_create_info.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
-    debug_utils_messenger_create_info.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-    debug_utils_messenger_create_info.pfnUserCallback =
-        debug_utils_message_callback;
+    VkDebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+        .messageType =
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT,
+        .pfnUserCallback = debugUtilsMessageCallback,
+    };
+
     VK_VERIFY(vk::CreateDebugUtilsMessengerEXT(
-        vkContext.instance, &debug_utils_messenger_create_info,
+        vkContext.instance, &debugUtilsMessengerCreateInfo,
         vk::context->allocator, &debugMessenger));
   }
 
