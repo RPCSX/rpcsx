@@ -149,7 +149,7 @@ struct CbColorInfo {
       std::uint32_t endian : 2;
       gnm::DataFormat dfmt : 5;
       std::uint32_t linearGeneral : 1;
-      gnm::NumericFormat nfmt : 3;
+      gnm::CbNumericFormat nfmt : 3;
       CbCompSwap compSwap : 2;
       std::uint32_t fastClear : 1;
       std::uint32_t compression : 1;

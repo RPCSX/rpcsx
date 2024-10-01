@@ -71,6 +71,15 @@ enum NumericFormat : unsigned {
   kNumericFormatUBScaled = 0x0000000D,
 };
 
+enum CbNumericFormat : unsigned {
+  kCbNumericFormatUNorm = 0,
+  kCbNumericFormatSNorm = 1,
+  kCbNumericFormatUInt = 4,
+  kCbNumericFormatSint = 5,
+  kCbNumericFormatSrgb = 6,
+  kCbNumericFormatFloat = 7,
+};
+
 enum ZFormat {
   kZFormatInvalid = 0,
   kZFormat16 = 1,
@@ -285,5 +294,15 @@ enum class AnisoRatio : std::uint8_t {
   x8,
   x16,
 };
+
+constexpr NumericFormat toNumericFormat(CbNumericFormat cbFmt,
+                                        DataFormat dfmt) {
+  if (cbFmt == kCbNumericFormatSrgb || dfmt == kDataFormat8_8_8_8 ||
+      dfmt == kDataFormat10_10_10_2) {
+    return kNumericFormatSrgb;
+  }
+
+  return static_cast<NumericFormat>(cbFmt);
+}
 
 } // namespace gnm

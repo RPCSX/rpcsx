@@ -283,7 +283,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     renderTargetInfo.extent.height = vkViewPortScissor.extent.height;
     renderTargetInfo.extent.depth = 1;
     renderTargetInfo.dfmt = cbColor.info.dfmt;
-    renderTargetInfo.nfmt = cbColor.info.nfmt;
+    renderTargetInfo.nfmt = gnm::toNumericFormat(cbColor.info.nfmt, cbColor.info.dfmt);
     renderTargetInfo.mipCount = 1;
     renderTargetInfo.arrayLayerCount = 1;
 

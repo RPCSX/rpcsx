@@ -7,7 +7,7 @@
 
 static int gShmFd = -1;
 static constexpr std::size_t kShmSize = sizeof(amdgpu::bridge::BridgeHeader) +
-                                        (sizeof(std::uint64_t) * 256);
+                                        (sizeof(std::uint64_t) * 1024);
 amdgpu::bridge::BridgeHeader *
 amdgpu::bridge::createShmCommandBuffer(const char *name) {
   if (gShmFd != -1) {

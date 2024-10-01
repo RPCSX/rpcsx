@@ -272,19 +272,19 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
 
   case 0x80002200:
     dfmt = gnm::kDataFormat8_8_8_8;
-    nfmt = gnm::kNumericFormatUNorm;
+    nfmt = gnm::kNumericFormatSrgb;
     flipType = FlipType::Std;
     break;
 
   case 0x88740000:
   case 0x88060000:
     dfmt = gnm::kDataFormat2_10_10_10;
-    nfmt = gnm::kNumericFormatUNorm;
+    nfmt = gnm::kNumericFormatSNorm;
     break;
 
   case 0xc1060000:
     dfmt = gnm::kDataFormat16_16_16_16;
-    nfmt = gnm::kNumericFormatSrgb;
+    nfmt = gnm::kNumericFormatFloat;
     break;
 
   default:
