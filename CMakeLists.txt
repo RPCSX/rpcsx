@@ -58,7 +58,7 @@ add_subdirectory(tools)
 
 add_subdirectory(orbis-kernel)
 add_subdirectory(rpcsx-os)
-add_subdirectory(rpcsx-gpu)
+add_subdirectory(rpcsx-gpu-legacy)
 add_subdirectory(rpcsx-gpu2)
 add_subdirectory(hw/amdgpu)
 add_subdirectory(rx)
