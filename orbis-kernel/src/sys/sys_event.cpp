@@ -181,7 +181,8 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     }
     kq->cv.notify_all(kq->mtx);
   } else if (change.filter == kEvFiltDisplay) {
-    if (change.ident != 0x51000100000000 && change.ident != 0x63010100000000) {
+    if (change.ident != 0x51000100000000 && change.ident != 0x63010100000000 &&
+        change.ident != 0x06000000000000) {
       nodeIt->triggered = true;
       kq->cv.notify_all(kq->mtx);
     }

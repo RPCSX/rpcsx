@@ -1481,7 +1481,7 @@ static void createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "ScePsmSharedDmem");
 
   auto saveDataSem = createSemaphore("SceSaveData0000000000000001", 0x101, 0, 1);
-  createSemaphore("SceSaveData0000000000000001_0", 0x101, 0, 1);
+  auto saveDataSem_0 = createSemaphore("SceSaveData0000000000000001_0", 0x101, 0, 1);
   createShm("SceSaveData0000000000000001_0", 0x202, 0x1b6, 0x40000);
   createShm("SceSaveDataI0000000000000001", 0x202, 0x1b6, 43008);
   createShm("SceSaveDataI0000000000000001_0", 0x202, 0x1b6, 43008);
@@ -1493,7 +1493,14 @@ static void createShellCoreObjects(orbis::Process *process) {
           0x12340000,
           [=](void *out, std::uint64_t &size) -> std::int32_t {
             ruiEvf->set(~0ull);
+            {
             saveDataSem->value++;
+              saveDataSem->cond.notify_one(saveDataSem->mtx);
+            }
+            {
+              saveDataSem_0->value++;
+              saveDataSem_0->cond.notify_one(saveDataSem_0->mtx);
+            }
             return 0;
           })
       .addSyncMethod(
