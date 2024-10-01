@@ -8,7 +8,7 @@ add_precompiled_vulkan_spirv(rpcsx-gpu-shaders
     shaders/rect_list.geom.glsl
 )
 
-add_executable(rpcsx-gpu2
+add_executable(rpcsx-gpu
     Cache.cpp
     main.cpp
     Device.cpp
@@ -18,7 +18,7 @@ add_executable(rpcsx-gpu2
     Renderer.cpp
 )
 
-target_link_libraries(rpcsx-gpu2
+target_link_libraries(rpcsx-gpu
 PUBLIC
     rpcsx-gpu-shaders
     amdgpu::bridge
@@ -32,7 +32,7 @@ PUBLIC
     gnm
 )
 
-install(TARGETS rpcsx-gpu2 RUNTIME DESTINATION bin)
-set_target_properties(rpcsx-gpu2 PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-target_base_address(rpcsx-gpu2 0x0000060000000000)
+install(TARGETS rpcsx-gpu RUNTIME DESTINATION bin)
+set_target_properties(rpcsx-gpu PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+target_base_address(rpcsx-gpu 0x0000060000000000)
 add_subdirectory(lib)
