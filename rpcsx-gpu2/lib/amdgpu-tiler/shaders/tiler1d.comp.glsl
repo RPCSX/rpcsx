@@ -11,6 +11,7 @@
 #extension GL_EXT_null_initializer : enable
 #extension GL_EXT_buffer_reference2 : enable
 #extension GL_EXT_buffer_reference_uvec2 : enable
+#extension GL_EXT_debug_printf : enable
 
 #include "tiler.glsl"
 
@@ -44,7 +45,19 @@ void main() {
 
     linearByteOffset += linearSliceOffset;
 
-    switch ((config.bitsPerElement + 7) / 8) {
+    uint32_t bpp = (config.bitsPerElement + 7) / 8;
+
+    if (config.srcAddress + linearByteOffset + bpp > config.srcEndAddress) {
+        debugPrintfEXT("tiler1d: out of src buffer %d x %d x %d", pos.x, pos.y, pos.z);
+        return;
+    }
+
+    if (config.dstAddress + tiledByteOffset + bpp > config.dstEndAddress) {
+        debugPrintfEXT("tiler1d: out of dst buffer %d x %d x %d", pos.x, pos.y, pos.z);
+        return;
+    }
+
+    switch (bpp) {
     case 1:
         buffer_reference_uint8_t(config.dstAddress + tiledByteOffset).data = buffer_reference_uint8_t(config.srcAddress + linearByteOffset).data;
         break;

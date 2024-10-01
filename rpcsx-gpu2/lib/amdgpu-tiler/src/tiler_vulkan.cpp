@@ -87,9 +87,11 @@ struct amdgpu::GpuTiler::Impl {
   TilerShader tiler2d{descriptorSetLayout, spirv_tiler2d_comp};
   VkPipelineLayout pipelineLayout;
 
-  struct Config {
+  struct alignas(64) Config {
     uint64_t srcAddress;
+    uint64_t srcEndAddress;
     uint64_t dstAddress;
+    uint64_t dstEndAddress;
     uint32_t dataWidth;
     uint32_t dataHeight;
     uint32_t tileMode;
@@ -99,7 +101,6 @@ struct amdgpu::GpuTiler::Impl {
     uint32_t bitsPerElement;
     uint32_t tiledSurfaceSize;
     uint32_t linearSurfaceSize;
-    uint32_t padding[2];
   };
 
   Impl() {
@@ -170,7 +171,9 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
                               const amdgpu::SurfaceInfo &info,
                               amdgpu::TileMode tileMode, gnm::DataFormat dfmt,
                               std::uint64_t srcTiledAddress,
-                              std::uint64_t dstLinearAddress, int mipLevel,
+                              std::uint64_t srcSize,
+                              std::uint64_t dstLinearAddress,
+                              std::uint64_t dstSize, int mipLevel,
                               int baseArray, int arrayCount) {
   auto commandBuffer = scheduler.getCommandBuffer();
   auto slot = mImpl->allocateDescriptorSlot();
@@ -181,7 +184,9 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
 
   auto &subresource = info.getSubresourceInfo(mipLevel);
   config->srcAddress = srcTiledAddress + subresource.offset;
+  config->srcEndAddress = srcTiledAddress + srcSize;
   config->dstAddress = dstLinearAddress;
+  config->dstEndAddress = dstLinearAddress + dstSize;
   config->dataWidth = subresource.dataWidth;
   config->dataHeight = subresource.dataHeight;
   config->tileMode = tileMode.raw;
@@ -266,8 +271,10 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
                             const amdgpu::SurfaceInfo &info,
                             amdgpu::TileMode tileMode, gnm::DataFormat dfmt,
                             std::uint64_t srcLinearAddress,
-                            std::uint64_t dstTiledAddress, int mipLevel,
-                            int baseArray, int arrayCount) {
+                            std::uint64_t srcSize,
+                            std::uint64_t dstTiledAddress,
+                            std::uint64_t dstSize, int mipLevel, int baseArray,
+                            int arrayCount) {
   auto commandBuffer = scheduler.getCommandBuffer();
   auto slot = mImpl->allocateDescriptorSlot();
 
@@ -277,7 +284,9 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
 
   auto &subresource = info.getSubresourceInfo(mipLevel);
   config->srcAddress = srcLinearAddress;
+  config->srcEndAddress = srcLinearAddress + srcSize;
   config->dstAddress = dstTiledAddress + subresource.offset;
+  config->dstEndAddress = dstTiledAddress + dstSize;
   config->dataWidth = subresource.dataWidth;
   config->dataHeight = subresource.dataHeight;
   config->tileMode = tileMode.raw;

@@ -992,7 +992,9 @@ uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTil
 
 layout(binding=0) uniform Config {
     uint64_t srcAddress;
+    uint64_t srcEndAddress;
     uint64_t dstAddress;
+    uint64_t dstEndAddress;
     uvec2 dataSize;
     uint32_t tileMode;
     uint32_t macroTileMode;

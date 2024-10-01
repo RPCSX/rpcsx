@@ -565,6 +565,7 @@ struct CachedImage : Cache::Entry {
                              tiledBuffer.handle, regions.size(),
                              regions.data());
     } else {
+      auto tiledSize = info.totalSize;
       std::uint64_t linearOffset = 0;
       for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
         auto &regionInfo = info.getSubresourceInfo(mipLevel);
@@ -590,6 +591,7 @@ struct CachedImage : Cache::Entry {
         linearOffset += regionInfo.linearSize * image.getArrayLayers();
       }
 
+      auto linearSize = linearOffset;
       auto transferBuffer = vk::Buffer::Allocate(
           vk::getDeviceLocalMemory(), linearOffset,
           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
@@ -605,8 +607,8 @@ struct CachedImage : Cache::Entry {
       for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
         auto &regionInfo = info.getSubresourceInfo(mipLevel);
         tiler.tile(scheduler, info, acquiredTileMode, acquiredDfmt,
-                   transferBuffer.getAddress() + linearOffset,
-                   tiledBuffer.deviceAddress, mipLevel, 0,
+                   transferBuffer.getAddress() + linearOffset, linearSize - linearOffset, 
+                   tiledBuffer.deviceAddress, tiledSize, mipLevel, 0,
                    image.getArrayLayers());
         linearOffset += regionInfo.linearSize * image.getArrayLayers();
       }
@@ -1182,8 +1184,10 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
         linearOffset += info.linearSize * key.arrayLayerCount;
       }
 
+      auto detiledSize = linearOffset;
+
       auto detiledBuffer =
-          vk::Buffer::Allocate(vk::getDeviceLocalMemory(), linearOffset,
+          vk::Buffer::Allocate(vk::getDeviceLocalMemory(), detiledSize,
                                VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR |
                                    VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR);
 
@@ -1197,9 +1201,10 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
         auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
 
         tiler.detile(*mScheduler, surfaceInfo, key.tileMode, key.dfmt,
-                     tiledBuffer.deviceAddress, dstAddress, mipLevel, 0,
+                     tiledBuffer.deviceAddress, surfaceInfo.totalSize, dstAddress, detiledSize, mipLevel, 0,
                      key.arrayLayerCount);
 
+        detiledSize -= info.linearSize * key.arrayLayerCount;
         dstAddress += info.linearSize * key.arrayLayerCount;
       }
     }
