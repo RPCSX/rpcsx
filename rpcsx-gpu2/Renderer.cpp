@@ -516,7 +516,6 @@ void amdgpu::dispatch(Cache &cache, Scheduler &sched,
                       Registers::ComputeConfig &computeConfig,
                       std::uint32_t groupCountX, std::uint32_t groupCountY,
                       std::uint32_t groupCountZ) {
-  return; // FIXME
   auto tag = cache.createComputeTag(sched);
   auto descriptorSet = tag.getDescriptorSet();
   auto shader = tag.getShader(computeConfig);
@@ -525,9 +524,9 @@ void amdgpu::dispatch(Cache &cache, Scheduler &sched,
 
   auto commandBuffer = sched.getCommandBuffer();
   VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_COMPUTE_BIT};
-  vk::CmdBindShadersEXT(commandBuffer, 1, stages, &shader.handle);
-  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE,
                           pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+  vk::CmdBindShadersEXT(commandBuffer, 1, stages, &shader.handle);
   vkCmdDispatch(commandBuffer, groupCountX, groupCountY, groupCountZ);
   sched.submit();
 }
