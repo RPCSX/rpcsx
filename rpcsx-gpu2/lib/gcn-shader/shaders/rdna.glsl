@@ -241,6 +241,60 @@ float32_t ps_input_vgpr(int32_t index, f32vec4 fragCoord, bool frontFace) {
     return 0;
 }
 
+uint32_t cs_input_sgpr(int32_t index, u32vec3 localInvocationId) {
+    if (index == 0) {
+        return localInvocationId.x;
+    }
+
+    if (index == 1) {
+        return localInvocationId.y;
+    }
+
+    if (index == 2) {
+        return localInvocationId.z;
+    }
+
+    return 0;
+}
+
+void cs_set_initial_exec(u32vec3 localInvocationId, u32vec3 workgroupSize) {
+    uint32_t totalWorkgroupSize = workgroupSize.x * workgroupSize.y * workgroupSize.z;
+
+    if (totalWorkgroupSize == 64) {
+        exec = ~uint64_t(0);
+        return;
+    }
+
+    if (totalWorkgroupSize < 64) {
+        exec = (uint64_t(1) << totalWorkgroupSize) - 1;
+        return;
+    }
+
+    uint32_t waveCount = totalWorkgroupSize / 64;
+
+    uint32_t totalInvocationIndex = localInvocationId.x + 
+        localInvocationId.y * workgroupSize.x + 
+        localInvocationId.z * workgroupSize.x * workgroupSize.y;
+
+    uint32_t waveIndex = (totalInvocationIndex + 63) / 64;
+
+    if (waveIndex + 1 < waveCount) {
+        exec = ~uint64_t(0);
+        return;
+    }
+
+    uint32_t lastWaveLen = totalWorkgroupSize % 64;
+    exec = lastWaveLen == 0 ? ~uint64_t(0) : ((uint64_t(1) << lastWaveLen) - 1);
+}
+
+void cs_set_thread_id(u32vec3 localInvocationId, u32vec3 workgroupSize) {
+    uint32_t totalInvocationIndex = localInvocationId.x + 
+        localInvocationId.y * workgroupSize.x + 
+        localInvocationId.z * workgroupSize.x * workgroupSize.y;
+
+    thread_id = totalInvocationIndex % 64;
+}
+
 const uint32_t kPrimTypeQuadList = 0x13;
 const uint32_t kPrimTypeQuadStrip = 0x14;
 

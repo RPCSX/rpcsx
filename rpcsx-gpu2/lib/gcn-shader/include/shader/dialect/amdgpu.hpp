@@ -16,6 +16,9 @@ enum Op {
   PS_INPUT_VGPR,
   PS_COMP_SWAP,
   VS_GET_INDEX,
+  CS_INPUT_SGPR,
+  CS_SET_INITIAL_EXEC,
+  CS_SET_THREAD_ID,
   RESOURCE_PHI,
 
   OpCount,
@@ -49,6 +52,12 @@ inline const char *getInstructionName(unsigned op) {
     return "ps_comp_swap";
   case VS_GET_INDEX:
     return "vs_get_index";
+  case CS_INPUT_SGPR:
+    return "cs_input_sgpr";
+  case CS_SET_INITIAL_EXEC:
+    return "cs_set_initial_exec";
+  case CS_SET_THREAD_ID:
+    return "cs_set_thread_id";
   case RESOURCE_PHI:
     return "resource_phi";
   }
