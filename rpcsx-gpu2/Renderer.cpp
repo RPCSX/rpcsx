@@ -566,12 +566,22 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
   }};
 
-  VkViewport viewPorts[1]{
-      {
-          .width = float(targetExtent.width),
-          .height = float(targetExtent.height),
-      },
-  };
+  VkViewport viewPort{};
+  viewPort.width = targetExtent.width;
+  viewPort.height = targetExtent.height;
+
+  float imageAspectRatio = float(imageExtent.width) / imageExtent.height;
+  float targetAspectRatio = float(targetExtent.width) / targetExtent.height;
+
+  auto aspectDiff = imageAspectRatio / targetAspectRatio;
+
+  if (aspectDiff > 1) {
+    viewPort.height = targetExtent.height / aspectDiff;
+    viewPort.y = (targetExtent.height - viewPort.height) / 2;
+  } else if (aspectDiff < 1) {
+    viewPort.width = targetExtent.width * aspectDiff;
+    viewPort.x = (targetExtent.width - viewPort.width) / 2;
+  }
 
   VkRect2D viewPortScissors[1]{{
       {},
@@ -597,7 +607,7 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
   cacheTag.getDevice()->flipPipeline.bind(cacheTag.getScheduler(), type,
                                           imageView.handle, sampler.handle);
 
-  vkCmdSetViewportWithCount(commandBuffer, 1, viewPorts);
+  vkCmdSetViewportWithCount(commandBuffer, 1, &viewPort);
   vkCmdSetScissorWithCount(commandBuffer, 1, viewPortScissors);
 
   vkCmdDraw(commandBuffer, 6, 1, 0, 0);
