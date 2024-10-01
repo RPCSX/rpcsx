@@ -1695,7 +1695,7 @@ gcn::convertToSpv(Context &context, ir::Region body,
   }
 
   extensions.createSpvExtension(context.getUnknownLocation(),
-                                "SPV_EXT_physical_storage_buffer");
+                                "SPV_KHR_physical_storage_buffer");
   extensions.createSpvExtension(context.getUnknownLocation(),
                                 "SPV_KHR_non_semantic_info");
 
