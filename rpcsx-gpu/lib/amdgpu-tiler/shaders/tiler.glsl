@@ -990,7 +990,7 @@ uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTil
 }
 
 
-layout(binding=0) uniform Config {
+layout(push_constant) uniform Config {
     uint64_t srcAddress;
     uint64_t srcEndAddress;
     uint64_t dstAddress;
@@ -1003,6 +1003,4 @@ layout(binding=0) uniform Config {
     uint32_t bitsPerElement;
     uint32_t tiledSurfaceSize;
     uint32_t linearSurfaceSize;
-    uint32_t padding0;
-    uint32_t padding1;
 } config;
