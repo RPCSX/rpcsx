@@ -252,7 +252,6 @@ gcn::Context::getOrCreateLabel(ir::Location loc, ir::Region body,
                                std::uint64_t address) {
   auto it = instructions.lower_bound(address);
 
-  bool exists = false;
   if (it != instructions.end() && it->first == address) {
     if (it->second == ir::spv::OpLabel) {
       return {it->second.staticCast<ir::Value>(), false};
@@ -408,7 +407,6 @@ ir::Value gcn::Context::getOrCreateRegisterVariable(gcn::RegId id) {
   auto pRegTxN = getTypePointer(storageClass, regT);
 
   auto globals = Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
-  auto debugs = Builder::createAppend(*this, layout.getOrCreateDebugs(*this));
 
   entity = globals.createSpvVariable(location, pRegTxN, storageClass);
   setName(entity, getRegisterName(id));
@@ -489,7 +487,6 @@ ir::Value gcn::Context::readReg(ir::Location loc, Builder &builder,
   }
 
   int regCount = valWidth / regWidth;
-  auto sint32 = getTypeSInt32();
   auto channelType = getTypeInt(regWidth, false);
   auto splittedType = regCount > 4 ? getTypeArray(channelType, imm32(regCount))
                                    : getTypeVector(channelType, regCount);
@@ -602,7 +599,6 @@ void gcn::Context::writeReg(ir::Location loc, Builder &builder, gcn::RegId id,
 
   int regCount = valWidth / regWidth;
 
-  auto sint32 = getTypeSInt32();
   auto channelType = getTypeInt(regWidth, false);
   auto splittedType = regCount > 4 ? getTypeArray(channelType, imm32(regCount))
                                    : getTypeVector(channelType, regCount);
@@ -701,11 +697,9 @@ static ir::Value deserializeGcnRegion(
     const std::function<std::uint32_t(std::uint64_t)> &readMemory,
     std::vector<ir::Instruction> &branchesToUnknown,
     std::unordered_set<std::uint64_t> &processed) {
-  BinaryLayout &resultLayout = converter.layout;
   AddressLocationBuilder locBuilder{&converter};
 
   ir::Value boolTV = converter.getTypeBool();
-  ir::Value float64TV = converter.getTypeFloat64();
   ir::Value float32TV = converter.getTypeFloat32();
   ir::Value uint16TV = converter.getTypeUInt16();
   ir::Value sint16TV = converter.getTypeSInt16();
@@ -800,7 +794,6 @@ static ir::Value deserializeGcnRegion(
       auto f32 = converter.getTypeFloat32();
       auto attrChannelPtrType =
           converter.getTypePointer(ir::spv::StorageClass::Input, f32);
-      auto resultType = converter.getTypeArray(f32, converter.simm32(3));
 
       auto attr =
           converter.createAttr(loc, op.attrId, environment.supportsBarycentric,
@@ -947,8 +940,8 @@ static ir::Value deserializeGcnRegion(
     case GcnOperand::Kind::LdsDirect:
       return converter.writeReg(loc, builder, gcn::RegId::LdsDirect, 0, value);
     case GcnOperand::Kind::Vgpr:
-      return converter.writeReg(loc, builder, gcn::RegId::Vgpr, op.value,
-                                value);
+      return converter.writeReg(loc, builder, gcn::RegId::Vgpr, op.value, value,
+                                lane);
     case GcnOperand::Kind::Sgpr:
       return converter.writeReg(loc, builder, gcn::RegId::Sgpr, op.value,
                                 value);
@@ -1281,7 +1274,7 @@ static ir::Value deserializeGcnRegion(
       auto inst = builder.createInstruction(loc, isaInst.kind, isaInst.op);
       auto paramBuilder = gcn::Builder::createInsertBefore(converter, inst);
 
-      for (std::size_t index = 0; auto &op : operands) {
+      for (auto &op : operands) {
         inst.addOperand(createOperandRead(loc, paramBuilder, uint32TV, op));
       }
 
@@ -1430,7 +1423,6 @@ static ir::Value deserializeGcnRegion(
 }
 
 static void canonicalizeRegisterVariableType(ir::Context &context,
-                                             const BinaryLayout &layout,
                                              gcn::RegId regId,
                                              ir::Value variable) {
   auto varPointerType = variable.getOperand(0).getAsValue();
@@ -1534,7 +1526,7 @@ void gcn::canonicalizeSemantic(ir::Context &context,
     auto &name = *entry.getOperand(1).getAsString();
 
     if (auto regId = getRegIdByName(name)) {
-      canonicalizeRegisterVariableType(context, layout, *regId, node);
+      canonicalizeRegisterVariableType(context, *regId, node);
     }
   }
 }

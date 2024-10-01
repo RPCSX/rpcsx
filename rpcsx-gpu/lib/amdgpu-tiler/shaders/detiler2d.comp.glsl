@@ -11,7 +11,10 @@
 #extension GL_EXT_null_initializer : enable
 #extension GL_EXT_buffer_reference2 : enable
 #extension GL_EXT_buffer_reference_uvec2 : enable
+
+#ifdef DEBUG
 #extension GL_EXT_debug_printf : enable
+#endif
 
 #include "tiler.glsl"
 
@@ -54,6 +57,7 @@ void main() {
 
     uint32_t bpp = (config.bitsPerElement + 7) / 8;
 
+#ifdef DEBUG
     if (config.srcAddress + tiledByteOffset + bpp > config.srcEndAddress) {
         debugPrintfEXT("detiler2d: out of src buffer %d x %d x %d", pos.x, pos.y, pos.z);
         return;
@@ -63,6 +67,7 @@ void main() {
         debugPrintfEXT("detiler2d: out of dst buffer %d x %d x %d", pos.x, pos.y, pos.z);
         return;
     }
+#endif
 
     switch (bpp) {
     case 1:

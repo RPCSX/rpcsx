@@ -119,6 +119,7 @@ struct Environment {
   bool supportsBarycentric = true;
   bool supportsInt8 = false;
   bool supportsInt64Atomics = false;
+  bool supportsNonSemanticInfo = false;
   std::span<const std::uint32_t> userSgprs;
 };
 

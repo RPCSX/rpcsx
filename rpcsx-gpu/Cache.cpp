@@ -607,9 +607,9 @@ struct CachedImage : Cache::Entry {
       for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
         auto &regionInfo = info.getSubresourceInfo(mipLevel);
         tiler.tile(scheduler, info, acquiredTileMode, acquiredDfmt,
-                   transferBuffer.getAddress() + linearOffset, linearSize - linearOffset, 
-                   tiledBuffer.deviceAddress, tiledSize, mipLevel, 0,
-                   image.getArrayLayers());
+                   transferBuffer.getAddress() + linearOffset,
+                   linearSize - linearOffset, tiledBuffer.deviceAddress,
+                   tiledSize, mipLevel, 0, image.getArrayLayers());
         linearOffset += regionInfo.linearSize * image.getArrayLayers();
       }
 
@@ -690,9 +690,15 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
   std::optional<gcn::ConvertedShader> converted;
 
   {
+    auto env = key.env;
+    env.supportsBarycentric = vk::context->supportsBarycentric;
+    env.supportsInt8 = vk::context->supportsInt8;
+    env.supportsInt64Atomics = vk::context->supportsInt64Atomics;
+    env.supportsNonSemanticInfo = vk::context->supportsNonSemanticInfo;
+
     gcn::Context context;
     auto deserialized = gcn::deserialize(
-        context, key.env, mParent->mDevice->gcnSemantic, key.address,
+        context, env, mParent->mDevice->gcnSemantic, key.address,
         [vmId](std::uint64_t address) -> std::uint32_t {
           return *RemoteMemory{vmId}.getPointer<std::uint32_t>(address);
         });
@@ -701,7 +707,7 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
 
     converted = gcn::convertToSpv(context, deserialized,
                                   mParent->mDevice->gcnSemanticModuleInfo,
-                                  key.stage, key.env);
+                                  key.stage, env);
     if (!converted) {
       return {};
     }
@@ -1091,15 +1097,15 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   if (key.kind == ImageKind::Color) {
     usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-  bool isCompressed =
-      key.dfmt == gnm::kDataFormatBc1 || key.dfmt == gnm::kDataFormatBc2 ||
-      key.dfmt == gnm::kDataFormatBc3 || key.dfmt == gnm::kDataFormatBc4 ||
-      key.dfmt == gnm::kDataFormatBc5 || key.dfmt == gnm::kDataFormatBc6 ||
-      key.dfmt == gnm::kDataFormatBc7 || key.dfmt == gnm::kDataFormatGB_GR ||
-      key.dfmt == gnm::kDataFormatBG_RG;
+    bool isCompressed =
+        key.dfmt == gnm::kDataFormatBc1 || key.dfmt == gnm::kDataFormatBc2 ||
+        key.dfmt == gnm::kDataFormatBc3 || key.dfmt == gnm::kDataFormatBc4 ||
+        key.dfmt == gnm::kDataFormatBc5 || key.dfmt == gnm::kDataFormatBc6 ||
+        key.dfmt == gnm::kDataFormatBc7 || key.dfmt == gnm::kDataFormatGB_GR ||
+        key.dfmt == gnm::kDataFormatBG_RG;
 
-  if (!isCompressed) {
-    usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (!isCompressed) {
+      usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
   } else {
     usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -1201,8 +1207,8 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
         auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
 
         tiler.detile(*mScheduler, surfaceInfo, key.tileMode, key.dfmt,
-                     tiledBuffer.deviceAddress, surfaceInfo.totalSize, dstAddress, detiledSize, mipLevel, 0,
-                     key.arrayLayerCount);
+                     tiledBuffer.deviceAddress, surfaceInfo.totalSize,
+                     dstAddress, detiledSize, mipLevel, 0, key.arrayLayerCount);
 
         detiledSize -= info.linearSize * key.arrayLayerCount;
         dstAddress += info.linearSize * key.arrayLayerCount;
@@ -1420,9 +1426,6 @@ Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
   gcn::Environment env{
       .vgprCount = pgm.rsrc1.getVGprCount(),
       .sgprCount = pgm.rsrc1.getSGprCount(),
-      .supportsBarycentric = vk::context->supportsBarycentric,
-      .supportsInt8 = vk::context->supportsInt8,
-      .supportsInt64Atomics = vk::context->supportsInt64Atomics,
       .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
   };
 
@@ -1572,9 +1575,6 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
       .numThreadX = static_cast<std::uint8_t>(pgm.numThreadX),
       .numThreadY = static_cast<std::uint8_t>(pgm.numThreadY),
       .numThreadZ = static_cast<std::uint8_t>(pgm.numThreadZ),
-      .supportsBarycentric = vk::context->supportsBarycentric,
-      .supportsInt8 = vk::context->supportsInt8,
-      .supportsInt64Atomics = vk::context->supportsInt64Atomics,
       .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
   };
 
@@ -1610,23 +1610,28 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
   std::uint32_t sgprInputCount = 0;
 
   if (pgm.rsrc2.tgIdXEn) {
-    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdX);
+    sgprInput[sgprInputCount++] =
+        static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdX);
   }
 
   if (pgm.rsrc2.tgIdYEn) {
-    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdY);
+    sgprInput[sgprInputCount++] =
+        static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdY);
   }
 
   if (pgm.rsrc2.tgIdZEn) {
-    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdZ);
+    sgprInput[sgprInputCount++] =
+        static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupIdZ);
   }
 
   if (pgm.rsrc2.tgSizeEn) {
-    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupSize);
+    sgprInput[sgprInputCount++] =
+        static_cast<std::uint32_t>(gcn::CsSGprInput::ThreadGroupSize);
   }
 
   if (pgm.rsrc2.scratchEn) {
-    sgprInput[sgprInputCount++] = static_cast<std::uint32_t>(gcn::CsSGprInput::Scratch);
+    sgprInput[sgprInputCount++] =
+        static_cast<std::uint32_t>(gcn::CsSGprInput::Scratch);
   }
 
   for (std::size_t index = 0; const auto &slot : configSlots) {

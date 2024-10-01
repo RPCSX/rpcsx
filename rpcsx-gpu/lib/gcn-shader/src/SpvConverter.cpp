@@ -570,7 +570,6 @@ ir::Value spv::Context::createOutput(ir::Location loc, int index) {
         Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
     auto annotations =
         Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
-    auto debugs = Builder::createAppend(*this, layout.getOrCreateDebugs(*this));
 
     auto variable = globals.createSpvVariable(loc, variableType,
                                               ir::spv::StorageClass::Output);
@@ -598,7 +597,6 @@ ir::Value spv::Context::createInput(ir::Location loc, int index) {
         Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
     auto annotations =
         Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
-    auto debugs = Builder::createAppend(*this, layout.getOrCreateDebugs(*this));
 
     auto variable = globals.createSpvVariable(loc, variableType,
                                               ir::spv::StorageClass::Input);
@@ -630,7 +628,6 @@ ir::Value spv::Context::createAttr(ir::Location loc, int attrId, bool perVertex,
         Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
     auto annotations =
         Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
-    auto debugs = Builder::createAppend(*this, layout.getOrCreateDebugs(*this));
 
     auto variable = globals.createSpvVariable(loc, variableType,
                                               ir::spv::StorageClass::Input);

@@ -50,6 +50,7 @@ struct Context {
   bool supportsBarycentric = false;
   bool supportsInt8 = false;
   bool supportsInt64Atomics = false;
+  bool supportsNonSemanticInfo = false;
 
   Context() = default;
   Context(const Context &) = delete;

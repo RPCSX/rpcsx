@@ -93,7 +93,6 @@ static GcnOperand createSgprGcnOperand(std::uint64_t &address, unsigned id) {
 static void
 readVop2Inst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
   constexpr auto src0Mask = genMask(0, 9);
   constexpr auto vsrc1Mask = genMask(getMaskEnd(src0Mask), 8);
   constexpr auto vdstMask = genMask(getMaskEnd(vsrc1Mask), 8);
@@ -133,7 +132,6 @@ readVop2Inst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readSop2Inst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
   constexpr auto ssrc0Mask = genMask(0, 8);
   constexpr auto ssrc1Mask = genMask(getMaskEnd(ssrc0Mask), 8);
   constexpr auto sdstMask = genMask(getMaskEnd(ssrc1Mask), 7);
@@ -156,7 +154,6 @@ readSop2Inst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readSopkInst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
   constexpr auto simmMask = genMask(0, 16);
   constexpr auto sdstMask = genMask(getMaskEnd(simmMask), 7);
   constexpr auto opMask = genMask(getMaskEnd(sdstMask), 5);
@@ -180,7 +177,6 @@ readSopkInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readSmrdInst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
   constexpr auto offsetMask = genMask(0, 8);
   constexpr auto immMask = genMask(getMaskEnd(offsetMask), 1);
   constexpr auto sbaseMask = genMask(getMaskEnd(immMask), 6);
@@ -214,9 +210,9 @@ readSmrdInst(GcnInstruction &inst, std::uint64_t &address,
 
     if (op != ir::smrd::MEMTIME) {
       auto baseOperand = createSgprGcnOperand(address, sbase);
-      auto offsetOperand =
-          imm ? GcnOperand::createConstant(std::uint32_t(std::int8_t(offset << 2)))
-              : createSgprGcnOperand(address, offset).withR();
+      auto offsetOperand = imm ? GcnOperand::createConstant(
+                                     std::uint32_t(std::int8_t(offset << 2)))
+                               : createSgprGcnOperand(address, offset).withR();
 
       if (isBuffer) {
         inst.addOperand(GcnOperand::createBuffer(baseOperand).withR());
@@ -235,13 +231,9 @@ readSmrdInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 2;
   constexpr auto vdstMask = genMask(0, 8);
 
   constexpr auto absMask = genMask(getMaskEnd(vdstMask), 3);
-  constexpr auto abs0Mask = genMask(getMaskEnd(vdstMask), 1);
-  constexpr auto abs1Mask = genMask(getMaskEnd(abs0Mask), 1);
-  constexpr auto abs2Mask = genMask(getMaskEnd(abs1Mask), 1);
   constexpr auto clmpMask = genMask(getMaskEnd(absMask), 1);
 
   constexpr auto sdstMask = genMask(getMaskEnd(vdstMask), 7);
@@ -253,9 +245,6 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
   constexpr auto src2Mask = genMask(getMaskEnd(src1Mask), 9);
   constexpr auto omodMask = genMask(getMaskEnd(src2Mask), 2);
   constexpr auto negMask = genMask(getMaskEnd(omodMask), 3);
-  constexpr auto neg0Mask = genMask(getMaskEnd(omodMask), 1);
-  constexpr auto neg1Mask = genMask(getMaskEnd(neg0Mask), 1);
-  constexpr auto neg2Mask = genMask(getMaskEnd(neg1Mask), 1);
 
   std::uint32_t words[2];
   words[0] = readMemory(address);
@@ -308,7 +297,8 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
                    op == ir::vop3::DIV_SCALE_F64;
   bool readsVcc = op == ir::vop3::DIV_FMAS_F32 || op == ir::vop3::DIV_FMAS_F64;
 
-  bool usesSrc2 = op >= ir::vop3::MAD_LEGACY_F32 && op <= ir::vop3::DIV_FIXUP_F64;
+  bool usesSrc2 =
+      op >= ir::vop3::MAD_LEGACY_F32 && op <= ir::vop3::DIV_FIXUP_F64;
 
   if (writesVcc) {
     inst.addOperand(GcnOperand::createVccLo().withRW());
@@ -366,7 +356,6 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readMubufInst(GcnInstruction &inst, std::uint64_t &address,
               const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 2;
   constexpr auto offsetMask = genMask(0, 12);
   constexpr auto offenMask = genMask(getMaskEnd(offsetMask), 1);
   constexpr auto idxenMask = genMask(getMaskEnd(offenMask), 1);
@@ -465,8 +454,6 @@ readMubufInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readMtbufInst(GcnInstruction &inst, std::uint64_t &address,
               const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 2;
-
   constexpr auto offsetMask = genMask(0, 12);
   constexpr auto offenMask = genMask(getMaskEnd(offsetMask), 1);
   constexpr auto idxenMask = genMask(getMaskEnd(offenMask), 1);
@@ -554,8 +541,6 @@ readMtbufInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readMimgInst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 2;
-
   constexpr auto dmaskMask = genMask(8, 4);
   constexpr auto unrmMask = genMask(getMaskEnd(dmaskMask), 1);
   constexpr auto glcMask = genMask(getMaskEnd(unrmMask), 1);
@@ -638,7 +623,6 @@ readMimgInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readDsInst(GcnInstruction &inst, std::uint64_t &address,
            const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 2;
   constexpr auto offset0Mask = genMask(0, 8);
   constexpr auto offset1Mask = genMask(getMaskEnd(offset0Mask), 8);
   constexpr auto gdsMask = genMask(getMaskEnd(offset1Mask) + 1, 1);
@@ -713,7 +697,6 @@ readDsInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readVintrpInst(GcnInstruction &inst, std::uint64_t &address,
                const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
   constexpr auto vsrcMask = genMask(0, 8);
   constexpr auto attrChanMask = genMask(getMaskEnd(vsrcMask), 2);
   constexpr auto attrMask = genMask(getMaskEnd(attrChanMask), 6);
@@ -743,8 +726,6 @@ readVintrpInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readExpInst(GcnInstruction &inst, std::uint64_t &address,
             const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 2;
-
   constexpr auto enMask = genMask(0, 4);
   constexpr auto targetMask = genMask(getMaskEnd(enMask), 6);
   constexpr auto comprMask = genMask(getMaskEnd(targetMask), 1);
@@ -797,8 +778,6 @@ readExpInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readVop1Inst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
-
   constexpr auto src0Mask = genMask(0, 9);
   constexpr auto opMask = genMask(getMaskEnd(src0Mask), 8);
   constexpr auto vdstMask = genMask(getMaskEnd(opMask), 8);
@@ -818,7 +797,6 @@ readVop1Inst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readVopcInst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
   constexpr auto src0Mask = genMask(0, 9);
   constexpr auto vsrc1Mask = genMask(getMaskEnd(src0Mask), 8);
   constexpr auto opMask = genMask(getMaskEnd(vsrc1Mask), 8);
@@ -840,8 +818,6 @@ readVopcInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readSop1Inst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
-
   constexpr auto ssrc0Mask = genMask(0, 8);
   constexpr auto opMask = genMask(getMaskEnd(ssrc0Mask), 8);
   constexpr auto sdstMask = genMask(getMaskEnd(opMask), 7);
@@ -857,8 +833,7 @@ readSop1Inst(GcnInstruction &inst, std::uint64_t &address,
   inst.op = op;
 
   bool readsM0 = op == ir::sop1::MOVRELS_B32 || op == ir::sop1::MOVRELS_B64 ||
-                 op == ir::sop1::MOVRELD_B32 || op == ir::sop1::MOVRELD_B64 ||
-                 op == ir::sop1::ABS_I32;
+                 op == ir::sop1::MOVRELD_B32 || op == ir::sop1::MOVRELD_B64;
 
   inst.addOperand(createSgprGcnOperand(address, sdst).withW());
   inst.addOperand(createSgprGcnOperand(address, ssrc0).withR());
@@ -870,8 +845,6 @@ readSop1Inst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readSopcInst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  constexpr int kMinInstSize = 1;
-
   constexpr auto ssrc0Mask = genMask(0, 8);
   constexpr auto ssrc1Mask = genMask(getMaskEnd(ssrc0Mask), 8);
   constexpr auto opMask = genMask(getMaskEnd(ssrc1Mask), 7);
@@ -892,8 +865,6 @@ readSopcInst(GcnInstruction &inst, std::uint64_t &address,
 static void
 readSoppInst(GcnInstruction &inst, std::uint64_t &address,
              const std::function<std::uint32_t(std::uint64_t)> &readMemory) {
-  static constexpr int kMinInstSize = 1;
-
   static constexpr auto simmMask = genMask(0, 16);
   static constexpr auto opMask = genMask(getMaskEnd(simmMask), 7);
 
@@ -1030,7 +1001,7 @@ void GcnInstruction::print(std::ostream &os) const {
   if (operandCount > 0) {
     os << ' ';
 
-    for (int i = 0; i < operandCount; ++i) {
+    for (std::size_t i = 0; i < operandCount; ++i) {
       if (i != 0) {
         os << ", ";
       }

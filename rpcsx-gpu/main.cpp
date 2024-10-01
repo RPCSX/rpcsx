@@ -337,9 +337,11 @@ int main(int argc, const char *argv[]) {
                              VK_EXT_SHADER_OBJECT_EXTENSION_NAME,
                              VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                              VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
-                             VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
                          },
-                         {VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME});
+                         {
+                             VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME,
+                             VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME,
+                         });
 
   auto getTotalMemorySize = [&](int memoryType) -> VkDeviceSize {
     auto deviceLocalMemoryType =

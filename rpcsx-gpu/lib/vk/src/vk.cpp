@@ -481,6 +481,11 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
   }
 
   for (auto ext : requiredExtensions) {
+    if (ext ==
+        std::string_view(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME)) {
+      supportsNonSemanticInfo = true;
+    }
+
     deviceExtensions.push_back(ext);
   }
 

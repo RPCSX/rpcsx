@@ -226,7 +226,6 @@ struct ResourcesBuilder {
       auto cloned = ir::clone(inst, resources.context, importer);
 
       if (inst == ir::spv::OpLoad) {
-        auto load = inst.staticCast<ir::Value>();
         auto def = memorySSA.getDef(inst, inst.getOperand(1).getAsValue());
         auto resourceInst = unpackResourceDef(memorySSA, importer, def);
 
@@ -444,7 +443,6 @@ ir::Value GcnConverter::getGlPosition(gcn::Builder &builder) {
       ir::spv::StorageClass::Output,
       gcnContext.getTypeVector(gcnContext.getTypeFloat32(), 4));
 
-  auto index = gcnContext.simm32(0);
   return builder.createSpvAccessChain(gcnContext.getUnknownLocation(),
                                       float4OutPtrT, gcnContext.perVertex,
                                       {{gcnContext.simm32(0)}});
@@ -572,9 +570,7 @@ static void replaceVariableWithConstant(ir::Value variable,
   }
 }
 
-static void expToSpv(GcnConverter &converter, gcn::Import &importer,
-                     gcn::Stage stage,
-                     const SemanticModuleInfo &semanticModuleInfo,
+static void expToSpv(GcnConverter &converter, gcn::Stage stage,
                      gcn::ShaderInfo &info, ir::Instruction inst) {
   enum Target : unsigned {
     ET_MRT0 = 0,
@@ -832,10 +828,8 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
           .createSpvExtInstImport(context.getUnknownLocation(), "GLSL.std.450");
   auto boolT = context.getTypeBool();
   auto f32T = context.getTypeFloat32();
-  auto u32T = context.getTypeUInt32();
   auto s32T = context.getTypeSInt32();
   auto f32x3 = context.getTypeVector(f32T, 3);
-  auto f32x4 = context.getTypeVector(f32T, 4);
   auto s32PT = context.getTypePointer(ir::spv::StorageClass::Input, s32T);
   auto f32x3PT = context.getTypePointer(ir::spv::StorageClass::Input, f32x3);
 
@@ -876,7 +870,7 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
     }
 
     if (inst == ir::exp::EXP) {
-      expToSpv(converter, importer, stage, semanticModuleInfo, info, inst);
+      expToSpv(converter, stage, info, inst);
       inst.remove();
       continue;
     }
@@ -1696,8 +1690,11 @@ gcn::convertToSpv(Context &context, ir::Region body,
 
   extensions.createSpvExtension(context.getUnknownLocation(),
                                 "SPV_KHR_physical_storage_buffer");
-  extensions.createSpvExtension(context.getUnknownLocation(),
-                                "SPV_KHR_non_semantic_info");
+
+  if (env.supportsNonSemanticInfo) {
+    extensions.createSpvExtension(context.getUnknownLocation(),
+                                  "SPV_KHR_non_semantic_info");
+  }
 
   auto merged = context.layout.merge(context);
   result.spv = spv::serialize(merged);
