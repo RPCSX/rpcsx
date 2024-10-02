@@ -47,6 +47,10 @@ void main() {
 
     uint32_t bpp = (config.bitsPerElement + 7) / 8;
 
+    if (bpp == 1 && (linearByteOffset & 1) != 0) {
+        return;
+    }
+
     if (config.srcAddress + tiledByteOffset + bpp > config.srcEndAddress) {
         debugPrintfEXT("detiler1d: out of src buffer %d x %d x %d", pos.x, pos.y, pos.z);
         return;
@@ -59,9 +63,6 @@ void main() {
 
     switch (bpp) {
     case 1:
-        buffer_reference_uint8_t(config.dstAddress + linearByteOffset).data = buffer_reference_uint8_t(config.srcAddress + tiledByteOffset).data;
-        break;
-
     case 2:
         buffer_reference_uint16_t(config.dstAddress + linearByteOffset).data = buffer_reference_uint16_t(config.srcAddress + tiledByteOffset).data;
         break;
