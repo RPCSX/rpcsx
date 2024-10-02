@@ -148,6 +148,7 @@ struct Cache {
 
   struct Image {
     VkImage handle = VK_NULL_HANDLE;
+    VkFormat format;
     VkImageSubresourceRange subresource;
   };
 

@@ -1091,6 +1091,8 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
   VkImageUsageFlags usage =
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+  VkFormat format;
   if (key.kind == ImageKind::Color) {
     usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     bool isCompressed =
@@ -1103,14 +1105,39 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
     if (!isCompressed) {
       usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     }
+
+    format = gnm::toVkFormat(key.dfmt, key.nfmt);
   } else {
+    if (key.kind == ImageKind::Depth) {
+      if (key.dfmt == gnm::kDataFormat32 &&
+          key.nfmt == gnm::kNumericFormatFloat) {
+        format = VK_FORMAT_D32_SFLOAT;
+      } else if (key.dfmt == gnm::kDataFormat16 &&
+                 key.nfmt == gnm::kNumericFormatUNorm) {
+        format = VK_FORMAT_D16_UNORM;
+      } else {
+        rx::die("unexpected depth format %u, %u", static_cast<int>(key.dfmt),
+                static_cast<int>(key.nfmt));
+      }
+    } else if (key.kind == ImageKind::Stencil) {
+      if (key.dfmt == gnm::kDataFormat8 &&
+          key.nfmt == gnm::kNumericFormatUInt) {
+        format = VK_FORMAT_S8_UINT;
+      } else {
+        rx::die("unexpected stencil format %u, %u", static_cast<int>(key.dfmt),
+                static_cast<int>(key.nfmt));
+      }
+    } else {
+      rx::die("image kind %u %u, %u", static_cast<int>(key.kind),
+              static_cast<int>(key.dfmt), static_cast<int>(key.nfmt));
+    }
+
     usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
   }
 
   auto image = vk::Image::Allocate(
       vk::getDeviceLocalMemory(), gnm::toVkImageType(key.type), key.extent,
-      key.mipCount, key.arrayLayerCount, gnm::toVkFormat(key.dfmt, key.nfmt),
-      VK_SAMPLE_COUNT_1_BIT, usage);
+      key.mipCount, key.arrayLayerCount, format, VK_SAMPLE_COUNT_1_BIT, usage);
 
   VkImageSubresourceRange subresourceRange{
       .aspectMask = toAspect(key.kind),
@@ -1236,13 +1263,17 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
   cached->acquiredDfmt = key.dfmt;
   mStorage->mAcquiredResources.push_back(cached);
 
-  return {.handle = cached->image.getHandle(), .subresource = subresourceRange};
+  return {
+      .handle = cached->image.getHandle(),
+      .format = format,
+      .subresource = subresourceRange,
+  };
 }
 
 Cache::ImageView Cache::Tag::getImageView(const ImageKey &key, Access access) {
   auto image = getImage(key, access);
   auto result = vk::ImageView(gnm::toVkImageViewType(key.type), image.handle,
-                              gnm::toVkFormat(key.dfmt, key.nfmt), {},
+                              image.format, {},
                               {
                                   .aspectMask = toAspect(key.kind),
                                   .baseMipLevel = key.baseMipLevel,

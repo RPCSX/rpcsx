@@ -220,6 +220,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
                     .depth = 1,
                 },
             .pitch = viewPortRect.extent.width,
+            .mipCount = 1,
+            .arrayLayerCount = 1,
             .kind = ImageKind::Depth,
         },
         depthAccess);

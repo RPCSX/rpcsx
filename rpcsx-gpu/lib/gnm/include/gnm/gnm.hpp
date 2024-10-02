@@ -272,7 +272,7 @@ constexpr NumericFormat getNumericFormat(ZFormat format) {
   case kZFormat32Float:
     return kNumericFormatFloat;
   case kZFormat16:
-    return kNumericFormatUInt;
+    return kNumericFormatUNorm;
 
   case kZFormatInvalid:
     break;
@@ -296,7 +296,7 @@ constexpr DataFormat getDataFormat(StencilFormat format) {
 constexpr NumericFormat getNumericFormat(StencilFormat format) {
   switch (format) {
   case kStencil8:
-    return kNumericFormatSInt;
+    return kNumericFormatUInt;
 
   case kStencilInvalid:
     break;
