@@ -531,8 +531,6 @@ ir::Value spv::Context::createUniformBuffer(int descriptorSet, int binding,
       loc, blockVariable, ir::spv::Decoration::DescriptorSet(descriptorSet));
   annotations.createSpvDecorate(loc, blockVariable,
                                 ir::spv::Decoration::Binding(binding));
-  annotations.createSpvDecorate(loc, blockVariable,
-                                ir::spv::Decoration::Uniform());
   return blockVariable;
 }
 

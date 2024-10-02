@@ -81,7 +81,7 @@ struct Cache {
   };
 
   static constexpr std::array kDescriptorBindings = {
-      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
       VK_DESCRIPTOR_TYPE_SAMPLER,
       VkDescriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE + 1 * 1000),
       VkDescriptorType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE + 2 * 1000),

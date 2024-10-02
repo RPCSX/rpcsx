@@ -377,7 +377,7 @@ static void fillStageBindings(VkDescriptorSetLayoutBinding *bindings,
     };
   };
 
-  createDescriptorBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+  createDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1);
   if (setIndex == 0) {
     createDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLER, 16);
     createDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 16, 1);
@@ -836,9 +836,7 @@ Cache::Buffer Cache::Tag::getBuffer(std::uint64_t address, std::uint64_t size,
   auto buffer = vk::Buffer::Allocate(
       vk::getHostVisibleMemory(), size,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-          VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
           VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
-          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
           VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
@@ -869,7 +867,6 @@ Cache::Buffer Cache::Tag::getInternalHostVisibleBuffer(std::uint64_t size) {
   auto buffer = vk::Buffer::Allocate(vk::getHostVisibleMemory(), size,
                                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
                                          VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
   auto cached = std::make_shared<CachedBuffer>();
@@ -894,7 +891,6 @@ Cache::Buffer Cache::Tag::getInternalDeviceLocalBuffer(std::uint64_t size) {
   auto buffer = vk::Buffer::Allocate(vk::getDeviceLocalMemory(), size,
                                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
                                          VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                         VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
                                          VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
 
   auto cached = std::make_shared<CachedBuffer>();
@@ -1558,7 +1554,7 @@ Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
       .dstSet = descriptorSets[stageIndex],
       .dstBinding = 0,
       .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
       .pBufferInfo = &bufferInfo,
   };
 
@@ -1698,7 +1694,7 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
       .dstSet = descriptorSet,
       .dstBinding = 0,
       .descriptorCount = 1,
-      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
       .pBufferInfo = &bufferInfo,
   };
 
@@ -1781,7 +1777,7 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {
   {
     VkDescriptorPoolSize descriptorPoolSizes[]{
         {
-            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 4 * (kDescriptorSetCount * 2 / 4),
         },
         {
