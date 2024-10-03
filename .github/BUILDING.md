@@ -4,20 +4,20 @@
 ### The dependencies for Debian-like distributions.
 
 ```   
-sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libsox-dev git
+sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev spirv-tools glslang-tools libspirv-cross-c-shared-dev libsox-dev git libasound2-dev
 ```
 # git is only needed for ubuntu 22.04
 
 ### The dependencies for Fedora distributions:
 
 ```
-sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel sox-devel
+sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel spirv-tools glslang-devel gcc-c++ gcc spirv-tools-devel xbyak-devel sox-devel alsa-lib-devel
 ```
 
 ### The dependencies for Arch distributions:
 
 ```
-sudo pacman -S libunwind glfw-x11 vulkan-devel sox glslang git cmake
+sudo pacman -S libunwind glfw-x11 vulkan-devel sox glslang git cmake alsa-lib
 ```
 > Side note you will need to pull ``spirv-cross`` from the AUR for now so do the following
 ```
