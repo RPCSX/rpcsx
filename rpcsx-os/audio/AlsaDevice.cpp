@@ -78,9 +78,8 @@ void AlsaDevice::start() {
     std::abort();
   }
 
-  uint periods = mSampleCount;
-  if (auto err = snd_pcm_hw_params_set_periods_max(mPCMHandle, mHWParams,
-                                                   &periods, nullptr);
+  if (auto err =
+          snd_pcm_hw_params_set_periods(mPCMHandle, mHWParams, mSampleCount, 0);
       err < 0) {
     ORBIS_LOG_FATAL("Cannot set periods count", snd_strerror(err));
     std::abort();
@@ -91,7 +90,7 @@ void AlsaDevice::start() {
   snd_pcm_uframes_t size = mSampleSize / frameBytes;
 
   {
-    auto trySize = size * mSampleCount;
+    auto trySize = size * mSampleCount * 8;
     int err = -1;
     while (trySize >= 1024) {
       err = snd_pcm_hw_params_set_buffer_size(mPCMHandle, mHWParams, trySize);
@@ -104,7 +103,7 @@ void AlsaDevice::start() {
     }
 
     if (err < 0) {
-      trySize = size;
+      trySize = size * mSampleCount * 8;
       err = snd_pcm_hw_params_set_buffer_size_near(mPCMHandle, mHWParams,
                                                    &trySize);
     }
@@ -116,7 +115,7 @@ void AlsaDevice::start() {
   }
 
   {
-    auto trySize = size;
+    auto trySize = size * mSampleCount;
     int err = -1;
     while (trySize >= 256) {
       err =
@@ -130,7 +129,7 @@ void AlsaDevice::start() {
     }
 
     if (err < 0) {
-      trySize = size;
+      trySize = size * mSampleCount;
       err = snd_pcm_hw_params_set_period_size_near(mPCMHandle, mHWParams,
                                                    &trySize, 0);
     }
@@ -193,6 +192,11 @@ void AlsaDevice::start() {
     std::abort();
   }
 
+  if (auto err = snd_pcm_nonblock(mPCMHandle, 1); err < 0) {
+    ORBIS_LOG_FATAL("set nonblock mode failed", snd_strerror(err));
+    std::abort();
+  }
+
   if (auto err = snd_pcm_prepare(mPCMHandle); err < 0) {
     ORBIS_LOG_FATAL("cannot prepare audio interface for use",
                     snd_strerror(err));
@@ -220,20 +224,8 @@ int AlsaDevice::fixXRun() {
 }
 
 int AlsaDevice::resume() {
-  int err;
-  while (true) {
-    err = snd_pcm_resume(mPCMHandle);
-
-    if (err == -EAGAIN) {
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      continue;
-    }
-
-    break;
-  }
-
-  if (err == 0) {
-    return 0;
+  if (int err = snd_pcm_resume(mPCMHandle); err == -EAGAIN) {
+    return err;
   }
 
   return snd_pcm_prepare(mPCMHandle);
@@ -245,24 +237,25 @@ long AlsaDevice::write(void *buf, long len) {
 
   int frameBytes = snd_pcm_format_physical_width(mAlsaFormat) * mChannels / 8;
   snd_pcm_uframes_t frames = len / frameBytes;
+  if (frames == 0) {
+    return 0;
+  }
+
+  snd_pcm_wait(mPCMHandle, SND_PCM_WAIT_IO);
 
   while (true) {
     snd_pcm_sframes_t r = snd_pcm_writei(mPCMHandle, buf, frames);
 
     if (r == -EPIPE) {
       r = fixXRun();
-
-      if (r == 0) {
-        continue;
-      }
     }
 
     if (r == -ESTRPIPE) {
       r = resume();
+    }
 
-      if (r == 0) {
-        continue;
-      }
+    if (r == 0 || r == -EAGAIN) {
+      continue;
     }
 
     if (r < 0) {

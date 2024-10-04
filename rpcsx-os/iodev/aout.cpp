@@ -168,13 +168,22 @@ static orbis::ErrorCode aout_ioctl(orbis::File *file, std::uint64_t request,
 static orbis::ErrorCode aout_write(orbis::File *file, orbis::Uio *uio,
                                    orbis::Thread *thread) {
   auto device = static_cast<AoutDevice *>(file->device.get());
+  std::uint64_t totalSize = 0;
   if (auto audioDevice = device->audioDevice) {
     for (auto vec : std::span(uio->iov, uio->iovcnt)) {
-      audioDevice->write(vec.base, vec.len);
+      auto result = audioDevice->write(vec.base, vec.len);
+
+      if (result < 0) {
+        return static_cast<orbis::ErrorCode>(-result);
+      }
+
       // rx::hexdump({(std::byte*)vec.base, vec.len});
-      uio->offset += vec.len;
+      uio->offset += result;
+      totalSize += result;
     }
   }
+
+  thread->retval[0] = totalSize;
   return {};
 }
 
