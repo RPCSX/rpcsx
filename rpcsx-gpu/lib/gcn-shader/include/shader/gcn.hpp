@@ -116,7 +116,7 @@ struct Environment {
   std::uint8_t numThreadX;
   std::uint8_t numThreadY;
   std::uint8_t numThreadZ;
-  bool supportsBarycentric = true;
+  bool supportsBarycentric = false;
   bool supportsInt8 = false;
   bool supportsInt64Atomics = false;
   bool supportsNonSemanticInfo = false;

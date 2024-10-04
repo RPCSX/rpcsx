@@ -242,8 +242,7 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
 }
 
 bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
-                  VkCommandBuffer commandBuffer, VkImage swapchainImage,
-                  VkImageView swapchainImageView, VkFence fence) {
+                  VkImage swapchainImage, VkImageView swapchainImageView) {
   auto &pipe = graphicsPipes[0];
   auto &scheduler = pipe.scheduler;
   auto &process = processInfo[pid];
@@ -292,15 +291,11 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
   }
 
   // std::printf("displaying buffer %lx\n", buffer.address);
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
   auto cacheTag = getCacheTag(process.vmId, scheduler);
+  auto &sched = cacheTag.getScheduler();
 
-  transitionImageLayout(commandBuffer, swapchainImage,
+  transitionImageLayout(sched.getCommandBuffer(), swapchainImage,
                         VK_IMAGE_LAYOUT_UNDEFINED,
                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                         {
@@ -310,11 +305,11 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
                         });
 
   amdgpu::flip(
-      cacheTag, commandBuffer, vk::context->swapchainExtent, buffer.address,
+      cacheTag, vk::context->swapchainExtent, buffer.address,
       swapchainImageView, {bufferAttr.width, bufferAttr.height}, flipType,
       getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8], dfmt, nfmt);
 
-  transitionImageLayout(commandBuffer, swapchainImage,
+  transitionImageLayout(sched.getCommandBuffer(), swapchainImage,
                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                         VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                         {
@@ -323,10 +318,25 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
                             .layerCount = 1,
                         });
 
+  sched.submit();
+
   auto submitCompleteTask = scheduler.createExternalSubmit();
 
   {
-    vkEndCommandBuffer(commandBuffer);
+    VkSemaphoreSubmitInfo waitSemSubmitInfos[] = {
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = vk::context->presentCompleteSemaphore,
+            .value = 1,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        },
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = scheduler.getSemaphoreHandle(),
+            .value = submitCompleteTask - 1,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        },
+    };
 
     VkSemaphoreSubmitInfo signalSemSubmitInfos[] = {
         {
@@ -343,38 +353,15 @@ bool Device::flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
         },
     };
 
-    VkSemaphoreSubmitInfo waitSemSubmitInfos[] = {
-        {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = vk::context->presentCompleteSemaphore,
-            .value = 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-        },
-        {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = scheduler.getSemaphoreHandle(),
-            .value = submitCompleteTask - 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-        },
-    };
-
-    VkCommandBufferSubmitInfo cmdBufferSubmitInfo{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-        .commandBuffer = commandBuffer,
-    };
-
     VkSubmitInfo2 submitInfo{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-        .waitSemaphoreInfoCount = 1,
+        .waitSemaphoreInfoCount = 2,
         .pWaitSemaphoreInfos = waitSemSubmitInfos,
-        .commandBufferInfoCount = 1,
-        .pCommandBufferInfos = &cmdBufferSubmitInfo,
         .signalSemaphoreInfoCount = 2,
         .pSignalSemaphoreInfos = signalSemSubmitInfos,
     };
 
-    vkQueueSubmit2(vk::context->presentQueue, 1, &submitInfo, fence);
-    vkQueueWaitIdle(vk::context->presentQueue);
+    vkQueueSubmit2(vk::context->presentQueue, 1, &submitInfo, VK_NULL_HANDLE);
   }
 
   scheduler.then([=, this, cacheTag = std::move(cacheTag)] {

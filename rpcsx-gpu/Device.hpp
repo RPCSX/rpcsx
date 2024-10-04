@@ -86,8 +86,7 @@ struct Device {
                        std::uint64_t size);
   bool processPipes();
   bool flip(std::int64_t pid, int bufferIndex, std::uint64_t arg,
-            VkCommandBuffer commandBuffer, VkImage swapchainImage,
-            VkImageView swapchainImageView, VkFence fence);
+            VkImage swapchainImage, VkImageView swapchainImageView);
   void mapMemory(std::int64_t pid, std::uint64_t address, std::uint64_t size,
                  int memoryType, int dmemIndex, int prot, std::int64_t offset);
   void registerBuffer(std::int64_t pid, bridge::CmdBuffer buffer);

@@ -42,7 +42,6 @@ struct Context {
   VkFormat swapchainColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
   VkColorSpaceKHR swapchainColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
   std::vector<VkImageView> swapchainImageViews;
-  std::vector<VkFence> inFlightFences;
   VkSemaphore presentCompleteSemaphore = VK_NULL_HANDLE;
   VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
   VkPhysicalDeviceDescriptorBufferPropertiesEXT descriptorBufferProps;
@@ -67,10 +66,6 @@ struct Context {
 
     if (swapchain != VK_NULL_HANDLE) {
       vkDestroySwapchainKHR(device, swapchain, allocator);
-    }
-
-    for (auto fence : inFlightFences) {
-      vkDestroyFence(device, fence, allocator);
     }
 
     if (presentCompleteSemaphore != VK_NULL_HANDLE) {

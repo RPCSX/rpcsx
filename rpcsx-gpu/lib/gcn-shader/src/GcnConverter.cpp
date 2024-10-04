@@ -1577,12 +1577,6 @@ static void createInitialValues(GcnConverter &converter,
       }
     }
 
-    for (std::int32_t i = 0; i < 3; ++i) {
-      auto value = builder.createSpvCompositeExtract(loc, uintT,
-                                                     localInvocationId, {{i}});
-      context.writeReg(loc, builder, gcn::RegId::Vgpr, i, value);
-    }
-
     auto workgroupSize = builder.createSpvCompositeConstruct(
         loc, uvec3T,
         {{context.imm32(env.numThreadX), context.imm32(env.numThreadY),
@@ -1590,12 +1584,19 @@ static void createInitialValues(GcnConverter &converter,
     auto workgroupSizeLocVar =
         converter.createLocalVariable(builder, loc, workgroupSize);
 
-    builder.createValue(loc, ir::amdgpu::CS_SET_INITIAL_EXEC,
-                        context.getTypeVoid(), localInvocationIdLocVar,
-                        workgroupSizeLocVar);
     builder.createValue(loc, ir::amdgpu::CS_SET_THREAD_ID,
                         context.getTypeVoid(), localInvocationIdLocVar,
                         workgroupSizeLocVar);
+
+    builder.createValue(loc, ir::amdgpu::CS_SET_INITIAL_EXEC,
+                        context.getTypeVoid(), localInvocationIdLocVar,
+                        workgroupSizeLocVar);
+
+    for (std::int32_t i = 0; i < 3; ++i) {
+      auto value = builder.createSpvCompositeExtract(loc, uintT,
+                                                     localInvocationId, {{i}});
+      context.writeReg(loc, builder, gcn::RegId::Vgpr, i, value);
+    }
   }
 
   context.writeReg(loc, builder, gcn::RegId::Vcc, 0, context.imm64(0));

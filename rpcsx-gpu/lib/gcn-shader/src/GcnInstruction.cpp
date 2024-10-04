@@ -169,9 +169,6 @@ readSopkInst(GcnInstruction &inst, std::uint64_t &address,
   inst.addOperand(createSgprGcnOperand(address, sdst).withW());
 
   inst.addOperand(GcnOperand::createConstant(static_cast<std::uint32_t>(simm)));
-  if (op <= 16) {
-    inst.addOperand(createImmediateGcnOperand(address));
-  }
 }
 
 static void
@@ -264,14 +261,10 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
   auto omod = fetchMaskedValue(words[1], omodMask);
   auto neg = fetchMaskedValue(words[1], negMask);
 
-  if (op == ir::vop3::Op::MUL_HI_U32) {
-    std::printf(".");
-  }
-
   inst.op = op;
   bool vop3b = isVop3b(op);
 
-  if (!vop3b) {
+  if (vop3b) {
     abs = 0;
     clmp = false;
   }
@@ -291,18 +284,8 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
     inst.addOperand(createSgprGcnOperand(address, sdst).withRW());
   }
 
-  bool writesVcc = op == ir::vop3::MAD_I64_I32 || op == ir::vop3::MAD_U64_U32 ||
-                   op == ir::vop3::MQSAD_U32_U8 ||
-                   op == ir::vop3::DIV_SCALE_F32 ||
-                   op == ir::vop3::DIV_SCALE_F64;
-  bool readsVcc = op == ir::vop3::DIV_FMAS_F32 || op == ir::vop3::DIV_FMAS_F64;
-
   bool usesSrc2 =
       op >= ir::vop3::MAD_LEGACY_F32 && op <= ir::vop3::DIV_FIXUP_F64;
-
-  if (writesVcc) {
-    inst.addOperand(GcnOperand::createVccLo().withRW());
-  }
 
   inst.addOperand(createSgprGcnOperand(address, src0)
                       .withR()
@@ -346,10 +329,6 @@ readVop3Inst(GcnInstruction &inst, std::uint64_t &address,
                           .withAbs(((abs >> 2) & 1) != 0)
                           .withNeg(((neg >> 2) & 1) != 0));
     }
-  }
-
-  if (readsVcc) {
-    inst.addOperand(GcnOperand::createVccLo().withR());
   }
 }
 

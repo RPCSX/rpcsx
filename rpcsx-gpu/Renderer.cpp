@@ -285,7 +285,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     renderTargetInfo.extent.height = vkViewPortScissor.extent.height;
     renderTargetInfo.extent.depth = 1;
     renderTargetInfo.dfmt = cbColor.info.dfmt;
-    renderTargetInfo.nfmt = gnm::toNumericFormat(cbColor.info.nfmt, cbColor.info.dfmt);
+    renderTargetInfo.nfmt =
+        gnm::toNumericFormat(cbColor.info.nfmt, cbColor.info.dfmt);
     renderTargetInfo.mipCount = 1;
     renderTargetInfo.arrayLayerCount = 1;
 
@@ -423,6 +424,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
   cacheTag.buildDescriptors(descriptorSets[0]);
 
+  pipe.scheduler.submit();
   pipe.scheduler.afterSubmit([cacheTag = std::move(cacheTag)] {});
 
   auto commandBuffer = pipe.scheduler.getCommandBuffer();
@@ -479,11 +481,14 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   vkCmdSetStencilReference(commandBuffer, VK_STENCIL_FACE_FRONT_AND_BACK, 0);
 
   VkCullModeFlags cullMode = VK_CULL_MODE_NONE;
+
+  if (pipe.uConfig.vgtPrimitiveType != gnm::PrimitiveType::RectList) {
   if (pipe.context.paSuScModeCntl.cullBack) {
     cullMode |= VK_CULL_MODE_BACK_BIT;
   }
   if (pipe.context.paSuScModeCntl.cullFront) {
     cullMode |= VK_CULL_MODE_FRONT_BIT;
+    }
   }
 
   vkCmdSetCullMode(commandBuffer, cullMode);
@@ -512,6 +517,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
   vkCmdEndRendering(commandBuffer);
   pipe.scheduler.submit();
+  pipe.scheduler.wait();
 }
 
 void amdgpu::dispatch(Cache &cache, Scheduler &sched,
@@ -530,14 +536,15 @@ void amdgpu::dispatch(Cache &cache, Scheduler &sched,
                           pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
   vk::CmdBindShadersEXT(commandBuffer, 1, stages, &shader.handle);
   vkCmdDispatch(commandBuffer, groupCountX, groupCountY, groupCountZ);
+  sched.afterSubmit([tag = std::move(tag)] {});
   sched.submit();
+  sched.wait();
 }
 
-void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
-                  VkExtent2D targetExtent, std::uint64_t address,
-                  VkImageView target, VkExtent2D imageExtent, FlipType type,
-                  TileMode tileMode, gnm::DataFormat dfmt,
-                  gnm::NumericFormat nfmt) {
+void amdgpu::flip(Cache::Tag &cacheTag, VkExtent2D targetExtent,
+                  std::uint64_t address, VkImageView target,
+                  VkExtent2D imageExtent, FlipType type, TileMode tileMode,
+                  gnm::DataFormat dfmt, gnm::NumericFormat nfmt) {
   ImageKey framebuffer{};
   framebuffer.readAddress = address;
   framebuffer.type = gnm::TextureType::Dim2D;
@@ -601,8 +608,7 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
       .pColorAttachments = colorAttachments,
   };
 
-  commandBuffer = cacheTag.getScheduler().getCommandBuffer();
-
+  auto commandBuffer = cacheTag.getScheduler().getCommandBuffer();
   vkCmdBeginRendering(commandBuffer, &renderInfo);
 
   cacheTag.getDevice()->flipPipeline.bind(cacheTag.getScheduler(), type,
@@ -613,5 +619,4 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkCommandBuffer commandBuffer,
 
   vkCmdDraw(commandBuffer, 6, 1, 0, 0);
   vkCmdEndRendering(commandBuffer);
-  cacheTag.getScheduler().submit();
 }

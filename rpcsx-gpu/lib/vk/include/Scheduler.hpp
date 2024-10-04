@@ -16,6 +16,7 @@ class Scheduler {
   unsigned mQueueFamily;
   vk::CommandPool mCommandPool;
   vk::CommandBuffer mCommandBuffer;
+  bool mIsEmpty = false;
 
   std::uint64_t mNextSignal = 1;
   std::mutex mTaskMutex;
@@ -40,9 +41,17 @@ public:
 
   unsigned getQueueFamily() const { return mQueueFamily; }
   VkQueue getQueue() const { return mQueue; }
-  VkCommandBuffer getCommandBuffer() const { return mCommandBuffer; }
+  VkCommandBuffer getCommandBuffer() {
+    mIsEmpty = false;
+    return mCommandBuffer;
+  }
 
   Scheduler &submit() {
+    if (mIsEmpty) {
+      return *this;
+    }
+    mIsEmpty = true;
+
     mCommandBuffer.end();
 
     VkSemaphoreSubmitInfo waitSemSubmitInfo = {
@@ -56,7 +65,7 @@ public:
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .semaphore = mSemaphore.getHandle(),
         .value = mNextSignal,
-        .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        .stageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
     };
 
     VkCommandBufferSubmitInfo cmdBufferSubmitInfo{
@@ -96,11 +105,14 @@ public:
       return *this;
     }
 
+    auto afterSubmit = std::move(mAfterSubmitTasks);
+    mAfterSubmitTasks.clear();
+
     wait();
 
-    while (!mAfterSubmitTasks.empty()) {
-      auto task = std::move(mAfterSubmitTasks.back());
-      mAfterSubmitTasks.pop_back();
+    while (!afterSubmit.empty()) {
+      auto task = std::move(afterSubmit.back());
+      afterSubmit.pop_back();
       std::move(task)();
     }
 

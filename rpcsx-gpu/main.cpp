@@ -18,8 +18,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <print>
 #include <span>
 #include <thread>
@@ -38,20 +36,6 @@
 #include <shaders/rdna-semantic-spirv.hpp>
 
 #include "Device.hpp"
-
-static void saveImage(const char *name, const void *data, std::uint32_t width,
-                      std::uint32_t height) {
-  std::ofstream file(name, std::ios::out | std::ios::binary);
-
-  file << "P6\n" << width << "\n" << height << "\n" << 255 << "\n";
-
-  auto ptr = (unsigned int *)data;
-  for (uint32_t y = 0; y < height; y++) {
-    for (uint32_t x = 0; x < width; x++) {
-      file.write((char *)ptr++, 3);
-    }
-  }
-}
 
 void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
                            VkImageLayout oldLayout, VkImageLayout newLayout,
@@ -116,17 +100,6 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
                             .levelCount = 1,
                             .layerCount = 1,
                         });
-}
-
-static void submit(VkQueue queue, VkCommandBuffer cmdBuffer) {
-  VkSubmitInfo submit{
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &cmdBuffer,
-  };
-
-  VK_VERIFY(vkQueueSubmit(queue, 1, &submit, nullptr));
-  vkQueueWaitIdle(queue);
 }
 
 static void usage(std::FILE *out, const char *argv0) {
@@ -374,12 +347,6 @@ int main(int argc, const char *argv[]) {
                               VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
   vkContext.createSwapchain();
-  std::vector<vk::CommandBuffer> presentCmdBuffers(
-      vkContext.swapchainImages.size());
-
-  for (auto &cmdBuffer : presentCmdBuffers) {
-    cmdBuffer = commandPool.createPrimaryBuffer({});
-  }
 
   amdgpu::bridge::BridgePuller bridgePuller{bridge};
   amdgpu::bridge::Command commandsBuffer[1];
@@ -597,14 +564,11 @@ int main(int argc, const char *argv[]) {
 
       case amdgpu::bridge::CommandId::Flip: {
         if (!isImageAcquired) {
-          vkWaitForFences(vkContext.device, 1,
-                          &vkContext.inFlightFences[imageIndex], VK_TRUE,
-                          UINT64_MAX);
-
           while (true) {
             auto acquireNextImageResult = vkAcquireNextImageKHR(
                 vkContext.device, vkContext.swapchain, UINT64_MAX,
-                vkContext.presentCompleteSemaphore, nullptr, &imageIndex);
+                vkContext.presentCompleteSemaphore, VK_NULL_HANDLE,
+                &imageIndex);
             if (acquireNextImageResult == VK_ERROR_OUT_OF_DATE_KHR) {
               vkContext.recreateSwapchain();
               continue;
@@ -613,18 +577,11 @@ int main(int argc, const char *argv[]) {
             VK_VERIFY(acquireNextImageResult);
             break;
           }
-
-          vkResetFences(vkContext.device, 1,
-                        &vkContext.inFlightFences[imageIndex]);
         }
 
-        vkResetCommandBuffer(presentCmdBuffers[imageIndex], 0);
-
         if (!device.flip(cmd.flip.pid, cmd.flip.bufferIndex, cmd.flip.arg,
-                         presentCmdBuffers[imageIndex],
                          vkContext.swapchainImages[imageIndex],
-                         vkContext.swapchainImageViews[imageIndex],
-                         vkContext.inFlightFences[imageIndex])) {
+                         vkContext.swapchainImageViews[imageIndex])) {
           isImageAcquired = true;
           break;
         }
@@ -640,6 +597,8 @@ int main(int argc, const char *argv[]) {
 
         auto vkQueuePresentResult =
             vkQueuePresentKHR(vkContext.presentQueue, &presentInfo);
+
+        isImageAcquired = false;
 
         if (vkQueuePresentResult == VK_ERROR_OUT_OF_DATE_KHR) {
           vkContext.recreateSwapchain();
@@ -678,4 +637,6 @@ int main(int argc, const char *argv[]) {
       }
     }
   }
+
+  vkDeviceWaitIdle(vk::context->device);
 }

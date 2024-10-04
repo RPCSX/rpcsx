@@ -24,7 +24,7 @@
 
 #define ClampInfToFltMax(x) (isinf(x) ? ((x) < 0 ? -FLT_MAX : FLT_MAX) : (x))
 #define ConvertInfToZero(x) (isinf(x) ? 0.0 : (x))
-#define Rsqrt(x) (1.0 / sqrt(x))
+#define Rsqrt(x) (inversesqrt(x))
 #define Rcp(x) (1.0 / x)
 
 #define U32ARRAY_FETCH_BITS(ARRAY, START, BITCOUNT)  ((ARRAY[(START) >> 5] >> ((START) & 31)) & ((1 << (BITCOUNT)) - 1))
@@ -577,10 +577,12 @@ void set_cond_thread_bit(inout uint64_t sdst, bool cond) {
 
 void set_cond_thread_bit_exec(inout uint64_t sdst, bool cond) {
     uint64_t bit = uint64_t(1) << thread_id;
-    if (cond && (exec & bit) != 0) {
+    if (cond) {
         sdst |= bit;
+        exec |= bit;
     } else {
         sdst &= ~bit;
+        exec &= ~bit;
     }
 }
 
@@ -995,6 +997,23 @@ void s_cmpk_le_u32(uint32_t a, uint32_t b) { scc = a <= b; }
 void s_cmpk_lt_u32(uint32_t a, uint32_t b) { scc = a < b; }
 void s_cmpk_lg_u32(uint32_t a, uint32_t b) { scc = a != b; }
 
+void s_cmovk_i32(out uint32_t sdst, uint32_t value) { 
+    if (scc) {
+        sdst = value;
+    }
+}
+
+void s_cmov_b32(out uint32_t sdst, uint32_t value) { 
+    if (scc) {
+        sdst = value;
+    }
+}
+
+void s_cmov_b64(out uint64_t sdst, uint64_t value) { 
+    if (scc) {
+        sdst = value;
+    }
+}
 
 uint32_t s_not_b32(uint32_t x) {
     uint32_t result = ~x;
@@ -1236,7 +1255,13 @@ int32_t s_ashr_i32(int32_t x, uint32_t y) { int32_t result = x >> (y & 0x1f); sc
 int64_t s_ashr_i64(int64_t x, uint32_t y) { int64_t result = x >> (y & 0x3f); scc = result != 0; return result; }
 uint32_t s_bfm_b32(uint32_t x, uint32_t y) { uint32_t result = ((1 << (x & 0x1f)) - 1) << (y & 0x1f); scc = result != 0; return result; }
 uint64_t s_bfm_b64(uint64_t x, uint64_t y) { uint64_t result = ((uint64_t(1) << (x & 0x1f)) - 1) << (y & 0x1f); scc = result != 0; return result; }
-int32_t s_mul_i32(int32_t x, int32_t y) { int32_t result = x * y; scc = result != 0; return result; }
+int32_t s_mul_i32(int32_t x, int32_t y) { return x * y; }
+int32_t s_mulk_i32(int32_t x, int32_t y) { return x * y; }
+int32_t s_abs_i32(int32_t x) {
+    int32_t result = abs(x);
+    scc = result == 0;
+    return result;
+}
 uint32_t s_bfe_u32(uint32_t x, uint32_t y) {
     uint32_t offset = y & 0x1f;
     uint32_t width = (y >> 16) & 0x7f;
@@ -2168,10 +2193,10 @@ void s_dcache_inv() {
 
 bool s_cbranch_scc0() { return scc == false; }
 bool s_cbranch_scc1() { return scc == true; }
-bool s_cbranch_vccz() { return vcc == 0; }
-bool s_cbranch_vccnz() { return vcc != 0; }
-bool s_cbranch_execz() { return exec == 0; }
-bool s_cbranch_execnz() { return exec != 0; }
+bool s_cbranch_vccz() { return (vcc & (uint64_t(1) << thread_id)) == 0; }
+bool s_cbranch_vccnz() { return (vcc & (uint64_t(1) << thread_id)) != 0; }
+bool s_cbranch_execz() { return (exec & (uint64_t(1) << thread_id)) == 0; }
+bool s_cbranch_execnz() { return (exec & (uint64_t(1) << thread_id)) != 0; }
 
 
 // DS

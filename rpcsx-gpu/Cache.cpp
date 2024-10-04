@@ -1299,21 +1299,21 @@ Cache::ImageView Cache::Tag::getImageView(const ImageKey &key, Access access) {
 
 void Cache::Tag::readMemory(void *target, std::uint64_t address,
                             std::uint64_t size) {
-  mParent->flush(*mScheduler, address, size);
+  // mParent->flush(*mScheduler, address, size);
   auto memoryPtr = RemoteMemory{mParent->mVmIm}.getPointer(address);
   std::memcpy(target, memoryPtr, size);
 }
 
 void Cache::Tag::writeMemory(const void *source, std::uint64_t address,
                              std::uint64_t size) {
-  mParent->flush(*mScheduler, address, size);
+  // mParent->invalidate(*mScheduler, address, size);
   auto memoryPtr = RemoteMemory{mParent->mVmIm}.getPointer(address);
   std::memcpy(memoryPtr, source, size);
 }
 
 int Cache::Tag::compareMemory(const void *source, std::uint64_t address,
                               std::uint64_t size) {
-  mParent->flush(*mScheduler, address, size);
+  // mParent->flush(*mScheduler, address, size);
   auto memoryPtr = RemoteMemory{mParent->mVmIm}.getPointer(address);
   return std::memcmp(memoryPtr, source, size);
 }
@@ -1348,14 +1348,18 @@ void Cache::Tag::release() {
     return;
   }
 
+  std::vector<std::shared_ptr<Entry>> tmpResources;
   while (!mStorage->mAcquiredResources.empty()) {
     auto resource = std::move(mStorage->mAcquiredResources.back());
     mStorage->mAcquiredResources.pop_back();
     resource->flush(*this, *mScheduler, 0, ~static_cast<std::uint64_t>(0));
+    tmpResources.push_back(std::move(resource));
   }
 
-  mScheduler->submit();
-  mScheduler->wait();
+  if (!tmpResources.empty()) {
+    mScheduler->submit();
+    mScheduler->wait();
+  }
 
   mStorage->clear();
   auto storageIndex = mStorage - mParent->mTagStorages;
@@ -1865,6 +1869,10 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmIm(vmId) {
 }
 
 Cache::~Cache() {
+  for (auto &samp : mSamplers) {
+    vkDestroySampler(vk::context->device, samp.second, vk::context->allocator);
+  }
+
   vkDestroyDescriptorPool(vk::context->device, mDescriptorPool,
                           vk::context->allocator);
 

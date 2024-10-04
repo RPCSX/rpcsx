@@ -198,15 +198,6 @@ void vk::Context::createSwapchain() {
 
   recreateSwapchain();
 
-  inFlightFences.resize(swapchainImages.size());
-
-  for (auto &fence : inFlightFences) {
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    VK_VERIFY(vkCreateFence(device, &fenceInfo, allocator, &fence));
-  }
   {
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -421,6 +412,10 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
   supportsInt8 =
       storage_8bit.uniformAndStorageBuffer8BitAccess && float16_int8.shaderInt8;
   supportsInt64Atomics = phyDevFeatures12.shaderBufferInt64Atomics;
+
+  if (!fsBarycentric.fragmentShaderBarycentric) {
+    shaderObject.pNext = fsBarycentric.pNext;
+  }
 
   rx::dieIf(!storage_16bit.uniformAndStorageBuffer16BitAccess,
             "16-bit storage is unsupported by this GPU");
