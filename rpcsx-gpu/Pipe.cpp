@@ -1005,9 +1005,6 @@ bool GraphicsPipe::dmaData(Queue &queue) {
 }
 
 bool GraphicsPipe::setConfigReg(Queue &queue) {
-  rx::dieIf(queue.indirectLevel != 0, "setConfigReg from queue %d",
-            queue.indirectLevel);
-
   auto len = rx::getBits(queue.rptr[0], 29, 16);
   auto offset = queue.rptr[1] & 0xffff;
   auto data = queue.rptr + 2;
