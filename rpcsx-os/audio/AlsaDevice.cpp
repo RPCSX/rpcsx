@@ -248,20 +248,21 @@ long AlsaDevice::write(void *buf, long len) {
 
   while (true) {
     snd_pcm_sframes_t r = snd_pcm_writei(mPCMHandle, buf, frames);
-    if (r == -EPIPE) {
-      if (fixXRun() == 0) {
-        return write(buf, len);
-      }
 
-      continue;
+    if (r == -EPIPE) {
+      r = fixXRun();
+
+      if (r == 0) {
+        continue;
+      }
     }
 
     if (r == -ESTRPIPE) {
-      if (resume() == 0) {
-        return write(buf, len);
-      }
+      r = resume();
 
-      continue;
+      if (r == 0) {
+        continue;
+      }
     }
 
     if (r < 0) {
