@@ -404,9 +404,9 @@ static void ps4InitDev() {
   rx::vfs::addDevice("notification3", createNotificationCharacterDevice(3));
   rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
   rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
-  rx::vfs::addDevice("aout0", createAoutCharacterDevice());
-  rx::vfs::addDevice("aout1", createAoutCharacterDevice());
-  rx::vfs::addDevice("aout2", createAoutCharacterDevice());
+  rx::vfs::addDevice("aout0", createAoutCharacterDevice(0));
+  rx::vfs::addDevice("aout1", createAoutCharacterDevice(1));
+  rx::vfs::addDevice("aout2", createAoutCharacterDevice(2));
   rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
   rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
   rx::vfs::addDevice("mbus_av", mbusAv);
@@ -462,6 +462,189 @@ static void ps4InitFd(orbis::Thread *mainThread) {
   mainThread->tproc->fileDescriptors.insert(stdinFile);
   mainThread->tproc->fileDescriptors.insert(stdoutFile);
   mainThread->tproc->fileDescriptors.insert(stderrFile);
+}
+
+static orbis::Process *createGuestProcess() {
+  auto pid = orbis::g_context.allocatePid() * 10000 + 1;
+  return orbis::g_context.createProcess(pid);
+}
+
+static orbis::Thread *createGuestThread() {
+  auto process = createGuestProcess();
+  auto [baseId, thread] = process->threadsMap.emplace();
+  thread->tproc = process;
+  thread->tid = process->pid + baseId;
+  thread->state = orbis::ThreadState::RUNNING;
+  return thread;
+}
+
+template <typename T = std::byte> struct GuestAlloc {
+  orbis::ptr<T> guestAddress;
+
+  GuestAlloc(std::size_t size) {
+    if (size == 0) {
+      guestAddress = nullptr;
+    } else {
+      guestAddress = orbis::ptr<T>(rx::vm::map(
+          nullptr, size, rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
+          rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
+    }
+  }
+
+  GuestAlloc() : GuestAlloc(sizeof(T)) {}
+
+  GuestAlloc(const T &data) : GuestAlloc() {
+    if (orbis::uwrite(guestAddress, data) != orbis::ErrorCode{}) {
+      std::abort();
+    }
+  }
+
+  GuestAlloc(const void *data, std::size_t size) : GuestAlloc(size) {
+    if (orbis::uwriteRaw(guestAddress, data, size) != orbis::ErrorCode{}) {
+      std::abort();
+    }
+  }
+
+  GuestAlloc(const GuestAlloc &) = delete;
+
+  GuestAlloc(GuestAlloc &&other) : guestAddress(other.guestAddress) {
+    other.guestAddress = 0;
+  }
+  GuestAlloc &operator=(GuestAlloc &&other) {
+    std::swap(guestAddress, other.guestAddress);
+  }
+
+  ~GuestAlloc() {
+    if (guestAddress != 0) {
+      rx::vm::unmap(guestAddress, sizeof(T));
+    }
+  }
+
+  operator orbis::ptr<T>() { return guestAddress; }
+  T *operator->() { return guestAddress; }
+  operator T &() { return *guestAddress; }
+};
+
+struct IpmiClient {
+  orbis::Ref<orbis::IpmiClient> clientImpl;
+  orbis::uint kid;
+  orbis::Thread *thread;
+
+  orbis::sint
+  sendSyncMessageRaw(std::uint32_t method,
+                     const std::vector<std::vector<std::byte>> &inData,
+                     std::vector<std::vector<std::byte>> &outBuf) {
+    GuestAlloc<orbis::sint> serverResult;
+    GuestAlloc<orbis::IpmiDataInfo> guestInDataArray{
+        sizeof(orbis::IpmiDataInfo) * inData.size()};
+    GuestAlloc<orbis::IpmiBufferInfo> guestOutBufArray{
+        sizeof(orbis::IpmiBufferInfo) * outBuf.size()};
+
+    std::vector<GuestAlloc<std::byte>> guestAllocs;
+    guestAllocs.reserve(inData.size() + outBuf.size());
+
+    for (auto &data : inData) {
+      auto pointer =
+          guestAllocs.emplace_back(data.data(), data.size()).guestAddress;
+
+      guestInDataArray.guestAddress[&data - inData.data()] = {
+          .data = pointer, .size = data.size()};
+    }
+
+    for (auto &buf : outBuf) {
+      auto pointer =
+          guestAllocs.emplace_back(buf.data(), buf.size()).guestAddress;
+
+      guestOutBufArray.guestAddress[&buf - outBuf.data()] = {
+          .data = pointer, .capacity = buf.size()};
+    }
+
+    GuestAlloc params = orbis::IpmiSyncCallParams{
+        .method = method,
+        .numInData = static_cast<orbis::uint32_t>(inData.size()),
+        .numOutData = static_cast<orbis::uint32_t>(outBuf.size()),
+        .pInData = guestInDataArray,
+        .pOutData = guestOutBufArray,
+        .pResult = serverResult,
+        .flags = (inData.size() >= 1 || outBuf.size() >= 1) ? 1u : 0u,
+    };
+
+    GuestAlloc<orbis::uint> errorCode;
+    orbis::sysIpmiClientInvokeSyncMethod(thread, errorCode, kid, params,
+                                         sizeof(orbis::IpmiSyncCallParams));
+
+    for (auto &buf : outBuf) {
+      auto size = guestOutBufArray.guestAddress[inData.data() - &buf].size;
+      buf.resize(size);
+    }
+    return serverResult;
+  }
+
+  template <typename... InputTypes>
+  orbis::sint sendSyncMessage(std::uint32_t method,
+                              const InputTypes &...input) {
+    std::vector<std::vector<std::byte>> outBuf;
+    return sendSyncMessageRaw(method, {toBytes(input)...}, outBuf);
+  }
+
+  template <typename... OutputTypes, typename... InputTypes>
+    requires((sizeof...(OutputTypes) > 0) || sizeof...(InputTypes) == 0)
+  std::tuple<OutputTypes...> sendSyncMessage(std::uint32_t method,
+                                             InputTypes... input) {
+    std::vector<std::vector<std::byte>> outBuf{sizeof(OutputTypes)...};
+    sendSyncMessageRaw(method, {toBytes(input)...}, outBuf);
+    std::tuple<OutputTypes...> output;
+
+    auto unpack = [&]<std::size_t... I>(std::index_sequence<I...>) {
+      ((std::get<I>(output) = *reinterpret_cast<OutputTypes *>(outBuf.data())),
+       ...);
+    };
+    unpack(std::make_index_sequence<sizeof...(OutputTypes)>{});
+    return output;
+  }
+};
+
+static IpmiClient audioIpmiClient;
+
+static IpmiClient createIpmiClient(orbis::Thread *thread, const char *name) {
+  orbis::Ref<orbis::IpmiClient> client;
+  GuestAlloc config = orbis::IpmiCreateClientConfig{
+      .size = sizeof(orbis::IpmiCreateClientConfig),
+  };
+
+  orbis::uint kid;
+
+  {
+    GuestAlloc<char> guestName{name, std::strlen(name)};
+    GuestAlloc params = orbis::IpmiCreateClientParams{
+        .name = guestName,
+        .config = config,
+    };
+
+    GuestAlloc<orbis::uint> result;
+    GuestAlloc<orbis::uint> guestKid;
+    orbis::sysIpmiCreateClient(thread, guestKid, params,
+                               sizeof(orbis::IpmiCreateClientParams));
+    kid = guestKid;
+  }
+
+  {
+    GuestAlloc<orbis::sint> status;
+    GuestAlloc params = orbis::IpmiClientConnectParams{.status = status};
+
+    GuestAlloc<orbis::uint> result;
+    while (true) {
+      auto errc = orbis::sysIpmiClientConnect(
+          thread, result, kid, params, sizeof(orbis::IpmiClientConnectParams));
+      if (errc.value() == 0) {
+        break;
+      }
+
+      std::this_thread::sleep_for(std::chrono::microseconds(300));
+    }
+  }
+
+  return {std::move(client), kid, thread};
 }
 
 struct ExecEnv {
@@ -1281,7 +1464,7 @@ static void createAudioSystemObjects(orbis::Process *process) {
 }
 
 struct SceMbusIpcAddHandleByUserIdMethodArgs {
-  orbis::uint32_t unk; // 0
+  orbis::uint32_t deviceType; // 0 - pad, 1 - aout, 2 - ain, 4 - camera, 6 - kb, 7 - mouse, 8 - vr
   orbis::uint32_t deviceId;
   orbis::uint32_t userId;
   orbis::uint32_t type;
@@ -1301,9 +1484,36 @@ static void createSysCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceMbusIpc")
       .addSyncMethod<SceMbusIpcAddHandleByUserIdMethodArgs>(
           0xce110007, [](const auto &args) -> std::int32_t {
-            ORBIS_LOG_TODO("IPMI: SceMbusIpcAddHandleByUserId", args.unk,
+            ORBIS_LOG_TODO("IPMI: SceMbusIpcAddHandleByUserId", args.deviceType,
                            args.deviceId, args.userId, args.type, args.index,
                            args.reserved, args.pid);
+            if (args.deviceType == 1) {
+              struct HandleA {
+                int32_t pid;
+                int32_t port;
+                int32_t unk0 = 0x20100000;
+                int32_t unk1 = 1;
+              } handleA;
+              handleA.pid = args.pid;
+              handleA.port = args.deviceId;
+              audioIpmiClient.sendSyncMessage(0x1234000a, handleA);
+              struct HandleC {
+                int32_t pid;
+                int32_t port;
+                int32_t unk0 = 1;
+                int32_t unk1 = 0;
+                int32_t unk2 = 1;
+                int32_t unk3 = 0;
+                int32_t unk4 = 0;
+                int32_t unk5 = 0;
+                int32_t unk6 = 0;
+                int32_t unk7 = 1;
+                int32_t unk8 = 0;
+              } handleC;
+              handleC.pid = args.pid;
+              handleC.port = args.deviceId;
+              audioIpmiClient.sendSyncMessage(0x1234000c, handleC);
+            }
             return 0;
           });
   createIpmiServer(process, "SceSysCoreApp");
@@ -1617,180 +1827,6 @@ static void createShellCoreObjects(orbis::Process *process) {
   createShm("vmicDdShmAin", 0x202, 0x1b6, 43008);
 
   createSemaphore("SceNpTpip 0", 0x101, 0, 1);
-}
-
-static orbis::Process *createGuestProcess() {
-  auto pid = orbis::g_context.allocatePid() * 10000 + 1;
-  return orbis::g_context.createProcess(pid);
-}
-
-static orbis::Thread *createGuestThread() {
-  auto process = createGuestProcess();
-  auto [baseId, thread] = process->threadsMap.emplace();
-  thread->tproc = process;
-  thread->tid = process->pid + baseId;
-  thread->state = orbis::ThreadState::RUNNING;
-  return thread;
-}
-
-template <typename T = std::byte> struct GuestAlloc {
-  orbis::ptr<T> guestAddress;
-
-  GuestAlloc(std::size_t size) {
-    if (size == 0) {
-      guestAddress = nullptr;
-    } else {
-      guestAddress = orbis::ptr<T>(rx::vm::map(
-          nullptr, size, rx::vm::kMapProtCpuRead | rx::vm::kMapProtCpuWrite,
-          rx::vm::kMapFlagPrivate | rx::vm::kMapFlagAnonymous));
-    }
-  }
-
-  GuestAlloc() : GuestAlloc(sizeof(T)) {}
-
-  GuestAlloc(const T &data) : GuestAlloc() {
-    if (orbis::uwrite(guestAddress, data) != orbis::ErrorCode{}) {
-      std::abort();
-    }
-  }
-
-  GuestAlloc(const void *data, std::size_t size) : GuestAlloc(size) {
-    if (orbis::uwriteRaw(guestAddress, data, size) != orbis::ErrorCode{}) {
-      std::abort();
-    }
-  }
-
-  GuestAlloc(const GuestAlloc &) = delete;
-
-  GuestAlloc(GuestAlloc &&other) : guestAddress(other.guestAddress) {
-    other.guestAddress = 0;
-  }
-  GuestAlloc &operator=(GuestAlloc &&other) {
-    std::swap(guestAddress, other.guestAddress);
-  }
-
-  ~GuestAlloc() {
-    if (guestAddress != 0) {
-      rx::vm::unmap(guestAddress, sizeof(T));
-    }
-  }
-
-  operator orbis::ptr<T>() { return guestAddress; }
-  T *operator->() { return guestAddress; }
-  operator T &() { return *guestAddress; }
-};
-
-struct IpmiClient {
-  orbis::Ref<orbis::IpmiClient> clientImpl;
-  orbis::uint kid;
-  orbis::Thread *thread;
-
-  orbis::sint
-  sendSyncMessageRaw(std::uint32_t method,
-                     const std::vector<std::vector<std::byte>> &inData,
-                     std::vector<std::vector<std::byte>> &outBuf) {
-    GuestAlloc<orbis::sint> serverResult;
-    GuestAlloc<orbis::IpmiDataInfo> guestInDataArray{
-        sizeof(orbis::IpmiDataInfo) * inData.size()};
-    GuestAlloc<orbis::IpmiBufferInfo> guestOutBufArray{
-        sizeof(orbis::IpmiBufferInfo) * outBuf.size()};
-
-    std::vector<GuestAlloc<std::byte>> guestAllocs;
-    guestAllocs.reserve(inData.size() + outBuf.size());
-
-    for (auto &data : inData) {
-      auto pointer =
-          guestAllocs.emplace_back(data.data(), data.size()).guestAddress;
-
-      guestInDataArray.guestAddress[&data - inData.data()] = {
-          .data = pointer, .size = data.size()};
-    }
-
-    for (auto &buf : outBuf) {
-      auto pointer =
-          guestAllocs.emplace_back(buf.data(), buf.size()).guestAddress;
-
-      guestOutBufArray.guestAddress[&buf - outBuf.data()] = {
-          .data = pointer, .capacity = buf.size()};
-    }
-
-    GuestAlloc params = orbis::IpmiSyncCallParams{
-        .method = method,
-        .numInData = static_cast<orbis::uint32_t>(inData.size()),
-        .numOutData = static_cast<orbis::uint32_t>(outBuf.size()),
-        .pInData = guestInDataArray,
-        .pOutData = guestOutBufArray,
-        .pResult = serverResult,
-        .flags = (inData.size() > 1 || outBuf.size() > 1) ? 1u : 0u,
-    };
-
-    GuestAlloc<orbis::uint> errorCode;
-    orbis::sysIpmiClientInvokeSyncMethod(thread, errorCode, kid, params,
-                                         sizeof(orbis::IpmiSyncCallParams));
-
-    for (auto &buf : outBuf) {
-      auto size = guestOutBufArray.guestAddress[inData.data() - &buf].size;
-      buf.resize(size);
-    }
-    return serverResult;
-  }
-
-  template <typename... InputTypes>
-  orbis::sint sendSyncMessage(std::uint32_t method,
-                              const InputTypes &...input) {
-    std::vector<std::vector<std::byte>> outBuf;
-    return sendSyncMessageRaw(method, {toBytes(input)...}, outBuf);
-  }
-
-  template <typename... OutputTypes, typename... InputTypes>
-    requires((sizeof...(OutputTypes) > 0) || sizeof...(InputTypes) == 0)
-  std::tuple<OutputTypes...> sendSyncMessage(std::uint32_t method,
-                                             InputTypes... input) {
-    std::vector<std::vector<std::byte>> outBuf{sizeof(OutputTypes)...};
-    sendSyncMessageRaw(method, {toBytes(input)...}, outBuf);
-    std::tuple<OutputTypes...> output;
-
-    auto unpack = [&]<std::size_t... I>(std::index_sequence<I...>) {
-      ((std::get<I>(output) = *reinterpret_cast<OutputTypes *>(outBuf.data())),
-       ...);
-    };
-    unpack(std::make_index_sequence<sizeof...(OutputTypes)>{});
-    return output;
-  }
-};
-
-static IpmiClient createIpmiClient(orbis::Thread *thread, const char *name) {
-  orbis::Ref<orbis::IpmiClient> client;
-  GuestAlloc config = orbis::IpmiCreateClientConfig{
-      .size = sizeof(orbis::IpmiCreateClientConfig),
-  };
-
-  orbis::uint kid;
-
-  {
-    GuestAlloc<char> guestName{name, std::strlen(name)};
-    GuestAlloc params = orbis::IpmiCreateClientParams{
-        .name = guestName,
-        .config = config,
-    };
-
-    GuestAlloc<orbis::uint> result;
-    GuestAlloc<orbis::uint> guestKid;
-    orbis::sysIpmiCreateClient(thread, guestKid, params,
-                               sizeof(orbis::IpmiCreateClientParams));
-    kid = guestKid;
-  }
-
-  {
-    GuestAlloc<orbis::sint> status;
-    GuestAlloc params = orbis::IpmiClientConnectParams{.status = status};
-
-    GuestAlloc<orbis::uint> result;
-    orbis::sysIpmiClientConnect(thread, result, kid, params,
-                                sizeof(orbis::IpmiClientConnectParams));
-  }
-
-  return {std::move(client), kid, thread};
 }
 
 static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
@@ -2186,6 +2222,34 @@ int main(int argc, const char *argv[]) {
                          .titleId = "NPXS20973",
                          .unk4 = orbis::slong(0x80000000'00000000),
                      });
+        // confirmed to work and known method of initialization since 5.05 version             
+        if (orbis::g_context.fwSdkVersion >= 0x5050000) {
+          auto fakeIpmiThread = createGuestThread();
+          audioIpmiClient = createIpmiClient(fakeIpmiThread, "SceSysAudioSystemIpc");
+          // HACK: here is a bug in audiod because we send this very early and audiod has time to reset the state due to initialization
+          // so we wait for a second, during this time audiod should have time to initialize on most systems
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          struct Data1 {
+            int32_t pid = 0;
+            int32_t someSwitch = 0x14; // 0x14 for init, 0x19 for mute
+            int32_t someFlag = 0;
+          } data1;
+          data1.pid = fakeIpmiThread->tproc->pid;
+          struct Data2 {
+            void* unk0 = 0;
+            int32_t unk1 = 0x105;
+            int32_t unk2 = 0x10000;
+            int64_t unk3 = 0;
+            int32_t unk4 = 0;
+            int32_t unk5 = 0;
+            int32_t unk6 = 0;
+            int64_t unk7 = 0;
+            int32_t unk8 = 0x2;
+            char unk9[24]{0};
+          } data2;
+          std::uint32_t method = orbis::g_context.fwSdkVersion >= 0x8000000 ? 0x1234002c : 0x1234002b;
+          audioIpmiClient.sendSyncMessage(method, data1, data2);
+        }
       }
     }
 
