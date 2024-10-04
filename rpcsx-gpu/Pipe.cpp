@@ -974,17 +974,18 @@ bool GraphicsPipe::dmaData(Queue &queue) {
   case 2:
     src = &data;
     srcSize = sizeof(data);
+    saic = 1;
     break;
 
   default:
     rx::die("IT_DMA_DATA: unexpected srcSel %u", srcSel);
   }
 
-  rx::dieIf(size > srcSize,
+  rx::dieIf(size > srcSize && saic == 0,
             "IT_DMA_DATA: out of source size srcSel %u, dstSel %u, size %u",
             srcSel, dstSel, size);
 
-  if (saic != 0 && srcSel == 0 && sas == 1) {
+  if (saic != 0) {
     if (daic != 0 && dstSel == 0 && das == 1) {
       std::memcpy(dst, src, sizeof(std::uint32_t));
     } else {
