@@ -404,9 +404,9 @@ static void ps4InitDev() {
   rx::vfs::addDevice("notification3", createNotificationCharacterDevice(3));
   rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
   rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
-  rx::vfs::addDevice("aout0", createAoutCharacterDevice());
-  rx::vfs::addDevice("aout1", createAoutCharacterDevice());
-  rx::vfs::addDevice("aout2", createAoutCharacterDevice());
+  rx::vfs::addDevice("aout0", createAoutCharacterDevice(0));
+  rx::vfs::addDevice("aout1", createAoutCharacterDevice(1));
+  rx::vfs::addDevice("aout2", createAoutCharacterDevice(2));
   rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
   rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
   rx::vfs::addDevice("mbus_av", mbusAv);
@@ -2224,7 +2224,6 @@ int main(int argc, const char *argv[]) {
                      });
         // confirmed to work and known method of initialization since 5.05 version             
         if (orbis::g_context.fwSdkVersion >= 0x5050000) {
-          ORBIS_LOG_TODO("FW VERSION IS", orbis::g_context.fwSdkVersion);
           auto fakeIpmiThread = createGuestThread();
           audioIpmiClient = createIpmiClient(fakeIpmiThread, "SceSysAudioSystemIpc");
           // HACK: here is a bug in audiod because we send this very early and audiod has time to reset the state due to initialization

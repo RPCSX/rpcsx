@@ -28,7 +28,10 @@
 struct AoutFile : orbis::File {};
 
 struct AoutDevice : public IoDevice {
+  std::int8_t id;
   AudioDevice *audioDevice;
+
+  AoutDevice(std::int8_t id) : id(id) {}
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
@@ -187,12 +190,14 @@ orbis::ErrorCode AoutDevice::open(orbis::Ref<orbis::File> *file,
   thread->where();
 
   *file = newFile;
-  // TODO: create it only for hdmi device
-  if (true) {
+  // create audio device only for hdmi output, 0 - hdmi, 1 - analog, 2 - spdif
+  if (id == 0) {
     // TODO: use factory to more backends support
-    this->audioDevice = new AlsaDevice();
+    audioDevice = new AlsaDevice();
   }
   return {};
 }
 
-IoDevice *createAoutCharacterDevice() { return orbis::knew<AoutDevice>(); }
+IoDevice *createAoutCharacterDevice(std::int8_t id) {
+  return orbis::knew<AoutDevice>(id);
+}

@@ -31,7 +31,7 @@ IoDevice *createXptCharacterDevice();
 IoDevice *createCdCharacterDevice();
 IoDevice *createMetaDbgCharacterDevice();
 IoDevice *createHddCharacterDevice(std::uint64_t size);
-IoDevice *createAoutCharacterDevice();
+IoDevice *createAoutCharacterDevice(std::int8_t id);
 IoDevice *createAVControlCharacterDevice();
 IoDevice *createHDMICharacterDevice();
 IoDevice *createMBusAVCharacterDevice();
