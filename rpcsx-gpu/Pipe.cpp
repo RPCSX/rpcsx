@@ -655,6 +655,7 @@ bool GraphicsPipe::writeData(Queue &queue) {
     break;
 
   case 1:   // memory sync
+  case 2:   // TC L2
   case 5: { // memory async
     auto address =
         (dstAddressLo & ~3) | (static_cast<std::uint64_t>(dstAddressHi) << 32);
