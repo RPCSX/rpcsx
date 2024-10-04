@@ -574,7 +574,9 @@ int main(int argc, const char *argv[]) {
               continue;
             }
 
-            VK_VERIFY(acquireNextImageResult);
+            if (acquireNextImageResult != VK_SUBOPTIMAL_KHR) {
+              VK_VERIFY(acquireNextImageResult);
+            }
             break;
           }
         }
@@ -600,7 +602,8 @@ int main(int argc, const char *argv[]) {
 
         isImageAcquired = false;
 
-        if (vkQueuePresentResult == VK_ERROR_OUT_OF_DATE_KHR) {
+        if (vkQueuePresentResult == VK_ERROR_OUT_OF_DATE_KHR ||
+            vkQueuePresentResult == VK_SUBOPTIMAL_KHR) {
           vkContext.recreateSwapchain();
         } else {
           VK_VERIFY(vkQueuePresentResult);
