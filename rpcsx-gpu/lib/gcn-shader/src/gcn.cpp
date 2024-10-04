@@ -1046,6 +1046,11 @@ static ir::Value deserializeGcnRegion(
       continue;
     }
 
+    if (isaInst == ir::sopp::NOP || isaInst == ir::vop1::NOP ||
+        isaInst == ir::vop3::NOP || isaInst == ir::ds::NOP) {
+      continue;
+    }
+
     bool isBranch = isaInst == ir::sopp::BRANCH ||
                     isaInst == ir::sop1::SETPC_B64 ||
                     isaInst == ir::sop1::SWAPPC_B64;
