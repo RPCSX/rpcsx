@@ -1,44 +1,45 @@
 #pragma once
 
-#define FMT_S16_LE  0x10
-#define FMT_AC3     0x400
-#define FMT_S32_LE  0x1000
-
+#include "orbis-config.hpp"
+#include "orbis/utils/Rc.hpp"
 #include <cstdlib>
 #include <orbis/sys/sysproto.hpp>
 
-struct audio_buf_info {
-  int fragments;
-  int fragstotal;
-  int fragsize;
-  int bytes;
+struct [[gnu::packed]] audio_buf_info {
+  orbis::sint fragments;
+  orbis::sint fragsize;
+  orbis::sint fragstotal;
+  orbis::sint bytes;
 };
 
-class AudioDevice {
+enum class AudioFormat : std::uint32_t {
+  S16_LE = 0x10,
+  AC3 = 0x400,
+  S32_LE = 0x1000,
+};
+
+class AudioDevice : public orbis::RcBase {
 protected:
   bool mWorking = false;
-  orbis::uint mFormat{};
+  AudioFormat mFormat{};
   orbis::uint mFrequency{};
   orbis::ushort mChannels{};
   orbis::ushort mSampleSize{};
   orbis::ushort mSampleCount{};
 
-private:
-
 public:
-  AudioDevice();
-  virtual ~AudioDevice();
+  virtual ~AudioDevice() = default;
 
-  virtual void init();
-  virtual void start();
-  virtual long write(void *buf, long len);
-  virtual void stop();
-  virtual void reset();
+  virtual void init() {}
+  virtual void start() {}
+  virtual long write(void *buf, long len) { return -1; }
+  virtual void stop() {}
+  virtual void reset() {}
 
-  void setFormat(orbis::uint format);
+  void setFormat(AudioFormat format);
   void setFrequency(orbis::uint frequency);
   void setChannels(orbis::ushort channels);
   void setSampleSize(orbis::uint sampleSize = 0, orbis::uint sampleCount = 0);
 
-  virtual audio_buf_info getOSpace();
+  virtual audio_buf_info getOSpace() { return {}; }
 };

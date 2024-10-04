@@ -1,5 +1,6 @@
 #include "AudioOut.hpp"
 #include "amdgpu/bridge/bridge.hpp"
+#include "audio/AlsaDevice.hpp"
 #include "backtrace.hpp"
 #include "bridge.hpp"
 #include "io-device.hpp"
@@ -336,6 +337,14 @@ static void ps4InitDev() {
   auto mbus = static_cast<MBusDevice *>(createMBusCharacterDevice());
   auto mbusAv = static_cast<MBusAVDevice *>(createMBusAVCharacterDevice());
 
+  // FIXME: make it configurable
+  auto defaultAudioDevice = orbis::knew<AlsaDevice>();
+  auto nullAudioDevice = orbis::knew<AudioDevice>();
+
+  auto hdmiAudioDevice = defaultAudioDevice;
+  auto analogAudioDevice = nullAudioDevice;
+  auto spdifAudioDevice = nullAudioDevice;
+
   rx::vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   rx::vfs::addDevice("npdrm", createNpdrmCharacterDevice());
   rx::vfs::addDevice("icc_configuration",
@@ -404,9 +413,9 @@ static void ps4InitDev() {
   rx::vfs::addDevice("notification3", createNotificationCharacterDevice(3));
   rx::vfs::addDevice("notification4", createNotificationCharacterDevice(4));
   rx::vfs::addDevice("notification5", createNotificationCharacterDevice(5));
-  rx::vfs::addDevice("aout0", createAoutCharacterDevice(0));
-  rx::vfs::addDevice("aout1", createAoutCharacterDevice(1));
-  rx::vfs::addDevice("aout2", createAoutCharacterDevice(2));
+  rx::vfs::addDevice("aout0", createAoutCharacterDevice(0, hdmiAudioDevice));
+  rx::vfs::addDevice("aout1", createAoutCharacterDevice(1, analogAudioDevice));
+  rx::vfs::addDevice("aout2", createAoutCharacterDevice(2, spdifAudioDevice));
   rx::vfs::addDevice("av_control", createAVControlCharacterDevice());
   rx::vfs::addDevice("hdmi", createHDMICharacterDevice());
   rx::vfs::addDevice("mbus_av", mbusAv);

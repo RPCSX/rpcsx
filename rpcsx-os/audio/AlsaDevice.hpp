@@ -13,8 +13,7 @@ private:
   snd_pcm_sw_params_t *mSWParams;
 
 public:
-  AlsaDevice();
-  ~AlsaDevice() override;
+  ~AlsaDevice() { stop(); }
 
   void init() override {};
   void start() override;
@@ -22,10 +21,8 @@ public:
   void stop() override;
   void reset() override;
 
-  void setAlsaFormat();
-
   int fixXRun();
-  int resumeFromSupsend();
+  int resume();
 
   audio_buf_info getOSpace() override;
 };

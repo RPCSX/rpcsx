@@ -1,6 +1,5 @@
-#include "audio/AlsaDevice.hpp"
+#include "audio/AudioDevice.hpp"
 #include "io-device.hpp"
-#include "iodev/mbus_av.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/thread/Process.hpp"
@@ -8,6 +7,7 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/utils/Rc.hpp"
 #include <bits/types/struct_iovec.h>
 // #include <rx/hexdump.hpp>
 
@@ -29,9 +29,10 @@ struct AoutFile : orbis::File {};
 
 struct AoutDevice : public IoDevice {
   std::int8_t id;
-  AudioDevice *audioDevice;
+  orbis::Ref<AudioDevice> audioDevice;
 
-  AoutDevice(std::int8_t id) : id(id) {}
+  AoutDevice(std::int8_t id, AudioDevice *audioDevice)
+      : id(id), audioDevice(audioDevice) {}
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
@@ -42,122 +43,124 @@ static orbis::ErrorCode aout_ioctl(orbis::File *file, std::uint64_t request,
                                    void *argp, orbis::Thread *thread) {
   auto device = static_cast<AoutDevice *>(file->device.get());
   switch (request) {
-    case SNDCTL_DSP_RESET: {
-      ORBIS_LOG_TODO("SNDCTL_DSP_RESET");
-      if (auto audioDevice = device->audioDevice) {
-        audioDevice->reset();
-      }
-      return {};
+  case SNDCTL_DSP_RESET: {
+    ORBIS_LOG_TODO("SNDCTL_DSP_RESET");
+    if (auto audioDevice = device->audioDevice) {
+      audioDevice->reset();
     }
-    case SNDCTL_DSP_SETFRAGMENT: {
-      struct Args {
-        std::uint32_t fragment;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      ORBIS_LOG_NOTICE("SNDCTL_DSP_SETFRAGMENT", args->fragment & 0xF, (args->fragment >> 16) & 0xF);
-      if (auto audioDevice = device->audioDevice) {
-        audioDevice->setSampleSize(1 << (args->fragment & 0xF), (args->fragment >> 16) & 0xF);
-      }
-      return {};
+    return {};
+  }
+  case SNDCTL_DSP_SETFRAGMENT: {
+    struct Args {
+      orbis::uint32_t fragment;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_NOTICE("SNDCTL_DSP_SETFRAGMENT", args->fragment & 0xF,
+                     (args->fragment >> 16) & 0xF);
+    if (auto audioDevice = device->audioDevice) {
+      audioDevice->setSampleSize(1 << (args->fragment & 0xF),
+                                 (args->fragment >> 16) & 0xF);
     }
-    case SNDCTL_DSP_SETFMT: {
-      struct Args {
-        std::uint32_t fmt;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      ORBIS_LOG_NOTICE("SNDCTL_DSP_SETFMT", args->fmt);
-      if (auto audioDevice = device->audioDevice) {
-        audioDevice->setFormat(args->fmt);
-      }
-      return {};
+    return {};
+  }
+  case SNDCTL_DSP_SETFMT: {
+    struct Args {
+      orbis::uint32_t fmt;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_NOTICE("SNDCTL_DSP_SETFMT", args->fmt);
+    if (auto audioDevice = device->audioDevice) {
+      audioDevice->setFormat(static_cast<AudioFormat>(args->fmt));
     }
-    case SNDCTL_DSP_SPEED: {
-      struct Args {
-        std::uint32_t speed;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      if (auto audioDevice = device->audioDevice) {
-        audioDevice->setFrequency(args->speed);
-      }
-      return {};
+    return {};
+  }
+  case SNDCTL_DSP_SPEED: {
+    struct Args {
+      orbis::uint32_t speed;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    if (auto audioDevice = device->audioDevice) {
+      audioDevice->setFrequency(args->speed);
     }
-    case SNDCTL_DSP_CHANNELS: {
-      struct Args {
-        std::uint32_t channels;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      if (auto audioDevice = device->audioDevice) {
-        audioDevice->setChannels(args->channels);
-      }
-      return {};
+    return {};
+  }
+  case SNDCTL_DSP_CHANNELS: {
+    struct Args {
+      orbis::uint32_t channels;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    if (auto audioDevice = device->audioDevice) {
+      audioDevice->setChannels(args->channels);
     }
-    case ORBIS_AUDIO_UPDATE_TICK_PARAMS: {
-      struct Args {
-        std::uint32_t tick;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      ORBIS_LOG_NOTICE("ORBIS_AUDIO_UPDATE_TICK_PARAMS", args->tick);
-      return {};
+    return {};
+  }
+  case ORBIS_AUDIO_UPDATE_TICK_PARAMS: {
+    struct Args {
+      orbis::uint32_t tick;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_NOTICE("ORBIS_AUDIO_UPDATE_TICK_PARAMS", args->tick);
+    return {};
+  }
+  case SNDCTL_DSP_SYNCGROUP: {
+    ORBIS_LOG_NOTICE("SNDCTL_DSP_SYNCGROUP");
+    return {};
+  }
+  case ORBIS_AUDIO_CONFIG_SPDIF: {
+    struct Args {
+      orbis::uint64_t unk0;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    args->unk0 = 0x100000000; // Disable SPDIF output
+    return {};
+  }
+  case SNDCTL_DSP_GETBLKSIZE: {
+    struct Args {
+      orbis::uint32_t blksize;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_NOTICE("SNDCTL_DSP_GETBLKSIZE", args->blksize);
+    return {};
+  }
+  case SOUND_PCM_READ_BITS: {
+    struct Args {
+      orbis::uint32_t bits;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_NOTICE("SOUND_PCM_READ_BITS", args->bits);
+    return {};
+  }
+  case SNDCTL_DSP_GETOSPACE: {
+
+    if (auto audioDevice = device->audioDevice) {
+      auto info = audioDevice->getOSpace();
+      ORBIS_RET_ON_ERROR(orbis::uwrite(orbis::ptr<audio_buf_info>(argp), info));
+
+      ORBIS_LOG_WARNING("SNDCTL_DSP_GETOSPACE", info.fragments, info.fragsize,
+                        info.fragstotal, info.bytes);
     }
-    case SNDCTL_DSP_SYNCGROUP: {
-      ORBIS_LOG_NOTICE("SNDCTL_DSP_SYNCGROUP");
-      return {};
+
+    return {};
+  }
+  case SNDCTL_DSP_SYNCSTART: {
+    ORBIS_LOG_NOTICE("SNDCTL_DSP_SYNCSTART");
+    if (auto audioDevice = device->audioDevice) {
+      audioDevice->start();
     }
-    case ORBIS_AUDIO_CONFIG_SPDIF: {
-      struct Args {
-        std::uint64_t unk0;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      args->unk0 = 0x100000000; // Disable SPDIF output
-      return {};
-    }
-    case SNDCTL_DSP_GETBLKSIZE: {
-      struct Args {
-        std::uint32_t blksize;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      ORBIS_LOG_NOTICE("SNDCTL_DSP_GETBLKSIZE", args->blksize);
-      return {};
-    }
-    case SOUND_PCM_READ_BITS: {
-      struct Args {
-        std::uint32_t bits;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      ORBIS_LOG_NOTICE("SOUND_PCM_READ_BITS", args->bits);
-      return {};
-    }
-    case SNDCTL_DSP_GETOSPACE: {
-      auto args = reinterpret_cast<audio_buf_info *>(argp);
-      if (auto audioDevice = device->audioDevice) {
-        auto info = audioDevice->getOSpace();
-        args->fragments = info.fragments;
-        args->fragstotal = info.fragstotal;
-        args->fragsize = info.fragsize;
-        args->bytes = info.bytes;
-      }
-      ORBIS_LOG_TODO("SNDCTL_DSP_GETOSPACE", args->fragments, args->fragstotal, args->fragsize, args->bytes);
-      return {};
-    }
-    case SNDCTL_DSP_SYNCSTART: {
-      ORBIS_LOG_NOTICE("SNDCTL_DSP_SYNCSTART");
-      if (auto audioDevice = device->audioDevice) {
-        audioDevice->start();
-      }
-      return {};
-    }
-    case ORBIS_AUDIO_IOCTL_SETCONTROL: {
-      struct Args {
-        std::uint64_t unk0;
-      };
-      auto args = reinterpret_cast<Args *>(argp);
-      ORBIS_LOG_NOTICE("ORBIS_AUDIO_IOCTL_SETCONTROL", args->unk0);
-      return {};
-    }
-    default:
-      ORBIS_LOG_FATAL("Unhandled aout ioctl", request);
-      thread->where();
-      break;
+    return {};
+  }
+  case ORBIS_AUDIO_IOCTL_SETCONTROL: {
+    struct Args {
+      orbis::uint64_t unk0;
+    };
+    auto args = reinterpret_cast<Args *>(argp);
+    ORBIS_LOG_NOTICE("ORBIS_AUDIO_IOCTL_SETCONTROL", args->unk0);
+    return {};
+  }
+  default:
+    ORBIS_LOG_FATAL("Unhandled aout ioctl", request);
+    thread->where();
+    break;
   }
   return {};
 }
@@ -190,14 +193,9 @@ orbis::ErrorCode AoutDevice::open(orbis::Ref<orbis::File> *file,
   thread->where();
 
   *file = newFile;
-  // create audio device only for hdmi output, 0 - hdmi, 1 - analog, 2 - spdif
-  if (id == 0) {
-    // TODO: use factory to more backends support
-    audioDevice = new AlsaDevice();
-  }
   return {};
 }
 
-IoDevice *createAoutCharacterDevice(std::int8_t id) {
-  return orbis::knew<AoutDevice>(id);
+IoDevice *createAoutCharacterDevice(std::int8_t id, AudioDevice *device) {
+  return orbis::knew<AoutDevice>(id, device);
 }
