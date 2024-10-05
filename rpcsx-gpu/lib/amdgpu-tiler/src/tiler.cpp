@@ -555,7 +555,7 @@ static SurfaceInfo computeTextureLinearInfo(
     }
 
     surfaceOffset += arraySliceCount * surfaceSize;
-    surfaceOffset += arraySliceCount * linearSize;
+    linearOffset += arraySliceCount * linearSize;
   }
 
   result.totalTiledSize = surfaceOffset;

@@ -133,7 +133,7 @@ struct ResourcesBuilder {
     std::printf("failed to resolve function call to %s\n",
                 ns->getNameOf(call.getOperand(1).getAsValue()).c_str());
 
-    for (auto op : call.getOperands().subspan(2)) {
+    for (auto &op : call.getOperands().subspan(2)) {
       std::cerr << "arg: ";
       op.print(std::cerr, *ns);
       auto argValue = op.getAsValue();
@@ -727,6 +727,20 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
         converter.createLocalVariable(builder, loc, value));
 
     auto channelType = context.getTypeFloat32();
+
+    if (swizzle == 0 && done) {
+      auto termBuilder = gcn::Builder::createAppend(
+          context, context.layout.getOrCreateFunctions(context));
+      auto terminateFn = termBuilder.createSpvFunction(
+          loc, context.getTypeVoid(), ir::spv::FunctionControl::None,
+          context.getTypeFunction(context.getTypeVoid(), {}));
+      termBuilder.createSpvLabel(loc);
+      termBuilder.createSpvKill(loc);
+      termBuilder.createSpvFunctionEnd(loc);
+
+      builder.createSpvFunctionCall(loc, context.getTypeVoid(), terminateFn,
+                                    {});
+    }
 
     for (int channel = 0; channel < 4; ++channel) {
       if (~swizzle & (1 << channel)) {

@@ -3,14 +3,11 @@
 #include "Pipe.hpp"
 #include "amdgpu/tiler.hpp"
 #include "gnm/constants.hpp"
-#include "rx/die.hpp"
 #include "shader/Access.hpp"
 #include "shader/Evaluator.hpp"
 #include "shader/GcnConverter.hpp"
 #include <algorithm>
 #include <memory>
-#include <mutex>
-#include <ostream>
 #include <print>
 #include <rx/ConcurrentBitPool.hpp>
 #include <rx/MemoryTable.hpp>
@@ -27,7 +24,7 @@ struct ShaderKey {
   shader::gcn::Environment env;
 };
 
-enum class ImageKind { Color, Depth, Stencil };
+enum class ImageKind : std::uint8_t { Color, Depth, Stencil };
 
 struct ImageKey {
   std::uint64_t readAddress;
@@ -265,7 +262,7 @@ public:
     }
     ~Tag() { release(); }
 
-    void swap(Tag &other) {
+    void swap(Tag &other) noexcept {
       std::swap(static_cast<TagData &>(*this), static_cast<TagData &>(other));
     }
 
@@ -364,7 +361,7 @@ public:
                            std::span<const VkViewport> viewPorts);
     void release();
 
-    void swap(GraphicsTag &other) {
+    void swap(GraphicsTag &other) noexcept {
       Tag::swap(other);
       std::swap(mAcquiredGraphicsDescriptorSet,
                 other.mAcquiredGraphicsDescriptorSet);
@@ -396,7 +393,7 @@ public:
 
     void release();
 
-    void swap(ComputeTag &other) {
+    void swap(ComputeTag &other) noexcept {
       Tag::swap(other);
       std::swap(mAcquiredComputeDescriptorSet,
                 other.mAcquiredComputeDescriptorSet);

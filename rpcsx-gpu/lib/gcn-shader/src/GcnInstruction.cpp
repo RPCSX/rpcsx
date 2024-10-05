@@ -207,8 +207,7 @@ readSmrdInst(GcnInstruction &inst, std::uint64_t &address,
 
     if (op != ir::smrd::MEMTIME) {
       auto baseOperand = createSgprGcnOperand(address, sbase);
-      auto offsetOperand = imm ? GcnOperand::createConstant(
-                                     std::uint32_t(std::int8_t(offset << 2)))
+      auto offsetOperand = imm ? GcnOperand::createConstant(offset << 2)
                                : createSgprGcnOperand(address, offset).withR();
 
       if (isBuffer) {

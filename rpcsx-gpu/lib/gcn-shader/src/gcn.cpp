@@ -1283,7 +1283,7 @@ static ir::Value deserializeGcnRegion(
         inst.addOperand(createOperandRead(loc, paramBuilder, uint32TV, op));
       }
 
-      if (isaInst == ir::exp::EXP) {
+      if (isaInst == ir::exp::EXP && isaInst.getOperand(1).value != 0) {
         createExecTest();
       }
       continue;

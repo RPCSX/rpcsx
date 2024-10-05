@@ -2101,7 +2101,7 @@ void tbuffer_store_format_xyzw(u32vec4 vdata, uint32_t vOFFSET, uint32_t vINDEX,
 #define S_LOAD_DWORD(dest, memoryLocationHint, sbase, offset, N) \
     int32_t _offset = 0; \
     uint64_t deviceAreaSize = 0; \
-    uint64_t deviceAddress = findMemoryAddress(sbase + offset, SIZEOF(uint32_t) * N, memoryLocationHint, deviceAreaSize); \
+    uint64_t deviceAddress = findMemoryAddress((sbase & ~uint64_t(3)) + (offset & ~3), SIZEOF(uint32_t) * N, memoryLocationHint, deviceAreaSize); \
     if (deviceAddress == kInvalidAddress || deviceAreaSize < SIZEOF(uint32_t) * N) { \
         for (int i = 0; i < (N); ++i) { \
             dest[i] = 0; \

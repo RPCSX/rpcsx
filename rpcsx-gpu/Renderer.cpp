@@ -139,10 +139,6 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
                   std::uint32_t vertexCount, std::uint32_t firstInstance,
                   std::uint32_t instanceCount, std::uint64_t indiciesAddress,
                   std::uint32_t indexCount) {
-  if (pipe.uConfig.vgtPrimitiveType == gnm::PrimitiveType::None) {
-    return;
-  }
-
   if (pipe.context.cbColorControl.mode == gnm::CbMode::Disable) {
     return;
   }
@@ -150,10 +146,6 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   if (pipe.context.cbColorControl.mode != gnm::CbMode::Normal) {
     std::println("unimplemented context.cbColorControl.mode = {}",
                  static_cast<int>(pipe.context.cbColorControl.mode));
-    return;
-  }
-
-  if (pipe.context.cbTargetMask.raw == 0) {
     return;
   }
 
@@ -199,50 +191,6 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
   // FIXME
   stencilAccess = Access::None;
-
-  if (depthAccess != Access::None) {
-    auto viewPortScissor = pipe.context.paScScreenScissor;
-    auto viewPortRect = gnm::toVkRect2D(viewPortScissor);
-
-    auto imageView = cacheTag.getImageView(
-        {
-            .readAddress = static_cast<std::uint64_t>(pipe.context.dbZReadBase)
-                           << 8,
-            .writeAddress =
-                static_cast<std::uint64_t>(pipe.context.dbZWriteBase) << 8,
-            .type = gnm::TextureType::Dim2D,
-            .dfmt = gnm::getDataFormat(pipe.context.dbZInfo.format),
-            .nfmt = gnm::getNumericFormat(pipe.context.dbZInfo.format),
-            .extent =
-                {
-                    .width = viewPortRect.extent.width,
-                    .height = viewPortRect.extent.height,
-                    .depth = 1,
-                },
-            .pitch = viewPortRect.extent.width,
-            .mipCount = 1,
-            .arrayLayerCount = 1,
-            .kind = ImageKind::Depth,
-        },
-        depthAccess);
-
-    depthAttachment = {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = imageView.handle,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-    };
-
-    if ((depthAccess & Access::Read) == Access::None) {
-      depthAttachment.clearValue.depthStencil.depth = pipe.context.dbDepthClear;
-      depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    }
-
-    if ((depthAccess & Access::Write) == Access::None) {
-      depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
-    }
-  }
 
   for (auto &cbColor : pipe.context.cbColor) {
     if (targetMask == 0) {
@@ -304,6 +252,26 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
       access |= Access::Write;
     }
 
+    if (pipe.uConfig.vgtPrimitiveType == gnm::PrimitiveType::None) {
+      if (cbColor.info.fastClear) {
+        auto image = cacheTag.getImage(renderTargetInfo, access);
+        VkClearColorValue clearValue = {
+            .uint32 =
+                {
+                    cbColor.clearWord0,
+                    cbColor.clearWord1,
+                    cbColor.clearWord2,
+                },
+        };
+
+        vkCmdClearColorImage(cacheTag.getScheduler().getCommandBuffer(),
+                             image.handle, VK_IMAGE_LAYOUT_GENERAL, &clearValue,
+                             1, &image.subresource);
+      }
+
+      continue;
+    }
+
     auto imageView = cacheTag.getImageView(renderTargetInfo, access);
 
     colorAttachments[renderTargets] = {
@@ -359,8 +327,94 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   }
 
   if (renderTargets == 0) {
+    if ((depthAccess & Access::Write) != Access::None) {
+      auto screenRect = gnm::toVkRect2D(pipe.context.paScScreenScissor);
+
+      auto image = cacheTag.getImage(
+          {
+              .readAddress =
+                  static_cast<std::uint64_t>(pipe.context.dbZReadBase) << 8,
+              .writeAddress =
+                  static_cast<std::uint64_t>(pipe.context.dbZWriteBase) << 8,
+              .type = gnm::TextureType::Dim2D,
+              .dfmt = gnm::getDataFormat(pipe.context.dbZInfo.format),
+              .nfmt = gnm::getNumericFormat(pipe.context.dbZInfo.format),
+              .extent =
+                  {
+                      .width = screenRect.extent.width,
+                      .height = screenRect.extent.height,
+                      .depth = 1,
+                  },
+              .pitch = screenRect.extent.width,
+              .mipCount = 1,
+              .arrayLayerCount = 1,
+              .kind = ImageKind::Depth,
+          },
+          Access::Write);
+
+      VkClearDepthStencilValue depthStencil = {
+          .depth = pipe.context.dbDepthClear,
+      };
+
+      vkCmdClearDepthStencilImage(cacheTag.getScheduler().getCommandBuffer(),
+                                  image.handle, VK_IMAGE_LAYOUT_GENERAL,
+                                  &depthStencil, 1, &image.subresource);
+      pipe.scheduler.submit();
+      pipe.scheduler.wait();
+    }
+
     return;
   }
+
+  if (pipe.uConfig.vgtPrimitiveType == gnm::PrimitiveType::None) {
+    pipe.scheduler.submit();
+    pipe.scheduler.wait();
+    return;
+  }
+
+  if (depthAccess != Access::None) {
+    auto screenRect = gnm::toVkRect2D(pipe.context.paScScreenScissor);
+
+    auto imageView = cacheTag.getImageView(
+        {
+            .readAddress = static_cast<std::uint64_t>(pipe.context.dbZReadBase)
+                           << 8,
+            .writeAddress =
+                static_cast<std::uint64_t>(pipe.context.dbZWriteBase) << 8,
+            .type = gnm::TextureType::Dim2D,
+            .dfmt = gnm::getDataFormat(pipe.context.dbZInfo.format),
+            .nfmt = gnm::getNumericFormat(pipe.context.dbZInfo.format),
+            .extent =
+                {
+                    .width = screenRect.extent.width,
+                    .height = screenRect.extent.height,
+                    .depth = 1,
+                },
+            .pitch = screenRect.extent.width,
+            .mipCount = 1,
+            .arrayLayerCount = 1,
+            .kind = ImageKind::Depth,
+        },
+        depthAccess);
+
+    depthAttachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = imageView.handle,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+    };
+
+    if ((depthAccess & Access::Read) == Access::None) {
+      depthAttachment.clearValue.depthStencil.depth = pipe.context.dbDepthClear;
+      depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
+
+    if ((depthAccess & Access::Write) == Access::None) {
+      depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
+    }
+  }
+
   if (indiciesAddress == 0) {
     indexCount = vertexCount;
   }
@@ -483,11 +537,11 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   VkCullModeFlags cullMode = VK_CULL_MODE_NONE;
 
   if (pipe.uConfig.vgtPrimitiveType != gnm::PrimitiveType::RectList) {
-  if (pipe.context.paSuScModeCntl.cullBack) {
-    cullMode |= VK_CULL_MODE_BACK_BIT;
-  }
-  if (pipe.context.paSuScModeCntl.cullFront) {
-    cullMode |= VK_CULL_MODE_FRONT_BIT;
+    if (pipe.context.paSuScModeCntl.cullBack) {
+      cullMode |= VK_CULL_MODE_BACK_BIT;
+    }
+    if (pipe.context.paSuScModeCntl.cullFront) {
+      cullMode |= VK_CULL_MODE_FRONT_BIT;
     }
   }
 
@@ -521,12 +575,11 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 }
 
 void amdgpu::dispatch(Cache &cache, Scheduler &sched,
-                      Registers::ComputeConfig &computeConfig,
-                      std::uint32_t groupCountX, std::uint32_t groupCountY,
-                      std::uint32_t groupCountZ) {
+                      Registers::ComputeConfig &pgm, std::uint32_t groupCountX,
+                      std::uint32_t groupCountY, std::uint32_t groupCountZ) {
   auto tag = cache.createComputeTag(sched);
   auto descriptorSet = tag.getDescriptorSet();
-  auto shader = tag.getShader(computeConfig);
+  auto shader = tag.getShader(pgm);
   auto pipelineLayout = tag.getComputePipelineLayout();
   tag.buildDescriptors(descriptorSet);
 

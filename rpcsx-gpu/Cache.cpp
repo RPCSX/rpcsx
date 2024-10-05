@@ -99,8 +99,8 @@ void Cache::ShaderResources::loadResources(
     bufferMemoryTable.map(*pointerBase,
                           *pointerBase + *pointerOffset + pointer.size,
                           Access::Read);
-    resourceSlotToAddress.push_back(
-        {slotOffset + pointer.resourceSlot, *pointerBase});
+    resourceSlotToAddress.emplace_back(slotOffset + pointer.resourceSlot,
+                                       *pointerBase);
   }
 
   for (auto &bufferRes : res.buffers) {
@@ -124,10 +124,16 @@ void Cache::ShaderResources::loadResources(
     std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 3, &*word3,
                 sizeof(std::uint32_t));
 
-    bufferMemoryTable.map(buffer.address(), buffer.address() + buffer.size(),
-                          bufferRes.access);
-    resourceSlotToAddress.push_back(
-        {slotOffset + bufferRes.resourceSlot, buffer.address()});
+    if (auto it = bufferMemoryTable.queryArea(buffer.address());
+        it != bufferMemoryTable.end() &&
+        it.beginAddress() == buffer.address() && it.size() == buffer.size()) {
+      it.get() |= bufferRes.access;
+    } else {
+      bufferMemoryTable.map(buffer.address(), buffer.address() + buffer.size(),
+                            bufferRes.access);
+    }
+    resourceSlotToAddress.emplace_back(slotOffset + bufferRes.resourceSlot,
+                                       buffer.address());
   }
 
   for (auto &texture : res.textures) {
@@ -569,7 +575,6 @@ struct CachedImage : Cache::Entry {
         auto &regionInfo = info.getSubresourceInfo(mipLevel);
         regions.push_back({
             .bufferOffset = regionInfo.linearOffset,
-            .bufferRowLength = regionInfo.linearPitch,
             .imageSubresource =
                 {
                     .aspectMask = toAspect(kind),
@@ -579,9 +584,9 @@ struct CachedImage : Cache::Entry {
                 },
             .imageExtent =
                 {
-                    .width = regionInfo.linearWidth,
-                    .height = regionInfo.linearHeight,
-                    .depth = regionInfo.linearDepth,
+                    .width = std::max(image.getWidth() >> mipLevel, 1u),
+                    .height = std::max(image.getHeight() >> mipLevel, 1u),
+                    .depth = std::max(image.getDepth() >> mipLevel, 1u),
                 },
         });
       }
@@ -1183,7 +1188,6 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
         regions.push_back({
             .bufferOffset = info.linearOffset,
-            .bufferRowLength = info.linearPitch,
             .imageSubresource =
                 {
                     .aspectMask = toAspect(key.kind),
@@ -1193,9 +1197,9 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                 },
             .imageExtent =
                 {
-                    .width = info.linearWidth,
-                    .height = info.linearHeight,
-                    .depth = info.linearDepth,
+                    .width = std::max(key.extent.width >> mipLevel, 1u),
+                    .height = std::max(key.extent.height >> mipLevel, 1u),
+                    .depth = std::max(key.extent.depth >> mipLevel, 1u),
                 },
         });
       }
