@@ -1,7 +1,5 @@
 
 #define FOR_ALL_BASE_TYPES(OP) \
-    OP(int8_t) \
-    OP(uint8_t) \
     OP(int16_t) \
     OP(uint16_t) \
     OP(float16_t) \
@@ -785,11 +783,8 @@ uint64_t getTiledBitOffset1D(uint32_t tileMode, uvec3 pos, uvec2 dataSize, uint3
 }
 
 
-uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTileMode,
-                            uvec2 dataSize, int arraySlice, uint32_t numFragments, u32vec3 pos, int fragmentIndex) {
-  uint32_t bitsPerFragment = getBitsPerElement(dfmt);
-
-  bool isBlockCompressed = getTexelsPerElement(dfmt) > 1;
+uint64_t getTiledBitOffset2D(uint32_t tileMode, uint32_t macroTileMode,
+                            uvec2 dataSize, int arraySlice, uint32_t numFragments, uint32_t bitsPerElement, u32vec3 pos, int fragmentIndex) {
   uint32_t tileSwizzleMask = 0;
   uint32_t numFragmentsPerPixel = 1 << numFragments;
   uint32_t arrayMode = tileMode_getArrayMode(tileMode);
@@ -820,7 +815,6 @@ uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTil
     break;
   }
 
-  uint32_t bitsPerElement = bitsPerFragment;
   uint32_t paddedWidth = dataSize.x;
   uint32_t paddedHeight = dataSize.y;
 
@@ -849,7 +843,8 @@ uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTil
 
   uint32_t tileSplitBytes = min(kDramRowSize, tileSplitC);
 
-  uint32_t numPipes = getPipeCount(tileMode_getPipeConfig(tileMode));
+  uint32_t pipeConfig = tileMode_getPipeConfig(tileMode);
+  uint32_t numPipes = getPipeCount(pipeConfig);
   uint32_t pipeInterleaveBits = findLSB(kPipeInterleaveBytes);
   uint32_t pipeInterleaveMask = (1 << pipeInterleaveBits) - 1;
   uint32_t pipeBits = findLSB(numPipes);
@@ -873,7 +868,7 @@ uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTil
     xh %= macroTileWidth;
     yh %= macroTileHeight;
   }
-  uint64_t pipe = getPipeIndex(xh, yh, tileMode_getPipeConfig(tileMode));
+  uint64_t pipe = getPipeIndex(xh, yh, pipeConfig);
   uint64_t bank =
       getBankIndex(xh, yh, bankWidth, bankHeight, numBanks, numPipes);
 
@@ -989,16 +984,15 @@ uint64_t getTiledBitOffset2D(uint32_t dfmt, uint32_t tileMode, uint32_t macroTil
   return (finalByteOffset << 3) | bitOffset;
 }
 
-
 layout(push_constant) uniform Config {
     uint64_t srcAddress;
     uint64_t srcEndAddress;
     uint64_t dstAddress;
     uint64_t dstEndAddress;
     uvec2 dataSize;
+    uvec2 linearDataSize;
     uint32_t tileMode;
     uint32_t macroTileMode;
-    uint32_t dfmt;
     uint32_t numFragments;
     uint32_t bitsPerElement;
     uint32_t tiledSurfaceSize;

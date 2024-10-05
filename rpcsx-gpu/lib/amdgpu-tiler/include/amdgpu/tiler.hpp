@@ -115,27 +115,27 @@ struct TileMode {
 
   constexpr TileMode &arrayMode(ArrayMode mode) {
     raw = (raw & ~0x0000003c) |
-          (static_cast<std::uint32_t>(mode) << 2) & 0x0000003c;
+          ((static_cast<std::uint32_t>(mode) << 2) & 0x0000003c);
     return *this;
   }
   constexpr TileMode &pipeConfig(PipeConfig mode) {
     raw = (raw & ~0x000007c0) |
-          (static_cast<std::uint32_t>(mode) << 6) & 0x000007c0;
+          ((static_cast<std::uint32_t>(mode) << 6) & 0x000007c0);
     return *this;
   }
   constexpr TileMode &tileSplit(TileSplit mode) {
     raw = (raw & ~0x00003800) |
-          (static_cast<std::uint32_t>(mode) << 11) & 0x00003800;
+          ((static_cast<std::uint32_t>(mode) << 11) & 0x00003800);
     return *this;
   }
   constexpr TileMode &microTileMode(MicroTileMode mode) {
     raw = (raw & ~0x01c00000) |
-          (static_cast<std::uint32_t>(mode) << 22) & 0x01c00000;
+          ((static_cast<std::uint32_t>(mode) << 22) & 0x01c00000);
     return *this;
   }
   constexpr TileMode &sampleSplit(SampleSplit mode) {
     raw = (raw & ~0x06000000) |
-          (static_cast<std::uint32_t>(mode) << 25) & 0x06000000;
+          ((static_cast<std::uint32_t>(mode) << 25) & 0x06000000);
     return *this;
   }
 };
@@ -166,17 +166,24 @@ struct SurfaceInfo {
   std::uint32_t height;
   std::uint32_t depth;
   std::uint32_t pitch;
+  MacroTileMode macroTileMode;
   int arrayLayerCount;
   int numFragments;
   int bitsPerElement;
-  std::uint64_t totalSize;
+  std::uint64_t totalTiledSize;
+  std::uint64_t totalLinearSize;
 
   struct SubresourceInfo {
-    std::uint32_t dataWidth;
-    std::uint32_t dataHeight;
-    std::uint32_t dataDepth;
-    std::uint64_t offset;
+    std::uint32_t tiledWidth;
+    std::uint32_t tiledHeight;
+    std::uint32_t tiledDepth;
+    std::uint64_t tiledOffset;
     std::uint64_t tiledSize;
+    std::uint32_t linearPitch;
+    std::uint32_t linearWidth;
+    std::uint32_t linearHeight;
+    std::uint32_t linearDepth;
+    std::uint64_t linearOffset;
     std::uint64_t linearSize;
   };
 
@@ -524,5 +531,4 @@ SurfaceInfo computeSurfaceInfo(TileMode tileMode, gnm::TextureType type,
                                std::uint32_t pitch, int baseArrayLayer,
                                int arrayCount, int baseMipLevel, int mipCount,
                                bool pow2pad);
-SurfaceInfo computeSurfaceInfo(const gnm::TBuffer &tbuffer, TileMode tileMode);
 } // namespace amdgpu

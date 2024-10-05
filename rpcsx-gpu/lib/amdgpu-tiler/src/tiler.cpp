@@ -5,9 +5,8 @@
 
 using namespace amdgpu;
 
-// FIXME: should be properly implemented
 static SurfaceInfo
-computeTexture2dInfo(ArrayMode arrayMode, gnm::TextureType type,
+computeTexture2dInfo(TileMode tileMode, gnm::TextureType type,
                      gnm::DataFormat dfmt, std::uint32_t width,
                      std::uint32_t height, std::uint32_t depth,
                      std::uint32_t pitch, int baseArrayLayer, int arrayCount,
@@ -32,7 +31,7 @@ computeTexture2dInfo(ArrayMode arrayMode, gnm::TextureType type,
   auto numFragmentsPerPixel = 1 << numFragments;
   auto isBlockCompressed = getTexelsPerElement(dfmt) > 1;
 
-  auto bitsPerElement = bitsPerFragment;
+  std::uint32_t bitsPerElement = bitsPerFragment;
   depth = isVolume ? depth : 1;
 
   if (isBlockCompressed) {
@@ -60,6 +59,10 @@ computeTexture2dInfo(ArrayMode arrayMode, gnm::TextureType type,
 
   std::uint64_t surfaceOffset = 0;
   std::uint64_t surfaceSize = 0;
+  std::uint64_t linearOffset = 0;
+
+  auto macroTileMode = getDefaultMacroTileModes()[computeMacroTileIndex(
+      tileMode, bitsPerElement, 1 << numFragments)];
 
   SurfaceInfo result;
   result.width = width;
@@ -69,8 +72,10 @@ computeTexture2dInfo(ArrayMode arrayMode, gnm::TextureType type,
   result.numFragments = numFragments;
   result.bitsPerElement = bitsPerElement;
   result.arrayLayerCount = arraySliceCount;
+  result.macroTileMode = macroTileMode;
 
-  auto thickness = getMicroTileThickness(arrayMode);
+  auto arrayMode = tileMode.arrayMode();
+  auto numPipes = getPipeCount(tileMode.pipeConfig());
 
   for (int mipLevel = 0; mipLevel < baseMipLevel + mipCount; mipLevel++) {
     std::uint32_t elemWidth = std::max<std::uint64_t>(width >> mipLevel, 1);
@@ -116,55 +121,91 @@ computeTexture2dInfo(ArrayMode arrayMode, gnm::TextureType type,
       linearPitch = linearWidth;
     }
 
-    std::uint32_t paddedPitch =
-        (linearPitch + kMicroTileWidth - 1) & ~(kMicroTileWidth - 1);
-    std::uint32_t paddedHeight =
-        (linearHeight + kMicroTileHeight - 1) & ~(kMicroTileHeight - 1);
-    std::uint32_t paddedDepth = linearDepth;
+    auto thickness = getMicroTileThickness(arrayMode);
 
-    if (!isCubemap || (mipLevel > 0 && linearDepth > 1)) {
-      if (isCubemap) {
-        linearDepth = std::bit_ceil(linearDepth);
-      }
+    uint32_t numBanks = 2 << macroTileMode.numBanks();
+    uint32_t macroAspect = 1 << macroTileMode.macroTileAspect();
+    uint32_t tileBytes1x =
+        (thickness * bitsPerElement * kMicroTileWidth * kMicroTileHeight + 7) /
+        8;
+    auto microTileMode = tileMode.microTileMode();
+    uint32_t tileSplit =
+        (microTileMode == kMicroTileModeDepth)
+            ? (64 << tileMode.sampleSplit())
+            : std::max(256U, (1 << tileMode.sampleSplit()) * tileBytes1x);
+    uint32_t tileSplitC = std::min(kDramRowSize, tileSplit);
+    uint32_t bankWidth = 1 << macroTileMode.bankWidth();
+    uint32_t bankHeight = 1 << macroTileMode.bankHeight();
 
-      paddedDepth = (linearDepth + thickness - 1) & ~(thickness - 1);
+    uint32_t tileSize = std::min(
+        tileSplitC, (thickness * bitsPerElement * numFragmentsPerPixel *
+                         kMicroTileWidth * kMicroTileHeight +
+                     7) /
+                        8);
+    uint32_t bankHeightAlign =
+        std::max(1U, kPipeInterleaveBytes / (tileSize * bankWidth));
+
+    bankHeight = (bankHeight + bankHeightAlign - 1) & ~(bankHeightAlign - 1);
+
+    if (numFragmentsPerPixel == 1) {
+      uint32_t macroAspectAlign = std::max(
+          1U, kPipeInterleaveBytes / (tileSize * numPipes * bankWidth));
+      macroAspect =
+          (macroAspect + macroAspectAlign - 1) & ~(macroAspectAlign - 1);
     }
 
-    std::uint32_t tempPitch = paddedPitch;
-    std::uint64_t logicalSliceSizeBytes = std::uint64_t(tempPitch) *
-                                          paddedHeight * bitsPerElement *
-                                          numFragmentsPerPixel;
+    auto depthAlign = thickness;
+
+    // FIXME: rotate tile mode for mipLevel > 0
+
+    uint32_t outPitch = linearPitch;
+    uint32_t outHeight = linearHeight;
+    uint32_t outDepth = linearDepth;
+
+    uint32_t macroTileWidth =
+        kMicroTileWidth * bankWidth * numPipes * macroAspect;
+    uint32_t macroTileHeight =
+        kMicroTileHeight * bankHeight * numBanks / macroAspect;
+
+    uint32_t heightAlign = macroTileHeight;
+    auto pitchAlign = macroTileWidth;
+
+    outPitch = (outPitch + pitchAlign - 1) & ~(pitchAlign - 1);
+    outDepth = (outDepth + depthAlign - 1) & ~(depthAlign - 1);
+    outHeight = (outHeight + heightAlign - 1) & ~(heightAlign - 1);
+
+    std::uint64_t logicalSliceSizeBytes = std::uint64_t(outPitch) * outHeight *
+                                          bitsPerElement * numFragmentsPerPixel;
     logicalSliceSizeBytes = (logicalSliceSizeBytes + 7) / 8;
 
-    uint64_t physicalSliceSizeBytes = logicalSliceSizeBytes * thickness;
-    while ((physicalSliceSizeBytes % kPipeInterleaveBytes) != 0) {
-      tempPitch += kMicroTileWidth;
-      logicalSliceSizeBytes = std::uint64_t(tempPitch) * paddedHeight *
-                              bitsPerElement * numFragmentsPerPixel;
-      logicalSliceSizeBytes = (logicalSliceSizeBytes + 7) / 8;
-      physicalSliceSizeBytes = logicalSliceSizeBytes * thickness;
-    }
+    surfaceSize = static_cast<uint64_t>(outPitch) * outHeight *
+                  std::bit_ceil(bitsPerElement) * numFragmentsPerPixel;
+    surfaceSize = (surfaceSize + 7) / 8;
 
-    surfaceSize = logicalSliceSizeBytes * paddedDepth;
-    auto linearSize =
-        linearDepth *
-        (linearPitch * linearHeight * bitsPerElement * numFragmentsPerPixel +
-         7) /
-        8;
+    auto linearSize = uint64_t(linearPitch) * linearHeight * bitsPerElement *
+                      numFragmentsPerPixel;
+    linearSize = linearDepth * ((linearSize + 7) / 8);
 
     result.setSubresourceInfo(mipLevel, {
-                                            .dataWidth = linearPitch,
-                                            .dataHeight = linearHeight,
-                                            .dataDepth = linearDepth,
-                                            .offset = surfaceOffset,
+                                            .tiledWidth = outPitch,
+                                            .tiledHeight = outHeight,
+                                            .tiledDepth = outDepth,
+                                            .tiledOffset = surfaceOffset,
                                             .tiledSize = surfaceSize,
+                                            .linearPitch = linearPitch,
+                                            .linearWidth = linearWidth,
+                                            .linearHeight = linearHeight,
+                                            .linearDepth = linearDepth,
+                                            .linearOffset = linearOffset,
                                             .linearSize = linearSize,
                                         });
 
+    linearOffset += arraySliceCount * linearSize;
     surfaceOffset += arraySliceCount * surfaceSize;
   }
 
-  result.totalSize = surfaceOffset;
+  result.totalTiledSize = surfaceOffset;
+  result.totalLinearSize = linearOffset;
   return result;
 }
 
@@ -222,6 +263,7 @@ computeTexture1dInfo(ArrayMode arrayMode, gnm::TextureType type,
 
   std::uint64_t surfaceOffset = 0;
   std::uint64_t surfaceSize = 0;
+  std::uint64_t linearOffset = 0;
 
   SurfaceInfo result;
   result.width = width;
@@ -308,25 +350,30 @@ computeTexture1dInfo(ArrayMode arrayMode, gnm::TextureType type,
     }
 
     surfaceSize = logicalSliceSizeBytes * paddedDepth;
-    auto linearSize =
-        linearDepth *
-        (linearPitch * linearHeight * bitsPerElement * numFragmentsPerPixel +
-         7) /
-        8;
+    auto linearSize = uint64_t(linearPitch) * linearHeight * bitsPerElement *
+                      numFragmentsPerPixel;
+    linearSize = linearDepth * ((linearSize + 7) / 8);
 
     result.setSubresourceInfo(mipLevel, {
-                                            .dataWidth = linearPitch,
-                                            .dataHeight = linearHeight,
-                                            .dataDepth = linearDepth,
-                                            .offset = surfaceOffset,
+                                            .tiledWidth = linearPitch,
+                                            .tiledHeight = linearHeight,
+                                            .tiledDepth = linearDepth,
+                                            .tiledOffset = surfaceOffset,
                                             .tiledSize = surfaceSize,
+                                            .linearPitch = linearPitch,
+                                            .linearWidth = linearWidth,
+                                            .linearHeight = linearHeight,
+                                            .linearDepth = linearDepth,
+                                            .linearOffset = linearOffset,
                                             .linearSize = linearSize,
                                         });
 
     surfaceOffset += arraySliceCount * surfaceSize;
+    linearOffset += arraySliceCount * linearSize;
   }
 
-  result.totalSize = surfaceOffset;
+  result.totalTiledSize = surfaceOffset;
+  result.totalLinearSize = linearOffset;
   return result;
 }
 
@@ -383,6 +430,7 @@ static SurfaceInfo computeTextureLinearInfo(
 
   std::uint64_t surfaceOffset = 0;
   std::uint64_t surfaceSize = 0;
+  std::uint64_t linearOffset = 0;
 
   SurfaceInfo result;
   result.width = width;
@@ -437,20 +485,25 @@ static SurfaceInfo computeTextureLinearInfo(
       linearPitch = linearWidth;
     }
 
-    if (arrayMode == kArrayModeLinearGeneral) {
-      surfaceSize = (static_cast<uint64_t>(linearPitch) *
-                         (linearHeight)*bitsPerElement * numFragmentsPerPixel +
-                     7) /
-                    8;
-      surfaceSize *= linearDepth;
+    auto linearSize = static_cast<uint64_t>(linearPitch) *
+                      (linearHeight)*bitsPerElement * numFragmentsPerPixel;
 
+    linearSize = linearDepth * ((linearSize + 7) / 8);
+
+    if (arrayMode == kArrayModeLinearGeneral) {
+      surfaceSize = linearSize;
       result.setSubresourceInfo(mipLevel, {
-                                              .dataWidth = linearPitch,
-                                              .dataHeight = linearHeight,
-                                              .dataDepth = linearDepth,
-                                              .offset = surfaceOffset,
+                                              .tiledWidth = linearPitch,
+                                              .tiledHeight = linearHeight,
+                                              .tiledDepth = linearDepth,
+                                              .tiledOffset = surfaceOffset,
                                               .tiledSize = surfaceSize,
-                                              .linearSize = surfaceSize,
+                                              .linearPitch = linearPitch,
+                                              .linearWidth = linearWidth,
+                                              .linearHeight = linearHeight,
+                                              .linearDepth = linearDepth,
+                                              .linearOffset = linearOffset,
+                                              .linearSize = linearSize,
                                           });
     } else {
       if (mipLevel > 0 && pitch > 0) {
@@ -487,19 +540,26 @@ static SurfaceInfo computeTextureLinearInfo(
       surfaceSize = (pixelsPerSlice * bitsPerElement + 7) / 8 * paddedDepth;
 
       result.setSubresourceInfo(mipLevel, {
-                                              .dataWidth = paddedPitch,
-                                              .dataHeight = paddedHeight,
-                                              .dataDepth = paddedDepth,
-                                              .offset = surfaceOffset,
+                                              .tiledWidth = paddedPitch,
+                                              .tiledHeight = paddedHeight,
+                                              .tiledDepth = paddedDepth,
+                                              .tiledOffset = surfaceOffset,
                                               .tiledSize = surfaceSize,
-                                              .linearSize = surfaceSize,
+                                              .linearPitch = linearPitch,
+                                              .linearWidth = linearWidth,
+                                              .linearHeight = linearHeight,
+                                              .linearDepth = linearDepth,
+                                              .linearOffset = linearOffset,
+                                              .linearSize = linearSize,
                                           });
     }
 
     surfaceOffset += arraySliceCount * surfaceSize;
+    surfaceOffset += arraySliceCount * linearSize;
   }
 
-  result.totalSize = surfaceOffset;
+  result.totalTiledSize = surfaceOffset;
+  result.totalLinearSize = linearOffset;
   return result;
 }
 
@@ -533,20 +593,10 @@ SurfaceInfo amdgpu::computeSurfaceInfo(
   case kArrayMode2dTiledThickPrt:
   case kArrayMode3dTiledThinPrt:
   case kArrayMode3dTiledThickPrt:
-    return computeTexture2dInfo(tileMode.arrayMode(), type, dfmt, width, height,
-                                depth, pitch, baseArrayLayer, arrayCount,
-                                baseMipLevel, mipCount, pow2pad);
+    return computeTexture2dInfo(tileMode, type, dfmt, width, height, depth,
+                                pitch, baseArrayLayer, arrayCount, baseMipLevel,
+                                mipCount, pow2pad);
   }
 
   std::abort();
-}
-
-SurfaceInfo amdgpu::computeSurfaceInfo(const gnm::TBuffer &tbuffer,
-                                       TileMode tileMode) {
-  return computeSurfaceInfo(
-      tileMode, tbuffer.type, tbuffer.dfmt, tbuffer.width + 1,
-      tbuffer.height + 1, tbuffer.depth + 1, tbuffer.pitch + 1,
-      tbuffer.base_array, tbuffer.last_array - tbuffer.base_array + 1,
-      tbuffer.base_level, tbuffer.last_level - tbuffer.base_level + 1,
-      tbuffer.pow2pad != 0);
 }

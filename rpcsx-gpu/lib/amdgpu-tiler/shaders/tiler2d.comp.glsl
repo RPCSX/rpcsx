@@ -1,4 +1,5 @@
 #version 460
+#define DEBUG
 
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_shader_explicit_arithmetic_types : enable
@@ -31,12 +32,12 @@ void main() {
     }
 
     uint64_t tiledByteOffset = getTiledBitOffset2D(
-        config.dfmt,
         config.tileMode,
         config.macroTileMode,
         config.dataSize,
         arraySlice,
         config.numFragments,
+        config.bitsPerElement,
         pos,
         fragmentIndex
     ) / 8;
@@ -46,8 +47,8 @@ void main() {
     uint64_t linearByteOffset = computeLinearElementByteOffset(
         pos,
         0,
-        config.dataSize.x,
-        config.dataSize.x * config.dataSize.y,
+        config.linearDataSize.x,
+        config.linearDataSize.x * config.linearDataSize.y,
         config.bitsPerElement,
         1 << config.numFragments
     );
@@ -55,24 +56,27 @@ void main() {
     linearByteOffset += linearSliceOffset;
 
     uint32_t bpp = (config.bitsPerElement + 7) / 8;
+    if (bpp == 1 && (linearByteOffset & 1) != 0) {
+        return;
+    }
 
 #ifdef DEBUG
     if (config.srcAddress + linearByteOffset + bpp > config.srcEndAddress) {
-        debugPrintfEXT("tiler2d: out of src buffer %d x %d x %d", pos.x, pos.y, pos.z);
+        debugPrintfEXT("tiler2d: out of src buffer %d x %d x %d, src offset: %lu, src size: %lu", pos.x, pos.y, pos.z,
+            linearByteOffset, config.srcEndAddress - config.srcAddress);
         return;
     }
 
     if (config.dstAddress + tiledByteOffset + bpp > config.dstEndAddress) {
-        debugPrintfEXT("tiler2d: out of dst buffer %d x %d x %d", pos.x, pos.y, pos.z);
+        debugPrintfEXT("tiler2d: out of dst buffer %d x %d x %d, offset %lx, size %lx", pos.x, pos.y, pos.z, tiledByteOffset, config.dstEndAddress - config.dstAddress);
         return;
     }
 #endif
 
     switch (bpp) {
     case 1:
-        buffer_reference_uint8_t(config.dstAddress + tiledByteOffset).data = buffer_reference_uint8_t(config.srcAddress + linearByteOffset).data;
-        break;
-
+        // buffer_reference_uint8_t(config.dstAddress + tiledByteOffset).data = buffer_reference_uint8_t(config.srcAddress + linearByteOffset).data;
+        // break;
     case 2:
         buffer_reference_uint16_t(config.dstAddress + tiledByteOffset).data = buffer_reference_uint16_t(config.srcAddress + linearByteOffset).data;
         break;

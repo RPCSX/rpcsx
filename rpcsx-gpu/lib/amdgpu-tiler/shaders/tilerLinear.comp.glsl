@@ -36,19 +36,21 @@ void main() {
     uint64_t linearByteOffset = computeLinearElementByteOffset(
         pos,
         0,
-        config.dataSize.x,
-        config.dataSize.x * config.dataSize.y,
+        config.linearDataSize.x,
+        config.linearDataSize.x * config.linearDataSize.y,
         config.bitsPerElement,
         1 << config.numFragments
     );
 
     linearByteOffset += linearSliceOffset;
 
-    switch ((config.bitsPerElement + 7) / 8) {
-    case 1:
-        buffer_reference_uint8_t(config.dstAddress + tiledByteOffset).data = buffer_reference_uint8_t(config.srcAddress + linearByteOffset).data;
-        break;
+    uint32_t bpp = (config.bitsPerElement + 7) / 8;
+    if (bpp == 1 && (linearByteOffset & 1) != 0) {
+        return;
+    }
 
+    switch (bpp) {
+    case 1:
     case 2:
         buffer_reference_uint16_t(config.dstAddress + tiledByteOffset).data = buffer_reference_uint16_t(config.srcAddress + linearByteOffset).data;
         break;

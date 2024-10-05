@@ -21,9 +21,10 @@ struct Config {
   uint64_t dstEndAddress;
   uint32_t dataWidth;
   uint32_t dataHeight;
+  uint32_t linearDataWidth;
+  uint32_t linearDataHeight;
   uint32_t tileMode;
   uint32_t macroTileMode;
-  uint32_t dfmt;
   uint32_t numFragments;
   uint32_t bitsPerElement;
   uint32_t tiledSurfaceSize;
@@ -66,7 +67,7 @@ struct TilerShader {
 struct amdgpu::GpuTiler::Impl {
   TilerShader detilerLinear{spirv_detilerLinear_comp};
   TilerShader detiler1d{spirv_detiler1d_comp};
-  TilerShader detiler2d{spirv_detilerLinear_comp};
+  TilerShader detiler2d{spirv_detiler2d_comp};
   TilerShader tilerLinear{spirv_tiler2d_comp};
   TilerShader tiler1d{spirv_tiler1d_comp};
   TilerShader tiler2d{spirv_tiler2d_comp};
@@ -98,29 +99,28 @@ struct amdgpu::GpuTiler::Impl {
 amdgpu::GpuTiler::GpuTiler() { mImpl = std::make_unique<Impl>(); }
 amdgpu::GpuTiler::~GpuTiler() = default;
 
-void amdgpu::GpuTiler::detile(Scheduler &scheduler,
-                              const amdgpu::SurfaceInfo &info,
-                              amdgpu::TileMode tileMode, gnm::DataFormat dfmt,
-                              std::uint64_t srcTiledAddress,
-                              std::uint64_t srcSize,
-                              std::uint64_t dstLinearAddress,
-                              std::uint64_t dstSize, int mipLevel,
-                              int baseArray, int arrayCount) {
+void amdgpu::GpuTiler::detile(
+    Scheduler &scheduler, const amdgpu::SurfaceInfo &info,
+    amdgpu::TileMode tileMode, std::uint64_t srcTiledAddress,
+    std::uint64_t srcSize, std::uint64_t dstLinearAddress,
+    std::uint64_t dstSize, int mipLevel, int baseArray, int arrayCount) {
   auto commandBuffer = scheduler.getCommandBuffer();
 
   Config config{};
   auto &subresource = info.getSubresourceInfo(mipLevel);
-  config.srcAddress = srcTiledAddress + subresource.offset;
+  config.srcAddress = srcTiledAddress + subresource.tiledOffset +
+                      baseArray * subresource.tiledSize;
   config.srcEndAddress = srcTiledAddress + srcSize;
-  config.dstAddress = dstLinearAddress;
+  config.dstAddress = dstLinearAddress + subresource.linearOffset +
+                      baseArray * subresource.linearSize;
   config.dstEndAddress = dstLinearAddress + dstSize;
-  config.dataWidth = subresource.dataWidth;
-  config.dataHeight = subresource.dataHeight;
+  config.dataWidth = subresource.tiledWidth;
+  config.dataHeight = subresource.tiledHeight;
   config.tileMode = tileMode.raw;
-  config.dfmt = dfmt;
+  config.macroTileMode = info.macroTileMode.raw;
   config.numFragments = info.numFragments;
   config.bitsPerElement = info.bitsPerElement;
-  uint32_t groupCountZ = subresource.dataDepth;
+  uint32_t groupCountZ = subresource.tiledDepth;
 
   if (arrayCount > 1) {
     config.tiledSurfaceSize = subresource.tiledSize;
@@ -130,6 +130,9 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
     config.tiledSurfaceSize = 0;
     config.linearSurfaceSize = 0;
   }
+
+  config.linearDataWidth = subresource.linearPitch;
+  config.linearDataHeight = subresource.linearHeight;
 
   VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_COMPUTE_BIT};
 
@@ -157,46 +160,39 @@ void amdgpu::GpuTiler::detile(Scheduler &scheduler,
   case amdgpu::kArrayMode3dTiledThick:
   case amdgpu::kArrayMode3dTiledXThick:
   case amdgpu::kArrayMode3dTiledThickPrt:
-    config.macroTileMode =
-        getDefaultMacroTileModes()[computeMacroTileIndex(
-                                       tileMode, info.bitsPerElement,
-                                       1 << info.numFragments)]
-            .raw;
-
-    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->detiler1d.shader);
+    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->detiler2d.shader);
     break;
   }
 
   vkCmdPushConstants(commandBuffer, mImpl->pipelineLayout,
                      VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(config), &config);
-  vkCmdDispatch(commandBuffer, subresource.dataWidth, subresource.dataHeight,
-                groupCountZ);
+  vkCmdDispatch(commandBuffer, subresource.linearWidth,
+                subresource.linearHeight, groupCountZ);
 }
 
-void amdgpu::GpuTiler::tile(Scheduler &scheduler,
-                            const amdgpu::SurfaceInfo &info,
-                            amdgpu::TileMode tileMode, gnm::DataFormat dfmt,
-                            std::uint64_t srcLinearAddress,
-                            std::uint64_t srcSize,
-                            std::uint64_t dstTiledAddress,
-                            std::uint64_t dstSize, int mipLevel, int baseArray,
-                            int arrayCount) {
+void amdgpu::GpuTiler::tile(
+    Scheduler &scheduler, const amdgpu::SurfaceInfo &info,
+    amdgpu::TileMode tileMode, std::uint64_t srcLinearAddress,
+    std::uint64_t srcSize, std::uint64_t dstTiledAddress, std::uint64_t dstSize,
+    int mipLevel, int baseArray, int arrayCount) {
   auto commandBuffer = scheduler.getCommandBuffer();
 
   Config config{};
 
   auto &subresource = info.getSubresourceInfo(mipLevel);
-  config.srcAddress = srcLinearAddress;
+  config.srcAddress = srcLinearAddress + subresource.linearOffset +
+                      baseArray * subresource.linearSize;
   config.srcEndAddress = srcLinearAddress + srcSize;
-  config.dstAddress = dstTiledAddress + subresource.offset;
+  config.dstAddress = dstTiledAddress + subresource.tiledOffset +
+                      baseArray * subresource.tiledSize;
   config.dstEndAddress = dstTiledAddress + dstSize;
-  config.dataWidth = subresource.dataWidth;
-  config.dataHeight = subresource.dataHeight;
+  config.dataWidth = subresource.tiledWidth;
+  config.dataHeight = subresource.tiledHeight;
   config.tileMode = tileMode.raw;
-  config.dfmt = dfmt;
+  config.macroTileMode = info.macroTileMode.raw;
   config.numFragments = info.numFragments;
   config.bitsPerElement = info.bitsPerElement;
-  uint32_t groupCountZ = subresource.dataDepth;
+  uint32_t groupCountZ = subresource.tiledDepth;
 
   if (arrayCount > 1) {
     config.tiledSurfaceSize = subresource.tiledSize;
@@ -206,6 +202,9 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
     config.tiledSurfaceSize = 0;
     config.linearSurfaceSize = 0;
   }
+
+  config.linearDataWidth = subresource.linearPitch;
+  config.linearDataHeight = subresource.linearHeight;
 
   VkShaderStageFlagBits stages[]{VK_SHADER_STAGE_COMPUTE_BIT};
 
@@ -232,18 +231,13 @@ void amdgpu::GpuTiler::tile(Scheduler &scheduler,
   case amdgpu::kArrayMode3dTiledThick:
   case amdgpu::kArrayMode3dTiledXThick:
   case amdgpu::kArrayMode3dTiledThickPrt:
-    config.macroTileMode =
-        getDefaultMacroTileModes()[computeMacroTileIndex(
-                                       tileMode, info.bitsPerElement,
-                                       1 << info.numFragments)]
-            .raw;
-    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->tiler1d.shader);
+    vk::CmdBindShadersEXT(commandBuffer, 1, stages, &mImpl->tiler2d.shader);
     break;
   }
 
   vkCmdPushConstants(commandBuffer, mImpl->pipelineLayout,
                      VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(config), &config);
 
-  vkCmdDispatch(commandBuffer, subresource.dataWidth, subresource.dataHeight,
-                groupCountZ);
+  vkCmdDispatch(commandBuffer, subresource.linearWidth,
+                subresource.linearHeight, groupCountZ);
 }

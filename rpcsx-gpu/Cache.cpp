@@ -534,14 +534,14 @@ struct CachedImage : Cache::Entry {
     regions.reserve(image.getMipLevels());
 
     auto tiledBuffer =
-        tag.getBuffer(baseAddress, info.totalSize, Access::Write);
+        tag.getBuffer(baseAddress, info.totalTiledSize, Access::Write);
 
     if (isLinear) {
       for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
         auto &regionInfo = info.getSubresourceInfo(mipLevel);
 
         regions.push_back({
-            .bufferOffset = regionInfo.offset,
+            .bufferOffset = regionInfo.tiledOffset,
             .bufferRowLength =
                 mipLevel > 0 ? 0 : std::max(info.pitch >> mipLevel, 1u),
             .imageSubresource =
@@ -565,14 +565,11 @@ struct CachedImage : Cache::Entry {
                              tiledBuffer.handle, regions.size(),
                              regions.data());
     } else {
-      auto tiledSize = info.totalSize;
-      std::uint64_t linearOffset = 0;
       for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
         auto &regionInfo = info.getSubresourceInfo(mipLevel);
         regions.push_back({
-            .bufferOffset = linearOffset,
-            .bufferRowLength =
-                mipLevel > 0 ? 0 : std::max(info.pitch >> mipLevel, 1u),
+            .bufferOffset = regionInfo.linearOffset,
+            .bufferRowLength = regionInfo.linearPitch,
             .imageSubresource =
                 {
                     .aspectMask = toAspect(kind),
@@ -582,18 +579,15 @@ struct CachedImage : Cache::Entry {
                 },
             .imageExtent =
                 {
-                    .width = std::max(image.getWidth() >> mipLevel, 1u),
-                    .height = std::max(image.getHeight() >> mipLevel, 1u),
-                    .depth = std::max(image.getDepth() >> mipLevel, 1u),
+                    .width = regionInfo.linearWidth,
+                    .height = regionInfo.linearHeight,
+                    .depth = regionInfo.linearDepth,
                 },
         });
-
-        linearOffset += regionInfo.linearSize * image.getArrayLayers();
       }
 
-      auto linearSize = linearOffset;
       auto transferBuffer = vk::Buffer::Allocate(
-          vk::getDeviceLocalMemory(), linearOffset,
+          vk::getDeviceLocalMemory(), info.totalLinearSize,
           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
       vkCmdCopyImageToBuffer(scheduler.getCommandBuffer(), image.getHandle(),
@@ -603,14 +597,11 @@ struct CachedImage : Cache::Entry {
 
       auto &tiler = tag.getDevice()->tiler;
 
-      linearOffset = 0;
       for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
-        auto &regionInfo = info.getSubresourceInfo(mipLevel);
-        tiler.tile(scheduler, info, acquiredTileMode, acquiredDfmt,
-                   transferBuffer.getAddress() + linearOffset,
-                   linearSize - linearOffset, tiledBuffer.deviceAddress,
-                   tiledSize, mipLevel, 0, image.getArrayLayers());
-        linearOffset += regionInfo.linearSize * image.getArrayLayers();
+        tiler.tile(scheduler, info, acquiredTileMode,
+                   transferBuffer.getAddress(), info.totalLinearSize,
+                   tiledBuffer.deviceAddress, info.totalTiledSize, mipLevel, 0,
+                   image.getArrayLayers());
       }
 
       scheduler.afterSubmit([transferBuffer = std::move(transferBuffer)] {});
@@ -1157,7 +1148,7 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
     VkBuffer sourceBuffer;
 
     auto tiledBuffer =
-        getBuffer(key.readAddress, surfaceInfo.totalSize, Access::Read);
+        getBuffer(key.readAddress, surfaceInfo.totalTiledSize, Access::Read);
 
     if (isLinear) {
       sourceBuffer = tiledBuffer.handle;
@@ -1165,7 +1156,7 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
            mipLevel < key.baseMipLevel + key.mipCount; ++mipLevel) {
         auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
         regions.push_back({
-            .bufferOffset = info.offset,
+            .bufferOffset = info.tiledOffset,
             .bufferRowLength =
                 mipLevel > 0 ? 0 : std::max(key.pitch >> mipLevel, 1u),
             .imageSubresource =
@@ -1186,15 +1177,13 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
     } else {
       auto &tiler = mParent->mDevice->tiler;
 
-      std::uint64_t linearOffset = 0;
       for (unsigned mipLevel = key.baseMipLevel;
            mipLevel < key.baseMipLevel + key.mipCount; ++mipLevel) {
         auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
 
         regions.push_back({
-            .bufferOffset = linearOffset,
-            .bufferRowLength =
-                mipLevel > 0 ? 0 : std::max(key.pitch >> mipLevel, 1u),
+            .bufferOffset = info.linearOffset,
+            .bufferRowLength = info.linearPitch,
             .imageSubresource =
                 {
                     .aspectMask = toAspect(key.kind),
@@ -1204,37 +1193,29 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                 },
             .imageExtent =
                 {
-                    .width = std::max(key.extent.width >> mipLevel, 1u),
-                    .height = std::max(key.extent.height >> mipLevel, 1u),
-                    .depth = std::max(key.extent.depth >> mipLevel, 1u),
+                    .width = info.linearWidth,
+                    .height = info.linearHeight,
+                    .depth = info.linearDepth,
                 },
         });
-
-        linearOffset += info.linearSize * key.arrayLayerCount;
       }
 
-      auto detiledSize = linearOffset;
-
-      auto detiledBuffer =
-          vk::Buffer::Allocate(vk::getDeviceLocalMemory(), detiledSize,
-                               VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR |
-                                   VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR);
+      auto detiledBuffer = vk::Buffer::Allocate(
+          vk::getDeviceLocalMemory(), surfaceInfo.totalLinearSize,
+          VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR |
+              VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR);
 
       sourceBuffer = detiledBuffer.getHandle();
-      std::uint64_t dstAddress = detiledBuffer.getAddress();
+      auto linearAddress = detiledBuffer.getAddress();
 
       mScheduler->afterSubmit([detiledBuffer = std::move(detiledBuffer)] {});
 
       for (unsigned mipLevel = key.baseMipLevel;
            mipLevel < key.baseMipLevel + key.mipCount; ++mipLevel) {
-        auto &info = surfaceInfo.getSubresourceInfo(mipLevel);
-
-        tiler.detile(*mScheduler, surfaceInfo, key.tileMode, key.dfmt,
-                     tiledBuffer.deviceAddress, surfaceInfo.totalSize,
-                     dstAddress, detiledSize, mipLevel, 0, key.arrayLayerCount);
-
-        detiledSize -= info.linearSize * key.arrayLayerCount;
-        dstAddress += info.linearSize * key.arrayLayerCount;
+        tiler.detile(*mScheduler, surfaceInfo, key.tileMode,
+                     tiledBuffer.deviceAddress, surfaceInfo.totalTiledSize,
+                     linearAddress, surfaceInfo.totalLinearSize, mipLevel, 0,
+                     key.arrayLayerCount);
       }
     }
 
