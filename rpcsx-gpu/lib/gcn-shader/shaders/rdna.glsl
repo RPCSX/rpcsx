@@ -298,7 +298,9 @@ void cs_set_thread_id(u32vec3 localInvocationId, u32vec3 workgroupSize) {
 const uint32_t kPrimTypeQuadList = 0x13;
 const uint32_t kPrimTypeQuadStrip = 0x14;
 
-uint32_t vs_get_index(uint32_t mode, uint32_t index) {
+uint32_t vs_get_index(uint32_t mode, uint32_t index, uint32_t indexOffset) {
+    index += indexOffset;
+
     switch (mode) {
     case kPrimTypeQuadList: {
         const uint32_t indicies[] = {0, 1, 2, 2, 3, 0};

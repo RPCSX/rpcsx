@@ -284,7 +284,8 @@ public:
 
     Sampler getSampler(const SamplerKey &key);
     Buffer getBuffer(std::uint64_t address, std::uint64_t size, Access access);
-    IndexBuffer getIndexBuffer(std::uint64_t address, std::uint32_t indexCount,
+    IndexBuffer getIndexBuffer(std::uint64_t address, std::uint32_t offset,
+                               std::uint32_t indexCount,
                                gnm::PrimitiveType primType,
                                gnm::IndexType indexType);
     Image getImage(const ImageKey &key, Access access);
@@ -347,7 +348,7 @@ public:
 
     Shader getShader(shader::gcn::Stage stage, const SpiShaderPgm &pgm,
                      const Registers::Context &context,
-                     gnm::PrimitiveType vsPrimType,
+                     std::uint32_t indexOffset, gnm::PrimitiveType vsPrimType,
                      std::span<const VkViewport> viewPorts,
                      std::span<const shader::gcn::PsVGprInput> psVgprInput);
 
@@ -357,6 +358,7 @@ public:
 
     Shader getVertexShader(shader::gcn::Stage stage, const SpiShaderPgm &pgm,
                            const Registers::Context &context,
+                           std::uint32_t indexOffset,
                            gnm::PrimitiveType vsPrimType,
                            std::span<const VkViewport> viewPorts);
     void release();

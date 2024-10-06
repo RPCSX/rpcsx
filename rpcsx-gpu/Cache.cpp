@@ -488,6 +488,7 @@ struct CachedBuffer : Cache::Entry {
 
 struct CachedIndexBuffer : Cache::Entry {
   vk::Buffer buffer;
+  std::uint64_t offset;
   std::size_t size;
   gnm::IndexType indexType;
   gnm::PrimitiveType primType;
@@ -966,6 +967,7 @@ void Cache::Tag::buildDescriptors(VkDescriptorSet descriptorSet) {
 }
 
 Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
+                                              std::uint32_t indexOffset,
                                               std::uint32_t indexCount,
                                               gnm::PrimitiveType primType,
                                               gnm::IndexType indexType) {
@@ -980,14 +982,16 @@ Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
 
     return {
         .handle = VK_NULL_HANDLE,
-        .offset = 0,
+        .offset = indexOffset,
         .indexCount = indexCount,
         .primType = primType,
         .indexType = indexType,
     };
   }
 
-  auto indexBuffer = getBuffer(address, size, Access::Read);
+  auto indexBuffer = getBuffer(
+      address + static_cast<std::uint64_t>(indexOffset) * origIndexSize, size,
+      Access::Read);
 
   if (!isPrimRequiresConversion(primType)) {
     return {
@@ -1010,7 +1014,7 @@ Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
 
       return {
           .handle = indexBuffer->buffer.getHandle(),
-          .offset = 0,
+          .offset = indexBuffer->offset,
           .indexCount = indexCount,
           .primType = indexBuffer->primType,
           .indexType = indexBuffer->indexType,
@@ -1059,6 +1063,7 @@ Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
   cached->baseAddress = address;
   cached->acquiredAccess = Access::Read;
   cached->buffer = std::move(convertedIndexBuffer);
+  cached->offset = indexBuffer.offset;
   cached->size = size;
   cached->tagId = indexBuffer.tagId;
   cached->primType = primType;
@@ -1234,11 +1239,15 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
     transitionImageLayout(mScheduler->getCommandBuffer(), image,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                           VK_IMAGE_LAYOUT_GENERAL, subresourceRange);
+  } else {
+    transitionImageLayout(mScheduler->getCommandBuffer(), image,
+                          VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                          subresourceRange);
   }
 
   auto cached = std::make_shared<CachedImage>();
   cached->image = std::move(image);
-  cached->info = std::move(surfaceInfo);
+  cached->info = surfaceInfo;
   cached->baseAddress = (access & Access::Write) != Access::None
                             ? key.writeAddress
                             : key.readAddress;
@@ -1420,24 +1429,22 @@ Cache::GraphicsTag::getPixelShader(const SpiShaderPgm &pgm,
     psVgprInput[psVgprInputs++] = gcn::PsVGprInput::PosFixed;
   }
 
-  return getShader(gcn::Stage::Ps, pgm, context, {}, viewPorts,
+  return getShader(gcn::Stage::Ps, pgm, context, 0, {}, viewPorts,
                    {psVgprInput, psVgprInputs});
 }
 
-Cache::Shader
-Cache::GraphicsTag::getVertexShader(gcn::Stage stage, const SpiShaderPgm &pgm,
-                                    const Registers::Context &context,
-                                    gnm::PrimitiveType vsPrimType,
-                                    std::span<const VkViewport> viewPorts) {
-  return getShader(stage, pgm, context, vsPrimType, viewPorts, {});
+Cache::Shader Cache::GraphicsTag::getVertexShader(
+    gcn::Stage stage, const SpiShaderPgm &pgm,
+    const Registers::Context &context, std::uint32_t indexOffset,
+    gnm::PrimitiveType vsPrimType, std::span<const VkViewport> viewPorts) {
+  return getShader(stage, pgm, context, indexOffset, vsPrimType, viewPorts, {});
 }
 
-Cache::Shader
-Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
-                              const Registers::Context &context,
-                              gnm::PrimitiveType vsPrimType,
-                              std::span<const VkViewport> viewPorts,
-                              std::span<const gcn::PsVGprInput> psVgprInput) {
+Cache::Shader Cache::GraphicsTag::getShader(
+    gcn::Stage stage, const SpiShaderPgm &pgm,
+    const Registers::Context &context, std::uint32_t indexOffset,
+    gnm::PrimitiveType vsPrimType, std::span<const VkViewport> viewPorts,
+    std::span<const gcn::PsVGprInput> psVgprInput) {
   auto descriptorSets = getDescriptorSets();
   gcn::Environment env{
       .vgprCount = pgm.rsrc1.getVGprCount(),
@@ -1520,6 +1527,10 @@ Cache::GraphicsTag::getShader(gcn::Stage stage, const SpiShaderPgm &pgm,
       break;
     case gcn::ConfigType::VsPrimType:
       configPtr[index] = static_cast<std::uint32_t>(vsPrimType);
+      break;
+
+    case gcn::ConfigType::VsIndexOffset:
+      configPtr[index] = static_cast<std::uint32_t>(indexOffset);
       break;
 
     case gcn::ConfigType::ResourceSlot:

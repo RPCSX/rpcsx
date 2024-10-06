@@ -138,7 +138,7 @@ static VkPrimitiveTopology toVkPrimitiveType(gnm::PrimitiveType type) {
 void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
                   std::uint32_t vertexCount, std::uint32_t firstInstance,
                   std::uint32_t instanceCount, std::uint64_t indiciesAddress,
-                  std::uint32_t indexCount) {
+                  std::uint32_t indexOffset, std::uint32_t indexCount) {
   if (pipe.context.cbColorControl.mode == gnm::CbMode::Disable) {
     return;
   }
@@ -419,9 +419,9 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     indexCount = vertexCount;
   }
 
-  auto indexBuffer = cacheTag.getIndexBuffer(indiciesAddress, indexCount,
-                                             pipe.uConfig.vgtPrimitiveType,
-                                             pipe.uConfig.vgtIndexType);
+  auto indexBuffer = cacheTag.getIndexBuffer(
+      indiciesAddress, indexOffset, indexCount, pipe.uConfig.vgtPrimitiveType,
+      pipe.uConfig.vgtIndexType);
 
   auto stages = Cache::kGraphicsStages;
   VkShaderEXT shaders[stages.size()]{};
@@ -437,9 +437,9 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
       vsPrimType = pipe.uConfig.vgtPrimitiveType.value;
     }
 
-    vertexShader =
-        cacheTag.getVertexShader(gcn::Stage::VsVs, pipe.sh.spiShaderPgmVs,
-                                 pipe.context, vsPrimType, viewPorts);
+    vertexShader = cacheTag.getVertexShader(
+        gcn::Stage::VsVs, pipe.sh.spiShaderPgmVs, pipe.context,
+        indexBuffer.offset, vsPrimType, viewPorts);
   }
 
   auto pixelShader =

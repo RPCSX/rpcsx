@@ -1465,12 +1465,15 @@ static void createInitialValues(GcnConverter &converter,
 
     auto primType = converter.createReadConfig(
         stage, builder, info.create(gcn::ConfigType::VsPrimType, 0));
+    auto indexOffset = converter.createReadConfig(
+        stage, builder, info.create(gcn::ConfigType::VsIndexOffset, 0));
     primType = converter.createLocalVariable(builder, loc, primType);
     vertexIndex = converter.createLocalVariable(builder, loc, vertexIndex);
+    indexOffset = converter.createLocalVariable(builder, loc, indexOffset);
 
-    vertexIndex =
-        builder.createValue(loc, ir::amdgpu::VS_GET_INDEX,
-                            {{context.getTypeUInt32(), primType, vertexIndex}});
+    vertexIndex = builder.createValue(
+        loc, ir::amdgpu::VS_GET_INDEX,
+        {{context.getTypeUInt32(), primType, vertexIndex, indexOffset}});
 
     context.writeReg(loc, builder, gcn::RegId::Vgpr, 0, vertexIndex);
   } else if (stage == gcn::Stage::Ps) {

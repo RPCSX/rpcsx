@@ -117,6 +117,7 @@ enum class ConfigType {
   GsInstanceEn,
   InstanceEn,
   VsPrimType,
+  VsIndexOffset,
   PsPrimType,
   CsTgIdCompCnt,
   VsInputVgprCount,

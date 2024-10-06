@@ -545,7 +545,7 @@ bool GraphicsPipe::drawIndirect(Queue &queue) {
   std::uint32_t startInstanceLocation = buffer[3];
 
   draw(*this, queue.vmId, startVertexLocation, vertexCountPerInstance,
-       startInstanceLocation, instanceCount, 0, 0);
+       startInstanceLocation, instanceCount, 0, 0, 0);
   return true;
 }
 bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
@@ -565,7 +565,7 @@ bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
   std::uint32_t startInstanceLocation = buffer[4];
 
   draw(*this, queue.vmId, baseVertexLocation, indexCountPerInstance,
-       startInstanceLocation, instanceCount, vgtIndexBase + startIndexLocation,
+       startInstanceLocation, instanceCount, vgtIndexBase, startIndexLocation,
        indexCountPerInstance);
   return true;
 }
@@ -586,7 +586,7 @@ bool GraphicsPipe::drawIndex2(Queue &queue) {
   uConfig.vgtNumIndices = indexCount;
 
   draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
-       vgtIndexBase + indexOffset, maxSize);
+       vgtIndexBase + indexOffset, 0, maxSize);
   return true;
 }
 bool GraphicsPipe::indexType(Queue &queue) {
@@ -600,7 +600,7 @@ bool GraphicsPipe::drawIndexAuto(Queue &queue) {
   uConfig.vgtNumIndices = indexCount;
   context.vgtDrawInitiator = drawInitiator;
 
-  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, 0, 0);
+  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, 0, 0, 0);
   return true;
 }
 bool GraphicsPipe::numInstances(Queue &queue) {
@@ -620,8 +620,8 @@ bool GraphicsPipe::drawIndexMultiAuto(Queue &queue) {
   uConfig.vgtPrimitiveType = static_cast<gnm::PrimitiveType>(primType);
   uConfig.vgtNumIndices = indexCount;
 
-  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
-       vgtIndexBase + indexOffset, primCount);
+  draw(*this, queue.vmId, 0, primCount, 0, uConfig.vgtNumInstances,
+       vgtIndexBase, indexOffset, indexCount);
   return true;
 }
 bool GraphicsPipe::drawIndexOffset2(Queue &queue) {
@@ -632,7 +632,7 @@ bool GraphicsPipe::drawIndexOffset2(Queue &queue) {
 
   context.vgtDrawInitiator = drawInitiator;
   draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
-       vgtIndexBase + indexOffset, maxSize);
+       vgtIndexBase, indexOffset, maxSize);
   return true;
 }
 bool GraphicsPipe::writeData(Queue &queue) {
@@ -1033,7 +1033,12 @@ bool GraphicsPipe::setShReg(Queue &queue) {
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&sh) + offset, data,
               sizeof(std::uint32_t) * len);
-
+  // for (std::size_t i = 0; i < len; ++i) {
+  //   std::fprintf(
+  //       stderr, "writing to %s value %x\n",
+  //       gnm::mmio::registerName(decltype(sh)::kMmioOffset + offset + i),
+  //       data[i]);
+  // }
   return true;
 }
 
@@ -1064,7 +1069,12 @@ bool GraphicsPipe::setUConfigReg(Queue &queue) {
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&uConfig) + offset, data,
               sizeof(std::uint32_t) * len);
-
+  // for (std::size_t i = 0; i < len; ++i) {
+  //   std::fprintf(
+  //       stderr, "writing to %s value %x\n",
+  //       gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset + i),
+  //       data[i]);
+  // }
   return true;
 }
 
@@ -1097,8 +1107,8 @@ bool GraphicsPipe::setContextReg(Queue &queue) {
               sizeof(std::uint32_t) * len);
 
   // for (std::size_t i = 0; i < len; ++i) {
-  //   std::fprintf(stderr,
-  //       "writing to %s value %x\n",
+  //   std::fprintf(
+  //       stderr, "writing to %s value %x\n",
   //       gnm::mmio::registerName(decltype(context)::kMmioOffset + offset + i),
   //       data[i]);
   // }
