@@ -2371,49 +2371,6 @@ layout(binding = 3) uniform texture2D textures2D[];
 layout(binding = 4) uniform texture3D textures3D[];
 layout(binding = 5) uniform textureBuffer textureBuffers[];
 
-// void image_atomic_add() {
-//     // imageAtomicAdd
-// }
-// void image_atomic_and() {
-//     // imageAtomicAnd
-// }
-// void image_atomic_cmpswap() {
-//     // imageAtomicCompSwap
-// }
-// void image_atomic_dec() {}
-// void image_atomic_fcmpswap() {
-//     // imageAtomicCompSwap
-// }
-// void image_atomic_fmax() {
-//     // imageAtomicMax
-// }
-// void image_atomic_fmin() {
-//     // imageAtomicMin
-// }
-// void image_atomic_inc() {
-//     // imageAtomicMin
-// }
-// void image_atomic_or() {}
-// void image_atomic_smax() {}
-// void image_atomic_smin() {}
-// void image_atomic_sub() {}
-// void image_atomic_swap() {}
-// void image_atomic_umax() {}
-// void image_atomic_umin() {}
-// void image_atomic_xor() {}
-
-// void image_load() {}
-// void image_load_pck() {}
-// void image_load_pck_sgn() {}
-// void image_load_mip() {}
-// void image_load_mip_pck() {}
-// void image_load_mip_pck_sgn() {}
-
-// void image_store() {}
-// void image_store_pck() {}
-// void image_store_mip() {}
-// void image_store_mip_pck() {}
-
 const uint8_t kTextureType1D = uint8_t(8);
 const uint8_t kTextureType2D = uint8_t(9);
 const uint8_t kTextureType3D = uint8_t(10);
@@ -2638,6 +2595,131 @@ f32vec4 swizzle(f32vec4 comp, int selX, int selY, int selZ, int selW) {
     return f32vec4(swizzle(comp, selX), swizzle(comp, selY), swizzle(comp, selZ), swizzle(comp, selW));
 }
 
+
+// void image_atomic_add() {
+//     // imageAtomicAdd
+// }
+// void image_atomic_and() {
+//     // imageAtomicAnd
+// }
+// void image_atomic_cmpswap() {
+//     // imageAtomicCompSwap
+// }
+// void image_atomic_dec() {}
+// void image_atomic_fcmpswap() {
+//     // imageAtomicCompSwap
+// }
+// void image_atomic_fmax() {
+//     // imageAtomicMax
+// }
+// void image_atomic_fmin() {
+//     // imageAtomicMin
+// }
+// void image_atomic_inc() {
+//     // imageAtomicMin
+// }
+// void image_atomic_or() {}
+// void image_atomic_smax() {}
+// void image_atomic_smin() {}
+// void image_atomic_sub() {}
+// void image_atomic_swap() {}
+// void image_atomic_umax() {}
+// void image_atomic_umin() {}
+// void image_atomic_xor() {}
+
+void image_load(inout f32vec4 vdata, i32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], uint32_t dmask) {
+    uint8_t textureType = tbuffer_type(tbuffer);
+    f32vec4 result;
+
+    switch (uint(textureType)) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        result = texelFetch(textures1D[findTexture1DIndex(textureIndexHint, tbuffer)], vaddr.x, 0);
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        result = texelFetch(textures2D[findTexture2DIndex(textureIndexHint, tbuffer)], vaddr.xy, 0);
+        break;
+
+    case kTextureType3D:
+        result = texelFetch(textures3D[findTexture3DIndex(textureIndexHint, tbuffer)], vaddr, 0);
+        break;
+
+    default:
+        return;
+    }
+
+    result = swizzle(result,
+        tbuffer_dst_sel_x(tbuffer),
+        tbuffer_dst_sel_y(tbuffer),
+        tbuffer_dst_sel_z(tbuffer),
+        tbuffer_dst_sel_w(tbuffer));
+
+
+    int vdataIndex = 0;
+    for (int i = 0; i < 4; ++i) {
+        if ((dmask & (1 << i)) != 0) {
+            vdata[vdataIndex++] = result[i];
+        }
+    }
+}
+
+// void image_load_pck() {}
+// void image_load_pck_sgn() {}
+
+void image_load_mip(inout f32vec4 vdata, u32vec4 vaddr_u, int32_t textureIndexHint, uint32_t tbuffer[8], uint32_t dmask) {
+    uint8_t textureType = tbuffer_type(tbuffer);
+    f32vec4 result;
+    i32vec4 vaddr = i32vec4(vaddr_u);
+
+    switch (uint(textureType)) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        result = texelFetch(textures1D[findTexture1DIndex(textureIndexHint, tbuffer)], vaddr.x, vaddr.y);
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        result = texelFetch(textures2D[findTexture2DIndex(textureIndexHint, tbuffer)], vaddr.xy, vaddr.z);
+        break;
+
+    case kTextureType3D:
+        result = texelFetch(textures3D[findTexture3DIndex(textureIndexHint, tbuffer)], vaddr.xyz, vaddr.w);
+        break;
+
+    default:
+        return;
+    }
+
+    result = swizzle(result,
+        tbuffer_dst_sel_x(tbuffer),
+        tbuffer_dst_sel_y(tbuffer),
+        tbuffer_dst_sel_z(tbuffer),
+        tbuffer_dst_sel_w(tbuffer));
+
+
+    int vdataIndex = 0;
+    for (int i = 0; i < 4; ++i) {
+        if ((dmask & (1 << i)) != 0) {
+            vdata[vdataIndex++] = result[i];
+        }
+    }
+}
+
+// void image_load_mip_pck() {}
+// void image_load_mip_pck_sgn() {}
+// void image_store() {}
+// void image_store_pck() {}
+// void image_store_mip() {}
+// void image_store_mip_pck() {}
+
 void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
     uint8_t textureType = tbuffer_type(tbuffer);
     f32vec4 result;
@@ -2677,7 +2759,6 @@ void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, 
 
     // debugPrintfEXT("image_sample: textureType: %u, coord: %v3f, result: %v4f, dmask: %u", textureType, vaddr, result, dmask);
 
-    
     result = swizzle(result,
         tbuffer_dst_sel_x(tbuffer),
         tbuffer_dst_sel_y(tbuffer),

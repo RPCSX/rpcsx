@@ -557,7 +557,7 @@ readMimgInst(GcnInstruction &inst, std::uint64_t &address,
   auto ssamp = fetchMaskedValue(words[1], ssampMask) << 2;
 
   std::uint8_t textureAccess = 0;
-  bool hasSampler = true;
+  bool hasSampler = false;
 
   if (op >= ir::mimg::Op::LOAD && op <= ir::mimg::Op::LOAD_MIP_PCK_SGN) {
     textureAccess = GcnOperand::R;
@@ -569,11 +569,11 @@ readMimgInst(GcnInstruction &inst, std::uint64_t &address,
     hasSampler = false;
   } else if (op >= ir::mimg::Op::SAMPLE && op <= ir::mimg::Op::GATHER4_C_LZ_O) {
     textureAccess = GcnOperand::R;
+    hasSampler = true;
   } else if (op >= ir::mimg::Op::SAMPLE_CD &&
              op <= ir::mimg::Op::SAMPLE_C_CD_CL_O) {
     textureAccess = GcnOperand::R;
-  } else if (op == ir::mimg::Op::GET_RESINFO) {
-    hasSampler = false;
+    hasSampler = true;
   }
 
   inst.op = op;
