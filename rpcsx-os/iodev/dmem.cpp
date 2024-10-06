@@ -6,6 +6,7 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "rx/align.hpp"
 #include "vm.hpp"
 #include <fcntl.h>
 #include <mutex>
@@ -293,6 +294,10 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
   std::size_t offset = *start;
   std::size_t resultSize = 0;
   std::size_t resultOffset = 0;
+
+  alignment = std::max(alignment, rx::vm::kPageSize);
+  alignment = rx::alignUp(alignment, rx::vm::kPageSize);
+
   while (offset < searchEnd) {
     offset += alignment - 1;
     offset &= ~(alignment - 1);
@@ -335,6 +340,10 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
   *size = resultSize;
 
   ORBIS_LOG_WARNING("dmem queryMaxFreeChunkSize", resultOffset, resultSize);
+
+  if (resultSize == 0) {
+    return orbis::ErrorCode::NOMEM;
+  }
   return {};
 }
 
