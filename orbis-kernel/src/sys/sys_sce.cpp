@@ -226,10 +226,6 @@ orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
     auto [insertedEvf, inserted] =
         thread->tproc->context->createEventFlag(_name, attrs, initPattern);
 
-    if (!inserted) {
-      return ErrorCode::EXIST; // FIXME: verify
-    }
-
     eventFlag = insertedEvf;
   } else {
     eventFlag = knew<EventFlag>(attrs, initPattern);
