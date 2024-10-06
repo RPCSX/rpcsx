@@ -1182,28 +1182,31 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
       auto loc = inst.getLocation();
       auto valueType = value.getOperand(0).getAsValue();
 
-      if (valueType == ir::spv::OpTypeFloat) {
-        auto width = *valueType.getOperand(0).getAsInt32();
-        if (abs) {
-          auto boolT = context.getTypeBool();
-          auto c0 = width == 64 ? context.fimm64(0.0) : context.fimm32(0.0f);
-          value = builder.createSpvSelect(
-              loc, valueType,
-              builder.createSpvFOrdLessThan(loc, boolT, value, c0),
-              builder.createSpvFNegate(loc, valueType, value), value);
-        }
-
-        if (neg) {
-          value = builder.createSpvFNegate(loc, valueType, value);
-        }
-
-        if (valueType != resultType) {
-          value = builder.createSpvBitcast(loc, resultType, value);
-        }
-
-        inst.staticCast<ir::Value>().replaceAllUsesWith(value);
+      if (valueType == ir::spv::OpTypeInt) {
+        auto floatType =
+            context.getTypeFloat(*valueType.getOperand(0).getAsInt32());
+        value = builder.createSpvBitcast(loc, floatType, value);
+        valueType = floatType;
+      }
+      auto width = *valueType.getOperand(0).getAsInt32();
+      if (abs) {
+        auto boolT = context.getTypeBool();
+        auto c0 = width == 64 ? context.fimm64(0.0) : context.fimm32(0.0f);
+        value = builder.createSpvSelect(
+            loc, valueType,
+            builder.createSpvFOrdLessThan(loc, boolT, value, c0),
+            builder.createSpvFNegate(loc, valueType, value), value);
       }
 
+      if (neg) {
+        value = builder.createSpvFNegate(loc, valueType, value);
+      }
+
+      if (valueType != resultType) {
+        value = builder.createSpvBitcast(loc, resultType, value);
+      }
+
+      inst.staticCast<ir::Value>().replaceAllUsesWith(value);
       inst.remove();
       continue;
     }
@@ -1705,6 +1708,8 @@ gcn::convertToSpv(Context &context, ir::Region body,
     capabilities.createSpvCapability(context.getUnknownLocation(),
                                      ir::spv::Capability::Int64Atomics);
   }
+
+  capabilities.createSpvCapability(context.getUnknownLocation(), ir::spv::Capability::ImageQuery);
 
   extensions.createSpvExtension(context.getUnknownLocation(),
                                 "SPV_KHR_physical_storage_buffer");

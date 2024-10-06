@@ -574,6 +574,8 @@ readMimgInst(GcnInstruction &inst, std::uint64_t &address,
              op <= ir::mimg::Op::SAMPLE_C_CD_CL_O) {
     textureAccess = GcnOperand::R;
     hasSampler = true;
+  } else if (op == ir::mimg::Op::GET_LOD) {
+    hasSampler = true;
   }
 
   inst.op = op;

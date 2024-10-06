@@ -570,7 +570,7 @@ bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
   return true;
 }
 bool GraphicsPipe::indexBase(Queue &queue) {
-  auto addressLo = queue.rptr[1] << 1;
+  auto addressLo = queue.rptr[1] & ~1;
   auto addressHi = queue.rptr[2] & ((1 << 16) - 1);
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   vgtIndexBase = address;
@@ -578,15 +578,19 @@ bool GraphicsPipe::indexBase(Queue &queue) {
 }
 bool GraphicsPipe::drawIndex2(Queue &queue) {
   auto maxSize = queue.rptr[1];
-  auto indexOffset = queue.rptr[2];
-  auto indexCount = queue.rptr[3];
-  auto drawInitiator = queue.rptr[4];
+  auto indexBaseLo = queue.rptr[2] & ~1;
+  auto indexBaseHi = queue.rptr[3] & ((1 << 16) - 1);
+  auto indexCount = queue.rptr[4];
+  auto drawInitiator = queue.rptr[5];
 
   context.vgtDrawInitiator = drawInitiator;
   uConfig.vgtNumIndices = indexCount;
 
-  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
-       vgtIndexBase + indexOffset, 0, maxSize);
+  auto indexBase =
+      indexBaseLo | (static_cast<std::uint64_t>(indexBaseHi) << 32);
+
+  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, indexBase,
+       0, maxSize);
   return true;
 }
 bool GraphicsPipe::indexType(Queue &queue) {

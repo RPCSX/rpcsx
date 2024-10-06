@@ -33,22 +33,37 @@ VkRect2D toVkRect2D(amdgpu::PaScRect rect) {
 }
 
 amdgpu::PaScRect intersection(amdgpu::PaScRect lhs, amdgpu::PaScRect rhs) {
-  if (!lhs.isValid()) {
-    return rhs;
+  if (lhs.left > lhs.right) {
+    lhs.left = rhs.left;
   }
 
-  if (!rhs.isValid()) {
-    return lhs;
+  if (lhs.top > lhs.bottom) {
+    lhs.top = rhs.top;
   }
 
-  amdgpu::PaScRect result{
+  if (rhs.left > rhs.right) {
+    rhs.left = lhs.left;
+  }
+
+  if (rhs.top > rhs.bottom) {
+    rhs.top = lhs.top;
+  }
+
+  return {
       .left = std::max(lhs.left, rhs.left),
       .top = std::max(lhs.top, rhs.top),
       .right = std::min(lhs.right, rhs.right),
       .bottom = std::min(lhs.bottom, rhs.bottom),
   };
+}
 
-  return result;
+amdgpu::PaScRect extend(amdgpu::PaScRect lhs, amdgpu::PaScRect rhs) {
+  return {
+      .left = std::max(lhs.left, rhs.left),
+      .top = std::max(lhs.top, rhs.top),
+      .right = std::max(lhs.right, rhs.right),
+      .bottom = std::max(lhs.bottom, rhs.bottom),
+  };
 }
 } // namespace gnm
 
@@ -192,6 +207,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   // FIXME
   stencilAccess = Access::None;
 
+  amdgpu::PaScRect drawRect{};
+
   for (auto &cbColor : pipe.context.cbColor) {
     if (targetMask == 0) {
       break;
@@ -210,6 +227,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         gnm::intersection(viewPortScissor, pipe.context.paScGenericScissor);
 
     auto viewPortRect = gnm::toVkRect2D(viewPortScissor);
+
+    drawRect = gnm::extend(drawRect, viewPortScissor);
 
     viewPorts[renderTargets].x = viewPortRect.offset.x;
     viewPorts[renderTargets].y = viewPortRect.offset.y;
@@ -373,8 +392,6 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   }
 
   if (depthAccess != Access::None) {
-    auto screenRect = gnm::toVkRect2D(pipe.context.paScScreenScissor);
-
     auto imageView = cacheTag.getImageView(
         {
             .readAddress = static_cast<std::uint64_t>(pipe.context.dbZReadBase)
@@ -386,11 +403,11 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
             .nfmt = gnm::getNumericFormat(pipe.context.dbZInfo.format),
             .extent =
                 {
-                    .width = screenRect.extent.width,
-                    .height = screenRect.extent.height,
+                    .width = pipe.context.dbDepthSize.getPitch(),
+                    .height = pipe.context.dbDepthSize.getHeight(),
                     .depth = 1,
                 },
-            .pitch = screenRect.extent.width,
+            .pitch = pipe.context.dbDepthSize.getPitch(),
             .mipCount = 1,
             .arrayLayerCount = 1,
             .kind = ImageKind::Depth,
@@ -466,7 +483,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
   VkRenderingInfo renderInfo{
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-      .renderArea = gnm::toVkRect2D(pipe.context.paScScreenScissor),
+      .renderArea = gnm::toVkRect2D(drawRect),
       .layerCount = 1,
       .colorAttachmentCount = renderTargets,
       .pColorAttachments = colorAttachments,

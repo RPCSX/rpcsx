@@ -389,6 +389,24 @@ struct DbZInfo {
   };
 };
 
+struct DbDepthSize {
+  union {
+    struct {
+      std::uint32_t pitchTileMax : 11;
+      std::uint32_t heightTileMax : 11;
+    };
+
+    std::uint32_t raw;
+  };
+
+  std::uint32_t getPitch() const {
+    return (pitchTileMax + 1) * 8;
+  }
+  std::uint32_t getHeight() const {
+    return (heightTileMax + 1) * 8;
+  }
+};
+
 struct DbRenderControl {
   union {
     struct {
@@ -657,7 +675,7 @@ struct Registers {
       Register<0x13> dbStencilReadBase;
       Register<0x14> dbZWriteBase;
       Register<0x15> dbStencilWriteBase;
-      Register<0x16> dbDepthSize;
+      Register<0x16, DbDepthSize> dbDepthSize;
       Register<0x17> dbDepthSlice;
       Register<0x20> taBcBaseAddr;
       Register<0x80> paScWindowOffset;
