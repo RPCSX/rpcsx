@@ -1492,6 +1492,16 @@ Cache::IndexBuffer Cache::Tag::getIndexBuffer(std::uint64_t address,
   };
 }
 
+static bool isImageCompatible(CachedImage *cached, const ImageKey &key) {
+  // FIXME: relax it
+  return cached->image.getFormat() == gnm::toVkFormat(key.dfmt, key.nfmt) &&
+         cached->image.getWidth() == key.extent.width &&
+         cached->image.getHeight() == key.extent.height &&
+         cached->image.getDepth() == key.extent.depth &&
+         cached->pitch == key.pitch &&
+         cached->tileMode.raw == key.tileMode.raw && cached->kind == key.kind;
+}
+
 Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
   auto surfaceInfo = computeSurfaceInfo(
       key.tileMode, key.type, key.dfmt, key.extent.width, key.extent.height,
@@ -1514,9 +1524,24 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       break;
     }
 
-    static_cast<CachedImage *>(it->get())->flush(*this, getScheduler(),
-                                                 it.range());
+    auto img = static_cast<CachedImage *>(it->get());
+
+    if (storeRange == it.range()) {
+      if (isImageCompatible(img, key)) {
+        break;
+      }
+
+      img->flush(*this, getScheduler(), it.range());
+      getScheduler().wait();
+      it.get() = nullptr;
+      break;
+    }
+
+    img->flush(*this, getScheduler(), it.range());
   }
+
+  getScheduler().submit();
+  getScheduler().wait();
 
   auto it = table.map(storeRange.beginAddress(), storeRange.endAddress(),
                       nullptr, false, true);
@@ -1719,6 +1744,8 @@ void Cache::Tag::release() {
     auto resource = std::move(mStorage->mAcquiredImageResources.back());
     mStorage->mAcquiredImageResources.pop_back();
     resource->release(this);
+    mScheduler->submit();
+    mScheduler->wait();
     tmpResources.push_back(std::move(resource));
   }
 
@@ -1726,6 +1753,8 @@ void Cache::Tag::release() {
     auto resource = std::move(mStorage->mAcquiredMemoryResources.back());
     mStorage->mAcquiredMemoryResources.pop_back();
     resource->release(this);
+    mScheduler->submit();
+    mScheduler->wait();
     tmpResources.push_back(std::move(resource));
   }
 
