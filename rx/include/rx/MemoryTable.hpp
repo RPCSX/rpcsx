@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rx/AddressRange.hpp"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -232,6 +233,10 @@ public:
       return {it->first, std::next(it)->first, it->second.second};
     }
 
+    rx::AddressRange range() const {
+      return rx::AddressRange::fromBeginEnd(beginAddress(), endAddress());
+    }
+
     std::uint64_t beginAddress() const { return it->first; }
     std::uint64_t endAddress() const { return std::next(it)->first; }
     std::uint64_t size() const { return endAddress() - beginAddress(); }
@@ -307,7 +312,7 @@ public:
   }
 
   iterator map(std::uint64_t beginAddress, std::uint64_t endAddress,
-               PayloadT payload, bool merge = true) {
+               PayloadT payload, bool merge = true, bool noOverride = false) {
     assert(beginAddress < endAddress);
     auto [beginIt, beginInserted] =
         mAreas.emplace(beginAddress, std::pair{Kind::O, payload});
@@ -318,6 +323,10 @@ public:
     bool endCollision = false;
     bool lastRemovedIsOpen = false;
     PayloadT lastRemovedOpenPayload;
+    if (noOverride && !beginInserted && !endInserted &&
+        std::next(beginIt) == endIt) {
+      return beginIt;
+    }
 
     if (!beginInserted || !endInserted) {
       if (!beginInserted) {

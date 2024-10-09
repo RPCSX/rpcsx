@@ -1,6 +1,7 @@
 #include "vk.hpp"
 
 #include <amdgpu/bridge/bridge.hpp>
+#include <print>
 #include <rx/MemoryTable.hpp>
 #include <rx/atScopeExit.hpp>
 #include <rx/die.hpp>
@@ -103,22 +104,22 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
 }
 
 static void usage(std::FILE *out, const char *argv0) {
-  std::fprintf(out, "usage: %s [options...]\n", argv0);
-  std::fprintf(out, "  options:\n");
-  std::fprintf(out, "  --version, -v - print version\n");
-  std::fprintf(out,
-               "    --cmd-bridge <name> - setup command queue bridge name\n");
-  std::fprintf(out, "    --shm <name> - setup shared memory name\n");
-  std::fprintf(
+  std::println(out, "usage: {} [options...]", argv0);
+  std::println(out, "  options:");
+  std::println(out, "  --version, -v - print version");
+  std::println(out,
+               "    --cmd-bridge <name> - setup command queue bridge name");
+  std::println(out, "    --shm <name> - setup shared memory name");
+  std::println(
       out,
-      "    --gpu <index> - specify physical gpu index to use, default is 0\n");
-  std::fprintf(out,
-               "    --presenter <presenter mode> - set flip engine target\n");
-  std::fprintf(out, "    --validate - enable validation layers\n");
-  std::fprintf(out, "    -h, --help - show this message\n");
-  std::fprintf(out, "\n");
-  std::fprintf(out, "  presenter mode:\n");
-  std::fprintf(out, "     window - create and use native window (default)\n");
+      "    --gpu <index> - specify physical gpu index to use, default is 0");
+  std::println(out,
+               "    --presenter <presenter mode> - set flip engine target");
+  std::println(out, "    --validate - enable validation layers");
+  std::println(out, "    -h, --help - show this message");
+  std::println(out, "");
+  std::println(out, "  presenter mode:");
+  std::println(out, "     window - create and use native window (default)");
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessageCallback(
@@ -340,7 +341,7 @@ int main(int argc, const char *argv[]) {
   vk::getHostVisibleMemory().initHostVisible(
       std::min(hostVisibleMemoryTotalSize / 2, 1ul * 1024 * 1024 * 1024));
   vk::getDeviceLocalMemory().initDeviceLocal(
-      std::min(localMemoryTotalSize / 2, 4ul * 1024 * 1024 * 1024));
+      std::min(localMemoryTotalSize / 4, 4ul * 1024 * 1024 * 1024));
 
   auto commandPool =
       vk::CommandPool::Create(vkContext.presentQueueFamily,
@@ -398,7 +399,7 @@ int main(int argc, const char *argv[]) {
     if (gpIndex > GLFW_JOYSTICK_LAST) {
       for (int i = 0; i <= GLFW_JOYSTICK_LAST; ++i) {
         if (glfwJoystickIsGamepad(i) == GLFW_TRUE) {
-          std::printf("Gamepad \"%s\" activated", glfwGetGamepadName(i));
+          std::print("Gamepad \"{}\" activated", glfwGetGamepadName(i));
           gpIndex = i;
           break;
         }

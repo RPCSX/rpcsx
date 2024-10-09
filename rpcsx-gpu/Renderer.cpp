@@ -454,9 +454,12 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
       vsPrimType = pipe.uConfig.vgtPrimitiveType.value;
     }
 
+    auto indexOffset =
+        indexBuffer.handle == VK_NULL_HANDLE ? indexBuffer.offset : 0;
+
     vertexShader = cacheTag.getVertexShader(
-        gcn::Stage::VsVs, pipe.sh.spiShaderPgmVs, pipe.context,
-        indexBuffer.offset, vsPrimType, viewPorts);
+        gcn::Stage::VsVs, pipe.sh.spiShaderPgmVs, pipe.context, indexOffset,
+        vsPrimType, viewPorts);
   }
 
   auto pixelShader =

@@ -11,6 +11,7 @@
 #include "shaders/rdna-semantic-spirv.hpp"
 #include "vk.hpp"
 #include <fcntl.h>
+#include <print>
 #include <sys/mman.h>
 
 using namespace amdgpu;
@@ -31,10 +32,6 @@ Device::Device() {
     gcnSemantic = shader::gcn::collectSemanticInfo(gcnSemanticModuleInfo);
   } else {
     rx::die("failed to deserialize builtin semantics\n");
-  }
-
-  for (int index = 0; auto &cache : caches) {
-    cache.vmId = index++;
   }
 
   for (auto &pipe : graphicsPipes) {
@@ -73,7 +70,7 @@ void Device::mapProcess(std::int64_t pid, int vmId, const char *shmName) {
   process.vmFd = memoryFd;
 
   if (memoryFd < 0) {
-    std::printf("failed to process %x shared memory\n", (int)pid);
+    std::println("failed to process {:x} shared memory", (int)pid);
     std::abort();
   }
 
@@ -95,7 +92,7 @@ void Device::mapProcess(std::int64_t pid, int vmId, const char *shmName) {
                gpuProt, MAP_FIXED | MAP_SHARED, mapFd, devOffset);
 
     if (mmapResult == MAP_FAILED) {
-      std::printf("failed to map process %x memory, address %lx-%lx, type %x\n",
+      std::println("failed to map process {:x} memory, address {:x}-{:x}, type {:x}",
                   (int)pid, startAddress, endAddress, slot.memoryType);
       std::abort();
     }

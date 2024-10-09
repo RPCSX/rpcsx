@@ -217,7 +217,7 @@ void vk::Context::recreateSwapchain() {
                                                       &surfCaps));
   uint32_t presentModeCount;
   VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface,
-                                                      &presentModeCount, NULL));
+                                                      &presentModeCount, nullptr));
 
   std::vector<VkPresentModeKHR> presentModes(presentModeCount);
   VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(

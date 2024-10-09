@@ -3,10 +3,12 @@
 #include "Pipe.hpp"
 #include "amdgpu/tiler.hpp"
 #include "gnm/constants.hpp"
+#include "rx/AddressRange.hpp"
 #include "shader/Access.hpp"
 #include "shader/Evaluator.hpp"
 #include "shader/GcnConverter.hpp"
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <print>
 #include <rx/ConcurrentBitPool.hpp>
@@ -33,7 +35,6 @@ struct ImageKey {
   gnm::DataFormat dfmt;
   gnm::NumericFormat nfmt;
   TileMode tileMode = {};
-  VkOffset3D offset = {};
   VkExtent3D extent = {1, 1, 1};
   std::uint32_t pitch = 1;
   unsigned baseMipLevel = 0;
@@ -69,6 +70,16 @@ struct SamplerKey {
 };
 
 struct Cache {
+  enum class EntryType {
+    HostVisibleBuffer,
+    DeviceLocalBuffer,
+    IndexBuffer,
+    Image,
+    Shader,
+
+    Count
+  };
+
   static constexpr std::array kGraphicsStages = {
       VK_SHADER_STAGE_VERTEX_BIT,
       VK_SHADER_STAGE_GEOMETRY_BIT,
@@ -115,8 +126,6 @@ struct Cache {
   enum class TagId : std::uint64_t {};
   struct Entry;
 
-  int vmId = -1;
-
   struct Shader {
     VkShaderEXT handle = VK_NULL_HANDLE;
     shader::gcn::ShaderInfo *info;
@@ -145,6 +154,7 @@ struct Cache {
 
   struct Image {
     VkImage handle = VK_NULL_HANDLE;
+    Entry *entry;
     VkFormat format;
     VkImageSubresourceRange subresource;
   };
@@ -152,6 +162,7 @@ struct Cache {
   struct ImageView {
     VkImageView handle = VK_NULL_HANDLE;
     VkImage imageHandle;
+    VkFormat format;
     VkImageSubresourceRange subresource;
   };
 
@@ -211,7 +222,8 @@ private:
 
     template <typename T> T readPointer(std::uint64_t address) {
       T result{};
-      cacheTag->readMemory(&result, address, sizeof(result));
+      cacheTag->readMemory(
+          &result, rx::AddressRange::fromBeginSize(address, sizeof(result)));
       return result;
     }
 
@@ -227,7 +239,9 @@ private:
       std::uint32_t resourceSlot;
     };
 
-    std::vector<std::shared_ptr<Entry>> mAcquiredResources;
+    std::vector<std::shared_ptr<Entry>> mAcquiredImageResources;
+    std::vector<std::shared_ptr<Entry>> mAcquiredMemoryResources;
+    std::vector<std::shared_ptr<Entry>> mAcquiredViewResources;
     std::vector<MemoryTableConfigSlot> memoryTableConfigSlots;
     std::vector<std::uint32_t *> descriptorBuffers;
     ShaderResources shaderResources;
@@ -236,7 +250,8 @@ private:
     TagStorage(const TagStorage &) = delete;
 
     void clear() {
-      mAcquiredResources.clear();
+      mAcquiredImageResources.clear();
+      mAcquiredMemoryResources.clear();
       memoryTableConfigSlots.clear();
       descriptorBuffers.clear();
       shaderResources.clear();
@@ -247,6 +262,7 @@ private:
     TagStorage *mStorage = nullptr;
     Scheduler *mScheduler = nullptr;
     Cache *mParent = nullptr;
+    std::unique_lock<std::mutex> mResourcesLock;
     TagId mTagId{};
     std::uint32_t mAcquiredMemoryTable = -1;
   };
@@ -275,33 +291,33 @@ public:
     Cache *getCache() const { return mParent; }
     Device *getDevice() const { return mParent->mDevice; }
     Scheduler &getScheduler() const { return *mScheduler; }
-    int getVmId() const { return mParent->mVmIm; }
+    int getVmId() const { return mParent->mVmId; }
 
     Buffer getInternalHostVisibleBuffer(std::uint64_t size);
     Buffer getInternalDeviceLocalBuffer(std::uint64_t size);
 
+    void unlock() { mResourcesLock.unlock(); }
+
     void buildDescriptors(VkDescriptorSet descriptorSet);
 
     Sampler getSampler(const SamplerKey &key);
-    Buffer getBuffer(std::uint64_t address, std::uint64_t size, Access access);
+    Buffer getBuffer(rx::AddressRange range, Access access);
     IndexBuffer getIndexBuffer(std::uint64_t address, std::uint32_t offset,
                                std::uint32_t indexCount,
                                gnm::PrimitiveType primType,
                                gnm::IndexType indexType);
     Image getImage(const ImageKey &key, Access access);
     ImageView getImageView(const ImageKey &key, Access access);
-    void readMemory(void *target, std::uint64_t address, std::uint64_t size);
-    void writeMemory(const void *source, std::uint64_t address,
-                     std::uint64_t size);
-    int compareMemory(const void *source, std::uint64_t address,
-                      std::uint64_t size);
+    void readMemory(void *target, rx::AddressRange range);
+    void writeMemory(const void *source, rx::AddressRange range);
+    int compareMemory(const void *source, rx::AddressRange range);
     void release();
 
-    VkPipelineLayout getGraphicsPipelineLayout() const {
+    [[nodiscard]] VkPipelineLayout getGraphicsPipelineLayout() const {
       return getCache()->getGraphicsPipelineLayout();
     }
 
-    VkPipelineLayout getComputePipelineLayout() const {
+    [[nodiscard]] VkPipelineLayout getComputePipelineLayout() const {
       return getCache()->getComputePipelineLayout();
     }
 
@@ -423,6 +439,9 @@ private:
     result.mParent = this;
     result.mScheduler = &scheduler;
 
+    std::unique_lock<std::mutex> lock(mResourcesMtx);
+    result.mResourcesLock = std::move(lock);
+
     return result;
   }
 
@@ -457,23 +476,37 @@ public:
     flush(scheduler, 0, ~static_cast<std::uint64_t>(0));
   }
 
-  VkPipelineLayout getGraphicsPipelineLayout() const {
+  [[nodiscard]] VkPipelineLayout getGraphicsPipelineLayout() const {
     return mGraphicsPipelineLayout;
   }
 
-  VkPipelineLayout getComputePipelineLayout() const {
+  [[nodiscard]] VkPipelineLayout getComputePipelineLayout() const {
     return mComputePipelineLayout;
   }
 
-  auto &getGraphicsDescriptorSetLayouts() const {
+  [[nodiscard]] auto &getGraphicsDescriptorSetLayouts() const {
     return mGraphicsDescriptorSetLayouts;
   }
 
+  void trackUpdate(EntryType type, rx::AddressRange range,
+                   std::shared_ptr<Entry> entry, TagId tagId,
+                   bool watchChanges);
+
+  void trackWrite(rx::AddressRange range, TagId tagId, bool lockMemory);
+
+  [[nodiscard]] bool isInSync(rx::AddressRange range, TagId expTagId) {
+    auto syncIt = mSyncTable.queryArea(range.beginAddress());
+    return syncIt != mSyncTable.end() && syncIt.range().contains(range) &&
+           syncIt.get() == expTagId;
+  }
+
+  auto &getTable(EntryType type) { return mTables[static_cast<int>(type)]; }
+
 private:
-  TagId getSyncTag(std::uint64_t address, std::uint64_t size, TagId currentTag);
+  std::shared_ptr<Entry> getInSyncEntry(EntryType type, rx::AddressRange range);
 
   Device *mDevice;
-  int mVmIm;
+  int mVmId;
   std::atomic<TagId> mNextTagId{TagId{2}};
   vk::Buffer mGdsBuffer;
 
@@ -502,12 +535,10 @@ private:
   std::map<SamplerKey, VkSampler> mSamplers;
 
   std::shared_ptr<Entry> mFrameBuffers[10];
+  std::mutex mResourcesMtx;
 
-  rx::MemoryTableWithPayload<std::shared_ptr<Entry>> mBuffers;
-  rx::MemoryTableWithPayload<std::shared_ptr<Entry>> mIndexBuffers;
-  rx::MemoryTableWithPayload<std::shared_ptr<Entry>> mImages;
-  rx::MemoryTableWithPayload<std::shared_ptr<Entry>> mShaders;
-
-  rx::MemoryTableWithPayload<std::shared_ptr<Entry>> mSyncTable;
+  rx::MemoryTableWithPayload<std::shared_ptr<Entry>>
+      mTables[static_cast<std::size_t>(EntryType::Count)];
+  rx::MemoryTableWithPayload<TagId> mSyncTable;
 };
 } // namespace amdgpu
