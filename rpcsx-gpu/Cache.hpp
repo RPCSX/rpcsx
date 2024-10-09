@@ -464,16 +464,17 @@ public:
                       TileMode tileMode);
   void removeFrameBuffer(Scheduler &scheduler, int index);
   VkImage getFrameBuffer(Scheduler &scheduler, int index);
-  void invalidate(Scheduler &scheduler, std::uint64_t address,
-                  std::uint64_t size);
 
-  void invalidate(Scheduler &scheduler) {
-    invalidate(scheduler, 0, ~static_cast<std::uint64_t>(0));
+  void flush(Tag &tag, rx::AddressRange range);
+  void flush(Scheduler &sched, rx::AddressRange range) {
+    auto tag = createTag(sched);
+    flush(tag, range);
   }
 
-  void flush(Scheduler &scheduler, std::uint64_t address, std::uint64_t size);
-  void flush(Scheduler &scheduler) {
-    flush(scheduler, 0, ~static_cast<std::uint64_t>(0));
+  void invalidate(Tag &tag, rx::AddressRange range);
+  void invalidate(Scheduler &sched, rx::AddressRange range) {
+    auto tag = createTag(sched);
+    invalidate(tag, range);
   }
 
   [[nodiscard]] VkPipelineLayout getGraphicsPipelineLayout() const {
@@ -501,6 +502,8 @@ public:
   }
 
   auto &getTable(EntryType type) { return mTables[static_cast<int>(type)]; }
+  rx::AddressRange flushImages(Tag &tag, rx::AddressRange range);
+  rx::AddressRange flushBuffers(rx::AddressRange range);
 
 private:
   std::shared_ptr<Entry> getInSyncEntry(EntryType type, rx::AddressRange range);

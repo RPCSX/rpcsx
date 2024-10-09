@@ -863,13 +863,14 @@ bool GraphicsPipe::eventWriteEos(Queue &queue) {
     auto size = sizeof(std::uint32_t) * sizeDw;
 
     auto gds = cache.getGdsBuffer().getData();
-    cache.invalidate(scheduler, address, size);
+    cache.invalidate(scheduler, rx::AddressRange::fromBeginSize(address, size));
     std::memcpy(pointer, gds + gdsIndexDw * sizeof(std::uint32_t), size);
     break;
   }
 
   case 2: // after GDS writes confirm, store 32 bit DATA to memory as fence
-    cache.invalidate(scheduler, address, sizeof(std::uint32_t));
+    cache.invalidate(scheduler, rx::AddressRange::fromBeginSize(
+                                    address, sizeof(std::uint32_t)));
     *pointer = dataInfo;
     break;
 
@@ -940,7 +941,8 @@ bool GraphicsPipe::dmaData(Queue &queue) {
       auto dstAddress =
           dstAddressLo | (static_cast<std::uint64_t>(dstAddressHi) << 32);
       dst = amdgpu::RemoteMemory{queue.vmId}.getPointer(dstAddress);
-      device->caches[queue.vmId].invalidate(scheduler, dstAddress, size);
+      device->caches[queue.vmId].invalidate(
+          scheduler, rx::AddressRange::fromBeginSize(dstAddress, size));
     } else {
       dst = getMmRegister(dstAddressLo / sizeof(std::uint32_t));
     }
@@ -963,7 +965,8 @@ bool GraphicsPipe::dmaData(Queue &queue) {
       auto srcAddress =
           srcAddressLo | (static_cast<std::uint64_t>(srcAddressHi) << 32);
       src = amdgpu::RemoteMemory{queue.vmId}.getPointer(srcAddress);
-      device->caches[queue.vmId].flush(scheduler, srcAddress, size);
+      device->caches[queue.vmId].flush(
+          scheduler, rx::AddressRange::fromBeginSize(srcAddress, size));
     } else {
       src = getMmRegister(srcAddressLo / sizeof(std::uint32_t));
     }

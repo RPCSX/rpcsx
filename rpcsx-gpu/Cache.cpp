@@ -137,6 +137,22 @@ static bool handleHostInvalidations(bridge::BridgeHeader *bridge, int vmId,
   return hasInvalidations;
 }
 
+static void markHostInvalidated(bridge::BridgeHeader *bridge, int vmId,
+                                std::uint64_t address, std::uint64_t size) {
+  auto firstPage = address / bridge::kHostPageSize;
+  auto lastPage =
+      (address + size + bridge::kHostPageSize - 1) / bridge::kHostPageSize;
+
+  for (auto page = firstPage; page < lastPage; ++page) {
+    std::uint8_t prevValue = 0;
+
+    while (!bridge->cachePages[vmId][page].compare_exchange_weak(
+        prevValue, prevValue | bridge::kPageInvalidated,
+        std::memory_order::relaxed)) {
+    }
+  }
+}
+
 static bool isPrimRequiresConversion(gnm::PrimitiveType primType) {
   switch (primType) {
   case gnm::PrimitiveType::PointList:
@@ -1212,16 +1228,11 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
   auto &table = mParent->getTable(EntryType::HostVisibleBuffer);
   auto it = table.queryArea(range.beginAddress());
 
-  if (it == table.end() || it.endAddress() < range.endAddress()) {
-    for (auto it = table.lowerBound(range.beginAddress()); it != table.end();
-         ++it) {
-      if (!range.intersects(it.range())) {
-        break;
-      }
-
-      static_cast<CachedImage *>(it->get())->flush(*this, getScheduler(),
-                                                   it.range());
-    }
+  if (it == table.end() || !it.range().contains(range)) {
+    mParent->flushImages(*this, range);
+    mScheduler->submit();
+    mScheduler->wait();
+    mParent->flushBuffers(range);
 
     it = table.map(range.beginAddress(), range.endAddress(), nullptr, false,
                    true);
@@ -1531,13 +1542,13 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
         break;
       }
 
-      img->flush(*this, getScheduler(), it.range());
+      img->flush(*this, getScheduler(), img->addressRange);
       getScheduler().wait();
       it.get() = nullptr;
       break;
     }
 
-    img->flush(*this, getScheduler(), it.range());
+    img->flush(*this, getScheduler(), img->addressRange);
   }
 
   getScheduler().submit();
@@ -1686,21 +1697,21 @@ Cache::ImageView Cache::Tag::getImageView(const ImageKey &key, Access access) {
 }
 
 void Cache::Tag::readMemory(void *target, rx::AddressRange range) {
-  // mParent->flush(*mScheduler, address, size);
+  mParent->flush(*this, range);
   auto memoryPtr =
       RemoteMemory{mParent->mVmId}.getPointer(range.beginAddress());
   std::memcpy(target, memoryPtr, range.size());
 }
 
 void Cache::Tag::writeMemory(const void *source, rx::AddressRange range) {
-  // mParent->invalidate(*mScheduler, address, size);
+  mParent->flush(*this, range);
   auto memoryPtr =
       RemoteMemory{mParent->mVmId}.getPointer(range.beginAddress());
   std::memcpy(memoryPtr, source, range.size());
 }
 
 int Cache::Tag::compareMemory(const void *source, rx::AddressRange range) {
-  // mParent->flush(*mScheduler, address, size);
+  mParent->flush(*this, range);
   auto memoryPtr =
       RemoteMemory{mParent->mVmId}.getPointer(range.beginAddress());
   return std::memcmp(memoryPtr, source, range.size());
@@ -2303,83 +2314,16 @@ void Cache::removeFrameBuffer(Scheduler &scheduler, int index) {}
 
 VkImage Cache::getFrameBuffer(Scheduler &scheduler, int index) { return {}; }
 
-static void invalidateCacheImpl(
-    Scheduler &scheduler,
-    rx::MemoryTableWithPayload<std::shared_ptr<Cache::Entry>> &table,
-    std::uint64_t beginAddress, std::uint64_t endAddress) {
-  table.unmap(beginAddress, endAddress);
+void Cache::invalidate(Tag &tag, rx::AddressRange range) {
+  flush(tag, range);
+  markHostInvalidated(mDevice->bridge, mVmId, range.beginAddress(),
+                      range.size());
 }
-
-void Cache::invalidate(Scheduler &scheduler, std::uint64_t address,
-                       std::uint64_t size) {
-  auto beginAddress = address;
-  auto endAddress = address + size;
-
-  rx::dieIf(beginAddress >= endAddress,
-            "wrong flush range: address %lx, size %lx", address, size);
-
-  // invalidateCacheImpl(scheduler, mBuffers, beginAddress, endAddress);
-  // invalidateCacheImpl(scheduler, mImages, beginAddress, endAddress);
-
-  // invalidateCacheImpl(scheduler, mSyncTable, beginAddress, endAddress);
-}
-
-void Cache::flush(Scheduler &scheduler, std::uint64_t address,
-                  std::uint64_t size) {
-  // auto beginAddress = address;
-  // auto endAddress = address + size;
-
-  // rx::dieIf(beginAddress >= endAddress,
-  //           "wrong flush range: address %lx, size %lx", address, size);
-
-  // auto tag = createTag(scheduler);
-  // flushCacheImpl(scheduler, tag, mBuffers, beginAddress, endAddress);
-  // flushCacheImpl(scheduler, tag, mImages, beginAddress, endAddress);
-
-  // flushCacheImpl(scheduler, tag, mSyncTable, beginAddress, endAddress);
-  // scheduler.submit();
-  // scheduler.wait();
-}
-
-static void flushImageCache(
-    Scheduler &scheduler, Cache::Tag &tag,
-    rx::MemoryTableWithPayload<std::shared_ptr<Cache::Entry>> &table,
-    rx::AddressRange range) {
-  auto beginIt = table.lowerBound(range.beginAddress());
-
-  while (beginIt != table.end()) {
-    auto cached = beginIt->get();
-    if (!cached->addressRange.intersects(range)) {
-      break;
-    }
-
-    static_cast<CachedImage *>(cached)->flush(tag, scheduler, range);
-    ++beginIt;
-  }
-}
-
-static rx::AddressRange flushHostVisibleBufferCache(
-    Cache::Tag &tag,
-    rx::MemoryTableWithPayload<std::shared_ptr<Cache::Entry>> &table,
-    rx::AddressRange range) {
-  auto beginIt = table.lowerBound(range.beginAddress());
-
-  rx::AddressRange result;
-  while (beginIt != table.end()) {
-    auto cached = beginIt->get();
-    if (!cached->addressRange.intersects(range)) {
-      break;
-    }
-    auto address = RemoteMemory{tag.getVmId()}.getPointer(
-        cached->addressRange.beginAddress());
-    static_cast<CachedHostVisibleBuffer *>(cached)->flush(address,
-                                                          cached->addressRange);
-
-    result = result.merge(cached->addressRange);
-    ++beginIt;
-  }
-
-  return result;
+void Cache::flush(Tag &tag, rx::AddressRange range) {
+  flushImages(tag, range);
+  tag.getScheduler().submit();
+  tag.getScheduler().wait();
+  flushBuffers(range);
 }
 
 void Cache::trackUpdate(EntryType type, rx::AddressRange range,
@@ -2431,15 +2375,60 @@ void Cache::trackWrite(rx::AddressRange range, TagId tagId, bool lockMemory) {
       auto range =
           rx::AddressRange::fromBeginSize(address, bridge::kHostPageSize);
       auto tag = mDevice->getCacheTag(vmId, sched);
-      flushImageCache(sched, tag, getTable(EntryType::Image), range);
-      auto flushedRange = flushHostVisibleBufferCache(
-          tag, getTable(EntryType::HostVisibleBuffer), range);
+
+      flushImages(tag, range);
+      sched.submit();
+      sched.wait();
+
+      auto flushedRange = flushBuffers(range);
 
       assert(flushedRange.isValid() && flushedRange.size() > 0);
       unlockReadWrite(mDevice->bridge, vmId, flushedRange.beginAddress(),
                       flushedRange.size());
     }
   }};
+}
+
+rx::AddressRange Cache::flushImages(Tag &tag, rx::AddressRange range) {
+  auto &table = getTable(EntryType::Image);
+  rx::AddressRange result;
+  auto beginIt = table.lowerBound(range.beginAddress());
+
+  while (beginIt != table.end()) {
+    auto cached = beginIt->get();
+    if (!cached->addressRange.intersects(range)) {
+      break;
+    }
+
+    static_cast<CachedImage *>(cached)->flush(tag, tag.getScheduler(), range);
+    result = result.merge(cached->addressRange);
+    ++beginIt;
+  }
+
+  return result;
+}
+
+rx::AddressRange Cache::flushBuffers(rx::AddressRange range) {
+  auto &table = getTable(EntryType::HostVisibleBuffer);
+  auto beginIt = table.lowerBound(range.beginAddress());
+
+  rx::AddressRange result;
+  while (beginIt != table.end()) {
+    auto cached = beginIt->get();
+    if (!cached->addressRange.intersects(range)) {
+      break;
+    }
+
+    auto address =
+        RemoteMemory{mVmId}.getPointer(cached->addressRange.beginAddress());
+    static_cast<CachedHostVisibleBuffer *>(cached)->flush(address,
+                                                          cached->addressRange);
+
+    result = result.merge(cached->addressRange);
+    ++beginIt;
+  }
+
+  return result;
 }
 
 std::shared_ptr<Cache::Entry> Cache::getInSyncEntry(EntryType type,
