@@ -1,5 +1,5 @@
 #include "dmem.hpp"
-#include "gpu/Device.hpp"
+#include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/KernelContext.hpp"
@@ -68,8 +68,8 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
     return orbis::ErrorCode::INVAL;
   }
 
-  if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
-    gpu->submitMapMemory(orbis::g_currentThread->tproc->gfxRing,
+  if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+    gpu.submitMapMemory(orbis::g_currentThread->tproc->gfxRing,
                          orbis::g_currentThread->tproc->pid,
                          reinterpret_cast<std::uint64_t>(result), len,
                          memoryType, index, prot, directMemoryStart);

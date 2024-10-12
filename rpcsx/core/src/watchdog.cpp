@@ -1,5 +1,5 @@
 #include "rx/watchdog.hpp"
-#include "gpu/Device.hpp"
+#include "gpu/DeviceCtl.hpp"
 #include "orbis/KernelContext.hpp"
 #include <chrono>
 #include <csignal>
@@ -38,7 +38,7 @@ static void runGPU() {
     return;
   }
 
-  amdgpu::Device *gpu;
+  amdgpu::DeviceCtl gpu;
   {
     pthread_setname_np(pthread_self(), "rpcsx-gpu");
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
@@ -52,11 +52,11 @@ static void runGPU() {
     dup2(logFd, 2);
     ::close(logFd);
 
-    gpu = orbis::knew<amdgpu::Device>();
-    orbis::g_context.gpuDevice = gpu;
+    gpu = amdgpu::DeviceCtl::createDevice();
+    orbis::g_context.gpuDevice = gpu.getOpaque();
   }
 
-  gpu->start();
+  gpu.start();
   std::exit(0);
 }
 

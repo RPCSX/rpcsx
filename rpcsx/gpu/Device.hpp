@@ -1,5 +1,6 @@
 #pragma once
 #include "Cache.hpp"
+#include "DeviceContext.hpp"
 #include "FlipPipeline.hpp"
 #include "Pipe.hpp"
 #include "amdgpu/tiler_vulkan.hpp"
@@ -13,7 +14,6 @@
 #include <GLFW/glfw3.h>
 #include <array>
 #include <thread>
-#include <unordered_map>
 #include <vulkan/vulkan_core.h>
 
 namespace amdgpu {
@@ -44,71 +44,12 @@ struct VmMapSlot {
   auto operator<=>(const VmMapSlot &) const = default;
 };
 
-struct BufferAttribute {
-  std::uint8_t attrId;
-  std::uint8_t submit;
-  std::uint64_t canary;
-  std::uint32_t pixelFormat;
-  std::uint32_t tilingMode;
-  std::uint32_t pitch;
-  std::uint32_t width;
-  std::uint32_t height;
-};
-
-struct Buffer {
-  std::uint64_t canary;
-  std::uint32_t index;
-  std::uint32_t attrId;
-  std::uint64_t address;
-  std::uint64_t address2;
-};
-
 struct ProcessInfo {
   int vmId = -1;
   int vmFd = -1;
   BufferAttribute bufferAttributes[10];
   Buffer buffers[10];
   rx::MemoryTableWithPayload<VmMapSlot> vmTable;
-};
-
-enum {
-  kPageWriteWatch = 1 << 0,
-  kPageReadWriteLock = 1 << 1,
-  kPageInvalidated = 1 << 2,
-  kPageLazyLock = 1 << 3
-};
-
-struct PadState {
-  std::uint64_t timestamp;
-  std::uint32_t unk;
-  std::uint32_t buttons;
-  std::uint8_t leftStickX;
-  std::uint8_t leftStickY;
-  std::uint8_t rightStickX;
-  std::uint8_t rightStickY;
-  std::uint8_t l2;
-  std::uint8_t r2;
-};
-
-enum {
-  kPadBtnL3 = 1 << 1,
-  kPadBtnR3 = 1 << 2,
-  kPadBtnOptions = 1 << 3,
-  kPadBtnUp = 1 << 4,
-  kPadBtnRight = 1 << 5,
-  kPadBtnDown = 1 << 6,
-  kPadBtnLeft = 1 << 7,
-  kPadBtnL2 = 1 << 8,
-  kPadBtnR2 = 1 << 9,
-  kPadBtnL1 = 1 << 10,
-  kPadBtnR1 = 1 << 11,
-  kPadBtnTriangle = 1 << 12,
-  kPadBtnCircle = 1 << 13,
-  kPadBtnCross = 1 << 14,
-  kPadBtnSquare = 1 << 15,
-  kPadBtnPs = 1 << 16,
-  kPadBtnTouchPad = 1 << 20,
-  kPadBtnIntercepted = 1 << 31,
 };
 
 struct RemoteMemory {
@@ -121,10 +62,9 @@ struct RemoteMemory {
   }
 };
 
-struct Device : orbis::RcBase {
+struct Device : orbis::RcBase, DeviceContext {
   static constexpr auto kComputePipeCount = 8;
   static constexpr auto kGfxPipeCount = 2;
-  static constexpr auto kMaxProcessCount = 6;
 
   shader::SemanticInfo gcnSemantic;
   shader::spv::Context shaderSemanticContext;
@@ -153,16 +93,6 @@ struct Device : orbis::RcBase {
       {this, 0}, {this, 1}, {this, 2}, {this, 3}, {this, 4}, {this, 5},
   };
 
-  PadState kbPadState;
-  std::atomic<std::uint64_t> cacheCommands[kMaxProcessCount][4];
-  std::atomic<std::uint32_t> gpuCacheCommand[kMaxProcessCount];
-  std::atomic<std::uint8_t> *cachePages[kMaxProcessCount];
-
-  volatile std::uint32_t flipBuffer[kMaxProcessCount];
-  volatile std::uint64_t flipArg[kMaxProcessCount];
-  volatile std::uint64_t flipCount[kMaxProcessCount];
-  volatile std::uint64_t bufferInUseAddress[kMaxProcessCount];
-
   std::uint32_t mainGfxRings[kGfxPipeCount][0x4000 / sizeof(std::uint32_t)];
 
   Device();
@@ -184,20 +114,6 @@ struct Device : orbis::RcBase {
 
   void submitCommand(Queue &ring, std::span<const std::uint32_t> command);
   void submitGfxCommand(int gfxPipe, std::span<const std::uint32_t> command);
-  void submitGfxCommand(int gfxPipe, int vmId,
-                        std::span<const std::uint32_t> command);
-  void submitSwitchBuffer(int gfxPipe);
-  void submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
-                  std::uint64_t flipArg);
-  void submitMapMemory(int gfxPipe, std::uint32_t pid, std::uint64_t address,
-                       std::uint64_t size, int memoryType, int dmemIndex,
-                       int prot, std::int64_t offset);
-  void submitUnmapMemory(int gfxPipe, std::uint32_t pid, std::uint64_t address,
-                         std::uint64_t size);
-  void submitMapProcess(int gfxPipe, std::uint32_t pid, int vmId);
-  void submitUnmapProcess(int gfxPipe, std::uint32_t pid);
-  void submitProtectMemory(int gfxPipe, std::uint32_t pid,
-                           std::uint64_t address, std::uint64_t size, int prot);
 
   void mapProcess(std::uint32_t pid, int vmId);
   void unmapProcess(std::uint32_t pid);
@@ -214,8 +130,6 @@ struct Device : orbis::RcBase {
                  int memoryType, int dmemIndex, int prot, std::int64_t offset);
   void unmapMemory(std::uint32_t pid, std::uint64_t address,
                    std::uint64_t size);
-  void registerBuffer(std::uint32_t pid, Buffer buffer);
-  void registerBufferAttribute(std::uint32_t pid, BufferAttribute attr);
   void watchWrites(int vmId, std::uint64_t address, std::uint64_t size);
   void lockReadWrite(int vmId, std::uint64_t address, std::uint64_t size,
                      bool isLazy);

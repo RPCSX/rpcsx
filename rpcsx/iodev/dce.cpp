@@ -1,4 +1,4 @@
-#include "gpu/Device.hpp"
+#include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
 #include "orbis/KernelAllocator.hpp"
@@ -134,12 +134,13 @@ static void runBridge(int vmId) {
   std::thread{[=] {
     pthread_setname_np(pthread_self(), "Bridge");
 
-    auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>();
+    auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
+    auto &gpuCtx = gpu.getContext();
     std::vector<std::uint64_t> fetchedCommands;
-    fetchedCommands.reserve(std::size(gpu->cacheCommands));
+    fetchedCommands.reserve(std::size(gpuCtx.cacheCommands));
 
     while (true) {
-      for (auto &command : gpu->cacheCommands) {
+      for (auto &command : gpuCtx.cacheCommands) {
         std::uint64_t value = command[vmId].load(std::memory_order::relaxed);
 
         if (value != 0) {
@@ -157,7 +158,7 @@ static void runBridge(int vmId) {
         auto count = static_cast<std::uint32_t>(command >> 32) + 1;
 
         auto pageFlags =
-            gpu->cachePages[vmId][page].load(std::memory_order::relaxed);
+            gpuCtx.cachePages[vmId][page].load(std::memory_order::relaxed);
 
         auto address = static_cast<std::uint64_t>(page) * rx::mem::pageSize;
         auto origVmProt = vm::getPageProtection(address);
@@ -253,7 +254,9 @@ static void initDceMemory(DceDevice *device) {
 static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
   auto device = static_cast<DceDevice *>(file->device.get());
-  auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>();
+
+  auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
+  auto &gpuCtx = gpu.getContext();
 
   if (request == 0xc0308203) {
     // returns:
@@ -299,11 +302,11 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
 
       FlipControlStatus flipStatus{};
       // TODO: lock bridge header
-      flipStatus.flipArg = gpu->flipArg[thread->tproc->vmId];
-      flipStatus.count = gpu->flipCount[thread->tproc->vmId];
+      flipStatus.flipArg = gpuCtx.flipArg[thread->tproc->vmId];
+      flipStatus.count = gpuCtx.flipCount[thread->tproc->vmId];
       flipStatus.processTime = 0; // TODO
       flipStatus.tsc = 0;         // TODO
-      flipStatus.currentBuffer = gpu->flipBuffer[thread->tproc->vmId];
+      flipStatus.currentBuffer = gpuCtx.flipBuffer[thread->tproc->vmId];
       flipStatus.flipPendingNum0 = 0; // TODO
       flipStatus.gcQueueNum = 0;      // TODO
       flipStatus.flipPendingNum1 = 0; // TODO
@@ -333,7 +336,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       *(std::uint64_t *)args->size = kDceControlMemorySize;  // size
     } else if (args->id == 31) {
       if ((std::uint64_t)args->ptr == 0xc) {
-        gpu->bufferInUseAddress[thread->tproc->vmId] = args->size;
+        gpuCtx.bufferInUseAddress[thread->tproc->vmId] = args->size;
       } else if ((std::uint64_t)args->ptr != 1) {
         ORBIS_LOG_ERROR("buffer in use", args->ptr, args->size);
         thread->where();
@@ -362,13 +365,13 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     ORBIS_LOG_ERROR("dce: RegisterBuffer", args->canary, args->index,
                     args->address, args->address2);
 
-    gpu->registerBuffer(thread->tproc->pid, {
-                                                .canary = args->canary,
-                                                .index = args->index,
-                                                .attrId = args->attrid,
-                                                .address = args->address,
-                                                .address2 = args->address2,
-                                            });
+    gpu.registerBuffer(thread->tproc->pid, {
+                                               .canary = args->canary,
+                                               .index = args->index,
+                                               .attrId = args->attrid,
+                                               .address = args->address,
+                                               .address2 = args->address2,
+                                           });
     return {};
   }
 
@@ -381,17 +384,17 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                     args->unk4_zero, args->unk5_zero, args->options,
                     args->reserved1, args->reserved2);
 
-    gpu->registerBufferAttribute(thread->tproc->pid,
-                                 {
-                                     .attrId = args->attrid,
-                                     .submit = args->submit,
-                                     .canary = args->canary,
-                                     .pixelFormat = args->pixelFormat,
-                                     .tilingMode = args->tilingMode,
-                                     .pitch = args->pitch,
-                                     .width = args->width,
-                                     .height = args->height,
-                                 });
+    gpu.registerBufferAttribute(thread->tproc->pid,
+                                {
+                                    .attrId = args->attrid,
+                                    .submit = args->submit,
+                                    .canary = args->canary,
+                                    .pixelFormat = args->pixelFormat,
+                                    .tilingMode = args->tilingMode,
+                                    .pitch = args->pitch,
+                                    .width = args->width,
+                                    .height = args->height,
+                                });
 
     return {};
   }
@@ -404,9 +407,9 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     //                 args->displayBufferIndex, args->flipMode, args->unk1,
     //                 args->flipArg, args->flipArg2, args->eop_nz, args->unk2,
     //                 args->eop_val, args->unk3, args->unk4, args->rout);
-    gpu->submitFlip(thread->tproc->gfxRing, thread->tproc->pid,
-                    args->displayBufferIndex,
-                    /*args->flipMode,*/ args->flipArg);
+    gpu.submitFlip(thread->tproc->gfxRing, thread->tproc->pid,
+                   args->displayBufferIndex,
+                   /*args->flipMode,*/ args->flipArg);
 
     // *args->rout = 0;
     return {};
@@ -470,8 +473,8 @@ orbis::ErrorCode DceDevice::open(orbis::Ref<orbis::File> *file,
 
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     {
-      auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>();
-      gpu->submitMapProcess(thread->tproc->gfxRing, thread->tproc->pid, vmId);
+      auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
+      gpu.submitMapProcess(thread->tproc->gfxRing, thread->tproc->pid, vmId);
       thread->tproc->vmId = vmId;
     }
 

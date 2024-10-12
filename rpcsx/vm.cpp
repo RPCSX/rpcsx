@@ -1,5 +1,5 @@
 #include "vm.hpp"
-#include "gpu/Device.hpp"
+#include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
 #include "orbis/KernelContext.hpp"
@@ -932,9 +932,9 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   if (auto thr = orbis::g_currentThread) {
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
-      gpu->submitMapMemory(thr->tproc->gfxRing, thr->tproc->pid, address, len,
-                           -1, -1, prot, address - kMinAddress);
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.submitMapMemory(thr->tproc->gfxRing, thr->tproc->pid, address, len,
+                          -1, -1, prot, address - kMinAddress);
     }
   }
 
@@ -989,9 +989,9 @@ bool vm::unmap(void *addr, std::uint64_t size) {
       (address & kBlockMask) >> kPageShift, pages, ~0);
   if (auto thr = orbis::g_currentThread) {
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
-      gpu->submitUnmapMemory(thr->tproc->gfxRing, thr->tproc->pid, address,
-                             size);
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.submitUnmapMemory(thr->tproc->gfxRing, thr->tproc->pid, address,
+                            size);
     }
   } else {
     std::println(stderr, "ignoring mapping {:x}-{:x}", address, address + size);
@@ -1031,8 +1031,8 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   if (auto thr = orbis::g_currentThread) {
     std::println("memory prot: {:x}", prot);
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
-      gpu->submitProtectMemory(thr->tproc->gfxRing, thr->tproc->pid, address,
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.submitProtectMemory(thr->tproc->gfxRing, thr->tproc->pid, address,
                                size, prot);
     }
   } else {

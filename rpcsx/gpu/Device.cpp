@@ -476,71 +476,6 @@ void Device::submitGfxCommand(int gfxPipe,
   submitCommand(ring, command);
 }
 
-void Device::submitGfxCommand(int gfxPipe, int vmId,
-                              std::span<const std::uint32_t> command) {
-  auto op = rx::getBits(command[0], 15, 8);
-  auto type = rx::getBits(command[0], 31, 30);
-  auto len = rx::getBits(command[0], 29, 16) + 2;
-
-  if ((op != gnm::IT_INDIRECT_BUFFER && op != gnm::IT_INDIRECT_BUFFER_CNST) ||
-      type != 3 || len != 4 || command.size() != len) {
-    std::println(stderr, "unexpected gfx command for main ring: {}, {}, {}", op,
-                 type, len);
-    rx::die("");
-  }
-
-  std::vector<std::uint32_t> patchedCommand{command.data(),
-                                            command.data() + command.size()};
-  patchedCommand[3] &= ~(~0 << 24);
-  patchedCommand[3] |= vmId << 24;
-
-  submitGfxCommand(gfxPipe, patchedCommand);
-}
-
-void Device::submitSwitchBuffer(int gfxPipe) {
-  submitGfxCommand(gfxPipe, createPm4Packet(gnm::IT_SWITCH_BUFFER, 0));
-}
-void Device::submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
-                        std::uint64_t flipArg) {
-  submitGfxCommand(gfxPipe,
-                   createPm4Packet(IT_FLIP, bufferIndex, flipArg & 0xffff'ffff,
-                                   flipArg >> 32, pid));
-}
-
-void Device::submitMapMemory(int gfxPipe, std::uint32_t pid,
-                             std::uint64_t address, std::uint64_t size,
-                             int memoryType, int dmemIndex, int prot,
-                             std::int64_t offset) {
-  submitGfxCommand(gfxPipe,
-                   createPm4Packet(IT_MAP_MEMORY, pid, address & 0xffff'ffff,
-                                   address >> 32, size & 0xffff'ffff,
-                                   size >> 32, memoryType, dmemIndex, prot,
-                                   offset & 0xffff'ffff, offset >> 32));
-}
-void Device::submitUnmapMemory(int gfxPipe, std::uint32_t pid,
-                               std::uint64_t address, std::uint64_t size) {
-  submitGfxCommand(
-      gfxPipe, createPm4Packet(IT_UNMAP_MEMORY, pid, address & 0xffff'ffff,
-                               address >> 32, size & 0xffff'ffff, size >> 32));
-}
-
-void Device::submitMapProcess(int gfxPipe, std::uint32_t pid, int vmId) {
-  submitGfxCommand(gfxPipe, createPm4Packet(gnm::IT_MAP_PROCESS, pid, vmId));
-}
-
-void Device::submitUnmapProcess(int gfxPipe, std::uint32_t pid) {
-  submitGfxCommand(gfxPipe, createPm4Packet(IT_UNMAP_PROCESS, pid));
-}
-
-void Device::submitProtectMemory(int gfxPipe, std::uint32_t pid,
-                                 std::uint64_t address, std::uint64_t size,
-                                 int prot) {
-  submitGfxCommand(gfxPipe,
-                   createPm4Packet(IT_PROTECT_MEMORY, pid,
-                                   address & 0xffff'ffff, address >> 32,
-                                   size & 0xffff'ffff, size >> 32, prot));
-}
-
 void Device::mapProcess(std::uint32_t pid, int vmId) {
   auto &process = processInfo[pid];
   process.vmId = vmId;
@@ -985,25 +920,6 @@ void Device::unmapMemory(std::uint32_t pid, std::uint64_t address,
                          std::uint64_t size) {
   // TODO
   protectMemory(pid, address, size, 0);
-}
-
-void Device::registerBuffer(std::uint32_t pid, Buffer buffer) {
-  auto &process = processInfo[pid];
-
-  if (buffer.attrId >= 10 || buffer.index >= 10) {
-    rx::die("out of buffers %u, %u", buffer.attrId, buffer.index);
-  }
-
-  process.buffers[buffer.index] = buffer;
-}
-
-void Device::registerBufferAttribute(std::uint32_t pid, BufferAttribute attr) {
-  auto &process = processInfo[pid];
-  if (attr.attrId >= 10) {
-    rx::die("out of buffer attributes %u", attr.attrId);
-  }
-
-  process.bufferAttributes[attr.attrId] = attr;
 }
 
 static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,

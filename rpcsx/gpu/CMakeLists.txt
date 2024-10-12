@@ -12,6 +12,7 @@ add_library(rpcsx-gpu
 STATIC
     Cache.cpp
     Device.cpp
+    DeviceCtl.cpp
     FlipPipeline.cpp
     Pipe.cpp
     Registers.cpp

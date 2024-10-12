@@ -1,4 +1,4 @@
-#include "gpu/Device.hpp"
+#include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
 #include "orbis/KernelAllocator.hpp"
@@ -8,12 +8,12 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedMutex.hpp"
+#include "rx/die.hpp"
 #include "vm.hpp"
 #include <cstdio>
 #include <mutex>
 #include <print>
 #include <sys/mman.h>
-#include <unordered_map>
 
 struct ComputeQueue {
   std::uint64_t ringBaseAddress{};
@@ -84,9 +84,9 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       for (unsigned i = 0; i < args->count; ++i) {
-        gpu->submitGfxCommand(gcFile->gfxPipe,
+        gpu.submitGfxCommand(gcFile->gfxPipe,
                               orbis::g_currentThread->tproc->vmId,
                               {args->cmds + i * 4, 4});
       }
@@ -103,8 +103,8 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
-      gpu->submitSwitchBuffer(orbis::g_currentThread->tproc->vmId);
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.submitSwitchBuffer(orbis::g_currentThread->tproc->vmId);
     } else {
       return orbis::ErrorCode::INVAL;
     }
@@ -124,9 +124,9 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       for (unsigned i = 0; i < args->count; ++i) {
-        gpu->submitGfxCommand(gcFile->gfxPipe,
+        gpu.submitGfxCommand(gcFile->gfxPipe,
                               orbis::g_currentThread->tproc->vmId,
                               {args->cmds + i * 4, 4});
       }
@@ -139,8 +139,8 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   }
 
   case 0xc0048116: { // submit done?
-    if (auto gpu = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>()) {
-      gpu->waitForIdle();
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::INVAL;
     }

@@ -1,6 +1,6 @@
 #include "audio/AlsaDevice.hpp"
 #include "backtrace.hpp"
-#include "gpu/Device.hpp"
+#include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
 #include "iodev/mbus.hpp"
@@ -77,22 +77,23 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
       prot |= PROT_EXEC;
     }
 
-    auto gpuDevice = orbis::g_context.gpuDevice.staticCast<amdgpu::Device>();
+    auto gpuDevice = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
 
     if (gpuDevice && (prot & (isWrite ? PROT_WRITE : PROT_READ)) != 0) {
+      auto &gpuContext = gpuDevice.getContext();
       while (true) {
         auto flags =
-            gpuDevice->cachePages[vmid][page].load(std::memory_order::relaxed);
+            gpuContext.cachePages[vmid][page].load(std::memory_order::relaxed);
 
         if ((flags & amdgpu::kPageReadWriteLock) != 0) {
           if ((flags & amdgpu::kPageLazyLock) != 0) {
             if (std::uint32_t gpuCommand = 0;
-                !gpuDevice->gpuCacheCommand[vmid].compare_exchange_weak(
+                !gpuContext.gpuCacheCommand[vmid].compare_exchange_weak(
                     gpuCommand, page)) {
               continue;
             }
 
-            while (!gpuDevice->cachePages[vmid][page].compare_exchange_weak(
+            while (!gpuContext.cachePages[vmid][page].compare_exchange_weak(
                 flags, flags & ~amdgpu::kPageLazyLock,
                 std::memory_order::relaxed)) {
             }
@@ -109,7 +110,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
           break;
         }
 
-        if (gpuDevice->cachePages[vmid][page].compare_exchange_weak(
+        if (gpuContext.cachePages[vmid][page].compare_exchange_weak(
                 flags, amdgpu::kPageInvalidated, std::memory_order::relaxed)) {
           break;
         }
