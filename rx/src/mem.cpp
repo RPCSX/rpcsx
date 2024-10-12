@@ -1,11 +1,13 @@
 #include "mem.hpp"
+#include <cstdio>
+#include <print>
 #include <sys/mman.h>
 #include <unistd.h>
 
 extern const std::size_t rx::mem::pageSize = sysconf(_SC_PAGE_SIZE);
 
-void *rx::mem::map(void *address, std::size_t size, int prot, int flags,
-                   int fd, std::ptrdiff_t offset) {
+void *rx::mem::map(void *address, std::size_t size, int prot, int flags, int fd,
+                   std::ptrdiff_t offset) {
   return ::mmap(address, size, prot, flags, fd, offset);
 }
 
@@ -24,4 +26,21 @@ bool rx::mem::protect(void *address, std::size_t size, int prot) {
 
 bool rx::mem::unmap(void *address, std::size_t size) {
   return ::munmap(address, size) == 0;
+}
+
+void rx::mem::printStats() {
+  FILE *maps = fopen("/proc/self/maps", "r");
+
+  if (!maps) {
+    return;
+  }
+
+  char *line = nullptr;
+  std::size_t size = 0;
+  while (getline(&line, &size, maps) > 0) {
+    std::print("{}", line);
+  }
+
+  free(line);
+  fclose(maps);
 }

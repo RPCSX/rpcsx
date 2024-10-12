@@ -10,4 +10,5 @@ void *reserve(std::size_t size);
 bool reserve(void *address, std::size_t size);
 bool protect(void *address, std::size_t size, int prot);
 bool unmap(void *address, std::size_t size);
+void printStats();
 } // namespace rx::mem

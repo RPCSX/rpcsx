@@ -9,6 +9,8 @@
 #include <unistd.h>
 
 static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
+static constexpr auto kHeapBaseAddress = 0x600'0000'0000;
+static constexpr auto kHeapSize = 0x2'0000'0000;
 
 namespace orbis {
 thread_local Thread *g_currentThread;
@@ -16,7 +18,7 @@ thread_local Thread *g_currentThread;
 KernelContext &g_context = *[]() -> KernelContext * {
   // Allocate global shared kernel memory
   // TODO: randomize for hardening and reduce size
-  auto ptr = mmap(reinterpret_cast<void *>(0x200'0000'0000), 0x2'0000'0000,
+  auto ptr = mmap(reinterpret_cast<void *>(kHeapBaseAddress), kHeapSize,
                   PROT_READ | PROT_WRITE,
                   MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
   if (ptr == MAP_FAILED)
@@ -166,15 +168,32 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
   align = std::max<std::size_t>(align, __STDCPP_DEFAULT_NEW_ALIGNMENT__);
   auto heap = reinterpret_cast<std::uintptr_t>(m_heap_next);
   heap = (heap + (align - 1)) & ~(align - 1);
+
+  if (heap + size > kHeapBaseAddress + kHeapSize) {
+    std::fprintf(stderr, "out of kernel memory");
+    std::abort();
+  }
+  // Check overflow
+  if (heap + size < heap) {
+    std::fprintf(stderr, "too big allocation");
+    std::abort();
+  }
+
   auto result = reinterpret_cast<void *>(heap);
   std::memcpy(std::bit_cast<std::byte *>(result) + size, &g_allocProtWord,
               sizeof(g_allocProtWord));
   m_heap_next = reinterpret_cast<void *>(heap + size + sizeof(g_allocProtWord));
-  // Check overflow
-  if (heap + size < heap)
-    std::abort();
-  if (heap + size > (uintptr_t)&g_context + 0x1'0000'0000)
-    std::abort();
+
+  if (true) {
+    heap = reinterpret_cast<std::uintptr_t>(m_heap_next);
+    align = std::min<std::size_t>(align, 4096);
+    heap = (heap + (align - 1)) & ~(align - 1);
+    size = 4096;
+    ::mmap(reinterpret_cast<void *>(heap), size, PROT_NONE, MAP_FIXED, -1, 0);
+
+    m_heap_next = reinterpret_cast<void *>(heap + size);
+  }
+
   return result;
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <compare>
 
 namespace orbis {
 enum class ErrorCode : int;
@@ -18,5 +19,13 @@ public:
 
   [[nodiscard]] int value() const { return mValue < 0 ? -mValue : mValue; }
   [[nodiscard]] bool isError() const { return mValue < 0; }
+
+  [[nodiscard]] auto operator<=>(ErrorCode ec) const {
+    return static_cast<ErrorCode>(value()) <=> ec;
+  }
+
+  [[nodiscard]] auto operator<=>(SysResult other) const {
+    return value() <=> other.value();
+  }
 };
 } // namespace orbis

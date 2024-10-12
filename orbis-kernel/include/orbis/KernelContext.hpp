@@ -2,6 +2,7 @@
 #include "KernelAllocator.hpp"
 #include "evf.hpp"
 #include "ipmi.hpp"
+#include "orbis/note.hpp"
 #include "osem.hpp"
 #include "thread/types.hpp"
 #include "utils/IdMap.hpp"
@@ -174,9 +175,12 @@ public:
     return getUmtxChainIndexed(1, t, flags, ptr);
   }
 
+  Ref<EventEmitter> deviceEventEmitter;
   Ref<RcBase> shmDevice;
   Ref<RcBase> dmemDevice;
   Ref<RcBase> blockpoolDevice;
+  shared_mutex gpuDeviceMtx;
+  Ref<RcBase> gpuDevice;
   uint sdkVersion{};
   uint fwSdkVersion{};
   uint safeMode{};

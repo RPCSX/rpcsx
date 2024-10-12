@@ -39,25 +39,8 @@ git clone https://github.com/KhronosGroup/SPIRV-Cross && cd SPIRV-Cross && mkdir
 ```
 git clone --recursive https://github.com/RPCSX/rpcsx && cd rpcsx
 ```
-```
-git submodule update --init --recursive
-```  
 ## How to compile the emulator
    
 ```
-mkdir -p build && cd build && cmake .. && cmake --build .
-```
-
-## How to create a Virtual HDD
-
-> The PS4 has a case-insensitive filesystem. To create the Virtual HDD, do the following:
- 
-```
-truncate -s 512M ps4-hdd.exfat
-
-mkfs.exfat -n PS4-HDD ./ps4-hdd.exfat
-
-mkdir ps4-fs
-
-sudo mount -t exfat -o uid=`id -u`,gid=`id -g` ./ps4-hdd.exfat ./ps4-fs
+cmake -B build && cmake --build build -j$(nproc)
 ```

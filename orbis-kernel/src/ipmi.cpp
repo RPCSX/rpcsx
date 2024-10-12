@@ -223,6 +223,10 @@ orbis::SysResult orbis::sysIpmiServerReceivePacket(Thread *thread,
     ptr<uint> unk;
   };
 
+  if (paramsSz != sizeof(IpmiServerReceivePacketParams)) {
+    return orbis::ErrorCode::INVAL;
+  }
+
   IpmiServerReceivePacketParams _params;
 
   ORBIS_RET_ON_ERROR(
@@ -265,9 +269,6 @@ orbis::SysResult orbis::sysIpmiServerReceivePacket(Thread *thread,
     auto asyncMessage = (IpmiAsyncMessageHeader *)_packet.message.data();
     ORBIS_LOG_ERROR(__FUNCTION__, server->name, asyncMessage->methodId,
                     asyncMessage->numInData, asyncMessage->pid);
-
-    ORBIS_LOG_ERROR(__FUNCTION__, server->name,
-                    *(std::uint64_t *)(*(long *)server->eventHandler + 0x18));
   }
 
   if (_params.bufferSize < _packet.message.size()) {
@@ -380,11 +381,13 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
     clientTid = session->server->tidToClientTid.at(thread->tid);
   }
 
+  ORBIS_LOG_ERROR(__FUNCTION__, session->client->name, _params.errorCode);
+
   if (_params.errorCode != 0) {
     ORBIS_LOG_ERROR(__FUNCTION__, session->client->name, _params.errorCode);
     thread->where();
 
-    // HACK: completely broken audio audio support should not be visible
+    // HACK: completely broken audio support should not be visible
     if (session->client->name == "SceSysAudioSystemIpc" &&
         _params.errorCode == -1) {
       _params.errorCode = 0;
@@ -1267,6 +1270,10 @@ orbis::SysResult orbis::sysIpmiClientWaitEventFlag(Thread *thread,
   };
 
   static_assert(sizeof(IpmiWaitEventFlagParam) == 0x28);
+
+  if (paramsSz != sizeof(IpmiWaitEventFlagParam)) {
+    return ErrorCode::INVAL;
+  }
 
   IpmiWaitEventFlagParam _params;
   ORBIS_RET_ON_ERROR(uread(_params, ptr<IpmiWaitEventFlagParam>(params)));

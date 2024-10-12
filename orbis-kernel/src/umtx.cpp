@@ -305,7 +305,7 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
     ORBIS_LOG_FATAL("umtx_cv_wait: UNKNOWN wflags", wflags);
     return ErrorCode::INVAL;
   }
-  if ((wflags & kCvWaitClockId) != 0 && ut + 1) {
+  if ((wflags & kCvWaitClockId) != 0 && ut + 1 && cv->clockid != 0) {
     ORBIS_LOG_WARNING("umtx_cv_wait: CLOCK_ID", wflags, cv->clockid);
     // std::abort();
     return ErrorCode::NOSYS;
