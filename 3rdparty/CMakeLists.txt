@@ -43,9 +43,17 @@ add_custom_command(
 add_custom_target(ffmpeg-configure DEPENDS ${FFMPEG_PATH}/config.h)
 
 function(import_ffmpeg_library name)
+    if (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+        set(MAKE_COMMAND $(MAKE) -j$(nproc))
+    elseif (${CMAKE_GENERATOR} STREQUAL "Ninja")
+        set(MAKE_COMMAND make -j$$(nproc))
+    else()
+        set(MAKE_COMMAND make)
+    endif()
+
     add_custom_command(
         OUTPUT "${FFMPEG_PATH}/lib${name}/lib${name}.a"
-        COMMAND $(MAKE) -C ${FFMPEG_PATH} "lib${name}/lib${name}.a"
+        COMMAND ${MAKE_COMMAND} -C ${FFMPEG_PATH} "lib${name}/lib${name}.a"
         COMMENT "Building lib${name}/lib${name}.a"
         DEPENDS ffmpeg-configure
         WORKING_DIRECTORY ${FFMPEG_PATH}
