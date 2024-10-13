@@ -42,22 +42,21 @@ add_custom_command(
 )
 add_custom_target(ffmpeg-configure DEPENDS ${FFMPEG_PATH}/config.h)
 
-add_custom_target(ffmpeg-build)
-add_custom_command(
-    TARGET ffmpeg-build
-    COMMAND $(MAKE) -C ${FFMPEG_PATH}
-    COMMENT "Building FFmpeg..."
-    DEPENDS ffmpeg-configure
-    WORKING_DIRECTORY ${FFMPEG_PATH}
-)
-
-add_library(ffmpeg-core INTERFACE)
-add_dependencies(ffmpeg-core ffmpeg-build)
-
 function(import_ffmpeg_library name)
+    add_custom_command(
+        OUTPUT "${FFMPEG_PATH}/lib${name}/lib${name}.a"
+        COMMAND $(MAKE) -C ${FFMPEG_PATH} "lib${name}/lib${name}.a"
+        COMMENT "Building lib${name}/lib${name}.a"
+        DEPENDS ffmpeg-configure
+        WORKING_DIRECTORY ${FFMPEG_PATH}
+    )
+
+    add_custom_target(ffmpeg-build-${name} DEPENDS "${FFMPEG_PATH}/lib${name}/lib${name}.a")
+
     add_library(ffmpeg::${name} STATIC IMPORTED GLOBAL)
     set_property(TARGET ffmpeg::${name} PROPERTY IMPORTED_LOCATION "${FFMPEG_PATH}/lib${name}/lib${name}.a")
     set_property(TARGET ffmpeg::${name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_PATH}")
+    add_dependencies(ffmpeg::${name} ffmpeg-build-${name})
 endfunction()
 
 import_ffmpeg_library(avcodec)
