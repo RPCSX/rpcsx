@@ -75,6 +75,9 @@ add_subdirectory(core)
 target_include_directories(rpcsx PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(rpcsx
 PUBLIC
+  ffmpeg::avcodec
+  ffmpeg::swresample
+  ffmpeg::avutil
   rpcsx-gpu
   orbis::kernel
   rx

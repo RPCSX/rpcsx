@@ -16,3 +16,9 @@
 [submodule "3rdparty/json"]
 	path = 3rdparty/json
 	url = ../../nlohmann/json.git
+[submodule "3rdparty/FFmpeg"]
+	path = 3rdparty/FFmpeg
+	url = ../../FFmpeg/FFmpeg.git
+[submodule "3rdparty/LibAtrac9"]
+	path = 3rdparty/LibAtrac9
+	url = ../../RPCSX/LibAtrac9.git
