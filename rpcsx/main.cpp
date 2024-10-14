@@ -915,9 +915,9 @@ int main(int argc, const char *argv[]) {
     break;
   }
 
-  rx::startWatchdog();
-
   setupSigHandlers();
+
+  rx::startWatchdog();
 
   rx::createGpuDevice();
   vfs::initialize();
