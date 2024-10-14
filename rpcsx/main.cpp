@@ -705,6 +705,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
     }
 
     orbis::kfree(flag, sizeof(*flag));
+    rx::attachProcess(hostPid);
     return {};
   }
 

@@ -16,6 +16,7 @@
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
 #include "orbis/vm.hpp"
+#include "rx/watchdog.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
@@ -287,7 +288,7 @@ orbis::SysResult
 query_memory_protection(orbis::Thread *thread, orbis::ptr<void> address,
                         orbis::ptr<MemoryProtection> protection) {
   if (vm::queryProtection(address, &protection->startAddress,
-                              &protection->endAddress, &protection->prot)) {
+                          &protection->endAddress, &protection->prot)) {
     return {};
   }
   return ErrorCode::INVAL;
@@ -296,8 +297,7 @@ query_memory_protection(orbis::Thread *thread, orbis::ptr<void> address,
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
                       orbis::sint flags, orbis::sint mode,
                       orbis::Ref<orbis::File> *file) {
-  return vfs::open(getAbsolutePath(path, thread), flags, mode, file,
-                       thread);
+  return vfs::open(getAbsolutePath(path, thread), flags, mode, file, thread);
 }
 
 orbis::SysResult shm_open(orbis::Thread *thread, const char *path,
@@ -320,8 +320,8 @@ orbis::SysResult rmdir(Thread *thread, ptr<const char> path) {
 orbis::SysResult rename(Thread *thread, ptr<const char> from,
                         ptr<const char> to) {
   ORBIS_LOG_TODO(__FUNCTION__, from, to);
-  return vfs::rename(getAbsolutePath(from, thread),
-                         getAbsolutePath(to, thread), thread);
+  return vfs::rename(getAbsolutePath(from, thread), getAbsolutePath(to, thread),
+                     thread);
 }
 
 orbis::SysResult blockpool_open(orbis::Thread *thread,
@@ -480,8 +480,7 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
 
   {
     orbis::Ref<orbis::File> file;
-    if (auto result = vfs::open(path, 0, 0, &file, thread);
-        result.isError()) {
+    if (auto result = vfs::open(path, 0, 0, &file, thread); result.isError()) {
       return result;
     }
   }
@@ -761,6 +760,8 @@ SysResult fork(Thread *thread, slong flags) {
     while (*flag == false) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
+
+    rx::attachProcess(hostPid);
 
     kfree(flag, sizeof(*flag));
 

@@ -1,8 +1,10 @@
 #include "rx/watchdog.hpp"
 #include "gpu/DeviceCtl.hpp"
 #include "orbis/KernelContext.hpp"
+#include <bit>
 #include <chrono>
 #include <csignal>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
@@ -21,9 +23,11 @@ static std::atomic<bool> g_runGpuRequested;
 static pid_t g_watchdogPid;
 static pid_t g_gpuPid;
 static char g_shmPath[256];
+static std::vector<int> g_attachedProcesses;
 
 enum class MessageId {
   RunGPU,
+  AttachProcess,
 };
 
 static void runGPU() {
@@ -61,9 +65,15 @@ static void runGPU() {
 }
 
 static void handleManagementSignal(siginfo_t *info) {
-  switch (static_cast<MessageId>(info->si_value.sival_int)) {
+  auto rawMessage = std::bit_cast<std::uintptr_t>(info->si_value.sival_ptr);
+  auto id = static_cast<MessageId>(static_cast<std::uint32_t>(rawMessage));
+  auto data = static_cast<std::uint32_t>(rawMessage >> 32);
+  switch (id) {
   case MessageId::RunGPU:
     g_runGpuRequested = true;
+    break;
+  case MessageId::AttachProcess:
+    g_attachedProcesses.push_back(data);
     break;
   }
 }
@@ -78,10 +88,12 @@ static void handle_watchdog_signal(int sig, siginfo_t *info, void *) {
   }
 }
 
-static void sendMessage(MessageId id) {
+static void sendMessage(MessageId id, std::uint32_t data) {
   sigqueue(g_watchdogPid, SIGUSR1,
            {
-               .sival_int = static_cast<int>(id),
+               .sival_ptr = std::bit_cast<void *>(
+                   ((static_cast<std::uintptr_t>(data) << 32) |
+                    static_cast<std::uintptr_t>(id))),
            });
 }
 
@@ -90,8 +102,10 @@ std::filesystem::path rx::getShmGuestPath(std::string_view path) {
   return std::format("{}/guest/{}", getShmPath(), path);
 }
 
-void rx::createGpuDevice() { sendMessage(MessageId::RunGPU); }
+void rx::createGpuDevice() { sendMessage(MessageId::RunGPU, 0); }
 void rx::shutdown() { kill(g_watchdogPid, SIGQUIT); }
+
+void rx::attachProcess(int pid) { sendMessage(MessageId::AttachProcess, pid); }
 
 static void killProcesses(std::vector<int> list) {
   int iteration = 0;
@@ -161,6 +175,18 @@ int rx::startWatchdog() {
     std::exit(-1);
   }
 
+  if (sigaction(SIGHUP, &act, nullptr)) {
+    perror("Error sigaction:");
+    std::exit(-1);
+  }
+
+  sigset_t sigSet;
+  sigemptyset(&sigSet);
+  sigaddset(&sigSet, SIGUSR1);
+  sigaddset(&sigSet, SIGINT);
+  sigaddset(&sigSet, SIGQUIT);
+  sigaddset(&sigSet, SIGHUP);
+
   int stat = 0;
   while (true) {
     auto childPid = wait(&stat);
@@ -185,10 +211,31 @@ int rx::startWatchdog() {
       g_runGpuRequested = false;
       runGPU();
     }
+
+    if (childPid <= 0) {
+      continue;
+    }
+
+    pthread_sigmask(SIG_BLOCK, &sigSet, nullptr);
+    for (std::size_t i = 0; i < g_attachedProcesses.size();) {
+      if (g_attachedProcesses[i] != childPid) {
+        continue;
+      }
+
+      if (i + 1 != g_attachedProcesses.size()) {
+        std::swap(g_attachedProcesses[i], g_attachedProcesses.back());
+      }
+      g_attachedProcesses.pop_back();
+    }
+    pthread_sigmask(SIG_UNBLOCK, &sigSet, nullptr);
   }
 
+  pthread_sigmask(SIG_BLOCK, &sigSet, nullptr);
+
   std::filesystem::remove_all(g_shmPath);
-  killProcesses({initProcessPid, g_gpuPid});
+  g_attachedProcesses.push_back(initProcessPid);
+  g_attachedProcesses.push_back(g_gpuPid);
+  killProcesses(g_attachedProcesses);
   ::wait(nullptr);
   std::_Exit(stat);
 }

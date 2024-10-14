@@ -8,5 +8,6 @@ const char *getShmPath();
 std::filesystem::path getShmGuestPath(std::string_view path);
 void createGpuDevice();
 void shutdown();
+void attachProcess(int pid);
 int startWatchdog();
 } // namespace rx
