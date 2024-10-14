@@ -61,6 +61,12 @@ static vk::Context createVkContext(Device *device) {
   std::vector<const char *> optionalLayers;
   bool enableValidation = rx::g_config.validateGpu;
 
+  std::uint64_t minAddress = 0x40000;
+  if (!rx::mem::reserve(reinterpret_cast<void *>(minAddress),
+                        0x600'0000'0000 - minAddress)) {
+    rx::die("failed to reserve userspace memory");
+  }
+
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   const char **glfwExtensions;
@@ -216,7 +222,7 @@ Device::Device() : vkContext(createVkContext(this)) {
     graphicsPipes[i].setDeQueue(
         Queue{
             .base = mainGfxRings[i],
-            .size = sizeof(mainGfxRings[i]),
+            .size = sizeof(mainGfxRings[i]) / sizeof(mainGfxRings[i][0]),
             .rptr = mainGfxRings[i],
             .wptr = mainGfxRings[i],
         },
@@ -517,10 +523,10 @@ void Device::mapProcess(std::uint32_t pid, int vmId) {
       std::abort();
     }
 
-    std::println(stderr,
-                 "map process {} memory, address {}-{}, type {:x}, vmId {}",
-                 (int)pid, memory.getPointer(startAddress),
-                 memory.getPointer(endAddress), slot.memoryType, vmId);
+    // std::println(stderr,
+    //              "map process {} memory, address {}-{}, type {:x}, vmId {}",
+    //              (int)pid, memory.getPointer(startAddress),
+    //              memory.getPointer(endAddress), slot.memoryType, vmId);
   }
 }
 
@@ -558,9 +564,9 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
     auto memory = amdgpu::RemoteMemory{process.vmId};
     rx::mem::protect(memory.getPointer(address), size, prot >> 4);
 
-    std::println(stderr, "protect process {} memory, address {}-{}, prot {:x}",
-                 (int)pid, memory.getPointer(address),
-                 memory.getPointer(address + size), prot);
+    // std::println(stderr, "protect process {} memory, address {}-{}, prot {:x}",
+    //              (int)pid, memory.getPointer(address),
+    //              memory.getPointer(address + size), prot);
   }
 }
 
@@ -911,9 +917,9 @@ void Device::mapMemory(std::uint32_t pid, std::uint64_t address,
             memory.getPointer(address + size), memoryType, offset, prot);
   }
 
-  std::println(stderr, "map memory of process {}, address {}-{}, prot {:x}",
-               (int)pid, memory.getPointer(address),
-               memory.getPointer(address + size), prot);
+  // std::println(stderr, "map memory of process {}, address {}-{}, prot {:x}",
+  //              (int)pid, memory.getPointer(address),
+  //              memory.getPointer(address + size), prot);
 }
 
 void Device::unmapMemory(std::uint32_t pid, std::uint64_t address,
