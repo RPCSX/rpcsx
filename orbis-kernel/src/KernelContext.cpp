@@ -196,8 +196,8 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
     std::abort();
   }
 
-  std::fprintf(stderr, "kalloc: allocate %lx-%lx, size = %lx, align=%lx\n",
-               heap, heap + size, size, align);
+  // std::fprintf(stderr, "kalloc: allocate %lx-%lx, size = %lx, align=%lx\n",
+  //              heap, heap + size, size, align);
 
   auto result = reinterpret_cast<void *>(heap);
   if (kDebugHeap > 0) {
@@ -217,8 +217,8 @@ void *KernelContext::kalloc(std::size_t size, std::size_t align) {
     align = std::min<std::size_t>(align, 4096);
     heap = (heap + (align - 1)) & ~(align - 1);
     size = 4096;
-    std::fprintf(stderr, "kalloc: protect %lx-%lx, size = %lx, align=%lx\n",
-                 heap, heap + size, size, align);
+    // std::fprintf(stderr, "kalloc: protect %lx-%lx, size = %lx, align=%lx\n",
+    //              heap, heap + size, size, align);
 
     auto result = ::mmap(reinterpret_cast<void *>(heap), size, PROT_NONE,
                          MAP_FIXED | MAP_ANONYMOUS | MAP_SHARED, -1, 0);
