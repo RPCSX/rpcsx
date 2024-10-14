@@ -134,6 +134,10 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     return orbis::ErrorCode::NOENT;
   }
 
+  if (change.filter == kEvFiltDisplay || change.filter == kEvFiltGraphicsCore) {
+    change.flags |= kEvClear;
+  }
+
   if (!noteLock.owns_lock()) {
     noteLock = std::unique_lock(nodeIt->mutex);
   }
@@ -300,7 +304,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
 
             if (note.event.filter == kEvFiltGraphicsCore ||
                 note.event.filter == kEvFiltDisplay) {
-              waitHack = true;
+              note.triggered = false;
             }
 
             if (note.event.flags & kEvDispatch) {
