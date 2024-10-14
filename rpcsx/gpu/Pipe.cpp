@@ -1116,17 +1116,22 @@ bool GraphicsPipe::setUConfigReg(Queue &queue) {
   auto data = queue.rptr + 2;
 
   if (index != 0) {
-    std::println(
-        stderr,
-        "set UConfig regs with index, offset: {:x}, count {}, index {}, {}",
-        offset, len, index,
-        gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
+    {
+      auto name =
+          gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset);
+      std::println(
+          stderr,
+          "set UConfig regs with index, offset: {:x}, count {}, index {}, {}",
+          offset, len, index, name ? name : "<null>");
+    }
 
     for (std::size_t i = 0; i < len; ++i) {
-      std::println(
-          stderr, "writing to {} value {:x}",
-          gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset + i),
-          data[i]);
+      auto id = decltype(uConfig)::kMmioOffset + offset + i;
+      if (auto regName = gnm::mmio::registerName(id)) {
+        std::println(stderr, "writing to {} value {:x}", regName, data[i]);
+      } else {
+        std::println(stderr, "writing to {:x} value {:x}", id, data[i]);
+      }
     }
   }
 
@@ -1152,17 +1157,22 @@ bool GraphicsPipe::setContextReg(Queue &queue) {
   auto data = queue.rptr + 2;
 
   if (index != 0) {
-    std::println(
-        stderr,
-        "set Context regs with index, offset: {:x}, count {}, index {}, {}",
-        offset, len, index,
-        gnm::mmio::registerName(decltype(context)::kMmioOffset + offset));
+    {
+      auto name =
+          gnm::mmio::registerName(decltype(context)::kMmioOffset + offset);
+      std::println(
+          stderr,
+          "set Context regs with index, offset: {:x}, count {}, index {}, {}",
+          offset, len, index, name ? name : "<null>");
+    }
 
     for (std::size_t i = 0; i < len; ++i) {
-      std::println(
-          stderr, "writing to {} value {:x}",
-          gnm::mmio::registerName(decltype(context)::kMmioOffset + offset + i),
-          data[i]);
+      auto id = decltype(context)::kMmioOffset + offset + i;
+      if (auto regName = gnm::mmio::registerName(id)) {
+        std::println(stderr, "writing to {} value {:x}", regName, data[i]);
+      } else {
+        std::println(stderr, "writing to {:x} value {:x}", id, data[i]);
+      }
     }
   }
 
