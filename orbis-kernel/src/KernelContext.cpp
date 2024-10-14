@@ -5,14 +5,15 @@
 #include <bit>
 #include <chrono>
 #include <csignal>
+#include <cstdio>
 #include <mutex>
 #include <sys/mman.h>
 #include <thread>
 #include <unistd.h>
 
 static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
-static constexpr auto kHeapBaseAddress = 0x00000600'0000'0000;
-static constexpr auto kHeapSize = 0x10'0000'0000;
+static constexpr std::uintptr_t kHeapBaseAddress = 0x00000600'0000'0000;
+static constexpr auto kHeapSize = 0x1'0000'0000;
 static constexpr int kDebugHeap = 0;
 
 namespace orbis {
@@ -21,11 +22,22 @@ thread_local Thread *g_currentThread;
 KernelContext &g_context = *[]() -> KernelContext * {
   // Allocate global shared kernel memory
   // TODO: randomize for hardening and reduce size
-  auto ptr = mmap(reinterpret_cast<void *>(kHeapBaseAddress), kHeapSize,
+  auto ptr = mmap(std::bit_cast<void *>(kHeapBaseAddress), kHeapSize,
                   PROT_READ | PROT_WRITE,
                   MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-  if (ptr == MAP_FAILED)
+  if (ptr == MAP_FAILED) {
+    perror("mmap failed");
+    FILE *maps = fopen("/proc/self/maps", "r");
+    char *line = nullptr;
+    std::size_t size = 0;
+    while (getline(&line, &size, maps) > 0) {
+      std::printf("%s", line);
+    }
+
+    free(line);
+    fclose(maps);
     std::abort();
+  }
 
   return new (ptr) KernelContext;
 }();
