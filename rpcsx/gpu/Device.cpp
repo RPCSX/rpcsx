@@ -67,8 +67,25 @@ static vk::Context createVkContext(Device *device) {
     rx::die("failed to reserve userspace memory");
   }
 
+  if (glfwPlatformSupported(GLFW_PLATFORM_WAYLAND)) {
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
+  }
+
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+  device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+
+  if (device->window == nullptr) {
+    glfwTerminate();
+
+    glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
+    glfwInit();
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+  }
+
   const char **glfwExtensions;
   uint32_t glfwExtensionCount = 0;
   glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -103,7 +120,6 @@ static vk::Context createVkContext(Device *device) {
         &device->debugMessenger));
   }
 
-  device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
   glfwCreateWindowSurface(vk::context->instance, device->window, nullptr,
                           &device->surface);
 
@@ -564,7 +580,8 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
     auto memory = amdgpu::RemoteMemory{process.vmId};
     rx::mem::protect(memory.getPointer(address), size, prot >> 4);
 
-    // std::println(stderr, "protect process {} memory, address {}-{}, prot {:x}",
+    // std::println(stderr, "protect process {} memory, address {}-{}, prot
+    // {:x}",
     //              (int)pid, memory.getPointer(address),
     //              memory.getPointer(address + size), prot);
   }
