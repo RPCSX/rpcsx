@@ -145,11 +145,11 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
   allowMonoDebug = true;
   if (sig != SIGINT) {
     char buf[128] = "";
-    int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal address=%p\n",
+    int len = snprintf(buf, sizeof(buf), " [%s] %u: Signal %u, address=%p\n",
                        orbis::g_currentThread ? "guest" : "host",
                        orbis::g_currentThread ? orbis::g_currentThread->tid
                                               : ::gettid(),
-                       info->si_addr);
+                       sig, info->si_addr);
     write(2, buf, len);
 
     if (std::size_t printed =
@@ -442,7 +442,6 @@ static void ps4InitDev() {
   });
 
   auto shm = createShmDevice();
-  vfs::addDevice("shm", shm);
   orbis::g_context.shmDevice = shm;
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();
 }
