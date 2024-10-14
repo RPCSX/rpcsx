@@ -13,7 +13,7 @@
 static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
 static constexpr auto kHeapBaseAddress = 0x00000800'0000'0000;
 static constexpr auto kHeapSize = 0x10'0000'0000;
-static constexpr int kDebugHeap = 2;
+static constexpr int kDebugHeap = 0;
 
 namespace orbis {
 thread_local Thread *g_currentThread;
