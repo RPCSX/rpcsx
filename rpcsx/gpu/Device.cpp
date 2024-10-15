@@ -67,24 +67,30 @@ static vk::Context createVkContext(Device *device) {
     rx::die("failed to reserve userspace memory");
   }
 
+  auto createWindow = [=] {
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+  };
+
+#ifdef GLFW_PLATFORM_WAYLAND
   if (glfwPlatformSupported(GLFW_PLATFORM_WAYLAND)) {
     glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
   }
 
   glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-  device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+  createWindow();
 
   if (device->window == nullptr) {
     glfwTerminate();
 
     glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
     glfwInit();
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+    createWindow();
   }
+#else
+  glfwInit();
+  createWindow();
+#endif
 
   const char **glfwExtensions;
   uint32_t glfwExtensionCount = 0;
@@ -474,8 +480,7 @@ void Device::start() {
   }
 }
 
-void Device::submitCommand(Ring &ring,
-                           std::span<const std::uint32_t> command) {
+void Device::submitCommand(Ring &ring, std::span<const std::uint32_t> command) {
   std::scoped_lock lock(writeCommandMtx);
   if (ring.wptr + command.size() > ring.base + ring.size) {
     while (ring.wptr != ring.rptr) {
@@ -605,8 +610,8 @@ void Device::onCommandBuffer(std::uint32_t pid, int cmdHeader,
   } else if (op == gnm::IT_INDIRECT_BUFFER) {
     graphicsPipes[0].setDeQueue(
         Ring::createFromRange(process.vmId,
-                               memory.getPointer<std::uint32_t>(address),
-                               size / sizeof(std::uint32_t)),
+                              memory.getPointer<std::uint32_t>(address),
+                              size / sizeof(std::uint32_t)),
         1);
   } else {
     rx::die("unimplemented command buffer %x", cmdHeader);
