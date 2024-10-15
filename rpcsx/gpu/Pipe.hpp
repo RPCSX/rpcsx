@@ -42,6 +42,7 @@ struct ComputePipe {
   CommandHandler commandHandlers[255];
   orbis::shared_mutex queueMtx[8];
   int index;
+  int currentQueueId;
   Ring queues[2][8];
   std::uint64_t drawIndexIndirPatchBase = 0;
 
@@ -49,6 +50,7 @@ struct ComputePipe {
 
   bool processAllRings();
   bool processRing(Ring &ring);
+  void setIndirectRing(int queueId, int level, Ring ring);
   void mapQueue(int queueId, Ring ring, std::unique_lock<orbis::shared_mutex> &lock);
   void waitForIdle(int queueId, std::unique_lock<orbis::shared_mutex> &lock);
   void submit(int queueId, std::uint32_t offset);
@@ -63,6 +65,7 @@ struct ComputePipe {
   bool releaseMem(Ring &ring);
   bool waitRegMem(Ring &ring);
   bool writeData(Ring &ring);
+  bool indirectBuffer(Ring &ring);
   bool unknownPacket(Ring &ring);
   bool handleNop(Ring &ring);
 

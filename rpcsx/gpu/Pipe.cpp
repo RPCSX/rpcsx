@@ -95,6 +95,7 @@ ComputePipe::ComputePipe(int index)
   commandHandlers[gnm::IT_RELEASE_MEM] = &ComputePipe::releaseMem;
   commandHandlers[gnm::IT_WAIT_REG_MEM] = &ComputePipe::waitRegMem;
   commandHandlers[gnm::IT_WRITE_DATA] = &ComputePipe::writeData;
+  commandHandlers[gnm::IT_INDIRECT_BUFFER] = &ComputePipe::indirectBuffer;
 }
 
 bool ComputePipe::processAllRings() {
@@ -104,6 +105,7 @@ bool ComputePipe::processAllRings() {
     std::lock_guard lock(queueMtx[&queue - queues]);
 
     for (auto &ring : queue) {
+      currentQueueId = &ring - queue;
       if (!processRing(ring)) {
         allProcessed = false;
       }
@@ -170,6 +172,19 @@ bool ComputePipe::processRing(Ring &ring) {
   }
 
   return true;
+}
+
+void ComputePipe::setIndirectRing(int queueId, int indirectLevel, Ring ring) {
+  if (indirectLevel != 1) {
+    rx::die("unexpected compute indirect ring indirect level %d",
+            ring.indirectLevel);
+  }
+
+  ring.indirectLevel = indirectLevel;
+  std::println("mapQueue: {}, {}, {}", (void *)ring.base, (void *)ring.wptr,
+               ring.size);
+
+  queues[1 - ring.indirectLevel][queueId] = ring;
 }
 
 void ComputePipe::mapQueue(int queueId, Ring ring,
@@ -387,6 +402,24 @@ bool ComputePipe::writeData(Ring &ring) {
     std::memcpy(dstPointer, data, len * sizeof(std::uint32_t));
   }
 
+  return true;
+}
+
+bool ComputePipe::indirectBuffer(Ring &ring) {
+  rx::dieIf(ring.indirectLevel < 0, "unexpected indirect buffer from CP");
+
+  auto addressLo = ring.rptr[1] & ~3;
+  auto addressHi = ring.rptr[2] & ((1 << 8) - 1);
+  int vmId = ring.rptr[3] >> 24;
+  auto ibSize = ring.rptr[3] & ((1 << 20) - 1);
+  auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
+
+  if (ring.indirectLevel != 0) {
+    vmId = ring.vmId;
+  }
+  auto rptr = RemoteMemory{vmId}.getPointer<std::uint32_t>(address);
+  setIndirectRing(currentQueueId, ring.indirectLevel + 1,
+                  Ring::createFromRange(vmId, rptr, ibSize));
   return true;
 }
 
