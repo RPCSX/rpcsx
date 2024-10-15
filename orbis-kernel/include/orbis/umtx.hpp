@@ -29,6 +29,30 @@ inline constexpr auto kCvWaitCheckUnparking = 0x01;
 inline constexpr auto kCvWaitAbsTime = 0x02;
 inline constexpr auto kCvWaitClockId = 0x04;
 
+inline constexpr auto kUmtxOpLock = 0;
+inline constexpr auto kUmtxOpUnlock = 1;
+inline constexpr auto kUmtxOpWait = 2;
+inline constexpr auto kUmtxOpWake = 3;
+inline constexpr auto kUmtxOpMutexTrylock = 4;
+inline constexpr auto kUmtxOpMutexLock = 5;
+inline constexpr auto kUmtxOpMutexUnock = 6;
+inline constexpr auto kUmtxOpSetCeiling = 7;
+inline constexpr auto kUmtxOpCvWait = 8;
+inline constexpr auto kUmtxOpCvSignal = 9;
+inline constexpr auto kUmtxOpCvBroadcast = 10;
+inline constexpr auto kUmtxOpWaitUint = 11;
+inline constexpr auto kUmtxOpRwRdLock = 12;
+inline constexpr auto kUmtxOpRwWrLock = 13;
+inline constexpr auto kUmtxOpRwUnlock = 14;
+inline constexpr auto kUmtxOpWaitUintPrivate = 15;
+inline constexpr auto kUmtxOpWakePrivate = 16;
+inline constexpr auto kUmtxOpMutexWait = 17;
+inline constexpr auto kUmtxOpMutexWake = 18;
+inline constexpr auto kUmtxOpSemWait = 19;
+inline constexpr auto kUmtxOpSemWake = 20;
+inline constexpr auto kUmtxOpNwakePrivate = 21;
+inline constexpr auto kUmtxOpMutexWake2 = 22;
+
 inline constexpr auto kSemNamed = 2;
 
 struct umtx {
