@@ -84,36 +84,35 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   };
 
   switch (op) {
-  case 0: {
+  case kUmtxOpLock: {
     return with_timeout([&](std::uint64_t ut) {
       return umtx_lock_umtx(thread, (ptr<umtx>)obj, val, ut);
     });
   }
-  case 1:
+  case kUmtxOpUnlock:
     return umtx_unlock_umtx(thread, (ptr<umtx>)obj, val);
-  case 2: {
+  case kUmtxOpWait: {
     return with_timeout(
         [&](std::uint64_t ut) {
           return umtx_wait(thread, obj, val, ut, false, true);
         },
         false);
   }
-  case 3:
+  case kUmtxOpWake:
     return umtx_wake(thread, obj, val);
-  case 4:
+  case kUmtxOpMutexTrylock:
     return umtx_trylock_umutex(thread, (ptr<umutex>)obj);
-  case 5: {
+  case kUmtxOpMutexLock: {
     return with_timeout([&](std::uint64_t ut) {
       return umtx_lock_umutex(thread, (ptr<umutex>)obj, ut);
     });
   }
-  case 6:
+  case kUmtxOpMutexUnock:
     return umtx_unlock_umutex(thread, (ptr<umutex>)obj);
-  case 7:
+  case kUmtxOpSetCeiling:
     return umtx_set_ceiling(thread, (ptr<umutex>)obj, val,
                             (ptr<uint32_t>)uaddr1);
-
-  case 8: {
+  case kUmtxOpCvWait: {
     return with_timeout(
         [&](std::uint64_t ut) {
           return umtx_cv_wait(thread, (ptr<ucond>)obj, (ptr<umutex>)uaddr1, ut,
@@ -121,55 +120,54 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
         },
         false);
   }
-
-  case 9:
+  case kUmtxOpCvSignal:
     return umtx_cv_signal(thread, (ptr<ucond>)obj);
-  case 10:
+  case kUmtxOpCvBroadcast:
     return umtx_cv_broadcast(thread, (ptr<ucond>)obj);
-  case 11: {
+  case kUmtxOpWaitUint: {
     return with_timeout(
         [&](std::uint64_t ut) {
           return umtx_wait(thread, obj, val, ut, true, true);
         },
         false);
   }
-  case 12:
+  case kUmtxOpRwRdLock:
     return with_timeout([&](std::uint64_t ut) {
       return umtx_rw_rdlock(thread, (ptr<urwlock>)obj, val, ut);
     });
-  case 13:
+  case kUmtxOpRwWrLock:
     return with_timeout([&](std::uint64_t ut) {
       return umtx_rw_wrlock(thread, (ptr<urwlock>)obj, ut);
     });
-  case 14:
+  case kUmtxOpRwUnlock:
     return umtx_rw_unlock(thread, (ptr<urwlock>)obj);
-  case 15: {
+  case kUmtxOpWaitUintPrivate: {
     return with_timeout(
         [&](std::uint64_t ut) {
           return umtx_wait(thread, obj, val, ut, true, false);
         },
         false);
   }
-  case 16:
+  case kUmtxOpWakePrivate:
     return umtx_wake_private(thread, obj, val);
-  case 17: {
+  case kUmtxOpMutexWait: {
     return with_timeout([&](std::uint64_t ut) {
       return umtx_wait_umutex(thread, (ptr<umutex>)obj, ut);
     });
   }
-  case 18:
+  case kUmtxOpMutexWake:
     return umtx_wake_umutex(thread, (ptr<umutex>)obj, 0);
-  case 19:
+  case kUmtxOpSemWait:
     return with_timeout(
         [&](std::uint64_t ut) {
           return umtx_sem_wait(thread, (ptr<usem>)obj, ut);
         },
         false);
-  case 20:
+  case kUmtxOpSemWake:
     return umtx_sem_wake(thread, (ptr<usem>)obj);
-  case 21:
+  case kUmtxOpNwakePrivate:
     return umtx_nwake_private(thread, (ptr<void *>)obj, val);
-  case 22:
+  case kUmtxOpMutexWake2:
     return umtx_wake2_umutex(thread, obj, val, uaddr1, uaddr2);
   case 23:
     ORBIS_LOG_ERROR("sys__umtx_op: unknown wake operation", op, val, uaddr1, uaddr2);
