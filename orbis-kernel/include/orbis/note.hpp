@@ -2,8 +2,8 @@
 
 #include "KernelAllocator.hpp"
 #include "orbis-config.hpp"
+#include "orbis/utils/Rc.hpp"
 #include "utils/SharedMutex.hpp"
-#include <mutex>
 #include <set>
 
 namespace orbis {
@@ -71,6 +71,7 @@ struct KEvent {
   ptr<void> udata;
 };
 
+struct EventEmitter;
 struct KQueue;
 struct KNote {
   shared_mutex mutex;
@@ -80,6 +81,7 @@ struct KNote {
   bool enabled = true;
   bool triggered = false;
   void *linked = nullptr; // TODO: use Ref<>
+  kvector<Ref<EventEmitter>> emitters;
 
   ~KNote();
 };
@@ -88,6 +90,8 @@ struct EventEmitter : orbis::RcBase {
   shared_mutex mutex;
   std::set<KNote *, std::less<>, kallocator<KNote *>> notes;
 
-  void emit(uint filter, uint fflags = 0, intptr_t data = 0);
+  void emit(sshort filter, uint fflags = 0, intptr_t data = 0);
+  void subscribe(KNote *note);
+  void unsubscribe(KNote *note);
 };
 } // namespace orbis

@@ -113,17 +113,15 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
         nodeIt->file = fd;
 
         if (auto eventEmitter = fd->event) {
-          std::unique_lock lock(eventEmitter->mutex);
-          // if (change.filter == kEvFiltWrite) {
-          // nodeIt->triggered = true;
-          // kq->cv.notify_all(kq->mtx);
-          // }
+          eventEmitter->subscribe(&*nodeIt);
           nodeIt->triggered = true;
-          eventEmitter->notes.insert(&*nodeIt);
           kq->cv.notify_all(kq->mtx);
         } else if (note.file->hostFd < 0) {
           ORBIS_LOG_ERROR("Unimplemented event emitter", change.ident);
         }
+      } else if (change.filter == kEvFiltGraphicsCore ||
+                 change.filter == kEvFiltDisplay) {
+        g_context.deviceEventEmitter->subscribe(&*nodeIt);
       }
     }
   }
@@ -134,6 +132,10 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     }
 
     return orbis::ErrorCode::NOENT;
+  }
+
+  if (change.filter == kEvFiltDisplay || change.filter == kEvFiltGraphicsCore) {
+    change.flags |= kEvClear;
   }
 
   if (!noteLock.owns_lock()) {
@@ -172,19 +174,14 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
       nodeIt->triggered = true;
       kq->cv.notify_all(kq->mtx);
     }
-  } else if (change.filter == kEvFiltGraphicsCore) {
+  } else if (change.filter == kEvFiltDisplay && change.ident >> 48 == 0x6301) {
     nodeIt->triggered = true;
-
-    if (change.ident == 0x84) {
-      // clock change event
-      nodeIt->event.data |= 1000ull << 16; // clock
-    }
     kq->cv.notify_all(kq->mtx);
-  } else if (change.filter == kEvFiltDisplay) {
-    if (change.ident != 0x51000100000000 && change.ident != 0x63010100000000) {
-      nodeIt->triggered = true;
-      kq->cv.notify_all(kq->mtx);
-    }
+  } else if (change.filter == kEvFiltGraphicsCore && change.ident == 0x84) {
+    nodeIt->triggered = true;
+    nodeIt->event.data |= 1000ull << 16; // clock
+
+    kq->cv.notify_all(kq->mtx);
   }
 
   return {};
@@ -307,7 +304,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
 
             if (note.event.filter == kEvFiltGraphicsCore ||
                 note.event.filter == kEvFiltDisplay) {
-              waitHack = true;
+              note.triggered = false;
             }
 
             if (note.event.flags & kEvDispatch) {

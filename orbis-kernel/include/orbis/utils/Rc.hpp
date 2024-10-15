@@ -49,11 +49,11 @@ template <typename T> class Ref {
 
 public:
   Ref() = default;
-  Ref(std::nullptr_t) {}
+  Ref(std::nullptr_t) noexcept {}
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
-  Ref(OT *ref) : m_ref(ref) {
+  Ref(OT *ref) noexcept : m_ref(ref) {
     if (m_ref != nullptr) {
       ref->incRef();
     }
@@ -61,7 +61,7 @@ public:
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
-  Ref(const Ref<OT> &other) : m_ref(other.get()) {
+  Ref(const Ref<OT> &other) noexcept : m_ref(other.get()) {
     if (m_ref != nullptr) {
       m_ref->incRef();
     }
@@ -69,42 +69,42 @@ public:
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
-  Ref(Ref<OT> &&other) : m_ref(other.release()) {}
+  Ref(Ref<OT> &&other) noexcept : m_ref(other.release()) {}
 
-  Ref(const Ref &other) : m_ref(other.get()) {
+  Ref(const Ref &other) noexcept : m_ref(other.get()) {
     if (m_ref != nullptr) {
       m_ref->incRef();
     }
   }
-  Ref(Ref &&other) : m_ref(other.release()) {}
+  Ref(Ref &&other) noexcept : m_ref(other.release()) {}
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
-  Ref &operator=(Ref<OT> &&other) {
+  Ref &operator=(Ref<OT> &&other) noexcept {
     other.template cast<T>().swap(*this);
     return *this;
   }
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
-  Ref &operator=(OT *other) {
+  Ref &operator=(OT *other) noexcept {
     *this = Ref(other);
     return *this;
   }
 
   template <typename OT>
     requires(std::is_base_of_v<T, OT>)
-  Ref &operator=(const Ref<OT> &other) {
+  Ref &operator=(const Ref<OT> &other) noexcept {
     *this = Ref(other);
     return *this;
   }
 
-  Ref &operator=(const Ref &other) {
+  Ref &operator=(const Ref &other) noexcept {
     *this = Ref(other);
     return *this;
   }
 
-  Ref &operator=(Ref &&other) {
+  Ref &operator=(Ref &&other) noexcept {
     other.swap(*this);
     return *this;
   }
@@ -115,7 +115,7 @@ public:
     }
   }
 
-  void swap(Ref<T> &other) { std::swap(m_ref, other.m_ref); }
+  void swap(Ref<T> &other) noexcept { std::swap(m_ref, other.m_ref); }
   T *get() const { return m_ref; }
   T *release() { return std::exchange(m_ref, nullptr); }
   T *operator->() const { return m_ref; }
@@ -126,10 +126,17 @@ public:
   auto operator<=>(const Ref &other) const = default;
 
   template <typename OtherT> Ref<OtherT> cast() {
-    return Ref<OtherT>(dynamic_cast<OtherT *>(m_ref));
+    return dynamic_cast<OtherT *>(m_ref);
   }
   template <typename OtherT> Ref<OtherT> staticCast() {
-    return Ref<OtherT>(static_cast<OtherT *>(m_ref));
+    return static_cast<OtherT *>(m_ref);
+  }
+
+  template <typename OtherT> OtherT *rawCast() {
+    return dynamic_cast<OtherT *>(m_ref);
+  }
+  template <typename OtherT> OtherT *rawStaticCast() {
+    return static_cast<OtherT *>(m_ref);
   }
 };
 

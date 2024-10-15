@@ -307,8 +307,8 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
     case sysctl_ctl::unspec: {
       switch (name[1]) {
       case 3: {
-        std::fprintf(stderr, "   unspec - get name of '%s'\n",
-                     std::string((char *)new_, newlen).c_str());
+        // std::fprintf(stderr, "   unspec - get name of '%s'\n",
+        //              std::string((char *)new_, newlen).c_str());
         auto searchName = std::string_view((char *)new_, newlen);
         auto *dest = (std::uint32_t *)old;
         std::uint32_t count = 0;

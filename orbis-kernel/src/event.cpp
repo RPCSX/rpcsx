@@ -1,7 +1,13 @@
 #include "event.hpp"
+
 #include "thread/Process.hpp"
+#include <algorithm>
 
 orbis::KNote::~KNote() {
+  while (!emitters.empty()) {
+    emitters.back()->unsubscribe(this);
+  }
+
   if (linked == nullptr) {
     return;
   }
@@ -14,7 +20,7 @@ orbis::KNote::~KNote() {
   }
 }
 
-void orbis::EventEmitter::emit(uint filter, uint fflags, intptr_t data) {
+void orbis::EventEmitter::emit(sshort filter, uint fflags, intptr_t data) {
   std::lock_guard lock(mutex);
 
   for (auto note : notes) {
@@ -39,4 +45,29 @@ void orbis::EventEmitter::emit(uint filter, uint fflags, intptr_t data) {
     note->event.data = data;
     note->queue->cv.notify_all(note->queue->mtx);
   }
+}
+
+void orbis::EventEmitter::subscribe(KNote *note) {
+  std::lock_guard lock(mutex);
+  notes.insert(note);
+  note->emitters.emplace_back(this);
+}
+
+void orbis::EventEmitter::unsubscribe(KNote *note) {
+  std::lock_guard lock(mutex);
+  notes.erase(note);
+
+  auto it = std::ranges::find(note->emitters, this);
+  if (it == note->emitters.end()) {
+    return;
+  }
+
+  std::size_t index = it - note->emitters.begin();
+  auto lastEmitter = note->emitters.size() - 1;
+
+  if (index != lastEmitter) {
+    std::swap(note->emitters[index], note->emitters[lastEmitter]);
+  }
+
+  note->emitters.pop_back();
 }
