@@ -66,6 +66,7 @@ struct ComputePipe {
   bool waitRegMem(Ring &ring);
   bool writeData(Ring &ring);
   bool indirectBuffer(Ring &ring);
+  bool acquireMem(Ring &ring);
   bool unknownPacket(Ring &ring);
   bool handleNop(Ring &ring);
 
