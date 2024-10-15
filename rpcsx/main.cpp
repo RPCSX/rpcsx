@@ -321,6 +321,9 @@ static void ps4InitDev() {
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
+  auto dce = createDceCharacterDevice();
+  orbis::g_context.dceDevice = dce;
+
   auto ttyFd = ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
   auto consoleDev = createConsoleCharacterDevice(STDIN_FILENO, ttyFd);
   auto mbus = static_cast<MBusDevice *>(createMBusCharacterDevice());
@@ -357,7 +360,7 @@ static void ps4InitDev() {
   vfs::addDevice("zero", createZeroCharacterDevice());
   vfs::addDevice("null", createNullCharacterDevice());
   vfs::addDevice("dipsw", createDipswCharacterDevice());
-  vfs::addDevice("dce", createDceCharacterDevice());
+  vfs::addDevice("dce", dce);
   vfs::addDevice("hmd_cmd", createHmdCmdCharacterDevice());
   vfs::addDevice("hmd_snsr", createHmdSnsrCharacterDevice());
   vfs::addDevice("hmd_3da", createHmd3daCharacterDevice());

@@ -112,7 +112,7 @@ struct Device : orbis::RcBase, DeviceContext {
     return caches[vmId].createComputeTag(scheduler);
   }
 
-  void submitCommand(Queue &ring, std::span<const std::uint32_t> command);
+  void submitCommand(Ring &ring, std::span<const std::uint32_t> command);
   void submitGfxCommand(int gfxPipe, std::span<const std::uint32_t> command);
 
   void mapProcess(std::uint32_t pid, int vmId);

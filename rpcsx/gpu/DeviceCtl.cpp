@@ -117,5 +117,49 @@ void DeviceCtl::registerBufferAttribute(std::uint32_t pid,
   process.bufferAttributes[attr.attrId] = attr;
 }
 
+void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
+                                std::uint32_t pipeId, std::uint32_t queueId,
+                                std::uint32_t vqueueId,
+                                orbis::uint64_t ringBaseAddress,
+                                orbis::uint64_t readPtrAddress,
+                                orbis::uint64_t doorbell,
+                                orbis::uint64_t ringSize) {
+  if (meId != 1) {
+    rx::die("unexpected ME %d", meId);
+  }
+
+  auto &pipe = mDevice->computePipes[pipeId];
+  auto lock = pipe.lockQueue(queueId);
+  auto memory = RemoteMemory{vmId};
+  auto base = memory.getPointer<std::uint32_t>(ringBaseAddress);
+  pipe.mapQueue(queueId,
+                Ring{
+                    .vmId = vmId,
+                    .indirectLevel = 0,
+                    .doorbell = memory.getPointer<std::uint32_t>(doorbell),
+                    .base = base,
+                    .size = ringSize,
+                    .rptr = base,
+                    .wptr = base,
+                    .rptrReportLocation =
+                        memory.getPointer<std::uint32_t>(readPtrAddress),
+                },
+                lock);
+
+  auto config = std::bit_cast<amdgpu::Registers::ComputeConfig *>(doorbell);
+  config->state = 1;
+}
+
+void DeviceCtl::submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
+                                   std::uint32_t queueId,
+                                   std::uint64_t offset) {
+  if (meId != 1) {
+    rx::die("unexpected ME %d", meId);
+  }
+
+  auto &pipe = mDevice->computePipes[pipeId];
+  pipe.submit(queueId, offset);
+}
+
 void DeviceCtl::start() { mDevice->start(); }
 void DeviceCtl::waitForIdle() { mDevice->waitForIdle(); }

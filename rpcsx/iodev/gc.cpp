@@ -1,5 +1,6 @@
 #include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
+#include "iodev/dce.hpp"
 #include "iodev/dmem.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/KernelContext.hpp"
@@ -87,11 +88,11 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       for (unsigned i = 0; i < args->count; ++i) {
         gpu.submitGfxCommand(gcFile->gfxPipe,
-                              orbis::g_currentThread->tproc->vmId,
-                              {args->cmds + i * 4, 4});
+                             orbis::g_currentThread->tproc->vmId,
+                             {args->cmds + i * 4, 4});
       }
     } else {
-      return orbis::ErrorCode::INVAL;
+      return orbis::ErrorCode::BUSY;
     }
     break;
   }
@@ -106,7 +107,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitSwitchBuffer(orbis::g_currentThread->tproc->vmId);
     } else {
-      return orbis::ErrorCode::INVAL;
+      return orbis::ErrorCode::BUSY;
     }
 
     // ORBIS_LOG_ERROR("gc ioctl 0xc0088101", args->arg0, args->arg1);
@@ -127,11 +128,11 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       for (unsigned i = 0; i < args->count; ++i) {
         gpu.submitGfxCommand(gcFile->gfxPipe,
-                              orbis::g_currentThread->tproc->vmId,
-                              {args->cmds + i * 4, 4});
+                             orbis::g_currentThread->tproc->vmId,
+                             {args->cmds + i * 4, 4});
       }
     } else {
-      return orbis::ErrorCode::INVAL;
+      return orbis::ErrorCode::BUSY;
     }
 
     // orbis::bridge.sendDoFlip();
@@ -142,7 +143,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.waitForIdle();
     } else {
-      return orbis::ErrorCode::INVAL;
+      return orbis::ErrorCode::BUSY;
     }
     break;
   }
@@ -193,64 +194,53 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
   case 0xc030810d: { // map compute queue
     struct Args {
-      std::uint32_t pipeHi;
-      std::uint32_t pipeLo;
-      std::uint32_t queueId;
-      std::uint32_t offset;
-      std::uint64_t ringBaseAddress;
-      std::uint64_t readPtrAddress;
-      std::uint64_t dingDongPtr;
-      std::uint32_t lenLog2;
+      orbis::uint32_t meId;
+      orbis::uint32_t pipeId;
+      orbis::uint32_t queueId;
+      orbis::uint32_t vqueueId;
+      orbis::uintptr_t ringBaseAddress;
+      orbis::uintptr_t readPtrAddress;
+      orbis::uintptr_t doorbell;
+      orbis::uint32_t ringSize;
     };
 
     auto args = reinterpret_cast<Args *>(argp);
 
-    ORBIS_LOG_ERROR("gc ioctl map compute queue", args->pipeHi, args->pipeLo,
-                    args->queueId, args->offset, args->ringBaseAddress,
-                    args->readPtrAddress, args->dingDongPtr, args->lenLog2);
+    ORBIS_LOG_ERROR("gc ioctl map compute queue", args->meId, args->pipeId,
+                    args->queueId, args->vqueueId, args->ringBaseAddress,
+                    args->readPtrAddress, args->doorbell, args->ringSize);
 
-    rx::die("gc ioctl map compute queue");
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.mapComputeQueue(thread->tproc->vmId, args->meId, args->pipeId,
+                          args->queueId, args->vqueueId, args->ringBaseAddress,
+                          args->readPtrAddress, args->doorbell,
+                          static_cast<std::uint64_t>(1) << args->ringSize);
 
-    // auto id = ((args->pipeHi * 4) + args->pipeLo) * 8 + args->queueId;
-    // device->computeQueues[id] = {
-    //     .ringBaseAddress = args->ringBaseAddress,
-    //     .readPtrAddress = args->readPtrAddress,
-    //     .dingDongPtr = args->dingDongPtr,
-    //     .len = static_cast<std::uint64_t>(1) << args->lenLog2,
-    // };
-    // args->pipeHi = 0x769c766;
-    // args->pipeLo = 0x72e8e3c1;
-    // args->queueId = -0x248d50d8;
-    // args->offset = 0xd245ed58;
-
-    // ((std::uint64_t *)args->dingDongPtr)[0xf0 / sizeof(std::uint64_t)] = 1;
+    } else {
+      return orbis::ErrorCode::BUSY;
+    }
     break;
   }
 
   case 0xc010811c: {
     // ding dong for workload
     struct Args {
-      std::uint32_t pipeHi;
-      std::uint32_t pipeLo;
+      std::uint32_t meId;
+      std::uint32_t pipeId;
       std::uint32_t queueId;
       std::uint32_t nextStartOffsetInDw;
     };
 
     auto args = reinterpret_cast<Args *>(argp);
-    ORBIS_LOG_ERROR("gc ioctl ding dong for workload", args->pipeHi,
-                    args->pipeLo, args->queueId, args->nextStartOffsetInDw);
-    rx::die("gc ioctl ding dong for workload");
+    ORBIS_LOG_ERROR("gc ioctl ding dong for workload", args->meId, args->pipeId,
+                    args->queueId, args->nextStartOffsetInDw);
 
-    // auto id = ((args->pipeHi * 4) + args->pipeLo) * 8 + args->queueId;
-
-    // auto queue = device->computeQueues.at(id);
-    // auto address = (queue.ringBaseAddress + queue.offset);
-    // auto endOffset = static_cast<std::uint64_t>(args->nextStartOffsetInDw) <<
-    // 2; auto size = endOffset - queue.offset;
-
-    // rx::bridge.sendCommandBuffer(thread->tproc->pid, id, address, size);
-
-    // queue.offset = endOffset;
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.submitComputeQueue(args->meId, args->pipeId, args->queueId,
+                           args->nextStartOffsetInDw);
+    } else {
+      return orbis::ErrorCode::BUSY;
+    }
     break;
   }
 
@@ -336,6 +326,9 @@ orbis::ErrorCode GcDevice::open(orbis::Ref<orbis::File> *file, const char *path,
 }
 
 void GcDevice::addClient(orbis::Process *process) {
+  auto dce = orbis::g_context.dceDevice.rawStaticCast<DceDevice>();
+  dce->initializeProcess(process);
+
   std::lock_guard lock(mtx);
   auto &client = clients[process->pid];
   ++client;

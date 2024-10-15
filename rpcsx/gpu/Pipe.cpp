@@ -8,6 +8,7 @@
 #include "vk.hpp"
 #include <bit>
 #include <cstdio>
+#include <mutex>
 #include <print>
 #include <rx/bits.hpp>
 #include <rx/die.hpp>
@@ -81,77 +82,336 @@ static bool compare(int cmpFn, std::uint32_t poll, std::uint32_t mask,
   return false;
 }
 
-ComputePipe::ComputePipe(int index) : scheduler(createComputeScheduler(index)) {
+ComputePipe::ComputePipe(int index)
+    : scheduler(createComputeScheduler(index)), index(index) {
   for (auto &handler : commandHandlers) {
     handler = &ComputePipe::unknownPacket;
   }
 
   commandHandlers[gnm::IT_NOP] = &ComputePipe::handleNop;
+  commandHandlers[gnm::IT_SET_SH_REG] = &ComputePipe::setShReg;
+  commandHandlers[gnm::IT_DISPATCH_DIRECT] = &ComputePipe::dispatchDirect;
+  commandHandlers[gnm::IT_DISPATCH_INDIRECT] = &ComputePipe::dispatchIndirect;
+  commandHandlers[gnm::IT_RELEASE_MEM] = &ComputePipe::releaseMem;
+  commandHandlers[gnm::IT_WAIT_REG_MEM] = &ComputePipe::waitRegMem;
+  commandHandlers[gnm::IT_WRITE_DATA] = &ComputePipe::writeData;
 }
 
 bool ComputePipe::processAllRings() {
   bool allProcessed = true;
 
-  for (auto &ring : queues) {
-    processRing(ring);
+  for (auto &queue : queues) {
+    std::lock_guard lock(queueMtx[&queue - queues]);
 
-    if (ring.rptr != ring.wptr) {
-      allProcessed = false;
-      break;
+    for (auto &ring : queue) {
+      if (!processRing(ring)) {
+        allProcessed = false;
+      }
     }
   }
 
   return allProcessed;
 }
 
-void ComputePipe::processRing(Queue &queue) {
-  while (queue.rptr != queue.wptr) {
-    if (queue.rptr >= queue.base + queue.size) {
-      queue.rptr = queue.base;
-    }
-
-    auto header = *queue.rptr;
-    auto type = rx::getBits(header, 31, 30);
-
-    if (type == 3) {
-      auto op = rx::getBits(header, 15, 8);
-      auto len = rx::getBits(header, 29, 16) + 2;
-
-      // std::fprintf(stderr, "queue %d: %s\n", queue.indirectLevel,
-      //              gnm::pm4OpcodeToString(op));
-
-      if (op == gnm::IT_COND_EXEC) {
-        rx::die("unimplemented COND_EXEC");
-      }
-
-      auto handler = commandHandlers[op];
-      if (!(this->*handler)(queue)) {
-        return;
-      }
-
-      queue.rptr += len;
-      continue;
-    }
-
-    if (type == 2) {
-      ++queue.rptr;
-      continue;
-    }
-
-    rx::die("unexpected pm4 packet type %u", type);
+bool ComputePipe::processRing(Ring &ring) {
+  if (ring.size == 0) {
+    return true;
   }
-}
 
-bool ComputePipe::unknownPacket(Queue &queue) {
-  auto op = rx::getBits(queue.rptr[0], 15, 8);
+  while (true) {
+    if (ring.rptrReportLocation != nullptr) {
+      // FIXME: verify
+      ring.rptr = ring.base + *ring.rptrReportLocation;
+    }
 
-  rx::die("unimplemented compute pm4 packet: %s, queue %u\n",
-          gnm::pm4OpcodeToString(op), queue.indirectLevel);
+    while (ring.rptr != ring.wptr) {
+      if (ring.rptr >= ring.base + ring.size) {
+        ring.rptr = ring.base;
+        continue;
+      }
+
+      auto header = *ring.rptr;
+      auto type = rx::getBits(header, 31, 30);
+
+      if (type == 3) {
+        auto op = rx::getBits(header, 15, 8);
+        auto len = rx::getBits(header, 29, 16) + 2;
+
+        // std::fprintf(stderr, "queue %d: %s\n", ring.indirectLevel,
+        //              gnm::pm4OpcodeToString(op));
+
+        if (op == gnm::IT_COND_EXEC) {
+          rx::die("unimplemented COND_EXEC");
+        }
+
+        auto handler = commandHandlers[op];
+        if (!(this->*handler)(ring)) {
+          if (ring.rptrReportLocation != nullptr) {
+            *ring.rptrReportLocation = ring.rptr - ring.base;
+          }
+          return false;
+        }
+
+        ring.rptr += len;
+        continue;
+      }
+
+      if (type == 2) {
+        ++ring.rptr;
+        continue;
+      }
+
+      rx::die("unexpected pm4 packet type %u", type);
+    }
+
+    if (ring.rptrReportLocation != nullptr) {
+      *ring.rptrReportLocation = ring.rptr - ring.base;
+    }
+  }
 
   return true;
 }
 
-bool ComputePipe::handleNop(Queue &queue) { return true; }
+void ComputePipe::mapQueue(int queueId, Ring ring,
+                           std::unique_lock<orbis::shared_mutex> &lock) {
+  if (ring.indirectLevel < 0 || ring.indirectLevel > 1) {
+    rx::die("unexpected compute ring indirect level %d", ring.indirectLevel);
+  }
+
+  if (ring.indirectLevel == 0) {
+    waitForIdle(queueId, lock);
+  }
+
+  std::println("mapQueue: {}, {}, {}", (void *)ring.base, (void *)ring.wptr,
+               ring.size);
+
+  queues[1 - ring.indirectLevel][queueId] = ring;
+}
+
+void ComputePipe::waitForIdle(int queueId,
+                              std::unique_lock<orbis::shared_mutex> &lock) {
+  auto &ring = queues[1][queueId];
+
+  while (true) {
+    if (ring.size == 0) {
+      return;
+    }
+
+    if (ring.rptr == ring.wptr) {
+      return;
+    }
+
+    lock.unlock();
+    std::this_thread::sleep_for(std::chrono::microseconds(10));
+    lock.lock();
+  }
+}
+
+void ComputePipe::submit(int queueId, std::uint32_t offset) {
+  auto &ring = queues[1][queueId];
+  ring.wptr = ring.base + offset;
+}
+
+bool ComputePipe::setShReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16);
+  auto offset = ring.rptr[1] & 0xffff;
+  auto index = ring.rptr[1] >> 26;
+  auto data = ring.rptr + 2;
+
+  if (Registers::ShaderConfig::kMmioOffset + offset <
+      Registers::ComputeConfig::kMmioOffset) {
+    rx::die(
+        "unexpected compute pipe offset %x %s", offset,
+        gnm::mmio::registerName(Registers::ShaderConfig::kMmioOffset + offset));
+  }
+
+  offset -= Registers::ComputeConfig::kMmioOffset -
+            Registers::ShaderConfig::kMmioOffset;
+
+  rx::dieIf(
+      (offset + len) * sizeof(std::uint32_t) > sizeof(Registers::ComputeConfig),
+      "out of compute regs, offset: %x, count %u, %s\n", offset, len,
+      gnm::mmio::registerName(Registers::ShaderConfig::kMmioOffset + offset));
+
+  for (std::size_t i = 0; i < len; ++i) {
+    std::fprintf(stderr, "writing to %s value %x\n",
+                 gnm::mmio::registerName(Registers::ShaderConfig::kMmioOffset +
+                                         offset + i),
+                 data[i]);
+  }
+
+  std::memcpy(ring.doorbell + offset, data, sizeof(std::uint32_t) * len);
+
+  return true;
+}
+
+bool ComputePipe::dispatchDirect(Ring &ring) {
+  auto config = std::bit_cast<Registers::ComputeConfig *>(ring.doorbell);
+  auto dimX = ring.rptr[1];
+  auto dimY = ring.rptr[2];
+  auto dimZ = ring.rptr[3];
+  auto dispatchInitiator = ring.rptr[4];
+  config->computeDispatchInitiator = dispatchInitiator;
+
+  amdgpu::dispatch(device->caches[ring.vmId], scheduler, *config, dimX, dimY,
+                   dimZ);
+  return true;
+}
+
+bool ComputePipe::dispatchIndirect(Ring &ring) {
+  auto config = std::bit_cast<Registers::ComputeConfig *>(ring.doorbell);
+  auto offset = ring.rptr[1];
+  auto dispatchInitiator = ring.rptr[2];
+
+  config->computeDispatchInitiator = dispatchInitiator;
+  auto buffer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(
+      drawIndexIndirPatchBase + offset);
+
+  auto dimX = buffer[0];
+  auto dimY = buffer[1];
+  auto dimZ = buffer[2];
+
+  amdgpu::dispatch(device->caches[ring.vmId], scheduler, *config, dimX, dimY,
+                   dimZ);
+  return true;
+}
+
+bool ComputePipe::releaseMem(Ring &ring) {
+  auto eventCntl = ring.rptr[1];
+  auto dataCntl = ring.rptr[2];
+  auto addressLo = ring.rptr[3] & ~3;
+  auto addressHi = ring.rptr[4] & ((1 << 16) - 1);
+  auto dataLo = ring.rptr[5];
+  auto dataHi = ring.rptr[6];
+
+  auto eventIndex = rx::getBits(eventCntl, 11, 8);
+  auto eventType = rx::getBits(eventCntl, 5, 0);
+  auto dataSel = rx::getBits(dataCntl, 31, 29);
+  auto intSel = rx::getBits(dataCntl, 25, 24);
+
+  auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
+  auto pointer = RemoteMemory{ring.vmId}.getPointer<std::uint64_t>(address);
+
+  switch (dataSel) {
+  case 0: // none
+    break;
+  case 1: // 32 bit, low
+    *reinterpret_cast<std::uint32_t *>(pointer) = dataLo;
+    break;
+  case 2: // 64 bit
+    *pointer = dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
+    break;
+  case 3: // 64 bit, global GPU clock
+    *pointer = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::system_clock::now().time_since_epoch())
+                   .count();
+    break;
+  case 4: // 64 bit, perf counter
+    *pointer = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::steady_clock::now().time_since_epoch())
+                   .count();
+    break;
+
+  default:
+    rx::die("unimplemented event release mem data %#x", dataSel);
+  }
+
+  if (intSel) {
+    orbis::g_context.deviceEventEmitter->emit(orbis::kEvFiltGraphicsCore, 0,
+                                              kGcEventCompute0RelMem + index);
+  }
+
+  return true;
+}
+
+bool ComputePipe::waitRegMem(Ring &ring) {
+  auto engine = rx::getBit(ring.rptr[1], 8);
+  auto memSpace = rx::getBit(ring.rptr[1], 4);
+  auto function = rx::getBits(ring.rptr[1], 2, 0);
+  auto pollAddressLo = ring.rptr[2];
+  auto pollAddressHi = ring.rptr[3] & ((1 << 16) - 1);
+  auto reference = ring.rptr[4];
+  auto mask = ring.rptr[5];
+  auto pollInterval = ring.rptr[6];
+
+  std::uint32_t pollData;
+
+  if (memSpace == 0) {
+    pollData = *getMmRegister(ring, pollAddressLo & ((1 << 16) - 1));
+  } else {
+    auto pollAddress = (pollAddressLo & ~3) |
+                       (static_cast<std::uint64_t>(pollAddressHi) << 32);
+    pollData = *RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(pollAddress);
+  }
+
+  return compare(function, pollData, mask, reference);
+}
+
+bool ComputePipe::writeData(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16) - 1;
+  auto control = ring.rptr[1];
+  auto dstAddressLo = ring.rptr[2];
+  auto dstAddressHi = ring.rptr[3];
+  auto data = ring.rptr + 4;
+
+  auto engineSel = rx::getBits(control, 31, 30);
+  auto wrConfirm = rx::getBit(control, 20);
+  auto wrOneAddress = rx::getBit(control, 16);
+  auto dstSel = rx::getBits(control, 11, 8);
+
+  std::uint32_t *dstPointer = nullptr;
+
+  switch (dstSel) {
+  case 0: // memory mapped register
+    dstPointer = getMmRegister(ring, dstAddressLo & ((1 << 16) - 1));
+    break;
+
+  case 1:   // memory sync
+  case 2:   // TC L2
+  case 5: { // memory async
+    auto address =
+        (dstAddressLo & ~3) | (static_cast<std::uint64_t>(dstAddressHi) << 32);
+    dstPointer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+    break;
+  }
+
+  default:
+    rx::die("unimplemented write data, dst sel = %#x", dstSel);
+  }
+
+  if (wrOneAddress) {
+    for (std::uint32_t i = 0; i < len; ++i) {
+      *dstPointer = data[i];
+    }
+  } else {
+    std::memcpy(dstPointer, data, len * sizeof(std::uint32_t));
+  }
+
+  return true;
+}
+
+bool ComputePipe::unknownPacket(Ring &ring) {
+  auto op = rx::getBits(ring.rptr[0], 15, 8);
+
+  rx::die("unimplemented compute pm4 packet: %s, indirect level %u\n",
+          gnm::pm4OpcodeToString(op), ring.indirectLevel);
+
+  return true;
+}
+
+bool ComputePipe::handleNop(Ring &ring) { return true; }
+
+std::uint32_t *ComputePipe::getMmRegister(Ring &ring, std::uint32_t dwAddress) {
+  if (dwAddress >= Registers::ComputeConfig::kMmioOffset &&
+      dwAddress <
+          Registers::ComputeConfig::kMmioOffset +
+              sizeof(Registers::ComputeConfig) / sizeof(std::uint32_t)) {
+    return ring.doorbell + (dwAddress - Registers::ComputeConfig::kMmioOffset);
+  }
+
+  rx::die("unexpected memory mapped compute register address %x, %s", dwAddress,
+          gnm::mmio::registerName(dwAddress));
+}
 
 GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   for (auto &processorHandlers : commandHandlers) {
@@ -263,15 +523,15 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   mainHandlers[IT_FLIP] = &GraphicsPipe::flip;
 }
 
-void GraphicsPipe::setCeQueue(Queue queue) {
-  queue.indirectLevel = -1;
-  ceQueue = queue;
+void GraphicsPipe::setCeQueue(Ring ring) {
+  ring.indirectLevel = -1;
+  ceQueue = ring;
 }
 
-void GraphicsPipe::setDeQueue(Queue queue, int ring) {
-  rx::dieIf(ring > 2, "out of indirect gfx rings, %u", ring);
-  queue.indirectLevel = ring;
-  deQueues[2 - ring] = queue;
+void GraphicsPipe::setDeQueue(Ring ring, int indirectLevel) {
+  rx::dieIf(indirectLevel > 2, "out of indirect gfx rings, %u", indirectLevel);
+  ring.indirectLevel = indirectLevel;
+  deQueues[2 - indirectLevel] = ring;
 }
 
 std::uint32_t *GraphicsPipe::getMmRegister(std::uint32_t dwAddress) {
@@ -318,14 +578,14 @@ bool GraphicsPipe::processAllRings() {
     }
   }
 
-  for (auto &queue : deQueues) {
-    if (queue.rptr == queue.wptr) {
+  for (auto &ring : deQueues) {
+    if (ring.rptr == ring.wptr) {
       continue;
     }
 
-    processRing(queue);
+    processRing(ring);
 
-    if (queue.rptr != queue.wptr) {
+    if (ring.rptr != ring.wptr) {
       allProcessed = false;
       break;
     }
@@ -334,21 +594,21 @@ bool GraphicsPipe::processAllRings() {
   return allProcessed;
 }
 
-void GraphicsPipe::processRing(Queue &queue) {
+void GraphicsPipe::processRing(Ring &ring) {
   int cp;
-  if (queue.indirectLevel < 0) {
+  if (ring.indirectLevel < 0) {
     cp = 0;
   } else {
-    cp = queue.indirectLevel + 1;
+    cp = ring.indirectLevel + 1;
   }
 
-  while (queue.rptr != queue.wptr) {
-    if (queue.rptr >= queue.base + queue.size) {
-      queue.rptr = queue.base;
+  while (ring.rptr != ring.wptr) {
+    if (ring.rptr >= ring.base + ring.size) {
+      ring.rptr = ring.base;
       continue;
     }
 
-    auto header = *queue.rptr;
+    auto header = *ring.rptr;
     auto type = rx::getBits(header, 31, 30);
 
     if (type == 3) {
@@ -356,9 +616,9 @@ void GraphicsPipe::processRing(Queue &queue) {
       auto len = rx::getBits(header, 29, 16) + 2;
 
       // if (auto str = gnm::pm4OpcodeToString(op)) {
-      //   std::println(stderr, "queue {}: {}", queue.indirectLevel, str);
+      //   std::println(stderr, "queue {}: {}", ring.indirectLevel, str);
       // } else {
-      //   std::println(stderr, "queue {}: {:x}", queue.indirectLevel, op);
+      //   std::println(stderr, "queue {}: {:x}", ring.indirectLevel, op);
       // }
 
       if (op == gnm::IT_COND_EXEC) {
@@ -366,11 +626,11 @@ void GraphicsPipe::processRing(Queue &queue) {
       }
 
       auto handler = commandHandlers[cp][op];
-      if (!(this->*handler)(queue)) {
+      if (!(this->*handler)(ring)) {
         return;
       }
 
-      queue.rptr += len;
+      ring.rptr += len;
 
       if (op == gnm::IT_INDIRECT_BUFFER || op == gnm::IT_INDIRECT_BUFFER_CNST) {
         break;
@@ -380,34 +640,33 @@ void GraphicsPipe::processRing(Queue &queue) {
     }
 
     if (type == 2) {
-      ++queue.rptr;
+      ++ring.rptr;
       continue;
     }
 
     rx::die("unexpected pm4 packet type %u, ring %u, header %u, rptr %p, wptr "
             "%p, base %p",
-            type, queue.indirectLevel, header, queue.rptr, queue.wptr,
-            queue.base);
+            type, ring.indirectLevel, header, ring.rptr, ring.wptr, ring.base);
   }
 }
 
-bool GraphicsPipe::handleNop(Queue &queue) { return true; }
+bool GraphicsPipe::handleNop(Ring &ring) { return true; }
 
-bool GraphicsPipe::setBase(Queue &queue) {
-  auto baseIndex = queue.rptr[1] & 0xf;
+bool GraphicsPipe::setBase(Ring &ring) {
+  auto baseIndex = ring.rptr[1] & 0xf;
 
   switch (baseIndex) {
   case 0: {
-    auto address0 = queue.rptr[2] & ~3;
-    auto address1 = queue.rptr[3] & ((1 << 16) - 1);
+    auto address0 = ring.rptr[2] & ~3;
+    auto address1 = ring.rptr[3] & ((1 << 16) - 1);
 
     displayListPatchBase =
         address0 | (static_cast<std::uint64_t>(address1) << 32);
     break;
   }
   case 1: {
-    auto address0 = queue.rptr[2] & ~3;
-    auto address1 = queue.rptr[3] & ((1 << 16) - 1);
+    auto address0 = ring.rptr[2] & ~3;
+    auto address1 = ring.rptr[3] & ((1 << 16) - 1);
 
     drawIndexIndirPatchBase =
         address0 | (static_cast<std::uint64_t>(address1) << 32);
@@ -415,16 +674,16 @@ bool GraphicsPipe::setBase(Queue &queue) {
   }
 
   case 2: {
-    auto cs1Index = queue.rptr[2] & ((1 << 16) - 1);
-    auto cs2Index = queue.rptr[3] & ((1 << 16) - 1);
+    auto cs1Index = ring.rptr[2] & ((1 << 16) - 1);
+    auto cs2Index = ring.rptr[3] & ((1 << 16) - 1);
     gdsPartitionBases[0] = cs1Index;
     gdsPartitionBases[1] = cs2Index;
     break;
   }
 
   case 3: {
-    auto cs1Index = queue.rptr[2] & ((1 << 16) - 1);
-    auto cs2Index = queue.rptr[3] & ((1 << 16) - 1);
+    auto cs1Index = ring.rptr[2] & ((1 << 16) - 1);
+    auto cs2Index = ring.rptr[3] & ((1 << 16) - 1);
     cePartitionBases[0] = cs1Index;
     cePartitionBases[1] = cs2Index;
     break;
@@ -437,7 +696,7 @@ bool GraphicsPipe::setBase(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::clearState(Queue &queue) {
+bool GraphicsPipe::clearState(Ring &ring) {
   auto paScClipRectRule = context.paScClipRectRule.value;
   auto cbTargetMask = context.cbTargetMask.raw;
   auto cbShaderMask = context.cbShaderMask.raw;
@@ -460,15 +719,15 @@ bool GraphicsPipe::clearState(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::contextControl(Queue &queue) { return true; }
-bool GraphicsPipe::acquireMem(Queue &queue) { return true; }
-bool GraphicsPipe::releaseMem(Queue &queue) {
-  auto eventCntl = queue.rptr[1];
-  auto dataCntl = queue.rptr[2];
-  auto addressLo = queue.rptr[3] & ~3;
-  auto addressHi = queue.rptr[3] & ~3;
-  auto dataLo = queue.rptr[4];
-  auto dataHi = queue.rptr[5];
+bool GraphicsPipe::contextControl(Ring &ring) { return true; }
+bool GraphicsPipe::acquireMem(Ring &ring) { return true; }
+bool GraphicsPipe::releaseMem(Ring &ring) {
+  auto eventCntl = ring.rptr[1];
+  auto dataCntl = ring.rptr[2];
+  auto addressLo = ring.rptr[3] & ~3;
+  auto addressHi = ring.rptr[4] & ((1 << 16) - 1);
+  auto dataLo = ring.rptr[5];
+  auto dataHi = ring.rptr[6];
 
   auto eventIndex = rx::getBits(eventCntl, 11, 8);
   auto eventType = rx::getBits(eventCntl, 5, 0);
@@ -476,7 +735,7 @@ bool GraphicsPipe::releaseMem(Queue &queue) {
   auto intSel = rx::getBits(dataCntl, 25, 24);
 
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
-  auto pointer = RemoteMemory{queue.vmId}.getPointer<std::uint64_t>(address);
+  auto pointer = RemoteMemory{ring.vmId}.getPointer<std::uint64_t>(address);
 
   context.vgtEventInitiator = eventType;
 
@@ -507,43 +766,43 @@ bool GraphicsPipe::releaseMem(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::drawPreamble(Queue &queue) { return true; }
+bool GraphicsPipe::drawPreamble(Ring &ring) { return true; }
 
-bool GraphicsPipe::indexBufferSize(Queue &queue) {
-  vgtIndexBufferSize = queue.rptr[1];
+bool GraphicsPipe::indexBufferSize(Ring &ring) {
+  vgtIndexBufferSize = ring.rptr[1];
   return true;
 }
-bool GraphicsPipe::dispatchDirect(Queue &queue) {
-  auto dimX = queue.rptr[1];
-  auto dimY = queue.rptr[2];
-  auto dimZ = queue.rptr[3];
-  auto dispatchInitiator = queue.rptr[4];
+bool GraphicsPipe::dispatchDirect(Ring &ring) {
+  auto dimX = ring.rptr[1];
+  auto dimY = ring.rptr[2];
+  auto dimZ = ring.rptr[3];
+  auto dispatchInitiator = ring.rptr[4];
   sh.compute.computeDispatchInitiator = dispatchInitiator;
 
-  amdgpu::dispatch(device->caches[queue.vmId], scheduler, sh.compute, dimX,
-                   dimY, dimZ);
+  amdgpu::dispatch(device->caches[ring.vmId], scheduler, sh.compute, dimX, dimY,
+                   dimZ);
   return true;
 }
-bool GraphicsPipe::dispatchIndirect(Queue &queue) {
-  auto offset = queue.rptr[1];
-  auto dispatchInitiator = queue.rptr[2];
+bool GraphicsPipe::dispatchIndirect(Ring &ring) {
+  auto offset = ring.rptr[1];
+  auto dispatchInitiator = ring.rptr[2];
 
   sh.compute.computeDispatchInitiator = dispatchInitiator;
-  auto buffer = RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(
+  auto buffer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(
       drawIndexIndirPatchBase + offset);
 
   auto dimX = buffer[0];
   auto dimY = buffer[1];
   auto dimZ = buffer[2];
 
-  amdgpu::dispatch(device->caches[queue.vmId], scheduler, sh.compute, dimX,
-                   dimY, dimZ);
+  amdgpu::dispatch(device->caches[ring.vmId], scheduler, sh.compute, dimX, dimY,
+                   dimZ);
   return true;
 }
 
-bool GraphicsPipe::setPredication(Queue &queue) {
-  auto startAddressLo = queue.rptr[1] & ~0xf;
-  auto predProperties = queue.rptr[2];
+bool GraphicsPipe::setPredication(Ring &ring) {
+  auto startAddressLo = ring.rptr[1] & ~0xf;
+  auto predProperties = ring.rptr[2];
 
   auto startAddressHi = rx::getBits(predProperties, 15, 0);
   auto predBool = rx::getBit(predProperties, 8);
@@ -562,15 +821,15 @@ bool GraphicsPipe::setPredication(Queue &queue) {
 
   return true;
 }
-bool GraphicsPipe::drawIndirect(Queue &queue) {
-  auto dataOffset = queue.rptr[1];
-  auto baseVtxLoc = queue.rptr[2] & ((1 << 16) - 1);
-  auto startInstLoc = queue.rptr[3] & ((1 << 16) - 1);
-  auto drawInitiator = queue.rptr[4];
+bool GraphicsPipe::drawIndirect(Ring &ring) {
+  auto dataOffset = ring.rptr[1];
+  auto baseVtxLoc = ring.rptr[2] & ((1 << 16) - 1);
+  auto startInstLoc = ring.rptr[3] & ((1 << 16) - 1);
+  auto drawInitiator = ring.rptr[4];
 
   context.vgtDrawInitiator = drawInitiator;
 
-  auto buffer = RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(
+  auto buffer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(
       drawIndexIndirPatchBase + dataOffset);
 
   std::uint32_t vertexCountPerInstance = buffer[0];
@@ -578,16 +837,16 @@ bool GraphicsPipe::drawIndirect(Queue &queue) {
   std::uint32_t startVertexLocation = buffer[2];
   std::uint32_t startInstanceLocation = buffer[3];
 
-  draw(*this, queue.vmId, startVertexLocation, vertexCountPerInstance,
+  draw(*this, ring.vmId, startVertexLocation, vertexCountPerInstance,
        startInstanceLocation, instanceCount, 0, 0, 0);
   return true;
 }
-bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
-  auto dataOffset = queue.rptr[1];
-  auto baseVtxLoc = queue.rptr[2] & ((1 << 16) - 1);
-  auto drawInitiator = queue.rptr[3];
+bool GraphicsPipe::drawIndexIndirect(Ring &ring) {
+  auto dataOffset = ring.rptr[1];
+  auto baseVtxLoc = ring.rptr[2] & ((1 << 16) - 1);
+  auto drawInitiator = ring.rptr[3];
 
-  auto buffer = RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(
+  auto buffer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(
       drawIndexIndirPatchBase + dataOffset);
 
   context.vgtDrawInitiator = drawInitiator;
@@ -598,24 +857,24 @@ bool GraphicsPipe::drawIndexIndirect(Queue &queue) {
   std::uint32_t baseVertexLocation = buffer[3];
   std::uint32_t startInstanceLocation = buffer[4];
 
-  draw(*this, queue.vmId, baseVertexLocation, indexCountPerInstance,
+  draw(*this, ring.vmId, baseVertexLocation, indexCountPerInstance,
        startInstanceLocation, instanceCount, vgtIndexBase, startIndexLocation,
        indexCountPerInstance);
   return true;
 }
-bool GraphicsPipe::indexBase(Queue &queue) {
-  auto addressLo = queue.rptr[1] & ~1;
-  auto addressHi = queue.rptr[2] & ((1 << 16) - 1);
+bool GraphicsPipe::indexBase(Ring &ring) {
+  auto addressLo = ring.rptr[1] & ~1;
+  auto addressHi = ring.rptr[2] & ((1 << 16) - 1);
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   vgtIndexBase = address;
   return true;
 }
-bool GraphicsPipe::drawIndex2(Queue &queue) {
-  auto maxSize = queue.rptr[1];
-  auto indexBaseLo = queue.rptr[2] & ~1;
-  auto indexBaseHi = queue.rptr[3] & ((1 << 16) - 1);
-  auto indexCount = queue.rptr[4];
-  auto drawInitiator = queue.rptr[5];
+bool GraphicsPipe::drawIndex2(Ring &ring) {
+  auto maxSize = ring.rptr[1];
+  auto indexBaseLo = ring.rptr[2] & ~1;
+  auto indexBaseHi = ring.rptr[3] & ((1 << 16) - 1);
+  auto indexCount = ring.rptr[4];
+  auto drawInitiator = ring.rptr[5];
 
   context.vgtDrawInitiator = drawInitiator;
   uConfig.vgtNumIndices = indexCount;
@@ -623,32 +882,32 @@ bool GraphicsPipe::drawIndex2(Queue &queue) {
   auto indexBase =
       indexBaseLo | (static_cast<std::uint64_t>(indexBaseHi) << 32);
 
-  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, indexBase,
+  draw(*this, ring.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, indexBase,
        0, maxSize);
   return true;
 }
-bool GraphicsPipe::indexType(Queue &queue) {
-  uConfig.vgtIndexType = static_cast<gnm::IndexType>(queue.rptr[1] & 1);
+bool GraphicsPipe::indexType(Ring &ring) {
+  uConfig.vgtIndexType = static_cast<gnm::IndexType>(ring.rptr[1] & 1);
   return true;
 }
-bool GraphicsPipe::drawIndexAuto(Queue &queue) {
-  auto indexCount = queue.rptr[1];
-  auto drawInitiator = queue.rptr[2];
+bool GraphicsPipe::drawIndexAuto(Ring &ring) {
+  auto indexCount = ring.rptr[1];
+  auto drawInitiator = ring.rptr[2];
 
   uConfig.vgtNumIndices = indexCount;
   context.vgtDrawInitiator = drawInitiator;
 
-  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, 0, 0, 0);
+  draw(*this, ring.vmId, 0, indexCount, 0, uConfig.vgtNumInstances, 0, 0, 0);
   return true;
 }
-bool GraphicsPipe::numInstances(Queue &queue) {
-  uConfig.vgtNumInstances = std::max(queue.rptr[1], 1u);
+bool GraphicsPipe::numInstances(Ring &ring) {
+  uConfig.vgtNumInstances = std::max(ring.rptr[1], 1u);
   return true;
 }
-bool GraphicsPipe::drawIndexMultiAuto(Queue &queue) {
-  auto primCount = queue.rptr[1];
-  auto drawInitiator = queue.rptr[2];
-  auto control = queue.rptr[3];
+bool GraphicsPipe::drawIndexMultiAuto(Ring &ring) {
+  auto primCount = ring.rptr[1];
+  auto drawInitiator = ring.rptr[2];
+  auto control = ring.rptr[3];
 
   auto indexOffset = rx::getBits(control, 15, 0);
   auto primType = rx::getBits(control, 20, 16);
@@ -658,27 +917,27 @@ bool GraphicsPipe::drawIndexMultiAuto(Queue &queue) {
   uConfig.vgtPrimitiveType = static_cast<gnm::PrimitiveType>(primType);
   uConfig.vgtNumIndices = indexCount;
 
-  draw(*this, queue.vmId, 0, primCount, 0, uConfig.vgtNumInstances,
-       vgtIndexBase, indexOffset, indexCount);
+  draw(*this, ring.vmId, 0, primCount, 0, uConfig.vgtNumInstances, vgtIndexBase,
+       indexOffset, indexCount);
   return true;
 }
-bool GraphicsPipe::drawIndexOffset2(Queue &queue) {
-  auto maxSize = queue.rptr[1];
-  auto indexOffset = queue.rptr[2];
-  auto indexCount = queue.rptr[3];
-  auto drawInitiator = queue.rptr[4];
+bool GraphicsPipe::drawIndexOffset2(Ring &ring) {
+  auto maxSize = ring.rptr[1];
+  auto indexOffset = ring.rptr[2];
+  auto indexCount = ring.rptr[3];
+  auto drawInitiator = ring.rptr[4];
 
   context.vgtDrawInitiator = drawInitiator;
-  draw(*this, queue.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
+  draw(*this, ring.vmId, 0, indexCount, 0, uConfig.vgtNumInstances,
        vgtIndexBase, indexOffset, maxSize);
   return true;
 }
-bool GraphicsPipe::writeData(Queue &queue) {
-  auto len = rx::getBits(queue.rptr[0], 29, 16) - 1;
-  auto control = queue.rptr[1];
-  auto dstAddressLo = queue.rptr[2];
-  auto dstAddressHi = queue.rptr[3];
-  auto data = queue.rptr + 4;
+bool GraphicsPipe::writeData(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16) - 1;
+  auto control = ring.rptr[1];
+  auto dstAddressLo = ring.rptr[2];
+  auto dstAddressHi = ring.rptr[3];
+  auto data = ring.rptr + 4;
 
   auto engineSel = rx::getBits(control, 31, 30);
   auto wrConfirm = rx::getBit(control, 20);
@@ -697,7 +956,7 @@ bool GraphicsPipe::writeData(Queue &queue) {
   case 5: { // memory async
     auto address =
         (dstAddressLo & ~3) | (static_cast<std::uint64_t>(dstAddressHi) << 32);
-    dstPointer = RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(address);
+    dstPointer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
     break;
   }
 
@@ -715,19 +974,19 @@ bool GraphicsPipe::writeData(Queue &queue) {
 
   return true;
 }
-bool GraphicsPipe::memSemaphore(Queue &queue) {
+bool GraphicsPipe::memSemaphore(Ring &ring) {
   // FIXME
   return true;
 }
-bool GraphicsPipe::waitRegMem(Queue &queue) {
-  auto engine = rx::getBit(queue.rptr[1], 8);
-  auto memSpace = rx::getBit(queue.rptr[1], 4);
-  auto function = rx::getBits(queue.rptr[1], 2, 0);
-  auto pollAddressLo = queue.rptr[2];
-  auto pollAddressHi = queue.rptr[3] & ((1 << 16) - 1);
-  auto reference = queue.rptr[4];
-  auto mask = queue.rptr[5];
-  auto pollInterval = queue.rptr[6];
+bool GraphicsPipe::waitRegMem(Ring &ring) {
+  auto engine = rx::getBit(ring.rptr[1], 8);
+  auto memSpace = rx::getBit(ring.rptr[1], 4);
+  auto function = rx::getBits(ring.rptr[1], 2, 0);
+  auto pollAddressLo = ring.rptr[2];
+  auto pollAddressHi = ring.rptr[3] & ((1 << 16) - 1);
+  auto reference = ring.rptr[4];
+  auto mask = ring.rptr[5];
+  auto pollInterval = ring.rptr[6];
 
   std::uint32_t pollData;
 
@@ -736,61 +995,60 @@ bool GraphicsPipe::waitRegMem(Queue &queue) {
   } else {
     auto pollAddress = (pollAddressLo & ~3) |
                        (static_cast<std::uint64_t>(pollAddressHi) << 32);
-    pollData = *RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(pollAddress);
+    pollData = *RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(pollAddress);
   }
 
   return compare(function, pollData, mask, reference);
 }
 
-bool GraphicsPipe::indirectBufferConst(Queue &queue) {
-  rx::dieIf(queue.indirectLevel < 0, "unexpected indirect buffer from CP");
+bool GraphicsPipe::indirectBufferConst(Ring &ring) {
+  rx::dieIf(ring.indirectLevel < 0, "unexpected indirect buffer from CP");
 
-  auto addressLo = queue.rptr[1] & ~3;
-  auto addressHi = queue.rptr[2] & ((1 << 8) - 1);
-  int vmId = queue.rptr[3] >> 24;
-  auto ibSize = queue.rptr[3] & ((1 << 20) - 1);
+  auto addressLo = ring.rptr[1] & ~3;
+  auto addressHi = ring.rptr[2] & ((1 << 8) - 1);
+  int vmId = ring.rptr[3] >> 24;
+  auto ibSize = ring.rptr[3] & ((1 << 20) - 1);
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
 
-  if (queue.indirectLevel != 0) {
-    vmId = queue.vmId;
+  if (ring.indirectLevel != 0) {
+    vmId = ring.vmId;
   }
 
   auto rptr = RemoteMemory{vmId}.getPointer<std::uint32_t>(address);
-  setCeQueue(Queue::createFromRange(vmId, rptr, ibSize));
+  setCeQueue(Ring::createFromRange(vmId, rptr, ibSize));
   return true;
 }
-bool GraphicsPipe::indirectBuffer(Queue &queue) {
-  rx::dieIf(queue.indirectLevel < 0, "unexpected indirect buffer from CP");
+bool GraphicsPipe::indirectBuffer(Ring &ring) {
+  rx::dieIf(ring.indirectLevel < 0, "unexpected indirect buffer from CP");
 
-  auto addressLo = queue.rptr[1] & ~3;
-  auto addressHi = queue.rptr[2] & ((1 << 8) - 1);
-  int vmId = queue.rptr[3] >> 24;
-  auto ibSize = queue.rptr[3] & ((1 << 20) - 1);
+  auto addressLo = ring.rptr[1] & ~3;
+  auto addressHi = ring.rptr[2] & ((1 << 8) - 1);
+  int vmId = ring.rptr[3] >> 24;
+  auto ibSize = ring.rptr[3] & ((1 << 20) - 1);
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
 
-  if (queue.indirectLevel != 0) {
-    vmId = queue.vmId;
+  if (ring.indirectLevel != 0) {
+    vmId = ring.vmId;
   }
   auto rptr = RemoteMemory{vmId}.getPointer<std::uint32_t>(address);
-  setDeQueue(Queue::createFromRange(vmId, rptr, ibSize),
-             queue.indirectLevel + 1);
+  setDeQueue(Ring::createFromRange(vmId, rptr, ibSize), ring.indirectLevel + 1);
   return true;
 }
-bool GraphicsPipe::pfpSyncMe(Queue &queue) {
+bool GraphicsPipe::pfpSyncMe(Ring &ring) {
   // TODO
   return true;
 }
-bool GraphicsPipe::condWrite(Queue &queue) {
-  auto writeSpace = rx::getBit(queue.rptr[1], 8);
-  auto pollSpace = rx::getBit(queue.rptr[1], 4);
-  auto function = rx::getBits(queue.rptr[1], 2, 0);
-  auto pollAddressLo = queue.rptr[2];
-  auto pollAddressHi = queue.rptr[3] & ((1 << 16) - 1);
-  auto reference = queue.rptr[4];
-  auto mask = queue.rptr[5];
-  auto writeAddressLo = queue.rptr[6];
-  auto writeAddressHi = queue.rptr[7] & ((1 << 16) - 1);
-  auto writeData = queue.rptr[8];
+bool GraphicsPipe::condWrite(Ring &ring) {
+  auto writeSpace = rx::getBit(ring.rptr[1], 8);
+  auto pollSpace = rx::getBit(ring.rptr[1], 4);
+  auto function = rx::getBits(ring.rptr[1], 2, 0);
+  auto pollAddressLo = ring.rptr[2];
+  auto pollAddressHi = ring.rptr[3] & ((1 << 16) - 1);
+  auto reference = ring.rptr[4];
+  auto mask = ring.rptr[5];
+  auto writeAddressLo = ring.rptr[6];
+  auto writeAddressHi = ring.rptr[7] & ((1 << 16) - 1);
+  auto writeData = ring.rptr[8];
 
   std::uint32_t pollData;
 
@@ -799,7 +1057,7 @@ bool GraphicsPipe::condWrite(Queue &queue) {
   } else {
     auto pollAddress = (pollAddressLo & ~3) |
                        (static_cast<std::uint64_t>(pollAddressHi) << 32);
-    pollData = *RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(pollAddress);
+    pollData = *RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(pollAddress);
   }
 
   if (compare(function, pollData, mask, reference)) {
@@ -809,7 +1067,7 @@ bool GraphicsPipe::condWrite(Queue &queue) {
       auto writeAddress = (writeAddressLo & ~3) |
                           (static_cast<std::uint64_t>(writeAddressHi) << 32);
 
-      *RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(writeAddress) =
+      *RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(writeAddress) =
           writeData;
     }
   }
@@ -817,7 +1075,7 @@ bool GraphicsPipe::condWrite(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::eventWrite(Queue &queue) {
+bool GraphicsPipe::eventWrite(Ring &ring) {
   enum {
     kEventZPassDone = 1,
     kEventSamplePipelineStat = 2,
@@ -825,7 +1083,7 @@ bool GraphicsPipe::eventWrite(Queue &queue) {
     kEventPartialFlush = 4,
   };
 
-  auto eventCntl = queue.rptr[1];
+  auto eventCntl = ring.rptr[1];
   auto invL2 = rx::getBit(eventCntl, 20);
   auto eventIndex = rx::getBits(eventCntl, 11, 8);
   auto eventType = rx::getBits(eventCntl, 5, 0);
@@ -834,8 +1092,8 @@ bool GraphicsPipe::eventWrite(Queue &queue) {
 
   if (eventIndex == kEventZPassDone || eventIndex == kEventSamplePipelineStat ||
       eventIndex == kEventSampleStreamOutStat) {
-    auto addressLo = queue.rptr[2] & ~7;
-    auto addressHi = queue.rptr[3] & ((1 << 16) - 1);
+    auto addressLo = ring.rptr[2] & ~7;
+    auto addressHi = ring.rptr[3] & ((1 << 16) - 1);
     auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
     rx::die("unimplemented event write, event index %#x, address %lx",
             eventIndex, address);
@@ -846,12 +1104,12 @@ bool GraphicsPipe::eventWrite(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::eventWriteEop(Queue &queue) {
-  auto eventCntl = queue.rptr[1];
-  auto addressLo = queue.rptr[2] & ~3;
-  auto dataCntl = queue.rptr[3];
-  auto dataLo = queue.rptr[4];
-  auto dataHi = queue.rptr[5];
+bool GraphicsPipe::eventWriteEop(Ring &ring) {
+  auto eventCntl = ring.rptr[1];
+  auto addressLo = ring.rptr[2] & ~3;
+  auto dataCntl = ring.rptr[3];
+  auto dataLo = ring.rptr[4];
+  auto dataHi = ring.rptr[5];
 
   auto invL2 = rx::getBit(eventCntl, 20);
   auto eventIndex = rx::getBits(eventCntl, 11, 8);
@@ -861,7 +1119,7 @@ bool GraphicsPipe::eventWriteEop(Queue &queue) {
   auto addressHi = rx::getBits(dataCntl, 15, 0);
 
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
-  auto pointer = RemoteMemory{queue.vmId}.getPointer<std::uint64_t>(address);
+  auto pointer = RemoteMemory{ring.vmId}.getPointer<std::uint64_t>(address);
 
   context.vgtEventInitiator = eventType;
 
@@ -897,11 +1155,11 @@ bool GraphicsPipe::eventWriteEop(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::eventWriteEos(Queue &queue) {
-  auto eventCntl = queue.rptr[1];
-  auto addressLo = queue.rptr[2] & ~3;
-  auto cmdInfo = queue.rptr[3];
-  auto dataInfo = queue.rptr[4];
+bool GraphicsPipe::eventWriteEos(Ring &ring) {
+  auto eventCntl = ring.rptr[1];
+  auto addressLo = ring.rptr[2] & ~3;
+  auto cmdInfo = ring.rptr[3];
+  auto dataInfo = ring.rptr[4];
 
   auto eventIndex = rx::getBits(eventCntl, 11, 8);
   auto eventType = rx::getBits(eventCntl, 5, 0);
@@ -909,10 +1167,10 @@ bool GraphicsPipe::eventWriteEos(Queue &queue) {
   auto addressHi = rx::getBits(cmdInfo, 15, 0);
 
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
-  auto pointer = RemoteMemory{queue.vmId}.getPointer<std::uint32_t>(address);
+  auto pointer = RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
 
   context.vgtEventInitiator = eventType;
-  auto &cache = device->caches[queue.vmId];
+  auto &cache = device->caches[ring.vmId];
 
   switch (cmd) {
   case 1: { // store GDS data to memory
@@ -940,14 +1198,14 @@ bool GraphicsPipe::eventWriteEos(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::dmaData(Queue &queue) {
-  auto control = queue.rptr[1];
-  auto srcAddressLo = queue.rptr[2];
+bool GraphicsPipe::dmaData(Ring &ring) {
+  auto control = ring.rptr[1];
+  auto srcAddressLo = ring.rptr[2];
   auto data = srcAddressLo;
-  auto srcAddressHi = queue.rptr[3];
-  auto dstAddressLo = queue.rptr[4];
-  auto dstAddressHi = queue.rptr[5];
-  auto cmdSize = queue.rptr[6];
+  auto srcAddressHi = ring.rptr[3];
+  auto dstAddressLo = ring.rptr[4];
+  auto dstAddressHi = ring.rptr[5];
+  auto cmdSize = ring.rptr[6];
   auto size = rx::getBits(cmdSize, 20, 0);
 
   auto engine = rx::getBit(control, 0);
@@ -1000,8 +1258,8 @@ bool GraphicsPipe::dmaData(Queue &queue) {
     if (dstSel == 3 || das == 0) {
       auto dstAddress =
           dstAddressLo | (static_cast<std::uint64_t>(dstAddressHi) << 32);
-      dst = amdgpu::RemoteMemory{queue.vmId}.getPointer(dstAddress);
-      device->caches[queue.vmId].invalidate(
+      dst = amdgpu::RemoteMemory{ring.vmId}.getPointer(dstAddress);
+      device->caches[ring.vmId].invalidate(
           scheduler, rx::AddressRange::fromBeginSize(dstAddress, size));
     } else {
       dst = getMmRegister(dstAddressLo / sizeof(std::uint32_t));
@@ -1009,7 +1267,7 @@ bool GraphicsPipe::dmaData(Queue &queue) {
     break;
 
   case 1:
-    dst = device->caches[queue.vmId].getGdsBuffer().getData() + dstAddressLo;
+    dst = device->caches[ring.vmId].getGdsBuffer().getData() + dstAddressLo;
     break;
 
   default:
@@ -1024,8 +1282,8 @@ bool GraphicsPipe::dmaData(Queue &queue) {
     if (srcSel == 3 || sas == 0) {
       auto srcAddress =
           srcAddressLo | (static_cast<std::uint64_t>(srcAddressHi) << 32);
-      src = amdgpu::RemoteMemory{queue.vmId}.getPointer(srcAddress);
-      device->caches[queue.vmId].flush(
+      src = amdgpu::RemoteMemory{ring.vmId}.getPointer(srcAddress);
+      device->caches[ring.vmId].flush(
           scheduler, rx::AddressRange::fromBeginSize(srcAddress, size));
     } else {
       src = getMmRegister(srcAddressLo / sizeof(std::uint32_t));
@@ -1034,7 +1292,7 @@ bool GraphicsPipe::dmaData(Queue &queue) {
     srcSize = ~0;
     break;
   case 1:
-    src = device->caches[queue.vmId].getGdsBuffer().getData() + srcAddressLo;
+    src = device->caches[ring.vmId].getGdsBuffer().getData() + srcAddressLo;
     srcSize = ~0;
     break;
 
@@ -1072,10 +1330,10 @@ bool GraphicsPipe::dmaData(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::setConfigReg(Queue &queue) {
-  auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1] & 0xffff;
-  auto data = queue.rptr + 2;
+bool GraphicsPipe::setConfigReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16);
+  auto offset = ring.rptr[1] & 0xffff;
+  auto data = ring.rptr + 2;
 
   rx::dieIf(
       (offset + len) * sizeof(std::uint32_t) > sizeof(device->config),
@@ -1088,11 +1346,11 @@ bool GraphicsPipe::setConfigReg(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::setShReg(Queue &queue) {
-  auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1] & 0xffff;
-  auto index = queue.rptr[1] >> 26;
-  auto data = queue.rptr + 2;
+bool GraphicsPipe::setShReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16);
+  auto offset = ring.rptr[1] & 0xffff;
+  auto index = ring.rptr[1] >> 26;
+  auto data = ring.rptr + 2;
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(sh),
             "out of SH regs, offset: %x, count %u, %s\n", offset, len,
@@ -1109,11 +1367,11 @@ bool GraphicsPipe::setShReg(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::setUConfigReg(Queue &queue) {
-  auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1] & 0xffff;
-  auto index = queue.rptr[1] >> 26;
-  auto data = queue.rptr + 2;
+bool GraphicsPipe::setUConfigReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16);
+  auto offset = ring.rptr[1] & 0xffff;
+  auto index = ring.rptr[1] >> 26;
+  auto data = ring.rptr + 2;
 
   if (index != 0) {
     {
@@ -1150,11 +1408,11 @@ bool GraphicsPipe::setUConfigReg(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::setContextReg(Queue &queue) {
-  auto len = rx::getBits(queue.rptr[0], 29, 16);
-  auto offset = queue.rptr[1] & 0xffff;
-  auto index = queue.rptr[1] >> 26;
-  auto data = queue.rptr + 2;
+bool GraphicsPipe::setContextReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16);
+  auto offset = ring.rptr[1] & 0xffff;
+  auto index = ring.rptr[1] >> 26;
+  auto data = ring.rptr + 2;
 
   if (index != 0) {
     {
@@ -1192,114 +1450,114 @@ bool GraphicsPipe::setContextReg(Queue &queue) {
   return true;
 }
 
-bool GraphicsPipe::setCeDeCounters(Queue &queue) {
-  auto counterLo = queue.rptr[1];
-  auto counterHi = queue.rptr[2];
+bool GraphicsPipe::setCeDeCounters(Ring &ring) {
+  auto counterLo = ring.rptr[1];
+  auto counterHi = ring.rptr[2];
   auto counter = counterLo | (static_cast<std::uint64_t>(counterHi) << 32);
   deCounter = counter;
   ceCounter = counter;
   return true;
 }
 
-bool GraphicsPipe::waitOnCeCounter(Queue &queue) {
-  auto counterLo = queue.rptr[1];
-  auto counterHi = queue.rptr[2];
+bool GraphicsPipe::waitOnCeCounter(Ring &ring) {
+  auto counterLo = ring.rptr[1];
+  auto counterHi = ring.rptr[2];
   auto counter = counterLo | (static_cast<std::uint64_t>(counterHi) << 32);
   return deCounter >= counter;
 }
 
-bool GraphicsPipe::waitOnDeCounterDiff(Queue &queue) {
-  auto waitDiff = queue.rptr[1];
+bool GraphicsPipe::waitOnDeCounterDiff(Ring &ring) {
+  auto waitDiff = ring.rptr[1];
   auto diff = ceCounter - deCounter;
   return diff < waitDiff;
 }
 
-bool GraphicsPipe::incrementCeCounter(Queue &) {
+bool GraphicsPipe::incrementCeCounter(Ring &) {
   ceCounter++;
   return true;
 }
 
-bool GraphicsPipe::incrementDeCounter(Queue &) {
+bool GraphicsPipe::incrementDeCounter(Ring &) {
   deCounter++;
   return true;
 }
 
-bool GraphicsPipe::loadConstRam(Queue &queue) {
-  std::uint32_t addressLo = queue.rptr[1];
-  std::uint32_t addressHi = queue.rptr[2];
-  std::uint32_t numDw = queue.rptr[3] & ((1 << 15) - 1);
+bool GraphicsPipe::loadConstRam(Ring &ring) {
+  std::uint32_t addressLo = ring.rptr[1];
+  std::uint32_t addressHi = ring.rptr[2];
+  std::uint32_t numDw = ring.rptr[3] & ((1 << 15) - 1);
   std::uint32_t offset =
-      (queue.rptr[4] & ((1 << 16) - 1)) / sizeof(std::uint32_t);
+      (ring.rptr[4] & ((1 << 16) - 1)) / sizeof(std::uint32_t);
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   std::memcpy(constantMemory + offset,
-              RemoteMemory{queue.vmId}.getPointer(address),
+              RemoteMemory{ring.vmId}.getPointer(address),
               numDw * sizeof(std::uint32_t));
 
   return true;
 }
 
-bool GraphicsPipe::writeConstRam(Queue &queue) {
+bool GraphicsPipe::writeConstRam(Ring &ring) {
   std::uint32_t offset =
-      (queue.rptr[1] & ((1 << 16) - 1)) / sizeof(std::uint32_t);
-  std::uint32_t data = queue.rptr[2];
+      (ring.rptr[1] & ((1 << 16) - 1)) / sizeof(std::uint32_t);
+  std::uint32_t data = ring.rptr[2];
   std::memcpy(constantMemory + offset, &data, sizeof(std::uint32_t));
   return true;
 }
 
-bool GraphicsPipe::dumpConstRam(Queue &queue) {
+bool GraphicsPipe::dumpConstRam(Ring &ring) {
   std::uint32_t offset =
-      (queue.rptr[1] & ((1 << 16) - 1)) / sizeof(std::uint32_t);
-  std::uint32_t numDw = queue.rptr[2] & ((1 << 15) - 1);
-  std::uint32_t addressLo = queue.rptr[3];
-  std::uint32_t addressHi = queue.rptr[4];
+      (ring.rptr[1] & ((1 << 16) - 1)) / sizeof(std::uint32_t);
+  std::uint32_t numDw = ring.rptr[2] & ((1 << 15) - 1);
+  std::uint32_t addressLo = ring.rptr[3];
+  std::uint32_t addressHi = ring.rptr[4];
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
-  std::memcpy(RemoteMemory{queue.vmId}.getPointer(address),
+  std::memcpy(RemoteMemory{ring.vmId}.getPointer(address),
               constantMemory + offset, numDw * sizeof(std::uint32_t));
 
   return true;
 }
 
-bool GraphicsPipe::unknownPacket(Queue &queue) {
-  auto op = rx::getBits(queue.rptr[0], 15, 8);
+bool GraphicsPipe::unknownPacket(Ring &ring) {
+  auto op = rx::getBits(ring.rptr[0], 15, 8);
 
   rx::die("unimplemented gfx pm4 packet: %s, queue %u\n",
-          gnm::pm4OpcodeToString(op), queue.indirectLevel);
+          gnm::pm4OpcodeToString(op), ring.indirectLevel);
 }
 
-bool GraphicsPipe::switchBuffer(Queue &queue) {
+bool GraphicsPipe::switchBuffer(Ring &ring) {
   // FIXME: implement
   return true;
 }
 
-bool GraphicsPipe::mapProcess(Queue &queue) {
-  auto pid = queue.rptr[1];
-  int vmId = queue.rptr[2];
+bool GraphicsPipe::mapProcess(Ring &ring) {
+  auto pid = ring.rptr[1];
+  int vmId = ring.rptr[2];
 
   device->mapProcess(pid, vmId);
   return true;
 }
 
-bool GraphicsPipe::mapQueues(Queue &queue) {
+bool GraphicsPipe::mapQueues(Ring &ring) {
   // FIXME: implement
   return true;
 }
 
-bool GraphicsPipe::unmapQueues(Queue &queue) {
+bool GraphicsPipe::unmapQueues(Ring &ring) {
   // FIXME: implement
   return true;
 }
 
-bool GraphicsPipe::mapMemory(Queue &queue) {
-  auto pid = queue.rptr[1];
-  auto addressLo = queue.rptr[2];
-  auto addressHi = queue.rptr[3];
-  auto sizeLo = queue.rptr[4];
-  auto sizeHi = queue.rptr[5];
-  auto memoryType = queue.rptr[6];
-  auto dmemIndex = queue.rptr[7];
-  auto prot = queue.rptr[8];
-  auto offsetLo = queue.rptr[9];
-  auto offsetHi = queue.rptr[10];
+bool GraphicsPipe::mapMemory(Ring &ring) {
+  auto pid = ring.rptr[1];
+  auto addressLo = ring.rptr[2];
+  auto addressHi = ring.rptr[3];
+  auto sizeLo = ring.rptr[4];
+  auto sizeHi = ring.rptr[5];
+  auto memoryType = ring.rptr[6];
+  auto dmemIndex = ring.rptr[7];
+  auto prot = ring.rptr[8];
+  auto offsetLo = ring.rptr[9];
+  auto offsetHi = ring.rptr[10];
 
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
@@ -1308,42 +1566,42 @@ bool GraphicsPipe::mapMemory(Queue &queue) {
   device->mapMemory(pid, address, size, memoryType, dmemIndex, prot, offset);
   return true;
 }
-bool GraphicsPipe::unmapMemory(Queue &queue) {
-  auto pid = queue.rptr[1];
-  auto addressLo = queue.rptr[2];
-  auto addressHi = queue.rptr[3];
-  auto sizeLo = queue.rptr[4];
-  auto sizeHi = queue.rptr[5];
+bool GraphicsPipe::unmapMemory(Ring &ring) {
+  auto pid = ring.rptr[1];
+  auto addressLo = ring.rptr[2];
+  auto addressHi = ring.rptr[3];
+  auto sizeLo = ring.rptr[4];
+  auto sizeHi = ring.rptr[5];
 
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
   device->unmapMemory(pid, address, size);
   return true;
 }
-bool GraphicsPipe::protectMemory(Queue &queue) {
-  auto pid = queue.rptr[1];
-  auto addressLo = queue.rptr[2];
-  auto addressHi = queue.rptr[3];
-  auto sizeLo = queue.rptr[4];
-  auto sizeHi = queue.rptr[5];
-  auto prot = queue.rptr[6];
+bool GraphicsPipe::protectMemory(Ring &ring) {
+  auto pid = ring.rptr[1];
+  auto addressLo = ring.rptr[2];
+  auto addressHi = ring.rptr[3];
+  auto sizeLo = ring.rptr[4];
+  auto sizeHi = ring.rptr[5];
+  auto prot = ring.rptr[6];
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
 
   device->protectMemory(pid, address, size, prot);
   return true;
 }
-bool GraphicsPipe::unmapProcess(Queue &queue) {
-  auto pid = queue.rptr[1];
+bool GraphicsPipe::unmapProcess(Ring &ring) {
+  auto pid = ring.rptr[1];
   device->unmapProcess(pid);
   return true;
 }
 
-bool GraphicsPipe::flip(Queue &queue) {
-  auto buffer = queue.rptr[1];
-  auto dataLo = queue.rptr[2];
-  auto dataHi = queue.rptr[3];
-  auto pid = queue.rptr[4];
+bool GraphicsPipe::flip(Ring &ring) {
+  auto buffer = ring.rptr[1];
+  auto dataLo = ring.rptr[2];
+  auto dataHi = ring.rptr[3];
+  auto pid = ring.rptr[4];
   auto data = dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
 
   device->flip(pid, buffer, data);

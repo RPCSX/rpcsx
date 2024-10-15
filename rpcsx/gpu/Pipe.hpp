@@ -1,6 +1,7 @@
 #pragma once
 #include "Registers.hpp"
 #include "Scheduler.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
@@ -8,7 +9,7 @@
 namespace amdgpu {
 struct Device;
 
-struct Queue {
+struct Ring {
   int vmId = -1;
   int indirectLevel = -1;
   std::uint32_t *doorbell{};
@@ -16,11 +17,12 @@ struct Queue {
   std::uint64_t size{};
   std::uint32_t *rptr{};
   std::uint32_t *wptr{};
+  std::uint32_t *rptrReportLocation{};
 
-  static Queue createFromRange(int vmId, std::uint32_t *base,
-                               std::uint64_t size, int indirectLevel = 0,
-                               std::uint32_t *doorbell = nullptr) {
-    Queue result;
+  static Ring createFromRange(int vmId, std::uint32_t *base, std::uint64_t size,
+                              int indirectLevel = 0,
+                              std::uint32_t *doorbell = nullptr) {
+    Ring result;
     result.vmId = vmId;
     result.indirectLevel = indirectLevel;
     result.doorbell = doorbell;
@@ -36,20 +38,35 @@ struct ComputePipe {
   Device *device;
   Scheduler scheduler;
 
-  using CommandHandler = bool (ComputePipe::*)(Queue &);
+  using CommandHandler = bool (ComputePipe::*)(Ring &);
   CommandHandler commandHandlers[255];
-  Queue queues[8];
-  Registers::ComputeConfig computeConfig;
+  orbis::shared_mutex queueMtx[8];
+  int index;
+  Ring queues[2][8];
+  std::uint64_t drawIndexIndirPatchBase = 0;
 
   ComputePipe(int index);
 
   bool processAllRings();
-  void processRing(Queue &queue);
-  void mapQueue(int queueId, Queue queue);
+  bool processRing(Ring &ring);
+  void mapQueue(int queueId, Ring ring, std::unique_lock<orbis::shared_mutex> &lock);
+  void waitForIdle(int queueId, std::unique_lock<orbis::shared_mutex> &lock);
+  void submit(int queueId, std::uint32_t offset);
 
-  bool setShReg(Queue &queue);
-  bool unknownPacket(Queue &queue);
-  bool handleNop(Queue &queue);
+  std::unique_lock<orbis::shared_mutex> lockQueue(int queueId) {
+    return std::unique_lock<orbis::shared_mutex>(queueMtx[queueId]);
+  }
+
+  bool setShReg(Ring &ring);
+  bool dispatchDirect(Ring &ring);
+  bool dispatchIndirect(Ring &ring);
+  bool releaseMem(Ring &ring);
+  bool waitRegMem(Ring &ring);
+  bool writeData(Ring &ring);
+  bool unknownPacket(Ring &ring);
+  bool handleNop(Ring &ring);
+
+  std::uint32_t *getMmRegister(Ring &ring, std::uint32_t dwAddress);
 };
 
 struct GraphicsPipe {
@@ -71,75 +88,75 @@ struct GraphicsPipe {
   Registers::Context context;
   Registers::UConfig uConfig;
 
-  Queue deQueues[3];
-  Queue ceQueue;
+  Ring deQueues[3];
+  Ring ceQueue;
 
-  using CommandHandler = bool (GraphicsPipe::*)(Queue &);
+  using CommandHandler = bool (GraphicsPipe::*)(Ring &);
   CommandHandler commandHandlers[4][255];
 
   GraphicsPipe(int index);
 
-  void setCeQueue(Queue queue);
-  void setDeQueue(Queue queue, int ring);
+  void setCeQueue(Ring ring);
+  void setDeQueue(Ring ring, int indirectLevel);
 
   bool processAllRings();
-  void processRing(Queue &queue);
+  void processRing(Ring &ring);
 
-  bool drawPreamble(Queue &queue);
-  bool indexBufferSize(Queue &queue);
-  bool handleNop(Queue &queue);
-  bool contextControl(Queue &queue);
-  bool acquireMem(Queue &queue);
-  bool releaseMem(Queue &queue);
-  bool dispatchDirect(Queue &queue);
-  bool dispatchIndirect(Queue &queue);
-  bool writeData(Queue &queue);
-  bool memSemaphore(Queue &queue);
-  bool waitRegMem(Queue &queue);
-  bool indirectBufferConst(Queue &queue);
-  bool indirectBuffer(Queue &queue);
-  bool condWrite(Queue &queue);
-  bool eventWrite(Queue &queue);
-  bool eventWriteEop(Queue &queue);
-  bool eventWriteEos(Queue &queue);
-  bool dmaData(Queue &queue);
-  bool setBase(Queue &queue);
-  bool clearState(Queue &queue);
-  bool setPredication(Queue &queue);
-  bool drawIndirect(Queue &queue);
-  bool drawIndexIndirect(Queue &queue);
-  bool indexBase(Queue &queue);
-  bool drawIndex2(Queue &queue);
-  bool indexType(Queue &queue);
-  bool drawIndexAuto(Queue &queue);
-  bool numInstances(Queue &queue);
-  bool drawIndexMultiAuto(Queue &queue);
-  bool drawIndexOffset2(Queue &queue);
-  bool pfpSyncMe(Queue &queue);
-  bool setCeDeCounters(Queue &queue);
-  bool waitOnCeCounter(Queue &queue);
-  bool waitOnDeCounterDiff(Queue &queue);
-  bool incrementCeCounter(Queue &queue);
-  bool incrementDeCounter(Queue &queue);
-  bool loadConstRam(Queue &queue);
-  bool writeConstRam(Queue &queue);
-  bool dumpConstRam(Queue &queue);
-  bool setConfigReg(Queue &queue);
-  bool setShReg(Queue &queue);
-  bool setUConfigReg(Queue &queue);
-  bool setContextReg(Queue &queue);
+  bool drawPreamble(Ring &ring);
+  bool indexBufferSize(Ring &ring);
+  bool handleNop(Ring &ring);
+  bool contextControl(Ring &ring);
+  bool acquireMem(Ring &ring);
+  bool releaseMem(Ring &ring);
+  bool dispatchDirect(Ring &ring);
+  bool dispatchIndirect(Ring &ring);
+  bool writeData(Ring &ring);
+  bool memSemaphore(Ring &ring);
+  bool waitRegMem(Ring &ring);
+  bool indirectBufferConst(Ring &ring);
+  bool indirectBuffer(Ring &ring);
+  bool condWrite(Ring &ring);
+  bool eventWrite(Ring &ring);
+  bool eventWriteEop(Ring &ring);
+  bool eventWriteEos(Ring &ring);
+  bool dmaData(Ring &ring);
+  bool setBase(Ring &ring);
+  bool clearState(Ring &ring);
+  bool setPredication(Ring &ring);
+  bool drawIndirect(Ring &ring);
+  bool drawIndexIndirect(Ring &ring);
+  bool indexBase(Ring &ring);
+  bool drawIndex2(Ring &ring);
+  bool indexType(Ring &ring);
+  bool drawIndexAuto(Ring &ring);
+  bool numInstances(Ring &ring);
+  bool drawIndexMultiAuto(Ring &ring);
+  bool drawIndexOffset2(Ring &ring);
+  bool pfpSyncMe(Ring &ring);
+  bool setCeDeCounters(Ring &ring);
+  bool waitOnCeCounter(Ring &ring);
+  bool waitOnDeCounterDiff(Ring &ring);
+  bool incrementCeCounter(Ring &ring);
+  bool incrementDeCounter(Ring &ring);
+  bool loadConstRam(Ring &ring);
+  bool writeConstRam(Ring &ring);
+  bool dumpConstRam(Ring &ring);
+  bool setConfigReg(Ring &ring);
+  bool setShReg(Ring &ring);
+  bool setUConfigReg(Ring &ring);
+  bool setContextReg(Ring &ring);
 
-  bool unknownPacket(Queue &queue);
+  bool unknownPacket(Ring &ring);
 
-  bool switchBuffer(Queue &queue);
-  bool mapProcess(Queue &queue);
-  bool mapQueues(Queue &queue);
-  bool unmapQueues(Queue &queue);
-  bool mapMemory(Queue &queue);
-  bool unmapMemory(Queue &queue);
-  bool protectMemory(Queue &queue);
-  bool unmapProcess(Queue &queue);
-  bool flip(Queue &queue);
+  bool switchBuffer(Ring &ring);
+  bool mapProcess(Ring &ring);
+  bool mapQueues(Ring &ring);
+  bool unmapQueues(Ring &ring);
+  bool mapMemory(Ring &ring);
+  bool unmapMemory(Ring &ring);
+  bool protectMemory(Ring &ring);
+  bool unmapProcess(Ring &ring);
+  bool flip(Ring &ring);
 
   std::uint32_t *getMmRegister(std::uint32_t dwAddress);
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DeviceContext.hpp"
+#include "orbis-config.hpp"
 #include "orbis/utils/Rc.hpp"
 #include <cstdint>
 #include <span>
@@ -40,6 +41,14 @@ public:
                            std::uint64_t address, std::uint64_t size, int prot);
   void registerBuffer(std::uint32_t pid, Buffer buffer);
   void registerBufferAttribute(std::uint32_t pid, BufferAttribute attr);
+
+  void mapComputeQueue(int vmId, std::uint32_t meId, std::uint32_t pipeId,
+                       std::uint32_t queueId, std::uint32_t vqueueId,
+                       orbis::uint64_t ringBaseAddress,
+                       orbis::uint64_t readPtrAddress, orbis::uint64_t doorbell,
+                       orbis::uint64_t ringSize);
+  void submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
+                        std::uint32_t queueId, std::uint64_t offset);
   void start();
   void waitForIdle();
 

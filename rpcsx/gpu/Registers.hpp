@@ -399,10 +399,10 @@ struct DbDepthSize {
     std::uint32_t raw;
   };
 
-  std::uint32_t getPitch() const {
+  [[nodiscard]] std::uint32_t getPitch() const {
     return (pitchTileMax + 1) * 8;
   }
-  std::uint32_t getHeight() const {
+  [[nodiscard]] std::uint32_t getHeight() const {
     return (heightTileMax + 1) * 8;
   }
 };
@@ -591,8 +591,12 @@ struct Registers {
         };
       };
 
-      std::uint8_t getVGprCount() const { return (vgprs + 1) * 4; }
-      std::uint8_t getSGprCount() const { return (sgprs + 1) * 8; }
+      [[nodiscard]] std::uint8_t getVGprCount() const {
+        return (vgprs + 1) * 4;
+      }
+      [[nodiscard]] std::uint8_t getSGprCount() const {
+        return (sgprs + 1) * 8;
+      }
     } rsrc1;
     struct {
       union {
@@ -613,7 +617,9 @@ struct Registers {
         };
       };
 
-      std::uint32_t getLdsDwordsCount() const { return ldsSize * 64; }
+      [[nodiscard]] std::uint32_t getLdsDwordsCount() const {
+        return ldsSize * 64;
+      }
     } rsrc2;
     std::uint32_t _pad3[1];
 
@@ -624,19 +630,24 @@ struct Registers {
           std::uint32_t wavesPerSh : 6;
           std::uint32_t : 6;
           std::uint32_t tgPerCu : 4;
-          std::uint32_t lockThreshold: 6;
+          std::uint32_t lockThreshold : 6;
           std::uint32_t simdDestCntl : 1;
         };
-
       };
-      std::uint32_t getWavesPerSh() const { return wavesPerSh << 4; }
+      [[nodiscard]] std::uint32_t getWavesPerSh() const {
+        return wavesPerSh << 4;
+      }
     } resourceLimits;
     std::uint32_t staticThreadMgmtSe0;
     std::uint32_t staticThreadMgmtSe1;
     std::uint32_t tmpRingSize;
-    std::uint32_t _pad4[39];
+    std::uint32_t _unk0[5];
+    std::uint32_t state;
+    std::uint32_t _unk1[33];
     std::array<std::uint32_t, 16> userData;
   };
+
+  static_assert(sizeof(ComputeConfig) == 320);
 
   struct ShaderConfig {
     static constexpr auto kMmioOffset = 0x2c00;

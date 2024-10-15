@@ -236,7 +236,7 @@ Device::Device() : vkContext(createVkContext(this)) {
 
   for (int i = 0; i < kGfxPipeCount; ++i) {
     graphicsPipes[i].setDeQueue(
-        Queue{
+        Ring{
             .base = mainGfxRings[i],
             .size = sizeof(mainGfxRings[i]) / sizeof(mainGfxRings[i][0]),
             .rptr = mainGfxRings[i],
@@ -474,7 +474,7 @@ void Device::start() {
   }
 }
 
-void Device::submitCommand(Queue &ring,
+void Device::submitCommand(Ring &ring,
                            std::span<const std::uint32_t> command) {
   std::scoped_lock lock(writeCommandMtx);
   if (ring.wptr + command.size() > ring.base + ring.size) {
@@ -599,12 +599,12 @@ void Device::onCommandBuffer(std::uint32_t pid, int cmdHeader,
   auto op = rx::getBits(cmdHeader, 15, 8);
 
   if (op == gnm::IT_INDIRECT_BUFFER_CNST) {
-    graphicsPipes[0].setCeQueue(Queue::createFromRange(
+    graphicsPipes[0].setCeQueue(Ring::createFromRange(
         process.vmId, memory.getPointer<std::uint32_t>(address),
         size / sizeof(std::uint32_t)));
   } else if (op == gnm::IT_INDIRECT_BUFFER) {
     graphicsPipes[0].setDeQueue(
-        Queue::createFromRange(process.vmId,
+        Ring::createFromRange(process.vmId,
                                memory.getPointer<std::uint32_t>(address),
                                size / sizeof(std::uint32_t)),
         1);

@@ -181,6 +181,7 @@ public:
   Ref<RcBase> blockpoolDevice;
   shared_mutex gpuDeviceMtx;
   Ref<RcBase> gpuDevice;
+  Ref<RcBase> dceDevice;
   uint sdkVersion{};
   uint fwSdkVersion{};
   uint safeMode{};

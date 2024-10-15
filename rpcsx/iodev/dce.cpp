@@ -1,3 +1,4 @@
+#include "dce.hpp"
 #include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
@@ -8,7 +9,6 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "orbis/utils/SharedMutex.hpp"
 #include "rx/mem.hpp"
 #include "rx/watchdog.hpp"
 #include "vm.hpp"
@@ -192,32 +192,21 @@ static void runBridge(int vmId) {
   }}.detach();
 }
 
-static constexpr auto kVmIdCount = 6;
 struct DceFile : public orbis::File {};
 
-struct DceDevice : IoDevice {
-  orbis::shared_mutex mtx;
-  std::uint32_t freeVmIds = (1 << (kVmIdCount + 1)) - 1;
-  orbis::uint64_t dmemOffset = ~static_cast<std::uint64_t>(0);
+int DceDevice::allocateVmId() {
+  int id = std::countr_zero(freeVmIds);
 
-  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
-                        std::uint32_t flags, std::uint32_t mode,
-                        orbis::Thread *thread) override;
+  if (id >= kVmIdCount) {
+    std::println(stderr, "out of vm slots");
+    std::abort();
+  }
 
-  int allocateVmId() {
-    int id = std::countr_zero(freeVmIds);
+  freeVmIds &= ~(1 << id);
+  return id;
+}
 
-    if (id >= kVmIdCount) {
-      std::println(stderr, "out of vm slots");
-      std::abort();
-    }
-
-    freeVmIds &= ~(1 << id);
-    return id;
-  };
-
-  void deallocateVmId(int vmId) { freeVmIds |= (1 << vmId); };
-};
+void DceDevice::deallocateVmId(int vmId) { freeVmIds |= (1 << vmId); }
 
 static void initDceMemory(DceDevice *device) {
   if (device->dmemOffset + 1) {
@@ -466,21 +455,24 @@ orbis::ErrorCode DceDevice::open(orbis::Ref<orbis::File> *file,
   newFile->device = this;
   newFile->ops = &ops;
   *file = newFile;
+  initializeProcess(thread->tproc);
+  return {};
+}
 
-  if (thread->tproc->vmId == -1) {
+void DceDevice::initializeProcess(orbis::Process *process) {
+  if (process->vmId == -1) {
     createGpu();
     auto vmId = allocateVmId();
 
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     {
       auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
-      gpu.submitMapProcess(thread->tproc->gfxRing, thread->tproc->pid, vmId);
-      thread->tproc->vmId = vmId;
+      gpu.submitMapProcess(process->gfxRing, process->pid, vmId);
+      process->vmId = vmId;
     }
 
     runBridge(vmId);
   }
-  return {};
 }
 
 IoDevice *createDceCharacterDevice() { return orbis::knew<DceDevice>(); }
