@@ -311,22 +311,6 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
     return ErrorCode::NOSYS;
 
   }
-  if ((wflags & kCvWaitAbsTime) != 0 && ut + 1) {
-    ORBIS_LOG_WARNING("umtx_cv_wait: ABSTIME unimplemented", wflags);
-    auto now = std::chrono::time_point_cast<std::chrono::microseconds>(
-                   std::chrono::high_resolution_clock::now())
-                   .time_since_epoch()
-                   .count();
-
-    if (now > ut) {
-      ut = 0;
-    } else {
-      ut = ut - now;
-    }
-
-    std::abort();
-    return ErrorCode::NOSYS;
-  }
 
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, cv->flags, cv);
   auto node = chain.enqueue(key, thread);
@@ -347,14 +331,26 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
     } else {
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
+
+      if ((wflags & kCvWaitAbsTime) != 0) {
+        udiff = std::chrono::time_point_cast<std::chrono::microseconds>(
+                   std::chrono::high_resolution_clock::now())
+                   .time_since_epoch()
+                   .count();
+      }
+      
       while (true) {
         result = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
         if (node->second.thr != thread) {
           break;
         }
-        udiff = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::steady_clock::now() - start)
-                    .count();
+
+        if ((wflags & kCvWaitAbsTime) == 0) {
+          udiff = std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now() - start)
+                      .count();
+        }
+
         if (udiff >= ut) {
           result = ErrorCode::TIMEDOUT;
           break;
