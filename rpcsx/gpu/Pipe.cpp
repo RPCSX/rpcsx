@@ -1193,9 +1193,6 @@ bool GraphicsPipe::eventWriteEop(Ring &ring) {
                                               kGcEventGfxEop);
   }
 
-  std::println("event write eop {}, {}, {}, {:x}, {}, {}, {}:{}", eventIndex,
-               dataSel, intSel, address, eventType, dataSel, dataHi, dataLo);
-
   if (intSel != 0 && dataSel == 2) {
     std::optional<EopFlipRequest> request;
     int index = -1;
