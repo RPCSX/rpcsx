@@ -78,6 +78,7 @@ struct EopFlipRequest {
   std::uint32_t pid;
   int bufferIndex;
   std::uint64_t arg;
+  std::uint64_t eopValue;
 };
 
 struct GraphicsPipe {

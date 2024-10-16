@@ -396,10 +396,14 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       gpu.submitFlip(thread->tproc->gfxRing, thread->tproc->pid,
                      args->displayBufferIndex, args->flipArg);
     } else if (args->eop_nz == 1) {
-      ORBIS_RET_ON_ERROR(
-          gpu.submitFlipOnEop(thread->tproc->gfxRing, thread->tproc->pid,
-                              args->displayBufferIndex, args->flipArg));
-      *args->eop_val = args->canary;
+      std::uint64_t eopValue = args->canary;
+      eopValue ^= 0xff00'0000;
+      eopValue ^= static_cast<std::uint64_t>(device->eopCount++) << 32;
+
+      ORBIS_RET_ON_ERROR(gpu.submitFlipOnEop(
+          thread->tproc->gfxRing, thread->tproc->pid, args->displayBufferIndex,
+          args->flipArg, eopValue));
+      *args->eop_val = eopValue;
     }
 
     *args->rout = 0;

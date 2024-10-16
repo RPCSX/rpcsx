@@ -512,6 +512,7 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   // IT_SURFACE_SYNC
   deHandlers[gnm::IT_COND_WRITE] = &GraphicsPipe::condWrite;
   deHandlers[gnm::IT_EVENT_WRITE] = &GraphicsPipe::eventWrite;
+  mainHandlers[gnm::IT_EVENT_WRITE_EOP] = &GraphicsPipe::eventWriteEop;
   deHandlers[gnm::IT_EVENT_WRITE_EOP] = &GraphicsPipe::eventWriteEop;
   deHandlers[gnm::IT_EVENT_WRITE_EOS] = &GraphicsPipe::eventWriteEos;
   deHandlers[gnm::IT_RELEASE_MEM] = &GraphicsPipe::releaseMem;
@@ -1144,7 +1145,7 @@ bool GraphicsPipe::eventWrite(Ring &ring) {
 
 bool GraphicsPipe::eventWriteEop(Ring &ring) {
   auto eventCntl = ring.rptr[1];
-  auto addressLo = ring.rptr[2] & ~3;
+  auto addressLo = ring.rptr[2];
   auto dataCntl = ring.rptr[3];
   auto dataLo = ring.rptr[4];
   auto dataHi = ring.rptr[5];
@@ -1161,44 +1162,63 @@ bool GraphicsPipe::eventWriteEop(Ring &ring) {
 
   context.vgtEventInitiator = eventType;
 
-  switch (dataSel) {
-  case 0: // none
-    break;
-  case 1: // 32 bit, low
-    *reinterpret_cast<std::uint32_t *>(pointer) = dataLo;
-    break;
-  case 2: // 64 bit
-    *pointer = dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
-    break;
-  case 3: // 64 bit, global GPU clock
-    *pointer = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-                   .count();
-    break;
-  case 4: // 64 bit, perf counter
-    *pointer = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                   std::chrono::steady_clock::now().time_since_epoch())
-                   .count();
-    break;
+  if (pointer != nullptr) {
+    switch (dataSel) {
+    case 0: // none
+      break;
+    case 1: // 32 bit, low
+      *reinterpret_cast<std::uint32_t *>(pointer) = dataLo;
+      break;
+    case 2: // 64 bit
+      *pointer = dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
+      break;
+    case 3: // 64 bit, global GPU clock
+      *pointer = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     std::chrono::system_clock::now().time_since_epoch())
+                     .count();
+      break;
+    case 4: // 64 bit, perf counter
+      *pointer = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                     std::chrono::steady_clock::now().time_since_epoch())
+                     .count();
+      break;
 
-  default:
-    rx::die("unimplemented event write eop data %#x", dataSel);
+    default:
+      rx::die("unimplemented event write eop data %#x", dataSel);
+    }
   }
 
-  if (intSel) {
+  if (intSel != 0) {
     orbis::g_context.deviceEventEmitter->emit(orbis::kEvFiltGraphicsCore, 0,
                                               kGcEventGfxEop);
   }
 
-  if (intSel == 2) {
+  std::println("event write eop {}, {}, {}, {:x}, {}, {}, {}:{}", eventIndex,
+               dataSel, intSel, address, eventType, dataSel, dataHi, dataLo);
+
+  if (intSel != 0 && dataSel == 2) {
     std::optional<EopFlipRequest> request;
-    int index;
+    int index = -1;
     {
       std::lock_guard lock(eopFlipMtx);
 
-      if (eopFlipRequestCount > 0) {
-        index = --eopFlipRequestCount;
+      auto data = dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
+      for (auto &request : std::span(eopFlipRequests, eopFlipRequestCount)) {
+        if (request.eopValue == data) {
+          index = &request - eopFlipRequests;
+          break;
+        }
+      }
+
+      if (index >= 0) {
         request = eopFlipRequests[index];
+
+        if (index + 1 != eopFlipRequestCount) {
+          std::swap(eopFlipRequests[index],
+                    eopFlipRequests[eopFlipRequestCount - 1]);
+        }
+
+        --eopFlipRequestCount;
       }
     }
 
