@@ -30,6 +30,8 @@ public:
   void submitSwitchBuffer(int gfxPipe);
   void submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
                   std::uint64_t flipArg);
+  orbis::ErrorCode submitFlipOnEop(int gfxPipe, std::uint32_t pid,
+                                   int bufferIndex, std::uint64_t flipArg);
   void submitMapMemory(int gfxPipe, std::uint32_t pid, std::uint64_t address,
                        std::uint64_t size, int memoryType, int dmemIndex,
                        int prot, std::int64_t offset);
@@ -48,7 +50,7 @@ public:
                        orbis::uint64_t readPtrAddress, orbis::uint64_t doorbell,
                        orbis::uint64_t ringSize);
   void submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
-                        std::uint32_t queueId, std::uint64_t offset);
+                          std::uint32_t queueId, std::uint64_t offset);
   void start();
   void waitForIdle();
 

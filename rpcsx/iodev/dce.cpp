@@ -392,15 +392,17 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     // flip request
     auto args = reinterpret_cast<FlipRequestArgs *>(argp);
 
-    // ORBIS_LOG_ERROR("dce: FlipRequestArgs", args->canary,
-    //                 args->displayBufferIndex, args->flipMode, args->unk1,
-    //                 args->flipArg, args->flipArg2, args->eop_nz, args->unk2,
-    //                 args->eop_val, args->unk3, args->unk4, args->rout);
-    gpu.submitFlip(thread->tproc->gfxRing, thread->tproc->pid,
-                   args->displayBufferIndex,
-                   /*args->flipMode,*/ args->flipArg);
+    if (args->eop_nz == 0) {
+      gpu.submitFlip(thread->tproc->gfxRing, thread->tproc->pid,
+                     args->displayBufferIndex, args->flipArg);
+    } else if (args->eop_nz == 1) {
+      ORBIS_RET_ON_ERROR(
+          gpu.submitFlipOnEop(thread->tproc->gfxRing, thread->tproc->pid,
+                              args->displayBufferIndex, args->flipArg));
+      *args->eop_val = args->canary;
+    }
 
-    // *args->rout = 0;
+    *args->rout = 0;
     return {};
   }
 

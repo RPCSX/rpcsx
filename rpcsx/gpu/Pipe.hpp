@@ -51,7 +51,8 @@ struct ComputePipe {
   bool processAllRings();
   bool processRing(Ring &ring);
   void setIndirectRing(int queueId, int level, Ring ring);
-  void mapQueue(int queueId, Ring ring, std::unique_lock<orbis::shared_mutex> &lock);
+  void mapQueue(int queueId, Ring ring,
+                std::unique_lock<orbis::shared_mutex> &lock);
   void waitForIdle(int queueId, std::unique_lock<orbis::shared_mutex> &lock);
   void submit(int queueId, std::uint32_t offset);
 
@@ -73,7 +74,14 @@ struct ComputePipe {
   std::uint32_t *getMmRegister(Ring &ring, std::uint32_t dwAddress);
 };
 
+struct EopFlipRequest {
+  std::uint32_t pid;
+  int bufferIndex;
+  std::uint64_t arg;
+};
+
 struct GraphicsPipe {
+  static constexpr auto kEopFlipRequestMax = 0x10;
   Device *device;
   Scheduler scheduler;
 
@@ -94,6 +102,10 @@ struct GraphicsPipe {
 
   Ring deQueues[3];
   Ring ceQueue;
+
+  orbis::shared_mutex eopFlipMtx;
+  std::uint32_t eopFlipRequestCount{0};
+  EopFlipRequest eopFlipRequests[kEopFlipRequestMax];
 
   using CommandHandler = bool (GraphicsPipe::*)(Ring &);
   CommandHandler commandHandlers[4][255];

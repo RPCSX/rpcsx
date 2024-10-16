@@ -60,6 +60,29 @@ void DeviceCtl::submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
                                                      flipArg >> 32, pid));
 }
 
+orbis::ErrorCode DeviceCtl::submitFlipOnEop(int gfxPipe, std::uint32_t pid,
+                                            int bufferIndex,
+                                            std::uint64_t flipArg) {
+  int index;
+  auto &pipe = mDevice->graphicsPipes[gfxPipe];
+  {
+    std::lock_guard lock(pipe.eopFlipMtx);
+    if (pipe.eopFlipRequestCount >= GraphicsPipe::kEopFlipRequestMax) {
+      return orbis::ErrorCode::AGAIN;
+    }
+
+    index = pipe.eopFlipRequestCount++;
+
+    pipe.eopFlipRequests[index] = {
+        .pid = pid,
+        .bufferIndex = bufferIndex,
+        .arg = flipArg,
+    };
+  }
+
+  return {};
+}
+
 void DeviceCtl::submitMapMemory(int gfxPipe, std::uint32_t pid,
                                 std::uint64_t address, std::uint64_t size,
                                 int memoryType, int dmemIndex, int prot,

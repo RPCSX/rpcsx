@@ -1190,6 +1190,23 @@ bool GraphicsPipe::eventWriteEop(Ring &ring) {
                                               kGcEventGfxEop);
   }
 
+  if (intSel == 2) {
+    std::optional<EopFlipRequest> request;
+    int index;
+    {
+      std::lock_guard lock(eopFlipMtx);
+
+      if (eopFlipRequestCount > 0) {
+        index = --eopFlipRequestCount;
+        request = eopFlipRequests[index];
+      }
+    }
+
+    if (request) {
+      device->flip(request->pid, request->bufferIndex, request->arg);
+    }
+  }
+
   return true;
 }
 
