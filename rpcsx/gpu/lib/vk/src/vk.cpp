@@ -539,7 +539,6 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
   }
 
   rx::dieIf(queueFamiliesWithPresentSupport.empty(), "not found queue family with present support");
-  rx::dieIf(queueFamiliesWithComputeSupport.empty(), "not found queue family with compute support");
   rx::dieIf(queueFamiliesWithGraphicsSupport.empty(), "not found queue family with graphics support");
 
   this->surface = surface;
