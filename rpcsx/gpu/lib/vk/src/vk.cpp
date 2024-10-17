@@ -538,6 +538,10 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
     queueFamiliesCount++;
   }
 
+  rx::dieIf(queueFamiliesWithPresentSupport.empty(), "not found queue family with present support");
+  rx::dieIf(queueFamiliesWithComputeSupport.empty(), "not found queue family with compute support");
+  rx::dieIf(queueFamiliesWithGraphicsSupport.empty(), "not found queue family with graphics support");
+
   this->surface = surface;
 
   std::vector<VkDeviceQueueCreateInfo> requestedQueues;
@@ -631,7 +635,9 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
     }
   }
 
-  if (graphicsQueues.empty() && presentQueue != VK_NULL_HANDLE) {
+  rx::dieIf(presentQueue == VK_NULL_HANDLE, "present queue not found");
+
+  if (graphicsQueues.empty()) {
     graphicsQueues.push_back({presentQueue, presentQueueFamily});
   }
 }
