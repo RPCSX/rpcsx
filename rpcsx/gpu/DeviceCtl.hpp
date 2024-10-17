@@ -30,8 +30,11 @@ public:
   void submitSwitchBuffer(int gfxPipe);
   void submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
                   std::uint64_t flipArg);
+  orbis::ErrorCode submitWriteEop(int gfxPipe, std::uint32_t waitMode,
+                                  std::uint64_t eopValue);
   orbis::ErrorCode submitFlipOnEop(int gfxPipe, std::uint32_t pid,
-                                   int bufferIndex, std::uint64_t flipArg);
+                                   int bufferIndex, std::uint64_t flipArg,
+                                   std::uint64_t eopValue);
   void submitMapMemory(int gfxPipe, std::uint32_t pid, std::uint64_t address,
                        std::uint64_t size, int memoryType, int dmemIndex,
                        int prot, std::int64_t offset);

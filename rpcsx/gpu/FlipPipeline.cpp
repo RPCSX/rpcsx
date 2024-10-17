@@ -139,7 +139,7 @@ FlipPipeline::FlipPipeline() {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
     };
 
-    VkSampleMask sampleMask = -1;
+    VkSampleMask sampleMask = VK_SAMPLE_COUNT_1_BIT;
     VkPipelineMultisampleStateCreateInfo multisampleState{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
@@ -149,9 +149,16 @@ FlipPipeline::FlipPipeline() {
     VkPipelineDepthStencilStateCreateInfo depthStencilState{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
     };
+
+    VkPipelineColorBlendAttachmentState blendAttachmentState = {
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                          VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+
     VkPipelineColorBlendStateCreateInfo colorBlendState{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-    };
+        .attachmentCount = 1,
+        .pAttachments = &blendAttachmentState};
 
     VkDynamicState dynamicStates[] = {
         VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT,
@@ -164,9 +171,18 @@ FlipPipeline::FlipPipeline() {
         .pDynamicStates = dynamicStates,
     };
 
+    VkFormat colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+
+    VkPipelineRenderingCreateInfoKHR info{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &colorFormat,
+    };
+
     VkGraphicsPipelineCreateInfo pipelineCreateInfos[]{
         {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+            .pNext = &info,
             .stageCount = std::size(stagesStd),
             .pStages = stagesStd,
             .pVertexInputState = &vertexInputState,
@@ -181,6 +197,7 @@ FlipPipeline::FlipPipeline() {
         },
         {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+            .pNext = &info,
             .stageCount = std::size(stagesAlt),
             .pStages = stagesAlt,
             .pVertexInputState = &vertexInputState,

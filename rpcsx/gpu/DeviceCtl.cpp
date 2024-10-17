@@ -1,6 +1,7 @@
 #include "DeviceCtl.hpp"
 #include "Device.hpp"
 #include "gnm/pm4.hpp"
+#include "orbis/error/ErrorCode.hpp"
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
 #include "shader/dialect.hpp"
@@ -60,9 +61,32 @@ void DeviceCtl::submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
                                                      flipArg >> 32, pid));
 }
 
+orbis::ErrorCode DeviceCtl::submitWriteEop(int gfxPipe, std::uint32_t waitMode,
+                                           std::uint64_t eopValue) {
+  std::uint64_t address = 0;
+  std::uint32_t eventType = 0;
+  // FIXME: event type currently not used
+
+  std::uint32_t eventCntl = (eventType << 0);
+  auto addressLo = static_cast<std::uint32_t>(address);
+  std::uint32_t dataCntl = 0           //
+                           | (2 << 24) // int sel
+                           | (2 << 29) // data sel
+                           | static_cast<std::uint16_t>(address >> 32);
+
+  auto dataLo = static_cast<std::uint32_t>(eopValue);
+  auto dataHi = static_cast<std::uint32_t>(eopValue >> 32);
+
+  mDevice->submitGfxCommand(gfxPipe, createPm4Packet(gnm::IT_EVENT_WRITE_EOP,
+                                                     eventCntl, addressLo,
+                                                     dataCntl, dataLo, dataHi));
+  return {};
+}
+
 orbis::ErrorCode DeviceCtl::submitFlipOnEop(int gfxPipe, std::uint32_t pid,
                                             int bufferIndex,
-                                            std::uint64_t flipArg) {
+                                            std::uint64_t flipArg,
+                                            std::uint64_t eopValue) {
   int index;
   auto &pipe = mDevice->graphicsPipes[gfxPipe];
   {
@@ -77,6 +101,7 @@ orbis::ErrorCode DeviceCtl::submitFlipOnEop(int gfxPipe, std::uint32_t pid,
         .pid = pid,
         .bufferIndex = bufferIndex,
         .arg = flipArg,
+        .eopValue = eopValue,
     };
   }
 

@@ -1193,7 +1193,7 @@ bool GraphicsPipe::eventWriteEop(Ring &ring) {
                                               kGcEventGfxEop);
   }
 
-  if (intSel != 0 && dataSel == 2) {
+  if (intSel == 2 && dataSel == 2) {
     std::optional<EopFlipRequest> request;
     int index = -1;
     {

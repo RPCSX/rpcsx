@@ -22,22 +22,7 @@
 using namespace amdgpu;
 using namespace shader;
 
-static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,
-                              std::uint32_t pageCount) {
-  std::uint64_t command =
-      (static_cast<std::uint64_t>(pageCount - 1) << 32) | firstPage;
-
-  while (true) {
-    for (std::size_t i = 0; i < std::size(device->cacheCommands); ++i) {
-      std::uint64_t expCommand = 0;
-      if (device->cacheCommands[vmId][i].compare_exchange_strong(
-              expCommand, command, std::memory_order::acquire,
-              std::memory_order::relaxed)) {
-        return;
-      }
-    }
-  }
-}
+static constexpr bool kDisableCache = false;
 
 static bool testHostInvalidations(Device *device, int vmId,
                                   std::uint64_t address, std::uint64_t size) {
@@ -620,7 +605,9 @@ struct CachedBuffer : Cache::Entry {
 struct CachedHostVisibleBuffer : CachedBuffer {
   using CachedBuffer::update;
 
-  bool expensive() { return addressRange.size() >= rx::mem::pageSize; }
+  bool expensive() {
+    return !kDisableCache && addressRange.size() >= rx::mem::pageSize;
+  }
 
   void flush(void *target, rx::AddressRange range) {
     if (!hasDelayedFlush) {
@@ -686,7 +673,7 @@ struct CachedImage : Cache::Entry {
   std::uint32_t pitch{};
   SurfaceInfo info;
 
-  bool expensive() { return true; }
+  bool expensive() { return !kDisableCache; }
 
   [[nodiscard]] VkImageSubresourceRange
   getSubresource(rx::AddressRange range) const {
@@ -2191,7 +2178,8 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
 
     VkDescriptorPoolCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = kDescriptorSetCount * 2,
+        .maxSets = static_cast<uint32_t>(std::size(mGraphicsDescriptorSets) * mGraphicsDescriptorSetLayouts.size() +
+                                         std::size(mComputeDescriptorSets) + 1),
         .poolSizeCount = static_cast<uint32_t>(std::size(descriptorPoolSizes)),
         .pPoolSizes = descriptorPoolSizes,
     };
@@ -2210,7 +2198,8 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
     };
 
     for (auto &graphicsSet : mGraphicsDescriptorSets) {
-      vkAllocateDescriptorSets(vk::context->device, &info, graphicsSet.data());
+      VK_VERIFY(vkAllocateDescriptorSets(vk::context->device, &info,
+                                         graphicsSet.data()));
     }
   }
 
@@ -2223,7 +2212,8 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
     };
 
     for (auto &computeSet : mComputeDescriptorSets) {
-      vkAllocateDescriptorSets(vk::context->device, &info, &computeSet);
+      VK_VERIFY(
+          vkAllocateDescriptorSets(vk::context->device, &info, &computeSet));
     }
   }
 }
