@@ -2160,19 +2160,19 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
     VkDescriptorPoolSize descriptorPoolSizes[]{
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = 4 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 4 * kDescriptorSetCount,
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 3 * 32 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 3 * 32 * kDescriptorSetCount,
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = 32 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 32 * kDescriptorSetCount,
         },
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = 32 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 32 * kDescriptorSetCount,
         },
     };
 
@@ -2181,7 +2181,7 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
         .maxSets =
             static_cast<uint32_t>(std::size(mGraphicsDescriptorSets) *
                                       mGraphicsDescriptorSetLayouts.size() +
-                                  std::size(mComputeDescriptorSets) + 1),
+                                  std::size(mComputeDescriptorSets)) * 2,
         .poolSizeCount = static_cast<uint32_t>(std::size(descriptorPoolSizes)),
         .pPoolSizes = descriptorPoolSizes,
     };
