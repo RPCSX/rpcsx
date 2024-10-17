@@ -1183,6 +1183,7 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
   }
 
   auto cached = static_cast<CachedHostVisibleBuffer *>(it->get());
+  mStorage->mAcquiredMemoryResources.push_back(it.get());
 
   cached->acquire(this, access);
   auto addressRange = it.get()->addressRange;
@@ -1203,7 +1204,6 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
   }
 
   auto offset = range.beginAddress() - addressRange.beginAddress();
-  mStorage->mAcquiredMemoryResources.push_back(it.get());
   return {
       .handle = cached->buffer.getHandle(),
       .offset = offset,
@@ -2178,8 +2178,10 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
 
     VkDescriptorPoolCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = static_cast<uint32_t>(std::size(mGraphicsDescriptorSets) * mGraphicsDescriptorSetLayouts.size() +
-                                         std::size(mComputeDescriptorSets) + 1),
+        .maxSets =
+            static_cast<uint32_t>(std::size(mGraphicsDescriptorSets) *
+                                      mGraphicsDescriptorSetLayouts.size() +
+                                  std::size(mComputeDescriptorSets) + 1),
         .poolSizeCount = static_cast<uint32_t>(std::size(descriptorPoolSizes)),
         .pPoolSizes = descriptorPoolSizes,
     };
