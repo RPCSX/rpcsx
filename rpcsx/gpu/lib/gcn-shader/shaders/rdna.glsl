@@ -497,7 +497,7 @@ uint32_t v_mbcnt_hi_u32_b32(uint32_t x, uint32_t y) {
     return (thread_id > 32 ? bitCount(x & ((1 << (thread_id - 32)) - 1)) : 0) + y;
 }
 uint32_t v_add_i32(inout uint64_t sdst, int32_t x, int32_t y) {
-    uint64_t result = uint64_t(x) + uint64_t(y);
+    uint64_t result = uint64_t(int64_t(x) + int64_t(y));
     
     if (result > 0xffffffff) {
         sdst |= exec & (uint64_t(1) << thread_id);
@@ -714,7 +714,7 @@ bool v_cmp_class_f64(float64_t x, uint vftypemask) { return CMP_CLASS(x, vftypem
 
 float32_t v_mad_legacy_f32(float32_t a, float32_t b, float32_t c) { return (a == 0 || b == 0) ? c : fma(a, b, c); }
 float32_t v_mad_f32(float32_t a, float32_t b, float32_t c) { return fma(a, b, c); }
-uint32_t v_mad_i32_i24(int32_t a, int32_t b, int32_t c) { return mul24lo(a, b) + c; }
+int32_t v_mad_i32_i24(int32_t a, int32_t b, int32_t c) { return mul24lo(a, b) + c; }
 uint32_t v_mad_u32_u24(uint32_t a, uint32_t b, uint32_t c) { return mul24lo(a, b) + c; }
 float32_t v_cubeid_f32(float32_t a, float32_t b, float32_t c) {
     if (abs(c) >= abs(a) && abs(c) >= abs(b)) {
@@ -964,12 +964,37 @@ uint32_t v_msad_u8(uint32_t x, uint32_t y, uint32_t z) {
 // }
 
 // void v_mqsad_u32_u8() {}
-// void v_mad_u64_u32() {}
-// void v_mad_i64_i32() {}
+
+uint64_t v_mad_u64_u32(uint32_t a, uint32_t b, uint64_t c) {
+    uint32_t mulResult = a * b;
+    uint64_t result = mulResult + c;
+
+    uint64_t thread_mask = uint64_t(1) << thread_id;
+    if (result < max(mulResult, c)) {
+        vcc |= thread_mask & exec;
+    } else {
+        vcc &= ~thread_mask;
+    }
+    return result;
+}
+int64_t v_mad_i64_i32(int32_t a, int32_t b, int64_t c) {
+    int32_t mulResult = a * b;
+    int64_t result = mulResult + c;
+
+    uint64_t thread_mask = uint64_t(1) << thread_id;
+    if (sign(mulResult) == sign(c) && sign(mulResult) != result) {
+        vcc |= thread_mask & exec;
+    } else {
+        vcc &= ~thread_mask;
+    }
+    return result;
+}
 
 // SOP
 
 bool scc;
+
+void s_ttracedata(uint64_t) {}
 
 void s_cmp_eq_i32(int32_t a, int32_t b) { scc = a == b; }
 void s_cmp_ge_i32(int32_t a, int32_t b) { scc = a >= b; }
@@ -1128,13 +1153,13 @@ uint64_t s_xor_saveexec_b64(uint64_t x) {
 }
 uint64_t s_andn2_saveexec_b64(uint64_t x) {
     uint64_t result = exec;
-    exec = result & ~x;
+    exec = x & ~result;
     scc = result != 0;
     return result;
 }
 uint64_t s_orn2_saveexec_b64(uint64_t x) {
     uint64_t result = exec;
-    exec = result | ~x;
+    exec = x | ~result;
     scc = result != 0;
     return result;
 }
@@ -1197,18 +1222,14 @@ int32_t s_sub_i32(int32_t x, int32_t y) {
     return result;
 }
 uint32_t s_addc_u32(uint32_t x, uint32_t y) {
-    uint32_t carry0;
-    uint32_t carry1 = 0;
-    uint32_t result = uaddCarry(x, y, carry0);
-    if (scc) {
-        result = uaddCarry(result, 1, carry1);
-    }
-    scc = (carry0 | carry1) != 0;
-    return result;
+    uint64_t result = uint64_t(x) + uint64_t(y) + (scc ? 1 : 0);
+    scc = result > 0xffffffff;
+    return uint32_t(result);
 }
 uint32_t s_subb_u32(uint32_t x, uint32_t y) {
-    uint32_t result = x - y - (scc ? 1 : 0);
-    scc = y + (scc ? 1 : 0) > x;
+    uint32_t sccValue = scc ? 1 : 0;
+    uint32_t result = x - y - sccValue;
+    scc = (y + sccValue) > x || sccValue > x;
     return result;
 }
 int32_t s_min_i32(int32_t x, int32_t y) {
@@ -2779,7 +2800,58 @@ void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, 
 // image_sample_cl
 // image_sample_d
 // image_sample_d_cl
-// image_sample_l
+void image_sample_l(inout f32vec4 vdata, f32vec4 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
+    uint8_t textureType = tbuffer_type(tbuffer);
+    f32vec4 result;
+    switch (uint(textureType)) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        result = textureLod(
+            sampler1D(
+                textures1D[findTexture1DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr.x, vaddr.y);
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        result = textureLod(
+            sampler2D(
+                textures2D[findTexture2DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr.xy, vaddr.z);
+        break;
+
+    case kTextureType3D:
+        result = textureLod(
+            sampler3D(
+                textures3D[findTexture3DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr.xyz, vaddr.w);
+        break;
+
+    default:
+        return;
+    }
+
+    result = swizzle(result,
+        tbuffer_dst_sel_x(tbuffer),
+        tbuffer_dst_sel_y(tbuffer),
+        tbuffer_dst_sel_z(tbuffer),
+        tbuffer_dst_sel_w(tbuffer));
+
+
+    int vdataIndex = 0;
+    for (int i = 0; i < 4; ++i) {
+        if ((dmask & (1 << i)) != 0) {
+            vdata[vdataIndex++] = result[i];
+        }
+    }
+}
+
 // image_sample_b
 // image_sample_b_cl
 // image_sample_lz
