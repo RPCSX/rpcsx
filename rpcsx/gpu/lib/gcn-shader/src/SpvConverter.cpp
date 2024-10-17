@@ -561,6 +561,8 @@ ir::Value spv::Context::createOutput(ir::Location loc, int index) {
   if (result == nullptr) {
     auto floatType = getTypeFloat32();
     auto float32x4Type = getTypeVector(floatType, 4);
+    auto nullValue = getNull(float32x4Type);
+
     auto variableType =
         getTypePointer(ir::spv::StorageClass::Output, float32x4Type);
 
@@ -570,7 +572,7 @@ ir::Value spv::Context::createOutput(ir::Location loc, int index) {
         Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
 
     auto variable = globals.createSpvVariable(loc, variableType,
-                                              ir::spv::StorageClass::Output);
+                                              ir::spv::StorageClass::Output, nullValue);
 
     annotations.createSpvDecorate(loc, variable,
                                   ir::spv::Decoration::Location(index));

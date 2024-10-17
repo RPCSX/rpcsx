@@ -862,6 +862,28 @@ readSoppInst(GcnInstruction &inst, std::uint64_t &address,
 }
 
 void GcnOperand::print(std::ostream &os) const {
+  if (neg) {
+    os << '-';
+  }
+  if (abs) {
+    os << "abs ";
+  }
+
+  if (clamp) {
+    os << "clamp ";
+  }
+  switch (omod) {
+  case 1:
+    os << "2 * ";
+    break;
+  case 2:
+    os << "4 * ";
+    break;
+  case 3:
+    os << "0.5 * ";
+    break;
+  }
+
   switch (kind) {
   case Kind::Invalid:
     os << "<invalid>";

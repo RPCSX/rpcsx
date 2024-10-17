@@ -1072,7 +1072,7 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
   readMemory(&result->magic, rx::AddressRange::fromBeginSize(
                                  key.address, sizeof(result->magic)));
 
-  for (auto entry : converted->info.memoryMap) {
+  for (auto entry : result->info.memoryMap) {
     auto entryRange =
         rx::AddressRange::fromBeginEnd(entry.beginAddress, entry.endAddress);
     auto &inserted = result->usedMemory.emplace_back();
@@ -1194,7 +1194,8 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
                                 addressRange.beginAddress(),
                                 addressRange.size()) ||
         !mParent->isInSync(addressRange, cached->tagId)) {
-
+      mParent->flushImages(*this, range);
+      getScheduler().wait();
       mParent->trackUpdate(EntryType::HostVisibleBuffer, addressRange, it.get(),
                            getReadId(), cached->expensive());
       amdgpu::RemoteMemory memory{mParent->mVmId};

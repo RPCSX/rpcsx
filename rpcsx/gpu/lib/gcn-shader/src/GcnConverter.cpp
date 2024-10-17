@@ -728,20 +728,6 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
 
     auto channelType = context.getTypeFloat32();
 
-    if (swizzle == 0 && done) {
-      auto termBuilder = gcn::Builder::createAppend(
-          context, context.layout.getOrCreateFunctions(context));
-      auto terminateFn = termBuilder.createSpvFunction(
-          loc, context.getTypeVoid(), ir::spv::FunctionControl::None,
-          context.getTypeFunction(context.getTypeVoid(), {}));
-      termBuilder.createSpvLabel(loc);
-      termBuilder.createSpvKill(loc);
-      termBuilder.createSpvFunctionEnd(loc);
-
-      builder.createSpvFunctionCall(loc, context.getTypeVoid(), terminateFn,
-                                    {});
-    }
-
     for (int channel = 0; channel < 4; ++channel) {
       if (~swizzle & (1 << channel)) {
         continue;
@@ -1111,7 +1097,8 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
       if (resultType == ir::spv::OpTypeInt) {
         auto floatType =
             context.getTypeFloat(*resultType.getOperand(0).getAsInt32());
-        value = builder.createSpvBitcast(resultType.getLocation(), floatType, value);
+        value = builder.createSpvBitcast(resultType.getLocation(), floatType,
+                                         value);
         resultType = floatType;
       }
 
@@ -1716,7 +1703,8 @@ gcn::convertToSpv(Context &context, ir::Region body,
                                      ir::spv::Capability::Int64Atomics);
   }
 
-  capabilities.createSpvCapability(context.getUnknownLocation(), ir::spv::Capability::ImageQuery);
+  capabilities.createSpvCapability(context.getUnknownLocation(),
+                                   ir::spv::Capability::ImageQuery);
 
   extensions.createSpvExtension(context.getUnknownLocation(),
                                 "SPV_KHR_physical_storage_buffer");
