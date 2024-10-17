@@ -172,8 +172,16 @@ void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
                                 orbis::uint64_t readPtrAddress,
                                 orbis::uint64_t doorbell,
                                 orbis::uint64_t ringSize) {
-  if (meId != 1) {
+  if (meId != 1 && meId != 2) {
     rx::die("unexpected ME %d", meId);
+  }
+
+  if (meId == 2) {
+    pipeId += 4;
+  }
+
+  if (queueId >= ComputePipe::kQueueCount) {
+    rx::die("unexpected queueId %d", queueId);
   }
 
   auto &pipe = mDevice->computePipes[pipeId];
@@ -201,8 +209,16 @@ void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
 void DeviceCtl::submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
                                    std::uint32_t queueId,
                                    std::uint64_t offset) {
-  if (meId != 1) {
+  if (meId != 1 && meId != 2) {
     rx::die("unexpected ME %d", meId);
+  }
+
+  if (queueId >= ComputePipe::kQueueCount) {
+    rx::die("unexpected queueId %d", queueId);
+  }
+
+  if (meId == 2) {
+    pipeId += 4;
   }
 
   auto &pipe = mDevice->computePipes[pipeId];

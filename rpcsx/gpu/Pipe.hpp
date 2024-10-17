@@ -35,15 +35,17 @@ struct Ring {
 };
 
 struct ComputePipe {
+  static constexpr auto kRingsPerQueue = 2;
+  static constexpr auto kQueueCount = 8;
   Device *device;
   Scheduler scheduler;
 
   using CommandHandler = bool (ComputePipe::*)(Ring &);
   CommandHandler commandHandlers[255];
-  orbis::shared_mutex queueMtx[8];
+  orbis::shared_mutex queueMtx[kQueueCount];
   int index;
   int currentQueueId;
-  Ring queues[2][8];
+  Ring queues[kRingsPerQueue][kQueueCount];
   std::uint64_t drawIndexIndirPatchBase = 0;
 
   ComputePipe(int index);
