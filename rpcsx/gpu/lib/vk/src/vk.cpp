@@ -518,16 +518,13 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
     }
 
     if (familyProperty.queueFamilyProperties.queueFlags &
-        VK_QUEUE_SPARSE_BINDING_BIT) {
-      if (familyProperty.queueFamilyProperties.queueFlags &
-          VK_QUEUE_GRAPHICS_BIT) {
-        queueFamiliesWithGraphicsSupport.insert(queueFamiliesCount);
-      }
+        VK_QUEUE_GRAPHICS_BIT) {
+      queueFamiliesWithGraphicsSupport.insert(queueFamiliesCount);
+    }
 
-      if (familyProperty.queueFamilyProperties.queueFlags &
-          VK_QUEUE_COMPUTE_BIT) {
-        queueFamiliesWithComputeSupport.insert(queueFamiliesCount);
-      }
+    if (familyProperty.queueFamilyProperties.queueFlags &
+        VK_QUEUE_COMPUTE_BIT) {
+      queueFamiliesWithComputeSupport.insert(queueFamiliesCount);
     }
 
     if (familyProperty.queueFamilyProperties.queueFlags &
@@ -538,8 +535,12 @@ void vk::Context::createDevice(VkSurfaceKHR surface, int gpuIndex,
     queueFamiliesCount++;
   }
 
-  rx::dieIf(queueFamiliesWithPresentSupport.empty(), "not found queue family with present support");
-  rx::dieIf(queueFamiliesWithGraphicsSupport.empty(), "not found queue family with graphics support");
+  rx::dieIf(queueFamiliesWithPresentSupport.empty(),
+            "not found queue family with present support");
+
+  if (queueFamiliesWithGraphicsSupport.empty()) {
+    queueFamiliesWithGraphicsSupport = queueFamiliesWithPresentSupport;
+  }
 
   this->surface = surface;
 
