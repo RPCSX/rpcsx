@@ -36,7 +36,7 @@ add_subdirectory(LibAtrac9)
 set(FFMPEG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg) 
 add_custom_command(
     OUTPUT ${FFMPEG_PATH}/config.h
-    COMMAND ./configure
+    COMMAND ./configure --disable-libdrm --disable-vaapi --disable-vdpau --disable-zlib --disable-lzma
     COMMENT "Configuring FFmpeg..."
     WORKING_DIRECTORY ${FFMPEG_PATH}
 )
