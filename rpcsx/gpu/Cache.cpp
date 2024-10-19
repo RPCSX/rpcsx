@@ -469,13 +469,16 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
   barrier.image = image;
   barrier.subresourceRange = subresourceRange;
 
-  auto layoutToStageAccess = [](VkImageLayout layout)
-      -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
+  auto layoutToStageAccess =
+      [](VkImageLayout layout,
+         bool isSrc) -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_GENERAL:
-      return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
+      return {isSrc ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+                    : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+              0};
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
       return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
@@ -501,8 +504,9 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
     }
   };
 
-  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout);
-  auto [destinationStage, destinationAccess] = layoutToStageAccess(newLayout);
+  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout, true);
+  auto [destinationStage, destinationAccess] =
+      layoutToStageAccess(newLayout, false);
 
   barrier.srcAccessMask = sourceAccess;
   barrier.dstAccessMask = destinationAccess;

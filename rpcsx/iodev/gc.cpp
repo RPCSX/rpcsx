@@ -143,13 +143,16 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   }
 
   case 0xc0048116: { // submit done?
+    break;
+  }
+
+  case 0xc0048117:
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }
     break;
-  }
 
   case 0xc00c8110: {
     // set gs ring sizes

@@ -164,19 +164,33 @@ struct GraphicsPipe {
   bool setShReg(Ring &ring);
   bool setUConfigReg(Ring &ring);
   bool setContextReg(Ring &ring);
-
-  bool unknownPacket(Ring &ring);
-
-  bool switchBuffer(Ring &ring);
-  bool mapProcess(Ring &ring);
   bool mapQueues(Ring &ring);
   bool unmapQueues(Ring &ring);
-  bool mapMemory(Ring &ring);
-  bool unmapMemory(Ring &ring);
-  bool protectMemory(Ring &ring);
-  bool unmapProcess(Ring &ring);
-  bool flip(Ring &ring);
+
+  bool unknownPacket(Ring &ring);
+  bool switchBuffer(Ring &ring);
 
   std::uint32_t *getMmRegister(std::uint32_t dwAddress);
+};
+
+struct CommandPipe {
+  Ring ring;
+  Device *device;
+  using CommandHandler = void (CommandPipe::*)(Ring &);
+  CommandHandler commandHandlers[255];
+
+  CommandPipe();
+
+  void processAllRings();
+  void processRing(Ring &ring);
+
+  void mapProcess(Ring &ring);
+  void mapMemory(Ring &ring);
+  void unmapMemory(Ring &ring);
+  void protectMemory(Ring &ring);
+  void unmapProcess(Ring &ring);
+  void flip(Ring &ring);
+
+  void unknownPacket(Ring &ring);
 };
 } // namespace amdgpu

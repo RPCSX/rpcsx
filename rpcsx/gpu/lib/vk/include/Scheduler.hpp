@@ -180,7 +180,7 @@ private:
         auto value = mSemaphore.getCounterValue();
         auto endIt = mTasks.upper_bound(value);
 
-        for (auto it = mTasks.begin(); it != mTasks.end();
+        for (auto it = mTasks.begin(); it != endIt;
              it = mTasks.erase(it)) {
           taskList.reserve(taskList.size() + it->second.size());
           for (auto &&fn : it->second) {

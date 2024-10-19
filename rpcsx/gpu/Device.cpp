@@ -236,6 +236,14 @@ Device::Device() : vkContext(createVkContext(this)) {
     }
   });
 
+  commandPipe.device = this;
+  commandPipe.ring = {
+      .base = cmdRing,
+      .size = std::size(cmdRing),
+      .rptr = cmdRing,
+      .wptr = cmdRing,
+  };
+
   for (auto &pipe : computePipes) {
     pipe.device = this;
   }
@@ -244,7 +252,7 @@ Device::Device() : vkContext(createVkContext(this)) {
     graphicsPipes[i].setDeQueue(
         Ring{
             .base = mainGfxRings[i],
-            .size = sizeof(mainGfxRings[i]) / sizeof(mainGfxRings[i][0]),
+            .size = std::size(mainGfxRings[i]),
             .rptr = mainGfxRings[i],
             .wptr = mainGfxRings[i],
         },
@@ -621,6 +629,8 @@ void Device::onCommandBuffer(std::uint32_t pid, int cmdHeader,
 bool Device::processPipes() {
   bool allProcessed = true;
 
+  commandPipe.processAllRings();
+
   for (auto &pipe : computePipes) {
     if (!pipe.processAllRings()) {
       allProcessed = false;
@@ -649,13 +659,16 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
   barrier.image = image;
   barrier.subresourceRange = subresourceRange;
 
-  auto layoutToStageAccess = [](VkImageLayout layout)
-      -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
+  auto layoutToStageAccess =
+      [](VkImageLayout layout,
+         bool isSrc) -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_GENERAL:
-      return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
+      return {isSrc ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+                    : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+              0};
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
       return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
@@ -681,8 +694,9 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
     }
   };
 
-  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout);
-  auto [destinationStage, destinationAccess] = layoutToStageAccess(newLayout);
+  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout, true);
+  auto [destinationStage, destinationAccess] =
+      layoutToStageAccess(newLayout, false);
 
   barrier.srcAccessMask = sourceAccess;
   barrier.dstAccessMask = destinationAccess;
@@ -783,13 +797,13 @@ bool Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg,
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             .semaphore = vk::context->presentCompleteSemaphore,
             .value = 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
         },
         {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             .semaphore = scheduler.getSemaphoreHandle(),
             .value = submitCompleteTask - 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
         },
     };
 

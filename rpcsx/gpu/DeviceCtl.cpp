@@ -54,12 +54,6 @@ void DeviceCtl::submitGfxCommand(int gfxPipe, int vmId,
 void DeviceCtl::submitSwitchBuffer(int gfxPipe) {
   mDevice->submitGfxCommand(gfxPipe, createPm4Packet(gnm::IT_SWITCH_BUFFER, 0));
 }
-void DeviceCtl::submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
-                           std::uint64_t flipArg) {
-  mDevice->submitGfxCommand(gfxPipe, createPm4Packet(IT_FLIP, bufferIndex,
-                                                     flipArg & 0xffff'ffff,
-                                                     flipArg >> 32, pid));
-}
 
 orbis::ErrorCode DeviceCtl::submitWriteEop(int gfxPipe, std::uint32_t waitMode,
                                            std::uint64_t eopValue) {
@@ -107,40 +101,47 @@ orbis::ErrorCode DeviceCtl::submitFlipOnEop(int gfxPipe, std::uint32_t pid,
 
   return {};
 }
+void DeviceCtl::submitFlip(std::uint32_t pid, int bufferIndex,
+                           std::uint64_t flipArg) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_FLIP, bufferIndex,
+                                         flipArg & 0xffff'ffff, flipArg >> 32,
+                                         pid));
+}
 
-void DeviceCtl::submitMapMemory(int gfxPipe, std::uint32_t pid,
-                                std::uint64_t address, std::uint64_t size,
-                                int memoryType, int dmemIndex, int prot,
-                                std::int64_t offset) {
-  mDevice->submitGfxCommand(
-      gfxPipe,
+void DeviceCtl::submitMapMemory(std::uint32_t pid, std::uint64_t address,
+                                std::uint64_t size, int memoryType,
+                                int dmemIndex, int prot, std::int64_t offset) {
+  mDevice->submitCommand(
+      mDevice->commandPipe.ring,
       createPm4Packet(IT_MAP_MEMORY, pid, address & 0xffff'ffff, address >> 32,
                       size & 0xffff'ffff, size >> 32, memoryType, dmemIndex,
                       prot, offset & 0xffff'ffff, offset >> 32));
 }
-void DeviceCtl::submitUnmapMemory(int gfxPipe, std::uint32_t pid,
-                                  std::uint64_t address, std::uint64_t size) {
-  mDevice->submitGfxCommand(
-      gfxPipe, createPm4Packet(IT_UNMAP_MEMORY, pid, address & 0xffff'ffff,
-                               address >> 32, size & 0xffff'ffff, size >> 32));
+void DeviceCtl::submitUnmapMemory(std::uint32_t pid, std::uint64_t address,
+                                  std::uint64_t size) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_UNMAP_MEMORY, pid,
+                                         address & 0xffff'ffff, address >> 32,
+                                         size & 0xffff'ffff, size >> 32));
 }
 
-void DeviceCtl::submitMapProcess(int gfxPipe, std::uint32_t pid, int vmId) {
-  mDevice->submitGfxCommand(gfxPipe,
-                            createPm4Packet(gnm::IT_MAP_PROCESS, pid, vmId));
+void DeviceCtl::submitMapProcess(std::uint32_t pid, int vmId) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(gnm::IT_MAP_PROCESS, pid, vmId));
 }
 
-void DeviceCtl::submitUnmapProcess(int gfxPipe, std::uint32_t pid) {
-  mDevice->submitGfxCommand(gfxPipe, createPm4Packet(IT_UNMAP_PROCESS, pid));
+void DeviceCtl::submitUnmapProcess(std::uint32_t pid) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_UNMAP_PROCESS, pid));
 }
 
-void DeviceCtl::submitProtectMemory(int gfxPipe, std::uint32_t pid,
-                                    std::uint64_t address, std::uint64_t size,
-                                    int prot) {
-  mDevice->submitGfxCommand(
-      gfxPipe,
-      createPm4Packet(IT_PROTECT_MEMORY, pid, address & 0xffff'ffff,
-                      address >> 32, size & 0xffff'ffff, size >> 32, prot));
+void DeviceCtl::submitProtectMemory(std::uint32_t pid, std::uint64_t address,
+                                    std::uint64_t size, int prot) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_PROTECT_MEMORY, pid,
+                                         address & 0xffff'ffff, address >> 32,
+                                         size & 0xffff'ffff, size >> 32, prot));
 }
 
 void DeviceCtl::registerBuffer(std::uint32_t pid, Buffer buffer) {

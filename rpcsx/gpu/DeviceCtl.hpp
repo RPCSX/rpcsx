@@ -28,22 +28,21 @@ public:
   void submitGfxCommand(int gfxPipe, int vmId,
                         std::span<const std::uint32_t> command);
   void submitSwitchBuffer(int gfxPipe);
-  void submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
-                  std::uint64_t flipArg);
   orbis::ErrorCode submitWriteEop(int gfxPipe, std::uint32_t waitMode,
                                   std::uint64_t eopValue);
   orbis::ErrorCode submitFlipOnEop(int gfxPipe, std::uint32_t pid,
                                    int bufferIndex, std::uint64_t flipArg,
                                    std::uint64_t eopValue);
-  void submitMapMemory(int gfxPipe, std::uint32_t pid, std::uint64_t address,
+  void submitFlip(std::uint32_t pid, int bufferIndex, std::uint64_t flipArg);
+  void submitMapMemory(std::uint32_t pid, std::uint64_t address,
                        std::uint64_t size, int memoryType, int dmemIndex,
                        int prot, std::int64_t offset);
-  void submitUnmapMemory(int gfxPipe, std::uint32_t pid, std::uint64_t address,
+  void submitUnmapMemory(std::uint32_t pid, std::uint64_t address,
                          std::uint64_t size);
-  void submitMapProcess(int gfxPipe, std::uint32_t pid, int vmId);
-  void submitUnmapProcess(int gfxPipe, std::uint32_t pid);
-  void submitProtectMemory(int gfxPipe, std::uint32_t pid,
-                           std::uint64_t address, std::uint64_t size, int prot);
+  void submitMapProcess(std::uint32_t pid, int vmId);
+  void submitUnmapProcess(std::uint32_t pid);
+  void submitProtectMemory(std::uint32_t pid, std::uint64_t address,
+                           std::uint64_t size, int prot);
   void registerBuffer(std::uint32_t pid, Buffer buffer);
   void registerBufferAttribute(std::uint32_t pid, BufferAttribute attr);
 

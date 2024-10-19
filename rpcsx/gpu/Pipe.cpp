@@ -540,13 +540,8 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   // IT_WAIT_ON_AVAIL_BUFFER
   mainHandlers[gnm::IT_SWITCH_BUFFER] = &GraphicsPipe::switchBuffer;
   // IT_SET_RESOURCES
-  mainHandlers[gnm::IT_MAP_PROCESS] = &GraphicsPipe::mapProcess;
   mainHandlers[gnm::IT_MAP_QUEUES] = &GraphicsPipe::mapQueues;
   mainHandlers[gnm::IT_UNMAP_QUEUES] = &GraphicsPipe::unmapQueues;
-  mainHandlers[IT_MAP_MEMORY] = &GraphicsPipe::mapMemory;
-  mainHandlers[IT_UNMAP_MEMORY] = &GraphicsPipe::unmapMemory;
-  mainHandlers[IT_PROTECT_MEMORY] = &GraphicsPipe::protectMemory;
-  mainHandlers[IT_UNMAP_PROCESS] = &GraphicsPipe::unmapProcess;
   // IT_QUERY_STATUS
   // IT_RUN_LIST
   // IT_DISPATCH_DRAW_PREAMBLE
@@ -558,8 +553,6 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   ceHandlers[gnm::IT_LOAD_CONST_RAM] = &GraphicsPipe::loadConstRam;
   ceHandlers[gnm::IT_WRITE_CONST_RAM] = &GraphicsPipe::writeConstRam;
   ceHandlers[gnm::IT_DUMP_CONST_RAM] = &GraphicsPipe::dumpConstRam;
-
-  mainHandlers[IT_FLIP] = &GraphicsPipe::flip;
 }
 
 void GraphicsPipe::setCeQueue(Ring ring) {
@@ -1601,14 +1594,6 @@ bool GraphicsPipe::switchBuffer(Ring &ring) {
   return true;
 }
 
-bool GraphicsPipe::mapProcess(Ring &ring) {
-  auto pid = ring.rptr[1];
-  int vmId = ring.rptr[2];
-
-  device->mapProcess(pid, vmId);
-  return true;
-}
-
 bool GraphicsPipe::mapQueues(Ring &ring) {
   // FIXME: implement
   return true;
@@ -1619,7 +1604,59 @@ bool GraphicsPipe::unmapQueues(Ring &ring) {
   return true;
 }
 
-bool GraphicsPipe::mapMemory(Ring &ring) {
+CommandPipe::CommandPipe() {
+  for (auto &handler : commandHandlers) {
+    handler = &CommandPipe::unknownPacket;
+  }
+
+  commandHandlers[gnm::IT_MAP_PROCESS] = &CommandPipe::mapProcess;
+  commandHandlers[IT_MAP_MEMORY] = &CommandPipe::mapMemory;
+  commandHandlers[IT_UNMAP_MEMORY] = &CommandPipe::unmapMemory;
+  commandHandlers[IT_PROTECT_MEMORY] = &CommandPipe::protectMemory;
+  commandHandlers[IT_UNMAP_PROCESS] = &CommandPipe::unmapProcess;
+  commandHandlers[IT_FLIP] = &CommandPipe::flip;
+}
+
+void CommandPipe::processAllRings() { processRing(ring); }
+
+void CommandPipe::processRing(Ring &ring) {
+  while (ring.rptr != ring.wptr) {
+    if (ring.rptr >= ring.base + ring.size) {
+      ring.rptr = ring.base;
+      continue;
+    }
+
+    auto header = *ring.rptr;
+    auto type = rx::getBits(header, 31, 30);
+
+    if (type == 3) {
+      auto op = rx::getBits(header, 15, 8);
+      auto len = rx::getBits(header, 29, 16) + 2;
+
+      if (op == gnm::IT_COND_EXEC) {
+        rx::die("unimplemented COND_EXEC");
+      }
+
+      auto handler = commandHandlers[op];
+      (this->*handler)(ring);
+
+      ring.rptr += len;
+      continue;
+    }
+
+    if (type == 2) {
+      ++ring.rptr;
+      continue;
+    }
+
+    rx::die("cmd pipe: unexpected pm4 packet type %u, ring %u, header %u, rptr "
+            "%p, wptr "
+            "%p, base %p",
+            type, ring.indirectLevel, header, ring.rptr, ring.wptr, ring.base);
+  }
+}
+
+void CommandPipe::mapMemory(Ring &ring) {
   auto pid = ring.rptr[1];
   auto addressLo = ring.rptr[2];
   auto addressHi = ring.rptr[3];
@@ -1636,9 +1673,8 @@ bool GraphicsPipe::mapMemory(Ring &ring) {
   auto offset = offsetLo | (static_cast<std::uint64_t>(offsetHi) << 32);
 
   device->mapMemory(pid, address, size, memoryType, dmemIndex, prot, offset);
-  return true;
 }
-bool GraphicsPipe::unmapMemory(Ring &ring) {
+void CommandPipe::unmapMemory(Ring &ring) {
   auto pid = ring.rptr[1];
   auto addressLo = ring.rptr[2];
   auto addressHi = ring.rptr[3];
@@ -1648,9 +1684,8 @@ bool GraphicsPipe::unmapMemory(Ring &ring) {
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
   device->unmapMemory(pid, address, size);
-  return true;
 }
-bool GraphicsPipe::protectMemory(Ring &ring) {
+void CommandPipe::protectMemory(Ring &ring) {
   auto pid = ring.rptr[1];
   auto addressLo = ring.rptr[2];
   auto addressHi = ring.rptr[3];
@@ -1661,15 +1696,19 @@ bool GraphicsPipe::protectMemory(Ring &ring) {
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
 
   device->protectMemory(pid, address, size, prot);
-  return true;
 }
-bool GraphicsPipe::unmapProcess(Ring &ring) {
+void CommandPipe::mapProcess(Ring &ring) {
+  auto pid = ring.rptr[1];
+  int vmId = ring.rptr[2];
+
+  device->mapProcess(pid, vmId);
+}
+void CommandPipe::unmapProcess(Ring &ring) {
   auto pid = ring.rptr[1];
   device->unmapProcess(pid);
-  return true;
 }
 
-bool GraphicsPipe::flip(Ring &ring) {
+void CommandPipe::flip(Ring &ring) {
   auto buffer = ring.rptr[1];
   auto dataLo = ring.rptr[2];
   auto dataHi = ring.rptr[3];
@@ -1677,5 +1716,11 @@ bool GraphicsPipe::flip(Ring &ring) {
   auto data = dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
 
   device->flip(pid, buffer, data);
-  return true;
+}
+
+void CommandPipe::unknownPacket(Ring &ring) {
+  auto op = rx::getBits(ring.rptr[0], 15, 8);
+
+  rx::die("unexpected command pm4 packet: %s, queue %u\n",
+          gnm::pm4OpcodeToString(op), ring.indirectLevel);
 }

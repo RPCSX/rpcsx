@@ -69,10 +69,9 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
   }
 
   if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
-    gpu.submitMapMemory(orbis::g_currentThread->tproc->gfxRing,
-                         orbis::g_currentThread->tproc->pid,
-                         reinterpret_cast<std::uint64_t>(result), len,
-                         memoryType, index, prot, directMemoryStart);
+    gpu.submitMapMemory(orbis::g_currentThread->tproc->pid,
+                        reinterpret_cast<std::uint64_t>(result), len,
+                        memoryType, index, prot, directMemoryStart);
   }
 
   *address = result;

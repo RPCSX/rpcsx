@@ -161,8 +161,8 @@ FlipPipeline::FlipPipeline() {
         .pAttachments = &blendAttachmentState};
 
     VkDynamicState dynamicStates[] = {
-        VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT,
-        VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT,
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState{
@@ -183,6 +183,7 @@ FlipPipeline::FlipPipeline() {
         {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &info,
+            .flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
             .stageCount = std::size(stagesStd),
             .pStages = stagesStd,
             .pVertexInputState = &vertexInputState,
@@ -198,6 +199,7 @@ FlipPipeline::FlipPipeline() {
         {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &info,
+            .flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
             .stageCount = std::size(stagesAlt),
             .pStages = stagesAlt,
             .pVertexInputState = &vertexInputState,

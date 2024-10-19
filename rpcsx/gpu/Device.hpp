@@ -78,6 +78,7 @@ struct Device : orbis::RcBase, DeviceContext {
   GpuTiler tiler;
   GraphicsPipe graphicsPipes[kGfxPipeCount]{0, 1};
   ComputePipe computePipes[kComputePipeCount]{0, 1, 2, 3, 4, 5, 6, 7};
+  CommandPipe commandPipe;
   FlipPipeline flipPipeline;
 
   orbis::shared_mutex writeCommandMtx;
@@ -94,6 +95,7 @@ struct Device : orbis::RcBase, DeviceContext {
   };
 
   std::uint32_t mainGfxRings[kGfxPipeCount][0x4000 / sizeof(std::uint32_t)];
+  std::uint32_t cmdRing[0x4000 / sizeof(std::uint32_t)];
 
   Device();
   ~Device();
