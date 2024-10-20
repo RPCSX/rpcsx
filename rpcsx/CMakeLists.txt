@@ -78,6 +78,7 @@ PUBLIC
   ffmpeg::avcodec
   ffmpeg::swresample
   ffmpeg::avutil
+  Atrac9
   rpcsx-gpu
   orbis::kernel
   rx
