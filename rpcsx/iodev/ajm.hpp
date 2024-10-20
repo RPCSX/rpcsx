@@ -1,3 +1,5 @@
+#pragma once
+
 #include "orbis-config.hpp"
 #include "orbis/utils/Logs.hpp"
 #include <cstdint>
@@ -16,14 +18,14 @@ enum class Opcode : std::uint8_t {
   JobBufferSidebandRa = 18,
 };
 
-typedef struct InstructionHeader {
+struct InstructionHeader {
   orbis::uint32_t id;
   orbis::uint32_t len;
-} InstructionHeader;
+};
 
 static_assert(sizeof(InstructionHeader) == 0x8);
 
-typedef struct OpcodeHeader {
+struct OpcodeHeader {
   orbis::uint32_t opcode;
 
   Opcode getOpcode() const {
@@ -35,16 +37,16 @@ typedef struct OpcodeHeader {
 
     return static_cast<Opcode>(opcode & 0x1f);
   }
-} OpcodeHeader;
+};
 
-typedef struct ReturnAddress {
+struct ReturnAddress {
   orbis::uint32_t opcode;
   orbis::uint32_t unk; // 0, padding?
   orbis::ptr<void> returnAddress;
-} ReturnAddress;
+};
 static_assert(sizeof(ReturnAddress) == 0x10);
 
-typedef struct BatchJobControlBufferRa {
+struct BatchJobControlBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t sidebandInputSize;
   std::byte* pSidebandInput;
@@ -53,38 +55,42 @@ typedef struct BatchJobControlBufferRa {
   orbis::uint32_t commandId;
   orbis::uint32_t sidebandOutputSize;
   std::byte* pSidebandOutput;
-} BatchJobControlBufferRa;
+
+  std::uint64_t getFlags() {
+    return ((uint64_t)flagsHi << 0x1a) | flagsLo;
+  }
+};
 static_assert(sizeof(BatchJobControlBufferRa) == 0x28);
 
-typedef struct BatchJobInputBufferRa {
+struct BatchJobInputBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t szInputSize;
   std::byte* pInput;
-} BatchJobInputBufferRa;
+};
 static_assert(sizeof(BatchJobInputBufferRa) == 0x10);
 
-typedef struct BatchJobFlagsRa {
+struct BatchJobFlagsRa {
   orbis::uint32_t flagsHi;
   orbis::uint32_t flagsLo;
-} BatchJobFlagsRa;
+};
 
 static_assert(sizeof(BatchJobFlagsRa) == 0x8);
 
-typedef struct BatchJobOutputBufferRa {
+struct BatchJobOutputBufferRa {
   orbis::uint32_t opcode;
-  orbis::uint32_t szOutputSize;
+  orbis::uint32_t outputSize;
   std::byte* pOutput;
-} BatchJobOutputBufferRa;
+};
 static_assert(sizeof(BatchJobOutputBufferRa) == 0x10);
 
-typedef struct BatchJobSidebandBufferRa {
+struct BatchJobSidebandBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t sidebandSize;
   std::byte* pSideband;
-} BatchJobSidebandBufferRa;
+};
 static_assert(sizeof(BatchJobSidebandBufferRa) == 0x10);
 
-typedef struct RunJob {
+struct RunJob {
   orbis::uint64_t flags;
   orbis::uint32_t inputSize;
   std::byte* pInput;
@@ -93,7 +99,7 @@ typedef struct RunJob {
   orbis::uint32_t sidebandSize;
   std::byte* pSideband;
   bool control;
-} RunJob;
+};
 
 // Thanks to mystical SirNickity with 1 post
 // https://hydrogenaud.io/index.php?topic=85125.msg747716#msg747716
@@ -213,7 +219,7 @@ enum AJMCodecs : orbis::uint32_t {
 };
 
 enum AJMChannels : orbis::uint32_t {
-  AJM_DEFAULT = 0,
+  AJM_CHANNEL_DEFAULT = 0,
   AJM_CHANNEL_1 = 1,
   AJM_CHANNEL_2 = 2,
   AJM_CHANNEL_3 = 3,
@@ -229,7 +235,7 @@ enum AJMFormat : orbis::uint32_t {
   AJM_FORMAT_FLOAT = 2
 };
 
-typedef struct At9Instance {
+struct At9Instance {
   orbis::ptr<void> handle;
   orbis::uint32_t inputChannels;
   orbis::uint32_t framesInSuperframe;
@@ -239,57 +245,69 @@ typedef struct At9Instance {
   orbis::uint32_t superFrameSize;
   orbis::uint32_t estimatedSizeUsed;
   orbis::uint32_t sampleRate;
-} At9Instance;
+};
 
-typedef struct AACInstance {
+struct AACInstance {
   AACHeaderType headerType;
   orbis::uint32_t sampleRate;
-} AACInstance;
+};
 
-typedef struct Instance {
+struct Instance {
   AJMCodecs codec;
-  AJMChannels outputChannels;
+  AJMChannels maxChannels;
   AJMFormat outputFormat;
   At9Instance at9;
   AACInstance aac;
   AVCodecContext *codecCtx;
   SwrContext *resampler;
   orbis::uint32_t lastBatchId;
-} Instance;
+  // TODO: use AJMSidebandGaplessDecode for these variables
+  orbis::uint32_t gaplessTotalSamples;
+  orbis::uint16_t gaplessSkipSamples;
+  orbis::uint16_t gaplessTotalSkippedSamples;
+  orbis::uint32_t processedSamples;
+};
 
-typedef struct AJMSidebandResult {
+struct AJMSidebandResult {
   orbis::int32_t result;
   orbis::int32_t codecResult;
-} AJMSidebandResult;
+};
 
-typedef struct AJMSidebandStream {
+struct AJMSidebandStream {
   orbis::int32_t inputSize;
   orbis::int32_t outputSize;
-  orbis::uint64_t unk0;
-} AJMSidebandStream;
+  orbis::uint64_t decodedSamples;
+};
 
-typedef struct AJMSidebandMultipleFrames {
+struct AJMSidebandMultipleFrames {
   orbis::uint32_t framesProcessed;
   orbis::uint32_t unk0;
-} AJMSidebandMultipleFrames;
+};
 
-typedef struct AJMSidebandFormat {
+struct AJMSidebandFormat {
   AJMChannels channels;
   orbis::uint32_t unk0; // maybe channel mask?
   orbis::uint32_t sampleRate;
   AJMFormat sampleFormat;
   uint32_t bitrate;
   uint32_t unk1;
-} AJMSidebandFormat;
+};
 
-typedef struct AJMAt9CodecInfoSideband {
+
+struct AJMSidebandGaplessDecode {
+  orbis::uint32_t totalSamples;
+  orbis::uint16_t skipSamples;
+  orbis::uint16_t totalSkippedSamples;
+};
+
+struct AJMAt9CodecInfoSideband {
   orbis::uint32_t superFrameSize;
   orbis::uint32_t framesInSuperFrame;
   orbis::uint32_t unk0;
   orbis::uint32_t frameSamples;
-} AJMAt9CodecInfoSideband;
+};
 
-typedef struct AJMMP3CodecInfoSideband {
+struct AJMMP3CodecInfoSideband {
   orbis::uint32_t header;
   orbis::uint8_t unk0;
   orbis::uint8_t unk1;
@@ -300,15 +318,16 @@ typedef struct AJMMP3CodecInfoSideband {
   orbis::uint16_t unk6;
   orbis::uint16_t unk7;
   orbis::uint16_t unk8;
-} AJMMP3CodecInfoSideband;
+};
 
-typedef struct AJMAACCodecInfoSideband {
+struct AJMAACCodecInfoSideband {
   orbis::uint32_t heaac;
   orbis::uint32_t unk0;
-} AJMAACCodecInfoSideband;
+};
 
 enum ControlFlags {
   CONTROL_INITIALIZE = 0x4000,
+  CONTROL_RESET = 0x2000,
 };
 
 enum RunFlags {
@@ -318,5 +337,6 @@ enum RunFlags {
 
 enum SidebandFlags {
   SIDEBAND_STREAM = 0x800000000000,
-  SIDEBAND_FORMAT = 0x400000000000
+  SIDEBAND_FORMAT = 0x400000000000,
+  SIDEBAND_GAPLESS_DECODE = 0x200000000000,
 };

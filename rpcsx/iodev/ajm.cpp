@@ -8,6 +8,7 @@
 #include "orbis/utils/Logs.hpp"
 #include <cstdint>
 #include <map>
+#include <rx/atScopeExit.hpp>
 #include <rx/hexdump.hpp>
 extern "C" {
 #include <libatrac9/decoder.h>
@@ -23,13 +24,15 @@ extern "C" {
 
 struct AjmFile : orbis::File {};
 
-uint batchId = 1;
+namespace ajm {
+orbis::uint32_t batchId = 1;
 
 orbis::uint32_t at9InstanceId = 0;
 orbis::uint32_t mp3InstanceId = 0;
 orbis::uint32_t aacInstanceId = 0;
 orbis::uint32_t unimplementedInstanceId = 0;
-std::map<orbis::int32_t, Instance> instanceMap;
+orbis::kmap<orbis::int32_t, Instance> instanceMap;
+} // namespace ajm
 
 AVSampleFormat ajmToAvFormat(AJMFormat ajmFormat) {
   switch (ajmFormat) {
@@ -64,14 +67,14 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
       orbis::uint32_t instanceId;
     };
     auto args = reinterpret_cast<InstanceDestroyArgs *>(argp);
-    auto it = instanceMap.find(args->instanceId);
-    if (it != instanceMap.end()) {
-      auto &instance = instanceMap[args->instanceId];
+    auto it = ajm::instanceMap.find(args->instanceId);
+    if (it != ajm::instanceMap.end()) {
+      auto &instance = ajm::instanceMap[args->instanceId];
       if (instance.resampler) {
         swr_free(&instance.resampler);
         avcodec_free_context(&instance.codecCtx);
       }
-      instanceMap.erase(args->instanceId);
+      ajm::instanceMap.erase(args->instanceId);
     }
     args->result = 0;
   }
@@ -95,15 +98,15 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
     if (codecId >= 0 && codecId <= 2) {
       args->result = 0;
       if (codecId == AJM_CODEC_At9) {
-        args->instanceId = codecOffset + at9InstanceId++;
+        args->instanceId = codecOffset + ajm::at9InstanceId++;
       } else if (codecId == AJM_CODEC_MP3) {
-        args->instanceId = codecOffset + mp3InstanceId++;
+        args->instanceId = codecOffset + ajm::mp3InstanceId++;
       } else if (codecId == AJM_CODEC_AAC) {
-        args->instanceId = codecOffset + aacInstanceId++;
+        args->instanceId = codecOffset + ajm::aacInstanceId++;
       }
       Instance instance;
       instance.codec = codecId;
-      instance.outputChannels =
+      instance.maxChannels =
           AJMChannels(((args->flags & ~7) & (0xFF & ~0b11)) >> 3);
       instance.outputFormat = AJMFormat((args->flags & ~7) & 0b11);
       if (codecId == AJM_CODEC_At9) {
@@ -129,12 +132,12 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
 
         instance.codecCtx = codecCtx;
       }
-      instanceMap.insert({
+      ajm::instanceMap.insert({
           args->instanceId,
           instance,
       });
     } else {
-      args->instanceId = codecOffset + unimplementedInstanceId++;
+      args->instanceId = codecOffset + ajm::unimplementedInstanceId++;
     }
     ORBIS_LOG_ERROR(__FUNCTION__, request, args->result, args->unk0,
                     args->flags, args->codec, args->instanceId);
@@ -150,11 +153,11 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
     };
     auto args = reinterpret_cast<StartBatchBufferArgs *>(argp);
     args->result = 0;
-    args->batchId = batchId;
+    args->batchId = ajm::batchId;
     ORBIS_LOG_ERROR(__FUNCTION__, request, args->result, args->unk0,
                     args->pBatch, args->batchSize, args->priority,
                     args->batchError, args->batchId);
-    batchId += 1;
+    ajm::batchId += 1;
 
     auto ptr = args->pBatch;
     auto endPtr = args->pBatch + args->batchSize;
@@ -165,7 +168,7 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
       auto jobPtr = ptr + sizeof(InstructionHeader);
       auto endJobPtr = ptr + header->len;
       // TODO: handle unimplemented codecs, so auto create instance for now
-      auto &instance = instanceMap[instanceId];
+      auto &instance = ajm::instanceMap[instanceId];
       RunJob runJob;
       while (jobPtr < endJobPtr) {
         auto typed = (OpcodeHeader *)jobPtr;
@@ -187,7 +190,17 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
           ORBIS_LOG_ERROR(__FUNCTION__, request, "control buffer", ctrl->opcode,
                           ctrl->commandId, ctrl->flagsHi, ctrl->flagsLo,
                           ctrl->sidebandInputSize, ctrl->sidebandOutputSize);
-          if ((ctrl->flagsLo & ~7) & CONTROL_INITIALIZE) {
+          if (ctrl->getFlags() & CONTROL_RESET) {
+            // instance.outputChannels = AJMChannels(0);
+            // instance.outputFormat = AJMFormat(0);
+            instance.gaplessSkipSamples = 0;
+            instance.gaplessTotalSamples = 0;
+            instance.gaplessTotalSkippedSamples = 0;
+            instance.processedSamples = 0;
+            ORBIS_LOG_TODO("CONTROL_RESET");
+          }
+
+          if (ctrl->getFlags() & CONTROL_INITIALIZE) {
             if (instance.codec == AJM_CODEC_At9) {
               struct InitalizeBuffer {
                 orbis::uint32_t configData;
@@ -215,10 +228,14 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               instance.at9.superFrameDataLeft = pCodecInfo.superframeSize;
               instance.at9.sampleRate = pCodecInfo.samplingRate;
 
+              orbis::uint32_t maxChannels =
+                  instance.maxChannels == AJM_CHANNEL_DEFAULT
+                      ? 2
+                      : instance.maxChannels;
               orbis::uint32_t outputChannels =
-                  instance.outputChannels == AJM_DEFAULT
-                      ? instance.at9.inputChannels
-                      : instance.outputChannels;
+                  instance.at9.inputChannels > maxChannels
+                      ? maxChannels
+                      : instance.at9.inputChannels;
               if (instance.at9.inputChannels != outputChannels ||
                   instance.outputFormat != AJM_FORMAT_S16) {
                 instance.resampler = swr_alloc();
@@ -265,6 +282,24 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                   AACFreq[initializeBuffer->sampleRateIndex];
             }
           }
+          if (ctrl->getFlags() & SIDEBAND_GAPLESS_DECODE) {
+            struct InitalizeBuffer {
+              orbis::uint32_t totalSamples;
+              orbis::uint16_t skipSamples;
+              orbis::uint16_t totalSkippedSamples;
+            };
+            InitalizeBuffer *initializeBuffer =
+                (InitalizeBuffer *)ctrl->pSidebandInput;
+            if (initializeBuffer->totalSamples > 0) {
+              instance.gaplessTotalSamples = initializeBuffer->totalSamples;
+            }
+            if (initializeBuffer->skipSamples > 0) {
+              instance.gaplessSkipSamples = initializeBuffer->skipSamples;
+            }
+            ORBIS_LOG_TODO("SIDEBAND_GAPLESS_DECODE",
+                           instance.gaplessSkipSamples,
+                           instance.gaplessTotalSamples);
+          }
           jobPtr += sizeof(BatchJobControlBufferRa);
           break;
         }
@@ -288,9 +323,9 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
         case Opcode::JobBufferOutputRa: {
           BatchJobOutputBufferRa *job = (BatchJobOutputBufferRa *)jobPtr;
           ORBIS_LOG_ERROR(__FUNCTION__, request, "BatchJobOutputBufferRa",
-                          job->opcode, job->szOutputSize, job->pOutput);
+                          job->opcode, job->outputSize, job->pOutput);
           runJob.pOutput = job->pOutput;
-          runJob.outputSize = job->szOutputSize;
+          runJob.outputSize = job->outputSize;
           jobPtr += sizeof(BatchJobOutputBufferRa);
           break;
         }
@@ -320,19 +355,19 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
           stream->outputSize = runJob.outputSize;
         }
       } else if (!runJob.control) {
-        orbis::uint32_t outputChannels = instance.outputChannels == AJM_DEFAULT
-                                             ? 2
-                                             : instance.outputChannels;
+        orbis::uint32_t maxChannels =
+            instance.maxChannels == AJM_CHANNEL_DEFAULT ? 2
+                                                        : instance.maxChannels;
         AJMSidebandResult *result =
             reinterpret_cast<AJMSidebandResult *>(runJob.pSideband);
         result->result = 0;
         result->codecResult = 0;
 
-        uint32_t inputReaded = 0;
-        uint32_t outputWritten = 0;
-        uint32_t framesProcessed = 0;
-        uint32_t channels = 0;
-        uint32_t sampleRate = 0;
+        orbis::uint32_t inputReaded = 0;
+        orbis::uint32_t outputWritten = 0;
+        orbis::uint32_t framesProcessed = 0;
+        orbis::uint32_t channels = 0;
+        orbis::uint32_t sampleRate = 0;
         if (runJob.inputSize != 0 && runJob.outputSize != 0) {
           while (inputReaded < runJob.inputSize &&
                  outputWritten < runJob.outputSize) {
@@ -342,9 +377,10 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               break;
             }
             if (instance.codec == AJM_CODEC_At9) {
-              outputChannels = instance.outputChannels == AJM_DEFAULT
-                                   ? instance.at9.inputChannels
-                                   : instance.outputChannels;
+              orbis::uint32_t outputChannels =
+                  instance.at9.inputChannels > maxChannels
+                      ? maxChannels
+                      : instance.at9.inputChannels;
               orbis::int32_t outputBufferSize = av_samples_get_buffer_size(
                   nullptr, outputChannels, instance.at9.frameSamples,
                   ajmToAvFormat(instance.resampler ? AJM_FORMAT_S16
@@ -363,6 +399,40 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                 ORBIS_LOG_FATAL("Could not decode frame", err);
                 std::abort();
               }
+              instance.at9.estimatedSizeUsed =
+                  static_cast<orbis::uint32_t>(bytesUsed);
+              instance.at9.superFrameDataLeft -= bytesUsed;
+              instance.at9.superFrameDataIdx++;
+              if (instance.at9.superFrameDataIdx ==
+                  instance.at9.framesInSuperframe) {
+                instance.at9.estimatedSizeUsed +=
+                    instance.at9.superFrameDataLeft;
+                instance.at9.superFrameDataIdx = 0;
+                instance.at9.superFrameDataLeft = instance.at9.superFrameSize;
+              }
+              // TODO: possible memory leak because "genius" code to avoiding memory
+              // copying
+              if (instance.gaplessSkipSamples > 0 ||
+                  instance.gaplessTotalSamples > 0) {
+                if (instance.gaplessSkipSamples >
+                    instance.gaplessTotalSkippedSamples) {
+                  instance.gaplessTotalSkippedSamples +=
+                      instance.at9.frameSamples;
+                  inputReaded += instance.at9.estimatedSizeUsed;
+                  ORBIS_LOG_TODO("skip frame",
+                                 instance.gaplessTotalSkippedSamples);
+                  break;
+                } else if (instance.processedSamples >
+                           instance.gaplessTotalSamples) {
+                  instance.gaplessTotalSkippedSamples +=
+                      instance.at9.frameSamples;
+                  inputReaded += instance.at9.estimatedSizeUsed;
+                  ORBIS_LOG_TODO(
+                      "skip output", instance.gaplessTotalSkippedSamples,
+                      instance.processedSamples, instance.gaplessTotalSamples);
+                  break;
+                }
+              }
               if (instance.resampler) {
                 auto outputBuffer = reinterpret_cast<orbis::uint8_t *>(
                     runJob.pOutput + outputWritten);
@@ -377,21 +447,11 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                 }
                 av_freep(&tempBuffer);
               }
-              instance.at9.estimatedSizeUsed = static_cast<uint32_t>(bytesUsed);
-              instance.at9.superFrameDataLeft -= bytesUsed;
-              instance.at9.superFrameDataIdx++;
-              if (instance.at9.superFrameDataIdx ==
-                  instance.at9.framesInSuperframe) {
-                instance.at9.estimatedSizeUsed +=
-                    instance.at9.superFrameDataLeft;
-                instance.at9.superFrameDataIdx = 0;
-                instance.at9.superFrameDataLeft = instance.at9.superFrameSize;
-              }
               channels = instance.at9.inputChannels;
               sampleRate = instance.at9.sampleRate;
               inputReaded += instance.at9.estimatedSizeUsed;
-              outputWritten +=
-                  std::max((uint32_t)outputBufferSize, runJob.outputSize);
+              outputWritten += std::max((orbis::uint32_t)outputBufferSize,
+                                        runJob.outputSize);
               framesProcessed += 1;
             } else if (instance.codec == AJM_CODEC_MP3) {
               ORBIS_LOG_FATAL("Pre get mp3 data size info", runJob.inputSize,
@@ -414,8 +474,10 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               //     realInputSize});
 
               AVPacket *pkt = av_packet_alloc();
+              rx::atScopeExit _free_pkt([&] { av_packet_free(&pkt); });
               AVFrame *frame = av_frame_alloc();
-              pkt->data = (uint8_t *)(runJob.pInput + inputReaded);
+              rx::atScopeExit _free_frame([&] { av_frame_free(&frame); });
+              pkt->data = (orbis::uint8_t *)(runJob.pInput + inputReaded);
               pkt->size = realInputSize;
               int ret = avcodec_send_packet(instance.codecCtx, pkt);
               if (ret < 0) {
@@ -428,11 +490,37 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                 std::abort();
               }
 
+              if (instance.gaplessSkipSamples > 0 ||
+                  instance.gaplessTotalSamples > 0) {
+                if (instance.gaplessSkipSamples >
+                    instance.gaplessTotalSkippedSamples) {
+                  instance.gaplessTotalSkippedSamples += frame->nb_samples;
+                  inputReaded += realInputSize;
+                  ORBIS_LOG_TODO("skip frame",
+                                 instance.gaplessTotalSkippedSamples);
+                  break;
+                } else if (instance.processedSamples >
+                           instance.gaplessTotalSamples) {
+                  instance.gaplessTotalSkippedSamples += frame->nb_samples;
+                  inputReaded += realInputSize;
+                  ORBIS_LOG_TODO(
+                      "skip output", instance.gaplessTotalSkippedSamples,
+                      instance.processedSamples, instance.gaplessTotalSamples);
+                  break;
+                }
+              }
+
               auto resampler = swr_alloc();
+              rx::atScopeExit _free_resampler([&] { swr_free(&resampler); });
               if (!resampler) {
                 ORBIS_LOG_FATAL("Could not allocate resampler context");
                 std::abort();
               }
+
+              orbis::uint32_t outputChannels =
+                  (orbis::uint32_t)frame->ch_layout.nb_channels > maxChannels
+                      ? maxChannels
+                      : frame->ch_layout.nb_channels;
 
               AVChannelLayout inputChLayout;
               av_channel_layout_default(&inputChLayout,
@@ -458,6 +546,8 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               }
 
               uint8_t *outputBuffer = NULL;
+              rx::atScopeExit _free_outputBuffer(
+                  [&] { av_freep(&outputBuffer); });
               int outputBufferSize = av_samples_alloc(
                   &outputBuffer, NULL, frame->ch_layout.nb_channels,
                   frame->nb_samples, ajmToAvFormat(instance.outputFormat), 0);
@@ -467,7 +557,9 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               }
               ORBIS_LOG_TODO("output buffer info", frame->ch_layout.nb_channels,
                              frame->nb_samples, (int32_t)instance.outputFormat,
-                             outputBufferSize);
+                             outputBufferSize,
+                             instance.gaplessTotalSkippedSamples,
+                             instance.processedSamples);
 
               if (outputWritten + outputBufferSize > runJob.outputSize) {
                 ORBIS_LOG_TODO("overwriting", outputWritten, outputBufferSize,
@@ -490,14 +582,17 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               sampleRate = frame->sample_rate;
               inputReaded += realInputSize;
               outputWritten += outputBufferSize;
+              instance.processedSamples += frame->nb_samples;
               framesProcessed += 1;
-              av_freep(&outputBuffer);
-              swr_free(&resampler);
-              av_frame_free(&frame);
-              av_packet_free(&pkt);
+              // av_freep(&outputBuffer);
+              // swr_free(&resampler);
+              // av_frame_free(&frame);
+              // av_packet_free(&pkt);
             } else if (instance.codec == AJM_CODEC_AAC) {
               AVPacket *pkt = av_packet_alloc();
+              rx::atScopeExit _free_pkt([&] { av_packet_free(&pkt); });
               AVFrame *frame = av_frame_alloc();
+              rx::atScopeExit _free_frame([&] { av_frame_free(&frame); });
               pkt->data = (uint8_t *)runJob.pInput + inputReaded;
               pkt->size = runJob.inputSize;
 
@@ -510,16 +605,37 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                       ->cb.decode(instance.codecCtx, frame, &gotFrame, pkt);
 
               orbis::uint32_t outputChannels =
-                  instance.outputChannels == AJM_DEFAULT
-                      ? frame->ch_layout.nb_channels
-                      : instance.outputChannels;
+                  (orbis::uint32_t)frame->ch_layout.nb_channels > maxChannels
+                      ? maxChannels
+                      : frame->ch_layout.nb_channels;
 
               ORBIS_LOG_TODO("aac decode", len, gotFrame,
                              frame->ch_layout.nb_channels, frame->sample_rate,
                              instance.aac.sampleRate, outputChannels,
-                             (orbis::uint32_t)instance.outputChannels);
+                             (orbis::uint32_t)instance.maxChannels);
+
+              if (instance.gaplessSkipSamples > 0 ||
+                  instance.gaplessTotalSamples > 0) {
+                if (instance.gaplessSkipSamples >
+                    instance.gaplessTotalSkippedSamples) {
+                  instance.gaplessTotalSkippedSamples += frame->nb_samples;
+                  inputReaded += len;
+                  ORBIS_LOG_TODO("skip frame",
+                                 instance.gaplessTotalSkippedSamples);
+                  break;
+                } else if (instance.processedSamples >
+                           instance.gaplessTotalSamples) {
+                  instance.gaplessTotalSkippedSamples += frame->nb_samples;
+                  inputReaded += len;
+                  ORBIS_LOG_TODO(
+                      "skip output", instance.gaplessTotalSkippedSamples,
+                      instance.processedSamples, instance.gaplessTotalSamples);
+                  break;
+                }
+              }
 
               auto resampler = swr_alloc();
+              rx::atScopeExit _free_resampler([&] { swr_free(&resampler); });
               if (!resampler) {
                 ORBIS_LOG_FATAL("Could not allocate resampler context");
                 std::abort();
@@ -549,6 +665,8 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               }
 
               uint8_t *outputBuffer = NULL;
+              rx::atScopeExit _free_outputBuffer(
+                  [&] { av_freep(&outputBuffer); });
               int outputBufferSize = av_samples_alloc(
                   &outputBuffer, NULL, outputChannels, frame->nb_samples,
                   ajmToAvFormat(instance.outputFormat), 0);
@@ -572,9 +690,10 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               inputReaded += len;
               outputWritten += outputBufferSize;
               framesProcessed += 1;
-              av_frame_free(&frame);
-              av_packet_free(&pkt);
-              swr_free(&resampler);
+              instance.processedSamples += frame->nb_samples;
+              // av_frame_free(&frame);
+              // av_packet_free(&pkt);
+              // swr_free(&resampler);
             }
             if (!(runJob.flags & RUN_MULTIPLE_FRAMES)) {
               break;
@@ -586,11 +705,12 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
 
         if (runJob.flags & SIDEBAND_STREAM) {
           ORBIS_LOG_TODO("SIDEBAND_STREAM", currentSize, inputReaded,
-                         outputWritten);
+                         outputWritten, instance.processedSamples);
           AJMSidebandStream *stream = reinterpret_cast<AJMSidebandStream *>(
               runJob.pSideband + currentSize);
           stream->inputSize = inputReaded;
           stream->outputSize = outputWritten;
+          stream->decodedSamples = instance.processedSamples;
           currentSize += sizeof(AJMSidebandStream);
         }
 
@@ -602,6 +722,17 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
           format->sampleRate = sampleRate;
           format->sampleFormat = AJM_FORMAT_FLOAT;
           currentSize += sizeof(AJMSidebandFormat);
+        }
+
+        if (runJob.flags & SIDEBAND_GAPLESS_DECODE) {
+          ORBIS_LOG_TODO("SIDEBAND_GAPLESS_DECODE", currentSize);
+          AJMSidebandGaplessDecode *gapless =
+              reinterpret_cast<AJMSidebandGaplessDecode *>(runJob.pSideband +
+                                                           currentSize);
+          gapless->skipSamples = instance.gaplessSkipSamples;
+          gapless->totalSamples = instance.gaplessTotalSamples;
+          gapless->totalSkippedSamples = instance.gaplessTotalSkippedSamples;
+          currentSize += sizeof(AJMSidebandGaplessDecode);
         }
 
         if (runJob.flags & RUN_GET_CODEC_INFO) {
