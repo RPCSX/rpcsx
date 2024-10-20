@@ -6,6 +6,7 @@
 #include <gnm/constants.hpp>
 #include <gnm/vulkan.hpp>
 #include <print>
+#include <rx/format.hpp>
 #include <shader/Evaluator.hpp>
 #include <shader/dialect.hpp>
 #include <shader/gcn.hpp>
@@ -158,9 +159,10 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     return;
   }
 
-  if (pipe.context.cbColorControl.mode != gnm::CbMode::Normal) {
+  if (pipe.context.cbColorControl.mode != gnm::CbMode::Normal &&
+      pipe.context.cbColorControl.mode != gnm::CbMode::EliminateFastClear) {
     std::println("unimplemented context.cbColorControl.mode = {}",
-                 static_cast<int>(pipe.context.cbColorControl.mode));
+                 static_cast<gnm::CbMode>(pipe.context.cbColorControl.mode));
     return;
   }
 
@@ -242,14 +244,16 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
     auto vkViewPortScissor = gnm::toVkRect2D(viewPortScissor);
     viewPortScissors[renderTargets] = vkViewPortScissor;
 
-    ImageKey renderTargetInfo{};
+    ImageViewKey renderTargetInfo{};
     renderTargetInfo.type = gnm::TextureType::Dim2D;
     renderTargetInfo.pitch = vkViewPortScissor.extent.width;
     renderTargetInfo.readAddress = static_cast<std::uint64_t>(cbColor.base)
                                    << 8;
     renderTargetInfo.writeAddress = renderTargetInfo.readAddress;
-    renderTargetInfo.extent.width = vkViewPortScissor.extent.width;
-    renderTargetInfo.extent.height = vkViewPortScissor.extent.height;
+    renderTargetInfo.extent.width =
+        vkViewPortScissor.offset.x + vkViewPortScissor.extent.width;
+    renderTargetInfo.extent.height =
+        vkViewPortScissor.offset.y + vkViewPortScissor.extent.height;
     renderTargetInfo.extent.depth = 1;
     renderTargetInfo.dfmt = cbColor.info.dfmt;
     renderTargetInfo.nfmt =
@@ -273,7 +277,8 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
     if (pipe.uConfig.vgtPrimitiveType == gnm::PrimitiveType::None) {
       if (cbColor.info.fastClear) {
-        auto image = cacheTag.getImage(renderTargetInfo, access);
+        auto image =
+            cacheTag.getImage(ImageKey::createFrom(renderTargetInfo), access);
         VkClearColorValue clearValue = {
             .uint32 =
                 {
@@ -618,7 +623,7 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkExtent2D targetExtent,
                   std::uint64_t address, VkImageView target,
                   VkExtent2D imageExtent, FlipType type, TileMode tileMode,
                   gnm::DataFormat dfmt, gnm::NumericFormat nfmt) {
-  ImageKey framebuffer{};
+  ImageViewKey framebuffer{};
   framebuffer.readAddress = address;
   framebuffer.type = gnm::TextureType::Dim2D;
   framebuffer.dfmt = dfmt;
@@ -687,8 +692,8 @@ void amdgpu::flip(Cache::Tag &cacheTag, VkExtent2D targetExtent,
   cacheTag.getDevice()->flipPipeline.bind(cacheTag.getScheduler(), type,
                                           imageView.handle, sampler.handle);
 
-  vkCmdSetViewportWithCount(commandBuffer, 1, &viewPort);
-  vkCmdSetScissorWithCount(commandBuffer, 1, viewPortScissors);
+  vkCmdSetViewport(commandBuffer, 0, 1, &viewPort);
+  vkCmdSetScissor(commandBuffer, 0, 1, viewPortScissors);
 
   vkCmdDraw(commandBuffer, 6, 1, 0, 0);
   vkCmdEndRendering(commandBuffer);

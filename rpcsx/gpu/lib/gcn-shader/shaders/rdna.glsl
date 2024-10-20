@@ -63,6 +63,23 @@ DEFINE_SIZEOF(float64_t, 8);
 uint thread_id;
 uint64_t exec;
 
+float32_t swizzle(f32vec4 comp, int sel) {
+    switch (sel) {
+    case 0: return 0;
+    case 1: return 1;
+    case 4: return comp.x;
+    case 5: return comp.y;
+    case 6: return comp.z;
+    case 7: return comp.w;
+    }
+
+    return 1;
+}
+
+f32vec4 swizzle(f32vec4 comp, int selX, int selY, int selZ, int selW) {
+    return f32vec4(swizzle(comp, selX), swizzle(comp, selY), swizzle(comp, selZ), swizzle(comp, selW));
+}
+
 int32_t sext(int32_t x, uint bits) {
     return bits == 32 ? x : (x << (32 - bits)) >> (32 - bits);
 }
@@ -2164,12 +2181,12 @@ uint32_t[16] s_load_dwordx16(int32_t memoryLocationHint, uint64_t sbase, int32_t
 }
 
 #define S_BUFFER_LOAD_DWORD(dest, memoryLocationHint, vbuffer, offset, N) \
-    uint64_t base_address = vbuffer_base(vbuffer) & ~0x3; \
+    uint64_t base_address = vbuffer_base(vbuffer) & ~0x3ul; \
     uint64_t stride = vbuffer_stride(vbuffer); \
     uint64_t num_records = vbuffer_num_records(vbuffer); \
     uint64_t size = (stride == 0 ? 1 : stride) * num_records; \
     uint64_t deviceAreaSize = 0; \
-    uint64_t deviceAddress = findMemoryAddress(base_address + offset, size, memoryLocationHint, deviceAreaSize); \
+    uint64_t deviceAddress = findMemoryAddress(base_address + (offset & ~0x3ul), size, memoryLocationHint, deviceAreaSize); \
     int32_t _offset = 0; \
     for (int i = 0; i < N; i++) { \
         if (deviceAddress == kInvalidAddress || _offset + SIZEOF(uint32_t) > deviceAreaSize) { \
@@ -2563,6 +2580,55 @@ uint8_t ssampler_border_color_type(u32vec4 ssampler) {
     return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 126, 2));
 }
 
+uint64_t image_memory_table;
+
+uint64_t findImageMemoryAddress(uint64_t address, uint64_t size, int32_t hint, out uint64_t areaSize) {
+    MemoryTable mt = MemoryTable(image_memory_table);
+
+    uint32_t pivot;
+    uint32_t slotCount = mt.count;
+    if (hint < 0 || hint >= slotCount) {
+        pivot = slotCount / 2;
+    } else {
+        pivot = uint32_t(hint);
+    }
+
+    uint32_t begin = 0;
+    uint32_t end = slotCount;
+
+    while (begin < end) {
+        MemoryTableSlot slot = mt.slots[pivot];
+        uint64_t slotSize = getSlotSize(slot);
+        if (slot.address >= address + size) {
+            end = pivot;
+        } else if (address >= slot.address + slotSize) {
+            begin = pivot + 1;
+        } else {
+            uint64_t offset = address - slot.address;
+            areaSize = slotSize - offset;
+            return slot.deviceAddress + offset;
+        }
+
+        pivot = begin + ((end - begin) / 2);
+    }
+
+    return kInvalidAddress;
+}
+
+
+int findSamplerIndex(int32_t samplerIndexHint, u32vec4 ssampler) {
+    return samplerIndexHint;
+}
+int findTexture1DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
+    return textureIndexHint;
+}
+int findTexture2DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
+    return textureIndexHint;
+}
+int findTexture3DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
+    return textureIndexHint;
+}
+
 // void image_gather4(inout u32vec4 vdata, u32vec4 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 samplerDescriptor) {}
 // image_gather4_cl
 // image_gather4_l
@@ -2587,37 +2653,6 @@ uint8_t ssampler_border_color_type(u32vec4 ssampler) {
 // image_gather4_c_b_o
 // image_gather4_c_b_cl_o
 // image_gather4_c_lz_o
-
-int findSamplerIndex(int32_t samplerIndexHint, u32vec4 ssampler) {
-    return samplerIndexHint;
-}
-int findTexture1DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
-    return textureIndexHint;
-}
-int findTexture2DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
-    return textureIndexHint;
-}
-int findTexture3DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
-    return textureIndexHint;
-}
-
-float32_t swizzle(f32vec4 comp, int sel) {
-    switch (sel) {
-    case 0: return 0;
-    case 1: return 1;
-    case 4: return comp.x;
-    case 5: return comp.y;
-    case 6: return comp.z;
-    case 7: return comp.w;
-    }
-
-    return 1;
-}
-
-f32vec4 swizzle(f32vec4 comp, int selX, int selY, int selZ, int selW) {
-    return f32vec4(swizzle(comp, selX), swizzle(comp, selY), swizzle(comp, selZ), swizzle(comp, selW));
-}
-
 
 // void image_atomic_add() {
 //     // imageAtomicAdd
@@ -2676,13 +2711,6 @@ void image_load(inout f32vec4 vdata, i32vec3 vaddr, int32_t textureIndexHint, ui
         return;
     }
 
-    result = swizzle(result,
-        tbuffer_dst_sel_x(tbuffer),
-        tbuffer_dst_sel_y(tbuffer),
-        tbuffer_dst_sel_z(tbuffer),
-        tbuffer_dst_sel_w(tbuffer));
-
-
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {
         if ((dmask & (1 << i)) != 0) {
@@ -2720,13 +2748,6 @@ void image_load_mip(inout f32vec4 vdata, u32vec4 vaddr_u, int32_t textureIndexHi
     default:
         return;
     }
-
-    result = swizzle(result,
-        tbuffer_dst_sel_x(tbuffer),
-        tbuffer_dst_sel_y(tbuffer),
-        tbuffer_dst_sel_z(tbuffer),
-        tbuffer_dst_sel_w(tbuffer));
-
 
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {
@@ -2782,13 +2803,6 @@ void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, 
 
     // debugPrintfEXT("image_sample: textureType: %u, coord: %v3f, result: %v4f, dmask: %u", textureType, vaddr, result, dmask);
 
-    result = swizzle(result,
-        tbuffer_dst_sel_x(tbuffer),
-        tbuffer_dst_sel_y(tbuffer),
-        tbuffer_dst_sel_z(tbuffer),
-        tbuffer_dst_sel_w(tbuffer));
-
-
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {
         if ((dmask & (1 << i)) != 0) {
@@ -2837,13 +2851,6 @@ void image_sample_l(inout f32vec4 vdata, f32vec4 vaddr, int32_t textureIndexHint
         return;
     }
 
-    result = swizzle(result,
-        tbuffer_dst_sel_x(tbuffer),
-        tbuffer_dst_sel_y(tbuffer),
-        tbuffer_dst_sel_z(tbuffer),
-        tbuffer_dst_sel_w(tbuffer));
-
-
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {
         if ((dmask & (1 << i)) != 0) {
@@ -2854,7 +2861,50 @@ void image_sample_l(inout f32vec4 vdata, f32vec4 vaddr, int32_t textureIndexHint
 
 // image_sample_b
 // image_sample_b_cl
-// image_sample_lz
+void image_sample_lz(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
+    uint8_t textureType = tbuffer_type(tbuffer);
+    f32vec4 result;
+    switch (uint(textureType)) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        result = textureLod(
+            sampler1D(
+                textures1D[findTexture1DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr.x, 0);
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        result = textureLod(
+            sampler2D(
+                textures2D[findTexture2DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr.xy, 0);
+        break;
+
+    case kTextureType3D:
+        result = textureLod(
+            sampler3D(
+                textures3D[findTexture3DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr.xyz, 0);
+        break;
+
+    default:
+        return;
+    }
+
+    int vdataIndex = 0;
+    for (int i = 0; i < 4; ++i) {
+        if ((dmask & (1 << i)) != 0) {
+            vdata[vdataIndex++] = result[i];
+        }
+    }
+}
 // image_sample_c
 // image_sample_c_cl
 // image_sample_c_d

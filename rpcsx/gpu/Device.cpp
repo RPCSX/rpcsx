@@ -224,9 +224,15 @@ Device::Device() : vkContext(createVkContext(this)) {
             rx::AddressRange::fromBeginSize(address, rx::mem::pageSize);
         auto tag = getCacheTag(vmId, sched);
 
-        tag.getCache()->flushImages(tag, range);
-        sched.submit();
-        sched.wait();
+        if (tag.getCache()->flushImages(tag, range)) {
+          sched.submit();
+          sched.wait();
+        }
+
+        if (tag.getCache()->flushImageBuffers(tag, range)) {
+          sched.submit();
+          sched.wait();
+        }
 
         auto flushedRange = tag.getCache()->flushBuffers(range);
 

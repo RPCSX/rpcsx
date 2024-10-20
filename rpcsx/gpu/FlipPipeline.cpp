@@ -179,16 +179,22 @@ FlipPipeline::FlipPipeline() {
         .pColorAttachmentFormats = &colorFormat,
     };
 
+    VkPipelineViewportStateCreateInfo viewportState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .scissorCount = 1,
+    };
+
     VkGraphicsPipelineCreateInfo pipelineCreateInfos[]{
         {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &info,
-            .flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
             .stageCount = std::size(stagesStd),
             .pStages = stagesStd,
             .pVertexInputState = &vertexInputState,
             .pInputAssemblyState = &inputAssemblyState,
             .pTessellationState = &tessellationState,
+            .pViewportState = &viewportState,
             .pRasterizationState = &rasterizationState,
             .pMultisampleState = &multisampleState,
             .pDepthStencilState = &depthStencilState,
@@ -199,12 +205,12 @@ FlipPipeline::FlipPipeline() {
         {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .pNext = &info,
-            .flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT,
             .stageCount = std::size(stagesAlt),
             .pStages = stagesAlt,
             .pVertexInputState = &vertexInputState,
             .pInputAssemblyState = &inputAssemblyState,
             .pTessellationState = &tessellationState,
+            .pViewportState = &viewportState,
             .pRasterizationState = &rasterizationState,
             .pMultisampleState = &multisampleState,
             .pDepthStencilState = &depthStencilState,
