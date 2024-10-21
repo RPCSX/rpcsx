@@ -8,6 +8,7 @@ set(CMAKE_BUILD_RPATH_USE_ORIGIN on)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+find_package(ffmpeg 7.0.2 MODULE COMPONENTS avcodec avutil swresample)
 find_package(nlohmann_json CONFIG)
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 
