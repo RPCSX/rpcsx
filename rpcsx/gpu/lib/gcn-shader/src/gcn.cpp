@@ -1283,7 +1283,7 @@ static ir::Value deserializeGcnRegion(
         inst.addOperand(createOperandRead(loc, paramBuilder, uint32TV, op));
       }
 
-      if (isaInst == ir::exp::EXP && isaInst.getOperand(1).value != 0) {
+      if (isaInst == ir::exp::EXP) {
         createExecTest();
       }
       continue;
@@ -1381,10 +1381,8 @@ static ir::Value deserializeGcnRegion(
           converter.getTypePointer(ir::spv::StorageClass::Function, paramType),
           ir::spv::StorageClass::Function);
 
-      if ((paramInfo.access & Access::Read) == Access::Read) {
         auto result = createOperandRead(loc, builder, paramType, op);
         builder.createSpvStore(loc, arg, result);
-      }
 
       callArgs.push_back(arg);
     }

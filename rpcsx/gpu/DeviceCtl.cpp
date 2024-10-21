@@ -1,6 +1,7 @@
 #include "DeviceCtl.hpp"
 #include "Device.hpp"
 #include "gnm/pm4.hpp"
+#include "orbis/error/ErrorCode.hpp"
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
 #include "shader/dialect.hpp"
@@ -53,46 +54,94 @@ void DeviceCtl::submitGfxCommand(int gfxPipe, int vmId,
 void DeviceCtl::submitSwitchBuffer(int gfxPipe) {
   mDevice->submitGfxCommand(gfxPipe, createPm4Packet(gnm::IT_SWITCH_BUFFER, 0));
 }
-void DeviceCtl::submitFlip(int gfxPipe, std::uint32_t pid, int bufferIndex,
-                           std::uint64_t flipArg) {
-  mDevice->submitGfxCommand(gfxPipe, createPm4Packet(IT_FLIP, bufferIndex,
-                                                     flipArg & 0xffff'ffff,
-                                                     flipArg >> 32, pid));
+
+orbis::ErrorCode DeviceCtl::submitWriteEop(int gfxPipe, std::uint32_t waitMode,
+                                           std::uint64_t eopValue) {
+  std::uint64_t address = 0;
+  std::uint32_t eventType = 0;
+  // FIXME: event type currently not used
+
+  std::uint32_t eventCntl = (eventType << 0);
+  auto addressLo = static_cast<std::uint32_t>(address);
+  std::uint32_t dataCntl = 0           //
+                           | (2 << 24) // int sel
+                           | (2 << 29) // data sel
+                           | static_cast<std::uint16_t>(address >> 32);
+
+  auto dataLo = static_cast<std::uint32_t>(eopValue);
+  auto dataHi = static_cast<std::uint32_t>(eopValue >> 32);
+
+  mDevice->submitGfxCommand(gfxPipe, createPm4Packet(gnm::IT_EVENT_WRITE_EOP,
+                                                     eventCntl, addressLo,
+                                                     dataCntl, dataLo, dataHi));
+  return {};
 }
 
-void DeviceCtl::submitMapMemory(int gfxPipe, std::uint32_t pid,
-                                std::uint64_t address, std::uint64_t size,
-                                int memoryType, int dmemIndex, int prot,
-                                std::int64_t offset) {
-  mDevice->submitGfxCommand(
-      gfxPipe,
+orbis::ErrorCode DeviceCtl::submitFlipOnEop(int gfxPipe, std::uint32_t pid,
+                                            int bufferIndex,
+                                            std::uint64_t flipArg,
+                                            std::uint64_t eopValue) {
+  int index;
+  auto &pipe = mDevice->graphicsPipes[gfxPipe];
+  {
+    std::lock_guard lock(pipe.eopFlipMtx);
+    if (pipe.eopFlipRequestCount >= GraphicsPipe::kEopFlipRequestMax) {
+      return orbis::ErrorCode::AGAIN;
+    }
+
+    index = pipe.eopFlipRequestCount++;
+
+    pipe.eopFlipRequests[index] = {
+        .pid = pid,
+        .bufferIndex = bufferIndex,
+        .arg = flipArg,
+        .eopValue = eopValue,
+    };
+  }
+
+  return {};
+}
+void DeviceCtl::submitFlip(std::uint32_t pid, int bufferIndex,
+                           std::uint64_t flipArg) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_FLIP, bufferIndex,
+                                         flipArg & 0xffff'ffff, flipArg >> 32,
+                                         pid));
+}
+
+void DeviceCtl::submitMapMemory(std::uint32_t pid, std::uint64_t address,
+                                std::uint64_t size, int memoryType,
+                                int dmemIndex, int prot, std::int64_t offset) {
+  mDevice->submitCommand(
+      mDevice->commandPipe.ring,
       createPm4Packet(IT_MAP_MEMORY, pid, address & 0xffff'ffff, address >> 32,
                       size & 0xffff'ffff, size >> 32, memoryType, dmemIndex,
                       prot, offset & 0xffff'ffff, offset >> 32));
 }
-void DeviceCtl::submitUnmapMemory(int gfxPipe, std::uint32_t pid,
-                                  std::uint64_t address, std::uint64_t size) {
-  mDevice->submitGfxCommand(
-      gfxPipe, createPm4Packet(IT_UNMAP_MEMORY, pid, address & 0xffff'ffff,
-                               address >> 32, size & 0xffff'ffff, size >> 32));
+void DeviceCtl::submitUnmapMemory(std::uint32_t pid, std::uint64_t address,
+                                  std::uint64_t size) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_UNMAP_MEMORY, pid,
+                                         address & 0xffff'ffff, address >> 32,
+                                         size & 0xffff'ffff, size >> 32));
 }
 
-void DeviceCtl::submitMapProcess(int gfxPipe, std::uint32_t pid, int vmId) {
-  mDevice->submitGfxCommand(gfxPipe,
-                            createPm4Packet(gnm::IT_MAP_PROCESS, pid, vmId));
+void DeviceCtl::submitMapProcess(std::uint32_t pid, int vmId) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(gnm::IT_MAP_PROCESS, pid, vmId));
 }
 
-void DeviceCtl::submitUnmapProcess(int gfxPipe, std::uint32_t pid) {
-  mDevice->submitGfxCommand(gfxPipe, createPm4Packet(IT_UNMAP_PROCESS, pid));
+void DeviceCtl::submitUnmapProcess(std::uint32_t pid) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_UNMAP_PROCESS, pid));
 }
 
-void DeviceCtl::submitProtectMemory(int gfxPipe, std::uint32_t pid,
-                                    std::uint64_t address, std::uint64_t size,
-                                    int prot) {
-  mDevice->submitGfxCommand(
-      gfxPipe,
-      createPm4Packet(IT_PROTECT_MEMORY, pid, address & 0xffff'ffff,
-                      address >> 32, size & 0xffff'ffff, size >> 32, prot));
+void DeviceCtl::submitProtectMemory(std::uint32_t pid, std::uint64_t address,
+                                    std::uint64_t size, int prot) {
+  mDevice->submitCommand(mDevice->commandPipe.ring,
+                         createPm4Packet(IT_PROTECT_MEMORY, pid,
+                                         address & 0xffff'ffff, address >> 32,
+                                         size & 0xffff'ffff, size >> 32, prot));
 }
 
 void DeviceCtl::registerBuffer(std::uint32_t pid, Buffer buffer) {
@@ -124,8 +173,16 @@ void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
                                 orbis::uint64_t readPtrAddress,
                                 orbis::uint64_t doorbell,
                                 orbis::uint64_t ringSize) {
-  if (meId != 1) {
+  if (meId != 1 && meId != 2) {
     rx::die("unexpected ME %d", meId);
+  }
+
+  if (meId == 2) {
+    pipeId += 4;
+  }
+
+  if (queueId >= ComputePipe::kQueueCount) {
+    rx::die("unexpected queueId %d", queueId);
   }
 
   auto &pipe = mDevice->computePipes[pipeId];
@@ -153,8 +210,16 @@ void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
 void DeviceCtl::submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
                                    std::uint32_t queueId,
                                    std::uint64_t offset) {
-  if (meId != 1) {
+  if (meId != 1 && meId != 2) {
     rx::die("unexpected ME %d", meId);
+  }
+
+  if (queueId >= ComputePipe::kQueueCount) {
+    rx::die("unexpected queueId %d", queueId);
+  }
+
+  if (meId == 2) {
+    pipeId += 4;
   }
 
   auto &pipe = mDevice->computePipes[pipeId];

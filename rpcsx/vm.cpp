@@ -933,8 +933,8 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   if (auto thr = orbis::g_currentThread) {
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
-      gpu.submitMapMemory(thr->tproc->gfxRing, thr->tproc->pid, address, len,
-                          -1, -1, prot, address - kMinAddress);
+      gpu.submitMapMemory(thr->tproc->pid, address, len, -1, -1, prot,
+                          address - kMinAddress);
     }
   }
 
@@ -990,11 +990,11 @@ bool vm::unmap(void *addr, std::uint64_t size) {
   if (auto thr = orbis::g_currentThread) {
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
-      gpu.submitUnmapMemory(thr->tproc->gfxRing, thr->tproc->pid, address,
-                            size);
+      gpu.submitUnmapMemory(thr->tproc->pid, address, size);
     }
   } else {
-    std::println(stderr, "ignoring mapping {:x}-{:x}", address, address + size);
+    std::println(stderr, "ignoring unmapping {:x}-{:x}", address,
+                 address + size);
   }
   return rx::mem::unmap(addr, size);
 }
@@ -1032,10 +1032,9 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
     std::println("memory prot: {:x}", prot);
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
-      gpu.submitProtectMemory(thr->tproc->gfxRing, thr->tproc->pid, address,
-                               size, prot);
+      gpu.submitProtectMemory(thr->tproc->pid, address, size, prot);
     }
-  } else {
+  } else if (prot >> 4) {
     std::println(stderr, "ignoring mapping {:x}-{:x}", address, address + size);
   }
   return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;

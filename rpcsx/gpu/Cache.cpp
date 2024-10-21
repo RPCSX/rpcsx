@@ -2,6 +2,7 @@
 #include "Device.hpp"
 #include "amdgpu/tiler.hpp"
 #include "gnm/vulkan.hpp"
+#include "rx/hexdump.hpp"
 #include "rx/mem.hpp"
 #include "shader/Evaluator.hpp"
 #include "shader/GcnConverter.hpp"
@@ -16,28 +17,14 @@
 #include <rx/AddressRange.hpp>
 #include <rx/MemoryTable.hpp>
 #include <rx/die.hpp>
+#include <rx/format.hpp>
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
 using namespace amdgpu;
 using namespace shader;
 
-static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,
-                              std::uint32_t pageCount) {
-  std::uint64_t command =
-      (static_cast<std::uint64_t>(pageCount - 1) << 32) | firstPage;
-
-  while (true) {
-    for (std::size_t i = 0; i < std::size(device->cacheCommands); ++i) {
-      std::uint64_t expCommand = 0;
-      if (device->cacheCommands[vmId][i].compare_exchange_strong(
-              expCommand, command, std::memory_order::acquire,
-              std::memory_order::relaxed)) {
-        return;
-      }
-    }
-  }
-}
+static constexpr bool kDisableCache = false;
 
 static bool testHostInvalidations(Device *device, int vmId,
                                   std::uint64_t address, std::uint64_t size) {
@@ -224,14 +211,14 @@ void Cache::ShaderResources::loadResources(
       rx::die("failed to evaluate 128 bit T#");
     }
 
-    gnm::TBuffer buffer{};
-    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer), &*word0,
+    gnm::TBuffer tbuffer{};
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer), &*word0,
                 sizeof(std::uint32_t));
-    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 1, &*word1,
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 1, &*word1,
                 sizeof(std::uint32_t));
-    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 2, &*word2,
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 2, &*word2,
                 sizeof(std::uint32_t));
-    std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 3, &*word3,
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 3, &*word3,
                 sizeof(std::uint32_t));
 
     if (texture.words[4] != nullptr) {
@@ -245,19 +232,19 @@ void Cache::ShaderResources::loadResources(
         rx::die("failed to evaluate 256 bit T#");
       }
 
-      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 4, &*word4,
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 4, &*word4,
                   sizeof(std::uint32_t));
-      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 5, &*word5,
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 5, &*word5,
                   sizeof(std::uint32_t));
-      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 6, &*word6,
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 6, &*word6,
                   sizeof(std::uint32_t));
-      std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 7, &*word7,
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 7, &*word7,
                   sizeof(std::uint32_t));
     }
 
     std::vector<amdgpu::Cache::ImageView> *resources = nullptr;
 
-    switch (buffer.type) {
+    switch (tbuffer.type) {
     case gnm::TextureType::Array1D:
     case gnm::TextureType::Dim1D:
       resources = &imageResources[0];
@@ -276,11 +263,11 @@ void Cache::ShaderResources::loadResources(
 
     rx::dieIf(resources == nullptr,
               "ShaderResources: unexpected texture type %u",
-              static_cast<unsigned>(buffer.type));
+              static_cast<unsigned>(tbuffer.type));
 
     slotResources[slotOffset + texture.resourceSlot] = resources->size();
     resources->push_back(cacheTag->getImageView(
-        amdgpu::ImageKey::createFrom(buffer), texture.access));
+        amdgpu::ImageViewKey::createFrom(tbuffer), texture.access));
   }
 
   for (auto &sampler : res.samplers) {
@@ -484,13 +471,16 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
   barrier.image = image;
   barrier.subresourceRange = subresourceRange;
 
-  auto layoutToStageAccess = [](VkImageLayout layout)
-      -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
+  auto layoutToStageAccess =
+      [](VkImageLayout layout,
+         bool isSrc) -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_GENERAL:
-      return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
+      return {isSrc ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+                    : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+              0};
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
       return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
@@ -516,8 +506,9 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
     }
   };
 
-  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout);
-  auto [destinationStage, destinationAccess] = layoutToStageAccess(newLayout);
+  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout, true);
+  auto [destinationStage, destinationAccess] =
+      layoutToStageAccess(newLayout, false);
 
   barrier.srcAccessMask = sourceAccess;
   barrier.dstAccessMask = destinationAccess;
@@ -559,24 +550,27 @@ struct Cache::Entry {
     acquiredTag = tag->mStorage;
   }
 
-  void release(Cache::Tag *tag) {
+  bool release(Cache::Tag *tag) {
     if (acquiredTag != tag->mStorage) {
-      return;
+      return false;
     }
 
     auto access = acquiredAccess.load(std::memory_order::relaxed);
+    bool hasSubmits = false;
     if ((access & Access::Write) == Access::Write) {
       tagId = tag->getWriteId();
-      release(tag, access);
+      hasSubmits = release(tag, access);
     }
 
     acquiredTag = nullptr;
 
     acquiredAccess.store(Access::None, std::memory_order::release);
     acquiredAccess.notify_one();
+
+    return hasSubmits;
   }
 
-  virtual void release(Cache::Tag *tag, Access access) {}
+  virtual bool release(Cache::Tag *tag, Access access) { return false; }
 };
 
 struct CachedShader : Cache::Entry {
@@ -620,11 +614,13 @@ struct CachedBuffer : Cache::Entry {
 struct CachedHostVisibleBuffer : CachedBuffer {
   using CachedBuffer::update;
 
-  bool expensive() { return addressRange.size() >= rx::mem::pageSize; }
+  bool expensive() {
+    return !kDisableCache && addressRange.size() >= rx::mem::pageSize;
+  }
 
-  void flush(void *target, rx::AddressRange range) {
+  bool flush(void *target, rx::AddressRange range) {
     if (!hasDelayedFlush) {
-      return;
+      return false;
     }
 
     hasDelayedFlush = false;
@@ -632,6 +628,8 @@ struct CachedHostVisibleBuffer : CachedBuffer {
     auto data =
         buffer.getData() + range.beginAddress() - addressRange.beginAddress();
     std::memcpy(target, data, range.size());
+
+    return false;
   }
 
   void update(rx::AddressRange range, void *from) {
@@ -640,20 +638,22 @@ struct CachedHostVisibleBuffer : CachedBuffer {
     std::memcpy(data, from, range.size());
   }
 
-  void release(Cache::Tag *tag, Access) override {
+  bool release(Cache::Tag *tag, Access) override {
     if (addressRange.beginAddress() == 0) {
-      return;
+      return false;
     }
 
     auto locked = expensive();
     tag->getCache()->trackWrite(addressRange, tagId, locked);
     hasDelayedFlush = true;
 
-    if (!locked) {
-      auto address =
-          RemoteMemory{tag->getVmId()}.getPointer(addressRange.beginAddress());
-      flush(address, addressRange);
+    if (locked) {
+      return false;
     }
+
+    auto address =
+        RemoteMemory{tag->getVmId()}.getPointer(addressRange.beginAddress());
+    return flush(address, addressRange);
   }
 };
 
@@ -677,16 +677,200 @@ constexpr VkImageAspectFlags toAspect(ImageKind kind) {
   return VK_IMAGE_ASPECT_NONE;
 }
 
-struct CachedImage : Cache::Entry {
-  vk::Image image;
+struct CachedImageBuffer : Cache::Entry {
+  vk::Buffer buffer;
   GpuTiler *tiler;
-  ImageKind kind;
   TileMode tileMode{};
   gnm::DataFormat dfmt{};
   std::uint32_t pitch{};
   SurfaceInfo info;
+  unsigned mipLevels = 1;
+  unsigned arrayLayers = 1;
+  unsigned width = 1;
+  unsigned height = 1;
+  unsigned depth = 1;
 
-  bool expensive() { return true; }
+  bool expensive() {
+    if (kDisableCache) {
+      return false;
+    }
+
+    if (isLinear() && info.totalTiledSize < rx::mem::pageSize) {
+      return false;
+    }
+
+    return true;
+  }
+
+  [[nodiscard]] bool isLinear() const {
+    return tileMode.arrayMode() == kArrayModeLinearGeneral ||
+           tileMode.arrayMode() == kArrayModeLinearAligned;
+  }
+
+  [[nodiscard]] VkImageSubresourceRange
+  getSubresource(rx::AddressRange range) const {
+    auto offset = range.beginAddress() - addressRange.beginAddress();
+    auto size = range.size();
+    std::uint32_t firstMip = -1;
+    std::uint32_t lastMip = 0;
+
+    for (std::uint32_t mipLevel = 0; mipLevel < mipLevels; ++mipLevel) {
+      auto &mipInfo = info.getSubresourceInfo(mipLevel);
+      if (mipInfo.tiledOffset > offset + size) {
+        break;
+      }
+
+      if (mipInfo.tiledOffset + mipInfo.tiledSize * arrayLayers < offset) {
+        continue;
+      }
+
+      firstMip = std::min(firstMip, mipLevel);
+      lastMip = std::max(lastMip, mipLevel);
+    }
+
+    assert(firstMip <= lastMip);
+
+    return {
+        .aspectMask = 0,
+        .baseMipLevel = firstMip,
+        .levelCount = lastMip - firstMip + 1,
+        .baseArrayLayer = 0,
+        .layerCount = arrayLayers,
+    };
+  }
+
+  [[nodiscard]] std::size_t getTiledSize() const { return info.totalTiledSize; }
+  [[nodiscard]] std::size_t getLinerSize() const {
+    return info.totalLinearSize;
+  }
+
+  void update(Cache::Tag *tag, rx::AddressRange range,
+              Cache::Buffer tiledBuffer) {
+    auto subresource = getSubresource(range);
+    auto &sched = tag->getScheduler();
+
+    if (!isLinear()) {
+      auto linearAddress = buffer.getAddress();
+
+      for (unsigned mipLevel = subresource.baseMipLevel;
+           mipLevel < subresource.baseMipLevel + subresource.levelCount;
+           ++mipLevel) {
+        tiler->detile(sched, info, tileMode, tiledBuffer.deviceAddress,
+                      info.totalTiledSize, linearAddress, info.totalLinearSize,
+                      mipLevel, 0, info.arrayLayerCount);
+      }
+      return;
+    }
+
+    std::vector<VkBufferCopy> regions;
+    regions.reserve(subresource.levelCount);
+
+    for (unsigned mipLevel = subresource.baseMipLevel;
+         mipLevel < subresource.baseMipLevel + subresource.levelCount;
+         ++mipLevel) {
+      auto &mipInfo = info.getSubresourceInfo(mipLevel);
+      regions.push_back({
+          .srcOffset = mipInfo.tiledOffset + tiledBuffer.offset,
+          .dstOffset = mipInfo.linearOffset,
+          .size = mipInfo.linearSize,
+      });
+    }
+
+    vkCmdCopyBuffer(sched.getCommandBuffer(), tiledBuffer.handle,
+                    buffer.getHandle(), regions.size(), regions.data());
+  }
+
+  void write(Scheduler &scheduler, Cache::Buffer tiledBuffer,
+             const VkImageSubresourceRange &subresourceRange) {
+    if (!isLinear()) {
+      for (unsigned mipLevel = 0; mipLevel < subresourceRange.levelCount;
+           ++mipLevel) {
+        tiler->tile(scheduler, info, tileMode, buffer.getAddress(),
+                    info.totalLinearSize, tiledBuffer.deviceAddress,
+                    info.totalTiledSize, mipLevel, 0,
+                    subresourceRange.levelCount);
+      }
+
+      return;
+    }
+
+    std::vector<VkBufferCopy> regions;
+    regions.reserve(subresourceRange.levelCount);
+
+    for (unsigned mipLevelOffset = 0;
+         mipLevelOffset < subresourceRange.levelCount; ++mipLevelOffset) {
+      auto mipLevel = mipLevelOffset + subresourceRange.baseMipLevel;
+      auto &mipInfo = info.getSubresourceInfo(mipLevel);
+
+      regions.push_back({
+          .srcOffset = mipInfo.linearOffset,
+          .dstOffset = mipInfo.tiledOffset + tiledBuffer.offset,
+          .size = mipInfo.linearSize,
+      });
+    }
+
+    vkCmdCopyBuffer(scheduler.getCommandBuffer(), buffer.getHandle(),
+                    tiledBuffer.handle, regions.size(), regions.data());
+  }
+
+  bool flush(Cache::Tag &tag, Scheduler &scheduler, rx::AddressRange range) {
+    if (!hasDelayedFlush) {
+      return false;
+    }
+
+    hasDelayedFlush = false;
+
+    auto subresourceRange = getSubresource(range);
+    auto beginOffset =
+        info.getSubresourceInfo(subresourceRange.baseMipLevel).tiledOffset;
+    auto lastLevelInfo = info.getSubresourceInfo(
+        subresourceRange.baseMipLevel + subresourceRange.levelCount - 1);
+    auto totalTiledSubresourceSize =
+        lastLevelInfo.tiledOffset +
+        lastLevelInfo.tiledSize * subresourceRange.layerCount;
+
+    auto targetRange = rx::AddressRange::fromBeginSize(
+        range.beginAddress() + beginOffset, totalTiledSubresourceSize);
+
+    auto tiledBuffer = tag.getBuffer(targetRange, Access::Write);
+
+    write(scheduler, tiledBuffer, subresourceRange);
+    return true;
+  }
+
+  bool release(Cache::Tag *tag, Access) override {
+    hasDelayedFlush = true;
+    auto locked = expensive();
+
+    for (auto &subresource : std::span(info.subresources, mipLevels)) {
+      auto subresourceRange = rx::AddressRange::fromBeginSize(
+          subresource.tiledOffset + addressRange.beginAddress(),
+          subresource.tiledSize);
+
+      tag->getCache()->trackWrite(subresourceRange, tagId, locked);
+    }
+
+    if (locked) {
+      return false;
+    }
+
+    return flush(*tag, tag->getScheduler(), addressRange);
+  }
+};
+
+struct CachedImage : Cache::Entry {
+  vk::Image image;
+  ImageKind kind;
+  ImageBufferKey imageBufferKey;
+  SurfaceInfo info;
+
+  bool expensive() {
+    if (kDisableCache) {
+      return false;
+    }
+
+    return info.totalTiledSize >= rx::mem::pageSize;
+  }
 
   [[nodiscard]] VkImageSubresourceRange
   getSubresource(rx::AddressRange range) const {
@@ -728,10 +912,7 @@ struct CachedImage : Cache::Entry {
   }
 
   void update(Cache::Tag *tag, rx::AddressRange range,
-              Cache::Buffer tiledBuffer) {
-    bool isLinear = tileMode.arrayMode() == kArrayModeLinearGeneral ||
-                    tileMode.arrayMode() == kArrayModeLinearAligned;
-
+              Cache::ImageBuffer imageBuffer) {
     auto subresource = getSubresource(range);
 
     std::vector<VkBufferImageCopy> regions;
@@ -739,75 +920,28 @@ struct CachedImage : Cache::Entry {
 
     auto &sched = tag->getScheduler();
 
-    VkBuffer sourceBuffer;
-    if (isLinear) {
-      sourceBuffer = tiledBuffer.handle;
-      for (unsigned mipLevel = subresource.baseMipLevel;
-           mipLevel < subresource.baseMipLevel + subresource.levelCount;
-           ++mipLevel) {
-        auto &mipInfo = info.getSubresourceInfo(mipLevel);
-        regions.push_back({
-            .bufferOffset = mipInfo.tiledOffset + tiledBuffer.offset,
-            .bufferRowLength =
-                mipLevel > 0 ? 0 : std::max(pitch >> mipLevel, 1u),
-            .imageSubresource =
-                {
-                    .aspectMask = toAspect(kind),
-                    .mipLevel = mipLevel,
-                    .baseArrayLayer = subresource.baseArrayLayer,
-                    .layerCount = subresource.layerCount,
-                },
-            .imageExtent =
-                {
-                    .width = std::max(image.getWidth() >> mipLevel, 1u),
-                    .height = std::max(image.getHeight() >> mipLevel, 1u),
-                    .depth = std::max(image.getDepth() >> mipLevel, 1u),
-                },
-        });
-      }
-    } else {
-      auto &tiler = tag->getDevice()->tiler;
-
-      for (unsigned mipLevel = subresource.baseMipLevel;
-           mipLevel < subresource.baseMipLevel + subresource.levelCount;
-           ++mipLevel) {
-        auto &mipInfo = info.getSubresourceInfo(mipLevel);
-
-        regions.push_back({
-            .bufferOffset = mipInfo.linearOffset,
-            .imageSubresource =
-                {
-                    .aspectMask = toAspect(kind),
-                    .mipLevel = mipLevel,
-                    .baseArrayLayer = subresource.baseArrayLayer,
-                    .layerCount = subresource.layerCount,
-                },
-            .imageExtent =
-                {
-                    .width = std::max(image.getWidth() >> mipLevel, 1u),
-                    .height = std::max(image.getHeight() >> mipLevel, 1u),
-                    .depth = std::max(image.getDepth() >> mipLevel, 1u),
-                },
-        });
-      }
-
-      auto detiledBuffer =
-          vk::Buffer::Allocate(vk::getDeviceLocalMemory(), info.totalLinearSize,
-                               VK_BUFFER_USAGE_2_TRANSFER_DST_BIT_KHR |
-                                   VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT_KHR);
-
-      sourceBuffer = detiledBuffer.getHandle();
-      auto linearAddress = detiledBuffer.getAddress();
-
-      sched.afterSubmit([detiledBuffer = std::move(detiledBuffer)] {});
-
-      for (unsigned mipLevel = subresource.baseMipLevel;
-           mipLevel < subresource.baseMipLevel + subresource.levelCount;
-           ++mipLevel) {
-        tiler.detile(sched, info, tileMode, tiledBuffer.deviceAddress,
-                     info.totalTiledSize, linearAddress, info.totalLinearSize,
-                     mipLevel, 0, info.arrayLayerCount);
-      }
+    for (unsigned mipLevel = subresource.baseMipLevel;
+         mipLevel < subresource.baseMipLevel + subresource.levelCount;
+         ++mipLevel) {
+      auto &mipInfo = info.getSubresourceInfo(mipLevel);
+      regions.push_back({
+          .bufferOffset = mipInfo.tiledOffset + imageBuffer.offset,
+          .bufferRowLength =
+              mipLevel > 0 ? 0 : std::max(imageBufferKey.pitch >> mipLevel, 1u),
+          .imageSubresource =
+              {
+                  .aspectMask = toAspect(kind),
+                  .mipLevel = mipLevel,
+                  .baseArrayLayer = subresource.baseArrayLayer,
+                  .layerCount = subresource.layerCount,
+              },
+          .imageExtent =
+              {
+                  .width = std::max(image.getWidth() >> mipLevel, 1u),
+                  .height = std::max(image.getHeight() >> mipLevel, 1u),
+                  .depth = std::max(image.getDepth() >> mipLevel, 1u),
+              },
+      });
     }
 
     transitionImageLayout(sched.getCommandBuffer(), image,
@@ -815,7 +949,7 @@ struct CachedImage : Cache::Entry {
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource);
 
     vkCmdCopyBufferToImage(
-        sched.getCommandBuffer(), sourceBuffer, image.getHandle(),
+        sched.getCommandBuffer(), imageBuffer.handle, image.getHandle(),
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions.size(), regions.data());
 
     transitionImageLayout(sched.getCommandBuffer(), image,
@@ -823,129 +957,72 @@ struct CachedImage : Cache::Entry {
                           VK_IMAGE_LAYOUT_GENERAL, subresource);
   }
 
-  void write(Scheduler &scheduler, Cache::Buffer tiledBuffer,
-             const VkImageSubresourceRange &subresourceRange) {
+  void write(Scheduler &scheduler, Cache::ImageBuffer imageBuffer,
+             rx::AddressRange range) {
+    auto subresourceRange = getSubresource(range);
+    std::vector<VkBufferImageCopy> regions;
+    regions.reserve(subresourceRange.levelCount);
+
+    for (unsigned mipLevelOffset = 0;
+         mipLevelOffset < subresourceRange.levelCount; ++mipLevelOffset) {
+      auto mipLevel = mipLevelOffset + subresourceRange.baseMipLevel;
+      auto &regionInfo = info.getSubresourceInfo(mipLevel);
+
+      regions.push_back({
+          .bufferOffset = imageBuffer.offset + regionInfo.linearOffset,
+          .bufferRowLength =
+              mipLevel > 0 ? 0 : std::max(info.pitch >> mipLevel, 1u),
+          .imageSubresource =
+              {
+                  .aspectMask = toAspect(kind),
+                  .mipLevel = mipLevel,
+                  .baseArrayLayer = 0,
+                  .layerCount = image.getArrayLayers(),
+              },
+          .imageExtent =
+              {
+                  .width = std::max(image.getWidth() >> mipLevel, 1u),
+                  .height = std::max(image.getHeight() >> mipLevel, 1u),
+                  .depth = std::max(image.getDepth() >> mipLevel, 1u),
+              },
+      });
+    }
+
     transitionImageLayout(
         scheduler.getCommandBuffer(), image, VK_IMAGE_LAYOUT_GENERAL,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresourceRange);
 
-    bool isLinear = tileMode.arrayMode() == kArrayModeLinearGeneral ||
-                    tileMode.arrayMode() == kArrayModeLinearAligned;
-
-    std::vector<VkBufferImageCopy> regions;
-    regions.reserve(subresourceRange.levelCount);
-
-    if (isLinear) {
-      for (unsigned mipLevelOffset = 0;
-           mipLevelOffset < subresourceRange.levelCount; ++mipLevelOffset) {
-        auto mipLevel = mipLevelOffset + subresourceRange.baseMipLevel;
-        auto &regionInfo = info.getSubresourceInfo(mipLevel);
-
-        regions.push_back({
-            .bufferOffset = tiledBuffer.offset + regionInfo.tiledOffset,
-            .bufferRowLength =
-                mipLevel > 0 ? 0 : std::max(info.pitch >> mipLevel, 1u),
-            .imageSubresource =
-                {
-                    .aspectMask = toAspect(kind),
-                    .mipLevel = mipLevel,
-                    .baseArrayLayer = 0,
-                    .layerCount = image.getArrayLayers(),
-                },
-            .imageExtent =
-                {
-                    .width = std::max(image.getWidth() >> mipLevel, 1u),
-                    .height = std::max(image.getHeight() >> mipLevel, 1u),
-                    .depth = std::max(image.getDepth() >> mipLevel, 1u),
-                },
-        });
-      }
-
-      vkCmdCopyImageToBuffer(scheduler.getCommandBuffer(), image.getHandle(),
-                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                             tiledBuffer.handle, regions.size(),
-                             regions.data());
-    } else {
-      for (unsigned mipLevelOffset = 0;
-           mipLevelOffset < subresourceRange.levelCount; ++mipLevelOffset) {
-        auto mipLevel = mipLevelOffset + subresourceRange.baseMipLevel;
-
-        auto &regionInfo = info.getSubresourceInfo(mipLevel);
-        regions.push_back({
-            .bufferOffset = tiledBuffer.offset + regionInfo.linearOffset,
-            .imageSubresource =
-                {
-                    .aspectMask = toAspect(kind),
-                    .mipLevel = mipLevel,
-                    .baseArrayLayer = 0,
-                    .layerCount = image.getArrayLayers(),
-                },
-            .imageExtent =
-                {
-                    .width = std::max(image.getWidth() >> mipLevel, 1u),
-                    .height = std::max(image.getHeight() >> mipLevel, 1u),
-                    .depth = std::max(image.getDepth() >> mipLevel, 1u),
-                },
-        });
-      }
-
-      auto transferBuffer = vk::Buffer::Allocate(
-          vk::getDeviceLocalMemory(), info.totalLinearSize,
-          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-
-      vkCmdCopyImageToBuffer(scheduler.getCommandBuffer(), image.getHandle(),
-                             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                             transferBuffer.getHandle(), regions.size(),
-                             regions.data());
-
-      for (unsigned mipLevel = 0; mipLevel < image.getMipLevels(); ++mipLevel) {
-        tiler->tile(scheduler, info, tileMode, transferBuffer.getAddress(),
-                    info.totalLinearSize, tiledBuffer.deviceAddress,
-                    info.totalTiledSize, mipLevel, 0, image.getArrayLayers());
-      }
-
-      scheduler.afterSubmit([transferBuffer = std::move(transferBuffer)] {});
-    }
+    vkCmdCopyImageToBuffer(scheduler.getCommandBuffer(), image.getHandle(),
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           imageBuffer.handle, regions.size(), regions.data());
 
     transitionImageLayout(scheduler.getCommandBuffer(), image,
                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                           VK_IMAGE_LAYOUT_GENERAL, subresourceRange);
-
-    scheduler.submit();
   }
 
-  void flush(Cache::Tag &tag, Scheduler &scheduler, rx::AddressRange range) {
+  bool flush(Cache::Tag &tag, Scheduler &scheduler, rx::AddressRange range) {
     if (!hasDelayedFlush) {
-      return;
+      return false;
     }
 
     hasDelayedFlush = false;
 
-    auto subresourceRange = getSubresource(range);
-    auto beginOffset =
-        info.getSubresourceInfo(subresourceRange.baseMipLevel).tiledOffset;
-    auto lastLevelInfo = info.getSubresourceInfo(
-        subresourceRange.baseMipLevel + subresourceRange.levelCount - 1);
-    auto totalTiledSubresourceSize =
-        lastLevelInfo.tiledOffset +
-        lastLevelInfo.tiledSize * subresourceRange.layerCount;
-
-    auto targetRange = rx::AddressRange::fromBeginSize(
-        range.beginAddress() + beginOffset, totalTiledSubresourceSize);
-
-    auto tiledBuffer = tag.getBuffer(targetRange, Access::Write);
-
-    write(scheduler, tiledBuffer, subresourceRange);
+    auto imageBuffer = tag.getImageBuffer(imageBufferKey, Access::Write);
+    write(scheduler, imageBuffer, range);
+    return true;
   }
 
-  void release(Cache::Tag *tag, Access) override {
+  bool release(Cache::Tag *tag, Access) override {
     hasDelayedFlush = true;
     auto locked = expensive();
     tag->getCache()->trackWrite(addressRange, tagId, locked);
 
-    if (!locked) {
-      flush(*tag, tag->getScheduler(), addressRange);
+    if (locked) {
+      return true;
     }
+
+    return flush(*tag, tag->getScheduler(), addressRange);
   }
 };
 
@@ -953,27 +1030,111 @@ struct CachedImageView : Cache::Entry {
   vk::ImageView view;
 };
 
-ImageKey ImageKey::createFrom(const gnm::TBuffer &buffer) {
+ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &tbuffer) {
   return {
-      .readAddress = buffer.address(),
-      .writeAddress = buffer.address(),
-      .type = buffer.type,
-      .dfmt = buffer.dfmt,
-      .nfmt = buffer.nfmt,
-      .tileMode = getDefaultTileModes()[buffer.tiling_idx],
+      .readAddress = tbuffer.address(),
+      .writeAddress = tbuffer.address(),
+      .type = tbuffer.type,
+      .dfmt = tbuffer.dfmt,
+      .nfmt = tbuffer.nfmt,
+      .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
       .extent =
           {
-              .width = buffer.width + 1u,
-              .height = buffer.height + 1u,
-              .depth = buffer.depth + 1u,
+              .width = tbuffer.width + 1u,
+              .height = tbuffer.height + 1u,
+              .depth = tbuffer.depth + 1u,
           },
-      .pitch = buffer.pitch + 1u,
-      .baseMipLevel = static_cast<std::uint32_t>(buffer.base_level),
-      .mipCount = buffer.last_level - buffer.base_level + 1u,
-      .baseArrayLayer = static_cast<std::uint32_t>(buffer.base_array),
-      .arrayLayerCount = buffer.last_array - buffer.base_array + 1u,
+      .pitch = tbuffer.pitch + 1u,
+      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
+      .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
+      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
+      .arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u,
       .kind = ImageKind::Color,
-      .pow2pad = buffer.pow2pad != 0,
+      .pow2pad = tbuffer.pow2pad != 0,
+      .r = tbuffer.dst_sel_x,
+      .g = tbuffer.dst_sel_y,
+      .b = tbuffer.dst_sel_z,
+      .a = tbuffer.dst_sel_w,
+  };
+}
+
+ImageKey ImageKey::createFrom(const gnm::TBuffer &tbuffer) {
+  return {
+      .readAddress = tbuffer.address(),
+      .writeAddress = tbuffer.address(),
+      .type = tbuffer.type,
+      .dfmt = tbuffer.dfmt,
+      .nfmt = tbuffer.nfmt,
+      .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
+      .extent =
+          {
+              .width = tbuffer.width + 1u,
+              .height = tbuffer.height + 1u,
+              .depth = tbuffer.depth + 1u,
+          },
+      .pitch = tbuffer.pitch + 1u,
+      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
+      .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
+      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
+      .arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u,
+      .kind = ImageKind::Color,
+      .pow2pad = tbuffer.pow2pad != 0,
+  };
+}
+
+ImageKey ImageKey::createFrom(const ImageViewKey &imageView) {
+  return {
+      .readAddress = imageView.readAddress,
+      .writeAddress = imageView.writeAddress,
+      .type = imageView.type,
+      .dfmt = imageView.dfmt,
+      .nfmt = imageView.nfmt,
+      .tileMode = imageView.tileMode,
+      .extent = imageView.extent,
+      .pitch = imageView.pitch,
+      .baseMipLevel = imageView.baseMipLevel,
+      .mipCount = imageView.mipCount,
+      .baseArrayLayer = imageView.baseArrayLayer,
+      .arrayLayerCount = imageView.arrayLayerCount,
+      .kind = imageView.kind,
+      .pow2pad = imageView.pow2pad,
+  };
+}
+
+ImageBufferKey ImageBufferKey::createFrom(const gnm::TBuffer &tbuffer) {
+  return {
+      .address = tbuffer.address(),
+      .type = tbuffer.type,
+      .dfmt = tbuffer.dfmt,
+      .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
+      .extent =
+          {
+              .width = tbuffer.width + 1u,
+              .height = tbuffer.height + 1u,
+              .depth = tbuffer.depth + 1u,
+          },
+      .pitch = tbuffer.pitch + 1u,
+      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
+      .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
+      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
+      .arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u,
+      .pow2pad = tbuffer.pow2pad != 0,
+  };
+}
+
+ImageBufferKey ImageBufferKey::createFrom(const ImageKey &imageKey) {
+  return {
+      .address = imageKey.readAddress,
+      .type = imageKey.type,
+      .dfmt = imageKey.dfmt,
+      .tileMode = imageKey.tileMode,
+      .extent = imageKey.extent,
+      .pitch = imageKey.pitch,
+      .baseMipLevel = imageKey.baseMipLevel,
+      .mipCount = imageKey.mipCount,
+      .baseArrayLayer = imageKey.baseArrayLayer,
+      .arrayLayerCount = imageKey.arrayLayerCount,
+      .pow2pad = imageKey.pow2pad,
   };
 }
 
@@ -1085,7 +1246,7 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
   readMemory(&result->magic, rx::AddressRange::fromBeginSize(
                                  key.address, sizeof(result->magic)));
 
-  for (auto entry : converted->info.memoryMap) {
+  for (auto entry : result->info.memoryMap) {
     auto entryRange =
         rx::AddressRange::fromBeginEnd(entry.beginAddress, entry.endAddress);
     auto &inserted = result->usedMemory.emplace_back();
@@ -1173,9 +1334,16 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
   auto it = table.queryArea(range.beginAddress());
 
   if (it == table.end() || !it.range().contains(range)) {
-    mParent->flushImages(*this, range);
-    mScheduler->submit();
-    mScheduler->wait();
+    if (mParent->flushImages(*this, range)) {
+      mScheduler->submit();
+      mScheduler->wait();
+    }
+
+    if (mParent->flushImageBuffers(*this, range)) {
+      mScheduler->submit();
+      mScheduler->wait();
+    }
+
     mParent->flushBuffers(range);
 
     it = table.map(range.beginAddress(), range.endAddress(), nullptr, false,
@@ -1195,8 +1363,9 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
     it.get() = std::move(cached);
   }
 
-  auto cached = static_cast<CachedHostVisibleBuffer *>(it->get());
+  mStorage->mAcquiredMemoryResources.push_back(it.get());
 
+  auto cached = static_cast<CachedHostVisibleBuffer *>(it->get());
   cached->acquire(this, access);
   auto addressRange = it.get()->addressRange;
 
@@ -1206,6 +1375,15 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
                                 addressRange.beginAddress(),
                                 addressRange.size()) ||
         !mParent->isInSync(addressRange, cached->tagId)) {
+      if (mParent->flushImages(*this, range)) {
+        getScheduler().submit();
+        getScheduler().wait();
+      }
+
+      if (mParent->flushImageBuffers(*this, range)) {
+        getScheduler().submit();
+        getScheduler().wait();
+      }
 
       mParent->trackUpdate(EntryType::HostVisibleBuffer, addressRange, it.get(),
                            getReadId(), cached->expensive());
@@ -1216,7 +1394,6 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
   }
 
   auto offset = range.beginAddress() - addressRange.beginAddress();
-  mStorage->mAcquiredMemoryResources.push_back(it.get());
   return {
       .handle = cached->buffer.getHandle(),
       .offset = offset,
@@ -1453,8 +1630,120 @@ static bool isImageCompatible(CachedImage *cached, const ImageKey &key) {
          cached->image.getWidth() == key.extent.width &&
          cached->image.getHeight() == key.extent.height &&
          cached->image.getDepth() == key.extent.depth &&
-         cached->pitch == key.pitch &&
-         cached->tileMode.raw == key.tileMode.raw && cached->kind == key.kind;
+         cached->imageBufferKey.pitch == key.pitch &&
+         cached->imageBufferKey.tileMode.raw == key.tileMode.raw &&
+         cached->kind == key.kind;
+}
+
+static bool isImageBufferCompatible(CachedImageBuffer *cached,
+                                    const ImageBufferKey &key) {
+  // FIXME: relax it
+  return cached->dfmt == key.dfmt && cached->width == key.extent.width &&
+         cached->height == key.extent.height &&
+         cached->depth == key.extent.depth && cached->pitch == key.pitch &&
+         cached->tileMode.raw == key.tileMode.raw;
+}
+
+Cache::ImageBuffer Cache::Tag::getImageBuffer(const ImageBufferKey &key,
+                                              Access access) {
+  auto surfaceInfo = computeSurfaceInfo(
+      key.tileMode, key.type, key.dfmt, key.extent.width, key.extent.height,
+      key.extent.depth, key.pitch, key.baseArrayLayer, key.arrayLayerCount,
+      key.baseMipLevel, key.mipCount, key.pow2pad);
+
+  auto range =
+      rx::AddressRange::fromBeginSize(key.address, surfaceInfo.totalTiledSize);
+
+  auto &table = mParent->getTable(EntryType::ImageBuffer);
+
+  std::vector<std::shared_ptr<CachedImageBuffer>> flushed;
+  for (auto it = table.lowerBound(range.beginAddress()); it != table.end();
+       ++it) {
+    if (!range.intersects(it.range())) {
+      break;
+    }
+
+    auto imgBuffer = std::static_pointer_cast<CachedImageBuffer>(it.get());
+
+    if (range == it.range()) {
+      if (isImageBufferCompatible(imgBuffer.get(), key)) {
+        break;
+      }
+
+      if (imgBuffer->flush(*this, getScheduler(), imgBuffer->addressRange)) {
+        flushed.push_back(std::move(imgBuffer));
+      }
+
+      it.get() = nullptr;
+      break;
+    }
+
+    if (imgBuffer->flush(*this, getScheduler(), imgBuffer->addressRange)) {
+      flushed.push_back(std::move(imgBuffer));
+    }
+  }
+
+  if (!flushed.empty()) {
+    getScheduler().submit();
+    getScheduler().wait();
+    flushed.clear();
+  }
+
+  auto it =
+      table.map(range.beginAddress(), range.endAddress(), nullptr, false, true);
+
+  if (it.get() == nullptr) {
+    auto cached = std::make_shared<CachedImageBuffer>();
+    cached->buffer = vk::Buffer::Allocate(
+        vk::getDeviceLocalMemory(), surfaceInfo.totalLinearSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    cached->tiler = &getDevice()->tiler;
+    cached->info = surfaceInfo;
+    cached->addressRange = range;
+    cached->tileMode = key.tileMode;
+    cached->dfmt = key.dfmt;
+    cached->pitch = key.pitch;
+    cached->arrayLayers = key.arrayLayerCount;
+    cached->mipLevels = key.mipCount;
+    cached->width = key.extent.width;
+    cached->height = key.extent.height;
+    cached->depth = key.extent.depth;
+
+    it.get() = std::move(cached);
+  }
+
+  mStorage->mAcquiredImageBufferResources.push_back(it.get());
+
+  auto cached = std::static_pointer_cast<CachedImageBuffer>(it.get());
+  cached->acquire(this, access);
+
+  if ((access & Access::Read) != Access::None) {
+    if (!cached->expensive() ||
+        testHostInvalidations(getDevice(), mParent->mVmId, range.beginAddress(),
+                              range.size()) ||
+        !mParent->isInSync(cached->addressRange, cached->tagId)) {
+
+      auto tiledBuffer = getBuffer(range, Access::Read);
+      if (tiledBuffer.tagId != cached->tagId) {
+        mParent->trackUpdate(EntryType::ImageBuffer, range, it.get(),
+                             tiledBuffer.tagId, cached->expensive());
+
+        cached->update(this, cached->addressRange, tiledBuffer);
+      }
+    }
+  }
+
+  std::uint64_t offset =
+      cached->addressRange.beginAddress() - range.beginAddress();
+
+  Cache::ImageBuffer result{
+      .handle = cached->buffer.getHandle(),
+      .offset = offset,
+      .deviceAddress = cached->buffer.getAddress() + offset,
+      .tagId = cached->tagId,
+  };
+
+  return result;
 }
 
 Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
@@ -1473,30 +1762,39 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
   auto &table = mParent->getTable(EntryType::Image);
 
+  std::vector<std::shared_ptr<CachedImage>> flushed;
+
   for (auto it = table.lowerBound(storeRange.beginAddress()); it != table.end();
        ++it) {
     if (!storeRange.intersects(it.range())) {
       break;
     }
 
-    auto img = static_cast<CachedImage *>(it->get());
+    auto img = std::static_pointer_cast<CachedImage>(it.get());
 
     if (storeRange == it.range()) {
-      if (isImageCompatible(img, key)) {
+      if (isImageCompatible(img.get(), key)) {
         break;
       }
 
-      img->flush(*this, getScheduler(), img->addressRange);
-      getScheduler().wait();
+      if (img->flush(*this, getScheduler(), img->addressRange)) {
+        flushed.push_back(std::move(img));
+      }
+
       it.get() = nullptr;
       break;
     }
 
-    img->flush(*this, getScheduler(), img->addressRange);
+    if (img->flush(*this, getScheduler(), img->addressRange)) {
+      flushed.push_back(std::move(img));
+    }
   }
 
-  getScheduler().submit();
-  getScheduler().wait();
+  if (!flushed.empty()) {
+    getScheduler().submit();
+    getScheduler().wait();
+    flushed.clear();
+  }
 
   auto it = table.map(storeRange.beginAddress(), storeRange.endAddress(),
                       nullptr, false, true);
@@ -1514,7 +1812,8 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
           key.dfmt == gnm::kDataFormatBc5 || key.dfmt == gnm::kDataFormatBc6 ||
           key.dfmt == gnm::kDataFormatBc7 ||
           key.dfmt == gnm::kDataFormatGB_GR ||
-          key.dfmt == gnm::kDataFormatBG_RG;
+          key.dfmt == gnm::kDataFormatBG_RG ||
+          key.dfmt == gnm::kDataFormat5_6_5;
 
       if (!isCompressed) {
         usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -1556,19 +1855,18 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
 
     auto cached = std::make_shared<CachedImage>();
     cached->image = std::move(image);
-    cached->tiler = &getDevice()->tiler;
     cached->info = surfaceInfo;
     cached->addressRange = storeRange;
     cached->kind = key.kind;
-    cached->tileMode = key.tileMode;
-    cached->dfmt = key.dfmt;
-    cached->pitch = key.pitch;
+    cached->imageBufferKey = ImageBufferKey::createFrom(key);
 
     transitionImageLayout(mScheduler->getCommandBuffer(), cached->image,
                           VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
                           cached->getSubresource(storeRange));
     it.get() = std::move(cached);
   }
+
+  mStorage->mAcquiredImageResources.push_back(it.get());
 
   auto cached = std::static_pointer_cast<CachedImage>(it.get());
   cached->acquire(this, access);
@@ -1579,19 +1877,20 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                               updateRange.beginAddress(), updateRange.size()) ||
         !mParent->isInSync(cached->addressRange, cached->tagId)) {
 
-      auto tiledBuffer = getBuffer(updateRange, Access::Read);
-      if (tiledBuffer.tagId != cached->tagId) {
+      auto imageBufferKey = cached->imageBufferKey;
+      imageBufferKey.address = key.readAddress;
+      auto imageBuffer = getImageBuffer(imageBufferKey, Access::Read);
+      if (imageBuffer.tagId != cached->tagId) {
         mParent->trackUpdate(EntryType::Image, storeRange, it.get(),
-                             tiledBuffer.tagId, cached->expensive());
+                             imageBuffer.tagId, cached->expensive());
 
-        cached->update(this, cached->addressRange, tiledBuffer);
+        cached->update(this, cached->addressRange, imageBuffer);
       }
     }
   }
 
   auto entry = cached.get();
   auto handle = cached->image.getHandle();
-  mStorage->mAcquiredImageResources.push_back(std::move(cached));
 
   return {
       .handle = handle,
@@ -1601,7 +1900,8 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
   };
 }
 
-Cache::ImageView Cache::Tag::getImageView(const ImageKey &key, Access access) {
+Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
+                                          Access access) {
   auto surfaceInfo = computeSurfaceInfo(
       key.tileMode, key.type, key.dfmt, key.extent.width, key.extent.height,
       key.extent.depth, key.pitch, key.baseArrayLayer, key.arrayLayerCount,
@@ -1609,16 +1909,15 @@ Cache::ImageView Cache::Tag::getImageView(const ImageKey &key, Access access) {
 
   auto storeRange = rx::AddressRange::fromBeginSize(key.writeAddress,
                                                     surfaceInfo.totalTiledSize);
-  auto updateRange = rx::AddressRange::fromBeginSize(
-      key.readAddress, surfaceInfo.totalTiledSize);
-
-  if ((access & Access::Write) != Access::Write) {
-    storeRange = updateRange;
-  }
-
-  auto image = getImage(key, access);
+  auto image = getImage(ImageKey::createFrom(key), access);
   auto result = vk::ImageView(gnm::toVkImageViewType(key.type), image.handle,
-                              image.format, {},
+                              image.format,
+                              {
+                                  .r = gnm::toVkComponentSwizzle(key.r),
+                                  .g = gnm::toVkComponentSwizzle(key.g),
+                                  .b = gnm::toVkComponentSwizzle(key.b),
+                                  .a = gnm::toVkComponentSwizzle(key.a),
+                              },
                               {
                                   .aspectMask = toAspect(key.kind),
                                   .baseMipLevel = key.baseMipLevel,
@@ -1694,28 +1993,45 @@ void Cache::Tag::release() {
   }
 
   std::vector<std::shared_ptr<Entry>> tmpResources;
+  bool hasSubmits = false;
 
   while (!mStorage->mAcquiredImageResources.empty()) {
     auto resource = std::move(mStorage->mAcquiredImageResources.back());
     mStorage->mAcquiredImageResources.pop_back();
-    resource->release(this);
+    if (resource->release(this)) {
+      hasSubmits = true;
+    }
+
+    tmpResources.push_back(std::move(resource));
+  }
+
+  if (hasSubmits) {
+    hasSubmits = false;
     mScheduler->submit();
     mScheduler->wait();
+  }
+
+  while (!mStorage->mAcquiredImageBufferResources.empty()) {
+    auto resource = std::move(mStorage->mAcquiredImageBufferResources.back());
+    mStorage->mAcquiredImageBufferResources.pop_back();
+    if (resource->release(this)) {
+      hasSubmits = true;
+    }
+
     tmpResources.push_back(std::move(resource));
+  }
+
+  if (hasSubmits) {
+    hasSubmits = false;
+    mScheduler->submit();
+    mScheduler->wait();
   }
 
   while (!mStorage->mAcquiredMemoryResources.empty()) {
     auto resource = std::move(mStorage->mAcquiredMemoryResources.back());
     mStorage->mAcquiredMemoryResources.pop_back();
     resource->release(this);
-    mScheduler->submit();
-    mScheduler->wait();
     tmpResources.push_back(std::move(resource));
-  }
-
-  if (!tmpResources.empty()) {
-    mScheduler->submit();
-    mScheduler->wait();
   }
 
   mStorage->clear();
@@ -2173,25 +2489,29 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
     VkDescriptorPoolSize descriptorPoolSizes[]{
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = 4 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 4 * kDescriptorSetCount,
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 3 * 32 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 3 * 32 * kDescriptorSetCount,
         },
         {
             .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = 32 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 32 * kDescriptorSetCount,
         },
         {
             .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = 32 * (kDescriptorSetCount * 2 / 4),
+            .descriptorCount = 32 * kDescriptorSetCount,
         },
     };
 
     VkDescriptorPoolCreateInfo info{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = kDescriptorSetCount * 2,
+        .maxSets =
+            static_cast<uint32_t>(std::size(mGraphicsDescriptorSets) *
+                                      mGraphicsDescriptorSetLayouts.size() +
+                                  std::size(mComputeDescriptorSets)) *
+            2,
         .poolSizeCount = static_cast<uint32_t>(std::size(descriptorPoolSizes)),
         .pPoolSizes = descriptorPoolSizes,
     };
@@ -2210,7 +2530,8 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
     };
 
     for (auto &graphicsSet : mGraphicsDescriptorSets) {
-      vkAllocateDescriptorSets(vk::context->device, &info, graphicsSet.data());
+      VK_VERIFY(vkAllocateDescriptorSets(vk::context->device, &info,
+                                         graphicsSet.data()));
     }
   }
 
@@ -2223,7 +2544,8 @@ Cache::Cache(Device *device, int vmId) : mDevice(device), mVmId(vmId) {
     };
 
     for (auto &computeSet : mComputeDescriptorSets) {
-      vkAllocateDescriptorSets(vk::context->device, &info, &computeSet);
+      VK_VERIFY(
+          vkAllocateDescriptorSets(vk::context->device, &info, &computeSet));
     }
   }
 }
@@ -2263,9 +2585,16 @@ void Cache::invalidate(Tag &tag, rx::AddressRange range) {
   markHostInvalidated(mDevice, mVmId, range.beginAddress(), range.size());
 }
 void Cache::flush(Tag &tag, rx::AddressRange range) {
-  flushImages(tag, range);
-  tag.getScheduler().submit();
-  tag.getScheduler().wait();
+  if (flushImages(tag, range)) {
+    tag.getScheduler().submit();
+    tag.getScheduler().wait();
+  }
+
+  if (flushImageBuffers(tag, range)) {
+    tag.getScheduler().submit();
+    tag.getScheduler().wait();
+  }
+
   flushBuffers(range);
 }
 
@@ -2312,8 +2641,32 @@ rx::AddressRange Cache::flushImages(Tag &tag, rx::AddressRange range) {
       break;
     }
 
-    static_cast<CachedImage *>(cached)->flush(tag, tag.getScheduler(), range);
-    result = result.merge(cached->addressRange);
+    if (static_cast<CachedImage *>(cached)->flush(tag, tag.getScheduler(),
+                                                  range)) {
+      result = result.merge(cached->addressRange);
+    }
+    ++beginIt;
+  }
+
+  return result;
+}
+
+rx::AddressRange Cache::flushImageBuffers(Tag &tag, rx::AddressRange range) {
+  auto &table = getTable(EntryType::ImageBuffer);
+  rx::AddressRange result;
+  auto beginIt = table.lowerBound(range.beginAddress());
+
+  while (beginIt != table.end()) {
+    auto cached = beginIt->get();
+    if (!cached->addressRange.intersects(range)) {
+      break;
+    }
+
+    if (static_cast<CachedImageBuffer *>(cached)->flush(tag, tag.getScheduler(),
+                                                        range)) {
+      result = result.merge(cached->addressRange);
+    }
+
     ++beginIt;
   }
 
@@ -2333,10 +2686,11 @@ rx::AddressRange Cache::flushBuffers(rx::AddressRange range) {
 
     auto address =
         RemoteMemory{mVmId}.getPointer(cached->addressRange.beginAddress());
-    static_cast<CachedHostVisibleBuffer *>(cached)->flush(address,
-                                                          cached->addressRange);
+    if (static_cast<CachedHostVisibleBuffer *>(cached)->flush(
+            address, cached->addressRange)) {
+      result = result.merge(cached->addressRange);
+    }
 
-    result = result.merge(cached->addressRange);
     ++beginIt;
   }
 

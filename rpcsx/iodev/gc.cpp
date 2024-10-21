@@ -114,13 +114,13 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     break;
   }
 
-  case 0xc020810c: { // submit and flip?
+  case 0xc020810c: { // submit and write eop
     struct Args {
-      std::uint32_t arg0;
-      std::uint32_t count;
-      std::uint32_t *cmds;
-      std::uint64_t arg3; // flipArg?
-      std::uint32_t arg4; // bufferIndex?
+      orbis::uint32_t arg0;
+      orbis::uint32_t count;
+      orbis::ptr<orbis::uint32_t> cmds;
+      orbis::uint64_t eopValue;
+      orbis::uint32_t waitFlag;
     };
 
     auto args = reinterpret_cast<Args *>(argp);
@@ -131,6 +131,9 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
                              orbis::g_currentThread->tproc->vmId,
                              {args->cmds + i * 4, 4});
       }
+
+      // ORBIS_LOG_ERROR("submit and write eop", args->eopValue, args->waitFlag);
+      gpu.submitWriteEop(gcFile->gfxPipe, args->waitFlag, args->eopValue);
     } else {
       return orbis::ErrorCode::BUSY;
     }
@@ -140,13 +143,16 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   }
 
   case 0xc0048116: { // submit done?
+    break;
+  }
+
+  case 0xc0048117:
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }
     break;
-  }
 
   case 0xc00c8110: {
     // set gs ring sizes

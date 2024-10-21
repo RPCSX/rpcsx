@@ -28,6 +28,30 @@ struct ShaderKey {
 
 enum class ImageKind : std::uint8_t { Color, Depth, Stencil };
 
+struct ImageViewKey {
+  std::uint64_t readAddress;
+  std::uint64_t writeAddress;
+  gnm::TextureType type;
+  gnm::DataFormat dfmt;
+  gnm::NumericFormat nfmt;
+  TileMode tileMode = {};
+  VkOffset3D offset = {0, 0, 0};
+  VkExtent3D extent = {1, 1, 1};
+  std::uint32_t pitch = 1;
+  unsigned baseMipLevel = 0;
+  unsigned mipCount = 1;
+  unsigned baseArrayLayer = 0;
+  unsigned arrayLayerCount = 1;
+  ImageKind kind = ImageKind::Color;
+  bool pow2pad = false;
+  gnm::Swizzle r = gnm::Swizzle::R;
+  gnm::Swizzle g = gnm::Swizzle::G;
+  gnm::Swizzle b = gnm::Swizzle::B;
+  gnm::Swizzle a = gnm::Swizzle::A;
+
+  static ImageViewKey createFrom(const gnm::TBuffer &tbuffer);
+};
+
 struct ImageKey {
   std::uint64_t readAddress;
   std::uint64_t writeAddress;
@@ -45,6 +69,24 @@ struct ImageKey {
   bool pow2pad = false;
 
   static ImageKey createFrom(const gnm::TBuffer &tbuffer);
+  static ImageKey createFrom(const ImageViewKey &imageView);
+};
+
+struct ImageBufferKey {
+  std::uint64_t address;
+  gnm::TextureType type;
+  gnm::DataFormat dfmt;
+  TileMode tileMode = {};
+  VkExtent3D extent = {1, 1, 1};
+  std::uint32_t pitch = 1;
+  unsigned baseMipLevel = 0;
+  unsigned mipCount = 1;
+  unsigned baseArrayLayer = 0;
+  unsigned arrayLayerCount = 1;
+  bool pow2pad = false;
+
+  static ImageBufferKey createFrom(const gnm::TBuffer &tbuffer);
+  static ImageBufferKey createFrom(const ImageKey &imageKey);
 };
 
 struct SamplerKey {
@@ -74,6 +116,7 @@ struct Cache {
     HostVisibleBuffer,
     DeviceLocalBuffer,
     IndexBuffer,
+    ImageBuffer,
     Image,
     Shader,
 
@@ -142,6 +185,13 @@ struct Cache {
     std::uint64_t deviceAddress;
     TagId tagId;
     std::byte *data;
+  };
+
+  struct ImageBuffer {
+    VkBuffer handle = VK_NULL_HANDLE;
+    std::uint64_t offset;
+    std::uint64_t deviceAddress;
+    TagId tagId;
   };
 
   struct IndexBuffer {
@@ -240,6 +290,7 @@ private:
     };
 
     std::vector<std::shared_ptr<Entry>> mAcquiredImageResources;
+    std::vector<std::shared_ptr<Entry>> mAcquiredImageBufferResources;
     std::vector<std::shared_ptr<Entry>> mAcquiredMemoryResources;
     std::vector<std::shared_ptr<Entry>> mAcquiredViewResources;
     std::vector<MemoryTableConfigSlot> memoryTableConfigSlots;
@@ -251,6 +302,7 @@ private:
 
     void clear() {
       mAcquiredImageResources.clear();
+      mAcquiredImageBufferResources.clear();
       mAcquiredMemoryResources.clear();
       memoryTableConfigSlots.clear();
       descriptorBuffers.clear();
@@ -306,8 +358,9 @@ public:
                                std::uint32_t indexCount,
                                gnm::PrimitiveType primType,
                                gnm::IndexType indexType);
+    ImageBuffer getImageBuffer(const ImageBufferKey &key, Access access);
     Image getImage(const ImageKey &key, Access access);
-    ImageView getImageView(const ImageKey &key, Access access);
+    ImageView getImageView(const ImageViewKey &key, Access access);
     void readMemory(void *target, rx::AddressRange range);
     void writeMemory(const void *source, rx::AddressRange range);
     int compareMemory(const void *source, rx::AddressRange range);
@@ -503,6 +556,7 @@ public:
 
   auto &getTable(EntryType type) { return mTables[static_cast<int>(type)]; }
   rx::AddressRange flushImages(Tag &tag, rx::AddressRange range);
+  rx::AddressRange flushImageBuffers(Tag &tag, rx::AddressRange range);
   rx::AddressRange flushBuffers(rx::AddressRange range);
 
 private:

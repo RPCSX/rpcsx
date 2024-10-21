@@ -25,11 +25,11 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y cmake build-essential libunwind-dev \
-        libglfw3-dev libvulkan-dev vulkan-validationlayers \
+        libvulkan-dev vulkan-validationlayers \
         libsox-dev
         echo "deb http://azure.archive.ubuntu.com/ubuntu noble main universe" | sudo tee /etc/apt/sources.list
         sudo apt update
-        sudo apt install g++-14 ninja-build libasound2-dev nasm
+        sudo apt install g++-14 ninja-build libasound2-dev libglfw3-dev nasm
         VULKANVER=1.3.290
         curl -sSfLo Vulkan-Headers.tar.gz https://github.com/KhronosGroup/Vulkan-Headers/archive/v${VULKANVER}.tar.gz
         tar -xf Vulkan-Headers*.tar.gz

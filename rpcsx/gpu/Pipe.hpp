@@ -35,15 +35,17 @@ struct Ring {
 };
 
 struct ComputePipe {
+  static constexpr auto kRingsPerQueue = 2;
+  static constexpr auto kQueueCount = 8;
   Device *device;
   Scheduler scheduler;
 
   using CommandHandler = bool (ComputePipe::*)(Ring &);
   CommandHandler commandHandlers[255];
-  orbis::shared_mutex queueMtx[8];
+  orbis::shared_mutex queueMtx[kQueueCount];
   int index;
   int currentQueueId;
-  Ring queues[2][8];
+  Ring queues[kRingsPerQueue][kQueueCount];
   std::uint64_t drawIndexIndirPatchBase = 0;
 
   ComputePipe(int index);
@@ -51,7 +53,8 @@ struct ComputePipe {
   bool processAllRings();
   bool processRing(Ring &ring);
   void setIndirectRing(int queueId, int level, Ring ring);
-  void mapQueue(int queueId, Ring ring, std::unique_lock<orbis::shared_mutex> &lock);
+  void mapQueue(int queueId, Ring ring,
+                std::unique_lock<orbis::shared_mutex> &lock);
   void waitForIdle(int queueId, std::unique_lock<orbis::shared_mutex> &lock);
   void submit(int queueId, std::uint32_t offset);
 
@@ -66,13 +69,22 @@ struct ComputePipe {
   bool waitRegMem(Ring &ring);
   bool writeData(Ring &ring);
   bool indirectBuffer(Ring &ring);
+  bool acquireMem(Ring &ring);
   bool unknownPacket(Ring &ring);
   bool handleNop(Ring &ring);
 
   std::uint32_t *getMmRegister(Ring &ring, std::uint32_t dwAddress);
 };
 
+struct EopFlipRequest {
+  std::uint32_t pid;
+  int bufferIndex;
+  std::uint64_t arg;
+  std::uint64_t eopValue;
+};
+
 struct GraphicsPipe {
+  static constexpr auto kEopFlipRequestMax = 0x10;
   Device *device;
   Scheduler scheduler;
 
@@ -93,6 +105,10 @@ struct GraphicsPipe {
 
   Ring deQueues[3];
   Ring ceQueue;
+
+  orbis::shared_mutex eopFlipMtx;
+  std::uint32_t eopFlipRequestCount{0};
+  EopFlipRequest eopFlipRequests[kEopFlipRequestMax];
 
   using CommandHandler = bool (GraphicsPipe::*)(Ring &);
   CommandHandler commandHandlers[4][255];
@@ -148,19 +164,33 @@ struct GraphicsPipe {
   bool setShReg(Ring &ring);
   bool setUConfigReg(Ring &ring);
   bool setContextReg(Ring &ring);
-
-  bool unknownPacket(Ring &ring);
-
-  bool switchBuffer(Ring &ring);
-  bool mapProcess(Ring &ring);
   bool mapQueues(Ring &ring);
   bool unmapQueues(Ring &ring);
-  bool mapMemory(Ring &ring);
-  bool unmapMemory(Ring &ring);
-  bool protectMemory(Ring &ring);
-  bool unmapProcess(Ring &ring);
-  bool flip(Ring &ring);
+
+  bool unknownPacket(Ring &ring);
+  bool switchBuffer(Ring &ring);
 
   std::uint32_t *getMmRegister(std::uint32_t dwAddress);
+};
+
+struct CommandPipe {
+  Ring ring;
+  Device *device;
+  using CommandHandler = void (CommandPipe::*)(Ring &);
+  CommandHandler commandHandlers[255];
+
+  CommandPipe();
+
+  void processAllRings();
+  void processRing(Ring &ring);
+
+  void mapProcess(Ring &ring);
+  void mapMemory(Ring &ring);
+  void unmapMemory(Ring &ring);
+  void protectMemory(Ring &ring);
+  void unmapProcess(Ring &ring);
+  void flip(Ring &ring);
+
+  void unknownPacket(Ring &ring);
 };
 } // namespace amdgpu

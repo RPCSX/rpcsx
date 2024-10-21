@@ -685,6 +685,7 @@ static void usage(const char *argv0) {
   std::println("    -m, --mount <host path> <virtual path>");
   std::println("    -o, --override <original module name> <virtual path to "
                "overriden module>");
+  std::println("    --fw <path to firmware root>");
   std::println(
       "    --gpu <index> - specify physical gpu index to use, default is 0");
   // std::println("    --presenter <window>");
@@ -851,6 +852,20 @@ int main(int argc, const char *argv[]) {
       continue;
     }
 
+    if (argv[argIndex] == std::string_view("--fw")) {
+      if (argc <= argIndex + 1) {
+        usage(argv[0]);
+        return 1;
+      }
+
+      std::println("mounting firmware '{}'", argv[argIndex + 1]);
+
+      vfs::mount("/", createHostIoDevice(argv[argIndex + 1], "/"));
+
+      argIndex += 2;
+      continue;
+    }
+
     if (argv[argIndex] == std::string_view("--trace")) {
       argIndex++;
       g_traceSyscalls = true;
@@ -925,9 +940,10 @@ int main(int argc, const char *argv[]) {
   rx::createGpuDevice();
   vfs::initialize();
 
-  if (argIndex >= argc) {
-    usage(argv[0]);
-    return 1;
+  std::vector<std::string> guestArgv(argv + argIndex, argv + argc);
+  if (guestArgv.empty()) {
+    guestArgv.emplace_back("/mini-syscore.elf");
+    isSystem = true;
   }
 
   rx::thread::initialize();
@@ -1007,11 +1023,22 @@ int main(int argc, const char *argv[]) {
   mainThread->hostTid = ::gettid();
   orbis::g_currentThread = mainThread;
 
-  auto executableModule =
-      rx::linker::loadModuleFile(argv[argIndex], mainThread);
+  if (!isSystem && !vfs::exists(guestArgv[0], mainThread) &&
+      std::filesystem::exists(guestArgv[0])) {
+    std::filesystem::path filePath(guestArgv[0]);
+    if (std::filesystem::is_directory(filePath)) {
+      filePath /= "eboot.bin";
+    }
+
+    vfs::mount("/app0",
+               createHostIoDevice(filePath.parent_path().c_str(), "/app0"));
+    guestArgv[0] = "/app0" / filePath.filename();
+  }
+
+  auto executableModule = rx::linker::loadModuleFile(guestArgv[0], mainThread);
 
   if (executableModule == nullptr) {
-    std::println(stderr, "Failed to open '{}'", argv[argIndex]);
+    std::println(stderr, "Failed to open '{}'", guestArgv[0]);
     std::abort();
   }
 
@@ -1035,9 +1062,6 @@ int main(int argc, const char *argv[]) {
 
   ps4InitDev();
   ps4InitFd(mainThread);
-
-  std::vector<std::string> ps4Argv(argv + argIndex,
-                                   argv + argIndex + argc - argIndex);
 
   auto execEnv = ps4CreateExecEnv(mainThread, executableModule, isSystem);
 
@@ -1150,7 +1174,7 @@ int main(int argc, const char *argv[]) {
   }
 
   status =
-      ps4Exec(mainThread, execEnv, std::move(executableModule), ps4Argv, {});
+      ps4Exec(mainThread, execEnv, std::move(executableModule), guestArgv, {});
 
   vm::deinitialize();
   rx::thread::deinitialize();

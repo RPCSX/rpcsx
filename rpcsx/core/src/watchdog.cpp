@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <utility>
 
+static constexpr bool kDebugGpu = false;
+
 static std::atomic<bool> g_exitRequested;
 static std::atomic<bool> g_runGpuRequested;
 static pid_t g_watchdogPid;
@@ -37,9 +39,17 @@ static void runGPU() {
 
   auto childPid = ::fork();
 
-  if (childPid != 0) {
+  if (kDebugGpu) {
+    if (childPid == 0) {
+      return;
+    }
+
     g_gpuPid = childPid;
-    return;
+  } else {
+    if (childPid != 0) {
+      g_gpuPid = childPid;
+      return;
+    }
   }
 
   amdgpu::DeviceCtl gpu;
@@ -79,7 +89,7 @@ static void handleManagementSignal(siginfo_t *info) {
 }
 
 static void handle_watchdog_signal(int sig, siginfo_t *info, void *) {
-  if (sig == SIGUSR1) {
+  if (sig == SIGUSR2) {
     handleManagementSignal(info);
   }
 
@@ -89,7 +99,7 @@ static void handle_watchdog_signal(int sig, siginfo_t *info, void *) {
 }
 
 static void sendMessage(MessageId id, std::uint32_t data) {
-  sigqueue(g_watchdogPid, SIGUSR1,
+  sigqueue(g_watchdogPid, SIGUSR2,
            {
                .sival_ptr = std::bit_cast<void *>(
                    ((static_cast<std::uintptr_t>(data) << 32) |
@@ -102,7 +112,13 @@ std::filesystem::path rx::getShmGuestPath(std::string_view path) {
   return std::format("{}/guest/{}", getShmPath(), path);
 }
 
-void rx::createGpuDevice() { sendMessage(MessageId::RunGPU, 0); }
+void rx::createGpuDevice() {
+  if (kDebugGpu) {
+    runGPU();
+  } else {
+    sendMessage(MessageId::RunGPU, 0);
+  }
+}
 void rx::shutdown() { kill(g_watchdogPid, SIGQUIT); }
 
 void rx::attachProcess(int pid) { sendMessage(MessageId::AttachProcess, pid); }
@@ -133,7 +149,7 @@ static void killProcesses(std::vector<int> list) {
   }
 }
 
-int rx::startWatchdog() {
+void rx::startWatchdog() {
   auto watchdogPid = ::getpid();
   g_watchdogPid = watchdogPid;
   std::format_to(g_shmPath, "/dev/shm/rpcsx/{}", watchdogPid);
@@ -150,8 +166,17 @@ int rx::startWatchdog() {
 
   pid_t initProcessPid = fork();
 
-  if (initProcessPid == 0) {
-    return watchdogPid;
+  if (kDebugGpu) {
+    if (initProcessPid == 0) {
+      initProcessPid = watchdogPid;
+    } else {
+      g_watchdogPid = initProcessPid;
+      return;
+    }
+  } else {
+    if (initProcessPid == 0) {
+      return;
+    }
   }
 
   pthread_setname_np(pthread_self(), "rpcsx-watchdog");
@@ -160,7 +185,7 @@ int rx::startWatchdog() {
   act.sa_sigaction = handle_watchdog_signal;
   act.sa_flags = SA_SIGINFO;
 
-  if (sigaction(SIGUSR1, &act, nullptr)) {
+  if (sigaction(SIGUSR2, &act, nullptr)) {
     perror("Error sigaction:");
     std::exit(-1);
   }
@@ -182,7 +207,7 @@ int rx::startWatchdog() {
 
   sigset_t sigSet;
   sigemptyset(&sigSet);
-  sigaddset(&sigSet, SIGUSR1);
+  sigaddset(&sigSet, SIGUSR2);
   sigaddset(&sigSet, SIGINT);
   sigaddset(&sigSet, SIGQUIT);
   sigaddset(&sigSet, SIGHUP);

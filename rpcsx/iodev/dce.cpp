@@ -100,8 +100,8 @@ struct ResolutionStatus {
   std::uint32_t heigth;
   std::uint32_t paneWidth;
   std::uint32_t paneHeight;
-  std::uint32_t refreshHz;        // float
-  std::uint32_t screenSizeInInch; // float
+  float refreshHz;        // float
+  float screenSizeInInch; // float
   std::byte padding[20];
 };
 
@@ -316,8 +316,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       status->heigth = 1080;
       status->paneWidth = 1920;
       status->paneHeight = 1080;
-      status->refreshHz = 0x426fc28f;        //( 59.94)
-      status->screenSizeInInch = 0x42500000; //( 52.00)
+      status->refreshHz = 59.94f;
+      status->screenSizeInInch = 52.0f;
     } else if (args->id == 9) {
       ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->arg2,
                        args->ptr, args->size);
@@ -392,15 +392,21 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     // flip request
     auto args = reinterpret_cast<FlipRequestArgs *>(argp);
 
-    // ORBIS_LOG_ERROR("dce: FlipRequestArgs", args->canary,
-    //                 args->displayBufferIndex, args->flipMode, args->unk1,
-    //                 args->flipArg, args->flipArg2, args->eop_nz, args->unk2,
-    //                 args->eop_val, args->unk3, args->unk4, args->rout);
-    gpu.submitFlip(thread->tproc->gfxRing, thread->tproc->pid,
-                   args->displayBufferIndex,
-                   /*args->flipMode,*/ args->flipArg);
+    if (args->eop_nz == 0) {
+      gpu.submitFlip(thread->tproc->pid, args->displayBufferIndex,
+                     args->flipArg);
+    } else if (args->eop_nz == 1) {
+      std::uint64_t eopValue = args->canary;
+      eopValue ^= 0xff00'0000;
+      eopValue ^= static_cast<std::uint64_t>(device->eopCount++) << 32;
 
-    // *args->rout = 0;
+      ORBIS_RET_ON_ERROR(gpu.submitFlipOnEop(
+          thread->tproc->gfxRing, thread->tproc->pid, args->displayBufferIndex,
+          args->flipArg, eopValue));
+      *args->eop_val = eopValue;
+    }
+
+    *args->rout = 0;
     return {};
   }
 
@@ -467,7 +473,7 @@ void DceDevice::initializeProcess(orbis::Process *process) {
     std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     {
       auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
-      gpu.submitMapProcess(process->gfxRing, process->pid, vmId);
+      gpu.submitMapProcess(process->pid, vmId);
       process->vmId = vmId;
     }
 

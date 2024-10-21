@@ -67,24 +67,30 @@ static vk::Context createVkContext(Device *device) {
     rx::die("failed to reserve userspace memory");
   }
 
+  auto createWindow = [=] {
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+  };
+
+#ifdef GLFW_PLATFORM_WAYLAND
   if (glfwPlatformSupported(GLFW_PLATFORM_WAYLAND)) {
     glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
   }
 
   glfwInit();
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-  device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+  createWindow();
 
   if (device->window == nullptr) {
     glfwTerminate();
 
     glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
     glfwInit();
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    device->window = glfwCreateWindow(1920, 1080, "RPCSX", nullptr, nullptr);
+    createWindow();
   }
+#else
+  glfwInit();
+  createWindow();
+#endif
 
   const char **glfwExtensions;
   uint32_t glfwExtensionCount = 0;
@@ -218,9 +224,15 @@ Device::Device() : vkContext(createVkContext(this)) {
             rx::AddressRange::fromBeginSize(address, rx::mem::pageSize);
         auto tag = getCacheTag(vmId, sched);
 
-        tag.getCache()->flushImages(tag, range);
-        sched.submit();
-        sched.wait();
+        if (tag.getCache()->flushImages(tag, range)) {
+          sched.submit();
+          sched.wait();
+        }
+
+        if (tag.getCache()->flushImageBuffers(tag, range)) {
+          sched.submit();
+          sched.wait();
+        }
 
         auto flushedRange = tag.getCache()->flushBuffers(range);
 
@@ -230,6 +242,14 @@ Device::Device() : vkContext(createVkContext(this)) {
     }
   });
 
+  commandPipe.device = this;
+  commandPipe.ring = {
+      .base = cmdRing,
+      .size = std::size(cmdRing),
+      .rptr = cmdRing,
+      .wptr = cmdRing,
+  };
+
   for (auto &pipe : computePipes) {
     pipe.device = this;
   }
@@ -238,7 +258,7 @@ Device::Device() : vkContext(createVkContext(this)) {
     graphicsPipes[i].setDeQueue(
         Ring{
             .base = mainGfxRings[i],
-            .size = sizeof(mainGfxRings[i]) / sizeof(mainGfxRings[i][0]),
+            .size = std::size(mainGfxRings[i]),
             .rptr = mainGfxRings[i],
             .wptr = mainGfxRings[i],
         },
@@ -474,8 +494,7 @@ void Device::start() {
   }
 }
 
-void Device::submitCommand(Ring &ring,
-                           std::span<const std::uint32_t> command) {
+void Device::submitCommand(Ring &ring, std::span<const std::uint32_t> command) {
   std::scoped_lock lock(writeCommandMtx);
   if (ring.wptr + command.size() > ring.base + ring.size) {
     while (ring.wptr != ring.rptr) {
@@ -605,8 +624,8 @@ void Device::onCommandBuffer(std::uint32_t pid, int cmdHeader,
   } else if (op == gnm::IT_INDIRECT_BUFFER) {
     graphicsPipes[0].setDeQueue(
         Ring::createFromRange(process.vmId,
-                               memory.getPointer<std::uint32_t>(address),
-                               size / sizeof(std::uint32_t)),
+                              memory.getPointer<std::uint32_t>(address),
+                              size / sizeof(std::uint32_t)),
         1);
   } else {
     rx::die("unimplemented command buffer %x", cmdHeader);
@@ -615,6 +634,8 @@ void Device::onCommandBuffer(std::uint32_t pid, int cmdHeader,
 
 bool Device::processPipes() {
   bool allProcessed = true;
+
+  commandPipe.processAllRings();
 
   for (auto &pipe : computePipes) {
     if (!pipe.processAllRings()) {
@@ -644,13 +665,16 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
   barrier.image = image;
   barrier.subresourceRange = subresourceRange;
 
-  auto layoutToStageAccess = [](VkImageLayout layout)
-      -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
+  auto layoutToStageAccess =
+      [](VkImageLayout layout,
+         bool isSrc) -> std::pair<VkPipelineStageFlags, VkAccessFlags> {
     switch (layout) {
     case VK_IMAGE_LAYOUT_UNDEFINED:
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_GENERAL:
-      return {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0};
+      return {isSrc ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+                    : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+              0};
 
     case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
       return {VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT};
@@ -676,8 +700,9 @@ transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image,
     }
   };
 
-  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout);
-  auto [destinationStage, destinationAccess] = layoutToStageAccess(newLayout);
+  auto [sourceStage, sourceAccess] = layoutToStageAccess(oldLayout, true);
+  auto [destinationStage, destinationAccess] =
+      layoutToStageAccess(newLayout, false);
 
   barrier.srcAccessMask = sourceAccess;
   barrier.dstAccessMask = destinationAccess;
@@ -778,13 +803,13 @@ bool Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg,
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             .semaphore = vk::context->presentCompleteSemaphore,
             .value = 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
         },
         {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
             .semaphore = scheduler.getSemaphoreHandle(),
             .value = submitCompleteTask - 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+            .stageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT,
         },
     };
 
