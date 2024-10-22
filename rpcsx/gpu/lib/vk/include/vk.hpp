@@ -20,6 +20,22 @@
     ::vk::verifyFailed(_, #__VA_ARGS__);                                       \
   }
 
+inline constexpr auto operator<=>(const VkExtent3D &lhs,
+                                  const VkExtent3D &rhs) {
+  if (auto res = lhs.width <=> rhs.width; res != 0) {
+    return res;
+  }
+  if (auto res = lhs.height <=> rhs.height; res != 0) {
+    return res;
+  }
+  return lhs.depth <=> rhs.depth;
+}
+
+inline constexpr bool operator==(const VkExtent3D &lhs, const VkExtent3D &rhs) {
+  return lhs.width == rhs.width && lhs.height == rhs.height &&
+         lhs.depth == rhs.depth;
+}
+
 namespace vk {
 void verifyFailed(VkResult result, const char *message);
 
