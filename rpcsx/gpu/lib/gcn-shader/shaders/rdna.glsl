@@ -65,8 +65,8 @@ uint64_t exec;
 
 uint32_t swizzle(u32vec4 comp, int sel) {
     switch (sel) {
-    case 0: return 0;
-    case 1: return 1;
+    case 0: return floatBitsToUint(0.f);
+    case 1: return floatBitsToUint(1.f);
     case 4: return comp.x;
     case 5: return comp.y;
     case 6: return comp.z;
@@ -1978,7 +1978,7 @@ u32vec4 buffer_load_format(uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vIND
         return u32vec4(0);
     }
 
-    uint32_t result[4] = {};
+    u32vec4 result = u32vec4(0);
     int outIndex = 0;
     for (int element = 0; element < elements_count; element++) {
         uint32_t data = MEMORY_DATA_REF(uint32_t, deviceAddress);
@@ -1989,7 +1989,13 @@ u32vec4 buffer_load_format(uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vIND
         }
     }
 
-    return u32vec4(result[0], result[1], result[2], result[3]);
+    result = swizzle(result,
+        int(vbuffer_dst_sel_x(vbuffer)),
+        int(vbuffer_dst_sel_y(vbuffer)),
+        int(vbuffer_dst_sel_z(vbuffer)),
+        int(vbuffer_dst_sel_w(vbuffer)));
+
+    return result;
 }
 
 void buffer_store_format(u32vec4 data, uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vINDEX, int32_t memoryLocationHint, u32vec4 vbuffer, uint32_t soff, uint32_t OFFSET, bool IDXEN, bool GLC, bool LDS, bool SLC, bool TFE) {
