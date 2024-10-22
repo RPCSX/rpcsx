@@ -127,6 +127,8 @@ bool ComputePipe::processRing(Ring &ring) {
       ring.rptr = ring.base + *ring.rptrReportLocation;
     }
 
+    auto origRptr = ring.rptr;
+
     while (ring.rptr != ring.wptr) {
       if (ring.rptr >= ring.base + ring.size) {
         ring.rptr = ring.base;
@@ -167,7 +169,7 @@ bool ComputePipe::processRing(Ring &ring) {
       rx::die("unexpected pm4 packet type %u", type);
     }
 
-    if (ring.rptrReportLocation != nullptr) {
+    if (origRptr != ring.rptr && ring.rptrReportLocation != nullptr) {
       *ring.rptrReportLocation = ring.rptr - ring.base;
     }
 
@@ -619,7 +621,28 @@ bool GraphicsPipe::processAllRings() {
 
     if (ring.rptr != ring.wptr) {
       allProcessed = false;
+
+      for (auto &delayedRing : delayedRings) {
+        if (delayedRing.rptr != delayedRing.wptr) {
+          continue;
+        }
+
+        delayedRing = ring;
+        ring.rptr = ring.wptr;
+        break;
+      }
+
       break;
+    }
+  }
+
+  if (allProcessed) {
+    for (auto &ring : delayedRings) {
+      if (ring.rptr == ring.wptr) {
+        continue;
+      }
+
+      processRing(ring);
     }
   }
 

@@ -147,7 +147,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
   case 0xc0048116: { // submit done?
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
-      gpu.waitForIdle();
+      // gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }

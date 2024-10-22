@@ -103,6 +103,8 @@ struct GraphicsPipe {
   Registers::Context context;
   Registers::UConfig uConfig;
 
+  Ring delayedRings[8];
+
   Ring deQueues[3];
   Ring ceQueue;
 
