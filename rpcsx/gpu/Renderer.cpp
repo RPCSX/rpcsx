@@ -187,7 +187,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   auto depthAccess = Access::None;
   auto stencilAccess = Access::None;
 
-  if (pipe.context.dbDepthControl.depthEnable) {
+  if (pipe.context.dbDepthControl.depthEnable && pipe.context.dbZInfo.format != gnm::kZFormatInvalid) {
     if (!pipe.context.dbRenderControl.depthClearEnable) {
       depthAccess |= Access::Read;
     }
