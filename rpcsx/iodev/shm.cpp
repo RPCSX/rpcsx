@@ -35,7 +35,7 @@ orbis::ErrorCode ShmDevice::open(orbis::Ref<orbis::File> *file,
     return convertErrno();
   }
 
-  auto hostFile = createHostFile(fd, this);
+  auto hostFile = createHostFile(fd, this, true);
   *file = hostFile;
   return {};
 }

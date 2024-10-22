@@ -74,5 +74,5 @@ IoDevice *createHostIoDevice(orbis::kstring hostPath, orbis::kstring virtualPath
 orbis::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom, int type, int prot);
 orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
                               orbis::kstring name, int dom, int type, int prot);
-orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device);
+orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device, bool alignTruncate = false);
 IoDevice *createFdWrapDevice(int fd);

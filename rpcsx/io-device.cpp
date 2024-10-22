@@ -30,6 +30,7 @@
 
 struct HostFile : orbis::File {
   bool closeOnExit = true;
+  bool alignTruncate = false;
 
   ~HostFile() {
     if (hostFd > 0 && closeOnExit) {
@@ -437,10 +438,12 @@ static orbis::ErrorCode host_truncate(orbis::File *file, std::uint64_t len,
     return orbis::ErrorCode::ISDIR;
   }
 
+  if (hostFile->alignTruncate) {
+    len = rx::alignUp(len, vm::kPageSize);
+  }
+
   if (::ftruncate(hostFile->hostFd, len)) {
-    auto result = convertErrno();
-    ORBIS_LOG_ERROR("host_truncate", hostFile->hostFd, len);
-    return result;
+    return convertErrno();
   }
 
   return {};
@@ -934,11 +937,13 @@ orbis::ErrorCode HostFsDevice::rename(const char *from, const char *to,
   return convertErrorCode(ec);
 }
 
-orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device) {
+orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device,
+                            bool alignTruncate) {
   auto newFile = orbis::knew<HostFile>();
   newFile->hostFd = hostFd;
   newFile->ops = &hostOps;
-  newFile->device = std::move(device);
+  newFile->device = device;
+  newFile->alignTruncate = alignTruncate;
   return newFile;
 }
 
