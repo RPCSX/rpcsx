@@ -9,6 +9,7 @@
 #include "rx/die.hpp"
 #include <iostream>
 #include <limits>
+#include <print>
 
 using namespace shader;
 
@@ -651,9 +652,9 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
         continue;
       }
 
-      auto src =
-          builder.createSpvBitcast(loc, context.getTypeFloat32(),
-                                   inst.getOperand(operandIndex++).getAsValue());
+      auto src = builder.createSpvBitcast(
+          loc, context.getTypeFloat32(),
+          inst.getOperand(operandIndex++).getAsValue());
 
       auto srcType = src.getOperand(0).getAsValue();
       ir::Value elementType;
@@ -786,6 +787,26 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
     return;
   }
 
+  if (target == ET_MRTZ) {
+    auto output = context.createFragDepth(loc);
+    auto channelType = context.getTypeFloat32();
+
+    for (int channel = 0; channel < 4; ++channel) {
+      if (~swizzle & (1 << channel)) {
+        continue;
+      }
+
+      auto channelValue =
+          builder.createSpvCompositeExtract(loc, elemType, value, {{channel}});
+      channelValue =
+          context.createCast(loc, builder, channelType, channelValue);
+      builder.createSpvStore(loc, output, channelValue);
+      break;
+    }
+
+    return;
+  }
+
   if (target >= ET_PARAM0 && target <= ET_PARAM31) {
     auto output = context.createOutput(loc, target - ET_PARAM0);
     auto floatT = context.getTypeFloat32();
@@ -849,8 +870,8 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
     return result;
   };
 
-  std::printf("exp target %s.%s\n", targetToString(target).c_str(),
-              swizzleToString(swizzle).c_str());
+  std::println(stderr, "exp target {}.{}", targetToString(target),
+               swizzleToString(swizzle));
   std::abort();
 }
 
@@ -1454,6 +1475,8 @@ static void createEntryPoint(gcn::Context &context, const gcn::Environment &env,
     executionModes.createSpvExecutionMode(
         mainFn.getLocation(), mainFn,
         ir::spv::ExecutionMode::OriginUpperLeft());
+    executionModes.createSpvExecutionMode(
+        mainFn.getLocation(), mainFn, ir::spv::ExecutionMode::DepthReplacing());
   }
 
   if (executionModel == ir::spv::ExecutionModel::GLCompute) {

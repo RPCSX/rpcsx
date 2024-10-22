@@ -571,8 +571,8 @@ ir::Value spv::Context::createOutput(ir::Location loc, int index) {
     auto annotations =
         Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
 
-    auto variable = globals.createSpvVariable(loc, variableType,
-                                              ir::spv::StorageClass::Output, nullValue);
+    auto variable = globals.createSpvVariable(
+        loc, variableType, ir::spv::StorageClass::Output, nullValue);
 
     annotations.createSpvDecorate(loc, variable,
                                   ir::spv::Decoration::Location(index));
@@ -646,4 +646,31 @@ ir::Value spv::Context::createAttr(ir::Location loc, int attrId, bool perVertex,
   }
 
   return result;
+}
+
+ir::Value spv::Context::createFragDepth(ir::Location loc) {
+  if (fragDepth == nullptr) {
+    auto floatType = getTypeFloat32();
+    auto nullValue = getNull(floatType);
+
+    auto variableType =
+        getTypePointer(ir::spv::StorageClass::Output, floatType);
+
+    auto globals =
+        Builder::createAppend(*this, layout.getOrCreateGlobals(*this));
+    auto annotations =
+        Builder::createAppend(*this, layout.getOrCreateAnnotations(*this));
+
+    auto variable = globals.createSpvVariable(
+        loc, variableType, ir::spv::StorageClass::Output, nullValue);
+
+    annotations.createSpvDecorate(
+        loc, variable,
+        ir::spv::Decoration::BuiltIn(ir::spv::BuiltIn::FragDepth));
+
+    setName(variable, "fragDepth");
+    fragDepth = variable;
+  }
+
+  return fragDepth;
 }
