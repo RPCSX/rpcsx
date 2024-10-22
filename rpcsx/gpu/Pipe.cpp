@@ -1423,6 +1423,19 @@ bool GraphicsPipe::setConfigReg(Ring &ring) {
   auto offset = ring.rptr[1] & 0xffff;
   auto data = ring.rptr + 2;
 
+  auto mmioOffset = decltype(device->config)::kMmioOffset + offset;
+
+  // FIXME: verify
+  if (mmioOffset >= decltype(context)::kMmioOffset) {
+    auto contextOffset = mmioOffset - decltype(context)::kMmioOffset;
+
+    if (contextOffset + len <= sizeof(context)) {
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&context) + contextOffset,
+                  data, sizeof(std::uint32_t) * len);
+      return true;
+    }
+  }
+
   rx::dieIf(
       (offset + len) * sizeof(std::uint32_t) > sizeof(device->config),
       "out of Config regs, offset: %x, count %u, %s\n", offset, len,
