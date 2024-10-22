@@ -87,6 +87,8 @@ struct ImageBufferKey {
 
   static ImageBufferKey createFrom(const gnm::TBuffer &tbuffer);
   static ImageBufferKey createFrom(const ImageKey &imageKey);
+
+  constexpr auto operator<=>(const ImageBufferKey &) const = default;
 };
 
 struct SamplerKey {
@@ -244,6 +246,7 @@ private:
 
     std::uint32_t slotOffset = 0;
     rx::MemoryTableWithPayload<Access> bufferMemoryTable;
+    rx::MemoryTableWithPayload<std::pair<ImageBufferKey, Access>> imageMemoryTable;
     std::vector<std::pair<std::uint32_t, std::uint64_t>> resourceSlotToAddress;
     std::vector<Cache::Sampler> samplerResources;
     std::vector<Cache::ImageView> imageResources[3];
@@ -256,6 +259,7 @@ private:
       cacheTag = nullptr;
       slotOffset = 0;
       bufferMemoryTable.clear();
+      imageMemoryTable.clear();
       resourceSlotToAddress.clear();
       samplerResources.clear();
       for (auto &res : imageResources) {
@@ -268,6 +272,7 @@ private:
     void loadResources(shader::gcn::Resources &res,
                        std::span<const std::uint32_t> userSgprs);
     void buildMemoryTable(MemoryTable &memoryTable);
+    void buildImageMemoryTable(MemoryTable &memoryTable);
     std::uint32_t getResourceSlot(std::uint32_t id);
 
     template <typename T> T readPointer(std::uint64_t address) {
@@ -317,6 +322,7 @@ private:
     std::unique_lock<std::mutex> mResourcesLock;
     TagId mTagId{};
     std::uint32_t mAcquiredMemoryTable = -1;
+    std::uint32_t mAcquiredImageMemoryTable = -1;
   };
 
 public:
@@ -381,6 +387,24 @@ public:
 
       auto &buffer = mParent->mMemoryTableBuffer;
       auto offset = mAcquiredMemoryTable * kMemoryTableSize;
+
+      Buffer result{
+          .offset = offset,
+          .deviceAddress = buffer.getAddress() + offset,
+          .tagId = getReadId(),
+          .data = buffer.getData() + offset,
+      };
+
+      return result;
+    }
+
+    Buffer getImageMemoryTable() {
+      if (mAcquiredImageMemoryTable + 1 == 0) {
+        mAcquiredImageMemoryTable = mParent->mMemoryTablePool.acquire();
+      }
+
+      auto &buffer = mParent->mMemoryTableBuffer;
+      auto offset = mAcquiredImageMemoryTable * kMemoryTableSize;
 
       Buffer result{
           .offset = offset,

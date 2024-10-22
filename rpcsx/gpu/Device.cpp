@@ -224,20 +224,23 @@ Device::Device() : vkContext(createVkContext(this)) {
             rx::AddressRange::fromBeginSize(address, rx::mem::pageSize);
         auto tag = getCacheTag(vmId, sched);
 
-        if (tag.getCache()->flushImages(tag, range)) {
+        auto flushedRange = tag.getCache()->flushImages(tag, range);
+        flushedRange =
+            flushedRange.merge(tag.getCache()->flushImageBuffers(tag, range));
+
+        if (flushedRange) {
           sched.submit();
           sched.wait();
         }
 
-        if (tag.getCache()->flushImageBuffers(tag, range)) {
-          sched.submit();
-          sched.wait();
+        flushedRange = tag.getCache()->flushBuffers(flushedRange);
+
+        if (flushedRange) {
+          unlockReadWrite(vmId, flushedRange.beginAddress(),
+                          flushedRange.size());
+        } else {
+          unlockReadWrite(vmId, range.beginAddress(), range.size());
         }
-
-        auto flushedRange = tag.getCache()->flushBuffers(range);
-
-        assert(flushedRange.isValid() && flushedRange.size() > 0);
-        unlockReadWrite(vmId, flushedRange.beginAddress(), flushedRange.size());
       }
     }
   });
@@ -912,6 +915,23 @@ void Device::waitForIdle() {
     for (auto &queue : graphicsPipes[0].deQueues) {
       if (queue.wptr != queue.rptr) {
         allProcessed = false;
+      }
+    }
+
+    {
+      auto &queue = graphicsPipes[0].ceQueue;
+      if (queue.wptr != queue.rptr) {
+        allProcessed = false;
+      }
+    }
+
+    for (auto &pipe : computePipes) {
+      for (auto &queue : pipe.queues) {
+        for (auto &ring : queue) {
+          if (ring.wptr != ring.rptr) {
+            allProcessed = false;
+          }
+        }
       }
     }
 

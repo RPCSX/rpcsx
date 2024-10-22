@@ -41,6 +41,7 @@ enum RegId {
   VgprCount,
   ThreadId,
   MemoryTable,
+  ImageMemoryTable,
   Gds,
 };
 

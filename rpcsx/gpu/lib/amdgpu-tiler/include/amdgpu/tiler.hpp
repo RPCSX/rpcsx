@@ -138,6 +138,9 @@ struct TileMode {
           ((static_cast<std::uint32_t>(mode) << 25) & 0x06000000);
     return *this;
   }
+
+  constexpr auto operator<=>(const TileMode &other) const { return raw <=> other.raw; }
+  constexpr bool operator==(const TileMode &other) const { return raw == other.raw; }
 };
 
 struct MacroTileMode {

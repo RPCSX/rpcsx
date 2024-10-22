@@ -132,6 +132,7 @@ static std::unordered_set<ir::InstructionId> g_instsWithoutSideEffects = {
     ir::getInstructionId(ir::amdgpu::VBUFFER),
     ir::getInstructionId(ir::amdgpu::SAMPLER),
     ir::getInstructionId(ir::amdgpu::TBUFFER),
+    ir::getInstructionId(ir::amdgpu::IMAGE_BUFFER),
     ir::getInstructionId(ir::amdgpu::POINTER),
     ir::getInstructionId(ir::amdgpu::PS_INPUT_VGPR),
     ir::getInstructionId(ir::amdgpu::PS_COMP_SWAP),
