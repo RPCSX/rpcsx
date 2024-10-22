@@ -645,6 +645,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
                                                    {{cf0, cf0, cf0, cf0}});
 
   if (comr) {
+    int operandIndex = 5;
     for (auto channel = 0; channel < 2; ++channel) {
       if (~swizzle & (1 << (channel * 2))) {
         continue;
@@ -652,7 +653,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
 
       auto src =
           builder.createSpvBitcast(loc, context.getTypeFloat32(),
-                                   inst.getOperand(5 + channel).getAsValue());
+                                   inst.getOperand(operandIndex++).getAsValue());
 
       auto srcType = src.getOperand(0).getAsValue();
       ir::Value elementType;
@@ -697,6 +698,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
                                                {{channel * 2 + 1}});
     }
   } else {
+    int operandIndex = 5;
     for (auto channel = 0; channel < 4; ++channel) {
       if (~swizzle & (1 << channel)) {
         continue;
@@ -705,7 +707,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
       value = builder.createSpvCompositeInsert(
           loc, valueType,
           context.createCast(loc, builder, elemType,
-                             inst.getOperand(5 + channel).getAsValue()),
+                             inst.getOperand(operandIndex++).getAsValue()),
           value, {{channel}});
     }
   }
