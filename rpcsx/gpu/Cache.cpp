@@ -2,6 +2,7 @@
 #include "Device.hpp"
 #include "amdgpu/tiler.hpp"
 #include "gnm/vulkan.hpp"
+#include "rx/Config.hpp"
 #include "rx/hexdump.hpp"
 #include "rx/mem.hpp"
 #include "shader/Evaluator.hpp"
@@ -23,8 +24,6 @@
 
 using namespace amdgpu;
 using namespace shader;
-
-static constexpr bool kDisableCache = false;
 
 static bool testHostInvalidations(Device *device, int vmId,
                                   std::uint64_t address, std::uint64_t size) {
@@ -703,7 +702,7 @@ struct CachedHostVisibleBuffer : CachedBuffer {
   using CachedBuffer::update;
 
   bool expensive() {
-    return !kDisableCache && addressRange.size() >= rx::mem::pageSize;
+    return !rx::g_config.disableGpuCache && addressRange.size() >= rx::mem::pageSize;
   }
 
   bool flush(void *target, rx::AddressRange range) {
@@ -779,7 +778,7 @@ struct CachedImageBuffer : Cache::Entry {
   unsigned depth = 1;
 
   bool expensive() {
-    if (kDisableCache) {
+    if (rx::g_config.disableGpuCache) {
       return false;
     }
 
@@ -954,7 +953,7 @@ struct CachedImage : Cache::Entry {
 
   bool expensive() {
     return false;
-    if (kDisableCache) {
+    if (rx::g_config.disableGpuCache) {
       return false;
     }
 
