@@ -10,6 +10,7 @@ enum Op {
   VBUFFER,
   SAMPLER,
   TBUFFER,
+  IMAGE_BUFFER,
   POINTER,
   OMOD,
   NEG_ABS,
@@ -40,6 +41,8 @@ inline const char *getInstructionName(unsigned op) {
     return "sampler";
   case TBUFFER:
     return "tbuffer";
+  case IMAGE_BUFFER:
+    return "image_buffer";
   case POINTER:
     return "pointer";
   case OMOD:

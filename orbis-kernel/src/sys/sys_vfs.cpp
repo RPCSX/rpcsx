@@ -360,7 +360,7 @@ orbis::SysResult orbis::sys_futimes(Thread *thread, sint fd,
 orbis::SysResult orbis::sys_truncate(Thread *thread, ptr<char> path,
                                      off_t length) {
   Ref<File> file;
-  auto result = thread->tproc->ops->open(thread, path, 0, 0, &file);
+  auto result = thread->tproc->ops->open(thread, path, 2, 0, &file);
   if (result.isError()) {
     return result;
   }

@@ -17,6 +17,7 @@ struct Context : ir::Context {
   ir::Value perVertex;
   std::map<int, ir::Value> outputs;
   std::map<int, ir::Value> inputs;
+  ir::Value fragDepth;
 
   ir::RegionLike localVariables;
   ir::RegionLike epilogue;
@@ -151,5 +152,7 @@ struct Context : ir::Context {
   ir::Value createOutput(ir::Location loc, int index);
   ir::Value createInput(ir::Location loc, int index);
   ir::Value createAttr(ir::Location loc, int attrId, bool perVertex, bool flat);
+
+  ir::Value createFragDepth(ir::Location loc);
 };
 } // namespace shader::spv

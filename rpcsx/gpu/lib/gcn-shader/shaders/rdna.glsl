@@ -63,10 +63,10 @@ DEFINE_SIZEOF(float64_t, 8);
 uint thread_id;
 uint64_t exec;
 
-float32_t swizzle(f32vec4 comp, int sel) {
+uint32_t swizzle(u32vec4 comp, int sel) {
     switch (sel) {
-    case 0: return 0;
-    case 1: return 1;
+    case 0: return floatBitsToUint(0.f);
+    case 1: return floatBitsToUint(1.f);
     case 4: return comp.x;
     case 5: return comp.y;
     case 6: return comp.z;
@@ -76,8 +76,8 @@ float32_t swizzle(f32vec4 comp, int sel) {
     return 1;
 }
 
-f32vec4 swizzle(f32vec4 comp, int selX, int selY, int selZ, int selW) {
-    return f32vec4(swizzle(comp, selX), swizzle(comp, selY), swizzle(comp, selZ), swizzle(comp, selW));
+u32vec4 swizzle(u32vec4 comp, int selX, int selY, int selZ, int selW) {
+    return u32vec4(swizzle(comp, selX), swizzle(comp, selY), swizzle(comp, selZ), swizzle(comp, selW));
 }
 
 int32_t sext(int32_t x, uint bits) {
@@ -247,10 +247,13 @@ float32_t ps_input_vgpr(int32_t index, f32vec4 fragCoord, bool frontFace) {
     case kPsVGprInputFrontFace:
         return intBitsToFloat(frontFace ? 1 : 0);
     case kPsVGprInputAncillary:
+        debugPrintfEXT("ps_input_vgpr: kPsVGprInputAncillary");
         return 0;
     case kPsVGprInputSampleCoverage:
+        debugPrintfEXT("ps_input_vgpr: kPsVGprInputSampleCoverage");
         return 0;
     case kPsVGprInputPosFixed:
+        debugPrintfEXT("ps_input_vgpr: kPsVGprInputPosFixed");
         return 0;
     }
 
@@ -1389,6 +1392,11 @@ const int kBufferChannelTypeUInt = 0x00000004;
 const int kBufferChannelTypeSInt = 0x00000005;
 const int kBufferChannelTypeSNormNoZero = 0x00000006;
 const int kBufferChannelTypeFloat = 0x00000007;
+const int kNumericFormatSrgb = 0x00000009;
+const int kNumericFormatUBNorm = 0x0000000A;
+const int kNumericFormatUBNormNoZero = 0x0000000B;
+const int kNumericFormatUBInt = 0x0000000C;
+const int kNumericFormatUBScaled = 0x0000000D;
 
 uint64_t compute_vbuffer_address(uint size, u32vec4 vbuffer, uint64_t soff, uint64_t OFFSET, bool IDXEN, uint64_t vINDEX, uint64_t vOFFSET) {
     bool addTid = vbuffer_addtid_en(vbuffer);
@@ -1594,8 +1602,10 @@ uint32_t convert_from_nfmt(uint32_t data, uint bits, uint nfmt) {
     data = zext(data, bits);
 
     switch (nfmt) {
+    case kNumericFormatSrgb:
     case kBufferChannelTypeUNorm:
-        return floatBitsToUint(float(uint(data)) / ((1 << bits) - 1));
+        uint32_t result = floatBitsToUint(float(uint(data)) / ((1 << bits) - 1));
+        return result;
 
     case kBufferChannelTypeSNorm:
         return floatBitsToUint(float(sext(int(data), bits)) / ((1 << (bits - 1)) - 1));
@@ -1607,7 +1617,7 @@ uint32_t convert_from_nfmt(uint32_t data, uint bits, uint nfmt) {
         return floatBitsToUint(float(sext(int(data), bits)));
 
     case kBufferChannelTypeUInt:
-        return data;
+        return floatBitsToUint(float(data));
 
     case kBufferChannelTypeSInt:
         return uint32_t(sext(int(data), bits));
@@ -1617,38 +1627,52 @@ uint32_t convert_from_nfmt(uint32_t data, uint bits, uint nfmt) {
 
     case kBufferChannelTypeFloat:
         return data;
+
+    default:
+        debugPrintfEXT("convert_from_nfmt: unexpected nfmt %x", nfmt);
+        break;
     }
 
     return 0;
 }
 
 uint32_t convert_to_nfmt(uint32_t data, uint bits, uint nfmt) {
-    data = zext(data, bits);
-
+    uint32_t result = 0;
     switch (nfmt) {
     case kBufferChannelTypeUNorm:
-        return uint32_t(clamp(uintBitsToFloat(data), 0, 1) * ((1 << bits) - 1));
+        result = uint32_t(clamp(uintBitsToFloat(data), 0, 1) * ((1 << bits) - 1));
+        break;
 
     case kBufferChannelTypeSNorm:
-        return uint32_t(clamp(uintBitsToFloat(data), -1, 1) * ((1 << (bits - 1)) - 1));
+        result = uint32_t(clamp(uintBitsToFloat(data), -1, 1) * ((1 << (bits - 1)) - 1));
+        break;
 
     case kBufferChannelTypeUScaled:
-        return uint32_t(uintBitsToFloat(data));
+        result = uint32_t(uintBitsToFloat(data));
+        break;
 
     case kBufferChannelTypeUInt:
-        return data;
+        result = uint32_t(uintBitsToFloat(data));
+        break;
 
     case kBufferChannelTypeSInt:
-        return uint32_t(sext(int32_t(data), bits));
+        result = uint32_t(sext(int32_t(uintBitsToFloat(data)), bits));
+        break;
 
     case kBufferChannelTypeSNormNoZero:
-        return uint32_t(clamp(uintBitsToFloat(data), -1, 1) * ((1 << bits) - 1) / 2 - 1);
+        result = uint32_t(clamp(uintBitsToFloat(data), -1, 1) * ((1 << bits) - 1) / 2 - 1);
+        break;
 
     case kBufferChannelTypeFloat:
-        return data;
+        result = data;
+        break;
+
+    default:
+        debugPrintfEXT("convert_to_nfmt: unexpected nfmt %x", nfmt);
+        break;
     }
 
-    return 0;
+    return zext(result, bits);
 }
 
 uint32_t convert_from_format_x(uint32_t data, uint dfmt, uint nfmt) {
@@ -1877,6 +1901,10 @@ uint32_t convert_to_format(uint element, u32vec4 data, uint dfmt, uint nfmt) {
             (convert_to_nfmt(data[2], 10, nfmt) << 20) |
             (convert_to_nfmt(data[3], 2, nfmt) << 30)
         );
+
+    default:
+        debugPrintfEXT("convert_to_format: unexpected format");
+        break;
     }
 
     return uint32_t(0);
@@ -1938,6 +1966,7 @@ u32vec4 buffer_load_format(uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vIND
     uint64_t address = compute_vbuffer_address(data_size, vbuffer, soff, OFFSET, IDXEN, vINDEX, vOFFSET);
 
     if (address == 0 || dfmt == kBufferFormatInvalid) {
+        debugPrintfEXT("buffer_load_format: invalid buffer");
         return u32vec4(0);
     }
 
@@ -1945,10 +1974,11 @@ u32vec4 buffer_load_format(uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vIND
     uint64_t deviceAddress = findMemoryAddress(address, data_size, memoryLocationHint, deviceAreaSize);
 
     if (deviceAddress == kInvalidAddress || deviceAreaSize < data_size) {
+        debugPrintfEXT("buffer_load_format: out of buffer memory");
         return u32vec4(0);
     }
 
-    uint32_t result[4] = {};
+    u32vec4 result = u32vec4(0);
     int outIndex = 0;
     for (int element = 0; element < elements_count; element++) {
         uint32_t data = MEMORY_DATA_REF(uint32_t, deviceAddress);
@@ -1959,7 +1989,13 @@ u32vec4 buffer_load_format(uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vIND
         }
     }
 
-    return u32vec4(result[0], result[1], result[2], result[3]);
+    result = swizzle(result,
+        int(vbuffer_dst_sel_x(vbuffer)),
+        int(vbuffer_dst_sel_y(vbuffer)),
+        int(vbuffer_dst_sel_z(vbuffer)),
+        int(vbuffer_dst_sel_w(vbuffer)));
+
+    return result;
 }
 
 void buffer_store_format(u32vec4 data, uint dfmt, uint nfmt, uint32_t vOFFSET, uint32_t vINDEX, int32_t memoryLocationHint, u32vec4 vbuffer, uint32_t soff, uint32_t OFFSET, bool IDXEN, bool GLC, bool LDS, bool SLC, bool TFE) {
@@ -2189,7 +2225,8 @@ uint32_t[16] s_load_dwordx16(int32_t memoryLocationHint, uint64_t sbase, int32_t
     uint64_t deviceAddress = findMemoryAddress(base_address + (offset & ~0x3ul), size, memoryLocationHint, deviceAreaSize); \
     int32_t _offset = 0; \
     for (int i = 0; i < N; i++) { \
-        if (deviceAddress == kInvalidAddress || _offset + SIZEOF(uint32_t) > deviceAreaSize) { \
+        if (deviceAddress == kInvalidAddress || offset + _offset > size - SIZEOF(uint32_t) || _offset + SIZEOF(uint32_t) > deviceAreaSize) { \
+            debugPrintfEXT("S_BUFFER_LOAD_DWORD: out of buffer memory"); \
             sdst[i] = 0; \
         } else { \
             sdst[i] = MEMORY_DATA_REF(uint32_t, deviceAddress + _offset); \
@@ -2210,6 +2247,10 @@ u32vec2 s_buffer_load_dwordx2(int32_t memoryLocationHint, u32vec4 vbuffer, int32
 u32vec4 s_buffer_load_dwordx4(int32_t memoryLocationHint, u32vec4 vbuffer, int32_t offset) {
     u32vec4 sdst;
     S_BUFFER_LOAD_DWORD(sdst, memoryLocationHint, vbuffer, offset, 4);
+    if (offset == 48) {
+        uint64_t base = vbuffer_base(vbuffer);
+        debugPrintfEXT("s_buffer_load_dwordx4: %v4u, base=%lx", sdst, base);
+    }
     return sdst;
 }
 uint32_t[8] s_buffer_load_dwordx8(int32_t memoryLocationHint, u32vec4 vbuffer, int32_t offset) {
@@ -2629,6 +2670,132 @@ int findTexture3DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
     return textureIndexHint;
 }
 
+const uint32_t kImageFlagDmask = 0xf;
+const uint32_t kImageFlagR128 = 1 << 4;
+const uint32_t kImageFlagDA = 1 << 5;
+const uint32_t kImageFlagUnorm = 1 << 6;
+const uint32_t kImageFlagTFE = 1 << 7;
+
+struct ImageInfo {
+    uint64_t offset;
+    uvec3 extent;
+    uint16_t pitch;
+    uint16_t baseArraySlice;
+    uint16_t arraySliceCount;
+    uint8_t baseMipLevel;
+    uint8_t mipLevelCount;
+    uint8_t type;
+    uint8_t dataSize;
+};
+
+ImageInfo getImageInfo(uint32_t tbuffer[8], uint32_t mipLevel) {
+    uint8_t type = tbuffer_type(tbuffer);
+    uint16_t width = uint16_t(tbuffer_width(tbuffer) + 1u);
+    uint16_t height = uint16_t(tbuffer_height(tbuffer) + 1u);
+    uint16_t depth = uint16_t(tbuffer_depth(tbuffer) + 1u);
+    uint16_t pitch = uint16_t(tbuffer_pitch(tbuffer) + 1u);
+    uint16_t baseArray = tbuffer_base_array(tbuffer);
+    uint16_t lastArray = tbuffer_last_array(tbuffer);
+    uint8_t baseLevel = tbuffer_base_level(tbuffer);
+    uint8_t lastLevel = tbuffer_last_level(tbuffer);
+    bool pow2pad = tbuffer_pow2pad(tbuffer);
+    bool isVolume = type == kTextureType3D;
+    bool isCubemap = type == kTextureTypeCube;
+    depth = isVolume ? depth : uint16_t(1);
+
+    uint arraySliceCount = depth;
+
+    if (isCubemap) {
+        arraySliceCount *= 6;
+    } else if (isVolume) {
+        arraySliceCount = 1;
+    }
+
+    if (pow2pad) {
+        if ((arraySliceCount & (arraySliceCount - 1)) != 0 ||
+            (width & (width - 1)) != 0 ||
+            (height & (height - 1)) != 0 || 
+            (depth & (depth - 1)) != 0 ||
+            (pitch & (pitch - 1)) != 0) {
+            debugPrintfEXT("getImageInfo: pow2pad");
+        }
+    }
+
+    uint64_t offset = 0;
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint dataSize = size_of_format(dfmt);
+
+    for (uint32_t i = 0; i < mipLevel; ++i) {
+        uint16_t mipHeight = uint16_t(max(height >> i, 1));
+        uint16_t mipDepth = uint16_t(max(depth >> i, 1));
+        uint16_t mipPitch = uint16_t(max(pitch >> i, 1));
+
+        offset += arraySliceCount * dataSize * mipHeight * mipPitch * mipDepth;
+    }
+
+    width = uint16_t(max(width >> mipLevel, 1));
+    height = uint16_t(max(height >> mipLevel, 1));
+    depth = uint16_t(max(depth >> mipLevel, 1));
+    pitch = uint16_t(max(pitch >> mipLevel, 1));
+
+    ImageInfo result;
+    result.offset = offset;
+    result.extent = uvec3(width, height, depth);
+    result.pitch = pitch;
+    result.baseArraySlice = baseArray;
+    result.arraySliceCount = uint16_t(min(arraySliceCount, lastArray - baseArray + 1));
+    result.baseMipLevel = baseLevel;
+    result.mipLevelCount = uint8_t(lastLevel - baseLevel + 1);
+    result.type = type;
+    result.dataSize = uint8_t(dataSize);
+
+    return result;
+}
+
+uint64_t findImageUnormPixelAddress(int32_t imageMemoryIndexHint, uint32_t tbuffer[8], uint32_t mipLevel, uint32_t arrayLayer, i32vec3 pos) {
+    ImageInfo img = getImageInfo(tbuffer, mipLevel);
+
+    if (any(lessThan(pos, ivec3(0))) || any(greaterThan(pos, img.extent))) {
+        return kInvalidAddress;
+    }
+
+    uint64_t address = tbuffer_base(tbuffer);
+
+    address += img.offset;
+    address += img.dataSize * pos.x;
+    address += img.dataSize * img.pitch * pos.y;
+    address += img.dataSize * img.pitch * img.extent.y * pos.z;
+
+    uint64_t deviceAreaSize = 0;
+    uint64_t deviceAddress = findImageMemoryAddress(address, img.dataSize, imageMemoryIndexHint, deviceAreaSize);
+
+    if (deviceAddress == kInvalidAddress || deviceAreaSize < img.dataSize) {
+        return kInvalidAddress;
+    }
+
+    return deviceAddress;
+}
+
+uint64_t findImagePixelAddress(int32_t imageMemoryIndexHint, uint32_t tbuffer[8], float mipLevel, uint32_t arrayLayer, f32vec3 pos, bool unorm) {
+    i32vec3 unormPos;
+    if (unorm) {
+        unormPos = i32vec3(pos);
+    } else {
+        unormPos.x = int32_t((tbuffer_width(tbuffer) + 1) * pos.x);
+        unormPos.y = int32_t((tbuffer_height(tbuffer) + 1) * pos.y);
+        unormPos.z = int32_t((tbuffer_depth(tbuffer) + 1) * pos.z);
+    }
+
+    uint8_t baseLevel = tbuffer_base_level(tbuffer);
+    uint8_t lastLevel = tbuffer_last_level(tbuffer);
+
+    uint32_t umipLevel = baseLevel + uint32_t((lastLevel - baseLevel + 1) * mipLevel);
+    umipLevel = min(umipLevel, lastLevel + 1);
+    umipLevel = max(umipLevel, baseLevel);
+
+    return findImageUnormPixelAddress(imageMemoryIndexHint, tbuffer, umipLevel, arrayLayer, unormPos);
+}
+
 // void image_gather4(inout u32vec4 vdata, u32vec4 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 samplerDescriptor) {}
 // image_gather4_cl
 // image_gather4_l
@@ -2685,35 +2852,74 @@ int findTexture3DIndex(int32_t textureIndexHint, uint32_t tbuffer[8]) {
 // void image_atomic_umin() {}
 // void image_atomic_xor() {}
 
-void image_load(inout f32vec4 vdata, i32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], uint32_t dmask) {
-    uint8_t textureType = tbuffer_type(tbuffer);
-    f32vec4 result;
+void image_load(inout u32vec4 vdata, u32vec3 vaddr, int32_t imageBufferIndexHint, uint32_t tbuffer[8], uint32_t flags) {
+    u32vec3 pos = u32vec3(0);
 
-    switch (uint(textureType)) {
+    switch (uint(tbuffer_type(tbuffer))) {
     case kTextureType1D:
     case kTextureTypeArray1D:
-        result = texelFetch(textures1D[findTexture1DIndex(textureIndexHint, tbuffer)], vaddr.x, 0);
+        pos.x = vaddr[0];
         break;
 
     case kTextureType2D:
     case kTextureTypeCube:
     case kTextureTypeArray2D:
-    case kTextureTypeMsaa2D:
-    case kTextureTypeMsaaArray2D:
-        result = texelFetch(textures2D[findTexture2DIndex(textureIndexHint, tbuffer)], vaddr.xy, 0);
+        pos.xy = vaddr.xy;
         break;
 
     case kTextureType3D:
-        result = texelFetch(textures3D[findTexture3DIndex(textureIndexHint, tbuffer)], vaddr, 0);
+        pos.xyz = vaddr.xyz;
         break;
 
-    default:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        debugPrintfEXT("image_load: MSAA");
+        pos.xy = ivec2(vaddr.xy);
+        break;
+    }
+
+    uint64_t deviceAddress = findImageUnormPixelAddress(imageBufferIndexHint, tbuffer, 0, 0, i32vec3(pos));
+    if (deviceAddress == kInvalidAddress) {
+        debugPrintfEXT("image_load: invalid address");
         return;
     }
 
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+
+    uint data_size = size_of_format(dfmt);
+    uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
+    uint channel_count = components_of_format(dfmt);
+    uint channel_size = data_size / channel_count;
+    uint channels_per_element;
+ 
+    if (data_size > SIZEOF(uint32_t)) {
+        channels_per_element = SIZEOF(uint32_t) / channel_size;
+    } else {
+        channels_per_element = channel_count;
+    }
+
+    u32vec4 result = u32vec4(0);
+    int outIndex = 0;
+
+    for (uint element = 0; element < elements_count; element++) {
+        uint32_t data = MEMORY_DATA_REF(uint32_t, deviceAddress);
+        u32vec4 unpacked = convert_from_format(data, dfmt, nfmt);
+        deviceAddress += SIZEOF(uint32_t);
+        for (int channel = 0; channel < channels_per_element; channel++) {
+            result[outIndex++] = unpacked[channel];
+        }
+    }
+
+    result = swizzle(result,
+        tbuffer_dst_sel_x(tbuffer),
+        tbuffer_dst_sel_y(tbuffer),
+        tbuffer_dst_sel_z(tbuffer),
+        tbuffer_dst_sel_w(tbuffer));
+
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {
-        if ((dmask & (1 << i)) != 0) {
+        if ((flags & (1 << i)) != 0) {
             vdata[vdataIndex++] = result[i];
         }
     }
@@ -2722,36 +2928,80 @@ void image_load(inout f32vec4 vdata, i32vec3 vaddr, int32_t textureIndexHint, ui
 // void image_load_pck() {}
 // void image_load_pck_sgn() {}
 
-void image_load_mip(inout f32vec4 vdata, u32vec4 vaddr_u, int32_t textureIndexHint, uint32_t tbuffer[8], uint32_t dmask) {
-    uint8_t textureType = tbuffer_type(tbuffer);
-    f32vec4 result;
-    i32vec4 vaddr = i32vec4(vaddr_u);
+void image_load_mip(inout u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint, uint32_t tbuffer[8], uint32_t flags) {
+    u32vec3 pos = u32vec3(0);
+    uint32_t mipLevel = 0;
 
-    switch (uint(textureType)) {
+    switch (uint(tbuffer_type(tbuffer))) {
     case kTextureType1D:
     case kTextureTypeArray1D:
-        result = texelFetch(textures1D[findTexture1DIndex(textureIndexHint, tbuffer)], vaddr.x, vaddr.y);
+        pos.x = vaddr[0];
+        mipLevel = vaddr.y;
         break;
 
     case kTextureType2D:
     case kTextureTypeCube:
     case kTextureTypeArray2D:
-    case kTextureTypeMsaa2D:
-    case kTextureTypeMsaaArray2D:
-        result = texelFetch(textures2D[findTexture2DIndex(textureIndexHint, tbuffer)], vaddr.xy, vaddr.z);
+        pos.xy = vaddr.xy;
+        mipLevel = vaddr.z;
         break;
 
     case kTextureType3D:
-        result = texelFetch(textures3D[findTexture3DIndex(textureIndexHint, tbuffer)], vaddr.xyz, vaddr.w);
+        pos.xyz = vaddr.xyz;
+        mipLevel = vaddr.w;
         break;
 
-    default:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        debugPrintfEXT("image_load_mip: MSAA");
+        pos.xy = ivec2(vaddr.xy);
+        mipLevel = vaddr.z;
+        break;
+    }
+
+    uint64_t deviceAddress = findImageUnormPixelAddress(imageBufferIndexHint, tbuffer, mipLevel, 0, i32vec3(pos));
+    if (deviceAddress == kInvalidAddress) {
+        debugPrintfEXT("image_load_mip: invalid address");
         return;
     }
 
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+
+    uint data_size = size_of_format(dfmt);
+    uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
+    uint channel_count = components_of_format(dfmt);
+    uint channel_size = data_size / channel_count;
+    uint channels_per_element;
+ 
+    if (data_size > SIZEOF(uint32_t)) {
+        channels_per_element = SIZEOF(uint32_t) / channel_size;
+    } else {
+        channels_per_element = channel_count;
+    }
+
+    u32vec4 result = u32vec4(0);
+    int outIndex = 0;
+
+    for (uint element = 0; element < elements_count; element++) {
+        uint32_t data = MEMORY_DATA_REF(uint32_t, deviceAddress);
+        u32vec4 unpacked = convert_from_format(data, dfmt, nfmt);
+        deviceAddress += SIZEOF(uint32_t);
+        // debugPrintfEXT("image_load_mip: data: %x, unpacked: %v4x, element: %u, channels: %u", data, unpacked, element, channels_per_element);
+        for (int channel = 0; channel < channels_per_element; channel++) {
+            result[outIndex++] = unpacked[channel];
+        }
+    }
+
+    result = swizzle(result,
+        tbuffer_dst_sel_x(tbuffer),
+        tbuffer_dst_sel_y(tbuffer),
+        tbuffer_dst_sel_z(tbuffer),
+        tbuffer_dst_sel_w(tbuffer));
+
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {
-        if ((dmask & (1 << i)) != 0) {
+        if ((flags & (1 << i)) != 0) {
             vdata[vdataIndex++] = result[i];
         }
     }
@@ -2759,10 +3009,203 @@ void image_load_mip(inout f32vec4 vdata, u32vec4 vaddr_u, int32_t textureIndexHi
 
 // void image_load_mip_pck() {}
 // void image_load_mip_pck_sgn() {}
-// void image_store() {}
-// void image_store_pck() {}
-// void image_store_mip() {}
-// void image_store_mip_pck() {}
+
+void image_store(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint, uint32_t tbuffer[8], uint32_t flags) {
+    u32vec3 pos = u32vec3(0);
+
+    switch (uint(tbuffer_type(tbuffer))) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        pos.x = vaddr[0];
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+        pos.xy = vaddr.xy;
+        break;
+
+    case kTextureType3D:
+        pos.xyz = vaddr.xyz;
+        break;
+
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        debugPrintfEXT("image_store: MSAA");
+        pos.xy = ivec2(vaddr.xy);
+        break;
+    }
+
+    uint64_t deviceAddress = findImageUnormPixelAddress(imageBufferIndexHint, tbuffer, 0, 0, i32vec3(pos));
+    if (deviceAddress == kInvalidAddress) {
+        debugPrintfEXT("image_store: invalid address");
+        return;
+    }
+
+    if ((flags & kImageFlagDmask) != 0xf) {
+        debugPrintfEXT("image_store: unexpected dmask. flags %x", flags);
+    }
+
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+
+    uint data_size = size_of_format(dfmt);
+    uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
+
+    for (uint element = 0; element < elements_count; element++) {
+        uint32_t value = convert_to_format(element, vdata, dfmt, nfmt);
+        MEMORY_DATA_REF(uint32_t, deviceAddress) = value;
+        deviceAddress += SIZEOF(uint32_t);
+    }
+}
+void image_store_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint, uint32_t tbuffer[8], uint32_t flags) {
+    u32vec3 pos = u32vec3(0);
+
+    switch (uint(tbuffer_type(tbuffer))) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        pos.x = vaddr[0];
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+        pos.xy = vaddr.xy;
+        break;
+
+    case kTextureType3D:
+        pos.xyz = vaddr.xyz;
+        break;
+
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        debugPrintfEXT("image_store: MSAA");
+        pos.xy = ivec2(vaddr.xy);
+        break;
+    }
+
+    uint64_t deviceAddress = findImageUnormPixelAddress(imageBufferIndexHint, tbuffer, 0, 0, i32vec3(pos));
+    if (deviceAddress == kInvalidAddress) {
+        debugPrintfEXT("image_store: invalid address");
+        return;
+    }
+
+    if ((flags & kImageFlagDmask) != 0xf) {
+        debugPrintfEXT("image_store: unexpected dmask. flags %x", flags);
+    }
+
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+
+    uint data_size = size_of_format(dfmt);
+    uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
+
+    for (uint element = 0; element < elements_count; element++) {
+        MEMORY_DATA_REF(uint32_t, deviceAddress) = vdata[element];
+        deviceAddress += SIZEOF(uint32_t);
+    }
+}
+void image_store_mip(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint, uint32_t tbuffer[8], uint32_t flags) {
+    u32vec3 pos = u32vec3(0);
+    uint32_t mipLevel = 0;
+
+    switch (uint(tbuffer_type(tbuffer))) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        pos.x = vaddr[0];
+        mipLevel = vaddr.y;
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+        pos.xy = vaddr.xy;
+        mipLevel = vaddr.z;
+        break;
+
+    case kTextureType3D:
+        pos.xyz = vaddr.xyz;
+        mipLevel = vaddr.w;
+        break;
+
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        debugPrintfEXT("image_store_mip: MSAA");
+        pos.xy = ivec2(vaddr.xy);
+        mipLevel = vaddr.z;
+        break;
+    }
+
+    uint64_t deviceAddress = findImageUnormPixelAddress(imageBufferIndexHint, tbuffer, mipLevel, 0, i32vec3(pos));
+    if (deviceAddress == kInvalidAddress) {
+        debugPrintfEXT("image_store_mip: invalid address");
+        return;
+    }
+
+    if ((flags & kImageFlagDmask) != 0xf) {
+        debugPrintfEXT("image_store_mip: unexpected dmask. flags %x", flags);
+    }
+
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+
+    uint data_size = size_of_format(dfmt);
+    uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
+
+    for (uint element = 0; element < elements_count; element++) {
+        uint32_t value = convert_to_format(element, vdata, dfmt, nfmt);
+        MEMORY_DATA_REF(uint32_t, deviceAddress) = value;
+        deviceAddress += SIZEOF(uint32_t);
+    }
+}
+void image_store_mip_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint, uint32_t tbuffer[8], uint32_t flags) {
+    u32vec3 pos = u32vec3(0);
+    uint32_t mipLevel = 0;
+
+    switch (uint(tbuffer_type(tbuffer))) {
+    case kTextureType1D:
+    case kTextureTypeArray1D:
+        pos.x = vaddr[0];
+        mipLevel = vaddr.y;
+        break;
+
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+        pos.xy = vaddr.xy;
+        mipLevel = vaddr.z;
+        break;
+
+    case kTextureType3D:
+        pos.xyz = vaddr.xyz;
+        mipLevel = vaddr.w;
+        break;
+
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D:
+        debugPrintfEXT("image_store_mip_pck: MSAA");
+        return;
+    }
+
+    uint64_t deviceAddress = findImageUnormPixelAddress(imageBufferIndexHint, tbuffer, mipLevel, 0, i32vec3(pos));
+    if (deviceAddress == kInvalidAddress) {
+        debugPrintfEXT("image_store_mip_pck: invalid address");
+        return;
+    }
+
+    if ((flags & kImageFlagDmask) != 0xf) {
+        debugPrintfEXT("image_store_mip_pck: unexpected dmask. flags %x", flags);
+    }
+
+    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint data_size = size_of_format(dfmt);
+    uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
+
+    for (uint element = 0; element < elements_count; element++) {
+        MEMORY_DATA_REF(uint32_t, deviceAddress) = vdata[element];
+        deviceAddress += SIZEOF(uint32_t);
+    }
+}
 
 void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
     uint8_t textureType = tbuffer_type(tbuffer);
@@ -2980,38 +3423,8 @@ void image_get_lod(inout f32vec2 vdata, u32vec3 vaddr, int32_t textureIndexHint,
 }
 
 void image_get_resinfo(inout u32vec4 vdata, int32_t vmipid, int32_t textureIndexHint, uint32_t tbuffer[8], uint32_t dmask) {
-    i32vec4 result = i32vec4(1);
-
-    switch (uint(tbuffer_type(tbuffer))) {
-    case kTextureType1D: {
-        int texIndex = findTexture1DIndex(textureIndexHint, tbuffer);
-        result.x = textureSize(textures1D[texIndex], vmipid);
-        result.w = textureQueryLevels(textures1D[texIndex]);
-        break;
-    }
-
-    case kTextureTypeArray1D:
-    case kTextureType2D:
-    case kTextureTypeCube:
-    case kTextureTypeArray2D: {
-        int texIndex = findTexture2DIndex(textureIndexHint, tbuffer);
-        result.xy = textureSize(textures2D[texIndex], vmipid);
-        result.w = textureQueryLevels(textures2D[texIndex]);
-        break;
-    }
-
-    case kTextureTypeMsaa2D:
-    case kTextureTypeMsaaArray2D:
-        result.xy = textureSize(textures2D[findTexture2DIndex(textureIndexHint, tbuffer)], 0);
-        break;
-
-    case kTextureType3D: {
-        int texIndex = findTexture3DIndex(textureIndexHint, tbuffer);
-        result.xyz = textureSize(textures3D[texIndex], vmipid);
-        result.w = textureQueryLevels(textures3D[texIndex]);
-        break;
-    }
-    }
+    ImageInfo img = getImageInfo(tbuffer, vmipid);
+    i32vec4 result = i32vec4(img.extent, img.mipLevelCount);
 
     int vdataIndex = 0;
     for (int i = 0; i < 4; ++i) {

@@ -48,6 +48,11 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
     prot = vm::kMapProtCpuWrite | vm::kMapProtCpuRead | vm::kMapProtGpuAll;
   }
 
+  if (*address == nullptr) {
+    *address = std::bit_cast<void *>(0x80000000ull);
+    flags &= ~vm::kMapFlagFixed;
+  }
+
   int memoryType = 0;
   if (auto allocationInfoIt = allocations.queryArea(directMemoryStart);
       allocationInfoIt != allocations.end()) {

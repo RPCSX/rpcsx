@@ -29,6 +29,8 @@ struct GcnOperand {
     Buffer,
     Texture128,
     Texture256,
+    ImageBuffer128,
+    ImageBuffer256,
     Sampler,
     Pointer,
   };
@@ -135,6 +137,13 @@ struct GcnOperand {
         .firstRegisterKind = firstReg.kind,
         .firstRegisterIndex = static_cast<std::uint8_t>(firstReg.value),
         .kind = (is128 ? Kind::Texture128 : Kind::Texture256),
+    };
+  }
+  static constexpr GcnOperand createImageBuffer(GcnOperand firstReg, bool is128) {
+    return {
+        .firstRegisterKind = firstReg.kind,
+        .firstRegisterIndex = static_cast<std::uint8_t>(firstReg.value),
+        .kind = (is128 ? Kind::ImageBuffer128 : Kind::ImageBuffer256),
     };
   }
   static constexpr GcnOperand createBuffer(GcnOperand firstReg) {

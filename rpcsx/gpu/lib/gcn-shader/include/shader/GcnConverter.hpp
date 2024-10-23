@@ -104,6 +104,7 @@ enum class ConfigType {
   UserSgpr,
   ResourceSlot,
   MemoryTable,
+  ImageMemoryTable,
   Gds,
   PsInputVGpr,
   VsInputSGpr,
@@ -156,6 +157,11 @@ struct Resources {
     ir::Value words[4];
   };
 
+  struct ImageBuffer : Resource {
+    Access access;
+    ir::Value words[8];
+  };
+
   struct Sampler : Resource {
     bool unorm;
     ir::Value words[4];
@@ -165,8 +171,9 @@ struct Resources {
   bool hasUnknown = false;
   std::uint32_t slots = 0;
   std::vector<Pointer> pointers;
-  std::vector<Texture> textures;
   std::vector<Buffer> buffers;
+  std::vector<Texture> textures;
+  std::vector<ImageBuffer> imageBuffers;
   std::vector<Sampler> samplers;
 
   void print(std::ostream &os, ir::NameStorage &ns) const;

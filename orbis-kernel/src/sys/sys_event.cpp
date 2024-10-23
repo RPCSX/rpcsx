@@ -302,8 +302,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
           if (note.enabled && note.triggered) {
             result.push_back(note.event);
 
-            if (note.event.filter == kEvFiltGraphicsCore ||
-                note.event.filter == kEvFiltDisplay) {
+            if (note.event.filter == kEvFiltDisplay) {
               note.triggered = false;
             }
 

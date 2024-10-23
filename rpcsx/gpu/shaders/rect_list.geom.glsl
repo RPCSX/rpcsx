@@ -3,6 +3,9 @@
 layout (triangles, invocations = 1) in;
 layout (triangle_strip, max_vertices = 4) out;
 
+layout (location=0) in vec4 inp[3];
+layout (location=0) out vec4 outp;
+
 void main(void)
 {
   vec4 topLeft = gl_in[0].gl_Position;
@@ -23,15 +26,19 @@ void main(void)
       topLeft.w
   );
 
+  outp = inp[0];
   gl_Position = topLeft;
   EmitVertex();
 
+  outp = inp[2];
   gl_Position = bottomLeft;
   EmitVertex();
 
+  outp = vec4(inp[1].x, inp[0].y, inp[0].z, inp[0].w);
   gl_Position = topRight;
   EmitVertex();
 
+  outp = vec4(inp[1].x, inp[2].y, inp[0].z, inp[0].w);
   gl_Position = bottomRight;
   EmitVertex();
 

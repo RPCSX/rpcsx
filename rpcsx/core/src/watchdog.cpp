@@ -1,6 +1,7 @@
 #include "rx/watchdog.hpp"
 #include "gpu/DeviceCtl.hpp"
 #include "orbis/KernelContext.hpp"
+#include "rx/Config.hpp"
 #include <bit>
 #include <chrono>
 #include <csignal>
@@ -17,8 +18,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
-
-static constexpr bool kDebugGpu = false;
 
 static std::atomic<bool> g_exitRequested;
 static std::atomic<bool> g_runGpuRequested;
@@ -39,7 +38,7 @@ static void runGPU() {
 
   auto childPid = ::fork();
 
-  if (kDebugGpu) {
+  if (rx::g_config.debugGpu) {
     if (childPid == 0) {
       return;
     }
@@ -113,7 +112,7 @@ std::filesystem::path rx::getShmGuestPath(std::string_view path) {
 }
 
 void rx::createGpuDevice() {
-  if (kDebugGpu) {
+  if (rx::g_config.debugGpu) {
     runGPU();
   } else {
     sendMessage(MessageId::RunGPU, 0);
@@ -166,7 +165,7 @@ void rx::startWatchdog() {
 
   pid_t initProcessPid = fork();
 
-  if (kDebugGpu) {
+  if (rx::g_config.debugGpu) {
     if (initProcessPid == 0) {
       initProcessPid = watchdogPid;
     } else {

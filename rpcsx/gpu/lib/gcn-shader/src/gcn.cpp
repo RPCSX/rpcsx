@@ -9,6 +9,7 @@
 #include "spv.hpp"
 #include "transform.hpp"
 
+#include <print>
 #include <rx/die.hpp>
 
 #include <SPIRV/GlslangToSpv.h>
@@ -121,6 +122,14 @@ inline shader::spv::TypeInfo getRegisterInfo(unsigned id) {
         .componentsCount = 2,
     };
 
+  case gcn::RegId::ImageMemoryTable:
+    return {
+        .baseType = ir::spv::OpTypeVector,
+        .componentType = ir::spv::OpTypeInt,
+        .componentWidth = 32,
+        .componentsCount = 2,
+    };
+
   case gcn::RegId::Gds:
     return {
         .baseType = ir::spv::OpTypeVector,
@@ -161,6 +170,8 @@ inline const char *getRegisterName(unsigned id) {
     return "thread_id";
   case gcn::MemoryTable:
     return "memory_table";
+  case gcn::ImageMemoryTable:
+    return "image_memory_table";
   case gcn::Gds:
     return "gds";
   }
@@ -190,6 +201,8 @@ static std::optional<gcn::RegId> getRegIdByName(std::string_view variableName) {
     return gcn::RegId::ThreadId;
   if (variableName == "memory_table")
     return gcn::RegId::MemoryTable;
+  if (variableName == "image_memory_table")
+    return gcn::RegId::ImageMemoryTable;
   if (variableName == "gds")
     return gcn::RegId::Gds;
 
@@ -825,6 +838,8 @@ static ir::Value deserializeGcnRegion(
     case GcnOperand::Kind::Buffer:
     case GcnOperand::Kind::Texture128:
     case GcnOperand::Kind::Texture256:
+    case GcnOperand::Kind::ImageBuffer128:
+    case GcnOperand::Kind::ImageBuffer256:
     case GcnOperand::Kind::Sampler:
     case GcnOperand::Kind::Pointer:
       break;
@@ -849,6 +864,37 @@ static ir::Value deserializeGcnRegion(
                                 op.getUnderlyingOperand(2)),
           createOperandReadImpl(loc, builder, uint32TV,
                                 op.getUnderlyingOperand(3)));
+    case GcnOperand::Kind::ImageBuffer128:
+      return builder.createValue(
+          loc, ir::amdgpu::IMAGE_BUFFER, type, op.access,
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(0)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(1)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(2)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(3)));
+
+    case GcnOperand::Kind::ImageBuffer256:
+      return builder.createValue(
+          loc, ir::amdgpu::IMAGE_BUFFER, type, op.access,
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(0)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(1)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(2)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(3)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(4)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(5)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(6)),
+          createOperandReadImpl(loc, builder, uint32TV,
+                                op.getUnderlyingOperand(7)));
 
     case GcnOperand::Kind::Texture128:
       return builder.createValue(
@@ -1381,8 +1427,8 @@ static ir::Value deserializeGcnRegion(
           converter.getTypePointer(ir::spv::StorageClass::Function, paramType),
           ir::spv::StorageClass::Function);
 
-        auto result = createOperandRead(loc, builder, paramType, op);
-        builder.createSpvStore(loc, arg, result);
+      auto result = createOperandRead(loc, builder, paramType, op);
+      builder.createSpvStore(loc, arg, result);
 
       callArgs.push_back(arg);
     }
@@ -1631,10 +1677,9 @@ ir::Node gcn::Import::getOrCloneImpl(ir::Context &context, ir::Node node,
         if (shader::spv::getTypeInfo(
                 inst.getOperand(0).getAsValue().getOperand(1).getAsValue()) !=
             getRegisterInfo(*regId)) {
-          std::fprintf(stderr,
-                       "unexpected type for register variable "
-                       "'%s', expected %u\n",
-                       name->c_str(), getRegisterInfo(*regId).width());
+          std::println(
+              stderr, "unexpected type for register variable '{}', expected {}",
+              *name, getRegisterInfo(*regId).width());
           std::abort();
         }
 
@@ -1799,7 +1844,7 @@ gcn::deserialize(gcn::Context &context, const gcn::Environment &environment,
           .createSpvBranch(child.getLocation(), regionEntry);
       child.remove();
     } else {
-      std::fprintf(stderr, "failed to evaluate branch!\n");
+      std::println(stderr, "failed to evaluate branch!");
     }
     context.requiredUserSgprs |= evaluator.usedUserSgprs;
   }

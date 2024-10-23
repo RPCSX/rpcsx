@@ -557,6 +557,11 @@ readMimgInst(GcnInstruction &inst, std::uint64_t &address,
   auto srsrc = fetchMaskedValue(words[1], srsrcMask) << 2;
   auto ssamp = fetchMaskedValue(words[1], ssampMask) << 2;
 
+  const uint32_t kImageFlagR128 = 1 << 4;
+  const uint32_t kImageFlagDA = 1 << 5;
+  const uint32_t kImageFlagUnorm = 1 << 6;
+  const uint32_t kImageFlagTFE = 1 << 7;
+
   std::uint8_t textureAccess = 0;
   bool hasSampler = false;
 
@@ -583,14 +588,32 @@ readMimgInst(GcnInstruction &inst, std::uint64_t &address,
   inst.addOperand(createVgprGcnOperand(vdata).withRW());
   inst.addOperand(createVgprGcnOperand(vaddr).withR());
   auto tbufferStart = createSgprGcnOperand(address, srsrc);
-  inst.addOperand(
-      GcnOperand::createTexture(tbufferStart, r128).withAccess(textureAccess));
-  inst.addOperand(tbufferStart);
 
   if (hasSampler) {
+    inst.addOperand(GcnOperand::createTexture(tbufferStart, r128)
+                        .withAccess(textureAccess));
+    inst.addOperand(tbufferStart);
+
     auto samplerStart = createSgprGcnOperand(address, ssamp);
     inst.addOperand(GcnOperand::createSampler(samplerStart, unrm).withR());
     inst.addOperand(samplerStart);
+  } else {
+    inst.addOperand(GcnOperand::createImageBuffer(tbufferStart, r128)
+                        .withAccess(textureAccess));
+    inst.addOperand(tbufferStart);
+  }
+
+  if (r128) {
+    dmask |= kImageFlagR128;
+  }
+  if (da) {
+    dmask |= kImageFlagDA;
+  }
+  if (unrm) {
+    dmask |= kImageFlagUnorm;
+  }
+  if (tfe) {
+    dmask |= kImageFlagTFE;
   }
 
   inst.addOperand(GcnOperand::createConstant(dmask));
@@ -977,6 +1000,20 @@ void GcnOperand::print(std::ostream &os) const {
     break;
   case Kind::Texture256:
     os << "T#{";
+    getUnderlyingOperand(0).print(os);
+    os << "..";
+    getUnderlyingOperand(7).print(os);
+    os << "}";
+    break;
+  case Kind::ImageBuffer128:
+    os << "buffer T#{";
+    getUnderlyingOperand(0).print(os);
+    os << "..";
+    getUnderlyingOperand(3).print(os);
+    os << "}";
+    break;
+  case Kind::ImageBuffer256:
+    os << "buffer T#{";
     getUnderlyingOperand(0).print(os);
     os << "..";
     getUnderlyingOperand(7).print(os);

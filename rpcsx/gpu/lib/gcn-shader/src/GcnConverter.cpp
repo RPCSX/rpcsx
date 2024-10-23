@@ -9,6 +9,7 @@
 #include "rx/die.hpp"
 #include <iostream>
 #include <limits>
+#include <print>
 
 using namespace shader;
 
@@ -101,6 +102,10 @@ struct ResourcesBuilder {
   void addTexture(gcn::Resources::Texture p) {
     p.resourceSlot = resources.slots++;
     resources.textures.push_back(p);
+  }
+  void addImageBuffer(gcn::Resources::ImageBuffer p) {
+    p.resourceSlot = resources.slots++;
+    resources.imageBuffers.push_back(p);
   }
   void addBuffer(gcn::Resources::Buffer p) {
     p.resourceSlot = resources.slots++;
@@ -334,6 +339,27 @@ struct ResourcesBuilder {
         continue;
       }
 
+      if (inst == ir::amdgpu::IMAGE_BUFFER) {
+        auto access = static_cast<Access>(*inst.getOperand(1).getAsInt32());
+        auto words = inst.getOperands().subspan(2);
+        if (words.size() > 4) {
+          addImageBuffer({
+              .access = access,
+              .words = {words[0].getAsValue(), words[1].getAsValue(),
+                        words[2].getAsValue(), words[3].getAsValue(),
+                        words[4].getAsValue(), words[5].getAsValue(),
+                        words[6].getAsValue(), words[7].getAsValue()},
+          });
+        } else {
+          addImageBuffer({
+              .access = access,
+              .words = {words[0].getAsValue(), words[1].getAsValue(),
+                        words[2].getAsValue(), words[3].getAsValue()},
+          });
+        }
+        continue;
+      }
+
       if (inst == ir::amdgpu::SAMPLER) {
         auto words = inst.getOperands().subspan(1);
         auto unorm = *inst.getOperand(5).getAsBool();
@@ -402,6 +428,20 @@ void gcn::Resources::print(std::ostream &os, ir::NameStorage &ns) const {
 
       for (auto &word : texture.words) {
         os << "  word" << (&word - texture.words) << ": ";
+        printFlat(os, word, ns);
+        os << "\n";
+      }
+    }
+  }
+
+  if (!imageBuffers.empty()) {
+    os << "image buffers:\n";
+    for (auto &buffer : buffers) {
+      os << " #" << buffer.resourceSlot << ":\n";
+      printAccess(buffer.access);
+
+      for (auto &word : buffer.words) {
+        os << "  word" << (&word - buffer.words) << ": ";
         printFlat(os, word, ns);
         os << "\n";
       }
@@ -606,14 +646,15 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
                                                    {{cf0, cf0, cf0, cf0}});
 
   if (comr) {
+    int operandIndex = 5;
     for (auto channel = 0; channel < 2; ++channel) {
       if (~swizzle & (1 << (channel * 2))) {
         continue;
       }
 
-      auto src =
-          builder.createSpvBitcast(loc, context.getTypeFloat32(),
-                                   inst.getOperand(5 + channel).getAsValue());
+      auto src = builder.createSpvBitcast(
+          loc, context.getTypeFloat32(),
+          inst.getOperand(operandIndex++).getAsValue());
 
       auto srcType = src.getOperand(0).getAsValue();
       ir::Value elementType;
@@ -658,6 +699,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
                                                {{channel * 2 + 1}});
     }
   } else {
+    int operandIndex = 5;
     for (auto channel = 0; channel < 4; ++channel) {
       if (~swizzle & (1 << channel)) {
         continue;
@@ -666,7 +708,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
       value = builder.createSpvCompositeInsert(
           loc, valueType,
           context.createCast(loc, builder, elemType,
-                             inst.getOperand(5 + channel).getAsValue()),
+                             inst.getOperand(operandIndex++).getAsValue()),
           value, {{channel}});
     }
   }
@@ -745,6 +787,26 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
     return;
   }
 
+  if (target == ET_MRTZ) {
+    auto output = context.createFragDepth(loc);
+    auto channelType = context.getTypeFloat32();
+
+    for (int channel = 0; channel < 4; ++channel) {
+      if (~swizzle & (1 << channel)) {
+        continue;
+      }
+
+      auto channelValue =
+          builder.createSpvCompositeExtract(loc, elemType, value, {{channel}});
+      channelValue =
+          context.createCast(loc, builder, channelType, channelValue);
+      builder.createSpvStore(loc, output, channelValue);
+      break;
+    }
+
+    return;
+  }
+
   if (target >= ET_PARAM0 && target <= ET_PARAM31) {
     auto output = context.createOutput(loc, target - ET_PARAM0);
     auto floatT = context.getTypeFloat32();
@@ -808,8 +870,8 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
     return result;
   };
 
-  std::printf("exp target %s.%s\n", targetToString(target).c_str(),
-              swizzleToString(swizzle).c_str());
+  std::println(stderr, "exp target {}.{}", targetToString(target),
+               swizzleToString(swizzle));
   std::abort();
 }
 
@@ -876,7 +938,8 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
     }
 
     if (inst == ir::amdgpu::POINTER || inst == ir::amdgpu::VBUFFER ||
-        inst == ir::amdgpu::SAMPLER || inst == ir::amdgpu::TBUFFER) {
+        inst == ir::amdgpu::SAMPLER || inst == ir::amdgpu::TBUFFER ||
+        inst == ir::amdgpu::IMAGE_BUFFER) {
       toAnalyze.push_back(inst.staticCast<ir::Value>());
       continue;
     }
@@ -1216,7 +1279,7 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
     auto spvFnCall = builder.createSpvFunctionCall(
         inst.getLocation(), inst.getOperand(0).getAsValue(), function);
 
-    for (auto arg : inst.getOperands().subspan(1)) {
+    for (auto &arg : inst.getOperands().subspan(1)) {
       spvFnCall.addOperand(arg);
     }
 
@@ -1412,6 +1475,8 @@ static void createEntryPoint(gcn::Context &context, const gcn::Environment &env,
     executionModes.createSpvExecutionMode(
         mainFn.getLocation(), mainFn,
         ir::spv::ExecutionMode::OriginUpperLeft());
+    executionModes.createSpvExecutionMode(
+        mainFn.getLocation(), mainFn, ir::spv::ExecutionMode::DepthReplacing());
   }
 
   if (executionModel == ir::spv::ExecutionModel::GLCompute) {
@@ -1620,6 +1685,13 @@ static void createInitialValues(GcnConverter &converter,
         loc, builder, gcn::RegId::MemoryTable, word,
         converter.createReadConfig(
             stage, builder, info.create(gcn::ConfigType::MemoryTable, word)));
+  }
+
+  for (int word = 0; word < 2; ++word) {
+    context.writeReg(loc, builder, gcn::RegId::ImageMemoryTable, word,
+                     converter.createReadConfig(
+                         stage, builder,
+                         info.create(gcn::ConfigType::ImageMemoryTable, word)));
   }
 
   for (int word = 0; word < 2; ++word) {

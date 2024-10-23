@@ -2,6 +2,7 @@
 #include "Device.hpp"
 #include "amdgpu/tiler.hpp"
 #include "gnm/vulkan.hpp"
+#include "rx/Config.hpp"
 #include "rx/hexdump.hpp"
 #include "rx/mem.hpp"
 #include "shader/Evaluator.hpp"
@@ -23,8 +24,6 @@
 
 using namespace amdgpu;
 using namespace shader;
-
-static constexpr bool kDisableCache = false;
 
 static bool testHostInvalidations(Device *device, int vmId,
                                   std::uint64_t address, std::uint64_t size) {
@@ -200,6 +199,68 @@ void Cache::ShaderResources::loadResources(
                                        buffer.address());
   }
 
+  for (auto &imageBuffer : res.imageBuffers) {
+    auto word0 = eval(imageBuffer.words[0]).zExtScalar();
+    auto word1 = eval(imageBuffer.words[1]).zExtScalar();
+    auto word2 = eval(imageBuffer.words[2]).zExtScalar();
+    auto word3 = eval(imageBuffer.words[3]).zExtScalar();
+
+    if (!word0 || !word1 || !word2 || !word3) {
+      res.dump();
+      rx::die("failed to evaluate V#");
+    }
+
+    gnm::TBuffer tbuffer{};
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer), &*word0,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 1, &*word1,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 2, &*word2,
+                sizeof(std::uint32_t));
+    std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 3, &*word3,
+                sizeof(std::uint32_t));
+
+    if (imageBuffer.words[4] != nullptr) {
+      auto word4 = eval(imageBuffer.words[4]).zExtScalar();
+      auto word5 = eval(imageBuffer.words[5]).zExtScalar();
+      auto word6 = eval(imageBuffer.words[6]).zExtScalar();
+      auto word7 = eval(imageBuffer.words[7]).zExtScalar();
+
+      if (!word4 || !word5 || !word6 || !word7) {
+        res.dump();
+        rx::die("failed to evaluate 256 bit T#");
+      }
+
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 4, &*word4,
+                  sizeof(std::uint32_t));
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 5, &*word5,
+                  sizeof(std::uint32_t));
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 6, &*word6,
+                  sizeof(std::uint32_t));
+      std::memcpy(reinterpret_cast<std::uint32_t *>(&tbuffer) + 7, &*word7,
+                  sizeof(std::uint32_t));
+    }
+
+    auto info = computeSurfaceInfo(
+        getDefaultTileModes()[tbuffer.tiling_idx], tbuffer.type, tbuffer.dfmt,
+        tbuffer.width + 1, tbuffer.height + 1, tbuffer.depth + 1,
+        tbuffer.pitch + 1, 0, tbuffer.last_array + 1, 0, tbuffer.last_level + 1,
+        tbuffer.pow2pad != 0);
+
+    if (auto it = imageMemoryTable.queryArea(tbuffer.address());
+        it != imageMemoryTable.end() &&
+        it.beginAddress() == tbuffer.address() &&
+        it.size() == info.totalTiledSize) {
+      it.get().second |= imageBuffer.access;
+    } else {
+      imageMemoryTable.map(
+          tbuffer.address(), tbuffer.address() + info.totalTiledSize,
+          {ImageBufferKey::createFrom(tbuffer), imageBuffer.access});
+    }
+    resourceSlotToAddress.emplace_back(slotOffset + imageBuffer.resourceSlot,
+                                       tbuffer.address());
+  }
+
   for (auto &texture : res.textures) {
     auto word0 = eval(texture.words[0]).zExtScalar();
     auto word1 = eval(texture.words[1]).zExtScalar();
@@ -325,6 +386,28 @@ void Cache::ShaderResources::buildMemoryTable(MemoryTable &memoryTable) {
     }
   }
 }
+void Cache::ShaderResources::buildImageMemoryTable(MemoryTable &memoryTable) {
+  memoryTable.count = 0;
+
+  for (auto p : imageMemoryTable) {
+    auto range = rx::AddressRange::fromBeginEnd(p.beginAddress, p.endAddress);
+    auto buffer = cacheTag->getImageBuffer(p.payload.first, p.payload.second);
+
+    auto memoryTableSlot = memoryTable.count;
+    memoryTable.slots[memoryTable.count++] = {
+        .address = p.beginAddress,
+        .size = range.size(),
+        .flags = static_cast<uint8_t>(p.payload.second),
+        .deviceAddress = buffer.deviceAddress,
+    };
+
+    for (auto [slot, address] : resourceSlotToAddress) {
+      if (address >= p.beginAddress && address < p.endAddress) {
+        slotResources[slot] = memoryTableSlot;
+      }
+    }
+  }
+}
 
 std::uint32_t Cache::ShaderResources::getResourceSlot(std::uint32_t id) {
   if (auto it = slotResources.find(id); it != slotResources.end()) {
@@ -384,6 +467,10 @@ Cache::ShaderResources::eval(ir::InstructionId instId,
 
   if (instId == ir::amdgpu::TBUFFER) {
     rx::die("resource depends on texture value");
+  }
+
+  if (instId == ir::amdgpu::IMAGE_BUFFER) {
+    rx::die("resource depends on image buffer value");
   }
 
   if (instId == ir::amdgpu::SAMPLER) {
@@ -615,7 +702,7 @@ struct CachedHostVisibleBuffer : CachedBuffer {
   using CachedBuffer::update;
 
   bool expensive() {
-    return !kDisableCache && addressRange.size() >= rx::mem::pageSize;
+    return !rx::g_config.disableGpuCache && addressRange.size() >= rx::mem::pageSize;
   }
 
   bool flush(void *target, rx::AddressRange range) {
@@ -691,7 +778,7 @@ struct CachedImageBuffer : Cache::Entry {
   unsigned depth = 1;
 
   bool expensive() {
-    if (kDisableCache) {
+    if (rx::g_config.disableGpuCache) {
       return false;
     }
 
@@ -865,7 +952,8 @@ struct CachedImage : Cache::Entry {
   SurfaceInfo info;
 
   bool expensive() {
-    if (kDisableCache) {
+    return false;
+    if (rx::g_config.disableGpuCache) {
       return false;
     }
 
@@ -1139,7 +1227,7 @@ ImageBufferKey ImageBufferKey::createFrom(const ImageKey &imageKey) {
 }
 
 SamplerKey SamplerKey::createFrom(const gnm::SSampler &sampler) {
-  float lodBias = ((std::int16_t(sampler.lod_bias) << 2) >> 2) / float(256.f);
+  float lodBias = sampler.lod_bias / 256.f;
   // FIXME: lodBias can be scaled by gnm::TBuffer
 
   return {
@@ -1152,8 +1240,8 @@ SamplerKey SamplerKey::createFrom(const gnm::SSampler &sampler) {
       .mipLodBias = lodBias,
       .maxAnisotropy = 0, // max_aniso_ratio
       .compareOp = toVkCompareOp(sampler.depth_compare_func),
-      .minLod = static_cast<float>(sampler.min_lod),
-      .maxLod = static_cast<float>(sampler.max_lod),
+      .minLod = sampler.min_lod / 256.f,
+      .maxLod = sampler.max_lod / 256.f,
       .borderColor = toVkBorderColor(sampler.border_color_type),
       .anisotropyEnable = false,
       .compareEnable = sampler.depth_compare_func != gnm::CompareFunc::Never,
@@ -1334,12 +1422,9 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
   auto it = table.queryArea(range.beginAddress());
 
   if (it == table.end() || !it.range().contains(range)) {
-    if (mParent->flushImages(*this, range)) {
-      mScheduler->submit();
-      mScheduler->wait();
-    }
-
-    if (mParent->flushImageBuffers(*this, range)) {
+    auto flushRange = mParent->flushImages(*this, range);
+    flushRange = flushRange.merge(mParent->flushImageBuffers(*this, range));
+    if (flushRange) {
       mScheduler->submit();
       mScheduler->wait();
     }
@@ -1375,18 +1460,18 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
                                 addressRange.beginAddress(),
                                 addressRange.size()) ||
         !mParent->isInSync(addressRange, cached->tagId)) {
-      if (mParent->flushImages(*this, range)) {
+      auto flushedRange = mParent->flushImages(*this, range);
+      flushedRange =
+          flushedRange.merge(mParent->flushImageBuffers(*this, range));
+
+      if (flushedRange) {
         getScheduler().submit();
         getScheduler().wait();
       }
 
-      if (mParent->flushImageBuffers(*this, range)) {
-        getScheduler().submit();
-        getScheduler().wait();
-      }
-
-      mParent->trackUpdate(EntryType::HostVisibleBuffer, addressRange, it.get(),
-                           getReadId(), cached->expensive());
+      mParent->trackUpdate(
+          EntryType::HostVisibleBuffer, addressRange, it.get(), getReadId(),
+          (access & Access::Write) == Access::None && cached->expensive());
       amdgpu::RemoteMemory memory{mParent->mVmId};
       cached->update(addressRange,
                      memory.getPointer(addressRange.beginAddress()));
@@ -1448,13 +1533,18 @@ Cache::Buffer Cache::Tag::getInternalDeviceLocalBuffer(std::uint64_t size) {
 }
 
 void Cache::Tag::buildDescriptors(VkDescriptorSet descriptorSet) {
+  auto &res = mStorage->shaderResources;
   auto memoryTableBuffer = getMemoryTable();
+  auto imageMemoryTableBuffer = getImageMemoryTable();
   auto memoryTable = std::bit_cast<MemoryTable *>(memoryTableBuffer.data);
-  mStorage->shaderResources.buildMemoryTable(*memoryTable);
+  auto imageMemoryTable =
+      std::bit_cast<MemoryTable *>(imageMemoryTableBuffer.data);
 
-  for (auto &sampler : mStorage->shaderResources.samplerResources) {
-    uint32_t index =
-        &sampler - mStorage->shaderResources.samplerResources.data();
+  res.buildMemoryTable(*memoryTable);
+  res.buildImageMemoryTable(*imageMemoryTable);
+
+  for (auto &sampler : res.samplerResources) {
+    uint32_t index = &sampler - res.samplerResources.data();
 
     VkDescriptorImageInfo samplerInfo{.sampler = sampler.handle};
 
@@ -1471,8 +1561,8 @@ void Cache::Tag::buildDescriptors(VkDescriptorSet descriptorSet) {
     vkUpdateDescriptorSets(vk::context->device, 1, &writeDescSet, 0, nullptr);
   }
 
-  for (auto &imageResources : mStorage->shaderResources.imageResources) {
-    auto dim = (&imageResources - mStorage->shaderResources.imageResources) + 1;
+  for (auto &imageResources : res.imageResources) {
+    auto dim = (&imageResources - res.imageResources) + 1;
     auto binding = static_cast<uint32_t>(
         Cache::getDescriptorBinding(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, dim));
 
@@ -1725,8 +1815,9 @@ Cache::ImageBuffer Cache::Tag::getImageBuffer(const ImageBufferKey &key,
 
       auto tiledBuffer = getBuffer(range, Access::Read);
       if (tiledBuffer.tagId != cached->tagId) {
-        mParent->trackUpdate(EntryType::ImageBuffer, range, it.get(),
-                             tiledBuffer.tagId, cached->expensive());
+        mParent->trackUpdate(
+            EntryType::ImageBuffer, range, it.get(), tiledBuffer.tagId,
+            (access & Access::Write) == Access::None && cached->expensive());
 
         cached->update(this, cached->addressRange, tiledBuffer);
       }
@@ -1881,8 +1972,9 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       imageBufferKey.address = key.readAddress;
       auto imageBuffer = getImageBuffer(imageBufferKey, Access::Read);
       if (imageBuffer.tagId != cached->tagId) {
-        mParent->trackUpdate(EntryType::Image, storeRange, it.get(),
-                             imageBuffer.tagId, cached->expensive());
+        mParent->trackUpdate(
+            EntryType::Image, storeRange, it.get(), imageBuffer.tagId,
+            (access & Access::Write) == Access::None && cached->expensive());
 
         cached->update(this, cached->addressRange, imageBuffer);
       }
@@ -1990,6 +2082,11 @@ void Cache::Tag::release() {
   if (mAcquiredMemoryTable + 1 != 0) {
     getCache()->mMemoryTablePool.release(mAcquiredMemoryTable);
     mAcquiredMemoryTable = -1;
+  }
+
+  if (mAcquiredImageMemoryTable + 1 != 0) {
+    getCache()->mMemoryTablePool.release(mAcquiredImageMemoryTable);
+    mAcquiredImageMemoryTable = -1;
   }
 
   std::vector<std::shared_ptr<Entry>> tmpResources;
@@ -2141,6 +2238,7 @@ Cache::Shader Cache::GraphicsTag::getShader(
   }
 
   std::uint64_t memoryTableAddress = getMemoryTable().deviceAddress;
+  std::uint64_t imageMemoryTableAddress = getImageMemoryTable().deviceAddress;
 
   std::uint64_t gdsAddress = mParent->getGdsBuffer().getAddress();
   mStorage->shaderResources.cacheTag = this;
@@ -2228,6 +2326,14 @@ Cache::Shader Cache::GraphicsTag::getShader(
         configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress >> 32);
       }
       break;
+    case gcn::ConfigType::ImageMemoryTable:
+      if (slot.data == 0) {
+        configPtr[index] = static_cast<std::uint32_t>(imageMemoryTableAddress);
+      } else {
+        configPtr[index] =
+            static_cast<std::uint32_t>(imageMemoryTableAddress >> 32);
+      }
+      break;
     case gcn::ConfigType::Gds:
       if (slot.data == 0) {
         configPtr[index] = static_cast<std::uint32_t>(gdsAddress);
@@ -2295,6 +2401,7 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
   }
 
   std::uint64_t memoryTableAddress = getMemoryTable().deviceAddress;
+  std::uint64_t imageMemoryTableAddress = getImageMemoryTable().deviceAddress;
 
   std::uint64_t gdsAddress = mParent->getGdsBuffer().getAddress();
   mStorage->shaderResources.cacheTag = this;
@@ -2363,6 +2470,14 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
         configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress);
       } else {
         configPtr[index] = static_cast<std::uint32_t>(memoryTableAddress >> 32);
+      }
+      break;
+    case gcn::ConfigType::ImageMemoryTable:
+      if (slot.data == 0) {
+        configPtr[index] = static_cast<std::uint32_t>(imageMemoryTableAddress);
+      } else {
+        configPtr[index] =
+            static_cast<std::uint32_t>(imageMemoryTableAddress >> 32);
       }
       break;
     case gcn::ConfigType::Gds:
@@ -2585,12 +2700,10 @@ void Cache::invalidate(Tag &tag, rx::AddressRange range) {
   markHostInvalidated(mDevice, mVmId, range.beginAddress(), range.size());
 }
 void Cache::flush(Tag &tag, rx::AddressRange range) {
-  if (flushImages(tag, range)) {
-    tag.getScheduler().submit();
-    tag.getScheduler().wait();
-  }
+  auto flushedRange = flushImages(tag, range);
+  flushedRange = flushedRange.merge(flushImageBuffers(tag, range));
 
-  if (flushImageBuffers(tag, range)) {
+  if (flushedRange) {
     tag.getScheduler().submit();
     tag.getScheduler().wait();
   }

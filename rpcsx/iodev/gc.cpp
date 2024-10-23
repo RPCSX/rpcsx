@@ -91,6 +91,8 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
                              orbis::g_currentThread->tproc->vmId,
                              {args->cmds + i * 4, 4});
       }
+
+      // gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }
@@ -105,6 +107,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     auto args = reinterpret_cast<Args *>(argp);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      gpu.waitForIdle();
       gpu.submitSwitchBuffer(orbis::g_currentThread->tproc->vmId);
     } else {
       return orbis::ErrorCode::BUSY;
@@ -132,18 +135,22 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
                              {args->cmds + i * 4, 4});
       }
 
-      // ORBIS_LOG_ERROR("submit and write eop", args->eopValue, args->waitFlag);
+      // ORBIS_LOG_ERROR("submit and write eop", args->eopValue,
+      // args->waitFlag);
       gpu.submitWriteEop(gcFile->gfxPipe, args->waitFlag, args->eopValue);
     } else {
       return orbis::ErrorCode::BUSY;
     }
 
-    // orbis::bridge.sendDoFlip();
     break;
   }
 
   case 0xc0048116: { // submit done?
-    break;
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      // gpu.waitForIdle();
+    } else {
+      return orbis::ErrorCode::BUSY;
+    }
   }
 
   case 0xc0048117:
@@ -243,7 +250,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitComputeQueue(args->meId, args->pipeId, args->queueId,
-                           args->nextStartOffsetInDw);
+                             args->nextStartOffsetInDw);
     } else {
       return orbis::ErrorCode::BUSY;
     }

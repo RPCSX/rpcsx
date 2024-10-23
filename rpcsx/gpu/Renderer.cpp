@@ -187,7 +187,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   auto depthAccess = Access::None;
   auto stencilAccess = Access::None;
 
-  if (pipe.context.dbDepthControl.depthEnable) {
+  if (pipe.context.dbDepthControl.depthEnable && pipe.context.dbZInfo.format != gnm::kZFormatInvalid) {
     if (!pipe.context.dbRenderControl.depthClearEnable) {
       depthAccess |= Access::Read;
     }
@@ -467,18 +467,18 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
         vsPrimType, viewPorts);
   }
 
-  auto pixelShader =
-      cacheTag.getPixelShader(pipe.sh.spiShaderPgmPs, pipe.context, viewPorts);
-
-  if (pixelShader.handle == nullptr) {
-    shaders[Cache::getStageIndex(VK_SHADER_STAGE_FRAGMENT_BIT)] =
-        getFillRedFragShader(*cacheTag.getCache());
-  }
-
   shaders[Cache::getStageIndex(VK_SHADER_STAGE_VERTEX_BIT)] =
       vertexShader.handle;
-  shaders[Cache::getStageIndex(VK_SHADER_STAGE_FRAGMENT_BIT)] =
-      pixelShader.handle;
+
+  if (pipe.sh.spiShaderPgmPs.address != 0) {
+    auto pixelShader = cacheTag.getPixelShader(pipe.sh.spiShaderPgmPs,
+                                               pipe.context, viewPorts);
+
+    shaders[Cache::getStageIndex(VK_SHADER_STAGE_FRAGMENT_BIT)] =
+        pixelShader.handle != nullptr
+            ? pixelShader.handle
+            : getFillRedFragShader(*cacheTag.getCache());
+  }
 
   if (pipe.uConfig.vgtPrimitiveType == gnm::PrimitiveType::RectList) {
     shaders[Cache::getStageIndex(VK_SHADER_STAGE_GEOMETRY_BIT)] =

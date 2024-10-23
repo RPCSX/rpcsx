@@ -688,6 +688,7 @@ static void usage(const char *argv0) {
   std::println("    --fw <path to firmware root>");
   std::println(
       "    --gpu <index> - specify physical gpu index to use, default is 0");
+  std::println("    --disable-cache - disable cache of gpu resources");
   // std::println("    --presenter <window>");
   std::println("    --trace");
 }
@@ -909,6 +910,18 @@ int main(int argc, const char *argv[]) {
         argv[argIndex] == std::string_view("-a")) {
       argIndex++;
       enableAudioIpmi = true;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--disable-cache")) {
+      argIndex++;
+      rx::g_config.disableGpuCache = true;
+      continue;
+    }
+
+    if (argv[argIndex] == std::string_view("--debug-gpu")) {
+      argIndex++;
+      rx::g_config.debugGpu = true;
       continue;
     }
 
