@@ -236,15 +236,15 @@ enum AJMFormat : orbis::uint32_t {
 };
 
 struct At9Instance {
-  orbis::ptr<void> handle;
-  orbis::uint32_t inputChannels;
-  orbis::uint32_t framesInSuperframe;
-  orbis::uint32_t frameSamples;
-  orbis::uint32_t superFrameDataLeft;
-  orbis::uint32_t superFrameDataIdx;
-  orbis::uint32_t superFrameSize;
-  orbis::uint32_t estimatedSizeUsed;
-  orbis::uint32_t sampleRate;
+  orbis::ptr<void> handle{};
+  orbis::uint32_t inputChannels{};
+  orbis::uint32_t framesInSuperframe{};
+  orbis::uint32_t frameSamples{};
+  orbis::uint32_t superFrameDataLeft{};
+  orbis::uint32_t superFrameDataIdx{};
+  orbis::uint32_t superFrameSize{};
+  orbis::uint32_t estimatedSizeUsed{};
+  orbis::uint32_t sampleRate{};
 };
 
 struct AACInstance {
