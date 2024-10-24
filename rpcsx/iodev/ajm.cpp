@@ -248,6 +248,10 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                   instance.at9.inputChannels > maxChannels
                       ? maxChannels
                       : instance.at9.inputChannels;
+              if (instance.resampler) {
+                swr_free(&instance.resampler);
+                instance.resampler = NULL;
+              }
               if (instance.at9.inputChannels != outputChannels ||
                   instance.outputFormat != AJM_FORMAT_S16) {
                 instance.resampler = swr_alloc();
@@ -284,7 +288,8 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               ORBIS_LOG_TODO("CONTROL_INITIALIZE", pCodecInfo.channels,
                              pCodecInfo.samplingRate, pCodecInfo.frameSamples,
                              pCodecInfo.superframeSize, maxChannels,
-                             outputChannels, initializeBuffer->configData, &initializeBuffer->configData);
+                             outputChannels, initializeBuffer->configData,
+                             &initializeBuffer->configData);
             } else if (instance.codec == AJM_CODEC_AAC) {
               struct InitalizeBuffer {
                 orbis::uint32_t headerIndex;
@@ -428,7 +433,8 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                 instance.at9.superFrameDataLeft = instance.at9.superFrameSize;
               }
 
-              ORBIS_LOG_TODO("used size", bytesUsed, instance.at9.estimatedSizeUsed);
+              ORBIS_LOG_TODO("used size", bytesUsed,
+                             instance.at9.estimatedSizeUsed);
               // TODO: possible memory leak because "genius" code to avoiding
               // memory copying
               framesProcessed += 1;
@@ -462,7 +468,7 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                                 instance.at9.frameSamples, &tempBuffer,
                                 instance.at9.frameSamples);
                 if (nb_samples < 0) {
-                  ORBIS_LOG_FATAL("Error while resampling");
+                  ORBIS_LOG_FATAL("Error while resampling", nb_samples);
                   std::abort();
                 }
                 av_freep(&tempBuffer);
