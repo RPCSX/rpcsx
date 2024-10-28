@@ -3,7 +3,7 @@
 
 ### The dependencies for Debian-like distributions.
 ```   
-sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-validationlayers-dev libsox-dev git libasound2-dev nasm g++-14
+sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev vulkan-utility-libraries-dev libsox-dev git libasound2-dev nasm g++-14
 ```
 
 ### The dependencies for Fedora distributions:
