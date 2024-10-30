@@ -26,8 +26,17 @@ extern "C" {
 struct AjmFile : orbis::File {};
 
 enum {
+  AJM_RESULT_INVALID_DATA = 0x2,
+  AJM_RESULT_INVALID_PARAMETER = 0x4,
   AJM_RESULT_PARTIAL_INPUT = 0x8,
   AJM_RESULT_NOT_ENOUGH_ROOM = 0x10,
+  AJM_RESULT_STREAM_CHANGE = 0x20,
+  AJM_RESULT_TOO_MANY_CHANNELS = 0x40,
+  AJM_RESULT_UNSUPPORTED_FLAG = 0x80,
+  AJM_RESULT_SIDEBAND_TRUNCATED = 0x100,
+  AJM_RESULT_PRIORITY_PASSED = 0x200,
+  AJM_RESULT_FATAL = 0x80000000,
+  AJM_RESULT_CODEC_ERROR = 0x40000000,
 };
 
 struct AjmDevice : IoDevice {
@@ -407,6 +416,8 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               break;
             }
 
+            framesProcessed++;
+
             AVFrame *frame = av_frame_alloc();
             rx::atScopeExit _free_frame([&] { av_frame_free(&frame); });
 
@@ -424,25 +435,25 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                   (orbis::uint8_t *)(instance.inputBuffer.data() +
                                      totalDecodedBytes));
               if (inputFrameSize == 0) {
-                inputFrameSize =
-                    instance.inputBuffer.size() - totalDecodedBytes;
-              } else {
-                inputFrameSize = std::min<std::uint32_t>(
-                    inputFrameSize,
-                    instance.inputBuffer.size() - totalDecodedBytes);
+                result->result |= AJM_RESULT_INVALID_DATA;
+                break;
               }
+
+              inputFrameSize = std::min<std::uint32_t>(
+                  inputFrameSize,
+                  instance.inputBuffer.size() - totalDecodedBytes);
             } else if (instance.codec == AJM_CODEC_AAC) {
               inputFrameSize = instance.inputBuffer.size() - totalDecodedBytes;
             }
 
             if (inputFrameSize >
                 instance.inputBuffer.size() - totalDecodedBytes) {
-              result->result = AJM_RESULT_PARTIAL_INPUT;
+              result->result |= AJM_RESULT_PARTIAL_INPUT;
               break;
             }
 
             if (outputBufferSize > runJob.totalOutputSize - outputWritten) {
-              result->result = AJM_RESULT_NOT_ENOUGH_ROOM;
+              result->result |= AJM_RESULT_NOT_ENOUGH_ROOM;
               break;
             }
 
@@ -541,7 +552,6 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
               break;
             }
 
-            framesProcessed++;
             totalDecodedBytes += inputFrameSize;
 
             if (instance.gapless.skipSamples > 0 ||
