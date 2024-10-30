@@ -9,7 +9,7 @@ sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev 
 ### The dependencies for Fedora distributions:
 
 ```
-sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel vulkan-validation-layers-devel gcc-c++ gcc sox-devel alsa-lib-devel nasm
+sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel gcc-c++ gcc sox-devel alsa-lib-devel nasm
 ```
 
 ### The dependencies for Arch distributions:
