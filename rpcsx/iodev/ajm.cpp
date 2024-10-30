@@ -438,10 +438,6 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                 result->result |= AJM_RESULT_INVALID_DATA;
                 break;
               }
-
-              inputFrameSize = std::min<std::uint32_t>(
-                  inputFrameSize,
-                  instance.inputBuffer.size() - totalDecodedBytes);
             } else if (instance.codec == AJM_CODEC_AAC) {
               inputFrameSize = instance.inputBuffer.size() - totalDecodedBytes;
             }
