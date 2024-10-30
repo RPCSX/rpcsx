@@ -2,6 +2,8 @@
 
 #include "libatrac9/libatrac9.h"
 #include "orbis-config.hpp"
+#include "orbis/KernelAllocator.hpp"
+#include "orbis/utils/SharedMutex.hpp"
 // #include "orbis/utils/Logs.hpp"
 #include <cstdint>
 extern "C" {
@@ -50,12 +52,12 @@ static_assert(sizeof(ReturnAddress) == 0x10);
 struct BatchJobControlBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t sidebandInputSize;
-  std::byte *pSidebandInput;
+  orbis::ptr<std::byte> pSidebandInput;
   orbis::uint32_t flagsHi;
   orbis::uint32_t flagsLo;
   orbis::uint32_t commandId;
   orbis::uint32_t sidebandOutputSize;
-  std::byte *pSidebandOutput;
+  orbis::ptr<std::byte> pSidebandOutput;
 
   std::uint64_t getFlags() { return ((uint64_t)flagsHi << 0x1a) | flagsLo; }
 };
@@ -64,7 +66,7 @@ static_assert(sizeof(BatchJobControlBufferRa) == 0x28);
 struct BatchJobInputBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t szInputSize;
-  std::byte *pInput;
+  orbis::ptr<std::byte> pInput;
 };
 static_assert(sizeof(BatchJobInputBufferRa) == 0x10);
 
@@ -78,36 +80,41 @@ static_assert(sizeof(BatchJobFlagsRa) == 0x8);
 struct BatchJobOutputBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t outputSize;
-  std::byte *pOutput;
+  orbis::ptr<std::byte> pOutput;
 };
 static_assert(sizeof(BatchJobOutputBufferRa) == 0x10);
 
 struct BatchJobSidebandBufferRa {
   orbis::uint32_t opcode;
   orbis::uint32_t sidebandSize;
-  std::byte *pSideband;
+  orbis::ptr<std::byte> pSideband;
 };
 static_assert(sizeof(BatchJobSidebandBufferRa) == 0x10);
 
+
+struct AjmOutputBuffer {
+  orbis::ptr<std::byte> pOutput;
+  orbis::size_t size;
+};
 struct RunJob {
-  orbis::uint64_t flags;
-  orbis::uint32_t outputSize;
-  std::byte *pOutput;
-  orbis::uint32_t sidebandSize;
-  std::byte *pSideband;
+  std::uint64_t flags;
+  std::uint32_t sidebandSize;
+  std::uint32_t totalOutputSize;
+  std::vector<AjmOutputBuffer> outputBuffers;
+  orbis::ptr<std::byte> pSideband;
   bool control;
 };
 
 // Thanks to mystical SirNickity with 1 post
 // https://hydrogenaud.io/index.php?topic=85125.msg747716#msg747716
 
-const uint8_t mpeg_versions[4] = {25, 0, 2, 1};
+inline constexpr uint8_t mpeg_versions[4] = {25, 0, 2, 1};
 
 // Layers - use [layer]
-const uint8_t mpeg_layers[4] = {0, 3, 2, 1};
+inline constexpr uint8_t mpeg_layers[4] = {0, 3, 2, 1};
 
 // Bitrates - use [version][layer][bitrate]
-const uint16_t mpeg_bitrates[4][4][16] = {
+inline constexpr uint16_t mpeg_bitrates[4][4][16] = {
     {
         // Version 2.5
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Reserved
@@ -147,7 +154,7 @@ const uint16_t mpeg_bitrates[4][4][16] = {
     }};
 
 // Sample rates - use [version][srate]
-const uint16_t mpeg_srates[4][4] = {
+inline constexpr uint16_t mpeg_srates[4][4] = {
     {11025, 12000, 8000, 0},  // MPEG 2.5
     {0, 0, 0, 0},             // Reserved
     {22050, 24000, 16000, 0}, // MPEG 2
@@ -155,7 +162,7 @@ const uint16_t mpeg_srates[4][4] = {
 };
 
 // Samples per frame - use [version][layer]
-const uint16_t mpeg_frame_samples[4][4] = {
+inline constexpr uint16_t mpeg_frame_samples[4][4] = {
     //    Rsvd     3     2     1  < Layer  v Version
     {0, 576, 1152, 384}, //       2.5
     {0, 0, 0, 0},        //       Reserved
@@ -164,9 +171,9 @@ const uint16_t mpeg_frame_samples[4][4] = {
 };
 
 // Slot size (MPEG unit of measurement) - use [layer]
-const uint8_t mpeg_slot_size[4] = {0, 1, 1, 4}; // Rsvd, 3, 2, 1
+inline constexpr uint8_t mpeg_slot_size[4] = {0, 1, 1, 4}; // Rsvd, 3, 2, 1
 
-uint32_t get_mp3_data_size(const uint8_t *data) {
+constexpr uint32_t get_mp3_data_size(const uint8_t *data) {
   // Quick validity check
   if (((data[0] & 0xFF) != 0xFF) || ((data[1] & 0xE0) != 0xE0) // 3 sync bits
       || ((data[1] & 0x18) == 0x08)                            // Version rsvd
@@ -196,8 +203,8 @@ uint32_t get_mp3_data_size(const uint8_t *data) {
       ((pad) ? slot_size : 0);
 
   // ORBIS_LOG_TODO(__FUNCTION__, (uint16_t)ver, (uint16_t)lyr,
-  //                (uint16_t)pad, (uint16_t)brx, (uint16_t)srx, bitrate, samprate,
-  //                samples, (uint16_t)slot_size, bps, fsize,
+  //                (uint16_t)pad, (uint16_t)brx, (uint16_t)srx, bitrate,
+  //                samprate, samples, (uint16_t)slot_size, bps, fsize,
   //                static_cast<uint16_t>(fsize));
 
   // Frame sizes are truncated integers
@@ -206,13 +213,16 @@ uint32_t get_mp3_data_size(const uint8_t *data) {
 
 enum AACHeaderType { AAC_ADTS = 1, AAC_RAW = 2 };
 
-orbis::uint32_t AACFreq[12] = {96000, 88200, 64000, 48000, 44100, 32000,
-                               24000, 22050, 16000, 12000, 11025, 8000};
+inline constexpr orbis::uint32_t AACFreq[12] = {96000, 88200, 64000, 48000,
+                                                44100, 32000, 24000, 22050,
+                                                16000, 12000, 11025, 8000};
 
 enum AJMCodecs : orbis::uint32_t {
   AJM_CODEC_MP3 = 0,
   AJM_CODEC_At9 = 1,
   AJM_CODEC_AAC = 2,
+
+  AJM_CODEC_COUNT
 };
 
 enum AJMChannels : orbis::uint32_t {
@@ -244,6 +254,12 @@ struct At9Instance {
   orbis::uint32_t sampleRate{};
   Atrac9Format outputFormat{};
   orbis::uint32_t configData;
+
+  ~At9Instance() {
+    if (handle) {
+      Atrac9ReleaseHandle(handle);
+    }
+  }
 };
 
 struct AACInstance {
@@ -308,11 +324,15 @@ struct AJMAACCodecInfoSideband {
 };
 
 struct Instance {
+  orbis::shared_mutex mtx;
   AJMCodecs codec;
   AJMChannels maxChannels;
   AJMFormat outputFormat;
   At9Instance at9;
   AACInstance aac;
+  orbis::kvector<std::byte> inputBuffer;
+  orbis::kvector<std::byte> outputBuffer;
+
   AVCodecContext *codecCtx;
   SwrContext *resampler;
   orbis::uint32_t lastBatchId;
@@ -320,6 +340,15 @@ struct Instance {
   AJMSidebandGaplessDecode gapless;
   orbis::uint32_t processedSamples;
   AJMSidebandFormat lastDecode;
+
+  ~Instance() {
+    if (resampler) {
+      swr_free(&resampler);
+    }
+    if (codecCtx) {
+      avcodec_free_context(&codecCtx);
+    }
+  }
 };
 
 enum ControlFlags {
