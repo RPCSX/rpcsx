@@ -733,14 +733,14 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
               auto [dev, devPath] = vfs::get("/app0");
               if (auto hostFs = dev.cast<HostFsDevice>()) {
                 std::error_code ec;
-                auto saveDir = hostFs->hostPath + "/.rpcsx/saves/";
+                auto saveDir = hostFs->hostPath + "/.rpcsx/savedata/";
                 if (!std::filesystem::exists(saveDir)) {
                   return 0x8002'0000 +
                          static_cast<int>(orbis::ErrorCode::NOENT);
                 }
               }
             }
-            std::string_view result = "/saves";
+            std::string_view result = "/savedata";
             if (size < result.size() + 1) {
               return 0x8002'0000 + static_cast<int>(orbis::ErrorCode::INVAL);
             }
@@ -754,9 +754,9 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
           auto [dev, devPath] = vfs::get("/app0");
           if (auto hostFs = dev.cast<HostFsDevice>()) {
             std::error_code ec;
-            auto saveDir = hostFs->hostPath + "/.rpcsx/saves/";
+            auto saveDir = hostFs->hostPath + "/.rpcsx/savedata/";
             std::filesystem::create_directories(saveDir, ec);
-            vfs::mount("/saves/", createHostIoDevice(saveDir, "/saves/"));
+            vfs::mount("/savedata/", createHostIoDevice(saveDir, "/savedata/"));
           }
         }
         return 0;
