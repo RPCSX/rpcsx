@@ -1,0 +1,2 @@
+CompileFlags:
+    Add: [-Wall, -Wextra, -Wno-missing-designated-field-initializers]

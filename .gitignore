@@ -56,6 +56,5 @@ compile_commands.json
 # macOS
 *.DS_Store
 
-build/
-
+build*/
 .cache/
