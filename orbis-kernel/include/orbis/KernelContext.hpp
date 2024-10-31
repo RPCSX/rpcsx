@@ -36,13 +36,16 @@ struct UmtxCond {
 
 struct UmtxChain {
   utils::shared_mutex mtx;
-  utils::kmultimap<UmtxKey, UmtxCond> sleep_queue;
-  utils::kmultimap<UmtxKey, UmtxCond> spare_queue;
+  using queue_type = utils::kmultimap<UmtxKey, UmtxCond>;
+  queue_type sleep_queue;
+  queue_type spare_queue;
 
   std::pair<const UmtxKey, UmtxCond> *enqueue(UmtxKey &key, Thread *thr);
   void erase(std::pair<const UmtxKey, UmtxCond> *obj);
+  queue_type::iterator erase(queue_type::iterator it);
   uint notify_one(const UmtxKey &key);
   uint notify_all(const UmtxKey &key);
+  uint notify_n(const UmtxKey &key, sint count);
 };
 
 class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) KernelContext final {
