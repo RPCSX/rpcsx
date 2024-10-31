@@ -625,6 +625,23 @@ void v_cmp_neq_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thr
 void v_cmp_nlt_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit(sdst, !(a < b)); }
 void v_cmp_tru_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit(sdst, true); }
 
+void v_cmpx_f_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, false); }
+void v_cmpx_lt_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, a < b); }
+void v_cmpx_eq_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, a == b); }
+void v_cmpx_le_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, a <= b); }
+void v_cmpx_gt_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, a > b); }
+void v_cmpx_lg_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, a != b); }
+void v_cmpx_ge_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, a >= b); }
+void v_cmpx_o_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !isnan(a) && !isnan(b)); }
+void v_cmpx_u_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, isnan(a) || isnan(b)); }
+void v_cmpx_nge_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !(a >= b)); }
+void v_cmpx_nlg_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !(a != b)); }
+void v_cmpx_ngt_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !(a > b)); }
+void v_cmpx_nle_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !(a <= b)); }
+void v_cmpx_neq_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !(a == b)); }
+void v_cmpx_nlt_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, !(a < b)); }
+void v_cmpx_tru_f32(inout uint64_t sdst, float32_t a, float32_t b) { set_cond_thread_bit_exec(sdst, true); }
+
 void v_cmp_f_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit(sdst, false); }
 void v_cmp_lt_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit(sdst, a < b); }
 void v_cmp_eq_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit(sdst, a == b); }
@@ -642,6 +659,22 @@ void v_cmp_neq_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thr
 void v_cmp_nlt_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit(sdst, !(a < b)); }
 void v_cmp_tru_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit(sdst, true); }
 
+void v_cmpx_f_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, false); }
+void v_cmpx_lt_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, a < b); }
+void v_cmpx_eq_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, a == b); }
+void v_cmpx_le_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, a <= b); }
+void v_cmpx_gt_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, a > b); }
+void v_cmpx_lg_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, a != b); }
+void v_cmpx_ge_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, a >= b); }
+void v_cmpx_o_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !isnan(a) && !isnan(b)); }
+void v_cmpx_u_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, isnan(a) || isnan(b)); }
+void v_cmpx_nge_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !(a >= b)); }
+void v_cmpx_nlg_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !(a != b)); }
+void v_cmpx_ngt_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !(a > b)); }
+void v_cmpx_nle_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !(a <= b)); }
+void v_cmpx_neq_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !(a == b)); }
+void v_cmpx_nlt_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, !(a < b)); }
+void v_cmpx_tru_f64(inout uint64_t sdst, float64_t a, float64_t b) { set_cond_thread_bit_exec(sdst, true); }
 
 void v_cmp_eq_u32(inout uint64_t sdst, uint32_t a, uint32_t b) { set_cond_thread_bit(sdst, a == b); }
 void v_cmp_f_u32(inout uint64_t sdst, uint32_t a, uint32_t b) { set_cond_thread_bit(sdst, false); }
