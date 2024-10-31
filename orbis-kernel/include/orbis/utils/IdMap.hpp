@@ -51,7 +51,7 @@ class RcIdMap {
       return index;
     }
 
-    T *get(std::size_t index) { return objects[index]; }
+    T *get(std::size_t index) const { return objects[index]; }
 
     void remove(std::size_t index) {
       objects[index]->decRef();
@@ -66,7 +66,7 @@ class RcIdMap {
 public:
   static constexpr auto npos = static_cast<IdT>(~static_cast<std::size_t>(0));
 
-  shared_mutex mutex;
+  mutable shared_mutex mutex;
 
   struct end_iterator {};
 
@@ -213,7 +213,7 @@ public:
     return true;
   }
 
-  Ref<T> get(IdT id) {
+  Ref<T> get(IdT id) const {
     const auto rawId = static_cast<std::size_t>(id) - MinId;
 
     if (rawId >= MaxId - MinId) {
@@ -276,8 +276,6 @@ public:
     m_fullChunks.clear(chunk);
     return true;
   }
-
-  [[deprecated("use close()")]] bool remove(IdT id) { return close(id); }
 };
 
 template <typename T, typename IdT = int, std::size_t MaxId = 4096,
