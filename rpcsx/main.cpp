@@ -1,8 +1,11 @@
 #include "audio/AlsaDevice.hpp"
+#include "audio/At9Codec.hpp"
+#include "audio/FFmpegCodecs.hpp"
 #include "backtrace.hpp"
 #include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
+#include "iodev/ajm.hpp"
 #include "iodev/mbus.hpp"
 #include "iodev/mbus_av.hpp"
 #include "ipmi.hpp"
@@ -337,6 +340,10 @@ static void ps4InitDev() {
   auto analogAudioDevice = nullAudioDevice;
   auto spdifAudioDevice = nullAudioDevice;
 
+  auto ajm = static_cast<AjmDevice *>(createAjmCharacterDevice());
+  createAt9Codec(ajm);
+  createFFmpegCodecs(ajm);
+
   vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   vfs::addDevice("npdrm", createNpdrmCharacterDevice());
   vfs::addDevice("icc_configuration", createIccConfigurationCharacterDevice());
@@ -369,7 +376,7 @@ static void ps4InitDev() {
   vfs::addDevice("gc", createGcCharacterDevice());
   vfs::addDevice("rng", createRngCharacterDevice());
   vfs::addDevice("sbl_srv", createSblSrvCharacterDevice());
-  vfs::addDevice("ajm", createAjmCharacterDevice());
+  vfs::addDevice("ajm", ajm);
   vfs::addDevice("urandom", createUrandomCharacterDevice());
   vfs::addDevice("mbus", mbus);
   vfs::addDevice("metadbg", createMetaDbgCharacterDevice());

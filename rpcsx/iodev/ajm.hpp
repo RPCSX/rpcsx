@@ -1,368 +1,401 @@
 #pragma once
 
-#include "libatrac9/libatrac9.h"
+#include "io-device.hpp"
 #include "orbis-config.hpp"
 #include "orbis/KernelAllocator.hpp"
-#include "orbis/utils/SharedMutex.hpp"
-// #include "orbis/utils/Logs.hpp"
+#include "orbis/error.hpp"
+#include "orbis/utils/IdMap.hpp"
+#include "orbis/utils/Rc.hpp"
+#include "orbis/utils/SharedAtomic.hpp"
+#include "rx/refl.hpp"
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstdint>
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavutil/samplefmt.h>
-#include <libswresample/swresample.h>
-}
+#include <deque>
+#include <limits>
+#include <mutex>
+#include <print>
+#include <stop_token>
+#include <thread>
+#include <utility>
 
-enum class Opcode : std::uint8_t {
-  RunBufferRa = 1,
-  ControlBufferRa = 2,
-  Flags = 4,
-  ReturnAddress = 6,
-  JobBufferOutputRa = 17,
-  JobBufferSidebandRa = 18,
+namespace ajm {
+enum ControlFlags {
+  kControlInitialize = 0x4000,
+  kControlReset = 0x2000,
 };
 
-struct InstructionHeader {
-  orbis::uint32_t id;
-  orbis::uint32_t len;
+enum RunFlags {
+  kRunMultipleFrames = 0x1000,
+  kRunGetCodecInfo = 0x800,
 };
 
-static_assert(sizeof(InstructionHeader) == 0x8);
-
-struct OpcodeHeader {
-  orbis::uint32_t opcode;
-
-  Opcode getOpcode() const {
-    // ORBIS_LOG_ERROR(__FUNCTION__, opcode);
-    if (auto loType = static_cast<Opcode>(opcode & 0xf);
-        loType == Opcode::ReturnAddress || loType == Opcode::Flags) {
-      return loType;
-    }
-
-    return static_cast<Opcode>(opcode & 0x1f);
-  }
+enum SidebandFlags {
+  kSidebandStream = 0x800000000000,
+  kSidebandFormat = 0x400000000000,
+  kSidebandGaplessDecode = 0x200000000000,
 };
 
-struct ReturnAddress {
-  orbis::uint32_t opcode;
-  orbis::uint32_t unk; // 0, padding?
-  orbis::ptr<void> returnAddress;
-};
-static_assert(sizeof(ReturnAddress) == 0x10);
-
-struct BatchJobControlBufferRa {
-  orbis::uint32_t opcode;
-  orbis::uint32_t sidebandInputSize;
-  orbis::ptr<std::byte> pSidebandInput;
-  orbis::uint32_t flagsHi;
-  orbis::uint32_t flagsLo;
-  orbis::uint32_t commandId;
-  orbis::uint32_t sidebandOutputSize;
-  orbis::ptr<std::byte> pSidebandOutput;
-
-  std::uint64_t getFlags() { return ((uint64_t)flagsHi << 0x1a) | flagsLo; }
-};
-static_assert(sizeof(BatchJobControlBufferRa) == 0x28);
-
-struct BatchJobInputBufferRa {
-  orbis::uint32_t opcode;
-  orbis::uint32_t szInputSize;
-  orbis::ptr<std::byte> pInput;
-};
-static_assert(sizeof(BatchJobInputBufferRa) == 0x10);
-
-struct BatchJobFlagsRa {
-  orbis::uint32_t flagsHi;
-  orbis::uint32_t flagsLo;
+enum {
+  kResultInvalidData = 0x2,
+  kResultInvalidParameter = 0x4,
+  kResultPartialInput = 0x8,
+  kResultNotEnoughRoom = 0x10,
+  kResultStreamChange = 0x20,
+  kResultTooManyChannels = 0x40,
+  kResultUnsupportedFlag = 0x80,
+  kResultSidebandTruncated = 0x100,
+  kResultPriorityPassed = 0x200,
+  kResultCodecError = 0x40000000,
+  kResultFatal = 0x80000000,
 };
 
-static_assert(sizeof(BatchJobFlagsRa) == 0x8);
-
-struct BatchJobOutputBufferRa {
-  orbis::uint32_t opcode;
-  orbis::uint32_t outputSize;
-  orbis::ptr<std::byte> pOutput;
-};
-static_assert(sizeof(BatchJobOutputBufferRa) == 0x10);
-
-struct BatchJobSidebandBufferRa {
-  orbis::uint32_t opcode;
-  orbis::uint32_t sidebandSize;
-  orbis::ptr<std::byte> pSideband;
-};
-static_assert(sizeof(BatchJobSidebandBufferRa) == 0x10);
-
-
-struct AjmOutputBuffer {
-  orbis::ptr<std::byte> pOutput;
-  orbis::size_t size;
-};
-struct RunJob {
-  std::uint64_t flags;
-  std::uint32_t sidebandSize;
-  std::uint32_t totalOutputSize;
-  std::vector<AjmOutputBuffer> outputBuffers;
-  orbis::ptr<std::byte> pSideband;
-  bool control;
+enum class CodecId : std::uint32_t {
+  MP3 = 0,
+  At9 = 1,
+  AAC = 2,
 };
 
-// Thanks to mystical SirNickity with 1 post
-// https://hydrogenaud.io/index.php?topic=85125.msg747716#msg747716
-
-inline constexpr uint8_t mpeg_versions[4] = {25, 0, 2, 1};
-
-// Layers - use [layer]
-inline constexpr uint8_t mpeg_layers[4] = {0, 3, 2, 1};
-
-// Bitrates - use [version][layer][bitrate]
-inline constexpr uint16_t mpeg_bitrates[4][4][16] = {
-    {
-        // Version 2.5
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Reserved
-        {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160,
-         0}, // Layer 3
-        {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160,
-         0}, // Layer 2
-        {0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
-         0} // Layer 1
-    },
-    {
-        // Reserved
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Invalid
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Invalid
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Invalid
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}  // Invalid
-    },
-    {
-        // Version 2
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Reserved
-        {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160,
-         0}, // Layer 3
-        {0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160,
-         0}, // Layer 2
-        {0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
-         0} // Layer 1
-    },
-    {
-        // Version 1
-        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Reserved
-        {0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
-         0}, // Layer 3
-        {0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
-         0}, // Layer 2
-        {0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
-         0}, // Layer 1
-    }};
-
-// Sample rates - use [version][srate]
-inline constexpr uint16_t mpeg_srates[4][4] = {
-    {11025, 12000, 8000, 0},  // MPEG 2.5
-    {0, 0, 0, 0},             // Reserved
-    {22050, 24000, 16000, 0}, // MPEG 2
-    {44100, 48000, 32000, 0}  // MPEG 1
+enum class ChannelCount : orbis::uint32_t {
+  Default,
+  _1,
+  _2,
+  _3,
+  _4,
+  _5,
+  _6,
+  _8,
 };
 
-// Samples per frame - use [version][layer]
-inline constexpr uint16_t mpeg_frame_samples[4][4] = {
-    //    Rsvd     3     2     1  < Layer  v Version
-    {0, 576, 1152, 384}, //       2.5
-    {0, 0, 0, 0},        //       Reserved
-    {0, 576, 1152, 384}, //       2
-    {0, 1152, 1152, 384} //       1
+enum class Format : orbis::uint32_t {
+  S16 = 0, // default
+  S32 = 1,
+  Float = 2
 };
 
-// Slot size (MPEG unit of measurement) - use [layer]
-inline constexpr uint8_t mpeg_slot_size[4] = {0, 1, 1, 4}; // Rsvd, 3, 2, 1
+enum class BatchId : std::uint32_t {};
+enum class InstanceId : std::uint32_t {};
 
-constexpr uint32_t get_mp3_data_size(const uint8_t *data) {
-  // Quick validity check
-  if (((data[0] & 0xFF) != 0xFF) || ((data[1] & 0xE0) != 0xE0) // 3 sync bits
-      || ((data[1] & 0x18) == 0x08)                            // Version rsvd
-      || ((data[1] & 0x06) == 0x00)                            // Layer rsvd
-      || ((data[2] & 0xF0) == 0xF0)                            // Bitrate rsvd
-  ) {
-    return 0;
+struct PackedInstanceId {
+  std::uint32_t raw;
+
+  static PackedInstanceId create(CodecId codecId, InstanceId instanceId) {
+    return {.raw = static_cast<std::uint32_t>(codecId) << 15 |
+                   static_cast<std::uint32_t>(instanceId)};
   }
 
-  // Data to be extracted from the header
-  uint8_t ver = (data[1] & 0x18) >> 3; // Version index
-  uint8_t lyr = (data[1] & 0x06) >> 1; // Layer index
-  uint8_t pad = (data[2] & 0x02) >> 1; // Padding? 0/1
-  uint8_t brx = (data[2] & 0xf0) >> 4; // Bitrate index
-  uint8_t srx = (data[2] & 0x0c) >> 2; // SampRate index
-
-  // Lookup real values of these fields
-  uint32_t bitrate = mpeg_bitrates[ver][lyr][brx] * 1000;
-  uint32_t samprate = mpeg_srates[ver][srx];
-  uint16_t samples = mpeg_frame_samples[ver][lyr];
-  uint8_t slot_size = mpeg_slot_size[lyr];
-
-  // In-between calculations
-  float bps = static_cast<float>(samples) / 8.0f;
-  float fsize =
-      ((bps * static_cast<float>(bitrate)) / static_cast<float>(samprate)) +
-      ((pad) ? slot_size : 0);
-
-  // ORBIS_LOG_TODO(__FUNCTION__, (uint16_t)ver, (uint16_t)lyr,
-  //                (uint16_t)pad, (uint16_t)brx, (uint16_t)srx, bitrate,
-  //                samprate, samples, (uint16_t)slot_size, bps, fsize,
-  //                static_cast<uint16_t>(fsize));
-
-  // Frame sizes are truncated integers
-  return static_cast<uint16_t>(fsize);
-}
-
-enum AACHeaderType { AAC_ADTS = 1, AAC_RAW = 2 };
-
-inline constexpr orbis::uint32_t AACFreq[12] = {96000, 88200, 64000, 48000,
-                                                44100, 32000, 24000, 22050,
-                                                16000, 12000, 11025, 8000};
-
-enum AJMCodecs : orbis::uint32_t {
-  AJM_CODEC_MP3 = 0,
-  AJM_CODEC_At9 = 1,
-  AJM_CODEC_AAC = 2,
-
-  AJM_CODEC_COUNT
-};
-
-enum AJMChannels : orbis::uint32_t {
-  AJM_CHANNEL_DEFAULT = 0,
-  AJM_CHANNEL_1 = 1,
-  AJM_CHANNEL_2 = 2,
-  AJM_CHANNEL_3 = 3,
-  AJM_CHANNEL_4 = 4,
-  AJM_CHANNEL_5 = 5,
-  AJM_CHANNEL_6 = 6,
-  AJM_CHANNEL_8 = 8,
-};
-
-enum AJMFormat : orbis::uint32_t {
-  AJM_FORMAT_S16 = 0, // default
-  AJM_FORMAT_S32 = 1,
-  AJM_FORMAT_FLOAT = 2
-};
-
-struct At9Instance {
-  orbis::ptr<void> handle{};
-  orbis::uint32_t inputChannels{};
-  orbis::uint32_t framesInSuperframe{};
-  orbis::uint32_t frameSamples{};
-  orbis::uint32_t superFrameDataLeft{};
-  orbis::uint32_t superFrameDataIdx{};
-  orbis::uint32_t superFrameSize{};
-  orbis::uint32_t estimatedSizeUsed{};
-  orbis::uint32_t sampleRate{};
-  Atrac9Format outputFormat{};
-  orbis::uint32_t configData;
-
-  ~At9Instance() {
-    if (handle) {
-      Atrac9ReleaseHandle(handle);
-    }
+  [[nodiscard]] InstanceId getInstanceId() const {
+    return static_cast<InstanceId>(raw & ((1 << 15) - 1));
   }
+  [[nodiscard]] CodecId getCodecId() const {
+    return static_cast<CodecId>(raw >> 15);
+  }
+
+  auto operator<=>(const PackedInstanceId &) const = default;
 };
 
-struct AACInstance {
-  AACHeaderType headerType;
-  orbis::uint32_t sampleRate;
-};
-
-struct AJMSidebandGaplessDecode {
+struct SidebandGaplessDecode {
   orbis::uint32_t totalSamples;
   orbis::uint16_t skipSamples;
   orbis::uint16_t totalSkippedSamples;
 };
 
-struct AJMSidebandResult {
+struct SidebandResult {
   orbis::int32_t result;
   orbis::int32_t codecResult;
 };
 
-struct AJMSidebandStream {
+struct SidebandStream {
   orbis::int32_t inputSize;
   orbis::int32_t outputSize;
   orbis::uint64_t decodedSamples;
 };
 
-struct AJMSidebandMultipleFrames {
+struct SidebandMultipleFrames {
   orbis::uint32_t framesProcessed;
   orbis::uint32_t unk0;
 };
 
-struct AJMSidebandFormat {
-  AJMChannels channels;
+struct SidebandFormat {
+  ChannelCount channels;
   orbis::uint32_t unk0; // maybe channel mask?
   orbis::uint32_t sampleRate;
-  AJMFormat sampleFormat;
+  Format sampleFormat;
   uint32_t bitrate;
   uint32_t unk1;
 };
 
-struct AJMAt9CodecInfoSideband {
-  orbis::uint32_t superFrameSize;
-  orbis::uint32_t framesInSuperFrame;
-  orbis::uint32_t unk0;
-  orbis::uint32_t frameSamples;
+struct AjmBuffer {
+  orbis::ptr<std::byte> pData;
+  orbis::size_t size;
 };
 
-struct AJMMP3CodecInfoSideband {
-  orbis::uint32_t header;
-  orbis::uint8_t unk0;
-  orbis::uint8_t unk1;
-  orbis::uint8_t unk2;
-  orbis::uint8_t unk3;
-  orbis::uint8_t unk4;
-  orbis::uint8_t unk5;
-  orbis::uint16_t unk6;
-  orbis::uint16_t unk7;
-  orbis::uint16_t unk8;
+struct Job {
+  std::uint64_t flags;
+  std::uint32_t sidebandSize;
+  std::uint32_t totalOutputSize;
+  std::vector<AjmBuffer> inputBuffers;
+  std::vector<AjmBuffer> outputBuffers;
+  orbis::ptr<std::byte> pSideband;
+  orbis::ptr<SidebandResult> pSidebandResult;
+  std::uint64_t controlFlags;
 };
 
-struct AJMAACCodecInfoSideband {
-  orbis::uint32_t heaac;
-  orbis::uint32_t unk0;
-};
+class InstanceBatch;
 
-struct Instance {
-  orbis::shared_mutex mtx;
-  AJMCodecs codec;
-  AJMChannels maxChannels;
-  AJMFormat outputFormat;
-  At9Instance at9;
-  AACInstance aac;
-  orbis::kvector<std::byte> inputBuffer;
-  orbis::kvector<std::byte> outputBuffer;
+struct Batch : orbis::RcBase {
+  enum Status {
+    Queued,
+    Cancelled,
+    Complete,
+  };
 
-  AVCodecContext *codecCtx;
-  SwrContext *resampler;
-  orbis::uint32_t lastBatchId;
-  // TODO: use AJMSidebandGaplessDecode for these variables
-  AJMSidebandGaplessDecode gapless;
-  orbis::uint32_t processedSamples;
-  AJMSidebandFormat lastDecode;
+private:
+  std::atomic<std::uint32_t> mCompleteJobs{0};
+  orbis::shared_atomic32 mStatus{Status::Queued};
+  std::atomic<std::uint64_t> mBatchError{0};
+  std::vector<orbis::Ref<InstanceBatch>> mInstanceBatches;
 
-  ~Instance() {
-    if (resampler) {
-      swr_free(&resampler);
+public:
+  [[nodiscard]] orbis::ErrorCode wait(std::uint32_t timeout,
+                                      std::uint64_t *batchError) {
+    std::chrono::microseconds usecTimeout;
+    if (timeout == std::numeric_limits<std::uint32_t>::max()) {
+      usecTimeout = std::chrono::microseconds::max();
+    } else {
+      usecTimeout = std::chrono::microseconds(timeout);
     }
-    if (codecCtx) {
-      avcodec_free_context(&codecCtx);
+
+    while (true) {
+      auto status = mStatus.load(std::memory_order::relaxed);
+      if (status != Status::Queued) {
+        *batchError = mBatchError.load(std::memory_order::relaxed);
+        break;
+      }
+
+      auto errc = mStatus.wait(status, usecTimeout);
+
+      if (errc != std::errc{}) {
+        return orbis::toErrorCode(errc);
+      }
+    }
+
+    return {};
+  }
+
+  [[nodiscard]] Status getStatus() const {
+    return Status(mStatus.load(std::memory_order::acquire));
+  }
+
+  void setStatus(Status status) {
+    if (status == Status::Queued) {
+      return;
+    }
+
+    std::uint32_t prevStatus = Status::Queued;
+    if (mStatus.compare_exchange_strong(prevStatus, status,
+                                        std::memory_order::relaxed,
+                                        std::memory_order::release)) {
+      mStatus.notify_all();
+    }
+  }
+
+  void handleCompletion(std::uint64_t batchError) {
+    if (mBatchError != 0) {
+      std::uint64_t prevError = 0;
+      mBatchError.compare_exchange_strong(prevError, batchError);
+    }
+
+    if (mCompleteJobs.fetch_add(1) == mInstanceBatches.size() - 1) {
+      setStatus(Status::Complete);
     }
   }
 };
 
-enum ControlFlags {
-  CONTROL_INITIALIZE = 0x4000,
-  CONTROL_RESET = 0x2000,
+class InstanceBatch : public orbis::RcBase {
+  orbis::Ref<Batch> mBatch;
+  std::vector<Job> mJobs;
+
+public:
+  InstanceBatch() = default;
+  InstanceBatch(orbis::Ref<Batch> batch, std::vector<Job> jobs)
+      : mBatch(std::move(batch)), mJobs(std::move(jobs)) {}
+
+  std::span<const Job> getJobs() { return mJobs; }
+  void complete(std::uint64_t batchError) {
+    mBatch->handleCompletion(batchError);
+  }
+  [[nodiscard]] bool inProgress() const {
+    return mBatch->getStatus() == Batch::Status::Queued;
+  }
 };
 
-enum RunFlags {
-  RUN_MULTIPLE_FRAMES = 0x1000,
-  RUN_GET_CODEC_INFO = 0x800,
+class CodecInstance : public orbis::RcBase {
+  std::mutex mWorkerMutex;
+  std::condition_variable mWorkerCv;
+  std::deque<orbis::Ref<InstanceBatch>> mJobQueue;
+  std::jthread mWorkerThread{
+      [this](const std::stop_token &stopToken) { workerEntry(stopToken); }};
+
+public:
+  virtual ~CodecInstance() {
+    std::lock_guard lock(mWorkerMutex);
+    mWorkerThread.request_stop();
+    mWorkerCv.notify_all();
+  }
+
+  virtual std::uint64_t runJob(const Job &job) = 0;
+  virtual void reset() = 0;
+
+  void runBatch(orbis::Ref<Batch> batch, std::vector<Job> jobs) {
+    auto instanceBatch = orbis::Ref<InstanceBatch>(
+        orbis::knew<InstanceBatch>(std::move(batch), std::move(jobs)));
+
+    std::lock_guard lock(mWorkerMutex);
+    mJobQueue.push_back(instanceBatch);
+    mWorkerCv.notify_one();
+  }
+
+private:
+  void workerEntry(const std::stop_token &stopToken) {
+    while (!stopToken.stop_requested()) {
+      orbis::Ref<InstanceBatch> batch;
+      {
+        std::unique_lock lock(mWorkerMutex);
+
+        while (mJobQueue.empty()) {
+          mWorkerCv.wait(lock);
+
+          if (stopToken.stop_requested()) {
+            return;
+          }
+        }
+      }
+
+      if (batch == nullptr) {
+        continue;
+      }
+
+      if (batch->inProgress()) {
+        std::uint64_t error = 0;
+        for (auto &job : batch->getJobs()) {
+          auto result = runJob(job);
+          if (result != 0) {
+            error = result;
+          }
+        }
+
+        batch->complete(error);
+      }
+    }
+  }
 };
 
-enum SidebandFlags {
-  SIDEBAND_STREAM = 0x800000000000,
-  SIDEBAND_FORMAT = 0x400000000000,
-  SIDEBAND_GAPLESS_DECODE = 0x200000000000,
+struct Codec : orbis::RcBase {
+  virtual ~Codec() = default;
+  [[nodiscard]] virtual orbis::ErrorCode
+  createInstance(orbis::Ref<ajm::CodecInstance> *instance, std::uint32_t unk0,
+                 std::uint64_t flags) = 0;
+};
+
+inline constexpr auto kCodecCount = rx::fieldCount<ajm::CodecId>;
+} // namespace ajm
+
+struct AjmDevice : IoDevice {
+  orbis::shared_mutex mtx;
+
+  orbis::Ref<ajm::Codec> codecs[ajm::kCodecCount];
+  orbis::RcIdMap<ajm::CodecInstance, ajm::InstanceId>
+      mCodecInstances[ajm::kCodecCount];
+
+  orbis::RcIdMap<ajm::Batch, ajm::BatchId, 4096, 1> batchMap;
+
+  orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+
+  template <typename InstanceT, typename... ArgsT>
+  void createCodec(ajm::CodecId id, ArgsT &&...args) {
+    auto instance = orbis::knew<InstanceT>(std::forward<ArgsT>(args)...);
+    codecs[std::to_underlying(id)] = instance;
+  }
+
+  [[nodiscard]] orbis::ErrorCode
+  createInstance(orbis::Ref<ajm::CodecInstance> *instance, ajm::CodecId codecId,
+                 std::uint32_t unk0, std::uint64_t flags) {
+    auto rawCodecId = std::to_underlying(codecId);
+    if (rawCodecId >= ajm::kCodecCount) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    auto codec = codecs[rawCodecId];
+
+    if (codec == nullptr) {
+      return orbis::ErrorCode::SRCH;
+    }
+
+    return codec->createInstance(instance, unk0, flags);
+  }
+
+  [[nodiscard]] orbis::ErrorCode removeInstance(ajm::CodecId codecId,
+                                                ajm::InstanceId instanceId) {
+    auto rawCodecId = std::to_underlying(codecId);
+    if (rawCodecId >= ajm::kCodecCount) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    if (!mCodecInstances[rawCodecId].close(instanceId)) {
+      return orbis::ErrorCode::BADF;
+    }
+
+    return {};
+  }
+
+  [[nodiscard]] orbis::Ref<ajm::CodecInstance>
+  getInstance(ajm::CodecId codecId, ajm::InstanceId instanceId) {
+    auto rawCodecId = std::to_underlying(codecId);
+    if (rawCodecId >= ajm::kCodecCount) {
+      return {};
+    }
+
+    return mCodecInstances[rawCodecId].get(instanceId);
+  }
+
+  [[nodiscard]] ajm::InstanceId
+  addCodecInstance(ajm::CodecId codecId,
+                   orbis::Ref<ajm::CodecInstance> instance) {
+    auto &instances = mCodecInstances[std::to_underlying(codecId)];
+
+    auto id = instances.insert(std::move(instance));
+
+    if (id == std::remove_cvref_t<decltype(instances)>::npos) {
+      std::println(stderr, "out of codec instances");
+      std::abort();
+    }
+
+    return id;
+  }
+
+  [[nodiscard]] ajm::BatchId addBatch(ajm::Batch *batch) {
+    auto id = batchMap.insert(batch);
+    if (id == decltype(batchMap)::npos) {
+      std::println(stderr, "out of batches");
+      std::abort();
+    }
+
+    return id;
+  }
+
+  [[nodiscard]] orbis::Ref<ajm::Batch> getBatch(ajm::BatchId id) const {
+    return batchMap.get(id);
+  }
+
+  [[nodiscard]] orbis::ErrorCode removeBatch(ajm::BatchId id) {
+    if (batchMap.close(id)) {
+      return orbis::ErrorCode::BADF;
+    }
+
+    return {};
+  }
 };

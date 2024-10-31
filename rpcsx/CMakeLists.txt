@@ -9,6 +9,8 @@ add_library(orbis::kernel::config ALIAS standalone-config)
 add_executable(rpcsx
   audio/AudioDevice.cpp
   audio/AlsaDevice.cpp
+  audio/At9Codec.cpp
+  audio/FFmpegCodecs.cpp
 
   iodev/ajm.cpp
   iodev/blockpool.cpp
