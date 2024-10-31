@@ -1,6 +1,5 @@
 #include "utils/SharedMutex.hpp"
 #include "utils/Logs.hpp"
-#include <linux/futex.h>
 #include <syscall.h>
 #include <unistd.h>
 #include <xmmintrin.h>
@@ -48,7 +47,7 @@ void shared_mutex::impl_lock_shared(unsigned val) {
   if ((old % c_sig) + c_one >= c_sig)
     std::abort(); // "shared_mutex overflow"
 
-  while (impl_wait() != 0) {}
+  while (impl_wait() != std::errc{}) {}
   lock_downgrade();
 }
 void shared_mutex::impl_unlock_shared(unsigned old) {
@@ -60,9 +59,9 @@ void shared_mutex::impl_unlock_shared(unsigned old) {
     impl_signal();
   }
 }
-int shared_mutex::impl_wait() {
+std::errc shared_mutex::impl_wait() {
   while (true) {
-    const auto [old, ok] = atomic_fetch_op(m_value, [](unsigned &value) {
+    const auto [old, ok] = m_value.fetch_op([](unsigned &value) {
       if (value >= c_sig) {
         value -= c_sig;
         return true;
@@ -75,19 +74,17 @@ int shared_mutex::impl_wait() {
       break;
     }
 
-    int result = syscall(SYS_futex, &m_value, FUTEX_WAIT, old, 0, 0, 0);
-    if (result < 0) {
-      result = errno;
-    }
-    if (result == EINTR) {
-      return EINTR;
+    auto result = m_value.wait(old);
+    if (result == std::errc::interrupted) {
+      return result;
     }
   }
+
   return{};
 }
 void shared_mutex::impl_signal() {
   m_value += c_sig;
-  syscall(SYS_futex, &m_value, FUTEX_WAKE, 1, 0, 0, 0);
+  m_value.notify_one();
 }
 void shared_mutex::impl_lock(unsigned val) {
   if (val >= c_err)
@@ -123,7 +120,7 @@ void shared_mutex::impl_lock(unsigned val) {
 
   if ((old % c_sig) + c_one >= c_sig)
     std::abort(); // "shared_mutex overflow"
-  while (impl_wait() != 0) {}
+  while (impl_wait() != std::errc{}) {}
 }
 void shared_mutex::impl_unlock(unsigned old) {
   if (old - c_one >= c_err)
@@ -155,27 +152,23 @@ void shared_mutex::impl_lock_upgrade() {
     return;
   }
 
-  while (impl_wait() != 0) {}
+  while (impl_wait() != std::errc{}) {}
 }
 bool shared_mutex::lock_forced(int count) {
   if (count == 0)
     return false;
   if (count > 0) {
     // Lock
-    return atomic_op(m_value, [&](unsigned &v) {
+    return m_value.op([&](std::uint32_t &v) {
       if (v & c_sig) {
         v -= c_sig;
         v += c_one * count;
         return true;
       }
 
-      if (v == 0) {
-        v += c_one * count;
-        return true;
-      }
-
+      bool firstLock = v == 0;
       v += c_one * count;
-      return false;
+      return firstLock;
     });
   }
 

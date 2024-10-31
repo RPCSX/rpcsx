@@ -3,6 +3,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE on)
 add_library(obj.orbis-utils-ipc OBJECT
   src/utils/SharedMutex.cpp
   src/utils/SharedCV.cpp
+  src/utils/SharedAtomic.cpp
 )
 add_library(obj.orbis-kernel OBJECT
   src/module.cpp
@@ -88,6 +89,12 @@ target_include_directories(obj.orbis-utils-ipc
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/orbis
 )
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  target_compile_definitions(obj.orbis-utils-ipc PUBLIC ORBIS_HAS_FUTEX)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+  target_compile_definitions(obj.orbis-utils-ipc PUBLIC ORBIS_HAS_ULOCK)
+endif()
 
 add_library(orbis-utils-ipc STATIC)
 add_library(orbis-kernel STATIC)

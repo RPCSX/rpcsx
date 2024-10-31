@@ -1,8 +1,9 @@
 #pragma once
 
 #include <atomic>
-#include <mutex>
 #include <orbis/utils/AtomicOp.hpp>
+#include <orbis/utils/SharedAtomic.hpp>
+#include <system_error>
 
 namespace orbis {
 inline namespace utils {
@@ -16,11 +17,11 @@ class shared_mutex final {
     c_err = 1u << 31,
   };
 
-  std::atomic<unsigned> m_value{};
+  shared_atomic32 m_value{};
 
   void impl_lock_shared(unsigned val);
   void impl_unlock_shared(unsigned old);
-  int impl_wait();
+  std::errc impl_wait();
   void impl_signal();
   void impl_lock(unsigned val);
   void impl_unlock(unsigned old);
@@ -99,10 +100,10 @@ public:
   }
 
   // Check whether can immediately obtain an exclusive (writer) lock
-  bool is_free() const { return m_value.load() == 0; }
+  [[nodiscard]] bool is_free() const { return m_value.load() == 0; }
 
   // Check whether can immediately obtain a shared (reader) lock
-  bool is_lockable() const { return m_value.load() < c_one - 1; }
+  [[nodiscard]] bool is_lockable() const { return m_value.load() < c_one - 1; }
 
 private:
   // For CV
