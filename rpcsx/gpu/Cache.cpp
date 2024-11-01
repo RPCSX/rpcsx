@@ -1006,7 +1006,7 @@ struct CachedImage : Cache::Entry {
          ++mipLevel) {
       auto &mipInfo = info.getSubresourceInfo(mipLevel);
       regions.push_back({
-          .bufferOffset = mipInfo.tiledOffset + imageBuffer.offset,
+          .bufferOffset = imageBuffer.offset + mipInfo.linearOffset,
           .bufferRowLength =
               mipLevel > 0 ? 0 : std::max(imageBufferKey.pitch >> mipLevel, 1u),
           .imageSubresource =
