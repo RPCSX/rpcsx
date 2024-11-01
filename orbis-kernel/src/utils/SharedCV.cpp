@@ -18,7 +18,9 @@ std::errc shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
   std::errc result = {};
 
   while (true) {
-    result = m_value.wait(_val, std::chrono::microseconds(usec_timeout));
+    result = m_value.wait(_val, usec_timeout == static_cast<std::uint64_t>(-1)
+                                    ? std::chrono::microseconds::max()
+                                    : std::chrono::microseconds(usec_timeout));
 
     // Cleanup
     const auto old = m_value.fetch_op([&](unsigned &value) {

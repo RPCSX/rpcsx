@@ -7,14 +7,16 @@ using namespace orbis;
 std::errc shared_atomic32::wait_impl(std::uint32_t oldValue,
                                      std::chrono::microseconds usec_timeout) {
   auto usec_timeout_count = usec_timeout.count();
-  struct timespec timeout{};
-  timeout.tv_nsec = (usec_timeout_count % 1000'000) * 1000;
-  timeout.tv_sec = (usec_timeout_count / 1000'000);
 
-  int result = syscall(
-      SYS_futex, this, FUTEX_WAIT, oldValue,
-      usec_timeout != std::chrono::microseconds::max() ? &timeout : nullptr, 0,
-      0);
+  struct timespec timeout{};
+  bool useTimeout = usec_timeout != std::chrono::microseconds::max();
+  if (useTimeout) {
+    timeout.tv_nsec = (usec_timeout_count % 1000'000) * 1000;
+    timeout.tv_sec = (usec_timeout_count / 1000'000);
+  }
+
+  int result = syscall(SYS_futex, this, FUTEX_WAIT, oldValue,
+                       useTimeout ? &timeout : nullptr);
 
   if (result < 0) {
     return static_cast<std::errc>(errno);
