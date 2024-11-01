@@ -137,15 +137,26 @@ static void runBridge(int vmId) {
     auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
     auto &gpuCtx = gpu.getContext();
     std::vector<std::uint64_t> fetchedCommands;
-    fetchedCommands.reserve(std::size(gpuCtx.cacheCommands));
+    fetchedCommands.reserve(std::size(gpuCtx.cpuCacheCommands));
+
+    std::vector<std::atomic<std::uint64_t> *> fetchedAtomics;
+    std::uint32_t prevIdleValue = 0;
 
     while (true) {
-      for (auto &command : gpuCtx.cacheCommands) {
-        std::uint64_t value = command[vmId].load(std::memory_order::relaxed);
+      if (gpuCtx.cpuCacheCommandsIdle[vmId].wait(prevIdleValue) !=
+          std::errc{}) {
+        continue;
+      }
+
+      prevIdleValue =
+          gpuCtx.cpuCacheCommandsIdle[vmId].load(std::memory_order::acquire);
+
+      for (auto &command : gpuCtx.cpuCacheCommands[vmId]) {
+        std::uint64_t value = command.load(std::memory_order::relaxed);
 
         if (value != 0) {
           fetchedCommands.push_back(value);
-          command[vmId].store(0, std::memory_order::relaxed);
+          fetchedAtomics.push_back(&command);
         }
       }
 
@@ -187,7 +198,12 @@ static void runBridge(int vmId) {
         }
       }
 
+      for (auto fetchedAtomic : fetchedAtomics) {
+        fetchedAtomic->store(0, std::memory_order::release);
+      }
+
       fetchedCommands.clear();
+      fetchedAtomics.clear();
     }
   }}.detach();
 }

@@ -210,7 +210,14 @@ Device::Device() : vkContext(createVkContext(this)) {
 
   cacheUpdateThread = std::jthread([this](const std::stop_token &stopToken) {
     auto &sched = graphicsPipes[0].scheduler;
+    std::uint32_t prevIdleValue = 0;
     while (!stopToken.stop_requested()) {
+      if (gpuCacheCommandIdle.wait(prevIdleValue) != std::errc{}) {
+        continue;
+      }
+
+      prevIdleValue = gpuCacheCommandIdle.load(std::memory_order::acquire);
+
       for (int vmId = 0; vmId < kMaxProcessCount; ++vmId) {
         auto page = gpuCacheCommand[vmId].load(std::memory_order::relaxed);
         if (page == 0) {
@@ -996,11 +1003,16 @@ static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,
       (static_cast<std::uint64_t>(pageCount - 1) << 32) | firstPage;
 
   while (true) {
-    for (std::size_t i = 0; i < std::size(device->cacheCommands); ++i) {
+    for (std::size_t i = 0; i < std::size(device->cpuCacheCommands); ++i) {
       std::uint64_t expCommand = 0;
-      if (device->cacheCommands[vmId][i].compare_exchange_strong(
-              expCommand, command, std::memory_order::acquire,
+      if (device->cpuCacheCommands[vmId][i].compare_exchange_strong(
+              expCommand, command, std::memory_order::release,
               std::memory_order::relaxed)) {
+        device->cpuCacheCommandsIdle[vmId].fetch_add(
+            1, std::memory_order::release);
+        device->cpuCacheCommandsIdle[vmId].notify_one();
+
+        while (device->cpuCacheCommands[vmId][i].load(std::memory_order::acquire) != 0) {}
         return;
       }
     }
