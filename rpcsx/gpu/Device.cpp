@@ -92,6 +92,8 @@ static vk::Context createVkContext(Device *device) {
   createWindow();
 #endif
 
+  glfwHideWindow(device->window);
+
   const char **glfwExtensions;
   uint32_t glfwExtensionCount = 0;
   glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -344,6 +346,8 @@ void Device::start() {
 
   uint32_t gpIndex = -1;
   GLFWgamepadstate gpState;
+
+  glfwShowWindow(window);
 
   while (true) {
     glfwPollEvents();
