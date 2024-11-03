@@ -1003,9 +1003,12 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   std::println("vm::protect(addr = {}, len = {}, prot = {})", addr, size,
                mapProtToString(prot));
 
-  size = rx::alignUp(size, kPageSize);
-  auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
+  auto endAddress = address + size;
+  address = rx::alignDown(address, kPageSize);
+  endAddress = rx::alignUp(endAddress, kPageSize);
+  size = endAddress - address;
+  auto pages = size >> kPageShift;
   if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
       address > kMaxAddress - size) {
     std::println(stderr, "Memory error: protect out of memory");
@@ -1037,7 +1040,8 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   } else if (prot >> 4) {
     std::println(stderr, "ignoring mapping {:x}-{:x}", address, address + size);
   }
-  return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
+  return ::mprotect(std::bit_cast<void *>(address), size,
+                    prot & kMapProtCpuAll) == 0;
 }
 
 static std::int32_t getPageProtectionImpl(std::uint64_t address) {
