@@ -1114,6 +1114,10 @@ bool vm::virtualQuery(const void *addr, std::int32_t flags,
   std::lock_guard lock(g_mtx);
 
   auto address = reinterpret_cast<std::uint64_t>(addr);
+  if (address < kMinAddress || address >= kMaxAddress) {
+    return false;
+  }
+
   auto it = gMapInfo.lowerBound(address);
 
   if (it == gMapInfo.end()) {
