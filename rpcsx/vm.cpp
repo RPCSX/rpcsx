@@ -241,7 +241,7 @@ static constexpr std::uint64_t kGroupSize = 64;
 static constexpr std::uint64_t kGroupMask = kGroupSize - 1;
 static constexpr std::uint64_t kGroupsInBlock = kPagesInBlock / kGroupSize;
 static constexpr std::uint64_t kMinAddress =
-    kFirstBlock * kBlockSize + vm::kPageSize * 0x10;
+    kFirstBlock * kBlockSize + vm::kPageSize * 0x100;
 static constexpr std::uint64_t kMaxAddress = (kLastBlock + 1) * kBlockSize - 1;
 static constexpr std::uint64_t kMemorySize = kBlockCount * kBlockSize;
 
