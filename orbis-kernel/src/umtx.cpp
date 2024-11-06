@@ -1,9 +1,9 @@
 #include "umtx.hpp"
+#include "error.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/thread.hpp"
-#include "orbis/utils/AtomicOp.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "time.hpp"
+#include <limits>
 
 namespace orbis {
 std::pair<const UmtxKey, UmtxCond> *UmtxChain::enqueue(UmtxKey &key,
@@ -20,29 +20,46 @@ std::pair<const UmtxKey, UmtxCond> *UmtxChain::enqueue(UmtxKey &key,
 void UmtxChain::erase(std::pair<const UmtxKey, UmtxCond> *obj) {
   for (auto [it, e] = sleep_queue.equal_range(obj->first); it != e; it++) {
     if (&*it == obj) {
-      auto node = sleep_queue.extract(it);
-      node.key() = {};
-      spare_queue.insert(spare_queue.begin(), std::move(node));
+      erase(it);
       return;
     }
   }
 }
 
-uint UmtxChain::notify_one(const UmtxKey &key) {
+UmtxChain::queue_type::iterator UmtxChain::erase(queue_type::iterator it) {
+  auto next = std::next(it);
+  auto node = sleep_queue.extract(it);
+  node.key() = {};
+  spare_queue.insert(spare_queue.begin(), std::move(node));
+  return next;
+}
+
+uint UmtxChain::notify_n(const UmtxKey &key, sint count) {
   auto it = sleep_queue.find(key);
   if (it == sleep_queue.end())
     return 0;
-  it->second.thr = nullptr;
-  it->second.cv.notify_all(mtx);
-  this->erase(&*it);
-  return 1;
+
+  uint n = 0;
+  while (count > 0) {
+    it->second.thr = nullptr;
+    it->second.cv.notify_all(mtx);
+    it = erase(it);
+
+    n++;
+    count--;
+
+    if (it == sleep_queue.end()) {
+      break;
+    }
+  }
+
+  return n;
 }
 
+uint UmtxChain::notify_one(const UmtxKey &key) { return notify_n(key, 1); }
+
 uint UmtxChain::notify_all(const UmtxKey &key) {
-  uint n = 0;
-  while (notify_one(key))
-    n++;
-  return n;
+  return notify_n(key, std::numeric_limits<sint>::max());
 }
 } // namespace orbis
 
@@ -74,7 +91,7 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
   if (val == id) {
     if (ut + 1 == 0) {
       while (true) {
-        result = ErrorCode{node->second.cv.wait(chain.mtx)};
+        result = orbis::toErrorCode(node->second.cv.wait(chain.mtx));
         if (result != ErrorCode{} || node->second.thr != thread)
           break;
       }
@@ -82,7 +99,8 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
       while (true) {
-        result = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
+        result =
+            orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut - udiff));
         if (node->second.thr != thread)
           break;
         udiff = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -108,18 +126,12 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
 orbis::ErrorCode orbis::umtx_wake(Thread *thread, ptr<void> addr, sint n_wake) {
   ORBIS_LOG_NOTICE(__FUNCTION__, thread->tid, addr, n_wake);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, true, addr);
-  std::size_t count = chain.sleep_queue.count(key);
   if (key.pid == 0) {
     // IPC workaround (TODO)
     chain.notify_all(key);
     return {};
   }
-  // TODO: check this
-  while (count--) {
-    chain.notify_one(key);
-    if (n_wake-- <= 1)
-      break;
-  }
+  chain.notify_n(key, n_wake);
   return {};
 }
 
@@ -179,7 +191,7 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
     auto [chain, key, lock] = g_context.getUmtxChain1(thread, flags, m);
     auto node = chain.enqueue(key, thread);
     if (m->owner.compare_exchange_strong(owner, owner | kUmutexContested)) {
-      error = ErrorCode{node->second.cv.wait(chain.mtx, ut)};
+      error = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
       if (error == ErrorCode{} && node->second.thr == thread) {
         error = ErrorCode::TIMEDOUT;
       }
@@ -309,7 +321,6 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
     ORBIS_LOG_WARNING("umtx_cv_wait: CLOCK_ID", wflags, cv->clockid);
     // std::abort();
     return ErrorCode::NOSYS;
-
   }
   if ((wflags & kCvWaitAbsTime) != 0 && ut + 1) {
     ORBIS_LOG_WARNING("umtx_cv_wait: ABSTIME unimplemented", wflags);
@@ -339,7 +350,7 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
   if (result == ErrorCode{}) {
     if (ut + 1 == 0) {
       while (true) {
-        result = ErrorCode{node->second.cv.wait(chain.mtx, ut)};
+        result = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
         if (result != ErrorCode{} || node->second.thr != thread) {
           break;
         }
@@ -348,7 +359,8 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
       while (true) {
-        result = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
+        result =
+            orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut - udiff));
         if (node->second.thr != thread) {
           break;
         }
@@ -443,7 +455,7 @@ orbis::ErrorCode orbis::umtx_rw_rdlock(Thread *thread, ptr<urwlock> rwlock,
 
       if (ut + 1 == 0) {
         while (true) {
-          result = ErrorCode{node->second.cv.wait(chain.mtx, ut)};
+          result = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
           if (result != ErrorCode{} || node->second.thr != thread) {
             break;
           }
@@ -452,7 +464,8 @@ orbis::ErrorCode orbis::umtx_rw_rdlock(Thread *thread, ptr<urwlock> rwlock,
         auto start = std::chrono::steady_clock::now();
         std::uint64_t udiff = 0;
         while (true) {
-          result = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
+          result =
+              orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut - udiff));
           if (node->second.thr != thread)
             break;
           udiff = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -543,7 +556,7 @@ orbis::ErrorCode orbis::umtx_rw_wrlock(Thread *thread, ptr<urwlock> rwlock,
 
       if (ut + 1 == 0) {
         while (true) {
-          error = ErrorCode{node->second.cv.wait(chain.mtx, ut)};
+          error = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
           if (error != ErrorCode{} || node->second.thr != thread) {
             break;
           }
@@ -552,7 +565,8 @@ orbis::ErrorCode orbis::umtx_rw_wrlock(Thread *thread, ptr<urwlock> rwlock,
         auto start = std::chrono::steady_clock::now();
         std::uint64_t udiff = 0;
         while (true) {
-          error = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
+          error =
+              orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut - udiff));
           if (node->second.thr != thread)
             break;
           udiff = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -645,12 +659,7 @@ orbis::ErrorCode orbis::umtx_rw_unlock(Thread *thread, ptr<urwlock> rwlock) {
     }
   }
 
-  if (count == 1) {
-    chain.notify_one(key);
-  } else if (count != 0) {
-    chain.notify_all(key);
-  }
-
+  chain.notify_n(key, count);
   return {};
 }
 
@@ -658,13 +667,7 @@ orbis::ErrorCode orbis::umtx_wake_private(Thread *thread, ptr<void> addr,
                                           sint n_wake) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread->tid, addr, n_wake);
   auto [chain, key, lock] = g_context.getUmtxChain0(thread, false, addr);
-  std::size_t count = chain.sleep_queue.count(key);
-  // TODO: check this
-  while (count--) {
-    chain.notify_one(key);
-    if (n_wake-- <= 1)
-      break;
-  }
+  chain.notify_n(key, n_wake);
   return {};
 }
 
@@ -726,7 +729,7 @@ orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<usem> sem,
   if (!sem->count) {
     if (ut + 1 == 0) {
       while (true) {
-        result = ErrorCode{node->second.cv.wait(chain.mtx, ut)};
+        result = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
         if (result != ErrorCode{} || node->second.thr != thread)
           break;
       }
@@ -734,7 +737,8 @@ orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<usem> sem,
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
       while (true) {
-        result = ErrorCode{node->second.cv.wait(chain.mtx, ut - udiff)};
+        result =
+            orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut - udiff));
         if (node->second.thr != thread)
           break;
         udiff = std::chrono::duration_cast<std::chrono::microseconds>(

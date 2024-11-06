@@ -702,7 +702,8 @@ struct CachedHostVisibleBuffer : CachedBuffer {
   using CachedBuffer::update;
 
   bool expensive() {
-    return !rx::g_config.disableGpuCache && addressRange.size() >= rx::mem::pageSize;
+    return !rx::g_config.disableGpuCache &&
+           addressRange.size() >= rx::mem::pageSize;
   }
 
   bool flush(void *target, rx::AddressRange range) {
@@ -778,15 +779,7 @@ struct CachedImageBuffer : Cache::Entry {
   unsigned depth = 1;
 
   bool expensive() {
-    if (rx::g_config.disableGpuCache) {
-      return false;
-    }
-
-    if (isLinear() && info.totalTiledSize < rx::mem::pageSize) {
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
   [[nodiscard]] bool isLinear() const {
@@ -1013,7 +1006,7 @@ struct CachedImage : Cache::Entry {
          ++mipLevel) {
       auto &mipInfo = info.getSubresourceInfo(mipLevel);
       regions.push_back({
-          .bufferOffset = mipInfo.tiledOffset + imageBuffer.offset,
+          .bufferOffset = imageBuffer.offset + mipInfo.linearOffset,
           .bufferRowLength =
               mipLevel > 0 ? 0 : std::max(imageBufferKey.pitch >> mipLevel, 1u),
           .imageSubresource =

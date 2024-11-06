@@ -93,6 +93,9 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
               continue;
             }
 
+            gpuContext.gpuCacheCommandIdle.fetch_add(1, std::memory_order::release);
+            gpuContext.gpuCacheCommandIdle.notify_all();
+
             while (!gpuContext.cachePages[vmid][page].compare_exchange_weak(
                 flags, flags & ~amdgpu::kPageLazyLock,
                 std::memory_order::relaxed)) {

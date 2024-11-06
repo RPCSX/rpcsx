@@ -1,0 +1,1 @@
+Checks: 'modernize-*,performance-*,portability-*,-modernize-avoid-c-arrays,-modernize-use-trailing-return-type'

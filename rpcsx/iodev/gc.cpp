@@ -92,7 +92,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
                              {args->cmds + i * 4, 4});
       }
 
-      // gpu.waitForIdle();
+      gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }
@@ -138,6 +138,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
       // ORBIS_LOG_ERROR("submit and write eop", args->eopValue,
       // args->waitFlag);
       gpu.submitWriteEop(gcFile->gfxPipe, args->waitFlag, args->eopValue);
+      gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }
@@ -251,6 +252,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitComputeQueue(args->meId, args->pipeId, args->queueId,
                              args->nextStartOffsetInDw);
+      gpu.waitForIdle();
     } else {
       return orbis::ErrorCode::BUSY;
     }

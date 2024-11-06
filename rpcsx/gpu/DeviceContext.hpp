@@ -1,5 +1,6 @@
 #pragma once
 
+#include "orbis/utils/SharedAtomic.hpp"
 #include <atomic>
 #include <cstdint>
 
@@ -66,10 +67,12 @@ enum {
 struct DeviceContext {
   static constexpr auto kMaxProcessCount = 6;
 
-  PadState kbPadState;
-  std::atomic<std::uint64_t> cacheCommands[kMaxProcessCount][4];
-  std::atomic<std::uint32_t> gpuCacheCommand[kMaxProcessCount];
-  std::atomic<std::uint8_t> *cachePages[kMaxProcessCount];
+  PadState kbPadState{};
+  std::atomic<std::uint64_t> cpuCacheCommands[kMaxProcessCount][4]{};
+  orbis::shared_atomic32 cpuCacheCommandsIdle[kMaxProcessCount]{};
+  orbis::shared_atomic32 gpuCacheCommand[kMaxProcessCount]{};
+  orbis::shared_atomic32 gpuCacheCommandIdle{};
+  std::atomic<std::uint8_t> *cachePages[kMaxProcessCount]{};
 
   volatile std::uint32_t flipBuffer[kMaxProcessCount];
   volatile std::uint64_t flipArg[kMaxProcessCount];

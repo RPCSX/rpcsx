@@ -931,7 +931,6 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (auto thr = orbis::g_currentThread) {
-    std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitMapMemory(thr->tproc->pid, address, len, -1, -1, prot,
                           address - kMinAddress);
@@ -988,7 +987,6 @@ bool vm::unmap(void *addr, std::uint64_t size) {
   gBlocks[(address >> kBlockShift) - kFirstBlock].removeFlags(
       (address & kBlockMask) >> kPageShift, pages, ~0);
   if (auto thr = orbis::g_currentThread) {
-    std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitUnmapMemory(thr->tproc->pid, address, size);
     }
@@ -1003,9 +1001,12 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   std::println("vm::protect(addr = {}, len = {}, prot = {})", addr, size,
                mapProtToString(prot));
 
-  size = rx::alignUp(size, kPageSize);
-  auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
+  auto endAddress = address + size;
+  address = rx::alignDown(address, kPageSize);
+  endAddress = rx::alignUp(endAddress, kPageSize);
+  size = endAddress - address;
+  auto pages = size >> kPageShift;
   if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
       address > kMaxAddress - size) {
     std::println(stderr, "Memory error: protect out of memory");
@@ -1030,14 +1031,14 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
 
   if (auto thr = orbis::g_currentThread) {
     std::println("memory prot: {:x}", prot);
-    std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitProtectMemory(thr->tproc->pid, address, size, prot);
     }
   } else if (prot >> 4) {
     std::println(stderr, "ignoring mapping {:x}-{:x}", address, address + size);
   }
-  return ::mprotect(addr, size, prot & kMapProtCpuAll) == 0;
+  return ::mprotect(std::bit_cast<void *>(address), size,
+                    prot & kMapProtCpuAll) == 0;
 }
 
 static std::int32_t getPageProtectionImpl(std::uint64_t address) {
@@ -1113,6 +1114,10 @@ bool vm::virtualQuery(const void *addr, std::int32_t flags,
   std::lock_guard lock(g_mtx);
 
   auto address = reinterpret_cast<std::uint64_t>(addr);
+  if (address < kMinAddress || address >= kMaxAddress) {
+    return false;
+  }
+
   auto it = gMapInfo.lowerBound(address);
 
   if (it == gMapInfo.end()) {

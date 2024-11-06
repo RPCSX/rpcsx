@@ -140,6 +140,8 @@ public:
   }
 };
 
+template <typename T> Ref(T *) -> Ref<T>;
+
 // template <WithRc T, typename... ArgsT>
 //   requires(std::is_constructible_v<T, ArgsT...>)
 // Ref<T> kcreate(ArgsT &&...args) {

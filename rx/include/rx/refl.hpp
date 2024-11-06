@@ -139,11 +139,11 @@ constexpr auto calcFieldCount() {
   } else {
     constexpr auto c = getNameOf<EnumT(N)>()[0];
     if constexpr (requires { EnumT::Count; }) {
-      return EnumT::Count;
+      return static_cast<std::size_t>(EnumT::Count);
     } else if constexpr (requires { EnumT::_count; }) {
-      return EnumT::_count;
+      return static_cast<std::size_t>(EnumT::_count);
     } else if constexpr (requires { EnumT::count; }) {
-      return EnumT::count;
+      return static_cast<std::size_t>(EnumT::count);
     } else if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
       return N;
     } else if constexpr (c >= '0' && c <= '9') {
