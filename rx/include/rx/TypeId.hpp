@@ -1,35 +1,47 @@
 #pragma once
 
+#include "refl.hpp"
 #include <compare>
 #include <cstddef>
 #include <functional>
 
 namespace rx {
 namespace detail {
-template <typename> char mRawTypeId = 0;
-template <typename T> constexpr const void *getTypeIdImpl() {
+template <typename T> constexpr std::string_view mRawTypeId = getNameOf<T>();
+
+template <typename T>
+[[nodiscard]] constexpr const std::string_view *getTypeIdImpl() {
   return &mRawTypeId<T>;
 }
 } // namespace detail
 
 class TypeId {
-  const void *mId = detail::getTypeIdImpl<void>();
+  const std::string_view *mId = detail::getTypeIdImpl<void>();
 
 public:
-  constexpr const void *getOpaque() const { return mId; }
+  [[nodiscard]] constexpr const void *getOpaque() const { return mId; }
 
-  constexpr static TypeId createFromOpaque(const void *id) {
+  [[nodiscard]] constexpr static TypeId createFromOpaque(const void *id) {
     TypeId result;
-    result.mId = id;
+    result.mId = static_cast<const std::string_view *>(id);
     return result;
   }
 
-  template <typename T> constexpr static TypeId get() {
-    return createFromOpaque(detail::getTypeIdImpl<T>());
+  template <typename T> [[nodiscard]] constexpr static TypeId get() {
+    TypeId result;
+    result.mId = detail::getTypeIdImpl<T>();
+    return result;
   }
+
+  [[nodiscard]] constexpr std::string_view getName() const { return *mId; }
 
   constexpr auto operator<=>(const TypeId &other) const = default;
 };
+
+template <typename... Types>
+constexpr std::array<TypeId, sizeof...(Types)> getTypeIds() {
+  return std::array<TypeId, sizeof...(Types)>{TypeId::get<Types>()...};
+}
 } // namespace rx
 
 namespace std {
