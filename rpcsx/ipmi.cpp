@@ -6,11 +6,17 @@
 #include "orbis/osem.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "rx/hexdump.hpp"
+#include "rx/mem.hpp"
+#include "rx/watchdog.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <cstdint>
+#include <fcntl.h>
 #include <filesystem>
 #include <format>
 #include <print>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 ipmi::IpmiClient ipmi::audioIpmiClient;
 
@@ -585,7 +591,98 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
 
                        size = sizeof(SceLncServiceAppStatus);
                        return 0;
-                     });
+                     })
+      .addSyncMethodStub(
+          orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30033 : 0x3002e,
+          []() -> std::int32_t {
+            auto commonDialog = std::get<0>(orbis::g_context.dialogs.front());
+            auto currentDialogId =
+                *reinterpret_cast<std::int16_t *>(commonDialog + 4);
+            auto currentDialog = std::get<0>(orbis::g_context.dialogs.back());
+            if (currentDialogId == 5) {
+              std::int32_t titleSize = 8192;
+              std::int32_t buttonNameSize = 64;
+              std::string dialogTitle(
+                  reinterpret_cast<char *>(currentDialog + 0x4e4), titleSize);
+              std::string buttonOk(
+                  reinterpret_cast<char *>(currentDialog + 0x2510),
+                  buttonNameSize);
+              std::string buttonCancel(
+                  reinterpret_cast<char *>(currentDialog + 0x2550),
+                  buttonNameSize);
+              auto buttonType =
+                  *reinterpret_cast<std::uint8_t *>(currentDialog + 0x488);
+              ORBIS_LOG_TODO("Activate message dialog", dialogTitle.data(),
+                             buttonOk.data(), buttonCancel.data(),
+                             (std::int16_t)buttonType);
+              // ignore dialogs without buttons
+              if (buttonType != 2 && buttonType != 5 && buttonType != 6) {
+                *reinterpret_cast<std::uint8_t *>(currentDialog + 0x18) =
+                    1; // finished state
+                *reinterpret_cast<std::int32_t *>(currentDialog + 0x30) =
+                    0; // result code
+                *reinterpret_cast<std::uint8_t *>(currentDialog + 0x24ec) =
+                    1; // pressed button type
+              }
+            } else {
+              ORBIS_LOG_TODO("Activate unsupported dialog", currentDialogId);
+            }
+            return 0;
+          })
+      .addSyncMethod(
+          orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30044 : 0x3003f,
+          [=](std::vector<std::vector<std::byte>>,
+              const std::vector<std::span<std::byte>> &inData) -> std::int32_t {
+            struct InitDialogArgs {
+              char *name;
+              size_t len;
+            };
+            auto args = (InitDialogArgs *)inData.data();
+            // maybe it's not necessary, but they add 1 to len
+            std::string realName(args->name, args->len - 1);
+            auto hostPath = rx::getShmGuestPath(realName);
+            ORBIS_LOG_TODO("Register dialog", inData.data(), inData.size(),
+                           realName.data());
+            int shmFd =
+                ::open(hostPath.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+            if (shmFd == -1) {
+              perror("shm_open");
+              std::abort();
+            }
+
+            struct stat controlStat;
+            if (::fstat(shmFd, &controlStat)) {
+              perror("fstat");
+              std::abort();
+            }
+
+            auto shmAddress = reinterpret_cast<std::uint8_t *>(
+                rx::mem::map(nullptr, controlStat.st_size,
+                             PROT_READ | PROT_WRITE, MAP_SHARED, shmFd));
+            if (shmAddress == MAP_FAILED) {
+              perror("mmap");
+              std::abort();
+            }
+            orbis::g_context.dialogs.emplace_back(shmAddress,
+                                                  controlStat.st_size);
+            return 0;
+          })
+      .addSyncMethod(
+          orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30045 : 0x30040,
+          [=](std::vector<std::vector<std::byte>>,
+              const std::vector<std::span<std::byte>> &inData) -> std::int32_t {
+            if (!orbis::g_context.dialogs.empty()) {
+              auto currentDialogAddr =
+                  std::get<0>(orbis::g_context.dialogs.back());
+              auto currentDialogSize =
+                  std::get<1>(orbis::g_context.dialogs.back());
+              ORBIS_LOG_TODO("Unmap shm after unlinking", currentDialogAddr,
+                             currentDialogSize);
+              rx::mem::unmap(currentDialogAddr, currentDialogSize);
+              orbis::g_context.dialogs.pop_back();
+            }
+            return 0;
+          });
   createIpmiServer(process, "SceAppMessaging");
   createIpmiServer(process, "SceShellCoreUtil");
   createIpmiServer(process, "SceNetCtl");
@@ -822,6 +919,7 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
   createEventFlag("SceRtcUtilTzdataUpdateFlag", 0x120, 0);
   createEventFlag("SceDataTransfer", 0x120, 0);
 
+  createEventFlag("SceLncUtilAppStatus00000000", 0x100, 0);
   createEventFlag("SceLncUtilAppStatus1", 0x100, 0);
   createEventFlag("SceAppMessaging1", 0x120, 1);
   createEventFlag("SceShellCoreUtil1", 0x120, 0x3f8c);
