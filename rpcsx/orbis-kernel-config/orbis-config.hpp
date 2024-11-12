@@ -41,11 +41,14 @@ template <typename T> using cptr = T *const;
 
 using caddr_t = ptr<char>;
 
+static constexpr auto kMinAddress = 0x400000;
+static constexpr auto kMaxAddress = 0x100'0000'0000;
+
 [[nodiscard]] inline ErrorCode
 ureadRaw(void *kernelAddress, ptr<const void> userAddress, size_t size) {
   if (size != 0) {
     auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
-    if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+    if (addr < kMinAddress || addr + size >= kMaxAddress || addr + size < addr)
       return ErrorCode::FAULT;
     std::memcpy(kernelAddress, userAddress, size);
   }
@@ -56,7 +59,7 @@ ureadRaw(void *kernelAddress, ptr<const void> userAddress, size_t size) {
 uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
   if (size != 0) {
     auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
-    if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+    if (addr < kMinAddress || addr + size > kMaxAddress || addr + size < addr)
       return ErrorCode::FAULT;
     std::memcpy(userAddress, kernelAddress, size);
   }
@@ -66,7 +69,7 @@ uwriteRaw(ptr<void> userAddress, const void *kernelAddress, size_t size) {
 [[nodiscard]] inline ErrorCode ureadString(char *kernelAddress, size_t size,
                                            ptr<const char> userAddress) {
   auto addr = reinterpret_cast<std::uintptr_t>(userAddress);
-  if (addr < 0x40000 || addr + size > 0x100'0000'0000 || addr + size < addr)
+  if (addr < kMinAddress || addr + size > kMaxAddress || addr + size < addr)
     return ErrorCode::FAULT;
   std::strncpy(kernelAddress, userAddress, size);
   if (kernelAddress[size - 1] != '\0') {

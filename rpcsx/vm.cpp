@@ -2,6 +2,7 @@
 #include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
+#include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
@@ -240,10 +241,11 @@ static constexpr std::uint64_t kBlockCount = kLastBlock - kFirstBlock + 1;
 static constexpr std::uint64_t kGroupSize = 64;
 static constexpr std::uint64_t kGroupMask = kGroupSize - 1;
 static constexpr std::uint64_t kGroupsInBlock = kPagesInBlock / kGroupSize;
-static constexpr std::uint64_t kMinAddress =
-    kFirstBlock * kBlockSize + vm::kPageSize * 0x100;
-static constexpr std::uint64_t kMaxAddress = (kLastBlock + 1) * kBlockSize - 1;
+static constexpr std::uint64_t kMinAddress = orbis::kMinAddress;
+static constexpr std::uint64_t kMaxAddress = orbis::kMaxAddress;
 static constexpr std::uint64_t kMemorySize = kBlockCount * kBlockSize;
+
+static_assert((kLastBlock + 1) * kBlockSize == orbis::kMaxAddress);
 
 static int gMemoryShm = -1;
 
@@ -964,7 +966,7 @@ bool vm::unmap(void *addr, std::uint64_t size) {
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
 
-  if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
+  if (address < kMinAddress || address >= kMaxAddress || size >= kMaxAddress ||
       address > kMaxAddress - size) {
     std::println(stderr, "Memory error: unmap out of memory");
     return false;
@@ -994,6 +996,7 @@ bool vm::unmap(void *addr, std::uint64_t size) {
     std::println(stderr, "ignoring unmapping {:x}-{:x}", address,
                  address + size);
   }
+  gMapInfo.unmap(address, address + size);
   return rx::mem::unmap(addr, size);
 }
 
@@ -1007,7 +1010,7 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   endAddress = rx::alignUp(endAddress, kPageSize);
   size = endAddress - address;
   auto pages = size >> kPageShift;
-  if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
+  if (address < kMinAddress || address >= kMaxAddress || size >= kMaxAddress ||
       address > kMaxAddress - size) {
     std::println(stderr, "Memory error: protect out of memory");
     return false;

@@ -1,4 +1,5 @@
 #include "thread.hpp"
+#include "orbis-config.hpp"
 #include "orbis/sys/sysentry.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
@@ -268,7 +269,7 @@ void rx::thread::setupThisThread() {
   }
 
   if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
-            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
+            (void *)orbis::kMaxAddress, ~0ull - orbis::kMaxAddress, nullptr)) {
     perror("prctl failed\n");
     std::exit(-1);
   }

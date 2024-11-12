@@ -59,7 +59,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   if (orbis::g_currentThread != nullptr &&
       orbis::g_currentThread->tproc->vmId >= 0 && sig == SIGSEGV &&
-      signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
+      signalAddress >= orbis::kMinAddress &&
+      signalAddress < orbis::kMaxAddress) {
     auto vmid = orbis::g_currentThread->tproc->vmId;
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
     bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
@@ -93,7 +94,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
               continue;
             }
 
-            gpuContext.gpuCacheCommandIdle.fetch_add(1, std::memory_order::release);
+            gpuContext.gpuCacheCommandIdle.fetch_add(
+                1, std::memory_order::release);
             gpuContext.gpuCacheCommandIdle.notify_all();
 
             while (!gpuContext.cachePages[vmid][page].compare_exchange_weak(

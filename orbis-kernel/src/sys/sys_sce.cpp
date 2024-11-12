@@ -792,7 +792,7 @@ orbis::SysResult orbis::sys_get_authinfo(Thread *thread, pid_t pid,
 orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
                                   ptr<const char[32]> name) {
   ORBIS_LOG_NOTICE(__FUNCTION__, addr, len, name);
-  if (addr < 0x40000 || addr >= 0x100'0000'0000 || 0x100'0000'0000 - addr < len)
+  if (addr < kMinAddress || addr >= kMaxAddress || kMaxAddress - addr < len)
     return ErrorCode::INVAL;
   char _name[32];
   if (auto result = ureadString(_name, sizeof(_name), (const char *)name);
