@@ -149,6 +149,28 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
     return {};
   }
 
+  case 0xc0208004: { // get direct memory type
+    struct Args {
+      std::uint64_t start;
+      std::uint64_t regionStart;
+      std::uint64_t regionEnd;
+      std::uint32_t memoryType;
+    };
+
+    auto args = reinterpret_cast<Args *>(argp);
+
+    auto it = device->allocations.lowerBound(args->start);
+
+    if (it == device->allocations.end() || it->memoryType == -1u) {
+      return orbis::ErrorCode::SRCH;
+    }
+
+    args->regionStart = it.beginAddress();
+    args->regionEnd = it.endAddress();
+    args->memoryType = it->memoryType;
+    return {};
+  }
+
   case 0x80288012: { // direct memory query
     struct DirectMemoryQueryInfo {
       std::uint64_t start;
