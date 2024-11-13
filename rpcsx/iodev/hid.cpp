@@ -34,6 +34,10 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
     thread->retval[0] = 1; // hid id
     return {};
 
+  case 0x80104801:
+    // TODO
+    return{};
+
   case 0x8030482e: {
     // ORBIS_LOG_FATAL("hid ioctl", request);
     // read state
@@ -62,7 +66,7 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
 
   case 0x8010480e: {
     // read information
-    ORBIS_LOG_ERROR("hid read information");
+    // ORBIS_LOG_ERROR("hid read information");
     return {};
   }
 
@@ -81,6 +85,11 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
       thread->retval[0] = 1;
     }
     return {};
+  }
+
+  case 0x80184822: {
+    // TODO
+    break;
   }
 
   default:
