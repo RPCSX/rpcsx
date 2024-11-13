@@ -301,7 +301,8 @@ static shader::ir::Region parseIsa(shader::ir::Context &context,
   }
 
   if (auto converted = shader::gcn::convertToSpv(
-          isaContext, ir, gcnSemanticModuleInfo, *inputParam.gcnStage, env)) {
+          isaContext, ir, gcnSemanticInfo, gcnSemanticModuleInfo,
+          *inputParam.gcnStage, env)) {
     if (auto result = shader::spv::deserialize(context, converted->spv, loc)) {
       return result->merge(context);
     }
