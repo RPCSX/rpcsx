@@ -476,7 +476,9 @@ static orbis::ErrorCode ajm_ioctl(orbis::File *file, std::uint64_t request,
                                 instance.at9.superFrameSize,
                                 instance.at9.frameSamples, instance.at9.handle,
                                 totalDecodedBytes, outputWritten);
-                std::abort();
+                result->codecResult = err;
+                result->result |= AJM_RESULT_CODEC_ERROR | AJM_RESULT_FATAL;
+                break;
               }
 
               instance.at9.estimatedSizeUsed =
