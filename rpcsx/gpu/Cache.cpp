@@ -146,6 +146,13 @@ static ConverterFn *getPrimConverterFn(gnm::PrimitiveType primType,
             static_cast<unsigned>(primType));
   }
 }
+shader::eval::Value Cache::ShaderResources::eval(shader::ir::Value op) {
+  if (op == ir::sop2::ADD_U32 || op == ir::sop2::ADDC_U32) {
+    return eval(op.getOperand(1)) + eval(op.getOperand(2));
+  }
+
+  return Evaluator::eval(op);
+}
 
 void Cache::ShaderResources::loadResources(
     gcn::Resources &res, std::span<const std::uint32_t> userSgprs) {
@@ -454,8 +461,11 @@ Cache::ShaderResources::eval(ir::InstructionId instId,
     case 32:
       result = readPointer<std::array<std::uint32_t, 8>>(address);
       break;
+    case 64:
+      result = readPointer<std::array<std::uint32_t, 16>>(address);
+      break;
     default:
-      rx::die("unexpected pointer load size");
+      rx::die("unexpected pointer load size %u", loadSize);
     }
 
     return result;
@@ -1275,9 +1285,9 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
 
     // deserialized.print(std::cerr, context.ns);
 
-    converted = gcn::convertToSpv(context, deserialized,
-                                  mParent->mDevice->gcnSemanticModuleInfo,
-                                  key.stage, env);
+    converted = gcn::convertToSpv(
+        context, deserialized, mParent->mDevice->gcnSemantic,
+        mParent->mDevice->gcnSemanticModuleInfo, key.stage, env);
     if (!converted) {
       return {};
     }

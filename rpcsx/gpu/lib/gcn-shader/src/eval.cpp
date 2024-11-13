@@ -364,7 +364,8 @@ eval::Value eval::Value::compositeExtract(const Value &index) const {
 
 eval::Value eval::Value::isNan() const {
   using Cond = decltype([](auto type) {
-    return std::is_floating_point_v<ComponentType<decltype(type)>> && !IsArray<decltype(type)>;
+    return std::is_floating_point_v<ComponentType<decltype(type)>> &&
+           !IsArray<decltype(type)>;
   });
 
   return visit<Cond>(*this, [](auto &&value) -> Value {
@@ -384,7 +385,8 @@ eval::Value eval::Value::isNan() const {
 
 eval::Value eval::Value::isInf() const {
   using Cond = decltype([](auto type) {
-    return std::is_floating_point_v<ComponentType<decltype(type)>> && !IsArray<decltype(type)>;
+    return std::is_floating_point_v<ComponentType<decltype(type)>> &&
+           !IsArray<decltype(type)>;
   });
 
   return visit<Cond>(*this, [](auto &&value) -> Value {
@@ -472,7 +474,7 @@ eval::Value eval::Value::makeSigned() const {
 eval::Value eval::Value::all() const {
   using Cond = decltype([](auto type) {
     return std::is_same_v<ComponentType<decltype(type)>, bool> &&
-           (Components<decltype(type)> > 1)  && !IsArray<decltype(type)>;
+           (Components<decltype(type)> > 1) && !IsArray<decltype(type)>;
   });
 
   return visit<Cond>(*this, [](auto &&value) {
@@ -506,7 +508,8 @@ eval::Value eval::Value::any() const {
 eval::Value eval::Value::select(const Value &trueValue,
                                 const Value &falseValue) const {
   using Cond = decltype([](auto type) consteval {
-    return std::is_same_v<ComponentType<decltype(type)>, bool> && !IsArray<decltype(type)>;
+    return std::is_same_v<ComponentType<decltype(type)>, bool> &&
+           !IsArray<decltype(type)>;
   });
 
   return visit<Cond>(*this, [&](auto &&cond) -> Value {
@@ -548,7 +551,8 @@ eval::Value eval::Value::iConvert(ir::Value type, bool isSigned) const {
     using Type = std::remove_cvref_t<decltype(type)>;
 
     return std::is_integral_v<ComponentType<Type>> &&
-           !std::is_same_v<bool, ComponentType<Type>> && !IsArray<decltype(type)>;
+           !std::is_same_v<bool, ComponentType<Type>> &&
+           !IsArray<decltype(type)>;
   });
 
   using PairCond = decltype([](auto lhs, auto rhs) {
@@ -571,7 +575,8 @@ eval::Value eval::Value::iConvert(ir::Value type, bool isSigned) const {
 }
 eval::Value eval::Value::fConvert(ir::Value type) const {
   using Cond = decltype([](auto type) {
-    return std::is_floating_point_v<ComponentType<decltype(type)>> && !IsArray<decltype(type)>;
+    return std::is_floating_point_v<ComponentType<decltype(type)>> &&
+           !IsArray<decltype(type)>;
   });
 
   using PairCond = decltype([](auto lhs, auto rhs) {
@@ -640,10 +645,8 @@ std::optional<std::int64_t> eval::Value::sExtScalar() const {
 }
 
 #define DEFINE_BINARY_OP(OP)                                                   \
-  eval::Value eval::Value::operator OP(const Value & rhs) const {              \
-    using LhsCond = decltype([](auto &&lhs) {                                  \
-      return requires { static_cast<Value>(lhs OP rhs); };                     \
-    });                                                                        \
+  eval::Value eval::Value::operator OP(const Value &rhs) const {               \
+    using LhsCond = decltype([](auto &&lhs) { return true; });                 \
     return visit<LhsCond>(*this, [&]<typename Lhs>(Lhs &&lhs) -> Value {       \
       using RhsCond = decltype([](auto &&rhs) {                                \
         return requires(Lhs lhs) { static_cast<Value>(lhs OP rhs); };          \

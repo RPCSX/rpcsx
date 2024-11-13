@@ -211,7 +211,7 @@ struct ConvertedShader {
 
 std::optional<ConvertedShader>
 convertToSpv(Context &context, ir::Region body,
+             const SemanticInfo &semanticInfo,
              const SemanticModuleInfo &semanticModule, Stage stage,
              const Environment &state);
-
 } // namespace shader::gcn
