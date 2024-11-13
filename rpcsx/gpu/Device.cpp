@@ -952,16 +952,6 @@ void Device::waitForIdle() {
       }
     }
 
-    for (auto &pipe : computePipes) {
-      for (auto &queue : pipe.queues) {
-        for (auto &ring : queue) {
-          if (ring.wptr != ring.rptr) {
-            allProcessed = false;
-          }
-        }
-      }
-    }
-
     if (allProcessed) {
       break;
     }
