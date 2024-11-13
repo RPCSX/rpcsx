@@ -997,6 +997,12 @@ orbis::SysResult orbis::sys_mdbg_service(Thread *thread, uint32_t op,
     break;
   }
 
+  case 0x13: {
+    // wait for unhandled signal
+    while (true) {
+      std::this_thread::sleep_for(std::chrono::days(1));
+    }
+  }
   case 0x14: {
     // std::this_thread::sleep_for(std::chrono::years(1));
     break;
