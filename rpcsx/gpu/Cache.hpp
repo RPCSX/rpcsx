@@ -253,6 +253,8 @@ private:
 
     using Evaluator::eval;
 
+    shader::eval::Value eval(shader::ir::Value op) override;
+
     void clear() {
       slotResources.clear();
       userSgprs = {};
