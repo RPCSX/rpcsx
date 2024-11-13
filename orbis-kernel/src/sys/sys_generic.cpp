@@ -450,7 +450,15 @@ orbis::SysResult orbis::sys_select(Thread *thread, sint nd,
                                    ptr<struct fd_set_t> out,
                                    ptr<struct fd_set_t> ex,
                                    ptr<struct timeval> tv) {
-  return ErrorCode::NOSYS;
+  if (tv == nullptr) {
+    orbis::scoped_unblock_now unblock;
+    std::this_thread::sleep_for(std::chrono::days(1));
+  } else {
+    std::this_thread::sleep_for(std::chrono::seconds(tv->tv_sec));
+    return orbis::ErrorCode::TIMEDOUT;
+  }
+
+  return {};
 }
 orbis::SysResult orbis::sys_poll(Thread *thread, ptr<struct pollfd> fds,
                                  uint nfds, sint timeout) {

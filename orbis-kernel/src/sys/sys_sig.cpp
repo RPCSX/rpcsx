@@ -32,6 +32,8 @@ orbis::SysResult orbis::sys_sigaction(Thread *thread, sint sig,
 
 orbis::SysResult orbis::sys_sigprocmask(Thread *thread, sint how,
                                         ptr<SigSet> set, ptr<SigSet> oset) {
+  std::lock_guard lock(thread->mtx);
+
   if (oset) {
     ORBIS_RET_ON_ERROR(uwrite(oset, thread->sigMask));
   }
@@ -40,20 +42,23 @@ orbis::SysResult orbis::sys_sigprocmask(Thread *thread, sint how,
     SigSet _set;
     ORBIS_RET_ON_ERROR(uread(_set, set));
 
+    auto newSigMask = thread->sigMask;
+    auto oldSigMask = newSigMask;
+
     switch (how) {
     case 1: // block
       for (std::size_t i = 0; i < 4; ++i) {
-        thread->sigMask.bits[i] |= _set.bits[i];
+        newSigMask.bits[i] |= _set.bits[i];
       }
       break;
 
     case 2: // unblock
       for (std::size_t i = 0; i < 4; ++i) {
-        thread->sigMask.bits[i] &= ~_set.bits[i];
+        newSigMask.bits[i] &= ~_set.bits[i];
       }
       break;
     case 3: // set
-      thread->sigMask = _set;
+      newSigMask = _set;
       break;
 
     default:
@@ -62,8 +67,20 @@ orbis::SysResult orbis::sys_sigprocmask(Thread *thread, sint how,
       return ErrorCode::INVAL;
     }
 
-    thread->sigMask.clear(kSigKill);
-    thread->sigMask.clear(kSigStop);
+    newSigMask.clear(kSigKill);
+    newSigMask.clear(kSigStop);
+
+    thread->sigMask = newSigMask;
+
+    for (std::size_t word = 0; word < std::size(newSigMask.bits); ++word) {
+      auto unblockedBits = ~oldSigMask.bits[word] & newSigMask.bits[word];
+      std::uint32_t offset = word * 32 + 1;
+
+      for (std::uint32_t i = std::countr_zero(unblockedBits); i < 32;
+           i += std::countr_zero(unblockedBits >> (i + 1)) + 1) {
+        thread->notifyUnblockedSignal(offset + i);
+      }
+    }
   }
 
   return {};

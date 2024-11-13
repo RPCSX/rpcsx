@@ -15,9 +15,9 @@
 #include "uio.hpp"
 #include "utils/Logs.hpp"
 #include <fcntl.h>
+#include <ranges>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <thread>
 
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
@@ -576,6 +576,8 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
         break;
       }
     }
+
+    orbis::scoped_unblock unblock;
     sem->cond.wait(sem->mtx, ut);
   }
 
@@ -1158,10 +1160,17 @@ orbis::SysResult orbis::sys_get_resident_fmem_count(Thread *thread, pid_t pid) {
 orbis::SysResult orbis::sys_thr_get_name(Thread *thread, lwpid_t lwpid,
                                          char *buf, size_t buflen) {
   Thread *searchThread;
-  if (thread->tid == lwpid) {
+  if (thread->tid == lwpid || lwpid == -1) {
     searchThread = thread;
   } else {
-    searchThread = thread->tproc->threadsMap.get(lwpid);
+    searchThread = thread->tproc->threadsMap.get(lwpid - thread->tproc->pid);
+
+    if (searchThread == nullptr) {
+      if (auto process = g_context.findProcessById(lwpid)) {
+        searchThread = process->threadsMap.get(lwpid - process->pid);
+      }
+    }
+
     if (searchThread == nullptr) {
       return ErrorCode::SRCH;
     }
@@ -1169,11 +1178,13 @@ orbis::SysResult orbis::sys_thr_get_name(Thread *thread, lwpid_t lwpid,
 
   auto namelen = std::strlen(searchThread->name);
 
-  if (namelen >= buflen) {
-    return ErrorCode::INVAL;
+  auto writeLen = std::min(namelen + 1, buflen);
+  if (writeLen > 0) {
+    ORBIS_RET_ON_ERROR(uwriteRaw(buf, searchThread->name, writeLen - 1));
+    buf[writeLen] = 0;
   }
 
-  ORBIS_RET_ON_ERROR(uwriteRaw(buf, searchThread->name, namelen));
+  thread->retval[0] = writeLen > 0 ? writeLen : namelen + 1;
   return {};
 }
 orbis::SysResult orbis::sys_set_gpo(Thread *thread /* TODO */) {
@@ -1318,78 +1329,77 @@ orbis::SysResult orbis::sys_resume_internal_hdd(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_thr_suspend_ucontext(Thread *thread, lwpid_t tid) {
-  auto t = tid == thread->tid ? thread
-                              : thread->tproc->threadsMap.get(tid % 10000 - 1);
+  auto t = tid == thread->tid
+               ? thread
+               : thread->tproc->threadsMap.get(tid - thread->tproc->pid);
   if (t == nullptr) {
     return ErrorCode::SRCH;
   }
 
-  while (true) {
-    unsigned prevSuspend = 0;
-    if (t->suspended.compare_exchange_strong(prevSuspend, 1)) {
-      t->suspended.fetch_sub(1);
-      t->suspend();
+  ORBIS_LOG_NOTICE(__FUNCTION__, tid);
 
-      while (t->suspended == 0) {
-        std::this_thread::yield();
-      }
+  auto prevValue = t->suspendFlags.fetch_add(1, std::memory_order::relaxed);
 
-      break;
-    }
-
-    if (t->suspended.compare_exchange_strong(prevSuspend, prevSuspend + 1)) {
-      break;
-    }
+  while ((prevValue & kThreadSuspendFlag) == 0) {
+    t->suspend();
+    t->suspendFlags.wait(prevValue);
+    prevValue = t->suspendFlags.load(std::memory_order::relaxed);
   }
 
   return {};
 }
 orbis::SysResult orbis::sys_thr_resume_ucontext(Thread *thread, lwpid_t tid) {
-  auto t = tid == thread->tid ? thread
-                              : thread->tproc->threadsMap.get(tid % 10000 - 1);
+  auto t = tid == thread->tid
+               ? thread
+               : thread->tproc->threadsMap.get(tid - thread->tproc->pid);
   if (t == nullptr) {
     return ErrorCode::SRCH;
   }
 
-  while (true) {
-    unsigned prevSuspend = t->suspended.load();
-    if (t->suspended == prevSuspend) {
-      t->resume();
-      break;
-    }
+  ORBIS_LOG_NOTICE(__FUNCTION__, tid);
 
-    if (prevSuspend == 0) {
+  auto result = t->suspendFlags.op([](unsigned &value) -> ErrorCode {
+    if ((value & kThreadSuspendFlag) == 0) {
       return ErrorCode::INVAL;
     }
 
-    if (t->suspended.compare_exchange_strong(prevSuspend, prevSuspend - 1)) {
-      break;
+    if ((value & ~kThreadSuspendFlag) == 0) {
+      return ErrorCode::INVAL;
     }
+
+    --value;
+    return {};
+  });
+
+  if (result == ErrorCode{}) {
+    t->suspendFlags.notify_all();
   }
-  return {};
+
+  return result;
 }
 orbis::SysResult orbis::sys_thr_get_ucontext(Thread *thread, lwpid_t tid,
                                              ptr<UContext> context) {
 
-  auto t = tid == thread->tid ? thread
-                              : thread->tproc->threadsMap.get(tid % 10000 - 1);
+  auto t = tid == thread->tid
+               ? thread
+               : thread->tproc->threadsMap.get(tid - thread->tproc->pid);
   if (t == nullptr) {
     return ErrorCode::SRCH;
   }
 
   std::lock_guard lock(t->mtx);
 
-  if (t->suspended == 0) {
+  if ((t->suspendFlags.load() & kThreadSuspendFlag) == 0) {
     return ErrorCode::INVAL;
   }
 
-  for (auto it = t->sigReturns.rbegin(); it != t->sigReturns.rend(); ++it) {
-    auto &savedContext = *it;
-    if (savedContext.mcontext.rip < 0x100'0000'0000) {
+  for (auto &savedContext : std::ranges::reverse_view(t->sigReturns)) {
+    if (savedContext.mcontext.rip < orbis::kMaxAddress) {
       return uwrite(context, savedContext);
     }
   }
   ORBIS_LOG_FATAL(__FUNCTION__, tid, "not found guest context");
+  std::abort();
   *context = {};
   return {};
 }

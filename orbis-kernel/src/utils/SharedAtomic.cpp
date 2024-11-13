@@ -15,8 +15,19 @@ std::errc shared_atomic32::wait_impl(std::uint32_t oldValue,
     timeout.tv_sec = (usec_timeout_count / 1000'000);
   }
 
+  bool unblock = (!useTimeout || usec_timeout.count() > 1000) &&
+                 g_scopedUnblock != nullptr;
+
+  if (unblock) {
+    g_scopedUnblock(true);
+  }
+
   int result = syscall(SYS_futex, this, FUTEX_WAIT, oldValue,
                        useTimeout ? &timeout : nullptr);
+
+  if (unblock) {
+    g_scopedUnblock(false);
+  }
 
   if (result < 0) {
     return static_cast<std::errc>(errno);

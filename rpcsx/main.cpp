@@ -801,11 +801,15 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
 
   thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExec);
 
-  std::thread([&] {
+  thread->handle = std::thread([&] {
+    thread->hostTid = ::gettid();
+    rx::thread::initialize();
     rx::thread::setupSignalStack();
     rx::thread::setupThisThread();
     ps4Exec(thread, executableModule, argv, envv);
-  }).join();
+  });
+
+  thread->handle.join();
   std::abort();
 }
 
@@ -1038,7 +1042,6 @@ int main(int argc, const char *argv[]) {
   mainThread->tproc = initProcess;
   mainThread->tid = initProcess->pid + baseId;
   mainThread->state = orbis::ThreadState::RUNNING;
-  mainThread->hostTid = ::gettid();
   orbis::g_currentThread = mainThread;
 
   if (!isSystem && !vfs::exists(guestArgv[0], mainThread) &&
@@ -1190,6 +1193,12 @@ int main(int argc, const char *argv[]) {
       }
     }
   }
+
+  mainThread->hostTid = ::gettid();
+  mainThread->nativeHandle = pthread_self();
+  orbis::g_currentThread = mainThread;
+  rx::thread::setupSignalStack();
+  rx::thread::setupThisThread();
 
   status =
       ps4Exec(mainThread, execEnv, std::move(executableModule), guestArgv, {});

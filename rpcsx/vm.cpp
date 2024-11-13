@@ -933,6 +933,7 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (auto thr = orbis::g_currentThread) {
+    std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitMapMemory(thr->tproc->pid, address, len, -1, -1, prot,
                           address - kMinAddress);

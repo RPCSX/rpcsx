@@ -1,6 +1,7 @@
 #include "ipmi.hpp"
 #include "KernelContext.hpp"
 #include "thread/Process.hpp"
+#include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
 #include <span>
@@ -243,6 +244,7 @@ orbis::SysResult orbis::sysIpmiServerReceivePacket(Thread *thread,
   {
     std::lock_guard lock(server->mutex);
     while (server->packets.empty()) {
+      orbis::scoped_unblock unblock;
       server->receiveCv.wait(server->mutex);
     }
 
@@ -621,6 +623,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
       return uwrite(result, 0u);
     }
 
+    orbis::scoped_unblock unblock;
     client->asyncResponseCv.wait(client->mutex);
   }
 
@@ -684,7 +687,11 @@ orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
 
         auto waitTime = std::chrono::duration_cast<std::chrono::microseconds>(
             timeoutPoint - now);
-        queue.messageCv.wait(client->mutex, waitTime.count());
+
+        {
+          orbis::scoped_unblock unblock;
+          queue.messageCv.wait(client->mutex, waitTime.count());
+        }
 
         if (!queue.messages.empty()) {
           now = clock::now();
@@ -704,6 +711,7 @@ orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
       }
     } else {
       while (queue.messages.empty()) {
+        orbis::scoped_unblock unblock;
         queue.messageCv.wait(client->mutex);
       }
     }
@@ -966,7 +974,10 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
   IpmiSession::SyncResponse response;
 
   while (true) {
-    session->responseCv.wait(session->mutex);
+    {
+      orbis::scoped_unblock unblock;
+      session->responseCv.wait(session->mutex);
+    }
 
     bool found = false;
     for (auto it = session->syncResponses.begin();
@@ -1131,10 +1142,12 @@ orbis::SysResult orbis::sysIpmiClientConnect(Thread *thread, ptr<uint> result,
   }
 
   while (client->session == nullptr && !client->connectionStatus) {
+    orbis::scoped_unblock unblock;
     client->sessionCv.wait(client->mutex);
   }
 
   while (!client->connectionStatus) {
+    orbis::scoped_unblock unblock;
     client->connectCv.wait(client->mutex);
   }
 
@@ -1287,8 +1300,13 @@ orbis::SysResult orbis::sysIpmiClientWaitEventFlag(Thread *thread,
   }
 
   auto &evf = client->eventFlags[_params.index];
-  auto waitResult = evf.wait(thread, _params.mode, _params.patternSet,
-                             _params.pTimeout != 0 ? &resultTimeout : nullptr);
+  ErrorCode waitResult;
+
+  {
+    orbis::scoped_unblock unblock;
+    waitResult = evf.wait(thread, _params.mode, _params.patternSet,
+                          _params.pTimeout != 0 ? &resultTimeout : nullptr);
+  }
 
   if (_params.pPatternSet != nullptr) {
     ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, thread->evfResultPattern));
