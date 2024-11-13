@@ -230,7 +230,7 @@ static bool writeOutput(OutputParam &outputParam, std::ostream &out,
     } else if (outputParam.type == OutputType::SpirvHeader) {
       writeSpvHeader(outputParam, out, spv);
     } else if (outputParam.type == OutputType::SpirvAssembly) {
-      out << shader::spv::disassembly(spv);
+      out << shader::spv::disassembly(spv, true);
     } else if (outputParam.type == OutputType::Glsl) {
       out << shader::glsl::decompile(spv);
     } else {
@@ -301,7 +301,8 @@ static shader::ir::Region parseIsa(shader::ir::Context &context,
   }
 
   if (auto converted = shader::gcn::convertToSpv(
-          isaContext, ir, gcnSemanticModuleInfo, *inputParam.gcnStage, env)) {
+          isaContext, ir, gcnSemanticInfo, gcnSemanticModuleInfo,
+          *inputParam.gcnStage, env)) {
     if (auto result = shader::spv::deserialize(context, converted->spv, loc)) {
       return result->merge(context);
     }
