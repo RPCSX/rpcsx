@@ -78,8 +78,8 @@ void AlsaDevice::start() {
     std::abort();
   }
 
-  if (auto err =
-          snd_pcm_hw_params_set_periods(mPCMHandle, mHWParams, mSampleCount, 0);
+  if (auto err = snd_pcm_hw_params_set_periods(mPCMHandle, mHWParams,
+                                               mSampleCount * 10, 0);
       err < 0) {
     ORBIS_LOG_FATAL("Cannot set periods count", snd_strerror(err));
     std::abort();
@@ -240,8 +240,6 @@ long AlsaDevice::write(void *buf, long len) {
   if (frames == 0) {
     return 0;
   }
-
-  snd_pcm_wait(mPCMHandle, SND_PCM_WAIT_IO);
 
   while (true) {
     snd_pcm_sframes_t r = snd_pcm_writei(mPCMHandle, buf, frames);
