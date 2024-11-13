@@ -532,7 +532,8 @@ void Device::submitCommand(Ring &ring, std::span<const std::uint32_t> command) {
     ring.wptr = ring.base;
   }
 
-  std::memcpy(ring.wptr, command.data(), command.size_bytes());
+  std::memcpy(const_cast<std::uint32_t *>(ring.wptr), command.data(),
+              command.size_bytes());
   ring.wptr += command.size();
 }
 
@@ -594,6 +595,10 @@ void Device::unmapProcess(std::uint32_t pid) {
   auto &process = processInfo[pid];
   auto startAddress = static_cast<std::uint64_t>(process.vmId) << 40;
   auto size = static_cast<std::uint64_t>(1) << 40;
+
+  startAddress += orbis::kMinAddress;
+  size -= orbis::kMinAddress;
+
   rx::mem::reserve(reinterpret_cast<void *>(startAddress), size);
 
   ::close(process.vmFd);
@@ -607,7 +612,7 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
 
   auto vmSlotIt = process.vmTable.queryArea(address);
   if (vmSlotIt == process.vmTable.end()) {
-    std::abort();
+    return;
   }
 
   auto vmSlot = (*vmSlotIt).payload;
@@ -1027,7 +1032,9 @@ static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,
             1, std::memory_order::release);
         device->cpuCacheCommandsIdle[vmId].notify_one();
 
-        while (device->cpuCacheCommands[vmId][i].load(std::memory_order::acquire) != 0) {}
+        while (device->cpuCacheCommands[vmId][i].load(
+                   std::memory_order::acquire) != 0) {
+        }
         return;
       }
     }

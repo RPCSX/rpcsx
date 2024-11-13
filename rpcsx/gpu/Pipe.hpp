@@ -15,8 +15,8 @@ struct Ring {
   std::uint32_t *doorbell{};
   std::uint32_t *base{};
   std::uint64_t size{};
-  std::uint32_t *rptr{};
-  std::uint32_t *wptr{};
+  volatile std::uint32_t *volatile rptr{};
+  volatile std::uint32_t *volatile wptr{};
   std::uint32_t *rptrReportLocation{};
 
   static Ring createFromRange(int vmId, std::uint32_t *base, std::uint64_t size,
@@ -70,6 +70,7 @@ struct ComputePipe {
   bool writeData(Ring &ring);
   bool indirectBuffer(Ring &ring);
   bool acquireMem(Ring &ring);
+  bool dmaData(Ring &ring);
   bool unknownPacket(Ring &ring);
   bool handleNop(Ring &ring);
 
