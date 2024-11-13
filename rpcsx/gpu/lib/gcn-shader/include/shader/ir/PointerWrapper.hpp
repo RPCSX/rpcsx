@@ -8,16 +8,16 @@ namespace shader::ir {
 template <typename ImplT> struct PointerWrapper {
   using underlying_type = ImplT;
   ImplT *impl = nullptr;
-  PointerWrapper() = default;
-  PointerWrapper(ImplT *impl) : impl(impl) {}
+  constexpr PointerWrapper() = default;
+  constexpr PointerWrapper(ImplT *impl) : impl(impl) {}
 
   template <typename OtherT>
     requires std::is_base_of_v<ImplT, OtherT>
-  PointerWrapper(PointerWrapper<OtherT> node) : impl(node.impl) {}
+  constexpr PointerWrapper(PointerWrapper<OtherT> node) : impl(node.impl) {}
 
-  explicit operator bool() const { return impl != nullptr; }
-  bool operator==(std::nullptr_t) const { return impl == nullptr; }
-  bool operator==(ImplT *other) const { return impl == other; }
+  constexpr explicit operator bool() const { return impl != nullptr; }
+  constexpr bool operator==(std::nullptr_t) const { return impl == nullptr; }
+  constexpr bool operator==(ImplT *other) const { return impl == other; }
 
   template <typename Self> Self &operator=(this Self &self, ImplT *other) {
     self.impl = other;
@@ -26,34 +26,34 @@ template <typename ImplT> struct PointerWrapper {
 
   template <typename Self, typename OtherT>
     requires std::is_base_of_v<ImplT, OtherT>
-  Self &operator=(this Self &self, PointerWrapper<OtherT> other) {
+  constexpr Self &operator=(this Self &self, PointerWrapper<OtherT> other) {
     self.impl = other.get();
     return self;
   }
 
   // ImplT *operator->() const { return impl; }
 
-  ImplT *get() const { return impl; }
+  constexpr ImplT *get() const { return impl; }
 
-  auto operator<=>(const PointerWrapper &) const = default;
-  bool operator==(const PointerWrapper &) const = default;
+  constexpr auto operator<=>(const PointerWrapper &) const = default;
+  constexpr bool operator==(const PointerWrapper &) const = default;
 
   template <typename T>
-  T cast() const
+  constexpr T cast() const
     requires requires { static_cast<typename T::underlying_type *>(impl); }
   {
     return T(dynamic_cast<typename T::underlying_type *>(impl));
   }
 
   template <typename T>
-  T staticCast() const
+  constexpr T staticCast() const
     requires requires { static_cast<typename T::underlying_type *>(impl); }
   {
     assert(impl == nullptr || cast<T>() != nullptr);
     return T(static_cast<typename T::underlying_type *>(impl));
   }
 
-  template <typename T> bool isa() const {
+  template <typename T> constexpr bool isa() const {
     if (impl == nullptr) {
       return false;
     }
@@ -70,7 +70,7 @@ template <typename ImplT> struct PointerWrapper {
 
   template <typename... T>
     requires(sizeof...(T) > 1)
-  bool isa() const {
+  constexpr bool isa() const {
     return (isa<T>() || ...);
   }
 };
