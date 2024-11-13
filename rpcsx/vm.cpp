@@ -494,6 +494,16 @@ struct Block {
     return foundCount >= count;
   }
 
+  [[nodiscard]] bool isFree() const {
+    for (auto &group : groups) {
+      if (group.allocated) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   std::uint64_t findFreePages(std::uint64_t count, std::uint64_t alignment) {
     std::uint64_t foundCount = 0;
     std::uint64_t foundPage = 0;
@@ -787,12 +797,6 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     alignment = kPageSize;
   }
 
-  if (len > kBlockSize) {
-    std::println(stderr, "Memory error: too big allocation {} pages",
-                 pagesCount);
-    return MAP_FAILED;
-  }
-
   flags &= ~kMapFlagsAlignMask;
 
   bool noOverwrite = (flags & (kMapFlagNoOverwrite | kMapFlagFixed)) ==
@@ -841,30 +845,63 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   static constexpr auto kBadAddress = ~static_cast<std::uint64_t>(0);
 
+  std::size_t mapBlockCount = (len + kBlockSize - 1) / kBlockSize;
+
+  auto isFreeBlockRange = [&](std::uint64_t firstBlock,
+                              std::size_t blockCount) {
+    for (auto blockIndex = firstBlock; blockIndex < firstBlock + blockCount;
+         ++blockIndex) {
+      if (!gBlocks[blockIndex].isFree()) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   if (address == 0 && hitAddress != 0) {
     auto hitBlockIndex = hitAddress >> kBlockShift;
-    for (auto blockIndex = hitBlockIndex; blockIndex <= kLastBlock;
-         ++blockIndex) {
-      auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
-          pagesCount, alignment);
+    if (mapBlockCount > 1) {
+      for (auto blockIndex = hitBlockIndex;
+           blockIndex <= kLastBlock - mapBlockCount + 1; ++blockIndex) {
+        if (isFreeBlockRange(blockIndex, mapBlockCount)) {
+          address = blockIndex * kBlockSize;
+          break;
+        }
+      }
+    } else {
+      for (auto blockIndex = hitBlockIndex; blockIndex <= kLastBlock;
+           ++blockIndex) {
+        auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
+            pagesCount, alignment);
 
-      if (pageAddress != kBadAddress) {
-        address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
-        break;
+        if (pageAddress != kBadAddress) {
+          address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
+          break;
+        }
       }
     }
   }
 
   if (address == 0) {
-    for (auto blockIndex = kFirstBlock; blockIndex <= 2; ++blockIndex) {
-      // std::size_t blockIndex = 0; // system managed block
+    if (mapBlockCount > 1) {
+      for (auto blockIndex = kFirstBlock;
+           blockIndex <= kLastBlock - mapBlockCount + 1; ++blockIndex) {
+        if (isFreeBlockRange(blockIndex, mapBlockCount)) {
+          address = blockIndex * kBlockSize;
+          break;
+        }
+      }
+    } else {
+      for (auto blockIndex = kFirstBlock; blockIndex <= kLastBlock;
+           ++blockIndex) {
+        auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
+            pagesCount, alignment);
 
-      auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
-          pagesCount, alignment);
-
-      if (pageAddress != kBadAddress) {
-        address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
-        break;
+        if (pageAddress != kBadAddress) {
+          address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
+          break;
+        }
       }
     }
   }
