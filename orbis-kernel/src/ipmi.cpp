@@ -330,6 +330,7 @@ orbis::SysResult orbis::sysIpmiSendConnectResult(Thread *thread,
   std::lock_guard lock(client->mutex);
   client->connectionStatus = status;
   client->connectCv.notify_all(client->mutex);
+  client->sessionCv.notify_all(client->mutex);
   return uwrite(result, 0u);
 }
 orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
@@ -386,12 +387,6 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   if (_params.errorCode != 0) {
     ORBIS_LOG_ERROR(__FUNCTION__, session->client->name, _params.errorCode);
     thread->where();
-
-    // HACK: completely broken audio support should not be visible
-    if (session->client->name == "SceSysAudioSystemIpc" &&
-        _params.errorCode == -1) {
-      _params.errorCode = 0;
-    }
   }
 
   session->syncResponses.push_front({
@@ -990,10 +985,6 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
     }
   }
 
-  if (response.errorCode != 0) {
-    thread->where();
-  }
-
   ORBIS_RET_ON_ERROR(uwrite(_params.pResult, response.errorCode));
 
   if (response.data.size() != _params.numOutData) {
@@ -1019,8 +1010,9 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
       continue;
     }
 
-    ORBIS_LOG_ERROR(__FUNCTION__, i, _outData.data, _outData.capacity,
-                    data.size());
+    // ORBIS_LOG_ERROR(__FUNCTION__, server->name, i, _outData.data,
+    // _outData.capacity,
+    //                 data.size());
 
     _outData.size = data.size();
     ORBIS_RET_ON_ERROR(uwriteRaw(_outData.data, data.data(), data.size()));
@@ -1138,7 +1130,7 @@ orbis::SysResult orbis::sysIpmiClientConnect(Thread *thread, ptr<uint> result,
     server->receiveCv.notify_one(server->mutex);
   }
 
-  while (client->session == nullptr) {
+  while (client->session == nullptr && !client->connectionStatus) {
     client->sessionCv.wait(client->mutex);
   }
 
