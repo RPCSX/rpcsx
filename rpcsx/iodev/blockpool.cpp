@@ -113,6 +113,11 @@ orbis::ErrorCode BlockPoolDevice::map(void **address, std::uint64_t len,
                                       std::int32_t prot, std::int32_t flags,
                                       orbis::Thread *thread) {
   ORBIS_LOG_FATAL("blockpool device map", *address, len);
+  if (prot == 0) {
+    // FIXME: investigate it
+    prot = 0x33;
+  }
+
   auto result = vm::map(*address, len, prot, flags);
 
   if (result == (void *)-1) {
