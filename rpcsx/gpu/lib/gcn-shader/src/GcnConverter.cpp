@@ -1784,6 +1784,18 @@ gcn::convertToSpv(Context &context, ir::Region body,
   if (env.supportsNonSemanticInfo) {
     extensions.createSpvExtension(context.getUnknownLocation(),
                                   "SPV_KHR_non_semantic_info");
+  } else {
+    for (auto imported : context.layout.getOrCreateExtInstImports(context)
+                             .children<ir::Value>()) {
+      if (imported.getOperand(0) == "NonSemantic.DebugPrintf") {
+        while (!imported.getUseList().empty()) {
+          auto use = *imported.getUseList().begin();
+          use.user.remove();
+        }
+
+        imported.remove();
+      }
+    }
   }
 
   auto merged = context.layout.merge(context);

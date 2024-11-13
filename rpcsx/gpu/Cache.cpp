@@ -1932,6 +1932,10 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
 
+    if (format == VK_FORMAT_B5G6R5_UNORM_PACK16) {
+      format = VK_FORMAT_R5G6B5_UNORM_PACK16;
+    }
+
     auto image = vk::Image::Allocate(vk::getDeviceLocalMemory(),
                                      gnm::toVkImageType(key.type), key.extent,
                                      key.mipCount, key.arrayLayerCount, format,
@@ -1994,15 +1998,24 @@ Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
 
   auto storeRange = rx::AddressRange::fromBeginSize(key.writeAddress,
                                                     surfaceInfo.totalTiledSize);
+
+  auto format = gnm::toVkFormat(key.dfmt, key.nfmt);
   auto image = getImage(ImageKey::createFrom(key), access);
+
+  VkComponentMapping components{
+      .r = gnm::toVkComponentSwizzle(key.r),
+      .g = gnm::toVkComponentSwizzle(key.g),
+      .b = gnm::toVkComponentSwizzle(key.b),
+      .a = gnm::toVkComponentSwizzle(key.a),
+  };
+
+  if (format != image.format) {
+    std::swap(components.r, components.b);
+  }
+
   auto result = vk::ImageView(gnm::toVkImageViewType(key.type), image.handle,
                               image.format,
-                              {
-                                  .r = gnm::toVkComponentSwizzle(key.r),
-                                  .g = gnm::toVkComponentSwizzle(key.g),
-                                  .b = gnm::toVkComponentSwizzle(key.b),
-                                  .a = gnm::toVkComponentSwizzle(key.a),
-                              },
+                              components,
                               {
                                   .aspectMask = toAspect(key.kind),
                                   .baseMipLevel = key.baseMipLevel,

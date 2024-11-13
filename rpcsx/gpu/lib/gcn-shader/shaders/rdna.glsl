@@ -899,7 +899,7 @@ uint32_t v_sad_u32(uint32_t x, uint32_t y, uint32_t z) {
 uint32_t v_cvt_pk_u8_f32(float32_t x, uint32_t y, uint32_t z) {
     uint32_t byte = 8 * (y & 3);
     uint32_t result = z & ~(0xff << byte);
-    result |= (uint8_t(x) & 0xff) << byte;
+    result |= (int16_t(x) & 0xff) << byte;
     return result;
 }
 // uint32_t v_div_fixup_f32(uint32_t x) { return x; }
@@ -1179,7 +1179,7 @@ int32_t s_flbit_i32_i64(i32vec2 x) {
     int lo = findMSB(x.y < 0 ? ~uint32_t(x.x) : uint32_t(x.x));
     return lo < 0 ? -1 : lo;
 }
-int32_t s_sext_i32_i8(int8_t x) { return int32_t(x); }
+int32_t s_sext_i32_i8(int16_t x) { return (int32_t(x & 0xff) << 24) >> 24; }
 int32_t s_sext_i32_i16(int16_t x) { return int32_t(x); }
 uint32_t s_bitset0_b32(uint32_t dest, uint32_t x) { return dest & ~(~0 << (x & 0x1f)); }
 uint64_t s_bitset0_b64(uint32_t dest, uint64_t x) { return dest & ~(~uint64_t(0) << (x & 0x3f)); }
@@ -1506,8 +1506,8 @@ struct MemoryTableSlot {
 uint64_t getSlotSize(MemoryTableSlot slot) {
     return slot.sizeAndFlags & ((uint64_t(1) << 40) - 1);
 }
-uint8_t getSlotFlags(MemoryTableSlot slot) {
-    return uint8_t(slot.sizeAndFlags >> 40);
+uint16_t getSlotFlags(MemoryTableSlot slot) {
+    return uint16_t((slot.sizeAndFlags >> 40) & 0xff);
 }
 
 layout(buffer_reference) buffer MemoryTable {
@@ -2485,14 +2485,14 @@ layout(binding = 3) uniform texture2D textures2D[];
 layout(binding = 4) uniform texture3D textures3D[];
 layout(binding = 5) uniform textureBuffer textureBuffers[];
 
-const uint8_t kTextureType1D = uint8_t(8);
-const uint8_t kTextureType2D = uint8_t(9);
-const uint8_t kTextureType3D = uint8_t(10);
-const uint8_t kTextureTypeCube = uint8_t(11);
-const uint8_t kTextureTypeArray1D = uint8_t(12);
-const uint8_t kTextureTypeArray2D = uint8_t(13);
-const uint8_t kTextureTypeMsaa2D = uint8_t(14);
-const uint8_t kTextureTypeMsaaArray2D = uint8_t(15);
+const int kTextureType1D = 8;
+const int kTextureType2D = 9;
+const int kTextureType3D = 10;
+const int kTextureTypeCube = 11;
+const int kTextureTypeArray1D = 12;
+const int kTextureTypeArray2D = 13;
+const int kTextureTypeMsaa2D = 14;
+const int kTextureTypeMsaaArray2D = 15;
 
 uint64_t tbuffer_base256(uint32_t tbuffer[8]) {
     uint64_t baseLo = tbuffer[0];
@@ -2503,20 +2503,20 @@ uint64_t tbuffer_base256(uint32_t tbuffer[8]) {
 uint64_t tbuffer_base(uint32_t tbuffer[8]) {
     return tbuffer_base256(tbuffer) << 8;
 }
-uint8_t tbuffer_mtype_L2(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 38, 2));
+int tbuffer_mtype_L2(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 38, 2));
 }
 uint16_t tbuffer_min_lod(uint32_t tbuffer[8]) {
     return uint16_t(U32ARRAY_FETCH_BITS(tbuffer, 40, 12));
 }
-uint8_t tbuffer_dfmt(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 52, 6));
+int tbuffer_dfmt(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 52, 6));
 }
-uint8_t tbuffer_nfmt(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 58, 4));
+int tbuffer_nfmt(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 58, 4));
 }
-uint8_t tbuffer_mtype(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 62, 2) | (U32ARRAY_FETCH_BITS(tbuffer, 122, 1) << 2));
+int tbuffer_mtype(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 62, 2) | (U32ARRAY_FETCH_BITS(tbuffer, 122, 1) << 2));
 }
 uint16_t tbuffer_width(uint32_t tbuffer[8]) {
     return uint16_t(U32ARRAY_FETCH_BITS(tbuffer, 64, 14));
@@ -2524,38 +2524,38 @@ uint16_t tbuffer_width(uint32_t tbuffer[8]) {
 uint16_t tbuffer_height(uint32_t tbuffer[8]) {
     return uint16_t(U32ARRAY_FETCH_BITS(tbuffer, 78, 14));
 }
-uint8_t tbuffer_perf_mod(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 92, 3));
+int tbuffer_perf_mod(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 92, 3));
 }
 bool tbuffer_interlaced(uint32_t tbuffer[8]) {
     return U32ARRAY_FETCH_BITS(tbuffer, 95, 1) != 0;
 }
-uint8_t tbuffer_dst_sel_x(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 96, 3));
+int tbuffer_dst_sel_x(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 96, 3));
 }
-uint8_t tbuffer_dst_sel_y(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 99, 3));
+int tbuffer_dst_sel_y(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 99, 3));
 }
-uint8_t tbuffer_dst_sel_z(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 102, 3));
+int tbuffer_dst_sel_z(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 102, 3));
 }
-uint8_t tbuffer_dst_sel_w(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 105, 3));
+int tbuffer_dst_sel_w(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 105, 3));
 }
-uint8_t tbuffer_base_level(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 108, 4));
+int tbuffer_base_level(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 108, 4));
 }
-uint8_t tbuffer_last_level(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 112, 4));
+int tbuffer_last_level(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 112, 4));
 }
-uint8_t tbuffer_tiling_idx(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 116, 5));
+int tbuffer_tiling_idx(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 116, 5));
 }
 bool tbuffer_pow2pad(uint32_t tbuffer[8]) {
     return U32ARRAY_FETCH_BITS(tbuffer, 121, 1) != 0;
 }
-uint8_t tbuffer_type(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 124, 4));
+int tbuffer_type(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 124, 4));
 }
 uint16_t tbuffer_depth(uint32_t tbuffer[8]) {
     return uint16_t(U32ARRAY_FETCH_BITS(tbuffer, 128, 13));
@@ -2572,32 +2572,32 @@ uint16_t tbuffer_last_array(uint32_t tbuffer[8]) {
 uint16_t tbuffer_min_lod_warn(uint32_t tbuffer[8]) {
     return uint16_t(U32ARRAY_FETCH_BITS(tbuffer, 192, 12));
 }
-uint8_t tbuffer_counter_bank_id(uint32_t tbuffer[8]) {
-    return uint8_t(U32ARRAY_FETCH_BITS(tbuffer, 204, 8));
+int tbuffer_counter_bank_id(uint32_t tbuffer[8]) {
+    return int(U32ARRAY_FETCH_BITS(tbuffer, 204, 8));
 }
 bool tbuffer_LOD_hdw_cnt_en(uint32_t tbuffer[8]) {
     return U32ARRAY_FETCH_BITS(tbuffer, 212, 1) != 0;
 }
-uint8_t ssampler_clamp_x(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 0, 3));
+int ssampler_clamp_x(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 0, 3));
 }
-uint8_t ssampler_clamp_y(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 3, 3));
+int ssampler_clamp_y(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 3, 3));
 }
-uint8_t ssampler_clamp_z(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 6, 3));
+int ssampler_clamp_z(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 6, 3));
 }
-uint8_t ssampler_max_aniso_ratio(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 9, 3));
+int ssampler_max_aniso_ratio(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 9, 3));
 }
-uint8_t ssampler_depth_compare_func(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 12, 3));
+int ssampler_depth_compare_func(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 12, 3));
 }
 bool ssampler_force_unorm_coord(u32vec4 ssampler) {
     return U32ARRAY_FETCH_BITS(ssampler, 15, 1) != 0;
 }
-uint8_t ssampler_aniso_thresholt(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 16, 3));
+int ssampler_aniso_thresholt(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 16, 3));
 }
 bool ssampler_mc_coord_trunc(u32vec4 ssampler) {
     return U32ARRAY_FETCH_BITS(ssampler, 19, 1) != 0;
@@ -2605,8 +2605,8 @@ bool ssampler_mc_coord_trunc(u32vec4 ssampler) {
 bool ssampler_force_degamma(u32vec4 ssampler) {
     return U32ARRAY_FETCH_BITS(ssampler, 20, 1) != 0;
 }
-uint8_t ssampler_aniso_bias(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 21, 6));
+int ssampler_aniso_bias(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 21, 6));
 }
 bool ssampler_trunc_coord(u32vec4 ssampler) {
     return U32ARRAY_FETCH_BITS(ssampler, 27, 1) != 0;
@@ -2614,8 +2614,8 @@ bool ssampler_trunc_coord(u32vec4 ssampler) {
 bool ssampler_disable_cube_wrap(u32vec4 ssampler) {
     return U32ARRAY_FETCH_BITS(ssampler, 28, 1) != 0;
 }
-uint8_t ssampler_filter_mode(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 29, 2));
+int ssampler_filter_mode(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 29, 2));
 }
 uint16_t ssampler_min_lod(u32vec4 ssampler) {
     return uint16_t(U32ARRAY_FETCH_BITS(ssampler, 32, 12));
@@ -2623,35 +2623,35 @@ uint16_t ssampler_min_lod(u32vec4 ssampler) {
 uint16_t ssampler_max_lod(u32vec4 ssampler) {
     return uint16_t(U32ARRAY_FETCH_BITS(ssampler, 44, 12));
 }
-uint8_t ssampler_perf_mip(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 56, 4));
+int ssampler_perf_mip(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 56, 4));
 }
-uint8_t ssampler_perf_z(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 60, 4));
+int ssampler_perf_z(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 60, 4));
 }
 uint16_t ssampler_lod_bias(u32vec4 ssampler) {
     return uint16_t(U32ARRAY_FETCH_BITS(ssampler, 64, 14));
 }
-uint8_t ssampler_lod_bias_sec(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 78, 6));
+int ssampler_lod_bias_sec(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 78, 6));
 }
-uint8_t ssampler_xy_mag_filter(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 84, 2));
+int ssampler_xy_mag_filter(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 84, 2));
 }
-uint8_t ssampler_xy_min_filter(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 86, 2));
+int ssampler_xy_min_filter(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 86, 2));
 }
-uint8_t ssampler_z_filter(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 88, 2));
+int ssampler_z_filter(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 88, 2));
 }
-uint8_t ssampler_mip_filter(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 90, 2));
+int ssampler_mip_filter(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 90, 2));
 }
 uint16_t ssampler_border_color_ptr(u32vec4 ssampler) {
     return uint16_t(U32ARRAY_FETCH_BITS(ssampler, 96, 12));
 }
-uint8_t ssampler_border_color_type(u32vec4 ssampler) {
-    return uint8_t(U32ARRAY_FETCH_BITS(ssampler, 126, 2));
+int ssampler_border_color_type(u32vec4 ssampler) {
+    return int(U32ARRAY_FETCH_BITS(ssampler, 126, 2));
 }
 
 uint64_t image_memory_table;
@@ -2715,22 +2715,22 @@ struct ImageInfo {
     uint16_t pitch;
     uint16_t baseArraySlice;
     uint16_t arraySliceCount;
-    uint8_t baseMipLevel;
-    uint8_t mipLevelCount;
-    uint8_t type;
-    uint8_t dataSize;
+    uint16_t baseMipLevel;
+    uint16_t mipLevelCount;
+    uint16_t type;
+    uint16_t dataSize;
 };
 
 ImageInfo getImageInfo(uint32_t tbuffer[8], uint32_t mipLevel) {
-    uint8_t type = tbuffer_type(tbuffer);
+    uint16_t type = uint16_t(tbuffer_type(tbuffer));
     uint16_t width = uint16_t(tbuffer_width(tbuffer) + 1u);
     uint16_t height = uint16_t(tbuffer_height(tbuffer) + 1u);
     uint16_t depth = uint16_t(tbuffer_depth(tbuffer) + 1u);
     uint16_t pitch = uint16_t(tbuffer_pitch(tbuffer) + 1u);
-    uint16_t baseArray = tbuffer_base_array(tbuffer);
-    uint16_t lastArray = tbuffer_last_array(tbuffer);
-    uint8_t baseLevel = tbuffer_base_level(tbuffer);
-    uint8_t lastLevel = tbuffer_last_level(tbuffer);
+    uint16_t baseArray = uint16_t(tbuffer_base_array(tbuffer));
+    uint16_t lastArray = uint16_t(tbuffer_last_array(tbuffer));
+    uint16_t baseLevel = uint16_t(tbuffer_base_level(tbuffer));
+    uint16_t lastLevel = uint16_t(tbuffer_last_level(tbuffer));
     bool pow2pad = tbuffer_pow2pad(tbuffer);
     bool isVolume = type == kTextureType3D;
     bool isCubemap = type == kTextureTypeCube;
@@ -2755,7 +2755,7 @@ ImageInfo getImageInfo(uint32_t tbuffer[8], uint32_t mipLevel) {
     }
 
     uint64_t offset = 0;
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
     uint dataSize = size_of_format(dfmt);
 
     for (uint32_t i = 0; i < mipLevel; ++i) {
@@ -2778,9 +2778,9 @@ ImageInfo getImageInfo(uint32_t tbuffer[8], uint32_t mipLevel) {
     result.baseArraySlice = baseArray;
     result.arraySliceCount = uint16_t(min(arraySliceCount, lastArray - baseArray + 1));
     result.baseMipLevel = baseLevel;
-    result.mipLevelCount = uint8_t(lastLevel - baseLevel + 1);
+    result.mipLevelCount = uint16_t(lastLevel - baseLevel + 1);
     result.type = type;
-    result.dataSize = uint8_t(dataSize);
+    result.dataSize = uint16_t(dataSize);
 
     return result;
 }
@@ -2819,8 +2819,8 @@ uint64_t findImagePixelAddress(int32_t imageMemoryIndexHint, uint32_t tbuffer[8]
         unormPos.z = int32_t((tbuffer_depth(tbuffer) + 1) * pos.z);
     }
 
-    uint8_t baseLevel = tbuffer_base_level(tbuffer);
-    uint8_t lastLevel = tbuffer_last_level(tbuffer);
+    uint16_t baseLevel = uint16_t(tbuffer_base_level(tbuffer));
+    uint16_t lastLevel = uint16_t(tbuffer_last_level(tbuffer));
 
     uint32_t umipLevel = baseLevel + uint32_t((lastLevel - baseLevel + 1) * mipLevel);
     umipLevel = min(umipLevel, lastLevel + 1);
@@ -2917,8 +2917,8 @@ void image_load(inout u32vec4 vdata, u32vec3 vaddr, int32_t imageBufferIndexHint
         return;
     }
 
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
-    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
+    uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
@@ -2998,8 +2998,8 @@ void image_load_mip(inout u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndex
         return;
     }
 
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
-    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
+    uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
@@ -3079,8 +3079,8 @@ void image_store(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint, uin
         debugPrintfEXT("image_store: unexpected dmask. flags %x", flags);
     }
 
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
-    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
+    uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
@@ -3127,8 +3127,8 @@ void image_store_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint,
         debugPrintfEXT("image_store: unexpected dmask. flags %x", flags);
     }
 
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
-    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
+    uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
@@ -3179,8 +3179,8 @@ void image_store_mip(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint,
         debugPrintfEXT("image_store_mip: unexpected dmask. flags %x", flags);
     }
 
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
-    uint8_t nfmt = tbuffer_nfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
+    uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
@@ -3230,7 +3230,7 @@ void image_store_mip_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexH
         debugPrintfEXT("image_store_mip_pck: unexpected dmask. flags %x", flags);
     }
 
-    uint8_t dfmt = tbuffer_dfmt(tbuffer);
+    uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
 
@@ -3241,7 +3241,7 @@ void image_store_mip_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexH
 }
 
 void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
-    uint8_t textureType = tbuffer_type(tbuffer);
+    uint16_t textureType = uint16_t(tbuffer_type(tbuffer));
     f32vec4 result;
     switch (uint(textureType)) {
     case kTextureType1D:
@@ -3291,7 +3291,7 @@ void image_sample(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, 
 // image_sample_d
 // image_sample_d_cl
 void image_sample_l(inout f32vec4 vdata, f32vec4 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
-    uint8_t textureType = tbuffer_type(tbuffer);
+    uint16_t textureType = uint16_t(tbuffer_type(tbuffer));
     f32vec4 result;
     switch (uint(textureType)) {
     case kTextureType1D:
@@ -3338,7 +3338,7 @@ void image_sample_l(inout f32vec4 vdata, f32vec4 vaddr, int32_t textureIndexHint
 // image_sample_b
 // image_sample_b_cl
 void image_sample_lz(inout f32vec4 vdata, f32vec3 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
-    uint8_t textureType = tbuffer_type(tbuffer);
+    uint16_t textureType = uint16_t(tbuffer_type(tbuffer));
     f32vec4 result;
     switch (uint(textureType)) {
     case kTextureType1D:

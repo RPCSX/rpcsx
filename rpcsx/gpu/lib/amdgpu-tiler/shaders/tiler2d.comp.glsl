@@ -1,5 +1,4 @@
 #version 460
-#define DEBUG
 
 #extension GL_GOOGLE_include_directive : enable
 #extension GL_EXT_shader_explicit_arithmetic_types : enable
