@@ -8,6 +8,10 @@ sudo apt install build-essential cmake libunwind-dev libglfw3-dev libvulkan-dev 
 
 ### The dependencies for Fedora distributions:
 
+## Warning
+
+Fedora does not work at all.
+
 ```
 sudo dnf install cmake libunwind-devel glfw-devel vulkan-devel gcc-c++ gcc sox-devel alsa-lib-devel nasm
 ```
