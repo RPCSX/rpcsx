@@ -2829,12 +2829,51 @@ uint64_t findImagePixelAddress(int32_t imageMemoryIndexHint, uint32_t tbuffer[8]
     return findImageUnormPixelAddress(imageMemoryIndexHint, tbuffer, umipLevel, arrayLayer, unormPos);
 }
 
-// void image_gather4(inout u32vec4 vdata, u32vec4 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 samplerDescriptor) {}
+void image_gather4(inout f32vec4 vdata, f32vec2 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
+    uint16_t textureType = uint16_t(tbuffer_type(tbuffer));
+
+    switch (uint(textureType)) {
+    case kTextureType2D:
+    case kTextureTypeCube:
+    case kTextureTypeArray2D:
+    case kTextureTypeMsaa2D:
+    case kTextureTypeMsaaArray2D: {
+        if ((dmask & (1 << 0)) != 0) {
+            vdata = textureGather(sampler2D(
+                textures2D[findTexture2DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr, 0);
+        } else if ((dmask & (1 << 1)) != 0) {
+            vdata = textureGather(sampler2D(
+                textures2D[findTexture2DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr, 1);
+        } else if ((dmask & (1 << 2)) != 0) {
+            vdata = textureGather(sampler2D(
+                textures2D[findTexture2DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr, 2);
+        } else if ((dmask & (1 << 3)) != 0) {
+            vdata = textureGather(sampler2D(
+                textures2D[findTexture2DIndex(textureIndexHint, tbuffer)],
+                samplers[findSamplerIndex(samplerIndexHint, ssampler)]
+            ), vaddr, 3);
+        }
+        break;
+    }
+
+    default:
+        return;
+    }
+}
 // image_gather4_cl
 // image_gather4_l
 // image_gather4_b
 // image_gather4_b_cl
-// image_gather4_lz
+void image_gather4_lz(inout f32vec4 vdata, f32vec2 vaddr, int32_t textureIndexHint, uint32_t tbuffer[8], int32_t samplerIndexHint, u32vec4 ssampler, uint32_t dmask) {
+    // FIXME: implementation with explicit lod
+    image_gather4(vdata, vaddr, textureIndexHint, tbuffer, samplerIndexHint, ssampler, dmask);
+}
 // image_gather4_c
 // image_gather4_c_cl
 // image_gather4_c_l
