@@ -1178,6 +1178,49 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
         inst == ir::amdgpu::SAMPLER || inst == ir::amdgpu::TBUFFER ||
         inst == ir::amdgpu::IMAGE_BUFFER) {
       toAnalyze.push_back(inst.staticCast<ir::Value>());
+      continue;
+    }
+
+    if (inst.getKind() != ir::Kind::Spv && inst.getKind() != ir::Kind::AmdGpu &&
+        semanticModuleInfo.findSemanticOf(inst.getInstId()) == nullptr) {
+      std::println(std::cerr, "unimplemented semantic: ");
+      inst.print(std::cerr, context.ns);
+      std::println(std::cerr);
+
+      std::vector<ir::Instruction> workList;
+      std::set<ir::Instruction> removed;
+      workList.push_back(inst);
+      auto builder = gcn::Builder::createInsertBefore(context, inst);
+
+      while (!workList.empty()) {
+        auto inst = workList.back();
+        workList.pop_back();
+
+        if (!removed.insert(inst).second) {
+          continue;
+        }
+
+        std::println(std::cerr, "removing ");
+        inst.print(std::cerr, context.ns);
+        std::println(std::cerr);
+
+        if (auto value = inst.cast<ir::Value>()) {
+          for (auto &use : value.getUseList()) {
+            if (removed.contains(use.user)) {
+              continue;
+            }
+
+            workList.push_back(use.user);
+          }
+
+          value.replaceAllUsesWith(builder.createSpvUndef(
+              inst.getLocation(), value.getOperand(0).getAsValue()));
+        }
+
+        inst.remove();
+      }
+
+      continue;
     }
   }
 
@@ -1615,45 +1658,6 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
     }
 
     auto function = semanticModuleInfo.findSemanticOf(inst.getInstId());
-
-    if (function == nullptr) {
-      std::println(std::cerr, "unimplemented semantic: ");
-      inst.print(std::cerr, context.ns);
-      std::println(std::cerr);
-
-      std::vector<ir::Instruction> workList;
-      std::set<ir::Instruction> removed;
-      workList.push_back(inst);
-
-      while (!workList.empty()) {
-        auto inst = workList.back();
-        workList.pop_back();
-
-        if (!removed.insert(inst).second) {
-          continue;
-        }
-
-        std::println(std::cerr, "removing ");
-        inst.print(std::cerr, context.ns);
-        std::println(std::cerr);
-
-        if (auto value = inst.cast<ir::Value>()) {
-          for (auto &use : value.getUseList()) {
-            if (removed.contains(use.user)) {
-              continue;
-            }
-
-            workList.push_back(use.user);
-          }
-
-          value.replaceAllUsesWith(builder.createSpvUndef(
-              inst.getLocation(), value.getOperand(0).getAsValue()));
-        }
-
-        inst.remove();
-      }
-      continue;
-    }
 
     function = ir::clone(function, context, importer);
 
