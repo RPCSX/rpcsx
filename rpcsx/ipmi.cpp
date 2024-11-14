@@ -685,10 +685,7 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
           });
   createIpmiServer(process, "SceAppMessaging");
   createIpmiServer(process, "SceShellCoreUtil");
-  createIpmiServer(process, "SceNetCtl")
-      .addSyncMethod(0x20004, [](void *out, std::uint64_t &size) {
-        return 0x8002'0000 + static_cast<int>(orbis::ErrorCode::AUTH);
-      });
+  createIpmiServer(process, "SceNetCtl");
   createIpmiServer(process, "SceNpMgrIpc")
       .addSyncMethod(
           0,
