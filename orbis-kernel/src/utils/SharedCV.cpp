@@ -31,7 +31,7 @@ std::errc shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
       // Remove waiter if no signals
       if ((value & ~c_waiter_mask) == 0) {
 
-        if (useTimeout || !spurious) {
+        if (!spurious) {
           value -= 1;
         }
       }
@@ -66,7 +66,7 @@ std::errc shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
 #endif
 
     // Possibly spurious wakeup
-    if (useTimeout || !spurious) {
+    if (!spurious) {
       break;
     }
 
