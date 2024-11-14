@@ -62,7 +62,7 @@ orbis::SysResult orbis::sys_cpuset_getaffinity(Thread *thread, cpulevel_t level,
                                                cpuwhich_t which, id_t id,
                                                size_t cpusetsize,
                                                ptr<cpuset> mask) {
-  if (cpusetsize != sizeof(cpuset)) {
+  if (cpusetsize < sizeof(cpuset)) {
     return ErrorCode::INVAL;
   }
 
