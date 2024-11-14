@@ -48,7 +48,7 @@ uint UmtxChain::notify_n(const UmtxKey &key, sint count) {
     n++;
     count--;
 
-    if (it == sleep_queue.end()) {
+    if (it->first != key || it == sleep_queue.end()) {
       break;
     }
   }
