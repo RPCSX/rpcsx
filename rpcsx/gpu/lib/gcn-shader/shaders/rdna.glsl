@@ -1332,7 +1332,13 @@ int64_t s_ashr_i64(int64_t x, uint32_t y) { int64_t result = x >> (y & 0x3f); sc
 uint32_t s_bfm_b32(uint32_t x, uint32_t y) { uint32_t result = ((1 << (x & 0x1f)) - 1) << (y & 0x1f); scc = result != 0; return result; }
 uint64_t s_bfm_b64(uint64_t x, uint64_t y) { uint64_t result = ((uint64_t(1) << (x & 0x1f)) - 1) << (y & 0x1f); scc = result != 0; return result; }
 int32_t s_mul_i32(int32_t x, int32_t y) { return x * y; }
-int32_t s_mulk_i32(int32_t x, int32_t y) { return x * y; }
+void s_mulk_i32(inout int32_t x, int32_t y) { x = x * y; }
+void s_addk_i32(inout int32_t x, int32_t y) {
+    int32_t result = x + y;
+    scc = sign(x) == sign(y) && sign(result) != sign(x);
+    x = result;
+}
+
 int32_t s_abs_i32(int32_t x) {
     int32_t result = abs(x);
     scc = result == 0;

@@ -1185,7 +1185,7 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
         semanticModuleInfo.findSemanticOf(inst.getInstId()) == nullptr) {
       std::println(std::cerr, "unimplemented semantic: ");
       inst.print(std::cerr, context.ns);
-      std::println(std::cerr);
+      std::println(std::cerr, "\n");
 
       std::vector<ir::Instruction> workList;
       std::set<ir::Instruction> removed;
@@ -1202,7 +1202,7 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
 
         std::println(std::cerr, "removing ");
         inst.print(std::cerr, context.ns);
-        std::println(std::cerr);
+        std::println(std::cerr, "\n");
 
         if (auto value = inst.cast<ir::Value>()) {
           for (auto &use : value.getUseList()) {
