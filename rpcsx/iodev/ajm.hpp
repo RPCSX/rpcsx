@@ -265,6 +265,9 @@ struct At9Instance {
 struct AACInstance {
   AACHeaderType headerType;
   orbis::uint32_t sampleRate;
+  orbis::uint32_t isHeaac;
+  orbis::uint32_t isFrameSkipEnabled;
+  orbis::uint32_t framesSkipped;
 };
 
 struct AJMSidebandGaplessDecode {
@@ -333,6 +336,7 @@ struct Instance {
   orbis::kvector<std::byte> inputBuffer;
   orbis::kvector<std::byte> outputBuffer;
 
+  const AVCodec *avCodec;
   AVCodecContext *codecCtx;
   SwrContext *resampler;
   orbis::uint32_t lastBatchId;
@@ -340,6 +344,21 @@ struct Instance {
   AJMSidebandGaplessDecode gapless;
   orbis::uint32_t processedSamples;
   AJMSidebandFormat lastDecode;
+
+  bool isNeedToSkipOutput() {
+    if (codec == AJM_CODEC_AAC && aac.isFrameSkipEnabled &&
+        aac.framesSkipped < 2) {
+      aac.framesSkipped += 1;
+      return true;
+    }
+    if (gapless.skipSamples > 0 || gapless.totalSamples > 0) {
+      if (gapless.totalSkippedSamples < gapless.skipSamples ||
+          processedSamples > gapless.totalSamples) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   ~Instance() {
     if (resampler) {
