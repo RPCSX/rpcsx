@@ -3162,18 +3162,15 @@ void image_store_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint,
         return;
     }
 
-    if ((flags & kImageFlagDmask) != 0xf) {
-        debugPrintfEXT("image_store: unexpected dmask. flags %x", flags);
-    }
-
     uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
     uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
 
+    int vdataIndex = 0;
     for (uint element = 0; element < elements_count; element++) {
-        MEMORY_DATA_REF(uint32_t, deviceAddress) = vdata[element];
+        MEMORY_DATA_REF(uint32_t, deviceAddress) = (flags & (1 << element)) != 0 ? vdata[vdataIndex++] : 0;
         deviceAddress += SIZEOF(uint32_t);
     }
 }
@@ -3214,18 +3211,15 @@ void image_store_mip(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexHint,
         return;
     }
 
-    if ((flags & kImageFlagDmask) != 0xf) {
-        debugPrintfEXT("image_store_mip: unexpected dmask. flags %x", flags);
-    }
-
     uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
     uint16_t nfmt = uint16_t(tbuffer_nfmt(tbuffer));
 
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
 
+    int vdataIndex = 0;
     for (uint element = 0; element < elements_count; element++) {
-        uint32_t value = convert_to_format(element, vdata, dfmt, nfmt);
+        uint32_t value = (flags & (1 << element)) != 0 ? convert_to_format(element, vdata, dfmt, nfmt) : 0;
         MEMORY_DATA_REF(uint32_t, deviceAddress) = value;
         deviceAddress += SIZEOF(uint32_t);
     }
@@ -3265,16 +3259,13 @@ void image_store_mip_pck(u32vec4 vdata, u32vec4 vaddr, int32_t imageBufferIndexH
         return;
     }
 
-    if ((flags & kImageFlagDmask) != 0xf) {
-        debugPrintfEXT("image_store_mip_pck: unexpected dmask. flags %x", flags);
-    }
-
     uint16_t dfmt = uint16_t(tbuffer_dfmt(tbuffer));
     uint data_size = size_of_format(dfmt);
     uint elements_count = (data_size + SIZEOF(uint32_t) - 1) / SIZEOF(uint32_t);
 
+    int vdataIndex = 0;
     for (uint element = 0; element < elements_count; element++) {
-        MEMORY_DATA_REF(uint32_t, deviceAddress) = vdata[element];
+        MEMORY_DATA_REF(uint32_t, deviceAddress) = (flags & (1 << element)) != 0 ? vdata[vdataIndex++] : 0;
         deviceAddress += SIZEOF(uint32_t);
     }
 }
