@@ -466,17 +466,38 @@ ir::Value gcn::Context::readReg(ir::Location loc, Builder &builder,
 
     if (valInfo.baseType == ir::spv::OpTypeInt) {
       if (valWidth == 32) {
-        return builder.createSpvSelect(
-            loc, typeValue, result,
-            getOrCreateConstant(typeValue, static_cast<std::uint32_t>(1)),
-            getOrCreateConstant(typeValue, static_cast<std::uint32_t>(0)));
+        if (typeValue != getTypeUInt32()) {
+          result = builder.createSpvBitcast(loc, getTypeUInt32(), result);
+        }
+
+        result = builder.createSpvSelect(
+            loc, getTypeUInt32(), result,
+            getOrCreateConstant(getTypeUInt32(), static_cast<std::uint32_t>(1)),
+            getOrCreateConstant(getTypeUInt32(),
+                                static_cast<std::uint32_t>(0)));
+
+        if (typeValue != getTypeUInt32()) {
+          result = builder.createSpvBitcast(loc, typeValue, result);
+        }
+        return result;
       }
 
       if (valWidth == 64) {
-        return builder.createSpvSelect(
-            loc, typeValue, result,
-            getOrCreateConstant(typeValue, static_cast<std::uint64_t>(1)),
-            getOrCreateConstant(typeValue, static_cast<std::uint64_t>(0)));
+        if (typeValue != getTypeUInt64()) {
+          result = builder.createSpvBitcast(loc, getTypeUInt64(), result);
+        }
+
+        result = builder.createSpvSelect(
+            loc, getTypeUInt32(), result,
+            getOrCreateConstant(getTypeUInt32(), static_cast<std::uint64_t>(1)),
+            getOrCreateConstant(getTypeUInt32(),
+                                static_cast<std::uint64_t>(0)));
+
+        if (typeValue != getTypeUInt32()) {
+          result = builder.createSpvBitcast(loc, typeValue, result);
+        }
+
+        return result;
       }
     }
 
@@ -495,7 +516,25 @@ ir::Value gcn::Context::readReg(ir::Location loc, Builder &builder,
     return builder.createSpvBitcast(loc, typeValue, result);
   }
 
-  if (valWidth < regWidth || (valWidth % regWidth) != 0) {
+  if (valWidth < regWidth) {
+    if (valInfo.baseType == ir::spv::OpTypeFloat && valWidth == 16 &&
+        regWidth == 32) {
+      auto ref = getRegisterRef(loc, builder, id, index, lane);
+      auto regType = ref.getOperand(0).getAsValue().getOperand(1).getAsValue();
+      auto result = builder.createSpvLoad(loc, regType, ref);
+
+      if (regType != getTypeUInt32()) {
+        result = builder.createSpvBitcast(loc, getTypeUInt32(), result);
+      }
+
+      result = builder.createSpvUConvert(loc, getTypeUInt16(), result);
+      return builder.createSpvBitcast(loc, getTypeFloat16(), result);
+    }
+
+    rx::die("unexpected value width %u", valWidth);
+  }
+
+  if ((valWidth % regWidth) != 0) {
     std::abort();
   }
 
@@ -1144,9 +1183,8 @@ static ir::Value deserializeGcnRegion(
 
     if (instSem == nullptr) {
       if (isaInst == ir::sopp::BRANCH) {
-        auto target =
-            instAddress +
-            static_cast<std::int32_t>(isaInst.getOperand(0).value) / 4;
+        auto target = instAddress +
+                      static_cast<std::int32_t>(isaInst.getOperand(0).value);
         workList.push_back(target);
         auto [label, inserted] =
             converter.getOrCreateLabel(loc, bodyRegion, target);
