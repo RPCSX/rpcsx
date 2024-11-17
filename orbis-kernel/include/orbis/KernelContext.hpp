@@ -192,6 +192,7 @@ public:
 
   shared_mutex regMgrMtx;
   kmap<std::uint32_t, std::uint32_t> regMgrInt;
+  std::vector<std::tuple<std::uint8_t*, size_t>> dialogs{};
 
 private:
   shared_mutex m_heap_mtx;

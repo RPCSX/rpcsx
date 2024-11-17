@@ -59,7 +59,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
 
   if (orbis::g_currentThread != nullptr &&
       orbis::g_currentThread->tproc->vmId >= 0 && sig == SIGSEGV &&
-      signalAddress >= 0x40000 && signalAddress < 0x100'0000'0000) {
+      signalAddress >= orbis::kMinAddress &&
+      signalAddress < orbis::kMaxAddress) {
     auto vmid = orbis::g_currentThread->tproc->vmId;
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
     bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
@@ -93,7 +94,8 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
               continue;
             }
 
-            gpuContext.gpuCacheCommandIdle.fetch_add(1, std::memory_order::release);
+            gpuContext.gpuCacheCommandIdle.fetch_add(
+                1, std::memory_order::release);
             gpuContext.gpuCacheCommandIdle.notify_all();
 
             while (!gpuContext.cachePages[vmid][page].compare_exchange_weak(
@@ -602,11 +604,13 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
     mainThread->tproc->sdkVersion = orbis::g_context.sdkVersion;
   }
 
-  if (executableModule->interp.empty()) {
+  if (executableModule->type == rx::linker::kElfTypeExec ||
+      executableModule->type == rx::linker::kElfTypeSceExec) {
     return {.entryPoint = entryPoint, .interpBase = interpBase};
   }
 
-  if (vfs::exists(executableModule->interp, mainThread)) {
+  if (!executableModule->interp.empty() &&
+      vfs::exists(executableModule->interp, mainThread)) {
     auto loader =
         rx::linker::loadModuleFile(executableModule->interp, mainThread);
     loader->id = mainThread->tproc->modulesMap.insert(loader);
@@ -799,11 +803,15 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
 
   thread->tproc->event.emit(orbis::kEvFiltProc, orbis::kNoteExec);
 
-  std::thread([&] {
+  thread->handle = std::thread([&] {
+    thread->hostTid = ::gettid();
+    rx::thread::initialize();
     rx::thread::setupSignalStack();
     rx::thread::setupThisThread();
     ps4Exec(thread, executableModule, argv, envv);
-  }).join();
+  });
+
+  thread->handle.join();
   std::abort();
 }
 
@@ -1036,7 +1044,6 @@ int main(int argc, const char *argv[]) {
   mainThread->tproc = initProcess;
   mainThread->tid = initProcess->pid + baseId;
   mainThread->state = orbis::ThreadState::RUNNING;
-  mainThread->hostTid = ::gettid();
   orbis::g_currentThread = mainThread;
 
   if (!isSystem && !vfs::exists(guestArgv[0], mainThread) &&
@@ -1188,6 +1195,12 @@ int main(int argc, const char *argv[]) {
       }
     }
   }
+
+  mainThread->hostTid = ::gettid();
+  mainThread->nativeHandle = pthread_self();
+  orbis::g_currentThread = mainThread;
+  rx::thread::setupSignalStack();
+  rx::thread::setupThisThread();
 
   status =
       ps4Exec(mainThread, execEnv, std::move(executableModule), guestArgv, {});

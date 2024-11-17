@@ -540,6 +540,7 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
   auto proc = thread->tproc;
   std::lock_guard lock(proc->mtx);
   auto [baseId, childThread] = proc->threadsMap.emplace();
+  std::lock_guard lockThr(childThread->mtx);
   childThread->tproc = proc;
   childThread->tid = proc->pid + baseId;
   childThread->state = orbis::ThreadState::RUNQ;
@@ -569,35 +570,43 @@ SysResult thr_new(orbis::Thread *thread, orbis::ptr<thr_param> param,
     ORBIS_RET_ON_ERROR(uread(_rtp, _param.rtp));
     ORBIS_LOG_NOTICE("  rtp: ", _rtp.type, _rtp.prio);
   }
-  auto stdthr = std::thread{[=, childThread = Ref<Thread>(childThread)] {
-    static_cast<void>(
-        uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
-    auto context = new ucontext_t{};
+  childThread->handle =
+      std::thread{[=, childThread = Ref<Thread>(childThread)] {
+        static_cast<void>(
+            uwrite(_param.child_tid, slong(childThread->tid))); // TODO: verify
+        auto context = new ucontext_t{};
 
-    context->uc_mcontext.gregs[REG_RDI] =
-        reinterpret_cast<std::uintptr_t>(_param.arg);
-    context->uc_mcontext.gregs[REG_RSI] =
-        reinterpret_cast<std::uintptr_t>(_param.arg);
-    context->uc_mcontext.gregs[REG_RSP] =
-        reinterpret_cast<std::uintptr_t>(childThread->stackEnd);
-    context->uc_mcontext.gregs[REG_RIP] =
-        reinterpret_cast<std::uintptr_t>(_param.start_func);
+        context->uc_mcontext.gregs[REG_RDI] =
+            reinterpret_cast<std::uintptr_t>(_param.arg);
+        context->uc_mcontext.gregs[REG_RSI] =
+            reinterpret_cast<std::uintptr_t>(_param.arg);
+        context->uc_mcontext.gregs[REG_RSP] =
+            reinterpret_cast<std::uintptr_t>(childThread->stackEnd);
+        context->uc_mcontext.gregs[REG_RIP] =
+            reinterpret_cast<std::uintptr_t>(_param.start_func);
 
-    childThread->hostTid = ::gettid();
-    childThread->context = context;
-    childThread->state = orbis::ThreadState::RUNNING;
+        childThread->hostTid = ::gettid();
+        childThread->context = context;
+        childThread->state = orbis::ThreadState::RUNNING;
 
-    rx::thread::setupSignalStack();
-    rx::thread::setupThisThread();
-    rx::thread::invoke(childThread.get());
-  }};
+        rx::thread::setupSignalStack();
+        rx::thread::setupThisThread();
+        rx::thread::invoke(childThread.get());
+      }};
 
-  if (pthread_setname_np(stdthr.native_handle(),
-                         std::to_string(childThread->tid).c_str())) {
+  std::string name = std::to_string(childThread->tid);
+  if (childThread->name[0] != '0') {
+    name += '-';
+    name += childThread->name;
+  }
+
+  if (name.size() > 15) {
+    name.resize(15);
+  }
+  if (pthread_setname_np(childThread->getNativeHandle(), name.c_str())) {
     perror("pthread_setname_np");
   }
 
-  childThread->handle = std::move(stdthr);
   return {};
 }
 SysResult thr_exit(orbis::Thread *thread, orbis::ptr<orbis::slong> state) {
@@ -623,9 +632,7 @@ SysResult thr_kill(orbis::Thread *thread, orbis::slong id, orbis::sint sig) {
   }
 
   ORBIS_LOG_FATAL(__FUNCTION__, id, sig, t->hostTid);
-  std::lock_guard lock(t->tproc->mtx);
-  t->signalQueue.push_back(sig);
-  ::tgkill(t->tproc->hostPid, t->hostTid, SIGUSR1);
+  t->sendSignal(sig);
   return {};
 }
 
@@ -811,6 +818,7 @@ SysResult fork(Thread *thread, slong flags) {
   orbis::g_currentThread = newThread;
   newThread->retval[0] = 0;
   newThread->retval[1] = 1;
+  newThread->nativeHandle = pthread_self();
 
   thread = orbis::g_currentThread;
 
@@ -829,8 +837,6 @@ SysResult fork(Thread *thread, slong flags) {
 
   return {};
 }
-
-volatile bool debuggerPresent = false;
 
 SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
                  ptr<ptr<char>> envv) {
@@ -906,7 +912,13 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
   ORBIS_LOG_ERROR(__FUNCTION__, "done");
   std::thread([&] {
     rx::thread::setupSignalStack();
+    rx::thread::initialize();
     rx::thread::setupThisThread();
+
+    thread->hostTid = ::gettid();
+    thread->nativeHandle = pthread_self();
+    orbis::g_currentThread = thread;
+
     ps4Exec(thread, executableModule, _argv, _envv);
   }).join();
   std::abort();
@@ -924,6 +936,50 @@ SysResult registerEhFrames(Thread *thread) {
 
 void where(Thread *thread) {
   rx::printStackTrace((ucontext_t *)thread->context, thread, 2);
+}
+
+void block(Thread *thread) {
+  if (--thread->unblocked != 0) {
+    return;
+  }
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  sigaddset(&set, SIGSYS);
+  if (pthread_sigmask(SIG_BLOCK, &set, nullptr)) {
+    perror("pthread_sigmask block");
+    std::abort();
+  }
+  // ORBIS_LOG_ERROR("blocking thread", thread->tid,
+  // orbis::g_currentThread->tid);
+
+  std::free(thread->altStack.back());
+  thread->altStack.pop_back();
+  thread->sigReturns.pop_back();
+}
+
+void unblock(Thread *thread) {
+  if (thread->unblocked++ != 0) {
+    return;
+  }
+
+  // ORBIS_LOG_ERROR("unblocking thread", thread->tid,
+  //                 orbis::g_currentThread->tid);
+  rx::thread::copyContext(thread, thread->sigReturns.emplace_back(),
+                          *reinterpret_cast<ucontext_t *>(thread->context));
+
+  auto altStack = malloc(rx::thread::getSigAltStackSize());
+  thread->altStack.push_back(altStack);
+  rx::thread::setupSignalStack(altStack);
+
+  sigset_t set;
+  sigemptyset(&set);
+  sigaddset(&set, SIGUSR1);
+  sigaddset(&set, SIGSYS);
+  if (pthread_sigmask(SIG_UNBLOCK, &set, nullptr)) {
+    perror("pthread_sigmask unblock");
+    std::abort();
+  }
 }
 } // namespace
 
@@ -975,4 +1031,6 @@ ProcessOps rx::procOpsTable = {
     .processNeeded = processNeeded,
     .registerEhFrames = registerEhFrames,
     .where = where,
+    .unblock = unblock,
+    .block = block,
 };

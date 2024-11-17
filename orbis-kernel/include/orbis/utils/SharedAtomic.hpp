@@ -23,6 +23,8 @@ static constexpr auto kRelaxSpinCount = 12;
 static constexpr auto kSpinCount = 16;
 
 inline namespace utils {
+inline thread_local void (*g_scopedUnblock)(bool) = nullptr;
+
 bool try_spin_wait(auto &&pred) {
   for (std::size_t i = 0; i < kSpinCount; ++i) {
     if (pred()) {
@@ -58,8 +60,8 @@ struct shared_atomic32 : std::atomic<std::uint32_t> {
   using atomic::operator=;
 
   template <typename Clock, typename Dur>
-  [[nodiscard]] std::errc wait(std::uint32_t oldValue,
-                               std::chrono::time_point<Clock, Dur> timeout) {
+  std::errc wait(std::uint32_t oldValue,
+                 std::chrono::time_point<Clock, Dur> timeout) {
     if (try_spin_wait(
             [&] { return load(std::memory_order::acquire) != oldValue; })) {
       return {};
@@ -76,12 +78,12 @@ struct shared_atomic32 : std::atomic<std::uint32_t> {
         std::chrono::duration_cast<std::chrono::microseconds>(timeout - now));
   }
 
-  [[nodiscard]] std::errc wait(std::uint32_t oldValue,
-                               std::chrono::microseconds usec_timeout) {
+  std::errc wait(std::uint32_t oldValue,
+                 std::chrono::microseconds usec_timeout) {
     return wait_impl(oldValue, usec_timeout);
   }
 
-  [[nodiscard]] std::errc wait(std::uint32_t oldValue) {
+  std::errc wait(std::uint32_t oldValue) {
     if (try_spin_wait(
             [&] { return load(std::memory_order::acquire) != oldValue; })) {
       return {};

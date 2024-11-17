@@ -71,6 +71,10 @@ inline int stageToDescriptorSet(gcn::Stage stage) {
 
 static void printFlat(std::ostream &os, ir::Instruction inst,
                       ir::NameStorage &ns) {
+  if (inst == nullptr) {
+    os << "null";
+    return;
+  }
   os << ir::getInstructionName(inst.getKind(), inst.getOp());
   os << '(';
 
@@ -91,29 +95,165 @@ static void printFlat(std::ostream &os, ir::Instruction inst,
   os << ')';
 }
 
+static bool isEqual(ir::Value lhs, ir::Value rhs);
+
+static bool isEqual(const ir::Operand &lhs, const ir::Operand &rhs) {
+  return std::visit(
+      []<typename Lhs, typename Rhs>(const Lhs &lhs, const Rhs &rhs) {
+        if constexpr (std::is_same_v<Lhs, Rhs>) {
+          if constexpr (std::is_same_v<Lhs, ir::Value>) {
+            return isEqual(lhs, rhs);
+          } else {
+            return lhs == rhs;
+          }
+        } else {
+          return false;
+        }
+      },
+      lhs.value, rhs.value);
+}
+
+static bool isEqual(ir::Value lhs, ir::Value rhs) {
+  if (lhs == rhs) {
+    return true;
+  }
+
+  if ((lhs == nullptr) != (rhs == nullptr)) {
+    return false;
+  }
+
+  if (lhs.getInstId() != rhs.getInstId()) {
+    return false;
+  }
+
+  if (lhs.getOperandCount() != rhs.getOperandCount()) {
+    return false;
+  }
+
+  for (std::size_t i = 0, end = lhs.getOperandCount(); i < end; ++i) {
+    if (!isEqual(lhs.getOperand(i), rhs.getOperand(i))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 struct ResourcesBuilder {
   gcn::Resources resources;
   ir::NameStorage *ns;
 
-  void addPointer(gcn::Resources::Pointer p) {
+  int addPointer(gcn::Resources::Pointer p) {
+    for (auto &pointer : resources.pointers) {
+      if (pointer.size != p.size) {
+        continue;
+      }
+
+      if (!isEqual(pointer.base, p.base)) {
+        continue;
+      }
+
+      if (!isEqual(pointer.offset, p.offset)) {
+        continue;
+      }
+
+      return pointer.resourceSlot;
+    }
+
     p.resourceSlot = resources.slots++;
     resources.pointers.push_back(p);
+    return p.resourceSlot;
   }
-  void addTexture(gcn::Resources::Texture p) {
+  int addTexture(gcn::Resources::Texture p) {
+    for (auto &texture : resources.textures) {
+      bool equal = true;
+
+      for (std::size_t i = 0; i < std::size(texture.words); ++i) {
+        if (!isEqual(texture.words[i], p.words[i])) {
+          equal = false;
+          break;
+        }
+      }
+
+      if (!equal) {
+        continue;
+      }
+
+      texture.access |= p.access;
+      return texture.resourceSlot;
+    }
+
     p.resourceSlot = resources.slots++;
     resources.textures.push_back(p);
+    return p.resourceSlot;
   }
-  void addImageBuffer(gcn::Resources::ImageBuffer p) {
+  int addImageBuffer(gcn::Resources::ImageBuffer p) {
+    for (auto &buffer : resources.imageBuffers) {
+      bool equal = true;
+
+      for (std::size_t i = 0; i < std::size(buffer.words); ++i) {
+        if (!isEqual(buffer.words[i], p.words[i])) {
+          equal = false;
+          break;
+        }
+      }
+
+      if (!equal) {
+        continue;
+      }
+
+      buffer.access |= p.access;
+      return buffer.resourceSlot;
+    }
+
     p.resourceSlot = resources.slots++;
     resources.imageBuffers.push_back(p);
+    return p.resourceSlot;
   }
-  void addBuffer(gcn::Resources::Buffer p) {
+  int addBuffer(gcn::Resources::Buffer p) {
+    for (auto &buffer : resources.buffers) {
+      bool equal = true;
+
+      for (std::size_t i = 0; i < std::size(buffer.words); ++i) {
+        if (!isEqual(buffer.words[i], p.words[i])) {
+          equal = false;
+          break;
+        }
+      }
+
+      if (!equal) {
+        continue;
+      }
+
+      buffer.access |= p.access;
+      return buffer.resourceSlot;
+    }
+
     p.resourceSlot = resources.slots++;
     resources.buffers.push_back(p);
+    return p.resourceSlot;
   }
-  void addSampler(gcn::Resources::Sampler p) {
+  int addSampler(gcn::Resources::Sampler p) {
+    for (auto &sampler : resources.samplers) {
+      bool equal = true;
+
+      for (std::size_t i = 0; i < std::size(sampler.words); ++i) {
+        if (!isEqual(sampler.words[i], p.words[i])) {
+          equal = false;
+          break;
+        }
+      }
+
+      if (!equal) {
+        continue;
+      }
+
+      return sampler.resourceSlot;
+    }
+
     p.resourceSlot = resources.slots++;
     resources.samplers.push_back(p);
+    return p.resourceSlot;
   }
 
   ir::Value unpackFunctionCall(MemorySSA &memorySSA, spv::Import &importer,
@@ -163,6 +303,30 @@ struct ResourcesBuilder {
     return nullptr;
   }
 
+  ir::Instruction unpackInstruction(MemorySSA &memorySSA, spv::Import &importer,
+                                    ir::Instruction inst) {
+    for (auto &op : inst.getOperands()) {
+      auto value = op.getAsValue();
+      if (!value) {
+        continue;
+      }
+
+      if (value == ir::spv::OpVariable || value == ir::spv::OpAccessChain) {
+        auto varDef = memorySSA.getDefInst(inst, value);
+        if (varDef == ir::spv::OpStore) {
+          varDef = varDef.getOperand(1).getAsValue();
+        }
+        if (varDef == ir::amdgpu::POINTER) {
+          return importIR(memorySSA, importer, varDef).staticCast<ir::Value>();
+        }
+      } else if (value == ir::amdgpu::POINTER) {
+        return importIR(memorySSA, importer, value).staticCast<ir::Value>();
+      }
+    }
+
+    return inst;
+  }
+
   ir::Instruction unpackResourceDef(MemorySSA &memorySSA, spv::Import &importer,
                                     ir::memssa::Def def) {
     if (def == nullptr) {
@@ -180,6 +344,11 @@ struct ResourcesBuilder {
                                   defInst.staticCast<ir::Value>());
       }
 
+      if (defInst.getKind() != ir::Kind::Spv &&
+          defInst.getKind() != ir::Kind::AmdGpu) {
+        return unpackInstruction(memorySSA, importer, defInst);
+      }
+
       return importIR(memorySSA, importer, defInst);
     }
 
@@ -194,6 +363,7 @@ struct ResourcesBuilder {
             phi.getOperand(i + 1).getAsValue().staticCast<ir::memssa::Def>();
 
         auto inst = unpackResourceDef(memorySSA, importer, def);
+
         if (inst == nullptr) {
           resources.hasUnknown = true;
         }
@@ -205,6 +375,7 @@ struct ResourcesBuilder {
           resourcePhi.addOperand(value);
         } else {
           auto block = resources.context.create<ir::Block>(inst.getLocation());
+          inst.erase();
           block.addChild(inst);
           resourcePhi.addOperand(block);
         }
@@ -214,6 +385,20 @@ struct ResourcesBuilder {
     }
 
     return importIR(memorySSA, importer, def.getLinkedInst());
+  }
+
+  ir::Value toValue(ir::Instruction inst) {
+    if (inst == nullptr) {
+      return {};
+    }
+
+    if (auto value = inst.cast<ir::Value>()) {
+      return value;
+    }
+
+    auto block = resources.context.create<ir::Block>(inst.getLocation());
+    block.addChild(inst);
+    return block;
   }
 
   ir::Instruction importIR(MemorySSA &memorySSA, spv::Import &importer,
@@ -240,16 +425,15 @@ struct ResourcesBuilder {
           continue;
         }
 
-        if (auto value = resourceInst.cast<ir::Value>()) {
-          cloned.staticCast<ir::Value>().replaceAllUsesWith(value);
-        } else {
-          auto block =
-              resources.context.create<ir::Block>(resourceInst.getLocation());
-          block.addChild(resourceInst);
-          cloned.staticCast<ir::Value>().replaceAllUsesWith(block);
-        }
+        if (resourceInst != cloned) {
+          if (resource == inst) {
+            result = resourceInst;
+          }
 
-        continue;
+          cloned.staticCast<ir::Value>().replaceAllUsesWith(
+              toValue(resourceInst));
+          continue;
+        }
       }
 
       if (inst == ir::spv::OpFunctionCall) {
@@ -258,8 +442,55 @@ struct ResourcesBuilder {
 
         if (unpacked) {
           cloned.staticCast<ir::Value>().replaceAllUsesWith(unpacked);
+          if (resource == inst) {
+            result = unpacked;
+          }
+
           if (visited.insert(unpacked).second) {
-            workList.push_back(unpacked);
+            workList.emplace_back(unpacked);
+          }
+
+          continue;
+        }
+      }
+
+      if (inst.getKind() != ir::Kind::Spv &&
+          inst.getKind() != ir::Kind::AmdGpu) {
+        auto unpacked = unpackInstruction(memorySSA, importer, inst);
+
+        if (unpacked) {
+          if (unpacked != inst) {
+            cloned.staticCast<ir::Value>().replaceAllUsesWith(
+                toValue(unpacked));
+
+            if (resource == inst) {
+              result = unpacked;
+            }
+
+            if (visited.insert(unpacked).second) {
+              workList.emplace_back(unpacked);
+            }
+
+            continue;
+          }
+
+          // FIXME: pass read only parameters as value and remove this
+          // workaround
+          for (std::size_t i = 0, end = cloned.getOperandCount(); i < end;
+               ++i) {
+            auto valueOp = cloned.getOperand(i).getAsValue();
+            if (valueOp == nullptr) {
+              continue;
+            }
+            if (valueOp != ir::spv::OpVariable) {
+              continue;
+            }
+
+            auto def = memorySSA.getDef(inst, inst.getOperand(i).getAsValue());
+            if (auto resourceInst =
+                    unpackResourceDef(memorySSA, importer, def)) {
+              cloned.replaceOperand(i, toValue(resourceInst));
+            }
           }
 
           continue;
@@ -268,8 +499,13 @@ struct ResourcesBuilder {
 
       for (auto &operand : inst.getOperands()) {
         if (auto value = operand.getAsValue()) {
+          if (value.getKind() == ir::Kind::Spv &&
+              ir::spv::isTypeOp(value.getOp())) {
+            continue;
+          }
+
           if (visited.insert(value).second) {
-            workList.push_back(value);
+            workList.emplace_back(value);
           }
         }
       }
@@ -286,9 +522,13 @@ struct ResourcesBuilder {
 
     int slot = -1;
 
-    if (resourceSet.size() == 1 && resourceSet[0] != nullptr) {
-      slot = resources.slots;
-    }
+    auto trackResource = [&](int resourceSlot) {
+      if (slot == -1) {
+        slot = resourceSlot;
+      } else if (slot != resourceSlot) {
+        slot = -2;
+      }
+    };
 
     for (auto inst : resourceSet) {
       if (inst == ir::amdgpu::POINTER) {
@@ -296,11 +536,11 @@ struct ResourcesBuilder {
         auto base = inst.getOperand(2).getAsValue();
         auto offset = inst.getOperand(3).getAsValue();
 
-        addPointer({
+        trackResource(addPointer({
             .size = loadSize,
             .base = base,
             .offset = offset,
-        });
+        }));
 
         continue;
       }
@@ -309,11 +549,11 @@ struct ResourcesBuilder {
         auto access = static_cast<Access>(*inst.getOperand(1).getAsInt32());
         auto words = inst.getOperands().subspan(2);
 
-        addBuffer({
+        trackResource(addBuffer({
             .access = access,
             .words = {words[0].getAsValue(), words[1].getAsValue(),
                       words[2].getAsValue(), words[3].getAsValue()},
-        });
+        }));
 
         continue;
       }
@@ -322,19 +562,19 @@ struct ResourcesBuilder {
         auto access = static_cast<Access>(*inst.getOperand(1).getAsInt32());
         auto words = inst.getOperands().subspan(2);
         if (words.size() > 4) {
-          addTexture({
+          trackResource(addTexture({
               .access = access,
               .words = {words[0].getAsValue(), words[1].getAsValue(),
                         words[2].getAsValue(), words[3].getAsValue(),
                         words[4].getAsValue(), words[5].getAsValue(),
                         words[6].getAsValue(), words[7].getAsValue()},
-          });
+          }));
         } else {
-          addTexture({
+          trackResource(addTexture({
               .access = access,
               .words = {words[0].getAsValue(), words[1].getAsValue(),
                         words[2].getAsValue(), words[3].getAsValue()},
-          });
+          }));
         }
         continue;
       }
@@ -343,19 +583,19 @@ struct ResourcesBuilder {
         auto access = static_cast<Access>(*inst.getOperand(1).getAsInt32());
         auto words = inst.getOperands().subspan(2);
         if (words.size() > 4) {
-          addImageBuffer({
+          trackResource(addImageBuffer({
               .access = access,
               .words = {words[0].getAsValue(), words[1].getAsValue(),
                         words[2].getAsValue(), words[3].getAsValue(),
                         words[4].getAsValue(), words[5].getAsValue(),
                         words[6].getAsValue(), words[7].getAsValue()},
-          });
+          }));
         } else {
-          addImageBuffer({
+          trackResource(addImageBuffer({
               .access = access,
               .words = {words[0].getAsValue(), words[1].getAsValue(),
                         words[2].getAsValue(), words[3].getAsValue()},
-          });
+          }));
         }
         continue;
       }
@@ -363,11 +603,11 @@ struct ResourcesBuilder {
       if (inst == ir::amdgpu::SAMPLER) {
         auto words = inst.getOperands().subspan(1);
         auto unorm = *inst.getOperand(5).getAsBool();
-        addSampler({
+        trackResource(addSampler({
             .unorm = unorm,
             .words = {words[0].getAsValue(), words[1].getAsValue(),
                       words[2].getAsValue(), words[3].getAsValue()},
-        });
+        }));
         continue;
       }
 
@@ -877,6 +1117,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
 
 static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
                               gcn::Stage stage, const gcn::Environment &env,
+                              const SemanticInfo &semanticInfo,
                               const SemanticModuleInfo &semanticModuleInfo,
                               gcn::ShaderInfo &info, ir::Region body) {
   auto &context = converter.gcnContext;
@@ -927,10 +1168,6 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
   }
 
   for (auto inst : body.children()) {
-    if (inst.getKind() == ir::Kind::Spv) {
-      continue;
-    }
-
     if (inst == ir::exp::EXP) {
       expToSpv(converter, stage, info, inst);
       inst.remove();
@@ -941,6 +1178,100 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
         inst == ir::amdgpu::SAMPLER || inst == ir::amdgpu::TBUFFER ||
         inst == ir::amdgpu::IMAGE_BUFFER) {
       toAnalyze.push_back(inst.staticCast<ir::Value>());
+      continue;
+    }
+
+    if (inst.getKind() != ir::Kind::Spv && inst.getKind() != ir::Kind::AmdGpu &&
+        semanticModuleInfo.findSemanticOf(inst.getInstId()) == nullptr) {
+      std::println(std::cerr, "unimplemented semantic: ");
+      inst.print(std::cerr, context.ns);
+      std::println(std::cerr, "\n");
+
+      std::vector<ir::Instruction> workList;
+      std::set<ir::Instruction> removed;
+      workList.push_back(inst);
+      auto builder = gcn::Builder::createInsertBefore(context, inst);
+
+      while (!workList.empty()) {
+        auto inst = workList.back();
+        workList.pop_back();
+
+        if (!removed.insert(inst).second) {
+          continue;
+        }
+
+        std::println(std::cerr, "removing ");
+        inst.print(std::cerr, context.ns);
+        std::println(std::cerr, "\n");
+
+        if (auto value = inst.cast<ir::Value>()) {
+          for (auto &use : value.getUseList()) {
+            if (removed.contains(use.user)) {
+              continue;
+            }
+
+            workList.push_back(use.user);
+          }
+
+          value.replaceAllUsesWith(builder.createSpvUndef(
+              inst.getLocation(), value.getOperand(0).getAsValue()));
+        }
+
+        inst.remove();
+      }
+
+      continue;
+    }
+  }
+
+  if (!toAnalyze.empty()) {
+    auto &cfg =
+        context.analysis.get<CFG>([&] { return buildCFG(body.getFirst()); });
+
+    ModuleInfo moduleInfo;
+    collectModuleInfo(moduleInfo, context.layout);
+    auto memorySSA = buildMemorySSA(
+        cfg, semanticInfo,
+        [&](int regId) {
+          return context.getOrCreateRegisterVariable(gcn::RegId(regId));
+        },
+        &moduleInfo);
+
+    spv::Import resourceImporter;
+    // memorySSA.print(std::cerr, body, context.ns);
+
+    ResourcesBuilder resourcesBuilder;
+    std::map<ir::Value, std::int32_t> resourceConfigSlots;
+    resourcesBuilder.ns = &context.ns;
+    for (auto inst : toAnalyze) {
+      std::uint32_t configSlot = -1;
+      int resourceSlot =
+          resourcesBuilder.importResource(memorySSA, resourceImporter, inst);
+      if (resourceSlot >= 0) {
+        configSlot = info.create(gcn::ConfigType::ResourceSlot, resourceSlot);
+      }
+
+      resourceConfigSlots[inst] = configSlot;
+    }
+
+    for (auto [inst, slot] : resourceConfigSlots) {
+      auto builder = gcn::Builder::createInsertBefore(context, inst);
+      if (slot >= 0) {
+        auto value = converter.createReadConfig(stage, builder, slot);
+        value = builder.createSpvBitcast(inst.getLocation(),
+                                         context.getTypeSInt32(), value);
+        inst.replaceAllUsesWith(value);
+      } else {
+        inst.replaceAllUsesWith(context.simm32(-1));
+      }
+      inst.remove();
+    }
+
+    info.resources = std::move(resourcesBuilder.resources);
+  }
+
+  for (auto inst : body.children()) {
+    if (inst.getKind() == ir::Kind::Spv) {
       continue;
     }
 
@@ -1290,47 +1621,6 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
     inst.remove();
   }
 
-  if (!toAnalyze.empty()) {
-    auto &cfg =
-        context.analysis.get<CFG>([&] { return buildCFG(body.getFirst()); });
-
-    ModuleInfo moduleInfo;
-    collectModuleInfo(moduleInfo, context.layout);
-    auto memorySSA = buildMemorySSA(cfg, &moduleInfo);
-    spv::Import resourceImporter;
-
-    // memorySSA.print(std::cerr, body, context.ns);
-
-    ResourcesBuilder resourcesBuilder;
-    std::map<ir::Value, std::int32_t> resourceConfigSlots;
-    resourcesBuilder.ns = &context.ns;
-    for (auto inst : toAnalyze) {
-      std::uint32_t configSlot = -1;
-      int resourceSlot =
-          resourcesBuilder.importResource(memorySSA, resourceImporter, inst);
-      if (resourceSlot >= 0) {
-        configSlot = info.create(gcn::ConfigType::ResourceSlot, resourceSlot);
-      }
-
-      resourceConfigSlots[inst] = configSlot;
-    }
-
-    for (auto [inst, slot] : resourceConfigSlots) {
-      auto builder = gcn::Builder::createInsertBefore(context, inst);
-      if (slot >= 0) {
-        auto value = converter.createReadConfig(stage, builder, slot);
-        value = builder.createSpvBitcast(inst.getLocation(),
-                                         context.getTypeSInt32(), value);
-        inst.replaceAllUsesWith(value);
-      } else {
-        inst.replaceAllUsesWith(context.simm32(-1));
-      }
-      inst.remove();
-    }
-
-    info.resources = std::move(resourcesBuilder.resources);
-  }
-
   for (auto inst : body.children()) {
     if (inst.getKind() == ir::Kind::Spv) {
       continue;
@@ -1368,12 +1658,6 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
     }
 
     auto function = semanticModuleInfo.findSemanticOf(inst.getInstId());
-
-    if (function == nullptr) {
-      inst.print(std::cerr, context.ns);
-      std::cerr << "\n";
-      rx::die("unimplemented semantic");
-    }
 
     function = ir::clone(function, context, importer);
 
@@ -1704,15 +1988,16 @@ static void createInitialValues(GcnConverter &converter,
 
 std::optional<gcn::ConvertedShader>
 gcn::convertToSpv(Context &context, ir::Region body,
-                  const SemanticModuleInfo &semanticInfo, Stage stage,
+                  const SemanticInfo &semanticInfo,
+                  const SemanticModuleInfo &semanticModule, Stage stage,
                   const Environment &env) {
   gcn::ConvertedShader result;
   GcnConverter converter{context};
   gcn::Import importer;
 
   createInitialValues(converter, env, stage, result.info, body);
-  instructionsToSpv(converter, importer, stage, env, semanticInfo, result.info,
-                    body);
+  instructionsToSpv(converter, importer, stage, env, semanticInfo,
+                    semanticModule, result.info, body);
   if (stage != gcn::Stage::Cs) {
     replaceVariableWithConstant(
         context.getOrCreateRegisterVariable(gcn::RegId::ThreadId),
@@ -1784,6 +2069,18 @@ gcn::convertToSpv(Context &context, ir::Region body,
   if (env.supportsNonSemanticInfo) {
     extensions.createSpvExtension(context.getUnknownLocation(),
                                   "SPV_KHR_non_semantic_info");
+  } else {
+    for (auto imported : context.layout.getOrCreateExtInstImports(context)
+                             .children<ir::Value>()) {
+      if (imported.getOperand(0) == "NonSemantic.DebugPrintf") {
+        while (!imported.getUseList().empty()) {
+          auto use = *imported.getUseList().begin();
+          use.user.remove();
+        }
+
+        imported.remove();
+      }
+    }
   }
 
   auto merged = context.layout.merge(context);

@@ -2,6 +2,7 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/ProcessOps.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "utils/SharedAtomic.hpp"
 #include <bit>
 #include <chrono>
 #include <csignal>
@@ -314,16 +315,42 @@ void log_class_string<kstring>::format(std::string &out, const void *arg) {
 } // namespace logs
 
 void Thread::suspend() { sendSignal(-1); }
-
 void Thread::resume() { sendSignal(-2); }
 
 void Thread::sendSignal(int signo) {
-  std::lock_guard lock(mtx);
-  signalQueue.push_back(signo);
-  if (::tgkill(tproc->hostPid, hostTid, SIGUSR1) < 0) {
-    perror("tgkill");
+  if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = signo})) {
+    perror("pthread_sigqueue");
+  }
+}
+
+void Thread::notifyUnblockedSignal(int signo) {
+  for (std::size_t i = 0; i < blockedSignals.size();) {
+    if (blockedSignals[i].signo != signo) {
+      ++i;
+      continue;
+    }
+
+    queuedSignals.push_back(blockedSignals[i]);
+    blockedSignals.erase(blockedSignals.begin() + i);
   }
 }
 
 void Thread::where() { tproc->ops->where(this); }
+
+void Thread::unblock() { tproc->ops->unblock(this); }
+void Thread::block() { tproc->ops->block(this); }
+
+scoped_unblock::scoped_unblock() {
+  if (g_currentThread && g_currentThread->context) {
+    g_scopedUnblock = [](bool unblock) {
+      if (unblock) {
+        g_currentThread->unblock();
+      } else {
+        g_currentThread->block();
+      }
+    };
+  }
+}
+
+scoped_unblock::~scoped_unblock() { g_scopedUnblock = nullptr; }
 } // namespace orbis

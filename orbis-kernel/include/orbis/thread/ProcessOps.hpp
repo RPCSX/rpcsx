@@ -87,5 +87,8 @@ struct ProcessOps {
   SysResult (*registerEhFrames)(Thread *thread);
 
   void (*where)(Thread *);
+
+  void (*unblock)(Thread *);
+  void (*block)(Thread *);
 };
 } // namespace orbis

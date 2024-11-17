@@ -1,6 +1,8 @@
 #include "sys/sysproto.hpp"
+#include "thread/Process.hpp"
 #include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
+#include <sched.h>
 
 namespace orbis {
 struct rlimit {
@@ -21,9 +23,54 @@ orbis::SysResult orbis::sys_rtprio_thread(Thread *thread, sint function,
                                           ptr<struct rtprio> rtp) {
   ORBIS_LOG_ERROR(__FUNCTION__, function, lwpid, rtp->prio, rtp->type);
   thread->where();
+
+  Thread *targetThread;
+  if (lwpid == thread->tid || lwpid == -1) {
+    targetThread = thread;
+  } else {
+    targetThread = thread->tproc->threadsMap.get(lwpid - thread->tproc->pid);
+    if (targetThread == nullptr) {
+      return ErrorCode::SRCH;
+    }
+  }
   if (function == 0) {
-    rtp->type = 2;
-    rtp->prio = 10;
+    return orbis::uwrite(rtp, targetThread->prio);
+  } else if (function == 1) {
+    ORBIS_RET_ON_ERROR(orbis::uread(targetThread->prio, rtp));
+
+    int hostPolicy = SCHED_RR;
+    auto prioMin = sched_get_priority_min(hostPolicy);
+    auto prioMax = sched_get_priority_max(hostPolicy);
+    auto hostPriority =
+        (targetThread->prio.prio * (prioMax - prioMin + 1)) / 1000 - prioMin;
+    ::sched_param hostParam{};
+    hostParam.sched_priority = hostPriority;
+    if (pthread_setschedparam(targetThread->getNativeHandle(), hostPolicy,
+                              &hostParam)) {
+
+      auto normPrio = targetThread->prio.prio / 1000.f;
+      hostParam.sched_priority = 0;
+
+      if (normPrio < 0.3f) {
+        hostPolicy = SCHED_BATCH;
+      } else if (normPrio < 0.7f) {
+        hostPolicy = SCHED_OTHER;
+      } else {
+        hostPolicy = SCHED_IDLE;
+      }
+
+      if (pthread_setschedparam(targetThread->getNativeHandle(),
+                                hostPolicy, &hostParam)) {
+        ORBIS_LOG_ERROR(__FUNCTION__, "failed to set host priority",
+                        hostPriority, targetThread->prio.prio,
+                        targetThread->prio.type, errno,
+                        targetThread->getNativeHandle(), prioMin, prioMax, errno);
+      }
+    } else {
+      ORBIS_LOG_ERROR(__FUNCTION__, "set host priority", hostPriority,
+                      targetThread->tid, targetThread->prio.prio,
+                      targetThread->prio.type, prioMin, prioMax);
+    }
   }
   return {};
 }

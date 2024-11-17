@@ -4,8 +4,10 @@
 #include "amdgpu/tiler.hpp"
 #include "gnm/constants.hpp"
 #include "gnm/pm4.hpp"
+#include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/note.hpp"
+#include "rx/AddressRange.hpp"
 #include "rx/Config.hpp"
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
@@ -61,10 +63,13 @@ static vk::Context createVkContext(Device *device) {
   std::vector<const char *> optionalLayers;
   bool enableValidation = rx::g_config.validateGpu;
 
-  std::uint64_t minAddress = 0x40000;
-  if (!rx::mem::reserve(reinterpret_cast<void *>(minAddress),
-                        0x600'0000'0000 - minAddress)) {
-    rx::die("failed to reserve userspace memory");
+  for (std::size_t process = 0; process < 6; ++process) {
+    if (!rx::mem::reserve(
+            reinterpret_cast<void *>(orbis::kMinAddress +
+                                     orbis::kMaxAddress * process),
+            orbis::kMaxAddress - orbis::kMinAddress)) {
+      rx::die("failed to reserve userspace memory");
+    }
   }
 
   auto createWindow = [=] {
@@ -256,10 +261,10 @@ Device::Device() : vkContext(createVkContext(this)) {
 
   commandPipe.device = this;
   commandPipe.ring = {
-      .base = cmdRing,
+      .base = std::data(cmdRing),
       .size = std::size(cmdRing),
-      .rptr = cmdRing,
-      .wptr = cmdRing,
+      .rptr = std::data(cmdRing),
+      .wptr = std::data(cmdRing),
   };
 
   for (auto &pipe : computePipes) {
@@ -509,6 +514,12 @@ void Device::start() {
 }
 
 void Device::submitCommand(Ring &ring, std::span<const std::uint32_t> command) {
+  if (ring.size < command.size()) {
+    std::println(stderr, "too big command: ring size {}, command size {}",
+                 ring.size, command.size());
+    std::abort();
+  }
+
   std::scoped_lock lock(writeCommandMtx);
   if (ring.wptr + command.size() > ring.base + ring.size) {
     while (ring.wptr != ring.rptr) {
@@ -521,7 +532,8 @@ void Device::submitCommand(Ring &ring, std::span<const std::uint32_t> command) {
     ring.wptr = ring.base;
   }
 
-  std::memcpy(ring.wptr, command.data(), command.size_bytes());
+  std::memcpy(const_cast<std::uint32_t *>(ring.wptr), command.data(),
+              command.size_bytes());
   ring.wptr += command.size();
 }
 
@@ -583,6 +595,10 @@ void Device::unmapProcess(std::uint32_t pid) {
   auto &process = processInfo[pid];
   auto startAddress = static_cast<std::uint64_t>(process.vmId) << 40;
   auto size = static_cast<std::uint64_t>(1) << 40;
+
+  startAddress += orbis::kMinAddress;
+  size -= orbis::kMinAddress;
+
   rx::mem::reserve(reinterpret_cast<void *>(startAddress), size);
 
   ::close(process.vmFd);
@@ -596,7 +612,7 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
 
   auto vmSlotIt = process.vmTable.queryArea(address);
   if (vmSlotIt == process.vmTable.end()) {
-    std::abort();
+    return;
   }
 
   auto vmSlot = (*vmSlotIt).payload;
@@ -936,16 +952,6 @@ void Device::waitForIdle() {
       }
     }
 
-    for (auto &pipe : computePipes) {
-      for (auto &queue : pipe.queues) {
-        for (auto &ring : queue) {
-          if (ring.wptr != ring.rptr) {
-            allProcessed = false;
-          }
-        }
-      }
-    }
-
     if (allProcessed) {
       break;
     }
@@ -1016,7 +1022,9 @@ static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,
             1, std::memory_order::release);
         device->cpuCacheCommandsIdle[vmId].notify_one();
 
-        while (device->cpuCacheCommands[vmId][i].load(std::memory_order::acquire) != 0) {}
+        while (device->cpuCacheCommands[vmId][i].load(
+                   std::memory_order::acquire) != 0) {
+        }
         return;
       }
     }

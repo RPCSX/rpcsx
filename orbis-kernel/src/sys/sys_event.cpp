@@ -29,6 +29,9 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
   }
 
   auto fd = thread->tproc->fileDescriptors.insert(queue);
+  if (name != nullptr) {
+    queue->name = name;
+  }
   ORBIS_LOG_TODO(__FUNCTION__, name, flags, fd);
   thread->retval[0] = fd;
   return {};
@@ -182,6 +185,10 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     nodeIt->event.data |= 1000ull << 16; // clock
 
     kq->cv.notify_all(kq->mtx);
+  } else if (change.filter == kEvFiltGraphicsCore && change.ident == 0x41) {
+    // hp3d idle
+    nodeIt->triggered = true;
+    kq->cv.notify_all(kq->mtx);
   }
 
   return {};
@@ -218,9 +225,11 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       for (auto &changePtr : std::span(changelist, nchanges)) {
         KEvent change;
         ORBIS_RET_ON_ERROR(uread(change, &changePtr));
-        ORBIS_LOG_TODO(__FUNCTION__, fd, change.ident, change.filter,
-                       change.flags, change.fflags, change.data, change.udata);
-
+        if (change.filter != kEvFiltUser) {
+          ORBIS_LOG_NOTICE(__FUNCTION__, fd, change.ident, change.filter,
+                           change.flags, change.fflags, change.data,
+                           change.udata);
+        }
         if (auto result = keventChange(kq.get(), change, thread);
             result.value() != 0) {
           return result;
@@ -264,75 +273,79 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
   ErrorCode errorCode{};
 
   while (true) {
-    bool waitHack = false;
     bool canSleep = true;
 
     {
       std::lock_guard lock(kq->mtx);
-      for (auto it = kq->notes.begin(); it != kq->notes.end();) {
-        if (result.size() >= nevents) {
-          break;
-        }
+      while (result.size() < nevents && !kq->triggeredEvents.empty()) {
+        result.push_back(kq->triggeredEvents.back());
+        kq->triggeredEvents.pop_back();
+      }
 
-        auto &note = *it;
-        bool erase = false;
-        {
-          std::lock_guard lock(note.mutex);
+      if (result.empty()) {
+        for (auto it = kq->notes.begin(); it != kq->notes.end();) {
+          auto &note = *it;
+          bool erase = false;
+          {
+            std::lock_guard lock(note.mutex);
 
-          if (!note.triggered) {
-            if (note.event.filter == kEvFiltRead) {
-              if (note.file->hostFd >= 0) {
-                if (isReadEventTriggered(note.file->hostFd)) {
-                  note.triggered = true;
-                } else {
-                  canSleep = false;
+            if (!note.triggered) {
+              if (note.event.filter == kEvFiltRead) {
+                if (note.file->hostFd >= 0) {
+                  if (isReadEventTriggered(note.file->hostFd)) {
+                    note.triggered = true;
+                  } else {
+                    canSleep = false;
+                  }
+                }
+              } else if (note.event.filter == kEvFiltWrite) {
+                if (note.file->hostFd >= 0) {
+                  if (isWriteEventTriggered(note.file->hostFd)) {
+                    note.triggered = true;
+                  } else {
+                    canSleep = false;
+                  }
                 }
               }
-            } else if (note.event.filter == kEvFiltWrite) {
-              if (note.file->hostFd >= 0) {
-                if (isWriteEventTriggered(note.file->hostFd)) {
-                  note.triggered = true;
-                } else {
-                  canSleep = false;
-                }
+            }
+
+            if (note.enabled && note.triggered) {
+              result.push_back(note.event);
+
+              if (note.event.filter == kEvFiltDisplay) {
+                note.triggered = false;
+              }
+
+              if (note.event.flags & kEvDispatch) {
+                note.enabled = false;
+              }
+
+              if (note.event.flags & kEvOneshot) {
+                erase = true;
+              }
+
+              if (note.event.filter == kEvFiltRead ||
+                  note.event.filter == kEvFiltWrite) {
+                note.triggered = false;
               }
             }
           }
 
-          if (note.enabled && note.triggered) {
-            result.push_back(note.event);
-
-            if (note.event.filter == kEvFiltDisplay) {
-              note.triggered = false;
-            }
-
-            if (note.event.flags & kEvDispatch) {
-              note.enabled = false;
-            }
-
-            if (note.event.flags & kEvOneshot) {
-              erase = true;
-            }
-
-            if (note.event.filter == kEvFiltRead ||
-                note.event.filter == kEvFiltWrite) {
-              note.triggered = false;
-            }
+          if (erase) {
+            it = kq->notes.erase(it);
+          } else {
+            ++it;
           }
         }
 
-        if (erase) {
-          it = kq->notes.erase(it);
-        } else {
-          ++it;
+        while (result.size() > nevents) {
+          kq->triggeredEvents.push_back(result.back());
+          result.pop_back();
         }
       }
     }
 
     if (!result.empty()) {
-      // if (waitHack) {
-      //   std::this_thread::sleep_for(std::chrono::milliseconds(30));
-      // }
       break;
     }
 

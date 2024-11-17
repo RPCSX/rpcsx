@@ -191,7 +191,8 @@ CFG buildCFG(ir::Instruction firstInstruction,
 MemorySSA buildMemorySSA(CFG &cfg, ModuleInfo *moduleInfo = nullptr);
 
 MemorySSA buildMemorySSA(CFG &cfg, const SemanticInfo &instructionSemantic,
-                         std::function<ir::Value(int)> getRegisterVarCb);
+                         std::function<ir::Value(int)> getRegisterVarCb,
+                         ModuleInfo *moduleInfo = nullptr);
 
 bool dominates(ir::Instruction a, ir::Instruction b, bool isPostDom,
                graph::DomTree<ir::Value> &domTree);
@@ -385,10 +386,8 @@ struct Construct {
   CFG &getCfg() {
     return analysis.get<CFG>([this] {
       if (parent != nullptr) {
-        return parent->getCfg().buildView(
-            header,
-            &parent->getPostDomTree(),
-            {header, merge});
+        return parent->getCfg().buildView(header, &parent->getPostDomTree(),
+                                          {header, merge});
       }
 
       return buildCFG(header);
@@ -402,10 +401,8 @@ struct Construct {
 
     return analysis.get<Tag<CFG, kWithoutContinue>>([this] {
       if (parent != nullptr) {
-        return parent->getCfg().buildView(
-            header,
-            &parent->getPostDomTree(),
-            {header, merge}, loopContinue);
+        return parent->getCfg().buildView(header, &parent->getPostDomTree(),
+                                          {header, merge}, loopContinue);
       }
 
       return buildCFG(header, {}, loopContinue);

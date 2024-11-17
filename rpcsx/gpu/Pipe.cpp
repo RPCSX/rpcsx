@@ -97,6 +97,7 @@ ComputePipe::ComputePipe(int index)
   commandHandlers[gnm::IT_WRITE_DATA] = &ComputePipe::writeData;
   commandHandlers[gnm::IT_INDIRECT_BUFFER] = &ComputePipe::indirectBuffer;
   commandHandlers[gnm::IT_ACQUIRE_MEM] = &ComputePipe::acquireMem;
+  commandHandlers[gnm::IT_DMA_DATA] = &ComputePipe::dmaData;
 }
 
 bool ComputePipe::processAllRings() {
@@ -186,8 +187,8 @@ void ComputePipe::setIndirectRing(int queueId, int indirectLevel, Ring ring) {
   }
 
   ring.indirectLevel = indirectLevel;
-  std::println("mapQueue: {}, {}, {}", (void *)ring.base, (void *)ring.wptr,
-               ring.size);
+  std::println(stderr, "mapQueue: {}, {}, {}", (void *)ring.base,
+               (void *)ring.wptr, ring.size);
 
   queues[1 - ring.indirectLevel][queueId] = ring;
 }
@@ -202,8 +203,8 @@ void ComputePipe::mapQueue(int queueId, Ring ring,
     waitForIdle(queueId, lock);
   }
 
-  std::println("mapQueue: {}, {}, {}, {}", (void *)ring.base, (void *)ring.wptr,
-               ring.size, (void *)ring.doorbell);
+  std::println(stderr, "mapQueue: {}, {}, {}, {}", (void *)ring.base,
+               (void *)ring.wptr, ring.size, (void *)ring.doorbell);
 
   queues[1 - ring.indirectLevel][queueId] = ring;
 }
@@ -260,7 +261,7 @@ bool ComputePipe::setShReg(Ring &ring) {
                  data[i]);
   }
 
-  std::memcpy(ring.doorbell + offset, data, sizeof(std::uint32_t) * len);
+  std::memcpy(ring.doorbell + offset, const_cast<const uint32_t *>(data), sizeof(std::uint32_t) * len);
 
   return true;
 }
@@ -404,7 +405,7 @@ bool ComputePipe::writeData(Ring &ring) {
       *dstPointer = data[i];
     }
   } else {
-    std::memcpy(dstPointer, data, len * sizeof(std::uint32_t));
+    std::memcpy(dstPointer, const_cast<const uint32_t *>(data), len * sizeof(std::uint32_t));
   }
 
   return true;
@@ -429,6 +430,138 @@ bool ComputePipe::indirectBuffer(Ring &ring) {
 }
 
 bool ComputePipe::acquireMem(Ring &ring) { return true; }
+
+bool ComputePipe::dmaData(Ring &ring) {
+  auto control = ring.rptr[1];
+  auto srcAddressLo = ring.rptr[2];
+  auto data = srcAddressLo;
+  auto srcAddressHi = ring.rptr[3];
+  auto dstAddressLo = ring.rptr[4];
+  auto dstAddressHi = ring.rptr[5];
+  auto cmdSize = ring.rptr[6];
+  auto size = rx::getBits(cmdSize, 20, 0);
+
+  auto engine = rx::getBit(control, 0);
+  auto srcVolatile = rx::getBit(control, 15);
+
+  // 0 - dstAddress using das
+  // 1 - gds
+  // 3 - dstAddress using L2
+  auto dstSel = rx::getBits(control, 21, 20);
+
+  // 0 - LRU
+  // 1 - Stream
+  // 2 - Bypass
+  auto dstCachePolicy = rx::getBits(control, 26, 25);
+
+  auto dstVolatile = rx::getBit(control, 27);
+
+  // 0 - srcAddress using sas
+  // 1 - gds
+  // 2 - data
+  // 3 - srcAddress using L2
+  auto srcSel = rx::getBits(control, 30, 29);
+
+  auto cpSync = rx::getBit(control, 31);
+
+  auto dataDisWc = rx::getBit(cmdSize, 21);
+
+  // 0 - none
+  // 1 - 8 in 16
+  // 2 - 8 in 32
+  // 3 - 8 in 64
+  auto dstSwap = rx::getBits(cmdSize, 25, 24);
+
+  // 0 - memory
+  // 1 - register
+  auto sas = rx::getBit(cmdSize, 26);
+
+  // 0 - memory
+  // 1 - register
+  auto das = rx::getBit(cmdSize, 27);
+
+  auto saic = rx::getBit(cmdSize, 28);
+  auto daic = rx::getBit(cmdSize, 29);
+  auto rawWait = rx::getBit(cmdSize, 30);
+
+  void *dst = nullptr;
+  switch (dstSel) {
+  case 3:
+  case 0:
+    if (dstSel == 3 || das == 0) {
+      auto dstAddress =
+          dstAddressLo | (static_cast<std::uint64_t>(dstAddressHi) << 32);
+      dst = amdgpu::RemoteMemory{ring.vmId}.getPointer(dstAddress);
+      device->caches[ring.vmId].invalidate(
+          scheduler, rx::AddressRange::fromBeginSize(dstAddress, size));
+    } else {
+      dst = getMmRegister(ring, dstAddressLo / sizeof(std::uint32_t));
+    }
+    break;
+
+  case 1:
+    dst = device->caches[ring.vmId].getGdsBuffer().getData() + dstAddressLo;
+    break;
+
+  default:
+    rx::die("IT_DMA_DATA: unexpected dstSel %u", dstSel);
+  }
+
+  void *src = nullptr;
+  std::uint32_t srcSize = 0;
+  switch (srcSel) {
+  case 3:
+  case 0:
+    if (srcSel == 3 || sas == 0) {
+      auto srcAddress =
+          srcAddressLo | (static_cast<std::uint64_t>(srcAddressHi) << 32);
+      src = amdgpu::RemoteMemory{ring.vmId}.getPointer(srcAddress);
+      device->caches[ring.vmId].flush(
+          scheduler, rx::AddressRange::fromBeginSize(srcAddress, size));
+    } else {
+      src = getMmRegister(ring, srcAddressLo / sizeof(std::uint32_t));
+    }
+
+    srcSize = ~0;
+    break;
+  case 1:
+    src = device->caches[ring.vmId].getGdsBuffer().getData() + srcAddressLo;
+    srcSize = ~0;
+    break;
+
+  case 2:
+    src = &data;
+    srcSize = sizeof(data);
+    saic = 1;
+    break;
+
+  default:
+    rx::die("IT_DMA_DATA: unexpected srcSel %u", srcSel);
+  }
+
+  rx::dieIf(size > srcSize && saic == 0,
+            "IT_DMA_DATA: out of source size srcSel %u, dstSel %u, size %u",
+            srcSel, dstSel, size);
+
+  if (saic != 0) {
+    if (daic != 0 && dstSel == 0 && das == 1) {
+      std::memcpy(dst, src, sizeof(std::uint32_t));
+    } else {
+      for (std::uint32_t i = 0; i < size / sizeof(std::uint32_t); ++i) {
+        std::memcpy(std::bit_cast<std::uint32_t *>(dst) + i, src,
+                    sizeof(std::uint32_t));
+      }
+    }
+  } else if (daic != 0 && dstSel == 0 && das == 1) {
+    for (std::uint32_t i = 0; i < size / sizeof(std::uint32_t); ++i) {
+      std::memcpy(dst, std::bit_cast<std::uint32_t *>(src) + i,
+                  sizeof(std::uint32_t));
+    }
+  } else {
+    std::memcpy(dst, src, size);
+  }
+  return true;
+}
 
 bool ComputePipe::unknownPacket(Ring &ring) {
   auto op = rx::getBits(ring.rptr[0], 15, 8);
@@ -650,11 +783,15 @@ bool GraphicsPipe::processAllRings() {
 }
 
 void GraphicsPipe::processRing(Ring &ring) {
-  int cp;
+  int cp = 1;
   if (ring.indirectLevel < 0) {
     cp = 0;
   } else {
     cp = ring.indirectLevel + 1;
+
+    if (ring.indirectLevel == 2) {
+      cp = 2;
+    }
   }
 
   while (ring.rptr != ring.wptr) {
@@ -685,7 +822,8 @@ void GraphicsPipe::processRing(Ring &ring) {
         return;
       }
 
-      ring.rptr += len;
+      ring.rptr +=
+          std::min<std::uint32_t>(ring.size - (ring.rptr - ring.base), len);
 
       if (op == gnm::IT_INDIRECT_BUFFER || op == gnm::IT_INDIRECT_BUFFER_CNST) {
         break;
@@ -956,7 +1094,7 @@ bool GraphicsPipe::drawIndexAuto(Ring &ring) {
   return true;
 }
 bool GraphicsPipe::numInstances(Ring &ring) {
-  uConfig.vgtNumInstances = std::max(ring.rptr[1], 1u);
+  uConfig.vgtNumInstances = std::max(std::uint32_t(ring.rptr[1]), 1u);
   return true;
 }
 bool GraphicsPipe::drawIndexMultiAuto(Ring &ring) {
@@ -1024,7 +1162,7 @@ bool GraphicsPipe::writeData(Ring &ring) {
       *dstPointer = data[i];
     }
   } else {
-    std::memcpy(dstPointer, data, len * sizeof(std::uint32_t));
+    std::memcpy(dstPointer, const_cast<std::uint32_t *>(data), len * sizeof(std::uint32_t));
   }
 
   return true;
@@ -1264,7 +1402,7 @@ bool GraphicsPipe::eventWriteEos(Ring &ring) {
   case 1: { // store GDS data to memory
     auto sizeDw = rx::getBits(dataInfo, 31, 16);
     auto gdsIndexDw = rx::getBits(dataInfo, 15, 0);
-    std::println("event write eos: gds data {:x}-{:x}", gdsIndexDw,
+    std::println(stderr, "event write eos: gds data {:x}-{:x}", gdsIndexDw,
                  gdsIndexDw + sizeDw);
     auto size = sizeof(std::uint32_t) * sizeDw;
 
@@ -1431,7 +1569,8 @@ bool GraphicsPipe::setConfigReg(Ring &ring) {
 
     if (contextOffset + len <= sizeof(context)) {
       std::memcpy(reinterpret_cast<std::uint32_t *>(&context) + contextOffset,
-                  data, sizeof(std::uint32_t) * len);
+                  const_cast<std::uint32_t *>(data),
+                  sizeof(std::uint32_t) * len);
       return true;
     }
   }
@@ -1441,8 +1580,8 @@ bool GraphicsPipe::setConfigReg(Ring &ring) {
       "out of Config regs, offset: %x, count %u, %s\n", offset, len,
       gnm::mmio::registerName(decltype(device->config)::kMmioOffset + offset));
 
-  std::memcpy(reinterpret_cast<std::uint32_t *>(&device->config) + offset, data,
-              sizeof(std::uint32_t) * len);
+  std::memcpy(reinterpret_cast<std::uint32_t *>(&device->config) + offset,
+              const_cast<std::uint32_t *>(data), sizeof(std::uint32_t) * len);
 
   return true;
 }
@@ -1457,8 +1596,8 @@ bool GraphicsPipe::setShReg(Ring &ring) {
             "out of SH regs, offset: %x, count %u, %s\n", offset, len,
             gnm::mmio::registerName(decltype(sh)::kMmioOffset + offset));
 
-  std::memcpy(reinterpret_cast<std::uint32_t *>(&sh) + offset, data,
-              sizeof(std::uint32_t) * len);
+  std::memcpy(reinterpret_cast<std::uint32_t *>(&sh) + offset,
+              const_cast<std::uint32_t *>(data), sizeof(std::uint32_t) * len);
   // for (std::size_t i = 0; i < len; ++i) {
   //   std::fprintf(
   //       stderr, "writing to %s value %x\n",
@@ -1487,9 +1626,9 @@ bool GraphicsPipe::setUConfigReg(Ring &ring) {
     for (std::size_t i = 0; i < len; ++i) {
       auto id = decltype(uConfig)::kMmioOffset + offset + i;
       if (auto regName = gnm::mmio::registerName(id)) {
-        std::println(stderr, "writing to {} value {:x}", regName, data[i]);
+        std::println(stderr, "writing to {} value {:x}", regName, uint32_t(data[i]));
       } else {
-        std::println(stderr, "writing to {:x} value {:x}", id, data[i]);
+        std::println(stderr, "writing to {:x} value {:x}", id, uint32_t(data[i]));
       }
     }
   }
@@ -1498,8 +1637,8 @@ bool GraphicsPipe::setUConfigReg(Ring &ring) {
             "out of UConfig regs, offset: %u, count %u, %s\n", offset, len,
             gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
 
-  std::memcpy(reinterpret_cast<std::uint32_t *>(&uConfig) + offset, data,
-              sizeof(std::uint32_t) * len);
+  std::memcpy(reinterpret_cast<std::uint32_t *>(&uConfig) + offset,
+              const_cast<std::uint32_t *>(data), sizeof(std::uint32_t) * len);
   // for (std::size_t i = 0; i < len; ++i) {
   //   std::fprintf(
   //       stderr, "writing to %s value %x\n",
@@ -1528,9 +1667,9 @@ bool GraphicsPipe::setContextReg(Ring &ring) {
     for (std::size_t i = 0; i < len; ++i) {
       auto id = decltype(context)::kMmioOffset + offset + i;
       if (auto regName = gnm::mmio::registerName(id)) {
-        std::println(stderr, "writing to {} value {:x}", regName, data[i]);
+        std::println(stderr, "writing to {} value {:x}", regName, uint32_t(data[i]));
       } else {
-        std::println(stderr, "writing to {:x} value {:x}", id, data[i]);
+        std::println(stderr, "writing to {:x} value {:x}", id, uint32_t(data[i]));
       }
     }
   }
@@ -1539,8 +1678,8 @@ bool GraphicsPipe::setContextReg(Ring &ring) {
             "out of Context regs, offset: %u, count %u, %s\n", offset, len,
             gnm::mmio::registerName(decltype(context)::kMmioOffset + offset));
 
-  std::memcpy(reinterpret_cast<std::uint32_t *>(&context) + offset, data,
-              sizeof(std::uint32_t) * len);
+  std::memcpy(reinterpret_cast<std::uint32_t *>(&context) + offset,
+              const_cast<std::uint32_t *>(data), sizeof(std::uint32_t) * len);
 
   // for (std::size_t i = 0; i < len; ++i) {
   //   std::fprintf(
@@ -1687,8 +1826,9 @@ void CommandPipe::processRing(Ring &ring) {
 
     rx::die("cmd pipe: unexpected pm4 packet type %u, ring %u, header %u, rptr "
             "%p, wptr "
-            "%p, base %p",
-            type, ring.indirectLevel, header, ring.rptr, ring.wptr, ring.base);
+            "%p, base %p, end %p",
+            type, ring.indirectLevel, header, ring.rptr, ring.wptr, ring.base,
+            ring.base + ring.size);
   }
 }
 

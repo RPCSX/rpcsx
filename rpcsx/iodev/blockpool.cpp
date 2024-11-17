@@ -7,6 +7,7 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "vm.hpp"
+#include <cstddef>
 #include <mutex>
 #include <sys/mman.h>
 
@@ -30,22 +31,12 @@ static orbis::ErrorCode blockpool_ioctl(orbis::File *file,
     ORBIS_LOG_TODO("blockpool expand", args->len, args->searchStart,
                    args->searchEnd, args->flags);
 
-    // auto dmem = static_cast<DmemDevice *>(orbis::g_context.dmemDevice.get());
-    // std::lock_guard lock(dmem->mtx);
-    // std::uint64_t start = args->searchStart;
-    // std::uint64_t len = std::min(args->searchEnd - start, args->len);
-    // if (dmem->nextOffset > args->searchEnd) {
-    //   ORBIS_LOG_TODO("blockpool out of allocation", args->len,
-    //                  args->searchStart, args->searchEnd, args->flags);
-    //   return orbis::ErrorCode::INVAL;
-    // }
+    auto dmem = orbis::g_context.dmemDevice.rawStaticCast<DmemDevice>();
+    std::lock_guard lock(dmem->mtx);
+    std::uint64_t start = args->searchStart;
+    ORBIS_RET_ON_ERROR(dmem->allocate(&start, args->searchEnd, args->len, 1, args->flags));
 
-    // start = std::max(dmem->nextOffset, start);
-    // auto end = std::min(start + len, args->searchEnd);
-    // dmem->nextOffset = end;
-    // args->searchStart = start;
-
-    // blockPool->len += end - start;
+    blockPool->pool.map(start, start + args->len);
     return {};
   }
   }
@@ -61,17 +52,43 @@ static orbis::ErrorCode blockpool_mmap(orbis::File *file, void **address,
                                        orbis::Thread *thread) {
   auto blockPool = static_cast<BlockPoolDevice *>(file->device.get());
   std::lock_guard lock(blockPool->mtx);
-  ORBIS_LOG_FATAL("blockpool mmap", *address, size, offset, blockPool->len);
-  size = std::min<std::uint64_t>(
-      0x1000000, size); // FIXME: hack, investigate why we report so many memory
-  size = std::min(blockPool->len, size);
-  auto result = vm::map(*address, size, prot, flags);
+  ORBIS_LOG_FATAL("blockpool mmap", *address, size, offset);
 
-  if (result == (void *)-1) {
-    return orbis::ErrorCode::INVAL; // TODO
+  std::size_t totalBlockPoolSize = 0;
+  for (auto entry : blockPool->pool) {
+    totalBlockPoolSize += entry.endAddress - entry.beginAddress;
   }
 
-  blockPool->len -= size;
+  if (totalBlockPoolSize < size) {
+    return orbis::ErrorCode::NOMEM;
+  }
+
+  auto dmem = orbis::g_context.dmemDevice.rawStaticCast<DmemDevice>();
+  auto mapped = reinterpret_cast<std::byte *>(vm::map(*address, size, prot, flags, vm::kMapInternalReserveOnly, blockPool));
+
+  if (mapped == MAP_FAILED) {
+    return orbis::ErrorCode::NOMEM;
+  }
+  
+  auto result = mapped;
+
+  flags |= vm::kMapFlagFixed;
+  flags &= ~vm::kMapFlagNoOverwrite;
+  while (true) {
+    auto entry = *blockPool->pool.begin();
+    auto blockSize = std::min(entry.endAddress - entry.beginAddress, size);
+    void *mapAddress = mapped;
+    ORBIS_LOG_FATAL("blockpool mmap", mapAddress, blockSize, entry.beginAddress, blockSize);
+    ORBIS_RET_ON_ERROR(dmem->mmap(&mapAddress, blockSize, prot, flags, entry.beginAddress));
+
+    mapped += blockSize;
+    size -= blockSize;
+    blockPool->pool.unmap(entry.beginAddress, entry.beginAddress + blockSize);
+    if (size == 0) {
+      break;
+    }
+  }
+
   *address = result;
   return {};
 }
@@ -96,6 +113,11 @@ orbis::ErrorCode BlockPoolDevice::map(void **address, std::uint64_t len,
                                       std::int32_t prot, std::int32_t flags,
                                       orbis::Thread *thread) {
   ORBIS_LOG_FATAL("blockpool device map", *address, len);
+  if (prot == 0) {
+    // FIXME: investigate it
+    prot = 0x33;
+  }
+
   auto result = vm::map(*address, len, prot, flags);
 
   if (result == (void *)-1) {

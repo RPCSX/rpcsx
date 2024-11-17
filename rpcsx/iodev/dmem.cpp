@@ -45,7 +45,7 @@ orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
   if (prot == 0) {
     // hack
     // fixme: implement protect for pid
-    prot = vm::kMapProtCpuWrite | vm::kMapProtCpuRead | vm::kMapProtGpuAll;
+    prot = vm::kMapProtCpuReadWrite | vm::kMapProtGpuAll;
   }
 
   if (*address == nullptr) {
@@ -92,7 +92,7 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
   switch (request) {
   case 0x4008800a: // get size
     ORBIS_LOG_WARNING("dmem getTotalSize", device->index, argp);
-    *(std::uint64_t *)argp = device->dmemTotalSize;
+    *(std::uint64_t *)argp = device->dmemTotalSize / 0x10;
     return {};
 
   case 0xc0208016: { // get available size
@@ -146,6 +146,28 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
 
     device->allocations.map(args->address, args->address + args->size,
                             {.memoryType = -1u});
+    return {};
+  }
+
+  case 0xc0208004: { // get direct memory type
+    struct Args {
+      std::uint64_t start;
+      std::uint64_t regionStart;
+      std::uint64_t regionEnd;
+      std::uint32_t memoryType;
+    };
+
+    auto args = reinterpret_cast<Args *>(argp);
+
+    auto it = device->allocations.lowerBound(args->start);
+
+    if (it == device->allocations.end() || it->memoryType == -1u) {
+      return orbis::ErrorCode::SRCH;
+    }
+
+    args->regionStart = it.beginAddress();
+    args->regionEnd = it.endAddress();
+    args->memoryType = it->memoryType;
     return {};
   }
 

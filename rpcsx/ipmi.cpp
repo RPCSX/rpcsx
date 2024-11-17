@@ -6,11 +6,17 @@
 #include "orbis/osem.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "rx/hexdump.hpp"
+#include "rx/mem.hpp"
+#include "rx/watchdog.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
+#include <cstdint>
+#include <fcntl.h>
 #include <filesystem>
 #include <format>
 #include <print>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 ipmi::IpmiClient ipmi::audioIpmiClient;
 
@@ -578,14 +584,105 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
                        }
 
                        *(SceLncServiceAppStatus *)out = {
-                           .unk0 = 1,
-                           .unk1 = 1,
-                           .unk2 = 1,
+                           .unk0 = 1u,
+                           .unk1 = 0u,
+                           .unk2 = 5u,
                        };
 
                        size = sizeof(SceLncServiceAppStatus);
                        return 0;
-                     });
+                     })
+      .addSyncMethodStub(
+          orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30033 : 0x3002e,
+          []() -> std::int32_t {
+            auto commonDialog = std::get<0>(orbis::g_context.dialogs.front());
+            auto currentDialogId =
+                *reinterpret_cast<std::int16_t *>(commonDialog + 4);
+            auto currentDialog = std::get<0>(orbis::g_context.dialogs.back());
+            if (currentDialogId == 5) {
+              std::int32_t titleSize = 8192;
+              std::int32_t buttonNameSize = 64;
+              std::string dialogTitle(
+                  reinterpret_cast<char *>(currentDialog + 0x4e4), titleSize);
+              std::string buttonOk(
+                  reinterpret_cast<char *>(currentDialog + 0x2510),
+                  buttonNameSize);
+              std::string buttonCancel(
+                  reinterpret_cast<char *>(currentDialog + 0x2550),
+                  buttonNameSize);
+              auto buttonType =
+                  *reinterpret_cast<std::uint8_t *>(currentDialog + 0x488);
+              ORBIS_LOG_TODO("Activate message dialog", dialogTitle.data(),
+                             buttonOk.data(), buttonCancel.data(),
+                             (std::int16_t)buttonType);
+              // ignore dialogs without buttons
+              if (buttonType != 2 && buttonType != 5 && buttonType != 6) {
+                *reinterpret_cast<std::uint8_t *>(currentDialog + 0x18) =
+                    1; // finished state
+                *reinterpret_cast<std::int32_t *>(currentDialog + 0x30) =
+                    0; // result code
+                *reinterpret_cast<std::uint8_t *>(currentDialog + 0x24ec) =
+                    1; // pressed button type
+              }
+            } else {
+              ORBIS_LOG_TODO("Activate unsupported dialog", currentDialogId);
+            }
+            return 0;
+          })
+      .addSyncMethod(
+          orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30044 : 0x3003f,
+          [=](std::vector<std::vector<std::byte>>,
+              const std::vector<std::span<std::byte>> &inData) -> std::int32_t {
+            struct InitDialogArgs {
+              char *name;
+              size_t len;
+            };
+            auto args = (InitDialogArgs *)inData.data();
+            // maybe it's not necessary, but they add 1 to len
+            std::string realName(args->name, args->len - 1);
+            auto hostPath = rx::getShmGuestPath(realName);
+            ORBIS_LOG_TODO("Register dialog", inData.data(), inData.size(),
+                           realName.data());
+            int shmFd =
+                ::open(hostPath.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+            if (shmFd == -1) {
+              perror("shm_open");
+              std::abort();
+            }
+
+            struct stat controlStat;
+            if (::fstat(shmFd, &controlStat)) {
+              perror("fstat");
+              std::abort();
+            }
+
+            auto shmAddress = reinterpret_cast<std::uint8_t *>(
+                rx::mem::map(nullptr, controlStat.st_size,
+                             PROT_READ | PROT_WRITE, MAP_SHARED, shmFd));
+            if (shmAddress == MAP_FAILED) {
+              perror("mmap");
+              std::abort();
+            }
+            orbis::g_context.dialogs.emplace_back(shmAddress,
+                                                  controlStat.st_size);
+            return 0;
+          })
+      .addSyncMethod(
+          orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30045 : 0x30040,
+          [=](std::vector<std::vector<std::byte>>,
+              const std::vector<std::span<std::byte>> &inData) -> std::int32_t {
+            if (!orbis::g_context.dialogs.empty()) {
+              auto currentDialogAddr =
+                  std::get<0>(orbis::g_context.dialogs.back());
+              auto currentDialogSize =
+                  std::get<1>(orbis::g_context.dialogs.back());
+              ORBIS_LOG_TODO("Unmap shm after unlinking", currentDialogAddr,
+                             currentDialogSize);
+              rx::mem::unmap(currentDialogAddr, currentDialogSize);
+              orbis::g_context.dialogs.pop_back();
+            }
+            return 0;
+          });
   createIpmiServer(process, "SceAppMessaging");
   createIpmiServer(process, "SceShellCoreUtil");
   createIpmiServer(process, "SceNetCtl");
@@ -728,26 +825,157 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
                      })
       .addSyncMethod(
           0x12340001,
-          [](void *out, std::uint64_t &size) -> std::int32_t {
-            {
-              auto [dev, devPath] = vfs::get("/app0");
-              if (auto hostFs = dev.cast<HostFsDevice>()) {
-                std::error_code ec;
-                auto saveDir = hostFs->hostPath + "/.rpcsx/savedata/";
-                if (!std::filesystem::exists(saveDir)) {
-                  return 0x8002'0000 +
-                         static_cast<int>(orbis::ErrorCode::NOENT);
+          [](std::vector<std::vector<std::byte>> &outData,
+             const std::vector<std::span<std::byte>> &inData) -> std::int32_t {
+            std::println(stderr, "SceSaveData: 0x12340001");
+            if (inData.size() != 2 || outData.size() != 2) {
+              return 0x8002000 +
+                     static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
+            }
+            if (inData[0].size() != sizeof(orbis::uint64_t) ||
+                outData[1].size() != sizeof(orbis::uint64_t)) {
+              return 0x8002000 +
+                     static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
+            }
+
+            auto outputLen =
+                *reinterpret_cast<orbis::uint64_t *>(inData[0].data());
+
+            if (outputLen != outData[0].size()) {
+              return 0x8002000 +
+                     static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
+            }
+
+            struct Request {
+              orbis::uint32_t unk0;
+              orbis::uint32_t id;
+              orbis::uint32_t unk1[31];
+            };
+
+            static_assert(sizeof(Request) == 132);
+
+            if (inData[1].size() != sizeof(Request)) {
+              return 0x8002000 +
+                     static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
+            }
+
+            auto request = reinterpret_cast<Request *>(inData[1].data());
+
+            std::println(stderr, "SceSaveData: 0x12340001, message {}",
+                         request->id);
+
+            for (std::size_t index = 0; auto &in : inData) {
+              std::println(stderr, "in {} - {}", index++, in.size());
+              rx::hexdump(in);
+            }
+
+            for (std::size_t index = 0; auto &out : outData) {
+              std::println(stderr, "out {} - {}", index++, out.size());
+            }
+
+            if (request->id == 2) {
+              return 0;
+            }
+
+            if (request->id == 3) {
+              struct MountInfo {
+                std::uint64_t blocks;
+                std::uint64_t freeBlocks;
+              };
+
+              std::memset(outData[0].data(), 0xff, outData[0].size());
+
+              auto info = (MountInfo *)outData[0].data();
+              info->blocks = 1024 * 32;
+              info->freeBlocks = 1024 * 16;
+              return 0;
+            }
+
+            if (request->id == 4) {
+              return 0;
+            }
+
+            if (request->id == 6) {
+              struct Entry {
+                char string[32];
+              };
+
+              struct SearchResults {
+                std::uint32_t totalCount;
+                std::uint32_t count;
+                Entry entries[];
+              };
+
+              std::uint32_t fillOffset = 4 + sizeof(Entry) + 1024;
+
+              std::memset(outData[0].data() + fillOffset, 0xff,
+                          outData[0].size() - fillOffset);
+
+              auto results = (SearchResults *)outData[0].data();
+              std::vector<std::string> searchResults;
+              searchResults.emplace_back("TEST");
+              results->totalCount = searchResults.size();
+
+              Entry *entries = results->entries;
+              results->count = searchResults.size();
+
+              for (auto &str : searchResults) {
+                std::strncpy(entries->string, str.data(),
+                             sizeof(entries->string));
+                entries->string[std::size(entries->string) - 1] = 0;
+
+                entries++;
+              }
+
+              return 0;
+            }
+
+            if (request->id == 7) {
+              return 0;
+            }
+
+            if (request->id == 8) {
+              return 0;
+            }
+
+            if (request->id == 9) {
+              return 0;
+            }
+
+            if (request->id == 10) {
+              return 0;
+            }
+
+            if (request->id == 1 || request->id == 60) {
+              {
+                auto [dev, devPath] = vfs::get("/app0");
+                if (auto hostFs = dev.cast<HostFsDevice>()) {
+                  std::error_code ec;
+                  auto saveDir = hostFs->hostPath + "/.rpcsx/savedata/";
+                  if (!std::filesystem::exists(saveDir)) {
+                    return 0x8002'0000 +
+                           static_cast<int>(orbis::ErrorCode::NOENT);
+                  }
                 }
               }
+
+              // umount
+              std::string_view result = "/savedata";
+              if (outData[0].size() < result.size() + 1) {
+                return 0x8002'0000 + static_cast<int>(orbis::ErrorCode::INVAL);
+              }
+              std::strncpy((char *)outData[0].data(), result.data(),
+                           result.size() + 1);
+              outData[0].resize(result.size() + 1);
+              orbis::g_context.createEventFlag(orbis::kstring(result), 0x200,
+                                               0);
+
+              outData[1] = toBytes<orbis::uint64_t>(0);
+              return 0;
             }
-            std::string_view result = "/savedata";
-            if (size < result.size() + 1) {
-              return 0x8002'0000 + static_cast<int>(orbis::ErrorCode::INVAL);
-            }
-            std::strncpy((char *)out, result.data(), result.size() + 1);
-            size = result.size() + 1;
-            orbis::g_context.createEventFlag(orbis::kstring(result), 0x200, 0);
-            return 0;
+
+            return 0x8002000 +
+                   static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
           })
       .addSyncMethod(0x12340002, [](void *, std::uint64_t &) -> std::int32_t {
         {
@@ -781,7 +1009,27 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceScreenShot");
   createIpmiServer(process, "SceAppDbIpc");
   createIpmiServer(process, "SceAppInst");
-  createIpmiServer(process, "SceAppContent");
+  createIpmiServer(process, "SceAppContent")
+      .addSyncMethod<orbis::uint32_t, orbis::uint32_t>(
+          0x20001,
+          [](orbis::uint32_t &out, orbis::uint32_t param) -> std::int32_t {
+            switch (param) {
+            case 0: // sku
+              out = 3;
+              return 0;
+
+            case 1: // user defined param 0
+            case 2: // user defined param 1
+            case 3: // user defined param 2
+            case 4: // user defined param 3
+              ORBIS_LOG_ERROR("SceAppContent: get user defined param");
+              out = 0;
+              return 0;
+            }
+
+            return 0x8002000 + static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
+          });
+
   createIpmiServer(process, "SceNpEntAccess");
   createIpmiServer(process, "SceMwIPMIServer");
   createIpmiServer(process, "SceAutoMounterIpc");
@@ -822,6 +1070,7 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
   createEventFlag("SceRtcUtilTzdataUpdateFlag", 0x120, 0);
   createEventFlag("SceDataTransfer", 0x120, 0);
 
+  createEventFlag("SceLncUtilAppStatus00000000", 0x100, 0);
   createEventFlag("SceLncUtilAppStatus1", 0x100, 0);
   createEventFlag("SceAppMessaging1", 0x120, 1);
   createEventFlag("SceShellCoreUtil1", 0x120, 0x3f8c);

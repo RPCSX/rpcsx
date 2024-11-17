@@ -964,13 +964,12 @@ MemorySSA MemorySSABuilder::build(CFG &cfg, auto &&handleInst) {
   return std::move(memSSA);
 }
 
-MemorySSA
-shader::buildMemorySSA(CFG &cfg, const SemanticInfo &instructionSemantic,
-                       std::function<ir::Value(int)> getRegisterVarCb) {
-  return MemorySSABuilder{}.build(cfg, [&](MemorySSABuilder &builder,
-                                           ir::memssa::Scope scope,
-                                           ir::Instruction inst) {
-    using IRBuilder = MemorySSABuilder::IRBuilder;
+MemorySSA shader::buildMemorySSA(CFG &cfg,
+                                 const SemanticInfo &instructionSemantic,
+                                 std::function<ir::Value(int)> getRegisterVarCb,
+                                 ModuleInfo *moduleInfo) {
+  auto handleSemantic = [&](MemorySSABuilder &builder, ir::memssa::Scope scope,
+                            ir::Instruction inst) {
     auto semantic = instructionSemantic.findSemantic(inst.getInstId());
     if (semantic == nullptr) {
       return false;
@@ -1006,6 +1005,53 @@ shader::buildMemorySSA(CFG &cfg, const SemanticInfo &instructionSemantic,
     }
 
     return true;
+  };
+
+  auto handleModuleInfo = [&](MemorySSABuilder &builder,
+                              ir::memssa::Scope scope, ir::Instruction inst) {
+    if (inst != ir::spv::OpFunctionCall) {
+      return false;
+    }
+
+    auto callee = inst.getOperand(1).getAsValue();
+    auto it = moduleInfo->functions.find(callee);
+    auto fnInfo = it == moduleInfo->functions.end() ? nullptr : &it->second;
+
+    if (fnInfo == nullptr) {
+      return false;
+    }
+
+    for (auto [variable, access] : fnInfo->variables) {
+      builder.createPointerAccess(inst, scope, variable, VarSearchType::Root,
+                                  access);
+    }
+
+    auto args = inst.getOperands();
+    args = args.subspan(args.size() - fnInfo->parameters.size());
+
+    for (std::size_t i = 0; i < args.size(); ++i) {
+      auto arg = args[i].getAsValue();
+      auto param = fnInfo->parameters[i];
+
+      if (param.access == Access::None) {
+        continue;
+      }
+
+      builder.createPointerAccess(inst, scope, arg, VarSearchType::Root,
+                                  param.access);
+    }
+
+    return true;
+  };
+
+  return MemorySSABuilder{}.build(cfg, [&](MemorySSABuilder &builder,
+                                           ir::memssa::Scope scope,
+                                           ir::Instruction inst) {
+    if (handleSemantic(builder, scope, inst)) {
+      return true;
+    }
+
+    return moduleInfo != nullptr && handleModuleInfo(builder, scope, inst);
   });
 }
 
@@ -1013,8 +1059,6 @@ MemorySSA shader::buildMemorySSA(CFG &cfg, ModuleInfo *moduleInfo) {
   return MemorySSABuilder{}.build(cfg, [&](MemorySSABuilder &builder,
                                            ir::memssa::Scope scope,
                                            ir::Instruction inst) {
-    using IRBuilder = MemorySSABuilder::IRBuilder;
-
     if (moduleInfo == nullptr) {
       return false;
     }

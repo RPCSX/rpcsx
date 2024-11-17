@@ -1,0 +1,35 @@
+{
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "USER": "${localEnv:USER}"
+        }
+    },
+    "runArgs": [
+        "--cap-add=SYS_PTRACE",
+        "--security-opt",
+        "seccomp=unconfined"
+    ],
+    "updateRemoteUserUID": true,
+    "remoteUser": "${localEnv:USER}",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "streetsidesoftware.code-spell-checker",
+                "eamodio.gitlens",
+                "dtoplak.vscode-glsllint",
+                "slevesque.shader"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/bin/bash"
+                    }
+                }
+            }
+        }
+    }
+}

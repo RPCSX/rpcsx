@@ -152,7 +152,7 @@ enum OrbisElfDynamicType {
   kElfDynamicTypeSymbolic = 16,
   kElfDynamicTypeRel = 17,
   kElfDynamicTypeRelSize = 18,
-  kElfDynamicTypeRelEent = 19,
+  kElfDynamicTypeRelEnt = 19,
   kElfDynamicTypePltRel = 20,
   kElfDynamicTypeDebug = 21,
   kElfDynamicTypeTextRel = 22,
@@ -191,6 +191,7 @@ enum OrbisElfDynamicType {
   kElfDynamicTypeSceOriginalFilename1 = 0x61000041,
   kElfDynamicTypeSceModuleInfo1 = 0x61000043,
   kElfDynamicTypeSceNeededModule1 = 0x61000045,
+  kElfDynamicTypeSceExportLib1 = 0x61000047,
   kElfDynamicTypeSceImportLib1 = 0x61000049,
   kElfDynamicTypeSceSymTabSize = 0x6100003f,
   kElfDynamicTypeRelaCount = 0x6ffffff9
@@ -236,8 +237,8 @@ inline const char *toString(OrbisElfDynamicType dynType) {
     return "Rel";
   case kElfDynamicTypeRelSize:
     return "RelSize";
-  case kElfDynamicTypeRelEent:
-    return "RelEent";
+  case kElfDynamicTypeRelEnt:
+    return "RelEnt";
   case kElfDynamicTypePltRel:
     return "PltRel";
   case kElfDynamicTypeDebug:
@@ -320,6 +321,8 @@ inline const char *toString(OrbisElfDynamicType dynType) {
     return "SceSymTabSize";
   case kElfDynamicTypeRelaCount:
     return "RelaCount";
+  case kElfDynamicTypeSceExportLib1:
+    return "SceExportLib1";
   }
 
   return "<unknown>";
@@ -457,9 +460,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   auto imageBase = reinterpret_cast<std::byte *>(
       vm::map(reinterpret_cast<void *>(baseAddress),
-                  rx::alignUp(imageSize, vm::kPageSize), 0,
-                  vm::kMapFlagPrivate | vm::kMapFlagAnonymous |
-                      (baseAddress ? vm::kMapFlagFixed : 0)));
+              rx::alignUp(imageSize, vm::kPageSize), 0,
+              vm::kMapFlagPrivate | vm::kMapFlagAnonymous |
+                  (baseAddress ? vm::kMapFlagFixed : 0)));
 
   if (imageBase == MAP_FAILED) {
     std::abort();
@@ -566,6 +569,11 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     result->ehFrameSize = dataBufferIt - dataBuffer;
   }
 
+  orbis::Relocation *pltRelocations = nullptr;
+  std::size_t pltRelocationCount = 0;
+  orbis::Relocation *nonPltRelocations = nullptr;
+  std::size_t nonPltRelocationCount = 0;
+
   if (dynamicPhdrIndex >= 0 && phdrs[dynamicPhdrIndex].p_filesz > 0) {
     auto &dynPhdr = phdrs[dynamicPhdrIndex];
     std::vector<Elf64_Dyn> dyns(dynPhdr.p_filesz / sizeof(Elf64_Dyn));
@@ -655,15 +663,11 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     std::unordered_map<std::uint64_t, std::size_t> idToModuleIndex;
     std::unordered_map<std::uint64_t, std::size_t> idToLibraryIndex;
 
-    orbis::Relocation *pltRelocations = nullptr;
-    std::size_t pltRelocationCount = 0;
-    orbis::Relocation *nonPltRelocations = nullptr;
-    std::size_t nonPltRelocationCount = 0;
-
     for (auto dyn : dyns) {
-      if (dyn.d_tag == kElfDynamicTypeSceModuleInfo) {
+      if (dyn.d_tag == kElfDynamicTypeSceModuleInfo ||
+          dyn.d_tag == kElfDynamicTypeSceModuleInfo1) {
         std::strncpy(result->moduleName,
-                     sceStrtab + static_cast<std::uint32_t>(dyn.d_un.d_val),
+                     strtab + static_cast<std::uint32_t>(dyn.d_un.d_val),
                      sizeof(result->moduleName));
       } else if (dyn.d_tag == kElfDynamicTypeSceModuleAttr) {
         result->attributes = dyn.d_un.d_val;
@@ -675,11 +679,13 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
                      sizeof(result->soName));
       }
 
-      if (dyn.d_tag == kElfDynamicTypeSceModuleInfo) {
+      if (dyn.d_tag == kElfDynamicTypeSceModuleInfo ||
+          dyn.d_tag == kElfDynamicTypeSceModuleInfo1) {
         idToModuleIndex[dyn.d_un.d_val >> 48] = -1;
       }
 
-      if (dyn.d_tag == kElfDynamicTypeSceNeededModule) {
+      if (dyn.d_tag == kElfDynamicTypeSceNeededModule ||
+          dyn.d_tag == kElfDynamicTypeSceNeededModule1) {
         auto [it, inserted] = idToModuleIndex.try_emplace(
             dyn.d_un.d_val >> 48, result->neededModules.size());
 
@@ -692,7 +698,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         mod.attr = static_cast<std::uint16_t>(dyn.d_un.d_val >> 32);
         mod.isExport = false;
       } else if (dyn.d_tag == kElfDynamicTypeSceImportLib ||
-                 dyn.d_tag == kElfDynamicTypeSceExportLib) {
+                 dyn.d_tag == kElfDynamicTypeSceImportLib1 ||
+                 dyn.d_tag == kElfDynamicTypeSceExportLib ||
+                 dyn.d_tag == kElfDynamicTypeSceExportLib1) {
         auto [it, inserted] = idToLibraryIndex.try_emplace(
             dyn.d_un.d_val >> 48, result->neededLibraries.size());
 
@@ -703,7 +711,8 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         auto &lib = result->neededLibraries[it->second];
 
         lib.name = strtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
-        lib.isExport = dyn.d_tag == kElfDynamicTypeSceExportLib;
+        lib.isExport = dyn.d_tag == kElfDynamicTypeSceExportLib ||
+                       dyn.d_tag == kElfDynamicTypeSceExportLib1;
       } else if (dyn.d_tag == kElfDynamicTypeSceExportLibAttr ||
                  dyn.d_tag == kElfDynamicTypeSceImportLibAttr) {
         auto [it, inserted] = idToLibraryIndex.try_emplace(
@@ -719,11 +728,17 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       }
 
       switch (dyn.d_tag) {
+      case kElfDynamicTypePltGot:
       case kElfDynamicTypeScePltGot:
         result->pltGot = dyn.d_un.d_ptr
                              ? reinterpret_cast<std::uint64_t *>(
                                    imageBase - baseAddress + dyn.d_un.d_ptr)
                              : nullptr;
+        break;
+
+      case kElfDynamicTypeJmpRel:
+        pltRelocations = reinterpret_cast<orbis::Relocation *>(
+            imageBase - baseAddress + dyn.d_un.d_ptr);
         break;
 
       case kElfDynamicTypeSceJmpRel:
@@ -737,9 +752,16 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         break;
       case kElfDynamicTypeScePltRel:
         break;
+      case kElfDynamicTypePltRelSize:
       case kElfDynamicTypeScePltRelSize:
         pltRelocationCount = dyn.d_un.d_val / sizeof(orbis::Relocation);
         break;
+
+      case kElfDynamicTypeRela:
+        nonPltRelocations = reinterpret_cast<orbis::Relocation *>(
+            imageBase - baseAddress + dyn.d_un.d_ptr);
+        break;
+
       case kElfDynamicTypeSceRela:
         if (sceDynlibData != nullptr) {
           nonPltRelocations = reinterpret_cast<orbis::Relocation *>(
@@ -749,6 +771,7 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
               image.data() + dyn.d_un.d_ptr);
         }
         break;
+      case kElfDynamicTypeRelaSize:
       case kElfDynamicTypeSceRelaSize:
         nonPltRelocationCount = dyn.d_un.d_val / sizeof(orbis::Relocation);
         break;
@@ -831,25 +854,12 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         result->symbols.push_back(symbol);
       }
     }
-
-    if (pltRelocations != nullptr && pltRelocationCount > 0) {
-      result->pltRelocations.reserve(pltRelocationCount);
-      for (auto rel : std::span(pltRelocations, pltRelocationCount)) {
-        result->pltRelocations.push_back(rel);
-      }
-    }
-
-    if (nonPltRelocations != nullptr && nonPltRelocationCount > 0) {
-      result->nonPltRelocations.reserve(nonPltRelocationCount);
-      for (auto rel : std::span(nonPltRelocations, nonPltRelocationCount)) {
-        result->nonPltRelocations.push_back(rel);
-      }
-    }
   }
 
   for (auto phdr : phdrs) {
     if (phdr.p_type == kElfProgramTypeLoad ||
-        phdr.p_type == kElfProgramTypeSceRelRo) {
+        phdr.p_type == kElfProgramTypeSceRelRo ||
+        phdr.p_type == kElfProgramTypeGnuRelRo) {
       auto segmentEnd = rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize);
       auto segmentBegin =
           rx::alignDown(phdr.p_vaddr - baseAddress, phdr.p_align);
@@ -858,12 +868,28 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       std::memcpy(imageBase + phdr.p_vaddr - baseAddress,
                   image.data() + phdr.p_offset, phdr.p_filesz);
 
-      if (phdr.p_type == kElfProgramTypeSceRelRo) {
+      if (phdr.p_type == kElfProgramTypeSceRelRo ||
+          phdr.p_type == kElfProgramTypeGnuRelRo) {
         phdr.p_flags |= vm::kMapProtCpuWrite; // TODO: reprotect on relocations
       }
 
-      vm::protect(imageBase + segmentBegin, segmentSize,
-                  phdr.p_flags & (vm::kMapProtCpuAll | vm::kMapProtGpuAll));
+      int mapFlags = 0;
+
+      if (phdr.p_flags & PF_X) {
+        mapFlags |= vm::kMapProtCpuExec;
+      }
+      if (phdr.p_flags & PF_W) {
+        mapFlags |= vm::kMapProtCpuWrite;
+      }
+      if (phdr.p_flags & PF_R) {
+        mapFlags |= vm::kMapProtCpuRead;
+      }
+
+      if (mapFlags == 0) {
+        mapFlags = vm::kMapProtCpuWrite;
+      }
+
+      vm::protect(imageBase + segmentBegin, segmentSize, mapFlags);
 
       if (phdr.p_type == kElfProgramTypeLoad) {
         if (result->segmentCount >= std::size(result->segments)) {
@@ -878,6 +904,20 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     }
   }
 
+  if (pltRelocations != nullptr && pltRelocationCount > 0) {
+    result->pltRelocations.reserve(pltRelocationCount);
+    for (auto rel : std::span(pltRelocations, pltRelocationCount)) {
+      result->pltRelocations.push_back(rel);
+    }
+  }
+
+  if (nonPltRelocations != nullptr && nonPltRelocationCount > 0) {
+    result->nonPltRelocations.reserve(nonPltRelocationCount);
+    for (auto rel : std::span(nonPltRelocations, nonPltRelocationCount)) {
+      result->nonPltRelocations.push_back(rel);
+    }
+  }
+
   result->base = imageBase - baseAddress;
   result->size = imageSize + baseAddress;
   result->phdrAddress = phdrPhdrIndex >= 0 ? phdrs[phdrPhdrIndex].p_vaddr
@@ -888,12 +928,12 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   std::printf("Loaded module '%s' (%lx) from object '%s', address: %p - %p\n",
               result->moduleName, (unsigned long)result->attributes,
               result->soName, imageBase, (char *)imageBase + result->size);
-  for (auto mod : result->neededModules) {
+  for (const auto &mod : result->neededModules) {
     std::printf("  needed module '%s' (%lx)\n", mod.name.c_str(),
                 (unsigned long)mod.attr);
   }
 
-  for (auto lib : result->neededLibraries) {
+  for (const auto &lib : result->neededLibraries) {
     std::printf("  needed library '%s' (%lx), kind %s\n", lib.name.c_str(),
                 (unsigned long)lib.attr, lib.isExport ? "export" : "import");
   }

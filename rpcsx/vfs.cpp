@@ -55,7 +55,6 @@ struct ProcFs : IoDevice {
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override {
     std::fprintf(stderr, "procfs access: %s\n", path);
-    std::abort();
     return orbis::ErrorCode::NOENT;
   }
 };

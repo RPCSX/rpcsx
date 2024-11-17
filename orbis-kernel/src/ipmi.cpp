@@ -1,6 +1,7 @@
 #include "ipmi.hpp"
 #include "KernelContext.hpp"
 #include "thread/Process.hpp"
+#include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
 #include <chrono>
 #include <span>
@@ -243,6 +244,7 @@ orbis::SysResult orbis::sysIpmiServerReceivePacket(Thread *thread,
   {
     std::lock_guard lock(server->mutex);
     while (server->packets.empty()) {
+      orbis::scoped_unblock unblock;
       server->receiveCv.wait(server->mutex);
     }
 
@@ -330,6 +332,7 @@ orbis::SysResult orbis::sysIpmiSendConnectResult(Thread *thread,
   std::lock_guard lock(client->mutex);
   client->connectionStatus = status;
   client->connectCv.notify_all(client->mutex);
+  client->sessionCv.notify_all(client->mutex);
   return uwrite(result, 0u);
 }
 orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
@@ -386,12 +389,6 @@ orbis::SysResult orbis::sysIpmiSessionRespondSync(Thread *thread,
   if (_params.errorCode != 0) {
     ORBIS_LOG_ERROR(__FUNCTION__, session->client->name, _params.errorCode);
     thread->where();
-
-    // HACK: completely broken audio support should not be visible
-    if (session->client->name == "SceSysAudioSystemIpc" &&
-        _params.errorCode == -1) {
-      _params.errorCode = 0;
-    }
   }
 
   session->syncResponses.push_front({
@@ -626,6 +623,7 @@ orbis::SysResult orbis::sysIpmiClientTryGetResult(Thread *thread,
       return uwrite(result, 0u);
     }
 
+    orbis::scoped_unblock unblock;
     client->asyncResponseCv.wait(client->mutex);
   }
 
@@ -689,7 +687,11 @@ orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
 
         auto waitTime = std::chrono::duration_cast<std::chrono::microseconds>(
             timeoutPoint - now);
-        queue.messageCv.wait(client->mutex, waitTime.count());
+
+        {
+          orbis::scoped_unblock unblock;
+          queue.messageCv.wait(client->mutex, waitTime.count());
+        }
 
         if (!queue.messages.empty()) {
           now = clock::now();
@@ -709,6 +711,7 @@ orbis::SysResult orbis::sysIpmiClientGetMessage(Thread *thread,
       }
     } else {
       while (queue.messages.empty()) {
+        orbis::scoped_unblock unblock;
         queue.messageCv.wait(client->mutex);
       }
     }
@@ -971,7 +974,10 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
   IpmiSession::SyncResponse response;
 
   while (true) {
-    session->responseCv.wait(session->mutex);
+    {
+      orbis::scoped_unblock unblock;
+      session->responseCv.wait(session->mutex);
+    }
 
     bool found = false;
     for (auto it = session->syncResponses.begin();
@@ -988,10 +994,6 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
     if (found) {
       break;
     }
-  }
-
-  if (response.errorCode != 0) {
-    thread->where();
   }
 
   ORBIS_RET_ON_ERROR(uwrite(_params.pResult, response.errorCode));
@@ -1019,8 +1021,9 @@ orbis::sysIpmiClientInvokeSyncMethod(Thread *thread, ptr<uint> result, uint kid,
       continue;
     }
 
-    ORBIS_LOG_ERROR(__FUNCTION__, i, _outData.data, _outData.capacity,
-                    data.size());
+    // ORBIS_LOG_ERROR(__FUNCTION__, server->name, i, _outData.data,
+    // _outData.capacity,
+    //                 data.size());
 
     _outData.size = data.size();
     ORBIS_RET_ON_ERROR(uwriteRaw(_outData.data, data.data(), data.size()));
@@ -1138,11 +1141,13 @@ orbis::SysResult orbis::sysIpmiClientConnect(Thread *thread, ptr<uint> result,
     server->receiveCv.notify_one(server->mutex);
   }
 
-  while (client->session == nullptr) {
+  while (client->session == nullptr && !client->connectionStatus) {
+    orbis::scoped_unblock unblock;
     client->sessionCv.wait(client->mutex);
   }
 
   while (!client->connectionStatus) {
+    orbis::scoped_unblock unblock;
     client->connectCv.wait(client->mutex);
   }
 
@@ -1295,8 +1300,13 @@ orbis::SysResult orbis::sysIpmiClientWaitEventFlag(Thread *thread,
   }
 
   auto &evf = client->eventFlags[_params.index];
-  auto waitResult = evf.wait(thread, _params.mode, _params.patternSet,
-                             _params.pTimeout != 0 ? &resultTimeout : nullptr);
+  ErrorCode waitResult;
+
+  {
+    orbis::scoped_unblock unblock;
+    waitResult = evf.wait(thread, _params.mode, _params.patternSet,
+                          _params.pTimeout != 0 ? &resultTimeout : nullptr);
+  }
 
   if (_params.pPatternSet != nullptr) {
     ORBIS_RET_ON_ERROR(uwrite(_params.pPatternSet, thread->evfResultPattern));

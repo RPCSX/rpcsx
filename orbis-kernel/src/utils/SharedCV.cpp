@@ -17,17 +17,23 @@ std::errc shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
 
   std::errc result = {};
 
+  bool useTimeout = usec_timeout != static_cast<std::uint64_t>(-1);
+
   while (true) {
-    result = m_value.wait(_val, usec_timeout == static_cast<std::uint64_t>(-1)
-                                    ? std::chrono::microseconds::max()
-                                    : std::chrono::microseconds(usec_timeout));
+    result =
+        m_value.wait(_val, useTimeout ? std::chrono::microseconds(usec_timeout)
+                                      : std::chrono::microseconds::max());
+    bool spurious = result == std::errc::resource_unavailable_try_again ||
+                    result == std::errc::interrupted;
 
     // Cleanup
     const auto old = m_value.fetch_op([&](unsigned &value) {
       // Remove waiter if no signals
-      if (!(value & ~c_waiter_mask) &&
-          result != std::errc::resource_unavailable_try_again) {
-        value -= 1;
+      if ((value & ~c_waiter_mask) == 0) {
+
+        if (!spurious) {
+          value -= 1;
+        }
       }
 
       // Try to remove signal
@@ -60,7 +66,7 @@ std::errc shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
 #endif
 
     // Possibly spurious wakeup
-    if (result != std::errc::resource_unavailable_try_again) {
+    if (!spurious) {
       break;
     }
 

@@ -5,11 +5,12 @@
 #include "orbis/file.hpp"
 #include "orbis/utils/Rc.hpp"
 #include "orbis/utils/SharedMutex.hpp"
+#include "rx/MemoryTable.hpp"
 #include <cstdint>
 
 struct BlockPoolDevice : public IoDevice {
   orbis::shared_mutex mtx;
-  std::uint64_t len = 0;
+  rx::MemoryAreaTable<> pool;
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,

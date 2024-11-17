@@ -8,6 +8,7 @@
 #include "../thread/Thread.hpp"
 #include "../thread/types.hpp"
 #include "ProcessState.hpp"
+#include "cpuset.hpp"
 #include "orbis/AppInfo.hpp"
 #include "orbis/AuthInfo.hpp"
 #include "orbis/file.hpp"
@@ -64,6 +65,7 @@ struct Process final {
   AuthInfo authInfo{};
   kstring cwd;
   kstring root = "/";
+  cpuset affinity{(1 << 7) - 1};
   sint memoryContainer{1};
   sint budgetId{1};
   bool isInSandbox = false;

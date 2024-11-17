@@ -1,4 +1,5 @@
 #include "thread.hpp"
+#include "orbis-config.hpp"
 #include "orbis/sys/sysentry.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
@@ -9,17 +10,12 @@
 #include <immintrin.h>
 #include <link.h>
 #include <linux/prctl.h>
+#include <print>
 #include <rx/align.hpp>
 #include <sys/prctl.h>
 #include <ucontext.h>
 #include <unistd.h>
 #include <xbyak/xbyak.h>
-
-static std::size_t getSigStackSize() {
-  static auto sigStackSize = std::max<std::size_t>(
-      SIGSTKSZ, ::rx::alignUp(64 * 1024 * 1024, rx::mem::pageSize));
-  return sigStackSize;
-}
 
 static auto setContext = [] {
   struct SetContext : Xbyak::CodeGenerator {
@@ -41,7 +37,108 @@ static auto setContext = [] {
   return setContextStorage.getCode<void (*)(const mcontext_t &)>();
 }();
 
-static void copy(orbis::MContext &dst, const mcontext_t &src) {
+static __attribute__((no_stack_protector)) void
+handleSigSys(int sig, siginfo_t *info, void *ucontext) {
+  if (auto hostFs = _readgsbase_u64()) {
+    _writefsbase_u64(hostFs);
+  }
+
+  // rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
+  // rx::thread::g_current, 1);
+  auto thread = orbis::g_currentThread;
+  auto prevContext = std::exchange(thread->context, ucontext);
+
+  if ((std::uint64_t)&thread < orbis::kMaxAddress) {
+    ORBIS_LOG_ERROR("unexpected sigsys signal stack", thread->tid, sig,
+                    (std::uint64_t)&thread);
+    std::abort();
+  }
+
+  orbis::syscall_entry(thread);
+
+  thread = orbis::g_currentThread;
+  thread->context = prevContext;
+  _writefsbase_u64(thread->fsBase);
+}
+
+__attribute__((no_stack_protector)) static void
+handleSigUser(int sig, siginfo_t *info, void *ucontext) {
+  if (auto hostFs = _readgsbase_u64()) {
+    _writefsbase_u64(hostFs);
+  }
+
+  auto context = reinterpret_cast<ucontext_t *>(ucontext);
+  bool inGuestCode = context->uc_mcontext.gregs[REG_RIP] < orbis::kMaxAddress;
+  auto thread = orbis::g_currentThread;
+
+  if ((std::uint64_t)&context < orbis::kMaxAddress) {
+    ORBIS_LOG_ERROR("unexpected sigusr signal stack", thread->tid, sig,
+                    inGuestCode, (std::uint64_t)&context);
+    std::abort();
+  }
+
+  int guestSignal = info->si_value.sival_int;
+
+  if (guestSignal == -1) {
+    // ORBIS_LOG_ERROR("suspending thread", thread->tid, inGuestCode);
+
+    if (inGuestCode) {
+      thread->unblock();
+    }
+
+    auto [value, locked] = thread->suspendFlags.fetch_op([](unsigned &value) {
+      if ((value & ~orbis::kThreadSuspendFlag) != 0) {
+        value |= orbis::kThreadSuspendFlag;
+        return true;
+      }
+      return false;
+    });
+
+    if (locked) {
+      thread->suspendFlags.notify_all();
+      value |= orbis::kThreadSuspendFlag;
+
+      while (true) {
+        while ((value & ~orbis::kThreadSuspendFlag) != 0) {
+          thread->suspendFlags.wait(value);
+          value = thread->suspendFlags.load(std::memory_order::relaxed);
+        }
+
+        bool unlocked = thread->suspendFlags.op([](unsigned &value) {
+          if ((value & ~orbis::kThreadSuspendFlag) == 0) {
+            value &= ~orbis::kThreadSuspendFlag;
+            return true;
+          }
+
+          return false;
+        });
+
+        if (unlocked) {
+          thread->suspendFlags.notify_all();
+          break;
+        }
+      }
+    }
+
+    if (inGuestCode) {
+      thread->block();
+    }
+
+    // ORBIS_LOG_ERROR("thread wake", thread->tid);
+  }
+
+  if (inGuestCode) {
+    _writefsbase_u64(thread->fsBase);
+  }
+}
+
+std::size_t rx::thread::getSigAltStackSize() {
+  static auto sigStackSize = std::max<std::size_t>(
+      SIGSTKSZ, ::rx::alignUp(64 * 1024 * 1024, rx::mem::pageSize));
+  return sigStackSize;
+}
+
+void rx::thread::copyContext(orbis::MContext &dst, const mcontext_t &src) {
   // dst.onstack = src.gregs[REG_ONSTACK];
   dst.rdi = src.gregs[REG_RDI];
   dst.rsi = src.gregs[REG_RSI];
@@ -85,123 +182,14 @@ static void copy(orbis::MContext &dst, const mcontext_t &src) {
   // dst.xfpustate_len = src.gregs[REG_XFPUSTATE_LEN];
 }
 
-static void copy(orbis::Thread *thread, orbis::UContext &dst,
-                 const ucontext_t &src) {
+void rx::thread::copyContext(orbis::Thread *thread, orbis::UContext &dst,
+                             const ucontext_t &src) {
   dst = {};
   dst.stack.sp = thread->stackStart;
   dst.stack.size = (char *)thread->stackEnd - (char *)thread->stackStart;
   dst.stack.align = 0x10000;
   dst.sigmask = thread->sigMask;
-  copy(dst.mcontext, src.uc_mcontext);
-}
-
-static __attribute__((no_stack_protector)) void
-handleSigSys(int sig, siginfo_t *info, void *ucontext) {
-  if (auto hostFs = _readgsbase_u64()) {
-    _writefsbase_u64(hostFs);
-  }
-
-  // rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext),
-  // rx::thread::g_current, 1);
-  auto thread = orbis::g_currentThread;
-  auto prevContext = std::exchange(thread->context, ucontext);
-  {
-    std::lock_guard lock(thread->mtx);
-    copy(thread, thread->sigReturns.emplace_back(),
-         *reinterpret_cast<ucontext_t *>(ucontext));
-  }
-  if ((std::uint64_t)&thread < 0x100'0000'0000) {
-    ORBIS_LOG_ERROR("unexpected sigsys signal stack", thread->tid, sig,
-                    (std::uint64_t)&thread);
-    std::abort();
-  }
-
-  auto altStack = malloc(getSigStackSize());
-  rx::thread::setupSignalStack(altStack);
-
-  sigset_t set;
-  sigemptyset(&set);
-  sigaddset(&set, SIGUSR1);
-  sigaddset(&set, SIGSYS);
-  pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-
-  orbis::syscall_entry(thread);
-
-  pthread_sigmask(SIG_BLOCK, &set, NULL);
-
-  std::free(altStack);
-  if (thread == orbis::g_currentThread) {
-    std::lock_guard lock(thread->mtx);
-    thread->sigReturns.pop_back();
-  }
-  thread = orbis::g_currentThread;
-  thread->context = prevContext;
-  _writefsbase_u64(thread->fsBase);
-}
-
-__attribute__((no_stack_protector)) static void
-handleSigUser(int sig, siginfo_t *info, void *ucontext) {
-  if (auto hostFs = _readgsbase_u64()) {
-    _writefsbase_u64(hostFs);
-  }
-
-  auto context = reinterpret_cast<ucontext_t *>(ucontext);
-  bool inGuestCode = context->uc_mcontext.gregs[REG_RIP] < 0x100'0000'0000;
-  auto thread = orbis::g_currentThread;
-
-  if ((std::uint64_t)&context < 0x100'0000'0000) {
-    ORBIS_LOG_ERROR("unexpected sigusr signal stack", thread->tid, sig,
-                    inGuestCode, (std::uint64_t)&context);
-    std::abort();
-  }
-
-  int guestSignal = -3;
-  {
-    std::lock_guard lock(thread->mtx);
-    if (thread->signalQueue.empty()) {
-      ORBIS_LOG_ERROR("unexpected user signal", thread->tid, sig, inGuestCode);
-      return;
-    }
-
-    guestSignal = thread->signalQueue.front();
-    thread->signalQueue.pop_front();
-
-    copy(thread, thread->sigReturns.emplace_back(), *context);
-  }
-
-  if (guestSignal == -1) {
-    auto altStack = malloc(getSigStackSize());
-    rx::thread::setupSignalStack(altStack);
-
-    sigset_t set;
-    sigemptyset(&set);
-    sigaddset(&set, SIGUSR1);
-    sigaddset(&set, SIGSYS);
-    pthread_sigmask(SIG_UNBLOCK, &set, NULL);
-
-    thread->suspended++;
-    // ORBIS_LOG_ERROR("suspending thread", thread->tid);
-    while (thread->suspended > 0) {
-      ::sleep(1);
-    }
-
-    pthread_sigmask(SIG_BLOCK, &set, NULL);
-    free(altStack);
-
-    // ORBIS_LOG_ERROR("thread wake", thread->tid);
-  }
-
-  if (guestSignal == -2) {
-    // ORBIS_LOG_ERROR("thread resume signal", thread->tid);
-
-    std::lock_guard lock(thread->mtx);
-    thread->sigReturns.pop_back();
-    --thread->suspended;
-  }
-
-  if (inGuestCode) {
-    _writefsbase_u64(thread->fsBase);
-  }
+  copyContext(dst.mcontext, src.uc_mcontext);
 }
 
 void rx::thread::initialize() {
@@ -232,12 +220,12 @@ void *rx::thread::setupSignalStack(void *address) {
 
   if (address == NULL) {
     std::fprintf(stderr, "attempt to set null signal stack, %p - %zx\n",
-                 address, getSigStackSize());
+                 address, getSigAltStackSize());
     std::exit(EXIT_FAILURE);
   }
 
   ss.ss_sp = address;
-  ss.ss_size = getSigStackSize();
+  ss.ss_size = getSigAltStackSize();
   ss.ss_flags = 1 << 31;
 
   if (sigaltstack(&ss, &oss) == -1) {
@@ -249,9 +237,9 @@ void *rx::thread::setupSignalStack(void *address) {
 }
 
 void *rx::thread::setupSignalStack() {
-  auto data = malloc(getSigStackSize());
+  auto data = malloc(getSigAltStackSize());
   if (data == nullptr) {
-    std::fprintf(stderr, "malloc produces null, %zx\n", getSigStackSize());
+    std::println(stderr, "malloc produces null, {:x}", getSigAltStackSize());
     std::exit(EXIT_FAILURE);
   }
   return setupSignalStack(data);
@@ -268,7 +256,7 @@ void rx::thread::setupThisThread() {
   }
 
   if (prctl(PR_SET_SYSCALL_USER_DISPATCH, PR_SYS_DISPATCH_ON,
-            (void *)0x100'0000'0000, ~0ull - 0x100'0000'0000, nullptr)) {
+            (void *)orbis::kMaxAddress, ~0ull - orbis::kMaxAddress, nullptr)) {
     perror("prctl failed\n");
     std::exit(-1);
   }

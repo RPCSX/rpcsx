@@ -44,6 +44,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
     swap_avail = 1000,
     swap_total,
     kern_heap_size,
+    budgets,
   };
 
   enum sysctl_hw_config {
@@ -71,6 +72,10 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
   enum sysctl_kern_geom {
     updtfmt = 1000,
+  };
+
+  enum sysctl_vm_budgets_ {
+    mlock_total = 1000,
   };
 
   struct ProcInfo {
@@ -177,6 +182,15 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       }
 
       *(uint32_t *)old = 0;
+      return {};
+    }
+
+    if (name[0] == vm && name[1] == budgets && name[2] == mlock_total) {
+      if (*oldlenp != 8 || new_ != nullptr || newlen != 0) {
+        return ErrorCode::INVAL;
+      }
+
+      *(uint64_t *)old = 5056ull * 1024 * 1024;
       return {};
     }
   }
@@ -495,6 +509,15 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
           dest[count++] = machdep;
           dest[count++] = sceKernelIsCavern;
+        } else if (searchName == "vm.budgets.mlock_total") {
+          if (*oldlenp < 3 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = vm;
+          dest[count++] = budgets;
+          dest[count++] = mlock_total;
         }
 
         if (count == 0) {

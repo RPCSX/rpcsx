@@ -2,6 +2,7 @@
 #include "gpu/DeviceCtl.hpp"
 #include "io-device.hpp"
 #include "iodev/dmem.hpp"
+#include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
@@ -240,10 +241,11 @@ static constexpr std::uint64_t kBlockCount = kLastBlock - kFirstBlock + 1;
 static constexpr std::uint64_t kGroupSize = 64;
 static constexpr std::uint64_t kGroupMask = kGroupSize - 1;
 static constexpr std::uint64_t kGroupsInBlock = kPagesInBlock / kGroupSize;
-static constexpr std::uint64_t kMinAddress =
-    kFirstBlock * kBlockSize + vm::kPageSize * 0x10;
-static constexpr std::uint64_t kMaxAddress = (kLastBlock + 1) * kBlockSize - 1;
+static constexpr std::uint64_t kMinAddress = orbis::kMinAddress;
+static constexpr std::uint64_t kMaxAddress = orbis::kMaxAddress;
 static constexpr std::uint64_t kMemorySize = kBlockCount * kBlockSize;
+
+static_assert((kLastBlock + 1) * kBlockSize == orbis::kMaxAddress);
 
 static int gMemoryShm = -1;
 
@@ -490,6 +492,16 @@ struct Block {
     }
 
     return foundCount >= count;
+  }
+
+  [[nodiscard]] bool isFree() const {
+    for (auto &group : groups) {
+      if (group.allocated) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   std::uint64_t findFreePages(std::uint64_t count, std::uint64_t alignment) {
@@ -785,12 +797,6 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     alignment = kPageSize;
   }
 
-  if (len > kBlockSize) {
-    std::println(stderr, "Memory error: too big allocation {} pages",
-                 pagesCount);
-    return MAP_FAILED;
-  }
-
   flags &= ~kMapFlagsAlignMask;
 
   bool noOverwrite = (flags & (kMapFlagNoOverwrite | kMapFlagFixed)) ==
@@ -839,30 +845,63 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
 
   static constexpr auto kBadAddress = ~static_cast<std::uint64_t>(0);
 
+  std::size_t mapBlockCount = (len + kBlockSize - 1) / kBlockSize;
+
+  auto isFreeBlockRange = [&](std::uint64_t firstBlock,
+                              std::size_t blockCount) {
+    for (auto blockIndex = firstBlock; blockIndex < firstBlock + blockCount;
+         ++blockIndex) {
+      if (!gBlocks[blockIndex].isFree()) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   if (address == 0 && hitAddress != 0) {
     auto hitBlockIndex = hitAddress >> kBlockShift;
-    for (auto blockIndex = hitBlockIndex; blockIndex <= kLastBlock;
-         ++blockIndex) {
-      auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
-          pagesCount, alignment);
+    if (mapBlockCount > 1) {
+      for (auto blockIndex = hitBlockIndex;
+           blockIndex <= kLastBlock - mapBlockCount + 1; ++blockIndex) {
+        if (isFreeBlockRange(blockIndex, mapBlockCount)) {
+          address = blockIndex * kBlockSize;
+          break;
+        }
+      }
+    } else {
+      for (auto blockIndex = hitBlockIndex; blockIndex <= kLastBlock;
+           ++blockIndex) {
+        auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
+            pagesCount, alignment);
 
-      if (pageAddress != kBadAddress) {
-        address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
-        break;
+        if (pageAddress != kBadAddress) {
+          address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
+          break;
+        }
       }
     }
   }
 
   if (address == 0) {
-    for (auto blockIndex = kFirstBlock; blockIndex <= 2; ++blockIndex) {
-      // std::size_t blockIndex = 0; // system managed block
+    if (mapBlockCount > 1) {
+      for (auto blockIndex = kFirstBlock;
+           blockIndex <= kLastBlock - mapBlockCount + 1; ++blockIndex) {
+        if (isFreeBlockRange(blockIndex, mapBlockCount)) {
+          address = blockIndex * kBlockSize;
+          break;
+        }
+      }
+    } else {
+      for (auto blockIndex = kFirstBlock; blockIndex <= kLastBlock;
+           ++blockIndex) {
+        auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
+            pagesCount, alignment);
 
-      auto pageAddress = gBlocks[blockIndex - kFirstBlock].findFreePages(
-          pagesCount, alignment);
-
-      if (pageAddress != kBadAddress) {
-        address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
-        break;
+        if (pageAddress != kBadAddress) {
+          address = (pageAddress << kPageShift) | (blockIndex * kBlockSize);
+          break;
+        }
       }
     }
   }
@@ -931,6 +970,7 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
   }
 
   if (auto thr = orbis::g_currentThread) {
+    std::lock_guard lock(orbis::g_context.gpuDeviceMtx);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.submitMapMemory(thr->tproc->pid, address, len, -1, -1, prot,
                           address - kMinAddress);
@@ -964,7 +1004,7 @@ bool vm::unmap(void *addr, std::uint64_t size) {
   auto pages = (size + (kPageSize - 1)) >> kPageShift;
   auto address = reinterpret_cast<std::uint64_t>(addr);
 
-  if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
+  if (address < kMinAddress || address >= kMaxAddress || size >= kMaxAddress ||
       address > kMaxAddress - size) {
     std::println(stderr, "Memory error: unmap out of memory");
     return false;
@@ -994,6 +1034,7 @@ bool vm::unmap(void *addr, std::uint64_t size) {
     std::println(stderr, "ignoring unmapping {:x}-{:x}", address,
                  address + size);
   }
+  gMapInfo.unmap(address, address + size);
   return rx::mem::unmap(addr, size);
 }
 
@@ -1007,7 +1048,7 @@ bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {
   endAddress = rx::alignUp(endAddress, kPageSize);
   size = endAddress - address;
   auto pages = size >> kPageShift;
-  if (address < kMinAddress || address >= kMaxAddress || size > kMaxAddress ||
+  if (address < kMinAddress || address >= kMaxAddress || size >= kMaxAddress ||
       address > kMaxAddress - size) {
     std::println(stderr, "Memory error: protect out of memory");
     return false;

@@ -77,11 +77,14 @@ orbis::ErrorCode orbis::EventFlag::wait(Thread *thread, std::uint8_t waitMode,
 
     waitingThreads.emplace_back(waitingThread);
 
-    if (timeout) {
-      result = toErrorCode(thread->sync_cv.wait(queueMtx, *timeout));
-      update_timeout();
-    } else {
-      result = toErrorCode(thread->sync_cv.wait(queueMtx));
+    {
+      orbis::scoped_unblock unblock;
+      if (timeout) {
+        result = toErrorCode(thread->sync_cv.wait(queueMtx, *timeout));
+        update_timeout();
+      } else {
+        result = toErrorCode(thread->sync_cv.wait(queueMtx));
+      }
     }
 
     if (thread->evfIsCancelled == UINT64_MAX) {

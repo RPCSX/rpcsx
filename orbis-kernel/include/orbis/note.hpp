@@ -75,7 +75,7 @@ struct EventEmitter;
 struct KQueue;
 struct KNote {
   shared_mutex mutex;
-  Ref<KQueue> queue;
+  KQueue *queue;
   Ref<File> file;
   KEvent event{};
   bool enabled = true;
