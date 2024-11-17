@@ -426,6 +426,18 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     return {};
   }
 
+  if (request == 0x80308217) {
+    ORBIS_LOG_ERROR(__FUNCTION__, request);
+    thread->where();
+    return{};
+  }
+
+  if (request == 0x80208218) {
+    ORBIS_LOG_ERROR(__FUNCTION__, request);
+    thread->where();
+    return{};
+  }
+
   if (request == 0x80088209) { // deallocate?
     auto arg = *reinterpret_cast<std::uint64_t *>(argp);
     ORBIS_LOG_ERROR("dce: 0x80088209", arg);

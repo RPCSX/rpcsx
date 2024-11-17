@@ -604,11 +604,13 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
     mainThread->tproc->sdkVersion = orbis::g_context.sdkVersion;
   }
 
-  if (executableModule->interp.empty()) {
+  if (executableModule->type == rx::linker::kElfTypeExec ||
+      executableModule->type == rx::linker::kElfTypeSceExec) {
     return {.entryPoint = entryPoint, .interpBase = interpBase};
   }
 
-  if (vfs::exists(executableModule->interp, mainThread)) {
+  if (!executableModule->interp.empty() &&
+      vfs::exists(executableModule->interp, mainThread)) {
     auto loader =
         rx::linker::loadModuleFile(executableModule->interp, mainThread);
     loader->id = mainThread->tproc->modulesMap.insert(loader);
