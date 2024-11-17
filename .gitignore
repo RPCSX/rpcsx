@@ -34,6 +34,7 @@
 # Visual Studio Files
 .vs/*
 .vscode/*
+!.vscode/extensions.json
 *.ipch
 *.vspx
 *.psess
