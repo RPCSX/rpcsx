@@ -78,7 +78,7 @@ struct Module final {
   ptr<void> ehFrame{};
   uint32_t ehFrameHdrSize{};
   uint32_t ehFrameSize{};
-  ModuleSegment segments[4]{};
+  ModuleSegment segments[16]{};
   uint32_t segmentCount{};
   std::uint8_t fingerprint[20]{};
   ptr<void> base{};
