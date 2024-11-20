@@ -4,6 +4,7 @@
 #include "orbis/error/ErrorCode.hpp"
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
+#include "rx/format.hpp"
 #include "shader/dialect.hpp"
 #include <cstdio>
 #include <print>
