@@ -253,9 +253,21 @@ orbis::ErrorCode vfs::createSymlink(std::string_view target,
   }
 
   if (fromDevice != targetDevice) {
-    std::fprintf(stderr, "cross fs operation: %s -> %s\n",
-                 std::string(target).c_str(), std::string(linkPath).c_str());
-    std::abort();
+    auto fromHost = fromDevice.cast<HostFsDevice>();
+    auto targetHost = targetDevice.cast<HostFsDevice>();
+
+    if (fromHost == nullptr || targetHost == nullptr) {
+      std::fprintf(stderr, "cross fs operation: %s -> %s\n",
+                   std::string(target).c_str(), std::string(linkPath).c_str());
+      std::abort();
+    }
+
+    std::error_code ec;
+    std::filesystem::create_symlink(
+        std::filesystem::absolute(fromHost->hostPath + "/" +
+                                  fromDevPath.c_str()),
+        targetHost->hostPath + "/" + toDevPath.c_str(), ec);
+    return convertErrorCode(ec);
   }
 
   return fromDevice->createSymlink(fromDevPath.c_str(), toDevPath.c_str(),
