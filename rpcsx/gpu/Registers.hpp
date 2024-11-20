@@ -660,6 +660,7 @@ struct Registers {
       Register<0x107, SpiShaderPgm> spiShaderPgmHs;
       Register<0x147, SpiShaderPgm> spiShaderPgmLs;
       Register<0x200, ComputeConfig> compute;
+      Register<0x277, SpiShaderPgm> unk;
     };
   };
 
@@ -818,6 +819,7 @@ struct Registers {
       Register<0x316> unk_316;
       Register<0x317> vgtOutDeallocCntl;
       Register<0x318, std::array<CbColor, 8>> cbColor;
+      Register<0x500> unk;
     };
   };
 

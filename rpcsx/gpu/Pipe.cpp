@@ -12,6 +12,7 @@
 #include <print>
 #include <rx/bits.hpp>
 #include <rx/die.hpp>
+#include <rx/format.hpp>
 #include <vulkan/vulkan_core.h>
 
 using namespace amdgpu;
@@ -26,6 +27,11 @@ enum GraphicsCoreEvent {
   kGcEventCompute6RelMem = 0x06,
   kGcEventGfxEop = 0x40,
   kGcEventClockSet = 0x84,
+};
+
+struct RegSpan {
+  std::uint32_t offset;
+  std::uint32_t count;
 };
 
 static Scheduler createGfxScheduler(int index) {
@@ -621,6 +627,7 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   deHandlers[gnm::IT_INDEX_BASE] = &GraphicsPipe::indexBase;
   deHandlers[gnm::IT_DRAW_INDEX_2] = &GraphicsPipe::drawIndex2;
 
+  mainHandlers[gnm::IT_CONTEXT_CONTROL] = &GraphicsPipe::contextControl;
   deHandlers[gnm::IT_CONTEXT_CONTROL] = &GraphicsPipe::contextControl;
 
   deHandlers[gnm::IT_INDEX_TYPE] = &GraphicsPipe::indexType;
@@ -651,7 +658,7 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   deHandlers[gnm::IT_EVENT_WRITE_EOP] = &GraphicsPipe::eventWriteEop;
   deHandlers[gnm::IT_EVENT_WRITE_EOS] = &GraphicsPipe::eventWriteEos;
   deHandlers[gnm::IT_RELEASE_MEM] = &GraphicsPipe::releaseMem;
-  // IT_PREAMBLE_CNTL
+  deHandlers[gnm::IT_PREAMBLE_CNTL] = &GraphicsPipe::releaseMem;
   deHandlers[gnm::IT_DMA_DATA] = &GraphicsPipe::dmaData;
   deHandlers[gnm::IT_ACQUIRE_MEM] = &GraphicsPipe::acquireMem;
   // IT_REWIND
@@ -659,7 +666,10 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   // IT_LOAD_UCONFIG_REG
   // IT_LOAD_SH_REG
   // IT_LOAD_CONFIG_REG
-  // IT_LOAD_CONTEXT_REG
+  deHandlers[gnm::IT_LOAD_UCONFIG_REG] = &GraphicsPipe::loadUConfigReg;
+  deHandlers[gnm::IT_LOAD_SH_REG] = &GraphicsPipe::loadShReg;
+  deHandlers[gnm::IT_LOAD_CONFIG_REG] = &GraphicsPipe::loadConfigReg;
+  deHandlers[gnm::IT_LOAD_CONTEXT_REG] = &GraphicsPipe::loadContextReg;
   deHandlers[gnm::IT_SET_CONFIG_REG] = &GraphicsPipe::setConfigReg;
   deHandlers[gnm::IT_SET_CONTEXT_REG] = &GraphicsPipe::setContextReg;
   // IT_SET_CONTEXT_REG_INDIRECT
@@ -688,6 +698,14 @@ GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
   ceHandlers[gnm::IT_LOAD_CONST_RAM] = &GraphicsPipe::loadConstRam;
   ceHandlers[gnm::IT_WRITE_CONST_RAM] = &GraphicsPipe::writeConstRam;
   ceHandlers[gnm::IT_DUMP_CONST_RAM] = &GraphicsPipe::dumpConstRam;
+
+  deHandlers[gnm::IT_WAIT_REG_MEM64] = &GraphicsPipe::waitRegMem64;
+  deHandlers[gnm::IT_LOAD_CONTEXT_REG_INDEX] =
+      &GraphicsPipe::loadContextRegIndex;
+  deHandlers[gnm::IT_LOAD_SH_REG_INDEX] = &GraphicsPipe::loadShRegIndex;
+  deHandlers[gnm::IT_LOAD_UCONFIG_REG_INDEX] =
+      &GraphicsPipe::loadUConfigRegIndex;
+  deHandlers[gnm::IT_SET_UCONFIG_REG_INDEX] = &GraphicsPipe::setUConfigRegIndex;
 }
 
 void GraphicsPipe::setCeQueue(Ring ring) {
@@ -814,12 +832,12 @@ void GraphicsPipe::processRing(Ring &ring) {
       // }
 
       if (op == gnm::IT_COND_EXEC) {
-        rx::die("unimplemented COND_EXEC");
-      }
-
-      auto handler = commandHandlers[cp][op];
-      if (!(this->*handler)(ring)) {
-        return;
+        std::println("unimplemented COND_EXEC");
+      } else {
+        auto handler = commandHandlers[cp][op];
+        if (!(this->*handler)(ring)) {
+          return;
+        }
       }
 
       ring.rptr +=
@@ -953,7 +971,10 @@ bool GraphicsPipe::releaseMem(Ring &ring) {
     break;
 
   default:
-    rx::die("unimplemented event release mem data %#x", dataSel);
+    std::println(stderr,
+                 "unimplemented event release mem data {:#x}, address {}, "
+                 "dataLo {:x}, dataHi {:x}",
+                 dataSel, address, dataLo, dataHi);
   }
 
   return true;
@@ -1556,6 +1577,130 @@ bool GraphicsPipe::dmaData(Ring &ring) {
   return true;
 }
 
+bool GraphicsPipe::loadUConfigReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16) - 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  auto ranges = (RegSpan *)(ring.rptr + 3);
+
+  constexpr auto mmioOffset = Registers::UConfig::kMmioOffset;
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  for (auto range : std::span{ranges, len / 2}) {
+    // std::println(stderr, "loadUConfigReg: address={} regOffset={}
+    // numWords={}",
+    //              data, range.offset, range.count);
+    // for (auto offset = range.offset;
+    //      auto value : std::span{data, range.count}) {
+    //   std::fprintf(stderr, "writing %x to %s\n", value,
+    //                gnm::mmio::registerName(mmioOffset + offset));
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + range.offset), data,
+                sizeof(std::uint32_t) * range.count);
+    data += range.count;
+  }
+
+  return true;
+}
+
+bool GraphicsPipe::loadShReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16) - 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  auto ranges = (RegSpan *)(ring.rptr + 3);
+
+  constexpr auto mmioOffset = Registers::ShaderConfig::kMmioOffset;
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  for (auto range : std::span{ranges, len / 2}) {
+    // std::println(stderr, "loadShReg: address={} regOffset={} numWords={}",
+    // data,
+    //              range.offset, range.count);
+    // for (auto offset = range.offset;
+    //      auto value : std::span{data, range.count}) {
+    //   std::fprintf(stderr, "writing %x to %s\n", value,
+    //                gnm::mmio::registerName(mmioOffset + offset));
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + range.offset), data,
+                sizeof(std::uint32_t) * range.count);
+    data += range.count;
+  }
+
+  return true;
+}
+
+bool GraphicsPipe::loadConfigReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16) - 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  auto ranges = (RegSpan *)(ring.rptr + 3);
+
+  constexpr auto mmioOffset = Registers::Config::kMmioOffset;
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  for (auto range : std::span{ranges, len / 2}) {
+    // std::println(stderr, "loadConfigReg: address={} regOffset={}
+    // numWords={}",
+    //              data, range.offset, range.count);
+    // for (auto offset = range.offset;
+    //      auto value : std::span{data, range.count}) {
+    //   std::fprintf(stderr, "writing %x to %s\n", value,
+    //                gnm::mmio::registerName(mmioOffset + offset));
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + range.offset), data,
+                sizeof(std::uint32_t) * range.count);
+    data += range.count;
+  }
+
+  return true;
+}
+
+bool GraphicsPipe::loadContextReg(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16) - 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  auto ranges = (RegSpan *)(ring.rptr + 3);
+
+  constexpr auto mmioOffset = Registers::Context::kMmioOffset;
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  for (auto range : std::span{ranges, len / 2}) {
+    // std::println(stderr, "loadContextReg: address={} regOffset={}
+    // numWords={}",
+    //              data, range.offset, range.count);
+    // for (auto offset = range.offset;
+    //      auto value : std::span{data, range.count}) {
+    //   std::fprintf(stderr, "writing %x to %s\n", value,
+    //                gnm::mmio::registerName(mmioOffset + offset));
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + range.offset), data,
+                sizeof(std::uint32_t) * range.count);
+    data += range.count;
+  }
+
+  return true;
+}
+
 bool GraphicsPipe::setConfigReg(Ring &ring) {
   auto len = rx::getBits(ring.rptr[0], 29, 16);
   auto offset = ring.rptr[1] & 0xffff;
@@ -1613,25 +1758,27 @@ bool GraphicsPipe::setUConfigReg(Ring &ring) {
   auto index = ring.rptr[1] >> 26;
   auto data = ring.rptr + 2;
 
-  if (index != 0) {
-    {
-      auto name =
-          gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset);
-      std::println(
-          stderr,
-          "set UConfig regs with index, offset: {:x}, count {}, index {}, {}",
-          offset, len, index, name ? name : "<null>");
-    }
+  // if (index != 0) {
+  //   {
+  //     auto name =
+  //         gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset);
+  //     std::println(
+  //         stderr,
+  //         "set UConfig regs with index, offset: {:x}, count {}, index {},
+  //         {}", offset, len, index, name ? name : "<null>");
+  //   }
 
-    for (std::size_t i = 0; i < len; ++i) {
-      auto id = decltype(uConfig)::kMmioOffset + offset + i;
-      if (auto regName = gnm::mmio::registerName(id)) {
-        std::println(stderr, "writing to {} value {:x}", regName, uint32_t(data[i]));
-      } else {
-        std::println(stderr, "writing to {:x} value {:x}", id, uint32_t(data[i]));
-      }
-    }
-  }
+  //   for (std::size_t i = 0; i < len; ++i) {
+  //     auto id = decltype(uConfig)::kMmioOffset + offset + i;
+  //     if (auto regName = gnm::mmio::registerName(id)) {
+  //       std::println(stderr, "writing to {} value {:x}", regName,
+  //       uint32_t(data[i]));
+  //     } else {
+  //       std::println(stderr, "writing to {:x} value {:x}", id,
+  //       uint32_t(data[i]));
+  //     }
+  //   }
+  // }
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
             "out of UConfig regs, offset: %u, count %u, %s\n", offset, len,
@@ -1654,25 +1801,27 @@ bool GraphicsPipe::setContextReg(Ring &ring) {
   auto index = ring.rptr[1] >> 26;
   auto data = ring.rptr + 2;
 
-  if (index != 0) {
-    {
-      auto name =
-          gnm::mmio::registerName(decltype(context)::kMmioOffset + offset);
-      std::println(
-          stderr,
-          "set Context regs with index, offset: {:x}, count {}, index {}, {}",
-          offset, len, index, name ? name : "<null>");
-    }
+  // if (index != 0) {
+  //   {
+  //     auto name =
+  //         gnm::mmio::registerName(decltype(context)::kMmioOffset + offset);
+  //     std::println(
+  //         stderr,
+  //         "set Context regs with index, offset: {:x}, count {}, index {},
+  //         {}", offset, len, index, name ? name : "<null>");
+  //   }
 
-    for (std::size_t i = 0; i < len; ++i) {
-      auto id = decltype(context)::kMmioOffset + offset + i;
-      if (auto regName = gnm::mmio::registerName(id)) {
-        std::println(stderr, "writing to {} value {:x}", regName, uint32_t(data[i]));
-      } else {
-        std::println(stderr, "writing to {:x} value {:x}", id, uint32_t(data[i]));
-      }
-    }
-  }
+  //   for (std::size_t i = 0; i < len; ++i) {
+  //     auto id = decltype(context)::kMmioOffset + offset + i;
+  //     if (auto regName = gnm::mmio::registerName(id)) {
+  //       std::println(stderr, "writing to {} value {:x}", regName,
+  //                    uint32_t(data[i]));
+  //     } else {
+  //       std::println(stderr, "writing to {:x} value {:x}", id,
+  //                    uint32_t(data[i]));
+  //     }
+  //   }
+  // }
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
             "out of Context regs, offset: %u, count %u, %s\n", offset, len,
@@ -1776,6 +1925,216 @@ bool GraphicsPipe::mapQueues(Ring &ring) {
 
 bool GraphicsPipe::unmapQueues(Ring &ring) {
   // FIXME: implement
+  return true;
+}
+
+bool GraphicsPipe::waitRegMem64(Ring &ring) {
+  // FIXME: implement
+  return true;
+}
+
+bool GraphicsPipe::loadContextRegIndex(Ring &ring) {
+  uint32_t index = ring.rptr[1] & 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  uint32_t regOffset = ring.rptr[3] & ((1 << 16) - 1);
+  uint32_t dataFormat = ring.rptr[3] >> 31;
+  uint32_t numWords = (ring.rptr[4] & ((1 << 14) - 1));
+
+  if (index == 0) {
+    // direct address
+  } else {
+    // offset
+    rx::die("%s: unimplemented index 1", __FUNCTION__);
+  }
+
+  // std::println(
+  //     stderr,
+  //     "loadContextRegIndex: index={} addressLo={:x} addressHiOffset={:x} "
+  //     "regOffset={} dataFormat={} numWords={}",
+  //     index, addressLo, addressHiOffset, regOffset, dataFormat, numWords);
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  constexpr auto mmioOffset = Registers::Context::kMmioOffset;
+
+  if (dataFormat == 0) {
+    // offset and size
+    // for (auto offset = regOffset; auto value : std::span{data, numWords}) {
+    //   if (auto name = gnm::mmio::registerName(mmioOffset + offset)) {
+    //     std::println(stderr, "writing {:x} to {}", value, name);
+    //   } else {
+    //     std::println(stderr, "writing {:x} to {:x}", value,
+    //                  mmioOffset + offset);
+    //   }
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + regOffset), data,
+                sizeof(std::uint32_t) * numWords);
+  } else {
+    // offset and data
+
+    for (auto value :
+         std::span{(std::pair<std::uint32_t, std::uint32_t> *)data, numWords}) {
+      // if (auto name = gnm::mmio::registerName(mmioOffset + value.first)) {
+      //   std::println(stderr, "writing {:x} to {}", value.second, name);
+      // } else {
+      //   std::println(stderr, "writing {:x} to {:x}", value.second,
+      //                mmioOffset + value.first);
+      // }
+
+      auto regPtr = getMmRegister(mmioOffset + value.first);
+
+      *regPtr = value.second;
+    }
+  }
+
+  return true;
+}
+
+bool GraphicsPipe::loadShRegIndex(Ring &ring) {
+  uint32_t index = ring.rptr[1] & 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  uint32_t regOffset = ring.rptr[3] & ((1 << 16) - 1);
+  uint32_t dataFormat = ring.rptr[3] >> 31;
+  uint32_t numWords = (ring.rptr[4] & ((1 << 14) - 1));
+
+  if (index == 0) {
+    // direct address
+  } else {
+    // offset
+    rx::die("%s: unimplemented index 1", __FUNCTION__);
+  }
+
+  if (dataFormat == 0) {
+    // offset and size
+  } else {
+    // offset and data
+  }
+  // std::println(stderr,
+  //              "loadShRegIndex: index={} addressLo={:x} addressHiOffset={:x}
+  //              " "regOffset={} dataFormat={} numWords={}", index, addressLo,
+  //              addressHiOffset, regOffset, dataFormat, numWords);
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  constexpr auto mmioOffset = Registers::ShaderConfig::kMmioOffset;
+
+  if (dataFormat == 0) {
+    // offset and size
+    // for (auto offset = regOffset; auto value : std::span{data, numWords}) {
+    //   std::fprintf(stderr, "writing %x to %s\n", value,
+    //                gnm::mmio::registerName(mmioOffset + offset));
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + regOffset), data,
+                sizeof(std::uint32_t) * numWords);
+  } else {
+    // offset and data
+
+    for (auto value :
+         std::span{(std::pair<std::uint32_t, std::uint32_t> *)data, numWords}) {
+      // std::fprintf(stderr, "writing %x to %s\n", value.second,
+      //              gnm::mmio::registerName(mmioOffset + value.first));
+
+      auto regPtr = getMmRegister(mmioOffset + value.first);
+
+      *regPtr = value.second;
+    }
+  }
+
+  return true;
+}
+
+bool GraphicsPipe::loadUConfigRegIndex(Ring &ring) {
+  uint32_t index = ring.rptr[1] & 1;
+  uint32_t addressLo = ring.rptr[1] & ~3;
+  uint32_t addressHiOffset = ring.rptr[2];
+  uint32_t regOffset = ring.rptr[3] & ((1 << 16) - 1);
+  uint32_t dataFormat = ring.rptr[3] >> 31;
+  uint32_t numWords = (ring.rptr[4] & ((1 << 14) - 1));
+
+  if (index == 0) {
+    // direct address
+  } else {
+    // offset
+    rx::die("%s: unimplemented index 1", __FUNCTION__);
+  }
+
+  if (dataFormat == 0) {
+    // offset and size
+  } else {
+    // offset and data
+  }
+
+  // std::println(
+  //     stderr,
+  //     "loadUConfigRegIndex: index={} addressLo={:x} addressHiOffset={:x} "
+  //     "regOffset={} dataFormat={} numWords={}",
+  //     index, addressLo, addressHiOffset, regOffset, dataFormat, numWords);
+  // FIXME: implement
+  std::uint64_t address =
+      addressLo | (static_cast<std::uint64_t>(addressHiOffset) << 32);
+  auto data =
+      amdgpu::RemoteMemory{ring.vmId}.getPointer<std::uint32_t>(address);
+
+  constexpr auto mmioOffset = Registers::UConfig::kMmioOffset;
+
+  if (dataFormat == 0) {
+    // offset and size
+    // for (auto offset = regOffset; auto value : std::span{data, numWords}) {
+    //   std::fprintf(stderr, "writing %x to %s\n", value,
+    //                gnm::mmio::registerName(mmioOffset + offset));
+    //   ++offset;
+    // }
+
+    std::memcpy(getMmRegister(mmioOffset + regOffset), data,
+                sizeof(std::uint32_t) * numWords);
+  } else {
+    // offset and data
+
+    for (auto value :
+         std::span{(std::pair<std::uint32_t, std::uint32_t> *)data, numWords}) {
+      // std::fprintf(stderr, "writing %x to %s\n", value.second,
+      //              gnm::mmio::registerName(mmioOffset + value.first));
+
+      auto regPtr = getMmRegister(mmioOffset + value.first);
+
+      *regPtr = value.second;
+    }
+  }
+
+  return true;
+}
+
+bool GraphicsPipe::setUConfigRegIndex(Ring &ring) {
+  auto len = rx::getBits(ring.rptr[0], 29, 16);
+  auto offset = ring.rptr[1] & 0xffff;
+  auto data = ring.rptr + 2;
+
+  rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
+            "out of UConfig regs, offset: %u, count %u, %s\n", offset, len,
+            gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
+
+  // for (std::size_t i = 0; i < len; ++i) {
+  //   auto id = decltype(uConfig)::kMmioOffset + offset + i;
+  //   if (auto regName = gnm::mmio::registerName(id)) {
+  //     std::println(stderr, "writing to {} value {:x}", regName,
+  //                  uint32_t(data[i]));
+  //   } else {
+  //     std::println(stderr, "writing to {:x} value {:x}", id, uint32_t(data[i]));
+  //   }
+  // }
+
+  std::memcpy(reinterpret_cast<std::uint32_t *>(&uConfig) + offset,
+              const_cast<std::uint32_t *>(data), sizeof(std::uint32_t) * len);
   return true;
 }
 

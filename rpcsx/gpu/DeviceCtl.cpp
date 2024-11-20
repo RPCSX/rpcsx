@@ -36,17 +36,21 @@ void DeviceCtl::submitGfxCommand(int gfxPipe, int vmId,
   auto type = rx::getBits(command[0], 31, 30);
   auto len = rx::getBits(command[0], 29, 16) + 2;
 
-  if ((op != gnm::IT_INDIRECT_BUFFER && op != gnm::IT_INDIRECT_BUFFER_CNST) ||
-      type != 3 || len != 4 || command.size() != len) {
-    std::println(stderr, "unexpected gfx command for main ring: {}, {}, {}", op,
-                 type, len);
+  if ((op != gnm::IT_INDIRECT_BUFFER && op != gnm::IT_INDIRECT_BUFFER_CNST &&
+       op != gnm::IT_CONTEXT_CONTROL) ||
+      type != 3 || command.size() != len) {
+    std::println(stderr, "unexpected gfx command for main ring: {}, {}, {}",
+                 gnm::Pm4Opcode(op), type, len);
     rx::die("");
   }
 
   std::vector<std::uint32_t> patchedCommand{command.data(),
                                             command.data() + command.size()};
-  patchedCommand[3] &= ~(~0 << 24);
-  patchedCommand[3] |= vmId << 24;
+
+  if (op == gnm::IT_INDIRECT_BUFFER || op == gnm::IT_INDIRECT_BUFFER_CNST) {
+    patchedCommand[3] &= ~(~0 << 24);
+    patchedCommand[3] |= vmId << 24;
+  }
 
   mDevice->submitGfxCommand(gfxPipe, patchedCommand);
 }

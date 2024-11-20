@@ -130,6 +130,7 @@ struct GraphicsPipe {
   bool contextControl(Ring &ring);
   bool acquireMem(Ring &ring);
   bool releaseMem(Ring &ring);
+  bool preambleCtl(Ring &ring);
   bool dispatchDirect(Ring &ring);
   bool dispatchIndirect(Ring &ring);
   bool writeData(Ring &ring);
@@ -163,12 +164,22 @@ struct GraphicsPipe {
   bool loadConstRam(Ring &ring);
   bool writeConstRam(Ring &ring);
   bool dumpConstRam(Ring &ring);
+  bool loadUConfigReg(Ring &ring);
+  bool loadShReg(Ring &ring);
+  bool loadConfigReg(Ring &ring);
+  bool loadContextReg(Ring &ring);
   bool setConfigReg(Ring &ring);
   bool setShReg(Ring &ring);
   bool setUConfigReg(Ring &ring);
   bool setContextReg(Ring &ring);
   bool mapQueues(Ring &ring);
   bool unmapQueues(Ring &ring);
+
+  bool waitRegMem64(Ring &ring);
+  bool loadContextRegIndex(Ring &ring);
+  bool loadShRegIndex(Ring &ring);
+  bool loadUConfigRegIndex(Ring &ring);
+  bool setUConfigRegIndex(Ring &ring);
 
   bool unknownPacket(Ring &ring);
   bool switchBuffer(Ring &ring);

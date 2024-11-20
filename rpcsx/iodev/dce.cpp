@@ -294,6 +294,7 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       ORBIS_LOG_FATAL("dce: unimplemented 0x80308217 request", args->id,
                       args->padding, args->arg2, args->ptr, args->size,
                       args->arg5, args->arg6);
+      return {};
     }
   }
 
