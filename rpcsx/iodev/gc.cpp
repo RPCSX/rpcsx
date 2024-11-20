@@ -77,6 +77,136 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     *reinterpret_cast<void **>(argp) = device->submitArea;
     break;
 
+  case 0xc004812e: {
+    if (orbis::g_context.fwType != orbis::FwType::Ps5) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    struct Args {
+      std::uint16_t unk;
+      std::uint16_t flag;
+    };
+
+    auto args = reinterpret_cast<Args *>(argp);
+    args->unk = 0;
+    args->flag = 0;
+    return {};
+  }
+
+  case 0xc0488131: {
+    if (orbis::g_context.fwType != orbis::FwType::Ps5) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    // ps5 submit header
+    struct Args {
+      orbis::uint32_t unk0;
+      orbis::uint32_t contextControl[3];
+      orbis::uint32_t cmds[3 * 4];
+      orbis::uint64_t status;
+    };
+
+    static_assert(sizeof(Args) == 72);
+
+    auto args = reinterpret_cast<Args *>(argp);
+
+    // ORBIS_LOG_ERROR("gc submit header", args->status, args->unk0,
+    //                 args->contextControl[0], args->contextControl[1],
+    //                 args->contextControl[2]);
+
+    // for (std::size_t i = 0; i < 3; ++i) {
+    //   auto offset = i * 4;
+    //   ORBIS_LOG_ERROR("gc submit header cmd", i, args->cmds[offset],
+    //                   args->cmds[offset + 1], args->cmds[offset + 2],
+    //                   args->cmds[offset + 3]);
+    // }
+
+    // thread->where();
+
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      if (args->contextControl[0]) {
+        gpu.submitGfxCommand(gcFile->gfxPipe,
+                             orbis::g_currentThread->tproc->vmId,
+                             {args->contextControl, 3});
+      }
+
+      for (std::size_t i = 0; i < 3; ++i) {
+        auto offset = i * 4;
+
+        if (args->cmds[offset] == 0) {
+          continue;
+        }
+
+        ORBIS_LOG_ERROR("submit header", i, args->status, args->cmds[offset],
+                        args->cmds[offset + 1], args->cmds[offset + 2],
+                        args->cmds[offset + 3]);
+        gpu.submitGfxCommand(gcFile->gfxPipe,
+                             orbis::g_currentThread->tproc->vmId,
+                             {args->cmds + offset, 4});
+      }
+
+      gpu.waitForIdle();
+      args->status = 0;
+    } else {
+      return orbis::ErrorCode::BUSY;
+    }
+
+    return {};
+  }
+
+  case 0xc0188132: {
+    if (orbis::g_context.fwType != orbis::FwType::Ps5) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    struct Submit {
+      std::uint64_t unk0;
+      std::uint64_t unk1;
+      std::uint64_t address;
+      std::uint64_t size;
+    };
+
+    struct Args {
+      orbis::uint32_t unk0; // ringId?
+      orbis::uint32_t count;
+      orbis::ptr<Submit> submits;
+      orbis::uint32_t status;
+      orbis::uint32_t padding;
+    };
+
+    static_assert(sizeof(Args) == 24);
+    auto args = reinterpret_cast<Args *>(argp);
+
+    // ORBIS_LOG_ERROR("gc submit", args->unk0, args->count, args->submits,
+    //                 args->status, args->padding);
+
+    // for (std::size_t i = 0; i < args->count / 2; ++i) {
+    //   ORBIS_LOG_ERROR("gc submit cmd", i, args->submits[i].address,
+    //                   args->submits[i].size, args->submits[i].unk0,
+    //                   args->submits[i].unk1);
+    // }
+
+    if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+      for (unsigned i = 0; i < args->count / 2; ++i) {
+        auto addressLo = static_cast<std::uint32_t>(args->submits[i].address);
+        auto addressHi = static_cast<std::uint32_t>(args->submits[i].address >> 32);
+        auto size = static_cast<std::uint32_t>(args->submits[i].size);
+
+        gpu.submitGfxCommand(gcFile->gfxPipe,
+                             orbis::g_currentThread->tproc->vmId, {
+          {0xc0023f00, addressLo, addressHi, size}
+        });
+      }
+
+      gpu.waitForIdle();
+    } else {
+      return orbis::ErrorCode::BUSY;
+    }
+
+    args->status = 0;
+    return {};
+  }
+
   case 0xc0108102: { // submit?
     struct Args {
       orbis::uint32_t arg0;

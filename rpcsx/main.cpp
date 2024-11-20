@@ -322,7 +322,7 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   funlockfile(stderr);
 }
 
-static void ps4InitDev() {
+static void guestInitDev() {
   auto dmem1 = createDmemCharacterDevice(1);
   orbis::g_context.dmemDevice = dmem1;
 
@@ -431,6 +431,11 @@ static void ps4InitDev() {
   vfs::addDevice("cayman/reg", createCaymanRegCharacterDevice());
   vfs::addDevice("hctrl", createHidCharacterDevice());
 
+  if (orbis::g_context.fwType == orbis::FwType::Ps5) {
+    vfs::addDevice("iccnvs4", createIccPowerCharacterDevice());
+    vfs::addDevice("ajmi", createAjmCharacterDevice());
+  }
+
   // mbus->emitEvent({
   //     .system = 2,
   //     .eventId = 1,
@@ -454,7 +459,7 @@ static void ps4InitDev() {
   orbis::g_context.blockpoolDevice = createBlockPoolDevice();
 }
 
-static void ps4InitFd(orbis::Thread *mainThread) {
+static void guestInitFd(orbis::Thread *mainThread) {
   orbis::Ref<orbis::File> stdinFile;
   orbis::Ref<orbis::File> stdoutFile;
   orbis::Ref<orbis::File> stderrFile;
@@ -486,9 +491,9 @@ struct ExecEnv {
   std::uint64_t interpBase;
 };
 
-int ps4Exec(orbis::Thread *mainThread, ExecEnv execEnv,
-            orbis::utils::Ref<orbis::Module> executableModule,
-            std::span<std::string> argv, std::span<std::string> envp) {
+int guestExec(orbis::Thread *mainThread, ExecEnv execEnv,
+              orbis::utils::Ref<orbis::Module> executableModule,
+              std::span<std::string> argv, std::span<std::string> envp) {
   const auto stackEndAddress = 0x7'ffff'c000ull;
   const auto stackSize = 0x40000 * 32;
   auto stackStartAddress = stackEndAddress - stackSize;
@@ -517,6 +522,12 @@ int ps4Exec(orbis::Thread *mainThread, ExecEnv execEnv,
   }
 
   envpOffsets.push_back(0);
+
+  if (executableModule->dynType == orbis::DynType::Ps4) {
+    mainThread->tproc->type = orbis::ProcessType::Ps4;
+  } else if (executableModule->dynType == orbis::DynType::Ps5) {
+    mainThread->tproc->type = orbis::ProcessType::Ps5;
+  }
 
   // clang-format off
   std::uint64_t auxv[] = {
@@ -565,7 +576,7 @@ int ps4Exec(orbis::Thread *mainThread, ExecEnv execEnv,
   std::abort();
 }
 
-struct Ps4ProcessParam {
+struct ProcessParam {
   orbis::size_t size;
   orbis::uint32_t magic;
   orbis::uint32_t version;
@@ -578,23 +589,17 @@ struct Ps4ProcessParam {
   orbis::ptr<void> libcParam;
 };
 
-ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
-                         const orbis::Ref<orbis::Module> &executableModule,
-                         bool isSystem) {
+ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
+                           const orbis::Ref<orbis::Module> &executableModule,
+                           bool isSystem) {
   std::uint64_t interpBase = 0;
   std::uint64_t entryPoint = executableModule->entryPoint;
 
   if (mainThread->tproc->processParam != nullptr &&
-      mainThread->tproc->processParamSize >= sizeof(Ps4ProcessParam)) {
+      mainThread->tproc->processParamSize >= sizeof(ProcessParam)) {
     auto processParam =
-        reinterpret_cast<std::byte *>(mainThread->tproc->processParam);
-
-    auto sdkVersion = processParam        //
-                      + sizeof(uint64_t)  // size
-                      + sizeof(uint32_t)  // magic
-                      + sizeof(uint32_t); // entryCount
-
-    mainThread->tproc->sdkVersion = *(uint32_t *)sdkVersion;
+        reinterpret_cast<ProcessParam *>(mainThread->tproc->processParam);
+    mainThread->tproc->sdkVersion = processParam->sdkVersion;
   }
 
   if (orbis::g_context.sdkVersion == 0 && mainThread->tproc->sdkVersion != 0) {
@@ -604,8 +609,7 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
     mainThread->tproc->sdkVersion = orbis::g_context.sdkVersion;
   }
 
-  if (executableModule->type == rx::linker::kElfTypeExec ||
-      executableModule->type == rx::linker::kElfTypeSceExec) {
+  if (executableModule->dynType == orbis::DynType::None) {
     return {.entryPoint = entryPoint, .interpBase = interpBase};
   }
 
@@ -671,6 +675,14 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
     std::printf("fw sdk version: %x\n", orbis::g_context.fwSdkVersion);
   }
 
+  if (orbis::g_context.fwType == orbis::FwType::Unknown) {
+    if (libkernel->dynType == orbis::DynType::Ps4) {
+      orbis::g_context.fwType = orbis::FwType::Ps4;
+    } else {
+      orbis::g_context.fwType = orbis::FwType::Ps5;
+    }
+  }
+
   libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
   interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
   entryPoint = libkernel->entryPoint;
@@ -678,11 +690,12 @@ ExecEnv ps4CreateExecEnv(orbis::Thread *mainThread,
   return {.entryPoint = entryPoint, .interpBase = interpBase};
 }
 
-int ps4Exec(orbis::Thread *mainThread,
-            orbis::utils::Ref<orbis::Module> executableModule,
-            std::span<std::string> argv, std::span<std::string> envp) {
-  auto execEnv = ps4CreateExecEnv(mainThread, executableModule, true);
-  return ps4Exec(mainThread, execEnv, std::move(executableModule), argv, envp);
+int guestExec(orbis::Thread *mainThread,
+              orbis::utils::Ref<orbis::Module> executableModule,
+              std::span<std::string> argv, std::span<std::string> envp) {
+  auto execEnv = guestCreateExecEnv(mainThread, executableModule, true);
+  return guestExec(mainThread, execEnv, std::move(executableModule), argv,
+                   envp);
 }
 
 static void usage(const char *argv0) {
@@ -774,7 +787,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   rx::thread::initialize();
   rx::thread::setupThisThread();
 
-  ps4InitFd(newThread);
+  guestInitFd(newThread);
 
   orbis::Ref<orbis::File> socket;
   createSocket(&socket, "", 1, 1, 0);
@@ -808,7 +821,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
     rx::thread::initialize();
     rx::thread::setupSignalStack();
     rx::thread::setupThisThread();
-    ps4Exec(thread, executableModule, argv, envv);
+    guestExec(thread, executableModule, argv, envv);
   });
 
   thread->handle.join();
@@ -968,6 +981,7 @@ int main(int argc, const char *argv[]) {
   if (guestArgv.empty()) {
     guestArgv.emplace_back("/mini-syscore.elf");
     isSystem = true;
+    asRoot = true;
   }
 
   rx::thread::initialize();
@@ -1083,10 +1097,10 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  ps4InitDev();
-  ps4InitFd(mainThread);
+  guestInitDev();
+  guestInitFd(mainThread);
 
-  auto execEnv = ps4CreateExecEnv(mainThread, executableModule, isSystem);
+  auto execEnv = guestCreateExecEnv(mainThread, executableModule, isSystem);
 
   // data transfer mode
   // 0 - normal
@@ -1135,7 +1149,8 @@ int main(int argc, const char *argv[]) {
     ipmi::createSysCoreObjects(initProcess);
     ipmi::createGnmCompositorObjects(initProcess);
     ipmi::createShellCoreObjects(initProcess);
-    if (enableAudioIpmi) {
+
+    if (enableAudioIpmi || orbis::g_context.fwType == orbis::FwType::Ps5) {
       ipmi::createAudioSystemObjects(initProcess);
     }
 
@@ -1152,7 +1167,7 @@ int main(int argc, const char *argv[]) {
 
     initProcess->cwd = "/app0/";
 
-    if (!enableAudioIpmi) {
+    if (orbis::g_context.fwType != orbis::FwType::Ps5 && !enableAudioIpmi) {
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {},
                    {
@@ -1196,14 +1211,20 @@ int main(int argc, const char *argv[]) {
     }
   }
 
+  if (orbis::g_context.fwType == orbis::FwType::Ps5 && !isSystem) {
+    ipmi::createIpmiServer(initProcess, "SceSysAvControlIpc");
+    ipmi::createShm("SceAvControl", 0xa02, 0x1a4, 4096);
+    ipmi::createEventFlag("SceAvControlEvf", 0x121, 0);
+  }
+
   mainThread->hostTid = ::gettid();
   mainThread->nativeHandle = pthread_self();
   orbis::g_currentThread = mainThread;
   rx::thread::setupSignalStack();
   rx::thread::setupThisThread();
 
-  status =
-      ps4Exec(mainThread, execEnv, std::move(executableModule), guestArgv, {});
+  status = guestExec(mainThread, execEnv, std::move(executableModule),
+                     guestArgv, {});
 
   vm::deinitialize();
   rx::thread::deinitialize();

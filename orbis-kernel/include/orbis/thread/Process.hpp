@@ -44,6 +44,12 @@ struct NamedMemoryRange {
   }
 };
 
+enum class ProcessType : std::uint8_t {
+  FreeBsd,
+  Ps4,
+  Ps5,
+};
+
 struct Process final {
   KernelContext *context = nullptr;
   pid_t pid = -1;
@@ -54,6 +60,7 @@ struct Process final {
   Process *parentProcess = nullptr;
   shared_mutex mtx;
   int vmId = -1;
+  ProcessType type = ProcessType::FreeBsd;
   void (*onSysEnter)(Thread *thread, int id, uint64_t *args,
                      int argsCount) = nullptr;
   void (*onSysExit)(Thread *thread, int id, uint64_t *args, int argsCount,

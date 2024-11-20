@@ -202,6 +202,18 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       }
     }
 
+    if (name[0] == kern && name[1] == proc && name[2] == 55) {
+      if (g_context.fwType != FwType::Ps5) {
+        return orbis::ErrorCode::INVAL;
+      }
+
+      if (oldlenp && old && *oldlenp == 4) {
+        return uwrite<uint32_t>(ptr<uint32_t>(old),
+                                thread->tproc->type == ProcessType::Ps5 ? 1
+                                                                        : 0);
+      }
+    }
+
     if (name[0] == kern && name[1] == proc && name[2] == 36) {
       Process *process = thread->tproc;
       if (process->pid != name[3]) {

@@ -15,6 +15,12 @@ namespace orbis {
 struct Thread;
 struct Process;
 
+enum class DynType : std::uint8_t {
+  None,
+  Ps4,
+  Ps5,
+};
+
 struct ModuleNeeded {
   utils::kstring name;
   std::uint16_t version;
@@ -97,6 +103,8 @@ struct Module final {
   uint16_t type{};
   uint16_t flags{};
   uint64_t entryPoint{};
+
+  DynType dynType = DynType::None;
 
   uint32_t phNum{};
   uint64_t phdrAddress{};

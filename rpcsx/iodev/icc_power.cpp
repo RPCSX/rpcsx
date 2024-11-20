@@ -47,8 +47,13 @@ static orbis::ErrorCode icc_power_ioctl(orbis::File *file,
   return {};
 }
 
+orbis::ErrorCode icc_stat(orbis::File *file, orbis::Stat *sb, orbis::Thread *thread) {
+  return{};
+}
+
 static const orbis::FileOps fileOps = {
     .ioctl = icc_power_ioctl,
+    .stat = icc_stat,
 };
 
 orbis::ErrorCode IccPowerDevice::open(orbis::Ref<orbis::File> *file,

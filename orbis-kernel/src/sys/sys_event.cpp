@@ -189,6 +189,10 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     // hp3d idle
     nodeIt->triggered = true;
     kq->cv.notify_all(kq->mtx);
+  } else if (g_context.fwType == FwType::Ps5 &&
+             change.filter == kEvFiltGraphicsCore && change.ident == 0) {
+    nodeIt->triggered = true;
+    kq->cv.notify_all(kq->mtx);
   }
 
   return {};

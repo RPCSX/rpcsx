@@ -256,12 +256,46 @@ static void initDceMemory(DceDevice *device) {
   device->dmemOffset = start;
 }
 
+static orbis::ErrorCode dce_mmap(orbis::File *file, void **address,
+                                 std::uint64_t size, std::int32_t prot,
+                                 std::int32_t flags, std::int64_t offset,
+                                 orbis::Thread *thread);
+
 static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
   auto device = static_cast<DceDevice *>(file->device.get());
 
   auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice};
   auto &gpuCtx = gpu.getContext();
+
+  // std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  if (orbis::g_context.fwType == orbis::FwType::Ps5) {
+    if (request == 0x80308217) {
+      auto args = reinterpret_cast<FlipControlArgs *>(argp);
+
+      if (args->id == 9) {
+        ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->padding,
+                         args->arg2, args->ptr, args->size, args->arg5,
+                         args->arg6);
+
+        void *address;
+        ORBIS_RET_ON_ERROR(
+            dce_mmap(file, &address, vm::kPageSize,
+                     vm::kMapProtCpuReadWrite | vm::kMapProtGpuAll,
+                     vm::kMapFlagShared, 0, thread));
+
+        *(void **)args->ptr = address;
+        *(std::uint64_t *)args->arg5 = vm::kPageSize;
+
+        return {};
+      }
+
+      ORBIS_LOG_FATAL("dce: unimplemented 0x80308217 request", args->id,
+                      args->padding, args->arg2, args->ptr, args->size,
+                      args->arg5, args->arg6);
+    }
+  }
 
   if (request == 0xc0308203) {
     // returns:

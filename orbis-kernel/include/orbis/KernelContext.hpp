@@ -48,6 +48,12 @@ struct UmtxChain {
   uint notify_n(const UmtxKey &key, sint count);
 };
 
+enum class FwType : std::uint8_t {
+  Unknown,
+  Ps4,
+  Ps5,
+};
+
 class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) KernelContext final {
 public:
   KernelContext();
@@ -192,7 +198,10 @@ public:
 
   shared_mutex regMgrMtx;
   kmap<std::uint32_t, std::uint32_t> regMgrInt;
-  std::vector<std::tuple<std::uint8_t*, size_t>> dialogs{};
+  std::vector<std::tuple<std::uint8_t *, size_t>> dialogs{};
+
+  FwType fwType = FwType::Unknown;
+  bool isDevKit = false;
 
 private:
   shared_mutex m_heap_mtx;

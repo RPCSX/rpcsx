@@ -663,6 +663,9 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     std::unordered_map<std::uint64_t, std::size_t> idToModuleIndex;
     std::unordered_map<std::uint64_t, std::size_t> idToLibraryIndex;
 
+    bool hasPs4Dyn = false;
+    bool hasPs5Dyn = false;
+
     for (auto dyn : dyns) {
       if (dyn.d_tag == kElfDynamicTypeSceModuleInfo ||
           dyn.d_tag == kElfDynamicTypeSceModuleInfo1) {
@@ -686,6 +689,11 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
       if (dyn.d_tag == kElfDynamicTypeSceNeededModule ||
           dyn.d_tag == kElfDynamicTypeSceNeededModule1) {
+        if (dyn.d_tag == kElfDynamicTypeSceNeededModule) {
+          hasPs4Dyn = true;
+        } else {
+          hasPs5Dyn = true;
+        }
         auto [it, inserted] = idToModuleIndex.try_emplace(
             dyn.d_un.d_val >> 48, result->neededModules.size());
 
@@ -713,6 +721,13 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         lib.name = strtab + static_cast<std::uint32_t>(dyn.d_un.d_val);
         lib.isExport = dyn.d_tag == kElfDynamicTypeSceExportLib ||
                        dyn.d_tag == kElfDynamicTypeSceExportLib1;
+
+        if (dyn.d_tag == kElfDynamicTypeSceExportLib ||
+            dyn.d_tag == kElfDynamicTypeSceImportLib) {
+          hasPs4Dyn = true;
+        } else {
+          hasPs5Dyn = true;
+        }
       } else if (dyn.d_tag == kElfDynamicTypeSceExportLibAttr ||
                  dyn.d_tag == kElfDynamicTypeSceImportLibAttr) {
         auto [it, inserted] = idToLibraryIndex.try_emplace(
@@ -785,6 +800,16 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
         result->finiProc = imageBase - baseAddress + dyn.d_un.d_ptr;
         break;
       }
+    }
+
+    if (hasPs4Dyn && hasPs5Dyn) {
+      std::fprintf(stderr, "unexpected import type\n");
+      std::abort();
+    }
+    if (hasPs4Dyn) {
+      result->dynType = orbis::DynType::Ps4;
+    } else if (hasPs5Dyn) {
+      result->dynType = orbis::DynType::Ps5;
     }
 
     if (symtab != nullptr && symtabSize > 0) {

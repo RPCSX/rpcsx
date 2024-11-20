@@ -42,9 +42,9 @@ extern bool allowMonoDebug;
 
 extern "C" void __register_frame(const void *);
 void setupSigHandlers();
-int ps4Exec(orbis::Thread *mainThread,
-            orbis::utils::Ref<orbis::Module> executableModule,
-            std::span<std::string> argv, std::span<std::string> envp);
+int guestExec(orbis::Thread *mainThread,
+              orbis::utils::Ref<orbis::Module> executableModule,
+              std::span<std::string> argv, std::span<std::string> envp);
 
 namespace {
 static std::pair<SysResult, Ref<Module>>
@@ -722,7 +722,7 @@ SysResult processNeeded(Thread *thread) {
     }
   }
 
-  for (auto needed : allNeeded) {
+  for (const auto &needed : allNeeded) {
     auto [result, neededModule] =
         loadPrx(thread, needed, false, loadedObjects, loadedModules, needed);
 
@@ -736,7 +736,7 @@ SysResult processNeeded(Thread *thread) {
     module->importedModules.clear();
     module->importedModules.reserve(module->neededModules.size());
 
-    for (auto mod : module->neededModules) {
+    for (const auto &mod : module->neededModules) {
       if (auto it = loadedModules.find(std::string_view(mod.name));
           it != loadedModules.end()) {
         module->importedModules.emplace_back(it->second);
@@ -787,6 +787,7 @@ SysResult fork(Thread *thread, slong flags) {
   process->parentProcess = thread->tproc;
   process->authInfo = thread->tproc->authInfo;
   process->sdkVersion = thread->tproc->sdkVersion;
+  process->type = thread->tproc->type;
   for (auto [id, mod] : thread->tproc->modulesMap) {
     if (!process->modulesMap.insert(id, mod)) {
       std::abort();
@@ -919,7 +920,7 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     thread->nativeHandle = pthread_self();
     orbis::g_currentThread = thread;
 
-    ps4Exec(thread, executableModule, _argv, _envv);
+    guestExec(thread, executableModule, _argv, _envv);
   }).join();
   std::abort();
 }
