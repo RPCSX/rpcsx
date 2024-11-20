@@ -195,6 +195,23 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
     }
   }
 
+  if (namelen >= 3) {
+    if (name[0] == kern && name[1] == proc && name[2] == 1) {
+      ORBIS_LOG_ERROR("KERN_PROC_PROC 2");
+
+      if (namelen >= 4) {
+        auto process = g_context.findProcessById(name[3]);
+        if (process == nullptr || process->exitStatus.has_value()) {
+          return ErrorCode::SRCH;
+        }
+      }
+
+      std::memset(old, 0, sizeof(ProcInfo));
+      *oldlenp = sizeof(ProcInfo);
+      return {};
+    }
+  }
+
   if (namelen == 4) {
     if (name[0] == kern && name[1] == proc && name[2] == 37) {
       if (oldlenp && old && *oldlenp == 4) {
@@ -240,14 +257,6 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       ORBIS_RET_ON_ERROR(uwrite(ptr<uint32_t>(old), sdkVersion));
       ORBIS_LOG_ERROR("get sdk version by pid", name[3], sdkVersion);
       return uwrite(oldlenp, sizeof(uint32_t));
-    }
-
-    if (name[0] == kern && name[1] == proc && name[2] == 1) {
-      ORBIS_LOG_ERROR("KERN_PROC_PROC 2");
-
-      std::memset(old, 0, sizeof(ProcInfo));
-      *oldlenp = sizeof(ProcInfo);
-      return {};
     }
 
     if (name[0] == 1 && name[1] == proc && name[2] == 35) {
