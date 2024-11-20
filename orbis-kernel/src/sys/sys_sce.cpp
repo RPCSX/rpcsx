@@ -1683,10 +1683,12 @@ orbis::SysResult orbis::sys_get_phys_page_size(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_begin_app_mount(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_FATAL(__FUNCTION__);
+  return {};
 }
 orbis::SysResult orbis::sys_end_app_mount(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_FATAL(__FUNCTION__);
+  return {};
 }
 orbis::SysResult orbis::sys_fsc2h_ctrl(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;

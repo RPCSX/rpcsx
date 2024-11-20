@@ -525,8 +525,16 @@ int guestExec(orbis::Thread *mainThread, ExecEnv execEnv,
 
   if (executableModule->dynType == orbis::DynType::Ps4) {
     mainThread->tproc->type = orbis::ProcessType::Ps4;
+    mainThread->tproc->sysent = &orbis::ps4_sysvec;
   } else if (executableModule->dynType == orbis::DynType::Ps5) {
     mainThread->tproc->type = orbis::ProcessType::Ps5;
+    mainThread->tproc->sysent = &orbis::ps5_sysvec;
+  } else {
+    if (orbis::g_context.fwType == orbis::FwType::Ps4) {
+      mainThread->tproc->sysent = &orbis::ps4_sysvec;
+    } else {
+      mainThread->tproc->sysent = &orbis::ps5_sysvec;
+    }
   }
 
   // clang-format off
@@ -995,7 +1003,6 @@ int main(int argc, const char *argv[]) {
 
   int status = 0;
 
-  initProcess->sysent = &orbis::ps4_sysvec;
   initProcess->onSysEnter = onSysEnter;
   initProcess->onSysExit = onSysExit;
   initProcess->ops = &rx::procOpsTable;
@@ -1097,10 +1104,15 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
+  auto execEnv = guestCreateExecEnv(mainThread, executableModule, isSystem);
+
+  if (isSystem && executableModule->dynType == orbis::DynType::None) {
+    orbis::g_context.fwType = orbis::FwType::Ps5;
+    executableModule->dynType = orbis::DynType::Ps5;
+  }
+
   guestInitDev();
   guestInitFd(mainThread);
-
-  auto execEnv = guestCreateExecEnv(mainThread, executableModule, isSystem);
 
   // data transfer mode
   // 0 - normal
