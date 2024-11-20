@@ -133,18 +133,17 @@ namespace detail {
 template <typename EnumT, std::size_t N = 0>
   requires std::is_enum_v<EnumT>
 constexpr auto calcFieldCount() {
-
-  if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
+  if constexpr (requires { EnumT::Count; }) {
+    return static_cast<std::size_t>(EnumT::Count);
+  } else if constexpr (requires { EnumT::_count; }) {
+    return static_cast<std::size_t>(EnumT::_count);
+  } else if constexpr (requires { EnumT::count; }) {
+    return static_cast<std::size_t>(EnumT::count);
+  } else if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
     return N;
   } else {
     constexpr auto c = getNameOf<EnumT(N)>()[0];
-    if constexpr (requires { EnumT::Count; }) {
-      return static_cast<std::size_t>(EnumT::Count);
-    } else if constexpr (requires { EnumT::_count; }) {
-      return static_cast<std::size_t>(EnumT::_count);
-    } else if constexpr (requires { EnumT::count; }) {
-      return static_cast<std::size_t>(EnumT::count);
-    } else if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
+    if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
       return N;
     } else if constexpr (c >= '0' && c <= '9') {
       return N;
