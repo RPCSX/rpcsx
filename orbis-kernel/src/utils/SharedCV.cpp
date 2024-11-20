@@ -23,14 +23,12 @@ std::errc shared_cv::impl_wait(shared_mutex &mutex, unsigned _val,
     result =
         m_value.wait(_val, useTimeout ? std::chrono::microseconds(usec_timeout)
                                       : std::chrono::microseconds::max());
-    bool spurious = result == std::errc::resource_unavailable_try_again ||
-                    result == std::errc::interrupted;
+    bool spurious = result == std::errc::resource_unavailable_try_again;
 
     // Cleanup
     const auto old = m_value.fetch_op([&](unsigned &value) {
       // Remove waiter if no signals
       if ((value & ~c_waiter_mask) == 0) {
-
         if (!spurious) {
           value -= 1;
         }

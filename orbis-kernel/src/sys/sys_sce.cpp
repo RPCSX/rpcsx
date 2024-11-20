@@ -605,7 +605,10 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
 orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread, id, need);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
-  if (need < 1 || need > sem->maxValue)
+  if (sem == nullptr) {
+    return ErrorCode::BADF;
+  }
+
     return ErrorCode::INVAL;
 
   std::lock_guard lock(sem->mtx);
@@ -693,7 +696,9 @@ orbis::SysResult orbis::sys_debug_init(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_suspend_process(Thread *thread, pid_t pid) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_FATAL(__FUNCTION__, pid);
+  // FIXME: implement
+  return {};
 }
 orbis::SysResult orbis::sys_resume_process(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
@@ -1158,7 +1163,9 @@ orbis::SysResult orbis::sys_get_resident_count(Thread *thread, pid_t pid) {
 }
 orbis::SysResult orbis::sys_prepare_to_suspend_process(Thread *thread,
                                                        pid_t pid) {
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_FATAL(__FUNCTION__, pid);
+  // FIXME:implement
+  return {};
 }
 orbis::SysResult orbis::sys_get_resident_fmem_count(Thread *thread, pid_t pid) {
   return ErrorCode::NOSYS;
