@@ -1162,7 +1162,7 @@ int main(int argc, const char *argv[]) {
     ipmi::createGnmCompositorObjects(initProcess);
     ipmi::createShellCoreObjects(initProcess);
 
-    if (enableAudioIpmi || orbis::g_context.fwType == orbis::FwType::Ps5) {
+    if (enableAudioIpmi) {
       ipmi::createAudioSystemObjects(initProcess);
     }
 
@@ -1179,16 +1179,17 @@ int main(int argc, const char *argv[]) {
 
     initProcess->cwd = "/app0/";
 
-    if (orbis::g_context.fwType != orbis::FwType::Ps5 && !enableAudioIpmi) {
+    if (!enableAudioIpmi) {
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {},
                    {
-                       .titleId = "NPXS20973",
+                       .titleId = {"NPXS20973"},
                        .unk4 = orbis::slong(0x80000000'00000000),
                    });
       // confirmed to work and known method of initialization since 5.05
       // version
-      if (orbis::g_context.fwSdkVersion >= 0x5050000) {
+      if (orbis::g_context.fwType != orbis::FwType::Ps5 &&
+          orbis::g_context.fwSdkVersion >= 0x5050000) {
         auto fakeIpmiThread = createGuestThread();
         ipmi::audioIpmiClient =
             ipmi::createIpmiClient(fakeIpmiThread, "SceSysAudioSystemIpc");
