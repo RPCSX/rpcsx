@@ -274,6 +274,30 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     if (request == 0x80308217) {
       auto args = reinterpret_cast<FlipControlArgs *>(argp);
 
+      if (args->id == 0x36) {
+        auto flip = (FlipRequestArgs *)args->ptr;
+
+        // ORBIS_LOG_ERROR("dce: flip2", flip->canary, flip->displayBufferIndex,
+        //                 flip->flipMode, flip->unk1, flip->flipArg,
+        //                 flip->flipArg2, flip->eop_nz, flip->unk2, flip->eop_val,
+        //                 flip->unk3, flip->rout);
+
+        if (flip->eop_nz == 0) {
+          gpu.submitFlip(thread->tproc->pid, flip->displayBufferIndex,
+                         flip->flipArg);
+        } else if (flip->eop_nz == 1) {
+          std::uint64_t eopValue = flip->canary;
+          eopValue ^= 0xff00'0000;
+          eopValue ^= static_cast<std::uint64_t>(device->eopCount++) << 32;
+
+          ORBIS_RET_ON_ERROR(gpu.submitFlipOnEop(
+              thread->tproc->gfxRing, thread->tproc->pid,
+              flip->displayBufferIndex, flip->flipArg, eopValue));
+          *flip->eop_val = eopValue;
+        }
+        return {};
+      }
+
       if (args->id == 9) {
         ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->padding,
                          args->arg2, args->ptr, args->size, args->arg5,
@@ -288,6 +312,47 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
         *(void **)args->ptr = address;
         *(std::uint64_t *)args->arg5 = vm::kPageSize;
 
+        return {};
+      }
+      if (args->id == 0x38) {
+        auto attrs = (RegisterBufferAttributeArgs *)args->ptr;
+
+        ORBIS_LOG_ERROR("dce: RegisterBufferAttributes2", attrs->canary,
+                        (int)attrs->attrid, (int)attrs->submit, attrs->unk3,
+                        attrs->pixelFormat, attrs->tilingMode, attrs->pitch,
+                        attrs->width, attrs->height, (int)attrs->unk4_zero,
+                        (int)attrs->unk5_zero, attrs->options, attrs->reserved1,
+                        attrs->reserved2);
+
+        gpu.registerBufferAttribute(thread->tproc->pid,
+                                    {
+                                        .attrId = attrs->attrid,
+                                        .submit = attrs->submit,
+                                        .canary = attrs->canary,
+                                        .pixelFormat = attrs->pixelFormat,
+                                        .tilingMode = attrs->tilingMode,
+                                        .pitch = attrs->pitch,
+                                        .width = attrs->width,
+                                        .height = attrs->height,
+                                    });
+
+        return {};
+      }
+
+      if (args->id == 0x37) {
+        auto buffer = (RegisterBuffer *)args->ptr;
+        ORBIS_LOG_ERROR("dce: RegisterBuffer2", buffer->address,
+                        buffer->address2, buffer->canary, buffer->index,
+                        buffer->attrid, args->id, args->padding, args->arg2,
+                        args->ptr, args->size, args->arg5, args->arg6);
+        gpu.registerBuffer(thread->tproc->pid,
+                           {
+                               .canary = buffer->canary,
+                               .index = uint32_t(args->size),
+                               .attrId = buffer->attrid,
+                               .address = buffer->address,
+                               .address2 = buffer->address2,
+                           });
         return {};
       }
 
