@@ -569,9 +569,19 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
 
   createIpmiServer(process, "SceSystemLoggerService");
   createIpmiServer(process, "SceLoginMgrServer");
+  int lnsStatusServer;
+
+  if (orbis::g_context.fwType == orbis::FwType::Ps5) {
+    lnsStatusServer = 0x30010;
+  } else {
+    if (orbis::g_context.fwSdkVersion > 0x6000000) {
+      lnsStatusServer = 0x30013;
+    } else {
+      lnsStatusServer = 0x30010;
+    }
+  }
   createIpmiServer(process, "SceLncService")
-      .addSyncMethod(orbis::g_context.fwSdkVersion > 0x6000000 ? 0x30013
-                                                               : 0x30010,
+      .addSyncMethod(lnsStatusServer,
                      [](void *out, std::uint64_t &size) -> std::int32_t {
                        struct SceLncServiceAppStatus {
                          std::uint32_t unk0;
