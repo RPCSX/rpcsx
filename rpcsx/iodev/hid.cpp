@@ -34,6 +34,15 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
     thread->retval[0] = 1; // hid id
     return {};
 
+  case 0x8004486e:
+    if (orbis::g_context.fwType != orbis::FwType::Ps5) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    *static_cast<std::uint32_t *>(argp) = 1;
+    thread->retval[0] = 1;
+    return{};
+
   case 0x80104801:
     // TODO
     return{};
