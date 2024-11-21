@@ -10,6 +10,7 @@ add_executable(rpcsx
   audio/AudioDevice.cpp
   audio/AlsaDevice.cpp
 
+  iodev/a53io.cpp
   iodev/ajm.cpp
   iodev/blockpool.cpp
   iodev/bt.cpp
@@ -31,6 +32,7 @@ add_executable(rpcsx
   iodev/metadbg.cpp
   iodev/notification.cpp
   iodev/npdrm.cpp
+  iodev/nsid_ctl.cpp
   iodev/null.cpp
   iodev/rng.cpp
   iodev/sbl_srv.cpp

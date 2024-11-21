@@ -434,6 +434,26 @@ static void guestInitDev() {
   if (orbis::g_context.fwType == orbis::FwType::Ps5) {
     vfs::addDevice("iccnvs4", createIccPowerCharacterDevice());
     vfs::addDevice("ajmi", createAjmCharacterDevice());
+    vfs::addDevice("ssd0", createHddCharacterDevice(0x100000000));
+    vfs::addDevice("nsid1.ctl", createNsidCtlCharacterDevice());
+    vfs::addDevice("ssd0.swapx2", createHddCharacterDevice(0x100000000));
+    vfs::addDevice("ssd0.bd_rvlist", createHddCharacterDevice(1048576));
+    vfs::addDevice("ssd0.system", createHddCharacterDevice(671088640));
+    vfs::addDevice("ssd0.system_ex", createHddCharacterDevice(1610612736));
+    vfs::addDevice("ssd0.system_b", createHddCharacterDevice(671088640));
+    vfs::addDevice("ssd0.system_ex_b", createHddCharacterDevice(1610612736));
+    vfs::addDevice("ssd0.preinst", createHddCharacterDevice(155189248));
+    vfs::addDevice("ssd0.app_temp0", createHddCharacterDevice(1073741824));
+    // vfs::addDevice("ssd0.app_temp1", createHddCharacterDevice(1073741824));
+    vfs::addDevice("ssd0.system_data", createHddCharacterDevice(8589934592));
+    vfs::addDevice("ssd0.update", createHddCharacterDevice(4294967296));
+    vfs::addDevice("ssd0.swap", createHddCharacterDevice(8589934592));
+    vfs::addDevice("ssd0.app_swap", createHddCharacterDevice(15032385536));
+    vfs::addDevice("ssd0.hibernation", createHddCharacterDevice(3623878656));
+    vfs::addDevice("ssd0.user", createHddCharacterDevice(-41630302208)); /// ?????
+    vfs::addDevice("ssd0.user_bfs", createHddCharacterDevice(0x100000000));
+    vfs::addDevice("bfs/ctl", createHddCharacterDevice(0x100000000));
+    vfs::addDevice("a53io", createA53IoCharacterDevice());
   }
 
   // mbus->emitEvent({

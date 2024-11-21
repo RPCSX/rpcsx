@@ -51,3 +51,5 @@ IoDevice *createScreenShotCharacterDevice();
 IoDevice *createLvdCtlCharacterDevice();
 IoDevice *createIccPowerCharacterDevice();
 IoDevice *createCaymanRegCharacterDevice();
+IoDevice *createA53IoCharacterDevice();
+IoDevice *createNsidCtlCharacterDevice();
