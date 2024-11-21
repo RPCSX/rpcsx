@@ -609,7 +609,9 @@ orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
     return ErrorCode::BADF;
   }
 
+  if (need < 1 || need > sem->maxValue) {
     return ErrorCode::INVAL;
+  }
 
   std::lock_guard lock(sem->mtx);
   if (sem->isDeleted || sem->value < need)
@@ -620,8 +622,12 @@ orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
 orbis::SysResult orbis::sys_osem_post(Thread *thread, sint id, sint count) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread, id, count);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
-  if (count < 1 || count > sem->maxValue - sem->value)
+  if (sem == nullptr) {
+    return ErrorCode::BADF;
+  }
+  if (count < 1 || count > sem->maxValue - sem->value) {
     return ErrorCode::INVAL;
+  }
 
   std::lock_guard lock(sem->mtx);
   if (sem->isDeleted)
