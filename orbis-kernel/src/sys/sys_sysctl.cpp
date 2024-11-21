@@ -752,7 +752,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         }
 
         if (g_context.fwType != FwType::Ps5 &&
-            std::string_view((char *)thread->tproc->appInfo.titleId.data()) ==
+            std::string_view((char *)thread->tproc->appInfo.titleId) ==
                 "NPXS20973") {
           ORBIS_LOG_ERROR("get tsc freq: returning patched value");
           *(uint64_t *)old = 1000000;
