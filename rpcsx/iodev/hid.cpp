@@ -41,11 +41,53 @@ static orbis::ErrorCode hid_ioctl(orbis::File *file, std::uint64_t request,
 
     *static_cast<std::uint32_t *>(argp) = 1;
     thread->retval[0] = 1;
-    return{};
+    return {};
 
   case 0x80104801:
     // TODO
-    return{};
+    return {};
+
+  case 0xc0484851: {
+    if (orbis::g_context.fwType != orbis::FwType::Ps5) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    struct Args {
+      orbis::uint8_t op;
+      orbis::uint8_t padding[3];
+      orbis::uint32_t hid;
+      orbis::uint32_t unk0;
+      orbis::uint32_t unk1;
+      orbis::uint32_t unk2;
+      orbis::uint32_t unk3;
+      orbis::uint64_t unk4;
+      orbis::ptr<orbis::uint32_t> result;
+      orbis::ptr<orbis::uint32_t> status;
+      orbis::uint64_t unk5;
+      orbis::uint64_t unk6;
+      orbis::ptr<amdgpu::PadState> state;
+    };
+
+    static_assert(sizeof(Args) == 72);
+    auto args = reinterpret_cast<Args *>(argp);
+
+    ORBIS_LOG_WARNING("hid ioctl", request, args->op, args->hid, args->unk0,
+                      args->unk1, args->unk2, args->unk3, args->unk4,
+                      args->result, args->status, args->unk5, args->unk6,
+                      args->state);
+    thread->where();
+
+    if (args->op == 6) {
+      if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
+        *args->result = 1;
+        *args->status = 1;
+
+        *args->state = gpu.getContext().kbPadState;
+        thread->retval[0] = 1;
+      }
+    }
+    return {};
+  }
 
   case 0x8030482e: {
     // ORBIS_LOG_FATAL("hid ioctl", request);
