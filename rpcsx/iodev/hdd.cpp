@@ -35,6 +35,66 @@ static orbis::ErrorCode hdd_ioctl(orbis::File *fs, std::uint64_t request,
     return orbis::uwrite(orbis::ptr<orbis::ulong>(argp), device->size);
   }
 
+  if (request == 0xc03861a1) {
+    struct Args {
+      orbis::uint64_t unk0; // op id?
+      orbis::uint64_t unk1;
+      orbis::uint64_t lbn;
+      orbis::ptr<orbis::uint64_t> result;
+      orbis::uint64_t unk4;
+      orbis::uint64_t unk5;
+      orbis::uint64_t unk6;
+    };
+
+    static_assert(sizeof(Args) == 56);
+
+    auto args = reinterpret_cast<Args *>(argp);
+
+    ORBIS_LOG_WARNING("hdd: a53io: read bfs block", request, args->unk0,
+                      args->unk1, args->lbn, args->result, args->unk4,
+                      args->unk5, args->unk6);
+
+    if (args->unk1 == 0x700000000) {
+      ORBIS_RET_ON_ERROR(
+          orbis::uwrite<std::uint64_t>(args->result, 0x10f50bf520180705));
+      auto superblock = (orbis::uint16_t *)(args->result + 8);
+      superblock[0] = 1; // block exists
+      superblock[1] = 4; // block size
+    } else {
+      // ORBIS_RET_ON_ERROR(
+      //     orbis::uwrite<std::uint64_t>(args->result, 0x20f50bf520180713));
+      ORBIS_RET_ON_ERROR(
+          orbis::uwrite<std::uint64_t>(args->result, 0x20f50bf520190705));
+      auto flags = (orbis::uint8_t *)(args->result + 2);
+      *flags = 0x40; // block is clean
+
+      // FIXME: it should be configurable
+      std::strcpy((char *)(args->result + 4), "ssd0.user");
+    }
+    return {};
+  }
+
+  if (request == 0x4100bf0a) {
+    ORBIS_LOG_WARNING("hdd: bfs scfstat");
+
+    struct Args {
+      std::uint64_t data[32];
+    };
+
+    static_assert(sizeof(Args) == 256);
+
+    auto args = reinterpret_cast<Args *>(argp);
+    std::memset(args, 0, sizeof(Args));
+    // 0xe
+    args->data[0] = 1ull << 32;
+    args->data[1] = 1ull << 32;
+    args->data[16] = 1ull << 15;
+
+    *(orbis::uint16_t *)((char *)args->data + 200) = 1;
+    // block is clean
+    return {};
+  }
+
   ORBIS_LOG_FATAL("Unhandled hdd ioctl", request);
   thread->where();
   return {};
