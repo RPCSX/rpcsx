@@ -1245,6 +1245,7 @@ int main(int argc, const char *argv[]) {
   }
 
   if (orbis::g_context.fwType == orbis::FwType::Ps5 && !isSystem) {
+    ipmi::createIpmiServer(initProcess, "SceShareLibIpmiService");
     ipmi::createIpmiServer(initProcess, "SceSysAvControlIpc");
     ipmi::createShm("SceAvControl", 0xa02, 0x1a4, 4096);
     ipmi::createEventFlag("SceAvControlEvf", 0x121, 0);
