@@ -372,6 +372,8 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
     offset = it.endAddress();
   }
 
+  resultSize /= 0x20;
+
   *start = resultOffset;
   *size = resultSize;
 
