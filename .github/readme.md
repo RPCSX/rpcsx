@@ -1,7 +1,7 @@
 <div align="center">
    
 # RPCSX
-*An experimental PlayStation 4 emulator for Linux written in C++*
+*An experimental PlayStation 4 and PlayStation 5 emulator for Linux written in C++*
 
 [![Build RPCSX](../../../actions/workflows/rpcsx.yml/badge.svg)](../../../actions/workflows/rpcsx.yml)
 
