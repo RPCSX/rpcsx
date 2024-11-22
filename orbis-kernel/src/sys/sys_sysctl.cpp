@@ -76,6 +76,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
   enum sysctl_vm_budgets_ {
     mlock_total = 1000,
+    mlock_avail = 1000,
   };
 
   struct ProcInfo {
@@ -191,6 +192,19 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       }
 
       *(uint64_t *)old = 5056ull * 1024 * 1024;
+      return {};
+    }
+
+
+    if (name[0] == vm && name[1] == budgets && name[2] == mlock_avail) {
+      if (*oldlenp != 16 || new_ != nullptr || newlen != 0) {
+        return ErrorCode::INVAL;
+      }
+
+      // TODO
+      auto result = (uint64_t *)old;
+      result[0] = 0;
+      result[1] = 5056ull * 1024 * 1024;
       return {};
     }
   }
@@ -539,6 +553,15 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
           dest[count++] = vm;
           dest[count++] = budgets;
           dest[count++] = mlock_total;
+        } else if (searchName == "vm.budgets.mlock_avail") {
+          if (*oldlenp < 3 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = vm;
+          dest[count++] = budgets;
+          dest[count++] = mlock_avail;
         }
 
         if (count == 0) {
