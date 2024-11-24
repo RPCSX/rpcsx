@@ -695,8 +695,6 @@ ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
       }
     }
   }
-    }
-  }
 
   if (orbis::g_context.fwSdkVersion == 0) {
     auto moduleParam = reinterpret_cast<std::byte *>(libkernel->moduleParam);
