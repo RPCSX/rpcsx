@@ -4,6 +4,7 @@
 #include "orbis-config.hpp"
 #include "orbis/utils/Rc.hpp"
 #include "utils/SharedMutex.hpp"
+#include <limits>
 #include <set>
 
 namespace orbis {
@@ -90,7 +91,8 @@ struct EventEmitter : orbis::RcBase {
   shared_mutex mutex;
   std::set<KNote *, std::less<>, kallocator<KNote *>> notes;
 
-  void emit(sshort filter, uint fflags = 0, intptr_t data = 0);
+  void emit(sshort filter, uint fflags = 0, intptr_t data = 0,
+            uintptr_t ident = std::numeric_limits<uintptr_t>::max());
   void subscribe(KNote *note);
   void unsubscribe(KNote *note);
 };

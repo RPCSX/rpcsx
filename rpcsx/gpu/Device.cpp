@@ -44,9 +44,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessageCallback(
 }
 
 enum class DisplayEvent : std::uint16_t {
-  Flip,
-  VBlank,
-  PreVBlankStart,
+  Flip = 6,
+  VBlank = 7,
+  PreVBlankStart = 0x59,
 };
 
 static constexpr std::uint64_t
@@ -345,7 +345,7 @@ void Device::start() {
           std::chrono::duration_cast<std::chrono::nanoseconds>(period);
       std::this_thread::sleep_until(prevVBlank);
       orbis::g_context.deviceEventEmitter->emit(
-          orbis::kEvFiltDisplay, 0, makeDisplayEvent(DisplayEvent::VBlank));
+          orbis::kEvFiltDisplay, 0, 0, makeDisplayEvent(DisplayEvent::VBlank));
     }
   });
 
@@ -812,7 +812,7 @@ bool Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg,
   amdgpu::flip(
       cacheTag, vk::context->swapchainExtent, buffer.address,
       swapchainImageView, {bufferAttr.width, bufferAttr.height}, flipType,
-      getDefaultTileModes()[bufferAttr.tilingMode == 1 ? 10 : 8], dfmt, nfmt);
+      getDefaultTileModes()[bufferAttr.tilingMode != 0 ? 10 : 8], dfmt, nfmt);
 
   transitionImageLayout(sched.getCommandBuffer(), swapchainImage,
                         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -908,7 +908,8 @@ void Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg) {
            vk::context->swapchainImageViews[imageIndex]);
 
   orbis::g_context.deviceEventEmitter->emit(
-      orbis::kEvFiltDisplay, 0, makeDisplayEvent(DisplayEvent::Flip));
+      orbis::kEvFiltDisplay, 0, arg,
+      makeDisplayEvent(DisplayEvent::Flip, 1 << 8, 0));
   if (!flipComplete) {
     isImageAcquired = true;
     return;

@@ -20,7 +20,8 @@ orbis::KNote::~KNote() {
   }
 }
 
-void orbis::EventEmitter::emit(sshort filter, uint fflags, intptr_t data) {
+void orbis::EventEmitter::emit(sshort filter, uint fflags, intptr_t data,
+                               uintptr_t ident) {
   std::lock_guard lock(mutex);
 
   for (auto note : notes) {
@@ -33,6 +34,11 @@ void orbis::EventEmitter::emit(sshort filter, uint fflags, intptr_t data) {
       }
 
       note->event.fflags = fflags;
+    }
+
+    if (ident != std::numeric_limits<uintptr_t>::max() &&
+        note->event.ident != ident) {
+      continue;
     }
 
     std::lock_guard lock(note->mutex);
