@@ -176,6 +176,7 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
                                 std::uint64_t ut, umutex_lock_mode mode) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread->tid, m, flags, ut, mode);
 
+  auto [chain, key, lock] = g_context.getUmtxChain1(thread, flags, m);
   ErrorCode error = {};
   while (true) {
     int owner = m->owner.load(std::memory_order_acquire);
@@ -204,7 +205,6 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
     if (error != ErrorCode{} && !isSpuriousWakeup(error))
       return error;
 
-    auto [chain, key, lock] = g_context.getUmtxChain1(thread, flags, m);
     auto node = chain.enqueue(key, thread);
     if (m->owner.compare_exchange_strong(owner, owner | kUmutexContested)) {
       {
@@ -232,6 +232,8 @@ static ErrorCode do_lock_pp(Thread *thread, ptr<umutex> m, uint flags,
 static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread->tid, m, flags);
 
+  auto [chain, key, lock] = g_context.getUmtxChain1(thread, flags, m);
+
   int owner = m->owner.load(std::memory_order_acquire);
   if ((owner & ~kUmutexContested) != thread->tid)
     return ErrorCode::PERM;
@@ -241,7 +243,6 @@ static ErrorCode do_unlock_normal(Thread *thread, ptr<umutex> m, uint flags) {
       return {};
   }
 
-  auto [chain, key, lock] = g_context.getUmtxChain1(thread, flags, m);
   std::size_t count = chain.sleep_queue.count(key);
   bool ok = m->owner.compare_exchange_strong(
       owner, count <= 1 ? kUmutexUnowned : kUmutexContested);
