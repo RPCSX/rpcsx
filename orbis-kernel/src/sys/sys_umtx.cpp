@@ -168,11 +168,9 @@ orbis::SysResult orbis::sys__umtx_op(Thread *thread, ptr<void> obj, sint op,
   case kUmtxOpNwakePrivate:
     return umtx_nwake_private(thread, (ptr<void *>)obj, val);
   case kUmtxOpMutexWake2:
-    return umtx_wake2_umutex(thread, obj, val, uaddr1, uaddr2);
-  case 23:
-    ORBIS_LOG_ERROR("sys__umtx_op: unknown wake operation", op, val, uaddr1, uaddr2);
-    // thread->where();
-    return umtx_wake_umutex(thread, (orbis::ptr<orbis::umutex>)obj, val);
+    return umtx_wake2_umutex(thread, (orbis::ptr<orbis::umutex>)obj, val);
+  case kUmtxOpMutexWake3:
+    return umtx_wake3_umutex(thread, (orbis::ptr<orbis::umutex>)obj, val);
   }
 
   return ErrorCode::INVAL;

@@ -52,6 +52,8 @@ inline constexpr auto kUmtxOpSemWait = 19;
 inline constexpr auto kUmtxOpSemWake = 20;
 inline constexpr auto kUmtxOpNwakePrivate = 21;
 inline constexpr auto kUmtxOpMutexWake2 = 22;
+inline constexpr auto kUmtxOpMutexWake3 = 23;
+
 
 inline constexpr auto kSemNamed = 2;
 
@@ -114,6 +116,6 @@ ErrorCode umtx_sem_wait(Thread *thread, ptr<usem> sem, std::uint64_t ut);
 ErrorCode umtx_sem_wake(Thread *thread, ptr<usem> sem);
 ErrorCode umtx_nwake_private(Thread *thread, ptr<void *> uaddrs,
                              std::int64_t count);
-ErrorCode umtx_wake2_umutex(Thread *thread, ptr<void> obj, std::int64_t val,
-                            ptr<void> uaddr1, ptr<void> uaddr2);
+ErrorCode umtx_wake2_umutex(Thread *thread, ptr<umutex> m, sint wakeFlags);
+ErrorCode umtx_wake3_umutex(Thread *thread, ptr<umutex> m, sint wakeFlags);
 } // namespace orbis
