@@ -238,7 +238,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     auto args = reinterpret_cast<Args *>(argp);
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       gpu.waitForIdle();
-      gpu.submitSwitchBuffer(orbis::g_currentThread->tproc->vmId);
+      gpu.submitSwitchBuffer(orbis::g_currentThread->tproc->gfxRing);
     } else {
       return orbis::ErrorCode::BUSY;
     }
