@@ -85,6 +85,21 @@ struct FlipControlStatus {
   std::uint64_t unk1;
 };
 
+struct FlipControlStatus2 {
+  uint64_t count;
+  uint64_t processTime;
+  uint64_t reserved0;
+  int64_t flipArg;
+  uint64_t unk0;
+  uint64_t processTimeCounter;
+  int32_t gcQueueNum;
+  int32_t flipPendingNum;
+  int32_t currentBuffer;
+  uint32_t unk1;
+  uint64_t submitProcessTimeCounter;
+  uint64_t unk2[7];
+};
+
 struct FlipControlArgs {
   std::uint32_t id;
   std::uint32_t padding;
@@ -362,6 +377,17 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
           gpuCtx.bufferInUseAddress[thread->tproc->vmId] = args->size;
           return {};
         }
+      }
+
+      if (args->id == 0xa) {
+        FlipControlStatus2 flipStatus{};
+        flipStatus.flipArg = gpuCtx.flipArg[thread->tproc->vmId];
+        flipStatus.count = gpuCtx.flipCount[thread->tproc->vmId];
+        flipStatus.currentBuffer = gpuCtx.flipBuffer[thread->tproc->vmId];
+        // TODO
+
+        std::memcpy(args->ptr, &flipStatus, sizeof(FlipControlStatus2));
+        return {};
       }
 
       ORBIS_LOG_FATAL("dce: unimplemented 0x80308217 request", args->id,
