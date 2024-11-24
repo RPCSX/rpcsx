@@ -53,3 +53,7 @@ IoDevice *createIccPowerCharacterDevice();
 IoDevice *createCaymanRegCharacterDevice();
 IoDevice *createA53IoCharacterDevice();
 IoDevice *createNsidCtlCharacterDevice();
+IoDevice *createHmd2CmdCharacterDevice();
+IoDevice *createHmd2ImuCharacterDevice();
+IoDevice *createHmd2GazeCharacterDevice();
+IoDevice *createHmd2GenDataCharacterDevice();

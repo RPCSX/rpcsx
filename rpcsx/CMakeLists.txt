@@ -27,6 +27,10 @@ add_executable(rpcsx
   iodev/hmd_cmd.cpp
   iodev/hmd_mmap.cpp
   iodev/hmd_snsr.cpp
+  iodev/hmd2_cmd.cpp
+  iodev/hmd2_imu.cpp
+  iodev/hmd2_gen_data.cpp
+  iodev/hmd2_gaze.cpp
   iodev/icc_configuration.cpp
   iodev/mbus.cpp
   iodev/metadbg.cpp

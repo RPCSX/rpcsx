@@ -453,7 +453,13 @@ static void guestInitDev() {
     vfs::addDevice("ssd0.user", createHddCharacterDevice(-41630302208)); /// ?????
     vfs::addDevice("ssd0.user_bfs", createHddCharacterDevice(0x100000000));
     vfs::addDevice("bfs/ctl", createHddCharacterDevice(0x100000000));
+    vfs::addDevice("md2", createHddCharacterDevice(0x100000000));
     vfs::addDevice("a53io", createA53IoCharacterDevice());
+
+    vfs::addDevice("hmd2_cmd", createHmd2CmdCharacterDevice());
+    vfs::addDevice("hmd2_imu", createHmd2ImuCharacterDevice());
+    vfs::addDevice("hmd2_gaze", createHmd2GazeCharacterDevice());
+    vfs::addDevice("hmd2_gen_data", createHmd2GenDataCharacterDevice());
   }
 
   // mbus->emitEvent({
