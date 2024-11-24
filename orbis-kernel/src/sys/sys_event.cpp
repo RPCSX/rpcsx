@@ -316,7 +316,8 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
             if (note.enabled && note.triggered) {
               result.push_back(note.event);
 
-              if (note.event.filter == kEvFiltDisplay) {
+              if (note.event.filter == kEvFiltDisplay &&
+                  note.event.ident >> 48 != 0x6301) {
                 note.triggered = false;
               }
 
@@ -365,11 +366,17 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
       auto waitTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
           timeoutPoint - now);
       if (canSleep) {
-        kq->cv.wait(kq->mtx, waitTimeout.count());
+        if (waitTimeout.count() > 1000) {
+          orbis::scoped_unblock unblock;
+          kq->cv.wait(kq->mtx, waitTimeout.count());
+        } else {
+          kq->cv.wait(kq->mtx, waitTimeout.count());
+        }
       }
     } else {
       if (canSleep) {
         std::lock_guard lock(kq->mtx);
+        orbis::scoped_unblock unblock;
         kq->cv.wait(kq->mtx);
       } else {
         std::this_thread::sleep_for(std::chrono::microseconds(30));
