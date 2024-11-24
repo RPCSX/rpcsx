@@ -31,6 +31,7 @@ struct UContext;
 struct SigSet;
 struct SigAction;
 struct SocketAddress;
+struct AppMountInfo;
 
 SysResult nosys(Thread *thread);
 
@@ -829,7 +830,7 @@ SysResult sys_apr_stat(Thread *thread /* TODO */);
 SysResult sys_apr_wait(Thread *thread /* TODO */);
 SysResult sys_apr_ctrl(Thread *thread /* TODO */);
 SysResult sys_get_phys_page_size(Thread *thread /* TODO */);
-SysResult sys_begin_app_mount(Thread *thread /* TODO */);
+SysResult sys_begin_app_mount(Thread *thread, ptr<AppMountInfo> info);
 SysResult sys_end_app_mount(Thread *thread /* TODO */);
 SysResult sys_fsc2h_ctrl(Thread *thread /* TODO */);
 SysResult sys_streamwrite(Thread *thread /* TODO */);

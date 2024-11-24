@@ -19,6 +19,27 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+struct orbis::AppMountInfo {
+  uint64_t unk0; // 8
+  uint32_t unk1;
+  uint32_t unk2;
+  char titleId[10];
+  uint8_t unk3[6];
+  uint64_t unk4;
+  uint64_t unk5;
+  uint64_t unk6;
+  uint64_t unk7;
+  uint64_t unk8;
+  uint64_t unk9;
+  uint64_t unk10;
+  uint64_t unk11;
+  uint64_t unk12;
+  uint64_t unk13;
+  ptr<uint32_t> result;
+};
+
+static_assert(sizeof(orbis::AppMountInfo) == 120);
+
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
                                        ptr<void> buf, uint nbuf) {
   return {};
@@ -1688,9 +1709,18 @@ orbis::SysResult orbis::sys_apr_ctrl(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_get_phys_page_size(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_begin_app_mount(Thread *thread /* TODO */) {
-  ORBIS_LOG_FATAL(__FUNCTION__);
-  return {};
+orbis::SysResult orbis::sys_begin_app_mount(Thread *thread,
+                                            ptr<AppMountInfo> info) {
+  AppMountInfo _info;
+  ORBIS_RET_ON_ERROR(uread(_info, info));
+  ORBIS_LOG_FATAL(__FUNCTION__, _info.unk0, _info.unk1, _info.unk2,
+                  _info.titleId, int(_info.unk3[0]), int(_info.unk3[1]),
+                  int(_info.unk3[2]), int(_info.unk3[3]), int(_info.unk3[4]),
+                  int(_info.unk3[5]), int(_info.unk3[6]), _info.unk4,
+                  _info.unk5, _info.unk6, _info.unk7, _info.unk8, _info.unk9,
+                  _info.unk10, _info.unk11, _info.unk12, _info.unk13,
+                  _info.result);
+  return orbis::uwrite(_info.result, 0u);
 }
 orbis::SysResult orbis::sys_end_app_mount(Thread *thread /* TODO */) {
   ORBIS_LOG_FATAL(__FUNCTION__);
