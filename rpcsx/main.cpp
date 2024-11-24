@@ -673,24 +673,28 @@ ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
     std::abort();
   }
 
-  for (auto sym : libkernel->symbols) {
-    if (sym.id == 0xd2f4e7e480cc53d0) {
-      auto address = (uint64_t)libkernel->base + sym.address;
-      ::mprotect((void *)rx::alignDown(address, 0x1000),
-                 rx::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
-      std::println("patching sceKernelGetMainSocId");
-      struct GetMainSocId : Xbyak::CodeGenerator {
-        GetMainSocId(std::uint64_t address, std::uint64_t size)
-            : Xbyak::CodeGenerator(size, (void *)address) {
-          mov(eax, 0x710f00);
-          ret();
-        }
-      } gen{address, sym.size};
+  if (orbis::g_context.fwType == orbis::FwType::Ps4) {
+    for (auto sym : libkernel->symbols) {
+      if (sym.id == 0xd2f4e7e480cc53d0) {
+        auto address = (uint64_t)libkernel->base + sym.address;
+        ::mprotect((void *)rx::alignDown(address, 0x1000),
+                   rx::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
+        std::println("patching sceKernelGetMainSocId");
+        struct GetMainSocId : Xbyak::CodeGenerator {
+          GetMainSocId(std::uint64_t address, std::uint64_t size)
+              : Xbyak::CodeGenerator(size, (void *)address) {
+            mov(eax, 0x710f00);
+            ret();
+          }
+        } gen{address, sym.size};
 
-      ::mprotect((void *)rx::alignDown(address, 0x1000),
-                 rx::alignUp(sym.size + sym.address, 0x1000),
-                 PROT_READ | PROT_EXEC);
-      break;
+        ::mprotect((void *)rx::alignDown(address, 0x1000),
+                   rx::alignUp(sym.size + sym.address, 0x1000),
+                   PROT_READ | PROT_EXEC);
+        break;
+      }
+    }
+  }
     }
   }
 
