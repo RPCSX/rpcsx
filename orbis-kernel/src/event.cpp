@@ -53,6 +53,30 @@ void orbis::EventEmitter::emit(sshort filter, uint fflags, intptr_t data,
   }
 }
 
+void orbis::EventEmitter::emit(
+    sshort filter, void *userData,
+    std::optional<intptr_t> (*filterFn)(void *userData, KNote *note)) {
+  std::lock_guard lock(mutex);
+
+  for (auto note : notes) {
+    if (note->event.filter != filter) {
+      continue;
+    }
+
+    std::lock_guard lock(note->mutex);
+
+    if (note->triggered) {
+      continue;
+    }
+
+    if (auto data = filterFn(userData, note)) {
+      note->event.data = *data;
+      note->triggered = true;
+      note->queue->cv.notify_all(note->queue->mtx);
+    }
+  }
+}
+
 void orbis::EventEmitter::subscribe(KNote *note) {
   std::lock_guard lock(mutex);
   notes.insert(note);

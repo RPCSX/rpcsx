@@ -335,8 +335,15 @@ void Device::start() {
 
   std::jthread vblankThread([](const std::stop_token &stopToken) {
     orbis::g_context.deviceEventEmitter->emit(
-        orbis::kEvFiltDisplay, 0,
-        makeDisplayEvent(DisplayEvent::PreVBlankStart));
+        orbis::kEvFiltDisplay,
+        [=](orbis::KNote *note) -> std::optional<orbis::intptr_t> {
+          if (DisplayEvent(note->event.ident >> 48) ==
+              DisplayEvent::PreVBlankStart) {
+            return 0;
+          }
+          return {};
+        });
+
     auto prevVBlank = std::chrono::steady_clock::now();
     auto period = std::chrono::seconds(1) / 59.94;
 
@@ -344,8 +351,15 @@ void Device::start() {
       prevVBlank +=
           std::chrono::duration_cast<std::chrono::nanoseconds>(period);
       std::this_thread::sleep_until(prevVBlank);
+
       orbis::g_context.deviceEventEmitter->emit(
-          orbis::kEvFiltDisplay, 0, 0, makeDisplayEvent(DisplayEvent::VBlank));
+          orbis::kEvFiltDisplay,
+          [=](orbis::KNote *note) -> std::optional<orbis::intptr_t> {
+            if (DisplayEvent(note->event.ident >> 48) == DisplayEvent::VBlank) {
+              return 0;
+            }
+            return {};
+          });
     }
   });
 
@@ -908,8 +922,14 @@ void Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg) {
            vk::context->swapchainImageViews[imageIndex]);
 
   orbis::g_context.deviceEventEmitter->emit(
-      orbis::kEvFiltDisplay, 0, arg,
-      makeDisplayEvent(DisplayEvent::Flip, 1 << 8, 0));
+      orbis::kEvFiltDisplay,
+      [=](orbis::KNote *note) -> std::optional<orbis::intptr_t> {
+        if (DisplayEvent(note->event.ident >> 48) == DisplayEvent::Flip) {
+          return arg;
+        }
+        return {};
+      });
+
   if (!flipComplete) {
     isImageAcquired = true;
     return;

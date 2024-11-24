@@ -93,6 +93,20 @@ struct EventEmitter : orbis::RcBase {
 
   void emit(sshort filter, uint fflags = 0, intptr_t data = 0,
             uintptr_t ident = std::numeric_limits<uintptr_t>::max());
+  void emit(sshort filter, void *userData,
+            std::optional<intptr_t> (*filterFn)(void *userData, KNote *note));
+
+  template <typename T>
+  void emit(sshort filter, T &&fn)
+    requires requires(KNote *note) {
+      { fn(note) } -> std::same_as<std::optional<intptr_t>>;
+    }
+  {
+    emit(filter, &fn, [](void *userData, KNote *note) {
+      return (*static_cast<std::remove_cvref_t<T> *>(userData))(note);
+    });
+  }
+
   void subscribe(KNote *note);
   void unsubscribe(KNote *note);
 };
