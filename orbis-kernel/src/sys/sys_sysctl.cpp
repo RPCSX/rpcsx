@@ -37,6 +37,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
     // FIXME
     config = 1000,
+    sce_main_socid,
   };
 
   enum sysctl_vm {
@@ -562,6 +563,18 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
           dest[count++] = vm;
           dest[count++] = budgets;
           dest[count++] = mlock_avail;
+        } else if (searchName == "hw.sce_main_socid") {
+          if (g_context.fwType != FwType::Ps5) {
+            return ErrorCode::INVAL;
+          }
+
+          if (*oldlenp < 2 * sizeof(uint32_t)) {
+            std::fprintf(stderr, "   %s error\n", searchName.data());
+            return ErrorCode::INVAL;
+          }
+
+          dest[count++] = hw;
+          dest[count++] = sce_main_socid;
         }
 
         if (count == 0) {
@@ -751,6 +764,17 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         }
 
         *(uint32_t *)old = 0x4000;
+        return {};
+
+      case sysctl_hw::sce_main_socid:
+        if (g_context.fwType != FwType::Ps5) {
+          return ErrorCode::INVAL;
+        }
+        if (*oldlenp != 4 || new_ != nullptr || newlen != 0) {
+          return ErrorCode::INVAL;
+        }
+
+        *(uint32_t *)old = 0x840f50;
         return {};
 
       case sysctl_hw::ncpu:
