@@ -92,6 +92,11 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
     // 4.17.0.0.3.0
     if (name[0] == net && name[1] == 17 && name[2] == 0 && name[3] == 0 &&
         name[4] == 3 && name[5] == 0) {
+      if (g_context.fwSdkVersion == 0) {
+        // proto fw
+        return {};
+      }
+
       return ErrorCode::OPNOTSUPP;
     }
   }

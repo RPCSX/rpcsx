@@ -806,7 +806,10 @@ Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       std::fprintf(stderr, "unexpected import type\n");
       std::abort();
     }
-    if (hasPs4Dyn) {
+
+    if (!hasPs4Dyn && !hasPs5Dyn && interpPhdrIndex >= 0) {
+      result->dynType = orbis::DynType::FreeBsd;
+    } else if (hasPs4Dyn) {
       result->dynType = orbis::DynType::Ps4;
     } else if (hasPs5Dyn) {
       result->dynType = orbis::DynType::Ps5;

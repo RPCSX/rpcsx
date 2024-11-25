@@ -17,6 +17,7 @@ struct Process;
 
 enum class DynType : std::uint8_t {
   None,
+  FreeBsd,
   Ps4,
   Ps5,
 };

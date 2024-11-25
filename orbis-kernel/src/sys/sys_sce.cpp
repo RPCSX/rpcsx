@@ -201,7 +201,7 @@ orbis::SysResult orbis::sys_dl_get_info(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_dl_notify_event(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+  return {};
 }
 orbis::SysResult orbis::sys_evf_create(Thread *thread, ptr<const char[32]> name,
                                        sint attrs, uint64_t initPattern) {
