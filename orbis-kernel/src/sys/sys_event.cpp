@@ -185,10 +185,6 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
     nodeIt->event.data |= 1000ull << 16; // clock
 
     kq->cv.notify_all(kq->mtx);
-  } else if (change.filter == kEvFiltGraphicsCore && change.ident == 0x41) {
-    // hp3d idle
-    nodeIt->triggered = true;
-    kq->cv.notify_all(kq->mtx);
   } else if (g_context.fwType == FwType::Ps5 &&
              change.filter == kEvFiltGraphicsCore && change.ident == 0) {
     nodeIt->triggered = true;
@@ -316,8 +312,10 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
             if (note.enabled && note.triggered) {
               result.push_back(note.event);
 
-              if (note.event.filter == kEvFiltDisplay &&
-                  note.event.ident >> 48 != 0x6301) {
+              if (note.event.filter == kEvFiltDisplay) {
+                note.triggered = false;
+              } else if (note.event.filter == kEvFiltGraphicsCore &&
+                         note.event.ident != 0x84) {
                 note.triggered = false;
               }
 

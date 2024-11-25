@@ -488,7 +488,19 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
     } else if (args->id == 0x1e) {
       // TODO
       return {};
-    } else if (args->id != 1) { // used during open/close
+    } else if (args->id == 1) {
+
+      // Mode set
+      orbis::g_context.deviceEventEmitter->emit(
+          orbis::kEvFiltDisplay,
+          [](orbis::KNote *note) -> std::optional<orbis::intptr_t> {
+            if ((note->event.ident >> 48) == 0x64) {
+              return 0;
+            }
+            return {};
+          });
+
+    } else { // used during open/close
       ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
                        args->ptr, args->size);
 

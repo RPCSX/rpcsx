@@ -344,8 +344,15 @@ bool ComputePipe::releaseMem(Ring &ring) {
   }
 
   if (intSel) {
-    orbis::g_context.deviceEventEmitter->emit(orbis::kEvFiltGraphicsCore, 0,
-                                              kGcEventCompute0RelMem + index);
+    orbis::g_context.deviceEventEmitter->emit(
+        orbis::kEvFiltGraphicsCore,
+        [=, this](orbis::KNote *note) -> std::optional<std::int64_t> {
+          if (note->event.ident == kGcEventCompute0RelMem + index) {
+            return dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
+          }
+
+          return {};
+        });
   }
 
   return true;
@@ -1364,8 +1371,19 @@ bool GraphicsPipe::eventWriteEop(Ring &ring) {
   }
 
   if (intSel != 0) {
-    orbis::g_context.deviceEventEmitter->emit(orbis::kEvFiltGraphicsCore, 0,
-                                              kGcEventGfxEop);
+    orbis::g_context.deviceEventEmitter->emit(
+        orbis::kEvFiltGraphicsCore,
+        [=](orbis::KNote *note) -> std::optional<std::int64_t> {
+          if (note->event.ident == kGcEventGfxEop) {
+            return dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
+          }
+
+          if (note->event.ident == kGcEventGfxEop + 1) { // hp3d
+            return dataLo | (static_cast<std::uint64_t>(dataHi) << 32);
+          }
+
+          return {};
+        });
   }
 
   if (intSel == 2 && dataSel == 2) {
