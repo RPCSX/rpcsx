@@ -1,6 +1,7 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 
 struct DevActFile : orbis::File {};
@@ -21,7 +22,25 @@ static orbis::ErrorCode devact_ioctl(orbis::File *file, std::uint64_t request,
     param->unk0 = 1;
     return{};
   }
+
+  if (request == 0x40144401) {
+    // is expired
+    struct Param {
+      std::uint32_t unk0;
+      std::uint32_t unk1;
+      std::uint32_t unk2;
+      std::uint32_t unk3;
+      std::uint32_t unk4;
+      std::uint32_t unk5;
+    };
+    auto param = (Param *)argp;
+    *param = {};
+    param->unk1 = 1;
+    return{};
+  }
+
   ORBIS_LOG_FATAL("Unhandled devact ioctl", request);
+  thread->where();
   return {};
 }
 

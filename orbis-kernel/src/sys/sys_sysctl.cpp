@@ -201,7 +201,6 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       return {};
     }
 
-
     if (name[0] == vm && name[1] == budgets && name[2] == mlock_avail) {
       if (*oldlenp != 16 || new_ != nullptr || newlen != 0) {
         return ErrorCode::INVAL;
@@ -283,7 +282,6 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       // AppInfo get/set
 
       // 1 - 14 - 35 - pid
-
       Process *process = thread->tproc;
       if (process->pid != name[3] && name[3] != -1) {
         process = g_context.findProcessById(name[3]);
@@ -294,48 +292,73 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         }
       }
 
+      ORBIS_LOG_ERROR("1.14.35", name[3]);
+      thread->where();
+
       if (old) {
         size_t oldlen;
-        if (auto errc = uread(oldlen, oldlenp); errc != ErrorCode{}) {
-          return errc;
-        }
+        ORBIS_RET_ON_ERROR(uread(oldlen, oldlenp));
 
-        if (oldlen < sizeof(AppInfo)) {
+        ORBIS_LOG_ERROR("1.14.35", name[3], oldlen);
+
+        if (oldlen == sizeof(AppInfo2)) {
+          ORBIS_LOG_ERROR("get AppInfo2", process->appInfo2.appId,
+                          process->appInfo2.unk0, process->appInfo2.unk1,
+                          process->appInfo2.appType, process->appInfo2.titleId,
+                          process->appInfo2.unk2, process->appInfo2.unk3,
+                          process->appInfo2.unk5, process->appInfo2.unk6,
+                          process->appInfo2.unk7, process->appInfo2.unk8);
+
+          ORBIS_RET_ON_ERROR(uwrite((ptr<AppInfo2>)old, process->appInfo2));
+          ORBIS_RET_ON_ERROR(uwrite(oldlenp, sizeof(AppInfo2)));
+        } else if (oldlen == sizeof(AppInfo)) {
+          ORBIS_LOG_ERROR("get AppInfo", process->appInfo.appId,
+                          process->appInfo.unk0, process->appInfo.unk1,
+                          process->appInfo.appType, process->appInfo.titleId,
+                          process->appInfo.unk2, process->appInfo.unk3,
+                          process->appInfo.unk5, process->appInfo.unk6,
+                          process->appInfo.unk7, process->appInfo.unk8);
+
+          ORBIS_RET_ON_ERROR(uwrite((ptr<AppInfo>)old, process->appInfo));
+          ORBIS_RET_ON_ERROR(uwrite(oldlenp, sizeof(AppInfo)));
+        } else {
           return ErrorCode::INVAL;
-        }
-
-        if (auto errc = uwrite((ptr<AppInfo>)old, process->appInfo);
-            errc != ErrorCode{}) {
-          return errc;
-        }
-
-        if (auto errc = uwrite(oldlenp, sizeof(AppInfo)); errc != ErrorCode{}) {
-          return errc;
         }
       }
 
       if (new_) {
-        if (newlen != sizeof(AppInfo)) {
-          return ErrorCode::INVAL;
-        }
+        if (newlen == sizeof(AppInfo2)) {
+          auto result = uread(process->appInfo2, (ptr<AppInfo2>)new_);
+          if (result == ErrorCode{}) {
+            auto &appInfo = process->appInfo;
+            ORBIS_LOG_ERROR("set AppInfo2", appInfo.appId, appInfo.unk0,
+                            appInfo.unk1, appInfo.appType, appInfo.titleId,
+                            appInfo.unk2, appInfo.unk3, appInfo.unk5,
+                            appInfo.unk6, appInfo.unk7, appInfo.unk8);
 
-        auto result = uread(process->appInfo, (ptr<AppInfo>)new_);
-        if (result == ErrorCode{}) {
-          auto &appInfo = process->appInfo;
-          ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
-                          appInfo.unk1, appInfo.appType, appInfo.titleId,
-                          appInfo.unk2, appInfo.unk3, appInfo.unk5,
-                          appInfo.unk6, appInfo.unk7, appInfo.unk8);
+            // HACK
+            if (appInfo.appId == 0 && appInfo.unk4 == 0) {
+              appInfo.unk4 = orbis::slong(0x80000000'00000000);
+            }
+          }
 
-          // HACK
-          if (appInfo.appId == 0 && appInfo.unk4 == 0) {
-            appInfo.unk4 = orbis::slong(0x80000000'00000000);
+          return result;
+        } else if (newlen == sizeof(AppInfo)) {
+          auto result = uread(process->appInfo, (ptr<AppInfo>)new_);
+          if (result == ErrorCode{}) {
+            auto &appInfo = process->appInfo;
+            ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
+                            appInfo.unk1, appInfo.appType, appInfo.titleId,
+                            appInfo.unk2, appInfo.unk3, appInfo.unk5,
+                            appInfo.unk6, appInfo.unk7, appInfo.unk8);
+
+            // HACK
+            if (appInfo.appId == 0 && appInfo.unk4 == 0) {
+              appInfo.unk4 = orbis::slong(0x80000000'00000000);
+            }
           }
         }
-
-        return result;
       }
-
       return {};
     }
 
@@ -354,6 +377,111 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
           return {};
         }
       }
+
+      return ErrorCode::SRCH;
+    }
+
+    if (name[0] == kern && name[1] == proc && name[2] == 64) {
+      auto appInfo = g_context.appInfos.get(name[3]);
+      if (appInfo == nullptr) {
+        return ErrorCode::SRCH; // ?
+      }
+
+      if (old) {
+        size_t oldlen;
+        ORBIS_RET_ON_ERROR(uread(oldlen, oldlenp));
+        if (oldlen < sizeof(uint32_t)) {
+          return ErrorCode::INVAL;
+        }
+
+        ORBIS_LOG_TODO("1.14.64 get", name[3], appInfo->appState);
+
+        ORBIS_RET_ON_ERROR(uwrite(ptr<uint32_t>(old), 5u));
+        ORBIS_RET_ON_ERROR(uwrite<size_t>(oldlenp, sizeof(uint32_t)));
+      }
+
+      if (new_) {
+        if (newlen != sizeof(uint32_t)) {
+          return ErrorCode::INVAL;
+        }
+
+        uint32_t appState;
+        ORBIS_RET_ON_ERROR(uread(appState, ptr<uint32_t>(new_)));
+        ORBIS_LOG_TODO("1.14.64 set", name[3], appState);
+        appInfo->appState = appState;
+      }
+      return {};
+    }
+
+    if (name[0] == 1 && name[1] == proc && name[2] == 65) {
+      // AppInfo by appId get/set
+      // 1 - 14 - 65 - appId
+      auto appInfo = g_context.appInfos.get(name[3]);
+      if (appInfo == nullptr) {
+        ORBIS_LOG_ERROR("appinfo appId not found", name[3], thread->tproc->pid);
+        return ErrorCode::SRCH;
+      }
+
+      if (old) {
+        size_t oldlen;
+        ORBIS_RET_ON_ERROR(uread(oldlen, oldlenp));
+
+        ORBIS_LOG_ERROR("1.14.65", name[3], oldlen);
+
+        if (oldlen < sizeof(AppInfo2)) {
+          return ErrorCode::INVAL;
+        }
+
+        ORBIS_LOG_ERROR("get AppInfo2", appInfo->appId, appInfo->unk0,
+                        appInfo->unk1, appInfo->appType, appInfo->titleId,
+                        appInfo->unk2, appInfo->unk3, appInfo->unk5,
+                        appInfo->unk6, appInfo->unk7, appInfo->unk8);
+
+        if (auto errc = uwrite((ptr<AppInfo2>)old,
+                               *static_cast<AppInfo2 *>(appInfo.get()));
+            errc != ErrorCode{}) {
+          return errc;
+        }
+
+        if (auto errc = uwrite(oldlenp, sizeof(AppInfo2));
+            errc != ErrorCode{}) {
+          return errc;
+        }
+      }
+
+      if (new_) {
+        return ErrorCode::INVAL;
+      }
+
+      return {};
+    }
+
+    if (name[0] == kern && name[1] == proc && name[2] == 68) {
+      Process *process = thread->tproc;
+      if (process->pid != name[3]) {
+        process = g_context.findProcessById(name[3]);
+        if (process == nullptr) {
+          ORBIS_LOG_ERROR("get ps5 sdk version by pid: process not found",
+                          name[3], thread->tproc->pid);
+          return ErrorCode::SRCH;
+        }
+      }
+
+      size_t oldlen;
+      ORBIS_RET_ON_ERROR(uread(oldlen, oldlenp));
+
+      if (oldlen < sizeof(uint32_t)) {
+        return ErrorCode::INVAL;
+      }
+
+      auto sdkVersion = process->sdkVersion;
+      if (sdkVersion == 0) {
+        sdkVersion = g_context.fwSdkVersion;
+      }
+
+      ORBIS_RET_ON_ERROR(uwrite(ptr<uint32_t>(old), sdkVersion));
+      ORBIS_LOG_ERROR("get ps5 sdk version by pid", name[3], sdkVersion);
+      return uwrite(oldlenp, sizeof(uint32_t));
     }
   }
 

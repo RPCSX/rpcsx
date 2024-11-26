@@ -467,7 +467,9 @@ static orbis::ErrorCode socket_read(orbis::File *file, orbis::Uio *uio,
     return orbis::ErrorCode::INVAL;
   }
 
-  ORBIS_LOG_FATAL(__FUNCTION__, file, uio->iov->len);
+  if (uio->iov->len) {
+    ORBIS_LOG_FATAL(__FUNCTION__, file, uio->iov->len);
+  }
   return host_fd_read(socket->hostFd, uio);
 }
 

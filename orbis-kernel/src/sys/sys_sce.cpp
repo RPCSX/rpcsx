@@ -20,21 +20,10 @@
 #include <sys/stat.h>
 
 struct orbis::AppMountInfo {
-  uint64_t unk0; // 8
-  uint32_t unk1;
-  uint32_t unk2;
-  char titleId[10];
-  uint8_t unk3[6];
-  uint64_t unk4;
-  uint64_t unk5;
-  uint64_t unk6;
-  uint64_t unk7;
-  uint64_t unk8;
-  uint64_t unk9;
-  uint64_t unk10;
-  uint64_t unk11;
-  uint64_t unk12;
-  uint64_t unk13;
+  AppInfo2 appInfo;
+  uint64_t unk0;
+  uint64_t unk1;
+  uint64_t unk2;
   ptr<uint32_t> result;
 };
 
@@ -569,6 +558,9 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
                                       ptr<uint> pTimeout) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread, id, need, pTimeout);
   Ref<Semaphore> sem = thread->tproc->semMap.get(id);
+  if (sem == nullptr) {
+    return ErrorCode::BADF;
+  }
   if (need < 1 || need > sem->maxValue)
     return ErrorCode::INVAL;
 
@@ -753,6 +745,30 @@ orbis::SysResult orbis::sys_budget_delete(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_budget_get(Thread *thread, sint id, ptr<void> a,
                                        ptr<uint32_t> count) {
+  ORBIS_LOG_ERROR(__FUNCTION__, id, a, count);
+
+  struct budget {
+    uint32_t id;
+    uint32_t unk0;
+    uint64_t unk1;
+    uint64_t unk2;
+  };
+
+  static_assert(sizeof(budget) == 0x18);
+
+  if (g_context.fwType == FwType::Ps5 && id == 1) {
+    std::uint32_t _count;
+    ORBIS_RET_ON_ERROR(orbis::uread(_count, count));
+
+    if (_count == 0) {
+      ORBIS_RET_ON_ERROR(orbis::uwrite(count, 1u));
+      return {};
+    }
+
+    ptr<budget>(a)->id = 4;
+
+    ORBIS_RET_ON_ERROR(orbis::uwrite(count, 1u));
+  }
   return {};
 }
 orbis::SysResult orbis::sys_budget_set(Thread *thread, slong budget) {
@@ -1714,13 +1730,29 @@ orbis::SysResult orbis::sys_begin_app_mount(Thread *thread,
   AppMountInfo _info;
   ORBIS_RET_ON_ERROR(uread(_info, info));
   ORBIS_LOG_FATAL(__FUNCTION__, _info.unk0, _info.unk1, _info.unk2,
-                  _info.titleId, int(_info.unk3[0]), int(_info.unk3[1]),
-                  int(_info.unk3[2]), int(_info.unk3[3]), int(_info.unk3[4]),
-                  int(_info.unk3[5]), int(_info.unk3[6]), _info.unk4,
-                  _info.unk5, _info.unk6, _info.unk7, _info.unk8, _info.unk9,
-                  _info.unk10, _info.unk11, _info.unk12, _info.unk13,
-                  _info.result);
-  return orbis::uwrite(_info.result, 0u);
+                  _info.result, _info.appInfo.appId, _info.appInfo.unk0,
+                  _info.appInfo.unk1, _info.appInfo.appType,
+                  _info.appInfo.titleId, _info.appInfo.unk2, _info.appInfo.unk3,
+                  _info.appInfo.unk4, _info.appInfo.unk5, _info.appInfo.unk6,
+                  _info.appInfo.unk7, _info.appInfo.unk8, _info.appInfo.unk9,
+                  _info.appInfo.unk10);
+
+  orbis::Ref appInfo = orbis::knew<RcAppInfo>();
+
+  AppInfo2 *appInfoData = appInfo.get();
+  auto handle = g_context.appInfos.insert(appInfo);
+  ORBIS_LOG_TODO(__FUNCTION__, handle);
+  thread->where();
+  if (handle == decltype(g_context.appInfos)::npos) {
+    return ErrorCode::DOOFUS;
+  }
+
+  std::memcpy(appInfoData, &_info, sizeof(AppInfo2));
+  std::memcpy(&thread->tproc->appInfo2, &_info, sizeof(AppInfo2));
+  thread->tproc->appInfo2.appId = handle;
+  appInfoData->appId = handle;
+
+  return orbis::uwrite<uint32_t>(_info.result, handle);
 }
 orbis::SysResult orbis::sys_end_app_mount(Thread *thread /* TODO */) {
   ORBIS_LOG_FATAL(__FUNCTION__);

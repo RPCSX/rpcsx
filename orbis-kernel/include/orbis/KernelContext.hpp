@@ -1,4 +1,5 @@
 #pragma once
+#include "AppInfo.hpp"
 #include "KernelAllocator.hpp"
 #include "evf.hpp"
 #include "ipmi.hpp"
@@ -52,6 +53,10 @@ enum class FwType : std::uint8_t {
   Unknown,
   Ps4,
   Ps5,
+};
+
+struct RcAppInfo : RcBase, AppInfo2 {
+  orbis::uint32_t appState = 0;
 };
 
 class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) KernelContext final {
@@ -195,6 +200,7 @@ public:
   uint fwSdkVersion{};
   uint safeMode{};
   utils::RcIdMap<RcBase, sint, 4097, 1> ipmiMap;
+  RcIdMap<RcAppInfo> appInfos;
 
   shared_mutex regMgrMtx;
   kmap<std::uint32_t, std::uint32_t> regMgrInt;
