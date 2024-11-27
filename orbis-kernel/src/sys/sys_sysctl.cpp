@@ -292,25 +292,20 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         }
       }
 
-      ORBIS_LOG_ERROR("1.14.35", name[3]);
-      thread->where();
-
       if (old) {
         size_t oldlen;
         ORBIS_RET_ON_ERROR(uread(oldlen, oldlenp));
 
-        ORBIS_LOG_ERROR("1.14.35", name[3], oldlen);
+        if (oldlen == sizeof(AppInfoEx)) {
+          ORBIS_LOG_ERROR("get AppInfoEx", process->appInfo.appId,
+                          process->appInfo.unk0, process->appInfo.unk1,
+                          process->appInfo.appType, process->appInfo.titleId,
+                          process->appInfo.unk2, process->appInfo.unk3,
+                          process->appInfo.unk5, process->appInfo.unk6,
+                          process->appInfo.unk7, process->appInfo.unk8);
 
-        if (oldlen == sizeof(AppInfo2)) {
-          ORBIS_LOG_ERROR("get AppInfo2", process->appInfo2.appId,
-                          process->appInfo2.unk0, process->appInfo2.unk1,
-                          process->appInfo2.appType, process->appInfo2.titleId,
-                          process->appInfo2.unk2, process->appInfo2.unk3,
-                          process->appInfo2.unk5, process->appInfo2.unk6,
-                          process->appInfo2.unk7, process->appInfo2.unk8);
-
-          ORBIS_RET_ON_ERROR(uwrite((ptr<AppInfo2>)old, process->appInfo2));
-          ORBIS_RET_ON_ERROR(uwrite(oldlenp, sizeof(AppInfo2)));
+          ORBIS_RET_ON_ERROR(uwrite((ptr<AppInfoEx>)old, process->appInfo));
+          ORBIS_RET_ON_ERROR(uwrite(oldlenp, sizeof(AppInfoEx)));
         } else if (oldlen == sizeof(AppInfo)) {
           ORBIS_LOG_ERROR("get AppInfo", process->appInfo.appId,
                           process->appInfo.unk0, process->appInfo.unk1,
@@ -319,7 +314,8 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
                           process->appInfo.unk5, process->appInfo.unk6,
                           process->appInfo.unk7, process->appInfo.unk8);
 
-          ORBIS_RET_ON_ERROR(uwrite((ptr<AppInfo>)old, process->appInfo));
+          ORBIS_RET_ON_ERROR(
+              uwrite((ptr<AppInfo>)old, (AppInfo &)process->appInfo));
           ORBIS_RET_ON_ERROR(uwrite(oldlenp, sizeof(AppInfo)));
         } else {
           return ErrorCode::INVAL;
@@ -327,11 +323,11 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
       }
 
       if (new_) {
-        if (newlen == sizeof(AppInfo2)) {
-          auto result = uread(process->appInfo2, (ptr<AppInfo2>)new_);
+        if (newlen == sizeof(AppInfoEx)) {
+          auto result = uread(process->appInfo, (ptr<AppInfoEx>)new_);
           if (result == ErrorCode{}) {
             auto &appInfo = process->appInfo;
-            ORBIS_LOG_ERROR("set AppInfo2", appInfo.appId, appInfo.unk0,
+            ORBIS_LOG_ERROR("set AppInfoEx", appInfo.appId, appInfo.unk0,
                             appInfo.unk1, appInfo.appType, appInfo.titleId,
                             appInfo.unk2, appInfo.unk3, appInfo.unk5,
                             appInfo.unk6, appInfo.unk7, appInfo.unk8);
@@ -344,7 +340,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
           return result;
         } else if (newlen == sizeof(AppInfo)) {
-          auto result = uread(process->appInfo, (ptr<AppInfo>)new_);
+          auto result = uread((AppInfo &)process->appInfo, (ptr<AppInfo>)new_);
           if (result == ErrorCode{}) {
             auto &appInfo = process->appInfo;
             ORBIS_LOG_ERROR("set AppInfo", appInfo.appId, appInfo.unk0,
@@ -428,7 +424,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
         ORBIS_LOG_ERROR("1.14.65", name[3], oldlen);
 
-        if (oldlen < sizeof(AppInfo2)) {
+        if (oldlen < sizeof(AppInfoEx)) {
           return ErrorCode::INVAL;
         }
 
@@ -437,13 +433,13 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
                         appInfo->unk2, appInfo->unk3, appInfo->unk5,
                         appInfo->unk6, appInfo->unk7, appInfo->unk8);
 
-        if (auto errc = uwrite((ptr<AppInfo2>)old,
-                               *static_cast<AppInfo2 *>(appInfo.get()));
+        if (auto errc = uwrite((ptr<AppInfoEx>)old,
+                               *static_cast<AppInfoEx *>(appInfo.get()));
             errc != ErrorCode{}) {
           return errc;
         }
 
-        if (auto errc = uwrite(oldlenp, sizeof(AppInfo2));
+        if (auto errc = uwrite(oldlenp, sizeof(AppInfoEx));
             errc != ErrorCode{}) {
           return errc;
         }

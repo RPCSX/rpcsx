@@ -55,7 +55,7 @@ enum class FwType : std::uint8_t {
   Ps5,
 };
 
-struct RcAppInfo : RcBase, AppInfo2 {
+struct RcAppInfo : RcBase, AppInfoEx {
   orbis::uint32_t appState = 0;
 };
 

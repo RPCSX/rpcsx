@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 
 struct orbis::AppMountInfo {
-  AppInfo2 appInfo;
+  AppInfoEx appInfo;
   uint64_t unk0;
   uint64_t unk1;
   uint64_t unk2;
@@ -1739,7 +1739,7 @@ orbis::SysResult orbis::sys_begin_app_mount(Thread *thread,
 
   orbis::Ref appInfo = orbis::knew<RcAppInfo>();
 
-  AppInfo2 *appInfoData = appInfo.get();
+  AppInfoEx *appInfoData = appInfo.get();
   auto handle = g_context.appInfos.insert(appInfo);
   ORBIS_LOG_TODO(__FUNCTION__, handle);
   thread->where();
@@ -1747,9 +1747,8 @@ orbis::SysResult orbis::sys_begin_app_mount(Thread *thread,
     return ErrorCode::DOOFUS;
   }
 
-  std::memcpy(appInfoData, &_info, sizeof(AppInfo2));
-  std::memcpy(&thread->tproc->appInfo2, &_info, sizeof(AppInfo2));
-  thread->tproc->appInfo2.appId = handle;
+  std::memcpy(appInfoData, &_info, sizeof(AppInfoEx));
+  std::memcpy(&thread->tproc->appInfo, &_info, sizeof(AppInfoEx));
   appInfoData->appId = handle;
 
   return orbis::uwrite<uint32_t>(_info.result, handle);

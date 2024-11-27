@@ -68,8 +68,7 @@ struct Process final {
   ptr<void> processParam = nullptr;
   uint64_t processParamSize = 0;
   const ProcessOps *ops = nullptr;
-  AppInfo appInfo{};
-  AppInfo2 appInfo2{};
+  AppInfoEx appInfo{};
   AuthInfo authInfo{};
   kstring cwd;
   kstring root = "/";
