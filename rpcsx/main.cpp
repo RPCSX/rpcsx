@@ -752,7 +752,7 @@ static void usage(const char *argv0) {
 static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
                                      std::vector<std::string> argv,
                                      std::vector<std::string> envv,
-                                     orbis::AppInfo appInfo) {
+                                     orbis::AppInfoEx appInfo) {
   auto childPid = orbis::g_context.allocatePid() * 10000 + 1;
   auto flag = orbis::knew<std::atomic<bool>>();
   *flag = false;
@@ -1035,9 +1035,9 @@ int main(int argc, const char *argv[]) {
   initProcess->onSysExit = onSysExit;
   initProcess->ops = &rx::procOpsTable;
   initProcess->hostPid = ::getpid();
-  initProcess->appInfo = {
+  initProcess->appInfo = {{
       .unk4 = (isSystem ? orbis::slong(0x80000000'00000000) : 0),
-  };
+  }};
 
   if (isSystem) {
     orbis::g_context.safeMode = isSafeMode ? 1 : 0;
@@ -1210,10 +1210,10 @@ int main(int argc, const char *argv[]) {
     if (!enableAudioIpmi) {
       launchDaemon(mainThread, "/system/sys/orbis_audiod.elf",
                    {"/system/sys/orbis_audiod.elf"}, {},
-                   {
+                   {{
                        .titleId = {"NPXS20973"},
                        .unk4 = orbis::slong(0x80000000'00000000),
-                   });
+                   }});
       // confirmed to work and known method of initialization since 5.05
       // version
       if (orbis::g_context.fwType != orbis::FwType::Ps5 &&
