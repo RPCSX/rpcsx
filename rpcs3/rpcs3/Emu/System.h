@@ -277,6 +277,11 @@ public:
 		return m_title_id;
 	}
 
+	void SetTitleID(std::string title_id)
+	{
+		m_title_id = std::move(title_id);
+	}
+
 	const std::string& GetTitle() const
 	{
 		return m_title;
