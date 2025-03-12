@@ -79,6 +79,11 @@ namespace aarch64
         { 0x41, 0xd02, "", "", "cortex-a34" },
         { 0x41, 0xd04, "armv8-a+crc+simd", "", "Cortex-A35" },
         { 0x41, 0xd03, "armv8-a+crc+simd", "", "Cortex-A53" },
+
+        { 0x51, 0x201, "", "", "kryo" },
+        { 0x51, 0x205, "", "", "kryo" },
+        { 0x51, 0x211, "", "", "kryo" },
+
         { 0x41, 0xd05, "armv8.2-a+fp16+dotprod", "", "Cortex-A55" },
         { 0x41, 0xd46, "", "", "cortex-a510" },
         { 0x41, 0xd80, "", "", "cortex-a520" },
@@ -88,14 +93,27 @@ namespace aarch64
         { 0x41, 0xd43, "", "", "cortex-a65ae" },
         { 0x41, 0xd08, "armv8-a+crc+simd", "", "Cortex-A72" },
         { 0x41, 0xd09, "armv8-a+crc+simd", "", "Cortex-A73" },
+
+        { 0x51, 0x800, "", "", "cortex-a73" },
+        { 0x51, 0x801, "", "", "cortex-a73" },
+
         { 0x41, 0xd0a, "armv8.2-a+fp16+dotprod", "", "Cortex-A75" },
+
+        { 0x51, 0x802, "", "", "cortex-a75" },
+        { 0x51, 0x803, "", "", "cortex-a75" },
+
         { 0x41, 0xd0b, "armv8.2-a+fp16+dotprod", "", "Cortex-A76" },
+
+        { 0x51, 0x804, "", "", "cortex-a76" },
+        { 0x51, 0x805, "", "", "cortex-a76" },
+
         { 0x41, 0xd0e, "armv8.2-a+fp16+dotprod", "", "Cortex-A76ae" },
         { 0x41, 0xd0d, "armv8.2-a+fp16+dotprod", "", "Cortex-A77" },
         { 0x41, 0xd41, "armv8.2-a+fp16+dotprod", "", "Cortex-A78" },
         { 0x41, 0xd42, "armv8.2-a+fp16+dotprod", "", "Cortex-A78ae" },
         { 0x41, 0xd4b, "armv8.2-a+fp16+dotprod", "", "Cortex-A78c" },
         { 0x41, 0xd47, "armv9-a+fp16+bf16+i8mm", "", "Cortex-A710" },
+
         { 0x41, 0xd4d, "", "", "Cortex-A715" },
         { 0x41, 0xd81, "", "", "Cortex-A720" },
         { 0x41, 0xd89, "", "", "Cortex-A720AE" },
@@ -140,16 +158,6 @@ namespace aarch64
         // APM - 0x50
         // Qualcomm - 0x51
         { 0x51, 0x06f, "", "", "krait" },
-        { 0x51, 0x201, "", "", "kryo" },
-        { 0x51, 0x205, "", "", "kryo" },
-        { 0x51, 0x211, "", "", "kryo" },
-
-        { 0x51, 0x800, "", "", "cortex-a73" },
-        { 0x51, 0x801, "", "", "cortex-a73" },
-        { 0x51, 0x802, "", "", "cortex-a75" },
-        { 0x51, 0x803, "", "", "cortex-a75" },
-        { 0x51, 0x804, "", "", "cortex-a76" },
-        { 0x51, 0x805, "", "", "cortex-a76" },
         { 0x51, 0xc00, "", "", "falkor" },
         { 0x51, 0xc01, "", "", "saphira" },
         { 0x51, 0x001, "armv8.5-a", "Snapdragon", "oryon-1" },
