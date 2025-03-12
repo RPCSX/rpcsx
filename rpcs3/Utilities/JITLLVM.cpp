@@ -896,7 +896,7 @@ const char * fallback_cpu_detection()
 		std::string result = aarch64::get_cpu_name();
 		if (result.empty())
 		{
-			return "cortex-a32";
+			return "cortex-a34";
 		}
 
 		std::transform(result.begin(), result.end(), result.begin(), ::tolower);
