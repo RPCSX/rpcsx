@@ -35,6 +35,18 @@ namespace
 
 void VKGSRender::reinitialize_swapchain()
 {
+	if (surface_lost)
+	{
+		surface_lost = false;
+
+#ifdef ANDROID
+		vkDeviceWaitIdle(*m_device);
+
+		auto handle = m_frame->handle();
+		m_swapchain->create(handle);
+#endif
+	}
+
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();
 
@@ -123,6 +135,11 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			swapchain_unavailable = true;
 			break;
+		case VK_ERROR_SURFACE_LOST_KHR:
+			surface_lost = true;
+			swapchain_unavailable = true;
+			break;
+
 		default:
 			// Other errors not part of rpcs3. This can be caused by 3rd party injectors with bad code, of which we have no control over.
 			// Let the application attempt to recover instead of crashing outright.
@@ -591,6 +608,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			swapchain_unavailable = true;
 			reinitialize_swapchain();
 			continue;
+
+		case VK_ERROR_SURFACE_LOST_KHR:
+			surface_lost = true;
+			swapchain_unavailable = true;
+			reinitialize_swapchain();
+			break;
+
 		default:
 			vk::die_with_error(status);
 		}

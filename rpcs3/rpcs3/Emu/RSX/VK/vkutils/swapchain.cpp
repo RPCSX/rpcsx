@@ -133,6 +133,27 @@ namespace vk
 		}
 	}
 
+	void swapchain_WSI::create(display_handle_t& handle)
+	{
+#ifdef ANDROID
+		if (!dev)
+		{
+			return;
+		}
+
+		if (m_vk_swapchain)
+		{
+			_vkDestroySwapchainKHR(dev, m_vk_swapchain, nullptr);
+			m_vk_swapchain = nullptr;
+		}
+
+		swapchain_images.clear();
+
+		WSI_config config{};
+		m_surface = make_WSI_surface(dev.gpu(), handle, &config);
+#endif
+	}
+
 	void swapchain_WSI::destroy(bool)
 	{
 		if (VkDevice pdev = dev)
