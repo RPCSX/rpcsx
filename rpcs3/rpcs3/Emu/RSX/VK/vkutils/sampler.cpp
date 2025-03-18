@@ -1,3 +1,4 @@
+#include "Emu/RSX/VK/vkutils/instance.h"
 #include "memory.h"
 #include "sampler.h"
 #include "../../color_utils.h"
@@ -97,13 +98,13 @@ namespace vk
 			info.pNext = &custom_color_info;
 		}
 
-		CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateSampler)(m_device, &info, nullptr, &value));
 		vmm_notify_object_allocated(VMM_ALLOCATION_POOL_SAMPLER);
 	}
 
 	sampler::~sampler()
 	{
-		vkDestroySampler(m_device, value, nullptr);
+		VK_GET_SYMBOL(vkDestroySampler)(m_device, value, nullptr);
 		vmm_notify_object_freed(VMM_ALLOCATION_POOL_SAMPLER);
 	}
 

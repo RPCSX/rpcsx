@@ -16,7 +16,7 @@ namespace vk
 		createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
 		createInfo.pView = window_handle;
 
-		CHECK_RESULT(vkCreateMacOSSurfaceMVK(vk_instance, &createInfo, NULL, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateMacOSSurfaceMVK)(vk_instance, &createInfo, NULL, &result));
 		return result;
 	}
 #endif

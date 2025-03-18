@@ -31,7 +31,7 @@ namespace vk
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.subresourceRange = range;
 
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		VK_GET_SYMBOL(vkCmdPipelineBarrier)(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
 	void insert_buffer_memory_barrier(
@@ -57,7 +57,7 @@ namespace vk
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+		VK_GET_SYMBOL(vkCmdPipelineBarrier)(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 	}
 
 	void insert_global_memory_barrier(
@@ -75,7 +75,7 @@ namespace vk
 		barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 		barrier.srcAccessMask = src_access;
 		barrier.dstAccessMask = dst_access;
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+		VK_GET_SYMBOL(vkCmdPipelineBarrier)(cmd, src_stage, dst_stage, 0, 1, &barrier, 0, nullptr, 0, nullptr);
 	}
 
 	void insert_texture_barrier(
@@ -118,7 +118,7 @@ namespace vk
 		barrier.srcAccessMask = src_access;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		VK_GET_SYMBOL(vkCmdPipelineBarrier)(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
 	void insert_texture_barrier(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout, bool preserve_renderpass)

@@ -37,7 +37,7 @@ namespace vk
 			vs_info.pCode    = m_compiled.data();
 			vs_info.flags    = 0;
 
-			vkCreateShaderModule(*g_render_device, &vs_info, nullptr, &m_handle);
+			VK_GET_SYMBOL(vkCreateShaderModule)(*g_render_device, &vs_info, nullptr, &m_handle);
 
 			return m_handle;
 		}
@@ -49,7 +49,7 @@ namespace vk
 
 			if (m_handle)
 			{
-				vkDestroyShaderModule(*g_render_device, m_handle, nullptr);
+				VK_GET_SYMBOL(vkDestroyShaderModule)(*g_render_device, m_handle, nullptr);
 				m_handle = nullptr;
 			}
 		}
@@ -96,7 +96,7 @@ namespace vk
 
 		program::~program()
 		{
-			vkDestroyPipeline(m_device, pipeline, nullptr);
+			VK_GET_SYMBOL(vkDestroyPipeline)(m_device, pipeline, nullptr);
 		}
 
 		program& program::load_uniforms(const std::vector<program_input>& inputs)

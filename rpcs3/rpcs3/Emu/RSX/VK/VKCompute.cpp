@@ -57,7 +57,7 @@ namespace vk
 			layout_info.pPushConstantRanges = &push_constants;
 		}
 
-		CHECK_RESULT(vkCreatePipelineLayout(*g_render_device, &layout_info, nullptr, &m_pipeline_layout));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(*g_render_device, &layout_info, nullptr, &m_pipeline_layout));
 	}
 
 	void compute_task::create()
@@ -121,8 +121,8 @@ namespace vk
 			m_program.reset();
 			m_param_buffer.reset();
 
-			vkDestroyDescriptorSetLayout(*g_render_device, m_descriptor_layout, nullptr);
-			vkDestroyPipelineLayout(*g_render_device, m_pipeline_layout, nullptr);
+			VK_GET_SYMBOL(vkDestroyDescriptorSetLayout)(*g_render_device, m_descriptor_layout, nullptr);
+			VK_GET_SYMBOL(vkDestroyPipelineLayout)(*g_render_device, m_pipeline_layout, nullptr);
 			m_descriptor_pool.destroy();
 
 			initialized = false;
@@ -160,7 +160,7 @@ namespace vk
 
 		bind_resources();
 
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_program->pipeline);
+		VK_GET_SYMBOL(vkCmdBindPipeline)(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_program->pipeline);
 		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout);
 	}
 
@@ -173,7 +173,7 @@ namespace vk
 		}
 
 		load_program(cmd);
-		vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
+		VK_GET_SYMBOL(vkCmdDispatch)(cmd, invocations_x, invocations_y, invocations_z);
 	}
 
 	void compute_task::run(const vk::command_buffer& cmd, u32 num_invocations)
@@ -279,7 +279,7 @@ namespace vk
 	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
 	{
 		ensure(use_push_constants);
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 	}
 
 	void cs_shuffle_base::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset)

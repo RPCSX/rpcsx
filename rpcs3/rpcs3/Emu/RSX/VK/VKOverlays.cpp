@@ -115,7 +115,7 @@ namespace vk
 			layout_info.pPushConstantRanges = push_constants.data();
 		}
 
-		CHECK_RESULT(vkCreatePipelineLayout(*m_device, &layout_info, nullptr, &m_pipeline_layout));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(*m_device, &layout_info, nullptr, &m_pipeline_layout));
 	}
 
 	std::vector<vk::glsl::program_input> overlay_pass::get_vertex_inputs()
@@ -254,12 +254,12 @@ namespace vk
 			program->bind_uniform(info, "fs" + std::to_string(n), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_descriptor_set);
 		}
 
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);
+		VK_GET_SYMBOL(vkCmdBindPipeline)(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);
 		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout);
 
 		VkBuffer buffers = m_vao.heap->value;
 		VkDeviceSize offsets = m_vao_offset;
-		vkCmdBindVertexBuffers(cmd, 0, 1, &buffers, &offsets);
+		VK_GET_SYMBOL(vkCmdBindVertexBuffers)(cmd, 0, 1, &buffers, &offsets);
 	}
 
 	void overlay_pass::create(const vk::render_device& dev)
@@ -282,8 +282,8 @@ namespace vk
 			m_program_cache.clear();
 			m_sampler.reset();
 
-			vkDestroyDescriptorSetLayout(*m_device, m_descriptor_layout, nullptr);
-			vkDestroyPipelineLayout(*m_device, m_pipeline_layout, nullptr);
+			VK_GET_SYMBOL(vkDestroyDescriptorSetLayout)(*m_device, m_descriptor_layout, nullptr);
+			VK_GET_SYMBOL(vkDestroyPipelineLayout)(*m_device, m_pipeline_layout, nullptr);
 			m_descriptor_pool.destroy();
 
 			initialized = false;
@@ -305,7 +305,7 @@ namespace vk
 
 	void overlay_pass::emit_geometry(vk::command_buffer& cmd)
 	{
-		vkCmdDraw(cmd, num_drawable_elements, 1, first_vertex, 0);
+		VK_GET_SYMBOL(vkCmdDraw)(cmd, num_drawable_elements, 1, first_vertex, 0);
 	}
 
 	void overlay_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -317,10 +317,10 @@ namespace vk
 		vp.height = static_cast<f32>(h);
 		vp.minDepth = 0.f;
 		vp.maxDepth = 1.f;
-		vkCmdSetViewport(cmd, 0, 1, &vp);
+		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
 		VkRect2D vs = { { static_cast<s32>(x), static_cast<s32>(y) }, { w, h } };
-		vkCmdSetScissor(cmd, 0, 1, &vs);
+		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &vs);
 	}
 
 	void overlay_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
@@ -412,7 +412,7 @@ namespace vk
 			.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u }
 		};
 		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 	}
 
@@ -600,7 +600,7 @@ namespace vk
 			.get();
 		push_buf[16] = std::bit_cast<f32>(vert_config);
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
 
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts;
@@ -614,7 +614,7 @@ namespace vk
 		push_buf[1] = m_time;
 		push_buf[2] = m_blur_strength;
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -651,7 +651,7 @@ namespace vk
 
 			for (u32 n = 0; n < num_quads; ++n)
 			{
-				vkCmdDraw(cmd, 4, 1, first, 0);
+				VK_GET_SYMBOL(vkCmdDraw)(cmd, 4, 1, first, 0);
 				first += 4;
 			}
 		}
@@ -786,7 +786,7 @@ namespace vk
 		data[6] = colormask.b;
 		data[7] = colormask.a;
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
 	}
 
 	void attachment_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -798,9 +798,9 @@ namespace vk
 		vp.height = static_cast<f32>(h);
 		vp.minDepth = 0.f;
 		vp.maxDepth = 1.f;
-		vkCmdSetViewport(cmd, 0, 1, &vp);
+		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
-		vkCmdSetScissor(cmd, 0, 1, &region);
+		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &region);
 	}
 
 	void attachment_clear_pass::run(vk::command_buffer& cmd, vk::framebuffer* target, VkRect2D rect, u32 clearmask, color4f color, VkRenderPass render_pass)
@@ -861,9 +861,9 @@ namespace vk
 		vp.height = static_cast<f32>(h);
 		vp.minDepth = 0.f;
 		vp.maxDepth = 1.f;
-		vkCmdSetViewport(cmd, 0, 1, &vp);
+		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
-		vkCmdSetScissor(cmd, 0, 1, &region);
+		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &region);
 	}
 
 	void stencil_clear_pass::run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, u32 stencil_clear, u32 stencil_write_mask, VkRenderPass render_pass)
@@ -922,7 +922,7 @@ namespace vk
 
 	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
 	{
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,

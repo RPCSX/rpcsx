@@ -12,7 +12,7 @@ namespace vk
 	{
 		if (!allow_extensions)
 		{
-			vkGetPhysicalDeviceFeatures(dev, &features);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceFeatures)(dev, &features);
 			return;
 		}
 
@@ -21,7 +21,7 @@ namespace vk
 
 		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 		{
-			vkGetPhysicalDeviceFeatures(dev, &features);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceFeatures)(dev, &features);
 		}
 		else
 		{
@@ -86,7 +86,7 @@ namespace vk
 				features2.pNext         = &device_fault_info;
 			}
 
-			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
+			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(VK_GET_SYMBOL(vkGetInstanceProcAddr)(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
 
@@ -142,11 +142,11 @@ namespace vk
 
 	void physical_device::get_physical_device_properties(bool allow_extensions)
 	{
-		vkGetPhysicalDeviceMemoryProperties(dev, &memory_properties);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceMemoryProperties)(dev, &memory_properties);
 
 		if (!allow_extensions)
 		{
-			vkGetPhysicalDeviceProperties(dev, &props);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceProperties)(dev, &props);
 			return;
 		}
 
@@ -155,7 +155,7 @@ namespace vk
 
 		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 		{
-			vkGetPhysicalDeviceProperties(dev, &props);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceProperties)(dev, &props);
 		}
 		else
 		{
@@ -179,7 +179,7 @@ namespace vk
 				properties2.pNext = &driver_properties;
 			}
 
-			auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
+			auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(VK_GET_SYMBOL(vkGetInstanceProcAddr)(parent, "vkGetPhysicalDeviceProperties2KHR"));
 			ensure(_vkGetPhysicalDeviceProperties2KHR);
 
 			_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
@@ -397,7 +397,7 @@ namespace vk
 			return ::size32(queue_props);
 
 		u32 count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceQueueFamilyProperties)(dev, &count, nullptr);
 
 		return count;
 	}
@@ -407,10 +407,10 @@ namespace vk
 		if (queue_props.empty())
 		{
 			u32 count = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceQueueFamilyProperties)(dev, &count, nullptr);
 
 			queue_props.resize(count);
-			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
+			VK_GET_SYMBOL(vkGetPhysicalDeviceQueueFamilyProperties)(dev, &count, queue_props.data());
 		}
 
 		if (queue >= queue_props.size())
@@ -556,11 +556,12 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
 		}
 
-		enabled_features.robustBufferAccess = VK_TRUE;
+
+		enabled_features.robustBufferAccess = ensure(pgpu->features.robustBufferAccess, "robustBufferAccess is unsupported");
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
-		enabled_features.independentBlend = VK_TRUE;
+		enabled_features.independentBlend = ensure(pgpu->features.independentBlend, "independentBlend is unsupported");
 		enabled_features.logicOp = VK_TRUE;
-		enabled_features.depthClamp = VK_TRUE;
+		enabled_features.depthClamp = ensure(pgpu->features.depthClamp, "depthClamp is unsupported");
 		enabled_features.depthBounds = VK_TRUE;
 		enabled_features.wideLines = VK_TRUE;
 		enabled_features.largePoints = VK_TRUE;
@@ -780,7 +781,7 @@ namespace vk
 			device.pNext = &shader_barycentric_info;
 		}
 
-		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))
+		if (auto error = VK_GET_SYMBOL(vkCreateDevice)(*pgpu, &device, nullptr, &dev))
 		{
 			dump_debug_info(requested_extensions, enabled_features);
 			vk::die_with_error(error);
@@ -794,38 +795,38 @@ namespace vk
 		}
 
 		// Initialize queues
-		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
-		vkGetDeviceQueue(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
+		VK_GET_SYMBOL(vkGetDeviceQueue)(dev, graphics_queue_idx, 0, &m_graphics_queue);
+		VK_GET_SYMBOL(vkGetDeviceQueue)(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
 
 		if (present_queue_idx != umax)
 		{
-			vkGetDeviceQueue(dev, present_queue_idx, 0, &m_present_queue);
+			VK_GET_SYMBOL(vkGetDeviceQueue)(dev, present_queue_idx, 0, &m_present_queue);
 		}
 
 		// Import optional function endpoints
 		if (pgpu->optional_features_support.conditional_rendering)
 		{
-			_vkCmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
-			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
+			_vkCmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCmdBeginConditionalRenderingEXT"));
+			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCmdEndConditionalRenderingEXT"));
 		}
 
 		if (pgpu->optional_features_support.debug_utils)
 		{
-			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(dev, "vkSetDebugUtilsObjectNameEXT"));
-			_vkQueueInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkQueueInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkQueueInsertDebugUtilsLabelEXT"));
-			_vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkCmdInsertDebugUtilsLabelEXT"));
+			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkSetDebugUtilsObjectNameEXT"));
+			_vkQueueInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkQueueInsertDebugUtilsLabelEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkQueueInsertDebugUtilsLabelEXT"));
+			_vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCmdInsertDebugUtilsLabelEXT"));
 		}
 
 		if (pgpu->optional_features_support.synchronization_2)
 		{
-			_vkCmdSetEvent2KHR = reinterpret_cast<PFN_vkCmdSetEvent2KHR>(vkGetDeviceProcAddr(dev, "vkCmdSetEvent2KHR"));
-			_vkCmdWaitEvents2KHR = reinterpret_cast<PFN_vkCmdWaitEvents2KHR>(vkGetDeviceProcAddr(dev, "vkCmdWaitEvents2KHR"));
-			_vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>(vkGetDeviceProcAddr(dev, "vkCmdPipelineBarrier2KHR"));
+			_vkCmdSetEvent2KHR = reinterpret_cast<PFN_vkCmdSetEvent2KHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCmdSetEvent2KHR"));
+			_vkCmdWaitEvents2KHR = reinterpret_cast<PFN_vkCmdWaitEvents2KHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCmdWaitEvents2KHR"));
+			_vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCmdPipelineBarrier2KHR"));
 		}
 
 		if (pgpu->optional_features_support.extended_device_fault)
 		{
-			_vkGetDeviceFaultInfoEXT = reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>(vkGetDeviceProcAddr(dev, "vkGetDeviceFaultInfoEXT"));
+			_vkGetDeviceFaultInfoEXT = reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkGetDeviceFaultInfoEXT"));
 		}
 
 		memory_map = vk::get_memory_mapping(pdev);
@@ -834,7 +835,7 @@ namespace vk
 
 		if (pgpu->optional_features_support.external_memory_host)
 		{
-			memory_map._vkGetMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
+			memory_map._vkGetMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkGetMemoryHostPointerPropertiesEXT"));
 		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
@@ -866,7 +867,7 @@ namespace vk
 				m_allocator.reset();
 			}
 
-			vkDestroyDevice(dev, nullptr);
+			VK_GET_SYMBOL(vkDestroyDevice)(dev, nullptr);
 			dev = nullptr;
 			memory_map = {};
 			m_formats_support = {};
@@ -882,7 +883,7 @@ namespace vk
 		}
 
 		auto& props = pgpu->format_properties[format];
-		vkGetPhysicalDeviceFormatProperties(*pgpu, format, &props);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceFormatProperties)(*pgpu, format, &props);
 		return props;
 	}
 
@@ -1003,7 +1004,7 @@ namespace vk
 	{
 		VkPhysicalDevice pdev = dev;
 		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceMemoryProperties)(pdev, &memory_properties);
 
 		memory_type_mapping result;
 		result.device_local_total_bytes = 0;
@@ -1135,7 +1136,7 @@ namespace vk
 		const auto test_format_features = [&dev](VkFormat format, VkFlags required_features, VkBool32 linear_features) -> bool
 		{
 			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(dev, format, &props);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceFormatProperties)(dev, format, &props);
 
 			const auto supported_features_mask = (linear_features) ? props.linearTilingFeatures : props.optimalTilingFeatures;
 			return (supported_features_mask & required_features) == required_features;

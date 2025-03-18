@@ -200,7 +200,7 @@ namespace vk
 
 		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override
 		{
-			return vkAcquireNextImageKHR(dev, m_vk_swapchain, timeout, semaphore, VK_NULL_HANDLE, result);
+			return VK_GET_SYMBOL(vkAcquireNextImageKHR)(dev, m_vk_swapchain, timeout, semaphore, VK_NULL_HANDLE, result);
 		}
 
 		void end_frame(command_buffer& /*cmd*/, u32 /*index*/) override

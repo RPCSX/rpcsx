@@ -18,7 +18,7 @@ namespace vk
 		infos.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		infos.queueFamilyIndex = queue_family;
 
-		CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateCommandPool)(dev, &infos, nullptr, &pool));
 	}
 
 	void command_pool::destroy()
@@ -26,7 +26,7 @@ namespace vk
 		if (!pool)
 			return;
 
-		vkDestroyCommandPool((*owner), pool, nullptr);
+		VK_GET_SYMBOL(vkDestroyCommandPool)((*owner), pool, nullptr);
 		pool = nullptr;
 	}
 
@@ -52,7 +52,7 @@ namespace vk
 		infos.commandBufferCount = 1;
 		infos.commandPool = +cmd_pool;
 		infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+		CHECK_RESULT(VK_GET_SYMBOL(vkAllocateCommandBuffers)(cmd_pool.get_owner(), &infos, &commands));
 
 		m_submit_fence = new fence(cmd_pool.get_owner());
 		pool = &cmd_pool;
@@ -60,7 +60,7 @@ namespace vk
 
 	void command_buffer::destroy()
 	{
-		vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+		VK_GET_SYMBOL(vkFreeCommandBuffers)(pool->get_owner(), (*pool), 1, &commands);
 
 		if (m_submit_fence)
 		{
@@ -79,7 +79,7 @@ namespace vk
 
 			//CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
 			m_submit_fence->reset();
-			CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			CHECK_RESULT(VK_GET_SYMBOL(vkResetCommandBuffer)(commands, 0));
 		}
 
 		if (is_open)
@@ -92,7 +92,7 @@ namespace vk
 		begin_infos.pInheritanceInfo = &inheritance_info;
 		begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+		CHECK_RESULT(VK_GET_SYMBOL(vkBeginCommandBuffer)(commands, &begin_infos));
 		is_open = true;
 	}
 
@@ -104,7 +104,7 @@ namespace vk
 			return;
 		}
 
-		CHECK_RESULT(vkEndCommandBuffer(commands));
+		CHECK_RESULT(VK_GET_SYMBOL(vkEndCommandBuffer)(commands));
 		is_open = false;
 	}
 

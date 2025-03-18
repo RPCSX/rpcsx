@@ -73,7 +73,7 @@ namespace vk
 			}
 
 			++reset_id;
-			CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			CHECK_RESULT(VK_GET_SYMBOL(vkResetCommandBuffer)(commands, 0));
 		}
 
 		bool poke()
@@ -90,7 +90,7 @@ namespace vk
 				return false;
 			}
 
-			if (vkGetFenceStatus(pool->get_owner(), m_submit_fence->handle) == VK_SUCCESS)
+			if (VK_GET_SYMBOL(vkGetFenceStatus)(pool->get_owner(), m_submit_fence->handle) == VK_SUCCESS)
 			{
 				lock.upgrade();
 

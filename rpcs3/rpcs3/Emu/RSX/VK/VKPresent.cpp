@@ -40,7 +40,7 @@ void VKGSRender::reinitialize_swapchain()
 		surface_lost = false;
 
 #ifdef ANDROID
-		vkDeviceWaitIdle(*m_device);
+		VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
 		auto handle = m_frame->handle();
 		m_swapchain->create(handle);
@@ -77,7 +77,7 @@ void VKGSRender::reinitialize_swapchain()
 	m_upscaler.reset();
 
 	// Drain all the queues
-	vkDeviceWaitIdle(*m_device);
+	VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
 	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(m_swapchain_dims.width, m_swapchain_dims.height))
@@ -96,7 +96,7 @@ void VKGSRender::reinitialize_swapchain()
 		VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 	}
 
@@ -657,7 +657,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		// Clear the window background to black
 		VkClearColorValue clear_black {};
 		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
 
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
@@ -807,7 +807,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.subresourceRange = subresource_range;
-			vkCmdPipelineBarrier(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
+			VK_GET_SYMBOL(vkCmdPipelineBarrier)(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
 
 			target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		}

@@ -563,8 +563,8 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	for (auto &ctx : frame_context_storage)
 	{
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
+		VK_GET_SYMBOL(vkCreateSemaphore)((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
+		VK_GET_SYMBOL(vkCreateSemaphore)((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
@@ -598,7 +598,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 
 	}
@@ -778,7 +778,7 @@ VKGSRender::~VKGSRender()
 	}
 
 	//Wait for device to finish up with resources
-	vkDeviceWaitIdle(*m_device);
+	VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
 	// Globals. TODO: Refactor lifetime management
 	if (auto async_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>())
@@ -844,8 +844,8 @@ VKGSRender::~VKGSRender()
 	// NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
 	for (auto &ctx : frame_context_storage)
 	{
-		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
-		vkDestroySemaphore((*m_device), ctx.acquire_signal_semaphore, nullptr);
+		VK_GET_SYMBOL(vkDestroySemaphore)((*m_device), ctx.present_wait_semaphore, nullptr);
+		VK_GET_SYMBOL(vkDestroySemaphore)((*m_device), ctx.acquire_signal_semaphore, nullptr);
 
 		ctx.buffer_views_to_clean.clear();
 	}
@@ -859,8 +859,8 @@ VKGSRender::~VKGSRender()
 	// Pipeline descriptors
 	m_descriptor_pool.destroy();
 
-	vkDestroyPipelineLayout(*m_device, m_pipeline_layout, nullptr);
-	vkDestroyDescriptorSetLayout(*m_device, m_descriptor_layouts, nullptr);
+	VK_GET_SYMBOL(vkDestroyPipelineLayout)(*m_device, m_pipeline_layout, nullptr);
+	VK_GET_SYMBOL(vkDestroyDescriptorSetLayout)(*m_device, m_descriptor_layouts, nullptr);
 
 	// Queries
 	m_occlusion_query_manager.reset();
@@ -1337,8 +1337,8 @@ void VKGSRender::bind_viewport()
 		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 	}
 
-	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
-	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &m_scissor);
+	VK_GET_SYMBOL(vkCmdSetViewport)(*m_current_command_buffer, 0, 1, &m_viewport);
+	VK_GET_SYMBOL(vkCmdSetScissor)(*m_current_command_buffer, 0, 1, &m_scissor);
 }
 
 void VKGSRender::on_init_thread()
@@ -1619,7 +1619,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (!clear_descriptors.empty())
 	{
 		begin_render_pass();
-		vkCmdClearAttachments(*m_current_command_buffer, ::size32(clear_descriptors), clear_descriptors.data(), 1, &region);
+		VK_GET_SYMBOL(vkCmdClearAttachments)(*m_current_command_buffer, ::size32(clear_descriptors), clear_descriptors.data(), 1, &region);
 	}
 }
 
@@ -1711,15 +1711,15 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 			vk::end_renderpass(*m_current_command_buffer);
 		}
 
-		vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
 		flush_command_queue();
 	}
 	else
 	{
 		auto cmd = m_secondary_cb_list.next();
 		cmd->begin();
-		vkCmdUpdateBuffer(*cmd, mapping.second->value, mapping.first, 4, &write_data);
-		vkCmdUpdateBuffer(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, &release_event_id);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, mapping.second->value, mapping.first, 4, &write_data);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, &release_event_id);
 		cmd->end();
 
 		vk::queue_submit_t submit_info = { m_device->get_graphics_queue(), nullptr };
@@ -1741,7 +1741,7 @@ void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
 	// Queue a sync update on the CB doing the load
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 	const auto event_id = host_ctx->on_texture_load_acquire();
-	vkCmdUpdateBuffer(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
+	VK_GET_SYMBOL(vkCmdUpdateBuffer)(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 }
 
 void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
@@ -2334,7 +2334,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		data_size = 20;
 	}
 
-	vkCmdPushConstants(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
+	VK_GET_SYMBOL(vkCmdPushConstants)(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -2428,7 +2428,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		preserve_renderpass);
 
 	// FIXME: This is illegal during a renderpass
-	vkCmdUpdateBuffer(
+	VK_GET_SYMBOL(vkCmdUpdateBuffer)(
 		*m_current_command_buffer,
 		m_vertex_constants_buffer_info.buffer,
 		data_range.first,
@@ -2524,7 +2524,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	if (m_host_dma_ctrl && m_host_dma_ctrl->host_ctx()->needs_label_release())
 	{
-		vkCmdUpdateBuffer(*m_current_command_buffer,
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*m_current_command_buffer,
 			m_host_object_data->value,
 			::offset32(&vk::host_data_t::commands_complete_event),
 			sizeof(u64),
@@ -3132,7 +3132,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			ensure(dst_offset > 4);
 
 			// Clear result to zero
-			vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
+			VK_GET_SYMBOL(vkCmdFillBuffer)(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
 
 			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,

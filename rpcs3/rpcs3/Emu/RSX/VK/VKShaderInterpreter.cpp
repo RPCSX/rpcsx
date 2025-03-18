@@ -367,7 +367,7 @@ namespace vk
 		layout_info.pPushConstantRanges = push_constants.data();
 
 		VkPipelineLayout result;
-		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(dev, &layout_info, nullptr, &result));
 		return { set_layout, result };
 	}
 
@@ -399,13 +399,13 @@ namespace vk
 
 		if (m_shared_pipeline_layout)
 		{
-			vkDestroyPipelineLayout(m_device, m_shared_pipeline_layout, nullptr);
+			VK_GET_SYMBOL(vkDestroyPipelineLayout)(m_device, m_shared_pipeline_layout, nullptr);
 			m_shared_pipeline_layout = VK_NULL_HANDLE;
 		}
 
 		if (m_shared_descriptor_layout)
 		{
-			vkDestroyDescriptorSetLayout(m_device, m_shared_descriptor_layout, nullptr);
+			VK_GET_SYMBOL(vkDestroyDescriptorSetLayout)(m_device, m_shared_descriptor_layout, nullptr);
 			m_shared_descriptor_layout = VK_NULL_HANDLE;
 		}
 	}

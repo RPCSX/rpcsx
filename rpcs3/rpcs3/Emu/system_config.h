@@ -197,6 +197,17 @@ struct cfg_root : cfg::node
 			cfg::string custom_driver_path{ this, "Custom Driver Path", "", false };
 			cfg::string custom_driver_internal_data_dir{ this, "Custom Driver Internal Data Directory", "", false };
 			cfg::string custom_driver_hook_dir{ this, "Custom Driver Hook Directory", "", false };
+
+			struct node_workarounds : cfg::node
+			{
+				node_workarounds(cfg::node* _this) : cfg::node(_this, "Workarounds") {}
+				cfg::_bool no_primitive_restart{ this, "No Primitive Restart" };
+				cfg::_bool sanitize_fp_values{ this, "Sanitize FP Values" };
+				cfg::_bool disable_fence_reset{ this, "Disable Fence Reset" };
+				cfg::_bool emulate_cond_render{ this, "Emulate Cond Render" };
+				cfg::_bool strict_query_scopes{ this, "Strict Query Scopes" };
+				cfg::_bool force_reuse_query_pools{ this, "Force Reuse Query Pools" };
+			} workarounds{ this };
 #endif
 		} vk{ this };
 

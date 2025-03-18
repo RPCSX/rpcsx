@@ -154,7 +154,7 @@ namespace vk
 		layout_info.pPushConstantRanges = push_constants.data();
 
 		VkPipelineLayout result;
-		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(dev, &layout_info, nullptr, &result));
 		return std::make_tuple(result, set_layout);
 	}
 }
