@@ -194,9 +194,14 @@ struct cfg_root : cfg::node
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
 			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
 #ifdef ANDROID
-			cfg::string custom_driver_path{ this, "Custom Driver Path", "", false };
-			cfg::string custom_driver_internal_data_dir{ this, "Custom Driver Internal Data Directory", "", false };
-			cfg::string custom_driver_hook_dir{ this, "Custom Driver Hook Directory", "", false };
+			struct driver : cfg::node
+			{
+				driver(cfg::node* _this) : cfg::node(_this, "Custom Driver") {}
+				cfg::string path{ this, "Path", "", false };
+				cfg::string internal_data_dir{ this, "Internal Data Directory", "", false };
+				cfg::string hook_dir{ this, "Hook Directory", "", false };
+				cfg::_bool turbo_mode{ this, "Turbo Mode", false, false };
+			} driver{ this };
 
 			struct node_workarounds : cfg::node
 			{

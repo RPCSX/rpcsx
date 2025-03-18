@@ -81,6 +81,7 @@ namespace vk
 #ifdef ANDROID
 		if (owns_loader && g_vk_loader != nullptr)
 		{
+			adrenotools_set_turbo(false);
 			::dlclose(g_vk_loader);
 			g_vk_loader = nullptr;
 
@@ -116,7 +117,7 @@ namespace vk
 #ifdef ANDROID
 		if (g_vk_loader == nullptr)
 		{
-			auto custom_driver_path = g_cfg.video.vk.custom_driver_path.to_string();
+			auto custom_driver_path = g_cfg.video.vk.driver.path.to_string();
 			if (!custom_driver_path.empty())
 			{
 				rsx_log.warning("Loading custom driver %s", custom_driver_path);
@@ -128,7 +129,7 @@ namespace vk
 					auto library_name = meta["libraryName"].get<std::string>();
 					rsx_log.warning("Custom driver: library name %s", library_name);
 
-					auto hook_dir = g_cfg.video.vk.custom_driver_hook_dir.to_string();
+					auto hook_dir = g_cfg.video.vk.driver.hook_dir.to_string();
 					rsx_log.warning("Custom driver: hook dir %s", hook_dir);
 
 					::dlerror();
@@ -144,6 +145,7 @@ namespace vk
 					}
 					else
 					{
+						adrenotools_set_turbo(g_cfg.video.vk.driver.turbo_mode.get());
 						rsx_log.success("Custom driver at '%s' successfully loaded", custom_driver_path);
 					}
 				}
