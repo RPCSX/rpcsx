@@ -245,6 +245,17 @@ namespace vk
 		return props.deviceName;
 	}
 
+	std::string physical_device::get_driver_name() const
+	{
+		return driver_properties.driverName;
+	}
+
+	std::string physical_device::get_driver_vk_version() const
+	{
+		auto version = driver_properties.conformanceVersion;
+		return fmt::format("%u.%u.%u.%d", version.major, version.minor, version.subminor, version.patch);
+	}
+
 	driver_vendor physical_device::get_driver_vendor() const
 	{
 #ifdef __APPLE__

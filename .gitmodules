@@ -136,3 +136,6 @@
 	path = rpcs3/3rdparty/json
 	url = ../../nlohmann/json.git
 	ignore = dirty
+[submodule "3rdparty/libadrenotools"]
+	path = 3rdparty/libadrenotools
+	url = ../../bylaws/libadrenotools.git

@@ -36,6 +36,9 @@ namespace vk
 		std::vector<physical_device> gpus;
 		VkInstance m_instance = VK_NULL_HANDLE;
 		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+#ifdef ANDROID
+		void *m_vk_loader = nullptr;
+#endif
 
 		PFN_vkDestroyDebugReportCallbackEXT _vkDestroyDebugReportCallback = nullptr;
 		PFN_vkCreateDebugReportCallbackEXT _vkCreateDebugReportCallback = nullptr;

@@ -1,32 +1,49 @@
 #include "stdafx.h"
 #include "instance.h"
 
+#ifdef ANDROID
+#include <fstream>
+#include "libadrenotools/include/adrenotools/priv.h"
+#include <libadrenotools/include/adrenotools/driver.h>
+#include <dlfcn.h>
+#include <nlohmann/json.hpp>
+#endif
+
+#ifdef ANDROID
+#define GET_VK_PFN(lib, name) (lib == nullptr ? &name : reinterpret_cast<PFN_##name>(dlsym(lib, #name)))
+#else
+#define GET_VK_PFN(lib, name) (&name)
+#endif
+
 namespace vk
 {
+	static PFN_vkEnumerateInstanceExtensionProperties _vkEnumerateInstanceExtensionProperties;
+	static PFN_vkEnumerateDeviceExtensionProperties _vkEnumerateDeviceExtensionProperties;
+
 	// Supported extensions
 	supported_extensions::supported_extensions(enumeration_class _class, const char* layer_name, VkPhysicalDevice pdev)
 	{
 		u32 count;
 		if (_class == enumeration_class::instance)
 		{
-			if (vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
+			if (_vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
 				return;
 		}
 		else
 		{
 			ensure(pdev);
-			if (vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, nullptr) != VK_SUCCESS)
+			if (_vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, nullptr) != VK_SUCCESS)
 				return;
 		}
 
 		m_vk_exts.resize(count);
 		if (_class == enumeration_class::instance)
 		{
-			vkEnumerateInstanceExtensionProperties(layer_name, &count, m_vk_exts.data());
+			_vkEnumerateInstanceExtensionProperties(layer_name, &count, m_vk_exts.data());
 		}
 		else
 		{
-			vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, m_vk_exts.data());
+			_vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, m_vk_exts.data());
 		}
 	}
 
@@ -56,12 +73,19 @@ namespace vk
 
 		if (m_surface)
 		{
-			vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+			GET_VK_PFN(m_vk_loader, vkDestroySurfaceKHR)(m_instance, m_surface, nullptr);
 			m_surface = VK_NULL_HANDLE;
 		}
 
-		vkDestroyInstance(m_instance, nullptr);
+		GET_VK_PFN(m_vk_loader, vkDestroyInstance)(m_instance, nullptr);
 		m_instance = VK_NULL_HANDLE;
+
+#ifdef ANDROID
+		if (m_vk_loader != nullptr)
+		{
+			::dlclose(m_vk_loader);
+		}
+#endif
 	}
 
 	void instance::enable_debugging()
@@ -70,8 +94,10 @@ namespace vk
 
 		PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
-		_vkCreateDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
-		_vkDestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
+		auto _vkGetInstanceProcAddr = GET_VK_PFN(m_vk_loader, vkGetInstanceProcAddr);
+
+		_vkCreateDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(_vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
+		_vkDestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(_vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
 
 		VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 		dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -87,6 +113,48 @@ namespace vk
 #endif
 	bool instance::create(const char* app_name, bool fast)
 	{
+#ifdef ANDROID
+	auto custom_driver_path = g_cfg.video.vk.custom_driver_path.to_string();
+	if (!custom_driver_path.empty())
+	{
+		rsx_log.warning("Loading custom driver %s", custom_driver_path);
+
+		auto meta = nlohmann::json::parse(std::ifstream(custom_driver_path + "/meta.json"));
+
+		if (meta.contains("libraryName"))
+		{
+			auto library_name = meta["libraryName"].get<std::string>();
+			rsx_log.warning("Custom driver: library name %s", library_name);
+		
+			auto hook_dir = g_cfg.video.vk.custom_driver_hook_dir.to_string();
+			rsx_log.warning("Custom driver: hook dir %s", hook_dir);
+
+
+			::dlerror();
+			m_vk_loader = adrenotools_open_libvulkan(
+				RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM,
+				nullptr, (hook_dir + "/").c_str(),
+				(custom_driver_path + "/").c_str(), library_name.c_str(),
+				nullptr, nullptr);
+
+			if (m_vk_loader == nullptr)
+			{
+				rsx_log.error("Failed to load custom driver at '%s': %s", custom_driver_path, ::dlerror());
+			}
+			else
+			{
+				rsx_log.error("Custom driver at '%s' successfully loaded", custom_driver_path);
+			}
+		}
+		else
+		{
+			rsx_log.error("Custom driver load error: Invalid meta.json at %s", custom_driver_path);
+		}
+	}
+#endif
+		_vkEnumerateInstanceExtensionProperties = GET_VK_PFN(m_vk_loader, vkEnumerateInstanceExtensionProperties);
+		_vkEnumerateDeviceExtensionProperties = GET_VK_PFN(m_vk_loader, vkEnumerateDeviceExtensionProperties);
+
 		// Initialize a vulkan instance
 		VkApplicationInfo app = {};
 
@@ -207,7 +275,7 @@ namespace vk
 		instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 		instance_info.pNext = next_info;
 
-		if (VkResult result = vkCreateInstance(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
+		if (VkResult result = GET_VK_PFN(m_vk_loader, vkCreateInstance)(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
 		{
 			if (result == VK_ERROR_LAYER_NOT_PRESENT)
 			{
@@ -238,7 +306,7 @@ namespace vk
 	{
 		u32 num_gpus;
 		// This may fail on unsupported drivers, so just assume no devices
-		if (vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr) != VK_SUCCESS)
+		if (GET_VK_PFN(m_vk_loader, vkEnumeratePhysicalDevices)(m_instance, &num_gpus, nullptr) != VK_SUCCESS)
 			return gpus;
 
 		if (gpus.size() != num_gpus)
@@ -246,7 +314,7 @@ namespace vk
 			std::vector<VkPhysicalDevice> pdevs(num_gpus);
 			gpus.resize(num_gpus);
 
-			CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, pdevs.data()));
+			CHECK_RESULT(GET_VK_PFN(m_vk_loader, vkEnumeratePhysicalDevices)(m_instance, &num_gpus, pdevs.data()));
 
 			for (u32 i = 0; i < num_gpus; ++i)
 				gpus[i].create(m_instance, pdevs[i], extensions_loaded);
@@ -269,7 +337,7 @@ namespace vk
 
 		for (u32 index = 0; index < device_queues; index++)
 		{
-			vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supports_present[index]);
+			GET_VK_PFN(m_vk_loader, vkGetPhysicalDeviceSurfaceSupportKHR)(dev, index, m_surface, &supports_present[index]);
 		}
 
 		u32 graphics_queue_idx = -1;
@@ -338,10 +406,10 @@ namespace vk
 
 		// Get the list of VkFormat's that are supported:
 		u32 formatCount;
-		CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, nullptr));
+		CHECK_RESULT(GET_VK_PFN(m_vk_loader,vkGetPhysicalDeviceSurfaceFormatsKHR)(dev, m_surface, &formatCount, nullptr));
 
 		std::vector<VkSurfaceFormatKHR> surfFormats(formatCount);
-		CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, surfFormats.data()));
+		CHECK_RESULT(GET_VK_PFN(m_vk_loader,vkGetPhysicalDeviceSurfaceFormatsKHR)(dev, m_surface, &formatCount, surfFormats.data()));
 
 		VkFormat format;
 		VkColorSpaceKHR color_space;
