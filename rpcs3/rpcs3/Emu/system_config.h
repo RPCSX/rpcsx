@@ -26,7 +26,7 @@ struct cfg_root : cfg::node
 		cfg::_bool ppu_call_history{ this, "PPU Calling History" }; // Enable PPU calling history recording
 		cfg::_bool llvm_logs{ this, "Save LLVM logs" };
 		cfg::string llvm_cpu{ this, "Use LLVM CPU" };
-		cfg::_int<0, 1024> llvm_threads{ this, "Max LLVM Compile Threads", 0 };
+		cfg::_int<0, 1024> llvm_threads{ this, "Max LLVM Compile Threads", 0, false, nullptr, []{ return std::thread::hardware_concurrency() * 2; } };
 		cfg::_bool ppu_llvm_greedy_mode{ this, "PPU LLVM Greedy Mode", false, false };
 		cfg::_bool llvm_precompilation{ this, "LLVM Precompilation", true };
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
