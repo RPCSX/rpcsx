@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/Thread.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
 
@@ -45,6 +46,22 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
+
+#ifdef ANDROID
+		struct node_affinity : cfg::node
+		{
+		public:
+			node_affinity(cfg::node* _this) : cfg::node(_this, "Affinity") {}
+			cfg::_enum<thread_class> cpu0{this, "CPU0", thread_class::general, true};
+			cfg::_enum<thread_class> cpu1{this, "CPU1", thread_class::general, true};
+			cfg::_enum<thread_class> cpu2{this, "CPU2", thread_class::general, true};
+			cfg::_enum<thread_class> cpu3{this, "CPU3", thread_class::general, true};
+			cfg::_enum<thread_class> cpu4{this, "CPU4", thread_class::general, true};
+			cfg::_enum<thread_class> cpu5{this, "CPU5", thread_class::general, true};
+			cfg::_enum<thread_class> cpu6{this, "CPU6", thread_class::general, true};
+			cfg::_enum<thread_class> cpu7{this, "CPU7", thread_class::general, true};
+		} affinity { this };
+#endif
 
 		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
 		{

@@ -226,6 +226,7 @@ bool try_to_string(std::string* out, const f64& value)
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view value)
 {
 	u64 max = umax;
+	std::size_t gap = 0;
 
 	for (u64 i = 0;; i++)
 	{
@@ -242,9 +243,15 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 		fmt_class_string<u64>::format(hex, i);
 		if (var == hex)
 		{
-			break;
+			if (++gap > 100)
+			{
+				break;
+			}
+
+			continue;
 		}
 
+		gap = 0;
 		max = i;
 	}
 
@@ -281,6 +288,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::format) func)
 {
 	std::vector<std::string> result;
+	std::size_t gap = 0;
 
 	for (u64 i = 0;; i++)
 	{
@@ -291,8 +299,15 @@ std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::
 		fmt_class_string<u64>::format(hex, i);
 		if (var == hex)
 		{
-			break;
+			if (++gap > 100)
+			{
+				break;
+			}
+
+			continue;
 		}
+
+		gap = 0;
 
 		result.emplace_back(std::move(var));
 	}

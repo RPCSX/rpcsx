@@ -246,6 +246,16 @@ namespace aarch64
 #endif
     }
 
+    const char *get_cpu_name(int cpu)
+    {
+        const auto midr = read_MIDR_EL1(cpu);
+        const auto implementer_id = (midr >> 24) & 0xff;
+        const auto part_id = (midr >> 4) & 0xfff;
+
+        const auto part_info = find_cpu_part(implementer_id, part_id);
+        return part_info ? part_info->name : nullptr;
+    }
+
     std::string get_cpu_name()
     {
         std::map<u64, int> core_layout;
