@@ -8,6 +8,7 @@
 #include "nlohmann/json.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <utility>
 #include <string>
 #include <vector>
@@ -348,6 +349,8 @@ namespace cfg
 		using int_type = std::conditional_t<Min >= s32{smin} && Max <= s32{smax}, s32, s64>;
 
 		atomic_t<int_type> m_value;
+		std::function<s64()> m_min_fn;
+		std::function<s64()> m_max_fn;
 
 	public:
 		int_type def;
@@ -356,9 +359,13 @@ namespace cfg
 		static constexpr s64 max = Max;
 		static constexpr s64 min = Min;
 
-		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false)
+		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false,
+				std::function<s64()> min_fn = nullptr,
+				std::function<s64()> max_fn = nullptr)
 			: _base(type::_int, owner, name, dynamic)
 			, m_value(def)
+			, m_min_fn(std::move(min_fn))
+			, m_max_fn(std::move(max_fn))
 			, def(def)
 		{
 		}
@@ -383,6 +390,26 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
+		s64 get_min() const
+		{
+			if (m_min_fn != nullptr)
+			{
+				return m_min_fn();
+			}
+
+			return min;
+		}
+
+		s64 get_max() const
+		{
+			if (m_max_fn != nullptr)
+			{
+				return m_max_fn();
+			}
+
+			return max;
+		}
+
 		nlohmann::ordered_json to_json() const override
 		{
 			return
@@ -390,8 +417,8 @@ namespace cfg
 				{"type", "int"},
 				{"value", to_string()},
 				{"default", def_to_string()},
-				{"min", std::to_string(min)},
-				{"max", std::to_string(max)},
+				{"min", std::to_string(get_min())},
+				{"max", std::to_string(get_max())},
 			};
 		}
 
@@ -420,7 +447,7 @@ namespace cfg
 			}
 
 			auto value = json.get<nlohmann::json::number_integer_t>();
-			if (value < min || value > max)
+			if (value < get_min() || value > get_max())
 			{
 				return false;
 			}
