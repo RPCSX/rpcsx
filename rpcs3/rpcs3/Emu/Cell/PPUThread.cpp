@@ -5774,7 +5774,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		{
 			translator.build_interpreter();
 		}
-
+#ifdef ARCH_X64
 		// Create the analysis managers.
 		// These must be declared in this order so that they are destroyed in the
 		// correct order due to inter-analysis-manager references.
@@ -5799,7 +5799,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		FunctionPassManager fpm;
 		// Basic optimizations
 		fpm.addPass(EarlyCSEPass());
-
+#endif
 		u32 guest_code_size = 0;
 		u32 min_addr = umax;
 		u32 max_addr = 0;
@@ -5862,7 +5862,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		//mpm.add(createFunctionInliningPass());
 		//mpm.add(createDeadInstEliminationPass());
 		//mpm.run(*module);
-
+#ifndef ANDROID
 		std::string result;
 		raw_string_ostream out(result);
 
@@ -5880,7 +5880,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 			Emu.CallFromMainThread([]{ Emu.GracefulShutdown(false, true); });
 			return;
 		}
-
+#endif
 		ppu_log.notice("LLVM: %zu functions generated (code_size=0x%x, num_func=%d, max_addr(-)min_addr=0x%x)", _module->getFunctionList().size(), guest_code_size, num_func, max_addr - min_addr);
 	}
 
