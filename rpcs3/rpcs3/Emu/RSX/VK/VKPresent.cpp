@@ -43,6 +43,12 @@ void VKGSRender::reinitialize_swapchain()
 		VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
 		auto handle = m_frame->handle();
+
+		if (Emu.IsStopped())
+		{
+			return;
+		}
+
 		m_swapchain->create(handle);
 #endif
 	}
