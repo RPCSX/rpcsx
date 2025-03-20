@@ -2944,7 +2944,8 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 #ifdef ANDROID
 	u64 mask = 0;
-	thread_class affinities[] = {
+	thread_class affinities[] =
+	{
 		g_cfg.core.affinity.cpu0.get(),
 		g_cfg.core.affinity.cpu1.get(),
 		g_cfg.core.affinity.cpu2.get(),
@@ -2955,10 +2956,17 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		g_cfg.core.affinity.cpu7.get()
 	};
 
-	for (std::size_t i = 0; i < std::size(affinities); ++i) {
-		if (affinities[i] == group || affinities[i] == thread_class::general) {
-			mask |= 1ull < i;
+	for (std::size_t i = 0; i < std::min<std::size_t>(std::thread::hardware_concurrency(), std::size(affinities)); ++i)
+	{
+		if (affinities[i] == group || affinities[i] == thread_class::general)
+		{
+			mask |= 1ull << i;
 		}
+	}
+
+	for (std::size_t i = std::size(affinities); i < std::thread::hardware_concurrency(); ++i)
+	{
+		mask |= 1ull << i;
 	}
 
 	return mask;
