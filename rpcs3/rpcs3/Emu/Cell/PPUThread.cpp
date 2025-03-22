@@ -167,9 +167,104 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 	return true;
 }
 
+class concurent_memory_limit
+{
+	u32 m_total = 0;
+	atomic_t<u32> m_free = 0;
+
+	static constexpr auto k_block_size = 1024 * 8;
+
+public:
+	class [[nodiscard]] user
+	{
+		concurent_memory_limit *m_limit = nullptr;
+		u32 m_used = 0;		
+
+	public:
+		user(concurent_memory_limit *limit, u32 used) : m_limit(limit), m_used(used) {}
+		user() = default;
+		user(user &&other)
+		{
+			*this = std::move(other);
+		}
+
+		~user()
+		{
+			if (m_used != 0)
+			{
+				m_limit->release(m_used);
+			}
+		}
+
+		user &operator=(user &&other)
+		{
+			std::swap(other.m_limit, m_limit);
+			std::swap(other.m_used, m_used);
+			return *this;
+		}
+
+		explicit operator bool() const { return m_limit != nullptr; }
+	};
+
+	concurent_memory_limit(u64 total)
+		: m_total(u32(std::min<u64>(total / k_block_size, std::numeric_limits<u32>::max()))), m_free(m_total) {}
+
+
+	user acquire(u64 amount)
+	{
+		amount = utils::aligned_div<u64>(amount, k_block_size);
+
+		u32 allocated = 0;
+		while (!m_free.fetch_op([&, this](u32& value)
+		{
+			if (value >= amount || value == m_total)
+			{
+				// Allow at least allocation, make 0 the "memory unavailable" sign value for atomic waiting efficiency 
+				const u32 new_val = static_cast<u32>(utils::sub_saturate<u64>(value, amount));
+				allocated = value - new_val;
+				value = new_val;
+				return true;
+			}
+
+			// Resort to waiting
+			allocated = 0;
+			return Emu.IsStopped();
+		}).second)
+		{
+			// Wait until not 0
+			m_free.wait(0);
+		}
+
+		if (Emu.IsStopped())
+		{
+			return {};
+		}
+
+		return user(this, allocated);
+	}
+
+	std::size_t free_memory() const {
+		return m_free.load() * k_block_size;
+	}
+
+	std::uint64_t total_memory() const {
+		return m_total * k_block_size;
+	}
+
+private:
+	void release(u32 amount)
+	{
+		if (!m_free.fetch_add(amount))
+		{
+			m_free.notify_all();
+		}
+	}
+};
+
 extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release = false);
 extern bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only = false, u64 file_size = 0);
+extern bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size, concurent_memory_limit &memory_limit);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
@@ -4171,13 +4266,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	lf_queue<file_info> possible_exec_file_paths;
 
-	// Allow to allocate 2000 times the size of each file for the use of LLVM
-	// This works very nicely with Metal Gear Solid 4 for example:
-	// 2 7MB overlay files -> 14GB
-	// The growth in memory requirements of LLVM is not linear with file size of course
-	// But these estimates should hopefully protect RPCS3 in the coming years
-	// Especially when thread count is on the rise with each CPU generation 
-	atomic_t<u32> file_size_limit = static_cast<u32>(std::clamp<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536, u32{umax}));
+	concurent_memory_limit memory_limit(utils::get_total_memory() / 3);
 
 	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
 	const u32 cpu_thread_limit = utils::get_thread_count() > 8u ? std::max<u32>(utils::get_thread_count(), 2) - 1 : utils::get_thread_count(); // One LLVM thread less
@@ -4236,7 +4325,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 		u32 inc_fdone = 1;
-		u32 restore_mem = 0;
 
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone += std::exchange(inc_fdone, 1))
 		{
@@ -4245,19 +4333,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			if (restore_mem)
-			{
-				if (!file_size_limit.fetch_add(restore_mem))
-				{
-					file_size_limit.notify_all();
-				}
-
-				restore_mem = 0;
-			}
-
 			auto& [path, offset, file_size] = file_queue[func_i];
 
 			ppu_log.notice("Trying to load: %s", path);
+
+			auto file_allocation = memory_limit.acquire(file_size * 2);
 
 			// Load MSELF, SPRX or SELF
 			fs::file src{path};
@@ -4322,52 +4402,15 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			auto wait_for_memory = [&]() -> bool
-			{
-				// Try not to process too many files at once because it seems to reduce performance and cause RAM shortages
-				// Concurrently compiling more OVL or huge PRX files does not have much theoretical benefit
-				while (!file_size_limit.fetch_op([&](u32& value)
-				{
-					if (value)
-					{
-						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency 
-						const u32 new_val = static_cast<u32>(utils::sub_saturate<u64>(value, file_size));
-						restore_mem = value - new_val;
-						value = new_val;
-						return true;
-					}
-
-					// Resort to waiting
-					restore_mem = 0;
-					return false;
-				}).second)
-				{
-					// Wait until not 0
-					file_size_limit.wait(0);
-				}
-
-				if (Emu.IsStopped())
-				{
-					return false;
-				}
-
-				return true;
-			};
-
 			elf_error prx_err{}, ovl_err{};
 
 			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
-				if (!wait_for_memory())
-				{
-					// Emulation stopped
-					continue;
-				}
-
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
-					ppu_initialize(*prx, false, file_size);
+					file_allocation = {}; // release used file memory
+					ppu_initialize(*prx, false, file_size, memory_limit);
 					ppu_finalize(*prx, true);
 					continue;
 				}
@@ -4400,11 +4443,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
-					if (!wait_for_memory())
-					{
-						// Emulation stopped
-						break;
-					}
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+					file_allocation = {}; // release used file memory
 
 					// Participate in thread execution limitation (takes a long time)
 					if (std::lock_guard lock(g_fxo->get<jit_core_allocator>().sem); !ovlm->analyse(0, ovlm->entry, ovlm->seg0_code_end, ovlm->applied_patches, std::vector<u32>{}, []()
@@ -4416,8 +4456,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
-					obj.clear(), src.close(); // Clear decrypted file and elf object memory
-					ppu_initialize(*ovlm, false, file_size);
+					ppu_initialize(*ovlm, false, file_size, memory_limit);
 					ppu_finalize(*ovlm, true);
 					break;
 				}
@@ -4431,14 +4470,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s): Attempting compilation as executable file", path, prx_err, ovl_err);
 			possible_exec_file_paths.push(path, offset, file_size);
 			inc_fdone = 0;
-		}
-
-		if (restore_mem)
-		{
-			if (!file_size_limit.fetch_add(restore_mem))
-			{
-				file_size_limit.notify_all();
-			}
 		}
 	});
 
@@ -4481,6 +4512,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				ppu_log.error("Failed to open '%s' (%s)", path, fs::g_tls_error);
 				continue;
 			}
+
+			auto file_allocation = memory_limit.acquire(file_size * 2);
 
 			for (usz i = 0;; i++)
 			{
@@ -4550,10 +4583,11 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					}
 
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+					file_allocation = {};
 
 					_main.name = ' '; // Make ppu_finalize work
 					Emu.ConfigurePPUCache();
-					ppu_initialize(_main, false, file_size);
+					ppu_initialize(_main, false, file_size, memory_limit);
 					spu_cache::initialize(false);
 					ppu_finalize(_main, true);
 					_main = {};
@@ -4719,7 +4753,7 @@ extern void ppu_initialize()
 	}
 }
 
-bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
+bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size, concurent_memory_limit &memory_limit)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
@@ -5466,6 +5500,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		struct thread_op
 		{
+			concurent_memory_limit &memory_limit;
 			atomic_t<u32>& work_cv;
 			std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload;
 			const ppu_module<lv2_obj>& main_module;
@@ -5474,10 +5509,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			std::unique_lock<decltype(jit_core_allocator::sem)> core_lock;
 
-			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
+			thread_op(concurent_memory_limit &memory_limit, atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
 				, const cpu_thread* cpu, const ppu_module<lv2_obj>& main_module, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
 
-				: work_cv(work_cv)
+				: memory_limit(memory_limit)
+				, work_cv(work_cv)
 				, workload(workload)
 				, main_module(main_module)
 				, cache_path(cache_path)
@@ -5488,7 +5524,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			}
 
 			thread_op(const thread_op& other) noexcept
-				: work_cv(other.work_cv)
+				: memory_limit(other.memory_limit)
+				, work_cv(other.work_cv)
 				, workload(other.workload)
 				, main_module(other.main_module)
 				, cache_path(other.cache_path)
@@ -5520,6 +5557,16 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 					// Keep allocating workload
 					const auto& [obj_name, part] = std::as_const(workload)[i];
+
+
+					std::size_t total_fn_size = 0;
+					for (auto &fn : part.get_funcs())
+					{
+						total_fn_size += fn.size;
+					}
+
+					ppu_log.warning("LLVM: reporting used memory %u (free/total: %u/%u) by %s%s", total_fn_size * 1024 * 16, memory_limit.free_memory(), memory_limit.total_memory(), cache_path, obj_name);
+					auto used_memory = memory_limit.acquire(total_fn_size * 1024 * 16);
 
 					std::shared_lock rlock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
 					std::unique_lock lock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
@@ -5553,7 +5600,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		g_watchdog_hold_ctr++;
 
 		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count
-			, thread_op(work_cv, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
+			, thread_op(memory_limit, work_cv, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
 			, [&](u32 /*thread_index*/, thread_op& op)
 		{
 			// Allocate "core"
@@ -5726,6 +5773,12 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 #else
 	fmt::throw_exception("LLVM is not available in this build.");
 #endif
+}
+
+bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
+{
+	concurent_memory_limit memory_limit(utils::aligned_div<u64>(utils::get_total_memory(), 2));
+	return ppu_initialize(info, check_only, file_size, memory_limit);
 }
 
 static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name)
