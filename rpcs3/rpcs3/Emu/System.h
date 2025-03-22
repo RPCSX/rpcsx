@@ -244,6 +244,11 @@ public:
 		m_state = system_state::running;
 	}
 
+	void SetState(system_state state)
+	{
+		m_state = state;
+	}
+
 	void Init();
 
 	std::vector<std::string> argv;
