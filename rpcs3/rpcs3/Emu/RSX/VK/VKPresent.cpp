@@ -90,6 +90,7 @@ void VKGSRender::reinitialize_swapchain()
 	{
 		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
+		surface_lost = true;
 		return;
 	}
 
@@ -586,7 +587,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
-	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
+	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull :
+#ifdef ANDROID
+		1000ull
+#else
+		100000000ull
+#endif
+	;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
 	{
 		switch (status)
@@ -619,7 +626,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			surface_lost = true;
 			swapchain_unavailable = true;
 			reinitialize_swapchain();
-			break;
+			return;
 
 		default:
 			vk::die_with_error(status);

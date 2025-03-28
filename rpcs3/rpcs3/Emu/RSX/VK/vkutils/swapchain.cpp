@@ -208,7 +208,15 @@ namespace vk
 		}
 #endif
 		VkSurfaceCapabilitiesKHR surface_descriptors = {};
-		CHECK_RESULT(VK_GET_SYMBOL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)(dev.gpu(), m_surface, &surface_descriptors));
+		auto result = VK_GET_SYMBOL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)(dev.gpu(), m_surface, &surface_descriptors);
+#ifdef ANDROID
+        if (result != VK_ERROR_SURFACE_LOST_KHR)
+        {
+            CHECK_RESULT(result);
+        }
+#else
+        CHECK_RESULT(result);
+#endif
 		return { surface_descriptors, false };
 	}
 
