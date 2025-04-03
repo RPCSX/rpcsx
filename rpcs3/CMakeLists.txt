@@ -1,203 +1,149 @@
-﻿# Define GNU standard installation directories
-include(GNUInstallDirs)
+cmake_minimum_required(VERSION 3.28)
 
-# Generate git-version.h at build time.
-include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
+project(rpcs3 LANGUAGES C CXX)
 
-# Check for a sufficient compiler and set build options
-include(ConfigureCompiler)
-include(CheckFunctionExists)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_STANDARD 20)
-
-set(ADDITIONAL_LIBS "")
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    #on some Linux distros shm_unlink and similar functions are in librt only
-    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
-elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
-    #it seems like glibc includes the iconv functions we use but other libc
-    #implementations like the one on OSX don't seem implement them
-    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
-endif()
-
-if(UNIX AND NOT APPLE AND NOT ANDROID)
-    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
-    # Optionally enable X11 for window management
-    find_package(X11)
-    if(X11_FOUND)
-        add_definitions(-DHAVE_X11)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+        message(FATAL_ERROR "RPCS3 requires at least gcc-11.")
     endif()
-    find_package(Wayland)
-    if(WAYLAND_FOUND)
-        add_definitions(-DHAVE_WAYLAND)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+        message(FATAL_ERROR "RPCS3 requires at least clang-12.0.")
     endif()
 endif()
 
-if (NOT ANDROID)
-    # Qt
-    # finds Qt libraries and setups custom commands for MOC and UIC
-    # Must be done here because generated MOC and UIC targets cant
-    # be found otherwise
-    include(${CMAKE_SOURCE_DIR}/3rdparty/qt6.cmake)
+option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
+option(WITH_LLVM "Enable usage of LLVM library" ON)
+option(BUILD_LLVM "Build LLVM from git submodule" OFF)
+option(STATIC_LINK_LLVM "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." OFF)
+option(USE_FAUDIO "FAudio audio backend" ON)
+option(USE_LIBEVDEV "libevdev-based joystick support" ON)
+option(USE_DISCORD_RPC "Discord rich presence integration" OFF)
+option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
+option(USE_VULKAN "Vulkan render backend" ON)
+option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
+option(USE_SDL "Enables SDL input handler" OFF)
+option(USE_SYSTEM_SDL "Prefer system SDL instead of the builtin one" ON)
+option(USE_SYSTEM_FFMPEG "Prefer system ffmpeg instead of the prebuild one" OFF)
+option(USE_SYSTEM_OPENAL "Prefer system OpenAL instead of the prebuild one" ON)
+option(USE_SYSTEM_CURL "Prefer system Curl instead of the prebuild one" ON)
+option(USE_SYSTEM_OPENCV "Prefer system OpenCV instead of the builtin one" ON)
+option(HAS_MEMORY_BREAKPOINTS "Add support for memory breakpoints to the interpreter" OFF)
+option(USE_LTO "Use LTO for building" ON)
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/buildfiles/cmake")
+
+include(CheckCXXCompilerFlag)
+
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(IS_MULTI_CONFIG)
+    # TODO(cjj19970505@live.cn)
+    # Currently DicordRPC is included as a binary compiled with /MT flag.
+    # We need all 4 binaries(/MT /MTd /MD /MDd) or including the source instead of binary.
+    set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only avaliable with single-config generator" FORCE)
+else()
+    if(NOT CMAKE_BUILD_TYPE)
+        message(STATUS "No build type selected, default to Release")
+        set(CMAKE_BUILD_TYPE "Release")
+    endif()
 endif()
 
-# subdirectories
-add_subdirectory(Emu)
-
-if (NOT ANDROID)
-    add_subdirectory(rpcs3qt)
+if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT MSVC)
+    add_compile_definitions(_DEBUG)
 endif()
 
-gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
+if(MSVC)
+    option(USE_MSVC_STATIC_CRT "Use static MSVC C runtime" OFF)
 
-if (NOT ANDROID)
-    if(WIN32)
-        add_executable(rpcs3 WIN32)
-        target_sources(rpcs3 PRIVATE rpcs3.rc)
-        target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
-    elseif(APPLE)
-        add_executable(rpcs3 MACOSX_BUNDLE)
-        target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
-        set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-        set_target_properties(rpcs3
-            PROPERTIES
-                MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.plist.in")
-    else()
-        add_executable(rpcs3)
-    endif()
-
-    target_sources(rpcs3
-        PRIVATE
-        display_sleep_control.cpp
-        headless_application.cpp
-        main.cpp
-        main_application.cpp
-        module_verifier.cpp
-        rpcs3_version.cpp
-        stb_image.cpp
-        stdafx.cpp
-
-        Input/basic_keyboard_handler.cpp
-        Input/basic_mouse_handler.cpp
-        Input/ds3_pad_handler.cpp
-        Input/ds4_pad_handler.cpp
-        Input/dualsense_pad_handler.cpp
-        Input/evdev_joystick_handler.cpp
-        Input/evdev_gun_handler.cpp
-        Input/gui_pad_thread.cpp
-        Input/hid_pad_handler.cpp
-        Input/keyboard_pad_handler.cpp
-        Input/mm_joystick_handler.cpp
-        Input/pad_thread.cpp
-        Input/product_info.cpp
-        Input/ps_move_calibration.cpp
-        Input/ps_move_config.cpp
-        Input/ps_move_handler.cpp
-        Input/ps_move_tracker.cpp
-        Input/raw_mouse_config.cpp
-        Input/raw_mouse_handler.cpp
-        Input/sdl_pad_handler.cpp
-        Input/skateboard_pad_handler.cpp
-        Input/xinput_pad_handler.cpp
-    )
-
-    set_target_properties(rpcs3
-        PROPERTIES
-            AUTOMOC ON
-            AUTOUIC ON)
-
-    target_link_libraries(rpcs3
-        PRIVATE
-            rpcs3_emu
-            rpcs3_ui
-            3rdparty::discordRPC
-            3rdparty::qt6
-            3rdparty::hidapi
-            3rdparty::libusb
-            3rdparty::wolfssl
-            3rdparty::libcurl
-            3rdparty::zlib
-            3rdparty::opencv
-            3rdparty::fusion
-            ${ADDITIONAL_LIBS})
-
-    # Unix display manager
-    if(X11_FOUND)
-        target_link_libraries(rpcs3 PRIVATE X11::X11)
-    elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE AND NOT ANDROID)
-        # Wayland has been checked in 3rdparty/CMakeLists.txt already.
-        message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
-    endif()
-
-    if(UNIX)
-        set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-        find_package(Threads REQUIRED)
-        target_link_libraries(rpcs3 PRIVATE Threads::Threads)
-    endif()
-
-    if(WIN32)
-        target_link_libraries(rpcs3 PRIVATE bcrypt ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh)
-    else()
-        target_link_libraries(rpcs3 PRIVATE ${CMAKE_DL_LIBS})
-    endif()
-
-    if(USE_PRECOMPILED_HEADERS)
-        target_precompile_headers(rpcs3 PRIVATE stdafx.h)
-    endif()
-
-
-    # Copy icons to executable directory
-    if(APPLE)
-        if (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-            set(QT_DEPLOY_FLAGS "-no-strip")
-        else()
-            set(QT_DEPLOY_FLAGS "")
+    # TODO(cjj19970505@live.cn)
+    # DiscordRPC binary in 3rdparty is compiled /MT
+    # So theoretically we should enable DiscordRPC in Release and static CRT build
+    # since we might encounter some rumtime issues when more than one CRT version are presented.
+    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
+    # Add other DiscordRPC binaries(compiled with /MTd, /MD, /MDd) or compile it from source may address this issue.
+    if(NOT IS_MULTI_CONFIG)
+        if(NOT(CMAKE_BUILD_TYPE MATCHES "Release" AND USE_MSVC_STATIC_CRT))
+            set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available in Release and static CRT build." FORCE)
         endif()
-        qt_finalize_target(rpcs3)
-        add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/../Resources/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/../Resources/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/../Resources/git
-            COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app" "${QT_DEPLOY_FLAGS}")
-    elseif(UNIX)
-        add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
-    elseif(WIN32)
-        add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenAL::OpenAL> $<TARGET_FILE_DIR:rpcs3>
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git
-            COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
-                --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import
-                --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
-                --verbose 0 "$<TARGET_FILE:rpcs3>")
     endif()
 
-    # Unix installation
-    if(UNIX AND NOT APPLE)
-        # Install the binary
-        install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-        # Install the application icon and menu item
-        install(FILES rpcs3.svg
-            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps)
-        install(FILES rpcs3.png
-            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps)
-        install(FILES rpcs3.desktop
-            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
-        install(FILES rpcs3.metainfo.xml
-            DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo)
-        # Install other files
-        install(DIRECTORY ../bin/Icons
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY ../bin/GuiConfigs
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY ../bin/git
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY ../bin/test
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
+    if(USE_MSVC_STATIC_CRT)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    else()
+        # though doc ( https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_RUNTIME_LIBRARY.html )
+        # says if that property is not set then CMake uses the default value MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
+        # to select a MSVC runtime library.
+        # But yaml-cpp set /MT(d) if CMAKE_MSVC_RUNTIME_LIBRARY is undefined
+        # So we have to define it explicitly
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    endif()
+
+    # TODO(cjj19970505@live.cn)
+    # offical QT uses dynamic CRT.
+    # When building our lib with static CRT and debug build type
+    # and linking with Qt with dynamic CRT and debug build,
+    # error is encountered in runtime (which is expected).
+    # But building our lib with static CRT and release build type,
+    # and linking with Qt with dynamic CRT and release build seems to be working,
+    # which is the same config with VS solution.
+    # (though technically it might still have some hidden errors).
+    # So we allow static CRT in both relase and debug build, but prompt warning in debug build.
+    # For more info:
+    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
+    # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
+    if(USE_MSVC_STATIC_CRT)
+        if(IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE MATCHES "Debug")
+            message(AUTHOR_WARNING "Debug build currently can not work with static CRT.")
+        endif()
+    endif()
+    add_compile_options(/MP)
+endif()
+
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
+endif()
+
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+endif()
+
+if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    include_directories(/opt/homebrew/include)
+    link_directories(/opt/homebrew/lib)
+endif()
+
+if(MSVC)
+    add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
+endif()
+
+add_subdirectory(3rdparty)
+
+if (DISABLE_LTO)
+    if (CMAKE_C_FLAGS)
+        string(REGEX REPLACE "-flto[^ ]*" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+    endif()
+    if (CMAKE_CXX_FLAGS)
+        string(REGEX REPLACE "-flto[^ ]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     endif()
 endif()
+
+string(FIND "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}" "-flto" FOUND_LTO)
+if (NOT FOUND_LTO EQUAL -1)
+    message(FATAL_ERROR "RPCS3 doesn't support building with LTO, use -DDISABLE_LTO=TRUE to force-disable it")
+endif()
+
+if(NOT WIN32)
+    add_compile_options(-pthread)
+endif()
+
+# TODO: do real installation, including copying directory structure
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/bin")
+
+add_subdirectory(rpcs3)
+
+set_directory_properties(PROPERTIES VS_STARTUP_PROJECT rpcs3)
