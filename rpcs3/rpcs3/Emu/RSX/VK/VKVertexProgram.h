@@ -1,0 +1,70 @@
+#pragma once
+#include "../Program/VertexProgramDecompiler.h"
+#include "VKProgramPipeline.h"
+#include "vkutils/pipeline_binding_table.h"
+
+namespace vk
+{
+	class shader_interpreter;
+}
+
+struct VKVertexDecompilerThread : public VertexProgramDecompiler
+{
+	friend class vk::shader_interpreter;
+
+	std::string &m_shader;
+	std::vector<vk::glsl::program_input> inputs;
+	class VKVertexProgram *vk_prog;
+	vk::pipeline_binding_table m_binding_table{};
+
+	struct
+	{
+		bool emulate_conditional_rendering{false};
+	}
+	m_device_props;
+
+protected:
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getIntTypeName(usz elementCount) override;
+	std::string getFunction(FUNCTION) override;
+	std::string compareFunction(COMPARE, const std::string&, const std::string&, bool scalar) override;
+
+	void insertHeader(std::stringstream &OS) override;
+	void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs) override;
+	void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants) override;
+	void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs) override;
+	void insertMainStart(std::stringstream &OS) override;
+	void insertMainEnd(std::stringstream &OS) override;
+
+	const RSXVertexProgram &rsx_vertex_program;
+public:
+	VKVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray&, class VKVertexProgram &dst)
+		: VertexProgramDecompiler(prog)
+		, m_shader(shader)
+		, vk_prog(&dst)
+		, rsx_vertex_program(prog)
+	{
+	}
+
+	void Task();
+	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
+};
+
+class VKVertexProgram : public rsx::VertexProgramBase
+{
+public:
+	VKVertexProgram();
+	~VKVertexProgram();
+
+	ParamArray parr;
+	VkShaderModule handle = nullptr;
+	vk::glsl::shader shader;
+	std::vector<vk::glsl::program_input> uniforms;
+
+	void Decompile(const RSXVertexProgram& prog);
+	void Compile();
+	void SetInputs(std::vector<vk::glsl::program_input>& inputs);
+
+private:
+	void Delete();
+};
