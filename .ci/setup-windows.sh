@@ -69,7 +69,7 @@ download_and_verify()
 }
 
 # Some dependencies install here
-[ -d "./build/lib_ext/Release-x64" ] || mkdir -p "./build/lib_ext/Release-x64"
+[ -d "./rpcs3/build/lib_ext/Release-x64" ] || mkdir -p "./rpcs3/build/lib_ext/Release-x64"
 
 for url in $DEP_URLS; do
     # Get the filename from the URL and remove query strings (?arg=something).
@@ -79,8 +79,8 @@ for url in $DEP_URLS; do
     # shellcheck disable=SC1003
     case "$url" in
     *qt*) checksum=$(curl -fL "${url}.sha1"); algo="sha1"; outDir="$QTDIR/" ;;
-    *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
-    *glslang*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
+    *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./rpcs3/build/lib_ext/Release-x64" ;;
+    *glslang*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./rpcs3/build/lib_ext/Release-x64" ;;
     *ccache*) checksum=$CCACHE_SHA; algo="sha256"; outDir="$CCACHE_BIN_DIR" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
@@ -104,7 +104,7 @@ mv "$CCACHE_SH_DIR"/ccache-*/* "$CCACHE_SH_DIR"
 cp "$CCACHE_SH_DIR"/ccache.exe "$CCACHE_SH_DIR"/cl.exe
 
 # Gather explicit version number and number of commits
-COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
+COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3/rpcs3_version.cpp)
 COMM_COUNT=$(git rev-list --count HEAD)
 COMM_HASH=$(git rev-parse --short=8 HEAD)
 

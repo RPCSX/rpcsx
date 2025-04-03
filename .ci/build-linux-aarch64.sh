@@ -1,13 +1,12 @@
 #!/bin/sh -ex
 
 if [ -z "$CIRRUS_CI" ]; then
-   cd rpcs3 || exit 1
+   cd rpcs3/rpcs3 || exit 1
 fi
 
 git config --global --add safe.directory '*'
 
 # Pull all the submodules except llvm and opencv
-# Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
 git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 }' .gitmodules)
 
@@ -18,19 +17,13 @@ if [ "$COMPILER" = "gcc" ]; then
     export CC="${GCC_BINARY}"
     export CXX="${GXX_BINARY}"
     export LINKER=gold
-    # We need to set the following variables for LTO to link properly
-    export AR=/usr/bin/gcc-ar-"$GCCVER"
-    export RANLIB=/usr/bin/gcc-ranlib-"$GCCVER"
-    export CFLAGS="-fuse-linker-plugin"
 else
     export CC="${CLANG_BINARY}"
     export CXX="${CLANGXX_BINARY}"
-    export LINKER=lld
-    export AR=/usr/bin/llvm-ar-"$LLVMVER"
-    export RANLIB=/usr/bin/llvm-ranlib-"$LLVMVER"
+    export LINKER="${LLD_BINARY}"
 fi
-
 export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
+export CXXFLAGS="$CXXFLAGS -fuse-ld=${LINKER}"
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
@@ -38,8 +31,6 @@ cmake ..                                               \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
     -DCMAKE_C_FLAGS="$CFLAGS"                          \
     -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
-    -DCMAKE_AR="$AR"                                   \
-    -DCMAKE_RANLIB="$RANLIB"                           \
     -DUSE_SYSTEM_CURL=ON                               \
     -DUSE_SDL=ON                                       \
     -DUSE_SYSTEM_SDL=ON                                \
@@ -55,7 +46,7 @@ ninja; build_status=$?;
 
 cd ..
 
-shellcheck .ci/*.sh
+shellcheck ../.ci/*.sh
 
 # If it compiled succesfully let's deploy.
 # Azure and Cirrus publish PRs as artifacts only.
@@ -63,5 +54,5 @@ shellcheck .ci/*.sh
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
-    .ci/deploy-linux.sh "x86_64"
+    ../.ci/deploy-linux.sh "aarch64"
 fi
