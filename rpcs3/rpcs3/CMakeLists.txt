@@ -10,6 +10,10 @@ include(CheckFunctionExists)
 
 set(CMAKE_CXX_STANDARD 20)
 
+if (MSVC)
+    add_compile_options(/MT)
+endif()
+
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #on some Linux distros shm_unlink and similar functions are in librt only
@@ -76,6 +80,8 @@ if (NOT ANDROID)
         rpcs3_version.cpp
         stb_image.cpp
         stdafx.cpp
+
+        dev/iso.cpp
 
         Input/basic_keyboard_handler.cpp
         Input/basic_mouse_handler.cpp
