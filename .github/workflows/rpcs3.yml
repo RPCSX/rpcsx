@@ -142,7 +142,7 @@ jobs:
       - name: Compile RPCS3
         run: |
           cd rpcs3
-          cmake --preset msvc -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQt6_DIR="$QTDIR"
+          cmake --preset msvc -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQt6_DIR="$QTDIR" -DLLVM_DIR=build/lib_ext/Release-x64/llvm_build/lib/cmake/llvm -DBUILD_LLVM=off -DUSE_MSVC_STATIC_CRT=on
           cmake --build --preset msvc-release
 
       - name: Pack up build artifacts
