@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Utilities/Thread.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
+#include <thread>
 
 enum CellNetCtlState : s32;
 enum CellSysutilLicenseArea : s32;
