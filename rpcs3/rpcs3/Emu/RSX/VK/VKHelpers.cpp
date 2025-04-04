@@ -152,14 +152,6 @@ namespace vk
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
 
-
-		if (g_cfg.video.vk.workarounds.no_primitive_restart) g_drv_no_primitive_restart = true;
-		if (g_cfg.video.vk.workarounds.sanitize_fp_values) g_drv_sanitize_fp_values = true;
-		if (g_cfg.video.vk.workarounds.disable_fence_reset) g_drv_disable_fence_reset = true;
-		if (g_cfg.video.vk.workarounds.emulate_cond_render) g_drv_emulate_cond_render = true;
-		if (g_cfg.video.vk.workarounds.strict_query_scopes) g_drv_strict_query_scopes = true;
-		if (g_cfg.video.vk.workarounds.force_reuse_query_pools) g_drv_force_reuse_query_pools = true;
-
 		rsx_log.notice("Vulkan: Renderer initialized on device '%s'", gpu_name);
 
 		{
