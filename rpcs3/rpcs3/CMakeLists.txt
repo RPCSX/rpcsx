@@ -105,6 +105,7 @@ if (NOT ANDROID)
         Input/sdl_pad_handler.cpp
         Input/skateboard_pad_handler.cpp
         Input/xinput_pad_handler.cpp
+        Input/virtual_pad_handler.cpp
     )
 
     set_target_properties(rpcs3

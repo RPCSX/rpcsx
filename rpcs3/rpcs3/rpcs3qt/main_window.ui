@@ -156,7 +156,7 @@
       <bool>true</bool>
      </property>
      <property name="title">
-      <string>Boot (S)Elf</string>
+      <string>Boot File</string>
      </property>
      <property name="toolTipsVisible">
       <bool>true</bool>
@@ -465,7 +465,7 @@
   </widget>
   <action name="bootElfAct">
    <property name="text">
-    <string>Boot SELF/ELF</string>
+    <string>Boot SELF/ELF/ISO</string>
    </property>
   </action>
   <action name="bootTestAct">
@@ -475,7 +475,7 @@
   </action>
   <action name="bootGameAct">
    <property name="text">
-    <string>Boot Game</string>
+    <string>Boot Game Folder</string>
    </property>
   </action>
   <action name="bootSavestateAct">

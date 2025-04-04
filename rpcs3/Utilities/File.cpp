@@ -205,7 +205,7 @@ namespace fs
 		std::unordered_map<std::string, shared_ptr<device_base>> m_map{};
 
 	public:
-		shared_ptr<device_base> get_device(const std::string& path);
+		shared_ptr<device_base> get_device(const std::string& path, std::string_view *device_path = nullptr);
 		shared_ptr<device_base> set_device(const std::string& name, shared_ptr<device_base>);
 	};
 
@@ -835,19 +835,23 @@ namespace fs
 #endif
 }
 
-shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)
+shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path, std::string_view *device_path)
 {
+	auto prefix = path.substr(0, path.find_first_of('/', 1));
+
 	reader_lock lock(m_mutex);
 
-	const usz prefix = path.find_first_of('_', 7) + 1;
-
-	const auto found = m_map.find(path.substr(prefix, path.find_first_of('/', 1) - prefix));
+	const auto found = m_map.find(prefix);
 
 	if (found == m_map.end() || !path.starts_with(found->second->fs_prefix))
 	{
 		return null_ptr;
 	}
 
+	if (device_path != nullptr)
+	{
+		*device_path = std::string_view(path).substr(prefix.size());
+	}
 	return found->second;
 }
 
@@ -881,12 +885,12 @@ shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& na
 	return null_ptr;
 }
 
-shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
+shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path, std::string_view *device_path)
 {
 	// Every virtual device path must have specific name at the beginning
 	if (path.starts_with("/vfsv0_") && path.size() >= 8 + 22 && path[29] == '_' && path.find_first_of('/', 1) > 29)
 	{
-		return get_device_manager().get_device(path);
+		return get_device_manager().get_device(path, device_path);
 	}
 
 	return null_ptr;
@@ -953,9 +957,9 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	// Ensure consistent information on failure
 	info = {};
 
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->stat(path, info);
+		return device->stat(std::string(dev_path), info);
 	}
 
 #ifdef _WIN32
@@ -1122,9 +1126,9 @@ bool fs::is_symlink(const std::string& path)
 
 bool fs::statfs(const std::string& path, fs::device_stat& info)
 {
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->statfs(path, info);
+		return device->statfs(std::string(dev_path), info);
 	}
 
 #ifdef _WIN32
@@ -1181,9 +1185,9 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 
 bool fs::create_dir(const std::string& path)
 {
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->create_dir(path);
+		return device->create_dir(std::string(dev_path));
 	}
 
 #ifdef _WIN32
@@ -1244,9 +1248,9 @@ bool fs::remove_dir(const std::string& path)
 		return false;
 	}
 
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->remove_dir(path);
+		return device->remove_dir(std::string(dev_path));
 	}
 
 #ifdef _WIN32
@@ -1268,9 +1272,9 @@ bool fs::remove_dir(const std::string& path)
 
 bool fs::create_symlink(const std::string& path, const std::string& target)
 {
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->create_symlink(path);
+		return device->create_symlink(std::string(dev_path));
 	}
 
 #ifdef _WIN32
@@ -1302,16 +1306,17 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 		return false;
 	}
 
-	const auto device = get_virtual_device(from);
+	std::string_view device_from, device_to;
+	const auto device = get_virtual_device(from, &device_from);
 
-	if (device != get_virtual_device(to))
+	if (device != get_virtual_device(to, &device_to))
 	{
 		fmt::throw_exception("fs::rename() between different devices not implemented.\nFrom: %s\nTo: %s", from, to);
 	}
 
 	if (device)
 	{
-		return device->rename(from, to);
+		return device->rename(std::string(device_from), std::string(device_to));
 	}
 
 #ifdef _WIN32
@@ -1379,9 +1384,10 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 
 bool fs::copy_file(const std::string& from, const std::string& to, bool overwrite)
 {
-	const auto device = get_virtual_device(from);
+	std::string_view device_from, device_to;
+	const auto device = get_virtual_device(from, &device_from);
 
-	if (device != get_virtual_device(to) || device) // TODO
+	if (device != get_virtual_device(to, &device_to) || device) // TODO
 	{
 		fmt::throw_exception("fs::copy_file() for virtual devices not implemented.\nFrom: %s\nTo: %s", from, to);
 	}
@@ -1479,9 +1485,9 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 
 bool fs::remove_file(const std::string& path)
 {
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->remove(path);
+		return device->remove(std::string(dev_path));
 	}
 
 #ifdef _WIN32
@@ -1505,9 +1511,9 @@ bool fs::remove_file(const std::string& path)
 
 bool fs::truncate_file(const std::string& path, u64 length)
 {
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->trunc(path, length);
+		return device->trunc(std::string(dev_path), length);
 	}
 
 #ifdef _WIN32
@@ -1544,9 +1550,9 @@ bool fs::truncate_file(const std::string& path, u64 length)
 
 bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 {
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		return device->utime(path, atime, mtime);
+		return device->utime(std::string(dev_path), atime, mtime);
 	}
 
 #ifdef _WIN32
@@ -1634,9 +1640,9 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		if (auto&& _file = device->open(path, mode))
+		if (auto&& _file = device->open(std::string(dev_path), mode))
 		{
 			m_file = std::move(_file);
 			return;
@@ -1884,9 +1890,9 @@ bool fs::dir::open(const std::string& path)
 		return false;
 	}
 
-	if (auto device = get_virtual_device(path))
+	if (std::string_view dev_path; auto device = get_virtual_device(path, &dev_path))
 	{
-		if (auto&& _dir = device->open_dir(path))
+		if (auto&& _dir = device->open_dir(std::string(dev_path)))
 		{
 			m_dir = std::move(_dir);
 			return true;

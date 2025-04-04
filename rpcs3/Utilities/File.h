@@ -185,7 +185,7 @@ namespace fs
 	constexpr struct pod_tag_t{} pod_tag;
 
 	// Get virtual device for specified path (nullptr for real path)
-	shared_ptr<device_base> get_virtual_device(const std::string& path);
+	shared_ptr<device_base> get_virtual_device(const std::string& path, std::string_view *device_path);
 
 	// Set virtual device with specified name (nullptr for deletion)
 	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);

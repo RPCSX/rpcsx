@@ -149,7 +149,7 @@ bool iso_dev::statfs(const std::string& path, fs::device_stat& info)
 
 std::unique_ptr<fs::file_base> iso_dev::open(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	if (mode != fs::open_mode::read)
+	if (mode & fs::write)
 	{
 		fs::g_tls_error = fs::error::acces;
 		return {};
