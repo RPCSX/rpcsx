@@ -1042,42 +1042,40 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 bool vfs::host::unlink(const std::string& path, [[maybe_unused]] const std::string& dev_root)
 {
 #ifdef _WIN32
-	if (auto device = fs::get_virtual_device(path))
+	if (std::string_view dev_path; auto device = fs::get_virtual_device(path, &dev_path))
 	{
-		return device->remove(path);
+		return device->remove(std::string(dev_path));
 	}
-	else
+
+	// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
+	std::string dummy = hash_path(path, dev_root, "file");
+
+	while (true)
 	{
-		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
-		std::string dummy = hash_path(path, dev_root, "file");
-
-		while (true)
+		if (fs::rename(path, dummy, false))
 		{
-			if (fs::rename(path, dummy, false))
-			{
-				break;
-			}
-
-			if (fs::g_tls_error != fs::error::exist)
-			{
-				return false;
-			}
-
-			dummy = hash_path(path, dev_root, "file");
+			break;
 		}
 
-		if (fs::file f{dummy, fs::read + fs::write})
+		if (fs::g_tls_error != fs::error::exist)
 		{
-			// Set to delete on close on last handle
-			FILE_DISPOSITION_INFO disp;
-			disp.DeleteFileW = true;
-			SetFileInformationByHandle(f.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
-			return true;
+			return false;
 		}
 
-		// TODO: what could cause this and how to handle it
+		dummy = hash_path(path, dev_root, "file");
+	}
+
+	if (fs::file f{dummy, fs::read + fs::write})
+	{
+		// Set to delete on close on last handle
+		FILE_DISPOSITION_INFO disp;
+		disp.DeleteFileW = true;
+		SetFileInformationByHandle(f.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 		return true;
 	}
+
+	// TODO: what could cause this and how to handle it
+	return true;
 #else
 	return fs::remove_file(path);
 #endif
