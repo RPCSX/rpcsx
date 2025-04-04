@@ -61,7 +61,7 @@ namespace rpcs3
 
 	bool is_release_build()
 	{
-		static constexpr bool is_release_build = std::string_view(RPCS3_GIT_FULL_BRANCH) == "RPCS3/rpcs3/master"sv;
+		static constexpr bool is_release_build = std::string_view(RPCS3_GIT_FULL_BRANCH) == "RPCSX/rpcsx/master"sv;
 		return is_release_build;
 	}
 
