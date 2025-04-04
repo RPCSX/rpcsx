@@ -47,7 +47,9 @@ namespace vk
 			});
 	}
 
+#ifdef ANDROID
 	void* instance::g_vk_loader = nullptr;
+#endif
 
 	// Instance
 	instance::~instance()
