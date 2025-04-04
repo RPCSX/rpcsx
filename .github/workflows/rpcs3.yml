@@ -104,7 +104,6 @@ jobs:
           fetch-depth: 0
 
       - name: Setup env
-        shell: pwsh
         run: |
           echo "QTDIR=C:\Qt\${{ env.QT_VER }}\${{ env.QT_VER_MSVC }}_64" >> ${{ github.env }}
           echo "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_VER }}" >> ${{ github.env }}
@@ -141,8 +140,10 @@ jobs:
         uses: microsoft/setup-msbuild@main
 
       - name: Compile RPCS3
-        shell: pwsh
-        run: msbuild rpcs3/rpcs3.sln /p:Configuration=Release /v:minimal /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\rpcs3\buildfiles\msvc\ci_only.targets"
+        run: |
+          cd rpcs3
+          cmake --preset msvc -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQt6_DIR="$QTDIR"
+          cmake --build --preset msvc-release
 
       - name: Pack up build artifacts
         run: |
