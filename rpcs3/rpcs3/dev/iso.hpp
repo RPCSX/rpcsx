@@ -68,7 +68,16 @@ namespace iso
 			time.tm_hour = hour;
 			time.tm_min = minute;
 			time.tm_sec = second;
-			time.tm_gmtoff = gmt_offset;
+
+			auto set_tm_gmtoff2 = [](auto& t, s8 gmt_offset)
+			{
+				if constexpr (requires { t.tm_gmtoff = gmt_offset; })
+				{
+					t.tm_gmtoff = gmt_offset;
+				}
+			};
+
+			set_tm_gmtoff2(time, gmt_offset);
 			return time;
 		}
 
