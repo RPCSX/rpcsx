@@ -18,4 +18,4 @@ namespace rsx
 		virtual void refresh();
 		virtual void close();
 	};
-}
+} // namespace rsx

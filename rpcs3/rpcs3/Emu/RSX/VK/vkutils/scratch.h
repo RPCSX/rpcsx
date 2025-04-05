@@ -9,4 +9,4 @@ namespace vk
 	buffer* get_scratch_buffer(const command_buffer& cmd, u64 min_required_size, bool zero_memory = false);
 
 	void clear_scratch_resources();
-}
+} // namespace vk

@@ -58,14 +58,14 @@ error_code cellNetAoiAddPeer()
 }
 
 DECLARE(ppu_module_manager::cellNetAoi)("cellNetAoi", []()
-{
-	REG_FUNC(cellNetAoi, cellNetAoiDeletePeer);
-	REG_FUNC(cellNetAoi, cellNetAoiInit);
-	REG_FUNC(cellNetAoi, cellNetAoiGetPspTitleId);
-	REG_FUNC(cellNetAoi, cellNetAoiTerm);
-	REG_FUNC(cellNetAoi, cellNetAoiStop);
-	REG_FUNC(cellNetAoi, cellNetAoiGetRemotePeerInfo);
-	REG_FUNC(cellNetAoi, cellNetAoiStart);
-	REG_FUNC(cellNetAoi, cellNetAoiGetLocalInfo);
-	REG_FUNC(cellNetAoi, cellNetAoiAddPeer);
-});
+	{
+		REG_FUNC(cellNetAoi, cellNetAoiDeletePeer);
+		REG_FUNC(cellNetAoi, cellNetAoiInit);
+		REG_FUNC(cellNetAoi, cellNetAoiGetPspTitleId);
+		REG_FUNC(cellNetAoi, cellNetAoiTerm);
+		REG_FUNC(cellNetAoi, cellNetAoiStop);
+		REG_FUNC(cellNetAoi, cellNetAoiGetRemotePeerInfo);
+		REG_FUNC(cellNetAoi, cellNetAoiStart);
+		REG_FUNC(cellNetAoi, cellNetAoiGetLocalInfo);
+		REG_FUNC(cellNetAoi, cellNetAoiAddPeer);
+	});

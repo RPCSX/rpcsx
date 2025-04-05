@@ -79,11 +79,11 @@ namespace rpcs3::utils
 
 		// Run PKG unpacking asynchronously
 		named_thread worker("PKG Installer", [&]
-		{
-			std::deque<std::string> bootables;
-			const package_install_result result = package_reader::extract_data(reader, bootables);
-			return result.error == package_install_result::error_type::no_error;
-		});
+			{
+				std::deque<std::string> bootables;
+				const package_install_result result = package_reader::extract_data(reader, bootables);
+				return result.error == package_install_result::error_type::no_error;
+			});
 
 		// Wait for the completion
 		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
@@ -336,7 +336,8 @@ namespace rpcs3::utils
 
 	std::string get_custom_input_config_path(const std::string& title_id)
 	{
-		if (title_id.empty()) return "";
+		if (title_id.empty())
+			return "";
 		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
 	}
 
@@ -357,7 +358,7 @@ namespace rpcs3::utils
 		const auto find_content = [&](const std::string& name, const std::string& extension) -> std::string
 		{
 			// Check localized content first
-			for (bool localized : { true, false })
+			for (bool localized : {true, false})
 			{
 				const std::string filename = fmt::format("/%s%s.%s", name, localized ? locale_suffix : std::string(), extension);
 
@@ -433,4 +434,4 @@ namespace rpcs3::utils
 		sys_log.error("Failed to compare the %s numbers for title ID %s: '%s'-'%s'", is_fw ? "firmware version" : "version", serial, v0, v1);
 		return false;
 	}
-}
+} // namespace rpcs3::utils

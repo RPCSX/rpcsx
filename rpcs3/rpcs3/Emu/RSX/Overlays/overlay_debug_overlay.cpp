@@ -14,7 +14,7 @@ namespace rsx
 			text_display.set_font("n023055ms.ttf", 10);
 			text_display.align_text(overlay_element::text_align::left);
 			text_display.set_wrap_text(true);
-			text_display.fore_color = { 0.3f, 1.f, 0.3f, 1.f };
+			text_display.fore_color = {0.3f, 1.f, 0.3f, 1.f};
 			text_display.back_color.a = 0.f;
 		}
 

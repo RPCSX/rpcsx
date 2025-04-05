@@ -134,15 +134,15 @@ error_code cellGameGetList(u32 listBufNum, u32 unk, vm::ptr<u32> listNum, vm::pt
 }
 
 DECLARE(ppu_module_manager::cellGameExec)("cellGameExec", []()
-{
-	REG_FUNC(cellGameExec, cellGameSetExitParam);
-	REG_FUNC(cellGameExec, cellGameGetHomeDataExportPath);
-	REG_FUNC(cellGameExec, cellGameGetHomePath);
-	REG_FUNC(cellGameExec, cellGameGetHomeDataImportPath);
-	REG_FUNC(cellGameExec, cellGameGetHomeLaunchOptionPath);
-	REG_FUNC(cellGameExec, cellGameExecGame);
-	REG_FUNC(cellGameExec, cellGameDeleteGame);
-	REG_FUNC(cellGameExec, cellGameGetBootGameInfo);
-	REG_FUNC(cellGameExec, cellGameGetExitGameInfo);
-	REG_FUNC(cellGameExec, cellGameGetList);
-});
+	{
+		REG_FUNC(cellGameExec, cellGameSetExitParam);
+		REG_FUNC(cellGameExec, cellGameGetHomeDataExportPath);
+		REG_FUNC(cellGameExec, cellGameGetHomePath);
+		REG_FUNC(cellGameExec, cellGameGetHomeDataImportPath);
+		REG_FUNC(cellGameExec, cellGameGetHomeLaunchOptionPath);
+		REG_FUNC(cellGameExec, cellGameExecGame);
+		REG_FUNC(cellGameExec, cellGameDeleteGame);
+		REG_FUNC(cellGameExec, cellGameGetBootGameInfo);
+		REG_FUNC(cellGameExec, cellGameGetExitGameInfo);
+		REG_FUNC(cellGameExec, cellGameGetList);
+	});

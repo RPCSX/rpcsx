@@ -6,32 +6,32 @@
 
 namespace
 {
-	const char *get_format_prefix(VkFormat format)
+	const char* get_format_prefix(VkFormat format)
 	{
 		switch (format)
 		{
-			case VK_FORMAT_R5G6B5_UNORM_PACK16:
-				return "r16";
-			case VK_FORMAT_R8G8B8A8_UNORM:
-			case VK_FORMAT_B8G8R8A8_UNORM:
-				return "rgba8";
-			case VK_FORMAT_R16G16B16A16_SFLOAT:
-				return "rgba16f";
-			case VK_FORMAT_R32G32B32A32_SFLOAT:
-				return "rgba32f";
-			case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-				return "r16";
-			case VK_FORMAT_R8_UNORM:
-				return "r8";
-			case VK_FORMAT_R8G8_UNORM:
-				return "rg8";
-			case VK_FORMAT_R32_SFLOAT:
-				return "r32f";
-			default:
-				fmt::throw_exception("Unhandled VkFormat 0x%x", u32(format));
+		case VK_FORMAT_R5G6B5_UNORM_PACK16:
+			return "r16";
+		case VK_FORMAT_R8G8B8A8_UNORM:
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return "rgba8";
+		case VK_FORMAT_R16G16B16A16_SFLOAT:
+			return "rgba16f";
+		case VK_FORMAT_R32G32B32A32_SFLOAT:
+			return "rgba32f";
+		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+			return "r16";
+		case VK_FORMAT_R8_UNORM:
+			return "r8";
+		case VK_FORMAT_R8G8_UNORM:
+			return "rg8";
+		case VK_FORMAT_R32_SFLOAT:
+			return "r32f";
+		default:
+			fmt::throw_exception("Unhandled VkFormat 0x%x", u32(format));
 		}
 	}
-}
+} // namespace
 
 namespace vk
 {
@@ -44,7 +44,7 @@ namespace vk
 	std::unique_ptr<vk::depthstencil_resolve_EXT> g_depthstencil_resolver;
 	std::unique_ptr<vk::depthstencil_unresolve_EXT> g_depthstencil_unresolver;
 
-	template <typename T, typename ...Args>
+	template <typename T, typename... Args>
 	void initialize_pass(std::unique_ptr<T>& ptr, vk::render_device& dev, Args&&... extras)
 	{
 		if (!ptr)
@@ -58,7 +58,7 @@ namespace vk
 	{
 		if (src->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			auto &job = g_resolve_helpers[src->format()];
+			auto& job = g_resolve_helpers[src->format()];
 
 			if (!job)
 			{
@@ -79,7 +79,7 @@ namespace vk
 		}
 		else
 		{
-			std::vector<vk::image*> surface = { dst };
+			std::vector<vk::image*> surface = {dst};
 			auto& dev = cmd.get_command_pool().get_owner();
 
 			const auto key = vk::get_renderpass_key(surface);
@@ -106,8 +106,8 @@ namespace vk
 					}
 					else
 					{
-						VkClearDepthStencilValue clear{ 1.f, stencil_init_flags & 0xFF };
-						VkImageSubresourceRange range{ VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
+						VkClearDepthStencilValue clear{1.f, stencil_init_flags & 0xFF};
+						VkImageSubresourceRange range{VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1};
 
 						dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 						VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
@@ -127,7 +127,7 @@ namespace vk
 	{
 		if (src->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			auto &job = g_unresolve_helpers[src->format()];
+			auto& job = g_unresolve_helpers[src->format()];
 
 			if (!job)
 			{
@@ -148,7 +148,7 @@ namespace vk
 		}
 		else
 		{
-			std::vector<vk::image*> surface = { dst };
+			std::vector<vk::image*> surface = {dst};
 			auto& dev = cmd.get_command_pool().get_owner();
 
 			const auto key = vk::get_renderpass_key(surface);
@@ -175,8 +175,8 @@ namespace vk
 					}
 					else
 					{
-						VkClearDepthStencilValue clear{ 1.f, stencil_init_flags & 0xFF };
-						VkImageSubresourceRange range{ VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
+						VkClearDepthStencilValue clear{1.f, stencil_init_flags & 0xFF};
+						VkImageSubresourceRange range{VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1};
 
 						dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 						VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
@@ -194,12 +194,12 @@ namespace vk
 
 	void clear_resolve_helpers()
 	{
-		for (auto &task : g_resolve_helpers)
+		for (auto& task : g_resolve_helpers)
 		{
 			task.second->destroy();
 		}
 
-		for (auto &task : g_unresolve_helpers)
+		for (auto& task : g_unresolve_helpers)
 		{
 			task.second->destroy();
 		}
@@ -246,14 +246,19 @@ namespace vk
 
 	void reset_resolve_resources()
 	{
-		if (g_depth_resolver) g_depth_resolver->free_resources();
-		if (g_depth_unresolver) g_depth_unresolver->free_resources();
-		if (g_stencil_resolver) g_stencil_resolver->free_resources();
-		if (g_stencil_unresolver) g_stencil_unresolver->free_resources();
-		if (g_depthstencil_resolver) g_depthstencil_resolver->free_resources();
-		if (g_depthstencil_unresolver) g_depthstencil_unresolver->free_resources();
+		if (g_depth_resolver)
+			g_depth_resolver->free_resources();
+		if (g_depth_unresolver)
+			g_depth_unresolver->free_resources();
+		if (g_stencil_resolver)
+			g_stencil_resolver->free_resources();
+		if (g_stencil_unresolver)
+			g_stencil_unresolver->free_resources();
+		if (g_depthstencil_resolver)
+			g_depthstencil_resolver->free_resources();
+		if (g_depthstencil_unresolver)
+			g_depthstencil_unresolver->free_resources();
 	}
-
 
 	void cs_resolve_base::build(const std::string& format_prefix, bool unresolve, bool bgra_swap)
 	{
@@ -273,20 +278,19 @@ namespace vk
 		}
 
 		static const char* resolve_kernel =
-			#include "Emu/RSX/Program/MSAA/ColorResolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/ColorResolvePass.glsl"
 			;
 
 		static const char* unresolve_kernel =
-			#include "Emu/RSX/Program/MSAA/ColorUnresolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/ColorUnresolvePass.glsl"
 			;
 
 		const std::pair<std::string_view, std::string> syntax_replace[] =
-		{
-			{ "%WORKGROUP_SIZE_X", std::to_string(cs_wave_x) },
-			{ "%WORKGROUP_SIZE_Y", std::to_string(cs_wave_y) },
-			{ "%IMAGE_FORMAT", format_prefix },
-			{ "%BGRA_SWAP", bgra_swap ? "1" : "0" }
-		};
+			{
+				{"%WORKGROUP_SIZE_X", std::to_string(cs_wave_x)},
+				{"%WORKGROUP_SIZE_Y", std::to_string(cs_wave_y)},
+				{"%IMAGE_FORMAT", format_prefix},
+				{"%BGRA_SWAP", bgra_swap ? "1" : "0"}};
 
 		m_src = unresolve ? unresolve_kernel : resolve_kernel;
 		m_src = fmt::replace_all(m_src, syntax_replace);
@@ -297,31 +301,31 @@ namespace vk
 	void depth_resolve_base::build(bool resolve_depth, bool resolve_stencil, bool is_unresolve)
 	{
 		vs_src =
-			#include "Emu/RSX/Program/GLSLSnippets/GenericVSPassthrough.glsl"
+#include "Emu/RSX/Program/GLSLSnippets/GenericVSPassthrough.glsl"
 			;
 
 		static const char* depth_resolver =
-			#include "Emu/RSX/Program/MSAA/DepthResolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/DepthResolvePass.glsl"
 			;
 
 		static const char* depth_unresolver =
-			#include "Emu/RSX/Program/MSAA/DepthUnresolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/DepthUnresolvePass.glsl"
 			;
 
 		static const char* stencil_resolver =
-			#include "Emu/RSX/Program/MSAA/StencilResolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/StencilResolvePass.glsl"
 			;
 
 		static const char* stencil_unresolver =
-			#include "Emu/RSX/Program/MSAA/StencilUnresolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/StencilUnresolvePass.glsl"
 			;
 
 		static const char* depth_stencil_resolver =
-			#include "Emu/RSX/Program/MSAA/DepthStencilResolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/DepthStencilResolvePass.glsl"
 			;
 
 		static const char* depth_stencil_unresolver =
-			#include "Emu/RSX/Program/MSAA/DepthStencilUnresolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/DepthStencilUnresolvePass.glsl"
 			;
 
 		if (resolve_depth && resolve_stencil)
@@ -339,4 +343,4 @@ namespace vk
 
 		rsx_log.notice("Resolve shader:\n%s", fs_src);
 	}
-}
+} // namespace vk

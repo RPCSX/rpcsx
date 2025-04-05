@@ -16,7 +16,7 @@ debugger_add_bp_window::debugger_add_bp_window(breakpoint_list* bp_list, QWidget
 	: QDialog(parent)
 {
 	ensure(bp_list);
-	
+
 	setWindowTitle(tr("Add a breakpoint"));
 	setModal(true);
 

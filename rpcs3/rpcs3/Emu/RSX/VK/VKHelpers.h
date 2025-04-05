@@ -8,7 +8,7 @@
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/rsx_utils.h"
 
-#define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
+#define OCCLUSION_MAX_POOL_SIZE DESCRIPTOR_MAX_DRAW_CALLS
 
 namespace rsx
 {
@@ -30,8 +30,8 @@ namespace vk
 	enum runtime_state
 	{
 		uninterruptible = 1,
-		heap_dirty      = 2,
-		heap_changed    = 4,
+		heap_dirty = 2,
+		heap_changed = 4,
 	};
 
 	struct image_readback_options_t
@@ -42,12 +42,15 @@ namespace vk
 			u64 offset = 0;
 			u64 length = 0;
 
-			operator bool() const { return length != 0; }
-		} sync_region {};
+			operator bool() const
+			{
+				return length != 0;
+			}
+		} sync_region{};
 	};
 
-	const vk::render_device *get_current_renderer();
-	void set_current_renderer(const vk::render_device &device);
+	const vk::render_device* get_current_renderer();
+	void set_current_renderer(const vk::render_device& device);
 
 	// Compatibility workarounds
 	bool emulate_primitive_restart(rsx::primitive_type type);
@@ -63,7 +66,7 @@ namespace vk
 	void release_global_submit_lock();
 	void queue_submit(const vk::queue_submit_t* packet);
 
-	template<class T>
+	template <class T>
 	T* get_compute_task();
 
 	void destroy_global_resources();
@@ -71,19 +74,19 @@ namespace vk
 
 	enum image_upload_options
 	{
-		upload_contents_async   = 1,
+		upload_contents_async = 1,
 		initialize_image_layout = 2,
-		preserve_image_layout   = 4,
-		source_is_gpu_resident  = 8,
+		preserve_image_layout = 4,
+		source_is_gpu_resident = 8,
 
 		// meta-flags
-		upload_contents_inline    = 0,
+		upload_contents_inline = 0,
 		upload_heap_align_default = 0
 	};
 
 	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 layer_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
+		VkImageAspectFlags flags, vk::data_heap& upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
 
 	std::pair<buffer*, u32> detile_memory_block(
 		const vk::command_buffer& cmd, const rsx::GCM_tile_reference& tiled_region, const utils::address_range& range,
@@ -92,18 +95,18 @@ namespace vk
 	// Other texture management helpers
 	void copy_image_to_buffer(const vk::command_buffer& cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, const image_readback_options_t& options = {});
 	void copy_buffer_to_image(const vk::command_buffer& cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
-	u64  calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect);
+	u64 calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect);
 
-	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
+	void copy_image_typeless(const command_buffer& cmd, image* src, image* dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
-			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+		const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_scaled_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
-			bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR);
+		const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+		bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 
@@ -128,4 +131,4 @@ namespace vk
 	{
 		void scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, const rsx::typeless_xfer& xfer_info);
 	};
-}
+} // namespace vk

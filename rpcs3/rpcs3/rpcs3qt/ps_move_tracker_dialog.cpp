@@ -27,8 +27,7 @@ static const constexpr f64 max_radius_conversion = radius_range / g_cfg_move.max
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
 ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
-	: QDialog(parent)
-	, ui(new Ui::ps_move_tracker_dialog)
+	: QDialog(parent), ui(new Ui::ps_move_tracker_dialog)
 {
 	ui->setupUi(this);
 
@@ -40,23 +39,23 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, this, [this](QAbstractButton* button)
-	{
-		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
-			g_cfg_move.save();
-		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
-		{
-			g_cfg_move.save();
-		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::Close))
-		{
-			if (!g_cfg_move.load())
+			if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 			{
-				ps_move.notice("Could not load PS Move config. Using defaults.");
+				g_cfg_move.save();
 			}
-		}
-	});
+			else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
+			{
+				g_cfg_move.save();
+			}
+			else if (button == ui->buttonBox->button(QDialogButtonBox::Close))
+			{
+				if (!g_cfg_move.load())
+				{
+					ps_move.notice("Could not load PS Move config. Using defaults.");
+				}
+			}
+		});
 
 	m_format = CELL_CAMERA_RGBA;
 	ui->inputFormatCombo->addItem(tr("RGBA"), static_cast<int>(CELL_CAMERA_RGBA));
@@ -64,14 +63,15 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	ui->inputFormatCombo->setCurrentIndex(ui->inputFormatCombo->findData(m_format));
 
 	connect(ui->inputFormatCombo, &QComboBox::currentIndexChanged, this, [this](int index)
-	{
-		if (index < 0) return;
-		if (const auto qvar = ui->inputFormatCombo->currentData(); qvar.canConvert<int>())
 		{
-			m_format = qvar.toInt();
-			reset_camera();
-		}
-	});
+			if (index < 0)
+				return;
+			if (const auto qvar = ui->inputFormatCombo->currentData(); qvar.canConvert<int>())
+			{
+				m_format = qvar.toInt();
+				reset_camera();
+			}
+		});
 
 	ui->viewCombo->addItem(tr("Image"), static_cast<int>(view_mode::image));
 	ui->viewCombo->addItem(tr("Grayscale"), static_cast<int>(view_mode::grayscale));
@@ -83,119 +83,121 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	ui->viewCombo->setCurrentIndex(ui->viewCombo->findData(static_cast<int>(m_view_mode)));
 
 	connect(ui->viewCombo, &QComboBox::currentIndexChanged, this, [this](int index)
-	{
-		if (index < 0) return;
-		if (const auto qvar = ui->viewCombo->currentData(); qvar.canConvert<int>())
 		{
-			m_view_mode = static_cast<view_mode>(qvar.toInt());
-		}
-	});
+			if (index < 0)
+				return;
+			if (const auto qvar = ui->viewCombo->currentData(); qvar.canConvert<int>())
+			{
+				m_view_mode = static_cast<view_mode>(qvar.toInt());
+			}
+		});
 
 	ui->histoCombo->addItem(tr("Hues"), static_cast<int>(histo_mode::unfiltered_hues));
 	ui->histoCombo->setCurrentIndex(ui->viewCombo->findData(static_cast<int>(m_histo_mode)));
 
 	connect(ui->histoCombo, &QComboBox::currentIndexChanged, this, [this](int index)
-	{
-		if (index < 0) return;
-		if (const auto qvar = ui->histoCombo->currentData(); qvar.canConvert<int>())
 		{
-			m_histo_mode = static_cast<histo_mode>(qvar.toInt());
-		}
-	});
+			if (index < 0)
+				return;
+			if (const auto qvar = ui->histoCombo->currentData(); qvar.canConvert<int>())
+			{
+				m_histo_mode = static_cast<histo_mode>(qvar.toInt());
+			}
+		});
 
 	connect(ui->hueSlider, &QSlider::valueChanged, this, [this](int value)
-	{
-		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
-		const u16 hue = std::clamp<u16>(value, config->hue.min, config->hue.max);
-		config->hue.set(hue);
-		update_hue();
-	});
+		{
+			cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+			const u16 hue = std::clamp<u16>(value, config->hue.min, config->hue.max);
+			config->hue.set(hue);
+			update_hue();
+		});
 	ui->hueSlider->setRange(g_cfg_move.move1.hue.min, g_cfg_move.move1.hue.max);
 
 	connect(ui->hueThresholdSlider, &QSlider::valueChanged, this, [this](int value)
-	{
-		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
-		const u16 hue_threshold = std::clamp<u16>(value, config->hue_threshold.min, config->hue_threshold.max);
-		config->hue_threshold.set(hue_threshold);
-		update_hue_threshold();
-	});
+		{
+			cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+			const u16 hue_threshold = std::clamp<u16>(value, config->hue_threshold.min, config->hue_threshold.max);
+			config->hue_threshold.set(hue_threshold);
+			update_hue_threshold();
+		});
 	ui->hueThresholdSlider->setRange(g_cfg_move.move1.hue_threshold.min, g_cfg_move.move1.hue_threshold.max);
 
 	connect(ui->saturationThresholdSlider, &QSlider::valueChanged, this, [this](int value)
-	{
-		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
-		const u16 saturation_threshold = std::clamp<u16>(value, config->saturation_threshold.min, config->saturation_threshold.max);
-		config->saturation_threshold.set(saturation_threshold);
-		update_saturation_threshold();
-	});
+		{
+			cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+			const u16 saturation_threshold = std::clamp<u16>(value, config->saturation_threshold.min, config->saturation_threshold.max);
+			config->saturation_threshold.set(saturation_threshold);
+			update_saturation_threshold();
+		});
 	ui->saturationThresholdSlider->setRange(g_cfg_move.move1.saturation_threshold.min, g_cfg_move.move1.saturation_threshold.max);
 
 	connect(ui->minRadiusSlider, &QSlider::valueChanged, this, [this](int value)
-	{
-		const f32 min_radius = std::clamp(value / min_radius_conversion, g_cfg_move.min_radius.min, g_cfg_move.min_radius.max);
-		g_cfg_move.min_radius.set(min_radius);
-		update_min_radius();
-	});
+		{
+			const f32 min_radius = std::clamp(value / min_radius_conversion, g_cfg_move.min_radius.min, g_cfg_move.min_radius.max);
+			g_cfg_move.min_radius.set(min_radius);
+			update_min_radius();
+		});
 	ui->minRadiusSlider->setRange(0, radius_range);
 
 	connect(ui->maxRadiusSlider, &QSlider::valueChanged, this, [this](int value)
-	{
-		const f32 max_radius = std::clamp(value / max_radius_conversion, g_cfg_move.max_radius.min, g_cfg_move.max_radius.max);
-		g_cfg_move.max_radius.set(max_radius);
-		update_max_radius();
-	});
+		{
+			const f32 max_radius = std::clamp(value / max_radius_conversion, g_cfg_move.max_radius.min, g_cfg_move.max_radius.max);
+			g_cfg_move.max_radius.set(max_radius);
+			update_max_radius();
+		});
 	ui->maxRadiusSlider->setRange(0, radius_range);
 
 	connect(ui->colorSliderR, &QSlider::valueChanged, this, [this](int value)
-	{
-		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
-		config->r.set(std::clamp<u8>(value, config->r.min, config->r.max));
-		update_color();
-	});
+		{
+			cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+			config->r.set(std::clamp<u8>(value, config->r.min, config->r.max));
+			update_color();
+		});
 	connect(ui->colorSliderG, &QSlider::valueChanged, this, [this](int value)
-	{
-		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
-		config->g.set(std::clamp<u8>(value, config->g.min, config->g.max));
-		update_color();
-	});
+		{
+			cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+			config->g.set(std::clamp<u8>(value, config->g.min, config->g.max));
+			update_color();
+		});
 	connect(ui->colorSliderB, &QSlider::valueChanged, this, [this](int value)
-	{
-		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
-		config->b.set(std::clamp<u8>(value, config->b.min, config->b.max));
-		update_color();
-	});
+		{
+			cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+			config->b.set(std::clamp<u8>(value, config->b.min, config->b.max));
+			update_color();
+		});
 	ui->colorSliderR->setRange(g_cfg_move.move1.r.min, g_cfg_move.move1.r.max);
 	ui->colorSliderG->setRange(g_cfg_move.move1.g.min, g_cfg_move.move1.g.max);
 	ui->colorSliderB->setRange(g_cfg_move.move1.b.min, g_cfg_move.move1.b.max);
 
 	connect(ui->filterSmallContoursBox, &QCheckBox::toggled, [this](bool checked)
-	{
-		m_filter_small_contours = checked;
-	});
+		{
+			m_filter_small_contours = checked;
+		});
 	ui->filterSmallContoursBox->setChecked(m_filter_small_contours);
 
 	connect(ui->freezeFrameBox, &QCheckBox::toggled, [this](bool checked)
-	{
-		m_freeze_frame = checked;
-	});
+		{
+			m_freeze_frame = checked;
+		});
 	ui->freezeFrameBox->setChecked(m_freeze_frame);
 
 	connect(ui->showAllContoursBox, &QCheckBox::toggled, [this](bool checked)
-	{
-		m_show_all_contours = checked;
-	});
+		{
+			m_show_all_contours = checked;
+		});
 	ui->showAllContoursBox->setChecked(m_show_all_contours);
 
 	connect(ui->drawContoursBox, &QCheckBox::toggled, [this](bool checked)
-	{
-		m_draw_contours = checked;
-	});
+		{
+			m_draw_contours = checked;
+		});
 	ui->drawContoursBox->setChecked(m_draw_contours);
 
 	connect(ui->drawOverlaysBox, &QCheckBox::toggled, [this](bool checked)
-	{
-		m_draw_overlays = checked;
-	});
+		{
+			m_draw_overlays = checked;
+		});
 	ui->drawOverlaysBox->setChecked(m_draw_overlays);
 
 	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
@@ -205,36 +207,40 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	ui->comboSelectDevice->setCurrentIndex(ui->comboSelectDevice->findData(m_index));
 
 	connect(ui->comboSelectDevice, &QComboBox::currentIndexChanged, this, [this](int index)
-	{
-		if (index < 0) return;
-		if (const auto qvar = ui->comboSelectDevice->currentData(); qvar.canConvert<int>())
 		{
-			m_index = qvar.toInt();
-			update_color(true);
-			update_hue(true);
-			update_hue_threshold(true);
-			update_saturation_threshold(true);
-		}
-	});
+			if (index < 0)
+				return;
+			if (const auto qvar = ui->comboSelectDevice->currentData(); qvar.canConvert<int>())
+			{
+				m_index = qvar.toInt();
+				update_color(true);
+				update_hue(true);
+				update_hue_threshold(true);
+				update_saturation_threshold(true);
+			}
+		});
 
 	m_ps_move_tracker = std::make_unique<ps_move_tracker<true>>();
 
 	m_update_timer = new QTimer(this);
 	connect(m_update_timer, &QTimer::timeout, this, [this]()
-	{
-		std::lock_guard lock(m_image_mutex);
+		{
+			std::lock_guard lock(m_image_mutex);
 
-		if (m_image.isNull() || m_histogram.isNull())
-			return;
+			if (m_image.isNull() || m_histogram.isNull())
+				return;
 
-		ui->imageLabel->setPixmap(m_image);
-		ui->histogramLabel->setPixmap(m_histogram);
-	});
+			ui->imageLabel->setPixmap(m_image);
+			ui->histogramLabel->setPixmap(m_histogram);
+		});
 
 	reset_camera();
 
 	m_input_thread = std::make_unique<named_thread<pad_thread>>(thread(), window(), "");
-	qt_events_aware_op(0, [](){ return !!pad::g_started; });
+	qt_events_aware_op(0, []()
+		{
+			return !!pad::g_started;
+		});
 
 	adjustSize();
 
@@ -248,9 +254,9 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	if constexpr (!g_ps_move_tracking_supported)
 	{
 		QTimer::singleShot(1000, this, [this]()
-		{
-			QMessageBox::warning(this, QObject::tr("Tracking not supported!"), QObject::tr("The PS Move tracking is not yet supported on this operating system."));
-		});
+			{
+				QMessageBox::warning(this, QObject::tr("Tracking not supported!"), QObject::tr("The PS Move tracking is not yet supported on this operating system."));
+			});
 	}
 }
 
@@ -408,12 +414,12 @@ void ps_move_tracker_dialog::reset_camera()
 	m_update_timer->start(1000 / 60);
 
 	m_tracker_thread.reset(QThread::create([this]()
-	{
-		while (!m_stop_threads)
 		{
-			process_camera_frame();
-		}
-	}));
+			while (!m_stop_threads)
+			{
+				process_camera_frame();
+			}
+		}));
 	m_tracker_thread->start();
 }
 
@@ -596,7 +602,8 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 	for (int i = zero_offset; i < static_cast<int>(hues.size()); i++)
 	{
 		const int bar_height = (hues[i] / static_cast<float>(max_value)) * height;
-		if (bar_height <= 0) continue;
+		if (bar_height <= 0)
+			continue;
 		painter.drawLine(i, height - 1, i, height - bar_height);
 	}
 

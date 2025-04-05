@@ -7,7 +7,7 @@
 namespace fmt
 {
 	template <typename CharT, usz N, typename... Args>
-	static std::string format(const CharT(&)[N], const Args&...);
+	static std::string format(const CharT (&)[N], const Args&...);
 
 #ifdef _WIN32
 	struct win_error
@@ -20,7 +20,7 @@ namespace fmt
 	std::string win_error_to_string(unsigned long error, void* module_handle = nullptr);
 	std::string win_error_to_string(const win_error& error);
 #endif
-}
+} // namespace fmt
 
 template <typename T>
 struct fmt_unveil
@@ -146,7 +146,7 @@ struct fmt_class_string
 	}
 
 	// Enum -> string function type
-	using convert_t = const char*(*)(T value);
+	using convert_t = const char* (*)(T value);
 
 	// Helper function (safely converts arg to enum value)
 	static FORCE_INLINE SAFE_BUFFERS(void) format_enum(std::string& out, u64 arg, convert_t convert)
@@ -250,11 +250,10 @@ struct fmt_class_string<wchar_t*> : fmt_class_string<const wchar_t*>
 namespace fmt
 {
 	template <typename T>
-	concept StringConvertible = requires (T & t)
-	{
+	concept StringConvertible = requires(T& t) {
 		{ t.to_string() } -> std::convertible_to<std::string>;
 	};
-}
+} // namespace fmt
 
 template <fmt::StringConvertible T>
 struct fmt_class_string<T>
@@ -274,8 +273,8 @@ namespace fmt
 {
 	// Both uchar and std::byte are allowed
 	template <typename T>
-	concept ByteArray = requires (T& t) { const_cast<std::conditional_t<std::is_same_v<decltype(std::as_const(t[0])), const std::byte&>, std::byte, uchar>&>(std::data(t)[0]); };
-}
+	concept ByteArray = requires(T& t) { const_cast<std::conditional_t<std::is_same_v<decltype(std::as_const(t[0])), const std::byte&>, std::byte, uchar>&>(std::data(t)[0]); };
+} // namespace fmt
 
 template <fmt::ByteArray T>
 struct fmt_class_string<T>
@@ -301,8 +300,7 @@ struct fmt_type_info
 	template <typename T>
 	static constexpr fmt_type_info make()
 	{
-		return fmt_type_info
-		{
+		return fmt_type_info{
 			&fmt_class_string<T>::format,
 		};
 	}
@@ -310,7 +308,7 @@ struct fmt_type_info
 
 // Argument array type (each element generated via fmt_unveil<>)
 template <typename... Args>
-using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
+using fmt_args_t = const u64 (&&)[sizeof...(Args) + 1];
 
 template <typename Arg>
 using fmt_unveil_t = typename fmt_unveil<Arg>::type;
@@ -327,14 +325,12 @@ namespace fmt
 
 		template <typename T>
 		base57(const T& arg) noexcept
-			: data(reinterpret_cast<const uchar*>(std::addressof(arg)))
-			, size(sizeof(T))
+			: data(reinterpret_cast<const uchar*>(std::addressof(arg))), size(sizeof(T))
 		{
 		}
 
 		base57(const uchar* data, usz size) noexcept
-			: data(data)
-			, size(size)
+			: data(data), size(size)
 		{
 		}
 	};
@@ -348,8 +344,7 @@ namespace fmt
 		base57_result& operator=(base57_result&&) = default;
 
 		explicit base57_result(usz size) noexcept
-			: base57(size ? new uchar[size] : nullptr, size)
-			, memory(const_cast<uchar*>(this->data))
+			: base57(size ? new uchar[size] : nullptr, size), memory(const_cast<uchar*>(this->data))
 		{
 		}
 
@@ -364,14 +359,14 @@ namespace fmt
 
 	// Formatting function
 	template <typename CharT, usz N, typename... Args>
-	FORCE_INLINE SAFE_BUFFERS(void) append(std::string& out, const CharT(&fmt)[N], const Args&... args)
+	FORCE_INLINE SAFE_BUFFERS(void) append(std::string& out, const CharT (&fmt)[N], const Args&... args)
 	{
 		raw_append(out, reinterpret_cast<const char*>(fmt), type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 
 	// Formatting function
 	template <typename CharT, usz N, typename... Args>
-	FORCE_INLINE SAFE_BUFFERS(std::string) format(const CharT(&fmt)[N], const Args&... args)
+	FORCE_INLINE SAFE_BUFFERS(std::string) format(const CharT (&fmt)[N], const Args&... args)
 	{
 		std::string result;
 		append(result, fmt, args...);
@@ -385,9 +380,11 @@ namespace fmt
 	template <typename CharT, usz N, typename... Args>
 	struct throw_exception
 	{
-		struct args_break_t {};
+		struct args_break_t
+		{
+		};
 
-		[[noreturn]] FORCE_INLINE SAFE_BUFFERS() throw_exception(const CharT(&fmt)[N], const Args&... args,
+		[[noreturn]] FORCE_INLINE SAFE_BUFFERS() throw_exception(const CharT (&fmt)[N], const Args&... args,
 			args_break_t = args_break_t{}, std::source_location src_loc = std::source_location::current())
 		{
 			raw_throw_exception(src_loc, reinterpret_cast<const char*>(fmt), type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
@@ -399,7 +396,7 @@ namespace fmt
 	};
 
 	template <typename CharT, usz N, typename... Args>
-	throw_exception(const CharT(&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
+	throw_exception(const CharT (&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
 
 	// Helper template: pack format variables
 	template <typename Arg = void, typename... Args>
@@ -412,8 +409,7 @@ namespace fmt
 
 		// Store only references, unveil op is postponed
 		tie(Arg&& arg, Args&&... args) noexcept
-			: arg(std::forward<Arg>(arg))
-			, next(std::forward<Args>(args)...)
+			: arg(std::forward<Arg>(arg)), next(std::forward<Args>(args)...)
 		{
 		}
 
@@ -445,7 +441,7 @@ namespace fmt
 
 	// Ensure with formatting
 	template <typename T, typename CharT, usz N, typename... Args>
-	decltype(auto) ensure(T&& arg, const CharT(&fmt)[N], tie<Args...> args, std::source_location src_loc = std::source_location::current()) noexcept
+	decltype(auto) ensure(T&& arg, const CharT (&fmt)[N], tie<Args...> args, std::source_location src_loc = std::source_location::current()) noexcept
 	{
 		if (std::forward<T>(arg)) [[likely]]
 		{
@@ -458,4 +454,4 @@ namespace fmt
 
 		raw_throw_exception(src_loc, reinterpret_cast<const char*>(fmt), type_info_v<std::remove_cvref_t<Args>...>, +data);
 	}
-}
+} // namespace fmt

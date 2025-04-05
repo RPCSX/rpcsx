@@ -14,25 +14,25 @@
 
 LOG_CHANNEL(cellAvconfExt);
 
-template<>
+template <>
 void fmt_class_string<CellAudioInError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_AUDIO_IN_ERROR_NOT_IMPLEMENTED);
-			STR_CASE(CELL_AUDIO_IN_ERROR_ILLEGAL_CONFIGURATION);
-			STR_CASE(CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER);
-			STR_CASE(CELL_AUDIO_IN_ERROR_PARAMETER_OUT_OF_RANGE);
-			STR_CASE(CELL_AUDIO_IN_ERROR_DEVICE_NOT_FOUND);
-			STR_CASE(CELL_AUDIO_IN_ERROR_UNSUPPORTED_AUDIO_IN);
-			STR_CASE(CELL_AUDIO_IN_ERROR_UNSUPPORTED_SOUND_MODE);
-			STR_CASE(CELL_AUDIO_IN_ERROR_CONDITION_BUSY);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_AUDIO_IN_ERROR_NOT_IMPLEMENTED);
+				STR_CASE(CELL_AUDIO_IN_ERROR_ILLEGAL_CONFIGURATION);
+				STR_CASE(CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER);
+				STR_CASE(CELL_AUDIO_IN_ERROR_PARAMETER_OUT_OF_RANGE);
+				STR_CASE(CELL_AUDIO_IN_ERROR_DEVICE_NOT_FOUND);
+				STR_CASE(CELL_AUDIO_IN_ERROR_UNSUPPORTED_AUDIO_IN);
+				STR_CASE(CELL_AUDIO_IN_ERROR_UNSUPPORTED_SOUND_MODE);
+				STR_CASE(CELL_AUDIO_IN_ERROR_CONDITION_BUSY);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct avconf_manager
@@ -66,15 +66,15 @@ avconf_manager::avconf_manager()
 			{
 				devices.emplace_back();
 
-				devices[curindex].portType                  = CELL_AUDIO_IN_PORT_USB;
-				devices[curindex].availableModeCount        = 1;
-				devices[curindex].state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
-				devices[curindex].deviceId                  = 0xE11CC0DE + curindex;
-				devices[curindex].type                      = 0xC0DEE11C;
-				devices[curindex].availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+				devices[curindex].portType = CELL_AUDIO_IN_PORT_USB;
+				devices[curindex].availableModeCount = 1;
+				devices[curindex].state = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+				devices[curindex].deviceId = 0xE11CC0DE + curindex;
+				devices[curindex].type = 0xC0DEE11C;
+				devices[curindex].availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
 				devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
-				devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
-				devices[curindex].deviceNumber              = curindex;
+				devices[curindex].availableModes[0].fs = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+				devices[curindex].deviceNumber = curindex;
 				strcpy_trunc(devices[curindex].name, mic_list[index]);
 
 				curindex++;
@@ -85,15 +85,15 @@ avconf_manager::avconf_manager()
 			// Only one device for singstar device
 			devices.emplace_back();
 
-			devices[curindex].portType                  = CELL_AUDIO_IN_PORT_USB;
-			devices[curindex].availableModeCount        = 1;
-			devices[curindex].state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
-			devices[curindex].deviceId                  = 0x00000001;
-			devices[curindex].type                      = 0x14150000;
-			devices[curindex].availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+			devices[curindex].portType = CELL_AUDIO_IN_PORT_USB;
+			devices[curindex].availableModeCount = 1;
+			devices[curindex].state = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+			devices[curindex].deviceId = 0x00000001;
+			devices[curindex].type = 0x14150000;
+			devices[curindex].availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
 			devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
-			devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
-			devices[curindex].deviceNumber              = curindex;
+			devices[curindex].availableModes[0].fs = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+			devices[curindex].deviceNumber = curindex;
 			strcpy_trunc(devices[curindex].name, mic_list[0]);
 
 			curindex++;
@@ -101,15 +101,15 @@ avconf_manager::avconf_manager()
 		case microphone_handler::rocksmith:
 			devices.emplace_back();
 
-			devices[curindex].portType                  = CELL_AUDIO_IN_PORT_USB;
-			devices[curindex].availableModeCount        = 1;
-			devices[curindex].state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
-			devices[curindex].deviceId                  = 0x12BA00FF; // Specific to rocksmith usb input
-			devices[curindex].type                      = 0xC0DE73C4;
-			devices[curindex].availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+			devices[curindex].portType = CELL_AUDIO_IN_PORT_USB;
+			devices[curindex].availableModeCount = 1;
+			devices[curindex].state = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+			devices[curindex].deviceId = 0x12BA00FF; // Specific to rocksmith usb input
+			devices[curindex].type = 0xC0DE73C4;
+			devices[curindex].availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
 			devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_1;
-			devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
-			devices[curindex].deviceNumber              = curindex;
+			devices[curindex].availableModes[0].fs = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+			devices[curindex].deviceNumber = curindex;
 			strcpy_trunc(devices[curindex].name, mic_list[0]);
 
 			curindex++;
@@ -123,15 +123,15 @@ avconf_manager::avconf_manager()
 	{
 		devices.emplace_back();
 
-		devices[curindex].portType                  = CELL_AUDIO_IN_PORT_USB;
-		devices[curindex].availableModeCount        = 1;
-		devices[curindex].state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
-		devices[curindex].deviceId                  = 0xDEADBEEF;
-		devices[curindex].type                      = 0xBEEFDEAD;
-		devices[curindex].availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+		devices[curindex].portType = CELL_AUDIO_IN_PORT_USB;
+		devices[curindex].availableModeCount = 1;
+		devices[curindex].state = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+		devices[curindex].deviceId = 0xDEADBEEF;
+		devices[curindex].type = 0xBEEFDEAD;
+		devices[curindex].availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
 		devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_NONE;
-		devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
-		devices[curindex].deviceNumber              = curindex;
+		devices[curindex].availableModes[0].fs = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+		devices[curindex].deviceNumber = curindex;
 		strcpy_trunc(devices[curindex].name, "USB Camera");
 
 		curindex++;
@@ -223,7 +223,7 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 error_code cellVideoOutConvertCursorColor(u32 videoOut, s32 displaybuffer_format, f32 gamma, s32 source_buffer_format, vm::ptr<void> src_addr, vm::ptr<u32> dest_addr, s32 num)
 {
 	cellAvconfExt.todo("cellVideoOutConvertCursorColor(videoOut=%d, displaybuffer_format=0x%x, gamma=0x%x, source_buffer_format=0x%x, src_addr=*0x%x, dest_addr=*0x%x, num=0x%x)", videoOut,
-			displaybuffer_format, gamma, source_buffer_format, src_addr, dest_addr, num);
+		displaybuffer_format, gamma, source_buffer_format, src_addr, dest_addr, num);
 
 	if (!dest_addr || num == 0)
 	{
@@ -517,26 +517,26 @@ error_code cellVideoOutGetResolutionAvailability2()
 }
 
 DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
-{
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutUnregisterDevice);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetDeviceInfo2);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetXVColor);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetupDisplay);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioInGetDeviceInfo);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutConvertCursorColor);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetGamma);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioInGetAvailableDeviceInfo);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetAvailableDeviceInfo);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetGamma);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutRegisterDevice);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutSetDeviceMode);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioInSetDeviceMode);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioInRegisterDevice);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioInUnregisterDevice);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetScreenSize);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetCopyControl);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutConfigure2);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetConfiguration2);
-	REG_FUNC(cellSysutilAvconfExt, cellAudioOutConfigure2);
-	REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetResolutionAvailability2);
-});
+	{
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutUnregisterDevice);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetDeviceInfo2);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetXVColor);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetupDisplay);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioInGetDeviceInfo);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutConvertCursorColor);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetGamma);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioInGetAvailableDeviceInfo);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetAvailableDeviceInfo);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetGamma);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutRegisterDevice);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutSetDeviceMode);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioInSetDeviceMode);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioInRegisterDevice);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioInUnregisterDevice);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetScreenSize);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetCopyControl);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutConfigure2);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetConfiguration2);
+		REG_FUNC(cellSysutilAvconfExt, cellAudioOutConfigure2);
+		REG_FUNC(cellSysutilAvconfExt, cellVideoOutGetResolutionAvailability2);
+	});

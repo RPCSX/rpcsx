@@ -21,7 +21,7 @@ class flow_widget_item : public QWidget
 {
 	Q_OBJECT
 
-	Q_PROPERTY(bool hover MEMBER m_hover) // Stylesheet workaround for descendants with parent pseudo state
+	Q_PROPERTY(bool hover MEMBER m_hover)     // Stylesheet workaround for descendants with parent pseudo state
 	Q_PROPERTY(bool selected MEMBER selected) // Stylesheet workaround for descendants with parent pseudo state
 
 public:

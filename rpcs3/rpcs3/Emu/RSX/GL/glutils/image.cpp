@@ -164,7 +164,7 @@ namespace gl
 
 		m_target = static_cast<texture::target>(target);
 		m_internal_format = static_cast<internal_format>(sized_format);
-		m_component_layout = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
+		m_component_layout = {GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE};
 		m_format_class = format_class;
 	}
 
@@ -213,7 +213,7 @@ namespace gl
 				for (unsigned face = region.z; face < end; ++face)
 				{
 					glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), ptr);
-					ptr += (region.width * region.height * 4); //TODO
+					ptr += (region.width * region.height * 4); // TODO
 				}
 			}
 			break;
@@ -247,24 +247,24 @@ namespace gl
 			region.width == m_width && region.height == m_height && region.depth == m_depth)
 		{
 			if (caps.ARB_direct_state_access_supported)
-				glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst);
+				glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), s32{smax}, dst);
 			else
 				glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
 		}
 		else if (caps.ARB_direct_state_access_supported)
 		{
 			glGetTextureSubImage(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth,
-				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst);
+				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{smax}, dst);
 		}
 		else
 		{
 			// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
 			const auto target_ = static_cast<GLenum>(m_target);
-			texture tmp{ target_, region.width, region.height, region.depth, 1, 1, static_cast<GLenum>(m_internal_format), m_format_class };
+			texture tmp{target_, region.width, region.height, region.depth, 1, 1, static_cast<GLenum>(m_internal_format), m_format_class};
 			glCopyImageSubData(m_id, target_, level, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
 				region.width, region.height, region.depth);
 
-			const coord3u region2 = { {0, 0, 0}, region.size };
+			const coord3u region2 = {{0, 0, 0}, region.size};
 			tmp.copy_to(dst, format, type, 0, region2, pixel_settings);
 		}
 	}
@@ -383,4 +383,4 @@ namespace gl
 			views.clear();
 		}
 	}
-}
+} // namespace gl

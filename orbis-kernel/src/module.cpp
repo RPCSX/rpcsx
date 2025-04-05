@@ -203,7 +203,8 @@ static orbis::SysResult doRelocation(orbis::Process *process,
 
     auto &defModule = module->importedModules.at(symbol.moduleIndex);
     if (!defModule) {
-      // std::printf("'%s' ('%s') uses undefined symbol '%llx' in unloaded module "
+      // std::printf("'%s' ('%s') uses undefined symbol '%llx' in unloaded
+      // module "
       //             "'%s', rel %u\n",
       //             module->moduleName, module->soName,
       //             (unsigned long long)symbol.id,
@@ -295,7 +296,8 @@ static orbis::SysResult doRelocation(orbis::Process *process,
     if (defObj == nullptr) {
       return orbis::ErrorCode::INVAL;
     }
-    *where32 = S ? reinterpret_cast<std::uintptr_t>(defObj->base) + S + A - P : 0;
+    *where32 =
+        S ? reinterpret_cast<std::uintptr_t>(defObj->base) + S + A - P : 0;
     return {};
   }
   // case kRelCopy:

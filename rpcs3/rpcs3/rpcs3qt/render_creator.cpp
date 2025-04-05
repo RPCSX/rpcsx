@@ -15,7 +15,7 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-render_creator::render_creator(QObject *parent) : QObject(parent)
+render_creator::render_creator(QObject* parent) : QObject(parent)
 {
 #if defined(HAVE_VULKAN)
 	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
@@ -31,54 +31,57 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	static bool work_done = false;
 
 	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [&, adapters = &this->vulkan_adapters]()
-	{
-		thread_ctrl::scoped_priority low_prio(-1);
-
-		vk::instance device_enum_context;
-
-		std::unique_lock lock(mtx, std::defer_lock);
-
-		if (device_enum_context.create("RPCS3", true))
 		{
-			device_enum_context.bind();
-			const std::vector<vk::physical_device>& gpus = device_enum_context.enumerate_devices();
+			thread_ctrl::scoped_priority low_prio(-1);
 
-			lock.lock();
+			vk::instance device_enum_context;
 
-			if (!work_done) // The spawning thread gave up, do not attempt to modify vulkan_adapters
+			std::unique_lock lock(mtx, std::defer_lock);
+
+			if (device_enum_context.create("RPCS3", true))
 			{
-				for (const auto& gpu : gpus)
+				device_enum_context.bind();
+				const std::vector<vk::physical_device>& gpus = device_enum_context.enumerate_devices();
+
+				lock.lock();
+
+				if (!work_done) // The spawning thread gave up, do not attempt to modify vulkan_adapters
 				{
-					adapters->append(QString::fromStdString(gpu.get_name()));
+					for (const auto& gpu : gpus)
+					{
+						adapters->append(QString::fromStdString(gpu.get_name()));
+					}
 				}
 			}
-		}
-		else
-		{
-			lock.lock();
-		}
+			else
+			{
+				lock.lock();
+			}
 
-		work_done = true;
-		lock.unlock();
-		cond.notify_all();
-	});
+			work_done = true;
+			lock.unlock();
+			cond.notify_all();
+		});
 
 	std::unique_ptr<std::remove_pointer_t<decltype(enum_thread_v)>> enum_thread(enum_thread_v);
 
 	if ([&]()
-	{
-		std::unique_lock lck(mtx);
-		cond.wait_for(lck, std::chrono::seconds(10), [&] { return work_done; });
-		return !std::exchange(work_done, true); // If thread hasn't done its job yet, it won't anymore
-	}())
+		{
+			std::unique_lock lck(mtx);
+			cond.wait_for(lck, std::chrono::seconds(10), [&]
+				{
+					return work_done;
+				});
+			return !std::exchange(work_done, true); // If thread hasn't done its job yet, it won't anymore
+		}())
 	{
 		enum_thread.release(); // Detach thread (destructor is not called)
 
 		cfg_log.error("Vulkan device enumeration timed out");
 		const auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
 			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
-				"graphics drivers, reinstalling them could fix the issue.\n\n"
-				"Selecting ignore starts the emulator without Vulkan support."),
+			   "graphics drivers, reinstalling them could fix the issue.\n\n"
+			   "Selecting ignore starts the emulator without Vulkan support."),
 			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
 
 		if (button != QMessageBox::Ignore)
@@ -107,13 +110,13 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	if (!Vulkan.supported)
 	{
 		QMessageBox::warning(nullptr,
-							 tr("Warning"),
-							 tr("Vulkan is not supported on this Mac.\n"
-								"No graphics will be rendered."));
+			tr("Warning"),
+			tr("Vulkan is not supported on this Mac.\n"
+			   "No graphics will be rendered."));
 	}
 #endif
 
-	renderers = { &Vulkan, &OpenGL, &NullRender };
+	renderers = {&Vulkan, &OpenGL, &NullRender};
 }
 
 void render_creator::update_names(const QStringList& names)

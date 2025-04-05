@@ -25,34 +25,34 @@
 
 enum : u32
 {
-	SYS_RSXAUDIO_SERIAL_STREAM_CNT        = 4,
-	SYS_RSXAUDIO_STREAM_DATA_BLK_CNT      = 4,
-	SYS_RSXAUDIO_DATA_BLK_SIZE            = 256,
-	SYS_RSXAUDIO_STREAM_SIZE              = SYS_RSXAUDIO_DATA_BLK_SIZE * SYS_RSXAUDIO_STREAM_DATA_BLK_CNT,
-	SYS_RSXAUDIO_CH_PER_STREAM            = 2,
-	SYS_RSXAUDIO_SERIAL_MAX_CH            = 8,
-	SYS_RSXAUDIO_SPDIF_MAX_CH             = 2,
-	SYS_RSXAUDIO_STREAM_SAMPLE_CNT        = SYS_RSXAUDIO_STREAM_SIZE / SYS_RSXAUDIO_CH_PER_STREAM / sizeof(f32),
+	SYS_RSXAUDIO_SERIAL_STREAM_CNT = 4,
+	SYS_RSXAUDIO_STREAM_DATA_BLK_CNT = 4,
+	SYS_RSXAUDIO_DATA_BLK_SIZE = 256,
+	SYS_RSXAUDIO_STREAM_SIZE = SYS_RSXAUDIO_DATA_BLK_SIZE * SYS_RSXAUDIO_STREAM_DATA_BLK_CNT,
+	SYS_RSXAUDIO_CH_PER_STREAM = 2,
+	SYS_RSXAUDIO_SERIAL_MAX_CH = 8,
+	SYS_RSXAUDIO_SPDIF_MAX_CH = 2,
+	SYS_RSXAUDIO_STREAM_SAMPLE_CNT = SYS_RSXAUDIO_STREAM_SIZE / SYS_RSXAUDIO_CH_PER_STREAM / sizeof(f32),
 
-	SYS_RSXAUDIO_RINGBUF_BLK_SZ_SERIAL    = SYS_RSXAUDIO_STREAM_SIZE * SYS_RSXAUDIO_SERIAL_STREAM_CNT,
-	SYS_RSXAUDIO_RINGBUF_BLK_SZ_SPDIF     = SYS_RSXAUDIO_STREAM_SIZE,
+	SYS_RSXAUDIO_RINGBUF_BLK_SZ_SERIAL = SYS_RSXAUDIO_STREAM_SIZE * SYS_RSXAUDIO_SERIAL_STREAM_CNT,
+	SYS_RSXAUDIO_RINGBUF_BLK_SZ_SPDIF = SYS_RSXAUDIO_STREAM_SIZE,
 
-	SYS_RSXAUDIO_RINGBUF_SZ	              = 16,
+	SYS_RSXAUDIO_RINGBUF_SZ = 16,
 
-	SYS_RSXAUDIO_AVPORT_CNT               = 5,
+	SYS_RSXAUDIO_AVPORT_CNT = 5,
 
-	SYS_RSXAUDIO_FREQ_BASE_384K           = 384000,
-	SYS_RSXAUDIO_FREQ_BASE_352K           = 352800,
+	SYS_RSXAUDIO_FREQ_BASE_384K = 384000,
+	SYS_RSXAUDIO_FREQ_BASE_352K = 352800,
 
-	SYS_RSXAUDIO_PORT_CNT                 = 3,
+	SYS_RSXAUDIO_PORT_CNT = 3,
 
-	SYS_RSXAUDIO_SPDIF_CNT                = 2,
+	SYS_RSXAUDIO_SPDIF_CNT = 2,
 };
 
 enum class RsxaudioAvportIdx : u8
 {
-	HDMI_0  = 0,
-	HDMI_1  = 1,
+	HDMI_0 = 0,
+	HDMI_1 = 1,
 	AVMULTI = 2,
 	SPDIF_0 = 3,
 	SPDIF_1 = 4,
@@ -60,7 +60,7 @@ enum class RsxaudioAvportIdx : u8
 
 enum class RsxaudioPort : u8
 {
-	SERIAL  = 0,
+	SERIAL = 0,
 	SPDIF_0 = 1,
 	SPDIF_1 = 2,
 	INVALID = 0xFF,
@@ -152,7 +152,7 @@ enum rsxaudio_dma_flag : u32
 
 struct lv2_rsxaudio final : lv2_obj
 {
-	static constexpr u32 id_base   = 0x60000000;
+	static constexpr u32 id_base = 0x60000000;
 	static constexpr u64 dma_io_id = 1;
 	static constexpr u32 dma_io_base = 0x30000000;
 
@@ -164,10 +164,11 @@ struct lv2_rsxaudio final : lv2_obj
 	std::array<shared_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
 
 	// lv2 uses port memory addresses for their names
-	static constexpr std::array<u64, SYS_RSXAUDIO_PORT_CNT> event_port_name{ 0x8000000000400100, 0x8000000000400200, 0x8000000000400300 };
+	static constexpr std::array<u64, SYS_RSXAUDIO_PORT_CNT> event_port_name{0x8000000000400100, 0x8000000000400200, 0x8000000000400300};
 
 	lv2_rsxaudio() noexcept = default;
-	lv2_rsxaudio(utils::serial& ar) noexcept;	void save(utils::serial& ar);
+	lv2_rsxaudio(utils::serial& ar) noexcept;
+	void save(utils::serial& ar);
 
 	void page_lock()
 	{
@@ -188,7 +189,6 @@ struct lv2_rsxaudio final : lv2_obj
 class rsxaudio_periodic_tmr
 {
 public:
-
 	enum class wait_result
 	{
 		SUCCESS,
@@ -205,7 +205,7 @@ public:
 	rsxaudio_periodic_tmr& operator=(const rsxaudio_periodic_tmr&) = delete;
 
 	// Wait until timer fires and calls callback.
-	wait_result wait(const std::function<void()> &callback);
+	wait_result wait(const std::function<void()>& callback);
 
 	// Cancel wait() call
 	void cancel_wait();
@@ -237,7 +237,6 @@ public:
 	u64 vtimer_get_sched_time(u32 vtimer_id) const;
 
 private:
-
 	static constexpr u64 MAX_BURST_PERIODS = SYS_RSXAUDIO_RINGBUF_SZ;
 	static constexpr u32 VTIMER_MAX = 4;
 
@@ -291,7 +290,7 @@ struct rsxaudio_hw_param_t
 		bool buf_empty_en = false;
 		bool muted = true;
 		bool en = false;
-		u8   freq_div = 8;
+		u8 freq_div = 8;
 		RsxaudioSampleSize depth = RsxaudioSampleSize::_16BIT;
 	};
 
@@ -302,9 +301,9 @@ struct rsxaudio_hw_param_t
 		bool muted = true;
 		bool en = false;
 		bool use_serial_buf = true;
-		u8   freq_div = 8;
+		u8 freq_div = 8;
 		RsxaudioSampleSize depth = RsxaudioSampleSize::_16BIT;
-		std::array<u8, 6> cs_data = { 0x00, 0x90, 0x00, 0x40, 0x80, 0x00 }; // HW supports only 6 bytes (uart pkt has 8)
+		std::array<u8, 6> cs_data = {0x00, 0x90, 0x00, 0x40, 0x80, 0x00}; // HW supports only 6 bytes (uart pkt has 8)
 	};
 
 	struct hdmi_param_t
@@ -317,14 +316,14 @@ struct rsxaudio_hw_param_t
 
 		static constexpr u8 MAP_SILENT_CH = umax;
 
-		bool                init = false;
-		hdmi_ch_cfg_t       ch_cfg{};
-		std::array<u8, 5>   info_frame{}; // TODO: check chstat and info_frame for info on audio layout, add default values
-		std::array<u8, 5>   chstat{};
+		bool init = false;
+		hdmi_ch_cfg_t ch_cfg{};
+		std::array<u8, 5> info_frame{}; // TODO: check chstat and info_frame for info on audio layout, add default values
+		std::array<u8, 5> chstat{};
 
-		bool                muted = true;
-		bool                force_mute = true;
-		bool                use_spdif_1 = false; // TODO: unused for now
+		bool muted = true;
+		bool force_mute = true;
+		bool use_spdif_1 = false; // TODO: unused for now
 	};
 
 	u32 serial_freq_base = SYS_RSXAUDIO_FREQ_BASE_384K;
@@ -337,13 +336,12 @@ struct rsxaudio_hw_param_t
 	hdmi_param_t hdmi[2]{};
 
 	std::array<RsxaudioPort, SYS_RSXAUDIO_AVPORT_CNT> avport_src =
-	{
-		RsxaudioPort::INVALID,
-		RsxaudioPort::INVALID,
-		RsxaudioPort::INVALID,
-		RsxaudioPort::INVALID,
-		RsxaudioPort::INVALID
-	};
+		{
+			RsxaudioPort::INVALID,
+			RsxaudioPort::INVALID,
+			RsxaudioPort::INVALID,
+			RsxaudioPort::INVALID,
+			RsxaudioPort::INVALID};
 };
 
 // 16-bit PCM converted into float, so buffer must be twice as big
@@ -352,7 +350,6 @@ using ra_stream_blk_t = std::array<f32, SYS_RSXAUDIO_STREAM_SAMPLE_CNT * 2>;
 class rsxaudio_data_container
 {
 public:
-
 	struct buf_t
 	{
 		std::array<ra_stream_blk_t, SYS_RSXAUDIO_SERIAL_MAX_CH> serial{};
@@ -367,7 +364,6 @@ public:
 	bool data_was_used();
 
 private:
-
 	const rsxaudio_hw_param_t& hwp;
 	const buf_t& out_buf;
 
@@ -382,9 +378,9 @@ private:
 	rsxaudio_data_container& operator=(rsxaudio_data_container&&) = delete;
 
 	// Mix individual channels into final PCM stream. Channels in channel map that are > input_ch_cnt treated as silent.
-	template<usz output_ch_cnt, usz input_ch_cnt>
-	requires (output_ch_cnt > 0 && output_ch_cnt <= 8 && input_ch_cnt > 0)
-	constexpr void mix(const std::array<u8, 8> &ch_map, RsxaudioSampleSize sample_size, const std::array<ra_stream_blk_t, input_ch_cnt> &input_channels, data_blk_t& data_out)
+	template <usz output_ch_cnt, usz input_ch_cnt>
+		requires(output_ch_cnt > 0 && output_ch_cnt <= 8 && input_ch_cnt > 0)
+	constexpr void mix(const std::array<u8, 8>& ch_map, RsxaudioSampleSize sample_size, const std::array<ra_stream_blk_t, input_ch_cnt>& input_channels, data_blk_t& data_out)
 	{
 		const ra_stream_blk_t silent_channel{};
 
@@ -408,14 +404,22 @@ private:
 		{
 			const u32 src_sample_idx = sample_idx / output_ch_cnt;
 
-			if constexpr (output_ch_cnt >= 1) data_out[sample_idx + 0] = (*real_input_ch[0])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 2) data_out[sample_idx + 1] = (*real_input_ch[1])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 3) data_out[sample_idx + 2] = (*real_input_ch[2])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 4) data_out[sample_idx + 3] = (*real_input_ch[3])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 5) data_out[sample_idx + 4] = (*real_input_ch[4])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 6) data_out[sample_idx + 5] = (*real_input_ch[5])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 7) data_out[sample_idx + 6] = (*real_input_ch[6])[src_sample_idx];
-			if constexpr (output_ch_cnt >= 8) data_out[sample_idx + 7] = (*real_input_ch[7])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 1)
+				data_out[sample_idx + 0] = (*real_input_ch[0])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 2)
+				data_out[sample_idx + 1] = (*real_input_ch[1])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 3)
+				data_out[sample_idx + 2] = (*real_input_ch[2])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 4)
+				data_out[sample_idx + 3] = (*real_input_ch[3])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 5)
+				data_out[sample_idx + 4] = (*real_input_ch[4])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 6)
+				data_out[sample_idx + 5] = (*real_input_ch[5])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 7)
+				data_out[sample_idx + 6] = (*real_input_ch[6])[src_sample_idx];
+			if constexpr (output_ch_cnt >= 8)
+				data_out[sample_idx + 7] = (*real_input_ch[7])[src_sample_idx];
 		}
 	}
 };
@@ -428,7 +432,6 @@ namespace audio
 class rsxaudio_backend_thread
 {
 public:
-
 	struct port_config
 	{
 		AudioFreq freq = AudioFreq::FREQ_48K;
@@ -439,8 +442,8 @@ public:
 
 	struct avport_bit
 	{
-		bool hdmi_0  : 1;
-		bool hdmi_1  : 1;
+		bool hdmi_0 : 1;
+		bool hdmi_1 : 1;
 		bool avmulti : 1;
 		bool spdif_0 : 1;
 		bool spdif_1 : 1;
@@ -452,7 +455,7 @@ public:
 	void operator()();
 	rsxaudio_backend_thread& operator=(thread_state state);
 
-	void set_new_stream_param(const std::array<port_config, SYS_RSXAUDIO_AVPORT_CNT> &cfg, avport_bit muted_avports);
+	void set_new_stream_param(const std::array<port_config, SYS_RSXAUDIO_AVPORT_CNT>& cfg, avport_bit muted_avports);
 	void set_mute_state(avport_bit muted_avports);
 	void add_data(rsxaudio_data_container& cont);
 
@@ -466,7 +469,6 @@ public:
 	SAVESTATE_INIT_POS(8.91); // Depends on audio_out_configuration
 
 private:
-
 	struct emu_audio_cfg
 	{
 		std::string audio_device{};
@@ -495,21 +497,21 @@ private:
 		static constexpr u16 VOL_NOMINAL = 10000;
 		static constexpr f32 VOL_NOMINAL_INV = 1.0f / VOL_NOMINAL;
 
-		u32 freq : 20            = 48000;
+		u32 freq : 20 = 48000;
 
-		u16 target_volume        = 10000;
-		u16 initial_volume       = 10000;
-		u16 current_volume       = 10000;
+		u16 target_volume = 10000;
+		u16 initial_volume = 10000;
+		u16 current_volume = 10000;
 
 		RsxaudioAvportIdx avport_idx = RsxaudioAvportIdx::HDMI_0;
 		u8 mute_state : SYS_RSXAUDIO_AVPORT_CNT = 0b11111;
 
-		u8 input_ch_cnt          : 4 = 2;
+		u8 input_ch_cnt : 4 = 2;
 		u8 output_channel_layout : 4 = static_cast<u8>(audio_channel_layout::stereo);
 
-		bool ready : 1           = false;
-		bool convert_to_s16 : 1  = false;
-		bool cfg_changed : 1     = false;
+		bool ready : 1 = false;
+		bool convert_to_s16 : 1 = false;
+		bool cfg_changed : 1 = false;
 		bool callback_active : 1 = false;
 	};
 
@@ -537,7 +539,7 @@ private:
 	rsxaudio_state new_ra_state{};
 	bool ra_state_changed = true;
 
-	shared_mutex  state_update_m{};
+	shared_mutex state_update_m{};
 	cond_variable state_update_c{};
 
 	simple_ringbuf ringbuf{};
@@ -548,7 +550,7 @@ private:
 	shared_mutex ringbuf_mutex{};
 
 	std::shared_ptr<AudioBackend> backend{};
-	backend_config backend_current_cfg{ {}, new_emu_cfg.avport };
+	backend_config backend_current_cfg{{}, new_emu_cfg.avport};
 	atomic_t<callback_config> callback_cfg{};
 	bool backend_error_occured = false;
 	bool backend_device_changed = false;
@@ -578,7 +580,6 @@ private:
 class rsxaudio_data_thread
 {
 public:
-
 	// Prevent creation of multiple rsxaudio contexts
 	atomic_t<bool> rsxaudio_ctx_allocated = false;
 
@@ -598,7 +599,6 @@ public:
 	static constexpr auto thread_name = "RsxAudioData Thread"sv;
 
 private:
-
 	rsxaudio_data_container::buf_t output_buf{};
 
 	transactional_storage<rsxaudio_hw_param_t> hw_param_ts{std::make_shared<universal_pool>(), std::make_shared<rsxaudio_hw_param_t>()};

@@ -9,8 +9,7 @@ namespace utils
 		// Printing utilities
 
 		template <typename T>
-		concept Logger = requires (T& t, const std::string& msg)
-		{
+		concept Logger = requires(T& t, const std::string& msg) {
 			{ t.print(msg) };
 		};
 
@@ -21,14 +20,15 @@ namespace utils
 		public:
 			print_to_log(logs::channel& chan)
 				: log(chan)
-			{}
+			{
+			}
 
 			void print(const std::string& s)
 			{
 				log.error("%s", s);
 			}
 		};
-	}
+	} // namespace stack_trace
 
 	std::vector<void*> get_backtrace(int max_depth = 255);
 	std::vector<std::string> get_backtrace_symbols(const std::vector<void*>& stack);
@@ -43,4 +43,4 @@ namespace utils
 			logger.print(line);
 		}
 	}
-}
+} // namespace utils

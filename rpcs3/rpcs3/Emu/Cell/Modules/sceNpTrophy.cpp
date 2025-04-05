@@ -181,61 +181,61 @@ struct sce_np_trophy_manager
 	}
 };
 
-template<>
+template <>
 void fmt_class_string<SceNpTrophyError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-		STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_NOT_INITIALIZED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_NOT_SUPPORTED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_OUT_OF_MEMORY);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_EXCEEDS_MAX);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INSUFFICIENT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_FORMAT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_BAD_RESPONSE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_GRADE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_CONTEXT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_ABORT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_LOCKED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_HIDDEN);
-		STR_CASE(SCE_NP_TROPHY_ERROR_CANNOT_UNLOCK_PLATINUM);
-		STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_TYPE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_HANDLE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_NP_COMM_ID);
-		STR_CASE(SCE_NP_TROPHY_ERROR_DISC_IO);
-		STR_CASE(SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNSUPPORTED_FORMAT);
-		STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_INSTALLED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_BROKEN_DATA);
-		STR_CASE(SCE_NP_TROPHY_ERROR_VERIFICATION_FAILURE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_TROPHY_ID);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_FILE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_DISC_NOT_MOUNTED);
-		STR_CASE(SCE_NP_TROPHY_ERROR_SHUTDOWN);
-		STR_CASE(SCE_NP_TROPHY_ERROR_TITLE_ICON_NOT_FOUND);
-		STR_CASE(SCE_NP_TROPHY_ERROR_TROPHY_ICON_NOT_FOUND);
-		STR_CASE(SCE_NP_TROPHY_ERROR_INSUFFICIENT_DISK_SPACE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_SAVEDATA_USER_DOES_NOT_MATCH);
-		STR_CASE(SCE_NP_TROPHY_ERROR_TROPHY_ID_DOES_NOT_EXIST);
-		STR_CASE(SCE_NP_TROPHY_ERROR_SERVICE_UNAVAILABLE);
-		STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN);
-		}
+			switch (error)
+			{
+				STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_NOT_INITIALIZED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_NOT_SUPPORTED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_OUT_OF_MEMORY);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_EXCEEDS_MAX);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INSUFFICIENT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_FORMAT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_BAD_RESPONSE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_GRADE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_CONTEXT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_ABORT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_LOCKED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_HIDDEN);
+				STR_CASE(SCE_NP_TROPHY_ERROR_CANNOT_UNLOCK_PLATINUM);
+				STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_TYPE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_HANDLE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_NP_COMM_ID);
+				STR_CASE(SCE_NP_TROPHY_ERROR_DISC_IO);
+				STR_CASE(SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNSUPPORTED_FORMAT);
+				STR_CASE(SCE_NP_TROPHY_ERROR_ALREADY_INSTALLED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_BROKEN_DATA);
+				STR_CASE(SCE_NP_TROPHY_ERROR_VERIFICATION_FAILURE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_TROPHY_ID);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN_FILE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_DISC_NOT_MOUNTED);
+				STR_CASE(SCE_NP_TROPHY_ERROR_SHUTDOWN);
+				STR_CASE(SCE_NP_TROPHY_ERROR_TITLE_ICON_NOT_FOUND);
+				STR_CASE(SCE_NP_TROPHY_ERROR_TROPHY_ICON_NOT_FOUND);
+				STR_CASE(SCE_NP_TROPHY_ERROR_INSUFFICIENT_DISK_SPACE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_SAVEDATA_USER_DOES_NOT_MATCH);
+				STR_CASE(SCE_NP_TROPHY_ERROR_TROPHY_ID_DOES_NOT_EXIST);
+				STR_CASE(SCE_NP_TROPHY_ERROR_SERVICE_UNAVAILABLE);
+				STR_CASE(SCE_NP_TROPHY_ERROR_UNKNOWN);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
@@ -365,7 +365,7 @@ error_code sceNpTrophyDestroyHandle(u32 handle)
 	std::scoped_lock lock(trophy_manager.mtx);
 
 	// TODO: find out if this is checked
-	//if (!trophy_manager.is_initialized)
+	// if (!trophy_manager.is_initialized)
 	//{
 	//	return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	//}
@@ -399,7 +399,7 @@ error_code sceNpTrophyAbortHandle(u32 handle)
 	std::scoped_lock lock(trophy_manager.mtx);
 
 	// TODO: find out if this is checked
-	//if (!trophy_manager.is_initialized)
+	// if (!trophy_manager.is_initialized)
 	//{
 	//	return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	//}
@@ -532,7 +532,7 @@ error_code sceNpTrophyDestroyContext(u32 context)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (context < trophy_context_t::id_base	||
+	if (context < trophy_context_t::id_base ||
 		context >= trophy_context_t::id_base + trophy_context_t::id_count)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
@@ -711,12 +711,11 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	// This emulates vsh sending the events and ensures that not 2 events are processed at once
 	const std::pair<u32, s32> statuses[] =
-	{
-		{ SCE_NP_TROPHY_STATUS_PROCESSING_SETUP, 3 },
-		{ SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, ::narrow<s32>(tropusr->GetTrophiesCount()) - 1 },
-		{ SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE, 4 },
-		{ SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 0 }
-	};
+		{
+			{SCE_NP_TROPHY_STATUS_PROCESSING_SETUP, 3},
+			{SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, ::narrow<s32>(tropusr->GetTrophiesCount()) - 1},
+			{SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE, 4},
+			{SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 0}};
 
 	lock2.unlock();
 
@@ -732,17 +731,17 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		for (s32 completed = 0; completed <= status.second; completed++)
 		{
 			sysutil_register_cb([statusCb, status, context, completed, arg, queued](ppu_thread& cb_ppu) -> s32
-			{
-				// TODO: it is possible that we need to check the return value here as well.
-				statusCb(cb_ppu, context, status.first, completed, status.second, arg);
-
-				if (queued && (*queued)-- == 1)
 				{
-					queued->notify_one();
-				}
+					// TODO: it is possible that we need to check the return value here as well.
+					statusCb(cb_ppu, context, status.first, completed, status.second, arg);
 
-				return 0;
-			});
+					if (queued && (*queued)-- == 1)
+					{
+						queued->notify_one();
+					}
+
+					return 0;
+				});
 		}
 
 		u64 current = get_system_time();
@@ -907,7 +906,7 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 
 	if (!config)
 	{
-		return { SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path };
+		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path};
 	}
 
 	if (details)
@@ -957,9 +956,9 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 				details->numTrophies++;
 				switch (n->GetAttribute("ttype")[0])
 				{
-				case 'B': details->numBronze++;   break;
-				case 'S': details->numSilver++;   break;
-				case 'G': details->numGold++;     break;
+				case 'B': details->numBronze++; break;
+				case 'S': details->numSilver++; break;
+				case 'G': details->numGold++; break;
 				case 'P': details->numPlatinum++; break;
 				}
 			}
@@ -973,9 +972,9 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 					data->unlockedTrophies++;
 					switch (n->GetAttribute("ttype")[0])
 					{
-					case 'B': data->unlockedBronze++;   break;
-					case 'S': data->unlockedSilver++;   break;
-					case 'G': data->unlockedGold++;     break;
+					case 'B': data->unlockedBronze++; break;
+					case 'S': data->unlockedSilver++; break;
+					case 'G': data->unlockedGold++; break;
 					case 'P': data->unlockedPlatinum++; break;
 					default: break;
 					}
@@ -1190,7 +1189,7 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 	if (!config)
 	{
-		return { SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path };
+		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path};
 	}
 
 	SceNpTrophyDetails tmp_details{};
@@ -1233,9 +1232,9 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 
 				switch (n->GetAttribute("ttype")[0])
 				{
-				case 'B': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
-				case 'S': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
-				case 'G': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
+				case 'B': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE; break;
+				case 'S': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER; break;
+				case 'G': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD; break;
 				case 'P': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
 				default: break;
 				}
@@ -1502,28 +1501,27 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
-{
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
-	REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);
-	REG_FUNC(sceNpTrophy, sceNpTrophyCreateHandle);
-	REG_FUNC(sceNpTrophy, sceNpTrophySetSoundLevel);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetRequiredDiskSpace);
-	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyContext);
-	REG_FUNC(sceNpTrophy, sceNpTrophyInit);
-	REG_FUNC(sceNpTrophy, sceNpTrophyAbortHandle);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameInfo);
-	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyHandle);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameDetails);
-	REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetLatestTrophies);
-	REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetUserInfo);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
-	REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyDetails);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
-	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
-});
+	{
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
+		REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);
+		REG_FUNC(sceNpTrophy, sceNpTrophyCreateHandle);
+		REG_FUNC(sceNpTrophy, sceNpTrophySetSoundLevel);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetRequiredDiskSpace);
+		REG_FUNC(sceNpTrophy, sceNpTrophyDestroyContext);
+		REG_FUNC(sceNpTrophy, sceNpTrophyInit);
+		REG_FUNC(sceNpTrophy, sceNpTrophyAbortHandle);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetGameInfo);
+		REG_FUNC(sceNpTrophy, sceNpTrophyDestroyHandle);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetGameDetails);
+		REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetLatestTrophies);
+		REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetUserInfo);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
+		REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyDetails);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
+		REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
+	});

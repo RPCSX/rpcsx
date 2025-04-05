@@ -19,19 +19,19 @@ namespace rsx
 			dlg->on_close = [](s32 /*status*/)
 			{
 				Emu.CallFromMainThread([]()
-				{
-					rsx_log.notice("Aborted shader loading dialog");
-					Emu.Kill(false);
-				});
+					{
+						rsx_log.notice("Aborted shader loading dialog");
+						Emu.Kill(false);
+					});
 			};
 
 			ref_cnt++;
 
 			Emu.CallFromMainThread([&]()
-			{
-				dlg->Create(msg, title);
-				ref_cnt--;
-			});
+				{
+					dlg->Create(msg, title);
+					ref_cnt--;
+				});
 		}
 
 		while (ref_cnt.load() && !Emu.IsStopped())
@@ -50,10 +50,10 @@ namespace rsx
 		ref_cnt++;
 
 		Emu.CallFromMainThread([&, index, message = std::move(msg)]()
-		{
-			dlg->ProgressBarSetMsg(index, message);
-			ref_cnt--;
-		});
+			{
+				dlg->ProgressBarSetMsg(index, message);
+				ref_cnt--;
+			});
 	}
 
 	void shader_loading_dialog::inc_value(u32 index, u32 value)
@@ -66,10 +66,10 @@ namespace rsx
 		ref_cnt++;
 
 		Emu.CallFromMainThread([&, index, value]()
-		{
-			dlg->ProgressBarInc(index, value);
-			ref_cnt--;
-		});
+			{
+				dlg->ProgressBarInc(index, value);
+				ref_cnt--;
+			});
 	}
 
 	void shader_loading_dialog::set_value(u32 index, u32 value)
@@ -82,10 +82,10 @@ namespace rsx
 		ref_cnt++;
 
 		Emu.CallFromMainThread([&, index, value]()
-		{
-			dlg->ProgressBarSetValue(index, value);
-			ref_cnt--;
-		});
+			{
+				dlg->ProgressBarSetValue(index, value);
+				ref_cnt--;
+			});
 	}
 
 	void shader_loading_dialog::set_limit(u32 index, u32 limit)
@@ -98,10 +98,10 @@ namespace rsx
 		ref_cnt++;
 
 		Emu.CallFromMainThread([&, index, limit]()
-		{
-			dlg->ProgressBarSetLimit(index, limit);
-			ref_cnt--;
-		});
+			{
+				dlg->ProgressBarSetLimit(index, limit);
+				ref_cnt--;
+			});
 	}
 
 	void shader_loading_dialog::refresh()
@@ -115,4 +115,4 @@ namespace rsx
 			utils::pause();
 		}
 	}
-}
+} // namespace rsx

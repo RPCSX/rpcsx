@@ -57,22 +57,27 @@ namespace LUrlParser
 		std::string m_Password{};
 
 		clParseURL()
-			: m_ErrorCode( LUrlParserError_Uninitialized )
-		{}
+			: m_ErrorCode(LUrlParserError_Uninitialized)
+		{
+		}
 
 		/// return 'true' if the parsing was successful
-		bool IsValid() const { return m_ErrorCode == LUrlParserError_Ok; }
+		bool IsValid() const
+		{
+			return m_ErrorCode == LUrlParserError_Ok;
+		}
 
 		/// helper to convert the port number to int, return 'true' if the port is valid (within the 0..65535 range)
-		bool GetPort( int* OutPort ) const;
+		bool GetPort(int* OutPort) const;
 
 		/// parse the URL
-		static clParseURL ParseURL( const std::string& URL );
+		static clParseURL ParseURL(const std::string& URL);
 
 	private:
-		explicit clParseURL( LUrlParserError ErrorCode )
-			: m_ErrorCode( ErrorCode )
-		{}
+		explicit clParseURL(LUrlParserError ErrorCode)
+			: m_ErrorCode(ErrorCode)
+		{
+		}
 	};
 
 } // namespace LUrlParser

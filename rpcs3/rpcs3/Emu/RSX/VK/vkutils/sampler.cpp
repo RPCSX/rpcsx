@@ -12,7 +12,7 @@ namespace vk
 	{
 		if ((color4.r + color4.g + color4.b) > 1.35f)
 		{
-			//If color elements are brighter than roughly 0.5 average, use white border
+			// If color elements are brighter than roughly 0.5 average, use white border
 			return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 		}
 
@@ -49,18 +49,13 @@ namespace vk
 		}
 
 		ensure(aspect <= VK_IMAGE_ASPECT_METADATA_BIT);
-		storage_key = static_cast<u64>(encoded_color)
-			| (static_cast<u64>(aspect) << 32)
-			| (static_cast<u64>(fmt) << 34);
+		storage_key = static_cast<u64>(encoded_color) | (static_cast<u64>(aspect) << 32) | (static_cast<u64>(fmt) << 34);
 	}
 
 	border_color_t::border_color_t(VkBorderColor value)
-		: storage_key(0)
-		, value(value)
-		, format(VK_FORMAT_UNDEFINED)
-		, aspect(VK_IMAGE_ASPECT_COLOR_BIT)
-		, color_value(0.f)
-	{}
+		: storage_key(0), value(value), format(VK_FORMAT_UNDEFINED), aspect(VK_IMAGE_ASPECT_COLOR_BIT), color_value(0.f)
+	{
+	}
 
 	sampler::sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 		VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
@@ -89,10 +84,9 @@ namespace vk
 		if (border_color.value >= VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
 		{
 			custom_color_info =
-			{
-				.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT,
-				.format = border_color.format
-			};
+				{
+					.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT,
+					.format = border_color.format};
 
 			std::memcpy(custom_color_info.customBorderColor.float32, border_color.color_value.rgba, sizeof(float) * 4);
 			info.pNext = &custom_color_info;
@@ -114,11 +108,11 @@ namespace vk
 		VkBool32 depth_compare, VkCompareOp depth_compare_mode)
 	{
 		if (info.magFilter != mag_filter || info.minFilter != min_filter || info.mipmapMode != mipmap_mode ||
-		    info.addressModeU != clamp_u || info.addressModeV != clamp_v || info.addressModeW != clamp_w ||
-		    info.compareEnable != depth_compare || info.unnormalizedCoordinates != unnormalized_coordinates ||
-		    !rsx::fcmp(info.maxLod, max_lod) || !rsx::fcmp(info.mipLodBias, mipLodBias) || !rsx::fcmp(info.minLod, min_lod) ||
-		    !rsx::fcmp(info.maxAnisotropy, max_anisotropy) ||
-		    info.compareOp != depth_compare_mode || m_border_color != border_color)
+			info.addressModeU != clamp_u || info.addressModeV != clamp_v || info.addressModeW != clamp_w ||
+			info.compareEnable != depth_compare || info.unnormalizedCoordinates != unnormalized_coordinates ||
+			!rsx::fcmp(info.maxLod, max_lod) || !rsx::fcmp(info.mipLodBias, mipLodBias) || !rsx::fcmp(info.minLod, min_lod) ||
+			!rsx::fcmp(info.maxAnisotropy, max_anisotropy) ||
+			info.compareOp != depth_compare_mode || m_border_color != border_color)
 			return false;
 
 		return true;
@@ -147,7 +141,7 @@ namespace vk
 		key.base_key = u16(clamp_u) | u64(clamp_v) << 3 | u64(clamp_w) << 6;
 		key.base_key |= u64(unnormalized_coordinates) << 9;            // 1 bit
 		key.base_key |= u64(min_filter) << 10 | u64(mag_filter) << 11; // 1 bit each
-		key.base_key |= u64(mipmap_mode) << 12;   // 1 bit
+		key.base_key |= u64(mipmap_mode) << 12;                        // 1 bit
 
 		if (!use_border_encoding)
 		{
@@ -159,10 +153,10 @@ namespace vk
 			key.border_color_key = border_color.storage_key;
 		}
 
-		key.base_key |= u64(depth_compare) << 16; // 1 bit
-		key.base_key |= u64(depth_compare_mode) << 17;  // 3 bits
-		key.base_key |= u64(rsx::encode_fx12(min_lod)) << 20; // 12 bits
-		key.base_key |= u64(rsx::encode_fx12(max_lod)) << 32; // 12 bits
+		key.base_key |= u64(depth_compare) << 16;                      // 1 bit
+		key.base_key |= u64(depth_compare_mode) << 17;                 // 3 bits
+		key.base_key |= u64(rsx::encode_fx12(min_lod)) << 20;          // 12 bits
+		key.base_key |= u64(rsx::encode_fx12(max_lod)) << 32;          // 12 bits
 		key.base_key |= u64(rsx::encode_fx12<true>(mipLodBias)) << 44; // 13 bits (fx12 + sign)
 		key.base_key |= u64(max_anisotropy) << 57;                     // 4 bits
 
@@ -177,7 +171,7 @@ namespace vk
 
 	cached_sampler_object_t* sampler_pool_t::find(const sampler_pool_key_t& key) const
 	{
-		if (!key.border_color_key) [[ likely ]]
+		if (!key.border_color_key) [[likely]]
 		{
 			const auto found = m_generic_sampler_pool.find(key.base_key);
 			return found == m_generic_sampler_pool.end() ? nullptr : found->second.get();
@@ -199,7 +193,7 @@ namespace vk
 	{
 		object->key = key;
 
-		if (!key.border_color_key) [[ likely ]]
+		if (!key.border_color_key) [[likely]]
 		{
 			const auto [iterator, _unused] = m_generic_sampler_pool.emplace(key.base_key, std::move(object));
 			return iterator->second.get();
@@ -233,4 +227,4 @@ namespace vk
 
 		return result;
 	}
-}
+} // namespace vk

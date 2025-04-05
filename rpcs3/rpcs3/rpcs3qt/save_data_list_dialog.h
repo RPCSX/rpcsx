@@ -14,8 +14,8 @@
 class gui_settings;
 class persistent_settings;
 
-//Display a list of SaveData. Would need to be initialized.
-//Can also be used as a Save Data Chooser.
+// Display a list of SaveData. Would need to be initialized.
+// Can also be used as a Save Data Chooser.
 class save_data_list_dialog : public QDialog
 {
 	Q_OBJECT

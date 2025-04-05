@@ -3,16 +3,36 @@
 // SPU Instruction Type
 struct spu_itype
 {
-	static constexpr struct memory_tag{} memory{}; // Memory Load/Store Instructions
-	static constexpr struct constant_tag{} constant{}; // Constant Formation Instructions
-	static constexpr struct integer_tag{} integer{}; // Integer and Logical Instructions
-	static constexpr struct shiftrot_tag{} shiftrot{}; // Shift and Rotate Instructions
-	static constexpr struct compare_tag{} compare{}; // Compare Instructions
-	static constexpr struct branch_tag{} branch{}; // Branch Instructions
-	static constexpr struct floating_tag{} floating{}; // Floating-Point Instructions
-	static constexpr struct quadrop_tag{} _quadrop{}; // 4-op Instructions
-	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
-	static constexpr struct zregmod_tag{} zregmod{}; // Instructions not modifying any GPR
+	static constexpr struct memory_tag
+	{
+	} memory{}; // Memory Load/Store Instructions
+	static constexpr struct constant_tag
+	{
+	} constant{}; // Constant Formation Instructions
+	static constexpr struct integer_tag
+	{
+	} integer{}; // Integer and Logical Instructions
+	static constexpr struct shiftrot_tag
+	{
+	} shiftrot{}; // Shift and Rotate Instructions
+	static constexpr struct compare_tag
+	{
+	} compare{}; // Compare Instructions
+	static constexpr struct branch_tag
+	{
+	} branch{}; // Branch Instructions
+	static constexpr struct floating_tag
+	{
+	} floating{}; // Floating-Point Instructions
+	static constexpr struct quadrop_tag
+	{
+	} _quadrop{}; // 4-op Instructions
+	static constexpr struct xfloat_tag
+	{
+	} xfloat{}; // Instructions producing xfloat values
+	static constexpr struct zregmod_tag
+	{
+	} zregmod{}; // Instructions not modifying any GPR
 
 	enum class type : unsigned char
 	{
@@ -237,67 +257,67 @@ struct spu_itype
 	using enum type;
 
 	// Enable address-of operator for spu_decoder<>
-	friend constexpr type operator &(type value)
+	friend constexpr type operator&(type value)
 	{
 		return value;
 	}
 
 	// Test for branch instruction
-	friend constexpr bool operator &(type value, branch_tag)
+	friend constexpr bool operator&(type value, branch_tag)
 	{
 		return value >= BR && value <= BIHNZ;
 	}
 
 	// Test for floating point instruction
-	friend constexpr bool operator &(type value, floating_tag)
+	friend constexpr bool operator&(type value, floating_tag)
 	{
 		return value >= FMA && value <= DFTSV;
 	}
 
 	// Test for 4-op instruction
-	friend constexpr bool operator &(type value, quadrop_tag)
+	friend constexpr bool operator&(type value, quadrop_tag)
 	{
 		return value >= MPYA && value <= FMS;
 	}
 
 	// Test for xfloat instruction
-	friend constexpr bool operator &(type value, xfloat_tag)
+	friend constexpr bool operator&(type value, xfloat_tag)
 	{
 		return value >= FMA && value <= FRDS;
 	}
 
 	// Test for memory instruction
-	friend constexpr bool operator &(type value, memory_tag)
+	friend constexpr bool operator&(type value, memory_tag)
 	{
 		return value >= STQD && value <= LQR;
 	}
 
 	// Test for compare instruction
-	friend constexpr bool operator &(type value, compare_tag)
+	friend constexpr bool operator&(type value, compare_tag)
 	{
 		return value >= CEQB && value <= CLGTI;
 	}
 
 	// Test for integer instruction
-	friend constexpr bool operator &(type value, integer_tag)
+	friend constexpr bool operator&(type value, integer_tag)
 	{
 		return value >= AH && value <= SHUFB;
 	}
 
 	// Test for shift or rotate instruction
-	friend constexpr bool operator &(type value, shiftrot_tag)
+	friend constexpr bool operator&(type value, shiftrot_tag)
 	{
 		return value >= SHLH && value <= ROTMAI;
 	}
 
 	// Test for constant loading instruction
-	friend constexpr bool operator &(type value, constant_tag)
+	friend constexpr bool operator&(type value, constant_tag)
 	{
 		return value >= ILH && value <= FSMBI;
 	}
 
 	// Test for non register-modifying instruction
-	friend constexpr bool operator &(type value, zregmod_tag)
+	friend constexpr bool operator&(type value, zregmod_tag)
 	{
 		return value >= HEQ && value <= STQR;
 	}
@@ -522,7 +542,7 @@ struct spu_iflag
 	};
 
 	// Enable address-of operator for spu_decoder<>
-	friend constexpr flag operator &(flag value)
+	friend constexpr flag operator&(flag value)
 	{
 		return value;
 	}

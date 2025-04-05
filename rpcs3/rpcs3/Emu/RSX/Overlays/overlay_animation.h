@@ -29,7 +29,7 @@ namespace rsx
 			void begin_animation(u64 timestamp_us);
 			f32 get_progress_ratio(u64 timestamp_us) const;
 
-			template<typename T>
+			template <typename T>
 			static T lerp(const T& a, const T& b, f32 t)
 			{
 				return (a * (1.f - t)) + (b * t);
@@ -37,7 +37,7 @@ namespace rsx
 
 		public:
 			bool active = false;
-			animation_type type { animation_type::linear };
+			animation_type type{animation_type::linear};
 			f32 duration_sec = 1.f; // in seconds
 
 			std::function<void()> on_finish;
@@ -80,5 +80,5 @@ namespace rsx
 			void update(u64 timestamp_us) override;
 			void finish();
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

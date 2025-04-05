@@ -12,4 +12,4 @@ namespace disc
 	};
 
 	disc_type get_disc_type(const std::string& path, std::string& disc_root, std::string& ps3_game_dir);
-}
+} // namespace disc

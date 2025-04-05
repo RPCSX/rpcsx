@@ -80,7 +80,7 @@ struct vertex
 		values[3] = w;
 	}
 
-	void operator += (const vertex& other)
+	void operator+=(const vertex& other)
 	{
 		values[0] += other.values[0];
 		values[1] += other.values[1];
@@ -88,7 +88,7 @@ struct vertex
 		values[3] += other.values[3];
 	}
 
-	void operator -= (const vertex& other)
+	void operator-=(const vertex& other)
 	{
 		values[0] -= other.values[0];
 		values[1] -= other.values[1];
@@ -97,8 +97,7 @@ struct vertex
 	}
 };
 
-
-template<typename T>
+template <typename T>
 struct vector3_base : public position3_base<T>
 {
 	using position3_base<T>::position3_base;
@@ -129,42 +128,42 @@ struct vector3_base : public position3_base<T>
 	}
 };
 
-template<typename T>
-vector3_base<T> operator * (const vector3_base<T>& lhs, const vector3_base<T>& rhs)
+template <typename T>
+vector3_base<T> operator*(const vector3_base<T>& lhs, const vector3_base<T>& rhs)
 {
-	return { lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z };
+	return {lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
 }
 
-template<typename T>
-vector3_base<T> operator * (const vector3_base<T>& lhs, T rhs)
+template <typename T>
+vector3_base<T> operator*(const vector3_base<T>& lhs, T rhs)
 {
-	return { lhs.x * rhs, lhs.y * rhs, lhs.z * rhs };
+	return {lhs.x * rhs, lhs.y * rhs, lhs.z * rhs};
 }
 
-template<typename T>
-vector3_base<T> operator * (T lhs, const vector3_base<T>& rhs)
+template <typename T>
+vector3_base<T> operator*(T lhs, const vector3_base<T>& rhs)
 {
-	return { lhs * rhs.x, lhs * rhs.y, lhs * rhs.z };
+	return {lhs * rhs.x, lhs * rhs.y, lhs * rhs.z};
 }
 
-template<typename T>
-void operator *= (const vector3_base<T>& lhs, const vector3_base<T>& rhs)
+template <typename T>
+void operator*=(const vector3_base<T>& lhs, const vector3_base<T>& rhs)
 {
 	lhs.x *= rhs.x;
 	lhs.y *= rhs.y;
 	lhs.z *= rhs.z;
 }
 
-template<typename T>
-void operator *= (const vector3_base<T>& lhs, T rhs)
+template <typename T>
+void operator*=(const vector3_base<T>& lhs, T rhs)
 {
 	lhs.x *= rhs;
 	lhs.y *= rhs;
 	lhs.z *= rhs;
 }
 
-template<typename T>
-void operator < (const vector3_base<T>& lhs, T rhs)
+template <typename T>
+void operator<(const vector3_base<T>& lhs, T rhs)
 {
 	return lhs.x < rhs.x && lhs.y < rhs.y && lhs.z < rhs.z;
 }

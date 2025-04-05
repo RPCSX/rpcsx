@@ -22,6 +22,6 @@ constexpr s32 VPORT_0_HEADER_SIZE = sizeof(u16) + sizeof(u8);
 // Subset 1: Signaling
 enum VPORT_0_SUBSET : u8
 {
-	SUBSET_RPCN      = 0,
+	SUBSET_RPCN = 0,
 	SUBSET_SIGNALING = 1,
 };

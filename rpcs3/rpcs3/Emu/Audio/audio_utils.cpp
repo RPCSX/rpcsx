@@ -24,16 +24,18 @@ namespace audio
 	void change_volume(s32 delta)
 	{
 		// Ignore if muted
-		if (g_fxo->get<audio_fxo>().audio_muted) return;
+		if (g_fxo->get<audio_fxo>().audio_muted)
+			return;
 
 		const s32 old_volume = g_cfg.audio.volume;
 		const s32 new_volume = old_volume + delta;
 
-		if (old_volume == new_volume) return;
+		if (old_volume == new_volume)
+			return;
 
 		g_cfg.audio.volume.set(std::clamp<s32>(new_volume, g_cfg.audio.volume.min, g_cfg.audio.volume.max));
 		Emu.GetCallbacks().update_emu_settings();
 
 		rsx::overlays::queue_message(get_localized_string(localized_string_id::AUDIO_CHANGED, fmt::format("%d%%", g_cfg.audio.volume.get()).c_str()), 3'000'000);
 	}
-}
+} // namespace audio

@@ -31,7 +31,8 @@ namespace rsx
 
 			f32 t = f32(timestamp_us - timestamp_start_us) / (timestamp_end_us - timestamp_start_us);
 
-			switch (type) {
+			switch (type)
+			{
 			case animation_type::linear:
 				break;
 			case animation_type::ease_in_quad:
@@ -67,7 +68,7 @@ namespace rsx
 				return;
 			}
 
-			const vertex delta = { current.x, current.y, current.z, 0.f };
+			const vertex delta = {current.x, current.y, current.z, 0.f};
 			for (auto& cmd : resource.draw_commands)
 			{
 				for (auto& v : cmd.verts)
@@ -176,5 +177,5 @@ namespace rsx
 				on_finish();
 			}
 		}
-	};
-}
+	}; // namespace overlays
+} // namespace rsx

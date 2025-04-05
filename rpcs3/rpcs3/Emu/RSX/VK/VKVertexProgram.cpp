@@ -6,7 +6,6 @@
 #include "vkutils/device.h"
 #include "../Program/GLSLCommon.h"
 
-
 std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
@@ -22,44 +21,41 @@ std::string VKVertexDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string& Op0, const std::string& Op1, bool scalar)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1, scalar);
 }
 
-void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
+void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 {
 	OS << "#version 450\n\n";
 	OS << "#extension GL_ARB_separate_shader_objects : enable\n\n";
 
-	OS <<
-		"layout(std140, set = 0, binding = 0) uniform VertexContextBuffer\n"
-		"{\n"
-		"	mat4 scale_offset_mat;\n"
-		"	ivec4 user_clip_enabled[2];\n"
-		"	vec4 user_clip_factor[2];\n"
-		"	uint transform_branch_bits;\n"
-		"	float point_size;\n"
-		"	float z_near;\n"
-		"	float z_far;\n"
-		"};\n\n";
+	OS << "layout(std140, set = 0, binding = 0) uniform VertexContextBuffer\n"
+		  "{\n"
+		  "	mat4 scale_offset_mat;\n"
+		  "	ivec4 user_clip_enabled[2];\n"
+		  "	vec4 user_clip_factor[2];\n"
+		  "	uint transform_branch_bits;\n"
+		  "	float point_size;\n"
+		  "	float z_near;\n"
+		  "	float z_far;\n"
+		  "};\n\n";
 
 	if (m_device_props.emulate_conditional_rendering)
 	{
-		OS <<
-			"layout(std430, set = 0, binding = 8) readonly buffer EXT_Conditional_Rendering\n"
-			"{\n"
-			"	uint conditional_rendering_predicate;\n"
-			"};\n\n";
+		OS << "layout(std430, set = 0, binding = 8) readonly buffer EXT_Conditional_Rendering\n"
+			  "{\n"
+			  "	uint conditional_rendering_predicate;\n"
+			  "};\n\n";
 	}
 
-	OS <<
-		"layout(push_constant) uniform VertexLayoutBuffer\n"
-		"{\n"
-		"	uint vertex_base_index;\n"
-		"	uint vertex_index_offset;\n"
-		"	uint draw_id;\n"
-		"	uint layout_ptr_offset;\n";
+	OS << "layout(push_constant) uniform VertexLayoutBuffer\n"
+		  "{\n"
+		  "	uint vertex_base_index;\n"
+		  "	uint vertex_index_offset;\n"
+		  "	uint draw_id;\n"
+		  "	uint layout_ptr_offset;\n";
 
 	if (m_device_props.emulate_conditional_rendering)
 	{
@@ -78,9 +74,9 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
 {
-	OS << "layout(set=0, binding=5) uniform usamplerBuffer persistent_input_stream;\n";    // Data stream with persistent vertex data (cacheable)
-	OS << "layout(set=0, binding=6) uniform usamplerBuffer volatile_input_stream;\n";      // Data stream with per-draw data (registers and immediate draw data)
-	OS << "layout(set=0, binding=7) uniform usamplerBuffer vertex_layout_stream;\n";       // Data stream defining vertex data layout
+	OS << "layout(set=0, binding=5) uniform usamplerBuffer persistent_input_stream;\n"; // Data stream with persistent vertex data (cacheable)
+	OS << "layout(set=0, binding=6) uniform usamplerBuffer volatile_input_stream;\n";   // Data stream with per-draw data (registers and immediate draw data)
+	OS << "layout(set=0, binding=7) uniform usamplerBuffer vertex_layout_stream;\n";    // Data stream defining vertex data layout
 
 	vk::glsl::program_input in;
 	in.location = m_binding_table.vertex_buffers_first_bind_slot;
@@ -102,14 +98,14 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 	this->inputs.push_back(in);
 }
 
-void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
+void VKVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
 	vk::glsl::program_input in;
 	u32 location = m_binding_table.vertex_textures_first_bind_slot;
 
-	for (const ParamType &PT : constants)
+	for (const ParamType& PT : constants)
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			if (PI.name.starts_with("vc["))
 			{
@@ -172,7 +168,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 
 				auto samplerType = PT.type;
 
-				if (m_prog.texture_state.multisampled_textures) [[ unlikely ]]
+				if (m_prog.texture_state.multisampled_textures) [[unlikely]]
 				{
 					ensure(PI.name.length() > 3);
 					int index = atoi(&PI.name[3]);
@@ -195,37 +191,37 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 }
 
 static const vertex_reg_info reg_table[] =
-{
-	{ "gl_Position", false, "dst_reg0", "", false },
-	//Technically these two are for both back and front
-	{ "diff_color", true, "dst_reg1", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE },
-	{ "spec_color", true, "dst_reg2", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
-	{ "diff_color1", true, "dst_reg3", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE },
-	{ "spec_color1", true, "dst_reg4", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
-	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
-	//Warning: With spir-v if you declare clip distance var, you must assign a value even when its disabled! Runtime does not assign a default value
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "tc0", true, "dst_reg7", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
-	{ "tc1", true, "dst_reg8", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
-	{ "tc2", true, "dst_reg9", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
-	{ "tc3", true, "dst_reg10", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX3 },
-	{ "tc4", true, "dst_reg11", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX4 },
-	{ "tc5", true, "dst_reg12", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5 },
-	{ "tc6", true, "dst_reg13", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 },
-	{ "tc7", true, "dst_reg14", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 },
-	{ "tc8", true, "dst_reg15", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX8 },
-	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
+	{
+		{"gl_Position", false, "dst_reg0", "", false},
+		// Technically these two are for both back and front
+		{"diff_color", true, "dst_reg1", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE},
+		{"spec_color", true, "dst_reg2", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR},
+		{"diff_color1", true, "dst_reg3", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE},
+		{"spec_color1", true, "dst_reg4", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR},
+		{"fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG},
+		// Warning: With spir-v if you declare clip distance var, you must assign a value even when its disabled! Runtime does not assign a default value
+		{"gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0},
+		{"gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1},
+		{"gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2},
+		{"gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE},
+		{"gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3},
+		{"gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4},
+		{"gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5},
+		{"tc0", true, "dst_reg7", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0},
+		{"tc1", true, "dst_reg8", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1},
+		{"tc2", true, "dst_reg9", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2},
+		{"tc3", true, "dst_reg10", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX3},
+		{"tc4", true, "dst_reg11", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX4},
+		{"tc5", true, "dst_reg12", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5},
+		{"tc6", true, "dst_reg13", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6},
+		{"tc7", true, "dst_reg14", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7},
+		{"tc8", true, "dst_reg15", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX8},
+		{"tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9} // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
 void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::vector<ParamType>& /*outputs*/)
 {
-	for (auto &i : reg_table)
+	for (auto& i : reg_table)
 	{
 		if (i.need_declare)
 		{
@@ -235,7 +231,7 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 	}
 }
 
-void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
+void VKVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 {
 	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
@@ -251,9 +247,9 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 	// Declare global registers with optional initialization
 	std::string registers;
-	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
+	if (ParamType* vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
-		for (auto &PI : vec4Types->items)
+		for (auto& PI : vec4Types->items)
 		{
 			if (registers.length())
 				registers += ", ";
@@ -281,10 +277,10 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "void vs_main()\n";
 	OS << "{\n";
 
-	//Declare temporary registers, ignoring those mapped to outputs
-	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
+	// Declare temporary registers, ignoring those mapped to outputs
+	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			if (PI.name.starts_with("dst_reg"))
 				continue;
@@ -297,16 +293,16 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
 	}
 }
 
-void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
+void VKVertexDecompilerThread::insertMainEnd(std::stringstream& OS)
 {
 	OS << "}\n\n";
 
@@ -324,7 +320,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "	vs_main();\n\n";
 
-	for (auto &i : reg_table)
+	for (auto& i : reg_table)
 	{
 		if (!i.check_mask || i.test(rsx_vertex_program.output_mask))
 		{
@@ -334,12 +330,13 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 				if (condition.empty() || i.default_val.empty())
 				{
-					if (!condition.empty()) condition = "if " + condition;
+					if (!condition.empty())
+						condition = "if " + condition;
 					OS << "	" << condition << i.name << " = " << i.src_reg << i.src_reg_mask << ";\n";
 				}
 				else
 				{
-					//Insert if-else condition
+					// Insert if-else condition
 					OS << "	" << i.name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";\n";
 				}
 
@@ -364,7 +361,6 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
 	OS << "}\n";
 }
-
 
 void VKVertexDecompilerThread::Task()
 {
@@ -408,7 +404,7 @@ void VKVertexProgram::Delete()
 
 void VKVertexProgram::SetInputs(std::vector<vk::glsl::program_input>& inputs)
 {
-	for (auto &it : inputs)
+	for (auto& it : inputs)
 	{
 		uniforms.push_back(it);
 	}

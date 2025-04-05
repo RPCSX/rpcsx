@@ -29,7 +29,7 @@ namespace np
 		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 		const auto room_id = notification->room_id();
 
-		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(edata.data());
 		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, notification->update_info(), notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
@@ -73,7 +73,7 @@ namespace np
 
 	void np_handler::notif_user_left_room(vec_stream& noti)
 	{
-		u64 room_id       = noti.get<u64>();
+		u64 room_id = noti.get<u64>();
 		const auto* update_info = noti.get_flatbuffer<RoomMemberUpdateInfo>();
 
 		if (noti.is_error())
@@ -85,7 +85,7 @@ namespace np
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
-		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(edata.data());
 		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
@@ -112,7 +112,7 @@ namespace np
 
 	void np_handler::notif_room_destroyed(vec_stream& noti)
 	{
-		u64 room_id       = noti.get<u64>();
+		u64 room_id = noti.get<u64>();
 		const auto* update_info = noti.get_flatbuffer<RoomUpdateInfo>();
 
 		if (noti.is_error())
@@ -123,7 +123,7 @@ namespace np
 
 		const u32 event_key = get_event_key();
 
-		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomUpdateInfo, sizeof(SceNpMatching2RoomUpdateInfo));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomUpdateInfo, sizeof(SceNpMatching2RoomUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomUpdateInfo*>(edata.data());
 		RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(update_info, notif_data);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
@@ -157,7 +157,7 @@ namespace np
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
-		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomDataInternalUpdateInfo, sizeof(SceNpMatching2RoomDataInternalUpdateInfo));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomDataInternalUpdateInfo, sizeof(SceNpMatching2RoomDataInternalUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomDataInternalUpdateInfo*>(edata.data());
 		RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(edata, update_info, notif_data, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
@@ -192,7 +192,7 @@ namespace np
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
-		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberDataInternalUpdateInfo, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberDataInternalUpdateInfo, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberDataInternalUpdateInfo*>(edata.data());
 		RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
@@ -218,8 +218,8 @@ namespace np
 
 	void np_handler::notif_room_message_received(vec_stream& noti)
 	{
-		u64 room_id        = noti.get<u64>();
-		u16 member_id      = noti.get<u16>();
+		u64 room_id = noti.get<u64>();
+		u16 member_id = noti.get<u16>();
 		const auto* message_info = noti.get_flatbuffer<RoomMessageInfo>();
 
 		if (noti.is_error())
@@ -231,7 +231,7 @@ namespace np
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
-		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMessageInfo, sizeof(SceNpMatching2RoomMessageInfo));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMessageInfo, sizeof(SceNpMatching2RoomMessageInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMessageInfo*>(edata.data());
 		RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(edata, message_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());

@@ -20,7 +20,7 @@
 #include <deque>
 
 #ifdef _WIN32
-#include "Windows.h"
+#include <windows.h>
 #endif
 
 class gs_frame;
@@ -130,7 +130,7 @@ private:
 #ifdef _WIN32
 	void register_device_notification(WId window_id);
 	void unregister_device_notification();
-	HDEVNOTIFY m_device_notification_handle {};
+	HDEVNOTIFY m_device_notification_handle{};
 #endif
 
 private Q_SLOTS:

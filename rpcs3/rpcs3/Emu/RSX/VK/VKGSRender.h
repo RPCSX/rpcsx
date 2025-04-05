@@ -60,10 +60,10 @@ private:
 	};
 
 private:
-	const VKFragmentProgram *m_fragment_prog = nullptr;
-	const VKVertexProgram *m_vertex_prog = nullptr;
-	vk::glsl::program *m_program = nullptr;
-	vk::glsl::program *m_prev_program = nullptr;
+	const VKFragmentProgram* m_fragment_prog = nullptr;
+	const VKVertexProgram* m_vertex_prog = nullptr;
+	vk::glsl::program* m_program = nullptr;
+	vk::glsl::program* m_prev_program = nullptr;
 	vk::pipeline_props m_pipeline_properties;
 
 	vk::texture_cache m_texture_cache;
@@ -79,7 +79,7 @@ private:
 	u64 m_cond_render_sync_tag = 0;
 
 	shared_mutex m_sampler_mutex;
-	atomic_t<bool> m_samplers_dirty = { true };
+	atomic_t<bool> m_samplers_dirty = {true};
 	std::unique_ptr<vk::sampler> m_stencil_mirror_sampler;
 	std::array<vk::sampler*, rsx::limits::fragment_textures_count> fs_sampler_handles{};
 	std::array<vk::sampler*, rsx::limits::vertex_textures_count> vs_sampler_handles{};
@@ -88,11 +88,11 @@ private:
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
-	VkDependencyInfoKHR m_async_compute_dependency_info {};
-	VkMemoryBarrier2KHR m_async_compute_memory_barrier {};
+	VkDependencyInfoKHR m_async_compute_dependency_info{};
+	VkMemoryBarrier2KHR m_async_compute_memory_barrier{};
 
 public:
-	//vk::fbo draw_fbo;
+	// vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
@@ -101,12 +101,12 @@ private:
 
 	std::unique_ptr<vk::swapchain_base> m_swapchain;
 	vk::instance m_instance;
-	vk::render_device *m_device;
+	vk::render_device* m_device;
 
-	//Vulkan internals
+	// Vulkan internals
 	std::unique_ptr<vk::query_pool_manager> m_occlusion_query_manager;
 	bool m_occlusion_query_active = false;
-	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
+	rsx::reports::occlusion_query_info* m_active_query_info = nullptr;
 	std::vector<vk::occlusion_data> m_occlusion_map;
 
 	shared_mutex m_secondary_cb_guard;
@@ -148,29 +148,29 @@ private:
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;
 
-	VkDescriptorBufferInfo m_vertex_env_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_env_buffer_info {};
-	VkDescriptorBufferInfo m_vertex_layout_stream_info {};
-	VkDescriptorBufferInfo m_vertex_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info {};
-	VkDescriptorBufferInfo m_raster_env_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_indirection_buffer_info {};
+	VkDescriptorBufferInfo m_vertex_env_buffer_info{};
+	VkDescriptorBufferInfo m_fragment_env_buffer_info{};
+	VkDescriptorBufferInfo m_vertex_layout_stream_info{};
+	VkDescriptorBufferInfo m_vertex_constants_buffer_info{};
+	VkDescriptorBufferInfo m_fragment_constants_buffer_info{};
+	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info{};
+	VkDescriptorBufferInfo m_raster_env_buffer_info{};
+	VkDescriptorBufferInfo m_instancing_indirection_buffer_info{};
 	VkDescriptorBufferInfo m_instancing_constants_array_buffer_info{};
 
-	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
+	VkDescriptorBufferInfo m_vertex_instructions_buffer_info{};
+	VkDescriptorBufferInfo m_fragment_instructions_buffer_info{};
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
-	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
+	// Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	vk::frame_context_t m_aux_frame_context;
 
 	u32 m_current_queue_index = 0;
 	vk::frame_context_t* m_current_frame = nullptr;
 	std::deque<vk::frame_context_t*> m_queued_frames;
 
-	VkViewport m_viewport {};
-	VkRect2D m_scissor {};
+	VkViewport m_viewport{};
+	VkRect2D m_scissor{};
 
 	std::vector<u8> m_draw_buffers;
 
@@ -184,19 +184,19 @@ private:
 	utils::address_range m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
-	vk::draw_call_t m_current_draw {};
+	vk::draw_call_t m_current_draw{};
 	u64 m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;
 
-	//Vertex layout
+	// Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 
 	vk::shader_interpreter m_shader_interpreter;
 	u32 m_interpreter_state;
 
 #if defined(HAVE_X11) && defined(HAVE_VULKAN)
-	Display *m_display_handle = nullptr;
+	Display* m_display_handle = nullptr;
 #endif
 
 public:
@@ -217,9 +217,9 @@ private:
 
 	void flush_command_queue(bool hard_sync = false, bool do_not_switch = false);
 	void queue_swap_request();
-	void frame_context_cleanup(vk::frame_context_t *ctx);
+	void frame_context_cleanup(vk::frame_context_t* ctx);
 	void advance_queued_frames();
-	void present(vk::frame_context_t *ctx);
+	void present(vk::frame_context_t* ctx);
 	void reinitialize_swapchain();
 
 	vk::viewable_image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
@@ -302,6 +302,6 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
+	void on_invalidate_memory_range(const utils::address_range& range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
 };

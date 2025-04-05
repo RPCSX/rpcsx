@@ -14,31 +14,31 @@
 
 LOG_CHANNEL(cellMusicDecode);
 
-template<>
+template <>
 void fmt_class_string<CellMusicDecodeError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_MUSIC_DECODE_CANCELED);
-			STR_CASE(CELL_MUSIC_DECODE_DECODE_FINISHED);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_PARAM);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_BUSY);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_ACTIVE_CONTENT);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_MATCH_FOUND);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_DECODE_FAILURE);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_MORE_CONTENT);
-			STR_CASE(CELL_MUSIC_DECODE_DIALOG_OPEN);
-			STR_CASE(CELL_MUSIC_DECODE_DIALOG_CLOSE);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA);
-			STR_CASE(CELL_MUSIC_DECODE_NEXT_CONTENTS_READY);
-			STR_CASE(CELL_MUSIC_DECODE_ERROR_GENERIC);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_MUSIC_DECODE_CANCELED);
+				STR_CASE(CELL_MUSIC_DECODE_DECODE_FINISHED);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_PARAM);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_BUSY);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_ACTIVE_CONTENT);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_MATCH_FOUND);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_DECODE_FAILURE);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_MORE_CONTENT);
+				STR_CASE(CELL_MUSIC_DECODE_DIALOG_OPEN);
+				STR_CASE(CELL_MUSIC_DECODE_DIALOG_CLOSE);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA);
+				STR_CASE(CELL_MUSIC_DECODE_NEXT_CONTENTS_READY);
+				STR_CASE(CELL_MUSIC_DECODE_ERROR_GENERIC);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct music_decode
@@ -138,36 +138,36 @@ error_code cell_music_decode_select_contents()
 		[&dec](s32 status, utils::media_info info)
 		{
 			sysutil_register_cb([&dec, info = std::move(info), status](ppu_thread& ppu) -> s32
-			{
-				std::lock_guard lock(dec.mutex);
-				const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_CANCELED};
-				if (result == CELL_OK)
 				{
-					// Let's always choose the whole directory for now
-					std::string track;
-					std::string dir = info.path;
-					if (fs::is_file(info.path))
+					std::lock_guard lock(dec.mutex);
+					const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_CANCELED};
+					if (result == CELL_OK)
 					{
-						track = std::move(dir);
-						dir = fs::get_parent_dir(track);
-					}
+						// Let's always choose the whole directory for now
+						std::string track;
+						std::string dir = info.path;
+						if (fs::is_file(info.path))
+						{
+							track = std::move(dir);
+							dir = fs::get_parent_dir(track);
+						}
 
-					music_selection_context context{};
-					context.set_playlist(dir);
-					context.set_track(track);
-					// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
-					// TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
-					dec.current_selection_context = std::move(context);
-					dec.current_selection_context.create_playlist(music_selection_context::get_next_hash());
-					cellMusicDecode.success("Media list dialog: selected entry '%s'", dec.current_selection_context.playlist.front());
-				}
-				else
-				{
-					cellMusicDecode.warning("Media list dialog was canceled");
-				}
-				dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(result), dec.userData);
-				return CELL_OK;
-			});
+						music_selection_context context{};
+						context.set_playlist(dir);
+						context.set_track(track);
+						// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
+				        // TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
+						dec.current_selection_context = std::move(context);
+						dec.current_selection_context.create_playlist(music_selection_context::get_next_hash());
+						cellMusicDecode.success("Media list dialog: selected entry '%s'", dec.current_selection_context.playlist.front());
+					}
+					else
+					{
+						cellMusicDecode.warning("Media list dialog was canceled");
+					}
+					dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(result), dec.userData);
+					return CELL_OK;
+				});
 		});
 	return error;
 }
@@ -299,10 +299,10 @@ error_code cellMusicDecodeInitialize(s32 mode, u32 container, s32 spuPriority, v
 	dec.userData = userData;
 
 	sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
-		return CELL_OK;
-	});
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -322,10 +322,10 @@ error_code cellMusicDecodeInitializeSystemWorkload(s32 mode, u32 container, vm::
 	dec.userData = userData;
 
 	sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
-		return CELL_OK;
-	});
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -341,10 +341,10 @@ error_code cellMusicDecodeFinalize()
 	if (dec.func)
 	{
 		sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
-		{
-			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
-			return CELL_OK;
-		});
+			{
+				dec.func(ppu, CELL_MUSIC_DECODE_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
+				return CELL_OK;
+			});
 	}
 
 	return CELL_OK;
@@ -379,10 +379,10 @@ error_code cellMusicDecodeSetDecodeCommand(s32 command)
 	}
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(s32{result}), dec.userData);
-		return CELL_OK;
-	});
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(s32{result}), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -439,15 +439,17 @@ error_code cellMusicDecodeSetSelectionContext(vm::ptr<CellMusicSelectionContext>
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
 	const bool result = dec.current_selection_context.set(*context);
-	if (result) cellMusicDecode.warning("cellMusicDecodeSetSelectionContext: new selection_context = %s", dec.current_selection_context.to_string());
-	else cellMusicDecode.error("cellMusicDecodeSetSelectionContext: failed. context = '%s'", music_selection_context::context_to_hex(*context));
+	if (result)
+		cellMusicDecode.warning("cellMusicDecodeSetSelectionContext: new selection_context = %s", dec.current_selection_context.to_string());
+	else
+		cellMusicDecode.error("cellMusicDecodeSetSelectionContext: failed. context = '%s'", music_selection_context::context_to_hex(*context));
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
-	{
-		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT};
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), dec.userData);
-		return CELL_OK;
-	});
+		{
+			const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT};
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -483,10 +485,10 @@ error_code cellMusicDecodeInitialize2(s32 mode, u32 container, s32 spuPriority, 
 	dec.speed = speed;
 
 	sysutil_register_cb([userData, &dec](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
-		return CELL_OK;
-	});
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -507,10 +509,10 @@ error_code cellMusicDecodeInitialize2SystemWorkload(s32 mode, u32 container, vm:
 	dec.userData = userData;
 
 	sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
-		return CELL_OK;
-	});
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -526,10 +528,10 @@ error_code cellMusicDecodeFinalize2()
 	if (dec.func)
 	{
 		sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
-		{
-			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
-			return CELL_OK;
-		});
+			{
+				dec.func(ppu, CELL_MUSIC_DECODE_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
+				return CELL_OK;
+			});
 	}
 
 	return CELL_OK;
@@ -564,10 +566,10 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 	}
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(s32{result}), dec.userData);
-		return CELL_OK;
-	});
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(s32{result}), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -624,15 +626,17 @@ error_code cellMusicDecodeSetSelectionContext2(vm::ptr<CellMusicSelectionContext
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
 	const bool result = dec.current_selection_context.set(*context);
-	if (result) cellMusicDecode.warning("cellMusicDecodeSetSelectionContext2: new selection_context = %s", dec.current_selection_context.to_string());
-	else cellMusicDecode.error("cellMusicDecodeSetSelectionContext2: failed. context = '%s'", music_selection_context::context_to_hex(*context));
+	if (result)
+		cellMusicDecode.warning("cellMusicDecodeSetSelectionContext2: new selection_context = %s", dec.current_selection_context.to_string());
+	else
+		cellMusicDecode.error("cellMusicDecodeSetSelectionContext2: failed. context = '%s'", music_selection_context::context_to_hex(*context));
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
-	{
-		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT};
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), dec.userData);
-		return CELL_OK;
-	});
+		{
+			const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT};
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), dec.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -650,28 +654,27 @@ error_code cellMusicDecodeGetContentsId2(vm::ptr<CellSearchContentId> contents_i
 	return dec.current_selection_context.find_content_id(contents_id);
 }
 
-
 DECLARE(ppu_module_manager::cellMusicDecode)("cellMusicDecodeUtility", []()
-{
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitialize);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitializeSystemWorkload);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeFinalize);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSelectContents);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetDecodeCommand);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetDecodeStatus);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeRead);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetSelectionContext);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetSelectionContext);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetContentsId);
+	{
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitialize);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitializeSystemWorkload);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeFinalize);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSelectContents);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetDecodeCommand);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetDecodeStatus);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeRead);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetSelectionContext);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetSelectionContext);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetContentsId);
 
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitialize2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitialize2SystemWorkload);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeFinalize2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSelectContents2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetDecodeCommand2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetDecodeStatus2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeRead2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetSelectionContext2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetSelectionContext2);
-	REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetContentsId2);
-});
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitialize2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeInitialize2SystemWorkload);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeFinalize2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSelectContents2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetDecodeCommand2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetDecodeStatus2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeRead2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetSelectionContext2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeSetSelectionContext2);
+		REG_FUNC(cellMusicDecodeUtility, cellMusicDecodeGetContentsId2);
+	});

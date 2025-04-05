@@ -36,10 +36,7 @@ struct lv2_lwcond final : lv2_obj
 	atomic_t<s32> lwmutex_waiters = 0;
 
 	lv2_lwcond(u64 name, u32 lwid, u32 protocol, vm::ptr<sys_lwcond_t> control) noexcept
-		: name(std::bit_cast<be_t<u64>>(name))
-		, lwid(lwid)
-		, protocol{static_cast<u8>(protocol)}
-		, control(control)
+		: name(std::bit_cast<be_t<u64>>(name)), lwid(lwid), protocol{static_cast<u8>(protocol)}, control(control)
 	{
 	}
 

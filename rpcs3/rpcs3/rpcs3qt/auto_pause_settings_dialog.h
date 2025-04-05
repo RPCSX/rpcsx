@@ -20,7 +20,7 @@ class auto_pause_settings_dialog : public QDialog
 	};
 
 	std::vector<u32> m_entries;
-	QTableWidget *m_pause_list;
+	QTableWidget* m_pause_list;
 
 public:
 	explicit auto_pause_settings_dialog(QWidget* parent);
@@ -31,8 +31,8 @@ public:
 public Q_SLOTS:
 	void OnRemove();
 private Q_SLOTS:
-	void ShowContextMenu(const QPoint &pos);
-	void keyPressEvent(QKeyEvent *event) override;
+	void ShowContextMenu(const QPoint& pos);
+	void keyPressEvent(QKeyEvent* event) override;
 };
 
 class AutoPauseConfigDialog : public QDialog

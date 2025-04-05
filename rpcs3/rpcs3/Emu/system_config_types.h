@@ -87,11 +87,11 @@ enum class audio_format
 
 enum class audio_format_flag : unsigned
 {
-	lpcm_2_48khz   = 0x00000000, // Linear PCM 2 Ch. 48 kHz (always available)
+	lpcm_2_48khz = 0x00000000,   // Linear PCM 2 Ch. 48 kHz (always available)
 	lpcm_5_1_48khz = 0x00000001, // Linear PCM 5.1 Ch. 48 kHz
 	lpcm_7_1_48khz = 0x00000002, // Linear PCM 7.1 Ch. 48 kHz
-	ac3            = 0x00000004, // Dolby Digital 5.1 Ch.
-	dts            = 0x00000008, // DTS 5.1 Ch.
+	ac3 = 0x00000004,            // Dolby Digital 5.1 Ch.
+	dts = 0x00000008,            // DTS 5.1 Ch.
 };
 
 enum class audio_channel_layout

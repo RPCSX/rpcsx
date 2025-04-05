@@ -22,9 +22,7 @@
 constexpr auto qstr = QString::fromStdString;
 
 debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_settings, breakpoint_handler* handler)
-	: QListWidget(parent)
-	, m_gui_settings(std::move(gui_settings))
-	, m_ppu_breakpoint_handler(handler)
+	: QListWidget(parent), m_gui_settings(std::move(gui_settings)), m_ppu_breakpoint_handler(handler)
 {
 	setWindowTitle(tr("ASM"));
 
@@ -37,26 +35,26 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
 	connect(this, &QListWidget::currentRowChanged, this, [this](int row)
-	{
-		if (row < 0)
 		{
-			m_selected_instruction = -1;
-			m_showing_selected_instruction = false;
-			return;
-		}
+			if (row < 0)
+			{
+				m_selected_instruction = -1;
+				m_showing_selected_instruction = false;
+				return;
+			}
 
-		u32 pc = m_start_addr;
+			u32 pc = m_start_addr;
 
-		const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
+			const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
-		for (; cpu && cpu->get_class() == thread_class::rsx && row; row--)
-		{
-			// If scrolling forwards (downwards), we can skip entire commands
-			pc += std::max<u32>(m_disasm->disasm(pc), 4);
-		}
+			for (; cpu && cpu->get_class() == thread_class::rsx && row; row--)
+			{
+				// If scrolling forwards (downwards), we can skip entire commands
+				pc += std::max<u32>(m_disasm->disasm(pc), 4);
+			}
 
-		m_selected_instruction = pc + row * 4;
-	});
+			m_selected_instruction = pc + row * 4;
+		});
 }
 
 void debugger_list::UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm)
@@ -262,10 +260,10 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
-				static_cast<u8>(data >> 24),
-				static_cast<u8>(data >> 16),
-				static_cast<u8>(data >> 8),
-				static_cast<u8>(data >> 0))));
+																			static_cast<u8>(data >> 24),
+																			static_cast<u8>(data >> 16),
+																			static_cast<u8>(data >> 8),
+																			static_cast<u8>(data >> 0))));
 				count = 4;
 				continue;
 			}
@@ -352,10 +350,10 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 	switch (event->key())
 	{
-	case Qt::Key_PageUp:   scroll(0 - m_item_count); return;
+	case Qt::Key_PageUp: scroll(0 - m_item_count); return;
 	case Qt::Key_PageDown: scroll(m_item_count); return;
-	case Qt::Key_Up:       scroll(-1); return;
-	case Qt::Key_Down:     scroll(1); return;
+	case Qt::Key_Up: scroll(-1); return;
+	case Qt::Key_Down: scroll(1); return;
 	case Qt::Key_I:
 	{
 		if (event->isAutoRepeat())
@@ -378,16 +376,17 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 	QListWidget::keyPressEvent(event);
 }
 
-
 void debugger_list::showEvent(QShowEvent* event)
 {
-	if (m_cmd_detail) m_cmd_detail->show();
+	if (m_cmd_detail)
+		m_cmd_detail->show();
 	QListWidget::showEvent(event);
 }
 
 void debugger_list::hideEvent(QHideEvent* event)
 {
-	if (m_cmd_detail) m_cmd_detail->hide();
+	if (m_cmd_detail)
+		m_cmd_detail->hide();
 	QListWidget::hideEvent(event);
 }
 
@@ -397,7 +396,8 @@ void debugger_list::create_rsx_command_detail(u32 pc)
 	rsx_dis.change_mode(cpu_disasm_mode::list);
 
 	// Either invalid or not a method
-	if (rsx_dis.disasm(pc) <= 4) return;
+	if (rsx_dis.disasm(pc) <= 4)
+		return;
 
 	if (m_cmd_detail)
 	{
@@ -422,10 +422,10 @@ void debugger_list::create_rsx_command_detail(u32 pc)
 	m_cmd_detail->show();
 
 	connect(m_cmd_detail, &QDialog::finished, [this](int)
-	{
-		// Cleanup
-		std::exchange(m_cmd_detail, nullptr)->deleteLater();
-	});
+		{
+			// Cleanup
+			std::exchange(m_cmd_detail, nullptr)->deleteLater();
+		});
 }
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
@@ -433,7 +433,8 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 	if (event->button() == Qt::LeftButton)
 	{
 		int i = currentRow();
-		if (i < 0) return;
+		if (i < 0)
+			return;
 
 		u32 pc = m_start_addr;
 

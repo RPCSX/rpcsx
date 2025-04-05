@@ -32,7 +32,7 @@ namespace rsx
 			if (range.inside(tile_range))
 			{
 				ensure(tile_base_address + 1);
-				return { .base_address = tile_base_address, .tile = &tile };
+				return {.base_address = tile_base_address, .tile = &tile};
 			}
 		}
 
@@ -47,4 +47,4 @@ namespace rsx
 
 		return utils::address_range::start_length(start_offset + base_address, end_offset - start_offset);
 	}
-}
+} // namespace rsx

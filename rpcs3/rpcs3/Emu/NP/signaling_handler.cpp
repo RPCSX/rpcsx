@@ -429,7 +429,7 @@ void signaling_handler::operator()()
 				sign_log.notice("Timeout disconnection");
 				update_si_status(sig.sig_info, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TIMEOUT);
 				retire_packet(sig.sig_info, signal_ping); // Retire ping packet if necessary
-				break; // qpackets has been emptied of all packets for this user so we're requeuing
+				break;                                    // qpackets has been emptied of all packets for this user so we're requeuing
 			}
 
 			// Update the timestamp if necessary

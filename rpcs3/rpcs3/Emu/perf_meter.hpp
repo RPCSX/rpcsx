@@ -44,7 +44,7 @@ public:
 
 	perf_stat_base(const perf_stat_base&) = delete;
 
-	perf_stat_base& operator =(const perf_stat_base&) = delete;
+	perf_stat_base& operator=(const perf_stat_base&) = delete;
 
 	~perf_stat_base() {}
 
@@ -98,7 +98,7 @@ public:
 		std::fill(std::begin(m_timestamps), std::end(m_timestamps), 0);
 	}
 
-	FORCE_INLINE SAFE_BUFFERS(operator bool) () const noexcept
+	FORCE_INLINE SAFE_BUFFERS(operator bool)() const noexcept
 	{
 		return m_timestamps[0] != 0;
 	}
@@ -112,7 +112,8 @@ public:
 	}
 
 	template <auto SN, auto... S>
-	SAFE_BUFFERS() perf_meter(perf_meter<SN, S...>&& r) noexcept
+	SAFE_BUFFERS()
+	perf_meter(perf_meter<SN, S...>&& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		r.reset();
@@ -120,14 +121,16 @@ public:
 
 	// Copy first timestamp
 	template <auto SN, auto... S>
-	SAFE_BUFFERS(perf_meter&) operator =(const perf_meter<SN, S...>& r) noexcept
+	SAFE_BUFFERS(perf_meter&)
+	operator=(const perf_meter<SN, S...>& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		return *this;
 	}
 
 	template <auto SN, auto... S>
-	SAFE_BUFFERS(perf_meter&) operator =(perf_meter<SN, S...>& r) noexcept
+	SAFE_BUFFERS(perf_meter&)
+	operator=(perf_meter<SN, S...>& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		r.reset();
@@ -136,7 +139,8 @@ public:
 
 	// Push subevent data in array
 	template <auto Event, usz Index = 0>
-	SAFE_BUFFERS(void) push() noexcept
+	SAFE_BUFFERS(void)
+	push() noexcept
 	{
 		// TODO: should use more efficient search with type comparison, then value comparison, or pattern matching
 		if constexpr (std::array<bool, sizeof...(SubEvents)>{(SubEvents == Event)...}[Index])
@@ -170,7 +174,8 @@ public:
 		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
 	}
 
-	SAFE_BUFFERS() ~perf_meter()
+	SAFE_BUFFERS()
+	~perf_meter()
 	{
 		// Disabled counter
 		if (!m_timestamps[0]) [[unlikely]]

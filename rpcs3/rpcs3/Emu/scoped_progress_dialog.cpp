@@ -82,11 +82,11 @@ scoped_progress_dialog::scoped_progress_dialog(std::string text) noexcept
 	}
 
 	g_progr_text.data.atomic_op([&](std::common_type_t<progress_dialog_string_t::data_t>& progr)
-	{
-		progr.update_id++;
-		progr.text_index = m_text_index;
-		progr.text_count++;
-	});
+		{
+			progr.update_id++;
+			progr.text_index = m_text_index;
+			progr.text_count++;
+		});
 }
 
 scoped_progress_dialog& scoped_progress_dialog::operator=(std::string text) noexcept
@@ -130,30 +130,30 @@ scoped_progress_dialog::~scoped_progress_dialog() noexcept
 		}
 
 		auto [old, ok] = g_progr_text.data.fetch_op([&](std::common_type_t<progress_dialog_string_t::data_t>& progr0)
-		{
-			if (progr.update_id != progr0.update_id)
 			{
-				// Repeat the loop
-				return false;
-			}
-
-			progr0.text_count--;
-
-			if (progr0.text_index == m_text_index)
-			{
-				if (restored_text_index == umax)
+				if (progr.update_id != progr0.update_id)
 				{
-					progr0.text_index = umax;
-					progr0.update_id++;
-					return true;
+					// Repeat the loop
+					return false;
 				}
 
-				progr0.text_index = ::narrow<u32>(restored_text_index);
-				progr0.update_id++;
-			}
+				progr0.text_count--;
 
-			return true;
-		});
+				if (progr0.text_index == m_text_index)
+				{
+					if (restored_text_index == umax)
+					{
+						progr0.text_index = umax;
+						progr0.update_id++;
+						return true;
+					}
+
+					progr0.text_index = ::narrow<u32>(restored_text_index);
+					progr0.update_id++;
+				}
+
+				return true;
+			});
 
 		progr = old;
 

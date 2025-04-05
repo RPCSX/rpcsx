@@ -13,11 +13,9 @@
 #pragma GCC diagnostic pop
 #endif
 
-
 class SDLDevice : public PadDevice
 {
 public:
-
 	struct touch_point
 	{
 		int index = 0;

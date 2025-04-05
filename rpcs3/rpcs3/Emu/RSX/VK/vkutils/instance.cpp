@@ -479,7 +479,7 @@ namespace vk
 		}
 	}
 
-	void symbol_cache::register_symbol(const char* name, void **ptr)
+	void symbol_cache::register_symbol(const char* name, void** ptr)
 	{
 		registered_symbols.emplace_back(name, ptr);
 	}

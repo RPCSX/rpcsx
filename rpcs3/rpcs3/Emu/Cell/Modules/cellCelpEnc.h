@@ -9,12 +9,12 @@ struct CellSpurs;
 // Return Codes
 enum CellCelpEncError : u32
 {
-	CELL_CELPENC_ERROR_FAILED      = 0x80614001,
-	CELL_CELPENC_ERROR_SEQ         = 0x80614002,
-	CELL_CELPENC_ERROR_ARG         = 0x80614003,
+	CELL_CELPENC_ERROR_FAILED = 0x80614001,
+	CELL_CELPENC_ERROR_SEQ = 0x80614002,
+	CELL_CELPENC_ERROR_ARG = 0x80614003,
 	CELL_CELPENC_ERROR_CORE_FAILED = 0x80614081,
-	CELL_CELPENC_ERROR_CORE_SEQ    = 0x80614082,
-	CELL_CELPENC_ERROR_CORE_ARG    = 0x80614083,
+	CELL_CELPENC_ERROR_CORE_SEQ = 0x80614082,
+	CELL_CELPENC_ERROR_CORE_ARG = 0x80614083,
 };
 
 // Definitions
@@ -55,7 +55,7 @@ struct CellCelpEncResource
 	vm::bptr<void> startAddr;
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> spuThreadPriority;
-	be_t<u32/*usz*/> ppuThreadStackSize;
+	be_t<u32 /*usz*/> ppuThreadStackSize;
 };
 
 struct CellCelpEncParam

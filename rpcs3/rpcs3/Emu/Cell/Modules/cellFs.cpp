@@ -430,8 +430,8 @@ error_code cellFsGetDirectoryEntries(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDire
 	op->op = 0xe0000012;
 	op->arg._code = 0;
 	op->arg._size = 0;
-	op->arg.ptr   = entries;
-	op->arg.max   = entries_size / sizeof(CellFsDirectoryEntry);
+	op->arg.ptr = entries;
+	op->arg.max = entries_size / sizeof(CellFsDirectoryEntry);
 
 	const s32 rc = sys_fs_fcntl(ppu, fd, 0xe0000012, op.ptr(&lv2_file_op_dir::arg), 0x10);
 
@@ -451,7 +451,8 @@ error_code cellFsReadWithOffset(ppu_thread& ppu, u32 fd, u64 offset, vm::ptr<voi
 
 	if (fd - 3 > 252)
 	{
-		if (nread) *nread = 0;
+		if (nread)
+			*nread = 0;
 		return CELL_EBADF;
 	}
 
@@ -487,13 +488,15 @@ error_code cellFsWriteWithOffset(ppu_thread& ppu, u32 fd, u64 offset, vm::cptr<v
 
 	if (!buf)
 	{
-		if (nwrite) *nwrite = 0;
+		if (nwrite)
+			*nwrite = 0;
 		return CELL_EFAULT;
 	}
 
 	if (fd - 3 > 252)
 	{
-		if (nwrite) *nwrite = 0;
+		if (nwrite)
+			*nwrite = 0;
 		return CELL_EBADF;
 	}
 
@@ -637,12 +640,12 @@ error_code cellFsAllocateFileAreaWithoutZeroFill(ppu_thread& ppu, vm::cptr<char>
 
 	vm::var<lv2_file_e0000017> ctrl;
 	ctrl->size = ctrl.size();
-	ctrl->_x4  = 0x10;
-	ctrl->_x8  = 0x20;
+	ctrl->_x4 = 0x10;
+	ctrl->_x8 = 0x20;
 
 	ctrl->file_path = path;
 	ctrl->file_size = size;
-	ctrl->out_code  = CELL_ENOSYS;
+	ctrl->out_code = CELL_ENOSYS;
 
 	// TODO
 	if (s32 rc = sys_fs_fcntl(ppu, -1, 0xe0000017, ctrl, ctrl->size))
@@ -915,11 +918,10 @@ struct fs_aio_thread : ppu_thread
 			}
 			else if (std::lock_guard lock(file->mp->mutex); file->file)
 			{
-				const auto old_pos = file->file.pos(); file->file.seek(aio->offset);
+				const auto old_pos = file->file.pos();
+				file->file.seek(aio->offset);
 
-				result = type == 2
-					? file->op_write(aio->buf, aio->size)
-					: file->op_read(aio->buf, aio->size);
+				result = type == 2 ? file->op_write(aio->buf, aio->size) : file->op_read(aio->buf, aio->size);
 
 				file->file.seek(old_pos);
 				error = CELL_OK;
@@ -974,10 +976,9 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	m.thread->cmd_list
-	({
-		{ 1, xid },
-		{ aio, func },
+	m.thread->cmd_list({
+		{1, xid},
+		{aio, func},
 	});
 
 	return CELL_OK;
@@ -998,10 +999,9 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	m.thread->cmd_list
-	({
-		{ 2, xid },
-		{ aio, func },
+	m.thread->cmd_list({
+		{2, xid},
+		{aio, func},
 	});
 
 	return CELL_OK;
@@ -1035,85 +1035,85 @@ s32 cellFsUnregisterL10nCallbacks()
 }
 
 DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
-{
-	REG_FUNC(sys_fs, cellFsAccess);
-	REG_FUNC(sys_fs, cellFsAclRead);
-	REG_FUNC(sys_fs, cellFsAclWrite);
-	REG_FUNC(sys_fs, cellFsAioCancel);
-	REG_FUNC(sys_fs, cellFsAioFinish);
-	REG_FUNC(sys_fs, cellFsAioInit);
-	REG_FUNC(sys_fs, cellFsAioRead);
-	REG_FUNC(sys_fs, cellFsAioWrite);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithInitialData);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithoutZeroFill);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithInitialData);
-	REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill);
-	REG_FUNC(sys_fs, cellFsArcadeHddSerialNumber);
-	REG_FUNC(sys_fs, cellFsChangeFileSizeByFdWithoutAllocation);
-	REG_FUNC(sys_fs, cellFsChangeFileSizeWithoutAllocation);
-	REG_FUNC(sys_fs, cellFsChmod);
-	REG_FUNC(sys_fs, cellFsChown);
-	REG_FUNC(sys_fs, cellFsClose).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsClosedir).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsFcntl);
-	REG_FUNC(sys_fs, cellFsFdatasync);
-	REG_FUNC(sys_fs, cellFsFGetBlockSize).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsFGetBlockSize2);
-	REG_FUNC(sys_fs, cellFsFstat).flags = MFF_PERFECT;
-	REG_FUNC(sys_fs, cellFsFsync);
-	REG_FUNC(sys_fs, cellFsFtruncate).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsGetBlockSize);
-	REG_FUNC(sys_fs, cellFsGetBlockSize2);
-	REG_FUNC(sys_fs, cellFsGetDirectoryEntries);
-	REG_FUNC(sys_fs, cellFsGetFreeSize);
-	REG_FUNC(sys_fs, cellFsGetPath);
-	REG_FUNC(sys_fs, cellFsLink);
-	REG_FUNC(sys_fs, cellFsLseek).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsLsnGetCDA);
-	REG_FUNC(sys_fs, cellFsLsnGetCDASize);
-	REG_FUNC(sys_fs, cellFsLsnLock);
-	REG_FUNC(sys_fs, cellFsLsnRead);
-	REG_FUNC(sys_fs, cellFsLsnRead2);
-	REG_FUNC(sys_fs, cellFsLsnUnlock);
-	REG_FUNC(sys_fs, cellFsMappedAllocate);
-	REG_FUNC(sys_fs, cellFsMappedFree);
-	REG_FUNC(sys_fs, cellFsMkdir);
-	REG_FUNC(sys_fs, cellFsOpen);
-	REG_FUNC(sys_fs, cellFsOpen2);
-	REG_FUNC(sys_fs, cellFsOpendir);
-	REG_FUNC(sys_fs, cellFsRead).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsReaddir).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsReadWithOffset);
-	REG_FUNC(sys_fs, cellFsRegisterConversionCallback);
-	REG_FUNC(sys_fs, cellFsRename);
-	REG_FUNC(sys_fs, cellFsRmdir);
-	REG_FUNC(sys_fs, cellFsSdataOpen);
-	REG_FUNC(sys_fs, cellFsSdataOpenByFd);
-	REG_FUNC(sys_fs, cellFsSdataOpenWithVersion);
-	REG_FUNC(sys_fs, cellFsSetAttribute);
-	REG_FUNC(sys_fs, cellFsSetDefaultContainer);
-	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
-	REG_FUNC(sys_fs, cellFsSetIoBuffer);
-	REG_FUNC(sys_fs, cellFsSetIoBufferFromDefaultContainer);
-	REG_FUNC(sys_fs, cellFsStat);
-	REG_FUNC(sys_fs, cellFsStRead);
-	REG_FUNC(sys_fs, cellFsStReadFinish);
-	REG_FUNC(sys_fs, cellFsStReadGetCurrentAddr);
-	REG_FUNC(sys_fs, cellFsStReadGetRegid);
-	REG_FUNC(sys_fs, cellFsStReadGetRingBuf);
-	REG_FUNC(sys_fs, cellFsStReadGetStatus);
-	REG_FUNC(sys_fs, cellFsStReadInit);
-	REG_FUNC(sys_fs, cellFsStReadPutCurrentAddr);
-	REG_FUNC(sys_fs, cellFsStReadStart);
-	REG_FUNC(sys_fs, cellFsStReadStop);
-	REG_FUNC(sys_fs, cellFsStReadWait);
-	REG_FUNC(sys_fs, cellFsStReadWaitCallback);
-	REG_FUNC(sys_fs, cellFsSymbolicLink);
-	REG_FUNC(sys_fs, cellFsTruncate);
-	REG_FUNC(sys_fs, cellFsTruncate2);
-	REG_FUNC(sys_fs, cellFsUnlink);
-	REG_FUNC(sys_fs, cellFsUnregisterL10nCallbacks);
-	REG_FUNC(sys_fs, cellFsUtime);
-	REG_FUNC(sys_fs, cellFsWrite).flag(MFF_PERFECT);
-	REG_FUNC(sys_fs, cellFsWriteWithOffset);
-});
+	{
+		REG_FUNC(sys_fs, cellFsAccess);
+		REG_FUNC(sys_fs, cellFsAclRead);
+		REG_FUNC(sys_fs, cellFsAclWrite);
+		REG_FUNC(sys_fs, cellFsAioCancel);
+		REG_FUNC(sys_fs, cellFsAioFinish);
+		REG_FUNC(sys_fs, cellFsAioInit);
+		REG_FUNC(sys_fs, cellFsAioRead);
+		REG_FUNC(sys_fs, cellFsAioWrite);
+		REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithInitialData);
+		REG_FUNC(sys_fs, cellFsAllocateFileAreaByFdWithoutZeroFill);
+		REG_FUNC(sys_fs, cellFsAllocateFileAreaWithInitialData);
+		REG_FUNC(sys_fs, cellFsAllocateFileAreaWithoutZeroFill);
+		REG_FUNC(sys_fs, cellFsArcadeHddSerialNumber);
+		REG_FUNC(sys_fs, cellFsChangeFileSizeByFdWithoutAllocation);
+		REG_FUNC(sys_fs, cellFsChangeFileSizeWithoutAllocation);
+		REG_FUNC(sys_fs, cellFsChmod);
+		REG_FUNC(sys_fs, cellFsChown);
+		REG_FUNC(sys_fs, cellFsClose).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsClosedir).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsFcntl);
+		REG_FUNC(sys_fs, cellFsFdatasync);
+		REG_FUNC(sys_fs, cellFsFGetBlockSize).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsFGetBlockSize2);
+		REG_FUNC(sys_fs, cellFsFstat).flags = MFF_PERFECT;
+		REG_FUNC(sys_fs, cellFsFsync);
+		REG_FUNC(sys_fs, cellFsFtruncate).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsGetBlockSize);
+		REG_FUNC(sys_fs, cellFsGetBlockSize2);
+		REG_FUNC(sys_fs, cellFsGetDirectoryEntries);
+		REG_FUNC(sys_fs, cellFsGetFreeSize);
+		REG_FUNC(sys_fs, cellFsGetPath);
+		REG_FUNC(sys_fs, cellFsLink);
+		REG_FUNC(sys_fs, cellFsLseek).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsLsnGetCDA);
+		REG_FUNC(sys_fs, cellFsLsnGetCDASize);
+		REG_FUNC(sys_fs, cellFsLsnLock);
+		REG_FUNC(sys_fs, cellFsLsnRead);
+		REG_FUNC(sys_fs, cellFsLsnRead2);
+		REG_FUNC(sys_fs, cellFsLsnUnlock);
+		REG_FUNC(sys_fs, cellFsMappedAllocate);
+		REG_FUNC(sys_fs, cellFsMappedFree);
+		REG_FUNC(sys_fs, cellFsMkdir);
+		REG_FUNC(sys_fs, cellFsOpen);
+		REG_FUNC(sys_fs, cellFsOpen2);
+		REG_FUNC(sys_fs, cellFsOpendir);
+		REG_FUNC(sys_fs, cellFsRead).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsReaddir).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsReadWithOffset);
+		REG_FUNC(sys_fs, cellFsRegisterConversionCallback);
+		REG_FUNC(sys_fs, cellFsRename);
+		REG_FUNC(sys_fs, cellFsRmdir);
+		REG_FUNC(sys_fs, cellFsSdataOpen);
+		REG_FUNC(sys_fs, cellFsSdataOpenByFd);
+		REG_FUNC(sys_fs, cellFsSdataOpenWithVersion);
+		REG_FUNC(sys_fs, cellFsSetAttribute);
+		REG_FUNC(sys_fs, cellFsSetDefaultContainer);
+		REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
+		REG_FUNC(sys_fs, cellFsSetIoBuffer);
+		REG_FUNC(sys_fs, cellFsSetIoBufferFromDefaultContainer);
+		REG_FUNC(sys_fs, cellFsStat);
+		REG_FUNC(sys_fs, cellFsStRead);
+		REG_FUNC(sys_fs, cellFsStReadFinish);
+		REG_FUNC(sys_fs, cellFsStReadGetCurrentAddr);
+		REG_FUNC(sys_fs, cellFsStReadGetRegid);
+		REG_FUNC(sys_fs, cellFsStReadGetRingBuf);
+		REG_FUNC(sys_fs, cellFsStReadGetStatus);
+		REG_FUNC(sys_fs, cellFsStReadInit);
+		REG_FUNC(sys_fs, cellFsStReadPutCurrentAddr);
+		REG_FUNC(sys_fs, cellFsStReadStart);
+		REG_FUNC(sys_fs, cellFsStReadStop);
+		REG_FUNC(sys_fs, cellFsStReadWait);
+		REG_FUNC(sys_fs, cellFsStReadWaitCallback);
+		REG_FUNC(sys_fs, cellFsSymbolicLink);
+		REG_FUNC(sys_fs, cellFsTruncate);
+		REG_FUNC(sys_fs, cellFsTruncate2);
+		REG_FUNC(sys_fs, cellFsUnlink);
+		REG_FUNC(sys_fs, cellFsUnregisterL10nCallbacks);
+		REG_FUNC(sys_fs, cellFsUtime);
+		REG_FUNC(sys_fs, cellFsWrite).flag(MFF_PERFECT);
+		REG_FUNC(sys_fs, cellFsWriteWithOffset);
+	});

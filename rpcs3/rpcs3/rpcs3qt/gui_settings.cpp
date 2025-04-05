@@ -66,7 +66,7 @@ namespace gui
 		case game_list_columns::dir_size: return "column_dir_size";
 		case game_list_columns::count: return "";
 		}
-	
+
 		fmt::throw_exception("get_game_list_column_name: Invalid column");
 	}
 
@@ -84,7 +84,7 @@ namespace gui
 		case trophy_list_columns::time_unlocked: return "trophy_column_time_unlocked";
 		case trophy_list_columns::count: return "";
 		}
-	
+
 		fmt::throw_exception("get_trophy_list_column_name: Invalid column");
 	}
 
@@ -98,10 +98,10 @@ namespace gui
 		case trophy_game_list_columns::trophies: return "trophy_game_column_trophies";
 		case trophy_game_list_columns::count: return "";
 		}
-	
+
 		fmt::throw_exception("get_trophy_game_list_column_name: Invalid column");
 	}
-}
+} // namespace gui
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {
@@ -112,17 +112,28 @@ QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const
 {
 	QStringList filters;
 
-	if (GetCategoryVisibility(Category::HDD_Game, is_list_mode)) filters.append(cat::cat_hdd_game);
-	if (GetCategoryVisibility(Category::Disc_Game, is_list_mode)) filters.append(cat::cat_disc_game);
-	if (GetCategoryVisibility(Category::PS1_Game, is_list_mode)) filters.append(cat::cat_ps1_game);
-	if (GetCategoryVisibility(Category::PS2_Game, is_list_mode)) filters.append(cat::ps2_games);
-	if (GetCategoryVisibility(Category::PSP_Game, is_list_mode)) filters.append(cat::psp_games);
-	if (GetCategoryVisibility(Category::Home, is_list_mode)) filters.append(cat::cat_home);
-	if (GetCategoryVisibility(Category::Media, is_list_mode)) filters.append(cat::media);
-	if (GetCategoryVisibility(Category::Data, is_list_mode)) filters.append(cat::data);
-	if (GetCategoryVisibility(Category::OS, is_list_mode)) filters.append(cat::os);
-	if (GetCategoryVisibility(Category::Unknown_Cat, is_list_mode)) filters.append(cat::cat_unknown);
-	if (GetCategoryVisibility(Category::Others, is_list_mode)) filters.append(cat::others);
+	if (GetCategoryVisibility(Category::HDD_Game, is_list_mode))
+		filters.append(cat::cat_hdd_game);
+	if (GetCategoryVisibility(Category::Disc_Game, is_list_mode))
+		filters.append(cat::cat_disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game, is_list_mode))
+		filters.append(cat::cat_ps1_game);
+	if (GetCategoryVisibility(Category::PS2_Game, is_list_mode))
+		filters.append(cat::ps2_games);
+	if (GetCategoryVisibility(Category::PSP_Game, is_list_mode))
+		filters.append(cat::psp_games);
+	if (GetCategoryVisibility(Category::Home, is_list_mode))
+		filters.append(cat::cat_home);
+	if (GetCategoryVisibility(Category::Media, is_list_mode))
+		filters.append(cat::media);
+	if (GetCategoryVisibility(Category::Data, is_list_mode))
+		filters.append(cat::data);
+	if (GetCategoryVisibility(Category::OS, is_list_mode))
+		filters.append(cat::os);
+	if (GetCategoryVisibility(Category::Unknown_Cat, is_list_mode))
+		filters.append(cat::cat_unknown);
+	if (GetCategoryVisibility(Category::Others, is_list_mode))
+		filters.append(cat::others);
 
 	return filters;
 }
@@ -161,20 +172,20 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 	}
 
 	connect(&mb, &QMessageBox::finished, [&](int res)
-	{
-		if (result)
 		{
-			*result = res;
-		}
+			if (result)
+			{
+				*result = res;
+			}
 
-		const auto checkBox = mb.checkBox();
+			const auto checkBox = mb.checkBox();
 
-		if (checkBox && checkBox->isChecked())
-		{
-			SetValue(entry, false);
-			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, entry.name);
-		}
-	});
+			if (checkBox && checkBox->isChecked())
+			{
+				SetValue(entry, false);
+				cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, entry.name);
+			}
+		});
 
 	mb.exec();
 }
@@ -198,15 +209,15 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	const auto old_status = Emu.GetStatus(false);
 
 	qt_events_aware_op(16, [&]()
-	{
-		if (Emu.GetStatus(false) != system_state::stopping)
 		{
-			ensure(info == Emu.GetEmulationIdentifier(old_status == system_state::stopping));
-			return true;
-		}
+			if (Emu.GetStatus(false) != system_state::stopping)
+			{
+				ensure(info == Emu.GetEmulationIdentifier(old_status == system_state::stopping));
+				return true;
+			}
 
-		return false;
-	});
+			return false;
+		});
 
 	if (!Emu.IsStopped())
 	{
@@ -333,29 +344,29 @@ QSize gui_settings::SizeFromSlider(int pos)
 
 gui_save gui_settings::GetGuiSaveForSavestateGameColumn(gui::savestate_game_list_columns col)
 {
-	return gui_save{ gui::savestate, "visibility_" + gui::get_savestate_game_list_column_name(col), true };
+	return gui_save{gui::savestate, "visibility_" + gui::get_savestate_game_list_column_name(col), true};
 }
 
 gui_save gui_settings::GetGuiSaveForSavestateColumn(gui::savestate_list_columns col)
 {
-	return gui_save{ gui::savestate, "visibility_" + gui::get_savestate_list_column_name(col), true };
+	return gui_save{gui::savestate, "visibility_" + gui::get_savestate_list_column_name(col), true};
 }
 
 gui_save gui_settings::GetGuiSaveForTrophyGameColumn(gui::trophy_game_list_columns col)
 {
-	return gui_save{ gui::trophy, "visibility_" + gui::get_trophy_game_list_column_name(col), true };
+	return gui_save{gui::trophy, "visibility_" + gui::get_trophy_game_list_column_name(col), true};
 }
 
 gui_save gui_settings::GetGuiSaveForTrophyColumn(gui::trophy_list_columns col)
 {
-	return gui_save{ gui::trophy, "visibility_" + gui::get_trophy_list_column_name(col), true };
+	return gui_save{gui::trophy, "visibility_" + gui::get_trophy_list_column_name(col), true};
 }
 
 gui_save gui_settings::GetGuiSaveForGameColumn(gui::game_list_columns col)
 {
 	// hide sound format, parental level, firmware version and path by default
 	const bool show = col != gui::game_list_columns::sound && col != gui::game_list_columns::parental && col != gui::game_list_columns::firmware && col != gui::game_list_columns::path;
-	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name(col), show };
+	return gui_save{gui::game_list, "visibility_" + gui::get_game_list_column_name(col), show};
 }
 
 gui_save gui_settings::GetGuiSaveForCategory(int cat, bool is_list_mode)

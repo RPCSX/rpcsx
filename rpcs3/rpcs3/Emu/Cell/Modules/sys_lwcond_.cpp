@@ -14,7 +14,7 @@ error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::
 
 	vm::var<u32> out_id;
 	vm::var<sys_cond_attribute_t> attrs;
-	attrs->pshared  = SYS_SYNC_NOT_PROCESS_SHARED;
+	attrs->pshared = SYS_SYNC_NOT_PROCESS_SHARED;
 	attrs->name_u64 = attr->name_u64;
 
 	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(ppu, out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(ppu, out_id, lwmutex->sleep_queue, lwcond, std::bit_cast<be_t<u64>>(attr->name_u64)))
@@ -22,7 +22,7 @@ error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::
 		return res;
 	}
 
-	lwcond->lwmutex      = lwmutex;
+	lwcond->lwmutex = lwmutex;
 	lwcond->lwcond_queue = *out_id;
 	return CELL_OK;
 }
@@ -97,10 +97,10 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 	// if locking succeeded
 	lwmutex->lock_var.atomic_op([](sys_lwmutex_t::sync_var_t& var)
-	{
-		var.waiter++;
-		var.owner = lwmutex_reserved;
-	});
+		{
+			var.waiter++;
+			var.owner = lwmutex_reserved;
+		});
 
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, u32{umax}, 3))
@@ -108,10 +108,10 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		static_cast<void>(ppu.test_stopped());
 
 		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
-		{
-			var.waiter--;
-			var.owner = ppu.id;
-		});
+			{
+				var.waiter--;
+				var.owner = ppu.id;
+			});
 
 		// unlock the lightweight mutex
 		sys_lwmutex_unlock(ppu, lwmutex);
@@ -243,10 +243,10 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 
 	// if locking succeeded
 	lwmutex->lock_var.atomic_op([](sys_lwmutex_t::sync_var_t& var)
-	{
-		var.waiter++;
-		var.owner = lwmutex_reserved;
-	});
+		{
+			var.waiter++;
+			var.owner = lwmutex_reserved;
+		});
 
 	// call the syscall
 	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, ppu_thread_id, 3))
@@ -254,10 +254,10 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 		static_cast<void>(ppu.test_stopped());
 
 		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
-		{
-			var.waiter--;
-			var.owner = ppu.id;
-		});
+			{
+				var.waiter--;
+				var.owner = ppu.id;
+			});
 
 		// unlock the lightweight mutex
 		sys_lwmutex_unlock(ppu, lwmutex);
@@ -380,12 +380,12 @@ void sysPrxForUser_sys_lwcond_init(ppu_static_module* _this)
 	REG_FUNC(sysPrxForUser, sys_lwcond_wait);
 
 	_this->add_init_func([](ppu_static_module*)
-	{
-		REINIT_FUNC(sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	});
+		{
+			REINIT_FUNC(sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		});
 }

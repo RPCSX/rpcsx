@@ -8,7 +8,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 #include <Xinput.h>
 
 // ScpToolkit defined structure for pressure sensitive button query
@@ -97,9 +97,9 @@ class xinput_pad_handler final : public PadHandlerBase
 
 	struct XInputDevice : public PadDevice
 	{
-		u32 deviceNumber{ 0 };
-		bool is_scp_device{ false };
-		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
+		u32 deviceNumber{0};
+		bool is_scp_device{false};
+		DWORD state{ERROR_NOT_CONNECTED}; // holds internal controller state change
 		SCP_EXTN state_scp{};
 		XINPUT_STATE state_base{};
 	};
@@ -126,11 +126,11 @@ private:
 	static PadButtonValues get_button_values_base(const XINPUT_STATE& state, trigger_recognition_mode trigger_mode);
 	static PadButtonValues get_button_values_scp(const SCP_EXTN& state, trigger_recognition_mode trigger_mode);
 
-	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
-	PFN_XINPUTGETCUSTOMDATA xinputGetCustomData{ nullptr };
-	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
-	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
-	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };
+	PFN_XINPUTGETEXTENDED xinputGetExtended{nullptr};
+	PFN_XINPUTGETCUSTOMDATA xinputGetCustomData{nullptr};
+	PFN_XINPUTGETSTATE xinputGetState{nullptr};
+	PFN_XINPUTSETSTATE xinputSetState{nullptr};
+	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{nullptr};
 	utils::dynamic_library library;
 
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;

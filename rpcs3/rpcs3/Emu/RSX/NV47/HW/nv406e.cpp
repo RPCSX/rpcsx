@@ -124,5 +124,5 @@ namespace rsx
 
 			util::write_gcm_label<false, true>(ctx, addr, arg);
 		}
-	}
-}
+	} // namespace nv406e
+} // namespace rsx

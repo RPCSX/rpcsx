@@ -94,20 +94,20 @@ error_code cellPesmUnloadAsync()
 }
 
 DECLARE(ppu_module_manager::cellPesmUtility)("cellPesmUtility", []()
-{
-	REG_FUNC(cellPesmUtility, cellPesmInitialize);
-	REG_FUNC(cellPesmUtility, cellPesmFinalize);
-	REG_FUNC(cellPesmUtility, cellPesmLoadAsync);
-	REG_FUNC(cellPesmUtility, cellPesmOpenDevice);
-	REG_FUNC(cellPesmUtility, cellPesmEncryptSample);
-	REG_FUNC(cellPesmUtility, cellPesmUnloadAsync);
-	REG_FUNC(cellPesmUtility, cellPesmGetSinf);
-	REG_FUNC(cellPesmUtility, cellPesmStartMovieRec);
-	REG_FUNC(cellPesmUtility, cellPesmInitEntry);
-	REG_FUNC(cellPesmUtility, cellPesmEndMovieRec);
-	REG_FUNC(cellPesmUtility, cellPesmEncryptSample2);
-	REG_FUNC(cellPesmUtility, cellPesmFinalize2);
-	REG_FUNC(cellPesmUtility, cellPesmCloseDevice);
-	REG_FUNC(cellPesmUtility, cellPesmInitEntry2);
-	REG_FUNC(cellPesmUtility, cellPesmPrepareRec);
-});
+	{
+		REG_FUNC(cellPesmUtility, cellPesmInitialize);
+		REG_FUNC(cellPesmUtility, cellPesmFinalize);
+		REG_FUNC(cellPesmUtility, cellPesmLoadAsync);
+		REG_FUNC(cellPesmUtility, cellPesmOpenDevice);
+		REG_FUNC(cellPesmUtility, cellPesmEncryptSample);
+		REG_FUNC(cellPesmUtility, cellPesmUnloadAsync);
+		REG_FUNC(cellPesmUtility, cellPesmGetSinf);
+		REG_FUNC(cellPesmUtility, cellPesmStartMovieRec);
+		REG_FUNC(cellPesmUtility, cellPesmInitEntry);
+		REG_FUNC(cellPesmUtility, cellPesmEndMovieRec);
+		REG_FUNC(cellPesmUtility, cellPesmEncryptSample2);
+		REG_FUNC(cellPesmUtility, cellPesmFinalize2);
+		REG_FUNC(cellPesmUtility, cellPesmCloseDevice);
+		REG_FUNC(cellPesmUtility, cellPesmInitEntry2);
+		REG_FUNC(cellPesmUtility, cellPesmPrepareRec);
+	});

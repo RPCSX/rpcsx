@@ -30,10 +30,10 @@ namespace vk
 		switch (op)
 		{
 		case rsx::comparison_function::never: return VK_COMPARE_OP_NEVER;
-		case rsx::comparison_function::greater: return reverse_direction ? VK_COMPARE_OP_LESS: VK_COMPARE_OP_GREATER;
-		case rsx::comparison_function::less: return reverse_direction ? VK_COMPARE_OP_GREATER: VK_COMPARE_OP_LESS;
-		case rsx::comparison_function::less_or_equal: return reverse_direction ? VK_COMPARE_OP_GREATER_OR_EQUAL: VK_COMPARE_OP_LESS_OR_EQUAL;
-		case rsx::comparison_function::greater_or_equal: return reverse_direction ? VK_COMPARE_OP_LESS_OR_EQUAL: VK_COMPARE_OP_GREATER_OR_EQUAL;
+		case rsx::comparison_function::greater: return reverse_direction ? VK_COMPARE_OP_LESS : VK_COMPARE_OP_GREATER;
+		case rsx::comparison_function::less: return reverse_direction ? VK_COMPARE_OP_GREATER : VK_COMPARE_OP_LESS;
+		case rsx::comparison_function::less_or_equal: return reverse_direction ? VK_COMPARE_OP_GREATER_OR_EQUAL : VK_COMPARE_OP_LESS_OR_EQUAL;
+		case rsx::comparison_function::greater_or_equal: return reverse_direction ? VK_COMPARE_OP_LESS_OR_EQUAL : VK_COMPARE_OP_GREATER_OR_EQUAL;
 		case rsx::comparison_function::equal: return VK_COMPARE_OP_EQUAL;
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
@@ -51,10 +51,10 @@ namespace vk
 		switch (auto raw = view->image(); +raw->current_layout)
 		{
 		default:
-			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			// case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			//ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
+			// ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
 			raw->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
@@ -87,7 +87,7 @@ namespace vk
 					raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					src_stage, dst_stage,
 					src_access, VK_ACCESS_SHADER_READ_BIT,
-					{ raw->aspect(), 0, 1, 0, 1 });
+					{raw->aspect(), 0, 1, 0, 1});
 
 				raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			}
@@ -99,7 +99,7 @@ namespace vk
 			break;
 		}
 	}
-}
+} // namespace vk
 
 void VKGSRender::begin_render_pass()
 {
@@ -107,7 +107,7 @@ void VKGSRender::begin_render_pass()
 		*m_current_command_buffer,
 		get_render_pass(),
 		m_draw_fbo->value,
-		{ positionu{0u, 0u}, sizeu{m_draw_fbo->width(), m_draw_fbo->height()} });
+		{positionu{0u, 0u}, sizeu{m_draw_fbo->width(), m_draw_fbo->height()}});
 }
 
 void VKGSRender::close_render_pass()
@@ -130,12 +130,12 @@ void VKGSRender::update_draw_state()
 	m_profiler.start();
 
 	// Update conditional dynamic state
-	if (rsx::method_registers.current_draw_clause.primitive >= rsx::primitive_type::points &&   // AMD/AMDVLK driver does not like it if you render points without setting line width for some reason
+	if (rsx::method_registers.current_draw_clause.primitive >= rsx::primitive_type::points && // AMD/AMDVLK driver does not like it if you render points without setting line width for some reason
 		rsx::method_registers.current_draw_clause.primitive <= rsx::primitive_type::line_strip)
 	{
 		const float actual_line_width =
 			m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * rsx::get_resolution_scale() : 1.f;
-			VK_GET_SYMBOL(vkCmdSetLineWidth)(*m_current_command_buffer, actual_line_width);
+		VK_GET_SYMBOL(vkCmdSetLineWidth)(*m_current_command_buffer, actual_line_width);
 	}
 
 	if (rsx::method_registers.blend_enabled())
@@ -246,9 +246,7 @@ void VKGSRender::load_texture_env()
 
 	auto get_border_color = [&](const rsx::Texture auto& tex)
 	{
-		return  m_device->get_custom_border_color_support().require_border_color_remap
-			? tex.remapped_border_color()
-			: rsx::decode_border_color(tex.border_color());
+		return m_device->get_custom_border_color_support().require_border_color_remap ? tex.remapped_border_color() : rsx::decode_border_color(tex.border_color());
 	};
 
 	std::lock_guard lock(m_sampler_mutex);
@@ -313,9 +311,7 @@ void VKGSRender::load_texture_env()
 
 				// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
 				// Check the device properties to determine whether to pre-swizzle the colors or not.
-				const auto border_color = rsx::is_border_clamped_texture(tex)
-					? vk::border_color_t(get_border_color(tex))
-					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+				const auto border_color = rsx::is_border_clamped_texture(tex) ? vk::border_color_t(get_border_color(tex)) : vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 				// Check if non-point filtering can even be used on this format
 				bool can_sample_linear;
@@ -328,7 +324,7 @@ void VKGSRender::load_texture_env()
 				{
 					// Not all GPUs support linear filtering of depth formats
 					const auto vk_format = sampler_state->image_handle ? sampler_state->image_handle->image()->format() :
-						vk::get_compatible_sampler_format(m_device->get_formats_support(), sampler_state->external_subresource_desc.gcm_format);
+					                                                     vk::get_compatible_sampler_format(m_device->get_formats_support(), sampler_state->external_subresource_desc.gcm_format);
 
 					can_sample_linear = m_device->get_format_properties(vk_format).optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 				}
@@ -389,7 +385,7 @@ void VKGSRender::load_texture_env()
 				if (fs_sampler_handles[i] && m_textures_dirty[i])
 				{
 					if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-						min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode))
+							min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode))
 					{
 						replace = true;
 					}
@@ -458,14 +454,12 @@ void VKGSRender::load_texture_env()
 
 				// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
 				// Check the device properties to determine whether to pre-swizzle the colors or not.
-				const auto border_color = is_border_clamped_texture(tex)
-					? vk::border_color_t(get_border_color(tex))
-					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+				const auto border_color = is_border_clamped_texture(tex) ? vk::border_color_t(get_border_color(tex)) : vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 				if (vs_sampler_handles[i])
 				{
 					if (!vs_sampler_handles[i]->matches(wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-						unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
+							unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
 					{
 						replace = true;
 					}
@@ -534,7 +528,7 @@ bool VKGSRender::bind_texture_env()
 		{
 			if (view = sampler_state->image_handle; !view)
 			{
-				//Requires update, copy subresource
+				// Requires update, copy subresource
 				if (!(view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 				{
 					out_of_memory = true;
@@ -548,7 +542,7 @@ bool VKGSRender::bind_texture_env()
 
 		if (view) [[likely]]
 		{
-			m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
+			m_program->bind_uniform({fs_sampler_handles[i]->value, view->value, view->image()->current_layout},
 				i,
 				::glsl::program_domain::glsl_fragment_program,
 				m_current_frame->descriptor_set);
@@ -570,7 +564,7 @@ bool VKGSRender::bind_texture_env()
 						VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 				}
 
-				m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout },
+				m_program->bind_uniform({m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout},
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set,
@@ -580,14 +574,14 @@ bool VKGSRender::bind_texture_env()
 		else
 		{
 			const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
-			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			m_program->bind_uniform({vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
 				i,
 				::glsl::program_domain::glsl_fragment_program,
 				m_current_frame->descriptor_set);
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				m_program->bind_uniform({vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set,
@@ -604,7 +598,7 @@ bool VKGSRender::bind_texture_env()
 		if (!rsx::method_registers.vertex_textures[i].enabled())
 		{
 			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
-			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			m_program->bind_uniform({vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
 				i,
 				::glsl::program_domain::glsl_vertex_program,
 				m_current_frame->descriptor_set);
@@ -628,7 +622,7 @@ bool VKGSRender::bind_texture_env()
 			rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
 			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
 
-			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			m_program->bind_uniform({vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL},
 				i,
 				::glsl::program_domain::glsl_vertex_program,
 				m_current_frame->descriptor_set);
@@ -638,7 +632,7 @@ bool VKGSRender::bind_texture_env()
 
 		validate_image_layout_for_read_access(*m_current_command_buffer, image_ptr, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, sampler_state);
 
-		m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
+		m_program->bind_uniform({vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout},
 			i,
 			::glsl::program_domain::glsl_vertex_program,
 			m_current_frame->descriptor_set);
@@ -656,7 +650,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 	}
 
 	std::array<VkDescriptorImageInfo, 68> texture_env;
-	VkDescriptorImageInfo fallback = { vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, VK_IMAGE_VIEW_TYPE_1D)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+	VkDescriptorImageInfo fallback = {vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, VK_IMAGE_VIEW_TYPE_1D)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
 
 	auto start = texture_env.begin();
 	auto end = start;
@@ -696,7 +690,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 		{
 			if (view = sampler_state->image_handle; !view)
 			{
-				//Requires update, copy subresource
+				// Requires update, copy subresource
 				if (!(view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 				{
 					out_of_memory = true;
@@ -710,9 +704,9 @@ bool VKGSRender::bind_interpreter_texture_env()
 
 		if (view)
 		{
-			const int offsets[] = { 0, 16, 48, 32 };
+			const int offsets[] = {0, 16, 48, 32};
 			auto& sampled_image_info = texture_env[offsets[static_cast<u32>(sampler_state->image_type)] + i];
-			sampled_image_info = { fs_sampler_handles[i]->value, view->value, view->image()->current_layout };
+			sampled_image_info = {fs_sampler_handles[i]->value, view->value, view->image()->current_layout};
 		}
 	}
 
@@ -722,7 +716,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 
 void VKGSRender::emit_geometry(u32 sub_index)
 {
-	auto &draw_call = rsx::method_registers.current_draw_clause;
+	auto& draw_call = rsx::method_registers.current_draw_clause;
 	m_profiler.start();
 
 	const rsx::flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
@@ -758,8 +752,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		do
 		{
 			draw_call.execute_pipeline_dependencies(m_ctx);
-		}
-		while (draw_call.next());
+		} while (draw_call.next());
 
 		draw_call.end();
 		return;
@@ -792,8 +785,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
 			if (occlusion_id == umax)
 			{
-				//rsx_log.error("Occlusion pool overflow");
-				if (m_current_task) m_current_task->result = 1;
+				// rsx_log.error("Occlusion pool overflow");
+				if (m_current_task)
+					m_current_task->result = 1;
 			}
 		}
 
@@ -854,17 +848,17 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		for (u32 n = 0; n < binding_table.total_descriptor_bindings; ++n)
 		{
 			copy_cmds[n] =
-			{
-				VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,   // sType
-				nullptr,                                 // pNext
-				previous_set,                            // srcSet
-				n,                                       // srcBinding
-				0u,                                      // srcArrayElement
-				m_current_frame->descriptor_set.value(), // dstSet
-				n,                                       // dstBinding
-				0u,                                      // dstArrayElement
-				1u                                       // descriptorCount
-			};
+				{
+					VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,   // sType
+					nullptr,                                 // pNext
+					previous_set,                            // srcSet
+					n,                                       // srcBinding
+					0u,                                      // srcArrayElement
+					m_current_frame->descriptor_set.value(), // dstSet
+					n,                                       // dstBinding
+					0u,                                      // dstArrayElement
+					1u                                       // descriptorCount
+				};
 		}
 
 		m_current_frame->descriptor_set.push(copy_cmds);
@@ -884,24 +878,24 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	bool reload_state = (!m_current_draw.subdraw_id++);
 	vk::renderpass_op(*m_current_command_buffer, [&](const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer fbo)
-	{
-		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
 		{
-			// Nothing to do
-			return;
-		}
+			if (get_render_pass() == pass && m_draw_fbo->value == fbo)
+			{
+				// Nothing to do
+				return;
+			}
 
-		if (pass)
-		{
-			// Subpass mismatch, end it before proceeding
-			vk::end_renderpass(cmd);
-		}
+			if (pass)
+			{
+				// Subpass mismatch, end it before proceeding
+				vk::end_renderpass(cmd);
+			}
 
-		// Starting a new renderpass should clobber dynamic state
-		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
+			// Starting a new renderpass should clobber dynamic state
+			m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 
-		reload_state = true;
-	});
+			reload_state = true;
+		});
 
 	if (reload_state)
 	{
@@ -941,7 +935,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		{
 			u32 vertex_offset = 0;
 			const auto subranges = draw_call.get_subranges();
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				VK_GET_SYMBOL(vkCmdDraw)(*m_current_command_buffer, range.count, 1, vertex_offset, 0);
 				vertex_offset += range.count;
@@ -967,7 +961,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		{
 			u32 vertex_offset = 0;
 			const auto subranges = draw_call.get_subranges();
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				const auto count = get_index_count(draw_call.primitive, range.count);
 				VK_GET_SYMBOL(vkCmdDrawIndexed)(*m_current_command_buffer, count, 1, vertex_offset, 0, 0);
@@ -1061,7 +1055,7 @@ void VKGSRender::end()
 		ds->write_barrier(*m_current_command_buffer);
 	}
 
-	for (auto &rtt : m_rtts.m_bound_render_targets)
+	for (auto& rtt : m_rtts.m_bound_render_targets)
 	{
 		if (auto surface = std::get<1>(rtt))
 		{
@@ -1074,7 +1068,7 @@ void VKGSRender::end()
 	// Now bind the shader resources. It is important that this takes place after the barriers so that we don't end up with stale descriptors
 	for (int retry = 0; retry < 3; ++retry)
 	{
-		if (retry > 0 && m_samplers_dirty) [[ unlikely ]]
+		if (retry > 0 && m_samplers_dirty) [[unlikely]]
 		{
 			// Reload texture env if referenced objects were invalidated during OOM handling.
 			load_texture_env();
@@ -1087,9 +1081,7 @@ void VKGSRender::end()
 			m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 		}
 
-		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)
-			? bind_interpreter_texture_env()
-			: bind_texture_env();
+		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program) ? bind_interpreter_texture_env() : bind_texture_env();
 
 		if (!out_of_memory)
 		{
@@ -1110,8 +1102,8 @@ void VKGSRender::end()
 	// Final heap check...
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
 
-	u32 sub_index = 0;               // RSX subdraw ID
-	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
+	u32 sub_index = 0;             // RSX subdraw ID
+	m_current_draw.subdraw_id = 0; // Host subdraw ID. Invalid RSX subdraws do not increment this value
 
 	if (m_graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state)
 	{
@@ -1129,8 +1121,7 @@ void VKGSRender::end()
 			// We already completed. End the draw.
 			draw_call.end();
 		}
-	}
-	while (draw_call.next());
+	} while (draw_call.next());
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
 	{

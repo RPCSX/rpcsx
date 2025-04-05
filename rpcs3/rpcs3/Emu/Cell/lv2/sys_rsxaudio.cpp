@@ -29,17 +29,17 @@ namespace rsxaudio_ringbuf_reader
 {
 	static constexpr void clean_buf(rsxaudio_shmem::ringbuf_t& ring_buf)
 	{
-		ring_buf.unk2             = 100;
-		ring_buf.read_idx         = 0;
-		ring_buf.write_idx        = 0;
+		ring_buf.unk2 = 100;
+		ring_buf.read_idx = 0;
+		ring_buf.write_idx = 0;
 		ring_buf.queue_notify_idx = 0;
-		ring_buf.next_blk_idx     = 0;
+		ring_buf.next_blk_idx = 0;
 
 		for (auto& ring_entry : ring_buf.entries)
 		{
-			ring_entry.valid         = 0;
+			ring_entry.valid = 0;
 			ring_entry.audio_blk_idx = 0;
-			ring_entry.timestamp     = 0;
+			ring_entry.timestamp = 0;
 		}
 	}
 
@@ -65,7 +65,7 @@ namespace rsxaudio_ringbuf_reader
 
 		ring_buf.entries[read_idx].valid = 0;
 		ring_buf.queue_notify_idx = (ring_buf.queue_notify_idx + 1) % ring_buf.queue_notify_step;
-		ring_buf.read_idx         = (ring_buf.read_idx + 1) % ring_buf.rw_max_idx;
+		ring_buf.read_idx = (ring_buf.read_idx + 1) % ring_buf.rw_max_idx;
 
 		return std::make_tuple(((ring_buf.rw_max_idx > 2) ^ ring_buf.queue_notify_idx) == 0, ring_buf.entries[entry_idx].audio_blk_idx, ring_buf.entries[entry_idx].timestamp);
 	}
@@ -104,11 +104,10 @@ namespace rsxaudio_ringbuf_reader
 
 		return std::nullopt;
 	}
-}
+} // namespace rsxaudio_ringbuf_reader
 
 lv2_rsxaudio::lv2_rsxaudio(utils::serial& ar) noexcept
-	: lv2_obj{1}
-	, init(ar)
+	: lv2_obj{1}, init(ar)
 {
 	if (init)
 	{
@@ -183,12 +182,12 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 	for (auto& uf : sh_page->ctrl.channel_uf)
 	{
 		uf.uf_event_cnt = 0;
-		uf.unk1         = 0;
+		uf.unk1 = 0;
 	}
 
-	sh_page->ctrl.unk4             = 0x8000;
+	sh_page->ctrl.unk4 = 0x8000;
 	sh_page->ctrl.intr_thread_prio = 0xDEADBEEF;
-	sh_page->ctrl.unk5             = 0;
+	sh_page->ctrl.unk5 = 0;
 
 	rsxaudio_obj->init = true;
 	*handle = id;
@@ -332,12 +331,12 @@ error_code sys_rsxaudio_create_connection(u32 handle)
 	for (auto& rb : sh_page->ctrl.ringbuf)
 	{
 		rb.dma_silence_addr = rsxaudio_obj->dma_io_base + offsetof(rsxaudio_shmem, dma_silence_region);
-		rb.unk2             = 100;
+		rb.unk2 = 100;
 	}
 
 	for (u32 entry_idx = 0; entry_idx < SYS_RSXAUDIO_RINGBUF_SZ; entry_idx++)
 	{
-		sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SERIAL)].entries[entry_idx].dma_addr  = rsxaudio_obj->dma_io_base + u32{offsetof(rsxaudio_shmem, dma_serial_region)} + SYS_RSXAUDIO_RINGBUF_BLK_SZ_SERIAL * entry_idx;
+		sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SERIAL)].entries[entry_idx].dma_addr = rsxaudio_obj->dma_io_base + u32{offsetof(rsxaudio_shmem, dma_serial_region)} + SYS_RSXAUDIO_RINGBUF_BLK_SZ_SERIAL * entry_idx;
 		sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SPDIF_0)].entries[entry_idx].dma_addr = rsxaudio_obj->dma_io_base + u32{offsetof(rsxaudio_shmem, dma_spdif_0_region)} + SYS_RSXAUDIO_RINGBUF_BLK_SZ_SPDIF * entry_idx;
 		sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SPDIF_1)].entries[entry_idx].dma_addr = rsxaudio_obj->dma_io_base + u32{offsetof(rsxaudio_shmem, dma_spdif_1_region)} + SYS_RSXAUDIO_RINGBUF_BLK_SZ_SPDIF * entry_idx;
 	}
@@ -430,22 +429,26 @@ error_code sys_rsxaudio_start_process(u32 handle)
 
 	for (auto& rb : sh_page->ctrl.ringbuf)
 	{
-		if (rb.active) rsxaudio_ringbuf_reader::clean_buf(rb);
+		if (rb.active)
+			rsxaudio_ringbuf_reader::clean_buf(rb);
 	}
 
 	for (auto& uf : sh_page->ctrl.channel_uf)
 	{
 		uf.uf_event_cnt = 0;
-		uf.unk1         = 0;
+		uf.unk1 = 0;
 	}
 
 	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 	rsxaudio_thread.update_hw_param([&](auto& param)
-	{
-		if (sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SERIAL)].active)  param.serial.dma_en   = true;
-		if (sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SPDIF_0)].active) param.spdif[0].dma_en = true;
-		if (sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SPDIF_1)].active) param.spdif[1].dma_en = true;
-	});
+		{
+			if (sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SERIAL)].active)
+				param.serial.dma_en = true;
+			if (sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SPDIF_0)].active)
+				param.spdif[0].dma_en = true;
+			if (sh_page->ctrl.ringbuf[static_cast<u32>(RsxaudioPort::SPDIF_1)].active)
+				param.spdif[1].dma_en = true;
+		});
 
 	for (u32 q_idx = 0; q_idx < SYS_RSXAUDIO_PORT_CNT; q_idx++)
 	{
@@ -479,28 +482,29 @@ error_code sys_rsxaudio_stop_process(u32 handle)
 	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 
 	rsxaudio_thread.update_hw_param([&](auto& param)
-	{
-		param.serial.dma_en  = false;
-		param.serial.muted   = true;
-		param.serial.en      = false;
-
-		for (auto& spdif : param.spdif)
 		{
-			spdif.dma_en = false;
-			if (!spdif.use_serial_buf)
-			{
-				spdif.en = false;
-			}
-		}
+			param.serial.dma_en = false;
+			param.serial.muted = true;
+			param.serial.en = false;
 
-		param.spdif[1].muted  = true;
-	});
+			for (auto& spdif : param.spdif)
+			{
+				spdif.dma_en = false;
+				if (!spdif.use_serial_buf)
+				{
+					spdif.en = false;
+				}
+			}
+
+			param.spdif[1].muted = true;
+		});
 
 	rsxaudio_shmem* sh_page = rsxaudio_obj->get_rw_shared_page();
 
 	for (auto& rb : sh_page->ctrl.ringbuf)
 	{
-		if (rb.active) rsxaudio_ringbuf_reader::clean_buf(rb);
+		if (rb.active)
+			rsxaudio_ringbuf_reader::clean_buf(rb);
 	}
 
 	return CELL_OK;
@@ -778,7 +782,10 @@ void rsxaudio_data_thread::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		static const std::function<void()> tmr_callback = [this]() { extract_audio_data(); };
+		static const std::function<void()> tmr_callback = [this]()
+		{
+			extract_audio_data();
+		};
 
 		switch (timer.wait(tmr_callback))
 		{
@@ -838,8 +845,8 @@ void rsxaudio_data_thread::extract_audio_data()
 	}
 
 	rsxaudio_shmem* sh_page = rsxaudio_obj->get_rw_shared_page();
-	const auto hw_cfg       = hw_param_ts.get_current();
-	const u64 crnt_time     = get_system_time();
+	const auto hw_cfg = hw_param_ts.get_current();
+	const u64 crnt_time = get_system_time();
 
 	auto process_rb = [&](RsxaudioPort dst, bool dma_en)
 	{
@@ -911,22 +918,22 @@ std::pair<bool, void*> rsxaudio_data_thread::get_ringbuf_addr(RsxaudioPort dst, 
 void rsxaudio_data_thread::reset_hw()
 {
 	update_hw_param([&](rsxaudio_hw_param_t& current)
-	{
-		const bool serial_dma_en = current.serial.dma_en;
-		current.serial = {};
-		current.serial.dma_en = serial_dma_en;
-
-		for (auto& spdif : current.spdif)
 		{
-			const bool spdif_dma_en = spdif.dma_en;
-			spdif = {};
-			spdif.dma_en = spdif_dma_en;
-		}
+			const bool serial_dma_en = current.serial.dma_en;
+			current.serial = {};
+			current.serial.dma_en = serial_dma_en;
 
-		current.serial_freq_base = SYS_RSXAUDIO_FREQ_BASE_384K;
-		current.spdif_freq_base = SYS_RSXAUDIO_FREQ_BASE_352K;
-		current.avport_src.fill(RsxaudioPort::INVALID);
-	});
+			for (auto& spdif : current.spdif)
+			{
+				const bool spdif_dma_en = spdif.dma_en;
+				spdif = {};
+				spdif.dma_en = spdif_dma_en;
+			}
+
+			current.serial_freq_base = SYS_RSXAUDIO_FREQ_BASE_384K;
+			current.spdif_freq_base = SYS_RSXAUDIO_FREQ_BASE_352K;
+			current.avport_src.fill(RsxaudioPort::INVALID);
+		});
 }
 
 void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_t&)> update_callback)
@@ -934,168 +941,167 @@ void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_
 	ensure(update_callback);
 
 	hw_param_ts.add_op([&]()
-	{
-		auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
-
-		update_callback(*new_hw_param);
-
-		const bool serial_active = calc_port_active_state(RsxaudioPort::SERIAL, *new_hw_param);
-		const bool spdif_active[SYS_RSXAUDIO_SPDIF_CNT] =
 		{
-			calc_port_active_state(RsxaudioPort::SPDIF_0, *new_hw_param),
-			calc_port_active_state(RsxaudioPort::SPDIF_1, *new_hw_param)
-		};
+			auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
 
-		std::array<rsxaudio_backend_thread::port_config, SYS_RSXAUDIO_AVPORT_CNT> port_cfg{};
-		port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)] = {static_cast<AudioFreq>(new_hw_param->serial_freq_base / new_hw_param->serial.freq_div), AudioChannelCnt::STEREO};
+			update_callback(*new_hw_param);
 
-		auto gen_spdif_port_cfg = [&](u8 spdif_idx)
-		{
-			if (new_hw_param->spdif[spdif_idx].use_serial_buf)
-			{
-				return port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)];
-			}
-
-			return rsxaudio_backend_thread::port_config{static_cast<AudioFreq>(new_hw_param->spdif_freq_base / new_hw_param->spdif[spdif_idx].freq_div), AudioChannelCnt::STEREO};
-		};
-
-		port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = gen_spdif_port_cfg(0);
-		port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)] = gen_spdif_port_cfg(1);
-
-		auto gen_hdmi_port_cfg = [&](u8 hdmi_idx)
-		{
-			if (new_hw_param->hdmi[hdmi_idx].use_spdif_1)
-			{
-				return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
-			}
-
-			return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
-		};
-
-		port_cfg[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)] = gen_hdmi_port_cfg(0);
-		port_cfg[static_cast<u8>(RsxaudioAvportIdx::HDMI_1)] = gen_hdmi_port_cfg(1);
-		// TODO: ideally, old data must be flushed from backend buffers if channel became inactive or its src changed
-		g_fxo->get<rsx_audio_backend>().set_new_stream_param(port_cfg, calc_avport_mute_state(*new_hw_param));
-
-		timer.vtimer_access_sec([&]()
-		{
-			const u64 crnt_time = get_system_time();
-
-			if (serial_active)
-			{
-				// 2 channels per stream, streams go in parallel
-				const u32 new_timer_rate = static_cast<u32>(port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)].freq) *
-											static_cast<u8>(new_hw_param->serial.depth) *
-											SYS_RSXAUDIO_CH_PER_STREAM;
-
-				timer.enable_vtimer(static_cast<u32>(RsxaudioPort::SERIAL), new_timer_rate, crnt_time);
-			}
-			else
-			{
-				timer.disable_vtimer(static_cast<u32>(RsxaudioPort::SERIAL));
-			}
-
-			for (u8 spdif_idx = 0; spdif_idx < SYS_RSXAUDIO_SPDIF_CNT; spdif_idx++)
-			{
-				const u32 vtimer_id = static_cast<u32>(RsxaudioPort::SPDIF_0) + spdif_idx;
-
-				if (spdif_active[spdif_idx] && !new_hw_param->spdif[spdif_idx].use_serial_buf)
+			const bool serial_active = calc_port_active_state(RsxaudioPort::SERIAL, *new_hw_param);
+			const bool spdif_active[SYS_RSXAUDIO_SPDIF_CNT] =
 				{
-					// 2 channels per stream, single stream
-					const u32 new_timer_rate = static_cast<u32>(port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0) + spdif_idx].freq) *
-												static_cast<u8>(new_hw_param->spdif[spdif_idx].depth) *
-												SYS_RSXAUDIO_CH_PER_STREAM;
+					calc_port_active_state(RsxaudioPort::SPDIF_0, *new_hw_param),
+					calc_port_active_state(RsxaudioPort::SPDIF_1, *new_hw_param)};
 
-					timer.enable_vtimer(vtimer_id, new_timer_rate, crnt_time);
-				}
-				else
+			std::array<rsxaudio_backend_thread::port_config, SYS_RSXAUDIO_AVPORT_CNT> port_cfg{};
+			port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)] = {static_cast<AudioFreq>(new_hw_param->serial_freq_base / new_hw_param->serial.freq_div), AudioChannelCnt::STEREO};
+
+			auto gen_spdif_port_cfg = [&](u8 spdif_idx)
+			{
+				if (new_hw_param->spdif[spdif_idx].use_serial_buf)
 				{
-					timer.disable_vtimer(vtimer_id);
+					return port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)];
 				}
-			}
+
+				return rsxaudio_backend_thread::port_config{static_cast<AudioFreq>(new_hw_param->spdif_freq_base / new_hw_param->spdif[spdif_idx].freq_div), AudioChannelCnt::STEREO};
+			};
+
+			port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = gen_spdif_port_cfg(0);
+			port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)] = gen_spdif_port_cfg(1);
+
+			auto gen_hdmi_port_cfg = [&](u8 hdmi_idx)
+			{
+				if (new_hw_param->hdmi[hdmi_idx].use_spdif_1)
+				{
+					return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
+				}
+
+				return rsxaudio_backend_thread::port_config{port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)].freq, new_hw_param->hdmi[hdmi_idx].ch_cfg.total_ch_cnt};
+			};
+
+			port_cfg[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)] = gen_hdmi_port_cfg(0);
+			port_cfg[static_cast<u8>(RsxaudioAvportIdx::HDMI_1)] = gen_hdmi_port_cfg(1);
+			// TODO: ideally, old data must be flushed from backend buffers if channel became inactive or its src changed
+			g_fxo->get<rsx_audio_backend>().set_new_stream_param(port_cfg, calc_avport_mute_state(*new_hw_param));
+
+			timer.vtimer_access_sec([&]()
+				{
+					const u64 crnt_time = get_system_time();
+
+					if (serial_active)
+					{
+						// 2 channels per stream, streams go in parallel
+						const u32 new_timer_rate = static_cast<u32>(port_cfg[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)].freq) *
+				                                   static_cast<u8>(new_hw_param->serial.depth) *
+				                                   SYS_RSXAUDIO_CH_PER_STREAM;
+
+						timer.enable_vtimer(static_cast<u32>(RsxaudioPort::SERIAL), new_timer_rate, crnt_time);
+					}
+					else
+					{
+						timer.disable_vtimer(static_cast<u32>(RsxaudioPort::SERIAL));
+					}
+
+					for (u8 spdif_idx = 0; spdif_idx < SYS_RSXAUDIO_SPDIF_CNT; spdif_idx++)
+					{
+						const u32 vtimer_id = static_cast<u32>(RsxaudioPort::SPDIF_0) + spdif_idx;
+
+						if (spdif_active[spdif_idx] && !new_hw_param->spdif[spdif_idx].use_serial_buf)
+						{
+							// 2 channels per stream, single stream
+							const u32 new_timer_rate = static_cast<u32>(port_cfg[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0) + spdif_idx].freq) *
+					                                   static_cast<u8>(new_hw_param->spdif[spdif_idx].depth) *
+					                                   SYS_RSXAUDIO_CH_PER_STREAM;
+
+							timer.enable_vtimer(vtimer_id, new_timer_rate, crnt_time);
+						}
+						else
+						{
+							timer.disable_vtimer(vtimer_id);
+						}
+					}
+				});
+
+			return new_hw_param;
 		});
-
-		return new_hw_param;
-	});
 }
 
 void rsxaudio_data_thread::update_mute_state(RsxaudioPort port, bool muted)
 {
 	hw_param_ts.add_op([&]()
-	{
-		auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
+		{
+			auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
 
-		switch (port)
-		{
-		case RsxaudioPort::SERIAL:
-		{
-			new_hw_param->serial.muted = muted;
-			break;
-		}
-		case RsxaudioPort::SPDIF_0:
-		{
-			new_hw_param->spdif[0].muted = muted;
-			break;
-		}
-		case RsxaudioPort::SPDIF_1:
-		{
-			new_hw_param->spdif[1].muted = muted;
-			break;
-		}
-		default:
-		{
-			fmt::throw_exception("Invalid RSXAudio port: %u", static_cast<u8>(port));
-		}
-		}
+			switch (port)
+			{
+			case RsxaudioPort::SERIAL:
+			{
+				new_hw_param->serial.muted = muted;
+				break;
+			}
+			case RsxaudioPort::SPDIF_0:
+			{
+				new_hw_param->spdif[0].muted = muted;
+				break;
+			}
+			case RsxaudioPort::SPDIF_1:
+			{
+				new_hw_param->spdif[1].muted = muted;
+				break;
+			}
+			default:
+			{
+				fmt::throw_exception("Invalid RSXAudio port: %u", static_cast<u8>(port));
+			}
+			}
 
-		g_fxo->get<rsx_audio_backend>().set_mute_state(calc_avport_mute_state(*new_hw_param));
+			g_fxo->get<rsx_audio_backend>().set_mute_state(calc_avport_mute_state(*new_hw_param));
 
-		return new_hw_param;
-	});
+			return new_hw_param;
+		});
 }
 
 void rsxaudio_data_thread::update_av_mute_state(RsxaudioAvportIdx avport, bool muted, bool force_mute, bool set)
 {
 	hw_param_ts.add_op([&]()
-	{
-		auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
-
-		switch (avport)
 		{
-		case RsxaudioAvportIdx::HDMI_0:
-		case RsxaudioAvportIdx::HDMI_1:
-		{
-			const u32 hdmi_idx = avport == RsxaudioAvportIdx::HDMI_1;
+			auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
 
-			if (muted)
+			switch (avport)
 			{
-				new_hw_param->hdmi[hdmi_idx].muted = set;
+			case RsxaudioAvportIdx::HDMI_0:
+			case RsxaudioAvportIdx::HDMI_1:
+			{
+				const u32 hdmi_idx = avport == RsxaudioAvportIdx::HDMI_1;
+
+				if (muted)
+				{
+					new_hw_param->hdmi[hdmi_idx].muted = set;
+				}
+
+				if (force_mute)
+				{
+					new_hw_param->hdmi[hdmi_idx].force_mute = set;
+				}
+				break;
+			}
+			case RsxaudioAvportIdx::AVMULTI:
+			{
+				if (muted)
+				{
+					new_hw_param->avmulti_av_muted = set;
+				}
+				break;
+			}
+			default:
+			{
+				fmt::throw_exception("Invalid RSXAudio avport: %u", static_cast<u8>(avport));
+			}
 			}
 
-			if (force_mute)
-			{
-				new_hw_param->hdmi[hdmi_idx].force_mute = set;
-			}
-			break;
-		}
-		case RsxaudioAvportIdx::AVMULTI:
-		{
-			if (muted)
-			{
-				new_hw_param->avmulti_av_muted = set;
-			}
-			break;
-		}
-		default:
-		{
-			fmt::throw_exception("Invalid RSXAudio avport: %u", static_cast<u8>(avport));
-		}
-		}
+			g_fxo->get<rsx_audio_backend>().set_mute_state(calc_avport_mute_state(*new_hw_param));
 
-		g_fxo->get<rsx_audio_backend>().set_mute_state(calc_avport_mute_state(*new_hw_param));
-
-		return new_hw_param;
-	});
+			return new_hw_param;
+		});
 }
 
 rsxaudio_backend_thread::avport_bit rsxaudio_data_thread::calc_avport_mute_state(const rsxaudio_hw_param_t& hwp)
@@ -1103,10 +1109,9 @@ rsxaudio_backend_thread::avport_bit rsxaudio_data_thread::calc_avport_mute_state
 	const bool serial_active = calc_port_active_state(RsxaudioPort::SERIAL, hwp);
 
 	const bool spdif_active[SYS_RSXAUDIO_SPDIF_CNT] =
-	{
-		calc_port_active_state(RsxaudioPort::SPDIF_0, hwp),
-		calc_port_active_state(RsxaudioPort::SPDIF_1, hwp)
-	};
+		{
+			calc_port_active_state(RsxaudioPort::SPDIF_0, hwp),
+			calc_port_active_state(RsxaudioPort::SPDIF_1, hwp)};
 
 	const bool avmulti = !serial_active || hwp.serial.muted || hwp.avmulti_av_muted;
 
@@ -1123,7 +1128,7 @@ rsxaudio_backend_thread::avport_bit rsxaudio_data_thread::calc_avport_mute_state
 		return !spdif_active[spdif_port] || hwp.spdif[spdif_port].muted;
 	};
 
-	auto hdmi_muted  = [&](u8 hdmi_idx)
+	auto hdmi_muted = [&](u8 hdmi_idx)
 	{
 		const u8 hdmi_port = hdmi_idx == 1;
 
@@ -1135,7 +1140,7 @@ rsxaudio_backend_thread::avport_bit rsxaudio_data_thread::calc_avport_mute_state
 		return !serial_active || hwp.serial.muted || hwp.hdmi[hdmi_port].muted || hwp.hdmi[hdmi_port].force_mute || !hwp.hdmi[hdmi_port].init;
 	};
 
-	return { hdmi_muted(0), hdmi_muted(1), avmulti, spdif_muted(0), spdif_muted(1) };
+	return {hdmi_muted(0), hdmi_muted(1), avmulti, spdif_muted(0), spdif_muted(1)};
 }
 
 bool rsxaudio_data_thread::calc_port_active_state(RsxaudioPort port, const rsxaudio_hw_param_t& hwp)
@@ -1301,7 +1306,7 @@ namespace audio
 			g_fxo->get<rsx_audio_backend>().update_emu_cfg();
 		}
 	}
-}
+} // namespace audio
 
 rsxaudio_backend_thread::rsxaudio_backend_thread()
 {
@@ -1310,10 +1315,10 @@ rsxaudio_backend_thread::rsxaudio_backend_thread()
 	const f32 new_vol = audio::get_volume();
 
 	callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.target_volume = static_cast<u16>(new_vol * callback_config::VOL_NOMINAL);
-		val.initial_volume = val.current_volume;
-	});
+		{
+			val.target_volume = static_cast<u16>(new_vol * callback_config::VOL_NOMINAL);
+			val.initial_volume = val.current_volume;
+		});
 }
 
 rsxaudio_backend_thread::~rsxaudio_backend_thread()
@@ -1334,10 +1339,10 @@ void rsxaudio_backend_thread::update_emu_cfg()
 	const f32 new_vol = audio::get_volume();
 
 	callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.target_volume = static_cast<u16>(new_vol * callback_config::VOL_NOMINAL);
-		val.initial_volume = val.current_volume;
-	});
+		{
+			val.target_volume = static_cast<u16>(new_vol * callback_config::VOL_NOMINAL);
+			val.initial_volume = val.current_volume;
+		});
 
 	if (new_emu_cfg != _new_emu_cfg)
 	{
@@ -1364,20 +1369,19 @@ rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 	AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
-	{
-		.audio_device = g_cfg.audio.audio_device,
-		.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
-		.time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0,
-		.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
-		.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
-		.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
-		.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
-		.channels = out_ch_cnt,
-		.channel_layout = g_cfg.audio.channel_layout,
-		.renderer = g_cfg.audio.renderer,
-		.provider = g_cfg.audio.provider,
-		.avport = convert_avport(g_cfg.audio.rsxaudio_port)
-	};
+		{
+			.audio_device = g_cfg.audio.audio_device,
+			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
+			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0,
+			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
+			.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
+			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
+			.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
+			.channels = out_ch_cnt,
+			.channel_layout = g_cfg.audio.channel_layout,
+			.renderer = g_cfg.audio.renderer,
+			.provider = g_cfg.audio.provider,
+			.avport = convert_avport(g_cfg.audio.rsxaudio_port)};
 
 	cfg.buffering_enabled = cfg.buffering_enabled && cfg.renderer != audio_renderer::null;
 	cfg.enable_time_stretching = cfg.buffering_enabled && cfg.enable_time_stretching && cfg.time_stretching_threshold > 0.0;
@@ -1435,9 +1439,9 @@ void rsxaudio_backend_thread::operator()()
 						should_update_backend = true;
 						checkDefaultDevice = false;
 						callback_cfg.atomic_op([&](callback_config& val)
-						{
-							val.cfg_changed = false; // Acknowledge cfg update
-						});
+							{
+								val.cfg_changed = false; // Acknowledge cfg update
+							});
 					}
 				}
 
@@ -1612,7 +1616,7 @@ rsxaudio_backend_thread& rsxaudio_backend_thread::operator=(thread_state /* stat
 	return *this;
 }
 
-void rsxaudio_backend_thread::set_new_stream_param(const std::array<port_config, SYS_RSXAUDIO_AVPORT_CNT> &cfg, avport_bit muted_avports)
+void rsxaudio_backend_thread::set_new_stream_param(const std::array<port_config, SYS_RSXAUDIO_AVPORT_CNT>& cfg, avport_bit muted_avports)
 {
 	std::unique_lock lock(state_update_m);
 
@@ -1620,15 +1624,15 @@ void rsxaudio_backend_thread::set_new_stream_param(const std::array<port_config,
 	const bool should_update = backend_current_cfg.cfg != cfg[static_cast<u8>(backend_current_cfg.avport)];
 
 	callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.mute_state = new_mute_state;
-
-		if (should_update)
 		{
-			val.ready = false; // Prevent audio playback until backend is reconfigured
-			val.cfg_changed = true;
-		}
-	});
+			val.mute_state = new_mute_state;
+
+			if (should_update)
+			{
+				val.ready = false; // Prevent audio playback until backend is reconfigured
+				val.cfg_changed = true;
+			}
+		});
 
 	if (new_ra_state.port != cfg)
 	{
@@ -1644,20 +1648,25 @@ void rsxaudio_backend_thread::set_mute_state(avport_bit muted_avports)
 	const auto new_mute_state = gen_mute_state(muted_avports);
 
 	callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.mute_state = new_mute_state;
-	});
+		{
+			val.mute_state = new_mute_state;
+		});
 }
 
 u8 rsxaudio_backend_thread::gen_mute_state(avport_bit avports)
 {
 	std::bitset<SYS_RSXAUDIO_AVPORT_CNT> mute_state{0};
 
-	if (avports.hdmi_0)  mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)]  = true;
-	if (avports.hdmi_1)  mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_1)]  = true;
-	if (avports.avmulti) mute_state[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)] = true;
-	if (avports.spdif_0) mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = true;
-	if (avports.spdif_1) mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)] = true;
+	if (avports.hdmi_0)
+		mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)] = true;
+	if (avports.hdmi_1)
+		mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_1)] = true;
+	if (avports.avmulti)
+		mute_state[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)] = true;
+	if (avports.spdif_0)
+		mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = true;
+	if (avports.spdif_1)
+		mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)] = true;
 
 	return static_cast<u8>(mute_state.to_ulong());
 }
@@ -1703,8 +1712,8 @@ RsxaudioAvportIdx rsxaudio_backend_thread::convert_avport(audio_avport avport)
 {
 	switch (avport)
 	{
-	case audio_avport::hdmi_0:  return RsxaudioAvportIdx::HDMI_0;
-	case audio_avport::hdmi_1:  return RsxaudioAvportIdx::HDMI_1;
+	case audio_avport::hdmi_0: return RsxaudioAvportIdx::HDMI_0;
+	case audio_avport::hdmi_1: return RsxaudioAvportIdx::HDMI_1;
 	case audio_avport::avmulti: return RsxaudioAvportIdx::AVMULTI;
 	case audio_avport::spdif_0: return RsxaudioAvportIdx::SPDIF_0;
 	case audio_avport::spdif_1: return RsxaudioAvportIdx::SPDIF_1;
@@ -1770,19 +1779,19 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 	}
 
 	callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.callback_active = false; // Backend may take some time to activate. This prevents overflows on input side.
-
-		if (!val.cfg_changed)
 		{
-			val.freq = static_cast<u32>(port_cfg.freq);
-			val.input_ch_cnt = static_cast<u32>(port_cfg.ch_cnt);
-			val.output_channel_layout = static_cast<u8>(backend_channel_layout);
-			val.convert_to_s16 = emu_cfg.convert_to_s16;
-			val.avport_idx = emu_cfg.avport;
-			val.ready = true;
-		}
-	});
+			val.callback_active = false; // Backend may take some time to activate. This prevents overflows on input side.
+
+			if (!val.cfg_changed)
+			{
+				val.freq = static_cast<u32>(port_cfg.freq);
+				val.input_ch_cnt = static_cast<u32>(port_cfg.ch_cnt);
+				val.output_channel_layout = static_cast<u8>(backend_channel_layout);
+				val.convert_to_s16 = emu_cfg.convert_to_s16;
+				val.avport_idx = emu_cfg.avport;
+				val.ready = true;
+			}
+		});
 }
 
 void rsxaudio_backend_thread::backend_start()
@@ -1809,9 +1818,9 @@ void rsxaudio_backend_thread::backend_stop()
 
 	backend->Pause();
 	callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.callback_active = false;
-	});
+		{
+			val.callback_active = false;
+		});
 }
 
 bool rsxaudio_backend_thread::backend_playing()
@@ -1827,10 +1836,10 @@ bool rsxaudio_backend_thread::backend_playing()
 u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 {
 	const callback_config cb_cfg = callback_cfg.atomic_op([&](callback_config& val)
-	{
-		val.callback_active = true;
-		return val;
-	});
+		{
+			val.callback_active = true;
+			return val;
+		});
 
 	const std::bitset<SYS_RSXAUDIO_AVPORT_CNT> mute_state{cb_cfg.mute_state};
 
@@ -1867,25 +1876,24 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		if (cb_cfg.target_volume != cb_cfg.current_volume)
 		{
 			const AudioBackend::VolumeParam param =
-			{
-				.initial_volume = cb_cfg.initial_volume * callback_config::VOL_NOMINAL_INV,
-				.current_volume = cb_cfg.current_volume * callback_config::VOL_NOMINAL_INV,
-				.target_volume = cb_cfg.target_volume * callback_config::VOL_NOMINAL_INV,
-				.freq = cb_cfg.freq,
-				.ch_cnt = cb_cfg.input_ch_cnt
-			};
+				{
+					.initial_volume = cb_cfg.initial_volume * callback_config::VOL_NOMINAL_INV,
+					.current_volume = cb_cfg.current_volume * callback_config::VOL_NOMINAL_INV,
+					.target_volume = cb_cfg.target_volume * callback_config::VOL_NOMINAL_INV,
+					.freq = cb_cfg.freq,
+					.ch_cnt = cb_cfg.input_ch_cnt};
 
 			const u16 new_vol = static_cast<u16>(std::round(AudioBackend::apply_volume(param, sample_cnt_out, callback_tmp_buf.data(), callback_tmp_buf.data()) * callback_config::VOL_NOMINAL));
 			callback_cfg.atomic_op([&](callback_config& val)
-			{
-				if (val.target_volume != cb_cfg.target_volume)
 				{
-					val.initial_volume = new_vol;
-				}
+					if (val.target_volume != cb_cfg.target_volume)
+					{
+						val.initial_volume = new_vol;
+					}
 
-				// We don't care about proper volume adjustment if underflow has occured
-				val.current_volume = bytes_from_rb != byte_cnt ? val.target_volume : new_vol;
-			});
+					// We don't care about proper volume adjustment if underflow has occured
+					val.current_volume = bytes_from_rb != byte_cnt ? val.target_volume : new_vol;
+				});
 		}
 		else if (cb_cfg.current_volume != callback_config::VOL_NOMINAL)
 		{
@@ -1942,7 +1950,8 @@ u64 rsxaudio_backend_thread::get_time_until_service()
 
 void rsxaudio_backend_thread::update_service_time()
 {
-	if (get_time_until_service() <= SERVICE_THRESHOLD) time_period_idx++;
+	if (get_time_until_service() <= SERVICE_THRESHOLD)
+		time_period_idx++;
 }
 
 void rsxaudio_backend_thread::reset_service_time()
@@ -1983,7 +1992,7 @@ void rsxaudio_periodic_tmr::sched_timer()
 #elif defined(__linux__)
 	const time_t secs = interval / 1'000'000;
 	const long nsecs = (interval - secs * 1'000'000) * 1000;
-	const itimerspec tspec = {{}, { secs, nsecs }};
+	const itimerspec tspec = {{}, {secs, nsecs}};
 	ensure(timerfd_settime(timer_handle, 0, &tspec, nullptr) == 0);
 #elif defined(BSD) || defined(__APPLE__)
 	handle[TIMER_ID].data = interval * 1000;
@@ -2058,7 +2067,7 @@ rsxaudio_periodic_tmr::rsxaudio_periodic_tmr()
 #elif defined(__linux__)
 	timer_handle = timerfd_create(CLOCK_MONOTONIC, 0);
 	ensure((epoll_fd = epoll_create(2)) >= 0);
-	epoll_event evnt{ EPOLLIN, {} };
+	epoll_event evnt{EPOLLIN, {}};
 	evnt.data.fd = timer_handle;
 	ensure(timer_handle >= 0 && epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_handle, &evnt) == 0);
 	cancel_event = eventfd(0, EFD_NONBLOCK);
@@ -2098,7 +2107,7 @@ rsxaudio_periodic_tmr::~rsxaudio_periodic_tmr()
 #endif
 }
 
-rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::function<void()> &callback)
+rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::function<void()>& callback)
 {
 	std::unique_lock lock(mutex);
 
@@ -2109,8 +2118,8 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 
 	in_wait = true;
 
-	bool tmr_error     = false;
-	bool timeout       = false;
+	bool tmr_error = false;
+	bool timeout = false;
 	bool wait_canceled = false;
 
 	if (!zero_period)
@@ -2119,7 +2128,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		constexpr u8 obj_wait_cnt = 2;
 
 #if defined(_WIN32)
-		const HANDLE wait_arr[obj_wait_cnt] = { timer_handle, cancel_event };
+		const HANDLE wait_arr[obj_wait_cnt] = {timer_handle, cancel_event};
 		const auto wait_status = WaitForMultipleObjects(obj_wait_cnt, wait_arr, false, INFINITE);
 
 		if (wait_status == WAIT_FAILED || (wait_status >= WAIT_ABANDONED_0 && wait_status < WAIT_ABANDONED_0 + obj_wait_cnt))
@@ -2140,8 +2149,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		do
 		{
 			wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
-		}
-		while (wait_status == -1 && errno == EINTR);
+		} while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
@@ -2168,8 +2176,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		do
 		{
 			wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
-		}
-		while (wait_status == -1 && errno == EINTR);
+		} while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
@@ -2235,7 +2242,8 @@ u64 rsxaudio_periodic_tmr::get_rel_next_time()
 
 	for (vtimer& vtimer : vtmr_pool)
 	{
-		if (!vtimer.active) continue;
+		if (!vtimer.active)
+			continue;
 
 		u64 next_blk_time = static_cast<u64>(vtimer.blk_cnt * vtimer.blk_time);
 

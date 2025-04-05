@@ -43,29 +43,29 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 	buttons->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons](QAbstractButton* button)
-	{
-		if (button == buttons->button(QDialogButtonBox::Apply))
 		{
-			save_config();
-		}
-		else if (button == buttons->button(QDialogButtonBox::Save))
-		{
-			save_config();
-			accept();
-		}
-		else if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
-		{
-			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all buttons of all players?")) != QMessageBox::Yes)
-				return;
-			reset_config();
-		}
-		else if (button == buttons->button(QDialogButtonBox::Cancel))
-		{
-			// Restore config
-			load_config();
-			reject();
-		}
-	});
+			if (button == buttons->button(QDialogButtonBox::Apply))
+			{
+				save_config();
+			}
+			else if (button == buttons->button(QDialogButtonBox::Save))
+			{
+				save_config();
+				accept();
+			}
+			else if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
+			{
+				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all buttons of all players?")) != QMessageBox::Yes)
+					return;
+				reset_config();
+			}
+			else if (button == buttons->button(QDialogButtonBox::Cancel))
+			{
+				// Restore config
+				load_config();
+				reject();
+			}
+		});
 
 	load_config();
 
@@ -216,7 +216,8 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 
 		for (int i = 0, row = 0, col = 0; i < static_cast<int>(T::count); i++)
 		{
-			if (ignored_values.contains(i)) continue;
+			if (ignored_values.contains(i))
+				continue;
 
 			const T id = static_cast<T>(i);
 			const QString name = QString::fromStdString(fmt::format("%s", id));
@@ -231,7 +232,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				if (btn >= gem_btn::combo_begin && btn <= gem_btn::combo_end)
 				{
 					gb->setToolTip(tr("Press the \"Combo\" button in combination with any of the other combo buttons to trigger their related PS Move button.\n"
-					                  "This can be useful if your device does not have enough regular buttons."));
+									  "This can be useful if your device does not have enough regular buttons."));
 				}
 			}
 
@@ -303,50 +304,50 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			combo->setCurrentIndex(combo->findData(static_cast<int>(saved_btn_id)));
 
 			connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, id, combo](int index)
-			{
-				if (index < 0 || !combo)
-					return;
-
-				const QVariant data = combo->itemData(index, button_role::button);
-				if (!data.isValid() || !data.canConvert<int>())
-					return;
-
-				const pad_button btn_id = static_cast<pad_button>(data.toInt());
-
-				switch (m_type)
 				{
-				case pad_type::buzz:
-					::at32(g_cfg_buzz.players, player)->set_button(static_cast<buzz_btn>(id), btn_id);
-					break;
-				case pad_type::turntable:
-					::at32(g_cfg_turntable.players, player)->set_button(static_cast<turntable_btn>(id), btn_id);
-					break;
-				case pad_type::ghltar:
-					::at32(g_cfg_ghltar.players, player)->set_button(static_cast<ghltar_btn>(id), btn_id);
-					break;
-				case pad_type::usio:
-					::at32(g_cfg_usio.players, player)->set_button(static_cast<usio_btn>(id), btn_id);
-					break;
-				case pad_type::gem:
-					::at32(g_cfg_gem_real.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
-					break;
-				case pad_type::ds3gem:
-					::at32(g_cfg_gem_fake.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
-					break;
-				case pad_type::mousegem:
-					::at32(g_cfg_gem_mouse.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
-					break;
-				case pad_type::guncon3:
-					::at32(g_cfg_guncon3.players, player)->set_button(static_cast<guncon3_btn>(id), btn_id);
-					break;
-				case pad_type::topshotelite:
-					::at32(g_cfg_topshotelite.players, player)->set_button(static_cast<topshotelite_btn>(id), btn_id);
-					break;
-				case pad_type::topshotfearmaster:
-					::at32(g_cfg_topshotfearmaster.players, player)->set_button(static_cast<topshotfearmaster_btn>(id), btn_id);
-					break;
-				}
-			});
+					if (index < 0 || !combo)
+						return;
+
+					const QVariant data = combo->itemData(index, button_role::button);
+					if (!data.isValid() || !data.canConvert<int>())
+						return;
+
+					const pad_button btn_id = static_cast<pad_button>(data.toInt());
+
+					switch (m_type)
+					{
+					case pad_type::buzz:
+						::at32(g_cfg_buzz.players, player)->set_button(static_cast<buzz_btn>(id), btn_id);
+						break;
+					case pad_type::turntable:
+						::at32(g_cfg_turntable.players, player)->set_button(static_cast<turntable_btn>(id), btn_id);
+						break;
+					case pad_type::ghltar:
+						::at32(g_cfg_ghltar.players, player)->set_button(static_cast<ghltar_btn>(id), btn_id);
+						break;
+					case pad_type::usio:
+						::at32(g_cfg_usio.players, player)->set_button(static_cast<usio_btn>(id), btn_id);
+						break;
+					case pad_type::gem:
+						::at32(g_cfg_gem_real.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
+						break;
+					case pad_type::ds3gem:
+						::at32(g_cfg_gem_fake.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
+						break;
+					case pad_type::mousegem:
+						::at32(g_cfg_gem_mouse.players, player)->set_button(static_cast<gem_btn>(id), btn_id);
+						break;
+					case pad_type::guncon3:
+						::at32(g_cfg_guncon3.players, player)->set_button(static_cast<guncon3_btn>(id), btn_id);
+						break;
+					case pad_type::topshotelite:
+						::at32(g_cfg_topshotelite.players, player)->set_button(static_cast<topshotelite_btn>(id), btn_id);
+						break;
+					case pad_type::topshotfearmaster:
+						::at32(g_cfg_topshotfearmaster.players, player)->set_button(static_cast<topshotfearmaster_btn>(id), btn_id);
+						break;
+					}
+				});
 
 			if (row >= rows)
 			{
@@ -378,7 +379,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				fmt::append(basic_mouse_settings, "5: %s\n", g_cfg_mouse.mouse_button_5.to_string());
 				fmt::append(basic_mouse_settings, "6: %s\n", g_cfg_mouse.mouse_button_6.to_string());
 				fmt::append(basic_mouse_settings, "7: %s\n", g_cfg_mouse.mouse_button_7.to_string());
-				fmt::append(basic_mouse_settings, "8: %s",   g_cfg_mouse.mouse_button_8.to_string());
+				fmt::append(basic_mouse_settings, "8: %s", g_cfg_mouse.mouse_button_8.to_string());
 
 				QGroupBox* gb_legend_basic = new QGroupBox(tr("Current Basic Mouse Config"), this);
 				QVBoxLayout* gb_legend_basic_layout = new QVBoxLayout(this);
@@ -396,7 +397,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				fmt::append(raw_mouse_settings, "5: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_5.to_string()));
 				fmt::append(raw_mouse_settings, "6: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_6.to_string()));
 				fmt::append(raw_mouse_settings, "7: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_7.to_string()));
-				fmt::append(raw_mouse_settings, "8: %s",   raw_mouse_config::get_button_name(raw_cfg.mouse_button_8.to_string()));
+				fmt::append(raw_mouse_settings, "8: %s", raw_mouse_config::get_button_name(raw_cfg.mouse_button_8.to_string()));
 
 				QGroupBox* gb_legend_raw = new QGroupBox(tr("Current Raw Mouse Config"), this);
 				QVBoxLayout* gb_legend_raw_layout = new QVBoxLayout(this);

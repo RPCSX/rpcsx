@@ -28,7 +28,7 @@ namespace rpcs3
 	// Currently accessible by Windows and Linux build scripts, see implementations when doing MACOSX
 	const utils::version& get_version()
 	{
-		static constexpr utils::version version{ 0, 0, 36, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+		static constexpr utils::version version{0, 0, 36, utils::version_type::alpha, 1, RPCS3_GIT_VERSION};
 		return version;
 	}
 
@@ -70,4 +70,4 @@ namespace rpcs3
 		static constexpr bool is_local_build = std::string_view(RPCS3_GIT_FULL_BRANCH) == "local_build"sv;
 		return is_local_build;
 	}
-}
+} // namespace rpcs3

@@ -16,16 +16,16 @@ template <>
 void fmt_class_string<UartAudioCtrlID>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](UartAudioCtrlID value)
-	{
-		switch (value)
 		{
-		STR_CASE(UartAudioCtrlID::DAC_RESET);
-		STR_CASE(UartAudioCtrlID::DAC_DE_EMPHASIS);
-		STR_CASE(UartAudioCtrlID::AVCLK);
-		}
+			switch (value)
+			{
+				STR_CASE(UartAudioCtrlID::DAC_RESET);
+				STR_CASE(UartAudioCtrlID::DAC_DE_EMPHASIS);
+				STR_CASE(UartAudioCtrlID::AVCLK);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct av_init_cmd : public ps3av_cmd
@@ -35,9 +35,9 @@ struct av_init_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_av_init);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_av_init *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_av_init*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -51,7 +51,7 @@ struct av_init_cmd : public ps3av_cmd
 		if (pkt->event_bit & PS3AV_EVENT_BIT_UNK)
 		{
 			// 0 or 255, probably ps2 backwards compatibility (inverted)
-			const ps3av_pkt_av_init_reply reply = { 0 };
+			const ps3av_pkt_av_init_reply reply = {0};
 
 			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS, &reply, sizeof(ps3av_pkt_av_init_reply));
 			return;
@@ -68,9 +68,9 @@ struct av_fini_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -91,9 +91,9 @@ struct av_get_monitor_info_cmd : public ps3av_cmd
 		return sizeof(ps3av_get_monitor_info);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_get_monitor_info *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_get_monitor_info*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -140,7 +140,7 @@ struct av_get_monitor_info_cmd : public ps3av_cmd
 		}
 	}
 
-	static void set_hdmi_display_cfg(vuart_av_thread &vuart, ps3av_get_monitor_info_reply &cfg, u8 avport)
+	static void set_hdmi_display_cfg(vuart_av_thread& vuart, ps3av_get_monitor_info_reply& cfg, u8 avport)
 	{
 		if (vuart.hdmi_behavior_mode != PS3AV_HDMI_BEHAVIOR_NORMAL && (vuart.hdmi_behavior_mode & PS3AV_HDMI_BEHAVIOR_EDID_PASS))
 		{
@@ -150,18 +150,18 @@ struct av_get_monitor_info_cmd : public ps3av_cmd
 
 		// Report maximum support
 
-		static constexpr u8 mon_id[sizeof(cfg.monitor_id)] = { 0x4A, 0x13, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15 };
-		static constexpr u8 mon_name[sizeof(cfg.monitor_name)] = { 'R', 'P', 'C', 'S', '3', ' ', 'V', 'i', 'r', 't', 'M', 'o', 'n', '\0', '\0', '\0' };
+		static constexpr u8 mon_id[sizeof(cfg.monitor_id)] = {0x4A, 0x13, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x15};
+		static constexpr u8 mon_name[sizeof(cfg.monitor_name)] = {'R', 'P', 'C', 'S', '3', ' ', 'V', 'i', 'r', 't', 'M', 'o', 'n', '\0', '\0', '\0'};
 		static constexpr ps3av_info_audio audio_info[PS3AV_MON_INFO_AUDIO_BLK_MAX] =
-		{
-			{ PS3AV_MON_INFO_AUDIO_TYPE_LPCM,      8, 0x7F, 0x07 },
-			{ PS3AV_MON_INFO_AUDIO_TYPE_AC3,       8, 0x7F, 0xFF },
-			{ PS3AV_MON_INFO_AUDIO_TYPE_AAC,       8, 0x7F, 0xFF },
-			{ PS3AV_MON_INFO_AUDIO_TYPE_DTS,       8, 0x7F, 0xFF },
-			{ PS3AV_MON_INFO_AUDIO_TYPE_DDP,       8, 0x7F, 0xFF },
-			{ PS3AV_MON_INFO_AUDIO_TYPE_DTS_HD,    8, 0x7F, 0xFF },
-			{ PS3AV_MON_INFO_AUDIO_TYPE_DOLBY_THD, 8, 0x7F, 0xFF },
-		};
+			{
+				{PS3AV_MON_INFO_AUDIO_TYPE_LPCM, 8, 0x7F, 0x07},
+				{PS3AV_MON_INFO_AUDIO_TYPE_AC3, 8, 0x7F, 0xFF},
+				{PS3AV_MON_INFO_AUDIO_TYPE_AAC, 8, 0x7F, 0xFF},
+				{PS3AV_MON_INFO_AUDIO_TYPE_DTS, 8, 0x7F, 0xFF},
+				{PS3AV_MON_INFO_AUDIO_TYPE_DDP, 8, 0x7F, 0xFF},
+				{PS3AV_MON_INFO_AUDIO_TYPE_DTS_HD, 8, 0x7F, 0xFF},
+				{PS3AV_MON_INFO_AUDIO_TYPE_DOLBY_THD, 8, 0x7F, 0xFF},
+			};
 
 		cfg.avport = avport;
 		memcpy(cfg.monitor_id, mon_id, sizeof(cfg.monitor_id));
@@ -241,9 +241,9 @@ struct av_get_bksv_list_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_get_bksv);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_get_bksv *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_get_bksv*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -285,9 +285,9 @@ struct av_enable_event_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_enable_event);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_enable_event *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_enable_event*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -308,9 +308,9 @@ struct av_disable_event_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_enable_event);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_enable_event *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_enable_event*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -332,9 +332,9 @@ struct av_tv_mute_cmd : public ps3av_cmd
 	}
 
 	// Behavior is unknown, but it seems that this pkt could be ignored
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_av_audio_mute *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_av_audio_mute*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -358,9 +358,9 @@ struct av_null_cmd : public ps3av_cmd
 		return 12;
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -379,9 +379,9 @@ struct av_get_aksv_list_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr) + sizeof(ps3av_pkt_get_aksv_reply))
 		{
@@ -414,9 +414,9 @@ struct video_disable_signal_cmd : public ps3av_cmd
 	}
 
 	// Cross color reduction filter setting in vsh. (AVMULTI)
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_video_disable_sig *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_video_disable_sig*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -459,9 +459,9 @@ struct av_video_ytrapcontrol_cmd : public ps3av_cmd
 	}
 
 	// Cross color reduction filter setting in vsh. (AVMULTI)
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_av_video_ytrapcontrol *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_av_video_ytrapcontrol*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_get_hw_info_reply) + sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -488,9 +488,9 @@ struct av_audio_mute_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_av_audio_mute);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_av_audio_mute *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_av_audio_mute*>(pkt_buf);
 
 		if (pkt->avport == static_cast<u16>(UartAudioAvport::AVMULTI_1))
 		{
@@ -518,9 +518,9 @@ struct av_acp_ctrl_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_acp_ctrl);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_acp_ctrl *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_acp_ctrl*>(pkt_buf);
 
 		if (pkt->avport > static_cast<u8>(UartAudioAvport::HDMI_1) ||
 			(pkt->avport == static_cast<u8>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode))
@@ -542,9 +542,9 @@ struct av_set_acp_packet_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_set_acp_packet);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_set_acp_packet *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_set_acp_packet*>(pkt_buf);
 
 		if (pkt->avport > static_cast<u8>(UartAudioAvport::HDMI_1) ||
 			(pkt->avport == static_cast<u8>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode) ||
@@ -568,9 +568,9 @@ struct av_add_signal_ctl_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_add_signal_ctl);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_add_signal_ctl *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_add_signal_ctl*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -598,9 +598,9 @@ struct av_set_cgms_wss_cmd : public ps3av_cmd
 	}
 
 	// Something related to copy control on AVMULTI.
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_av_set_cgms_wss *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_av_set_cgms_wss*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -627,9 +627,9 @@ struct av_get_hw_conf_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_get_hw_info_reply) + sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -654,9 +654,9 @@ struct av_set_hdmi_mode_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_set_hdmi_mode);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_set_hdmi_mode *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_set_hdmi_mode*>(pkt_buf);
 
 		if (pkt->mode != PS3AV_HDMI_BEHAVIOR_NORMAL)
 		{
@@ -687,9 +687,9 @@ struct av_get_cec_status_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_av_get_cec_config_reply) + sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -709,9 +709,9 @@ struct video_init_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -730,9 +730,9 @@ struct video_set_format_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_video_format);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_video_format *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_video_format*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -757,9 +757,9 @@ struct video_set_route_cmd : public ps3av_cmd
 		return 24;
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -778,9 +778,9 @@ struct video_set_pitch_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_video_set_pitch);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_video_set_pitch *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_video_set_pitch*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -805,9 +805,9 @@ struct video_get_hw_cfg_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_video_get_hw_cfg_reply) + sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -829,9 +829,9 @@ struct audio_init_cmd : public ps3av_cmd
 		return sizeof(ps3av_header);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -852,9 +852,9 @@ struct audio_set_mode_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_audio_mode);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_audio_mode *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_audio_mode*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -873,7 +873,6 @@ struct audio_set_mode_cmd : public ps3av_cmd
 	}
 
 private:
-
 	bool set_mode(const ps3av_pkt_audio_mode& pkt)
 	{
 		bool spdif_use_serial_buf = false;
@@ -916,12 +915,12 @@ private:
 		}
 		case UartAudioAvport::SPDIF_0:
 		{
-			avport_idx    = RsxaudioAvportIdx::SPDIF_0;
+			avport_idx = RsxaudioAvportIdx::SPDIF_0;
 			rsxaudio_port = RsxaudioPort::SPDIF_0;
 			if (pkt.audio_source == UartAudioSource::SERIAL)
 			{
 				spdif_use_serial_buf = true;
-				avport_src           = RsxaudioPort::SERIAL;
+				avport_src = RsxaudioPort::SERIAL;
 			}
 			else
 			{
@@ -932,12 +931,12 @@ private:
 		}
 		case UartAudioAvport::SPDIF_1:
 		{
-			avport_idx    = RsxaudioAvportIdx::SPDIF_1;
+			avport_idx = RsxaudioAvportIdx::SPDIF_1;
 			rsxaudio_port = RsxaudioPort::SPDIF_1;
 			if (pkt.audio_source == UartAudioSource::SERIAL)
 			{
 				spdif_use_serial_buf = true;
-				avport_src           = RsxaudioPort::SERIAL;
+				avport_src = RsxaudioPort::SERIAL;
 			}
 			else
 			{
@@ -952,7 +951,8 @@ private:
 		}
 		}
 
-		if (static_cast<u32>(pkt.audio_fs.value()) > static_cast<u32>(UartAudioFreq::_192K)) return false;
+		if (static_cast<u32>(pkt.audio_fs.value()) > static_cast<u32>(UartAudioFreq::_192K))
+			return false;
 
 		const auto bit_cnt = [&]()
 		{
@@ -971,7 +971,7 @@ private:
 	}
 
 	bool commit_param(RsxaudioPort rsxaudio_port, RsxaudioAvportIdx avport, RsxaudioPort avport_src, UartAudioFreq freq,
-						UartAudioSampleSize bit_cnt, bool spdif_use_serial_buf, const u8 *cs_data)
+		UartAudioSampleSize bit_cnt, bool spdif_use_serial_buf, const u8* cs_data)
 	{
 		auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 		const auto avport_idx = static_cast<std::underlying_type_t<decltype(avport)>>(avport);
@@ -980,11 +980,11 @@ private:
 		{
 			switch (freq)
 			{
-			case UartAudioFreq::_44K:  return std::make_pair(8, SYS_RSXAUDIO_FREQ_BASE_352K);
+			case UartAudioFreq::_44K: return std::make_pair(8, SYS_RSXAUDIO_FREQ_BASE_352K);
 			default:
-			case UartAudioFreq::_48K:  return std::make_pair(8, SYS_RSXAUDIO_FREQ_BASE_384K);
-			case UartAudioFreq::_88K:  return std::make_pair(4, SYS_RSXAUDIO_FREQ_BASE_352K);
-			case UartAudioFreq::_96K:  return std::make_pair(4, SYS_RSXAUDIO_FREQ_BASE_384K);
+			case UartAudioFreq::_48K: return std::make_pair(8, SYS_RSXAUDIO_FREQ_BASE_384K);
+			case UartAudioFreq::_88K: return std::make_pair(4, SYS_RSXAUDIO_FREQ_BASE_352K);
+			case UartAudioFreq::_96K: return std::make_pair(4, SYS_RSXAUDIO_FREQ_BASE_384K);
 			case UartAudioFreq::_176K: return std::make_pair(2, SYS_RSXAUDIO_FREQ_BASE_352K);
 			case UartAudioFreq::_192K: return std::make_pair(2, SYS_RSXAUDIO_FREQ_BASE_384K);
 			}
@@ -995,13 +995,13 @@ private:
 		case RsxaudioPort::SERIAL:
 		{
 			rsxaudio_thread.update_hw_param([&](auto& obj)
-			{
-				obj.serial_freq_base = freq_param.second;
-				obj.serial.freq_div = freq_param.first;
-				obj.serial.depth = rsxaudio_word_depth;
-				obj.serial.buf_empty_en = true;
-				obj.avport_src[avport_idx] = avport_src;
-			});
+				{
+					obj.serial_freq_base = freq_param.second;
+					obj.serial.freq_div = freq_param.first;
+					obj.serial.depth = rsxaudio_word_depth;
+					obj.serial.buf_empty_en = true;
+					obj.avport_src[avport_idx] = avport_src;
+				});
 			break;
 		}
 		case RsxaudioPort::SPDIF_0:
@@ -1010,15 +1010,15 @@ private:
 			const u8 spdif_idx = rsxaudio_port == RsxaudioPort::SPDIF_1;
 
 			rsxaudio_thread.update_hw_param([&](auto& obj)
-			{
-				obj.spdif_freq_base = freq_param.second;
-				obj.spdif[spdif_idx].freq_div = freq_param.first;
-				obj.spdif[spdif_idx].depth = rsxaudio_word_depth;
-				obj.spdif[spdif_idx].use_serial_buf = spdif_use_serial_buf;
-				obj.spdif[spdif_idx].buf_empty_en = true;
-				obj.avport_src[avport_idx] = avport_src;
-				memcpy(obj.spdif[spdif_idx].cs_data.data(), cs_data, sizeof(obj.spdif[spdif_idx].cs_data));
-			});
+				{
+					obj.spdif_freq_base = freq_param.second;
+					obj.spdif[spdif_idx].freq_div = freq_param.first;
+					obj.spdif[spdif_idx].depth = rsxaudio_word_depth;
+					obj.spdif[spdif_idx].use_serial_buf = spdif_use_serial_buf;
+					obj.spdif[spdif_idx].buf_empty_en = true;
+					obj.avport_src[avport_idx] = avport_src;
+					memcpy(obj.spdif[spdif_idx].cs_data.data(), cs_data, sizeof(obj.spdif[spdif_idx].cs_data));
+				});
 			break;
 		}
 		default:
@@ -1039,9 +1039,9 @@ struct audio_mute_cmd : public ps3av_cmd
 		return 0;
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_audio_mute *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_audio_mute*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1078,9 +1078,9 @@ struct audio_set_active_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_audio_set_active);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_audio_set_active *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_audio_set_active*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1089,44 +1089,43 @@ struct audio_set_active_cmd : public ps3av_cmd
 		}
 
 		const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
-		{
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0U
-		};
-
-		g_fxo->get<rsx_audio_data>().update_hw_param([&](auto &obj)
-		{
-			for (u8 avport_idx = 0; avport_idx < SYS_RSXAUDIO_AVPORT_CNT; avport_idx++)
 			{
-				if (requested_avports[avport_idx])
+				(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0U};
+
+		g_fxo->get<rsx_audio_data>().update_hw_param([&](auto& obj)
+			{
+				for (u8 avport_idx = 0; avport_idx < SYS_RSXAUDIO_AVPORT_CNT; avport_idx++)
 				{
-					switch (obj.avport_src[avport_idx])
+					if (requested_avports[avport_idx])
 					{
-					case RsxaudioPort::SERIAL:
-						obj.serial.en = true;
-						break;
-					case RsxaudioPort::SPDIF_0:
-					case RsxaudioPort::SPDIF_1:
-					{
-						const u8 spdif_idx = obj.avport_src[avport_idx] == RsxaudioPort::SPDIF_1;
-						if (!obj.spdif[spdif_idx].use_serial_buf)
+						switch (obj.avport_src[avport_idx])
 						{
-							obj.spdif[spdif_idx].en = true;
+						case RsxaudioPort::SERIAL:
+							obj.serial.en = true;
+							break;
+						case RsxaudioPort::SPDIF_0:
+						case RsxaudioPort::SPDIF_1:
+						{
+							const u8 spdif_idx = obj.avport_src[avport_idx] == RsxaudioPort::SPDIF_1;
+							if (!obj.spdif[spdif_idx].use_serial_buf)
+							{
+								obj.spdif[spdif_idx].en = true;
+							}
+							break;
 						}
-						break;
-					}
-					default:
-						break;
+						default:
+							break;
+						}
 					}
 				}
-			}
 
-			obj.serial.muted = false;
-			obj.spdif[1].muted = false;
-		});
+				obj.serial.muted = false;
+				obj.spdif[1].muted = false;
+			});
 
 		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
 	}
@@ -1139,9 +1138,9 @@ struct audio_set_inactive_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_audio_set_active);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_audio_set_active *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_audio_set_active*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1149,24 +1148,24 @@ struct audio_set_inactive_cmd : public ps3av_cmd
 			return;
 		}
 
-		g_fxo->get<rsx_audio_data>().update_hw_param([&](auto &obj)
-		{
-			if ((pkt->audio_port & 0x8000'0000) == 0U)
+		g_fxo->get<rsx_audio_data>().update_hw_param([&](auto& obj)
 			{
-				obj.avport_src.fill(RsxaudioPort::INVALID);
-			}
-
-			obj.serial.en = false;
-			obj.serial.muted = true;
-			obj.spdif[1].muted = true;
-			for (u8 spdif_idx = 0; spdif_idx < SYS_RSXAUDIO_SPDIF_CNT; spdif_idx++)
-			{
-				if (!obj.spdif[spdif_idx].use_serial_buf)
+				if ((pkt->audio_port & 0x8000'0000) == 0U)
 				{
-					obj.spdif[spdif_idx].en = false;
+					obj.avport_src.fill(RsxaudioPort::INVALID);
 				}
-			}
-		});
+
+				obj.serial.en = false;
+				obj.serial.muted = true;
+				obj.spdif[1].muted = true;
+				for (u8 spdif_idx = 0; spdif_idx < SYS_RSXAUDIO_SPDIF_CNT; spdif_idx++)
+				{
+					if (!obj.spdif[spdif_idx].use_serial_buf)
+					{
+						obj.spdif[spdif_idx].en = false;
+					}
+				}
+			});
 
 		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
 	}
@@ -1179,9 +1178,9 @@ struct audio_spdif_bit_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_audio_spdif_bit);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_audio_spdif_bit *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_audio_spdif_bit*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1190,29 +1189,28 @@ struct audio_spdif_bit_cmd : public ps3av_cmd
 		}
 
 		const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
-		{
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0U,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0U
-		};
-
-		g_fxo->get<rsx_audio_data>().update_hw_param([&](auto &obj)
-		{
-			for (u8 avport_idx = 0; avport_idx < SYS_RSXAUDIO_AVPORT_CNT; avport_idx++)
 			{
-				if (requested_avports[avport_idx] && obj.avport_src[avport_idx] == RsxaudioPort::SPDIF_0)
-				{
-					auto &b_data = pkt->spdif_bit_data;
+				(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0U,
+				(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0U};
 
-					sys_uart.notice("[audio_spdif_bit_cmd] Data 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x",
-									b_data[0], b_data[1], b_data[2], b_data[3], b_data[4], b_data[5], b_data[6], b_data[7],
-									b_data[8], b_data[9], b_data[10], b_data[11]);
-					break;
+		g_fxo->get<rsx_audio_data>().update_hw_param([&](auto& obj)
+			{
+				for (u8 avport_idx = 0; avport_idx < SYS_RSXAUDIO_AVPORT_CNT; avport_idx++)
+				{
+					if (requested_avports[avport_idx] && obj.avport_src[avport_idx] == RsxaudioPort::SPDIF_0)
+					{
+						auto& b_data = pkt->spdif_bit_data;
+
+						sys_uart.notice("[audio_spdif_bit_cmd] Data 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x",
+							b_data[0], b_data[1], b_data[2], b_data[3], b_data[4], b_data[5], b_data[6], b_data[7],
+							b_data[8], b_data[9], b_data[10], b_data[11]);
+						break;
+					}
 				}
-			}
-		});
+			});
 
 		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
 	}
@@ -1225,9 +1223,9 @@ struct audio_ctrl_cmd : public ps3av_cmd
 		return sizeof(ps3av_pkt_audio_ctrl);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_audio_ctrl *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_audio_ctrl*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1254,14 +1252,14 @@ struct inc_avset_cmd : public ps3av_cmd
 {
 	u16 get_size(vuart_av_thread& /*vuart*/, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_inc_avset *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_pkt_inc_avset*>(pkt_buf);
 
 		if (pkt->num_of_video_pkt > 2 || pkt->num_of_av_video_pkt > 4 || pkt->num_of_av_audio_pkt > 4)
 		{
 			return -1;
 		}
 
-		const auto data_start = static_cast<const u8 *>(pkt_buf) + sizeof(ps3av_pkt_inc_avset);
+		const auto data_start = static_cast<const u8*>(pkt_buf) + sizeof(ps3av_pkt_inc_avset);
 
 		u64 video_pkt_sec_size = 0;
 		u64 av_video_pkt_sec_size = 0;
@@ -1269,26 +1267,26 @@ struct inc_avset_cmd : public ps3av_cmd
 
 		for (u16 pkt_idx = 0; pkt_idx < pkt->num_of_video_pkt; pkt_idx++)
 		{
-			video_pkt_sec_size += reinterpret_cast<const ps3av_header *>(&data_start[video_pkt_sec_size])->length + 4ULL;
+			video_pkt_sec_size += reinterpret_cast<const ps3av_header*>(&data_start[video_pkt_sec_size])->length + 4ULL;
 		}
 
 		for (u16 pkt_idx = 0; pkt_idx < pkt->num_of_av_video_pkt; pkt_idx++)
 		{
-			av_video_pkt_sec_size += reinterpret_cast<const ps3av_header *>(&data_start[video_pkt_sec_size + av_video_pkt_sec_size])->length + 4ULL;
+			av_video_pkt_sec_size += reinterpret_cast<const ps3av_header*>(&data_start[video_pkt_sec_size + av_video_pkt_sec_size])->length + 4ULL;
 		}
 
 		for (u16 pkt_idx = 0; pkt_idx < pkt->num_of_av_audio_pkt; pkt_idx++)
 		{
-			av_audio_pkt_sec_size += reinterpret_cast<const ps3av_header *>(&data_start[video_pkt_sec_size + av_video_pkt_sec_size + av_audio_pkt_sec_size])->length + 4ULL;
+			av_audio_pkt_sec_size += reinterpret_cast<const ps3av_header*>(&data_start[video_pkt_sec_size + av_video_pkt_sec_size + av_audio_pkt_sec_size])->length + 4ULL;
 		}
 
 		return static_cast<u16>(sizeof(ps3av_pkt_inc_avset) + video_pkt_sec_size + av_video_pkt_sec_size + av_audio_pkt_sec_size);
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_pkt_inc_avset *>(pkt_buf);
-		auto pkt_data_addr = static_cast<const u8 *>(pkt_buf) + sizeof(ps3av_pkt_inc_avset);
+		const auto pkt = static_cast<const ps3av_pkt_inc_avset*>(pkt_buf);
+		auto pkt_data_addr = static_cast<const u8*>(pkt_buf) + sizeof(ps3av_pkt_inc_avset);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1302,7 +1300,7 @@ struct inc_avset_cmd : public ps3av_cmd
 		u32 video_cmd_status = PS3AV_STATUS_SUCCESS;
 		for (u32 video_pkt_idx = 0; video_pkt_idx < pkt->num_of_video_pkt; ++video_pkt_idx)
 		{
-			const auto video_pkt = reinterpret_cast<const ps3av_pkt_video_mode *>(pkt_data_addr);
+			const auto video_pkt = reinterpret_cast<const ps3av_pkt_video_mode*>(pkt_data_addr);
 			const u32 subcmd_status = video_pkt_parse(*video_pkt);
 
 			if (video_pkt->video_head == PS3AV_HEAD_B_ANALOG)
@@ -1329,7 +1327,7 @@ struct inc_avset_cmd : public ps3av_cmd
 		// AV Video
 		for (u32 video_av_pkt_idx = 0; video_av_pkt_idx < pkt->num_of_av_video_pkt; video_av_pkt_idx++)
 		{
-			const auto av_video_pkt = reinterpret_cast<const ps3av_pkt_av_video_cs *>(pkt_data_addr);
+			const auto av_video_pkt = reinterpret_cast<const ps3av_pkt_av_video_cs*>(pkt_data_addr);
 			const av_video_resp subcmd_resp = av_video_pkt_parse(*av_video_pkt, syscon_check_passed);
 
 			if (subcmd_resp.status != PS3AV_STATUS_SUCCESS)
@@ -1365,7 +1363,7 @@ struct inc_avset_cmd : public ps3av_cmd
 		// AV Audio
 		for (u32 audio_av_pkt_idx = 0; audio_av_pkt_idx < pkt->num_of_av_audio_pkt; audio_av_pkt_idx++)
 		{
-			const auto av_audio_pkt = reinterpret_cast<const ps3av_pkt_av_audio_param *>(pkt_data_addr);
+			const auto av_audio_pkt = reinterpret_cast<const ps3av_pkt_av_audio_param*>(pkt_data_addr);
 
 			if (av_audio_pkt->avport <= static_cast<u16>(UartAudioAvport::HDMI_1))
 			{
@@ -1379,41 +1377,38 @@ struct inc_avset_cmd : public ps3av_cmd
 
 				const u8 hdmi_idx = av_audio_pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1);
 
-				g_fxo->get<rsx_audio_data>().update_hw_param([&](auto &obj)
-				{
-					auto &hdmi = obj.hdmi[hdmi_idx];
-					hdmi.init = true;
-
-					const std::array<u8, SYS_RSXAUDIO_SERIAL_STREAM_CNT> fifomap =
+				g_fxo->get<rsx_audio_data>().update_hw_param([&](auto& obj)
 					{
-						static_cast<u8>((av_audio_pkt->fifomap >> 0) & 3U),
-						static_cast<u8>((av_audio_pkt->fifomap >> 2) & 3U),
-						static_cast<u8>((av_audio_pkt->fifomap >> 4) & 3U),
-						static_cast<u8>((av_audio_pkt->fifomap >> 6) & 3U)
-					};
+						auto& hdmi = obj.hdmi[hdmi_idx];
+						hdmi.init = true;
 
-					const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> en_streams =
-					{
-						static_cast<bool>(av_audio_pkt->enable & 0x10),
-						static_cast<bool>(av_audio_pkt->enable & 0x20),
-						static_cast<bool>(av_audio_pkt->enable & 0x40),
-						static_cast<bool>(av_audio_pkt->enable & 0x80)
-					};
+						const std::array<u8, SYS_RSXAUDIO_SERIAL_STREAM_CNT> fifomap =
+							{
+								static_cast<u8>((av_audio_pkt->fifomap >> 0) & 3U),
+								static_cast<u8>((av_audio_pkt->fifomap >> 2) & 3U),
+								static_cast<u8>((av_audio_pkt->fifomap >> 4) & 3U),
+								static_cast<u8>((av_audio_pkt->fifomap >> 6) & 3U)};
 
-					// Might be wrong
-					const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> swap_lr =
-					{
-						static_cast<bool>(av_audio_pkt->swaplr & 0x10),
-						static_cast<bool>(av_audio_pkt->swaplr & 0x20),
-						static_cast<bool>(av_audio_pkt->swaplr & 0x40),
-						static_cast<bool>(av_audio_pkt->swaplr & 0x80)
-					};
+						const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> en_streams =
+							{
+								static_cast<bool>(av_audio_pkt->enable & 0x10),
+								static_cast<bool>(av_audio_pkt->enable & 0x20),
+								static_cast<bool>(av_audio_pkt->enable & 0x40),
+								static_cast<bool>(av_audio_pkt->enable & 0x80)};
 
-					memcpy(hdmi.info_frame.data(), av_audio_pkt->info, sizeof(av_audio_pkt->info));
-					memcpy(hdmi.chstat.data(), av_audio_pkt->chstat, sizeof(av_audio_pkt->chstat));
+						// Might be wrong
+						const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> swap_lr =
+							{
+								static_cast<bool>(av_audio_pkt->swaplr & 0x10),
+								static_cast<bool>(av_audio_pkt->swaplr & 0x20),
+								static_cast<bool>(av_audio_pkt->swaplr & 0x40),
+								static_cast<bool>(av_audio_pkt->swaplr & 0x80)};
 
-					hdmi.ch_cfg = hdmi_param_conv(fifomap, en_streams, swap_lr);
-				});
+						memcpy(hdmi.info_frame.data(), av_audio_pkt->info, sizeof(av_audio_pkt->info));
+						memcpy(hdmi.chstat.data(), av_audio_pkt->chstat, sizeof(av_audio_pkt->chstat));
+
+						hdmi.ch_cfg = hdmi_param_conv(fifomap, en_streams, swap_lr);
+					});
 			}
 
 			pkt_data_addr += av_audio_pkt->hdr.length + 4ULL;
@@ -1436,7 +1431,6 @@ struct inc_avset_cmd : public ps3av_cmd
 	}
 
 private:
-
 	struct video_sce_param
 	{
 		u32 width_div;
@@ -1450,56 +1444,55 @@ private:
 		bool hdcp_done_event[2]{};
 	};
 
-	u32 video_pkt_parse(const ps3av_pkt_video_mode &video_head_cfg)
+	u32 video_pkt_parse(const ps3av_pkt_video_mode& video_head_cfg)
 	{
 		static constexpr video_sce_param sce_param_arr[28] =
-		{
-			{ 0, 0,    0    },
-			{ 4, 2880, 480  },
-			{ 4, 2880, 480  },
-			{ 4, 2880, 576  },
-			{ 4, 2880, 576  },
-			{ 2, 1440, 480  },
-			{ 2, 1440, 576  },
-			{ 1, 1920, 1080 },
-			{ 1, 1920, 1080 },
-			{ 1, 1920, 1080 },
-			{ 1, 1280, 720  },
-			{ 1, 1280, 720  },
-			{ 1, 1920, 1080 },
-			{ 1, 1920, 1080 },
-			{ 1, 1920, 1080 },
-			{ 1, 1920, 1080 },
-			{ 1, 1280, 768  },
-			{ 1, 1280, 1024 },
-			{ 1, 1920, 1200 },
-			{ 1, 1360, 768  },
-			{ 1, 1280, 1470 },
-			{ 1, 1280, 1470 },
-			{ 1, 1920, 1080 },
-			{ 1, 1920, 2205 },
-			{ 1, 1920, 2205 },
-			{ 1, 1280, 721  },
-			{ 1, 720,  481  },
-			{ 1, 720,  577  }
-		};
+			{
+				{0, 0, 0},
+				{4, 2880, 480},
+				{4, 2880, 480},
+				{4, 2880, 576},
+				{4, 2880, 576},
+				{2, 1440, 480},
+				{2, 1440, 576},
+				{1, 1920, 1080},
+				{1, 1920, 1080},
+				{1, 1920, 1080},
+				{1, 1280, 720},
+				{1, 1280, 720},
+				{1, 1920, 1080},
+				{1, 1920, 1080},
+				{1, 1920, 1080},
+				{1, 1920, 1080},
+				{1, 1280, 768},
+				{1, 1280, 1024},
+				{1, 1920, 1200},
+				{1, 1360, 768},
+				{1, 1280, 1470},
+				{1, 1280, 1470},
+				{1, 1920, 1080},
+				{1, 1920, 2205},
+				{1, 1920, 2205},
+				{1, 1280, 721},
+				{1, 720, 481},
+				{1, 720, 577}};
 
 		const auto sce_idx = [&]() -> u8
 		{
 			switch (video_head_cfg.video_vid)
 			{
 			case 16: return 1;
-			case 1:  return 2;
-			case 3:  return 4;
+			case 1: return 2;
+			case 3: return 4;
 			case 17: return 4;
-			case 5:  return 5;
-			case 6:  return 6;
+			case 5: return 5;
+			case 6: return 6;
 			case 18: return 7;
-			case 7:  return 8;
+			case 7: return 8;
 			case 33: return 8;
-			case 8:  return 9;
+			case 8: return 9;
 			case 34: return 9;
-			case 9:  return 10;
+			case 9: return 10;
 			case 31: return 10;
 			case 10: return 11;
 			case 32: return 11;
@@ -1531,7 +1524,7 @@ private:
 			}
 		}();
 
-		const video_sce_param &sce_param = sce_param_arr[sce_idx];
+		const video_sce_param& sce_param = sce_param_arr[sce_idx];
 		if (sce_idx == umax ||
 			video_head_cfg.video_head > PS3AV_HEAD_B_ANALOG ||
 			video_head_cfg.video_order > 1 ||
@@ -1553,7 +1546,7 @@ private:
 		return PS3AV_STATUS_SUCCESS;
 	}
 
-	av_video_resp av_video_pkt_parse(const ps3av_pkt_av_video_cs &pkt, bool &syscon_pkt_valid)
+	av_video_resp av_video_pkt_parse(const ps3av_pkt_av_video_cs& pkt, bool& syscon_pkt_valid)
 	{
 		if (pkt.avport <= static_cast<u16>(UartAudioAvport::HDMI_1))
 		{
@@ -1597,9 +1590,9 @@ private:
 		return {};
 	}
 
-	static rsxaudio_hw_param_t::hdmi_param_t::hdmi_ch_cfg_t hdmi_param_conv(const std::array<u8, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &map,
-                                                                            const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &en,
-                                                                            const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &swap)
+	static rsxaudio_hw_param_t::hdmi_param_t::hdmi_ch_cfg_t hdmi_param_conv(const std::array<u8, SYS_RSXAUDIO_SERIAL_STREAM_CNT>& map,
+		const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT>& en,
+		const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT>& swap)
 	{
 		std::array<u8, SYS_RSXAUDIO_SERIAL_MAX_CH> result{};
 		u8 ch_cnt = 0;
@@ -1636,7 +1629,7 @@ private:
 			}
 		}();
 
-		return { result, ch_cnt_conv };
+		return {result, ch_cnt_conv};
 	}
 };
 
@@ -1647,9 +1640,9 @@ struct generic_reply_cmd : public ps3av_cmd
 		return 0;
 	}
 
-	void execute(vuart_av_thread &vuart, const void *pkt_buf) override
+	void execute(vuart_av_thread& vuart, const void* pkt_buf) override
 	{
-		const auto pkt = static_cast<const ps3av_header *>(pkt_buf);
+		const auto pkt = static_cast<const ps3av_header*>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
 		{
@@ -1663,7 +1656,7 @@ struct generic_reply_cmd : public ps3av_cmd
 	}
 };
 
-error_code sys_uart_initialize(ppu_thread &ppu)
+error_code sys_uart_initialize(ppu_thread& ppu)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -1674,7 +1667,7 @@ error_code sys_uart_initialize(ppu_thread &ppu)
 		return CELL_ENOSYS;
 	}
 
-	auto &vuart_thread = g_fxo->get<vuart_av>();
+	auto& vuart_thread = g_fxo->get<vuart_av>();
 
 	if (vuart_thread.initialized.test_and_set())
 	{
@@ -1684,7 +1677,7 @@ error_code sys_uart_initialize(ppu_thread &ppu)
 	return CELL_OK;
 }
 
-error_code sys_uart_receive(ppu_thread &ppu, vm::ptr<void> buffer, u64 size, u32 mode)
+error_code sys_uart_receive(ppu_thread& ppu, vm::ptr<void> buffer, u64 size, u32 mode)
 {
 	sys_uart.trace("sys_uart_receive(buffer=*0x%x, size=0x%llx, mode=0x%x)", buffer, size, mode);
 
@@ -1703,7 +1696,7 @@ error_code sys_uart_receive(ppu_thread &ppu, vm::ptr<void> buffer, u64 size, u32
 		return CELL_EINVAL;
 	}
 
-	auto &vuart_thread = g_fxo->get<vuart_av>();
+	auto& vuart_thread = g_fxo->get<vuart_av>();
 
 	if (!vuart_thread.initialized)
 	{
@@ -1719,7 +1712,7 @@ error_code sys_uart_receive(ppu_thread &ppu, vm::ptr<void> buffer, u64 size, u32
 	const std::unique_ptr<u8[]> data = std::make_unique<u8[]>(size);
 	u32 read_size = 0;
 
-	auto vuart_read = [&](u8 *buf, u32 buf_size) -> s32
+	auto vuart_read = [&](u8* buf, u32 buf_size) -> s32
 	{
 		constexpr u32 ITER_SIZE = 4096;
 		std::unique_lock lock(vuart_thread.rx_mutex, std::defer_lock);
@@ -1793,7 +1786,7 @@ error_code sys_uart_receive(ppu_thread &ppu, vm::ptr<void> buffer, u64 size, u32
 	return not_an_error(read_size);
 }
 
-error_code sys_uart_send(ppu_thread &ppu, vm::cptr<void> buffer, u64 size, u32 mode)
+error_code sys_uart_send(ppu_thread& ppu, vm::cptr<void> buffer, u64 size, u32 mode)
 {
 	sys_uart.trace("sys_uart_send(buffer=0x%x, size=0x%llx, mode=0x%x)", buffer, size, mode);
 
@@ -1812,7 +1805,7 @@ error_code sys_uart_send(ppu_thread &ppu, vm::cptr<void> buffer, u64 size, u32 m
 		return CELL_EINVAL;
 	}
 
-	auto &vuart_thread = g_fxo->get<vuart_av>();
+	auto& vuart_thread = g_fxo->get<vuart_av>();
 
 	if (!vuart_thread.initialized)
 	{
@@ -1844,7 +1837,7 @@ error_code sys_uart_send(ppu_thread &ppu, vm::cptr<void> buffer, u64 size, u32 m
 
 		lock.lock();
 
-		auto vuart_send_all = [&](const u8 *data, u32 data_sz)
+		auto vuart_send_all = [&](const u8* data, u32 data_sz)
 		{
 			u32 rem_size = data_sz;
 
@@ -1876,7 +1869,8 @@ error_code sys_uart_send(ppu_thread &ppu, vm::cptr<void> buffer, u64 size, u32 m
 		while (remaining)
 		{
 			const u32 packet_size = std::min(remaining, ITER_SIZE);
-			if (!vuart_send_all(data.get() + sent_size, packet_size)) return {};
+			if (!vuart_send_all(data.get() + sent_size, packet_size))
+				return {};
 			sent_size += packet_size;
 			remaining -= packet_size;
 		}
@@ -1946,7 +1940,7 @@ error_code sys_uart_get_params(vm::ptr<vuart_params> buffer)
 		return CELL_ENOSYS;
 	}
 
-	auto &vuart_thread = g_fxo->get<vuart_av>();
+	auto& vuart_thread = g_fxo->get<vuart_av>();
 
 	if (!vuart_thread.initialized)
 	{
@@ -1974,7 +1968,7 @@ void vuart_av_thread::operator()()
 			continue;
 		}
 
-		const u64 hdmi_event_dist[2] = { hdmi_event_handler[0].time_until_next(), hdmi_event_handler[1].time_until_next() };
+		const u64 hdmi_event_dist[2] = {hdmi_event_handler[0].time_until_next(), hdmi_event_handler[1].time_until_next()};
 		bool update_dist = false;
 
 		if (hdmi_event_dist[0] == 0)
@@ -2029,7 +2023,8 @@ void vuart_av_thread::parse_tx_buffer(u32 buf_size)
 {
 	if (buf_size >= PS3AV_TX_BUF_SIZE)
 	{
-		while (read_tx_data(temp_tx_buf, PS3AV_TX_BUF_SIZE) >= PS3AV_TX_BUF_SIZE);
+		while (read_tx_data(temp_tx_buf, PS3AV_TX_BUF_SIZE) >= PS3AV_TX_BUF_SIZE)
+			;
 		write_resp(reinterpret_cast<be_t<u16, 1>*>(temp_tx_buf)[3], PS3AV_STATUS_BUFFER_OVERFLOW);
 		return;
 	}
@@ -2039,7 +2034,7 @@ void vuart_av_thread::parse_tx_buffer(u32 buf_size)
 	while (buf_size)
 	{
 		const ps3av_header* const hdr = reinterpret_cast<ps3av_header*>(&temp_tx_buf[read_ptr]);
-		const u16 pkt_size            = hdr->length + 4;
+		const u16 pkt_size = hdr->length + 4;
 
 		if (hdr->length == 0xFFFCU)
 		{
@@ -2074,7 +2069,7 @@ void vuart_av_thread::parse_tx_buffer(u32 buf_size)
 
 		if (cmd_size != pkt_size && cmd_size)
 		{
-			sys_uart.error("Invalid size for cid=0x%x, expected=0x%x, got=0x%x", static_cast<const ps3av_header *>(pkt_storage)->cid, cmd_size, pkt_size);
+			sys_uart.error("Invalid size for cid=0x%x, expected=0x%x, got=0x%x", static_cast<const ps3av_header*>(pkt_storage)->cid, cmd_size, pkt_size);
 			write_resp(static_cast<u16>(hdr->cid.get()), PS3AV_STATUS_INVALID_SAMPLE_SIZE);
 			return;
 		}
@@ -2083,7 +2078,7 @@ void vuart_av_thread::parse_tx_buffer(u32 buf_size)
 	}
 }
 
-vuart_av_thread &vuart_av_thread::operator=(thread_state)
+vuart_av_thread& vuart_av_thread::operator=(thread_state)
 {
 	{
 		std::lock_guard lock(tx_wake_m);
@@ -2092,7 +2087,7 @@ vuart_av_thread &vuart_av_thread::operator=(thread_state)
 	return *this;
 }
 
-u32 vuart_av_thread::enque_tx_data(const void *data, u32 data_sz)
+u32 vuart_av_thread::enque_tx_data(const void* data, u32 data_sz)
 {
 	std::unique_lock<shared_mutex> lock(tx_wake_m);
 	if (u32 size = static_cast<u32>(tx_buf.push(data, data_sz, true)))
@@ -2110,12 +2105,12 @@ u32 vuart_av_thread::get_tx_bytes()
 	return static_cast<u32>(tx_buf.get_used_size());
 }
 
-u32 vuart_av_thread::read_rx_data(void *data, u32 data_sz)
+u32 vuart_av_thread::read_rx_data(void* data, u32 data_sz)
 {
 	return static_cast<u32>(rx_buf.pop(data, data_sz, true));
 }
 
-u32 vuart_av_thread::read_tx_data(void *data, u32 data_sz)
+u32 vuart_av_thread::read_tx_data(void* data, u32 data_sz)
 {
 	std::unique_lock<shared_mutex> lock(tx_rdy_m);
 	if (u32 size = static_cast<u32>(tx_buf.pop(data, data_sz, true)))
@@ -2132,23 +2127,22 @@ u32 vuart_av_thread::get_reply_buf_free_size()
 	return sizeof(temp_rx_buf.buf) - temp_rx_buf.crnt_size;
 }
 
-template<bool UseScBuffer>
-void vuart_av_thread::write_resp(u32 cid, u32 status, const void *data, u16 data_size)
+template <bool UseScBuffer>
+void vuart_av_thread::write_resp(u32 cid, u32 status, const void* data, u16 data_size)
 {
 	const ps3av_pkt_reply_hdr pkt_hdr =
-	{
-		PS3AV_VERSION,
-		data_size + 8U,
-		cid | PS3AV_REPLY_BIT,
-		status
-	};
+		{
+			PS3AV_VERSION,
+			data_size + 8U,
+			cid | PS3AV_REPLY_BIT,
+			status};
 
 	if (status != PS3AV_STATUS_SUCCESS)
 	{
 		sys_uart.error("Packet failed cid=0x%08x status=0x%02x", cid, status);
 	}
 
-	temp_buf &buf = UseScBuffer ? temp_rx_sc_buf : temp_rx_buf;
+	temp_buf& buf = UseScBuffer ? temp_rx_sc_buf : temp_rx_buf;
 	const u32 total_size = sizeof(pkt_hdr) + data_size;
 
 	if (buf.crnt_size + total_size <= sizeof(buf.buf))
@@ -2169,44 +2163,44 @@ std::shared_ptr<ps3av_cmd> vuart_av_thread::get_cmd(u32 cid)
 		return std::make_shared<generic_reply_cmd>();
 
 	// AV commands
-	case PS3AV_CID_AV_INIT:               return std::make_shared<av_init_cmd>();
-	case PS3AV_CID_AV_FIN:                return std::make_shared<av_fini_cmd>();
-	case PS3AV_CID_AV_GET_HW_CONF:        return std::make_shared<av_get_hw_conf_cmd>();
-	case PS3AV_CID_AV_GET_MONITOR_INFO:   return std::make_shared<av_get_monitor_info_cmd>();
-	case PS3AV_CID_AV_GET_BKSV_LIST:      return std::make_shared<av_get_bksv_list_cmd>();
-	case PS3AV_CID_AV_ENABLE_EVENT:       return std::make_shared<av_enable_event_cmd>();
-	case PS3AV_CID_AV_DISABLE_EVENT:      return std::make_shared<av_disable_event_cmd>();
-	case PS3AV_CID_AV_TV_MUTE:            return std::make_shared<av_tv_mute_cmd>();
-	case PS3AV_CID_AV_NULL_CMD:           return std::make_shared<av_null_cmd>();
-	case PS3AV_CID_AV_GET_AKSV:           return std::make_shared<av_get_aksv_list_cmd>();
-	case PS3AV_CID_AV_VIDEO_DISABLE_SIG:  return std::make_shared<video_disable_signal_cmd>();
+	case PS3AV_CID_AV_INIT: return std::make_shared<av_init_cmd>();
+	case PS3AV_CID_AV_FIN: return std::make_shared<av_fini_cmd>();
+	case PS3AV_CID_AV_GET_HW_CONF: return std::make_shared<av_get_hw_conf_cmd>();
+	case PS3AV_CID_AV_GET_MONITOR_INFO: return std::make_shared<av_get_monitor_info_cmd>();
+	case PS3AV_CID_AV_GET_BKSV_LIST: return std::make_shared<av_get_bksv_list_cmd>();
+	case PS3AV_CID_AV_ENABLE_EVENT: return std::make_shared<av_enable_event_cmd>();
+	case PS3AV_CID_AV_DISABLE_EVENT: return std::make_shared<av_disable_event_cmd>();
+	case PS3AV_CID_AV_TV_MUTE: return std::make_shared<av_tv_mute_cmd>();
+	case PS3AV_CID_AV_NULL_CMD: return std::make_shared<av_null_cmd>();
+	case PS3AV_CID_AV_GET_AKSV: return std::make_shared<av_get_aksv_list_cmd>();
+	case PS3AV_CID_AV_VIDEO_DISABLE_SIG: return std::make_shared<video_disable_signal_cmd>();
 	case PS3AV_CID_AV_VIDEO_YTRAPCONTROL: return std::make_shared<av_video_ytrapcontrol_cmd>();
-	case PS3AV_CID_AV_AUDIO_MUTE:         return std::make_shared<av_audio_mute_cmd>();
-	case PS3AV_CID_AV_ACP_CTRL:           return std::make_shared<av_acp_ctrl_cmd>();
-	case PS3AV_CID_AV_SET_ACP_PACKET:     return std::make_shared<av_set_acp_packet_cmd>();
-	case PS3AV_CID_AV_ADD_SIGNAL_CTL:     return std::make_shared<av_add_signal_ctl_cmd>();
-	case PS3AV_CID_AV_SET_CGMS_WSS:       return std::make_shared<av_set_cgms_wss_cmd>();
-	case PS3AV_CID_AV_HDMI_MODE:          return std::make_shared<av_set_hdmi_mode_cmd>();
-	case PS3AV_CID_AV_GET_CEC_CONFIG:     return std::make_shared<av_get_cec_status_cmd>();
+	case PS3AV_CID_AV_AUDIO_MUTE: return std::make_shared<av_audio_mute_cmd>();
+	case PS3AV_CID_AV_ACP_CTRL: return std::make_shared<av_acp_ctrl_cmd>();
+	case PS3AV_CID_AV_SET_ACP_PACKET: return std::make_shared<av_set_acp_packet_cmd>();
+	case PS3AV_CID_AV_ADD_SIGNAL_CTL: return std::make_shared<av_add_signal_ctl_cmd>();
+	case PS3AV_CID_AV_SET_CGMS_WSS: return std::make_shared<av_set_cgms_wss_cmd>();
+	case PS3AV_CID_AV_HDMI_MODE: return std::make_shared<av_set_hdmi_mode_cmd>();
+	case PS3AV_CID_AV_GET_CEC_CONFIG: return std::make_shared<av_get_cec_status_cmd>();
 
 	// Video commands
-	case PS3AV_CID_VIDEO_INIT:            return std::make_shared<video_init_cmd>();
-	case PS3AV_CID_VIDEO_ROUTE:           return std::make_shared<video_set_route_cmd>();
-	case PS3AV_CID_VIDEO_FORMAT:          return std::make_shared<video_set_format_cmd>();
-	case PS3AV_CID_VIDEO_PITCH:           return std::make_shared<video_set_pitch_cmd>();
-	case PS3AV_CID_VIDEO_GET_HW_CONF:     return std::make_shared<video_get_hw_cfg_cmd>();
+	case PS3AV_CID_VIDEO_INIT: return std::make_shared<video_init_cmd>();
+	case PS3AV_CID_VIDEO_ROUTE: return std::make_shared<video_set_route_cmd>();
+	case PS3AV_CID_VIDEO_FORMAT: return std::make_shared<video_set_format_cmd>();
+	case PS3AV_CID_VIDEO_PITCH: return std::make_shared<video_set_pitch_cmd>();
+	case PS3AV_CID_VIDEO_GET_HW_CONF: return std::make_shared<video_get_hw_cfg_cmd>();
 
 	// Audio commands
-	case PS3AV_CID_AUDIO_INIT:            return std::make_shared<audio_init_cmd>();
-	case PS3AV_CID_AUDIO_MODE:            return std::make_shared<audio_set_mode_cmd>();
-	case PS3AV_CID_AUDIO_MUTE:            return std::make_shared<audio_mute_cmd>();
-	case PS3AV_CID_AUDIO_ACTIVE:          return std::make_shared<audio_set_active_cmd>();
-	case PS3AV_CID_AUDIO_INACTIVE:        return std::make_shared<audio_set_inactive_cmd>();
-	case PS3AV_CID_AUDIO_SPDIF_BIT:       return std::make_shared<audio_spdif_bit_cmd>();
-	case PS3AV_CID_AUDIO_CTRL:            return std::make_shared<audio_ctrl_cmd>();
+	case PS3AV_CID_AUDIO_INIT: return std::make_shared<audio_init_cmd>();
+	case PS3AV_CID_AUDIO_MODE: return std::make_shared<audio_set_mode_cmd>();
+	case PS3AV_CID_AUDIO_MUTE: return std::make_shared<audio_mute_cmd>();
+	case PS3AV_CID_AUDIO_ACTIVE: return std::make_shared<audio_set_active_cmd>();
+	case PS3AV_CID_AUDIO_INACTIVE: return std::make_shared<audio_set_inactive_cmd>();
+	case PS3AV_CID_AUDIO_SPDIF_BIT: return std::make_shared<audio_spdif_bit_cmd>();
+	case PS3AV_CID_AUDIO_CTRL: return std::make_shared<audio_ctrl_cmd>();
 
 	// Multipacket
-	case PS3AV_CID_AVB_PARAM:             return std::make_shared<inc_avset_cmd>();
+	case PS3AV_CID_AVB_PARAM: return std::make_shared<inc_avset_cmd>();
 
 	default: return {};
 	}
@@ -2214,7 +2208,7 @@ std::shared_ptr<ps3av_cmd> vuart_av_thread::get_cmd(u32 cid)
 
 void vuart_av_thread::commit_rx_buf(bool syscon_buf)
 {
-	temp_buf &buf = syscon_buf ? temp_rx_sc_buf : temp_rx_buf;
+	temp_buf& buf = syscon_buf ? temp_rx_sc_buf : temp_rx_buf;
 
 	std::unique_lock<shared_mutex> lock(rx_wake_m);
 	rx_buf.push(buf.buf, buf.crnt_size, true);
@@ -2293,7 +2287,8 @@ RsxaudioAvportIdx vuart_av_thread::avport_to_idx(UartAudioAvport avport)
 
 void vuart_av_thread::add_unplug_event(bool hdmi_0, bool hdmi_1)
 {
-	if ((hdmi_events_bitmask & PS3AV_EVENT_BIT_UNPLUGGED) == 0) return;
+	if ((hdmi_events_bitmask & PS3AV_EVENT_BIT_UNPLUGGED) == 0)
+		return;
 
 	ps3av_header pkt{};
 	pkt.version = av_cmd_ver;
@@ -2318,7 +2313,8 @@ void vuart_av_thread::add_unplug_event(bool hdmi_0, bool hdmi_1)
 
 void vuart_av_thread::add_plug_event(bool hdmi_0, bool hdmi_1)
 {
-	if ((hdmi_events_bitmask & PS3AV_EVENT_BIT_PLUGGED) == 0) return;
+	if ((hdmi_events_bitmask & PS3AV_EVENT_BIT_PLUGGED) == 0)
+		return;
 
 	ps3av_pkt_hdmi_plugged_event pkt{};
 	pkt.hdr.version = av_cmd_ver;
@@ -2398,7 +2394,7 @@ void vuart_av_thread::add_hdcp_done_event(bool hdmi_0, bool hdmi_1)
 	}
 }
 
-void vuart_av_thread::commit_event_data(const void *data, u16 data_size)
+void vuart_av_thread::commit_event_data(const void* data, u16 data_size)
 {
 	std::unique_lock<shared_mutex> lock(rx_wake_m);
 	rx_buf.push(data, data_size, true);

@@ -11,7 +11,7 @@ namespace rsx
 
 	public:
 		eng_lock(rsx::thread* target)
-			:pthr(target)
+			: pthr(target)
 		{
 			if (pthr->is_current_thread())
 			{
@@ -25,7 +25,8 @@ namespace rsx
 
 		~eng_lock()
 		{
-			if (pthr) pthr->unpause();
+			if (pthr)
+				pthr->unpause();
 		}
 	};
-}
+} // namespace rsx

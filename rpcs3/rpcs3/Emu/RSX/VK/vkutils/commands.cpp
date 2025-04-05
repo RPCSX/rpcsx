@@ -14,8 +14,8 @@ namespace vk
 		queue_family = queue_family_id;
 
 		VkCommandPoolCreateInfo infos = {};
-		infos.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		infos.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		infos.queueFamilyIndex = queue_family;
 
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreateCommandPool)(dev, &infos, nullptr, &pool));
@@ -64,7 +64,7 @@ namespace vk
 
 		if (m_submit_fence)
 		{
-			//vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			// vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
 			delete m_submit_fence;
 			m_submit_fence = nullptr;
 		}
@@ -77,7 +77,7 @@ namespace vk
 			wait_for_fence(m_submit_fence);
 			is_pending = false;
 
-			//CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+			// CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
 			m_submit_fence->reset();
 			CHECK_RESULT(VK_GET_SYMBOL(vkResetCommandBuffer)(commands, 0));
 		}
@@ -129,4 +129,4 @@ namespace vk
 		queue_submit(submit_info, flush);
 		clear_flags();
 	}
-}
+} // namespace vk

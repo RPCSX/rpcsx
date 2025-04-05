@@ -33,32 +33,32 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 	m_button_box->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 
 	connect(m_button_box, &QDialogButtonBox::clicked, this, [this](QAbstractButton* button)
-	{
-		if (button == m_button_box->button(QDialogButtonBox::Apply))
 		{
-			g_cfg_mouse.save();
-		}
-		else if (button == m_button_box->button(QDialogButtonBox::Save))
-		{
-			g_cfg_mouse.save();
-			accept();
-		}
-		else if (button == m_button_box->button(QDialogButtonBox::RestoreDefaults))
-		{
-			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all settings?")) != QMessageBox::Yes)
-				return;
-			reset_config();
-		}
-		else if (button == m_button_box->button(QDialogButtonBox::Cancel))
-		{
-			// Restore config
-			if (!g_cfg_mouse.load())
+			if (button == m_button_box->button(QDialogButtonBox::Apply))
 			{
-				cfg_log.notice("Could not restore mouse config. Using defaults.");
+				g_cfg_mouse.save();
 			}
-			reject();
-		}
-	});
+			else if (button == m_button_box->button(QDialogButtonBox::Save))
+			{
+				g_cfg_mouse.save();
+				accept();
+			}
+			else if (button == m_button_box->button(QDialogButtonBox::RestoreDefaults))
+			{
+				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all settings?")) != QMessageBox::Yes)
+					return;
+				reset_config();
+			}
+			else if (button == m_button_box->button(QDialogButtonBox::Cancel))
+			{
+				// Restore config
+				if (!g_cfg_mouse.load())
+				{
+					cfg_log.notice("Could not restore mouse config. Using defaults.");
+				}
+				reject();
+			}
+		});
 
 	if (!g_cfg_mouse.load())
 	{
@@ -70,27 +70,27 @@ basic_mouse_settings_dialog::basic_mouse_settings_dialog(QWidget* parent)
 	connect(m_buttons, &QButtonGroup::idClicked, this, &basic_mouse_settings_dialog::on_button_click);
 
 	connect(&m_remap_timer, &QTimer::timeout, this, [this]()
-	{
-		auto button = m_buttons->button(m_button_id);
-
-		if (--m_seconds <= 0)
 		{
+			auto button = m_buttons->button(m_button_id);
+
+			if (--m_seconds <= 0)
+			{
+				if (button)
+				{
+					if (const int button_id = m_buttons->id(button))
+					{
+						const std::string name = g_cfg_mouse.get_button(button_id).to_string();
+						button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
+					}
+				}
+				reactivate_buttons();
+				return;
+			}
 			if (button)
 			{
-				if (const int button_id = m_buttons->id(button))
-				{
-					const std::string name = g_cfg_mouse.get_button(button_id).to_string();
-					button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
-				}
+				button->setText(tr("[ Waiting %1 ]").arg(m_seconds));
 			}
-			reactivate_buttons();
-			return;
-		}
-		if (button)
-		{
-			button->setText(tr("[ Waiting %1 ]").arg(m_seconds));
-		}
-	});
+		});
 
 	const auto insert_button = [this](int id, QPushButton* button)
 	{

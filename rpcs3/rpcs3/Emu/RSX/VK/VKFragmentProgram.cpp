@@ -21,12 +21,12 @@ std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::string& Op0, const std::string& Op1)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
-void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertHeader(std::stringstream& OS)
 {
 	std::vector<const char*> required_extensions;
 
@@ -56,32 +56,29 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	glsl::insert_subheader_block(OS);
 }
 
-void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertInputs(std::stringstream& OS)
 {
 	glsl::insert_fragment_shader_inputs_block(
 		OS,
 		glsl::extension_flavour::EXT,
 		m_prog,
 		m_parr.params[PF_PARAM_IN],
-		{
-			.two_sided_color = !!(properties.in_register_mask & in_diff_color),
-			.two_sided_specular = !!(properties.in_register_mask & in_spec_color)
-		},
-		vk::get_varying_register_location
-	);
+		{.two_sided_color = !!(properties.in_register_mask & in_diff_color),
+			.two_sided_specular = !!(properties.in_register_mask & in_spec_color)},
+		vk::get_varying_register_location);
 }
 
-void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertOutputs(std::stringstream& OS)
 {
 	const std::pair<std::string, std::string> table[] =
-	{
-		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
-	};
+		{
+			{"ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0"},
+			{"ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4"},
+			{"ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6"},
+			{"ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8"},
+		};
 
-	//NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
+	// NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
 	u8 output_index = 0;
 	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
@@ -95,7 +92,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	}
 }
 
-void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertConstants(std::stringstream& OS)
 {
 	u32 location = m_binding_table.textures_first_bind_slot;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -225,7 +222,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	inputs.push_back(in);
 }
 
-void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
+void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream& OS)
 {
 	m_shader_props.domain = glsl::glsl_fragment_program;
 	m_shader_props.require_lit_emulation = properties.has_lit_op;
@@ -253,16 +250,16 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
 
-void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertMainStart(std::stringstream& OS)
 {
 	std::set<std::string> output_registers;
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{
-		output_registers = { "r0", "r2", "r3", "r4" };
+		output_registers = {"r0", "r2", "r3", "r4"};
 	}
 	else
 	{
-		output_registers = { "h0", "h4", "h6", "h8" };
+		output_registers = {"h0", "h4", "h6", "h8"};
 	}
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
@@ -273,9 +270,9 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	std::string registers;
 	std::string reg_type;
 	const auto half4 = getHalfTypeName(4);
-	for (auto &reg_name : output_registers)
+	for (auto& reg_name : output_registers)
 	{
-		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support) ? "vec4" : half4;
 		if (reg_type == type) [[likely]]
 		{
 			registers += ", " + reg_name + " = " + type + "(0.)";
@@ -336,7 +333,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 }
 
-void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
+void VKFragmentDecompilerThread::insertMainEnd(std::stringstream& OS)
 {
 	OS << "}\n\n";
 
@@ -345,7 +342,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	::glsl::insert_rop_init(OS);
 
-	OS << "\n" << "	fs_main();\n\n";
+	OS << "\n"
+	   << "	fs_main();\n\n";
 
 	glsl::insert_rop(OS, m_shader_props);
 
@@ -362,7 +360,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		}
 		else
 		{
-			//Input not declared. Leave commented to assist in debugging the shader
+			// Input not declared. Leave commented to assist in debugging the shader
 			OS << "	//gl_FragDepth = r1.z;\n";
 		}
 	}
@@ -432,7 +430,7 @@ void VKFragmentProgram::Delete()
 
 void VKFragmentProgram::SetInputs(std::vector<vk::glsl::program_input>& inputs)
 {
-	for (auto &it : inputs)
+	for (auto& it : inputs)
 	{
 		uniforms.push_back(it);
 	}

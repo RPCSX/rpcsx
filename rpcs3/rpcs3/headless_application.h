@@ -9,7 +9,7 @@
 
 /** Headless RPCS3 Application Class
  * The main point of this class is to do application initialization and initialize callbacks.
-*/
+ */
 
 class headless_application : public QCoreApplication, public main_application
 {

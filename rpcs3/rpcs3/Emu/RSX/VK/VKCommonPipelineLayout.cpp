@@ -157,4 +157,4 @@ namespace vk
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(dev, &layout_info, nullptr, &result));
 		return std::make_tuple(result, set_layout);
 	}
-}
+} // namespace vk

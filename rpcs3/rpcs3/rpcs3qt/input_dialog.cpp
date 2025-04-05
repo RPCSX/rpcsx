@@ -8,7 +8,7 @@
 #include <QValidator>
 #include <QLabel>
 
-input_dialog::input_dialog(int max_length, const QString& text, const QString& title, const QString& label, const QString& placeholder, QWidget *parent, Qt::WindowFlags f)
+input_dialog::input_dialog(int max_length, const QString& text, const QString& title, const QString& label, const QString& placeholder, QWidget* parent, Qt::WindowFlags f)
 	: QDialog(parent, f)
 {
 	setWindowTitle(title);

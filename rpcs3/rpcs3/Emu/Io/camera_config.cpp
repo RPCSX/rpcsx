@@ -7,8 +7,7 @@ LOG_CHANNEL(camera_log, "Camera");
 cfg_camera g_cfg_camera;
 
 cfg_camera::cfg_camera()
-	: cfg::node()
-	, path(fs::get_config_dir(true) + "camera.yml")
+	: cfg::node(), path(fs::get_config_dir(true) + "camera.yml")
 {
 }
 
@@ -16,7 +15,7 @@ bool cfg_camera::load()
 {
 	camera_log.notice("Loading camera config from '%s'", path);
 
-	if (fs::file cfg_file{ path, fs::read })
+	if (fs::file cfg_file{path, fs::read})
 	{
 		return from_string(cfg_file.to_string());
 	}
@@ -71,7 +70,7 @@ void cfg_camera::camera_setting::from_string(const std::string& text)
 		return;
 	}
 
-	const std::vector<std::string> list = fmt::split(text, { "," });
+	const std::vector<std::string> list = fmt::split(text, {","});
 
 	if (list.size() != member_count)
 	{

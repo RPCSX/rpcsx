@@ -36,50 +36,52 @@ static thread_local u32 s_tls_thread_slot = -1;
 // Suspend counter stamp
 static thread_local u64 s_tls_sctr = -1;
 
-extern thread_local void(*g_tls_log_control)(const char* fmt, u64 progress);
-extern thread_local std::string(*g_tls_log_prefix)();
+extern thread_local void (*g_tls_log_control)(const char* fmt, u64 progress);
+extern thread_local std::string (*g_tls_log_prefix)();
 
 template <>
 void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](cpu_flag f)
-	{
-		switch (f)
 		{
-		case cpu_flag::stop: return "STOP";
-		case cpu_flag::exit: return "EXIT";
-		case cpu_flag::wait: return "w";
-		case cpu_flag::temp: return "t";
-		case cpu_flag::pause: return "p";
-		case cpu_flag::suspend: return "s";
-		case cpu_flag::ret: return "ret";
-		case cpu_flag::again: return "a";
-		case cpu_flag::signal: return "sig";
-		case cpu_flag::memory: return "mem";
-		case cpu_flag::pending: return "pend";
-		case cpu_flag::pending_recheck: return "pend-re";
-		case cpu_flag::notify: return "ntf";
-		case cpu_flag::yield: return "y";
-		case cpu_flag::preempt: return "PREEMPT";
-		case cpu_flag::dbg_global_pause: return "G-PAUSE";
-		case cpu_flag::dbg_pause: return "PAUSE";
-		case cpu_flag::dbg_step: return "STEP";
-		case cpu_flag::__bitset_enum_max: break;
-		}
+			switch (f)
+			{
+			case cpu_flag::stop: return "STOP";
+			case cpu_flag::exit: return "EXIT";
+			case cpu_flag::wait: return "w";
+			case cpu_flag::temp: return "t";
+			case cpu_flag::pause: return "p";
+			case cpu_flag::suspend: return "s";
+			case cpu_flag::ret: return "ret";
+			case cpu_flag::again: return "a";
+			case cpu_flag::signal: return "sig";
+			case cpu_flag::memory: return "mem";
+			case cpu_flag::pending: return "pend";
+			case cpu_flag::pending_recheck: return "pend-re";
+			case cpu_flag::notify: return "ntf";
+			case cpu_flag::yield: return "y";
+			case cpu_flag::preempt: return "PREEMPT";
+			case cpu_flag::dbg_global_pause: return "G-PAUSE";
+			case cpu_flag::dbg_pause: return "PAUSE";
+			case cpu_flag::dbg_step: return "STEP";
+			case cpu_flag::__bitset_enum_max: break;
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<bs_t<cpu_flag>>::format(std::string& out, u64 arg)
 {
 	format_bitset(out, arg, "[", "|", "]", &fmt_class_string<cpu_flag>::format);
 }
 
-enum cpu_threads_emulation_info_dump_t : u32 {};
+enum cpu_threads_emulation_info_dump_t : u32
+{
+};
 
-template<>
+template <>
 void fmt_class_string<cpu_threads_emulation_info_dump_t>::format(std::string& out, u64 arg)
 {
 	// Do not dump all threads, only select few
@@ -448,7 +450,6 @@ struct cpu_prof
 	static constexpr auto thread_name = "CPU Profiler"sv;
 };
 
-
 using cpu_profiler = named_thread<cpu_prof>;
 
 extern f64 get_cpu_program_usage_percent(u64 hash)
@@ -485,7 +486,7 @@ thread_local DECLARE(cpu_thread::g_tls_this_thread) = nullptr;
 static atomic_t<u64, 64> s_cpu_counter{0};
 
 // List of posted tasks for suspend_all
-//static atomic_t<cpu_thread::suspend_work*> s_cpu_work[128]{};
+// static atomic_t<cpu_thread::suspend_work*> s_cpu_work[128]{};
 
 // Linked list of pushed tasks for suspend_all
 static atomic_t<cpu_thread::suspend_work*> s_pushed{};
@@ -518,16 +519,16 @@ namespace cpu_counter
 		for (u64 i = 0;; i++)
 		{
 			const auto [bits, ok] = s_cpu_bits.fetch_op([](u128& bits)
-			{
-				if (~bits) [[likely]]
 				{
-					// Set lowest clear bit
-					bits |= bits + 1;
-					return true;
-				}
+					if (~bits) [[likely]]
+					{
+						// Set lowest clear bit
+						bits |= bits + 1;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			if (ok) [[likely]]
 			{
@@ -560,9 +561,9 @@ namespace cpu_counter
 	static void remove_cpu_bit(u32 bit)
 	{
 		s_cpu_bits.atomic_op([=](u128& val)
-		{
-			val &= ~(u128{1} << (bit % 128));
-		});
+			{
+				val &= ~(u128{1} << (bit % 128));
+			});
 	}
 
 	void remove(cpu_thread* _this) noexcept
@@ -626,7 +627,7 @@ namespace cpu_counter
 
 		return copy;
 	}
-}
+} // namespace cpu_counter
 
 void cpu_thread::operator()()
 {
@@ -654,7 +655,7 @@ void cpu_thread::operator()()
 	{
 	case thread_class::ppu:
 	{
-		//g_fxo->get<cpu_profiler>().registered.push(id);
+		// g_fxo->get<cpu_profiler>().registered.push(id);
 		break;
 	}
 	case thread_class::spu:
@@ -676,7 +677,7 @@ void cpu_thread::operator()()
 	{
 		cpu_thread* _this = nullptr;
 		std::string name;
-		std::string(*log_prefix)() = nullptr;
+		std::string (*log_prefix)() = nullptr;
 
 		void cleanup()
 		{
@@ -690,7 +691,7 @@ void cpu_thread::operator()()
 				ptr->compare_and_swap(_this, nullptr);
 			}
 
-			g_tls_log_control = [](const char*, u64){};
+			g_tls_log_control = [](const char*, u64) {};
 
 			if (s_tls_thread_slot != umax)
 			{
@@ -817,141 +818,142 @@ bool cpu_thread::check_state() noexcept
 		// Process all flags in a single atomic op
 		bs_t<cpu_flag> state1;
 		auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
-		{
-			bool store = false;
+							   {
+								   bool store = false;
 
-			if (flags & cpu_flag::pause && s_tls_thread_slot != umax)
-			{
-				// Save value before state is saved and cpu_flag::wait is observed
-				if (s_tls_sctr == umax)
-				{
-					u64 ctr = g_suspend_counter;
+								   if (flags & cpu_flag::pause && s_tls_thread_slot != umax)
+								   {
+									   // Save value before state is saved and cpu_flag::wait is observed
+									   if (s_tls_sctr == umax)
+									   {
+										   u64 ctr = g_suspend_counter;
 
-					if (flags & cpu_flag::wait)
-					{
-						if ((ctr & 3) == 2)
-						{
-							s_tls_sctr = ctr;
-						}
-					}
-					else
-					{
-						s_tls_sctr = ctr;
-					}
-				}
-			}
-			else
-			{
-				// Cleanup after asynchronous remove()
-				if (flags & cpu_flag::pause && s_tls_thread_slot == umax)
-				{
-					flags -= cpu_flag::pause;
-					store = true;
-				}
+										   if (flags & cpu_flag::wait)
+										   {
+											   if ((ctr & 3) == 2)
+											   {
+												   s_tls_sctr = ctr;
+											   }
+										   }
+										   else
+										   {
+											   s_tls_sctr = ctr;
+										   }
+									   }
+								   }
+								   else
+								   {
+									   // Cleanup after asynchronous remove()
+									   if (flags & cpu_flag::pause && s_tls_thread_slot == umax)
+									   {
+										   flags -= cpu_flag::pause;
+										   store = true;
+									   }
 
-				s_tls_sctr = -1;
-			}
+									   s_tls_sctr = -1;
+								   }
 
-			if (flags & cpu_flag::temp) [[unlikely]]
-			{
-				// Sticky flag, indicates check_state() is not allowed to return true
-				flags -= cpu_flag::temp;
-				cpu_can_stop = false;
-				store = true;
-			}
+								   if (flags & cpu_flag::temp) [[unlikely]]
+								   {
+									   // Sticky flag, indicates check_state() is not allowed to return true
+									   flags -= cpu_flag::temp;
+									   cpu_can_stop = false;
+									   store = true;
+								   }
 
-			if (cpu_can_stop && flags & cpu_flag::signal)
-			{
-				flags -= cpu_flag::signal;
-				cpu_sleep_called = false;
-				store = true;
-			}
+								   if (cpu_can_stop && flags & cpu_flag::signal)
+								   {
+									   flags -= cpu_flag::signal;
+									   cpu_sleep_called = false;
+									   store = true;
+								   }
 
-			if (flags & cpu_flag::notify)
-			{
-				flags -= cpu_flag::notify;
-				store = true;
-			}
+								   if (flags & cpu_flag::notify)
+								   {
+									   flags -= cpu_flag::notify;
+									   store = true;
+								   }
 
-			// Can't process dbg_step if we only paused temporarily
-			if (cpu_can_stop && flags & cpu_flag::dbg_step)
-			{
-				if (u32 pc = get_pc(), *pc2 = get_pc2(); pc != umax && pc2)
-				{
-					if (pc != *pc2)
-					{
-						flags -= cpu_flag::dbg_step;
-						flags += cpu_flag::dbg_pause;
-						store = true;
-					}
-				}
-				else
-				{
-					// Can't test, ignore flag
-					flags -= cpu_flag::dbg_step;
-					store = true;
-				}
-			}
+								   // Can't process dbg_step if we only paused temporarily
+								   if (cpu_can_stop && flags & cpu_flag::dbg_step)
+								   {
+									   if (u32 pc = get_pc(), *pc2 = get_pc2(); pc != umax && pc2)
+									   {
+										   if (pc != *pc2)
+										   {
+											   flags -= cpu_flag::dbg_step;
+											   flags += cpu_flag::dbg_pause;
+											   store = true;
+										   }
+									   }
+									   else
+									   {
+										   // Can't test, ignore flag
+										   flags -= cpu_flag::dbg_step;
+										   store = true;
+									   }
+								   }
 
-			// Atomically clean wait flag and escape
-			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
-			{
-				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
-				if (flags & cpu_flag::pause || (!cpu_memory_checked && flags & cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
-				{
-					if (!(flags & cpu_flag::wait))
-					{
-						flags += cpu_flag::wait;
-						store = true;
-					}
+								   // Atomically clean wait flag and escape
+								   if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
+								   {
+									   // Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
+									   if (flags & cpu_flag::pause || (!cpu_memory_checked && flags & cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
+									   {
+										   if (!(flags & cpu_flag::wait))
+										   {
+											   flags += cpu_flag::wait;
+											   store = true;
+										   }
 
-					if (flags & (cpu_flag::yield + cpu_flag::preempt) && cpu_can_stop)
-					{
-						flags -= (cpu_flag::yield + cpu_flag::preempt);
-						store = true;
-					}
+										   if (flags & (cpu_flag::yield + cpu_flag::preempt) && cpu_can_stop)
+										   {
+											   flags -= (cpu_flag::yield + cpu_flag::preempt);
+											   store = true;
+										   }
 
-					escape = false;
-					state1 = flags;
-					return store;
-				}
+										   escape = false;
+										   state1 = flags;
+										   return store;
+									   }
 
-				if (flags & (cpu_flag::wait + cpu_flag::memory))
-				{
-					flags -= (cpu_flag::wait + cpu_flag::memory);
-					store = true;
-				}
+									   if (flags & (cpu_flag::wait + cpu_flag::memory))
+									   {
+										   flags -= (cpu_flag::wait + cpu_flag::memory);
+										   store = true;
+									   }
 
-				if (s_tls_thread_slot == umax)
-				{
-					if (cpu_flag::wait - this->state.load())
-					{
-						// Force wait flag (must be set during ownership of s_cpu_lock), this makes the atomic op fail as a side effect
-						this->state += cpu_flag::wait;
-						store = true;
-					}
+									   if (s_tls_thread_slot == umax)
+									   {
+										   if (cpu_flag::wait - this->state.load())
+										   {
+											   // Force wait flag (must be set during ownership of s_cpu_lock), this makes the atomic op fail as a side effect
+											   this->state += cpu_flag::wait;
+											   store = true;
+										   }
 
-					// Restore thread in the suspend list
-					cpu_counter::add(this);
-				}
+										   // Restore thread in the suspend list
+										   cpu_counter::add(this);
+									   }
 
-				retval = false;
-			}
-			else
-			{
-				if (flags & cpu_flag::wait)
-				{
-					flags -= cpu_flag::wait;
-					store = true;
-				}
+									   retval = false;
+								   }
+								   else
+								   {
+									   if (flags & cpu_flag::wait)
+									   {
+										   flags -= cpu_flag::wait;
+										   store = true;
+									   }
 
-				retval = cpu_can_stop;
-			}
+									   retval = cpu_can_stop;
+								   }
 
-			escape = true;
-			state1 = flags;
-			return store;
-		}).first;
+								   escape = true;
+								   state1 = flags;
+								   return store;
+							   })
+		                  .first;
 
 		if (state0 & cpu_flag::preempt && cpu_can_stop)
 		{
@@ -970,14 +972,14 @@ bool cpu_thread::check_state() noexcept
 				reader_lock lock(s_cpu_lock);
 
 				cpu_counter::for_all_cpu(bits & s_cpu_bits, [](cpu_thread* cpu)
-				{
-					if (cpu->state.none_of(cpu_flag::wait + cpu_flag::yield))
 					{
-						cpu->state += cpu_flag::yield;
-					}
+						if (cpu->state.none_of(cpu_flag::wait + cpu_flag::yield))
+						{
+							cpu->state += cpu_flag::yield;
+						}
 
-					return true;
-				});
+						return true;
+					});
 			}
 		}
 
@@ -1182,11 +1184,11 @@ void cpu_thread::add_remove_flags(bs_t<cpu_flag> to_add, bs_t<cpu_flag> to_remov
 	else
 	{
 		result = state.atomic_op([&](bs_t<cpu_flag>& v)
-		{
-			v += to_add;
-			v -= to_remove;
-			return v;
-		});
+			{
+				v += to_add;
+				v -= to_remove;
+				return v;
+			});
 	}
 
 	if (!::is_paused(to_remove) && !::is_stopped(to_remove))
@@ -1358,7 +1360,9 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", state.load());
+	return fmt::format("Type: %s; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" :
+																															  "RSX",
+		state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
@@ -1383,8 +1387,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 			s_cpu_lock.lock_unlock();
 			continue;
 		}
-	}
-	while (!s_pushed.compare_and_swap_test(next, this));
+	} while (!s_pushed.compare_and_swap_test(next, this));
 
 	if (!next)
 	{
@@ -1398,15 +1401,15 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 
 		// Try to prefetch cpu->state earlier
 		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu)
-		{
-			if (cpu != _this)
 			{
-				utils::prefetch_write(&cpu->state);
-				return true;
-			}
+				if (cpu != _this)
+				{
+					utils::prefetch_write(&cpu->state);
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		// Initialization (first increment)
 		g_suspend_counter += 2;
@@ -1415,28 +1418,28 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		u128 copy2 = copy;
 
 		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
-		{
-			if (cpu->state.fetch_add(cpu_flag::pause) & cpu_flag::wait)
 			{
-				// Clear bits as long as wait flag is set
-				return false;
-			}
-
-			return true;
-		});
-
-		while (copy)
-		{
-			// Check only CPUs which haven't acknowledged their waiting state yet
-			copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
-			{
-				if (cpu->state & cpu_flag::wait)
+				if (cpu->state.fetch_add(cpu_flag::pause) & cpu_flag::wait)
 				{
+					// Clear bits as long as wait flag is set
 					return false;
 				}
 
 				return true;
 			});
+
+		while (copy)
+		{
+			// Check only CPUs which haven't acknowledged their waiting state yet
+			copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
+				{
+					if (cpu->state & cpu_flag::wait)
+					{
+						return false;
+					}
+
+					return true;
+				});
 
 			if (!copy)
 			{
@@ -1469,8 +1472,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 				// Fill priority range
 				min_prio = std::min<u8>(min_prio, head->prio);
 				max_prio = std::max<u8>(max_prio, head->prio);
-			}
-			while (prev);
+			} while (prev);
 		}
 
 		// Execute prefetch hint(s)
@@ -1483,10 +1485,10 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		}
 
 		cpu_counter::for_all_cpu(copy2, [&](cpu_thread* cpu)
-		{
-			utils::prefetch_write(&cpu->state);
-			return true;
-		});
+			{
+				utils::prefetch_write(&cpu->state);
+				return true;
+			});
 
 		// Execute all stored workload
 		for (s32 prio = max_prio; prio >= min_prio; prio--)
@@ -1506,10 +1508,10 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		ensure(g_suspend_counter++ & 1);
 
 		cpu_counter::for_all_cpu(copy2, [&](cpu_thread* cpu)
-		{
-			cpu->state -= cpu_flag::pause;
-			return true;
-		});
+			{
+				cpu->state -= cpu_flag::pause;
+				return true;
+			});
 	}
 	else
 	{
@@ -1584,20 +1586,20 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 			bool give_up = false;
 
 			idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
-			{
-				spu_list.emplace_back(ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
-
-				if (spu.current_func && spu.unsavable)
 				{
-					const u64 start = spu.start_time;
+					spu_list.emplace_back(ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
 
-					// Automatically give up if it is asleep 15 seconds or more
-					if (start && current > start && current - start >= 15'000'000)
+					if (spu.current_func && spu.unsavable)
 					{
-						give_up = true;
+						const u64 start = spu.start_time;
+
+						// Automatically give up if it is asleep 15 seconds or more
+						if (start && current > start && current - start >= 15'000'000)
+						{
+							give_up = true;
+						}
 					}
-				}
-			});
+				});
 
 			if (!force_collect && give_up)
 			{
@@ -1668,51 +1670,51 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		bool paused_anyone = false;
 
 		if (cpu_thread::suspend_all(nullptr, {}, [&]()
-		{
-			if (!get_spus(false, true))
-			{
-				// Avoid locking IDM here because this is a critical section
-				return true;
-			}
-
-			bool failed = false;
-			const bool is_emu_paused = Emu.IsPaused();
-
-			for (auto& spu : *spu_list)
-			{
-				if (spu->unsavable)
 				{
-					failed = true;
-					break;
-				}
-
-				if (is_emu_paused)
-				{
-					// If emulation is paused, we can only hope it's already in a state compatible with savestates
-					if (!(spu->state & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause)))
+					if (!get_spus(false, true))
 					{
-						failed = true;
-						break;
+						// Avoid locking IDM here because this is a critical section
+						return true;
 					}
-				}
-				else
-				{
-					paused_anyone = true;
-					ensure(!spu->state.test_and_set(cpu_flag::dbg_global_pause));
-				}
-			}
 
-			if (failed && paused_anyone)
-			{
-				// For faster signalling, first remove state flags then batch notifications
-				for (auto& spu : *spu_list)
-				{
-					spu->state -= cpu_flag::dbg_global_pause;
-				}
-			}
+					bool failed = false;
+					const bool is_emu_paused = Emu.IsPaused();
 
-			return failed;
-		}))
+					for (auto& spu : *spu_list)
+					{
+						if (spu->unsavable)
+						{
+							failed = true;
+							break;
+						}
+
+						if (is_emu_paused)
+						{
+							// If emulation is paused, we can only hope it's already in a state compatible with savestates
+							if (!(spu->state & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause)))
+							{
+								failed = true;
+								break;
+							}
+						}
+						else
+						{
+							paused_anyone = true;
+							ensure(!spu->state.test_and_set(cpu_flag::dbg_global_pause));
+						}
+					}
+
+					if (failed && paused_anyone)
+					{
+						// For faster signalling, first remove state flags then batch notifications
+						for (auto& spu : *spu_list)
+						{
+							spu->state -= cpu_flag::dbg_global_pause;
+						}
+					}
+
+					return failed;
+				}))
 		{
 			if (Emu.IsPaused())
 			{

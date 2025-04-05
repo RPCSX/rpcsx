@@ -20,17 +20,19 @@ game_list_grid::game_list_grid()
 	};
 
 	connect(this, &game_list_grid::IconReady, this, [this](const movie_item_base* item)
-	{
-		if (item) item->image_change_callback();
-	}, Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...
+		{
+			if (item)
+				item->image_change_callback();
+		},
+		Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...
 
 	connect(this, &flow_widget::ItemSelectionChanged, this, [this](int index)
-	{
-		if (game_list_grid_item* item = static_cast<game_list_grid_item*>(::at32(items(), index)))
 		{
-			Q_EMIT ItemSelectionChanged(item->game());
-		}
-	});
+			if (game_list_grid_item* item = static_cast<game_list_grid_item*>(::at32(items(), index)))
+			{
+				Q_EMIT ItemSelectionChanged(item->game());
+			}
+		});
 }
 
 void game_list_grid::clear_list()
@@ -82,30 +84,30 @@ void game_list_grid::populate(
 		}
 
 		item->set_image_change_callback([this, item, game](const QVideoFrame& frame)
-		{
-			if (!item || !game)
 			{
-				return;
-			}
-
-			if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
-			{
-				item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
-			}
-			else
-			{
-				std::lock_guard lock(item->pixmap_mutex);
-
-				item->set_icon(game->pxmap);
-
-				if (!game->has_hover_gif && !game->has_hover_pam)
+				if (!item || !game)
 				{
-					game->pxmap = {};
+					return;
 				}
 
-				item->stop_movie();
-			}
-		});
+				if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
+				{
+					item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
+				}
+				else
+				{
+					std::lock_guard lock(item->pixmap_mutex);
+
+					item->set_icon(game->pxmap);
+
+					if (!game->has_hover_gif && !game->has_hover_pam)
+					{
+						game->pxmap = {};
+					}
+
+					item->stop_movie();
+				}
+			});
 
 		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
@@ -158,9 +160,9 @@ void game_list_grid::repaint_icons(std::vector<game_info>& game_data, const QCol
 			}
 
 			item->set_icon_load_func([this, game, device_pixel_ratio, cancel = item->icon_loading_aborted()](int)
-			{
-				IconLoadFunction(game, device_pixel_ratio, cancel);
-			});
+				{
+					IconLoadFunction(game, device_pixel_ratio, cancel);
+				});
 
 			item->adjust_size();
 			item->show_title(show_title);

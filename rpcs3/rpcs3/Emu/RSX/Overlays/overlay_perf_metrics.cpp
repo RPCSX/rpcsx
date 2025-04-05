@@ -92,8 +92,8 @@ namespace rsx
 		void perf_metrics_overlay::reset_transform(label& elm) const
 		{
 			// left, top, right, bottom
-			const areau padding { m_padding, m_padding - std::min<u32>(4, m_padding), m_padding, m_padding };
-			const positionu margin { m_margin_x, m_margin_y };
+			const areau padding{m_padding, m_padding - std::min<u32>(4, m_padding), m_padding, m_padding};
+			const positionu margin{m_margin_x, m_margin_y};
 			positionu pos;
 
 			u16 graph_width = 0;
@@ -481,19 +481,19 @@ namespace rsx
 					case detail_level::medium:
 					{
 						m_ppus = idm::select<named_thread<ppu_thread>>([this](u32, named_thread<ppu_thread>& ppu)
-						{
-							m_ppu_cycles += thread_ctrl::get_cycles(ppu);
-						});
+							{
+								m_ppu_cycles += thread_ctrl::get_cycles(ppu);
+							});
 
 						m_spus = idm::select<named_thread<spu_thread>>([this](u32, named_thread<spu_thread>& spu)
-						{
-							m_spu_cycles += thread_ctrl::get_cycles(spu);
-						});
+							{
+								m_spu_cycles += thread_ctrl::get_cycles(spu);
+							});
 
 						m_rsx_cycles += rsx_thread.get_cycles();
 
 						m_total_cycles = std::max<u64>(1, m_ppu_cycles + m_spu_cycles + m_rsx_cycles);
-						m_cpu_usage    = static_cast<f32>(m_cpu_stats.get_usage());
+						m_cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
 
 						m_ppu_usage = std::clamp(m_cpu_usage * m_ppu_cycles / m_total_cycles, 0.f, 100.f);
 						m_spu_usage = std::clamp(m_cpu_usage * m_spu_cycles / m_total_cycles, 0.f, 100.f);
@@ -542,32 +542,32 @@ namespace rsx
 				case detail_level::low:
 				{
 					fmt::append(perf_text, "FPS : %05.2f\n"
-					                         "CPU : %04.1f %%",
-					    m_fps, m_cpu_usage);
+										   "CPU : %04.1f %%",
+						m_fps, m_cpu_usage);
 					break;
 				}
 				case detail_level::medium:
 				{
 					fmt::append(perf_text, "FPS : %05.2f\n\n"
-					                         "%s\n"
-					                         " PPU   : %04.1f %%\n"
-					                         " SPU   : %04.1f %%\n"
-					                         " RSX   : %04.1f %%\n"
-					                         " Total : %04.1f %%",
-					    m_fps, std::string(title1_medium.size(), ' '), m_ppu_usage, m_spu_usage, m_rsx_usage, m_cpu_usage, std::string(title2.size(), ' '));
+										   "%s\n"
+										   " PPU   : %04.1f %%\n"
+										   " SPU   : %04.1f %%\n"
+										   " RSX   : %04.1f %%\n"
+										   " Total : %04.1f %%",
+						m_fps, std::string(title1_medium.size(), ' '), m_ppu_usage, m_spu_usage, m_rsx_usage, m_cpu_usage, std::string(title2.size(), ' '));
 					break;
 				}
 				case detail_level::high:
 				{
 					fmt::append(perf_text, "FPS : %05.2f (%03.1fms)\n\n"
-					                         "%s\n"
-					                         " PPU   : %04.1f %% (%2u)\n"
-					                         " SPU   : %04.1f %% (%2u)\n"
-					                         " RSX   : %04.1f %% ( 1)\n"
-					                         " Total : %04.1f %% (%2u)\n\n"
-					                         "%s\n"
-					                         " RSX   : %02u %%",
-					    m_fps, m_frametime, std::string(title1_high.size(), ' '), m_ppu_usage, m_ppus, m_spu_usage, m_spus, m_rsx_usage, m_cpu_usage, m_total_threads, std::string(title2.size(), ' '), m_rsx_load);
+										   "%s\n"
+										   " PPU   : %04.1f %% (%2u)\n"
+										   " SPU   : %04.1f %% (%2u)\n"
+										   " RSX   : %04.1f %% ( 1)\n"
+										   " Total : %04.1f %% (%2u)\n\n"
+										   "%s\n"
+										   " RSX   : %02u %%",
+						m_fps, m_frametime, std::string(title1_high.size(), ' '), m_ppu_usage, m_ppus, m_spu_usage, m_spus, m_rsx_usage, m_cpu_usage, m_total_threads, std::string(title2.size(), ' '), m_rsx_load);
 					break;
 				}
 				}
@@ -639,10 +639,10 @@ namespace rsx
 		{
 			m_label.set_font("e046323ms.ttf", 8);
 			m_label.alignment = text_align::center;
-			m_label.fore_color = { 1.f, 1.f, 1.f, 1.f };
-			m_label.back_color = { 0.f, 0.f, 0.f, .7f };
+			m_label.fore_color = {1.f, 1.f, 1.f, 1.f};
+			m_label.back_color = {0.f, 0.f, 0.f, .7f};
 
-			back_color = { 0.f, 0.f, 0.f, 0.5f };
+			back_color = {0.f, 0.f, 0.f, 0.5f};
 		}
 
 		void graph::set_pos(s16 _x, s16 _y)
@@ -756,7 +756,8 @@ namespace rsx
 			{
 				const f32& dp = m_datapoints[i];
 
-				if (dp < 0) continue; // Skip initial negative values. They don't count.
+				if (dp < 0)
+					continue; // Skip initial negative values. They don't count.
 
 				m_min = std::min(m_min, dp);
 				m_max = std::max(m_max, dp);
@@ -831,7 +832,7 @@ namespace rsx
 				auto& cmd_guides = compiled_resources.append({});
 				auto& config_guides = cmd_guides.config;
 
-				config_guides.color = { 1.f, 1.f, 1.f, .2f };
+				config_guides.color = {1.f, 1.f, 1.f, .2f};
 				config_guides.primitives = primitive_type::line_list;
 
 				auto& verts_guides = compiled_resources.draw_commands.back().verts;

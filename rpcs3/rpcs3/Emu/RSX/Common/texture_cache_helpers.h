@@ -8,17 +8,17 @@ namespace rsx
 	// Defines pixel operation to be performed on a surface before it is ready for use
 	enum surface_transform : u32
 	{
-		identity = 0,                // Nothing
-		coordinate_transform = 1     // Incoming source coordinates may generated based on the format of the secondary (dest) surface. Recalculate them before use.
+		identity = 0,            // Nothing
+		coordinate_transform = 1 // Incoming source coordinates may generated based on the format of the secondary (dest) surface. Recalculate them before use.
 	};
 
-	template<typename image_resource_type>
+	template <typename image_resource_type>
 	struct copy_region_descriptor_base
 	{
 		image_resource_type src;
 		flags32_t xform;
 		u32 base_addr;
-		u8  level;
+		u8 level;
 		u16 src_x;
 		u16 src_y;
 		u16 dst_x;
@@ -33,16 +33,16 @@ namespace rsx
 	// Deferred texture processing commands
 	enum class deferred_request_command : u32
 	{
-		nop = 0,                  // Nothing
-		copy_image_static,        // Copy image and cache the results
-		copy_image_dynamic,       // Copy image but do not cache the results
-		cubemap_gather,           // Provided list of sections generates a cubemap
-		cubemap_unwrap,           // One large texture provided to be partitioned into a cubemap
-		atlas_gather,             // Provided list of sections generates a texture atlas
-		_3d_gather,               // Provided list of sections generates a 3D array
-		_3d_unwrap,               // One large texture provided to be partitioned into a 3D array
-		mipmap_gather,            // Provided list of sections to be reassembled as mipmap levels of the same texture
-		blit_image_static,        // Variant of the copy command that does scaling instead of copying
+		nop = 0,            // Nothing
+		copy_image_static,  // Copy image and cache the results
+		copy_image_dynamic, // Copy image but do not cache the results
+		cubemap_gather,     // Provided list of sections generates a cubemap
+		cubemap_unwrap,     // One large texture provided to be partitioned into a cubemap
+		atlas_gather,       // Provided list of sections generates a texture atlas
+		_3d_gather,         // Provided list of sections generates a 3D array
+		_3d_unwrap,         // One large texture provided to be partitioned into a 3D array
+		mipmap_gather,      // Provided list of sections to be reassembled as mipmap levels of the same texture
+		blit_image_static,  // Variant of the copy command that does scaling instead of copying
 	};
 
 	struct image_section_attributes_t
@@ -55,7 +55,7 @@ namespace rsx
 		u16 depth;
 		u16 mipmaps;
 		u16 slice_h;
-		u8  bpp;
+		u8 bpp;
 		bool swizzled;
 		bool edge_clamped;
 	};
@@ -67,7 +67,8 @@ namespace rsx
 		u32 real_dst_size = 0;
 
 		blit_op_result(bool success) : succeeded(success)
-		{}
+		{
+		}
 
 		inline address_range to_address_range() const
 		{
@@ -138,12 +139,12 @@ namespace rsx
 			case CELL_GCM_TEXTURE_A8R8G8B8:
 				return CELL_GCM_TEXTURE_DEPTH24_D8;
 			case CELL_GCM_TEXTURE_X16:
-				//case CELL_GCM_TEXTURE_A4R4G4B4:
-				//case CELL_GCM_TEXTURE_G8B8:
-				//case CELL_GCM_TEXTURE_A1R5G5B5:
-				//case CELL_GCM_TEXTURE_R5G5B5A1:
-				//case CELL_GCM_TEXTURE_R5G6B5:
-				//case CELL_GCM_TEXTURE_R6G5B5:
+				// case CELL_GCM_TEXTURE_A4R4G4B4:
+				// case CELL_GCM_TEXTURE_G8B8:
+				// case CELL_GCM_TEXTURE_A1R5G5B5:
+				// case CELL_GCM_TEXTURE_R5G5B5A1:
+				// case CELL_GCM_TEXTURE_R5G6B5:
+				// case CELL_GCM_TEXTURE_R6G5B5:
 				return CELL_GCM_TEXTURE_DEPTH16;
 			}
 
@@ -213,14 +214,14 @@ namespace rsx
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found
-						return { false, buffer_range.start, buffer.width, buffer.height };
+						return {false, buffer_range.start, buffer.width, buffer.height};
 					}
 
 					if (dst_range.overlaps(buffer_range)) [[unlikely]]
 					{
 						// The range clips the destination but does not fit inside it
 						// Use DMA stream to optimize the flush that is likely to happen when flipping
-						return { true };
+						return {true};
 					}
 				}
 			}
@@ -233,20 +234,20 @@ namespace rsx
 					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
 					// TODO: Add more entries based on empirical data
 					const auto optimal_height = std::max(dst_dimensions.height, 720u);
-					return { false, 0, dst_dimensions.width, optimal_height };
+					return {false, 0, dst_dimensions.width, optimal_height};
 				}
 
 				if (dst_dimensions.width == src_dimensions.width)
 				{
 					const auto optimal_height = std::max(dst_dimensions.height, src_dimensions.height);
-					return { false, 0, dst_dimensions.width, optimal_height };
+					return {false, 0, dst_dimensions.width, optimal_height};
 				}
 			}
 
-			return { false, 0, dst_dimensions.width, dst_dimensions.height };
+			return {false, 0, dst_dimensions.width, dst_dimensions.height};
 		}
 
-		template<typename commandbuffer_type, typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
+		template <typename commandbuffer_type, typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
 		void gather_texture_slices(
 			commandbuffer_type& cmd,
 			std::vector<copy_region_type>& out,
@@ -272,7 +273,7 @@ namespace rsx
 
 				for (u32 index = 0; index < fbos.size(); ++index)
 				{
-					sort_list.push_back({ fbos[index].surface->last_use_tag, 0, index });
+					sort_list.push_back({fbos[index].surface->last_use_tag, 0, index});
 				}
 
 				for (u32 index = 0; index < local.size(); ++index)
@@ -280,7 +281,7 @@ namespace rsx
 					if (local[index]->get_context() != rsx::texture_upload_context::blit_engine_dst)
 						continue;
 
-					sort_list.push_back({ local[index]->last_write_tag, 1, index });
+					sort_list.push_back({local[index]->last_write_tag, 1, index});
 				}
 
 				std::sort(sort_list.begin(), sort_list.end(), FN(x.tag < y.tag));
@@ -329,9 +330,7 @@ namespace rsx
 
 				section.surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
 
-				out.push_back
-				({
-					.src = section.surface->get_surface(rsx::surface_access::transfer_read),
+				out.push_back({.src = section.surface->get_surface(rsx::surface_access::transfer_read),
 					.xform = surface_transform::identity,
 					.base_addr = section.base_address,
 					.level = 0,
@@ -343,8 +342,7 @@ namespace rsx
 					.src_w = src_width,
 					.src_h = src_height,
 					.dst_w = dst_width,
-					.dst_h = dst_height
-				});
+					.dst_h = dst_height});
 			};
 
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true)
@@ -357,7 +355,7 @@ namespace rsx
 
 				auto [src_offset, dst_offset, dimensions] = rsx::intersect_region(
 					section->get_section_base(), normalized_section_width, section->get_height(), /* parent region (extractee) */
-					address, normalized_attr_width, attr.slice_h, /* child region (extracted) */
+					address, normalized_attr_width, attr.slice_h,                                 /* child region (extracted) */
 					attr.pitch);
 
 				if (!dimensions.width || !dimensions.height)
@@ -369,11 +367,11 @@ namespace rsx
 				// The intersection takes place in a normalized coordinate space. Now we convert back to domain-specific
 				src_offset.x /= section_bpp;
 				dst_offset.x /= attr.bpp;
-				const size2u dst_size = { dimensions.width / attr.bpp, dimensions.height };
-				const size2u src_size = { dimensions.width / section_bpp, dimensions.height };
+				const size2u dst_size = {dimensions.width / attr.bpp, dimensions.height};
+				const size2u src_size = {dimensions.width / section_bpp, dimensions.height};
 
-				const u32 dst_slice_begin = slice * attr.slice_h;      // Output slice low watermark
-				const u32 dst_slice_end = dst_slice_begin + attr.height;   // Output slice high watermark
+				const u32 dst_slice_begin = slice * attr.slice_h;        // Output slice low watermark
+				const u32 dst_slice_end = dst_slice_begin + attr.height; // Output slice high watermark
 
 				const auto dst_y = dst_offset.y;
 				const auto dst_h = dst_size.height;
@@ -395,45 +393,39 @@ namespace rsx
 					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(static_cast<u16>(dst_offset.x), static_cast<u16>(dst_y - dst_slice_begin), attr.width, attr.height);
 					const auto [_dst_w, _dst_h] = rsx::apply_resolution_scale<true>(dst_w, height, attr.width, attr.height);
 
-					out.push_back
-					({
-						.src = section->get_raw_texture(),
+					out.push_back({.src = section->get_raw_texture(),
 						.xform = surface_transform::identity,
 						.level = 0,
-						.src_x = static_cast<u16>(src_offset.x),   // src.x
-						.src_y = static_cast<u16>(src_offset.y),   // src.y
-						.dst_x = _dst_x,                           // dst.x
-						.dst_y = _dst_y,                           // dst.y
+						.src_x = static_cast<u16>(src_offset.x), // src.x
+						.src_y = static_cast<u16>(src_offset.y), // src.y
+						.dst_x = _dst_x,                         // dst.x
+						.dst_y = _dst_y,                         // dst.y
 						.dst_z = slice,
 						.src_w = src_w,
 						.src_h = height,
 						.dst_w = _dst_w,
-						.dst_h = _dst_h
-					});
+						.dst_h = _dst_h});
 				}
 				else
 				{
-					out.push_back
-					({
-						.src = section->get_raw_texture(),
+					out.push_back({.src = section->get_raw_texture(),
 						.xform = surface_transform::identity,
 						.level = 0,
-						.src_x = static_cast<u16>(src_offset.x),         // src.x
-						.src_y = static_cast<u16>(src_offset.y),         // src.y
-						.dst_x = static_cast<u16>(dst_offset.x),         // dst.x
-						.dst_y = static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
+						.src_x = static_cast<u16>(src_offset.x),            // src.x
+						.src_y = static_cast<u16>(src_offset.y),            // src.y
+						.dst_x = static_cast<u16>(dst_offset.x),            // dst.x
+						.dst_y = static_cast<u16>(dst_y - dst_slice_begin), // dst.y
 						.dst_z = 0,
 						.src_w = src_w,
 						.src_h = height,
 						.dst_w = dst_w,
-						.dst_h = height
-					});
+						.dst_h = height});
 				}
 			};
 
 			u32 current_address = attr.address;
-			//u16 current_src_offset = 0;
-			//u16 current_dst_offset = 0;
+			// u16 current_src_offset = 0;
+			// u16 current_dst_offset = 0;
 			u32 slice_size = (attr.pitch * attr.slice_h);
 
 			out.reserve(count);
@@ -493,7 +485,7 @@ namespace rsx
 			}
 		}
 
-		template<typename render_target_type>
+		template <typename render_target_type>
 		bool check_framebuffer_resource(
 			render_target_type texptr,
 			const image_section_attributes_t& attr,
@@ -698,15 +690,15 @@ namespace rsx
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 
 					texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);
-					return { texptr->get_surface(rsx::surface_access::transfer_read), command, attr2, {},
-							texture_upload_context::framebuffer_storage, format_class, scale,
-							extended_dimension, decoded_remap };
+					return {texptr->get_surface(rsx::surface_access::transfer_read), command, attr2, {},
+						texture_upload_context::framebuffer_storage, format_class, scale,
+						extended_dimension, decoded_remap};
 				}
 
 				texptr->memory_barrier(cmd, access_type);
 				auto viewed_surface = texptr->get_surface(access_type);
-				sampled_image_descriptor result = { viewed_surface->get_view(decoded_remap), texture_upload_context::framebuffer_storage,
-						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples() };
+				sampled_image_descriptor result = {viewed_surface->get_view(decoded_remap), texture_upload_context::framebuffer_storage,
+					texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples()};
 
 				if (requires_clip)
 				{
@@ -720,18 +712,18 @@ namespace rsx
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
-				return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::_3d_unwrap,
-						attr2, {},
-						texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
-						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+				return {texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::_3d_unwrap,
+					attr2, {},
+					texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
+					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap};
 			}
 
 			ensure(extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap);
 
-			return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::cubemap_unwrap,
-					attr2, {},
-					texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
-					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
+			return {texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::cubemap_unwrap,
+				attr2, {},
+				texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
+				rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap};
 		}
 
 		template <typename sampled_image_descriptor, typename commandbuffer_type, typename surface_store_list_type, typename section_storage_type>
@@ -808,10 +800,10 @@ namespace rsx
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
 
-				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather,
-						attr2, {},
-						upload_context, format_class, scale,
-						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
+				sampled_image_descriptor desc = {nullptr, deferred_request_command::cubemap_gather,
+					attr2, {},
+					upload_context, format_class, scale,
+					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap};
 
 				gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
 				return desc;
@@ -821,10 +813,10 @@ namespace rsx
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
 
-				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather,
+				sampled_image_descriptor desc = {nullptr, deferred_request_command::_3d_gather,
 					attr2, {},
 					upload_context, format_class, scale,
-					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap};
 
 				gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
 				return desc;
@@ -841,34 +833,32 @@ namespace rsx
 				attr2.height = scaled_h;
 			}
 
-			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
-					attr2, {}, upload_context, format_class,
-					scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+			sampled_image_descriptor result = {nullptr, deferred_request_command::atlas_gather,
+				attr2, {}, upload_context, format_class,
+				scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap};
 
 			gather_texture_slices(cmd, result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
 			result.simplify();
 			return result;
 		}
 
-		template<typename sampled_image_descriptor, typename copy_region_descriptor_type>
+		template <typename sampled_image_descriptor, typename copy_region_descriptor_type>
 		bool append_mipmap_level(
-			std::vector<copy_region_descriptor_type>& sections,   // Destination list
-			const sampled_image_descriptor& level,                // Descriptor for the image level being checked
-			const image_section_attributes_t& attr,               // Attributes of image level
-			u8 mipmap_level,                                      // Level index
-			bool apply_upscaling,                                 // Whether to upscale the results or not
-			const image_section_attributes_t& level0_attr)        // Attributes of the first mipmap level
+			std::vector<copy_region_descriptor_type>& sections, // Destination list
+			const sampled_image_descriptor& level,              // Descriptor for the image level being checked
+			const image_section_attributes_t& attr,             // Attributes of image level
+			u8 mipmap_level,                                    // Level index
+			bool apply_upscaling,                               // Whether to upscale the results or not
+			const image_section_attributes_t& level0_attr)      // Attributes of the first mipmap level
 		{
 			if (level.image_handle)
 			{
-				copy_region_descriptor_type mip
-				{
+				copy_region_descriptor_type mip{
 					.src = level.image_handle->image(),
 					.xform = surface_transform::coordinate_transform,
 					.level = mipmap_level,
 					.dst_w = attr.width,
-					.dst_h = attr.height
-				};
+					.dst_h = attr.height};
 
 				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
 				// Calculate transfer dimensions from attr
@@ -891,8 +881,7 @@ namespace rsx
 				case deferred_request_command::copy_image_dynamic:
 				case deferred_request_command::copy_image_static:
 				{
-					copy_region_descriptor_type mip
-					{
+					copy_region_descriptor_type mip{
 						.src = level.external_subresource_desc.external_handle,
 						.xform = surface_transform::coordinate_transform,
 						.level = mipmap_level,
@@ -904,8 +893,7 @@ namespace rsx
 						.src_h = level.external_subresource_desc.height,
 
 						.dst_w = attr.width,
-						.dst_h = attr.height
-					};
+						.dst_h = attr.height};
 
 					sections.push_back(mip);
 					break;
@@ -927,5 +915,5 @@ namespace rsx
 
 			return true;
 		}
-	};
-}
+	}; // namespace texture_cache_helpers
+} // namespace rsx

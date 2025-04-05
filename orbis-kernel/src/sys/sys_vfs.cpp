@@ -1,8 +1,8 @@
 #include "stat.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Process.hpp"
 #include "thread/ProcessOps.hpp"
 #include "thread/Thread.hpp"
-#include "thread/Process.hpp"
 #include "utils/Logs.hpp"
 #include <filesystem>
 #include <span>
@@ -71,8 +71,8 @@ orbis::SysResult orbis::sys_chroot(Thread *thread, ptr<char> path) {
 }
 
 // volatile bool debuggerPresent = false;
-orbis::SysResult orbis::sys_open(Thread *thread, ptr<const char> path, sint flags,
-                                 sint mode) {
+orbis::SysResult orbis::sys_open(Thread *thread, ptr<const char> path,
+                                 sint flags, sint mode) {
   if (auto open = thread->tproc->ops->open) {
     Ref<File> file;
     auto result = open(thread, path, flags, mode, &file);
@@ -82,16 +82,18 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<const char> path, sint flag
 
     auto fd = thread->tproc->fileDescriptors.insert(file);
     thread->retval[0] = fd;
-    // if (path == std::string_view{"/app0/psm/Application/resource/Sce.Vsh.ShellUI.SystemMessage.rco"}) {
+    // if (path ==
+    // std::string_view{"/app0/psm/Application/resource/Sce.Vsh.ShellUI.SystemMessage.rco"})
+    // {
     ORBIS_LOG_SUCCESS(__FUNCTION__, thread->tid, path, flags, mode, fd);
     if (path == std::string_view{"/app0/wave/wave1.fbxd"}) {
       thread->where();
     }
 
-      // while (debuggerPresent == false) {
-      //   std::this_thread::sleep_for(std::chrono::seconds(1));
-      // }
-      // // thread->where();
+    // while (debuggerPresent == false) {
+    //   std::this_thread::sleep_for(std::chrono::seconds(1));
+    // }
+    // // thread->where();
     // }
     return {};
   }
@@ -288,13 +290,14 @@ orbis::SysResult orbis::sys_readlink(Thread *thread, ptr<char> path,
   }
 
   Ref<File> file;
-  if (auto error = thread->tproc->ops->open(thread, path, 0, 0, &file); error.value()) {
+  if (auto error = thread->tproc->ops->open(thread, path, 0, 0, &file);
+      error.value()) {
     return error;
   }
 
   ORBIS_RET_ON_ERROR(uwriteRaw(buf, _path, pathLen));
   thread->retval[0] = pathLen;
-  return{};
+  return {};
 }
 orbis::SysResult orbis::sys_readlinkat(Thread *thread, sint fd, ptr<char> path,
                                        ptr<char> buf, size_t bufsize) {

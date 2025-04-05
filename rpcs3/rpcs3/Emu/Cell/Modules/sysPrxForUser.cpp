@@ -83,7 +83,9 @@ error_code sys_get_random_number(vm::ptr<void> addr, u64 size)
 	case 0x80010501: return CELL_ENOMEM;
 	case 0x80010503: return CELL_EAGAIN;
 	case 0x80010509: return CELL_EINVAL;
-	default: if (rs) return CELL_EABORT;
+	default:
+		if (rs)
+			return CELL_EABORT;
 	}
 
 	return CELL_OK;
@@ -182,69 +184,69 @@ extern void sysPrxForUser_sys_libc_init();
 extern void sysPrxForUser_sys_rsxaudio_init();
 
 DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", [](ppu_static_module* _this)
-{
-	static ppu_static_module cellGamePs1Emu("cellGamePs1Emu", []()
 	{
-		REG_FNID(cellGamePs1Emu, 0x61CE2BCD, cellGamePs1Emu_61CE2BCD);
+		static ppu_static_module cellGamePs1Emu("cellGamePs1Emu", []()
+			{
+				REG_FNID(cellGamePs1Emu, 0x61CE2BCD, cellGamePs1Emu_61CE2BCD);
+			});
+
+		static ppu_static_module cellSysconfPs1emu("cellSysconfPs1emu", []()
+			{
+				REG_FNID(cellSysconfPs1emu, 0x639ABBDE, cellSysconfPs1emu_639ABBDE);
+				REG_FNID(cellSysconfPs1emu, 0x6A12D11F, cellSysconfPs1emu_6A12D11F);
+				REG_FNID(cellSysconfPs1emu, 0x83E79A23, cellSysconfPs1emu_83E79A23);
+				REG_FNID(cellSysconfPs1emu, 0xEFDDAF6C, cellSysconfPs1emu_EFDDAF6C);
+			});
+
+		static ppu_static_module sys_lv2coredump("sys_lv2coredump", []()
+			{
+				REG_FNID(sys_lv2coredump, 0xD725F320, sys_lv2coredump_D725F320);
+			});
+
+		static ppu_static_module sysBdMediaId("sysBdMediaId", []()
+			{
+				REG_FUNC(sysBdMediaId, sys_get_bd_media_id);
+			});
+
+		static ppu_static_module sysConsoleId("sysConsoleId", []()
+			{
+				REG_FUNC(sysConsoleId, sys_get_console_id);
+			});
+
+		static ppu_static_module sysPs2Disc("sysPs2Disc", []()
+			{
+				REG_FNID(sysPs2Disc, 0xA84FD3C3, sysPs2Disc_A84FD3C3);
+				REG_FNID(sysPs2Disc, 0xBB7CD1AE, sysPs2Disc_BB7CD1AE);
+			});
+
+		sysPrxForUser_sys_lwmutex_init(_this);
+		sysPrxForUser_sys_lwcond_init(_this);
+		sysPrxForUser_sys_ppu_thread_init();
+		sysPrxForUser_sys_prx_init();
+		sysPrxForUser_sys_heap_init();
+		sysPrxForUser_sys_spinlock_init();
+		sysPrxForUser_sys_mmapper_init();
+		sysPrxForUser_sys_mempool_init();
+		sysPrxForUser_sys_spu_init();
+		sysPrxForUser_sys_game_init();
+		sysPrxForUser_sys_libc_init();
+		sysPrxForUser_sys_rsxaudio_init();
+
+		REG_VAR(sysPrxForUser, sys_prx_version); // 0x7df066cf
+		REG_VAR(sysPrxForUser, g_ppu_atexitspawn).flag(MFF_HIDDEN);
+		REG_VAR(sysPrxForUser, g_ppu_at_Exitspawn).flag(MFF_HIDDEN);
+
+		REG_FUNC(sysPrxForUser, sys_time_get_system_time);
+
+		REG_FUNC(sysPrxForUser, sys_process_exit);
+		REG_FUNC(sysPrxForUser, _sys_process_atexitspawn);
+		REG_FUNC(sysPrxForUser, _sys_process_at_Exitspawn);
+		REG_FUNC(sysPrxForUser, sys_process_is_stack);
+		REG_FUNC(sysPrxForUser, sys_process_get_paramsfo); // 0xe75c40f2
+
+		REG_FUNC(sysPrxForUser, sys_get_random_number);
+
+		REG_FUNC(sysPrxForUser, console_getc);
+		REG_FUNC(sysPrxForUser, console_putc);
+		REG_FUNC(sysPrxForUser, console_write);
 	});
-
-	static ppu_static_module cellSysconfPs1emu("cellSysconfPs1emu", []()
-	{
-		REG_FNID(cellSysconfPs1emu, 0x639ABBDE, cellSysconfPs1emu_639ABBDE);
-		REG_FNID(cellSysconfPs1emu, 0x6A12D11F, cellSysconfPs1emu_6A12D11F);
-		REG_FNID(cellSysconfPs1emu, 0x83E79A23, cellSysconfPs1emu_83E79A23);
-		REG_FNID(cellSysconfPs1emu, 0xEFDDAF6C, cellSysconfPs1emu_EFDDAF6C);
-	});
-
-	static ppu_static_module sys_lv2coredump("sys_lv2coredump", []()
-	{
-		REG_FNID(sys_lv2coredump, 0xD725F320, sys_lv2coredump_D725F320);
-	});
-
-	static ppu_static_module sysBdMediaId("sysBdMediaId", []()
-	{
-		REG_FUNC(sysBdMediaId, sys_get_bd_media_id);
-	});
-
-	static ppu_static_module sysConsoleId("sysConsoleId", []()
-	{
-		REG_FUNC(sysConsoleId, sys_get_console_id);
-	});
-
-	static ppu_static_module sysPs2Disc("sysPs2Disc", []()
-	{
-		REG_FNID(sysPs2Disc, 0xA84FD3C3, sysPs2Disc_A84FD3C3);
-		REG_FNID(sysPs2Disc, 0xBB7CD1AE, sysPs2Disc_BB7CD1AE);
-	});
-
-	sysPrxForUser_sys_lwmutex_init(_this);
-	sysPrxForUser_sys_lwcond_init(_this);
-	sysPrxForUser_sys_ppu_thread_init();
-	sysPrxForUser_sys_prx_init();
-	sysPrxForUser_sys_heap_init();
-	sysPrxForUser_sys_spinlock_init();
-	sysPrxForUser_sys_mmapper_init();
-	sysPrxForUser_sys_mempool_init();
-	sysPrxForUser_sys_spu_init();
-	sysPrxForUser_sys_game_init();
-	sysPrxForUser_sys_libc_init();
-	sysPrxForUser_sys_rsxaudio_init();
-
-	REG_VAR(sysPrxForUser, sys_prx_version); // 0x7df066cf
-	REG_VAR(sysPrxForUser, g_ppu_atexitspawn).flag(MFF_HIDDEN);
-	REG_VAR(sysPrxForUser, g_ppu_at_Exitspawn).flag(MFF_HIDDEN);
-
-	REG_FUNC(sysPrxForUser, sys_time_get_system_time);
-
-	REG_FUNC(sysPrxForUser, sys_process_exit);
-	REG_FUNC(sysPrxForUser, _sys_process_atexitspawn);
-	REG_FUNC(sysPrxForUser, _sys_process_at_Exitspawn);
-	REG_FUNC(sysPrxForUser, sys_process_is_stack);
-	REG_FUNC(sysPrxForUser, sys_process_get_paramsfo); // 0xe75c40f2
-
-	REG_FUNC(sysPrxForUser, sys_get_random_number);
-
-	REG_FUNC(sysPrxForUser, console_getc);
-	REG_FUNC(sysPrxForUser, console_putc);
-	REG_FUNC(sysPrxForUser, console_write);
-});

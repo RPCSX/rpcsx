@@ -19,7 +19,7 @@ using namespace std::literals::chrono_literals;
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -38,30 +38,30 @@ static std::string default_string()
 }
 
 // Thread-specific log prefix provider
-thread_local std::string(*g_tls_log_prefix)() = &default_string;
+thread_local std::string (*g_tls_log_prefix)() = &default_string;
 
 // Another thread-specific callback
-thread_local void(*g_tls_log_control)(const char* fmt, u64 progress) = [](const char*, u64){};
+thread_local void (*g_tls_log_control)(const char* fmt, u64 progress) = [](const char*, u64) {};
 
-template<>
+template <>
 void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto lev)
-	{
-		switch (lev)
 		{
-		case logs::level::always: return "Nothing";
-		case logs::level::fatal: return "Fatal";
-		case logs::level::error: return "Error";
-		case logs::level::todo: return "TODO";
-		case logs::level::success: return "Success";
-		case logs::level::warning: return "Warning";
-		case logs::level::notice: return "Notice";
-		case logs::level::trace: return "Trace";
-		}
+			switch (lev)
+			{
+			case logs::level::always: return "Nothing";
+			case logs::level::fatal: return "Fatal";
+			case logs::level::error: return "Error";
+			case logs::level::todo: return "TODO";
+			case logs::level::success: return "Success";
+			case logs::level::warning: return "Warning";
+			case logs::level::notice: return "Notice";
+			case logs::level::trace: return "Trace";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 namespace logs
@@ -313,7 +313,7 @@ namespace logs
 			g_init = true;
 		}
 	}
-}
+} // namespace logs
 
 logs::listener::~listener()
 {
@@ -494,33 +494,33 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 #endif
 
 	m_writer = std::thread([this]()
-	{
-		thread_base::set_name("Log Writer");
-
-		thread_ctrl::scoped_priority low_prio(-1);
-
-		while (true)
 		{
-			const u64 bufv = m_buf;
+			thread_base::set_name("Log Writer");
 
-			if (bufv % s_log_size)
-			{
-				// Wait if threads are writing logs
-				std::this_thread::yield();
-				continue;
-			}
+			thread_ctrl::scoped_priority low_prio(-1);
 
-			if (!flush(bufv))
+			while (true)
 			{
-				if (m_out == umax)
+				const u64 bufv = m_buf;
+
+				if (bufv % s_log_size)
 				{
-					break;
+					// Wait if threads are writing logs
+					std::this_thread::yield();
+					continue;
 				}
 
-				std::this_thread::sleep_for(10ms);
+				if (!flush(bufv))
+				{
+					if (m_out == umax)
+					{
+						break;
+					}
+
+					std::this_thread::sleep_for(10ms);
+				}
 			}
-		}
-	});
+		});
 }
 
 logs::file_writer::~file_writer()
@@ -539,19 +539,18 @@ logs::file_writer::~file_writer()
 	if (m_fout2)
 	{
 		m_zs.avail_in = 0;
-		m_zs.next_in  = nullptr;
+		m_zs.next_in = nullptr;
 
 		do
 		{
 			m_zs.avail_out = sizeof(m_zout);
-			m_zs.next_out  = m_zout;
+			m_zs.next_out = m_zout;
 
 			if (deflate(&m_zs, Z_FINISH) == Z_STREAM_ERROR || m_fout2.write(m_zout, sizeof(m_zout) - m_zs.avail_out) != sizeof(m_zout) - m_zs.avail_out)
 			{
 				break;
 			}
-		}
-		while (m_zs.avail_out == 0);
+		} while (m_zs.avail_out == 0);
 
 		deflateEnd(&m_zs);
 	}
@@ -591,12 +590,12 @@ bool logs::file_writer::flush(u64 bufv)
 		if (m_fout2)
 		{
 			m_zs.avail_in = static_cast<uInt>(size);
-			m_zs.next_in  = m_fptr.get() + out_index;
+			m_zs.next_in = m_fptr.get() + out_index;
 
 			do
 			{
 				m_zs.avail_out = sizeof(m_zout);
-				m_zs.next_out  = m_zout;
+				m_zs.next_out = m_zout;
 
 				if (deflate(&m_zs, Z_NO_FLUSH) == Z_STREAM_ERROR || m_fout2.write(m_zout, sizeof(m_zout) - m_zs.avail_out) != sizeof(m_zout) - m_zs.avail_out)
 				{
@@ -604,8 +603,7 @@ bool logs::file_writer::flush(u64 bufv)
 					m_fout2.close();
 					break;
 				}
-			}
-			while (m_zs.avail_out == 0);
+			} while (m_zs.avail_out == 0);
 		}
 
 		m_out += size;
@@ -626,19 +624,19 @@ void logs::file_writer::log(const char* text, usz size)
 	while (size && size < s_log_size)
 	{
 		const auto [bufv, pos] = m_buf.fetch_op([&](u64& v) -> uchar*
-		{
-			const u64 out = m_out % s_log_size;
-			const u64 v1 = (v / s_log_size) % s_log_size;
-			const u64 v2 = v % s_log_size;
-
-			if (v1 + v2 + size >= (out <= v1 ? out + s_log_size : out)) [[unlikely]]
 			{
-				return nullptr;
-			}
+				const u64 out = m_out % s_log_size;
+				const u64 v1 = (v / s_log_size) % s_log_size;
+				const u64 v2 = v % s_log_size;
 
-			v += size;
-			return m_fptr.get() + (v1 + v2) % s_log_size;
-		});
+				if (v1 + v2 + size >= (out <= v1 ? out + s_log_size : out)) [[unlikely]]
+				{
+					return nullptr;
+				}
+
+				v += size;
+				return m_fptr.get() + (v1 + v2) % s_log_size;
+			});
 
 		if (!pos) [[unlikely]]
 		{
@@ -728,19 +726,18 @@ void logs::file_writer::close_prematurely()
 	if (m_fout2)
 	{
 		m_zs.avail_in = 0;
-		m_zs.next_in  = nullptr;
+		m_zs.next_in = nullptr;
 
 		do
 		{
 			m_zs.avail_out = sizeof(m_zout);
-			m_zs.next_out  = m_zout;
+			m_zs.next_out = m_zout;
 
 			if (deflate(&m_zs, Z_FINISH) == Z_STREAM_ERROR || m_fout2.write(m_zout, sizeof(m_zout) - m_zs.avail_out) != sizeof(m_zout) - m_zs.avail_out)
 			{
 				break;
 			}
-		}
-		while (m_zs.avail_out == 0);
+		} while (m_zs.avail_out == 0);
 
 		deflateEnd(&m_zs);
 
@@ -764,8 +761,7 @@ void logs::file_writer::close_prematurely()
 }
 
 logs::file_listener::file_listener(const std::string& path, u64 max_size)
-	: file_writer(path, max_size)
-	, listener()
+	: file_writer(path, max_size), listener()
 {
 	// Write UTF-8 BOM
 	file_writer::log("\xEF\xBB\xBF", 3);
@@ -779,14 +775,14 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg)
 	{
-	case level::always:  text = reinterpret_cast<const char*>(u8"·A "); break;
-	case level::fatal:   text = reinterpret_cast<const char*>(u8"·F "); break;
-	case level::error:   text = reinterpret_cast<const char*>(u8"·E "); break;
-	case level::todo:    text = reinterpret_cast<const char*>(u8"·U "); break;
+	case level::always: text = reinterpret_cast<const char*>(u8"·A "); break;
+	case level::fatal: text = reinterpret_cast<const char*>(u8"·F "); break;
+	case level::error: text = reinterpret_cast<const char*>(u8"·E "); break;
+	case level::todo: text = reinterpret_cast<const char*>(u8"·U "); break;
 	case level::success: text = reinterpret_cast<const char*>(u8"·S "); break;
 	case level::warning: text = reinterpret_cast<const char*>(u8"·W "); break;
-	case level::notice:  text = reinterpret_cast<const char*>(u8"·! "); break;
-	case level::trace:   text = reinterpret_cast<const char*>(u8"·T "); break;
+	case level::notice: text = reinterpret_cast<const char*>(u8"·! "); break;
+	case level::trace: text = reinterpret_cast<const char*>(u8"·T "); break;
 	}
 
 	// Print microsecond timestamp

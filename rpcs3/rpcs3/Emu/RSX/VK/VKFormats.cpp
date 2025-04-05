@@ -16,13 +16,16 @@ namespace vk
 			return VK_FORMAT_D32_SFLOAT;
 		case rsx::surface_depth_format2::z24s8_uint:
 		{
-			if (support.d24_unorm_s8) return VK_FORMAT_D24_UNORM_S8_UINT;
-			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			if (support.d24_unorm_s8)
+				return VK_FORMAT_D24_UNORM_S8_UINT;
+			if (support.d32_sfloat_s8)
+				return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			fmt::throw_exception("No hardware support for z24s8");
 		}
 		case rsx::surface_depth_format2::z24s8_float:
 		{
-			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
+			if (support.d32_sfloat_s8)
+				return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			fmt::throw_exception("No hardware support for z24s8_float");
 		}
 		default:
@@ -35,13 +38,13 @@ namespace vk
 	{
 		switch (min_filter)
 		{
-		case rsx::texture_minify_filter::nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
-		case rsx::texture_minify_filter::linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
-		case rsx::texture_minify_filter::nearest_nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
-		case rsx::texture_minify_filter::linear_nearest: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
-		case rsx::texture_minify_filter::nearest_linear: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
-		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
-		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
+		case rsx::texture_minify_filter::nearest: return {VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false};
+		case rsx::texture_minify_filter::linear: return {VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false};
+		case rsx::texture_minify_filter::nearest_nearest: return {VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, true};
+		case rsx::texture_minify_filter::linear_nearest: return {VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true};
+		case rsx::texture_minify_filter::nearest_linear: return {VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR, true};
+		case rsx::texture_minify_filter::linear_linear: return {VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true};
+		case rsx::texture_minify_filter::convolution_min: return {VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false};
 		default:
 			fmt::throw_exception("Invalid min filter");
 		}
@@ -120,10 +123,9 @@ namespace vk
 		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(gcm_aniso));
 	}
 
-
 	std::array<VkComponentSwizzle, 4> get_component_mapping(u32 format)
 	{
-		//Component map in ARGB format
+		// Component map in ARGB format
 		std::array<VkComponentSwizzle, 4> mapping = {};
 
 		switch (format)
@@ -135,55 +137,70 @@ namespace vk
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B};
+			break;
 
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-			mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R};
+			break;
 
 		case CELL_GCM_TEXTURE_A4R4G4B4:
-			mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
+			break;
 
 		case CELL_GCM_TEXTURE_G8B8:
-			mapping = { VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R};
+			break;
 
 		case CELL_GCM_TEXTURE_B8:
-			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R};
+			break;
 
 		case CELL_GCM_TEXTURE_X16:
-			mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_ONE};
+			break;
 
 		case CELL_GCM_TEXTURE_X32_FLOAT:
-			mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R};
+			break;
 
 		case CELL_GCM_TEXTURE_Y16_X16:
-			mapping = { VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R};
+			break;
 
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-			mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G};
+			break;
 
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B};
+			break;
 
 		case CELL_GCM_TEXTURE_D8R8G8B8:
-			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B};
+			break;
 
 		case CELL_GCM_TEXTURE_D1R5G5B5:
-			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B};
+			break;
 
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-			mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G};
+			break;
 
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B};
+			break;
 
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
+			mapping = {VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B};
+			break;
 
 		default:
 			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)", format);
@@ -219,8 +236,8 @@ namespace vk
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return supports_dxt ? VK_FORMAT_BC2_UNORM_BLOCK : VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return supports_dxt ? VK_FORMAT_BC3_UNORM_BLOCK : VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return support.d24_unorm_s8? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D32_SFLOAT_S8_UINT;
+		case CELL_GCM_TEXTURE_DEPTH24_D8: return support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return VK_FORMAT_D32_SFLOAT_S8_UINT;
 		case CELL_GCM_TEXTURE_DEPTH16: return VK_FORMAT_D16_UNORM;
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return VK_FORMAT_D32_SFLOAT;
 		case CELL_GCM_TEXTURE_X16: return VK_FORMAT_R16_UNORM;
@@ -294,7 +311,7 @@ namespace vk
 		case VK_FORMAT_D16_UNORM:
 		case VK_FORMAT_D32_SFLOAT:
 			return 2;
-		case VK_FORMAT_D32_SFLOAT_S8_UINT: //TODO: Translate to D24S8
+		case VK_FORMAT_D32_SFLOAT_S8_UINT: // TODO: Translate to D24S8
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 			return 4;
 		default:
@@ -312,52 +329,52 @@ namespace vk
 
 		switch (format)
 		{
-		//8-bit
+		// 8-bit
 		case VK_FORMAT_R8_UNORM:
-			return{ 1, 1 };
+			return {1, 1};
 		case VK_FORMAT_R8G8_UNORM:
 		case VK_FORMAT_R8G8_SNORM:
-			return{ 2, 1 }; //UNSIGNED_SHORT_8_8
+			return {2, 1}; // UNSIGNED_SHORT_8_8
 		case VK_FORMAT_R8G8B8A8_UNORM:
 		case VK_FORMAT_B8G8R8A8_UNORM:
 		case VK_FORMAT_B8G8R8A8_SRGB:
-			return{ 4, 1 }; //UNSIGNED_INT_8_8_8_8
-		//16-bit
+			return {4, 1}; // UNSIGNED_INT_8_8_8_8
+		// 16-bit
 		case VK_FORMAT_R16_UINT:
 		case VK_FORMAT_R16_SFLOAT:
 		case VK_FORMAT_R16_UNORM:
-			return{ 2, 1 }; //UNSIGNED_SHORT and HALF_FLOAT
+			return {2, 1}; // UNSIGNED_SHORT and HALF_FLOAT
 		case VK_FORMAT_R16G16_UNORM:
 		case VK_FORMAT_R16G16_SFLOAT:
-			return{ 2, 2 }; //HALF_FLOAT
+			return {2, 2}; // HALF_FLOAT
 		case VK_FORMAT_R16G16B16A16_SFLOAT:
-			return{ 2, 4 }; //HALF_FLOAT
+			return {2, 4}; // HALF_FLOAT
 		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
 		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
 		case VK_FORMAT_R5G6B5_UNORM_PACK16:
 		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-			return{ 2, 1 }; //UNSIGNED_SHORT_X_Y_Z_W
-		//32-bit
+			return {2, 1}; // UNSIGNED_SHORT_X_Y_Z_W
+		// 32-bit
 		case VK_FORMAT_R32_UINT:
 		case VK_FORMAT_R32_SFLOAT:
-			return{ 4, 1 }; //FLOAT
+			return {4, 1}; // FLOAT
 		case VK_FORMAT_R32G32B32A32_SFLOAT:
-			return{ 4, 4 }; //FLOAT
-		//DXT
+			return {4, 4}; // FLOAT
+		// DXT
 		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
 		case VK_FORMAT_BC2_UNORM_BLOCK:
 		case VK_FORMAT_BC3_UNORM_BLOCK:
 		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
 		case VK_FORMAT_BC2_SRGB_BLOCK:
 		case VK_FORMAT_BC3_SRGB_BLOCK:
-			return{ 4, 1 };
-		//Depth
+			return {4, 1};
+		// Depth
 		case VK_FORMAT_D16_UNORM:
 		case VK_FORMAT_D32_SFLOAT:
-			return{ 2, 1 };
+			return {2, 1};
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
-			return{ 4, 1 };
+			return {4, 1};
 		default:
 			break;
 		}
@@ -369,15 +386,15 @@ namespace vk
 	{
 		switch (format)
 		{
-			//8-bit
+			// 8-bit
 		case VK_FORMAT_R8_UNORM:
-			return{ false, 1 };
+			return {false, 1};
 		case VK_FORMAT_B8G8R8A8_UNORM:
 		case VK_FORMAT_R8G8B8A8_UNORM:
 		case VK_FORMAT_B8G8R8A8_SRGB:
 		case VK_FORMAT_R8G8B8A8_SRGB:
-			return{ true, 4 };
-			//16-bit
+			return {true, 4};
+			// 16-bit
 		case VK_FORMAT_R16_UINT:
 		case VK_FORMAT_R16_SFLOAT:
 		case VK_FORMAT_R16_UNORM:
@@ -390,27 +407,27 @@ namespace vk
 		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
 		case VK_FORMAT_R5G6B5_UNORM_PACK16:
 		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-			return{ true, 2 };
-			//32-bit
+			return {true, 2};
+			// 32-bit
 		case VK_FORMAT_R32_UINT:
 		case VK_FORMAT_R32_SFLOAT:
 		case VK_FORMAT_R32G32B32A32_SFLOAT:
-			return{ true, 4 };
-			//DXT
+			return {true, 4};
+			// DXT
 		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
 		case VK_FORMAT_BC2_UNORM_BLOCK:
 		case VK_FORMAT_BC3_UNORM_BLOCK:
 		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
 		case VK_FORMAT_BC2_SRGB_BLOCK:
 		case VK_FORMAT_BC3_SRGB_BLOCK:
-			return{ false, 1 };
-			//Depth
+			return {false, 1};
+			// Depth
 		case VK_FORMAT_D16_UNORM:
 		case VK_FORMAT_D32_SFLOAT:
-			return{ true, 2 };
+			return {true, 2};
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
-			return{ true, 4 };
+			return {true, 4};
 		default:
 			break;
 		}
@@ -457,4 +474,4 @@ namespace vk
 
 		return formats_are_bitcast_compatible(image1->format(), image2->format());
 	}
-}
+} // namespace vk

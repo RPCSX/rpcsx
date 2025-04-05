@@ -24,8 +24,14 @@ public:
 
 	void operator()();
 
-	PadInfo& GetInfo() { return m_info; }
-	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM>& GetPads() { return m_pads; }
+	PadInfo& GetInfo()
+	{
+		return m_info;
+	}
+	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM>& GetPads()
+	{
+		return m_pads;
+	}
 	void SetRumble(const u32 pad, u8 large_motor, bool small_motor);
 	void SetIntercepted(bool intercepted);
 
@@ -34,7 +40,10 @@ public:
 
 	void open_home_menu();
 
-	std::map<pad_handler, std::shared_ptr<PadHandlerBase>>& get_handlers() { return m_handlers; }
+	std::map<pad_handler, std::shared_ptr<PadHandlerBase>>& get_handlers()
+	{
+		return m_handlers;
+	}
 
 	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
@@ -52,7 +61,7 @@ protected:
 	void* m_curthread = nullptr;
 	void* m_curwindow = nullptr;
 
-	PadInfo m_info{ 0, 0, false };
+	PadInfo m_info{0, 0, false};
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads{};
 	std::array<bool, CELL_PAD_MAX_PORT_NUM> m_pads_connected{};
 
@@ -105,4 +114,4 @@ namespace pad
 		const auto handler = get_pad_thread();
 		handler->SetIntercepted(intercepted);
 	}
-}
+} // namespace pad

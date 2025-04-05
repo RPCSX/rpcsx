@@ -135,7 +135,8 @@ namespace rsx
 
 		void message_dialog::on_button_pressed(pad_button button_press, bool /*is_auto_repeat*/)
 		{
-			if (fade_animation.active) return;
+			if (fade_animation.active)
+				return;
 
 			switch (button_press)
 			{
@@ -261,7 +262,7 @@ namespace rsx
 				btn_ok.set_pos(600, btn_ok.y);
 				btn_ok.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_OK);
 				interactive = true;
-				ok_only     = true;
+				ok_only = true;
 				break;
 			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
 				interactive = true;
@@ -308,14 +309,21 @@ namespace rsx
 					{
 						overlayman.attach_thread_input(
 							uid, "Message dialog",
-							[notify]() { *notify = true; notify->notify_one(); }
-						);
+							[notify]()
+							{
+								*notify = true;
+								notify->notify_one();
+							});
 					}
 					else
 					{
 						overlayman.attach_thread_input(
 							uid, "Message dialog",
-							[notify]() { *notify = true; notify->notify_one(); },
+							[notify]()
+							{
+								*notify = true;
+								notify->notify_one();
+							},
 							nullptr,
 							[&]()
 							{
@@ -334,8 +342,7 @@ namespace rsx
 								}
 
 								return 0;
-							}
-						);
+							});
 					}
 
 					while (!Emu.IsStopped() && !*notify)
@@ -358,14 +365,14 @@ namespace rsx
 			if (custom_background_allowed && g_cfg.video.shader_preloading_dialog.use_custom_background)
 			{
 				bool dirty = std::exchange(background_blur_strength, g_cfg.video.shader_preloading_dialog.blur_strength.get()) != background_blur_strength;
-				dirty     |= std::exchange(background_darkening_strength, g_cfg.video.shader_preloading_dialog.darkening_strength.get()) != background_darkening_strength;
+				dirty |= std::exchange(background_darkening_strength, g_cfg.video.shader_preloading_dialog.darkening_strength.get()) != background_darkening_strength;
 
 				if (!background_image)
 				{
 					// Search for any useable background picture in the given order
 					game_content_type content_type = game_content_type::background_picture;
 
-					for (game_content_type type : { game_content_type::background_picture, game_content_type::overlay_picture, game_content_type::content_icon })
+					for (game_content_type type : {game_content_type::background_picture, game_content_type::overlay_picture, game_content_type::content_icon})
 					{
 						if (const std::string picture_path = rpcs3::utils::get_game_content_path(type); !picture_path.empty())
 						{
@@ -389,9 +396,9 @@ namespace rsx
 
 				if (dirty && background_image && background_image->get_data())
 				{
-					const f32 color              = (100 - background_darkening_strength) / 100.f;
+					const f32 color = (100 - background_darkening_strength) / 100.f;
 					background_poster.fore_color = color4f(color, color, color, 1.);
-					background.back_color.a      = 0.f;
+					background.back_color.a = 0.f;
 
 					background_poster.set_size(virtual_width, virtual_height);
 					background_poster.set_raw_image(background_image.get());

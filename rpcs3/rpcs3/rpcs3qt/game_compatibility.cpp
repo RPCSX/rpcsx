@@ -16,8 +16,7 @@ LOG_CHANNEL(compat_log, "Compat");
 constexpr auto qstr = QString::fromStdString;
 
 game_compatibility::game_compatibility(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
-	: QObject(parent)
-	, m_gui_settings(std::move(gui_settings))
+	: QObject(parent), m_gui_settings(std::move(gui_settings))
 {
 	m_filepath = m_gui_settings->GetSettingsDir() + "/compat_database.dat";
 	m_downloader = new downloader(parent);
@@ -136,10 +135,10 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 			for (const QJsonValue& patch_set : patchsets_value.toArray())
 			{
 				compat::pkg_patchset set;
-				set.tag_id         = patch_set["tag_id"].toString().toStdString();
-				set.popup          = patch_set["popup"].toBool();
-				set.signoff        = patch_set["signoff"].toBool();
-				set.popup_delay    = patch_set["popup_delay"].toInt();
+				set.tag_id = patch_set["tag_id"].toString().toStdString();
+				set.popup = patch_set["popup"].toBool();
+				set.signoff = patch_set["signoff"].toBool();
+				set.popup_delay = patch_set["popup_delay"].toInt();
 				set.min_system_ver = patch_set["min_system_ver"].toString().toStdString();
 
 				if (const QJsonValue packages_value = patch_set["packages"]; packages_value.isArray())
@@ -147,18 +146,18 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 					for (const QJsonValue& package : packages_value.toArray())
 					{
 						compat::pkg_package pkg;
-						pkg.version        = package["version"].toString().toStdString();
-						pkg.size           = package["size"].toInt();
-						pkg.sha1sum        = package["sha1sum"].toString().toStdString();
+						pkg.version = package["version"].toString().toStdString();
+						pkg.size = package["size"].toInt();
+						pkg.sha1sum = package["sha1sum"].toString().toStdString();
 						pkg.ps3_system_ver = package["ps3_system_ver"].toString().toStdString();
-						pkg.drm_type       = package["drm_type"].toString().toStdString();
+						pkg.drm_type = package["drm_type"].toString().toStdString();
 
 						if (const QJsonValue changelogs_value = package["changelogs"]; changelogs_value.isArray())
 						{
 							for (const QJsonValue& changelog : changelogs_value.toArray())
 							{
 								compat::pkg_changelog chl;
-								chl.type    = changelog["type"].toString().toStdString();
+								chl.type = changelog["type"].toString().toStdString();
 								chl.content = changelog["content"].toString().toStdString();
 
 								pkg.changelogs.push_back(std::move(chl));
@@ -170,7 +169,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 							for (const QJsonValue& title : titles_value.toArray())
 							{
 								compat::pkg_title ttl;
-								ttl.type  = title["type"].toString().toStdString();
+								ttl.type = title["type"].toString().toStdString();
 								ttl.title = title["title"].toString().toStdString();
 
 								pkg.titles.push_back(std::move(ttl));
@@ -265,14 +264,14 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 	const psf::registry& psf = reader.get_psf();
 
 	// TODO: localization of title and changelog
-	const std::string title_key     = "TITLE";
+	const std::string title_key = "TITLE";
 	const std::string changelog_key = "paramhip";
 
-	info.path     = pkg_path;
-	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
+	info.path = pkg_path;
+	info.title = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
 	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID")));
 	info.category = qstr(std::string(psf::get_string(psf, "CATEGORY")));
-	info.version  = qstr(std::string(psf::get_string(psf, "APP_VER")));
+	info.version = qstr(std::string(psf::get_string(psf, "APP_VER")));
 
 	if (!info.category.isEmpty())
 	{

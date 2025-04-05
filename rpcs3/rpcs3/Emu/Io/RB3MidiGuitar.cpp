@@ -188,7 +188,6 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
-
 	// default input state
 	const std::array<u8, 27> bytes = {
 		0x00, 0x00, 0x08, 0x80, 0x80, 0x00, 0x00, 0x00,
@@ -317,39 +316,39 @@ void usb_device_rb3_midi_guitar::write_state(u8* buf)
 	{
 		switch (i)
 		{
-			case 1:
-			case 6:
-			case 13:
-				buf[9] |= 0b1000'0000;
-				break;
-			case 2:
-			case 7:
-			case 14:
-				buf[10] |= 0b1000'0000;
-				break;
-			case 3:
-			case 8:
-			case 15:
-				buf[11] |= 0b1000'0000;
-				break;
-			case 4:
-			case 9:
-			case 16:
-				buf[12] |= 0b1000'0000;
-				break;
-			case 5:
-			case 10:
-			case 17:
-				buf[13] |= 0b1000'0000;
-				break;
-			default:
-				break;
+		case 1:
+		case 6:
+		case 13:
+			buf[9] |= 0b1000'0000;
+			break;
+		case 2:
+		case 7:
+		case 14:
+			buf[10] |= 0b1000'0000;
+			break;
+		case 3:
+		case 8:
+		case 15:
+			buf[11] |= 0b1000'0000;
+			break;
+		case 4:
+		case 9:
+		case 16:
+			buf[12] |= 0b1000'0000;
+			break;
+		case 5:
+		case 10:
+		case 17:
+			buf[13] |= 0b1000'0000;
+			break;
+		default:
+			break;
 		}
 
 		// enable the solo bit for frets >= 13
 		if (i >= 13)
 		{
-				buf[8] |= 0b1000'0000;
+			buf[8] |= 0b1000'0000;
 		}
 	}
 

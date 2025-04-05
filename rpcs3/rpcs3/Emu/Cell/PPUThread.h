@@ -15,14 +15,14 @@ enum class ppu_cmd : u32
 {
 	null,
 
-	opcode, // Execute PPU instruction from arg
-	set_gpr, // Set gpr[arg] (+1 cmd)
-	set_args, // Set general-purpose args (+arg cmd)
-	lle_call, // Load addr and rtoc at *arg or *gpr[arg] and execute
-	hle_call, // Execute function by index (arg)
-	ptr_call, // Execute function by pointer
-	opd_call, // Execute function by provided rtoc and address (unlike lle_call, does not read memory)
-	cia_call, // Execute from current CIA, mo GPR modification applied
+	opcode,     // Execute PPU instruction from arg
+	set_gpr,    // Set gpr[arg] (+1 cmd)
+	set_args,   // Set general-purpose args (+arg cmd)
+	lle_call,   // Load addr and rtoc at *arg or *gpr[arg] and execute
+	hle_call,   // Execute function by index (arg)
+	ptr_call,   // Execute function by pointer
+	opd_call,   // Execute function by provided rtoc and address (unlike lle_call, does not read memory)
+	cia_call,   // Execute from current CIA, mo GPR modification applied
 	entry_call, // Load addr and rtoc from entry_func
 	initialize, // ppu_initialize()
 	sleep,
@@ -174,7 +174,7 @@ public:
 		u8 bits[32];
 		u32 fields[8];
 
-		u8& operator [](usz i)
+		u8& operator[](usz i)
 		{
 			return bits[i];
 		}
@@ -222,13 +222,12 @@ public:
 
 		u32 fields[8];
 		cr_bits bits;
-	}
-	fpscr{};
+	} fpscr{};
 
-	u64 lr{}; // Link Register
-	u64 ctr{}; // Counter Register
+	u64 lr{};               // Link Register
+	u64 ctr{};              // Counter Register
 	u32 vrsave{0xffffffff}; // VR Save Register
-	u32 cia{}; // Current Instruction Address
+	u32 cia{};              // Current Instruction Address
 
 	// Fixed-Point Exception Register (abstract representation)
 	struct
@@ -239,18 +238,17 @@ public:
 		bool ov{}; // Overflow
 		bool ca{}; // Carry
 		u8 cnt{};  // 0..6
-	}
-	xer;
+	} xer;
 
 	/*
-		Non-Java. A mode control bit that determines whether vector floating-point operations will be performed
-		in a Java-IEEE-C9X-compliant mode or a possibly faster non-Java/non-IEEE mode.
-		0	The Java-IEEE-C9X-compliant mode is selected. Denormalized values are handled as specified
-			by Java, IEEE, and C9X standard.
-		1	The non-Java/non-IEEE-compliant mode is selected. If an element in a source vector register
-			contains a denormalized value, the value '0' is used instead. If an instruction causes an underflow
-			exception, the corresponding element in the target vr is cleared to '0'. In both cases, the '0'
-			has the same sign as the denormalized or underflowing value.
+	    Non-Java. A mode control bit that determines whether vector floating-point operations will be performed
+	    in a Java-IEEE-C9X-compliant mode or a possibly faster non-Java/non-IEEE mode.
+	    0	The Java-IEEE-C9X-compliant mode is selected. Denormalized values are handled as specified
+	        by Java, IEEE, and C9X standard.
+	    1	The non-Java/non-IEEE-compliant mode is selected. If an element in a source vector register
+	        contains a denormalized value, the value '0' is used instead. If an instruction causes an underflow
+	        exception, the corresponding element in the target vr is cleared to '0'. In both cases, the '0'
+	        has the same sign as the denormalized or underflowing value.
 	*/
 	bool nj = true;
 
@@ -271,8 +269,8 @@ public:
 	union ppu_prio_t
 	{
 		u64 all;
-		bf_t<s64, 0, 13> prio; // Thread priority (0..3071) (firs 12-bits)
-		bf_t<s64, 13, 50> order; // Thread enqueue order (last 52-bits)
+		bf_t<s64, 0, 13> prio;         // Thread priority (0..3071) (firs 12-bits)
+		bf_t<s64, 13, 50> order;       // Thread enqueue order (last 52-bits)
 		bf_t<u64, 63, 1> preserve_bit; // Preserve value for savestates
 	};
 
@@ -281,7 +279,7 @@ public:
 	const u32 stack_addr; // Stack address
 
 	atomic_t<ppu_join_status> joiner; // Joining thread or status
-	u32 hw_sleep_time = 0; // Very specific delay for hardware threads switching, see lv2_obj::awake_unlocked for more details
+	u32 hw_sleep_time = 0;            // Very specific delay for hardware threads switching, see lv2_obj::awake_unlocked for more details
 
 	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 
@@ -289,17 +287,20 @@ public:
 	void cmd_list(std::initializer_list<cmd64>);
 	void cmd_pop(u32 = 0);
 	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
-	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
+	cmd64 cmd_get(u32 index)
+	{
+		return cmd_queue[cmd_queue.peek() + index].load();
+	}
 	atomic_t<u32> cmd_notify = 0;
 
 	alignas(64) const ppu_func_opd_t entry_func;
-	u64 start_time{0}; // Sleep start timepoint
-	u64 end_time{umax}; // Sleep end timepoint
-	s32 cancel_sleep{0}; // Flag to cancel the next lv2_obj::sleep call (when equals 2)
-	u64 syscall_args[8]{0}; // Last syscall arguments stored
+	u64 start_time{0};              // Sleep start timepoint
+	u64 end_time{umax};             // Sleep end timepoint
+	s32 cancel_sleep{0};            // Flag to cancel the next lv2_obj::sleep call (when equals 2)
+	u64 syscall_args[8]{0};         // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
-	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
-	const char* current_module{}; // Current module name, for savestates.
+	const char* last_function{};    // Sticky copy of current_function, is not cleared on function return
+	const char* current_module{};   // Current module name, for savestates.
 
 	const bool is_interrupt_thread; // True for interrupts-handler threads
 
@@ -361,11 +362,11 @@ public:
 		const ppu_thread* _this;
 
 		operator std::string() const;
-	} thread_name{ this };
+	} thread_name{this};
 
 	// For savestates
 	bool stop_flag_removal_protection = false; // If set, Emulator::Run won't remove stop flag
-	bool loaded_from_savestate = false; // Indicates the thread had just started straight from savestate load
+	bool loaded_from_savestate = false;        // Indicates the thread had just started straight from savestate load
 	std::shared_ptr<utils::serial> optional_savestate_state;
 	bool interrupt_thread_executing = false;
 
@@ -463,7 +464,7 @@ struct ppu_gpr_cast_impl<vm::null_t>
 	}
 };
 
-template<typename To = u64, typename From>
+template <typename To = u64, typename From>
 inline To ppu_gpr_cast(const From& value)
 {
 	return ppu_gpr_cast_impl<To>::from(ppu_gpr_cast_impl<From>::to(value));

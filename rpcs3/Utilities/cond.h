@@ -20,17 +20,17 @@ protected:
 	u32 add_waiter() noexcept
 	{
 		return m_value.atomic_op([](u32& value) -> u32
-		{
-			if ((value & c_signal_mask) == c_signal_mask || (value & c_waiter_mask) == c_waiter_mask)
 			{
-				// Signal or waiter overflow, return immediately
-				return 0;
-			}
+				if ((value & c_signal_mask) == c_signal_mask || (value & c_waiter_mask) == c_waiter_mask)
+				{
+					// Signal or waiter overflow, return immediately
+					return 0;
+				}
 
-			// Add waiter (c_waiter_mask)
-			value += 1;
-			return value;
-		});
+				// Add waiter (c_waiter_mask)
+				value += 1;
+				return value;
+			});
 	}
 
 	// Internal waiting function

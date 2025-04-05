@@ -34,10 +34,10 @@ error_code cellRtcAlarmGetStatus()
 }
 
 DECLARE(ppu_module_manager::cellRtcAlarm)("cellRtcAlarm", []()
-{
-	REG_FUNC(cellRtcAlarm, cellRtcAlarmRegister);
-	REG_FUNC(cellRtcAlarm, cellRtcAlarmUnregister);
-	REG_FUNC(cellRtcAlarm, cellRtcAlarmNotification);
-	REG_FUNC(cellRtcAlarm, cellRtcAlarmStopRunning);
-	REG_FUNC(cellRtcAlarm, cellRtcAlarmGetStatus);
-});
+	{
+		REG_FUNC(cellRtcAlarm, cellRtcAlarmRegister);
+		REG_FUNC(cellRtcAlarm, cellRtcAlarmUnregister);
+		REG_FUNC(cellRtcAlarm, cellRtcAlarmNotification);
+		REG_FUNC(cellRtcAlarm, cellRtcAlarmStopRunning);
+		REG_FUNC(cellRtcAlarm, cellRtcAlarmGetStatus);
+	});

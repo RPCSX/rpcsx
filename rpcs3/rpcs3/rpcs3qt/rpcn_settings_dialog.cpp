@@ -36,7 +36,7 @@ bool validate_email(std::string_view email)
 {
 	const QRegularExpressionValidator simple_email_validator(QRegularExpression("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
 	QString qstr_email = QString::fromStdString(std::string(email));
-	int pos            = 0;
+	int pos = 0;
 
 	if (qstr_email.isEmpty() || qstr_email.contains(' ') || qstr_email.contains('\t') || simple_email_validator.validate(qstr_email, pos) != QValidator::Acceptable)
 		return false;
@@ -46,7 +46,10 @@ bool validate_email(std::string_view email)
 
 bool validate_token(std::string_view token)
 {
-	return token.size() == 16 && std::all_of(token.cbegin(), token.cend(), [](const char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'); });
+	return token.size() == 16 && std::all_of(token.cbegin(), token.cend(), [](const char c)
+									 {
+										 return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z');
+									 });
 }
 
 std::string derive_password(std::string_view user_password)
@@ -59,8 +62,8 @@ std::string derive_password(std::string_view user_password)
 	std::string derived_password("0000000000000000000000000000000000000000000000000000000000000000");
 	for (u32 i = 0; i < SHA3_256_DIGEST_LENGTH; i++)
 	{
-		constexpr auto pal            = "0123456789ABCDEF";
-		derived_password[i * 2]       = pal[derived_password_digest[i] >> 4];
+		constexpr auto pal = "0123456789ABCDEF";
+		derived_password[i * 2] = pal[derived_password_digest[i] >> 4];
 		derived_password[(i * 2) + 1] = pal[derived_password_digest[i] & 15];
 	}
 
@@ -89,7 +92,7 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 
-	QGroupBox* group_btns   = new QGroupBox(tr("RPCN"));
+	QGroupBox* group_btns = new QGroupBox(tr("RPCN"));
 	QHBoxLayout* hbox_group = new QHBoxLayout();
 
 	QPushButton* btn_account = new QPushButton(tr("Account"));
@@ -130,19 +133,19 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 
-	QGroupBox* grp_server    = new QGroupBox(tr("Server:"));
+	QGroupBox* grp_server = new QGroupBox(tr("Server:"));
 	QVBoxLayout* vbox_server = new QVBoxLayout();
 
 	QHBoxLayout* hbox_lbl_combo = new QHBoxLayout();
-	QLabel* lbl_server          = new QLabel(tr("Server:"));
-	cbx_servers                 = new QComboBox();
+	QLabel* lbl_server = new QLabel(tr("Server:"));
+	cbx_servers = new QComboBox();
 
 	refresh_combobox();
 
 	hbox_lbl_combo->addWidget(lbl_server);
 	hbox_lbl_combo->addWidget(cbx_servers);
 
-	QHBoxLayout* hbox_buttons   = new QHBoxLayout();
+	QHBoxLayout* hbox_buttons = new QHBoxLayout();
 	QPushButton* btn_add_server = new QPushButton(tr("Add"));
 	QPushButton* btn_del_server = new QPushButton(tr("Del"));
 	hbox_buttons->addStretch();
@@ -155,12 +158,12 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_server->setLayout(vbox_server);
 	vbox_global->addWidget(grp_server);
 
-	QGroupBox* grp_buttons    = new QGroupBox(tr("Account:"));
+	QGroupBox* grp_buttons = new QGroupBox(tr("Account:"));
 	QVBoxLayout* vbox_buttons = new QVBoxLayout();
-	QPushButton* btn_create   = new QPushButton(tr("Create Account"));
-	QPushButton* btn_edit     = new QPushButton(tr("Edit Account"));
-	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
-	QLabel* label_npid        = new QLabel();
+	QPushButton* btn_create = new QPushButton(tr("Create Account"));
+	QPushButton* btn_edit = new QPushButton(tr("Edit Account"));
+	QPushButton* btn_test = new QPushButton(tr("Test Account"));
+	QLabel* label_npid = new QLabel();
 
 	QCheckBox* checkbox_disable_ipv6 = new QCheckBox("Disable IPv6");
 	checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Unchecked : Qt::Checked);
@@ -241,10 +244,10 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	connect(btn_create, &QAbstractButton::clicked, this, [this, update_npid_label]()
 		{
 			rpcn_ask_username_dialog dlg_username(this, tr("Please enter your username.\n\n"
-			                                               "Note that these restrictions apply:\n"
-			                                               "- Username must be between 3 and 16 characters\n"
-			                                               "- Username can only contain a-z A-Z 0-9 '-' '_'\n"
-			                                               "- Username is case sensitive\n"));
+														   "Note that these restrictions apply:\n"
+														   "- Username must be between 3 and 16 characters\n"
+														   "- Username can only contain a-z A-Z 0-9 '-' '_'\n"
+														   "- Username is case sensitive\n"));
 			dlg_username.exec();
 			const auto& username = dlg_username.get_username();
 
@@ -259,8 +262,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 				return;
 
 			rpcn_ask_email_dialog dlg_email(this, tr("An email address is required, please note:\n"
-			                                         "- A valid email is needed to receive the token that validates your account.\n"
-			                                         "- Your email won't be used for anything beyond sending you this token or the password reset token.\n\n"));
+													 "- A valid email is needed to receive the token that validates your account.\n"
+													 "- Your email won't be used for anything beyond sending you this token or the password reset token.\n\n"));
 			dlg_email.exec();
 			const auto& email = dlg_email.get_email();
 
@@ -271,7 +274,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 				return;
 
 			{
-				const auto rpcn       = rpcn::rpcn_client::get_instance();
+				const auto rpcn = rpcn::rpcn_client::get_instance();
 				const auto avatar_url = "https://rpcs3.net/cdn/netplay/DefaultAvatar.png";
 
 				if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
@@ -302,9 +305,9 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			g_cfg_rpcn.save();
 
 			rpcn_ask_token_dialog token_dlg(this, tr("Your account has been created successfully!\n"
-			                                         "Your account authentification was saved.\n"
-			                                         "Now all you need is to enter the token that was sent to your email.\n"
-			                                         "You can skip this step by leaving it empty and entering it later in the Edit Account section too.\n"));
+													 "Your account authentification was saved.\n"
+													 "Now all you need is to enter the token that was sent to your email.\n"
+													 "You can skip this step by leaving it empty and entering it later in the Edit Account section too.\n"));
 			token_dlg.exec();
 			const auto& token = token_dlg.get_token();
 
@@ -343,19 +346,19 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
 		});
-	
+
 	connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
-	{
-		g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
-		g_cfg_rpcn.save();
-	});
+		{
+			g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
+			g_cfg_rpcn.save();
+		});
 }
 
 void rpcn_account_dialog::refresh_combobox()
 {
 	g_cfg_rpcn.load();
 	const auto vec_hosts = g_cfg_rpcn.get_hosts();
-	const auto cur_host  = g_cfg_rpcn.get_host();
+	const auto cur_host = g_cfg_rpcn.get_host();
 	int i = 0, index = 0;
 
 	cbx_servers->clear();
@@ -381,11 +384,11 @@ rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 
-	QLabel* lbl_description    = new QLabel(tr("Description:"));
+	QLabel* lbl_description = new QLabel(tr("Description:"));
 	QLineEdit* edt_description = new QLineEdit();
-	QLabel* lbl_host           = new QLabel(tr("Host:"));
-	QLineEdit* edt_host        = new QLineEdit();
-	QDialogButtonBox* btn_box  = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+	QLabel* lbl_host = new QLabel(tr("Host:"));
+	QLineEdit* edt_host = new QLineEdit();
+	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
 
 	vbox_global->addWidget(lbl_description);
 	vbox_global->addWidget(edt_description);
@@ -398,7 +401,7 @@ rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
 	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_description, edt_host]()
 		{
 			const QString description = edt_description->text();
-			const QString host        = edt_host->text();
+			const QString host = edt_host->text();
 
 			if (description.isEmpty())
 			{
@@ -432,9 +435,9 @@ rpcn_ask_username_dialog::rpcn_ask_username_dialog(QWidget* parent, const QStrin
 
 	QLabel* lbl_username = new QLabel(description);
 
-	QGroupBox* grp_username        = new QGroupBox(tr("Username:"));
+	QGroupBox* grp_username = new QGroupBox(tr("Username:"));
 	QHBoxLayout* hbox_grp_username = new QHBoxLayout();
-	QLineEdit* edt_username        = new QLineEdit(QString::fromStdString(g_cfg_rpcn.get_npid()));
+	QLineEdit* edt_username = new QLineEdit(QString::fromStdString(g_cfg_rpcn.get_npid()));
 	edt_username->setMaxLength(16);
 	edt_username->setValidator(new QRegularExpressionValidator(QRegularExpression("^[a-zA-Z0-9_\\-]*$"), this));
 	hbox_grp_username->addWidget(edt_username);
@@ -484,12 +487,12 @@ rpcn_ask_password_dialog::rpcn_ask_password_dialog(QWidget* parent, const QStrin
 	QLabel* lbl_description = new QLabel(description);
 
 	QGroupBox* gbox_password = new QGroupBox();
-	QVBoxLayout* vbox_gbox   = new QVBoxLayout();
+	QVBoxLayout* vbox_gbox = new QVBoxLayout();
 
-	QLabel* lbl_pass1       = new QLabel(tr("Enter your password:"));
+	QLabel* lbl_pass1 = new QLabel(tr("Enter your password:"));
 	QLineEdit* m_edit_pass1 = new QLineEdit();
 	m_edit_pass1->setEchoMode(QLineEdit::Password);
-	QLabel* lbl_pass2       = new QLabel(tr("Enter your password a second time:"));
+	QLabel* lbl_pass2 = new QLabel(tr("Enter your password a second time:"));
 	QLineEdit* m_edit_pass2 = new QLineEdit();
 	m_edit_pass2->setEchoMode(QLineEdit::Password);
 
@@ -543,11 +546,11 @@ rpcn_ask_email_dialog::rpcn_ask_email_dialog(QWidget* parent, const QString& des
 	QLabel* lbl_emailinfo = new QLabel(description);
 
 	QGroupBox* gbox_password = new QGroupBox();
-	QVBoxLayout* vbox_gbox   = new QVBoxLayout();
+	QVBoxLayout* vbox_gbox = new QVBoxLayout();
 
-	QLabel* lbl_pass1       = new QLabel(tr("Enter your email:"));
+	QLabel* lbl_pass1 = new QLabel(tr("Enter your email:"));
 	QLineEdit* m_edit_pass1 = new QLineEdit();
-	QLabel* lbl_pass2       = new QLabel(tr("Enter your email a second time:"));
+	QLabel* lbl_pass2 = new QLabel(tr("Enter your email a second time:"));
 	QLineEdit* m_edit_pass2 = new QLineEdit();
 
 	vbox_gbox->addWidget(lbl_pass1);
@@ -606,9 +609,9 @@ rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& des
 
 	QLabel* lbl_token = new QLabel(description);
 
-	QGroupBox* grp_token        = new QGroupBox(tr("Token:"));
+	QGroupBox* grp_token = new QGroupBox(tr("Token:"));
 	QHBoxLayout* hbox_grp_token = new QHBoxLayout();
-	QLineEdit* edt_token        = new QLineEdit();
+	QLineEdit* edt_token = new QLineEdit();
 	edt_token->setMaxLength(16);
 	hbox_grp_token->addWidget(edt_token);
 	grp_token->setLayout(hbox_grp_token);
@@ -630,8 +633,8 @@ rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& des
 				if (!validate_token(token))
 				{
 					QMessageBox::critical(this, tr("Invalid Token"), tr("The token appears to be invalid:\n"
-					                                                    "-Token should be 16 characters long\n"
-					                                                    "-Token should only contain 0-9 and A-F"),
+																		"-Token should be 16 characters long\n"
+																		"-Token should only contain 0-9 and A-F"),
 						QMessageBox::Ok);
 					return;
 				}
@@ -656,25 +659,25 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 	setObjectName("rpcn_account_edit_dialog");
 	setMinimumSize(QSize(400, 200));
 
-	QVBoxLayout* vbox_global           = new QVBoxLayout();
+	QVBoxLayout* vbox_global = new QVBoxLayout();
 	QHBoxLayout* hbox_labels_and_edits = new QHBoxLayout();
-	QVBoxLayout* vbox_labels           = new QVBoxLayout();
-	QVBoxLayout* vbox_edits            = new QVBoxLayout();
-	QHBoxLayout* hbox_buttons          = new QHBoxLayout();
+	QVBoxLayout* vbox_labels = new QVBoxLayout();
+	QVBoxLayout* vbox_edits = new QVBoxLayout();
+	QHBoxLayout* hbox_buttons = new QHBoxLayout();
 
 	QLabel* lbl_username = new QLabel(tr("Username:"));
-	m_edit_username      = new QLineEdit();
+	m_edit_username = new QLineEdit();
 	m_edit_username->setMaxLength(16);
 	m_edit_username->setValidator(new QRegularExpressionValidator(QRegularExpression("^[a-zA-Z0-9_\\-]*$"), this));
-	QLabel* lbl_pass          = new QLabel(tr("Password:"));
+	QLabel* lbl_pass = new QLabel(tr("Password:"));
 	QPushButton* btn_chg_pass = new QPushButton(tr("Set Password"));
-	QLabel* lbl_token         = new QLabel(tr("Token:"));
-	m_edit_token              = new QLineEdit();
+	QLabel* lbl_token = new QLabel(tr("Token:"));
+	m_edit_token = new QLineEdit();
 	m_edit_token->setMaxLength(16);
 
-	QPushButton* btn_resendtoken     = new QPushButton(tr("Resend Token"), this);
+	QPushButton* btn_resendtoken = new QPushButton(tr("Resend Token"), this);
 	QPushButton* btn_change_password = new QPushButton(tr("Change Password"), this);
-	QPushButton* btn_save            = new QPushButton(tr("Save"), this);
+	QPushButton* btn_save = new QPushButton(tr("Save"), this);
 
 	vbox_labels->addWidget(lbl_username);
 	vbox_labels->addWidget(lbl_pass);
@@ -729,7 +732,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 bool rpcn_account_edit_dialog::save_config()
 {
 	const std::string username = m_edit_username->text().toStdString();
-	const std::string token    = m_edit_token->text().toStdString();
+	const std::string token = m_edit_token->text().toStdString();
 
 	if (username.empty() || g_cfg_rpcn.get_password().empty())
 	{
@@ -764,7 +767,7 @@ void rpcn_account_edit_dialog::resend_token()
 
 	const auto rpcn = rpcn::rpcn_client::get_instance();
 
-	const std::string npid     = g_cfg_rpcn.get_npid();
+	const std::string npid = g_cfg_rpcn.get_npid();
 	const std::string password = g_cfg_rpcn.get_password();
 
 	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
@@ -803,7 +806,7 @@ void rpcn_account_edit_dialog::change_password()
 		return;
 
 	switch (QMessageBox::question(this, tr("RPCN: Change Password"), tr("Do you already have a reset password token?\n"
-	                                                                    "Note that the reset password token is different from the email verification token.")))
+																		"Note that the reset password token is different from the email verification token.")))
 	{
 	case QMessageBox::No:
 	{
@@ -912,7 +915,7 @@ namespace np
 	};
 
 	std::map<std::string, player_history> load_players_history();
-}
+} // namespace np
 
 rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	: QDialog(parent)
@@ -965,7 +968,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 		painter.begin(&req_rcvd_pixmap);
 		painter.setPen(pen1);
 		painter.drawLine(QPointF(w * 0.5, h * 0.25), QPointF(w * 0.5, h * 0.75));
-		painter.drawLines({ QLineF(w * 0.5, h * 0.75, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.75, w * 0.75, h * 0.5) });
+		painter.drawLines({QLineF(w * 0.5, h * 0.75, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.75, w * 0.75, h * 0.5)});
 		painter.end();
 	}
 
@@ -974,7 +977,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 		painter.begin(&req_sent_pixmap);
 		painter.setPen(pen1);
 		painter.drawLine(QPointF(w * 0.5, h * 0.25), QPointF(w * 0.5, h * 0.75));
-		painter.drawLines({ QLineF(w * 0.5, h * 0.25, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.25, w * 0.75, h * 0.5) });
+		painter.drawLines({QLineF(w * 0.5, h * 0.25, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.25, w * 0.75, h * 0.5)});
 		painter.end();
 	}
 
@@ -1009,9 +1012,9 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	QHBoxLayout* hbox_groupboxes = new QHBoxLayout();
 
-	QGroupBox* grp_list_friends   = new QGroupBox(tr("Friends"));
+	QGroupBox* grp_list_friends = new QGroupBox(tr("Friends"));
 	QVBoxLayout* vbox_lst_friends = new QVBoxLayout();
-	m_lst_friends                 = new QListWidget(this);
+	m_lst_friends = new QListWidget(this);
 	m_lst_friends->setContextMenuPolicy(Qt::CustomContextMenu);
 	vbox_lst_friends->addWidget(m_lst_friends);
 	QPushButton* btn_addfriend = new QPushButton(tr("Add Friend"));
@@ -1019,9 +1022,9 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	grp_list_friends->setLayout(vbox_lst_friends);
 	hbox_groupboxes->addWidget(grp_list_friends);
 
-	QGroupBox* grp_list_requests   = new QGroupBox(tr("Friend Requests"));
+	QGroupBox* grp_list_requests = new QGroupBox(tr("Friend Requests"));
 	QVBoxLayout* vbox_lst_requests = new QVBoxLayout();
-	m_lst_requests                 = new QListWidget(this);
+	m_lst_requests = new QListWidget(this);
 	m_lst_requests->setContextMenuPolicy(Qt::CustomContextMenu);
 	vbox_lst_requests->addWidget(m_lst_requests);
 	QHBoxLayout* hbox_request_btns = new QHBoxLayout();
@@ -1029,16 +1032,16 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	grp_list_requests->setLayout(vbox_lst_requests);
 	hbox_groupboxes->addWidget(grp_list_requests);
 
-	QGroupBox* grp_list_blocks   = new QGroupBox(tr("Blocked Users"));
+	QGroupBox* grp_list_blocks = new QGroupBox(tr("Blocked Users"));
 	QVBoxLayout* vbox_lst_blocks = new QVBoxLayout();
-	m_lst_blocks                 = new QListWidget(this);
+	m_lst_blocks = new QListWidget(this);
 	vbox_lst_blocks->addWidget(m_lst_blocks);
 	grp_list_blocks->setLayout(vbox_lst_blocks);
 	hbox_groupboxes->addWidget(grp_list_blocks);
 
-	QGroupBox* grp_list_history   = new QGroupBox(tr("Recent Players"));
+	QGroupBox* grp_list_history = new QGroupBox(tr("Recent Players"));
 	QVBoxLayout* vbox_lst_history = new QVBoxLayout();
-	m_lst_history                 = new QListWidget(this);
+	m_lst_history = new QListWidget(this);
 	m_lst_history->setContextMenuPolicy(Qt::CustomContextMenu);
 	vbox_lst_history->addWidget(m_lst_history);
 	grp_list_history->setLayout(vbox_lst_history);
@@ -1122,9 +1125,9 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			}
 
 			QListWidgetItem* selected_item = m_lst_friends->selectedItems().first();
-			std::string str_sel_friend     = selected_item->text().toStdString();
+			std::string str_sel_friend = selected_item->text().toStdString();
 
-			QMenu* context_menu           = new QMenu();
+			QMenu* context_menu = new QMenu();
 			QAction* remove_friend_action = context_menu->addAction(tr("&Remove Friend"));
 
 			connect(remove_friend_action, &QAction::triggered, this, [this, str_sel_friend]()
@@ -1178,7 +1181,6 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				return;
 			}
 
-
 			QAction* accept_request_action = context_menu->addAction(tr("&Accept Request"));
 			QAction* reject_friend_request = context_menu->addAction(tr("&Reject Request"));
 
@@ -1195,16 +1197,16 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				});
 
 			connect(reject_friend_request, &QAction::triggered, this, [this, str_sel_friend]()
-			{
-				if (!m_rpcn->remove_friend(str_sel_friend))
 				{
-					QMessageBox::critical(this, tr("Error rejecting friend request!"), tr("An error occurred while trying to reject the friend request!"), QMessageBox::Ok);
-				}
-				else
-				{
-					QMessageBox::information(this, tr("Friend request cancelled!"), tr("You've successfully rejected the friend request!"), QMessageBox::Ok);
-				}
-			});
+					if (!m_rpcn->remove_friend(str_sel_friend))
+					{
+						QMessageBox::critical(this, tr("Error rejecting friend request!"), tr("An error occurred while trying to reject the friend request!"), QMessageBox::Ok);
+					}
+					else
+					{
+						QMessageBox::information(this, tr("Friend request cancelled!"), tr("You've successfully rejected the friend request!"), QMessageBox::Ok);
+					}
+				});
 
 			context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
 			context_menu->deleteLater();
@@ -1246,7 +1248,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			std::string str_friend_username;
 			while (true)
 			{
-				bool ok                 = false;
+				bool ok = false;
 				QString friend_username = QInputDialog::getText(this, tr("Add a friend"), tr("Friend's username:"), QLineEdit::Normal, "", &ok);
 				if (!ok)
 				{

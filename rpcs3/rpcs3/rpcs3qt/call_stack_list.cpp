@@ -37,7 +37,7 @@ void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_
 	{
 		const QString text = QString::fromStdString(fmt::format("0x%08llx (sp=0x%08llx)", addr.first, addr.second));
 		QListWidgetItem* call_stack_item = new QListWidgetItem(text);
-		call_stack_item->setData(Qt::UserRole, { addr.first });
+		call_stack_item->setData(Qt::UserRole, {addr.first});
 		addItem(call_stack_item);
 	}
 
@@ -55,7 +55,8 @@ void call_stack_list::ShowItemAddress()
 
 void call_stack_list::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (!ev) return;
+	if (!ev)
+		return;
 
 	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
 	// So we have to ignore this event when another button is pressed.

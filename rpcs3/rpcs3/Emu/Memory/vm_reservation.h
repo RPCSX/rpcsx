@@ -52,14 +52,14 @@ namespace vm
 		constexpr u32 unique_address_bit_mask = 0b11;
 		const usz index = std::popcount(raddr & -1024) + ((raddr / 128) & unique_address_bit_mask) * 32;
 		auto& waiter = g_resrv_waiters_count[index * wait_vars_for_each];
-		return { &g_resrv_waiters_count[index * wait_vars_for_each + waiter.load().waiters_index % wait_vars_for_each], &waiter };
+		return {&g_resrv_waiters_count[index * wait_vars_for_each + waiter.load().waiters_index % wait_vars_for_each], &waiter};
 	}
 
 	// Returns waiter count and index
 	static inline std::pair<u32, u32> reservation_notifier_count_index(u32 raddr)
 	{
 		const auto notifiers = reservation_notifier(raddr);
-		return { notifiers.first->load().waiters_count, static_cast<u32>(notifiers.first - notifiers.second) };
+		return {notifiers.first->load().waiters_count, static_cast<u32>(notifiers.first - notifiers.second)};
 	}
 
 	// Returns waiter count
@@ -71,12 +71,12 @@ namespace vm
 	static inline void reservation_notifier_end_wait(atomic_t<reservation_waiter_t>& waiter)
 	{
 		waiter.atomic_op([](reservation_waiter_t& value)
-		{
-			if (value.waiters_count-- == 1)
 			{
-				value.wait_flag = 0;
-			}
-		});
+				if (value.waiters_count-- == 1)
+				{
+					value.wait_flag = 0;
+				}
+			});
 	}
 
 	static inline atomic_t<reservation_waiter_t>* reservation_notifier_begin_wait(u32 raddr, u64 rtime)
@@ -84,10 +84,10 @@ namespace vm
 		atomic_t<reservation_waiter_t>& waiter = *reservation_notifier(raddr).first;
 
 		waiter.atomic_op([](reservation_waiter_t& value)
-		{
-			value.wait_flag = 1;
-			value.waiters_count++;
-		});
+			{
+				value.wait_flag = 1;
+				value.waiters_count++;
+			});
 
 		if ((reservation_acquire(raddr) & -128) != rtime)
 		{
@@ -107,17 +107,18 @@ namespace vm
 			if (notifiers.first == notifiers.second)
 			{
 				if (!notifiers.first->fetch_op([](reservation_waiter_t& value)
-				{
-					if (value.waiters_index == 0)
-					{
-						value.wait_flag = 0;
-						value.waiters_count = 0;
-						value.waiters_index++;
-						return true;
-					}
+										{
+											if (value.waiters_index == 0)
+											{
+												value.wait_flag = 0;
+												value.waiters_count = 0;
+												value.waiters_index++;
+												return true;
+											}
 
-					return false;
-				}).second)
+											return false;
+										})
+						.second)
 				{
 					return nullptr;
 				}
@@ -211,7 +212,7 @@ namespace vm
 			auto stamp0 = utils::get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
 
 #ifndef _MSC_VER
-			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
+			__asm__ goto("xbegin %l[stage2];" ::: "memory" : stage2);
 #else
 			status = _xbegin();
 			if (status == umax)
@@ -220,7 +221,7 @@ namespace vm
 				if (res & rsrv_unique_lock)
 				{
 #ifndef _MSC_VER
-					__asm__ volatile ("xend; mov $-1, %%eax;" ::: "memory");
+					__asm__ volatile("xend; mov $-1, %%eax;" ::: "memory");
 #else
 					_xend();
 #endif
@@ -232,7 +233,7 @@ namespace vm
 					std::invoke(op, *sptr);
 					res += 128;
 #ifndef _MSC_VER
-					__asm__ volatile ("xend;" ::: "memory");
+					__asm__ volatile("xend;" ::: "memory");
 #else
 					_xend();
 #endif
@@ -246,7 +247,7 @@ namespace vm
 					{
 						res += 128;
 #ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
+						__asm__ volatile("xend;" ::: "memory");
 #else
 						_xend();
 #endif
@@ -257,7 +258,7 @@ namespace vm
 					else
 					{
 #ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
+						__asm__ volatile("xend;" ::: "memory");
 #else
 						_xend();
 #endif
@@ -266,9 +267,9 @@ namespace vm
 				}
 			}
 
-			stage2:
+		stage2:
 #ifndef _MSC_VER
-			__asm__ volatile ("mov %%eax, %0;" : "=r" (status) :: "memory");
+			__asm__ volatile("mov %%eax, %0;" : "=r"(status)::"memory");
 #endif
 			stamp1 = utils::get_tsc();
 
@@ -287,7 +288,7 @@ namespace vm
 				}
 
 #ifndef _MSC_VER
-				__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
+				__asm__ goto("xbegin %l[retry];" ::: "memory" : retry);
 #else
 				status = _xbegin();
 
@@ -300,7 +301,7 @@ namespace vm
 				{
 					std::invoke(op, *sptr);
 #ifndef _MSC_VER
-					__asm__ volatile ("xend;" ::: "memory");
+					__asm__ volatile("xend;" ::: "memory");
 #else
 					_xend();
 #endif
@@ -314,7 +315,7 @@ namespace vm
 					if (auto result = std::invoke(op, *sptr))
 					{
 #ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
+						__asm__ volatile("xend;" ::: "memory");
 #else
 						_xend();
 #endif
@@ -326,7 +327,7 @@ namespace vm
 					else
 					{
 #ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
+						__asm__ volatile("xend;" ::: "memory");
 #else
 						_xend();
 #endif
@@ -334,9 +335,9 @@ namespace vm
 					}
 				}
 
-				retry:
+			retry:
 #ifndef _MSC_VER
-				__asm__ volatile ("mov %%eax, %0;" : "=r" (status) :: "memory");
+				__asm__ volatile("mov %%eax, %0;" : "=r"(status)::"memory");
 #endif
 
 				if (!status)
@@ -349,10 +350,10 @@ namespace vm
 			if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 			{
 				vm::reservation_op_internal(addr, [&]
-				{
-					std::invoke(op, *sptr);
-					return true;
-				});
+					{
+						std::invoke(op, *sptr);
+						return true;
+					});
 
 				if constexpr (Ack)
 					res.notify_all();
@@ -363,16 +364,16 @@ namespace vm
 				auto result = std::invoke_result_t<F, T&>();
 
 				vm::reservation_op_internal(addr, [&]
-				{
-					if ((result = std::invoke(op, *sptr)))
 					{
-						return true;
-					}
-					else
-					{
-						return false;
-					}
-				});
+						if ((result = std::invoke(op, *sptr)))
+						{
+							return true;
+						}
+						else
+						{
+							return false;
+						}
+					});
 
 				if (Ack && result)
 					res.notify_all();
@@ -485,15 +486,15 @@ namespace vm
 		auto& res = vm::reservation_acquire(addr);
 
 		auto [_old, _ok] = res.fetch_op([&](u64& r)
-		{
-			if (r & vm::rsrv_unique_lock)
 			{
-				return false;
-			}
+				if (r & vm::rsrv_unique_lock)
+				{
+					return false;
+				}
 
-			r += 1;
-			return true;
-		});
+				r += 1;
+				return true;
+			});
 
 		if (!_ok) [[unlikely]]
 		{
@@ -528,17 +529,17 @@ namespace vm
 	inline SAFE_BUFFERS(auto) atomic_op(T& data, F op)
 	{
 		return light_op<Ack, T>(data, [&](T& data)
-		{
-			return data.atomic_op(op);
-		});
+			{
+				return data.atomic_op(op);
+			});
 	}
 
 	template <bool Ack = false, typename T, typename F>
 	inline SAFE_BUFFERS(auto) fetch_op(T& data, F op)
 	{
 		return light_op<Ack, T>(data, [&](T& data)
-		{
-			return data.fetch_op(op);
-		});
+			{
+				return data.fetch_op(op);
+			});
 	}
 } // namespace vm

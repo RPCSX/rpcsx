@@ -11,25 +11,25 @@ template <>
 void fmt_class_string<CellSailError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SAIL_ERROR_INVALID_ARG);
-			STR_CASE(CELL_SAIL_ERROR_INVALID_STATE);
-			STR_CASE(CELL_SAIL_ERROR_UNSUPPORTED_STREAM);
-			STR_CASE(CELL_SAIL_ERROR_INDEX_OUT_OF_RANGE);
-			STR_CASE(CELL_SAIL_ERROR_EMPTY);
-			STR_CASE(CELL_SAIL_ERROR_FULLED);
-			STR_CASE(CELL_SAIL_ERROR_USING);
-			STR_CASE(CELL_SAIL_ERROR_NOT_AVAILABLE);
-			STR_CASE(CELL_SAIL_ERROR_CANCEL);
-			STR_CASE(CELL_SAIL_ERROR_MEMORY);
-			STR_CASE(CELL_SAIL_ERROR_INVALID_FD);
-			STR_CASE(CELL_SAIL_ERROR_FATAL);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SAIL_ERROR_INVALID_ARG);
+				STR_CASE(CELL_SAIL_ERROR_INVALID_STATE);
+				STR_CASE(CELL_SAIL_ERROR_UNSUPPORTED_STREAM);
+				STR_CASE(CELL_SAIL_ERROR_INDEX_OUT_OF_RANGE);
+				STR_CASE(CELL_SAIL_ERROR_EMPTY);
+				STR_CASE(CELL_SAIL_ERROR_FULLED);
+				STR_CASE(CELL_SAIL_ERROR_USING);
+				STR_CASE(CELL_SAIL_ERROR_NOT_AVAILABLE);
+				STR_CASE(CELL_SAIL_ERROR_CANCEL);
+				STR_CASE(CELL_SAIL_ERROR_MEMORY);
+				STR_CASE(CELL_SAIL_ERROR_INVALID_FD);
+				STR_CASE(CELL_SAIL_ERROR_FATAL);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
@@ -126,15 +126,15 @@ error_code cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, v
 
 	switch (pSelf->streamType)
 	{
-		case CELL_SAIL_STREAM_PAMF:
-		{
-			u32 addr = pSelf->sp_;
-			auto ptr = vm::ptr<CellPamfReader>::make(addr);
-			memcpy(pDatabase.get_ptr(), ptr.get_ptr(), sizeof(CellPamfReader));
-			break;
-		}
-		default:
-			cellSail.error("Unhandled stream type: %d", pSelf->streamType);
+	case CELL_SAIL_STREAM_PAMF:
+	{
+		u32 addr = pSelf->sp_;
+		auto ptr = vm::ptr<CellPamfReader>::make(addr);
+		memcpy(pDatabase.get_ptr(), ptr.get_ptr(), sizeof(CellPamfReader));
+		break;
+	}
+	default:
+		cellSail.error("Unhandled stream type: %d", pSelf->streamType);
 	}
 
 	return CELL_OK;
@@ -734,8 +734,8 @@ error_code cellSailPlayerSetParameter(vm::ptr<CellSailPlayer> pSelf, s32 paramet
 	switch (parameterType)
 	{
 	case CELL_SAIL_PARAMETER_GRAPHICS_ADAPTER_BUFFER_RELEASE_DELAY: pSelf->graphics_adapter_buffer_release_delay = static_cast<u32>(param1); break; // TODO: Stream index
-	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE:         pSelf->control_ppu_thread_stack_size = static_cast<u32>(param0); break;
-	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC:                      pSelf->enable_apost_src = static_cast<u32>(param1); break; // TODO: Stream index
+	case CELL_SAIL_PARAMETER_CONTROL_PPU_THREAD_STACK_SIZE: pSelf->control_ppu_thread_stack_size = static_cast<u32>(param0); break;
+	case CELL_SAIL_PARAMETER_ENABLE_APOST_SRC: pSelf->enable_apost_src = static_cast<u32>(param1); break; // TODO: Stream index
 	default: cellSail.todo("cellSailPlayerSetParameter(): unimplemented parameter %s", ParameterCodeToName(parameterType));
 	}
 
@@ -825,43 +825,43 @@ error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 str
 	descriptor->streamType = streamType;
 	descriptor->registered = false;
 
-	//pSelf->descriptors = 0;
+	// pSelf->descriptors = 0;
 	pSelf->repeatMode = 0;
 
 	switch (streamType)
 	{
-		case CELL_SAIL_STREAM_PAMF:
+	case CELL_SAIL_STREAM_PAMF:
+	{
+		std::string uri = pUri.get_ptr();
+		if (uri.starts_with("x-cell-fs://"))
 		{
-			std::string uri = pUri.get_ptr();
-			if (uri.starts_with("x-cell-fs://"))
+			if (fs::file f{vfs::get(uri.substr(12))})
 			{
-				if (fs::file f{ vfs::get(uri.substr(12)) })
-				{
-					u32 size = ::size32(f);
-					u32 buffer = vm::alloc(size, vm::main);
-					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
-					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
-					ensure(f.read(buf, size) == size);
-					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
-					auto sp = vm::ptr<CellPamfReader>::make(sp_);
-					[[maybe_unused]] u32 err = cellPamfReaderInitialize(sp, bufPtr, size, 0);
+				u32 size = ::size32(f);
+				u32 buffer = vm::alloc(size, vm::main);
+				auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
+				PamfHeader* buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
+				ensure(f.read(buf, size) == size);
+				u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
+				auto sp = vm::ptr<CellPamfReader>::make(sp_);
+				[[maybe_unused]] u32 err = cellPamfReaderInitialize(sp, bufPtr, size, 0);
 
-					descriptor->buffer = buffer;
-					descriptor->sp_ = sp_;
-				}
-				else
-				{
-					cellSail.warning("Couldn't open PAMF: %s", uri.c_str());
-				}
+				descriptor->buffer = buffer;
+				descriptor->sp_ = sp_;
 			}
 			else
 			{
-				cellSail.warning("Unhandled uri: %s", uri.c_str());
+				cellSail.warning("Couldn't open PAMF: %s", uri.c_str());
 			}
-			break;
 		}
-		default:
-			cellSail.error("Unhandled stream type: %d", streamType);
+		else
+		{
+			cellSail.warning("Unhandled uri: %s", uri.c_str());
+		}
+		break;
+	}
+	default:
+		cellSail.error("Unhandled stream type: %d", streamType);
 	}
 
 	return CELL_OK;
@@ -885,7 +885,7 @@ error_code cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr
 	{
 		ppDesc = pSelf->registeredDescriptors[pSelf->descriptors];
 		// TODO: Figure out how properly free a descriptor. Use game specified memory dealloc function?
-		//delete &pSelf->registeredDescriptors[pSelf->descriptors];
+		// delete &pSelf->registeredDescriptors[pSelf->descriptors];
 		pSelf->descriptors--;
 	}
 
@@ -1062,148 +1062,148 @@ error_code cellSailPlayerUnregisterSource()
 }
 
 DECLARE(ppu_module_manager::cellSail)("cellSail", []()
-{
-	static ppu_static_module cellSailAvi("cellSailAvi");
-
-	[[maybe_unused]] vm::ptr<CellSailMp4MovieInfo<>> test;
-
-	REG_FUNC(cellSail, cellSailMemAllocatorInitialize);
-
-	REG_FUNC(cellSail, cellSailFutureInitialize);
-	REG_FUNC(cellSail, cellSailFutureFinalize);
-	REG_FUNC(cellSail, cellSailFutureReset);
-	REG_FUNC(cellSail, cellSailFutureSet);
-	REG_FUNC(cellSail, cellSailFutureGet);
-	REG_FUNC(cellSail, cellSailFutureIsDone);
-
-	REG_FUNC(cellSail, cellSailDescriptorGetStreamType);
-	REG_FUNC(cellSail, cellSailDescriptorGetUri);
-	REG_FUNC(cellSail, cellSailDescriptorGetMediaInfo);
-	REG_FUNC(cellSail, cellSailDescriptorSetAutoSelection);
-	REG_FUNC(cellSail, cellSailDescriptorIsAutoSelection);
-	REG_FUNC(cellSail, cellSailDescriptorCreateDatabase);
-	REG_FUNC(cellSail, cellSailDescriptorDestroyDatabase);
-	REG_FUNC(cellSail, cellSailDescriptorOpen);
-	REG_FUNC(cellSail, cellSailDescriptorClose);
-	REG_FUNC(cellSail, cellSailDescriptorSetEs);
-	REG_FUNC(cellSail, cellSailDescriptorClearEs);
-	REG_FUNC(cellSail, cellSailDescriptorGetCapabilities);
-	REG_FUNC(cellSail, cellSailDescriptorInquireCapability);
-	REG_FUNC(cellSail, cellSailDescriptorSetParameter);
-
-	REG_FUNC(cellSail, cellSailSoundAdapterInitialize);
-	REG_FUNC(cellSail, cellSailSoundAdapterFinalize);
-	REG_FUNC(cellSail, cellSailSoundAdapterSetPreferredFormat);
-	REG_FUNC(cellSail, cellSailSoundAdapterGetFrame);
-	REG_FUNC(cellSail, cellSailSoundAdapterGetFormat);
-	REG_FUNC(cellSail, cellSailSoundAdapterUpdateAvSync);
-	REG_FUNC(cellSail, cellSailSoundAdapterPtsToTimePosition);
-
-	REG_FUNC(cellSail, cellSailGraphicsAdapterInitialize);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterFinalize);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterSetPreferredFormat);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterGetFrame);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterGetFrame2);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterGetFormat);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterUpdateAvSync);
-	REG_FUNC(cellSail, cellSailGraphicsAdapterPtsToTimePosition);
-
-	REG_FUNC(cellSail, cellSailAuReceiverInitialize);
-	REG_FUNC(cellSail, cellSailAuReceiverFinalize);
-	REG_FUNC(cellSail, cellSailAuReceiverGet);
-
-	REG_FUNC(cellSail, cellSailRendererAudioInitialize);
-	REG_FUNC(cellSail, cellSailRendererAudioFinalize);
-	REG_FUNC(cellSail, cellSailRendererAudioNotifyCallCompleted);
-	REG_FUNC(cellSail, cellSailRendererAudioNotifyFrameDone);
-	REG_FUNC(cellSail, cellSailRendererAudioNotifyOutputEos);
-
-	REG_FUNC(cellSail, cellSailRendererVideoInitialize);
-	REG_FUNC(cellSail, cellSailRendererVideoFinalize);
-	REG_FUNC(cellSail, cellSailRendererVideoNotifyCallCompleted);
-	REG_FUNC(cellSail, cellSailRendererVideoNotifyFrameDone);
-	REG_FUNC(cellSail, cellSailRendererVideoNotifyOutputEos);
-
-	REG_FUNC(cellSail, cellSailSourceInitialize);
-	REG_FUNC(cellSail, cellSailSourceFinalize);
-	REG_FUNC(cellSail, cellSailSourceNotifyCallCompleted);
-	REG_FUNC(cellSail, cellSailSourceNotifyInputEos);
-	REG_FUNC(cellSail, cellSailSourceNotifyStreamOut);
-	REG_FUNC(cellSail, cellSailSourceNotifySessionError);
-	REG_FUNC(cellSail, cellSailSourceNotifyMediaStateChanged);
-	REG_FUNC(cellSail, cellSailSourceSetDiagHandler);
-
 	{
-		// these functions shouldn't exist
-		REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
-		REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
-		REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
-		REG_FUNC(cellSail, cellSailSourceNotifyReadCompleted);
-		REG_FUNC(cellSail, cellSailSourceNotifyCloseCompleted);
-	}
+		static ppu_static_module cellSailAvi("cellSailAvi");
 
-	REG_FUNC(cellSail, cellSailMp4MovieGetBrand);
-	REG_FUNC(cellSail, cellSailMp4MovieIsCompatibleBrand);
-	REG_FUNC(cellSail, cellSailMp4MovieGetMovieInfo);
-	REG_FUNC(cellSail, cellSailMp4MovieGetTrackByIndex);
-	REG_FUNC(cellSail, cellSailMp4MovieGetTrackById);
-	REG_FUNC(cellSail, cellSailMp4MovieGetTrackByTypeAndIndex);
-	REG_FUNC(cellSail, cellSailMp4TrackGetTrackInfo);
-	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReferenceCount);
-	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReference);
+		[[maybe_unused]] vm::ptr<CellSailMp4MovieInfo<>> test;
 
-	REG_FUNC(cellSail, cellSailAviMovieGetMovieInfo);
-	REG_FUNC(cellSail, cellSailAviMovieGetStreamByIndex);
-	REG_FUNC(cellSail, cellSailAviMovieGetStreamByTypeAndIndex);
-	REG_FUNC(cellSail, cellSailAviMovieGetHeader);
-	REG_FUNC(cellSail, cellSailAviStreamGetMediaType);
-	REG_FUNC(cellSail, cellSailAviStreamGetHeader);
+		REG_FUNC(cellSail, cellSailMemAllocatorInitialize);
 
-	REG_FUNC(cellSail, cellSailPlayerInitialize);
-	REG_FUNC(cellSail, cellSailPlayerInitialize2);
-	REG_FUNC(cellSail, cellSailPlayerFinalize);
-	REG_FUNC(cellSail, cellSailPlayerRegisterSource);
-	REG_FUNC(cellSail, cellSailPlayerGetRegisteredProtocols);
-	REG_FUNC(cellSail, cellSailPlayerSetSoundAdapter);
-	REG_FUNC(cellSail, cellSailPlayerSetGraphicsAdapter);
-	REG_FUNC(cellSail, cellSailPlayerSetAuReceiver);
-	REG_FUNC(cellSail, cellSailPlayerSetRendererAudio);
-	REG_FUNC(cellSail, cellSailPlayerSetRendererVideo);
-	REG_FUNC(cellSail, cellSailPlayerSetParameter);
-	REG_FUNC(cellSail, cellSailPlayerGetParameter);
-	REG_FUNC(cellSail, cellSailPlayerSubscribeEvent);
-	REG_FUNC(cellSail, cellSailPlayerUnsubscribeEvent);
-	REG_FUNC(cellSail, cellSailPlayerReplaceEventHandler);
-	REG_FUNC(cellSail, cellSailPlayerBoot);
-	REG_FUNC(cellSail, cellSailPlayerCreateDescriptor);
-	REG_FUNC(cellSail, cellSailPlayerDestroyDescriptor);
-	REG_FUNC(cellSail, cellSailPlayerAddDescriptor);
-	REG_FUNC(cellSail, cellSailPlayerRemoveDescriptor);
-	REG_FUNC(cellSail, cellSailPlayerGetDescriptorCount);
-	REG_FUNC(cellSail, cellSailPlayerGetCurrentDescriptor);
-	REG_FUNC(cellSail, cellSailPlayerOpenStream);
-	REG_FUNC(cellSail, cellSailPlayerCloseStream);
-	REG_FUNC(cellSail, cellSailPlayerOpenEsAudio);
-	REG_FUNC(cellSail, cellSailPlayerOpenEsVideo);
-	REG_FUNC(cellSail, cellSailPlayerOpenEsUser);
-	REG_FUNC(cellSail, cellSailPlayerReopenEsAudio);
-	REG_FUNC(cellSail, cellSailPlayerReopenEsVideo);
-	REG_FUNC(cellSail, cellSailPlayerReopenEsUser);
-	REG_FUNC(cellSail, cellSailPlayerCloseEsAudio);
-	REG_FUNC(cellSail, cellSailPlayerCloseEsVideo);
-	REG_FUNC(cellSail, cellSailPlayerCloseEsUser);
-	REG_FUNC(cellSail, cellSailPlayerStart);
-	REG_FUNC(cellSail, cellSailPlayerStop);
-	REG_FUNC(cellSail, cellSailPlayerNext);
-	REG_FUNC(cellSail, cellSailPlayerCancel);
-	REG_FUNC(cellSail, cellSailPlayerSetPaused);
-	REG_FUNC(cellSail, cellSailPlayerIsPaused);
-	REG_FUNC(cellSail, cellSailPlayerSetRepeatMode);
-	REG_FUNC(cellSail, cellSailPlayerGetRepeatMode);
-	REG_FUNC(cellSail, cellSailPlayerSetEsAudioMuted);
-	REG_FUNC(cellSail, cellSailPlayerSetEsVideoMuted);
-	REG_FUNC(cellSail, cellSailPlayerIsEsAudioMuted);
-	REG_FUNC(cellSail, cellSailPlayerIsEsVideoMuted);
-	REG_FUNC(cellSail, cellSailPlayerDumpImage);
-	REG_FUNC(cellSail, cellSailPlayerUnregisterSource);
-});
+		REG_FUNC(cellSail, cellSailFutureInitialize);
+		REG_FUNC(cellSail, cellSailFutureFinalize);
+		REG_FUNC(cellSail, cellSailFutureReset);
+		REG_FUNC(cellSail, cellSailFutureSet);
+		REG_FUNC(cellSail, cellSailFutureGet);
+		REG_FUNC(cellSail, cellSailFutureIsDone);
+
+		REG_FUNC(cellSail, cellSailDescriptorGetStreamType);
+		REG_FUNC(cellSail, cellSailDescriptorGetUri);
+		REG_FUNC(cellSail, cellSailDescriptorGetMediaInfo);
+		REG_FUNC(cellSail, cellSailDescriptorSetAutoSelection);
+		REG_FUNC(cellSail, cellSailDescriptorIsAutoSelection);
+		REG_FUNC(cellSail, cellSailDescriptorCreateDatabase);
+		REG_FUNC(cellSail, cellSailDescriptorDestroyDatabase);
+		REG_FUNC(cellSail, cellSailDescriptorOpen);
+		REG_FUNC(cellSail, cellSailDescriptorClose);
+		REG_FUNC(cellSail, cellSailDescriptorSetEs);
+		REG_FUNC(cellSail, cellSailDescriptorClearEs);
+		REG_FUNC(cellSail, cellSailDescriptorGetCapabilities);
+		REG_FUNC(cellSail, cellSailDescriptorInquireCapability);
+		REG_FUNC(cellSail, cellSailDescriptorSetParameter);
+
+		REG_FUNC(cellSail, cellSailSoundAdapterInitialize);
+		REG_FUNC(cellSail, cellSailSoundAdapterFinalize);
+		REG_FUNC(cellSail, cellSailSoundAdapterSetPreferredFormat);
+		REG_FUNC(cellSail, cellSailSoundAdapterGetFrame);
+		REG_FUNC(cellSail, cellSailSoundAdapterGetFormat);
+		REG_FUNC(cellSail, cellSailSoundAdapterUpdateAvSync);
+		REG_FUNC(cellSail, cellSailSoundAdapterPtsToTimePosition);
+
+		REG_FUNC(cellSail, cellSailGraphicsAdapterInitialize);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterFinalize);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterSetPreferredFormat);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterGetFrame);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterGetFrame2);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterGetFormat);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterUpdateAvSync);
+		REG_FUNC(cellSail, cellSailGraphicsAdapterPtsToTimePosition);
+
+		REG_FUNC(cellSail, cellSailAuReceiverInitialize);
+		REG_FUNC(cellSail, cellSailAuReceiverFinalize);
+		REG_FUNC(cellSail, cellSailAuReceiverGet);
+
+		REG_FUNC(cellSail, cellSailRendererAudioInitialize);
+		REG_FUNC(cellSail, cellSailRendererAudioFinalize);
+		REG_FUNC(cellSail, cellSailRendererAudioNotifyCallCompleted);
+		REG_FUNC(cellSail, cellSailRendererAudioNotifyFrameDone);
+		REG_FUNC(cellSail, cellSailRendererAudioNotifyOutputEos);
+
+		REG_FUNC(cellSail, cellSailRendererVideoInitialize);
+		REG_FUNC(cellSail, cellSailRendererVideoFinalize);
+		REG_FUNC(cellSail, cellSailRendererVideoNotifyCallCompleted);
+		REG_FUNC(cellSail, cellSailRendererVideoNotifyFrameDone);
+		REG_FUNC(cellSail, cellSailRendererVideoNotifyOutputEos);
+
+		REG_FUNC(cellSail, cellSailSourceInitialize);
+		REG_FUNC(cellSail, cellSailSourceFinalize);
+		REG_FUNC(cellSail, cellSailSourceNotifyCallCompleted);
+		REG_FUNC(cellSail, cellSailSourceNotifyInputEos);
+		REG_FUNC(cellSail, cellSailSourceNotifyStreamOut);
+		REG_FUNC(cellSail, cellSailSourceNotifySessionError);
+		REG_FUNC(cellSail, cellSailSourceNotifyMediaStateChanged);
+		REG_FUNC(cellSail, cellSailSourceSetDiagHandler);
+
+		{
+			// these functions shouldn't exist
+			REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
+			REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
+			REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
+			REG_FUNC(cellSail, cellSailSourceNotifyReadCompleted);
+			REG_FUNC(cellSail, cellSailSourceNotifyCloseCompleted);
+		}
+
+		REG_FUNC(cellSail, cellSailMp4MovieGetBrand);
+		REG_FUNC(cellSail, cellSailMp4MovieIsCompatibleBrand);
+		REG_FUNC(cellSail, cellSailMp4MovieGetMovieInfo);
+		REG_FUNC(cellSail, cellSailMp4MovieGetTrackByIndex);
+		REG_FUNC(cellSail, cellSailMp4MovieGetTrackById);
+		REG_FUNC(cellSail, cellSailMp4MovieGetTrackByTypeAndIndex);
+		REG_FUNC(cellSail, cellSailMp4TrackGetTrackInfo);
+		REG_FUNC(cellSail, cellSailMp4TrackGetTrackReferenceCount);
+		REG_FUNC(cellSail, cellSailMp4TrackGetTrackReference);
+
+		REG_FUNC(cellSail, cellSailAviMovieGetMovieInfo);
+		REG_FUNC(cellSail, cellSailAviMovieGetStreamByIndex);
+		REG_FUNC(cellSail, cellSailAviMovieGetStreamByTypeAndIndex);
+		REG_FUNC(cellSail, cellSailAviMovieGetHeader);
+		REG_FUNC(cellSail, cellSailAviStreamGetMediaType);
+		REG_FUNC(cellSail, cellSailAviStreamGetHeader);
+
+		REG_FUNC(cellSail, cellSailPlayerInitialize);
+		REG_FUNC(cellSail, cellSailPlayerInitialize2);
+		REG_FUNC(cellSail, cellSailPlayerFinalize);
+		REG_FUNC(cellSail, cellSailPlayerRegisterSource);
+		REG_FUNC(cellSail, cellSailPlayerGetRegisteredProtocols);
+		REG_FUNC(cellSail, cellSailPlayerSetSoundAdapter);
+		REG_FUNC(cellSail, cellSailPlayerSetGraphicsAdapter);
+		REG_FUNC(cellSail, cellSailPlayerSetAuReceiver);
+		REG_FUNC(cellSail, cellSailPlayerSetRendererAudio);
+		REG_FUNC(cellSail, cellSailPlayerSetRendererVideo);
+		REG_FUNC(cellSail, cellSailPlayerSetParameter);
+		REG_FUNC(cellSail, cellSailPlayerGetParameter);
+		REG_FUNC(cellSail, cellSailPlayerSubscribeEvent);
+		REG_FUNC(cellSail, cellSailPlayerUnsubscribeEvent);
+		REG_FUNC(cellSail, cellSailPlayerReplaceEventHandler);
+		REG_FUNC(cellSail, cellSailPlayerBoot);
+		REG_FUNC(cellSail, cellSailPlayerCreateDescriptor);
+		REG_FUNC(cellSail, cellSailPlayerDestroyDescriptor);
+		REG_FUNC(cellSail, cellSailPlayerAddDescriptor);
+		REG_FUNC(cellSail, cellSailPlayerRemoveDescriptor);
+		REG_FUNC(cellSail, cellSailPlayerGetDescriptorCount);
+		REG_FUNC(cellSail, cellSailPlayerGetCurrentDescriptor);
+		REG_FUNC(cellSail, cellSailPlayerOpenStream);
+		REG_FUNC(cellSail, cellSailPlayerCloseStream);
+		REG_FUNC(cellSail, cellSailPlayerOpenEsAudio);
+		REG_FUNC(cellSail, cellSailPlayerOpenEsVideo);
+		REG_FUNC(cellSail, cellSailPlayerOpenEsUser);
+		REG_FUNC(cellSail, cellSailPlayerReopenEsAudio);
+		REG_FUNC(cellSail, cellSailPlayerReopenEsVideo);
+		REG_FUNC(cellSail, cellSailPlayerReopenEsUser);
+		REG_FUNC(cellSail, cellSailPlayerCloseEsAudio);
+		REG_FUNC(cellSail, cellSailPlayerCloseEsVideo);
+		REG_FUNC(cellSail, cellSailPlayerCloseEsUser);
+		REG_FUNC(cellSail, cellSailPlayerStart);
+		REG_FUNC(cellSail, cellSailPlayerStop);
+		REG_FUNC(cellSail, cellSailPlayerNext);
+		REG_FUNC(cellSail, cellSailPlayerCancel);
+		REG_FUNC(cellSail, cellSailPlayerSetPaused);
+		REG_FUNC(cellSail, cellSailPlayerIsPaused);
+		REG_FUNC(cellSail, cellSailPlayerSetRepeatMode);
+		REG_FUNC(cellSail, cellSailPlayerGetRepeatMode);
+		REG_FUNC(cellSail, cellSailPlayerSetEsAudioMuted);
+		REG_FUNC(cellSail, cellSailPlayerSetEsVideoMuted);
+		REG_FUNC(cellSail, cellSailPlayerIsEsAudioMuted);
+		REG_FUNC(cellSail, cellSailPlayerIsEsVideoMuted);
+		REG_FUNC(cellSail, cellSailPlayerDumpImage);
+		REG_FUNC(cellSail, cellSailPlayerUnregisterSource);
+	});

@@ -22,4 +22,4 @@ namespace vk
 
 	void change_image_layout(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout);
-}
+} // namespace vk

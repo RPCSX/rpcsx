@@ -36,8 +36,8 @@ namespace gl
 
 		enum usage
 		{
-			host_write     = (1 << 0),
-			host_read      = (1 << 1),
+			host_write = (1 << 0),
+			host_read = (1 << 1),
 			persistent_map = (1 << 2),
 			dynamic_update = (1 << 3),
 		};
@@ -108,8 +108,14 @@ namespace gl
 
 		void remove();
 
-		void bind(target target_) const { glBindBuffer(static_cast<GLenum>(target_), m_id); }
-		void bind() const { bind(current_target()); }
+		void bind(target target_) const
+		{
+			glBindBuffer(static_cast<GLenum>(target_), m_id);
+		}
+		void bind() const
+		{
+			bind(current_target());
+		}
 
 		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW);
 		void sub_data(GLsizeiptr offset, GLsizeiptr length, const GLvoid* data);
@@ -122,14 +128,35 @@ namespace gl
 
 		void copy_to(buffer* other, u64 src_offset, u64 dst_offset, u64 size);
 
-		target current_target() const { return m_target; }
-		GLsizeiptr size() const { return m_size; }
-		uint id() const { return m_id; }
-		void set_id(uint id) { m_id = id; }
-		bool created() const { return m_id != GL_NONE; }
-		std::pair<u32, u32> bound_range() const { return m_bound_range; }
+		target current_target() const
+		{
+			return m_target;
+		}
+		GLsizeiptr size() const
+		{
+			return m_size;
+		}
+		uint id() const
+		{
+			return m_id;
+		}
+		void set_id(uint id)
+		{
+			m_id = id;
+		}
+		bool created() const
+		{
+			return m_id != GL_NONE;
+		}
+		std::pair<u32, u32> bound_range() const
+		{
+			return m_bound_range;
+		}
 
-		explicit operator bool() const { return created(); }
+		explicit operator bool() const
+		{
+			return created();
+		}
 	};
 
 	class buffer_view
@@ -142,20 +169,33 @@ namespace gl
 	public:
 		buffer_view(buffer* _buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 			: m_buffer(_buffer), m_offset(offset), m_range(range), m_format(format)
-		{}
+		{
+		}
 
 		buffer_view() = default;
 
 		void update(buffer* _buffer, u32 offset, u32 range, GLenum format = GL_R8UI);
 
-		u32 offset() const { return m_offset; }
+		u32 offset() const
+		{
+			return m_offset;
+		}
 
-		u32 range() const { return m_range; }
+		u32 range() const
+		{
+			return m_range;
+		}
 
-		u32 format() const { return m_format; }
+		u32 format() const
+		{
+			return m_format;
+		}
 
-		buffer* value() const { return m_buffer; }
+		buffer* value() const
+		{
+			return m_buffer;
+		}
 
 		bool in_range(u32 address, u32 size, u32& new_offset) const;
 	};
-}
+} // namespace gl

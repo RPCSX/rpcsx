@@ -4,7 +4,7 @@
 #include "vkutils/buffer_object.h"
 #include "VKPipelineCompiler.h"
 
-#define VK_MAX_COMPUTE_TASKS 8192   // Max number of jobs per frame
+#define VK_MAX_COMPUTE_TASKS 8192 // Max number of jobs per frame
 
 namespace vk
 {
@@ -21,20 +21,17 @@ namespace vk
 		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings;
 
 		const auto layout = get_descriptor_layout();
-		for (const auto &e : layout)
+		for (const auto& e : layout)
 		{
 			descriptor_pool_sizes.push_back({e.first, e.second});
 
 			for (unsigned n = 0; n < e.second; ++n)
 			{
-				bindings.push_back
-				({
-					u32(bindings.size()),
+				bindings.push_back({u32(bindings.size()),
 					e.first,
 					1,
 					VK_SHADER_STAGE_COMPUTE_BIT,
-					nullptr
-				});
+					nullptr});
 			}
 		}
 
@@ -186,7 +183,8 @@ namespace vk
 			invocations_x = static_cast<u32>(floor(std::sqrt(num_invocations)));
 			invocations_y = invocations_x;
 
-			if (num_invocations % invocations_x) invocations_y++;
+			if (num_invocations % invocations_x)
+				invocations_y++;
 		}
 		else
 		{
@@ -215,24 +213,24 @@ namespace vk
 		// Initialize to allow detecting optimal settings
 		create();
 
-		kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
+		kernel_size = _kernel_size ? _kernel_size : optimal_kernel_size;
 
 		m_src =
-		#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
-		;
+#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
+			;
 
 		const auto parameters_size = utils::align(push_constants_size, 16) / 16;
 		const std::pair<std::string_view, std::string> syntax_replace[] =
-		{
-			{ "%loc", "0" },
-			{ "%set", "set = 0"},
-			{ "%ws", std::to_string(optimal_group_size) },
-			{ "%ks", std::to_string(kernel_size) },
-			{ "%vars", variables },
-			{ "%f", function_name },
-			{ "%md", method_declarations },
-			{ "%ub", use_push_constants? "layout(push_constant) uniform ubo{ uvec4 params[" + std::to_string(parameters_size) + "]; };\n" : "" },
-		};
+			{
+				{"%loc", "0"},
+				{"%set", "set = 0"},
+				{"%ws", std::to_string(optimal_group_size)},
+				{"%ks", std::to_string(kernel_size)},
+				{"%vars", variables},
+				{"%f", function_name},
+				{"%md", method_declarations},
+				{"%ub", use_push_constants ? "layout(push_constant) uniform ubo{ uvec4 params[" + std::to_string(parameters_size) + "]; };\n" : ""},
+			};
 
 		m_src = fmt::replace_all(m_src, syntax_replace);
 		work_kernel = fmt::replace_all(work_kernel, syntax_replace);
@@ -245,11 +243,9 @@ namespace vk
 		{
 			work_kernel += loop_advance + "\n";
 
-			m_src += std::string
-			(
+			m_src += std::string(
 				"	//Unrolled loop\n"
-				"	{\n"
-			);
+				"	{\n");
 
 			// Assemble body with manual loop unroll to try loweing GPR usage
 			for (u32 n = 0; n < kernel_size; ++n)
@@ -273,7 +269,7 @@ namespace vk
 
 	void cs_shuffle_base::bind_resources()
 	{
-		m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		m_program->bind_buffer({m_data->value, m_data_offset, m_data_length}, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
 	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
@@ -296,7 +292,8 @@ namespace vk
 		{
 			// Technically robust buffer access should keep the driver from crashing in OOB situations
 			rsx_log.error("Inadequate buffer length submitted for a compute operation."
-				"Required=%d bytes, Available=%d bytes", num_bytes_to_process, data->size());
+						  "Required=%d bytes, Available=%d bytes",
+				num_bytes_to_process, data->size());
 		}
 
 		compute_task::run(cmd, num_invocations);
@@ -319,12 +316,12 @@ namespace vk
 
 	void cs_interleave_task::bind_resources()
 	{
-		m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		m_program->bind_buffer({m_data->value, m_data_offset, m_ssbo_length}, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
 	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 	{
-		u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
+		u32 parameters[4] = {data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0};
 		set_parameters(cmd, parameters, 4);
 
 		ensure(stencil_offset > data_offset);
@@ -370,17 +367,17 @@ namespace vk
 			"}\n";
 
 		const std::pair<std::string_view, std::string> syntax_replace[] =
-		{
-			{ "%ws", std::to_string(optimal_group_size) },
-		};
+			{
+				{"%ws", std::to_string(optimal_group_size)},
+			};
 
 		m_src = fmt::replace_all(m_src, syntax_replace);
 	}
 
 	void cs_aggregator::bind_resources()
 	{
-		m_program->bind_buffer({ src->value, 0, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-		m_program->bind_buffer({ dst->value, 0, 4 }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		m_program->bind_buffer({src->value, 0, block_length}, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		m_program->bind_buffer({dst->value, 0, 4}, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 	}
 
 	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
@@ -393,4 +390,4 @@ namespace vk
 		const u32 linear_invocations = utils::aligned_div(word_count, optimal_group_size);
 		compute_task::run(cmd, linear_invocations);
 	}
-}
+} // namespace vk

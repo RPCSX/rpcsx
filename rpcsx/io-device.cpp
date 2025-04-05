@@ -341,7 +341,7 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
 
   auto result =
       vm::map(*address, size, prot, flags, vm::kMapInternalReserveOnly,
-                  hostFile->device.cast<IoDevice>().get(), offset);
+              hostFile->device.cast<IoDevice>().get(), offset);
 
   if (result == (void *)-1) {
     return orbis::ErrorCode::NOMEM;
@@ -349,11 +349,11 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
 
   size = rx::alignUp(size, vm::kPageSize);
 
-  result = ::mmap(
-      result, size, prot & vm::kMapProtCpuAll,
-      ((flags & vm::kMapFlagPrivate) != 0 ? MAP_PRIVATE : MAP_SHARED) |
-          MAP_FIXED,
-      hostFile->hostFd, offset);
+  result =
+      ::mmap(result, size, prot & vm::kMapProtCpuAll,
+             ((flags & vm::kMapFlagPrivate) != 0 ? MAP_PRIVATE : MAP_SHARED) |
+                 MAP_FIXED,
+             hostFile->hostFd, offset);
   if (result == (void *)-1) {
     auto errc = convertErrno();
     std::printf("Failed to map file at %p-%p\n", *address,
@@ -367,8 +367,7 @@ static orbis::ErrorCode host_mmap(orbis::File *file, void **address,
   struct stat stat;
   fstat(hostFile->hostFd, &stat);
   if (stat.st_size < offset + size) {
-    std::size_t rest =
-        std::min(offset + size - stat.st_size, vm::kPageSize);
+    std::size_t rest = std::min(offset + size - stat.st_size, vm::kPageSize);
 
     if (rest > rx::mem::pageSize) {
       auto fillSize = rx::alignUp(rest, rx::mem::pageSize) - rx::mem::pageSize;

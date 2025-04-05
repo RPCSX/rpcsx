@@ -24,9 +24,9 @@ namespace gui
 			case Qt::PermissionStatus::Undetermined:
 				gui_log.notice("Requesting microphone permission");
 				qApp->requestPermission(permission, []()
-				{
-					check_microphone_permission();
-				});
+					{
+						check_microphone_permission();
+					});
 				break;
 			case Qt::PermissionStatus::Denied:
 				gui_log.error("RPCS3 has no permissions to access microphones on this device.");
@@ -47,13 +47,15 @@ namespace gui
 			case Qt::PermissionStatus::Undetermined:
 				camera_log.notice("Requesting camera permission");
 				qApp->requestPermission(permission, static_cast<QObject*>(obj), [repeat_callback]()
-				{
-					if (repeat_callback) repeat_callback();
-				});
+					{
+						if (repeat_callback)
+							repeat_callback();
+					});
 				return false;
 			case Qt::PermissionStatus::Denied:
 				camera_log.error("RPCS3 has no permissions to access cameras on this device.");
-				if (denied_callback) denied_callback();
+				if (denied_callback)
+					denied_callback();
 				return false;
 			case Qt::PermissionStatus::Granted:
 				camera_log.notice("Camera permission granted");
@@ -62,5 +64,5 @@ namespace gui
 #endif
 			return true;
 		}
-	}
-}
+	} // namespace utils
+} // namespace gui

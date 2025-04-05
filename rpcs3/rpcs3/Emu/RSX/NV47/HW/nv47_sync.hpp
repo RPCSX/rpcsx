@@ -59,7 +59,7 @@ namespace rsx
 
 			vm::_ref<RsxSemaphore>(address).val = data;
 		}
-	}
-}
+	} // namespace util
+} // namespace rsx
 
 #include "context_accessors.undef.h"

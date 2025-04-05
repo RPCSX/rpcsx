@@ -25,4 +25,4 @@ namespace utils
 #error "Missing lfence() implementation"
 #endif
 	}
-}
+} // namespace utils

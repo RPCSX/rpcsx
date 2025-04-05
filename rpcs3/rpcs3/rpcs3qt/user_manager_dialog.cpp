@@ -30,9 +30,7 @@ constexpr auto qstr = QString::fromStdString;
 LOG_CHANNEL(gui_log, "GUI");
 
 user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
-	: QDialog(parent)
-	, m_gui_settings(std::move(gui_settings))
-	, m_persistent_settings(std::move(persistent_settings))
+	: QDialog(parent), m_gui_settings(std::move(gui_settings)), m_persistent_settings(std::move(persistent_settings))
 {
 	setWindowTitle(tr("User Manager"));
 	setMinimumSize(QSize(500, 400));
@@ -223,7 +221,11 @@ void user_manager_dialog::OnUserRemove()
 	const std::string user_dir = m_user_list[key].GetUserDir();
 
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the following user?\n\nUser ID: %0\nUsername: %1\n\n"
-		"This will remove all files in:\n%2").arg(user_id).arg(username).arg(qstr(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+																  "This will remove all files in:\n%2")
+																   .arg(user_id)
+																   .arg(username)
+																   .arg(qstr(user_dir)),
+			QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		gui_log.warning("Deleting user: %s", user_dir);
 		fs::remove_all(user_dir);
@@ -354,8 +356,8 @@ void user_manager_dialog::OnUserLogin()
 	if (!Emu.IsStopped())
 	{
 		if (QMessageBox::question(this, tr("Stop emulator?"),
-			tr("In order to change the user you have to stop the emulator first.\n\nStop the emulator now?"),
-			QMessageBox::Yes | QMessageBox::Abort) != QMessageBox::Yes)
+				tr("In order to change the user you have to stop the emulator first.\n\nStop the emulator now?"),
+				QMessageBox::Yes | QMessageBox::Abort) != QMessageBox::Yes)
 		{
 			return;
 		}
@@ -393,7 +395,7 @@ void user_manager_dialog::OnSort(int logicalIndex)
 	m_table->sortByColumn(m_sort_column, m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder);
 }
 
-void user_manager_dialog::ShowContextMenu(const QPoint &pos)
+void user_manager_dialog::ShowContextMenu(const QPoint& pos)
 {
 	const u32 key = GetUserKey();
 	if (key == 0)
@@ -424,13 +426,19 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(rename_act, &QAction::triggered, this, &user_manager_dialog::OnUserRename);
 	connect(login_act, &QAction::triggered, this, &user_manager_dialog::OnUserLogin);
 	connect(show_dir_act, &QAction::triggered, this, [this, key]()
-	{
-		const QString path = qstr(m_user_list[key].GetUserDir());
-		gui::utils::open_dir(path);
-	});
+		{
+			const QString path = qstr(m_user_list[key].GetUserDir());
+			gui::utils::open_dir(path);
+		});
 
-	connect(user_id_act, &QAction::triggered, this, [this] {OnSort(0); });
-	connect(username_act, &QAction::triggered, this, [this] {OnSort(1); });
+	connect(user_id_act, &QAction::triggered, this, [this]
+		{
+			OnSort(0);
+		});
+	connect(username_act, &QAction::triggered, this, [this]
+		{
+			OnSort(1);
+		});
 
 	menu->exec(m_table->viewport()->mapToGlobal(pos));
 }
@@ -459,13 +467,13 @@ u32 user_manager_dialog::GetUserKey() const
 	return idx_real;
 }
 
-void user_manager_dialog::closeEvent(QCloseEvent *event)
+void user_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	m_gui_settings->SetValue(gui::um_geometry, saveGeometry());
 	QDialog::closeEvent(event);
 }
 
-bool user_manager_dialog::eventFilter(QObject *object, QEvent *event)
+bool user_manager_dialog::eventFilter(QObject* object, QEvent* event)
 {
 	const u32 key = GetUserKey();
 	if (key == 0 || object != m_table || m_user_list[key].GetUserId() == m_active_user)
@@ -499,7 +507,8 @@ bool user_manager_dialog::eventFilter(QObject *object, QEvent *event)
 
 void user_manager_dialog::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (!ev) return;
+	if (!ev)
+		return;
 
 	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
 	// So we have to ignore this event when another button is pressed.

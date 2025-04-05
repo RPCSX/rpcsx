@@ -14,8 +14,8 @@ enum class breakpoint_types
 };
 
 /*
-* This class acts as a layer between the UI and Emu for breakpoints.
-*/
+ * This class acts as a layer between the UI and Emu for breakpoints.
+ */
 class breakpoint_handler
 {
 
@@ -27,19 +27,19 @@ public:
 	void SetBreakOnBPM(bool break_on_bpm);
 
 	/**
-	* Returns true iff breakpoint exists at loc.
-	* TODO: Add arg for flags, gameid, and maybe even thread if it should be thread local breakpoint.... breakpoint struct is probably what'll happen
-	*/
+	 * Returns true iff breakpoint exists at loc.
+	 * TODO: Add arg for flags, gameid, and maybe even thread if it should be thread local breakpoint.... breakpoint struct is probably what'll happen
+	 */
 	bool HasBreakpoint(u32 loc, bs_t<breakpoint_types> type);
 
 	/**
-	* Returns true if added successfully. TODO: flags
-	*/
+	 * Returns true if added successfully. TODO: flags
+	 */
 	bool AddBreakpoint(u32 loc, bs_t<breakpoint_types> type);
 
 	/**
-	* Returns true if removed breakpoint at loc successfully.
-	*/
+	 * Returns true if removed breakpoint at loc successfully.
+	 */
 	bool RemoveBreakpoint(u32 loc);
 
 private:

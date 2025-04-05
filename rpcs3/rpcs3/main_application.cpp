@@ -35,8 +35,8 @@
 #include "Emu/Audio/FAudio/faudio_enumerator.h"
 #endif
 
-#include <QFileInfo> // This shouldn't be outside rpcs3qt...
-#include <QImageReader> // This shouldn't be outside rpcs3qt...
+#include <QFileInfo>      // This shouldn't be outside rpcs3qt...
+#include <QImageReader>   // This shouldn't be outside rpcs3qt...
 #include <QStandardPaths> // This shouldn't be outside rpcs3qt...
 #include <thread>
 
@@ -46,13 +46,13 @@ namespace audio
 {
 	extern void configure_audio(bool force_reset = false);
 	extern void configure_rsxaudio();
-}
+} // namespace audio
 
 namespace rsx::overlays
 {
 	extern void reset_performance_overlay();
 	extern void reset_debug_overlay();
-}
+} // namespace rsx::overlays
 
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
@@ -65,7 +65,7 @@ void main_application::InitializeEmulator(const std::string& user, bool show_gui
 
 	// Log Firmware Version after Emu was initialized
 	const std::string firmware_version = utils::get_firmware_version();
-	const std::string firmware_string  = firmware_version.empty() ? "Missing Firmware" : ("Firmware version: " + firmware_version);
+	const std::string firmware_string = firmware_version.empty() ? "Missing Firmware" : ("Firmware version: " + firmware_version);
 	sys_log.always()("%s", firmware_string);
 }
 
@@ -99,17 +99,17 @@ EmuCallbacks main_application::CreateCallbacks()
 	callbacks.update_emu_settings = [this]()
 	{
 		Emu.CallFromMainThread([&]()
-		{
-			OnEmuSettingsChange();
-		});
+			{
+				OnEmuSettingsChange();
+			});
 	};
 
 	callbacks.save_emu_settings = [this]()
 	{
 		Emu.BlockingCallFromMainThread([&]()
-		{
-			Emulator::SaveSettings(g_cfg.to_string(), Emu.GetTitleID());
-		});
+			{
+				Emulator::SaveSettings(g_cfg.to_string(), Emu.GetTitleID());
+			});
 	};
 
 	callbacks.init_kb_handler = [this]()
@@ -178,7 +178,10 @@ EmuCallbacks main_application::CreateCallbacks()
 	{
 		ensure(g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id));
 
-		qt_events_aware_op(0, [](){ return !!pad::g_started; });
+		qt_events_aware_op(0, []()
+			{
+				return !!pad::g_started;
+			});
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
@@ -230,42 +233,42 @@ EmuCallbacks main_application::CreateCallbacks()
 
 		bool success = false;
 		Emu.BlockingCallFromMainThread([&]()
-		{
-			const QImageReader reader(QString::fromStdString(filename));
-			if (reader.canRead())
 			{
-				const QSize size = reader.size();
-				width = size.width();
-				height = size.height();
-				sub_type = reader.subType().toStdString();
-
-				switch (reader.transformation())
+				const QImageReader reader(QString::fromStdString(filename));
+				if (reader.canRead())
 				{
-				case QImageIOHandler::Transformation::TransformationNone:
-					orientation = 1; // CELL_SEARCH_ORIENTATION_TOP_LEFT = 0°
-					break;
-				case QImageIOHandler::Transformation::TransformationRotate90:
-					orientation = 2; // CELL_SEARCH_ORIENTATION_TOP_RIGHT = 90°
-					break;
-				case QImageIOHandler::Transformation::TransformationRotate180:
-					orientation = 3; // CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT = 180°
-					break;
-				case QImageIOHandler::Transformation::TransformationRotate270:
-					orientation = 4; // CELL_SEARCH_ORIENTATION_BOTTOM_LEFT = 270°
-					break;
-				default:
-					// Ignore other transformations for now
-					break;
-				}
+					const QSize size = reader.size();
+					width = size.width();
+					height = size.height();
+					sub_type = reader.subType().toStdString();
 
-				success = true;
-				sys_log.notice("get_image_info found image: filename='%s', sub_type='%s', width=%d, height=%d, orientation=%d", filename, sub_type, width, height, orientation);
-			}
-			else
-			{
-				sys_log.error("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString());
-			}
-		});
+					switch (reader.transformation())
+					{
+					case QImageIOHandler::Transformation::TransformationNone:
+						orientation = 1; // CELL_SEARCH_ORIENTATION_TOP_LEFT = 0°
+						break;
+					case QImageIOHandler::Transformation::TransformationRotate90:
+						orientation = 2; // CELL_SEARCH_ORIENTATION_TOP_RIGHT = 90°
+						break;
+					case QImageIOHandler::Transformation::TransformationRotate180:
+						orientation = 3; // CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT = 180°
+						break;
+					case QImageIOHandler::Transformation::TransformationRotate270:
+						orientation = 4; // CELL_SEARCH_ORIENTATION_BOTTOM_LEFT = 270°
+						break;
+					default:
+						// Ignore other transformations for now
+						break;
+					}
+
+					success = true;
+					sys_log.notice("get_image_info found image: filename='%s', sub_type='%s', width=%d, height=%d, orientation=%d", filename, sub_type, width, height, orientation);
+				}
+				else
+				{
+					sys_log.error("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString());
+				}
+			});
 		return success;
 	};
 
@@ -281,61 +284,61 @@ EmuCallbacks main_application::CreateCallbacks()
 
 		bool success = false;
 		Emu.BlockingCallFromMainThread([&]()
-		{
-			// We use QImageReader instead of QImage. This way we can load and scale image in one step.
-			QImageReader reader(QString::fromStdString(path));
-
-			if (reader.canRead())
 			{
-				QSize size = reader.size();
-				width = size.width();
-				height = size.height();
+				// We use QImageReader instead of QImage. This way we can load and scale image in one step.
+				QImageReader reader(QString::fromStdString(path));
 
-				if (width <= 0 || height <= 0)
+				if (reader.canRead())
 				{
-					return;
-				}
-
-				if (force_fit || width > target_width || height > target_height)
-				{
-					const f32 target_ratio = target_width / static_cast<f32>(target_height);
-					const f32 image_ratio = width / static_cast<f32>(height);
-					const f32 convert_ratio = image_ratio / target_ratio;
-
-					if (convert_ratio > 1.0f)
-					{
-						size = QSize(target_width, target_height / convert_ratio);
-					}
-					else if (convert_ratio < 1.0f)
-					{
-						size = QSize(target_width * convert_ratio, target_height);
-					}
-					else
-					{
-						size = QSize(target_width, target_height);
-					}
-
-					reader.setScaledSize(size);
+					QSize size = reader.size();
 					width = size.width();
 					height = size.height();
+
+					if (width <= 0 || height <= 0)
+					{
+						return;
+					}
+
+					if (force_fit || width > target_width || height > target_height)
+					{
+						const f32 target_ratio = target_width / static_cast<f32>(target_height);
+						const f32 image_ratio = width / static_cast<f32>(height);
+						const f32 convert_ratio = image_ratio / target_ratio;
+
+						if (convert_ratio > 1.0f)
+						{
+							size = QSize(target_width, target_height / convert_ratio);
+						}
+						else if (convert_ratio < 1.0f)
+						{
+							size = QSize(target_width * convert_ratio, target_height);
+						}
+						else
+						{
+							size = QSize(target_width, target_height);
+						}
+
+						reader.setScaledSize(size);
+						width = size.width();
+						height = size.height();
+					}
+
+					QImage image = reader.read();
+
+					if (image.format() != QImage::Format::Format_RGBA8888)
+					{
+						image = image.convertToFormat(QImage::Format::Format_RGBA8888);
+					}
+
+					std::memcpy(dst, image.constBits(), std::min(target_width * target_height * 4LL, image.height() * image.bytesPerLine()));
+					success = true;
+					sys_log.notice("get_scaled_image scaled image: path='%s', width=%d, height=%d", path, width, height);
 				}
-
-				QImage image = reader.read();
-
-				if (image.format() != QImage::Format::Format_RGBA8888)
+				else
 				{
-					image = image.convertToFormat(QImage::Format::Format_RGBA8888);
+					sys_log.error("get_scaled_image failed to read '%s'. Error='%s'", path, reader.errorString());
 				}
-
-				std::memcpy(dst, image.constBits(), std::min(target_width * target_height * 4LL, image.height() * image.bytesPerLine()));
-				success = true;
-				sys_log.notice("get_scaled_image scaled image: path='%s', width=%d, height=%d", path, width, height);
-			}
-			else
-			{
-				sys_log.error("get_scaled_image failed to read '%s'. Error='%s'", path, reader.errorString());
-			}
-		});
+			});
 		return success;
 	};
 

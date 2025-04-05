@@ -4,7 +4,6 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 
-
 #include "Emu/System.h"
 #include "Emu/RSX/NV47/HW/nv47.h"
 #include "Emu/RSX/NV47/HW/nv47_sync.hpp"
@@ -19,11 +18,11 @@ namespace rsx
 
 	void invalid_method(context* ctx, u32 reg, u32 arg)
 	{
-		//Don't throw, gather information and ignore broken/garbage commands
-		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
+		// Don't throw, gather information and ignore broken/garbage commands
+		// TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = RSX(ctx)->get_fifo_cmd();
 		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", reg << 2, arg,
-		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
+			cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 
 		if (g_cfg.core.rsx_fifo_accuracy != rsx_fifo_mode::as_ps3)
 		{
@@ -48,12 +47,9 @@ namespace rsx
 
 		if (auto ptr = RSX(ctx)->queue_handler)
 		{
-			RSX(ctx)->intr_thread->cmd_list
-			({
-				{ ppu_cmd::set_args, 1 }, u64{1},
-				{ ppu_cmd::lle_call, ptr },
-				{ ppu_cmd::sleep, 0 }
-			});
+			RSX(ctx)->intr_thread->cmd_list({{ppu_cmd::set_args, 1}, u64{1},
+				{ppu_cmd::lle_call, ptr},
+				{ppu_cmd::sleep, 0}});
 
 			RSX(ctx)->intr_thread->cmd_notify.store(1);
 			RSX(ctx)->intr_thread->cmd_notify.notify_one();
@@ -75,12 +71,9 @@ namespace rsx
 
 		if (auto ptr = RSX(ctx)->user_handler)
 		{
-			RSX(ctx)->intr_thread->cmd_list
-			({
-				{ ppu_cmd::set_args, 1 }, u64{arg},
-				{ ppu_cmd::lle_call, ptr },
-				{ ppu_cmd::sleep, 0 }
-			});
+			RSX(ctx)->intr_thread->cmd_list({{ppu_cmd::set_args, 1}, u64{arg},
+				{ppu_cmd::lle_call, ptr},
+				{ppu_cmd::sleep, 0}});
 
 			RSX(ctx)->intr_thread->cmd_notify.store(1);
 			RSX(ctx)->intr_thread->cmd_notify.notify_one();
@@ -89,7 +82,7 @@ namespace rsx
 
 	namespace gcm
 	{
-		template<u32 index>
+		template <u32 index>
 		struct driver_flip
 		{
 			static void impl(context*, u32 /*reg*/, u32 arg)
@@ -98,7 +91,7 @@ namespace rsx
 			}
 		};
 
-		template<u32 index>
+		template <u32 index>
 		struct queue_flip
 		{
 			static void impl(context* ctx, u32 /*reg*/, u32 arg)
@@ -111,7 +104,7 @@ namespace rsx
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
-	}
+	} // namespace gcm
 
 	namespace fifo
 	{
@@ -126,7 +119,7 @@ namespace rsx
 				}
 			}
 		}
-	}
+	} // namespace fifo
 
 	void rsx_state::init()
 	{
@@ -485,14 +478,14 @@ namespace rsx
 			registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
 			registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 			// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
-			//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
-			//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
-			//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
-			//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
-			//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
-			//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
-			//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
-			//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+			// registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			// registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			// registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			// registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			// registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			// registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			// registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			// registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 			registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 			registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 			registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -690,7 +683,7 @@ namespace rsx
 			if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); rsx && rsx->ctrl)
 			{
 				// FIXME: Multi-context unaware
-				rsx->ctrl->ref = u32{ umax };
+				rsx->ctrl->ref = u32{umax};
 			}
 		}
 
@@ -1124,14 +1117,14 @@ namespace rsx
 		registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
 		registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 		// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
-		//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
-		//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
-		//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
-		//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
-		//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
-		//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
-		//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
-		//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+		// registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		// registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		// registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		// registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		// registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		// registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		// registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		// registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 		registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 		registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 		registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -1212,7 +1205,7 @@ namespace rsx
 
 	namespace method_detail
 	{
-		template <u32 Id, u32 Step, u32 Count, template<u32> class T, u32 Index = 0>
+		template <u32 Id, u32 Step, u32 Count, template <u32> class T, u32 Index = 0>
 		struct bind_range_impl_t
 		{
 			static inline void impl()
@@ -1226,14 +1219,14 @@ namespace rsx
 			}
 		};
 
-		template <u32 Id, u32 Step, u32 Count, template<u32> class T, u32 Index = 0>
+		template <u32 Id, u32 Step, u32 Count, template <u32> class T, u32 Index = 0>
 		static inline void bind_range()
 		{
 			static_assert(Step && Count && Id + u64{Step} * (Count - 1) < 0x10000 / 4);
 
 			bind_range_impl_t<Id, Step, Count, T, Index>::impl();
 		}
-	}
+	} // namespace method_detail
 
 	// TODO: implement this as virtual function: rsx::thread::init_methods() or something
 	// TODO: this is unused
@@ -1259,330 +1252,330 @@ namespace rsx
 		};
 
 		// NV40_CHANNEL_DMA (NV406E)
-		methods[NV406E_SET_REFERENCE]                     = nullptr;
-		methods[NV406E_SET_CONTEXT_DMA_SEMAPHORE]         = nullptr;
-		methods[NV406E_SEMAPHORE_OFFSET]                  = nullptr;
-		methods[NV406E_SEMAPHORE_ACQUIRE]                 = nullptr;
-		methods[NV406E_SEMAPHORE_RELEASE]                 = nullptr;
+		methods[NV406E_SET_REFERENCE] = nullptr;
+		methods[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = nullptr;
+		methods[NV406E_SEMAPHORE_OFFSET] = nullptr;
+		methods[NV406E_SEMAPHORE_ACQUIRE] = nullptr;
+		methods[NV406E_SEMAPHORE_RELEASE] = nullptr;
 
 		// NV40_CURIE_PRIMITIVE	(NV4097)
-		methods[NV4097_SET_OBJECT]                        = nullptr;
-		methods[NV4097_NO_OPERATION]                      = nullptr;
-		methods[NV4097_NOTIFY]                            = nullptr;
-		methods[NV4097_WAIT_FOR_IDLE]                     = nullptr;
-		methods[NV4097_PM_TRIGGER]                        = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_A]                 = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_B]                 = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_COLOR_B]           = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_STATE]             = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_COLOR_A]           = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_ZETA]              = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_VERTEX_A]          = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_VERTEX_B]          = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_SEMAPHORE]         = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_REPORT]            = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_CLIP_ID]           = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_CULL_DATA]         = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_COLOR_C]           = nullptr;
-		methods[NV4097_SET_CONTEXT_DMA_COLOR_D]           = nullptr;
-		methods[NV4097_SET_SURFACE_CLIP_HORIZONTAL]       = nullptr;
-		methods[NV4097_SET_SURFACE_CLIP_VERTICAL]         = nullptr;
-		methods[NV4097_SET_SURFACE_FORMAT]                = nullptr;
-		methods[NV4097_SET_SURFACE_PITCH_A]               = nullptr;
-		methods[NV4097_SET_SURFACE_COLOR_AOFFSET]         = nullptr;
-		methods[NV4097_SET_SURFACE_ZETA_OFFSET]           = nullptr;
-		methods[NV4097_SET_SURFACE_COLOR_BOFFSET]         = nullptr;
-		methods[NV4097_SET_SURFACE_PITCH_B]               = nullptr;
-		methods[NV4097_SET_SURFACE_COLOR_TARGET]          = nullptr;
-		methods[0x224 >> 2]                               = nullptr;
-		methods[0x228 >> 2]                               = nullptr;
-		methods[0x230 >> 2]                               = nullptr;
-		methods[NV4097_SET_SURFACE_PITCH_Z]               = nullptr;
-		methods[NV4097_INVALIDATE_ZCULL]                  = nullptr;
-		methods[NV4097_SET_CYLINDRICAL_WRAP]              = nullptr;
-		methods[NV4097_SET_CYLINDRICAL_WRAP1]             = nullptr;
-		methods[0x240 >> 2]                               = nullptr;
-		methods[0x244 >> 2]                               = nullptr;
-		methods[0x248 >> 2]                               = nullptr;
-		methods[0x24C >> 2]                               = nullptr;
-		methods[NV4097_SET_SURFACE_PITCH_C]               = nullptr;
-		methods[NV4097_SET_SURFACE_PITCH_D]               = nullptr;
-		methods[NV4097_SET_SURFACE_COLOR_COFFSET]         = nullptr;
-		methods[NV4097_SET_SURFACE_COLOR_DOFFSET]         = nullptr;
-		methods[NV4097_SET_WINDOW_OFFSET]                 = nullptr;
-		methods[NV4097_SET_WINDOW_CLIP_TYPE]              = nullptr;
-		methods[NV4097_SET_WINDOW_CLIP_HORIZONTAL]        = nullptr;
-		methods[NV4097_SET_WINDOW_CLIP_VERTICAL]          = nullptr;
-		methods[0x2c8 >> 2]                               = nullptr;
-		methods[0x2cc >> 2]                               = nullptr;
-		methods[0x2d0 >> 2]                               = nullptr;
-		methods[0x2d4 >> 2]                               = nullptr;
-		methods[0x2d8 >> 2]                               = nullptr;
-		methods[0x2dc >> 2]                               = nullptr;
-		methods[0x2e0 >> 2]                               = nullptr;
-		methods[0x2e4 >> 2]                               = nullptr;
-		methods[0x2e8 >> 2]                               = nullptr;
-		methods[0x2ec >> 2]                               = nullptr;
-		methods[0x2f0 >> 2]                               = nullptr;
-		methods[0x2f4 >> 2]                               = nullptr;
-		methods[0x2f8 >> 2]                               = nullptr;
-		methods[0x2fc >> 2]                               = nullptr;
-		methods[NV4097_SET_DITHER_ENABLE]                 = nullptr;
-		methods[NV4097_SET_ALPHA_TEST_ENABLE]             = nullptr;
-		methods[NV4097_SET_ALPHA_FUNC]                    = nullptr;
-		methods[NV4097_SET_ALPHA_REF]                     = nullptr;
-		methods[NV4097_SET_BLEND_ENABLE]                  = nullptr;
-		methods[NV4097_SET_BLEND_FUNC_SFACTOR]            = nullptr;
-		methods[NV4097_SET_BLEND_FUNC_DFACTOR]            = nullptr;
-		methods[NV4097_SET_BLEND_COLOR]                   = nullptr;
-		methods[NV4097_SET_BLEND_EQUATION]                = nullptr;
-		methods[NV4097_SET_COLOR_MASK]                    = nullptr;
-		methods[NV4097_SET_STENCIL_TEST_ENABLE]           = nullptr;
-		methods[NV4097_SET_STENCIL_MASK]                  = nullptr;
-		methods[NV4097_SET_STENCIL_FUNC]                  = nullptr;
-		methods[NV4097_SET_STENCIL_FUNC_REF]              = nullptr;
-		methods[NV4097_SET_STENCIL_FUNC_MASK]             = nullptr;
-		methods[NV4097_SET_STENCIL_OP_FAIL]               = nullptr;
-		methods[NV4097_SET_STENCIL_OP_ZFAIL]              = nullptr;
-		methods[NV4097_SET_STENCIL_OP_ZPASS]              = nullptr;
+		methods[NV4097_SET_OBJECT] = nullptr;
+		methods[NV4097_NO_OPERATION] = nullptr;
+		methods[NV4097_NOTIFY] = nullptr;
+		methods[NV4097_WAIT_FOR_IDLE] = nullptr;
+		methods[NV4097_PM_TRIGGER] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_NOTIFIES] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_A] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_B] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_COLOR_B] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_STATE] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_COLOR_A] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_ZETA] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_VERTEX_A] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_VERTEX_B] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_REPORT] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_CLIP_ID] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_CULL_DATA] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_COLOR_C] = nullptr;
+		methods[NV4097_SET_CONTEXT_DMA_COLOR_D] = nullptr;
+		methods[NV4097_SET_SURFACE_CLIP_HORIZONTAL] = nullptr;
+		methods[NV4097_SET_SURFACE_CLIP_VERTICAL] = nullptr;
+		methods[NV4097_SET_SURFACE_FORMAT] = nullptr;
+		methods[NV4097_SET_SURFACE_PITCH_A] = nullptr;
+		methods[NV4097_SET_SURFACE_COLOR_AOFFSET] = nullptr;
+		methods[NV4097_SET_SURFACE_ZETA_OFFSET] = nullptr;
+		methods[NV4097_SET_SURFACE_COLOR_BOFFSET] = nullptr;
+		methods[NV4097_SET_SURFACE_PITCH_B] = nullptr;
+		methods[NV4097_SET_SURFACE_COLOR_TARGET] = nullptr;
+		methods[0x224 >> 2] = nullptr;
+		methods[0x228 >> 2] = nullptr;
+		methods[0x230 >> 2] = nullptr;
+		methods[NV4097_SET_SURFACE_PITCH_Z] = nullptr;
+		methods[NV4097_INVALIDATE_ZCULL] = nullptr;
+		methods[NV4097_SET_CYLINDRICAL_WRAP] = nullptr;
+		methods[NV4097_SET_CYLINDRICAL_WRAP1] = nullptr;
+		methods[0x240 >> 2] = nullptr;
+		methods[0x244 >> 2] = nullptr;
+		methods[0x248 >> 2] = nullptr;
+		methods[0x24C >> 2] = nullptr;
+		methods[NV4097_SET_SURFACE_PITCH_C] = nullptr;
+		methods[NV4097_SET_SURFACE_PITCH_D] = nullptr;
+		methods[NV4097_SET_SURFACE_COLOR_COFFSET] = nullptr;
+		methods[NV4097_SET_SURFACE_COLOR_DOFFSET] = nullptr;
+		methods[NV4097_SET_WINDOW_OFFSET] = nullptr;
+		methods[NV4097_SET_WINDOW_CLIP_TYPE] = nullptr;
+		methods[NV4097_SET_WINDOW_CLIP_HORIZONTAL] = nullptr;
+		methods[NV4097_SET_WINDOW_CLIP_VERTICAL] = nullptr;
+		methods[0x2c8 >> 2] = nullptr;
+		methods[0x2cc >> 2] = nullptr;
+		methods[0x2d0 >> 2] = nullptr;
+		methods[0x2d4 >> 2] = nullptr;
+		methods[0x2d8 >> 2] = nullptr;
+		methods[0x2dc >> 2] = nullptr;
+		methods[0x2e0 >> 2] = nullptr;
+		methods[0x2e4 >> 2] = nullptr;
+		methods[0x2e8 >> 2] = nullptr;
+		methods[0x2ec >> 2] = nullptr;
+		methods[0x2f0 >> 2] = nullptr;
+		methods[0x2f4 >> 2] = nullptr;
+		methods[0x2f8 >> 2] = nullptr;
+		methods[0x2fc >> 2] = nullptr;
+		methods[NV4097_SET_DITHER_ENABLE] = nullptr;
+		methods[NV4097_SET_ALPHA_TEST_ENABLE] = nullptr;
+		methods[NV4097_SET_ALPHA_FUNC] = nullptr;
+		methods[NV4097_SET_ALPHA_REF] = nullptr;
+		methods[NV4097_SET_BLEND_ENABLE] = nullptr;
+		methods[NV4097_SET_BLEND_FUNC_SFACTOR] = nullptr;
+		methods[NV4097_SET_BLEND_FUNC_DFACTOR] = nullptr;
+		methods[NV4097_SET_BLEND_COLOR] = nullptr;
+		methods[NV4097_SET_BLEND_EQUATION] = nullptr;
+		methods[NV4097_SET_COLOR_MASK] = nullptr;
+		methods[NV4097_SET_STENCIL_TEST_ENABLE] = nullptr;
+		methods[NV4097_SET_STENCIL_MASK] = nullptr;
+		methods[NV4097_SET_STENCIL_FUNC] = nullptr;
+		methods[NV4097_SET_STENCIL_FUNC_REF] = nullptr;
+		methods[NV4097_SET_STENCIL_FUNC_MASK] = nullptr;
+		methods[NV4097_SET_STENCIL_OP_FAIL] = nullptr;
+		methods[NV4097_SET_STENCIL_OP_ZFAIL] = nullptr;
+		methods[NV4097_SET_STENCIL_OP_ZPASS] = nullptr;
 		methods[NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE] = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_MASK]             = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_FUNC]             = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_FUNC_REF]         = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_FUNC_MASK]        = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_OP_FAIL]          = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_OP_ZFAIL]         = nullptr;
-		methods[NV4097_SET_BACK_STENCIL_OP_ZPASS]         = nullptr;
-		methods[NV4097_SET_SHADE_MODE]                    = nullptr;
-		methods[NV4097_SET_BLEND_ENABLE_MRT]              = nullptr;
-		methods[NV4097_SET_COLOR_MASK_MRT]                = nullptr;
-		methods[NV4097_SET_LOGIC_OP_ENABLE]               = nullptr;
-		methods[NV4097_SET_LOGIC_OP]                      = nullptr;
-		methods[NV4097_SET_BLEND_COLOR2]                  = nullptr;
-		methods[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE]      = nullptr;
-		methods[NV4097_SET_DEPTH_BOUNDS_MIN]              = nullptr;
-		methods[NV4097_SET_DEPTH_BOUNDS_MAX]              = nullptr;
-		methods[NV4097_SET_CLIP_MIN]                      = nullptr;
-		methods[NV4097_SET_CLIP_MAX]                      = nullptr;
-		methods[NV4097_SET_CONTROL0]                      = nullptr;
-		methods[NV4097_SET_LINE_WIDTH]                    = nullptr;
-		methods[NV4097_SET_LINE_SMOOTH_ENABLE]            = nullptr;
-		methods[NV4097_SET_ANISO_SPREAD]                  = nullptr;
-		methods[NV4097_SET_SCISSOR_HORIZONTAL]            = nullptr;
-		methods[NV4097_SET_SCISSOR_VERTICAL]              = nullptr;
-		methods[NV4097_SET_FOG_MODE]                      = nullptr;
-		methods[NV4097_SET_FOG_PARAMS]                    = nullptr;
-		methods[NV4097_SET_FOG_PARAMS + 1]                = nullptr;
-		methods[0x8d8 >> 2]                               = nullptr;
-		methods[NV4097_SET_SHADER_PROGRAM]                = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_OFFSET]         = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_FORMAT]         = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_ADDRESS]        = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_CONTROL0]       = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_CONTROL3]       = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_FILTER]         = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT]     = nullptr;
-		methods[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR]   = nullptr;
-		methods[NV4097_SET_VIEWPORT_HORIZONTAL]           = nullptr;
-		methods[NV4097_SET_VIEWPORT_VERTICAL]             = nullptr;
-		methods[NV4097_SET_POINT_CENTER_MODE]             = nullptr;
-		methods[NV4097_ZCULL_SYNC]                        = nullptr;
-		methods[NV4097_SET_VIEWPORT_OFFSET]               = nullptr;
-		methods[NV4097_SET_VIEWPORT_OFFSET + 1]           = nullptr;
-		methods[NV4097_SET_VIEWPORT_OFFSET + 2]           = nullptr;
-		methods[NV4097_SET_VIEWPORT_OFFSET + 3]           = nullptr;
-		methods[NV4097_SET_VIEWPORT_SCALE]                = nullptr;
-		methods[NV4097_SET_VIEWPORT_SCALE + 1]            = nullptr;
-		methods[NV4097_SET_VIEWPORT_SCALE + 2]            = nullptr;
-		methods[NV4097_SET_VIEWPORT_SCALE + 3]            = nullptr;
-		methods[NV4097_SET_POLY_OFFSET_POINT_ENABLE]      = nullptr;
-		methods[NV4097_SET_POLY_OFFSET_LINE_ENABLE]       = nullptr;
-		methods[NV4097_SET_POLY_OFFSET_FILL_ENABLE]       = nullptr;
-		methods[NV4097_SET_DEPTH_FUNC]                    = nullptr;
-		methods[NV4097_SET_DEPTH_MASK]                    = nullptr;
-		methods[NV4097_SET_DEPTH_TEST_ENABLE]             = nullptr;
-		methods[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR]   = nullptr;
-		methods[NV4097_SET_POLYGON_OFFSET_BIAS]           = nullptr;
-		methods[NV4097_SET_VERTEX_DATA_SCALED4S_M]        = nullptr;
-		methods[NV4097_SET_TEXTURE_CONTROL2]              = nullptr;
-		methods[NV4097_SET_TEX_COORD_CONTROL]             = nullptr;
-		methods[NV4097_SET_TRANSFORM_PROGRAM]             = nullptr;
-		methods[NV4097_SET_SPECULAR_ENABLE]               = nullptr;
-		methods[NV4097_SET_TWO_SIDE_LIGHT_EN]             = nullptr;
-		methods[NV4097_CLEAR_ZCULL_SURFACE]               = nullptr;
-		methods[NV4097_SET_PERFORMANCE_PARAMS]            = nullptr;
-		methods[NV4097_SET_FLAT_SHADE_OP]                 = nullptr;
-		methods[NV4097_SET_EDGE_FLAG]                     = nullptr;
-		methods[NV4097_SET_USER_CLIP_PLANE_CONTROL]       = nullptr;
-		methods[NV4097_SET_POLYGON_STIPPLE]               = nullptr;
-		methods[NV4097_SET_POLYGON_STIPPLE_PATTERN]       = nullptr;
-		methods[NV4097_SET_VERTEX_DATA3F_M]               = nullptr;
-		methods[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET]      = nullptr;
-		methods[NV4097_INVALIDATE_VERTEX_CACHE_FILE]      = nullptr;
-		methods[NV4097_INVALIDATE_VERTEX_FILE]            = nullptr;
-		methods[NV4097_PIPE_NOP]                          = nullptr;
-		methods[NV4097_SET_VERTEX_DATA_BASE_OFFSET]       = nullptr;
-		methods[NV4097_SET_VERTEX_DATA_BASE_INDEX]        = nullptr;
-		methods[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT]      = nullptr;
-		methods[NV4097_CLEAR_REPORT_VALUE]                = nullptr;
-		methods[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE]      = nullptr;
-		methods[NV4097_GET_REPORT]                        = nullptr;
-		methods[NV4097_SET_ZCULL_STATS_ENABLE]            = nullptr;
-		methods[NV4097_SET_BEGIN_END]                     = nullptr;
-		methods[NV4097_ARRAY_ELEMENT16]                   = nullptr;
-		methods[NV4097_ARRAY_ELEMENT32]                   = nullptr;
-		methods[NV4097_DRAW_ARRAYS]                       = nullptr;
-		methods[NV4097_INLINE_ARRAY]                      = nullptr;
-		methods[NV4097_SET_INDEX_ARRAY_ADDRESS]           = nullptr;
-		methods[NV4097_SET_INDEX_ARRAY_DMA]               = nullptr;
-		methods[NV4097_DRAW_INDEX_ARRAY]                  = nullptr;
-		methods[NV4097_SET_FRONT_POLYGON_MODE]            = nullptr;
-		methods[NV4097_SET_BACK_POLYGON_MODE]             = nullptr;
-		methods[NV4097_SET_CULL_FACE]                     = nullptr;
-		methods[NV4097_SET_FRONT_FACE]                    = nullptr;
-		methods[NV4097_SET_POLY_SMOOTH_ENABLE]            = nullptr;
-		methods[NV4097_SET_CULL_FACE_ENABLE]              = nullptr;
-		methods[NV4097_SET_TEXTURE_CONTROL3]              = nullptr;
-		methods[NV4097_SET_VERTEX_DATA2F_M]               = nullptr;
-		methods[NV4097_SET_VERTEX_DATA2S_M]               = nullptr;
-		methods[NV4097_SET_VERTEX_DATA4UB_M]              = nullptr;
-		methods[NV4097_SET_VERTEX_DATA4S_M]               = nullptr;
-		methods[NV4097_SET_TEXTURE_OFFSET]                = nullptr;
-		methods[NV4097_SET_TEXTURE_FORMAT]                = nullptr;
-		methods[NV4097_SET_TEXTURE_ADDRESS]               = nullptr;
-		methods[NV4097_SET_TEXTURE_CONTROL0]              = nullptr;
-		methods[NV4097_SET_TEXTURE_CONTROL1]              = nullptr;
-		methods[NV4097_SET_TEXTURE_FILTER]                = nullptr;
-		methods[NV4097_SET_TEXTURE_IMAGE_RECT]            = nullptr;
-		methods[NV4097_SET_TEXTURE_BORDER_COLOR]          = nullptr;
-		methods[NV4097_SET_VERTEX_DATA4F_M]               = nullptr;
-		methods[NV4097_SET_COLOR_KEY_COLOR]               = nullptr;
-		methods[0x1d04 >> 2]                              = nullptr;
-		methods[NV4097_SET_SHADER_CONTROL]                = nullptr;
-		methods[NV4097_SET_INDEXED_CONSTANT_READ_LIMITS]  = nullptr;
-		methods[NV4097_SET_SEMAPHORE_OFFSET]              = nullptr;
-		methods[NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE]  = nullptr;
-		methods[NV4097_TEXTURE_READ_SEMAPHORE_RELEASE]    = nullptr;
-		methods[NV4097_SET_ZMIN_MAX_CONTROL]              = nullptr;
-		methods[NV4097_SET_ANTI_ALIASING_CONTROL]         = nullptr;
-		methods[NV4097_SET_SURFACE_COMPRESSION]           = nullptr;
-		methods[NV4097_SET_ZCULL_EN]                      = nullptr;
-		methods[NV4097_SET_SHADER_WINDOW]                 = nullptr;
-		methods[NV4097_SET_ZSTENCIL_CLEAR_VALUE]          = nullptr;
-		methods[NV4097_SET_COLOR_CLEAR_VALUE]             = nullptr;
-		methods[NV4097_CLEAR_SURFACE]                     = nullptr;
-		methods[NV4097_SET_CLEAR_RECT_HORIZONTAL]         = nullptr;
-		methods[NV4097_SET_CLEAR_RECT_VERTICAL]           = nullptr;
-		methods[NV4097_SET_CLIP_ID_TEST_ENABLE]           = nullptr;
-		methods[NV4097_SET_RESTART_INDEX_ENABLE]          = nullptr;
-		methods[NV4097_SET_RESTART_INDEX]                 = nullptr;
-		methods[NV4097_SET_LINE_STIPPLE]                  = nullptr;
-		methods[NV4097_SET_LINE_STIPPLE_PATTERN]          = nullptr;
-		methods[NV4097_SET_VERTEX_DATA1F_M]               = nullptr;
-		methods[NV4097_SET_TRANSFORM_EXECUTION_MODE]      = nullptr;
-		methods[NV4097_SET_RENDER_ENABLE]                 = nullptr;
-		methods[NV4097_SET_TRANSFORM_PROGRAM_LOAD]        = nullptr;
-		methods[NV4097_SET_TRANSFORM_PROGRAM_START]       = nullptr;
-		methods[NV4097_SET_ZCULL_CONTROL0]                = nullptr;
-		methods[NV4097_SET_ZCULL_CONTROL1]                = nullptr;
-		methods[NV4097_SET_SCULL_CONTROL]                 = nullptr;
-		methods[NV4097_SET_POINT_SIZE]                    = nullptr;
-		methods[NV4097_SET_POINT_PARAMS_ENABLE]           = nullptr;
-		methods[NV4097_SET_POINT_SPRITE_CONTROL]          = nullptr;
-		methods[NV4097_SET_TRANSFORM_TIMEOUT]             = nullptr;
-		methods[NV4097_SET_TRANSFORM_CONSTANT_LOAD]       = nullptr;
-		methods[NV4097_SET_TRANSFORM_CONSTANT]            = nullptr;
-		methods[NV4097_SET_FREQUENCY_DIVIDER_OPERATION]   = nullptr;
-		methods[NV4097_SET_ATTRIB_COLOR]                  = nullptr;
-		methods[NV4097_SET_ATTRIB_TEX_COORD]              = nullptr;
-		methods[NV4097_SET_ATTRIB_TEX_COORD_EX]           = nullptr;
-		methods[NV4097_SET_ATTRIB_UCLIP0]                 = nullptr;
-		methods[NV4097_SET_ATTRIB_UCLIP1]                 = nullptr;
-		methods[NV4097_INVALIDATE_L2]                     = nullptr;
-		methods[NV4097_SET_REDUCE_DST_COLOR]              = nullptr;
-		methods[NV4097_SET_NO_PARANOID_TEXTURE_FETCHES]   = nullptr;
-		methods[NV4097_SET_SHADER_PACKER]                 = nullptr;
-		methods[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK]      = nullptr;
-		methods[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK]     = nullptr;
-		methods[NV4097_SET_TRANSFORM_BRANCH_BITS]         = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_MASK] = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_FUNC] = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_FUNC_REF] = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_FUNC_MASK] = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_OP_FAIL] = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = nullptr;
+		methods[NV4097_SET_BACK_STENCIL_OP_ZPASS] = nullptr;
+		methods[NV4097_SET_SHADE_MODE] = nullptr;
+		methods[NV4097_SET_BLEND_ENABLE_MRT] = nullptr;
+		methods[NV4097_SET_COLOR_MASK_MRT] = nullptr;
+		methods[NV4097_SET_LOGIC_OP_ENABLE] = nullptr;
+		methods[NV4097_SET_LOGIC_OP] = nullptr;
+		methods[NV4097_SET_BLEND_COLOR2] = nullptr;
+		methods[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = nullptr;
+		methods[NV4097_SET_DEPTH_BOUNDS_MIN] = nullptr;
+		methods[NV4097_SET_DEPTH_BOUNDS_MAX] = nullptr;
+		methods[NV4097_SET_CLIP_MIN] = nullptr;
+		methods[NV4097_SET_CLIP_MAX] = nullptr;
+		methods[NV4097_SET_CONTROL0] = nullptr;
+		methods[NV4097_SET_LINE_WIDTH] = nullptr;
+		methods[NV4097_SET_LINE_SMOOTH_ENABLE] = nullptr;
+		methods[NV4097_SET_ANISO_SPREAD] = nullptr;
+		methods[NV4097_SET_SCISSOR_HORIZONTAL] = nullptr;
+		methods[NV4097_SET_SCISSOR_VERTICAL] = nullptr;
+		methods[NV4097_SET_FOG_MODE] = nullptr;
+		methods[NV4097_SET_FOG_PARAMS] = nullptr;
+		methods[NV4097_SET_FOG_PARAMS + 1] = nullptr;
+		methods[0x8d8 >> 2] = nullptr;
+		methods[NV4097_SET_SHADER_PROGRAM] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_OFFSET] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_FORMAT] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_ADDRESS] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_CONTROL0] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_CONTROL3] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_FILTER] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT] = nullptr;
+		methods[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR] = nullptr;
+		methods[NV4097_SET_VIEWPORT_HORIZONTAL] = nullptr;
+		methods[NV4097_SET_VIEWPORT_VERTICAL] = nullptr;
+		methods[NV4097_SET_POINT_CENTER_MODE] = nullptr;
+		methods[NV4097_ZCULL_SYNC] = nullptr;
+		methods[NV4097_SET_VIEWPORT_OFFSET] = nullptr;
+		methods[NV4097_SET_VIEWPORT_OFFSET + 1] = nullptr;
+		methods[NV4097_SET_VIEWPORT_OFFSET + 2] = nullptr;
+		methods[NV4097_SET_VIEWPORT_OFFSET + 3] = nullptr;
+		methods[NV4097_SET_VIEWPORT_SCALE] = nullptr;
+		methods[NV4097_SET_VIEWPORT_SCALE + 1] = nullptr;
+		methods[NV4097_SET_VIEWPORT_SCALE + 2] = nullptr;
+		methods[NV4097_SET_VIEWPORT_SCALE + 3] = nullptr;
+		methods[NV4097_SET_POLY_OFFSET_POINT_ENABLE] = nullptr;
+		methods[NV4097_SET_POLY_OFFSET_LINE_ENABLE] = nullptr;
+		methods[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = nullptr;
+		methods[NV4097_SET_DEPTH_FUNC] = nullptr;
+		methods[NV4097_SET_DEPTH_MASK] = nullptr;
+		methods[NV4097_SET_DEPTH_TEST_ENABLE] = nullptr;
+		methods[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = nullptr;
+		methods[NV4097_SET_POLYGON_OFFSET_BIAS] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA_SCALED4S_M] = nullptr;
+		methods[NV4097_SET_TEXTURE_CONTROL2] = nullptr;
+		methods[NV4097_SET_TEX_COORD_CONTROL] = nullptr;
+		methods[NV4097_SET_TRANSFORM_PROGRAM] = nullptr;
+		methods[NV4097_SET_SPECULAR_ENABLE] = nullptr;
+		methods[NV4097_SET_TWO_SIDE_LIGHT_EN] = nullptr;
+		methods[NV4097_CLEAR_ZCULL_SURFACE] = nullptr;
+		methods[NV4097_SET_PERFORMANCE_PARAMS] = nullptr;
+		methods[NV4097_SET_FLAT_SHADE_OP] = nullptr;
+		methods[NV4097_SET_EDGE_FLAG] = nullptr;
+		methods[NV4097_SET_USER_CLIP_PLANE_CONTROL] = nullptr;
+		methods[NV4097_SET_POLYGON_STIPPLE] = nullptr;
+		methods[NV4097_SET_POLYGON_STIPPLE_PATTERN] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA3F_M] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET] = nullptr;
+		methods[NV4097_INVALIDATE_VERTEX_CACHE_FILE] = nullptr;
+		methods[NV4097_INVALIDATE_VERTEX_FILE] = nullptr;
+		methods[NV4097_PIPE_NOP] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA_BASE_OFFSET] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA_BASE_INDEX] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT] = nullptr;
+		methods[NV4097_CLEAR_REPORT_VALUE] = nullptr;
+		methods[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE] = nullptr;
+		methods[NV4097_GET_REPORT] = nullptr;
+		methods[NV4097_SET_ZCULL_STATS_ENABLE] = nullptr;
+		methods[NV4097_SET_BEGIN_END] = nullptr;
+		methods[NV4097_ARRAY_ELEMENT16] = nullptr;
+		methods[NV4097_ARRAY_ELEMENT32] = nullptr;
+		methods[NV4097_DRAW_ARRAYS] = nullptr;
+		methods[NV4097_INLINE_ARRAY] = nullptr;
+		methods[NV4097_SET_INDEX_ARRAY_ADDRESS] = nullptr;
+		methods[NV4097_SET_INDEX_ARRAY_DMA] = nullptr;
+		methods[NV4097_DRAW_INDEX_ARRAY] = nullptr;
+		methods[NV4097_SET_FRONT_POLYGON_MODE] = nullptr;
+		methods[NV4097_SET_BACK_POLYGON_MODE] = nullptr;
+		methods[NV4097_SET_CULL_FACE] = nullptr;
+		methods[NV4097_SET_FRONT_FACE] = nullptr;
+		methods[NV4097_SET_POLY_SMOOTH_ENABLE] = nullptr;
+		methods[NV4097_SET_CULL_FACE_ENABLE] = nullptr;
+		methods[NV4097_SET_TEXTURE_CONTROL3] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA2F_M] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA2S_M] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA4UB_M] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA4S_M] = nullptr;
+		methods[NV4097_SET_TEXTURE_OFFSET] = nullptr;
+		methods[NV4097_SET_TEXTURE_FORMAT] = nullptr;
+		methods[NV4097_SET_TEXTURE_ADDRESS] = nullptr;
+		methods[NV4097_SET_TEXTURE_CONTROL0] = nullptr;
+		methods[NV4097_SET_TEXTURE_CONTROL1] = nullptr;
+		methods[NV4097_SET_TEXTURE_FILTER] = nullptr;
+		methods[NV4097_SET_TEXTURE_IMAGE_RECT] = nullptr;
+		methods[NV4097_SET_TEXTURE_BORDER_COLOR] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA4F_M] = nullptr;
+		methods[NV4097_SET_COLOR_KEY_COLOR] = nullptr;
+		methods[0x1d04 >> 2] = nullptr;
+		methods[NV4097_SET_SHADER_CONTROL] = nullptr;
+		methods[NV4097_SET_INDEXED_CONSTANT_READ_LIMITS] = nullptr;
+		methods[NV4097_SET_SEMAPHORE_OFFSET] = nullptr;
+		methods[NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE] = nullptr;
+		methods[NV4097_TEXTURE_READ_SEMAPHORE_RELEASE] = nullptr;
+		methods[NV4097_SET_ZMIN_MAX_CONTROL] = nullptr;
+		methods[NV4097_SET_ANTI_ALIASING_CONTROL] = nullptr;
+		methods[NV4097_SET_SURFACE_COMPRESSION] = nullptr;
+		methods[NV4097_SET_ZCULL_EN] = nullptr;
+		methods[NV4097_SET_SHADER_WINDOW] = nullptr;
+		methods[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = nullptr;
+		methods[NV4097_SET_COLOR_CLEAR_VALUE] = nullptr;
+		methods[NV4097_CLEAR_SURFACE] = nullptr;
+		methods[NV4097_SET_CLEAR_RECT_HORIZONTAL] = nullptr;
+		methods[NV4097_SET_CLEAR_RECT_VERTICAL] = nullptr;
+		methods[NV4097_SET_CLIP_ID_TEST_ENABLE] = nullptr;
+		methods[NV4097_SET_RESTART_INDEX_ENABLE] = nullptr;
+		methods[NV4097_SET_RESTART_INDEX] = nullptr;
+		methods[NV4097_SET_LINE_STIPPLE] = nullptr;
+		methods[NV4097_SET_LINE_STIPPLE_PATTERN] = nullptr;
+		methods[NV4097_SET_VERTEX_DATA1F_M] = nullptr;
+		methods[NV4097_SET_TRANSFORM_EXECUTION_MODE] = nullptr;
+		methods[NV4097_SET_RENDER_ENABLE] = nullptr;
+		methods[NV4097_SET_TRANSFORM_PROGRAM_LOAD] = nullptr;
+		methods[NV4097_SET_TRANSFORM_PROGRAM_START] = nullptr;
+		methods[NV4097_SET_ZCULL_CONTROL0] = nullptr;
+		methods[NV4097_SET_ZCULL_CONTROL1] = nullptr;
+		methods[NV4097_SET_SCULL_CONTROL] = nullptr;
+		methods[NV4097_SET_POINT_SIZE] = nullptr;
+		methods[NV4097_SET_POINT_PARAMS_ENABLE] = nullptr;
+		methods[NV4097_SET_POINT_SPRITE_CONTROL] = nullptr;
+		methods[NV4097_SET_TRANSFORM_TIMEOUT] = nullptr;
+		methods[NV4097_SET_TRANSFORM_CONSTANT_LOAD] = nullptr;
+		methods[NV4097_SET_TRANSFORM_CONSTANT] = nullptr;
+		methods[NV4097_SET_FREQUENCY_DIVIDER_OPERATION] = nullptr;
+		methods[NV4097_SET_ATTRIB_COLOR] = nullptr;
+		methods[NV4097_SET_ATTRIB_TEX_COORD] = nullptr;
+		methods[NV4097_SET_ATTRIB_TEX_COORD_EX] = nullptr;
+		methods[NV4097_SET_ATTRIB_UCLIP0] = nullptr;
+		methods[NV4097_SET_ATTRIB_UCLIP1] = nullptr;
+		methods[NV4097_INVALIDATE_L2] = nullptr;
+		methods[NV4097_SET_REDUCE_DST_COLOR] = nullptr;
+		methods[NV4097_SET_NO_PARANOID_TEXTURE_FETCHES] = nullptr;
+		methods[NV4097_SET_SHADER_PACKER] = nullptr;
+		methods[NV4097_SET_VERTEX_ATTRIB_INPUT_MASK] = nullptr;
+		methods[NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK] = nullptr;
+		methods[NV4097_SET_TRANSFORM_BRANCH_BITS] = nullptr;
 
 		// NV03_MEMORY_TO_MEMORY_FORMAT	(NV0039)
-		methods[NV0039_SET_OBJECT]                        = nullptr;
+		methods[NV0039_SET_OBJECT] = nullptr;
 		bind(0x2100 >> 2, trace_method);
-		methods[NV0039_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
-		methods[NV0039_SET_CONTEXT_DMA_BUFFER_IN]         = nullptr;
-		methods[NV0039_SET_CONTEXT_DMA_BUFFER_OUT]        = nullptr;
-		methods[NV0039_OFFSET_IN]                         = nullptr;
-		methods[NV0039_OFFSET_OUT]                        = nullptr;
-		methods[NV0039_PITCH_IN]                          = nullptr;
-		methods[NV0039_PITCH_OUT]                         = nullptr;
-		methods[NV0039_LINE_LENGTH_IN]                    = nullptr;
-		methods[NV0039_LINE_COUNT]                        = nullptr;
-		methods[NV0039_FORMAT]                            = nullptr;
-		methods[NV0039_BUFFER_NOTIFY]                     = nullptr;
+		methods[NV0039_SET_CONTEXT_DMA_NOTIFIES] = nullptr;
+		methods[NV0039_SET_CONTEXT_DMA_BUFFER_IN] = nullptr;
+		methods[NV0039_SET_CONTEXT_DMA_BUFFER_OUT] = nullptr;
+		methods[NV0039_OFFSET_IN] = nullptr;
+		methods[NV0039_OFFSET_OUT] = nullptr;
+		methods[NV0039_PITCH_IN] = nullptr;
+		methods[NV0039_PITCH_OUT] = nullptr;
+		methods[NV0039_LINE_LENGTH_IN] = nullptr;
+		methods[NV0039_LINE_COUNT] = nullptr;
+		methods[NV0039_FORMAT] = nullptr;
+		methods[NV0039_BUFFER_NOTIFY] = nullptr;
 
 		// NV30_CONTEXT_SURFACES_2D	(NV3062)
-		methods[NV3062_SET_OBJECT]                        = nullptr;
-		methods[NV3062_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
-		methods[NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE]      = nullptr;
-		methods[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN]      = nullptr;
-		methods[NV3062_SET_COLOR_FORMAT]                  = nullptr;
-		methods[NV3062_SET_PITCH]                         = nullptr;
-		methods[NV3062_SET_OFFSET_SOURCE]                 = nullptr;
-		methods[NV3062_SET_OFFSET_DESTIN]                 = nullptr;
+		methods[NV3062_SET_OBJECT] = nullptr;
+		methods[NV3062_SET_CONTEXT_DMA_NOTIFIES] = nullptr;
+		methods[NV3062_SET_CONTEXT_DMA_IMAGE_SOURCE] = nullptr;
+		methods[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN] = nullptr;
+		methods[NV3062_SET_COLOR_FORMAT] = nullptr;
+		methods[NV3062_SET_PITCH] = nullptr;
+		methods[NV3062_SET_OFFSET_SOURCE] = nullptr;
+		methods[NV3062_SET_OFFSET_DESTIN] = nullptr;
 
 		// NV30_CONTEXT_SURFACE_SWIZZLED (NV309E)
-		methods[NV309E_SET_OBJECT]                        = nullptr;
-		methods[NV309E_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
-		methods[NV309E_SET_CONTEXT_DMA_IMAGE]             = nullptr;
-		methods[NV309E_SET_FORMAT]                        = nullptr;
-		methods[NV309E_SET_OFFSET]                        = nullptr;
+		methods[NV309E_SET_OBJECT] = nullptr;
+		methods[NV309E_SET_CONTEXT_DMA_NOTIFIES] = nullptr;
+		methods[NV309E_SET_CONTEXT_DMA_IMAGE] = nullptr;
+		methods[NV309E_SET_FORMAT] = nullptr;
+		methods[NV309E_SET_OFFSET] = nullptr;
 
 		// NV30_IMAGE_FROM_CPU (NV308A)
-		methods[NV308A_SET_OBJECT]                        = nullptr;
-		methods[NV308A_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
-		methods[NV308A_SET_CONTEXT_COLOR_KEY]             = nullptr;
-		methods[NV308A_SET_CONTEXT_CLIP_RECTANGLE]        = nullptr;
-		methods[NV308A_SET_CONTEXT_PATTERN]               = nullptr;
-		methods[NV308A_SET_CONTEXT_ROP]                   = nullptr;
-		methods[NV308A_SET_CONTEXT_BETA1]                 = nullptr;
-		methods[NV308A_SET_CONTEXT_BETA4]                 = nullptr;
-		methods[NV308A_SET_CONTEXT_SURFACE]               = nullptr;
-		methods[NV308A_SET_COLOR_CONVERSION]              = nullptr;
-		methods[NV308A_SET_OPERATION]                     = nullptr;
-		methods[NV308A_SET_COLOR_FORMAT]                  = nullptr;
-		methods[NV308A_POINT]                             = nullptr;
-		methods[NV308A_SIZE_OUT]                          = nullptr;
-		methods[NV308A_SIZE_IN]                           = nullptr;
-		methods[NV308A_COLOR]                             = nullptr;
+		methods[NV308A_SET_OBJECT] = nullptr;
+		methods[NV308A_SET_CONTEXT_DMA_NOTIFIES] = nullptr;
+		methods[NV308A_SET_CONTEXT_COLOR_KEY] = nullptr;
+		methods[NV308A_SET_CONTEXT_CLIP_RECTANGLE] = nullptr;
+		methods[NV308A_SET_CONTEXT_PATTERN] = nullptr;
+		methods[NV308A_SET_CONTEXT_ROP] = nullptr;
+		methods[NV308A_SET_CONTEXT_BETA1] = nullptr;
+		methods[NV308A_SET_CONTEXT_BETA4] = nullptr;
+		methods[NV308A_SET_CONTEXT_SURFACE] = nullptr;
+		methods[NV308A_SET_COLOR_CONVERSION] = nullptr;
+		methods[NV308A_SET_OPERATION] = nullptr;
+		methods[NV308A_SET_COLOR_FORMAT] = nullptr;
+		methods[NV308A_POINT] = nullptr;
+		methods[NV308A_SIZE_OUT] = nullptr;
+		methods[NV308A_SIZE_IN] = nullptr;
+		methods[NV308A_COLOR] = nullptr;
 
 		// NV30_SCALED_IMAGE_FROM_MEMORY (NV3089)
-		methods[NV3089_SET_OBJECT]                        = nullptr;
-		methods[NV3089_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
-		methods[NV3089_SET_CONTEXT_DMA_IMAGE]             = nullptr;
-		methods[NV3089_SET_CONTEXT_PATTERN]               = nullptr;
-		methods[NV3089_SET_CONTEXT_ROP]                   = nullptr;
-		methods[NV3089_SET_CONTEXT_BETA1]                 = nullptr;
-		methods[NV3089_SET_CONTEXT_BETA4]                 = nullptr;
-		methods[NV3089_SET_CONTEXT_SURFACE]               = nullptr;
-		methods[NV3089_SET_COLOR_CONVERSION]              = nullptr;
-		methods[NV3089_SET_COLOR_FORMAT]                  = nullptr;
-		methods[NV3089_SET_OPERATION]                     = nullptr;
-		methods[NV3089_CLIP_POINT]                        = nullptr;
-		methods[NV3089_CLIP_SIZE]                         = nullptr;
-		methods[NV3089_IMAGE_OUT_POINT]                   = nullptr;
-		methods[NV3089_IMAGE_OUT_SIZE]                    = nullptr;
-		methods[NV3089_DS_DX]                             = nullptr;
-		methods[NV3089_DT_DY]                             = nullptr;
-		methods[NV3089_IMAGE_IN_SIZE]                     = nullptr;
-		methods[NV3089_IMAGE_IN_FORMAT]                   = nullptr;
-		methods[NV3089_IMAGE_IN_OFFSET]                   = nullptr;
-		methods[NV3089_IMAGE_IN]                          = nullptr;
+		methods[NV3089_SET_OBJECT] = nullptr;
+		methods[NV3089_SET_CONTEXT_DMA_NOTIFIES] = nullptr;
+		methods[NV3089_SET_CONTEXT_DMA_IMAGE] = nullptr;
+		methods[NV3089_SET_CONTEXT_PATTERN] = nullptr;
+		methods[NV3089_SET_CONTEXT_ROP] = nullptr;
+		methods[NV3089_SET_CONTEXT_BETA1] = nullptr;
+		methods[NV3089_SET_CONTEXT_BETA4] = nullptr;
+		methods[NV3089_SET_CONTEXT_SURFACE] = nullptr;
+		methods[NV3089_SET_COLOR_CONVERSION] = nullptr;
+		methods[NV3089_SET_COLOR_FORMAT] = nullptr;
+		methods[NV3089_SET_OPERATION] = nullptr;
+		methods[NV3089_CLIP_POINT] = nullptr;
+		methods[NV3089_CLIP_SIZE] = nullptr;
+		methods[NV3089_IMAGE_OUT_POINT] = nullptr;
+		methods[NV3089_IMAGE_OUT_SIZE] = nullptr;
+		methods[NV3089_DS_DX] = nullptr;
+		methods[NV3089_DT_DY] = nullptr;
+		methods[NV3089_IMAGE_IN_SIZE] = nullptr;
+		methods[NV3089_IMAGE_IN_FORMAT] = nullptr;
+		methods[NV3089_IMAGE_IN_OFFSET] = nullptr;
+		methods[NV3089_IMAGE_IN] = nullptr;
 
-		//Some custom GCM methods
-		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-		methods[FIFO::FIFO_DRAW_BARRIER >> 2]             = nullptr;
+		// Some custom GCM methods
+		methods[GCM_SET_DRIVER_OBJECT] = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER >> 2] = nullptr;
 
 		bind_array(GCM_FLIP_HEAD, 1, 2, nullptr);
 		bind_array(GCM_DRIVER_QUEUE, 1, 8, nullptr);
@@ -1715,13 +1708,13 @@ namespace rsx
 		bind(NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor);
 		bind(NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor);
 
-		//NV308A (0xa400..0xbffc!)
+		// NV308A (0xa400..0xbffc!)
 		bind_array(NV308A_COLOR, 1, 256 * 7, nv308a::color::impl);
 
-		//NV3089
+		// NV3089
 		bind(NV3089_IMAGE_IN, nv3089::image_in);
 
-		//NV0039
+		// NV0039
 		bind(NV0039_BUFFER_NOTIFY, nv0039::buffer_notify);
 
 		// lv1 hypervisor
@@ -1740,4 +1733,4 @@ namespace rsx
 
 		return true;
 	}();
-}
+} // namespace rsx

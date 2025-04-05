@@ -34,9 +34,10 @@ u32 sys_libc_memcmp(vm::ptr<void> buf1, vm::ptr<void> buf2, u32 size)
 }
 
 DECLARE(ppu_module_manager::sys_libc)("sys_libc", []()
-{
-	REG_FNID(sys_libc, "memcpy", sys_libc_memcpy)/*.flag(MFF_FORCED_HLE)*/;
-	REG_FNID(sys_libc, "memset", sys_libc_memset);
-	REG_FNID(sys_libc, "memmove", sys_libc_memmove);
-	REG_FNID(sys_libc, "memcmp", sys_libc_memcmp);
-});
+	{
+		REG_FNID(sys_libc, "memcpy", sys_libc_memcpy)
+		/*.flag(MFF_FORCED_HLE)*/;
+		REG_FNID(sys_libc, "memset", sys_libc_memset);
+		REG_FNID(sys_libc, "memmove", sys_libc_memmove);
+		REG_FNID(sys_libc, "memcmp", sys_libc_memcmp);
+	});

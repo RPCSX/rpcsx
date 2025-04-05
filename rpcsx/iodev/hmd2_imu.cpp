@@ -10,7 +10,7 @@ struct Hmd2ImuDevice : public IoDevice {
 struct Hmd2ImuFile : public orbis::File {};
 
 static orbis::ErrorCode hmd2_imu_ioctl(orbis::File *file, std::uint64_t request,
-                                      void *argp, orbis::Thread *thread) {
+                                       void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hmd2_imu ioctl", request);
   return {};
 }
@@ -20,8 +20,9 @@ static const orbis::FileOps ops = {
 };
 
 orbis::ErrorCode Hmd2ImuDevice::open(orbis::Ref<orbis::File> *file,
-                                    const char *path, std::uint32_t flags,
-                                    std::uint32_t mode, orbis::Thread *thread) {
+                                     const char *path, std::uint32_t flags,
+                                     std::uint32_t mode,
+                                     orbis::Thread *thread) {
   auto newFile = orbis::knew<Hmd2ImuFile>();
   newFile->device = this;
   newFile->ops = &ops;
@@ -29,4 +30,6 @@ orbis::ErrorCode Hmd2ImuDevice::open(orbis::Ref<orbis::File> *file,
   return {};
 }
 
-IoDevice *createHmd2ImuCharacterDevice() { return orbis::knew<Hmd2ImuDevice>(); }
+IoDevice *createHmd2ImuCharacterDevice() {
+  return orbis::knew<Hmd2ImuDevice>();
+}

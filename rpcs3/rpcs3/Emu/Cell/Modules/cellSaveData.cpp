@@ -30,29 +30,29 @@
 
 LOG_CHANNEL(cellSaveData);
 
-template<>
+template <>
 void fmt_class_string<CellSaveDataError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SAVEDATA_ERROR_CBRESULT);
-			STR_CASE(CELL_SAVEDATA_ERROR_ACCESS_ERROR);
-			STR_CASE(CELL_SAVEDATA_ERROR_INTERNAL);
-			STR_CASE(CELL_SAVEDATA_ERROR_PARAM);
-			STR_CASE(CELL_SAVEDATA_ERROR_NOSPACE);
-			STR_CASE(CELL_SAVEDATA_ERROR_BROKEN);
-			STR_CASE(CELL_SAVEDATA_ERROR_FAILURE);
-			STR_CASE(CELL_SAVEDATA_ERROR_BUSY);
-			STR_CASE(CELL_SAVEDATA_ERROR_NOUSER);
-			STR_CASE(CELL_SAVEDATA_ERROR_SIZEOVER);
-			STR_CASE(CELL_SAVEDATA_ERROR_NODATA);
-			STR_CASE(CELL_SAVEDATA_ERROR_NOTSUPPORTED);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SAVEDATA_ERROR_CBRESULT);
+				STR_CASE(CELL_SAVEDATA_ERROR_ACCESS_ERROR);
+				STR_CASE(CELL_SAVEDATA_ERROR_INTERNAL);
+				STR_CASE(CELL_SAVEDATA_ERROR_PARAM);
+				STR_CASE(CELL_SAVEDATA_ERROR_NOSPACE);
+				STR_CASE(CELL_SAVEDATA_ERROR_BROKEN);
+				STR_CASE(CELL_SAVEDATA_ERROR_FAILURE);
+				STR_CASE(CELL_SAVEDATA_ERROR_BUSY);
+				STR_CASE(CELL_SAVEDATA_ERROR_NOUSER);
+				STR_CASE(CELL_SAVEDATA_ERROR_SIZEOVER);
+				STR_CASE(CELL_SAVEDATA_ERROR_NODATA);
+				STR_CASE(CELL_SAVEDATA_ERROR_NOTSUPPORTED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 SaveDialogBase::~SaveDialogBase()
@@ -87,21 +87,21 @@ using PFuncDone = vm::ptr<CellSaveDataDoneCallback>;
 
 enum : u32
 {
-	SAVEDATA_OP_AUTO_SAVE      = 0,
-	SAVEDATA_OP_AUTO_LOAD      = 1,
+	SAVEDATA_OP_AUTO_SAVE = 0,
+	SAVEDATA_OP_AUTO_LOAD = 1,
 	SAVEDATA_OP_LIST_AUTO_SAVE = 2,
 	SAVEDATA_OP_LIST_AUTO_LOAD = 3,
-	SAVEDATA_OP_LIST_SAVE      = 4,
-	SAVEDATA_OP_LIST_LOAD      = 5,
-	SAVEDATA_OP_FIXED_SAVE     = 6,
-	SAVEDATA_OP_FIXED_LOAD     = 7,
+	SAVEDATA_OP_LIST_SAVE = 4,
+	SAVEDATA_OP_LIST_LOAD = 5,
+	SAVEDATA_OP_FIXED_SAVE = 6,
+	SAVEDATA_OP_FIXED_LOAD = 7,
 
-	SAVEDATA_OP_LIST_IMPORT    = 9,
-	SAVEDATA_OP_LIST_EXPORT    = 10,
-	SAVEDATA_OP_FIXED_IMPORT   = 11,
-	SAVEDATA_OP_FIXED_EXPORT   = 12,
-	SAVEDATA_OP_LIST_DELETE    = 13,
-	SAVEDATA_OP_FIXED_DELETE   = 14,
+	SAVEDATA_OP_LIST_IMPORT = 9,
+	SAVEDATA_OP_LIST_EXPORT = 10,
+	SAVEDATA_OP_FIXED_IMPORT = 11,
+	SAVEDATA_OP_FIXED_EXPORT = 12,
+	SAVEDATA_OP_LIST_DELETE = 13,
+	SAVEDATA_OP_FIXED_DELETE = 14,
 };
 
 namespace
@@ -109,16 +109,16 @@ namespace
 	struct savedata_context
 	{
 		alignas(16) CellSaveDataCBResult result;
-		alignas(16) CellSaveDataListGet  listGet;
-		alignas(16) CellSaveDataListSet  listSet;
+		alignas(16) CellSaveDataListGet listGet;
+		alignas(16) CellSaveDataListSet listSet;
 		alignas(16) CellSaveDataFixedSet fixedSet;
-		alignas(16) CellSaveDataStatGet  statGet;
-		alignas(16) CellSaveDataStatSet  statSet;
-		alignas(16) CellSaveDataFileGet  fileGet;
-		alignas(16) CellSaveDataFileSet  fileSet;
-		alignas(16) CellSaveDataDoneGet  doneGet;
+		alignas(16) CellSaveDataStatGet statGet;
+		alignas(16) CellSaveDataStatSet statSet;
+		alignas(16) CellSaveDataFileGet fileGet;
+		alignas(16) CellSaveDataFileSet fileSet;
+		alignas(16) CellSaveDataDoneGet doneGet;
 	};
-}
+} // namespace
 
 vm::gvar<savedata_context> g_savedata_context;
 
@@ -175,9 +175,9 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 		}
 
 		if (disallow_system_files && ((dotpos >= 5u && std::memcmp(name, "PARAM", 5) == 0) ||
-			(dotpos >= 4u && std::memcmp(name, "ICON", 4) == 0) ||
-			(dotpos >= 3u && std::memcmp(name, "PIC", 3) == 0) ||
-			(dotpos >= 3u && std::memcmp(name, "SND", 3) == 0)))
+										 (dotpos >= 4u && std::memcmp(name, "ICON", 4) == 0) ||
+										 (dotpos >= 3u && std::memcmp(name, "PIC", 3) == 0) ||
+										 (dotpos >= 3u && std::memcmp(name, "SND", 3) == 0)))
 		{
 			// ****** sysutil savedata parameter error : 70 ******
 			return 70;
@@ -244,12 +244,12 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 			continue;
 		}
 
-		SaveDataEntry save_entry {};
-		save_entry.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+		SaveDataEntry save_entry{};
+		save_entry.dirName = psf::get_string(psf, "SAVEDATA_DIRECTORY");
 		save_entry.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
-		save_entry.title     = psf::get_string(psf, "TITLE");
-		save_entry.subtitle  = psf::get_string(psf, "SUB_TITLE");
-		save_entry.details   = psf::get_string(psf, "DETAIL");
+		save_entry.title = psf::get_string(psf, "TITLE");
+		save_entry.subtitle = psf::get_string(psf, "SUB_TITLE");
+		save_entry.details = psf::get_string(psf, "DETAIL");
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
@@ -297,7 +297,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 	auto save_entries = get_save_entries(base_dir, Emu.GetTitleID());
 
 	s32 selected = -1;
-	s32 focused  = -1;
+	s32 focused = -1;
 
 	while (true)
 	{
@@ -527,8 +527,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 			return 15;
 		}
 
-		if (!memchr(setList->dirNamePrefix.get_ptr(), '\0', CELL_SAVEDATA_PREFIX_SIZE)
-			|| (g_ps3_process_info.sdk_ver > 0x3FFFFF && !setList->dirNamePrefix[0]))
+		if (!memchr(setList->dirNamePrefix.get_ptr(), '\0', CELL_SAVEDATA_PREFIX_SIZE) || (g_ps3_process_info.sdk_ver > 0x3FFFFF && !setList->dirNamePrefix[0]))
 		{
 			// ****** sysutil savedata parameter error : 17 ******
 			return 17;
@@ -664,7 +663,8 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 	}
 
 	if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD ||
-		operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) && !funcFixed)
+			operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) &&
+		!funcFixed)
 	{
 		// ****** sysutil savedata parameter error : 19 ******
 		return 19;
@@ -707,7 +707,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		cellSaveData.notice("savedata_op(): setBuf  = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
 
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
-		funcFile, container, unk_op_flags, userdata, userId, funcDone))
+			funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -739,15 +739,15 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	std::memset(g_savedata_context.get_ptr(), 0, g_savedata_context.size());
 
-	vm::ptr<CellSaveDataCBResult> result   = g_savedata_context.ptr(&savedata_context::result);
-	vm::ptr<CellSaveDataListGet>  listGet  = g_savedata_context.ptr(&savedata_context::listGet);
-	vm::ptr<CellSaveDataListSet>  listSet  = g_savedata_context.ptr(&savedata_context::listSet);
+	vm::ptr<CellSaveDataCBResult> result = g_savedata_context.ptr(&savedata_context::result);
+	vm::ptr<CellSaveDataListGet> listGet = g_savedata_context.ptr(&savedata_context::listGet);
+	vm::ptr<CellSaveDataListSet> listSet = g_savedata_context.ptr(&savedata_context::listSet);
 	vm::ptr<CellSaveDataFixedSet> fixedSet = g_savedata_context.ptr(&savedata_context::fixedSet);
-	vm::ptr<CellSaveDataStatGet>  statGet  = g_savedata_context.ptr(&savedata_context::statGet);
-	vm::ptr<CellSaveDataStatSet>  statSet  = g_savedata_context.ptr(&savedata_context::statSet);
-	vm::ptr<CellSaveDataFileGet>  fileGet  = g_savedata_context.ptr(&savedata_context::fileGet);
-	vm::ptr<CellSaveDataFileSet>  fileSet  = g_savedata_context.ptr(&savedata_context::fileSet);
-	vm::ptr<CellSaveDataDoneGet>  doneGet  = g_savedata_context.ptr(&savedata_context::doneGet);
+	vm::ptr<CellSaveDataStatGet> statGet = g_savedata_context.ptr(&savedata_context::statGet);
+	vm::ptr<CellSaveDataStatSet> statSet = g_savedata_context.ptr(&savedata_context::statSet);
+	vm::ptr<CellSaveDataFileGet> fileGet = g_savedata_context.ptr(&savedata_context::fileGet);
+	vm::ptr<CellSaveDataFileSet> fileSet = g_savedata_context.ptr(&savedata_context::fileSet);
+	vm::ptr<CellSaveDataDoneGet> doneGet = g_savedata_context.ptr(&savedata_context::doneGet);
 
 	// userId(0) = CELL_SYSUTIL_USERID_CURRENT;
 	// path of the specified user (00000001 by default)
@@ -760,7 +760,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
-	SaveDataEntry save_entry {};
+	SaveDataEntry save_entry{};
 
 	if (setList)
 	{
@@ -786,7 +786,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			cellSaveData.notice("savedata_op(): dirNamePrefix is '*'. Listing all entries starting with '%s'. operation=%d", Emu.GetTitleID(), operation);
 			prefix_list.front() = Emu.GetTitleID(); // TODO: Let's be cautious for now and only list savedata starting with this game's ID
-			//prefix_list.front().clear(); // List savedata of all the games of this user
+													// prefix_list.front().clear(); // List savedata of all the games of this user
 		}
 
 		// get the saves matching the supplied prefix
@@ -820,12 +820,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 							break;
 						}
 
-						SaveDataEntry save_entry2 {};
-						save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+						SaveDataEntry save_entry2{};
+						save_entry2.dirName = psf::get_string(psf, "SAVEDATA_DIRECTORY");
 						save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
-						save_entry2.title     = psf::get_string(psf, "TITLE");
-						save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
-						save_entry2.details   = psf::get_string(psf, "DETAIL");
+						save_entry2.title = psf::get_string(psf, "TITLE");
+						save_entry2.subtitle = psf::get_string(psf, "SUB_TITLE");
+						save_entry2.details = psf::get_string(psf, "DETAIL");
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
@@ -859,26 +859,26 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			const u32 type = setList->sortType;
 
 			std::sort(save_entries.begin(), save_entries.end(), [=](const SaveDataEntry& entry1, const SaveDataEntry& entry2)
-			{
-				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
 				{
-					return entry1.mtime >= entry2.mtime;
-				}
-				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-				{
-					return entry1.subtitle >= entry2.subtitle;
-				}
-				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
-				{
-					return entry1.mtime < entry2.mtime;
-				}
-				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-				{
-					return entry1.subtitle < entry2.subtitle;
-				}
+					if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
+					{
+						return entry1.mtime >= entry2.mtime;
+					}
+					if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+					{
+						return entry1.subtitle >= entry2.subtitle;
+					}
+					if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
+					{
+						return entry1.mtime < entry2.mtime;
+					}
+					if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+					{
+						return entry1.subtitle < entry2.subtitle;
+					}
 
-				return true;
-			});
+					return true;
+				});
 		}
 
 		// Fill the listGet->dirList array
@@ -964,9 +964,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Clean save data list
 			save_entries.erase(std::remove_if(save_entries.begin(), save_entries.end(), [&selected_list](const SaveDataEntry& entry) -> bool
-			{
-				return selected_list.count(entry.dirName) == 0;
-			}), save_entries.end());
+								   {
+									   return selected_list.count(entry.dirName) == 0;
+								   }),
+				save_entries.end());
 
 			if (listSet->newData)
 			{
@@ -1126,7 +1127,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			strcpy_trunc(doneGet->dirName, save_entries[selected].dirName);
 			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
-			doneGet->excResult     = CELL_OK;
+			doneGet->excResult = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
 			const std::string old_path = base_dir + ".backup_" + save_entries[selected].escaped + "/";
@@ -1377,7 +1378,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				lv2_sleep(ppu, 30000);
 				break;
 
-			default :
+			default:
 				// ****** sysutil savedata parameter error : 81 ******
 				return {CELL_SAVEDATA_ERROR_PARAM, "81 (option=0x%x)", fixedSet->option};
 			}
@@ -1654,8 +1655,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			psf::assign(psf, "ACCOUNT_ID", psf::array(16, "0000000000000000")); // ???
 			psf::assign(psf, "ATTRIBUTE", statSet->setParam->attribute.value());
 			psf::assign(psf, "CATEGORY", psf::string(4, "SD")); // ???
-			psf::assign(psf, "PARAMS", psf::string(1024, {})); // ???
-			psf::assign(psf, "PARAMS2", psf::string(12, {})); // ???
+			psf::assign(psf, "PARAMS", psf::string(1024, {}));  // ???
+			psf::assign(psf, "PARAMS2", psf::string(12, {}));   // ???
 			psf::assign(psf, "PARENTAL_LEVEL", statSet->setParam->parental_level.value());
 			psf::assign(psf, "DETAIL", psf::string(CELL_SAVEDATA_SYSP_DETAIL_SIZE, statSet->setParam->detail));
 			psf::assign(psf, "SAVEDATA_DIRECTORY", psf::string(CELL_SAVEDATA_DIRNAME_SIZE, save_entry.dirName));
@@ -1674,9 +1675,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
 		{
-			//CELL_SAVEDATA_RECREATE_NO = overwrite and let the user know, not data is corrupt.
-			//cellSaveData.error("Savedata %s considered broken", save_entry.dirName);
-			//TODO: if this is a save, and it's not auto, then show a dialog
+			// CELL_SAVEDATA_RECREATE_NO = overwrite and let the user know, not data is corrupt.
+			// cellSaveData.error("Savedata %s considered broken", save_entry.dirName);
+			// TODO: if this is a save, and it's not auto, then show a dialog
 			[[fallthrough]];
 		}
 		case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
@@ -2258,7 +2259,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 
 	if (bind)
 	{
-		//TODO: Set bind in accordance to any problems
+		// TODO: Set bind in accordance to any problems
 		*bind = 0;
 	}
 
@@ -2491,7 +2492,6 @@ void cellSaveDataEnableOverlay(s32 enable)
 	manager.enable_overlay = enable != 0;
 }
 
-
 // Functions (Extensions)
 error_code cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
@@ -2510,7 +2510,7 @@ error_code cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSize
 	cellSaveData.todo("cellSaveDataListImport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_IMPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
-		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
+			setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2523,9 +2523,9 @@ error_code cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSize
 error_code cellSaveDataListExport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataListExport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
-	
+
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_EXPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
-		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
+			setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2540,7 +2540,7 @@ error_code cellSaveDataFixedImport(ppu_thread& ppu, vm::cptr<char> dirName, u32 
 	cellSaveData.todo("cellSaveDataFixedImport(dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", dirName, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_IMPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
-		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, 0, funcDone))
+			vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, 0, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2555,7 +2555,7 @@ error_code cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 
 	cellSaveData.todo("cellSaveDataFixedExport(dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", dirName, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_EXPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
-		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, 0, funcDone))
+			vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, 0, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2586,7 +2586,7 @@ error_code cellSaveDataUserListImport(ppu_thread& ppu, u32 userId, PSetList setL
 	cellSaveData.todo("cellSaveDataUserListImport(userId=%d, setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, setList, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_IMPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
-		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+			setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2601,7 +2601,7 @@ error_code cellSaveDataUserListExport(ppu_thread& ppu, u32 userId, PSetList setL
 	cellSaveData.todo("cellSaveDataUserListExport(userId=%d, setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, setList, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_EXPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
-		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+			setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2616,7 +2616,7 @@ error_code cellSaveDataUserFixedImport(ppu_thread& ppu, u32 userId, vm::cptr<cha
 	cellSaveData.todo("cellSaveDataUserFixedImport(userId=%d, dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, dirName, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_IMPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
-		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+			vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2631,7 +2631,7 @@ error_code cellSaveDataUserFixedExport(ppu_thread& ppu, u32 userId, vm::cptr<cha
 	cellSaveData.todo("cellSaveDataUserFixedExport(userId=%d, dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, dirName, maxSizeKB, funcDone, container, userdata);
 
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_FIXED_EXPORT, CELL_SAVEDATA_VERSION_OLD, dirName, CELL_SAVEDATA_ERRDIALOG_NONE,
-		vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
+			vm::null, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x44, userdata, userId, funcDone))
 	{
 		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
@@ -2688,33 +2688,33 @@ void cellSysutil_SaveData_init()
 }
 
 DECLARE(ppu_module_manager::cellSaveData)("cellSaveData", []()
-{
-	// libsysutil_savedata functions:
-	REG_FUNC(cellSaveData, cellSaveDataUserGetListItem);
-	REG_FUNC(cellSaveData, cellSaveDataGetListItem);
-	REG_FUNC(cellSaveData, cellSaveDataUserListDelete);
-	REG_FUNC(cellSaveData, cellSaveDataListDelete);
-	REG_FUNC(cellSaveData, cellSaveDataUserFixedExport);
-	REG_FUNC(cellSaveData, cellSaveDataUserFixedImport);
-	REG_FUNC(cellSaveData, cellSaveDataUserListExport);
-	REG_FUNC(cellSaveData, cellSaveDataUserListImport);
-	REG_FUNC(cellSaveData, cellSaveDataFixedExport);
-	REG_FUNC(cellSaveData, cellSaveDataFixedImport);
-	REG_FUNC(cellSaveData, cellSaveDataListExport);
-	REG_FUNC(cellSaveData, cellSaveDataListImport);
-});
+	{
+		// libsysutil_savedata functions:
+		REG_FUNC(cellSaveData, cellSaveDataUserGetListItem);
+		REG_FUNC(cellSaveData, cellSaveDataGetListItem);
+		REG_FUNC(cellSaveData, cellSaveDataUserListDelete);
+		REG_FUNC(cellSaveData, cellSaveDataListDelete);
+		REG_FUNC(cellSaveData, cellSaveDataUserFixedExport);
+		REG_FUNC(cellSaveData, cellSaveDataUserFixedImport);
+		REG_FUNC(cellSaveData, cellSaveDataUserListExport);
+		REG_FUNC(cellSaveData, cellSaveDataUserListImport);
+		REG_FUNC(cellSaveData, cellSaveDataFixedExport);
+		REG_FUNC(cellSaveData, cellSaveDataFixedImport);
+		REG_FUNC(cellSaveData, cellSaveDataListExport);
+		REG_FUNC(cellSaveData, cellSaveDataListImport);
+	});
 
 DECLARE(ppu_module_manager::cellMinisSaveData)("cellMinisSaveData", []()
-{
-	// libsysutil_savedata_psp functions:
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataDelete); // 0x6eb168b3
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListDelete); // 0xe63eb964
+	{
+		// libsysutil_savedata_psp functions:
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataDelete); // 0x6eb168b3
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataListDelete); // 0xe63eb964
 
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataFixedLoad); // 0x66515c18
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataFixedSave); // 0xf3f974b8
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListLoad); // 0xba161d45
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListSave); // 0xa342a73f
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListAutoLoad); // 0x22f2a553
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataListAutoSave); // 0xa931356e
-	//REG_FUNC(cellMinisSaveData, cellMinisSaveDataAutoLoad); // 0xfc3045d9
-});
+		// REG_FUNC(cellMinisSaveData, cellMinisSaveDataFixedLoad); // 0x66515c18
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataFixedSave); // 0xf3f974b8
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataListLoad); // 0xba161d45
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataListSave); // 0xa342a73f
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataListAutoLoad); // 0x22f2a553
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataListAutoSave); // 0xa931356e
+	    // REG_FUNC(cellMinisSaveData, cellMinisSaveDataAutoLoad); // 0xfc3045d9
+	});

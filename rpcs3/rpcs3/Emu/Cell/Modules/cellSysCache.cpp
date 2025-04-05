@@ -12,21 +12,21 @@
 
 LOG_CHANNEL(cellSysutil);
 
-template<>
+template <>
 void fmt_class_string<CellSysCacheError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SYSCACHE_ERROR_ACCESS_ERROR);
-			STR_CASE(CELL_SYSCACHE_ERROR_INTERNAL);
-			STR_CASE(CELL_SYSCACHE_ERROR_NOTMOUNTED);
-			STR_CASE(CELL_SYSCACHE_ERROR_PARAM);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SYSCACHE_ERROR_ACCESS_ERROR);
+				STR_CASE(CELL_SYSCACHE_ERROR_INTERNAL);
+				STR_CASE(CELL_SYSCACHE_ERROR_NOTMOUNTED);
+				STR_CASE(CELL_SYSCACHE_ERROR_PARAM);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
@@ -100,12 +100,12 @@ struct syscache_info
 		if (remove_root)
 		{
 			idm::select<lv2_fs_object, lv2_file>([](u32 /*id*/, lv2_file& file)
-			{
-				if (file.file && file.mp->flags & lv2_mp_flag::cache)
 				{
-					file.lock = 2;
-				}
-			});
+					if (file.file && file.mp->flags & lv2_mp_flag::cache)
+					{
+						file.lock = 2;
+					}
+				});
 		}
 	}
 
@@ -123,12 +123,12 @@ struct syscache_info
 		}
 
 		idm::select<lv2_fs_object, lv2_file>([](u32 /*id*/, lv2_file& file)
-		{
-			if (file.file && file.mp->flags & lv2_mp_flag::cache && file.flags & CELL_FS_O_ACCMODE)
 			{
-				file.file.sync();
-			}
-		});
+				if (file.file && file.mp->flags & lv2_mp_flag::cache && file.flags & CELL_FS_O_ACCMODE)
+				{
+					file.file.sync();
+				}
+			});
 
 		fs::remove_file(get_syscache_state_corruption_indicator_file_path(cache_root + cache_id));
 	}
@@ -205,9 +205,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	strcpy_trunc(param->getCachePath, "/dev_hdd1");
 
 	// Lock pseudo-mutex
-	const auto lock = cache.init.init_always([&]
-	{
-	});
+	const auto lock = cache.init.init_always([&] {});
 
 	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 
@@ -259,7 +257,6 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	return not_an_error(CELL_SYSCACHE_RET_OK_CLEARED);
 }
-
 
 extern void cellSysutil_SysCache_init()
 {

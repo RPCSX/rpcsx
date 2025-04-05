@@ -11,29 +11,29 @@ class ppu_thread;
 // PS3 internal codes
 enum PS3StandardUsbErrors : u32
 {
-	HC_CC_NOERR     = 0x00,
-	EHCI_CC_MISSMF  = 0x10,
-	EHCI_CC_XACT    = 0x20,
-	EHCI_CC_BABBLE  = 0x30,
+	HC_CC_NOERR = 0x00,
+	EHCI_CC_MISSMF = 0x10,
+	EHCI_CC_XACT = 0x20,
+	EHCI_CC_BABBLE = 0x30,
 	EHCI_CC_DATABUF = 0x40,
-	EHCI_CC_HALTED  = 0x50,
+	EHCI_CC_HALTED = 0x50,
 };
 
 enum PS3IsochronousUsbErrors : u8
 {
-	USBD_HC_CC_NOERR   = 0x00,
-	USBD_HC_CC_MISSMF  = 0x01,
-	USBD_HC_CC_XACT    = 0x02,
-	USBD_HC_CC_BABBLE  = 0x04,
+	USBD_HC_CC_NOERR = 0x00,
+	USBD_HC_CC_MISSMF = 0x01,
+	USBD_HC_CC_XACT = 0x02,
+	USBD_HC_CC_BABBLE = 0x04,
 	USBD_HC_CC_DATABUF = 0x08,
 };
 
 enum SysUsbdEvents : u32
 {
-	SYS_USBD_ATTACH            = 0x01,
-	SYS_USBD_DETACH            = 0x02,
+	SYS_USBD_ATTACH = 0x01,
+	SYS_USBD_DETACH = 0x02,
 	SYS_USBD_TRANSFER_COMPLETE = 0x03,
-	SYS_USBD_TERMINATE         = 0x04,
+	SYS_USBD_TERMINATE = 0x04,
 };
 
 // PS3 internal structures

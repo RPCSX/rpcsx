@@ -8,7 +8,6 @@
 class simple_ringbuf
 {
 public:
-
 	simple_ringbuf(u64 size = 0);
 	virtual ~simple_ringbuf();
 
@@ -34,11 +33,10 @@ public:
 	void reader_flush(u64 cnt = umax);
 
 private:
-
 	struct ctr_state
 	{
 		alignas(sizeof(u64) * 2)
-		u64 read_ptr = 0;
+			u64 read_ptr = 0;
 		u64 write_ptr = 0;
 
 		auto operator<=>(const ctr_state& other) const = default;

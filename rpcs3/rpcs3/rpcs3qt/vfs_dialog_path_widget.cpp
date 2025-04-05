@@ -55,11 +55,11 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 	setLayout(vbox);
 
 	connect(m_dir_list, &QListWidget::currentRowChanged, this, [this, button_remove_dir](int row)
-	{
-		QListWidgetItem* item = m_dir_list->item(row);
-		m_selected_config_label->setText((item && !item->text().isEmpty()) ? item->text() : EmptyPath);
-		button_remove_dir->setEnabled(item && row > 0);
-	});
+		{
+			QListWidgetItem* item = m_dir_list->item(row);
+			m_selected_config_label->setText((item && !item->text().isEmpty()) ? item->text() : EmptyPath);
+			button_remove_dir->setEnabled(item && row > 0);
+		});
 }
 
 void vfs_dialog_path_widget::reset() const

@@ -3,28 +3,26 @@
 
 #include "cellSpudll.h"
 
-
-
 LOG_CHANNEL(cellSpudll);
 
-template<>
+template <>
 void fmt_class_string<CellSpudllError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SPUDLL_ERROR_INVAL);
-			STR_CASE(CELL_SPUDLL_ERROR_STAT);
-			STR_CASE(CELL_SPUDLL_ERROR_ALIGN);
-			STR_CASE(CELL_SPUDLL_ERROR_NULL_POINTER);
-			STR_CASE(CELL_SPUDLL_ERROR_SRCH);
-			STR_CASE(CELL_SPUDLL_ERROR_UNDEF);
-			STR_CASE(CELL_SPUDLL_ERROR_FATAL);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SPUDLL_ERROR_INVAL);
+				STR_CASE(CELL_SPUDLL_ERROR_STAT);
+				STR_CASE(CELL_SPUDLL_ERROR_ALIGN);
+				STR_CASE(CELL_SPUDLL_ERROR_NULL_POINTER);
+				STR_CASE(CELL_SPUDLL_ERROR_SRCH);
+				STR_CASE(CELL_SPUDLL_ERROR_UNDEF);
+				STR_CASE(CELL_SPUDLL_ERROR_FATAL);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellSpudllGetImageSize(vm::ptr<u32> psize, vm::cptr<void> so_elf, vm::cptr<CellSpudllHandleConfig> config)
@@ -64,7 +62,7 @@ error_code cellSpudllHandleConfigSetDefaultValues(vm::ptr<CellSpudllHandleConfig
 }
 
 DECLARE(ppu_module_manager::cellSpudll)("cellSpudll", []()
-{
-	REG_FUNC(cellSpudll, cellSpudllGetImageSize);
-	REG_FUNC(cellSpudll, cellSpudllHandleConfigSetDefaultValues).flag(MFF_PERFECT);
-});
+	{
+		REG_FUNC(cellSpudll, cellSpudllGetImageSize);
+		REG_FUNC(cellSpudll, cellSpudllHandleConfigSetDefaultValues).flag(MFF_PERFECT);
+	});

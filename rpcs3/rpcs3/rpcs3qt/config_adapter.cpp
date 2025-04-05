@@ -68,4 +68,4 @@ namespace cfg_adapter
 		const cfg_location& loc = ::at32(settings_location, type);
 		return ::at32(loc, loc.size() - 1);
 	}
-}
+} // namespace cfg_adapter

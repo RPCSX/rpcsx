@@ -14,20 +14,12 @@
 LOG_CHANNEL(sys_cond);
 
 lv2_cond::lv2_cond(utils::serial& ar) noexcept
-	: key(ar)
-	, name(ar)
-	, mtx_id(ar)
-	, mutex(idm::check_unlocked<lv2_obj, lv2_mutex>(mtx_id))
-	, _mutex(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)) // May be nullptr
+	: key(ar), name(ar), mtx_id(ar), mutex(idm::check_unlocked<lv2_obj, lv2_mutex>(mtx_id)), _mutex(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)) // May be nullptr
 {
 }
 
 lv2_cond::lv2_cond(u64 key, u64 name, u32 mtx_id, shared_ptr<lv2_obj> mutex0) noexcept
-	: key(key)
-	, name(name)
-	, mtx_id(mtx_id)
-	, mutex(static_cast<lv2_mutex*>(mutex0.get()))
-	, _mutex(mutex0)
+	: key(key), name(name), mtx_id(mtx_id), mutex(static_cast<lv2_mutex*>(mutex0.get())), _mutex(mutex0)
 {
 }
 
@@ -55,15 +47,15 @@ CellError lv2_cond::on_id_create()
 	ensure(!!Emu.DeserialManager());
 
 	Emu.PostponeInitCode([this]()
-	{
-		if (!mutex)
 		{
-			_mutex = static_cast<shared_ptr<lv2_obj>>(ensure(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)));
-		}
+			if (!mutex)
+			{
+				_mutex = static_cast<shared_ptr<lv2_obj>>(ensure(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)));
+			}
 
-		// Defer function
-		ensure(CellError{} == do_it(this));
-	});
+			// Defer function
+			ensure(CellError{} == do_it(this));
+		});
 
 	return {};
 }
@@ -101,13 +93,13 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 	}
 
 	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, ipc_key, _attr.flags, [&]
-	{
-		return make_single<lv2_cond>(
-			ipc_key,
-			_attr.name_u64,
-			mutex_id,
-			std::move(mutex));
-	}))
+			{
+				return make_single<lv2_cond>(
+					ipc_key,
+					_attr.name_u64,
+					mutex_id,
+					std::move(mutex));
+			}))
 	{
 		return error;
 	}
@@ -124,18 +116,18 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 	sys_cond.trace("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> CellError
-	{
-		std::lock_guard lock(cond.mutex->mutex);
-
-		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
-			return CELL_EBUSY;
-		}
+			std::lock_guard lock(cond.mutex->mutex);
 
-		cond.mutex->cond_count--;
-		lv2_obj::on_id_destroy(cond, cond.key);
-		return {};
-	});
+			if (atomic_storage<ppu_thread*>::load(cond.sq))
+			{
+				return CELL_EBUSY;
+			}
+
+			cond.mutex->cond_count--;
+			lv2_obj::on_id_destroy(cond, cond.key);
+			return {};
+		});
 
 	if (!cond)
 	{
@@ -174,44 +166,44 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 		ppu.state += cpu_flag::wait;
 
 		const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&, notify = lv2_obj::notify_all_t()](lv2_cond& cond)
-		{
-			if (atomic_storage<ppu_thread*>::load(cond.sq))
 			{
-				std::lock_guard lock(cond.mutex->mutex);
-
-				if (ppu.state & cpu_flag::suspend)
+				if (atomic_storage<ppu_thread*>::load(cond.sq))
 				{
-					// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
-					finished = false;
-					return;
-				}
+					std::lock_guard lock(cond.mutex->mutex);
 
-				if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
-				{
-					if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+					if (ppu.state & cpu_flag::suspend)
 					{
-						ppu.state += cpu_flag::again;
+						// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
+						finished = false;
 						return;
 					}
 
-					// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
-
-					if (cond.mutex->try_own(*cpu))
+					if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 					{
-						cond.awake(cpu);
+						if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+						{
+							ppu.state += cpu_flag::again;
+							return;
+						}
+
+						// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
+
+						if (cond.mutex->try_own(*cpu))
+						{
+							cond.awake(cpu);
+						}
 					}
 				}
-			}
-			else
-			{
-				cond.mutex->mutex.lock_unlock();
-
-				if (ppu.state & cpu_flag::suspend)
+				else
 				{
-					finished = false;
+					cond.mutex->mutex.lock_unlock();
+
+					if (ppu.state & cpu_flag::suspend)
+					{
+						finished = false;
+					}
 				}
-			}
-		});
+			});
 
 		if (!finished)
 		{
@@ -246,54 +238,54 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 		ppu.state += cpu_flag::wait;
 
 		const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&, notify = lv2_obj::notify_all_t()](lv2_cond& cond)
-		{
-			if (atomic_storage<ppu_thread*>::load(cond.sq))
 			{
-				std::lock_guard lock(cond.mutex->mutex);
-
-				if (ppu.state & cpu_flag::suspend)
+				if (atomic_storage<ppu_thread*>::load(cond.sq))
 				{
-					// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
-					finished = false;
-					return;
-				}
+					std::lock_guard lock(cond.mutex->mutex);
 
-				for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
-				{
-					if (cpu->state & cpu_flag::again)
+					if (ppu.state & cpu_flag::suspend)
 					{
-						ppu.state += cpu_flag::again;
+						// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
+						finished = false;
 						return;
 					}
-				}
 
-				cpu_thread* result = nullptr;
-				auto sq = cond.sq;
-				atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
-
-				while (const auto cpu = cond.schedule<ppu_thread>(sq, SYS_SYNC_PRIORITY))
-				{
-					if (cond.mutex->try_own(*cpu))
+					for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
 					{
-						ensure(!std::exchange(result, cpu));
+						if (cpu->state & cpu_flag::again)
+						{
+							ppu.state += cpu_flag::again;
+							return;
+						}
+					}
+
+					cpu_thread* result = nullptr;
+					auto sq = cond.sq;
+					atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
+
+					while (const auto cpu = cond.schedule<ppu_thread>(sq, SYS_SYNC_PRIORITY))
+					{
+						if (cond.mutex->try_own(*cpu))
+						{
+							ensure(!std::exchange(result, cpu));
+						}
+					}
+
+					if (result)
+					{
+						cond.awake(result);
 					}
 				}
-
-				if (result)
+				else
 				{
-					cond.awake(result);
-				}
-			}
-			else
-			{
-				cond.mutex->mutex.lock_unlock();
+					cond.mutex->mutex.lock_unlock();
 
-				if (ppu.state & cpu_flag::suspend)
-				{
-					finished = false;
+					if (ppu.state & cpu_flag::suspend)
+					{
+						finished = false;
+					}
 				}
-			}
-		});
+			});
 
 		if (!finished)
 		{
@@ -328,57 +320,57 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 		ppu.state += cpu_flag::wait;
 
 		const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&, notify = lv2_obj::notify_all_t()](lv2_cond& cond)
-		{
-			if (!idm::check_unlocked<named_thread<ppu_thread>>(thread_id))
 			{
-				return -1;
-			}
-
-			if (atomic_storage<ppu_thread*>::load(cond.sq))
-			{
-				std::lock_guard lock(cond.mutex->mutex);
-
-				if (ppu.state & cpu_flag::suspend)
+				if (!idm::check_unlocked<named_thread<ppu_thread>>(thread_id))
 				{
-					// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
-					finished = false;
-					return 0;
+					return -1;
 				}
 
-				for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
+				if (atomic_storage<ppu_thread*>::load(cond.sq))
 				{
-					if (cpu->id == thread_id)
+					std::lock_guard lock(cond.mutex->mutex);
+
+					if (ppu.state & cpu_flag::suspend)
 					{
-						if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+						// Test if another signal caused the current thread to be suspended, in which case it needs to wait until the thread wakes up (otherwise the signal may cause unexpected results)
+						finished = false;
+						return 0;
+					}
+
+					for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
+					{
+						if (cpu->id == thread_id)
 						{
-							ppu.state += cpu_flag::again;
-							return 0;
+							if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+							{
+								ppu.state += cpu_flag::again;
+								return 0;
+							}
+
+							ensure(cond.unqueue(cond.sq, cpu));
+
+							if (cond.mutex->try_own(*cpu))
+							{
+								cond.awake(cpu);
+							}
+
+							return 1;
 						}
-
-						ensure(cond.unqueue(cond.sq, cpu));
-
-						if (cond.mutex->try_own(*cpu))
-						{
-							cond.awake(cpu);
-						}
-
-						return 1;
 					}
 				}
-			}
-			else
-			{
-				cond.mutex->mutex.lock_unlock();
-
-				if (ppu.state & cpu_flag::suspend)
+				else
 				{
-					finished = false;
-					return 0;
-				}
-			}
+					cond.mutex->mutex.lock_unlock();
 
-			return 0;
-		});
+					if (ppu.state & cpu_flag::suspend)
+					{
+						finished = false;
+						return 0;
+					}
+				}
+
+				return 0;
+			});
 
 		if (!finished)
 		{
@@ -411,59 +403,59 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	auto& sstate = *ppu.optional_savestate_state;
 
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&, notify = lv2_obj::notify_all_t()](lv2_cond& cond) -> s64
-	{
-		if (!ppu.loaded_from_savestate && atomic_storage<u32>::load(cond.mutex->control.raw().owner) != ppu.id)
 		{
-			return -1;
-		}
-
-		lv2_obj::prepare_for_sleep(ppu);
-
-		std::lock_guard lock(cond.mutex->mutex);
-
-		const u64 syscall_state = sstate.try_read<u64>().second;
-		sstate.clear();
-
-		if (ppu.loaded_from_savestate)
-		{
-			if (syscall_state & 1)
+			if (!ppu.loaded_from_savestate && atomic_storage<u32>::load(cond.mutex->control.raw().owner) != ppu.id)
 			{
-				// Mutex sleep
-				ensure(!cond.mutex->try_own(ppu));
-			}
-			else
-			{
-				lv2_obj::emplace(cond.sq, &ppu);
+				return -1;
 			}
 
+			lv2_obj::prepare_for_sleep(ppu);
+
+			std::lock_guard lock(cond.mutex->mutex);
+
+			const u64 syscall_state = sstate.try_read<u64>().second;
+			sstate.clear();
+
+			if (ppu.loaded_from_savestate)
+			{
+				if (syscall_state & 1)
+				{
+					// Mutex sleep
+					ensure(!cond.mutex->try_own(ppu));
+				}
+				else
+				{
+					lv2_obj::emplace(cond.sq, &ppu);
+				}
+
+				cond.sleep(ppu, timeout);
+				return static_cast<u32>(syscall_state >> 32);
+			}
+
+			// Register waiter
+			lv2_obj::emplace(cond.sq, &ppu);
+
+			// Unlock the mutex
+			const u32 count = cond.mutex->lock_count.exchange(0);
+
+			if (const auto cpu = cond.mutex->reown<ppu_thread>())
+			{
+				if (cpu->state & cpu_flag::again)
+				{
+					ensure(cond.unqueue(cond.sq, &ppu));
+					ppu.state += cpu_flag::again;
+					return 0;
+				}
+
+				cond.mutex->append(cpu);
+			}
+
+			// Sleep current thread and schedule mutex waiter
 			cond.sleep(ppu, timeout);
-			return static_cast<u32>(syscall_state >> 32);
-		}
 
-		// Register waiter
-		lv2_obj::emplace(cond.sq, &ppu);
-
-		// Unlock the mutex
-		const u32 count = cond.mutex->lock_count.exchange(0);
-
-		if (const auto cpu = cond.mutex->reown<ppu_thread>())
-		{
-			if (cpu->state & cpu_flag::again)
-			{
-				ensure(cond.unqueue(cond.sq, &ppu));
-				ppu.state += cpu_flag::again;
-				return 0;
-			}
-
-			cond.mutex->append(cpu);
-		}
-
-		// Sleep current thread and schedule mutex waiter
-		cond.sleep(ppu, timeout);
-
-		// Save the recursive value
-		return count;
-	});
+			// Save the recursive value
+			return count;
+		});
 
 	if (!cond)
 	{
@@ -530,7 +522,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		}
 
 		if (ppu.state & cpu_flag::signal)
- 		{
+		{
 			continue;
 		}
 

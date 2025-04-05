@@ -81,41 +81,41 @@ void screenshot_manager_dialog::reload()
 	m_abort_parsing = true;
 	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 
-	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
+	const std::string screenshot_path_qt = fs::get_config_dir() + "screenshots/";
 	const std::string screenshot_path_cell = rpcs3::utils::get_hdd0_dir() + "/photo/";
 
 	m_flow_widget->clear();
 	m_abort_parsing = false;
 	m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this, screenshot_path_qt, screenshot_path_cell](int index)
-	{
-		if (index != 0)
 		{
-			return;
-		}
-
-		const QStringList filter{ QStringLiteral("*.png") };
-
-		for (const std::string& path : { screenshot_path_qt, screenshot_path_cell })
-		{
-			if (m_abort_parsing)
+			if (index != 0)
 			{
 				return;
 			}
 
-			if (path.empty())
-			{
-				gui_log.error("Screenshot manager: Trying to load screenshots from empty path!");
-				continue;
-			}
+			const QStringList filter{QStringLiteral("*.png")};
 
-			QDirIterator dir_iter(QString::fromStdString(path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-
-			while (dir_iter.hasNext() && !m_abort_parsing)
+			for (const std::string& path : {screenshot_path_qt, screenshot_path_cell})
 			{
-				Q_EMIT signal_entry_parsed(dir_iter.next());
+				if (m_abort_parsing)
+				{
+					return;
+				}
+
+				if (path.empty())
+				{
+					gui_log.error("Screenshot manager: Trying to load screenshots from empty path!");
+					continue;
+				}
+
+				QDirIterator dir_iter(QString::fromStdString(path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
+				while (dir_iter.hasNext() && !m_abort_parsing)
+				{
+					Q_EMIT signal_entry_parsed(dir_iter.next());
+				}
 			}
-		}
-	}));
+		}));
 }
 
 void screenshot_manager_dialog::showEvent(QShowEvent* event)

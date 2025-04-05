@@ -12,37 +12,37 @@ enum lv2_mem_container_id : u32
 
 enum : u64
 {
-	SYS_MEMORY_ACCESS_RIGHT_NONE    = 0x00000000000000F0ULL,
-	SYS_MEMORY_ACCESS_RIGHT_ANY     = 0x000000000000000FULL,
+	SYS_MEMORY_ACCESS_RIGHT_NONE = 0x00000000000000F0ULL,
+	SYS_MEMORY_ACCESS_RIGHT_ANY = 0x000000000000000FULL,
 	SYS_MEMORY_ACCESS_RIGHT_PPU_THR = 0x0000000000000008ULL,
 	SYS_MEMORY_ACCESS_RIGHT_HANDLER = 0x0000000000000004ULL,
 	SYS_MEMORY_ACCESS_RIGHT_SPU_THR = 0x0000000000000002ULL,
 	SYS_MEMORY_ACCESS_RIGHT_RAW_SPU = 0x0000000000000001ULL,
 
-	SYS_MEMORY_ATTR_READ_ONLY       = 0x0000000000080000ULL,
-	SYS_MEMORY_ATTR_READ_WRITE      = 0x0000000000040000ULL,
+	SYS_MEMORY_ATTR_READ_ONLY = 0x0000000000080000ULL,
+	SYS_MEMORY_ATTR_READ_WRITE = 0x0000000000040000ULL,
 };
 
 enum : u64
 {
-	SYS_MEMORY_PAGE_SIZE_4K   = 0x100ull,
-	SYS_MEMORY_PAGE_SIZE_64K  = 0x200ull,
-	SYS_MEMORY_PAGE_SIZE_1M   = 0x400ull,
+	SYS_MEMORY_PAGE_SIZE_4K = 0x100ull,
+	SYS_MEMORY_PAGE_SIZE_64K = 0x200ull,
+	SYS_MEMORY_PAGE_SIZE_1M = 0x400ull,
 	SYS_MEMORY_PAGE_SIZE_MASK = 0xf00ull,
 };
 
 enum : u64
 {
-	SYS_MEMORY_GRANULARITY_64K  = 0x0000000000000200,
-	SYS_MEMORY_GRANULARITY_1M   = 0x0000000000000400,
+	SYS_MEMORY_GRANULARITY_64K = 0x0000000000000200,
+	SYS_MEMORY_GRANULARITY_1M = 0x0000000000000400,
 	SYS_MEMORY_GRANULARITY_MASK = 0x0000000000000f00,
 };
 
 enum : u64
 {
 	SYS_MEMORY_PROT_READ_WRITE = 0x0000000000040000,
-	SYS_MEMORY_PROT_READ_ONLY  = 0x0000000000080000,
-	SYS_MEMORY_PROT_MASK       = 0x00000000000f0000,
+	SYS_MEMORY_PROT_READ_ONLY = 0x0000000000080000,
+	SYS_MEMORY_PROT_MASK = 0x00000000000f0000,
 };
 
 struct sys_memory_info_t
@@ -50,7 +50,6 @@ struct sys_memory_info_t
 	be_t<u32> total_user_memory;
 	be_t<u32> available_user_memory;
 };
-
 
 struct sys_page_attr_t
 {
@@ -66,9 +65,9 @@ struct lv2_memory_container
 	static const u32 id_step = 0x1;
 	static const u32 id_count = 16;
 
-	const u32 size; // Amount of "physical" memory in this container
+	const u32 size;                // Amount of "physical" memory in this container
 	const lv2_mem_container_id id; // ID of the container in if placed at IDM, otherwise SYS_MEMORY_CONTAINER_ID_INVALID
-	atomic_t<u32> used{}; // Amount of "physical" memory currently used
+	atomic_t<u32> used{};          // Amount of "physical" memory currently used
 
 	SAVESTATE_INIT_POS(1);
 
@@ -83,15 +82,15 @@ struct lv2_memory_container
 	u32 take(u64 amount)
 	{
 		auto [_, result] = used.fetch_op([&](u32& value) -> u32
-		{
-			if (size - value >= amount)
 			{
-				value += static_cast<u32>(amount);
-				return static_cast<u32>(amount);
-			}
+				if (size - value >= amount)
+				{
+					value += static_cast<u32>(amount);
+					return static_cast<u32>(amount);
+				}
 
-			return 0;
-		});
+				return 0;
+			});
 
 		return result;
 	}
@@ -99,15 +98,15 @@ struct lv2_memory_container
 	u32 free(u64 amount)
 	{
 		auto [_, result] = used.fetch_op([&](u32& value) -> u32
-		{
-			if (value >= amount)
 			{
-				value -= static_cast<u32>(amount);
-				return static_cast<u32>(amount);
-			}
+				if (value >= amount)
+				{
+					value -= static_cast<u32>(amount);
+					return static_cast<u32>(amount);
+				}
 
-			return 0;
-		});
+				return 0;
+			});
 
 		// Sanity check
 		ensure(result == amount);

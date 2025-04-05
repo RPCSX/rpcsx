@@ -17,56 +17,56 @@ template <>
 void fmt_class_string<SceNpCommerce2Error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](SceNpCommerce2Error value)
-	{
-		switch (value)
 		{
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_UNSUPPORTED_VERSION);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_CTX_MAX);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_INDEX);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_SKUID);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_SKU_NUM);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_MEMORY_CONTAINER);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_MEMORY_CONTAINER);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_CTXID_NOT_AVAILABLE);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_REQ_NOT_FOUND);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_REQID_NOT_AVAILABLE);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_ABORTED);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_COULD_NOT_RECV_WHOLE_RESPONSE_DATA);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_RESULT_DATA);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_UNKNOWN);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_SERVER_MAINTENANCE);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_SERVER_UNKNOWN);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUF_SIZE);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_REQ_MAX);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_TARGET_TYPE);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_TARGET_ID);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_SIZE);
-		STR_CASE(SCE_NP_COMMERCE2_ERROR_DATA_NOT_FOUND);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_BAD_REQUEST);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_UNKNOWN_ERROR);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_SESSION_EXPIRED);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_ACCESS_PERMISSION_DENIED);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_NO_SUCH_CATEGORY);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_NO_SUCH_PRODUCT);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_NOT_ELIGIBILITY);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_INVALID_SKU);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_ACCOUNT_SUSPENDED1);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_ACCOUNT_SUSPENDED2);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_OVER_SPENDING_LIMIT);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_INVALID_VOUCHER);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_VOUCHER_ALREADY_CONSUMED);
-		STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_EXCEEDS_AGE_LIMIT_IN_BROWSING);
-		STR_CASE(SCE_NP_COMMERCE2_SYSTEM_UTIL_ERROR_INVALID_VOUCHER);
-		}
+			switch (value)
+			{
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_UNSUPPORTED_VERSION);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_CTX_MAX);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_INDEX);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_SKUID);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_SKU_NUM);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_MEMORY_CONTAINER);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_MEMORY_CONTAINER);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_CTXID_NOT_AVAILABLE);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_REQ_NOT_FOUND);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_REQID_NOT_AVAILABLE);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_ABORTED);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_RESPONSE_BUF_TOO_SMALL);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_COULD_NOT_RECV_WHOLE_RESPONSE_DATA);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_RESULT_DATA);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_UNKNOWN);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_SERVER_MAINTENANCE);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_SERVER_UNKNOWN);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INSUFFICIENT_BUF_SIZE);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_REQ_MAX);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_TARGET_TYPE);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_TARGET_ID);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_INVALID_SIZE);
+				STR_CASE(SCE_NP_COMMERCE2_ERROR_DATA_NOT_FOUND);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_BAD_REQUEST);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_UNKNOWN_ERROR);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_SESSION_EXPIRED);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_ACCESS_PERMISSION_DENIED);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_NO_SUCH_CATEGORY);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_NO_SUCH_PRODUCT);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_NOT_ELIGIBILITY);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_INVALID_SKU);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_ACCOUNT_SUSPENDED1);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_ACCOUNT_SUSPENDED2);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_OVER_SPENDING_LIMIT);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_INVALID_VOUCHER);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_VOUCHER_ALREADY_CONSUMED);
+				STR_CASE(SCE_NP_COMMERCE2_SERVER_ERROR_EXCEEDS_AGE_LIMIT_IN_BROWSING);
+				STR_CASE(SCE_NP_COMMERCE2_SYSTEM_UTIL_ERROR_INVALID_VOUCHER);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 void initialize_common_data(SceNpCommerce2CommonData* common_data, vm::ptr<void> data, u32 internal_data_addr, u32 internal_data_size)
@@ -221,10 +221,10 @@ error_code sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, 
 	if (ctx->context_callback)
 	{
 		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
-		{
-			context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_EMPTY_STORE_CHECK_DONE, 0, context_callback_param);
-			return 0;
-		});
+			{
+				context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_EMPTY_STORE_CHECK_DONE, 0, context_callback_param);
+				return 0;
+			});
 	}
 
 	return CELL_OK;
@@ -277,10 +277,10 @@ error_code sceNpCommerce2CreateSessionStart(u32 ctx_id)
 	if (ctx->context_callback)
 	{
 		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
-		{
-			context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_CREATE_SESSION_DONE, 0, context_callback_param);
-			return 0;
-		});
+			{
+				context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_CREATE_SESSION_DONE, 0, context_callback_param);
+				return 0;
+			});
 	}
 
 	return CELL_OK;
@@ -294,7 +294,7 @@ error_code sceNpCommerce2CreateSessionAbort(u32 ctx_id)
 
 	if (!nph.is_NP_Com2_init)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	
+
 	const auto ctx = get_commerce2_context(ctx_id);
 	if (!ctx)
 		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND;
@@ -387,7 +387,7 @@ error_code sceNpCommerce2GetCategoryContentsStart(u32 req_id, vm::cptr<char> cat
 
 error_code get_result(u32 /* req_id */, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
 {
-	if (!buf || !buf_size || ! fill_size)
+	if (!buf || !buf_size || !fill_size)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
 	// TODO
@@ -1068,58 +1068,58 @@ error_code sceNpCommerce2DoServiceListFinishAsync(u32 ctx_id)
 }
 
 DECLARE(ppu_module_manager::sceNpCommerce2)("sceNpCommerce2", []()
-{
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2ExecuteStoreBrowse);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetStoreBrowseUserdata);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2Init);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2Term);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateCtx);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyCtx);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckStart);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckAbort);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckFinish);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionStart);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionAbort);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionFinish);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryContentsCreateReq);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryContentsStart);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryContentsGetResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2InitGetCategoryContentsResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryInfoFromContentInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameProductInfoFromContentInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyGetCategoryContentsResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoCreateReq);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoStart);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoGetResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2InitGetProductInfoResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameProductInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyGetProductInfoResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoListCreateReq);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoListStart);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoListGetResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2InitGetProductInfoListResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyGetProductInfoListResult);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentRatingInfoFromGameProductInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentRatingInfoFromCategoryInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentRatingDescriptor);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameSkuInfoFromGameProductInfo);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetPrice);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoCheckoutStartAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoCheckoutFinishAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductBrowseStartAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductBrowseFinishAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoDlListStartAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoDlListFinishAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductCodeStartAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductCodeFinishAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetBGDLAvailability);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2SetBGDLAvailability);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2AbortReq);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyReq);
+	{
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2ExecuteStoreBrowse);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetStoreBrowseUserdata);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2Init);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2Term);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateCtx);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyCtx);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckStart);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckAbort);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2EmptyStoreCheckFinish);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionStart);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionAbort);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2CreateSessionFinish);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryContentsCreateReq);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryContentsStart);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryContentsGetResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2InitGetCategoryContentsResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetCategoryInfoFromContentInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameProductInfoFromContentInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyGetCategoryContentsResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoCreateReq);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoStart);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoGetResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2InitGetProductInfoResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameProductInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyGetProductInfoResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoListCreateReq);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoListStart);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetProductInfoListGetResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2InitGetProductInfoListResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyGetProductInfoListResult);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentRatingInfoFromGameProductInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentRatingInfoFromCategoryInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetContentRatingDescriptor);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetGameSkuInfoFromGameProductInfo);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetPrice);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoCheckoutStartAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoCheckoutFinishAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductBrowseStartAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductBrowseFinishAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoDlListStartAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoDlListFinishAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductCodeStartAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoProductCodeFinishAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2GetBGDLAvailability);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2SetBGDLAvailability);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2AbortReq);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DestroyReq);
 
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoServiceListStartAsync);
-	REG_FUNC(sceNpCommerce2, sceNpCommerce2DoServiceListFinishAsync);
-});
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoServiceListStartAsync);
+		REG_FUNC(sceNpCommerce2, sceNpCommerce2DoServiceListFinishAsync);
+	});

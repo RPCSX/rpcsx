@@ -38,5 +38,5 @@ namespace rsx
 
 			compiled_resource& get_compiled() override;
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

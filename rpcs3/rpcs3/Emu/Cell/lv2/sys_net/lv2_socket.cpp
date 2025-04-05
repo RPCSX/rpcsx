@@ -6,8 +6,8 @@ LOG_CHANNEL(sys_net);
 
 lv2_socket::lv2_socket(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 {
-	this->family   = family;
-	this->type     = type;
+	this->family = family;
+	this->type = type;
 	this->protocol = protocol;
 }
 

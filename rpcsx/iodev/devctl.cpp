@@ -6,7 +6,7 @@
 struct DevCtlFile : orbis::File {};
 
 static orbis::ErrorCode devctl_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                     void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled devctl ioctl", request);
   return {};

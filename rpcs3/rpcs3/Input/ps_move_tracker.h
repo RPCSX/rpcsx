@@ -3,9 +3,9 @@
 #include "Emu/Cell/Modules/cellGem.h"
 
 #ifdef HAVE_OPENCV
-	constexpr bool g_ps_move_tracking_supported = true;
+constexpr bool g_ps_move_tracking_supported = true;
 #else
-	constexpr bool g_ps_move_tracking_supported = false;
+constexpr bool g_ps_move_tracking_supported = false;
 #endif
 
 struct ps_move_info
@@ -33,26 +33,65 @@ public:
 	void convert_image(s32 output_format);
 	void process_hues();
 	void process_contours(ps_move_info& info, u32 index);
-	
+
 	void set_active(u32 index, bool active);
 	void set_hue(u32 index, u16 hue);
 	void set_hue_threshold(u32 index, u16 threshold);
 	void set_saturation_threshold(u32 index, u16 threshold);
 
-	void set_min_radius(f32 radius) { m_min_radius = radius; }
-	void set_max_radius(f32 radius) { m_max_radius = radius; }
-	void set_filter_small_contours(bool enabled = false) { m_filter_small_contours = enabled; }
-	void set_show_all_contours(bool enabled = false) { m_show_all_contours = enabled; }
-	void set_draw_contours(bool enabled = false) { m_draw_contours = enabled; }
-	void set_draw_overlays(bool enabled = false) { m_draw_overlays = enabled; }
+	void set_min_radius(f32 radius)
+	{
+		m_min_radius = radius;
+	}
+	void set_max_radius(f32 radius)
+	{
+		m_max_radius = radius;
+	}
+	void set_filter_small_contours(bool enabled = false)
+	{
+		m_filter_small_contours = enabled;
+	}
+	void set_show_all_contours(bool enabled = false)
+	{
+		m_show_all_contours = enabled;
+	}
+	void set_draw_contours(bool enabled = false)
+	{
+		m_draw_contours = enabled;
+	}
+	void set_draw_overlays(bool enabled = false)
+	{
+		m_draw_overlays = enabled;
+	}
 
-	const std::array<ps_move_info, CELL_GEM_MAX_NUM>& info() { return m_info; }
-	const std::array<u32, 360>& hues() { return m_hues; }
-	const std::vector<u8>& rgba() { return m_image_rgba; }
-	const std::vector<u8>& rgba_contours() { return m_image_rgba_contours; }
-	const std::vector<u8>& hsv() { return m_image_hsv; }
-	const std::vector<u8>& gray() { return m_image_gray; }
-	const std::vector<u8>& binary(u32 index) { return ::at32(m_image_binary, index); }
+	const std::array<ps_move_info, CELL_GEM_MAX_NUM>& info()
+	{
+		return m_info;
+	}
+	const std::array<u32, 360>& hues()
+	{
+		return m_hues;
+	}
+	const std::vector<u8>& rgba()
+	{
+		return m_image_rgba;
+	}
+	const std::vector<u8>& rgba_contours()
+	{
+		return m_image_rgba_contours;
+	}
+	const std::vector<u8>& hsv()
+	{
+		return m_image_hsv;
+	}
+	const std::vector<u8>& gray()
+	{
+		return m_image_gray;
+	}
+	const std::vector<u8>& binary(u32 index)
+	{
+		return ::at32(m_image_binary, index);
+	}
 
 	static std::tuple<u8, u8, u8> hsv_to_rgb(u16 hue, f32 saturation, f32 value);
 	static std::tuple<s16, f32, f32> rgb_to_hsv(f32 r, f32 g, f32 b);

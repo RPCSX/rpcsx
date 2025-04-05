@@ -13,25 +13,25 @@ extern bool is_input_allowed();
 
 LOG_CHANNEL(cellMouse);
 
-template<>
+template <>
 void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_MOUSE_ERROR_FATAL);
-			STR_CASE(CELL_MOUSE_ERROR_INVALID_PARAMETER);
-			STR_CASE(CELL_MOUSE_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_MOUSE_ERROR_UNINITIALIZED);
-			STR_CASE(CELL_MOUSE_ERROR_RESOURCE_ALLOCATION_FAILED);
-			STR_CASE(CELL_MOUSE_ERROR_DATA_READ_FAILED);
-			STR_CASE(CELL_MOUSE_ERROR_NO_DEVICE);
-			STR_CASE(CELL_MOUSE_ERROR_SYS_SETTING_FAILED);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_MOUSE_ERROR_FATAL);
+				STR_CASE(CELL_MOUSE_ERROR_INVALID_PARAMETER);
+				STR_CASE(CELL_MOUSE_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_MOUSE_ERROR_UNINITIALIZED);
+				STR_CASE(CELL_MOUSE_ERROR_RESOURCE_ALLOCATION_FAILED);
+				STR_CASE(CELL_MOUSE_ERROR_DATA_READ_FAILED);
+				STR_CASE(CELL_MOUSE_ERROR_NO_DEVICE);
+				STR_CASE(CELL_MOUSE_ERROR_SYS_SETTING_FAILED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellMouseInit(ppu_thread& ppu, u32 max_connect)
@@ -135,9 +135,9 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 
 	for (u32 i = 0; i < CELL_MAX_MICE; i++)
 	{
-		info->vendor_id[i]  = current_info.vendor_id[i];
+		info->vendor_id[i] = current_info.vendor_id[i];
 		info->product_id[i] = current_info.product_id[i];
-		info->status[i]     = current_info.status[i];
+		info->status[i] = current_info.status[i];
 	}
 
 	return CELL_OK;

@@ -16,7 +16,7 @@
 #endif
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <Psapi.h>
 #include <process.h>
 #include <sysinfoapi.h>
@@ -56,34 +56,34 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #endif
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-# include <sys/sysctl.h>
-# include <unistd.h>
-# if defined(__DragonFly__) || defined(__FreeBSD__)
-#  include <sys/user.h>
-# endif
-# if defined(__OpenBSD__)
-#  include <sys/param.h>
-#  include <sys/proc.h>
-# endif
+#include <sys/sysctl.h>
+#include <unistd.h>
+#if defined(__DragonFly__) || defined(__FreeBSD__)
+#include <sys/user.h>
+#endif
+#if defined(__OpenBSD__)
+#include <sys/param.h>
+#include <sys/proc.h>
+#endif
 
-# if defined(__NetBSD__)
-#  undef KERN_PROC
-#  define KERN_PROC KERN_PROC2
-#  define kinfo_proc kinfo_proc2
-# endif
+#if defined(__NetBSD__)
+#undef KERN_PROC
+#define KERN_PROC KERN_PROC2
+#define kinfo_proc kinfo_proc2
+#endif
 
-# if defined(__APPLE__)
-#  define KP_FLAGS kp_proc.p_flag
-# elif defined(__DragonFly__)
-#  define KP_FLAGS kp_flags
-# elif defined(__FreeBSD__)
-#  define KP_FLAGS ki_flag
-# elif defined(__NetBSD__)
-#  define KP_FLAGS p_flag
-# elif defined(__OpenBSD__)
-#  define KP_FLAGS p_psflags
-#  define P_TRACED PS_TRACED
-# endif
+#if defined(__APPLE__)
+#define KP_FLAGS kp_proc.p_flag
+#elif defined(__DragonFly__)
+#define KP_FLAGS kp_flags
+#elif defined(__FreeBSD__)
+#define KP_FLAGS ki_flag
+#elif defined(__NetBSD__)
+#define KP_FLAGS p_flag
+#elif defined(__OpenBSD__)
+#define KP_FLAGS p_psflags
+#define P_TRACED PS_TRACED
+#endif
 #endif
 
 #include "util/vm.hpp"
@@ -104,27 +104,29 @@ thread_local u64 g_tls_fault_spu = 0;
 thread_local u64 g_tls_wait_time = 0;
 thread_local u64 g_tls_wait_fail = 0;
 thread_local bool g_tls_access_violation_recovered = false;
-extern thread_local std::string(*g_tls_log_prefix)();
+extern thread_local std::string (*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
-enum cpu_threads_emulation_info_dump_t : u32 {};
+enum cpu_threads_emulation_info_dump_t : u32
+{
+};
 
-template<>
+template <>
 void fmt_class_string<thread_class>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](thread_class value)
-	{
-		switch (value)
 		{
-		case thread_class::general: return "General";
-		case thread_class::ppu: return "PPU";
-		case thread_class::spu: return "SPU";
-		case thread_class::rsx: return "RSX";
-		}
-		return unknown;
-	});
+			switch (value)
+			{
+			case thread_class::general: return "General";
+			case thread_class::ppu: return "PPU";
+			case thread_class::spu: return "SPU";
+			case thread_class::rsx: return "RSX";
+			}
+			return unknown;
+		});
 }
 
 std::string dump_useful_thread_info()
@@ -148,10 +150,10 @@ bool IsDebuggerPresent()
 		KERN_PROC,
 		KERN_PROC_PID,
 		getpid(),
-# if defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__)
 		sizeof(struct kinfo_proc),
 		1,
-# endif
+#endif
 	};
 	u_int miblen = std::size(mib);
 	struct kinfo_proc info;
@@ -318,9 +320,9 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 
 	enum : u8
 	{
-		LOCK  = 0xf0,
+		LOCK = 0xf0,
 		REPNE = 0xf2,
-		REPE  = 0xf3,
+		REPE = 0xf3,
 	};
 
 	// check prefixes:
@@ -590,7 +592,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 	{
 		switch (get_modRM_reg(code, 0))
 		{
-		//case 0: out_op = X64OP_ADD; break; // TODO: strange info in instruction manual
+		// case 0: out_op = X64OP_ADD; break; // TODO: strange info in instruction manual
 		case 1: out_op = X64OP_OR; break;
 		case 2: out_op = X64OP_ADC; break;
 		case 3: out_op = X64OP_SBB; break;
@@ -758,7 +760,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 		const u8 opx = op1 == 0xc5 ? op2 : op3;
 
 		// Implied prefixes
-		rex |= op2 & 0x80 ? 0 : 0x4; // REX.R
+		rex |= op2 & 0x80 ? 0 : 0x4;                // REX.R
 		rex |= op1 == 0xc4 && op3 & 0x80 ? 0x8 : 0; // REX.W ???
 		oso = (opx & 0x3) == 0x1;
 		repe = (opx & 0x3) == 0x2;
@@ -773,50 +775,52 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 
 		s_tls_reg3 = x64_reg_t{vreg};
 
-		if (vopm == 0x1) switch (vop1) // Implied leading byte 0x0F
-		{
-		case 0x11:
-		case 0x29:
-		{
-			if (!repe && !repne) // VMOVAPS/VMOVAPD/VMOVUPS/VMOVUPD mem,reg
+		if (vopm == 0x1)
+			switch (vop1) // Implied leading byte 0x0F
 			{
-				out_op = X64OP_STORE;
-				out_reg = get_modRM_reg_xmm(code, rex);
-				out_size = vlen;
-				out_length += get_modRM_size(code);
-				return;
-			}
-			break;
-		}
-		case 0x7f:
-		{
-			if (repe || oso) // VMOVDQU/VMOVDQA mem,reg
+			case 0x11:
+			case 0x29:
 			{
-				out_op = X64OP_STORE;
-				out_reg = get_modRM_reg_xmm(code, rex);
-				out_size = vlen;
-				out_length += get_modRM_size(code);
-				return;
+				if (!repe && !repne) // VMOVAPS/VMOVAPD/VMOVUPS/VMOVUPD mem,reg
+				{
+					out_op = X64OP_STORE;
+					out_reg = get_modRM_reg_xmm(code, rex);
+					out_size = vlen;
+					out_length += get_modRM_size(code);
+					return;
+				}
+				break;
 			}
-			break;
-		}
-		}
+			case 0x7f:
+			{
+				if (repe || oso) // VMOVDQU/VMOVDQA mem,reg
+				{
+					out_op = X64OP_STORE;
+					out_reg = get_modRM_reg_xmm(code, rex);
+					out_size = vlen;
+					out_length += get_modRM_size(code);
+					return;
+				}
+				break;
+			}
+			}
 
-		if (vopm == 0x2) switch (vop1) // Implied leading bytes 0x0F 0x38
-		{
-		case 0xf7:
-		{
-			if (!repe && !repne && vlen == 16) // BEXTR r32,mem,r32
+		if (vopm == 0x2)
+			switch (vop1) // Implied leading bytes 0x0F 0x38
 			{
-				out_op = X64OP_BEXTR;
-				out_reg = get_modRM_reg_xmm(code, rex);
-				out_size = opx & 0x80 ? 8 : 4;
-				out_length += get_modRM_size(code);
-				return;
+			case 0xf7:
+			{
+				if (!repe && !repne && vlen == 16) // BEXTR r32,mem,r32
+				{
+					out_op = X64OP_BEXTR;
+					out_reg = get_modRM_reg_xmm(code, rex);
+					out_size = opx & 0x80 ? 8 : 4;
+					out_length += get_modRM_size(code);
+					return;
+				}
+				break;
 			}
-			break;
-		}
-		}
+			}
 
 		break;
 	}
@@ -900,10 +904,10 @@ typedef ucontext_t x64_context;
 #define XMMREG(context, reg) (reinterpret_cast<v128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0.__xmm_reg[reg]))
 #define EFLAGS(context) ((context)->uc_mcontext->__ss.__rflags)
 
-u64* darwin_x64reg(x64_context *context, int reg)
+u64* darwin_x64reg(x64_context* context, int reg)
 {
-	auto *state = &context->uc_mcontext->__ss;
-	switch(reg)
+	auto* state = &context->uc_mcontext->__ss;
+	switch (reg)
 	{
 	case 0: return &state->__rax;
 	case 1: return &state->__rcx;
@@ -932,16 +936,16 @@ u64* darwin_x64reg(x64_context *context, int reg)
 
 #define X64REG(context, reg) (freebsd_x64reg(context, reg))
 #ifdef __DragonFly__
-#  define XMMREG(context, reg) (reinterpret_cast<v128*>((reinterpret_cast<union savefpu*>(context)->uc_mcontext.mc_fpregs)->sv_xmm.sv_xmm[reg]))
+#define XMMREG(context, reg) (reinterpret_cast<v128*>((reinterpret_cast<union savefpu*>(context)->uc_mcontext.mc_fpregs)->sv_xmm.sv_xmm[reg]))
 #else
-#  define XMMREG(context, reg) (reinterpret_cast<v128*>((reinterpret_cast<struct savefpu*>(context)->uc_mcontext.mc_fpstate)->sv_xmm[reg]))
+#define XMMREG(context, reg) (reinterpret_cast<v128*>((reinterpret_cast<struct savefpu*>(context)->uc_mcontext.mc_fpstate)->sv_xmm[reg]))
 #endif
 #define EFLAGS(context) ((context)->uc_mcontext.mc_rflags)
 
-register_t* freebsd_x64reg(x64_context *context, int reg)
+register_t* freebsd_x64reg(x64_context* context, int reg)
 {
-	auto *state = &context->uc_mcontext;
-	switch(reg)
+	auto* state = &context->uc_mcontext;
+	switch (reg)
 	{
 	case 0: return &state->mc_rax;
 	case 1: return &state->mc_rcx;
@@ -972,10 +976,10 @@ register_t* freebsd_x64reg(x64_context *context, int reg)
 #define XMMREG(context, reg) (reinterpret_cast<v128*>((context)->sc_fpstate->fx_xmm[reg]))
 #define EFLAGS(context) ((context)->sc_rflags)
 
-long* openbsd_x64reg(x64_context *context, int reg)
+long* openbsd_x64reg(x64_context* context, int reg)
 {
-	auto *state = &context;
-	switch(reg)
+	auto* state = &context;
+	switch (reg)
 	{
 	case 0: return &state->sc_rax;
 	case 1: return &state->sc_rcx;
@@ -1003,10 +1007,9 @@ long* openbsd_x64reg(x64_context *context, int reg)
 #elif defined(__NetBSD__)
 
 static const decltype(_REG_RAX) reg_table[] =
-{
-	_REG_RAX, _REG_RCX, _REG_RDX, _REG_RBX, _REG_RSP, _REG_RBP, _REG_RSI, _REG_RDI,
-	_REG_R8, _REG_R9, _REG_R10, _REG_R11, _REG_R12, _REG_R13, _REG_R14, _REG_R15, _REG_RIP
-};
+	{
+		_REG_RAX, _REG_RCX, _REG_RDX, _REG_RBX, _REG_RSP, _REG_RBP, _REG_RSI, _REG_RDI,
+		_REG_R8, _REG_R9, _REG_R10, _REG_R11, _REG_R12, _REG_R13, _REG_R14, _REG_R15, _REG_RIP};
 
 #define X64REG(context, reg) (&(context)->uc_mcontext.__gregs[reg_table[reg]])
 #define XMM_sig(context, reg) (reinterpret_cast<v128*>(((struct fxsave64*)(context)->uc_mcontext.__fpregs)->fx_xmm[reg]))
@@ -1015,10 +1018,9 @@ static const decltype(_REG_RAX) reg_table[] =
 #else
 
 static const int reg_table[] =
-{
-	REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
-	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP
-};
+	{
+		REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
+		REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP};
 
 #define X64REG(context, reg) (&(context)->uc_mcontext.gregs[reg_table[reg]])
 #ifdef __sun
@@ -1374,138 +1376,140 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	}
 
 	// check if address is RawSPU MMIO register
-	do if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
-	{
-		auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+	do
+		if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
+		{
+			auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
-		if (!thread)
-		{
-			break;
-		}
-
-		if (!a_size || !d_size || !i_size)
-		{
-			sig_log.error("Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", +op, +reg, d_size, a_size, i_size);
-			report_opcode();
-			return false;
-		}
-
-		if (a_size != 4)
-		{
-			// Might be unimplemented, such as writing MFC proxy EAL+EAH using 64-bit store
-			break;
-		}
-
-		switch (op)
-		{
-		case X64OP_LOAD:
-		case X64OP_LOAD_BE:
-		case X64OP_LOAD_CMP:
-		case X64OP_LOAD_TEST:
-		{
-			u32 value;
-			if (is_writing || !thread->read_reg(addr, value))
+			if (!thread)
 			{
+				break;
+			}
+
+			if (!a_size || !d_size || !i_size)
+			{
+				sig_log.error("Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", +op, +reg, d_size, a_size, i_size);
+				report_opcode();
 				return false;
 			}
 
-			if (op != X64OP_LOAD_BE)
+			if (a_size != 4)
 			{
+				// Might be unimplemented, such as writing MFC proxy EAL+EAH using 64-bit store
+				break;
+			}
+
+			switch (op)
+			{
+			case X64OP_LOAD:
+			case X64OP_LOAD_BE:
+			case X64OP_LOAD_CMP:
+			case X64OP_LOAD_TEST:
+			{
+				u32 value;
+				if (is_writing || !thread->read_reg(addr, value))
+				{
+					return false;
+				}
+
+				if (op != X64OP_LOAD_BE)
+				{
+					value = stx::se_storage<u32>::swap(value);
+				}
+
+				if (op == X64OP_LOAD_CMP)
+				{
+					u64 rvalue;
+					if (!get_x64_reg_value(context, reg, d_size, i_size, rvalue) || !set_x64_cmp_flags(context, d_size, value, rvalue))
+					{
+						return false;
+					}
+
+					break;
+				}
+
+				if (op == X64OP_LOAD_TEST)
+				{
+					u64 rvalue;
+					if (!get_x64_reg_value(context, reg, d_size, i_size, rvalue) || !set_x64_cmp_flags(context, d_size, value & rvalue, 0))
+					{
+						return false;
+					}
+
+					break;
+				}
+
+				if (!put_x64_reg_value(context, reg, d_size, value))
+				{
+					return false;
+				}
+
+				break;
+			}
+			case X64OP_BEXTR:
+			{
+				u32 value;
+				if (is_writing || !thread->read_reg(addr, value))
+				{
+					return false;
+				}
+
 				value = stx::se_storage<u32>::swap(value);
-			}
 
-			if (op == X64OP_LOAD_CMP)
-			{
-				u64 rvalue;
-				if (!get_x64_reg_value(context, reg, d_size, i_size, rvalue) || !set_x64_cmp_flags(context, d_size, value, rvalue))
+				u64 ctrl;
+				if (!get_x64_reg_value(context, s_tls_reg3, d_size, i_size, ctrl))
+				{
+					return false;
+				}
+
+				u8 start = ctrl & 0xff;
+				u8 _len = (ctrl & 0xff00) >> 8;
+				if (_len > 32)
+					_len = 32;
+				if (start > 32)
+					start = 32;
+				value = (u64{value} >> start) & ~(u64{umax} << _len);
+
+				if (!put_x64_reg_value(context, reg, d_size, value) || !set_x64_cmp_flags(context, d_size, value, 0))
 				{
 					return false;
 				}
 
 				break;
 			}
-
-			if (op == X64OP_LOAD_TEST)
+			case X64OP_STORE:
+			case X64OP_STORE_BE:
 			{
-				u64 rvalue;
-				if (!get_x64_reg_value(context, reg, d_size, i_size, rvalue) || !set_x64_cmp_flags(context, d_size, value & rvalue, 0))
+				u64 reg_value;
+				if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value))
+				{
+					return false;
+				}
+
+				u32 val32 = static_cast<u32>(reg_value);
+				if (!thread->write_reg(addr, op == X64OP_STORE ? stx::se_storage<u32>::swap(val32) : val32))
 				{
 					return false;
 				}
 
 				break;
 			}
-
-			if (!put_x64_reg_value(context, reg, d_size, value))
+			case X64OP_MOVS: // possibly, TODO
+			case X64OP_STOS:
+			default:
 			{
+				sig_log.error("Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", +op, +reg, d_size, i_size);
+				report_opcode();
 				return false;
 			}
+			}
 
-			break;
+			// skip processed instruction
+			RIP(context) += i_size;
+			g_tls_fault_spu++;
+			return true;
 		}
-		case X64OP_BEXTR:
-		{
-			u32 value;
-			if (is_writing || !thread->read_reg(addr, value))
-			{
-				return false;
-			}
-
-			value = stx::se_storage<u32>::swap(value);
-
-			u64 ctrl;
-			if (!get_x64_reg_value(context, s_tls_reg3, d_size, i_size, ctrl))
-			{
-				return false;
-			}
-
-			u8 start = ctrl & 0xff;
-			u8 _len = (ctrl & 0xff00) >> 8;
-			if (_len > 32)
-				_len = 32;
-			if (start > 32)
-				start = 32;
-			value = (u64{value} >> start) & ~(u64{umax} << _len);
-
-			if (!put_x64_reg_value(context, reg, d_size, value) || !set_x64_cmp_flags(context, d_size, value, 0))
-			{
-				return false;
-			}
-
-			break;
-		}
-		case X64OP_STORE:
-		case X64OP_STORE_BE:
-		{
-			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value))
-			{
-				return false;
-			}
-
-			u32 val32 = static_cast<u32>(reg_value);
-			if (!thread->write_reg(addr, op == X64OP_STORE ? stx::se_storage<u32>::swap(val32) : val32))
-			{
-				return false;
-			}
-
-			break;
-		}
-		case X64OP_MOVS: // possibly, TODO
-		case X64OP_STOS:
-		default:
-		{
-			sig_log.error("Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", +op, +reg, d_size, i_size);
-			report_opcode();
-			return false;
-		}
-		}
-
-		// skip processed instruction
-		RIP(context) += i_size;
-		g_tls_fault_spu++;
-		return true;
-	} while (0);
+	while (0);
 #else
 	static_cast<void>(context);
 #endif /* ARCH_ */
@@ -1578,8 +1582,8 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			else if (auto spu = cpu->try_get<spu_thread>())
 			{
 				const u64 type = spu->get_type() == spu_type::threaded ?
-					SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD :
-					SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU;
+				                     SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD :
+				                     SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU;
 
 				data2 = (type << 32) | spu->lv2_id;
 			}
@@ -1601,7 +1605,6 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
 				}
 			}
-
 
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
@@ -1843,12 +1846,12 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 	case EXCEPTION_INT_DIVIDE_BY_ZERO:
 	case EXCEPTION_NONCONTINUABLE_EXCEPTION:
 	case EXCEPTION_PRIV_INSTRUCTION:
-	//case EXCEPTION_STACK_OVERFLOW:
-	{
-		sys_log.notice("\n%s", dump_useful_thread_info());
-		logs::listener::sync_all();
-		break;
-	}
+		// case EXCEPTION_STACK_OVERFLOW:
+		{
+			sys_log.notice("\n%s", dump_useful_thread_info());
+			logs::listener::sync_all();
+			break;
+		}
 	default:
 	{
 		break;
@@ -1866,7 +1869,8 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 	{
 		const auto cause =
 			pExp->ExceptionRecord->ExceptionInformation[0] == 8 ? "executing" :
-			pExp->ExceptionRecord->ExceptionInformation[0] == 1 ? "writing" : "reading";
+			pExp->ExceptionRecord->ExceptionInformation[0] == 1 ? "writing" :
+																  "reading";
 
 		fmt::append(msg, "Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
 
@@ -1916,7 +1920,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 		fmt::append(msg, "Function address: %p (base+0x%x).\n", func_addr, rtf->BeginAddress);
 
 		// Access UNWIND_INFO structure
-		//const auto uw = (u8*)(unwind_base + rtf->UnwindData);
+		// const auto uw = (u8*)(unwind_base + rtf->UnwindData);
 	}
 
 	for (HMODULE _module : modules)
@@ -2014,19 +2018,19 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 #else
 	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
 	const bool is_writing =
-		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
-		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
-		(insn & 0xbfdf0000) == 0x0d000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
-		(insn & 0xbfc00000) == 0x0d800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, <Xm>] (store pair of registers with register offset)
-		(insn & 0x3f400000) == 0x08000000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
-		(insn & 0x3bc00000) == 0x39000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
-		(insn & 0x3fc00000) == 0x3d800000 ||  // STR <Vd>, [<Xn>, <Xm>] (store SIMD/FP register with register offset)
-		(insn & 0x3bc00000) == 0x38000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
-		(insn & 0x3fe00000) == 0x3c800000 ||  // STUR <Vd>, [<Xn>, #<imm>] (store unprivileged register with immediate offset)
-		(insn & 0x3fe00000) == 0x3ca00000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
-		(insn & 0x3a400000) == 0x28000000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
-		(insn & 0xbf000000) == 0xad000000 ||  // STP <Vd1>, <Vd2>, [<Xn>, #<imm>] (store SIMD/FP 128-bit register pair with immediate offset)
-		(insn & 0xbf000000) == 0x6d000000;    // STP <Dd1>, <Dd2>, [<Xn>, #<imm>] (store SIMD/FP 64-bit register pair with immediate offset)
+		(insn & 0xbfff0000) == 0x0c000000 || // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
+		(insn & 0xbfe00000) == 0x0c800000 || // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
+		(insn & 0xbfdf0000) == 0x0d000000 || // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
+		(insn & 0xbfc00000) == 0x0d800000 || // STP <Wt1>, <Wt2>, [<Xn>, <Xm>] (store pair of registers with register offset)
+		(insn & 0x3f400000) == 0x08000000 || // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
+		(insn & 0x3bc00000) == 0x39000000 || // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
+		(insn & 0x3fc00000) == 0x3d800000 || // STR <Vd>, [<Xn>, <Xm>] (store SIMD/FP register with register offset)
+		(insn & 0x3bc00000) == 0x38000000 || // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
+		(insn & 0x3fe00000) == 0x3c800000 || // STUR <Vd>, [<Xn>, #<imm>] (store unprivileged register with immediate offset)
+		(insn & 0x3fe00000) == 0x3ca00000 || // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
+		(insn & 0x3a400000) == 0x28000000 || // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
+		(insn & 0xbf000000) == 0xad000000 || // STP <Vd1>, <Vd2>, [<Xn>, #<imm>] (store SIMD/FP 128-bit register pair with immediate offset)
+		(insn & 0xbf000000) == 0x6d000000;   // STP <Dd1>, <Dd2>, [<Xn>, #<imm>] (store SIMD/FP 64-bit register pair with immediate offset)
 #endif
 
 #else
@@ -2034,7 +2038,8 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 #endif
 
 	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
-	const auto cause = is_executing ? "executing" : is_writing ? "writing" : "reading";
+	const auto cause = is_executing ? "executing" : is_writing ? "writing" :
+	                                                             "reading";
 
 	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok && !is_executing)
 	{
@@ -2144,15 +2149,15 @@ const bool s_exception_handler_set = []() -> bool
 const bool s_terminate_handler_set = []() -> bool
 {
 	std::set_terminate([]()
-	{
-		if (IsDebuggerPresent())
 		{
-			logs::listener::sync_all();
-			utils::trap();
-		}
+			if (IsDebuggerPresent())
+			{
+				logs::listener::sync_all();
+				utils::trap();
+			}
 
-		report_fatal_error("RPCS3 has abnormally terminated.");
-	});
+			report_fatal_error("RPCS3 has abnormally terminated.");
+		});
 
 	return true;
 }();
@@ -2161,15 +2166,15 @@ thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 thread_local DECLARE(thread_ctrl::g_tls_error_callback) = nullptr;
 
-DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
+DECLARE(thread_ctrl::g_native_core_layout){native_core_arrangement::undefined};
 
 void thread_base::start()
 {
 	m_sync.atomic_op([&](u32& v)
-	{
-		v &= ~static_cast<u32>(thread_state::mask);
-		v |= static_cast<u32>(thread_state::created);
-	});
+		{
+			v &= ~static_cast<u32>(thread_state::mask);
+			v |= static_cast<u32>(thread_state::created);
+		});
 
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
@@ -2206,18 +2211,18 @@ void thread_base::initialize(void (*error_cb)())
 	};
 
 	atomic_wait_engine::set_wait_callback([](const void*, u64 attempts, u64 stamp0) -> bool
-	{
-		if (attempts == umax)
 		{
-			g_tls_wait_time += utils::get_tsc() - stamp0;
-		}
-		else if (attempts > 1)
-		{
-			g_tls_wait_fail += attempts - 1;
-		}
+			if (attempts == umax)
+			{
+				g_tls_wait_time += utils::get_tsc() - stamp0;
+			}
+			else if (attempts > 1)
+			{
+				g_tls_wait_fail += attempts - 1;
+			}
 
-		return true;
-	});
+			return true;
+		});
 
 	set_name(thread_ctrl::get_name_cached());
 }
@@ -2241,22 +2246,23 @@ void thread_base::set_name(std::string name)
 	};
 
 	// Set thread name for VS debugger
-	if (IsDebuggerPresent()) [&]() NEVER_INLINE
-	{
-		THREADNAME_INFO info;
-		info.dwType = 0x1000;
-		info.szName = name.c_str();
-		info.dwThreadID = -1;
-		info.dwFlags = 0;
+	if (IsDebuggerPresent())
+		[&]() NEVER_INLINE
+		{
+			THREADNAME_INFO info;
+			info.dwType = 0x1000;
+			info.szName = name.c_str();
+			info.dwThreadID = -1;
+			info.dwFlags = 0;
 
-		__try
-		{
-			RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
-		{
-		}
-	}();
+			__try
+			{
+				RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+			}
+		}();
 #endif
 
 #if defined(__APPLE__)
@@ -2341,10 +2347,10 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 
 	// Set result state (errored or finalized)
 	m_sync.fetch_op([&](u32& v)
-	{
-		v &= -4;
-		v |= static_cast<u32>(result_state);
-	});
+		{
+			v &= -4;
+			v |= static_cast<u32>(result_state);
+		});
 
 	// Signal waiting threads
 	m_sync.notify_all();
@@ -2361,7 +2367,10 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 	g_tls_wait_fail = 0;
 	g_tls_access_violation_recovered = false;
 
-	g_tls_log_prefix = []() -> std::string { return {}; };
+	g_tls_log_prefix = []() -> std::string
+	{
+		return {};
+	};
 
 	if (_self == umax)
 	{
@@ -2378,42 +2387,42 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 	return nullptr;
 }
 
-thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
+thread_base::native_entry thread_base::make_trampoline(u64 (*entry)(thread_base* _base))
 {
 	return build_function_asm<native_entry>("", [&](native_asm& c, auto& args)
-	{
-		using namespace asmjit;
+		{
+			using namespace asmjit;
 
 #if defined(ARCH_X64)
-		Label _ret = c.newLabel();
-		c.push(x86::rbp);
-		c.sub(x86::rsp, 0x20);
+			Label _ret = c.newLabel();
+			c.push(x86::rbp);
+			c.sub(x86::rsp, 0x20);
 
-		// Call entry point (TODO: support for detached threads missing?)
-		c.call(entry);
+			// Call entry point (TODO: support for detached threads missing?)
+			c.call(entry);
 
-		// Call finalize, return if zero
-		c.mov(args[0], x86::rax);
-		c.call(static_cast<native_entry(*)(u64)>(&finalize));
-		c.test(x86::rax, x86::rax);
-		c.jz(_ret);
+			// Call finalize, return if zero
+			c.mov(args[0], x86::rax);
+			c.call(static_cast<native_entry (*)(u64)>(&finalize));
+			c.test(x86::rax, x86::rax);
+			c.jz(_ret);
 
-		// Otherwise, call it as an entry point with first arg = new current thread
-		c.mov(x86::rbp, x86::rax);
-		c.call(thread_ctrl::get_current);
-		c.mov(args[0], x86::rax);
-		c.add(x86::rsp, 0x28);
-		c.jmp(x86::rbp);
+			// Otherwise, call it as an entry point with first arg = new current thread
+			c.mov(x86::rbp, x86::rax);
+			c.call(thread_ctrl::get_current);
+			c.mov(args[0], x86::rax);
+			c.add(x86::rsp, 0x28);
+			c.jmp(x86::rbp);
 
-		c.bind(_ret);
-		c.add(x86::rsp, 0x28);
-		c.ret();
+			c.bind(_ret);
+			c.add(x86::rsp, 0x28);
+			c.ret();
 #else
-	UNUSED(c);
-	UNUSED(args);
-	UNUSED(entry);
+			UNUSED(c);
+			UNUSED(args);
+			UNUSED(entry);
 #endif
-	});
+		});
 }
 
 thread_state thread_ctrl::state()
@@ -2516,7 +2525,6 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
-
 void thread_ctrl::wait_until(u64* wait_time, u64 add_time, u64 min_wait, bool update_to_current_time)
 {
 	*wait_time = utils::add_saturate<u64>(*wait_time, add_time);
@@ -2609,20 +2617,19 @@ std::string thread_ctrl::get_name_cached()
 	if (!_this->m_tname.is_equal(name_cache)) [[unlikely]]
 	{
 		_this->m_tname.peek_op([&](const shared_ptr<std::string>& ptr)
-		{
-			if (ptr != name_cache)
 			{
-				name_cache = ptr;
-			}
-		});
+				if (ptr != name_cache)
+				{
+					name_cache = ptr;
+				}
+			});
 	}
 
 	return *name_cache;
 }
 
 thread_base::thread_base(native_entry entry, std::string name) noexcept
-	: entry_point(entry)
-	, m_tname(make_single_value(std::move(name)))
+	: entry_point(entry), m_tname(make_single_value(std::move(name)))
 {
 }
 
@@ -2709,7 +2716,7 @@ u64 thread_base::get_cycles()
 	if (ret == KERN_SUCCESS)
 	{
 		cycles = static_cast<u64>(info.user_time.seconds + info.system_time.seconds) * 1'000'000'000 +
-			static_cast<u64>(info.user_time.microseconds + info.system_time.microseconds) * 1'000;
+		         static_cast<u64>(info.user_time.microseconds + info.system_time.microseconds) * 1'000;
 #else
 	clockid_t _clock;
 	struct timespec thread_time;
@@ -2836,22 +2843,23 @@ void thread_base::exec()
 		const u64 current_break = get_system_time() & -2;
 
 		if (s_last_break.fetch_op([current_break](u64& v)
-		{
-			if (current_break >= (v & -2) && current_break - (v & -2) >= 20'000'000)
-			{
-				v = current_break;
-				return true;
-			}
+							{
+								if (current_break >= (v & -2) && current_break - (v & -2) >= 20'000'000)
+								{
+									v = current_break;
+									return true;
+								}
 
-			// Let's allow a single more thread to halt the debugger so the programmer sees the pattern
-			if (!(v & 1))
-			{
-				v |= 1;
-				return true;
-			}
+								// Let's allow a single more thread to halt the debugger so the programmer sees the pattern
+								if (!(v & 1))
+								{
+									v |= 1;
+									return true;
+								}
 
-			return false;
-		}).second)
+								return false;
+							})
+				.second)
 		{
 			utils::trap();
 		}
@@ -2913,7 +2921,7 @@ void thread_ctrl::detect_cpu_layout()
 		std::vector<u8> buffer(buffer_size);
 
 		if (!GetLogicalProcessorInformationEx(relationship,
-			reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *>(buffer.data()), &buffer_size))
+				reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*>(buffer.data()), &buffer_size))
 		{
 			sig_log.error("GetLogicalProcessorInformationEx failed (size=%u, error=%s)", buffer_size, fmt::win_error{GetLastError(), nullptr});
 		}
@@ -2925,7 +2933,7 @@ void thread_ctrl::detect_cpu_layout()
 
 			while (ptr < end)
 			{
-				auto info = reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *>(ptr);
+				auto info = reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*>(ptr);
 				if (info->Relationship == relationship && info->Processor.Flags == LTP_PC_SMT)
 				{
 					g_native_core_layout.store(native_core_arrangement::intel_ht);
@@ -2945,16 +2953,15 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 #ifdef ANDROID
 	u64 mask = 0;
 	thread_class affinities[] =
-	{
-		g_cfg.core.affinity.cpu0.get(),
-		g_cfg.core.affinity.cpu1.get(),
-		g_cfg.core.affinity.cpu2.get(),
-		g_cfg.core.affinity.cpu3.get(),
-		g_cfg.core.affinity.cpu4.get(),
-		g_cfg.core.affinity.cpu5.get(),
-		g_cfg.core.affinity.cpu6.get(),
-		g_cfg.core.affinity.cpu7.get()
-	};
+		{
+			g_cfg.core.affinity.cpu0.get(),
+			g_cfg.core.affinity.cpu1.get(),
+			g_cfg.core.affinity.cpu2.get(),
+			g_cfg.core.affinity.cpu3.get(),
+			g_cfg.core.affinity.cpu4.get(),
+			g_cfg.core.affinity.cpu5.get(),
+			g_cfg.core.affinity.cpu6.get(),
+			g_cfg.core.affinity.cpu7.get()};
 
 	for (std::size_t i = 0; i < std::min<std::size_t>(std::thread::hardware_concurrency(), std::size(affinities)); ++i)
 	{
@@ -3248,7 +3255,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	}
 #elif __APPLE__
 	// Supports only one core
-	thread_affinity_policy_data_t policy = { static_cast<integer_t>(std::countr_zero(mask)) };
+	thread_affinity_policy_data_t policy = {static_cast<integer_t>(std::countr_zero(mask))};
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), !mask ? 0 : 1);
 #elif (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))

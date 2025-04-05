@@ -119,19 +119,19 @@ namespace gui
 			{
 				// Example usage for an icon with multiple shades of the same color
 
-				//auto saturatedColor = [](const QColor& col, float sat /* must be < 1 */)
+				// auto saturatedColor = [](const QColor& col, float sat /* must be < 1 */)
 				//{
 				//	int r = col.red() + sat * (255 - col.red());
 				//	int g = col.green() + sat * (255 - col.green());
 				//	int b = col.blue() + sat * (255 - col.blue());
 				//	return QColor(r, g, b, col.alpha());
-				//};
+				// };
 
-				//QColor test_color(0, 173, 246, 255);
-				//QPixmap test_pixmap = old_pixmap;
-				//QBitmap test_mask = test_pixmap.createMaskFromColor(test_color, Qt::MaskOutColor);
-				//test_pixmap.fill(saturatedColor(new_color, 0.6f));
-				//test_pixmap.setMask(test_mask);
+				// QColor test_color(0, 173, 246, 255);
+				// QPixmap test_pixmap = old_pixmap;
+				// QBitmap test_mask = test_pixmap.createMaskFromColor(test_color, Qt::MaskOutColor);
+				// test_pixmap.fill(saturatedColor(new_color, 0.6f));
+				// test_pixmap.setMask(test_mask);
 
 				const QColor white_color(Qt::white);
 				QPixmap white_pixmap = old_pixmap;
@@ -142,7 +142,7 @@ namespace gui
 				QPainter painter(&pixmap);
 				painter.setRenderHint(QPainter::SmoothPixmapTransform);
 				painter.drawPixmap(QPoint(0, 0), white_pixmap);
-				//painter.drawPixmap(QPoint(0, 0), test_pixmap);
+				// painter.drawPixmap(QPoint(0, 0), test_pixmap);
 				painter.end();
 			}
 			return pixmap;
@@ -174,7 +174,7 @@ namespace gui
 			}
 			return res;
 		}
-		
+
 		QColor get_foreground_color()
 		{
 			QLabel dummy_color;
@@ -213,7 +213,8 @@ namespace gui
 		int get_label_width(const QString& text, const QFont* font)
 		{
 			QLabel l(text);
-			if (font) l.setFont(*font);
+			if (font)
+				l.setFont(*font);
 			return l.sizeHint().width();
 		}
 
@@ -245,8 +246,8 @@ namespace gui
 		QString make_paragraph(QString text, const QString& white_space_style)
 		{
 			return QString(R"(<p%0>%1</p>)")
-				.arg(white_space_style.isEmpty() ? "" : "style=\"white-space: nowrap;\"")
-				.arg(text.replace("\n", "<br>"));
+			    .arg(white_space_style.isEmpty() ? "" : "style=\"white-space: nowrap;\"")
+			    .arg(text.replace("\n", "<br>"));
 		}
 
 		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
@@ -261,7 +262,7 @@ namespace gui
 
 			// Define offset for raw image placement
 			QPoint offset(offset_x + icon_size.width() / 2 - pixmap.width() / 2,
-			              offset_y + icon_size.height() / 2 - pixmap.height() / 2);
+				offset_y + icon_size.height() / 2 - pixmap.height() / 2);
 
 			// Place raw image inside expanded image
 			QPainter painter(&exp_img);
@@ -392,14 +393,14 @@ namespace gui
 		{
 			// Try to find custom icon first
 			std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + title_id + "/ICON0.PNG";
-			bool found_file       = fs::is_file(icon_path);
+			bool found_file = fs::is_file(icon_path);
 
 			if (!found_file)
 			{
 				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
 				const QString qpath = qstr(path);
-				const std::string path_list[] = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
-					                              qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
+				const std::string path_list[] = {path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
+					qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString()};
 
 				for (const std::string& pth : path_list)
 				{
@@ -466,8 +467,8 @@ namespace gui
 #elif defined(__APPLE__)
 				gui_log.notice("gui::utils::open_dir: About to open file path '%s'", spath);
 
-				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
-				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
+				QProcess::execute("/usr/bin/osascript", {"-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\""});
+				QProcess::execute("/usr/bin/osascript", {"-e", "tell application \"Finder\" to activate"});
 #else
 				// open parent directory
 				const QUrl url = QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath)));
@@ -551,11 +552,11 @@ namespace gui
 			}
 		}
 
-		QTreeWidgetItem* add_child(QTreeWidgetItem *parent, const QString& text, int column)
+		QTreeWidgetItem* add_child(QTreeWidgetItem* parent, const QString& text, int column)
 		{
 			if (parent)
 			{
-				QTreeWidgetItem *tree_item = new QTreeWidgetItem();
+				QTreeWidgetItem* tree_item = new QTreeWidgetItem();
 				tree_item->setText(column, text);
 				parent->addChild(tree_item);
 				return tree_item;
@@ -643,7 +644,7 @@ namespace gui
 			usz byte_unit = 0;
 			usz divisor = 1;
 #if defined(__APPLE__)
-			constexpr usz multiplier = 1000; 
+			constexpr usz multiplier = 1000;
 			static const QString s_units[]{"B", "kB", "MB", "GB", "TB", "PB"};
 #else
 			constexpr usz multiplier = 1024;
@@ -658,5 +659,5 @@ namespace gui
 
 			return QStringLiteral("%0 %1").arg(QString::number((size + 0.) / divisor, 'f', 2)).arg(s_units[byte_unit]);
 		}
-	} // utils
-} // gui
+	} // namespace utils
+} // namespace gui

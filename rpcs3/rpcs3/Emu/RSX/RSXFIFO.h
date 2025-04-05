@@ -35,11 +35,11 @@ namespace rsx
 		enum class state : u8
 		{
 			running = 0,
-			empty = 1,    // PUT == GET
-			spinning = 2, // Puller continuously jumps to self addr (synchronization technique)
-			nop = 3,      // Puller is processing a NOP command
-			lock_wait = 4,// Puller is processing a lock acquire
-			paused = 5,   // Puller is paused externallly
+			empty = 1,     // PUT == GET
+			spinning = 2,  // Puller continuously jumps to self addr (synchronization technique)
+			nop = 3,       // Puller is processing a NOP command
+			lock_wait = 4, // Puller is processing a lock acquire
+			paused = 5,    // Puller is paused externallly
 		};
 
 		enum class interrupt_hint : u8
@@ -83,17 +83,15 @@ namespace rsx
 			static constexpr std::array<u8, 0x10000 / 4> m_register_properties = []
 			{
 				constexpr std::array<std::pair<u32, u32>, 4> ignorable_ranges =
-				{{
-					// General
-					{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
-					{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1 },
-					{ NV4097_INVALIDATE_L2, 1 },
-					{ NV4097_INVALIDATE_ZCULL, 1 }
-				}};
+					{{                                      // General
+						{NV4097_INVALIDATE_VERTEX_FILE, 3}, // PSLight clears VERTEX_FILE[0-2]
+						{NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1},
+						{NV4097_INVALIDATE_L2, 1},
+						{NV4097_INVALIDATE_ZCULL, 1}}};
 
 				std::array<u8, 0x10000 / 4> register_properties{};
 
-				for (const auto &method : ignorable_ranges)
+				for (const auto& method : ignorable_ranges)
 				{
 					for (u32 i = 0; i < method.second; ++i)
 					{
@@ -109,7 +107,7 @@ namespace rsx
 			bool in_begin_end = false;
 
 			bool enabled = false;
-			u32  num_collapsed = 0;
+			u32 num_collapsed = 0;
 			optimization_hint fifo_hint = unknown;
 
 			void reset(bool _enabled);
@@ -118,8 +116,14 @@ namespace rsx
 			flattening_helper() = default;
 			~flattening_helper() = default;
 
-			u32 get_primitive() const { return deferred_primitive; }
-			bool is_enabled() const { return enabled; }
+			u32 get_primitive() const
+			{
+				return deferred_primitive;
+			}
+			bool is_enabled() const
+			{
+				return enabled;
+			}
 
 			void force_disable();
 			void evaluate_performance(u32 total_draw_count);
@@ -154,13 +158,25 @@ namespace rsx
 			u32 translate_address(u32 addr) const;
 
 			std::pair<bool, u32> fetch_u32(u32 addr);
-			void invalidate_cache() { m_cache_size = 0; }
+			void invalidate_cache()
+			{
+				m_cache_size = 0;
+			}
 
-			u32 get_pos() const { return m_internal_get; }
-			u32 last_cmd() const { return m_cmd; }
+			u32 get_pos() const
+			{
+				return m_internal_get;
+			}
+			u32 last_cmd() const
+			{
+				return m_cmd;
+			}
 			void sync_get() const;
 			std::span<const u32> get_current_arg_ptr(u32 length_in_words) const;
-			u32 get_remaining_args_count() const { return m_remaining_commands; }
+			u32 get_remaining_args_count() const
+			{
+				return m_remaining_commands;
+			}
 			void restore_state(u32 cmd, u32 count);
 			void inc_get(bool wait);
 
@@ -174,5 +190,5 @@ namespace rsx
 			inline bool read_unsafe(register_pair& data);
 			bool skip_methods(u32 count);
 		};
-	}
-}
+	} // namespace FIFO
+} // namespace rsx

@@ -7,54 +7,54 @@ template <>
 void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellKbMappingType value)
-	{
-		switch (value)
 		{
-		case CELL_KB_MAPPING_101: return "English keyboard (US standard)";
-		case CELL_KB_MAPPING_106: return "Japanese keyboard";
-		case CELL_KB_MAPPING_106_KANA: return "Japanese keyboard (Kana state)";
-		case CELL_KB_MAPPING_GERMAN_GERMANY: return "German keyboard";
-		case CELL_KB_MAPPING_SPANISH_SPAIN: return "Spanish keyboard";
-		case CELL_KB_MAPPING_FRENCH_FRANCE: return "French keyboard";
-		case CELL_KB_MAPPING_ITALIAN_ITALY: return "Italian keyboard";
-		case CELL_KB_MAPPING_DUTCH_NETHERLANDS: return "Dutch keyboard";
-		case CELL_KB_MAPPING_PORTUGUESE_PORTUGAL: return "Portuguese keyboard (Portugal)";
-		case CELL_KB_MAPPING_RUSSIAN_RUSSIA: return "Russian keyboard";
-		case CELL_KB_MAPPING_ENGLISH_UK: return "English keyboard (UK standard)";
-		case CELL_KB_MAPPING_KOREAN_KOREA: return "Korean keyboard";
-		case CELL_KB_MAPPING_NORWEGIAN_NORWAY: return "Norwegian keyboard";
-		case CELL_KB_MAPPING_FINNISH_FINLAND: return "Finnish keyboard";
-		case CELL_KB_MAPPING_DANISH_DENMARK: return "Danish keyboard";
-		case CELL_KB_MAPPING_SWEDISH_SWEDEN: return "Swedish keyboard";
-		case CELL_KB_MAPPING_CHINESE_TRADITIONAL: return "Chinese keyboard (Traditional)";
-		case CELL_KB_MAPPING_CHINESE_SIMPLIFIED: return "Chinese keyboard (Simplified)";
-		case CELL_KB_MAPPING_SWISS_FRENCH_SWITZERLAND: return "French keyboard (Switzerland)";
-		case CELL_KB_MAPPING_SWISS_GERMAN_SWITZERLAND: return "German keyboard (Switzerland)";
-		case CELL_KB_MAPPING_CANADIAN_FRENCH_CANADA: return "French keyboard (Canada)";
-		case CELL_KB_MAPPING_BELGIAN_BELGIUM: return "French keyboard (Belgium)";
-		case CELL_KB_MAPPING_POLISH_POLAND: return "Polish keyboard";
-		case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return "Portuguese keyboard (Brazil)";
-		case CELL_KB_MAPPING_TURKISH_TURKEY: return "Turkish keyboard";
-		}
+			switch (value)
+			{
+			case CELL_KB_MAPPING_101: return "English keyboard (US standard)";
+			case CELL_KB_MAPPING_106: return "Japanese keyboard";
+			case CELL_KB_MAPPING_106_KANA: return "Japanese keyboard (Kana state)";
+			case CELL_KB_MAPPING_GERMAN_GERMANY: return "German keyboard";
+			case CELL_KB_MAPPING_SPANISH_SPAIN: return "Spanish keyboard";
+			case CELL_KB_MAPPING_FRENCH_FRANCE: return "French keyboard";
+			case CELL_KB_MAPPING_ITALIAN_ITALY: return "Italian keyboard";
+			case CELL_KB_MAPPING_DUTCH_NETHERLANDS: return "Dutch keyboard";
+			case CELL_KB_MAPPING_PORTUGUESE_PORTUGAL: return "Portuguese keyboard (Portugal)";
+			case CELL_KB_MAPPING_RUSSIAN_RUSSIA: return "Russian keyboard";
+			case CELL_KB_MAPPING_ENGLISH_UK: return "English keyboard (UK standard)";
+			case CELL_KB_MAPPING_KOREAN_KOREA: return "Korean keyboard";
+			case CELL_KB_MAPPING_NORWEGIAN_NORWAY: return "Norwegian keyboard";
+			case CELL_KB_MAPPING_FINNISH_FINLAND: return "Finnish keyboard";
+			case CELL_KB_MAPPING_DANISH_DENMARK: return "Danish keyboard";
+			case CELL_KB_MAPPING_SWEDISH_SWEDEN: return "Swedish keyboard";
+			case CELL_KB_MAPPING_CHINESE_TRADITIONAL: return "Chinese keyboard (Traditional)";
+			case CELL_KB_MAPPING_CHINESE_SIMPLIFIED: return "Chinese keyboard (Simplified)";
+			case CELL_KB_MAPPING_SWISS_FRENCH_SWITZERLAND: return "French keyboard (Switzerland)";
+			case CELL_KB_MAPPING_SWISS_GERMAN_SWITZERLAND: return "German keyboard (Switzerland)";
+			case CELL_KB_MAPPING_CANADIAN_FRENCH_CANADA: return "French keyboard (Canada)";
+			case CELL_KB_MAPPING_BELGIAN_BELGIUM: return "French keyboard (Belgium)";
+			case CELL_KB_MAPPING_POLISH_POLAND: return "Polish keyboard";
+			case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return "Portuguese keyboard (Brazil)";
+			case CELL_KB_MAPPING_TURKISH_TURKEY: return "Turkish keyboard";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<keyboard_consumer::identifier>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](keyboard_consumer::identifier value)
-	{
-		switch (value)
 		{
-		STR_CASE(keyboard_consumer::identifier::unknown);
-		STR_CASE(keyboard_consumer::identifier::overlays);
-		STR_CASE(keyboard_consumer::identifier::cellKb);
-		}
+			switch (value)
+			{
+				STR_CASE(keyboard_consumer::identifier::unknown);
+				STR_CASE(keyboard_consumer::identifier::overlays);
+				STR_CASE(keyboard_consumer::identifier::cellKb);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 keyboard_consumer& KeyboardHandlerBase::AddConsumer(keyboard_consumer::identifier id, u32 max_connect)
@@ -168,9 +168,12 @@ bool keyboard_consumer::ConsumeKey(u32 qt_code, u32 native_code, bool pressed, b
 				else
 				{
 					// Led Keys
-					if (qt_code == Key_CapsLock)   data.led ^= CELL_KB_LED_CAPS_LOCK;
-					if (qt_code == Key_NumLock)    data.led ^= CELL_KB_LED_NUM_LOCK;
-					if (qt_code == Key_ScrollLock) data.led ^= CELL_KB_LED_SCROLL_LOCK;
+					if (qt_code == Key_CapsLock)
+						data.led ^= CELL_KB_LED_CAPS_LOCK;
+					if (qt_code == Key_NumLock)
+						data.led ^= CELL_KB_LED_NUM_LOCK;
+					if (qt_code == Key_ScrollLock)
+						data.led ^= CELL_KB_LED_SCROLL_LOCK;
 					// if (qt_code == Key_Kana_Lock) data.led ^= CELL_KB_LED_KANA;
 					// if (qt_code == ???) data.led ^= CELL_KB_LED_COMPOSE;
 
@@ -245,12 +248,7 @@ bool keyboard_consumer::ConsumeKey(u32 qt_code, u32 native_code, bool pressed, b
 
 bool keyboard_consumer::IsMetaKey(u32 code)
 {
-	return code == Key_Control
-		|| code == Key_Shift
-		|| code == Key_Alt
-		|| code == Key_Meta
-		|| code == Key_Super_L
-		|| code == Key_Super_R;
+	return code == Key_Control || code == Key_Shift || code == Key_Alt || code == Key_Meta || code == Key_Super_L || code == Key_Super_R;
 }
 
 u32 keyboard_consumer::get_out_key_code(u32 qt_code, u32 native_code, u32 out_key_code)
@@ -293,7 +291,7 @@ void keyboard_consumer::SetIntercepted(bool intercepted)
 		for (Keyboard& keyboard : m_keyboards)
 		{
 			keyboard.m_data.mkey = 0;
-			keyboard.m_data.len  = 0;
+			keyboard.m_data.len = 0;
 
 			for (auto& button : keyboard.m_data.buttons)
 			{

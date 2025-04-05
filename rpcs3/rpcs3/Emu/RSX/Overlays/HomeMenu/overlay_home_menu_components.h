@@ -33,9 +33,9 @@ namespace rsx
 		public:
 			home_menu_setting(C* setting, const std::string& text) : m_setting(setting)
 			{
-				std::unique_ptr<overlay_element> layout  = std::make_unique<vertical_layout>();
+				std::unique_ptr<overlay_element> layout = std::make_unique<vertical_layout>();
 				std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
-				std::unique_ptr<overlay_element> title   = std::make_unique<label>(text);
+				std::unique_ptr<overlay_element> title = std::make_unique<label>(text);
 
 				padding->set_size(1, 1);
 				title->set_size(available_side_width, menu_entry_height);
@@ -79,6 +79,7 @@ namespace rsx
 		public:
 			home_menu_checkbox(cfg::_bool* setting, const std::string& text);
 			compiled_resource& get_compiled() override;
+
 		private:
 			overlay_element m_background;
 			overlay_element m_checkbox;
@@ -94,7 +95,7 @@ namespace rsx
 				m_dropdown.set_pos(overlay::virtual_width / 2 + menu_entry_margin, 0);
 				m_dropdown.set_font("Arial", 14);
 				m_dropdown.align_text(home_menu_dropdown<T>::text_align::center);
-				m_dropdown.back_color = { 0.3f, 0.3f, 0.3f, 1.0f };
+				m_dropdown.back_color = {0.3f, 0.3f, 0.3f, 1.0f};
 			}
 
 			compiled_resource& get_compiled() override
@@ -123,19 +124,15 @@ namespace rsx
 		{
 		public:
 			home_menu_slider(C* setting, const std::string& text, const std::string& suffix, std::map<T, std::string> special_labels = {}, T minimum = C::min, T maximum = C::max)
-				: home_menu_setting<T, C>(setting, text)
-				, m_suffix(suffix)
-				, m_special_labels(std::move(special_labels))
-				, m_minimum(minimum)
-				, m_maximum(maximum)
+				: home_menu_setting<T, C>(setting, text), m_suffix(suffix), m_special_labels(std::move(special_labels)), m_minimum(minimum), m_maximum(maximum)
 			{
 				m_slider.set_size(available_side_width / 2, element_height);
 				m_slider.set_pos(overlay::virtual_width / 2 + menu_entry_margin, 0);
-				m_slider.back_color = { 0.3f, 0.3f, 0.3f, 1.0f };
+				m_slider.back_color = {0.3f, 0.3f, 0.3f, 1.0f};
 
 				m_handle.set_size(element_height / 2, element_height);
 				m_handle.set_pos(m_slider.x, 0);
-				m_handle.back_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+				m_handle.back_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
 				m_value_label.back_color = m_slider.back_color;
 				m_value_label.set_font("Arial", 14);
@@ -219,5 +216,5 @@ namespace rsx
 		{
 			using home_menu_slider<f64, cfg::_float<Min, Max>>::home_menu_slider;
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

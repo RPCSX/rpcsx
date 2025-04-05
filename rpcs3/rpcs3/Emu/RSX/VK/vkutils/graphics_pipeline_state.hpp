@@ -17,8 +17,7 @@ namespace vk
 		struct extra_parameters
 		{
 			VkSampleMask msaa_sample_mask;
-		}
-		temp_storage;
+		} temp_storage;
 
 		graphics_pipeline_state()
 		{
@@ -54,7 +53,7 @@ namespace vk
 
 		~graphics_pipeline_state() = default;
 
-		graphics_pipeline_state& operator = (const graphics_pipeline_state& other)
+		graphics_pipeline_state& operator=(const graphics_pipeline_state& other)
 		{
 			if (this != &other)
 			{
@@ -84,10 +83,14 @@ namespace vk
 		void set_color_mask(int index, bool r, bool g, bool b, bool a)
 		{
 			VkColorComponentFlags mask = 0;
-			if (a) mask |= VK_COLOR_COMPONENT_A_BIT;
-			if (b) mask |= VK_COLOR_COMPONENT_B_BIT;
-			if (g) mask |= VK_COLOR_COMPONENT_G_BIT;
-			if (r) mask |= VK_COLOR_COMPONENT_R_BIT;
+			if (a)
+				mask |= VK_COLOR_COMPONENT_A_BIT;
+			if (b)
+				mask |= VK_COLOR_COMPONENT_B_BIT;
+			if (g)
+				mask |= VK_COLOR_COMPONENT_G_BIT;
+			if (r)
+				mask |= VK_COLOR_COMPONENT_R_BIT;
 
 			att_state[index].colorWriteMask = mask;
 		}
@@ -129,7 +132,7 @@ namespace vk
 
 		void enable_depth_bounds_test(bool enable = true)
 		{
-			ds.depthBoundsTestEnable = enable? VK_TRUE : VK_FALSE;
+			ds.depthBoundsTestEnable = enable ? VK_TRUE : VK_FALSE;
 		}
 
 		void enable_blend(int mrt_index,
@@ -217,4 +220,4 @@ namespace vk
 			ms.minSampleShading = shading_rate;
 		}
 	};
-}
+} // namespace vk

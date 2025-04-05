@@ -10,7 +10,8 @@
 
 class qt_camera_handler;
 class pad_thread;
-template <bool> class ps_move_tracker;
+template <bool>
+class ps_move_tracker;
 
 namespace Ui
 {

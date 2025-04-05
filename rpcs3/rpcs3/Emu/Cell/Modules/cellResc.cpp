@@ -13,21 +13,21 @@ template <>
 void fmt_class_string<CellRescError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellRescError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_RESC_ERROR_NOT_INITIALIZED);
-		STR_CASE(CELL_RESC_ERROR_REINITIALIZED);
-		STR_CASE(CELL_RESC_ERROR_BAD_ALIGNMENT);
-		STR_CASE(CELL_RESC_ERROR_BAD_ARGUMENT);
-		STR_CASE(CELL_RESC_ERROR_LESS_MEMORY);
-		STR_CASE(CELL_RESC_ERROR_GCM_FLIP_QUE_FULL);
-		STR_CASE(CELL_RESC_ERROR_BAD_COMBINATION);
-		STR_CASE(CELL_RESC_ERROR_x308);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_RESC_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_RESC_ERROR_REINITIALIZED);
+				STR_CASE(CELL_RESC_ERROR_BAD_ALIGNMENT);
+				STR_CASE(CELL_RESC_ERROR_BAD_ARGUMENT);
+				STR_CASE(CELL_RESC_ERROR_LESS_MEMORY);
+				STR_CASE(CELL_RESC_ERROR_GCM_FLIP_QUE_FULL);
+				STR_CASE(CELL_RESC_ERROR_BAD_COMBINATION);
+				STR_CASE(CELL_RESC_ERROR_x308);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellRescInit(vm::cptr<CellRescInitConfig> initConfig)
@@ -47,15 +47,14 @@ error_code cellRescInit(vm::cptr<CellRescInitConfig> initConfig)
 	}
 
 	resc_manager.config =
-	{
-		initConfig->size,
-		initConfig->resourcePolicy,
-		initConfig->supportModes,
-		initConfig->ratioMode,
-		initConfig->palTemporalMode,
-		initConfig->interlaceMode,
-		initConfig->flipMode
-	};
+		{
+			initConfig->size,
+			initConfig->resourcePolicy,
+			initConfig->supportModes,
+			initConfig->ratioMode,
+			initConfig->palTemporalMode,
+			initConfig->interlaceMode,
+			initConfig->flipMode};
 	resc_manager.is_initialized = true;
 
 	return CELL_OK;
@@ -118,7 +117,7 @@ error_code cellRescSetDisplayMode(u32 bufferMode)
 
 	if (bufferMode == CELL_RESC_720x576)
 	{
-		const u32 pal_mode  = resc_manager.config.pal_temporal_mode;
+		const u32 pal_mode = resc_manager.config.pal_temporal_mode;
 		const u32 flip_mode = resc_manager.config.flip_mode;
 
 		// Check if palTemporalMode is any INTERPOLATE mode or CELL_RESC_PAL_60_DROP
@@ -193,25 +192,25 @@ error_code cellRescGetBufferSize(vm::ptr<s32> colorBuffers, vm::ptr<s32> vertexA
 		return CELL_RESC_ERROR_NOT_INITIALIZED;
 	}
 
-	//if (something)
+	// if (something)
 	//{
 	//	return CELL_RESC_ERROR_x308;
-	//}
+	// }
 
-	//if (colorBuffers)
+	// if (colorBuffers)
 	//{
 	//	colorBuffers = something
-	//}
+	// }
 
-	//if (vertexArray)
+	// if (vertexArray)
 	//{
 	//	vertexArray = something
-	//}
+	// }
 
-	//if (fragmentShader)
+	// if (fragmentShader)
 	//{
 	//	fragmentShader = something
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -382,29 +381,28 @@ error_code cellRescCreateInterlaceTable(vm::ptr<void> ea_addr, f32 srcH, CellRes
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::cellResc)("cellResc", []()
-{
-	REG_FUNC(cellResc, cellRescSetConvertAndFlip);
-	REG_FUNC(cellResc, cellRescSetWaitFlip);
-	REG_FUNC(cellResc, cellRescSetFlipHandler);
-	REG_FUNC(cellResc, cellRescGcmSurface2RescSrc);
-	REG_FUNC(cellResc, cellRescGetNumColorBuffers);
-	REG_FUNC(cellResc, cellRescSetDsts);
-	REG_FUNC(cellResc, cellRescResetFlipStatus);
-	REG_FUNC(cellResc, cellRescSetPalInterpolateDropFlexRatio);
-	REG_FUNC(cellResc, cellRescGetRegisterCount);
-	REG_FUNC(cellResc, cellRescAdjustAspectRatio);
-	REG_FUNC(cellResc, cellRescSetDisplayMode);
-	REG_FUNC(cellResc, cellRescExit);
-	REG_FUNC(cellResc, cellRescInit);
-	REG_FUNC(cellResc, cellRescGetBufferSize);
-	REG_FUNC(cellResc, cellRescGetLastFlipTime);
-	REG_FUNC(cellResc, cellRescSetSrc);
-	REG_FUNC(cellResc, cellRescSetRegisterCount);
-	REG_FUNC(cellResc, cellRescSetBufferAddress);
-	REG_FUNC(cellResc, cellRescGetFlipStatus);
-	REG_FUNC(cellResc, cellRescVideoOutResolutionId2RescBufferMode);
-	REG_FUNC(cellResc, cellRescSetVBlankHandler);
-	REG_FUNC(cellResc, cellRescCreateInterlaceTable);
-});
+	{
+		REG_FUNC(cellResc, cellRescSetConvertAndFlip);
+		REG_FUNC(cellResc, cellRescSetWaitFlip);
+		REG_FUNC(cellResc, cellRescSetFlipHandler);
+		REG_FUNC(cellResc, cellRescGcmSurface2RescSrc);
+		REG_FUNC(cellResc, cellRescGetNumColorBuffers);
+		REG_FUNC(cellResc, cellRescSetDsts);
+		REG_FUNC(cellResc, cellRescResetFlipStatus);
+		REG_FUNC(cellResc, cellRescSetPalInterpolateDropFlexRatio);
+		REG_FUNC(cellResc, cellRescGetRegisterCount);
+		REG_FUNC(cellResc, cellRescAdjustAspectRatio);
+		REG_FUNC(cellResc, cellRescSetDisplayMode);
+		REG_FUNC(cellResc, cellRescExit);
+		REG_FUNC(cellResc, cellRescInit);
+		REG_FUNC(cellResc, cellRescGetBufferSize);
+		REG_FUNC(cellResc, cellRescGetLastFlipTime);
+		REG_FUNC(cellResc, cellRescSetSrc);
+		REG_FUNC(cellResc, cellRescSetRegisterCount);
+		REG_FUNC(cellResc, cellRescSetBufferAddress);
+		REG_FUNC(cellResc, cellRescGetFlipStatus);
+		REG_FUNC(cellResc, cellRescVideoOutResolutionId2RescBufferMode);
+		REG_FUNC(cellResc, cellRescSetVBlankHandler);
+		REG_FUNC(cellResc, cellRescCreateInterlaceTable);
+	});

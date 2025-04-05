@@ -11,7 +11,7 @@ C-style format parser. Appends formatted string to `out`, returns number of char
 `fmt`: null-terminated string of `Char` type (char or constructible from char)
 `src`: rvalue reference to argument provider.
 */
-template<typename Dst, typename Char, typename Src>
+template <typename Dst, typename Char, typename Src>
 usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 {
 	ensure(fmt);
@@ -22,8 +22,8 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 	{
 		usz size; // Size of current format sequence
 
-		u8 args; // Number of extra args used
-		u8 type; // Integral type bytesize
+		u8 args;  // Number of extra args used
+		u8 type;  // Integral type bytesize
 		bool dot; // Precision enabled
 		bool left;
 		bool sign;
@@ -114,8 +114,7 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 				out.push_back(value % 10 + '0');
 				value /= 10;
 			}
-		}
-		while (0 < --min_size || value);
+		} while (0 < --min_size || value);
 
 		// Revert written characters
 		for (usz i = start, j = out.size() - 1; i < j; i++, j--)
@@ -125,584 +124,586 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 	};
 
 	// Single pass over fmt string (null-terminated), TODO: check correct order
-	while (const Char ch = *fmt++) if (ctx.size == 0)
-	{
-		if (ch == '%')
+	while (const Char ch = *fmt++)
+		if (ctx.size == 0)
 		{
-			ctx.size = 1;
+			if (ch == '%')
+			{
+				ctx.size = 1;
+			}
+			else
+			{
+				out.push_back(ch);
+			}
 		}
-		else
+		else if (ctx.size == 1 && ch == '%')
+		{
+			ctx = {0};
+			out.push_back(ch);
+		}
+		else if (ctx.size == umax)
 		{
 			out.push_back(ch);
 		}
-	}
-	else if (ctx.size == 1 && ch == '%')
-	{
-		ctx = {0};
-		out.push_back(ch);
-	}
-	else if (ctx.size == umax)
-	{
-		out.push_back(ch);
-	}
-	else switch (ctx.size++, ch)
-	{
-	case '-': ctx.left = true; break;
-	case '+': ctx.sign = true; break;
-	case ' ': ctx.space = true; break;
-	case '#': ctx.alter = true; break;
-	case '0': ctx.zeros = true; break;
-
-	case '1':
-	case '2':
-	case '3':
-	case '4':
-	case '5':
-	case '6':
-	case '7':
-	case '8':
-	case '9':
-	{
-		if (ctx.width) [[unlikely]]
-		{
-			drop_sequence();
-		}
 		else
-		{
-			ctx.width = read_decimal(ch - '0');
-		}
+			switch (ctx.size++, ch)
+			{
+			case '-': ctx.left = true; break;
+			case '+': ctx.sign = true; break;
+			case ' ': ctx.space = true; break;
+			case '#': ctx.alter = true; break;
+			case '0': ctx.zeros = true; break;
 
-		break;
-	}
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+			{
+				if (ctx.width) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else
+				{
+					ctx.width = read_decimal(ch - '0');
+				}
 
-	case '*':
-	{
-		if (ctx.width || !src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else
-		{
-			const int warg = src.template get<int>(ctx.args++);
-			ctx.width = std::abs(warg);
-			ctx.left |= warg < 0;
-		}
+				break;
+			}
 
-		break;
-	}
+			case '*':
+			{
+				if (ctx.width || !src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else
+				{
+					const int warg = src.template get<int>(ctx.args++);
+					ctx.width = std::abs(warg);
+					ctx.left |= warg < 0;
+				}
 
-	case '.':
-	{
-		if (ctx.dot || ctx.prec) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else if (*fmt >= '0' && *fmt <= '9') // TODO: does it allow '0'?
-		{
-			ctx.prec = read_decimal(0);
-			ctx.dot = true;
-		}
-		else if (*fmt == '*')
-		{
-			if (!src.test(ctx.args)) [[unlikely]]
+				break;
+			}
+
+			case '.':
+			{
+				if (ctx.dot || ctx.prec) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else if (*fmt >= '0' && *fmt <= '9') // TODO: does it allow '0'?
+				{
+					ctx.prec = read_decimal(0);
+					ctx.dot = true;
+				}
+				else if (*fmt == '*')
+				{
+					if (!src.test(ctx.args)) [[unlikely]]
+					{
+						drop_sequence();
+					}
+					else
+					{
+						fmt++, ctx.size++;
+						const int parg = src.template get<int>(ctx.args++);
+						ctx.prec = std::max(parg, 0);
+						ctx.dot = parg >= 0;
+					}
+				}
+				else
+				{
+					ctx.prec = 0;
+					ctx.dot = true;
+				}
+
+				break;
+			}
+
+			case 'h':
+			{
+				if (ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else if (fmt[0] == 'h')
+				{
+					fmt++, ctx.size++;
+					ctx.type = src.size_char;
+				}
+				else
+				{
+					ctx.type = src.size_short;
+				}
+
+				break;
+			}
+
+			case 'l':
+			{
+				if (ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else if (fmt[0] == 'l')
+				{
+					fmt++, ctx.size++;
+					ctx.type = src.size_llong;
+				}
+				else
+				{
+					ctx.type = src.size_long;
+				}
+
+				break;
+			}
+
+			case 'z':
+			{
+				if (ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else
+				{
+					ctx.type = src.size_size;
+				}
+
+				break;
+			}
+
+			case 'j':
+			{
+				if (ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else
+				{
+					ctx.type = src.size_max;
+				}
+
+				break;
+			}
+
+			case 't':
+			{
+				if (ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+				}
+				else
+				{
+					ctx.type = src.size_diff;
+				}
+
+				break;
+			}
+
+			case 'c':
+			{
+				if (ctx.type || !src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const usz start = out.size();
+				out.push_back(src.template get<Char>(ctx.args));
+
+				if (1 < ctx.width)
+				{
+					// Add spaces if necessary
+					out.insert(out.begin() + start + ctx.left, ctx.width - 1, ' ');
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 's':
+			{
+				if (ctx.type || !src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const usz start = out.size();
+				const usz size1 = src.fmt_string(out, ctx.args);
+
+				if (ctx.dot && size1 > ctx.prec)
+				{
+					// Shrink if necessary
+					out.resize(start + ctx.prec);
+				}
+
+				const usz size2 = out.size() - start;
+
+				if (size2 < ctx.width)
+				{
+					// Add spaces if necessary
+					out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'd':
+			case 'i':
+			{
+				if (!src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const usz src_type = src.type(ctx.args);
+
+				if (!ctx.type || src_type > 8)
+				{
+					ctx.type = static_cast<u8>(src_type);
+
+					if (!ctx.type)
+					{
+						ctx.type = src.size_int;
+					}
+				}
+
+				// Sign-extended argument expected
+				const u64 val = src.template get<u64>(ctx.args);
+				bool negative = ctx.type && ctx.type <= 8 && static_cast<s64>(val) < 0;
+
+				if (ctx.type == 16)
+				{
+					u128 val2 = *reinterpret_cast<const u128*>(val);
+					negative = !!(val2 & (u128{1} << 127));
+				}
+
+				const usz start = out.size();
+
+				if (!ctx.dot || ctx.prec)
+				{
+					if (negative)
+					{
+						out.push_back('-');
+					}
+					else if (ctx.sign)
+					{
+						out.push_back('+');
+					}
+					else if (ctx.space)
+					{
+						out.push_back(' ');
+					}
+
+					if (ctx.type >= 16)
+					{
+						u128 val2 = *reinterpret_cast<const u128*>(val);
+						write_decimal(negative ? u128{} - val2 : val2, ctx.prec);
+					}
+					else
+					{
+						write_decimal(negative ? u64{} - val : val, ctx.prec);
+					}
+				}
+
+				const usz size2 = out.size() - start;
+
+				if (size2 < ctx.width)
+				{
+					// Add padding if necessary
+					if (ctx.zeros && !ctx.left && !ctx.dot)
+					{
+						out.insert(out.begin() + start + (negative || ctx.sign || ctx.space), ctx.width - size2, '0');
+					}
+					else
+					{
+						out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+					}
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'o':
+			{
+				if (!src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const usz src_type = src.type(ctx.args);
+
+				if (!ctx.type || src_type > 8)
+				{
+					ctx.type = static_cast<u8>(src_type);
+
+					if (!ctx.type)
+					{
+						ctx.type = src.size_int;
+					}
+				}
+
+				const u64 mask =
+					ctx.type == 1 ? 0xff :
+					ctx.type == 2 ? 0xffff :
+					ctx.type == 4 ? 0xffff'ffffu :
+									0xffff'ffff'ffff'ffffu;
+
+				// Trunc sign-extended signed types
+				const u64 val = src.template get<u64>(ctx.args) & mask;
+
+				const usz start = out.size();
+
+				if (ctx.alter)
+				{
+					out.push_back('0');
+
+					if (ctx.prec)
+					{
+						ctx.prec--;
+					}
+				}
+
+				if ((ctx.alter && val) || !ctx.dot || ctx.prec)
+				{
+					if (ctx.type >= 16)
+					{
+						u128 val2 = *reinterpret_cast<const u128*>(val);
+						write_octal(val2, ctx.prec);
+					}
+					else
+					{
+						write_octal(val, ctx.prec);
+					}
+				}
+
+				const usz size2 = out.size() - start;
+
+				if (size2 < ctx.width)
+				{
+					// Add padding if necessary
+					out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'x':
+			case 'X':
+			{
+				if (!src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const usz src_type = src.type(ctx.args);
+
+				if (!ctx.type || src_type > 8)
+				{
+					ctx.type = static_cast<u8>(src_type);
+
+					if (!ctx.type)
+					{
+						ctx.type = src.size_int;
+					}
+				}
+
+				const u64 mask =
+					ctx.type == 1 ? 0xff :
+					ctx.type == 2 ? 0xffff :
+					ctx.type == 4 ? 0xffff'ffffu :
+									0xffff'ffff'ffff'ffffu;
+
+				// Trunc sign-extended signed types
+				const u64 val = src.template get<u64>(ctx.args) & mask;
+
+				const usz start = out.size();
+
+				if (ctx.alter)
+				{
+					out.push_back('0');
+
+					if (val)
+					{
+						out.push_back(ch); // Prepend 0x or 0X
+					}
+				}
+
+				if ((ctx.alter && val) || !ctx.dot || ctx.prec)
+				{
+					if (ctx.type >= 16)
+					{
+						u128 val2 = *reinterpret_cast<const u128*>(val);
+						write_hex(val2, ch == 'X', ctx.prec);
+					}
+					else
+					{
+						write_hex(val, ch == 'X', ctx.prec);
+					}
+				}
+
+				const usz size2 = out.size() - start;
+
+				if (size2 < ctx.width)
+				{
+					// Add padding if necessary
+					if (ctx.zeros && !ctx.left && !ctx.dot)
+					{
+						out.insert(out.begin() + start + (ctx.alter && val ? 2 : 0), ctx.width - size2, '0');
+					}
+					else
+					{
+						out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+					}
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'u':
+			{
+				if (!src.test(ctx.args)) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const usz src_type = src.type(ctx.args);
+
+				if (!ctx.type || src_type > 8)
+				{
+					ctx.type = static_cast<u8>(src_type);
+
+					if (!ctx.type)
+					{
+						ctx.type = src.size_int;
+					}
+				}
+
+				const u64 mask =
+					ctx.type == 1 ? 0xff :
+					ctx.type == 2 ? 0xffff :
+					ctx.type == 4 ? 0xffff'ffffu :
+									0xffff'ffff'ffff'ffffu;
+
+				// Trunc sign-extended signed types
+				const u64 val = src.template get<u64>(ctx.args) & mask;
+
+				const usz start = out.size();
+
+				if (!ctx.dot || ctx.prec)
+				{
+					if (ctx.type >= 16)
+					{
+						u128 val2 = *reinterpret_cast<const u128*>(val);
+						write_decimal(val2, ctx.prec);
+					}
+					else
+					{
+						write_decimal(val, ctx.prec);
+					}
+				}
+
+				const usz size2 = out.size() - start;
+
+				if (size2 < ctx.width)
+				{
+					// Add padding if necessary
+					out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'p':
+			{
+				if (!src.test(ctx.args) || ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				const u64 val = src.template get<u64>(ctx.args);
+
+				const usz start = out.size();
+
+				write_hex(val, false, sizeof(void*) * 2);
+
+				const usz size2 = out.size() - start;
+
+				if (size2 < ctx.width)
+				{
+					// Add padding if necessary
+					out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'f':
+			case 'F':
+			case 'e':
+			case 'E':
+			case 'a':
+			case 'A':
+			case 'g':
+			case 'G':
+			{
+				if (!src.test(ctx.args) || ctx.type) [[unlikely]]
+				{
+					drop_sequence();
+					break;
+				}
+
+				// Fallback (TODO)
+
+				const std::string _fmt(fmt - ctx.size, fmt);
+
+				const f64 arg0 = src.template get<f64>(0);
+				const u64 arg1 = ctx.args >= 1 ? src.template get<u64>(1) : 0;
+				const u64 arg2 = ctx.args >= 2 ? src.template get<u64>(2) : 0;
+
+				if (const usz _size = std::snprintf(nullptr, 0, _fmt.c_str(), arg0, arg1, arg2))
+				{
+					out.resize(out.size() + _size);
+					std::snprintf(&out.front() + out.size() - _size, _size + 1, _fmt.c_str(), arg0, arg1, arg2);
+				}
+
+				src.skip(ctx.args);
+				ctx = {0};
+				break;
+			}
+
+			case 'L': // long double, not supported
+			case 'n': // writeback, not supported
+			default:
 			{
 				drop_sequence();
 			}
-			else
-			{
-				fmt++, ctx.size++;
-				const int parg = src.template get<int>(ctx.args++);
-				ctx.prec = std::max(parg, 0);
-				ctx.dot = parg >= 0;
 			}
-		}
-		else
-		{
-			ctx.prec = 0;
-			ctx.dot = true;
-		}
-
-		break;
-	}
-
-	case 'h':
-	{
-		if (ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else if (fmt[0] == 'h')
-		{
-			fmt++, ctx.size++;
-			ctx.type = src.size_char;
-		}
-		else
-		{
-			ctx.type = src.size_short;
-		}
-
-		break;
-	}
-
-	case 'l':
-	{
-		if (ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else if (fmt[0] == 'l')
-		{
-			fmt++, ctx.size++;
-			ctx.type = src.size_llong;
-		}
-		else
-		{
-			ctx.type = src.size_long;
-		}
-
-		break;
-	}
-
-	case 'z':
-	{
-		if (ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else
-		{
-			ctx.type = src.size_size;
-		}
-
-		break;
-	}
-
-	case 'j':
-	{
-		if (ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else
-		{
-			ctx.type = src.size_max;
-		}
-
-		break;
-	}
-
-	case 't':
-	{
-		if (ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-		}
-		else
-		{
-			ctx.type = src.size_diff;
-		}
-
-		break;
-	}
-
-	case 'c':
-	{
-		if (ctx.type || !src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const usz start = out.size();
-		out.push_back(src.template get<Char>(ctx.args));
-
-		if (1 < ctx.width)
-		{
-			// Add spaces if necessary
-			out.insert(out.begin() + start + ctx.left, ctx.width - 1, ' ');
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 's':
-	{
-		if (ctx.type || !src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const usz start = out.size();
-		const usz size1 = src.fmt_string(out, ctx.args);
-
-		if (ctx.dot && size1 > ctx.prec)
-		{
-			// Shrink if necessary
-			out.resize(start + ctx.prec);
-		}
-
-		const usz size2 = out.size() - start;
-
-		if (size2 < ctx.width)
-		{
-			// Add spaces if necessary
-			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'd':
-	case 'i':
-	{
-		if (!src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const usz src_type = src.type(ctx.args);
-
-		if (!ctx.type || src_type > 8)
-		{
-			ctx.type = static_cast<u8>(src_type);
-
-			if (!ctx.type)
-			{
-				ctx.type = src.size_int;
-			}
-		}
-
-		// Sign-extended argument expected
-		const u64 val = src.template get<u64>(ctx.args);
-		bool negative = ctx.type && ctx.type <= 8 && static_cast<s64>(val) < 0;
-
-		if (ctx.type == 16)
-		{
-			u128 val2 = *reinterpret_cast<const u128*>(val);
-			negative = !!(val2 & (u128{1} << 127));
-		}
-
-		const usz start = out.size();
-
-		if (!ctx.dot || ctx.prec)
-		{
-			if (negative)
-			{
-				out.push_back('-');
-			}
-			else if (ctx.sign)
-			{
-				out.push_back('+');
-			}
-			else if (ctx.space)
-			{
-				out.push_back(' ');
-			}
-
-			if (ctx.type >= 16)
-			{
-				u128 val2 = *reinterpret_cast<const u128*>(val);
-				write_decimal(negative ? u128{} - val2 : val2, ctx.prec);
-			}
-			else
-			{
-				write_decimal(negative ? u64{} - val : val, ctx.prec);
-			}
-		}
-
-		const usz size2 = out.size() - start;
-
-		if (size2 < ctx.width)
-		{
-			// Add padding if necessary
-			if (ctx.zeros && !ctx.left && !ctx.dot)
-			{
-				out.insert(out.begin() + start + (negative || ctx.sign || ctx.space), ctx.width - size2, '0');
-			}
-			else
-			{
-				out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
-			}
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'o':
-	{
-		if (!src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const usz src_type = src.type(ctx.args);
-
-		if (!ctx.type || src_type > 8)
-		{
-			ctx.type = static_cast<u8>(src_type);
-
-			if (!ctx.type)
-			{
-				ctx.type = src.size_int;
-			}
-		}
-
-		const u64 mask =
-			ctx.type == 1 ? 0xff :
-			ctx.type == 2 ? 0xffff :
-			ctx.type == 4 ? 0xffff'ffffu :
-			0xffff'ffff'ffff'ffffu;
-
-		// Trunc sign-extended signed types
-		const u64 val = src.template get<u64>(ctx.args) & mask;
-
-		const usz start = out.size();
-
-		if (ctx.alter)
-		{
-			out.push_back('0');
-
-			if (ctx.prec)
-			{
-				ctx.prec--;
-			}
-		}
-
-		if ((ctx.alter && val) || !ctx.dot || ctx.prec)
-		{
-			if (ctx.type >= 16)
-			{
-				u128 val2 = *reinterpret_cast<const u128*>(val);
-				write_octal(val2, ctx.prec);
-			}
-			else
-			{
-				write_octal(val, ctx.prec);
-			}
-		}
-
-		const usz size2 = out.size() - start;
-
-		if (size2 < ctx.width)
-		{
-			// Add padding if necessary
-			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'x':
-	case 'X':
-	{
-		if (!src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const usz src_type = src.type(ctx.args);
-
-		if (!ctx.type || src_type > 8)
-		{
-			ctx.type = static_cast<u8>(src_type);
-
-			if (!ctx.type)
-			{
-				ctx.type = src.size_int;
-			}
-		}
-
-		const u64 mask =
-			ctx.type == 1 ? 0xff :
-			ctx.type == 2 ? 0xffff :
-			ctx.type == 4 ? 0xffff'ffffu :
-			0xffff'ffff'ffff'ffffu;
-
-		// Trunc sign-extended signed types
-		const u64 val = src.template get<u64>(ctx.args) & mask;
-
-		const usz start = out.size();
-
-		if (ctx.alter)
-		{
-			out.push_back('0');
-
-			if (val)
-			{
-				out.push_back(ch); // Prepend 0x or 0X
-			}
-		}
-
-		if ((ctx.alter && val) || !ctx.dot || ctx.prec)
-		{
-			if (ctx.type >= 16)
-			{
-				u128 val2 = *reinterpret_cast<const u128*>(val);
-				write_hex(val2, ch == 'X', ctx.prec);
-			}
-			else
-			{
-				write_hex(val, ch == 'X', ctx.prec);
-			}
-		}
-
-		const usz size2 = out.size() - start;
-
-		if (size2 < ctx.width)
-		{
-			// Add padding if necessary
-			if (ctx.zeros && !ctx.left && !ctx.dot)
-			{
-				out.insert(out.begin() + start + (ctx.alter && val ? 2 : 0), ctx.width - size2, '0');
-			}
-			else
-			{
-				out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
-			}
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'u':
-	{
-		if (!src.test(ctx.args)) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const usz src_type = src.type(ctx.args);
-
-		if (!ctx.type || src_type > 8)
-		{
-			ctx.type = static_cast<u8>(src_type);
-
-			if (!ctx.type)
-			{
-				ctx.type = src.size_int;
-			}
-		}
-
-		const u64 mask =
-			ctx.type == 1 ? 0xff :
-			ctx.type == 2 ? 0xffff :
-			ctx.type == 4 ? 0xffff'ffffu :
-			0xffff'ffff'ffff'ffffu;
-
-		// Trunc sign-extended signed types
-		const u64 val = src.template get<u64>(ctx.args) & mask;
-
-		const usz start = out.size();
-
-		if (!ctx.dot || ctx.prec)
-		{
-			if (ctx.type >= 16)
-			{
-				u128 val2 = *reinterpret_cast<const u128*>(val);
-				write_decimal(val2, ctx.prec);
-			}
-			else
-			{
-				write_decimal(val, ctx.prec);
-			}
-		}
-
-		const usz size2 = out.size() - start;
-
-		if (size2 < ctx.width)
-		{
-			// Add padding if necessary
-			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'p':
-	{
-		if (!src.test(ctx.args) || ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		const u64 val = src.template get<u64>(ctx.args);
-
-		const usz start = out.size();
-
-		write_hex(val, false, sizeof(void*) * 2);
-
-		const usz size2 = out.size() - start;
-
-		if (size2 < ctx.width)
-		{
-			// Add padding if necessary
-			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'f':
-	case 'F':
-	case 'e':
-	case 'E':
-	case 'a':
-	case 'A':
-	case 'g':
-	case 'G':
-	{
-		if (!src.test(ctx.args) || ctx.type) [[unlikely]]
-		{
-			drop_sequence();
-			break;
-		}
-
-		// Fallback (TODO)
-
-		const std::string _fmt(fmt - ctx.size, fmt);
-
-		const f64 arg0 = src.template get<f64>(0);
-		const u64 arg1 = ctx.args >= 1 ? src.template get<u64>(1) : 0;
-		const u64 arg2 = ctx.args >= 2 ? src.template get<u64>(2) : 0;
-
-		if (const usz _size = std::snprintf(nullptr, 0, _fmt.c_str(), arg0, arg1, arg2))
-		{
-			out.resize(out.size() + _size);
-			std::snprintf(&out.front() + out.size() - _size, _size + 1, _fmt.c_str(), arg0, arg1, arg2);
-		}
-
-		src.skip(ctx.args);
-		ctx = {0};
-		break;
-	}
-
-	case 'L': // long double, not supported
-	case 'n': // writeback, not supported
-	default:
-	{
-		drop_sequence();
-	}
-	}
 
 	// Handle unfinished sequence
 	if (ctx.size && ctx.size != umax)

@@ -146,7 +146,8 @@ void dump(std::span<const std::uint32_t> spv, bool pretty = false);
 ///
 /// \note The SPIR-V binary is not validated or checked for errors.  If the
 /// input is invalid, the output is undefined.
-std::string disassembly(std::span<const std::uint32_t> spv, bool pretty = false);
+std::string disassembly(std::span<const std::uint32_t> spv,
+                        bool pretty = false);
 
 ///
 /// \brief Validates a given SPIR-V binary against the SPIR-V spec

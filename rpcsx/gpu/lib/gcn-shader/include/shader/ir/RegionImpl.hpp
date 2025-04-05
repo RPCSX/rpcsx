@@ -12,4 +12,4 @@ struct RegionImpl : NodeImpl, RegionLikeImpl {
   void print(std::ostream &os, NameStorage &ns) const override;
   Node clone(Context &context, CloneMap &map) const override;
 };
-} // namespace ir
+} // namespace shader::ir

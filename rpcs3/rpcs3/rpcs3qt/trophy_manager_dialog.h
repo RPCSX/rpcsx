@@ -22,7 +22,7 @@ class TROPUSRLoader;
 struct GameTrophiesData
 {
 	std::unique_ptr<TROPUSRLoader> trop_usr;
-	trophy_xml_document trop_config; // I'd like to use unique but the protocol inside of the function passes around shared pointers..
+	trophy_xml_document trop_config;                // I'd like to use unique but the protocol inside of the function passes around shared pointers..
 	std::unordered_map<int, QPixmap> trophy_images; // Cache trophy images to avoid loading from disk as much as possible.
 	std::unordered_map<int, QString> trophy_image_paths;
 	std::string game_name;
@@ -77,8 +77,8 @@ private:
 	void WaitAndAbortGameRepaintThreads();
 	void WaitAndAbortTrophyRepaintThreads();
 
-	void closeEvent(QCloseEvent *event) override;
-	bool eventFilter(QObject *object, QEvent *event) override;
+	void closeEvent(QCloseEvent* event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 
 	static QDateTime TickToDateTime(u64 tick);
 	static u64 DateTimeToTick(QDateTime date_time);
@@ -87,11 +87,11 @@ private:
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
 	std::mutex m_trophies_db_mtx;
-	QComboBox* m_game_combo; //! Lets you choose a game
-	QLabel* m_game_progress; //! Shows you the current game's progress
-	QSplitter* m_splitter; //! Contains the game and trophy tables
+	QComboBox* m_game_combo;   //! Lets you choose a game
+	QLabel* m_game_progress;   //! Shows you the current game's progress
+	QSplitter* m_splitter;     //! Contains the game and trophy tables
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
-	game_list* m_game_table; //! UI element to display games.
+	game_list* m_game_table;   //! UI element to display games.
 
 	QList<QAction*> m_trophy_column_acts;
 	QList<QAction*> m_game_column_acts;

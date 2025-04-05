@@ -49,16 +49,22 @@ namespace vk
 		descriptor_indexing_features(bool supported = false)
 			: supported(supported) {}
 
-		operator bool() const { return supported; }
+		operator bool() const
+		{
+			return supported;
+		}
 	};
 
 	struct custom_border_color_features
 	{
 		bool supported = false;
 		bool swizzle_extension_supported = false;
-		bool require_border_color_remap = true;  // Assume that without the swizzle extension and explicit remap the device just samples border color as replacement.
+		bool require_border_color_remap = true; // Assume that without the swizzle extension and explicit remap the device just samples border color as replacement.
 
-		operator bool() const { return supported; }
+		operator bool() const
+		{
+			return supported;
+		}
 	};
 
 	class physical_device
@@ -96,12 +102,12 @@ namespace vk
 		} optional_features_support;
 
 		friend class render_device;
+
 	private:
 		void get_physical_device_features(bool allow_extensions);
 		void get_physical_device_properties(bool allow_extensions);
 
 	public:
-
 		physical_device() = default;
 		~physical_device() = default;
 
@@ -171,43 +177,139 @@ namespace vk
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32* type_index) const;
 		void rebalance_memory_type_usage();
 
-		const physical_device& gpu() const { return *pgpu; }
-		const memory_type_mapping& get_memory_mapping() const { return memory_map; }
-		const gpu_formats_support& get_formats_support() const { return m_formats_support; }
-		const pipeline_binding_table& get_pipeline_binding_table() const { return m_pipeline_binding_table; }
-		const gpu_shader_types_support& get_shader_types_support() const { return pgpu->shader_types_support; }
-		const custom_border_color_features& get_custom_border_color_support() const { return pgpu->custom_border_color_support; }
+		const physical_device& gpu() const
+		{
+			return *pgpu;
+		}
+		const memory_type_mapping& get_memory_mapping() const
+		{
+			return memory_map;
+		}
+		const gpu_formats_support& get_formats_support() const
+		{
+			return m_formats_support;
+		}
+		const pipeline_binding_table& get_pipeline_binding_table() const
+		{
+			return m_pipeline_binding_table;
+		}
+		const gpu_shader_types_support& get_shader_types_support() const
+		{
+			return pgpu->shader_types_support;
+		}
+		const custom_border_color_features& get_custom_border_color_support() const
+		{
+			return pgpu->custom_border_color_support;
+		}
 
-		bool get_shader_stencil_export_support() const { return pgpu->optional_features_support.shader_stencil_export; }
-		bool get_depth_bounds_support() const { return pgpu->features.depthBounds != VK_FALSE; }
-		bool get_alpha_to_one_support() const { return pgpu->features.alphaToOne != VK_FALSE; }
-		bool get_anisotropic_filtering_support() const { return pgpu->features.samplerAnisotropy != VK_FALSE; }
-		bool get_wide_lines_support() const { return pgpu->features.wideLines != VK_FALSE; }
-		bool get_conditional_render_support() const { return pgpu->optional_features_support.conditional_rendering; }
-		bool get_unrestricted_depth_range_support() const { return pgpu->optional_features_support.unrestricted_depth_range; }
-		bool get_external_memory_host_support() const { return pgpu->optional_features_support.external_memory_host; }
-		bool get_surface_capabilities_2_support() const { return pgpu->optional_features_support.surface_capabilities_2; }
-		bool get_debug_utils_support() const { return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils; }
-		bool get_descriptor_indexing_support() const { return pgpu->descriptor_indexing_support; }
-		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
-		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
-		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
-		bool get_extended_device_fault_support() const { return pgpu->optional_features_support.extended_device_fault; }
-		bool get_texture_compression_bc_support() const { return pgpu->optional_features_support.texture_compression_bc; }
+		bool get_shader_stencil_export_support() const
+		{
+			return pgpu->optional_features_support.shader_stencil_export;
+		}
+		bool get_depth_bounds_support() const
+		{
+			return pgpu->features.depthBounds != VK_FALSE;
+		}
+		bool get_alpha_to_one_support() const
+		{
+			return pgpu->features.alphaToOne != VK_FALSE;
+		}
+		bool get_anisotropic_filtering_support() const
+		{
+			return pgpu->features.samplerAnisotropy != VK_FALSE;
+		}
+		bool get_wide_lines_support() const
+		{
+			return pgpu->features.wideLines != VK_FALSE;
+		}
+		bool get_conditional_render_support() const
+		{
+			return pgpu->optional_features_support.conditional_rendering;
+		}
+		bool get_unrestricted_depth_range_support() const
+		{
+			return pgpu->optional_features_support.unrestricted_depth_range;
+		}
+		bool get_external_memory_host_support() const
+		{
+			return pgpu->optional_features_support.external_memory_host;
+		}
+		bool get_surface_capabilities_2_support() const
+		{
+			return pgpu->optional_features_support.surface_capabilities_2;
+		}
+		bool get_debug_utils_support() const
+		{
+			return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils;
+		}
+		bool get_descriptor_indexing_support() const
+		{
+			return pgpu->descriptor_indexing_support;
+		}
+		bool get_framebuffer_loops_support() const
+		{
+			return pgpu->optional_features_support.framebuffer_loops;
+		}
+		bool get_barycoords_support() const
+		{
+			return pgpu->optional_features_support.barycentric_coords;
+		}
+		bool get_synchronization2_support() const
+		{
+			return pgpu->optional_features_support.synchronization_2;
+		}
+		bool get_extended_device_fault_support() const
+		{
+			return pgpu->optional_features_support.extended_device_fault;
+		}
+		bool get_texture_compression_bc_support() const
+		{
+			return pgpu->optional_features_support.texture_compression_bc;
+		}
 
-		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
-		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
+		u64 get_descriptor_update_after_bind_support() const
+		{
+			return pgpu->descriptor_indexing_support.update_after_bind_mask;
+		}
+		u32 get_descriptor_max_draw_calls() const
+		{
+			return pgpu->descriptor_max_draw_calls;
+		}
 
-		VkQueue get_present_queue() const { return m_present_queue; }
-		VkQueue get_graphics_queue() const { return m_graphics_queue; }
-		VkQueue get_transfer_queue() const { return m_transfer_queue; }
-		u32 get_graphics_queue_family() const { return m_graphics_queue_family; }
-		u32 get_present_queue_family() const { return m_graphics_queue_family; }
-		u32 get_transfer_queue_family() const { return m_transfer_queue_family; }
+		VkQueue get_present_queue() const
+		{
+			return m_present_queue;
+		}
+		VkQueue get_graphics_queue() const
+		{
+			return m_graphics_queue;
+		}
+		VkQueue get_transfer_queue() const
+		{
+			return m_transfer_queue;
+		}
+		u32 get_graphics_queue_family() const
+		{
+			return m_graphics_queue_family;
+		}
+		u32 get_present_queue_family() const
+		{
+			return m_graphics_queue_family;
+		}
+		u32 get_transfer_queue_family() const
+		{
+			return m_transfer_queue_family;
+		}
 
-		mem_allocator_base* get_allocator() const { return m_allocator.get(); }
+		mem_allocator_base* get_allocator() const
+		{
+			return m_allocator.get();
+		}
 
-		operator VkDevice() const { return dev; }
+		operator VkDevice() const
+		{
+			return dev;
+		}
 	};
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
@@ -215,4 +317,4 @@ namespace vk
 	pipeline_binding_table get_pipeline_binding_table(const physical_device& dev);
 
 	extern const render_device* g_render_device;
-}
+} // namespace vk

@@ -450,7 +450,8 @@ static void guestInitDev() {
     vfs::addDevice("ssd0.swap", createHddCharacterDevice(8589934592));
     vfs::addDevice("ssd0.app_swap", createHddCharacterDevice(15032385536));
     vfs::addDevice("ssd0.hibernation", createHddCharacterDevice(3623878656));
-    vfs::addDevice("ssd0.user", createHddCharacterDevice(-41630302208)); /// ?????
+    vfs::addDevice("ssd0.user",
+                   createHddCharacterDevice(-41630302208)); /// ?????
     vfs::addDevice("ssd0.user_bfs", createHddCharacterDevice(0x100000000));
     vfs::addDevice("bfs/ctl", createHddCharacterDevice(0x100000000));
     vfs::addDevice("md2", createHddCharacterDevice(0x100000000));

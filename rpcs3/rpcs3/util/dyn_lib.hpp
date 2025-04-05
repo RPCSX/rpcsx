@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/atomic.hpp"
+#include "util/types.hpp"
 #include <string>
 
 namespace utils
@@ -68,9 +70,7 @@ namespace utils
 
 		// Constant initialization
 		constexpr dynamic_import(const char* lib, const char* name) noexcept
-		    : ptr(-1)
-		    , lib(lib)
-		    , name(name)
+			: ptr(-1), lib(lib), name(name)
 		{
 		}
 
@@ -100,7 +100,7 @@ namespace utils
 			return reinterpret_cast<R (*)(Args...)>(ptr.load())(args...);
 		}
 	};
-}
+} // namespace utils
 
 #define DYNAMIC_IMPORT(lib, name, ...) inline constinit utils::dynamic_import<__VA_ARGS__> name(lib, #name);
 #define DYNAMIC_IMPORT_RENAME(lib, declare_name, lib_func_name, ...) inline constinit utils::dynamic_import<__VA_ARGS__> declare_name(lib, lib_func_name);

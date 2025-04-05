@@ -112,8 +112,8 @@ bool gui_application::Init()
 			"\n"
 			"Build origin: %1\n"
 			"Do you wish to use this build anyway?")
-			.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))
-			.arg(Qt::convertFromPlainText(branch_name.data()))));
+				.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))
+				.arg(Qt::convertFromPlainText(branch_name.data()))));
 		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 		if (msg.exec() == QMessageBox::No)
@@ -155,9 +155,9 @@ bool gui_application::Init()
 	{
 		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, nullptr);
 
-		const auto codes    = GetAvailableLanguageCodes();
+		const auto codes = GetAvailableLanguageCodes();
 		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
-		const auto index    = codes.indexOf(language);
+		const auto index = codes.indexOf(language);
 
 		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
 	}
@@ -183,11 +183,11 @@ bool gui_application::Init()
 	if (utils::get_maxfiles() < 4096)
 	{
 		QMessageBox::warning(nullptr,
-							 tr("Warning"),
-							 tr("The current limit of maximum file descriptors is too low.\n"
-								"Some games will crash.\n"
-								"\n"
-								"Please increase the limit before running RPCS3."));
+			tr("Warning"),
+			tr("The current limit of maximum file descriptors is too low.\n"
+			   "Some games will crash.\n"
+			   "\n"
+			   "Please increase the limit before running RPCS3."));
 	}
 
 	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
@@ -251,7 +251,7 @@ void gui_application::LoadLanguage(const QString& language_code)
 
 	set_language_code(language_code);
 
-	const QLocale locale      = QLocale(language_code);
+	const QLocale locale = QLocale(language_code);
 	const QString locale_name = QLocale::languageToString(locale.language());
 
 	QLocale::setDefault(locale);
@@ -320,31 +320,31 @@ void gui_application::set_language_code(QString language_code)
 
 	// Try to find the CELL language ID for this language code
 	static const std::map<QString, CellSysutilLang> language_ids = {
-		{"ja", CELL_SYSUTIL_LANG_JAPANESE },
-		{"en", CELL_SYSUTIL_LANG_ENGLISH_US },
-		{"en-us", CELL_SYSUTIL_LANG_ENGLISH_US },
-		{"en-gb", CELL_SYSUTIL_LANG_ENGLISH_GB },
-		{"fr", CELL_SYSUTIL_LANG_FRENCH },
-		{"es", CELL_SYSUTIL_LANG_SPANISH },
-		{"de", CELL_SYSUTIL_LANG_GERMAN },
-		{"it", CELL_SYSUTIL_LANG_ITALIAN },
-		{"nl", CELL_SYSUTIL_LANG_DUTCH },
-		{"pt", CELL_SYSUTIL_LANG_PORTUGUESE_PT },
-		{"pt-pt", CELL_SYSUTIL_LANG_PORTUGUESE_PT },
-		{"pt-br", CELL_SYSUTIL_LANG_PORTUGUESE_BR },
-		{"ru", CELL_SYSUTIL_LANG_RUSSIAN },
-		{"ko", CELL_SYSUTIL_LANG_KOREAN },
-		{"zh", CELL_SYSUTIL_LANG_CHINESE_T },
-		{"zh-hant", CELL_SYSUTIL_LANG_CHINESE_T },
-		{"zh-hans", CELL_SYSUTIL_LANG_CHINESE_S },
-		{"fi", CELL_SYSUTIL_LANG_FINNISH },
-		{"sv", CELL_SYSUTIL_LANG_SWEDISH },
-		{"da", CELL_SYSUTIL_LANG_DANISH },
-		{"no", CELL_SYSUTIL_LANG_NORWEGIAN },
-		{"nn", CELL_SYSUTIL_LANG_NORWEGIAN },
-		{"nb", CELL_SYSUTIL_LANG_NORWEGIAN },
-		{"pl", CELL_SYSUTIL_LANG_POLISH },
-		{"tr", CELL_SYSUTIL_LANG_TURKISH },
+		{"ja", CELL_SYSUTIL_LANG_JAPANESE},
+		{"en", CELL_SYSUTIL_LANG_ENGLISH_US},
+		{"en-us", CELL_SYSUTIL_LANG_ENGLISH_US},
+		{"en-gb", CELL_SYSUTIL_LANG_ENGLISH_GB},
+		{"fr", CELL_SYSUTIL_LANG_FRENCH},
+		{"es", CELL_SYSUTIL_LANG_SPANISH},
+		{"de", CELL_SYSUTIL_LANG_GERMAN},
+		{"it", CELL_SYSUTIL_LANG_ITALIAN},
+		{"nl", CELL_SYSUTIL_LANG_DUTCH},
+		{"pt", CELL_SYSUTIL_LANG_PORTUGUESE_PT},
+		{"pt-pt", CELL_SYSUTIL_LANG_PORTUGUESE_PT},
+		{"pt-br", CELL_SYSUTIL_LANG_PORTUGUESE_BR},
+		{"ru", CELL_SYSUTIL_LANG_RUSSIAN},
+		{"ko", CELL_SYSUTIL_LANG_KOREAN},
+		{"zh", CELL_SYSUTIL_LANG_CHINESE_T},
+		{"zh-hant", CELL_SYSUTIL_LANG_CHINESE_T},
+		{"zh-hans", CELL_SYSUTIL_LANG_CHINESE_S},
+		{"fi", CELL_SYSUTIL_LANG_FINNISH},
+		{"sv", CELL_SYSUTIL_LANG_SWEDISH},
+		{"da", CELL_SYSUTIL_LANG_DANISH},
+		{"no", CELL_SYSUTIL_LANG_NORWEGIAN},
+		{"nn", CELL_SYSUTIL_LANG_NORWEGIAN},
+		{"nb", CELL_SYSUTIL_LANG_NORWEGIAN},
+		{"pl", CELL_SYSUTIL_LANG_POLISH},
+		{"tr", CELL_SYSUTIL_LANG_TURKISH},
 	};
 
 	// Check direct match first
@@ -387,7 +387,10 @@ void gui_application::InitializeConnects()
 	{
 		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
-		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this]()
+			{
+				OnEmuSettingsChange();
+			});
 		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
@@ -398,26 +401,29 @@ void gui_application::InitializeConnects()
 		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
 		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
 
-		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
+		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this]()
+			{
+				OnChangeStyleSheetRequest();
+			});
 	}
 
 #ifdef WITH_DISCORD_RPC
 	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)
-	{
-		// Discord Rich Presence Integration
-		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 		{
-			discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
-		}
-	});
+			// Discord Rich Presence Integration
+			if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
+			{
+				discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
+			}
+		});
 	connect(this, &gui_application::OnEmulatorStop, [this]()
-	{
-		// Discord Rich Presence Integration
-		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 		{
-			discord::update_presence(m_gui_settings->GetValue(gui::m_discordState).toString().toStdString());
-		}
-	});
+			// Discord Rich Presence Integration
+			if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
+			{
+				discord::update_presence(m_gui_settings->GetValue(gui::m_discordState).toString().toStdString());
+			}
+		});
 #endif
 
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
@@ -558,17 +564,17 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 #endif
 
 	connect(m_game_window, &gs_frame::destroyed, this, [this]()
-	{
-		gui_log.notice("gui_application: Deleting old game window");
-		m_game_window = nullptr;
+		{
+			gui_log.notice("gui_application: Deleting old game window");
+			m_game_window = nullptr;
 
 #ifdef _WIN32
-		if (!m_show_gui)
-		{
-			unregister_device_notification();
-		}
+			if (!m_show_gui)
+			{
+				unregister_device_notification();
+			}
 #endif
-	});
+		});
 
 	return std::unique_ptr<gs_frame>(frame);
 }
@@ -663,7 +669,7 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.close_gs_frame  = [this]()
+	callbacks.close_gs_frame = [this]()
 	{
 		if (m_game_window)
 		{
@@ -673,33 +679,69 @@ void gui_application::InitializeCallbacks()
 			m_game_window = nullptr;
 		}
 	};
-	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
-	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
-	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
-	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
-	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
-	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
-	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
+	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
+	{
+		return get_gs_frame();
+	};
+	callbacks.get_msg_dialog = [this]() -> std::shared_ptr<MsgDialogBase>
+	{
+		return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr;
+	};
+	callbacks.get_osk_dialog = [this]() -> std::shared_ptr<OskDialogBase>
+	{
+		return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr;
+	};
+	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>
+	{
+		return std::make_unique<save_data_dialog>();
+	};
+	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase>
+	{
+		return std::make_shared<sendmessage_dialog_frame>();
+	};
+	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase>
+	{
+		return std::make_shared<recvmessage_dialog_frame>();
+	};
+	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase>
+	{
+		return std::make_unique<trophy_notification_helper>(m_game_window);
+	};
 
-	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
-	callbacks.on_pause  = [this]() { OnEmulatorPause(); };
-	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
-	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
-	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+	callbacks.on_run = [this](bool start_playtime)
+	{
+		OnEmulatorRun(start_playtime);
+	};
+	callbacks.on_pause = [this]()
+	{
+		OnEmulatorPause();
+	};
+	callbacks.on_resume = [this]()
+	{
+		OnEmulatorResume(true);
+	};
+	callbacks.on_stop = [this]()
+	{
+		OnEmulatorStop();
+	};
+	callbacks.on_ready = [this]()
+	{
+		OnEmulatorReady();
+	};
 
-	callbacks.enable_disc_eject  = [this](bool enabled)
+	callbacks.enable_disc_eject = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()
-		{
-			OnEnableDiscEject(enabled);
-		});
+			{
+				OnEnableDiscEject(enabled);
+			});
 	};
 	callbacks.enable_disc_insert = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()
-		{
-			OnEnableDiscInsert(enabled);
-		});
+			{
+				OnEnableDiscInsert(enabled);
+			});
 	};
 
 	callbacks.on_missing_fw = [this]()
@@ -744,24 +786,24 @@ void gui_application::InitializeCallbacks()
 	callbacks.play_sound = [this](const std::string& path)
 	{
 		Emu.CallFromMainThread([this, path]()
-		{
-			if (fs::is_file(path))
 			{
-				// Allow to play 3 sound effects at the same time
-				while (m_sound_effects.size() >= 3)
+				if (fs::is_file(path))
 				{
-					m_sound_effects.pop_front();
+					// Allow to play 3 sound effects at the same time
+					while (m_sound_effects.size() >= 3)
+					{
+						m_sound_effects.pop_front();
+					}
+
+					// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
+					std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
+					sound_effect->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
+					sound_effect->setVolume(audio::get_volume());
+					sound_effect->play();
+
+					m_sound_effects.push_back(std::move(sound_effect));
 				}
-
-				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
-				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
-				sound_effect->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
-				sound_effect->setVolume(audio::get_volume());
-				sound_effect->play();
-
-				m_sound_effects.push_back(std::move(sound_effect));
-			}
-		});
+			});
 	};
 
 	if (m_show_gui) // If this is false, we already have a fallback in the main_application.
@@ -782,7 +824,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
 	{
 		const std::string terminate_message = tr("Stopping emulator took too long."
-			"\nSome thread has probably deadlocked. Aborting.").toStdString();
+												 "\nSome thread has probably deadlocked. Aborting.")
+		                                          .toStdString();
 
 		if (!closed_successfully)
 		{
@@ -790,173 +833,181 @@ void gui_application::InitializeCallbacks()
 		}
 
 		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
-		{
-			const auto seconds = std::make_shared<int>(seconds_waiting_already);
-
-			QMessageBox* mb = new QMessageBox();
-			mb->setWindowTitle(tr("PS3 Game/Application Is Unresponsive"));
-			mb->setIcon(QMessageBox::Critical);
-			mb->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-			mb->setDefaultButton(QMessageBox::No);
-			mb->button(QMessageBox::Yes)->setText(tr("Terminate RPCS3"));
-			mb->button(QMessageBox::No)->setText(tr("Keep Waiting"));
-
-			QString text_base = tr("Waiting for %0 second(s) already to stop emulation without success."
-			                       "\nKeep waiting or terminate RPCS3 unsafely at your own risk?");
-
-			mb->setText(text_base.arg(10));
-			mb->layout()->setSizeConstraint(QLayout::SetFixedSize);
-			mb->setAttribute(Qt::WA_DeleteOnClose);
-
-			QTimer* update_timer = new QTimer(mb);
-
-			connect(update_timer, &QTimer::timeout, [mb, seconds, text_base, closed_successfully]()
 			{
-				*seconds += 1;
-				mb->setText(text_base.arg(*seconds));
+				const auto seconds = std::make_shared<int>(seconds_waiting_already);
 
-				if (*closed_successfully)
-				{
-					mb->reject();
-				}
+				QMessageBox* mb = new QMessageBox();
+				mb->setWindowTitle(tr("PS3 Game/Application Is Unresponsive"));
+				mb->setIcon(QMessageBox::Critical);
+				mb->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+				mb->setDefaultButton(QMessageBox::No);
+				mb->button(QMessageBox::Yes)->setText(tr("Terminate RPCS3"));
+				mb->button(QMessageBox::No)->setText(tr("Keep Waiting"));
+
+				QString text_base = tr("Waiting for %0 second(s) already to stop emulation without success."
+									   "\nKeep waiting or terminate RPCS3 unsafely at your own risk?");
+
+				mb->setText(text_base.arg(10));
+				mb->layout()->setSizeConstraint(QLayout::SetFixedSize);
+				mb->setAttribute(Qt::WA_DeleteOnClose);
+
+				QTimer* update_timer = new QTimer(mb);
+
+				connect(update_timer, &QTimer::timeout, [mb, seconds, text_base, closed_successfully]()
+					{
+						*seconds += 1;
+						mb->setText(text_base.arg(*seconds));
+
+						if (*closed_successfully)
+						{
+							mb->reject();
+						}
+					});
+
+				connect(mb, &QDialog::accepted, mb, [closed_successfully, terminate_message]
+					{
+						if (!*closed_successfully)
+						{
+							report_fatal_error(terminate_message);
+						}
+					});
+
+				mb->open();
+				update_timer->start(1000);
 			});
-
-			connect(mb, &QDialog::accepted, mb, [closed_successfully, terminate_message]
-			{
-				if (!*closed_successfully)
-				{
-					report_fatal_error(terminate_message);
-				}
-			});
-
-			mb->open();
-			update_timer->start(1000);
-		});
 	};
 
 	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
 	{
 		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, code_location, init_mtx]
-		{
-			const auto half_seconds = std::make_shared<int>(1);
-
-			progress_dialog* pdlg = new progress_dialog(tr("Creating Save-State / Do Not Close RPCS3"), tr("Please wait..."), tr("Hide Progress"), 0, 100, true, m_main_window);
-			pdlg->setAutoReset(false);
-			pdlg->setAutoClose(true);
-			pdlg->show();
-
-			QString text_base = tr("%0 written, %1 second(s) passed%2");
-
-			pdlg->setLabelText(text_base.arg("0B").arg(1).arg(""));
-			pdlg->setAttribute(Qt::WA_DeleteOnClose);
-
-			QTimer* update_timer = new QTimer(pdlg);
-
-			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully
-				, code_location, init_mtx, old_written = usz{0}, repeat_count = u32{0}]() mutable
 			{
-				std::string verbose_message;
-				usz bytes_written = 0;
+				const auto half_seconds = std::make_shared<int>(1);
 
-				while (true)
-				{
-					auto mtx = static_cast<stx::init_mutex*>(init_mtx.get());
-					auto init = mtx->access();
+				progress_dialog* pdlg = new progress_dialog(tr("Creating Save-State / Do Not Close RPCS3"), tr("Please wait..."), tr("Hide Progress"), 0, 100, true, m_main_window);
+				pdlg->setAutoReset(false);
+				pdlg->setAutoClose(true);
+				pdlg->show();
 
-					if (!init)
+				QString text_base = tr("%0 written, %1 second(s) passed%2");
+
+				pdlg->setLabelText(text_base.arg("0B").arg(1).arg(""));
+				pdlg->setAttribute(Qt::WA_DeleteOnClose);
+
+				QTimer* update_timer = new QTimer(pdlg);
+
+				connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully, code_location, init_mtx, old_written = usz{0}, repeat_count = u32{0}]() mutable
 					{
-						// Try to wait for the abort process to complete
-						auto fake_reset = mtx->reset();
-						if (!fake_reset)
+						std::string verbose_message;
+						usz bytes_written = 0;
+
+						while (true)
 						{
-							// End of emulation termination
-							pdlg->reject();
-							return;
+							auto mtx = static_cast<stx::init_mutex*>(init_mtx.get());
+							auto init = mtx->access();
+
+							if (!init)
+							{
+								// Try to wait for the abort process to complete
+								auto fake_reset = mtx->reset();
+								if (!fake_reset)
+								{
+									// End of emulation termination
+									pdlg->reject();
+									return;
+								}
+
+								fake_reset.set_init();
+
+								// Now ar_ptr contains a null file descriptor
+								continue;
+							}
+
+							if (auto str_ptr = code_location->load())
+							{
+								verbose_message = "\n" + *str_ptr;
+							}
+
+							bytes_written = ar_ptr->is_writing() ? std::max<usz>(ar_ptr->get_size(), old_written) : old_written;
+							break;
 						}
 
-						fake_reset.set_init();
+						*half_seconds += 1;
 
-						// Now ar_ptr contains a null file descriptor
-						continue;
-					}
-
-					if (auto str_ptr = code_location->load())
-					{
-						verbose_message = "\n" + *str_ptr;
-					}
-
-					bytes_written = ar_ptr->is_writing() ? std::max<usz>(ar_ptr->get_size(), old_written) : old_written;
-					break;
-				}
-
-				*half_seconds += 1;
-
-				if (old_written == bytes_written)
-				{
-					if (repeat_count == 60)
-					{
-						if (verbose_message.empty())
+						if (old_written == bytes_written)
 						{
-							verbose_message += "\n";
+							if (repeat_count == 60)
+							{
+								if (verbose_message.empty())
+								{
+									verbose_message += "\n";
+								}
+								else
+								{
+									verbose_message += ". ";
+								}
+
+								verbose_message += tr("If Stuck, Report To Developers").toStdString();
+							}
+							else
+							{
+								repeat_count++;
+							}
 						}
 						else
 						{
-							verbose_message += ". ";
+							repeat_count = 0;
 						}
 
-						verbose_message += tr("If Stuck, Report To Developers").toStdString();
-					}
-					else
-					{
-						repeat_count++;
-					}
-				}
-				else
-				{
-					repeat_count = 0;
-				}
+						old_written = bytes_written;
 
-				old_written = bytes_written;
+						pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(QString::fromStdString(verbose_message)));
 
-				pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(QString::fromStdString(verbose_message)));
+						// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
+						const int percent = std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100);
 
-				// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
-				const int percent = std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100);
+						// Add a third of the remaining progress when the keyword is found
+						pdlg->setValue(verbose_message.find("Finalizing") != umax ? 100 - ((100 - percent) * 2 / 3) : percent);
 
-				// Add a third of the remaining progress when the keyword is found
-				pdlg->setValue(verbose_message.find("Finalizing") != umax ? 100 - ((100 - percent) * 2 / 3) : percent);
+						if (*closed_successfully)
+						{
+							pdlg->reject();
+						}
+					});
 
-				if (*closed_successfully)
-				{
-					pdlg->reject();
-				}
+				pdlg->open();
+				update_timer->start(500);
 			});
-
-			pdlg->open();
-			update_timer->start(500);
-		});
 	};
 
 	callbacks.add_breakpoint = [this](u32 addr)
 	{
 		Emu.BlockingCallFromMainThread([this, addr]()
-		{
-			m_main_window->OnAddBreakpoint(addr);
-		});
+			{
+				m_main_window->OnAddBreakpoint(addr);
+			});
 	};
 
-	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
-	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
+	callbacks.display_sleep_control_supported = []()
+	{
+		return display_sleep_control_supported();
+	};
+	callbacks.enable_display_sleep = [](bool enabled)
+	{
+		enable_display_sleep(enabled);
+	};
 
 	callbacks.check_microphone_permissions = []()
 	{
 		Emu.BlockingCallFromMainThread([]()
-		{
-			gui::utils::check_microphone_permission();
-		});
+			{
+				gui::utils::check_microphone_permission();
+			});
 	};
 
-	callbacks.make_video_source = [](){ return std::make_unique<qt_video_source_wrapper>(); };
+	callbacks.make_video_source = []()
+	{
+		return std::make_unique<qt_video_source_wrapper>();
+	};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }
@@ -1019,8 +1070,8 @@ void gui_application::StopPlaytime()
 }
 
 /*
-* Handle a request to change the stylesheet based on the current entry in the settings.
-*/
+ * Handle a request to change the stylesheet based on the current entry in the settings.
+ */
 void gui_application::OnChangeStyleSheetRequest()
 {
 	// skip stylesheets on first repaint if a style was set from command line
@@ -1144,7 +1195,7 @@ void gui_application::OnChangeStyleSheetRequest()
 			if (file_info.exists())
 			{
 				loc.cdUp();
-				stylesheet_dir  = loc.absolutePath();
+				stylesheet_dir = loc.absolutePath();
 				stylesheet_path = file_info.absoluteFilePath();
 				break;
 			}
@@ -1258,8 +1309,8 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 	{
 		// Check if Emu.Kill() has not been called since
 		if (applicationState() != Qt::ApplicationActive && Emu.IsRunning() &&
-		    m_emu_focus_out_emulation_id == Emu.GetEmulationIdentifier() &&
-		    delayed_tag == m_pause_delayed_tag &&
+			m_emu_focus_out_emulation_id == Emu.GetEmulationIdentifier() &&
+			delayed_tag == m_pause_delayed_tag &&
 			!m_is_pause_on_focus_loss_active)
 		{
 			if (Emu.Pause())
@@ -1323,19 +1374,20 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 #ifdef _WIN32
 void gui_application::register_device_notification(WId window_id)
 {
-	if (m_device_notification_handle) return;
+	if (m_device_notification_handle)
+		return;
 
 	gui_log.notice("Registering device notifications...");
 
 	// Enable usb device hotplug events
 	// Currently only needed for hotplug on windows, as libusb handles other platforms
-	DEV_BROADCAST_DEVICEINTERFACE notification_filter {};
+	DEV_BROADCAST_DEVICEINTERFACE notification_filter{};
 	notification_filter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
 	notification_filter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
 	notification_filter.dbcc_classguid = GUID_DEVINTERFACE_USB_DEVICE;
 
 	m_device_notification_handle = RegisterDeviceNotification(reinterpret_cast<HWND>(window_id), &notification_filter, DEVICE_NOTIFY_WINDOW_HANDLE);
-	if (!m_device_notification_handle )
+	if (!m_device_notification_handle)
 	{
 		gui_log.error("RegisterDeviceNotification() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}

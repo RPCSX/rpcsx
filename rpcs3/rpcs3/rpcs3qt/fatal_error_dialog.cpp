@@ -34,9 +34,9 @@ fatal_error_dialog::fatal_error_dialog(std::string_view text, bool is_html, bool
 	if (include_help_text) [[likely]]
 	{
 		document_body = document_with_help_text
-			.arg(msg)
-			.arg(tr("HOW TO REPORT ERRORS:"))
-			.arg(tr("Please, don't send incorrect reports. Thanks for understanding."));
+		                    .arg(msg)
+		                    .arg(tr("HOW TO REPORT ERRORS:"))
+		                    .arg(tr("Please, don't send incorrect reports. Thanks for understanding."));
 	}
 	else
 	{

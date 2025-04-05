@@ -99,39 +99,39 @@ static u64 make_null_function(const std::string& name)
 
 		// Build a "null" function that contains its name
 		const auto func = build_function_asm<void (*)()>("NULL", [&](native_asm& c, auto& args)
-		{
+			{
 #if defined(ARCH_X64)
-			Label data = c.newLabel();
-			c.lea(args[0], x86::qword_ptr(data, 0));
-			c.jmp(Imm(&null));
-			c.align(AlignMode::kCode, 16);
-			c.bind(data);
+				Label data = c.newLabel();
+				c.lea(args[0], x86::qword_ptr(data, 0));
+				c.jmp(Imm(&null));
+				c.align(AlignMode::kCode, 16);
+				c.bind(data);
 
-			// Copy function name bytes
-			for (char ch : name)
-				c.db(ch);
-			c.db(0);
-			c.align(AlignMode::kData, 16);
+				// Copy function name bytes
+				for (char ch : name)
+					c.db(ch);
+				c.db(0);
+				c.align(AlignMode::kData, 16);
 #else
-			// AArch64 implementation
-			Label data = c.newLabel();
-			Label jump_address = c.newLabel();
-			c.ldr(args[0], arm::ptr(data, 0));
-			c.ldr(a64::x14, arm::ptr(jump_address, 0));
-			c.br(a64::x14);
+				// AArch64 implementation
+				Label data = c.newLabel();
+				Label jump_address = c.newLabel();
+				c.ldr(args[0], arm::ptr(data, 0));
+				c.ldr(a64::x14, arm::ptr(jump_address, 0));
+				c.br(a64::x14);
 
-			// Data frame
-			c.align(AlignMode::kCode, 16);
-			c.bind(jump_address);
-			c.embedUInt64(reinterpret_cast<u64>(&null));
+				// Data frame
+				c.align(AlignMode::kCode, 16);
+				c.bind(jump_address);
+				c.embedUInt64(reinterpret_cast<u64>(&null));
 
-			c.align(AlignMode::kData, 16);
-			c.bind(data);
-			c.embed(name.c_str(), name.size());
-			c.embedUInt8(0U);
-			c.align(AlignMode::kData, 16);
+				c.align(AlignMode::kData, 16);
+				c.bind(data);
+				c.embed(name.c_str(), name.size());
+				c.embedUInt8(0U);
+				c.align(AlignMode::kData, 16);
 #endif
-		});
+			});
 
 		func_ptr = reinterpret_cast<u64>(func);
 		return func_ptr;
@@ -203,7 +203,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		m_code_mems = ptr;
 		// ptr += c_max_size;
 		// m_data_ro_mems = ptr;
-		 ptr += c_max_size;
+		ptr += c_max_size;
 		m_data_rw_mems = ptr;
 	}
 
@@ -246,7 +246,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	u8* allocate(u64& alloc_pos, void* block, uptr size, u64 align, utils::protection prot)
 	{
 		align = align ? align : 16;
- 
+
 		const u64 sizea = utils::align(size, align);
 
 		if (!size || align > c_page_size || sizea > c_max_size || sizea < size)
@@ -312,7 +312,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		if (is_ro)
 		{
 			// Disabled
-			//return allocate(data_ro_ptr, m_data_ro_mems, size, align, utils::protection::rw);
+			// return allocate(data_ro_ptr, m_data_ro_mems, size, align, utils::protection::rw);
 		}
 
 		return allocate(data_rw_ptr, m_data_rw_mems, size, align, utils::protection::rw);
@@ -402,8 +402,7 @@ class ObjectCache final : public llvm::ObjectCache
 
 public:
 	ObjectCache(const std::string& path, jit_compiler* compiler = nullptr)
-		: m_path(path)
-		, m_compiler(compiler)
+		: m_path(path), m_compiler(compiler)
 	{
 	}
 
@@ -414,7 +413,7 @@ public:
 		std::string name = m_path;
 
 		name.append(_module->getName());
-		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
+		// fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
 
 		if (!obj.getBufferSize())
@@ -628,36 +627,37 @@ bool jit_compiler::add_sub_disk_space(ssz space)
 	}
 
 	return m_disk_space.fetch_op([sub_size = static_cast<usz>(0 - space)](usz& val)
-	{
-		if (val >= sub_size)
-		{
-			val -= sub_size;
-			return true;
-		}
+						   {
+							   if (val >= sub_size)
+							   {
+								   val -= sub_size;
+								   return true;
+							   }
 
-		return false;
-	}).second;
+							   return false;
+						   })
+	    .second;
 }
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
-	: m_context(new llvm::LLVMContext)
-	, m_cpu(cpu(_cpu))
+	: m_context(new llvm::LLVMContext), m_cpu(cpu(_cpu))
 {
 	[[maybe_unused]] static const bool s_install_llvm_error_handler = []()
 	{
 		llvm::remove_fatal_error_handler();
 		llvm::install_fatal_error_handler([](void*, const char* msg, bool)
-		{
-			const std::string_view out = msg ? msg : "";
-			fmt::throw_exception("LLVM Emergency Exit Invoked: '%s'", out);
-		}, nullptr);
+			{
+				const std::string_view out = msg ? msg : "";
+				fmt::throw_exception("LLVM Emergency Exit Invoked: '%s'", out);
+			},
+			nullptr);
 
 		return true;
 	}();
 
 	std::string result;
 
-	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
+	auto null_mod = std::make_unique<llvm::Module>("null_", *m_context);
 	null_mod->setTargetTriple(jit_compiler::triple1());
 
 	std::unique_ptr<llvm::RTDyldMemoryManager> mem;
@@ -682,17 +682,17 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 	{
 		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
-			.setErrorStr(&result)
-			.setEngineKind(llvm::EngineKind::JIT)
-			.setMCJITMemoryManager(std::move(mem))
-			.setOptLevel(llvm::CodeGenOptLevel::Aggressive)
-			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
+				.setErrorStr(&result)
+				.setEngineKind(llvm::EngineKind::JIT)
+				.setMCJITMemoryManager(std::move(mem))
+				.setOptLevel(llvm::CodeGenOptLevel::Aggressive)
+				.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 #ifdef __APPLE__
-			//.setCodeModel(llvm::CodeModel::Large)
+		//.setCodeModel(llvm::CodeModel::Large)
 #endif
-			.setRelocationModel(llvm::Reloc::Model::PIC_)
-			.setMCPU(m_cpu)
-			.create());
+				.setRelocationModel(llvm::Reloc::Model::PIC_)
+				.setMCPU(m_cpu)
+				.create());
 	}
 
 	if (!_link.empty())
@@ -824,7 +824,7 @@ u64 jit_compiler::get(const std::string& name)
 	return m_engine->getGlobalValueAddress(name);
 }
 
-const char * fallback_cpu_detection()
+const char* fallback_cpu_detection()
 {
 #if defined(ARCH_X64)
 	// If we got here we either have a very old and outdated CPU or a new CPU that has not been seen by LLVM yet.

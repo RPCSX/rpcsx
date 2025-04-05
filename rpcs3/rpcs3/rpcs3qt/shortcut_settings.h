@@ -43,8 +43,8 @@ namespace gui
 
 			count
 		};
-	}
-}
+	} // namespace shortcuts
+} // namespace gui
 
 struct shortcut_info
 {

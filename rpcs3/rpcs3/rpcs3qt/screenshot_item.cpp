@@ -9,10 +9,10 @@ screenshot_item::screenshot_item(QWidget* parent)
 	cb_on_first_visibility = [this]()
 	{
 		m_thread.reset(QThread::create([this]()
-		{
-			const QPixmap pixmap = gui::utils::get_centered_pixmap(icon_path, icon_size, 0, 0, 1.0, Qt::SmoothTransformation);
-			Q_EMIT signal_icon_update(pixmap);
-		}));
+			{
+				const QPixmap pixmap = gui::utils::get_centered_pixmap(icon_path, icon_size, 0, 0, 1.0, Qt::SmoothTransformation);
+				Q_EMIT signal_icon_update(pixmap);
+			}));
 		m_thread->start();
 	};
 

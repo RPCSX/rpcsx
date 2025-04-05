@@ -19,8 +19,14 @@
 #include "util/asm.hpp"
 
 constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
+inline std::string sstr(const QString& _in)
+{
+	return _in.toStdString();
+}
+inline std::string sstr(const QVariant& _in)
+{
+	return sstr(_in.toString());
+}
 
 enum registers : int
 {
@@ -59,10 +65,8 @@ enum registers : int
 	PC,
 };
 
-register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
-	: QDialog(parent)
-	, m_disasm(_disasm)
-	, m_get_cpu(std::move(func))
+register_editor_dialog::register_editor_dialog(QWidget* parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
+	: QDialog(parent), m_disasm(_disasm), m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit registers"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -108,29 +112,34 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	{
 		if (cpu->get_class() == thread_class::ppu)
 		{
-			for (int i = ppu_r0; i <= ppu_r31; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 32)), i);
-			for (int i = ppu_f0; i <= ppu_f31; i++) m_register_combo->addItem(qstr(fmt::format("f%d", i % 32)), i);
-			for (int i = ppu_ff0; i <= ppu_ff31; i++) m_register_combo->addItem(qstr(fmt::format("ff%d", i % 32)), i);
-			for (int i = ppu_v0; i <= ppu_v31; i++) m_register_combo->addItem(qstr(fmt::format("v%d", i % 32)), i);
+			for (int i = ppu_r0; i <= ppu_r31; i++)
+				m_register_combo->addItem(qstr(fmt::format("r%d", i % 32)), i);
+			for (int i = ppu_f0; i <= ppu_f31; i++)
+				m_register_combo->addItem(qstr(fmt::format("f%d", i % 32)), i);
+			for (int i = ppu_ff0; i <= ppu_ff31; i++)
+				m_register_combo->addItem(qstr(fmt::format("ff%d", i % 32)), i);
+			for (int i = ppu_v0; i <= ppu_v31; i++)
+				m_register_combo->addItem(qstr(fmt::format("v%d", i % 32)), i);
 			m_register_combo->addItem("CR", +PPU_CR);
 			m_register_combo->addItem("LR", +PPU_LR);
 			m_register_combo->addItem("CTR", PPU_CTR);
 			m_register_combo->addItem("VRSAVE", +PPU_VRSAVE);
-			//m_register_combo->addItem("XER", +PPU_XER);
-			//m_register_combo->addItem("FPSCR", +PPU_FPSCR);
-			//m_register_combo->addItem("VSCR", +PPU_VSCR);
+			// m_register_combo->addItem("XER", +PPU_XER);
+			// m_register_combo->addItem("FPSCR", +PPU_FPSCR);
+			// m_register_combo->addItem("VSCR", +PPU_VSCR);
 			m_register_combo->addItem("Priority", +PPU_PRIO);
-			//m_register_combo->addItem("Priority 2", +PPU_PRIO2);
+			// m_register_combo->addItem("Priority 2", +PPU_PRIO2);
 		}
 		else if (cpu->get_class() == thread_class::spu)
 		{
-			for (int i = spu_r0; i <= spu_r127; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 128)), i);
+			for (int i = spu_r0; i <= spu_r127; i++)
+				m_register_combo->addItem(qstr(fmt::format("r%d", i % 128)), i);
 			m_register_combo->addItem("MFC Pending Events", +MFC_PEVENTS);
 			m_register_combo->addItem("MFC Events Mask", +MFC_EVENTS_MASK);
 			m_register_combo->addItem("MFC Events Count", +MFC_EVENTS_COUNT);
 			m_register_combo->addItem("MFC Tag Mask", +MFC_TAG_MASK);
-			//m_register_combo->addItem("MFC Tag Update", +MFC_TAG_UPD);
-			//m_register_combo->addItem("MFC Atomic Status", +MFC_ATOMIC_STAT);
+			// m_register_combo->addItem("MFC Tag Update", +MFC_TAG_UPD);
+			// m_register_combo->addItem("MFC Atomic Status", +MFC_ATOMIC_STAT);
 			m_register_combo->addItem("SPU SNR1", +SPU_SNR1);
 			m_register_combo->addItem("SPU SNR2", +SPU_SNR2);
 			m_register_combo->addItem("SPU Out Mailbox", +SPU_OUT_MBOX);
@@ -152,15 +161,19 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	setLayout(vbox_panel);
 
 	// Events
-	connect(button_ok, &QAbstractButton::clicked, this, [this](){ OnOkay(); accept(); });
+	connect(button_ok, &QAbstractButton::clicked, this, [this]()
+		{
+			OnOkay();
+			accept();
+		});
 	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
 	connect(m_register_combo, &QComboBox::currentTextChanged, this, [this](const QString&)
-	{
-		if (const auto qvar = m_register_combo->currentData(); qvar.canConvert<int>())
 		{
-			updateRegister(qvar.toInt());
-		}
-	});
+			if (const auto qvar = m_register_combo->currentData(); qvar.canConvert<int>())
+			{
+				updateRegister(qvar.toInt());
+			}
+		});
 
 	updateRegister(m_register_combo->currentData().toInt());
 }
@@ -182,22 +195,32 @@ void register_editor_dialog::updateRegister(int reg) const
 		{
 			const u32 reg_index = reg % 32;
 
-			if (reg >= ppu_r0 && reg <= ppu_r31) str = fmt::format("%016llx", ppu.gpr[reg_index]);
-			else if (reg >= ppu_ff0 && reg <= ppu_ff31) str = fmt::format("%g", ppu.fpr[reg_index]);
-			else if (reg >= ppu_f0 && reg <= ppu_f31) str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
+			if (reg >= ppu_r0 && reg <= ppu_r31)
+				str = fmt::format("%016llx", ppu.gpr[reg_index]);
+			else if (reg >= ppu_ff0 && reg <= ppu_ff31)
+				str = fmt::format("%g", ppu.fpr[reg_index]);
+			else if (reg >= ppu_f0 && reg <= ppu_f31)
+				str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
 			else if (reg >= ppu_v0 && reg <= ppu_v31)
 			{
 				const v128 r = ppu.vr[reg_index];
 				str = !r._u ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 			}
 		}
-		else if (reg == PPU_CR)  str = fmt::format("%08x", ppu.cr.pack());
-		else if (reg == PPU_LR)  str = fmt::format("%016llx", ppu.lr);
-		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
-		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
-		else if (reg == PPU_PRIO) str = fmt::format("%08x", ppu.prio.load().prio);
-		else if (reg == RESERVATION_LOST) str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
-		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
+		else if (reg == PPU_CR)
+			str = fmt::format("%08x", ppu.cr.pack());
+		else if (reg == PPU_LR)
+			str = fmt::format("%016llx", ppu.lr);
+		else if (reg == PPU_CTR)
+			str = fmt::format("%016llx", ppu.ctr);
+		else if (reg == PPU_VRSAVE)
+			str = fmt::format("%08x", ppu.vrsave);
+		else if (reg == PPU_PRIO)
+			str = fmt::format("%08x", ppu.prio.load().prio);
+		else if (reg == RESERVATION_LOST)
+			str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
+		else if (reg == PC)
+			str = fmt::format("%08x", ppu.cia);
 	}
 	else if (cpu->get_class() == thread_class::spu)
 	{
@@ -209,17 +232,28 @@ void register_editor_dialog::updateRegister(int reg) const
 			const v128 r = spu.gpr[reg_index];
 			str = !r._u ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
-		else if (reg == MFC_PEVENTS) str = fmt::format("%08x", +spu.ch_events.load().events);
-		else if (reg == MFC_EVENTS_MASK) str = fmt::format("%08x", +spu.ch_events.load().mask);
-		else if (reg == MFC_EVENTS_COUNT) str = fmt::format("%u", +spu.ch_events.load().count);
-		else if (reg == MFC_TAG_MASK) str = fmt::format("%08x", spu.ch_tag_mask);
-		else if (reg == SPU_SRR0) str = fmt::format("%08x", spu.srr0);
-		else if (reg == SPU_SNR1) str = fmt::format("%s", spu.ch_snr1);
-		else if (reg == SPU_SNR2) str = fmt::format("%s", spu.ch_snr2);
-		else if (reg == SPU_OUT_MBOX) str = fmt::format("%s", spu.ch_out_mbox);
-		else if (reg == SPU_OUT_INTR_MBOX) str = fmt::format("%s", spu.ch_out_intr_mbox);
-		else if (reg == RESERVATION_LOST) str = sstr(spu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
-		else if (reg == PC) str = fmt::format("%08x", spu.pc);
+		else if (reg == MFC_PEVENTS)
+			str = fmt::format("%08x", +spu.ch_events.load().events);
+		else if (reg == MFC_EVENTS_MASK)
+			str = fmt::format("%08x", +spu.ch_events.load().mask);
+		else if (reg == MFC_EVENTS_COUNT)
+			str = fmt::format("%u", +spu.ch_events.load().count);
+		else if (reg == MFC_TAG_MASK)
+			str = fmt::format("%08x", spu.ch_tag_mask);
+		else if (reg == SPU_SRR0)
+			str = fmt::format("%08x", spu.srr0);
+		else if (reg == SPU_SNR1)
+			str = fmt::format("%s", spu.ch_snr1);
+		else if (reg == SPU_SNR2)
+			str = fmt::format("%s", spu.ch_snr2);
+		else if (reg == SPU_OUT_MBOX)
+			str = fmt::format("%s", spu.ch_out_mbox);
+		else if (reg == SPU_OUT_INTR_MBOX)
+			str = fmt::format("%s", spu.ch_out_intr_mbox);
+		else if (reg == RESERVATION_LOST)
+			str = sstr(spu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
+		else if (reg == PC)
+			str = fmt::format("%08x", spu.pc);
 	}
 
 	m_value_line->setText(qstr(str));
@@ -277,8 +311,10 @@ void register_editor_dialog::OnOkay()
 
 				if (u64 reg_value; check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value, 16), value.c_str() + 16))
 				{
-					if (reg >= ppu_r0 && reg <= ppu_r31) ppu.gpr[reg_index] = reg_value;
-					else if (reg >= ppu_f0 && reg <= ppu_f31) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
+					if (reg >= ppu_r0 && reg <= ppu_r31)
+						ppu.gpr[reg_index] = reg_value;
+					else if (reg >= ppu_f0 && reg <= ppu_f31)
+						ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
 					return;
 				}
 			}
@@ -304,7 +340,11 @@ void register_editor_dialog::OnOkay()
 					}
 				}
 
-				value.erase(std::remove_if(value.begin(), value.end(), [](uchar c){ return std::isspace(c); }), value.end());
+				value.erase(std::remove_if(value.begin(), value.end(), [](uchar c)
+								{
+									return std::isspace(c);
+								}),
+					value.end());
 
 				pad(32);
 
@@ -324,8 +364,10 @@ void register_editor_dialog::OnOkay()
 
 			if (u64 reg_value; check_res(std::from_chars(value.c_str(), value.c_str() + 16, reg_value, 16), value.c_str() + 16))
 			{
-				if (reg == PPU_LR) ppu.lr = reg_value;
-				else if (reg == PPU_CTR) ppu.ctr = reg_value;
+				if (reg == PPU_LR)
+					ppu.lr = reg_value;
+				else if (reg == PPU_CTR)
+					ppu.ctr = reg_value;
 				return;
 			}
 		}
@@ -336,17 +378,25 @@ void register_editor_dialog::OnOkay()
 			if (u32 reg_value; check_res(std::from_chars(value.c_str(), value.c_str() + 8, reg_value, 16), value.c_str() + 8))
 			{
 				bool ok = true;
-				if (reg == PPU_CR) ppu.cr.unpack(reg_value);
-				else if (reg == PPU_VRSAVE) ppu.vrsave = reg_value;
-				else if (reg == PPU_PRIO && !sys_ppu_thread_set_priority(ppu, ppu.id, reg_value)) {}
-				else if (reg == PC && reg_value % 4 == 0 && vm::check_addr(reg_value, vm::page_executable)) ppu.cia = reg_value & -4;
-				else ok = false;
-				if (ok) return;
+				if (reg == PPU_CR)
+					ppu.cr.unpack(reg_value);
+				else if (reg == PPU_VRSAVE)
+					ppu.vrsave = reg_value;
+				else if (reg == PPU_PRIO && !sys_ppu_thread_set_priority(ppu, ppu.id, reg_value))
+				{
+				}
+				else if (reg == PC && reg_value % 4 == 0 && vm::check_addr(reg_value, vm::page_executable))
+					ppu.cia = reg_value & -4;
+				else
+					ok = false;
+				if (ok)
+					return;
 			}
 		}
 		else if (reg == RESERVATION_LOST)
 		{
-			if (const u32 raddr = ppu.raddr) vm::reservation_update(raddr);
+			if (const u32 raddr = ppu.raddr)
+				vm::reservation_update(raddr);
 			return;
 		}
 	}
@@ -369,7 +419,11 @@ void register_editor_dialog::OnOkay()
 				}
 			}
 
-			value.erase(std::remove_if(value.begin(), value.end(), [](uchar c){ return std::isspace(c); }), value.end());
+			value.erase(std::remove_if(value.begin(), value.end(), [](uchar c)
+							{
+								return std::isspace(c);
+							}),
+				value.end());
 
 			pad(32);
 
@@ -387,15 +441,32 @@ void register_editor_dialog::OnOkay()
 			if (u32 reg_value; check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
 			{
 				bool ok = true;
-				if (reg == MFC_PEVENTS && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events){ events.events = reg_value; });
-				else if (reg == MFC_EVENTS_MASK && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events){ events.mask = reg_value; });
-				else if (reg == MFC_EVENTS_COUNT && reg_value <= 1u) spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events){ events.count = reg_value; });
-				else if (reg == MFC_TAG_MASK) spu.ch_tag_mask = reg_value;
-				else if (reg == SPU_SRR0 && !(reg_value & ~0x3fffc)) spu.srr0 = reg_value;
-				else if (reg == PC && !(reg_value & ~0x3fffc)) spu.pc = reg_value;
-				else ok = false;
+				if (reg == MFC_PEVENTS && !(reg_value & ~SPU_EVENT_IMPLEMENTED))
+					spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events)
+						{
+							events.events = reg_value;
+						});
+				else if (reg == MFC_EVENTS_MASK && !(reg_value & ~SPU_EVENT_IMPLEMENTED))
+					spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events)
+						{
+							events.mask = reg_value;
+						});
+				else if (reg == MFC_EVENTS_COUNT && reg_value <= 1u)
+					spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events)
+						{
+							events.count = reg_value;
+						});
+				else if (reg == MFC_TAG_MASK)
+					spu.ch_tag_mask = reg_value;
+				else if (reg == SPU_SRR0 && !(reg_value & ~0x3fffc))
+					spu.srr0 = reg_value;
+				else if (reg == PC && !(reg_value & ~0x3fffc))
+					spu.pc = reg_value;
+				else
+					ok = false;
 
-				if (ok) return;
+				if (ok)
+					return;
 			}
 		}
 		else if (reg == SPU_SNR1 || reg == SPU_SNR2 || reg == SPU_OUT_MBOX || reg == SPU_OUT_INTR_MBOX)
@@ -410,16 +481,21 @@ void register_editor_dialog::OnOkay()
 			if (u32 reg_value = 0;
 				!count || check_res(std::from_chars(value.c_str(), value.c_str() + 8, reg_value, 16), value.c_str() + 8))
 			{
-				if (reg == SPU_SNR1) spu.ch_snr1.set_value(reg_value, count);
-				else if (reg == SPU_SNR2) spu.ch_snr2.set_value(reg_value, count);
-				else if (reg == SPU_OUT_MBOX) spu.ch_out_mbox.set_value(reg_value, count);
-				else if (reg == SPU_OUT_INTR_MBOX) spu.ch_out_intr_mbox.set_value(reg_value, count);
+				if (reg == SPU_SNR1)
+					spu.ch_snr1.set_value(reg_value, count);
+				else if (reg == SPU_SNR2)
+					spu.ch_snr2.set_value(reg_value, count);
+				else if (reg == SPU_OUT_MBOX)
+					spu.ch_out_mbox.set_value(reg_value, count);
+				else if (reg == SPU_OUT_INTR_MBOX)
+					spu.ch_out_intr_mbox.set_value(reg_value, count);
 				return;
 			}
 		}
 		else if (reg == RESERVATION_LOST)
 		{
-			if (const u32 raddr = spu.raddr) vm::reservation_update(raddr);
+			if (const u32 raddr = spu.raddr)
+				vm::reservation_update(raddr);
 			return;
 		}
 	}

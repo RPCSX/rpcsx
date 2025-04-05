@@ -12,8 +12,7 @@ namespace rsx
 
 	public:
 		fragment_texture(u8 idx, std::array<u32, 0x10000 / 4>& r)
-			: m_index(idx)
-			, registers(r)
+			: m_index(idx), registers(r)
 		{
 		}
 
@@ -91,9 +90,8 @@ namespace rsx
 		std::array<u32, 0x10000 / 4>& registers;
 
 	public:
-		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r)
-			: m_index(idx)
-			, registers(r)
+		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4>& r)
+			: m_index(idx), registers(r)
 		{
 		}
 
@@ -143,6 +141,6 @@ namespace rsx
 		u16 get_exact_mipmap_count() const;
 	};
 
-	template<typename T>
+	template <typename T>
 	concept Texture = std::is_same_v<T, fragment_texture> || std::is_same_v<T, vertex_texture>;
-}
+} // namespace rsx

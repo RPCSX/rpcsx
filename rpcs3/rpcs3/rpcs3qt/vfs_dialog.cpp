@@ -50,53 +50,53 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 	buttons->button(QDialogButtonBox::Save)->setDefault(true);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons, tabs](QAbstractButton* button)
-	{
-		if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
 		{
-			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all file system directories?")) != QMessageBox::Yes)
-				return;
-
-			for (int i = 0; i < tabs->count(); ++i)
+			if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
 			{
-				if (tabs->tabText(i) == "dev_usb")
+				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all file system directories?")) != QMessageBox::Yes)
+					return;
+
+				for (int i = 0; i < tabs->count(); ++i)
 				{
-					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->reset();
-				}
-				else
-				{
-					static_cast<vfs_dialog_tab*>(tabs->widget(i))->reset();
+					if (tabs->tabText(i) == "dev_usb")
+					{
+						static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->reset();
+					}
+					else
+					{
+						static_cast<vfs_dialog_tab*>(tabs->widget(i))->reset();
+					}
 				}
 			}
-		}
-		else if (button == buttons->button(QDialogButtonBox::Save))
-		{
-			for (int i = 0; i < tabs->count(); ++i)
+			else if (button == buttons->button(QDialogButtonBox::Save))
 			{
-				if (tabs->tabText(i) == "dev_usb")
+				for (int i = 0; i < tabs->count(); ++i)
 				{
-					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
+					if (tabs->tabText(i) == "dev_usb")
+					{
+						static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
+					}
+					else
+					{
+						static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings();
+					}
 				}
-				else
+
+				g_cfg_vfs.save();
+
+				// Recreate folder structure for new VFS paths
+				if (Emu.IsStopped())
 				{
-					static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings();
+					Emu.Init();
 				}
+
+				accept();
 			}
-
-			g_cfg_vfs.save();
-
-			// Recreate folder structure for new VFS paths
-			if (Emu.IsStopped())
+			else if (button == buttons->button(QDialogButtonBox::Close))
 			{
-				Emu.Init();
+				reject();
 			}
-
-			accept();
-		}
-		else if (button == buttons->button(QDialogButtonBox::Close))
-		{
-			reject();
-		}
-	});
+		});
 
 	QVBoxLayout* vbox = new QVBoxLayout;
 	vbox->addWidget(tabs);

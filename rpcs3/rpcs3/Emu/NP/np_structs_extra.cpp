@@ -104,7 +104,7 @@ namespace extra_nps
 
 		for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal; i++)
 			print_int_attr(&req->roomSearchableIntAttrExternal[i]);
-		
+
 		sceNp2.warning("roomSearchableBinAttrExternal: *0x%x", req->roomSearchableBinAttrExternal);
 		sceNp2.warning("roomSearchableBinAttrExternalNum: %d", req->roomSearchableBinAttrExternalNum);
 
@@ -186,7 +186,7 @@ namespace extra_nps
 		sceNp2.warning("SceNpMatching2SearchRoomResponse:");
 		print_range(&resp->range);
 
-		const SceNpMatching2RoomDataExternal *room_ptr = resp->roomDataExternal.get_ptr();
+		const SceNpMatching2RoomDataExternal* room_ptr = resp->roomDataExternal.get_ptr();
 		for (u32 i = 0; i < resp->range.total; i++)
 		{
 			sceNp2.warning("SceNpMatching2SearchRoomResponse[%d]:", i);
@@ -471,7 +471,7 @@ namespace extra_nps
 		{
 			sceNp.warning("ptr: *0x%x", data->value.data.ptr);
 			sceNp.warning("size: %d", data->value.data.size);
-			sceNp.warning("data:\n%s", fmt::buf_to_hexstring(static_cast<u8 *>(data->value.data.ptr.get_ptr()), data->value.data.size));
+			sceNp.warning("data:\n%s", fmt::buf_to_hexstring(static_cast<u8*>(data->value.data.ptr.get_ptr()), data->value.data.size));
 		}
 		else
 		{

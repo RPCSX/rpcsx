@@ -97,5 +97,5 @@ namespace rsx
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 			}
 		}
-	}
-}
+	} // namespace util
+} // namespace rsx

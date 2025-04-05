@@ -36,7 +36,6 @@ namespace gl
 		void operator()();
 
 	private:
-
 		struct pipe_compiler_job
 		{
 			build_callback_t post_create_func;
@@ -45,7 +44,8 @@ namespace gl
 
 			pipe_compiler_job(build_callback_t post_create, build_callback_t post_link, storage_callback_t completion)
 				: post_create_func(post_create), post_link_func(post_link), completion_callback(completion)
-			{}
+			{
+			}
 		};
 
 		lf_queue<pipe_compiler_job> m_work_queue;
@@ -68,4 +68,4 @@ namespace gl
 
 	void destroy_pipe_compiler();
 	pipe_compiler* get_pipe_compiler();
-}
+} // namespace gl

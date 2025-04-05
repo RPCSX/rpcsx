@@ -30,8 +30,8 @@ constexpr u32 ppu_generate_id(u32 id)
 enum ppu_static_module_flags : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
-	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
-	MFF_HIDDEN     = (1 << 2), // Invisible variable for internal use (TODO)
+	MFF_PERFECT = (1 << 1),    // Indicates complete implementation and LLE interchangeability
+	MFF_HIDDEN = (1 << 2),     // Invisible variable for internal use (TODO)
 };
 
 // HLE function information
@@ -54,8 +54,8 @@ struct ppu_static_function
 struct ppu_static_variable
 {
 	const char* name;
-	u32* var; // Pointer to variable address storage
-	void(*init)(); // Variable initialization function
+	u32* var;       // Pointer to variable address storage
+	void (*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
 	u32 flags;
@@ -72,7 +72,7 @@ struct ppu_static_variable
 // HLE module information
 class ppu_static_module final
 {
-	std::vector<void(*)(ppu_static_module*)> m_on_init;
+	std::vector<void (*)(ppu_static_module*)> m_on_init;
 
 public:
 	const std::string name;
@@ -83,19 +83,19 @@ public:
 	ppu_static_module(const char* name);
 
 public:
-	ppu_static_module(const char* name, void(*init)())
+	ppu_static_module(const char* name, void (*init)())
 		: ppu_static_module(name)
 	{
 		init();
 	}
 
-	ppu_static_module(const char* name, void(*init)(ppu_static_module* _this))
+	ppu_static_module(const char* name, void (*init)(ppu_static_module* _this))
 		: ppu_static_module(name)
 	{
 		init(this);
 	}
 
-	void add_init_func(void(*func)(ppu_static_module*));
+	void add_init_func(void (*func)(ppu_static_module*));
 
 	void initialize();
 };
@@ -127,7 +127,7 @@ public:
 	{
 		auto& info = access_static_function(_module, fnid);
 
-		info.name  = name;
+		info.name = name;
 		info.index = ppu_function_manager::register_function<decltype(Func), Func>(func);
 		info.flags = 0;
 
@@ -151,13 +151,13 @@ public:
 
 		auto& info = access_static_variable(_module, vnid);
 
-		info.name  = name;
-		info.var   = &Var->raw();
-		info.init  = [] {};
-		info.size  = gvar::alloc_size;
+		info.name = name;
+		info.var = &Var->raw();
+		info.init = [] {};
+		info.size = gvar::alloc_size;
 		info.align = gvar::alloc_align;
 		info.flags = 0;
-		info.addr  = 0;
+		info.addr = 0;
 
 		return info;
 	}

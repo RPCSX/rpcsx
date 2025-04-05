@@ -7,13 +7,12 @@ namespace shader {
 template <typename T, std::size_t N> struct Vector : std::array<T, N> {
   using std::array<T, N>::array;
 
-  template<typename U>
-  constexpr explicit operator Vector<U, N>() const {
-     Vector<U, N> result;
-     for (std::size_t i = 0; i < N; ++i) {
-       result[i] = static_cast<U>((*this)[i]);
-     }
-     return result;
+  template <typename U> constexpr explicit operator Vector<U, N>() const {
+    Vector<U, N> result;
+    for (std::size_t i = 0; i < N; ++i) {
+      result[i] = static_cast<U>((*this)[i]);
+    }
+    return result;
   }
 
 #define DEFINE_BINOP(OP)                                                       \

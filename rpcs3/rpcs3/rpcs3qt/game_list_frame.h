@@ -55,7 +55,10 @@ public:
 
 	void SetShowHidden(bool show);
 
-	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
+	game_compatibility* GetGameCompatibility() const
+	{
+		return m_game_compat;
+	}
 
 	const std::vector<game_info>& GetGameInfo() const;
 
@@ -83,7 +86,7 @@ private Q_SLOTS:
 	void OnRefreshFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 	void doubleClickedSlot(QTableWidgetItem* item);
 	void doubleClickedSlot(const game_info& game);
 	void ItemSelectionChangedSlot();
@@ -113,15 +116,17 @@ public:
 		static_assert(std::is_void_v<KeySlot>);
 
 		connect(this, &game_list_frame::Refreshed, this, [this, func = std::move(func)]() mutable
-		{
-			func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_paths);
-		}, Qt::SingleShotConnection);
+			{
+				func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_paths);
+			},
+			Qt::SingleShotConnection);
 	}
 
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
-	bool eventFilter(QObject *object, QEvent *event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
+
 private:
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
 

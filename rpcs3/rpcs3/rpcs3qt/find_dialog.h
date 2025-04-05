@@ -11,7 +11,7 @@ class find_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	find_dialog(QPlainTextEdit* edit, QWidget *parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
+	find_dialog(QPlainTextEdit* edit, QWidget* parent = Q_NULLPTR, Qt::WindowFlags f = Qt::WindowFlags());
 
 private:
 	int m_count_lines = 0;

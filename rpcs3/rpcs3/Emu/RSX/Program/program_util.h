@@ -22,10 +22,12 @@ namespace rsx
 			float clamp_max[2];
 			u32 remap;
 			u32 control;
-		}
-		slots_[16]; // QT headers will collide with any variable named 'slots' because reasons
+		} slots_[16]; // QT headers will collide with any variable named 'slots' because reasons
 
-		TIU_slot& operator[](u32 index) { return slots_[index]; }
+		TIU_slot& operator[](u32 index)
+		{
+			return slots_[index];
+		}
 
 		void write_to(void* dst, u16 mask) const;
 		void load_from(const void* src, u16 mask);
@@ -44,7 +46,7 @@ namespace rsx
 		void clear(u32 index);
 		void import(const fragment_program_texture_state& other, u16 mask);
 		void set_dimension(texture_dimension_extended type, u32 index);
-		bool operator == (const fragment_program_texture_state& other) const;
+		bool operator==(const fragment_program_texture_state& other) const;
 	};
 
 	struct vertex_program_texture_state
@@ -55,7 +57,7 @@ namespace rsx
 		void clear(u32 index);
 		void import(const vertex_program_texture_state& other, u16 mask);
 		void set_dimension(texture_dimension_extended type, u32 index);
-		bool operator == (const vertex_program_texture_state& other) const;
+		bool operator==(const vertex_program_texture_state& other) const;
 	};
 
 	struct VertexProgramBase
@@ -72,4 +74,4 @@ namespace rsx
 		// Returns true if this program consumes any constants in the range [first, first + count - 1]
 		bool overlaps_constants_range(int first_index, int count) const;
 	};
-}
+} // namespace rsx

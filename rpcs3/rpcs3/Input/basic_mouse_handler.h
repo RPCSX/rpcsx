@@ -27,6 +27,7 @@ public:
 	void MouseMove(const QPoint& e_pos);
 
 	bool eventFilter(QObject* obj, QEvent* ev) override;
+
 private:
 	void reload_config();
 	bool get_mouse_lock_state() const;

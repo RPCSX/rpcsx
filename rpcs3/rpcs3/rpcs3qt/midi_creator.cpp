@@ -24,7 +24,11 @@ void midi_creator::refresh_list()
 	m_midi_list.clear();
 	m_midi_list.append(get_none());
 
-	const auto deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
+	const auto deleter = [](RtMidiWrapper* ptr)
+	{
+		if (ptr)
+			rtmidi_in_free(ptr);
+	};
 	std::unique_ptr<RtMidiWrapper, decltype(deleter)> midi_in(rtmidi_in_create_default());
 	ensure(midi_in);
 
@@ -109,7 +113,7 @@ void midi_creator::parse_devices(const std::string& list)
 {
 	m_sel_list = {};
 
-	const std::vector<std::string> devices_list = fmt::split(list, { "@@@" });
+	const std::vector<std::string> devices_list = fmt::split(list, {"@@@"});
 	for (usz index = 0; index < std::min(m_sel_list.size(), devices_list.size()); index++)
 	{
 		m_sel_list[index] = midi_device::from_string(devices_list[index]);

@@ -5,7 +5,6 @@
 #include "cellDmux.h"
 #include "cellDmuxPamf.h"
 
-
 vm::gvar<CellDmuxCoreOps> g_cell_dmux_core_ops_pamf;
 vm::gvar<CellDmuxCoreOps> g_cell_dmux_core_ops_raw_es;
 
@@ -132,38 +131,38 @@ static void init_gvar(const vm::gvar<CellDmuxCoreOps>& var)
 }
 
 DECLARE(ppu_module_manager::cellDmuxPamf)("cellDmuxPamf", []
-{
-	REG_VNID(cellDmuxPamf, 0x28b2b7b2, g_cell_dmux_core_ops_pamf).init = []
 	{
-		g_cell_dmux_core_ops_pamf->setStream.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpSetStream<false>)));
-		g_cell_dmux_core_ops_pamf->queryEsAttr.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpQueryEsAttr<false>)));
-		g_cell_dmux_core_ops_pamf->enableEs.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpEnableEs<false>)));
-		init_gvar(g_cell_dmux_core_ops_pamf);
-	};
+		REG_VNID(cellDmuxPamf, 0x28b2b7b2, g_cell_dmux_core_ops_pamf).init = []
+		{
+			g_cell_dmux_core_ops_pamf->setStream.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpSetStream<false>)));
+			g_cell_dmux_core_ops_pamf->queryEsAttr.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpQueryEsAttr<false>)));
+			g_cell_dmux_core_ops_pamf->enableEs.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpEnableEs<false>)));
+			init_gvar(g_cell_dmux_core_ops_pamf);
+		};
 
-	REG_VNID(cellDmuxPamf, 0x9728a0e9, g_cell_dmux_core_ops_raw_es).init = []
-	{
-		g_cell_dmux_core_ops_raw_es->setStream.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpSetStream<true>)));
-		g_cell_dmux_core_ops_raw_es->queryEsAttr.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpQueryEsAttr<true>)));
-		g_cell_dmux_core_ops_raw_es->enableEs.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpEnableEs<true>)));
-		init_gvar(g_cell_dmux_core_ops_raw_es);
-	};
+		REG_VNID(cellDmuxPamf, 0x9728a0e9, g_cell_dmux_core_ops_raw_es).init = []
+		{
+			g_cell_dmux_core_ops_raw_es->setStream.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpSetStream<true>)));
+			g_cell_dmux_core_ops_raw_es->queryEsAttr.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpQueryEsAttr<true>)));
+			g_cell_dmux_core_ops_raw_es->enableEs.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellDmuxCoreOpEnableEs<true>)));
+			init_gvar(g_cell_dmux_core_ops_raw_es);
+		};
 
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpQueryAttr);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpOpen);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpClose);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpResetStream);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpCreateThread);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpJoinThread);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpSetStream<false>);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpSetStream<true>);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpFreeMemory);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpQueryEsAttr<false>);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpQueryEsAttr<true>);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpEnableEs<false>);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpEnableEs<true>);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpDisableEs);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpFlushEs);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpResetEs);
-	REG_HIDDEN_FUNC(_CellDmuxCoreOpResetStreamAndWaitDone);
-});
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpQueryAttr);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpOpen);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpClose);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpResetStream);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpCreateThread);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpJoinThread);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpSetStream<false>);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpSetStream<true>);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpFreeMemory);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpQueryEsAttr<false>);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpQueryEsAttr<true>);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpEnableEs<false>);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpEnableEs<true>);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpDisableEs);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpFlushEs);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpResetEs);
+		REG_HIDDEN_FUNC(_CellDmuxCoreOpResetStreamAndWaitDone);
+	});

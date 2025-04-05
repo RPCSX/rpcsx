@@ -30,18 +30,48 @@ public:
 	virtual u64 frame_number() const = 0; // Convenience function to check if there's a new frame.
 	virtual camera_handler_state get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read) = 0;
 
-	camera_handler_state get_state() const { return m_state.load(); }
-	void set_state(camera_handler_state state) { m_state = m_state_expected = state; }
+	camera_handler_state get_state() const
+	{
+		return m_state.load();
+	}
+	void set_state(camera_handler_state state)
+	{
+		m_state = m_state_expected = state;
+	}
 
-	camera_handler_state get_expected_state() const { return m_state_expected.load(); }
-	void set_expected_state(camera_handler_state state) { m_state_expected = state; }
+	camera_handler_state get_expected_state() const
+	{
+		return m_state_expected.load();
+	}
+	void set_expected_state(camera_handler_state state)
+	{
+		m_state_expected = state;
+	}
 
-	bool mirrored() const { return m_mirrored; }
-	s32 format() const { return m_format; }
-	u32 bytesize() const { return m_bytesize; }
-	u32 width() const { return m_width; }
-	u32 height() const { return m_height; }
-	u32 frame_rate() const { return m_frame_rate; }
+	bool mirrored() const
+	{
+		return m_mirrored;
+	}
+	s32 format() const
+	{
+		return m_format;
+	}
+	u32 bytesize() const
+	{
+		return m_bytesize;
+	}
+	u32 width() const
+	{
+		return m_width;
+	}
+	u32 height() const
+	{
+		return m_height;
+	}
+	u32 frame_rate() const
+	{
+		return m_frame_rate;
+	}
 
 protected:
 	std::mutex m_mutex;

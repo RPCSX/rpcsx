@@ -37,4 +37,4 @@ namespace rsx
 	void mm_flush_lazy();
 	void mm_flush(u32 vm_address);
 	void mm_flush();
-}
+} // namespace rsx

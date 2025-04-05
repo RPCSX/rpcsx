@@ -12,6 +12,6 @@ error_code sceNpManagerIsSP()
 }
 
 DECLARE(ppu_module_manager::sceNpPlus)("sceNpPlus", []()
-{
-	REG_FUNC(sceNpPlus, sceNpManagerIsSP);
-});
+	{
+		REG_FUNC(sceNpPlus, sceNpManagerIsSP);
+	});

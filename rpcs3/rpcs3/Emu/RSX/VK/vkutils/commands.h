@@ -9,11 +9,11 @@ namespace vk
 	class command_pool
 	{
 		vk::render_device* owner = nullptr;
-		VkCommandPool pool       = nullptr;
-		u32 queue_family         = 0;
+		VkCommandPool pool = nullptr;
+		u32 queue_family = 0;
 
 	public:
-		command_pool()  = default;
+		command_pool() = default;
 		~command_pool() = default;
 
 		void create(vk::render_device& dev, u32 queue_family);
@@ -76,18 +76,17 @@ namespace vk
 		{
 			flush_only, // Only to be submitted/opened/closed via command flush
 			all         // Auxiliary, can be submitted/opened/closed at any time
-		}
-		access_hint = flush_only;
+		} access_hint = flush_only;
 
 		enum command_buffer_data_flag : u32
 		{
 			cb_has_occlusion_task = 0x01,
-			cb_has_blit_transfer  = 0x02,
-			cb_has_dma_transfer   = 0x04,
-			cb_has_open_query     = 0x08,
+			cb_has_blit_transfer = 0x02,
+			cb_has_dma_transfer = 0x04,
+			cb_has_open_query = 0x08,
 			cb_load_occluson_task = 0x10,
 			cb_has_conditional_render = 0x20,
-			cb_reload_dynamic_state   = 0x40
+			cb_reload_dynamic_state = 0x40
 		};
 		u32 flags = 0;
 
@@ -133,4 +132,4 @@ namespace vk
 			return is_open;
 		}
 	};
-}
+} // namespace vk

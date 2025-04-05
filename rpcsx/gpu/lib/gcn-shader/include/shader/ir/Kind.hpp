@@ -202,4 +202,4 @@ inline std::string getInstructionName(Kind kind, unsigned op) {
 
   return result;
 }
-} // namespace ir
+} // namespace shader::ir

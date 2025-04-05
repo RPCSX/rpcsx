@@ -46,7 +46,7 @@ elf_memory_dumping_dialog::elf_memory_dumping_dialog(u32 ppu_debugger_addr, std:
 	m_ppu_address_input = make_hex_edit(8);
 	m_ls_address_input = make_hex_edit(5);
 	m_segment_flags_input = make_hex_edit(1);
-	m_segment_flags_input->setText("0x7"); // READ WRITE EXEC
+	m_segment_flags_input->setText("0x7");                                                         // READ WRITE EXEC
 	m_ppu_address_input->setText(QStringLiteral("0x%1").arg(ppu_debugger_addr & -0x10000, 1, 16)); // SPU code segments are usually 128 bytes aligned, let's make it even 64k so the user would have to type himself the lower part to avoid human errors.
 
 	QPushButton* add_segment_button = new QPushButton(QStringLiteral("+"));
@@ -96,9 +96,9 @@ elf_memory_dumping_dialog::elf_memory_dumping_dialog(u32 ppu_debugger_addr, std:
 	setLayout(vbox);
 
 	connect(m_seg_list, &QListWidget::currentRowChanged, this, [this, remove_segment_button](int row)
-	{
-		remove_segment_button->setEnabled(row >= 0 && m_seg_list->item(row));
-	});
+		{
+			remove_segment_button->setEnabled(row >= 0 && m_seg_list->item(row));
+		});
 
 	show();
 }
@@ -202,7 +202,7 @@ void elf_memory_dumping_dialog::save_to_file()
 
 	const QString path_last_elf = m_gui_settings->GetValue(gui::fd_save_elf).toString();
 
-	const QString qpath = QFileDialog::getSaveFileName(this, tr("Capture"), path_last_elf, "SPU ELF (*.elf)" );
+	const QString qpath = QFileDialog::getSaveFileName(this, tr("Capture"), path_last_elf, "SPU ELF (*.elf)");
 	const std::string path = qpath.toStdString();
 
 	if (!path.empty())

@@ -9,4 +9,4 @@ namespace rsx
 	{
 		void buffer_notify(context* ctx, u32 reg, u32 arg);
 	}
-}
+} // namespace rsx

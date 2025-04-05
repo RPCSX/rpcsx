@@ -21,8 +21,8 @@ namespace vk
 	struct fence
 	{
 		atomic_t<bool> flushed = false;
-		VkFence handle         = VK_NULL_HANDLE;
-		VkDevice owner         = VK_NULL_HANDLE;
+		VkFence handle = VK_NULL_HANDLE;
+		VkDevice owner = VK_NULL_HANDLE;
 
 		fence(VkDevice dev);
 		~fence();
@@ -120,9 +120,18 @@ namespace vk
 		virtual ~gpu_label();
 
 		void signal(const vk::command_buffer& cmd, const VkDependencyInfoKHR& dependency);
-		void reset() { *m_ptr = label_constants::reset_; }
-		void set() { *m_ptr = label_constants::set_; }
-		bool signaled() const { return label_constants::set_ == *m_ptr; }
+		void reset()
+		{
+			*m_ptr = label_constants::reset_;
+		}
+		void set()
+		{
+			*m_ptr = label_constants::set_;
+		}
+		bool signaled() const
+		{
+			return label_constants::set_ == *m_ptr;
+		}
 	};
 
 	class gpu_debug_marker_pool : public gpu_label_pool
@@ -165,4 +174,4 @@ namespace vk
 
 	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(event* pEvent, u64 timeout = 0ull);
-}
+} // namespace vk

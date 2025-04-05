@@ -26,20 +26,20 @@ static orbis::ErrorCode icc_power_ioctl(orbis::File *file,
   case 0xc0019901: {
     iccPower->bootphase = *reinterpret_cast<std::uint8_t *>(argp);
     ORBIS_LOG_WARNING(__FUNCTION__, request, iccPower->bootphase);
-    return{};
+    return {};
   }
 
   case 0xc0099902: {
     auto &unk = *reinterpret_cast<std::uint32_t *>(argp);
     ORBIS_LOG_WARNING(__FUNCTION__, request, unk);
     unk = 1;
-    return{};
+    return {};
   }
 
   case 0x40019907:
     ORBIS_LOG_WARNING(__FUNCTION__, request);
     *reinterpret_cast<std::uint8_t *>(argp) = iccPower->bootphase;
-    return{};
+    return {};
   }
 
   ORBIS_LOG_FATAL("Unhandled icc_power ioctl", request);
@@ -47,8 +47,9 @@ static orbis::ErrorCode icc_power_ioctl(orbis::File *file,
   return {};
 }
 
-orbis::ErrorCode icc_stat(orbis::File *file, orbis::Stat *sb, orbis::Thread *thread) {
-  return{};
+orbis::ErrorCode icc_stat(orbis::File *file, orbis::Stat *sb,
+                          orbis::Thread *thread) {
+  return {};
 }
 
 static const orbis::FileOps fileOps = {

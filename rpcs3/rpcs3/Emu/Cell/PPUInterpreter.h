@@ -4,7 +4,7 @@
 
 class ppu_thread;
 
-using ppu_intrp_func_t = void(*)(ppu_thread& ppu_, ppu_opcode_t op, be_t<u32>* this_op, struct ppu_intrp_func* next_fn);
+using ppu_intrp_func_t = void (*)(ppu_thread& ppu_, ppu_opcode_t op, be_t<u32>* this_op, struct ppu_intrp_func* next_fn);
 
 struct ppu_intrp_func
 {

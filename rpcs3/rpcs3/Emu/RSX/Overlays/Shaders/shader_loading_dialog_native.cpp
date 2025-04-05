@@ -13,23 +13,23 @@ namespace rsx
 	{
 	}
 
-	void shader_loading_dialog_native::create(const std::string& msg, const std::string&/* title*/)
+	void shader_loading_dialog_native::create(const std::string& msg, const std::string& /* title*/)
 	{
 		MsgDialogType type = {};
-		type.se_mute_on     = true;
+		type.se_mute_on = true;
 		type.disable_cancel = true;
 		type.progress_bar_count = 2;
 
 		dlg = g_fxo->get<rsx::overlays::display_manager>().create<rsx::overlays::message_dialog>(true);
 		dlg->progress_bar_set_taskbar_index(-1);
 		dlg->show(false, msg, type, msg_dialog_source::shader_loading, [](s32 status)
-		{
-			if (status != CELL_OK)
 			{
-				rsx_log.notice("Aborted shader loading dialog");
-				Emu.Kill(false);
-			}
-		});
+				if (status != CELL_OK)
+				{
+					rsx_log.notice("Aborted shader loading dialog");
+					Emu.Kill(false);
+				}
+			});
 	}
 
 	void shader_loading_dialog_native::update_msg(u32 index, std::string msg)
@@ -66,4 +66,4 @@ namespace rsx
 		dlg->return_code = CELL_OK;
 		dlg->close(false, false);
 	}
-}
+} // namespace rsx

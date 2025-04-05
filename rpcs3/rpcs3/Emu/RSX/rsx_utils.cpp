@@ -26,18 +26,19 @@ extern "C"
 
 namespace rsx
 {
-	atomic_t<u64> g_rsx_shared_tag{ 0 };
+	atomic_t<u64> g_rsx_shared_tag{0};
 
-	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
-		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear)
+	void convert_scale_image(u8* dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
+		const u8* src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear)
 	{
-		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(src_width, src_height, src_format,
-			dst_width, dst_height, dst_format, bilinear ? SWS_FAST_BILINEAR : SWS_POINT, nullptr, nullptr, nullptr), sws_freeContext);
+		std::unique_ptr<SwsContext, void (*)(SwsContext*)> sws(sws_getContext(src_width, src_height, src_format,
+																   dst_width, dst_height, dst_format, bilinear ? SWS_FAST_BILINEAR : SWS_POINT, nullptr, nullptr, nullptr),
+			sws_freeContext);
 
 		sws_scale(sws.get(), &src, &src_pitch, 0, src_slice_h, &dst, &dst_pitch);
 	}
 
-	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
+	void clip_image(u8* dst, const u8* src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
 	{
 		const u8* pixels_src = src + clip_y * src_pitch + clip_x * bpp;
 		u8* pixels_dst = dst;
@@ -51,7 +52,7 @@ namespace rsx
 		}
 	}
 
-	void clip_image_may_overlap(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8 *buffer)
+	void clip_image_may_overlap(u8* dst, const u8* src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8* buffer)
 	{
 		src += clip_y * src_pitch + clip_x * bpp;
 
@@ -77,10 +78,10 @@ namespace rsx
 		}
 	}
 
-	//Convert decoded integer values for CONSTANT_BLEND_FACTOR into f32 array in 0-1 range
+	// Convert decoded integer values for CONSTANT_BLEND_FACTOR into f32 array in 0-1 range
 	std::array<float, 4> get_constant_blend_colors()
 	{
-		//TODO: check another color formats (probably all integer formats with > 8-bits wide channels)
+		// TODO: check another color formats (probably all integer formats with > 8-bits wide channels)
 		if (rsx::method_registers.surface_color() == rsx::surface_color_format::w16z16y16x16)
 		{
 			u16 blend_color_r = rsx::method_registers.blend_color_16b_r();
@@ -88,7 +89,7 @@ namespace rsx
 			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
 			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
 
-			return { blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f };
+			return {blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f};
 		}
 		else
 		{
@@ -97,7 +98,7 @@ namespace rsx
 			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
 			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
 
-			return { blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f };
+			return {blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f};
 		}
 	}
 
@@ -127,7 +128,7 @@ namespace rsx
 		}
 		else
 		{
-			result = { 0, 0, output_dimensions.width, output_dimensions.height };
+			result = {0, 0, output_dimensions.width, output_dimensions.height};
 		}
 
 		return result;
@@ -196,7 +197,7 @@ namespace rsx
 		}
 
 		// Unconstrained aspect ratio conversion
-		return size2u{ static_cast<u32>(image_dimensions.height * get_aspect_ratio()), image_dimensions.height };
+		return size2u{static_cast<u32>(image_dimensions.height * get_aspect_ratio()), image_dimensions.height};
 	}
 
 	areau avconf::aspect_convert_region(const size2u& image_dimensions, const size2u& output_dimensions) const
@@ -210,7 +211,7 @@ namespace rsx
 
 		// Fit the input image into the virtual display 'window'
 		const auto source_aspect = 1. * image_dimensions.width / image_dimensions.height;
-		const auto virtual_output = size2u{ resolution_x, resolution_y };
+		const auto virtual_output = size2u{resolution_x, resolution_y};
 		const auto area1 = convert_aspect_ratio_impl(virtual_output, source_aspect);
 
 		// Fit the virtual display into the physical display
@@ -220,10 +221,10 @@ namespace rsx
 		const double stretch_x = 1. * area2.width() / virtual_output.width;
 		const double stretch_y = 1. * area2.height() / virtual_output.height;
 
-		return static_cast<areau>(static_cast<aread>(area1) * size2d { stretch_x, stretch_y }) + size2u{ area2.x1, area2.y1 };
+		return static_cast<areau>(static_cast<aread>(area1) * size2d{stretch_x, stretch_y}) + size2u{area2.x1, area2.y1};
 	}
 
 #ifdef TEXTURE_CACHE_DEBUG
 	tex_cache_checker_t tex_cache_checker = {};
 #endif
-}
+} // namespace rsx

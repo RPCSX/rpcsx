@@ -54,7 +54,6 @@ inline constexpr auto kUmtxOpNwakePrivate = 21;
 inline constexpr auto kUmtxOpMutexWake2 = 22;
 inline constexpr auto kUmtxOpMutexWake3 = 23;
 
-
 inline constexpr auto kSemNamed = 2;
 
 struct umtx {

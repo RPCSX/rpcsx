@@ -19,16 +19,12 @@ struct uncompressed_serialization_file_handler : utils::serialization_file_handl
 	const std::add_pointer_t<const fs::file> m_file;
 
 	explicit uncompressed_serialization_file_handler(fs::file&& file) noexcept
-		: utils::serialization_file_handler()
-		, m_file_storage(std::make_unique<fs::file>(std::move(file)))
-		, m_file(m_file_storage.get())
+		: utils::serialization_file_handler(), m_file_storage(std::make_unique<fs::file>(std::move(file))), m_file(m_file_storage.get())
 	{
 	}
 
 	explicit uncompressed_serialization_file_handler(const fs::file& file) noexcept
-		: utils::serialization_file_handler()
-		, m_file_storage(nullptr)
-		, m_file(std::addressof(file))
+		: utils::serialization_file_handler(), m_file_storage(nullptr), m_file(std::addressof(file))
 	{
 	}
 
@@ -45,7 +41,8 @@ struct uncompressed_serialization_file_handler : utils::serialization_file_handl
 	void finalize(utils::serial& ar) override;
 };
 
-template <typename File> requires (std::is_same_v<std::remove_cvref_t<File>, fs::file>)
+template <typename File>
+	requires(std::is_same_v<std::remove_cvref_t<File>, fs::file>)
 inline std::unique_ptr<uncompressed_serialization_file_handler> make_uncompressed_serialization_file_handler(File&& file)
 {
 	ensure(file);
@@ -58,16 +55,12 @@ struct compressed_stream_data;
 struct compressed_serialization_file_handler : utils::serialization_file_handler
 {
 	explicit compressed_serialization_file_handler(fs::file&& file) noexcept
-		: utils::serialization_file_handler()
-		, m_file_storage(std::make_unique<fs::file>(std::move(file)))
-		, m_file(m_file_storage.get())
+		: utils::serialization_file_handler(), m_file_storage(std::make_unique<fs::file>(std::move(file))), m_file(m_file_storage.get())
 	{
 	}
 
 	explicit compressed_serialization_file_handler(const fs::file& file) noexcept
-		: utils::serialization_file_handler()
-		, m_file_storage(nullptr)
-		, m_file(std::addressof(file))
+		: utils::serialization_file_handler(), m_file_storage(nullptr), m_file(std::addressof(file))
 	{
 	}
 
@@ -111,7 +104,8 @@ private:
 	void blocked_compressed_write(const std::vector<u8>& data);
 };
 
-template <typename File> requires (std::is_same_v<std::remove_cvref_t<File>, fs::file>)
+template <typename File>
+	requires(std::is_same_v<std::remove_cvref_t<File>, fs::file>)
 inline std::unique_ptr<compressed_serialization_file_handler> make_compressed_serialization_file_handler(File&& file)
 {
 	ensure(file);
@@ -124,16 +118,12 @@ struct compressed_zstd_stream_data;
 struct compressed_zstd_serialization_file_handler : utils::serialization_file_handler
 {
 	explicit compressed_zstd_serialization_file_handler(fs::file&& file) noexcept
-		: utils::serialization_file_handler()
-		, m_file_storage(std::make_unique<fs::file>(std::move(file)))
-		, m_file(m_file_storage.get())
+		: utils::serialization_file_handler(), m_file_storage(std::make_unique<fs::file>(std::move(file))), m_file(m_file_storage.get())
 	{
 	}
 
 	explicit compressed_zstd_serialization_file_handler(const fs::file& file) noexcept
-		: utils::serialization_file_handler()
-		, m_file_storage(nullptr)
-		, m_file(std::addressof(file))
+		: utils::serialization_file_handler(), m_file_storage(nullptr), m_file(std::addressof(file))
 	{
 	}
 
@@ -189,7 +179,8 @@ private:
 	void file_writer_thread_op();
 };
 
-template <typename File> requires (std::is_same_v<std::remove_cvref_t<File>, fs::file>)
+template <typename File>
+	requires(std::is_same_v<std::remove_cvref_t<File>, fs::file>)
 inline std::unique_ptr<compressed_zstd_serialization_file_handler> make_compressed_zstd_serialization_file_handler(File&& file)
 {
 	ensure(file);

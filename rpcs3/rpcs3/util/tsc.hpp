@@ -16,7 +16,7 @@ namespace utils
 	{
 #if defined(ARCH_ARM64)
 		u64 r = 0;
-		__asm__ volatile("mrs %0, cntvct_el0" : "=r" (r));
+		__asm__ volatile("mrs %0, cntvct_el0" : "=r"(r));
 		return r;
 #elif defined(_M_X64)
 		return __rdtsc();
@@ -26,4 +26,4 @@ namespace utils
 #error "Missing utils::get_tsc() implementation"
 #endif
 	}
-}
+} // namespace utils

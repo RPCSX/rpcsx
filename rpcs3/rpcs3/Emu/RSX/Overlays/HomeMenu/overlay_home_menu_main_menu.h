@@ -10,5 +10,5 @@ namespace rsx
 		{
 			home_menu_main_menu(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

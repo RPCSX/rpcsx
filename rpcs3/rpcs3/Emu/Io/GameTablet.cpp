@@ -20,7 +20,7 @@ struct GameTablet_data
 	uint8_t btn_select : 1;
 	uint8_t btn_start : 1;
 	uint8_t : 2;
-	uint8_t btn_ps: 1;
+	uint8_t btn_ps : 1;
 	uint8_t : 3;
 
 	uint8_t dpad;
@@ -63,59 +63,58 @@ enum
 };
 
 usb_device_gametablet::usb_device_gametablet(u32 controller_index, const std::array<u8, 7>& location)
-	: usb_device_emulated(location)
-	, m_controller_index(controller_index)
+	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
-		UsbDeviceDescriptor {
-			.bcdUSB             = 0x0200,
-			.bDeviceClass       = 0x00,
-			.bDeviceSubClass    = 0x00,
-			.bDeviceProtocol    = 0x00,
-			.bMaxPacketSize0    = 0x08,
-			.idVendor           = 0x20d6,
-			.idProduct          = 0xcb17,
-			.bcdDevice          = 0x0108,
-			.iManufacturer      = 0x01,
-			.iProduct           = 0x02,
-			.iSerialNumber      = 0x00,
+		UsbDeviceDescriptor{
+			.bcdUSB = 0x0200,
+			.bDeviceClass = 0x00,
+			.bDeviceSubClass = 0x00,
+			.bDeviceProtocol = 0x00,
+			.bMaxPacketSize0 = 0x08,
+			.idVendor = 0x20d6,
+			.idProduct = 0xcb17,
+			.bcdDevice = 0x0108,
+			.iManufacturer = 0x01,
+			.iProduct = 0x02,
+			.iSerialNumber = 0x00,
 			.bNumConfigurations = 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG,
-		UsbDeviceConfiguration {
-			.wTotalLength        = 0x0029,
-			.bNumInterfaces      = 0x01,
+		UsbDeviceConfiguration{
+			.wTotalLength = 0x0029,
+			.bNumInterfaces = 0x01,
 			.bConfigurationValue = 0x01,
-			.iConfiguration      = 0x00,
-			.bmAttributes        = 0x80,
-			.bMaxPower           = 0x32}));
+			.iConfiguration = 0x00,
+			.bmAttributes = 0x80,
+			.bMaxPower = 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE,
-		UsbDeviceInterface {
-			.bInterfaceNumber   = 0x00,
-			.bAlternateSetting  = 0x00,
-			.bNumEndpoints      = 0x02,
-			.bInterfaceClass    = 0x03,
+		UsbDeviceInterface{
+			.bInterfaceNumber = 0x00,
+			.bAlternateSetting = 0x00,
+			.bNumEndpoints = 0x02,
+			.bInterfaceClass = 0x03,
 			.bInterfaceSubClass = 0x00,
 			.bInterfaceProtocol = 0x00,
-			.iInterface         = 0x00}));
+			.iInterface = 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID,
-		UsbDeviceHID {
-			.bcdHID            = 0x0110,
-			.bCountryCode      = 0x00,
-			.bNumDescriptors   = 0x01,
-			.bDescriptorType   = 0x22,
+		UsbDeviceHID{
+			.bcdHID = 0x0110,
+			.bCountryCode = 0x00,
+			.bNumDescriptors = 0x01,
+			.bDescriptorType = 0x22,
 			.wDescriptorLength = 0x0089}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x83,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0040,
-			.bInterval        = 0x0A}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0040,
+			.bInterval = 0x0A}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x04,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0040,
-			.bInterval        = 0x0A}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0040,
+			.bInterval = 0x0A}));
 
 	add_string("THQ Inc");
 	add_string("THQ uDraw Game Tablet for PS3");
@@ -127,10 +126,10 @@ usb_device_gametablet::~usb_device_gametablet()
 
 void usb_device_gametablet::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time   = get_timestamp() + 100;
+	transfer->expected_time = get_timestamp() + 100;
 
 	// Control transfers are nearly instant
 	switch (bmRequestType)
@@ -163,8 +162,8 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 {
 	ensure(buf_size >= sizeof(GameTablet_data));
 
-	transfer->fake            = true;
-	transfer->expected_count  = sizeof(GameTablet_data);
+	transfer->fake = true;
+	transfer->expected_count = sizeof(GameTablet_data);
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow (6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;

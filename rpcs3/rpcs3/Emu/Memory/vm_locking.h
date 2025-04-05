@@ -22,7 +22,7 @@ namespace vm
 		/* flag combinations with special meaning */
 
 		range_locked = 4ull << 61, // R+W as well, but being exclusively accessed (size extends addr)
-		range_allocation = 0, // Allocation, no safe access, g_shmem may change at ANY location
+		range_allocation = 0,      // Allocation, no safe access, g_shmem may change at ANY location
 
 		range_pos = 61,
 		range_bits = 3,
@@ -66,9 +66,9 @@ namespace vm
 			return;
 		}
 
-		#ifndef _MSC_VER
+#ifndef _MSC_VER
 		__asm__(""); // Tiny barrier
-		#endif
+#endif
 
 		if (!g_range_lock_bits[1]) [[likely]]
 		{

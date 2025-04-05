@@ -41,5 +41,5 @@ namespace rsx
 			std::vector<std::unique_ptr<overlay_element>> m_entries;
 			std::vector<std::function<page_navigation(pad_button)>> m_callbacks;
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

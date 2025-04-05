@@ -8,7 +8,7 @@
 namespace fmt
 {
 	template <typename CharT, usz N, typename... Args>
-	static std::string format(const CharT(&)[N], const Args&...);
+	static std::string format(const CharT (&)[N], const Args&...);
 }
 
 namespace rsx
@@ -50,49 +50,49 @@ namespace rsx
 				}
 			}
 		};
-	}
+	} // namespace exception_utils
 
 	template <typename E>
-	concept ErrorType = requires (E & e)
-	{
+	concept ErrorType = requires(E& e) {
 		{ e.empty() } -> std::same_as<bool>;
 	};
 
-    template <typename T, ErrorType E = exception_utils::soft_exception_t>
-    class expected
-    {
-        T value;
-        E error{};
+	template <typename T, ErrorType E = exception_utils::soft_exception_t>
+	class expected
+	{
+		T value;
+		E error{};
 
-    public:
-        [[ nodiscard ]] expected(const T& value_)
-            : value(value_)
-        {}
+	public:
+		[[nodiscard]] expected(const T& value_)
+			: value(value_)
+		{
+		}
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 26495) // disable warning for uninitialized value member (performance reasons)
 #endif
-        [[ nodiscard ]] expected(const E& error_)
-            : error(error_)
-        {
-            ensure(!error.empty());
-        }
+		[[nodiscard]] expected(const E& error_)
+			: error(error_)
+		{
+			ensure(!error.empty());
+		}
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-        operator T() const
-        {
-            ensure(error.empty());
-            return value;
-        }
+		operator T() const
+		{
+			ensure(error.empty());
+			return value;
+		}
 
-        T operator *() const
-        {
-            ensure(error.empty());
-            return value;
-        }
+		T operator*() const
+		{
+			ensure(error.empty());
+			return value;
+		}
 
 		operator bool() const
 			requires(!std::is_same_v<T, bool>)
@@ -100,15 +100,15 @@ namespace rsx
 			return error.empty();
 		}
 
-        operator std::pair<T&, E&>() const
-        {
-            return { value, error };
-        }
+		operator std::pair<T&, E&>() const
+		{
+			return {value, error};
+		}
 
-        bool operator == (const T& other) const
-        {
-            return error.empty() && value == other;
-        }
+		bool operator==(const T& other) const
+		{
+			return error.empty() && value == other;
+		}
 
 		std::string to_string() const
 		{
@@ -124,5 +124,5 @@ namespace rsx
 
 			return fmt::format("%s", error);
 		}
-    };
-}
+	};
+} // namespace rsx

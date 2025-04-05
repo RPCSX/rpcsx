@@ -19,8 +19,7 @@ namespace vk
 		{
 			dma_block* parent = nullptr;
 			u32 block_offset = 0;
-		}
-		inheritance_info;
+		} inheritance_info;
 
 		u32 base_address = 0;
 		u8* memory_mapping = nullptr;
@@ -32,7 +31,6 @@ namespace vk
 		virtual void unmap();
 
 	public:
-
 		dma_block() = default;
 		virtual ~dma_block();
 
@@ -52,7 +50,7 @@ namespace vk
 		virtual void extend(const render_device& dev, usz new_size);
 	};
 
-	class dma_block_EXT: public dma_block
+	class dma_block_EXT : public dma_block
 	{
 	private:
 		void allocate(const render_device& dev, usz size) override;
@@ -63,4 +61,4 @@ namespace vk
 		void flush(const utils::address_range& range) override;
 		void load(const utils::address_range& range) override;
 	};
-}
+} // namespace vk

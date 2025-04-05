@@ -36,193 +36,264 @@ vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_truehd;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_wma;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_WmaLsl;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_WmaPro;
-error_code _SceAdecCorrectPtsValue_Celp8(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_Celp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_Ddp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_DtsCore(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_DtsHd_Core(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_DtsHd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_DtsLbr(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_mpmc(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_M4Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_M4Aac2ch(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_M4Aac2chmod(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_Mp3s(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_mpmcl1(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_truehd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_wma(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_WmaLsl(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
-error_code _SceAdecCorrectPtsValue_WmaPro(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Celp8(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_Celp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_Ddp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_DtsCore(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_DtsHd_Core(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_DtsHd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_DtsLbr(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_mpmc(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_M4Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_M4Aac2ch(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_M4Aac2chmod(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_Mp3s(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_mpmcl1(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_truehd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_wma(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_WmaLsl(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
+error_code _SceAdecCorrectPtsValue_WmaPro(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>)
+{
+	UNIMPLEMENTED_FUNC(cellAdec);
+	return CELL_OK;
+}
 
 template <>
 void fmt_class_string<CellAdecError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellAdecError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_ADEC_ERROR_FATAL);
-		STR_CASE(CELL_ADEC_ERROR_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_ARG);
-		STR_CASE(CELL_ADEC_ERROR_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_CELP_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_CELP_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_CELP_ARG);
-		STR_CASE(CELL_ADEC_ERROR_CELP_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_CELP_CORE_FATAL);
-		STR_CASE(CELL_ADEC_ERROR_CELP_CORE_ARG);
-		STR_CASE(CELL_ADEC_ERROR_CELP_CORE_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_ARG);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_FATAL);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_ARG);
-		STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_FATAL);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_ARG);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_BUFFER_OVERFLOW);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_END_OF_BITSTREAM);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_CH_CONFIG_INCONSISTENCY);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_NO_CH_DEFAULT_POS);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_CH_POS);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_UNANTICIPATED_COUPLING_CH);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_LAYER_ID);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_ADTS_SYNCWORD_ERROR);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ADTS_ID);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_CH_CHANGED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SAMPLING_FREQ_CHANGED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_WRONG_SBR_CH);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_WRONG_SCALE_FACTOR);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_BOOKS);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_SECTION_DATA);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_PULSE_IS_NOT_LONG);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GC_IS_NOT_SUPPORTED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ELEMENT_ID);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_NO_CH_CONFIG);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_UNEXPECTED_OVERLAP_CRC);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_CRC_BUFFER_EXCEEDED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_CRC);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_BAD_WINDOW_CODE);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ADIF_HEADER_ID);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_NOT_SUPPORTED_PROFILE);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_PROG_NUMBER_NOT_FOUND);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_SAMP_RATE_INDEX);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_UNANTICIPATED_CH_CONFIG);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_PULSE_OVERFLOWED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_CAN_NOT_UNPACK_INDEX);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_DEINTERLEAVE_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_CALC_BAND_OFFSET_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_SCALE_FACTOR_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_CC_GAIN_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_MIX_COUPLING_CH_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GROUP_IS_INVALID);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_PREDICT_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_PREDICT_RESET_PATTERN);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_TNS_FRAME_INFO);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_MASK_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_GROUP_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_LPFLAG_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVERSE_QUANTIZATION_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_CB_MAP_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_PULSE_FAILED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_MONO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_STEREO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_CH_OVERFLOW);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_NOSYNCH);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PROGRAM);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_TAG);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_CHN_CONFIG);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_SECTION);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_SCFACTORS);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PULSE_DATA);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_MAIN_PROFILE_NOT_IMPLEMENTED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_GC_NOT_IMPLEMENTED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PLUS_ELE_ID);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_CREATE_ERROR);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_NOT_INITIALIZED);
-		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_INVALID_ENVELOPE);
-		STR_CASE(CELL_ADEC_ERROR_AC3_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_AC3_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_AC3_PARAM);
-		STR_CASE(CELL_ADEC_ERROR_AC3_FRAME);
-		STR_CASE(CELL_ADEC_ERROR_AT3_OK); // CELL_ADEC_ERROR_AT3_OFFSET
-		STR_CASE(CELL_ADEC_ERROR_AT3_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_AT3_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_AT3_ERROR);
-		STR_CASE(CELL_ADEC_ERROR_LPCM_FATAL);
-		STR_CASE(CELL_ADEC_ERROR_LPCM_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_LPCM_ARG);
-		STR_CASE(CELL_ADEC_ERROR_LPCM_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_LPCM_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_MP3_OK); // CELL_ADEC_ERROR_MP3_OFFSET
-		STR_CASE(CELL_ADEC_ERROR_MP3_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_MP3_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_MP3_ERROR);
-		STR_CASE(CELL_ADEC_ERROR_MP3_LOST_SYNC);
-		STR_CASE(CELL_ADEC_ERROR_MP3_NOT_L3);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_BITRATE);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_SFREQ);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_EMPHASIS);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_BLKTYPE);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_VERSION);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_MODE);
-		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_MODE_EXT);
-		STR_CASE(CELL_ADEC_ERROR_MP3_HUFFMAN_NUM);
-		STR_CASE(CELL_ADEC_ERROR_MP3_HUFFMAN_CASE_ID);
-		STR_CASE(CELL_ADEC_ERROR_MP3_SCALEFAC_COMPRESS);
-		STR_CASE(CELL_ADEC_ERROR_MP3_HGETBIT);
-		STR_CASE(CELL_ADEC_ERROR_MP3_FLOATING_EXCEPTION);
-		STR_CASE(CELL_ADEC_ERROR_MP3_ARRAY_OVERFLOW);
-		STR_CASE(CELL_ADEC_ERROR_MP3_STEREO_PROCESSING);
-		STR_CASE(CELL_ADEC_ERROR_MP3_JS_BOUND);
-		STR_CASE(CELL_ADEC_ERROR_MP3_PCMOUT);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_FATAL);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_SEQ);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_ARG);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_BUSY);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_EMPTY);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_SYNCF);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_LAYER);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_BITRATE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_SAMPLEFREQ);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_VERSION);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MODE_EXT);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_UNSUPPORT);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_OPENBS_EX);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_SYNCF_EX);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_CRCGET_EX);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_CRC_EX);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_CRCGET);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_CRC);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_BITALLOC);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_SCALE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_SAMPLE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_OPENBS);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_CRCGET);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_CRC);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_BITALLOC);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_SCALE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_SAMPLE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_HEADER);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_STATUS);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_CCRCGET);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_CRC);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_BITALLOC);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_SCALE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_SAMPLE);
-		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_STATUS);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_ADEC_ERROR_FATAL);
+				STR_CASE(CELL_ADEC_ERROR_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_ARG);
+				STR_CASE(CELL_ADEC_ERROR_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_CELP_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_CELP_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_CELP_ARG);
+				STR_CASE(CELL_ADEC_ERROR_CELP_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_CELP_CORE_FATAL);
+				STR_CASE(CELL_ADEC_ERROR_CELP_CORE_ARG);
+				STR_CASE(CELL_ADEC_ERROR_CELP_CORE_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_ARG);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_FATAL);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_ARG);
+				STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_FATAL);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_ARG);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_BUFFER_OVERFLOW);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_END_OF_BITSTREAM);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_CH_CONFIG_INCONSISTENCY);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_NO_CH_DEFAULT_POS);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_CH_POS);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_UNANTICIPATED_COUPLING_CH);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_LAYER_ID);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_ADTS_SYNCWORD_ERROR);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ADTS_ID);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_CH_CHANGED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SAMPLING_FREQ_CHANGED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_WRONG_SBR_CH);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_WRONG_SCALE_FACTOR);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_BOOKS);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_SECTION_DATA);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_PULSE_IS_NOT_LONG);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GC_IS_NOT_SUPPORTED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ELEMENT_ID);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_NO_CH_CONFIG);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_UNEXPECTED_OVERLAP_CRC);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_CRC_BUFFER_EXCEEDED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_CRC);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_BAD_WINDOW_CODE);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ADIF_HEADER_ID);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_NOT_SUPPORTED_PROFILE);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_PROG_NUMBER_NOT_FOUND);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_SAMP_RATE_INDEX);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_UNANTICIPATED_CH_CONFIG);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_PULSE_OVERFLOWED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_CAN_NOT_UNPACK_INDEX);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_DEINTERLEAVE_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_CALC_BAND_OFFSET_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_SCALE_FACTOR_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_CC_GAIN_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_MIX_COUPLING_CH_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GROUP_IS_INVALID);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_PREDICT_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_PREDICT_RESET_PATTERN);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_TNS_FRAME_INFO);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_MASK_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_GROUP_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_LPFLAG_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_INVERSE_QUANTIZATION_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_CB_MAP_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_PULSE_FAILED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_MONO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_STEREO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_CH_OVERFLOW);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_NOSYNCH);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PROGRAM);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_TAG);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_CHN_CONFIG);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_SECTION);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_SCFACTORS);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PULSE_DATA);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_MAIN_PROFILE_NOT_IMPLEMENTED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_GC_NOT_IMPLEMENTED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PLUS_ELE_ID);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_CREATE_ERROR);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_NOT_INITIALIZED);
+				STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_INVALID_ENVELOPE);
+				STR_CASE(CELL_ADEC_ERROR_AC3_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_AC3_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_AC3_PARAM);
+				STR_CASE(CELL_ADEC_ERROR_AC3_FRAME);
+				STR_CASE(CELL_ADEC_ERROR_AT3_OK); // CELL_ADEC_ERROR_AT3_OFFSET
+				STR_CASE(CELL_ADEC_ERROR_AT3_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_AT3_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_AT3_ERROR);
+				STR_CASE(CELL_ADEC_ERROR_LPCM_FATAL);
+				STR_CASE(CELL_ADEC_ERROR_LPCM_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_LPCM_ARG);
+				STR_CASE(CELL_ADEC_ERROR_LPCM_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_LPCM_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_MP3_OK); // CELL_ADEC_ERROR_MP3_OFFSET
+				STR_CASE(CELL_ADEC_ERROR_MP3_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_MP3_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_MP3_ERROR);
+				STR_CASE(CELL_ADEC_ERROR_MP3_LOST_SYNC);
+				STR_CASE(CELL_ADEC_ERROR_MP3_NOT_L3);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_BITRATE);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_SFREQ);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_EMPHASIS);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_BLKTYPE);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_VERSION);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_MODE);
+				STR_CASE(CELL_ADEC_ERROR_MP3_BAD_MODE_EXT);
+				STR_CASE(CELL_ADEC_ERROR_MP3_HUFFMAN_NUM);
+				STR_CASE(CELL_ADEC_ERROR_MP3_HUFFMAN_CASE_ID);
+				STR_CASE(CELL_ADEC_ERROR_MP3_SCALEFAC_COMPRESS);
+				STR_CASE(CELL_ADEC_ERROR_MP3_HGETBIT);
+				STR_CASE(CELL_ADEC_ERROR_MP3_FLOATING_EXCEPTION);
+				STR_CASE(CELL_ADEC_ERROR_MP3_ARRAY_OVERFLOW);
+				STR_CASE(CELL_ADEC_ERROR_MP3_STEREO_PROCESSING);
+				STR_CASE(CELL_ADEC_ERROR_MP3_JS_BOUND);
+				STR_CASE(CELL_ADEC_ERROR_MP3_PCMOUT);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_FATAL);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_SEQ);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_ARG);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_BUSY);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_EMPTY);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_SYNCF);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_LAYER);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_BITRATE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_SAMPLEFREQ);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_VERSION);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MODE_EXT);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_UNSUPPORT);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_OPENBS_EX);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_SYNCF_EX);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_CRCGET_EX);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_CRC_EX);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_CRCGET);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_CRC);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_BITALLOC);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_SCALE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_SAMPLE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_OPENBS);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_CRCGET);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_CRC);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_BITALLOC);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_SCALE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_SAMPLE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_HEADER);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_MC_STATUS);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_AG_CCRCGET);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_AG_CRC);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_AG_BITALLOC);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_AG_SCALE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_AG_SAMPLE);
+				STR_CASE(CELL_ADEC_ERROR_M2BC_AG_STATUS);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
-
 
 // LPCM decoder (included in cellAdec/libadec.sprx)
 
@@ -259,7 +330,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 		// Wait for the output to be consumed.
 		// The output has to be consumed even if the next command is not a decode command
 		savestate = lpcm_dec_state::waiting_for_output_mutex_lock;
-		output_mutex_lock:
+	output_mutex_lock:
 
 		error_occurred |= static_cast<u32>(sys_mutex_lock(ppu, output_mutex, 0) != CELL_OK);
 
@@ -271,7 +342,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 		while (output_locked)
 		{
 			savestate = lpcm_dec_state::waiting_for_output_cond_wait;
-			output_cond_wait:
+		output_cond_wait:
 
 			ensure(sys_cond_wait(ppu, output_consumed, 0) == CELL_OK); // Error code isn't checked on LLE
 
@@ -285,7 +356,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 
 		// Pop command from queue
 		savestate = lpcm_dec_state::queue_mutex_lock;
-		queue_mutex_lock:
+	queue_mutex_lock:
 
 		ensure(sys_mutex_lock(ppu, queue_mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
@@ -301,7 +372,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 		cellAdec.trace("Command type: %d", static_cast<u32>(cmd.type.get()));
 
 		savestate = lpcm_dec_state::executing_cmd;
-		execute_cmd:
+	execute_cmd:
 
 		switch (cmd.type)
 		{
@@ -351,26 +422,44 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 			{
 				switch (lpcm_param->sizeOfWord)
 				{
-				case CELL_ADEC_BIT_LENGTH_16: output_size = output_size * 32 / 16; sample_num /= 2; break;
+				case CELL_ADEC_BIT_LENGTH_16:
+					output_size = output_size * 32 / 16;
+					sample_num /= 2;
+					break;
 				case CELL_ADEC_BIT_LENGTH_20: // Same as below
-				case CELL_ADEC_BIT_LENGTH_24: output_size = output_size * 32 / 24; sample_num /= 3; break;
-				default: ; // LLE skips decoding entirely, the output buffer isn't written to, and it outputs whatever was there before
+				case CELL_ADEC_BIT_LENGTH_24:
+					output_size = output_size * 32 / 24;
+					sample_num /= 3;
+					break;
+				default:; // LLE skips decoding entirely, the output buffer isn't written to, and it outputs whatever was there before
 				}
 
 				// LPCM streams with an odd number of channels contain an empty dummy channel
 				switch (lpcm_param->channelNumber)
 				{
-				case CELL_ADEC_CH_MONO:    channel_num = 1; output_size = output_size * 1 / 2; break;
-				case CELL_ADEC_CH_STEREO:  channel_num = 2; break;
-				case CELL_ADEC_CH_3_0:     // Same as below
-				case CELL_ADEC_CH_2_1:     channel_num = 3; output_size = output_size * 3 / 4; break;
-				case CELL_ADEC_CH_3_1:     // Same as below
-				case CELL_ADEC_CH_2_2:     channel_num = 4; break;
-				case CELL_ADEC_CH_3_2:     channel_num = 5; output_size = output_size * 5 / 6; break;
+				case CELL_ADEC_CH_MONO:
+					channel_num = 1;
+					output_size = output_size * 1 / 2;
+					break;
+				case CELL_ADEC_CH_STEREO: channel_num = 2; break;
+				case CELL_ADEC_CH_3_0: // Same as below
+				case CELL_ADEC_CH_2_1:
+					channel_num = 3;
+					output_size = output_size * 3 / 4;
+					break;
+				case CELL_ADEC_CH_3_1: // Same as below
+				case CELL_ADEC_CH_2_2: channel_num = 4; break;
+				case CELL_ADEC_CH_3_2:
+					channel_num = 5;
+					output_size = output_size * 5 / 6;
+					break;
 				case CELL_ADEC_CH_3_2_LFE: channel_num = 6; break;
-				case CELL_ADEC_CH_3_4:     channel_num = 7; output_size = output_size * 7 / 8; break;
+				case CELL_ADEC_CH_3_4:
+					channel_num = 7;
+					output_size = output_size * 7 / 8;
+					break;
 				case CELL_ADEC_CH_3_4_LFE: channel_num = 8; break;
-				default: ; // Don't do anything, LLE simply skips reordering channels
+				default:; // Don't do anything, LLE simply skips reordering channels
 				}
 
 				// LLE doesn't check the output size
@@ -391,13 +480,9 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						const v128 s32_1 = gv_unpacklo16(gv_bcst16(0), s16le);
 						const v128 s32_2 = gv_unpackhi16(gv_bcst16(0), s16le);
 #else
-						const v128 s32_1 = std::endian::native == std::endian::little
-							? gv_shuffle8(s16be, v128::normal_array_t<s8>{ -1, -1, 1, 0, -1, -1, 3, 2, -1, -1, 5, 4, -1, -1, 7, 6 })
-							: gv_unpacklo16(s16be, gv_bcst16(0));
+						const v128 s32_1 = std::endian::native == std::endian::little ? gv_shuffle8(s16be, v128::normal_array_t<s8>{-1, -1, 1, 0, -1, -1, 3, 2, -1, -1, 5, 4, -1, -1, 7, 6}) : gv_unpacklo16(s16be, gv_bcst16(0));
 
-						const v128 s32_2 = std::endian::native == std::endian::little
-							? gv_shuffle8(s16be, v128::normal_array_t<s8>{ -1, -1, 9, 8, -1, -1, 11, 10, -1, -1, 13, 12, -1, -1, 15, 14 })
-							: gv_unpackhi16(s16be, gv_bcst16(0));
+						const v128 s32_2 = std::endian::native == std::endian::little ? gv_shuffle8(s16be, v128::normal_array_t<s8>{-1, -1, 9, 8, -1, -1, 11, 10, -1, -1, 13, 12, -1, -1, 15, 14}) : gv_unpackhi16(s16be, gv_bcst16(0));
 #endif
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 f32_1 = gv_mulfs(gv_cvts32_tofs(s32_1), 1.f / static_cast<f32>(0x80000000u));
@@ -418,9 +503,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 					for (; i * 3 <= au_size_u8 - static_cast<s64>(sizeof(v128)); i += 4)
 					{
 						// Load four samples, convert endianness if necessary and shift left by 8
-						const v128 _s32 = std::endian::native == std::endian::little
-							? gv_shuffle8(v128::loadu(&input_u8[i * 3]), v128::normal_array_t<s8>{ -1, 2, 1, 0, -1, 5, 4, 3, -1, 8, 7, 6, -1, 11, 10, 9 })
-							: gv_shuffle8(v128::loadu(&input_u8[i * 3]), v128::normal_array_t<s8>{ 0, 1, 2, -1, 3, 4, 5, -1, 6, 7, 8, -1, 9, 10, 11, -1 });
+						const v128 _s32 = std::endian::native == std::endian::little ? gv_shuffle8(v128::loadu(&input_u8[i * 3]), v128::normal_array_t<s8>{-1, 2, 1, 0, -1, 5, 4, 3, -1, 8, 7, 6, -1, 11, 10, 9}) : gv_shuffle8(v128::loadu(&input_u8[i * 3]), v128::normal_array_t<s8>{0, 1, 2, -1, 3, 4, 5, -1, 6, 7, 8, -1, 9, 10, 11, -1});
 
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
@@ -430,7 +513,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 
 					for (; i * 3 <= au_size_u8 - 3; i++)
 					{
-						alignas(alignof(s32)) const u8 s32le[4] = { 0, input_u8[i * 3 + 2], input_u8[i * 3 + 1], input_u8[i * 3] };
+						alignas(alignof(s32)) const u8 s32le[4] = {0, input_u8[i * 3 + 2], input_u8[i * 3 + 1], input_u8[i * 3]};
 
 						_output[i] = static_cast<f32>(std::bit_cast<le_t<s32>>(s32le)) / static_cast<f32>(0x80000000u);
 					}
@@ -499,7 +582,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_4:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 8, i_out += 7)
 					{
-						const v128 tmp1 = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
+						const v128 tmp1 = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in]));     // Swap Front Right and Center
 						const v128 tmp2 = gv_shuffle32<2, 0, 1, 3>(v128::loadu(&_output[i_in + 4])); // Reorder Rear Left, Rear Right, Side Right -> Side Right, Rear Left, Rear Right
 						v128::storeu(tmp1, &_output[i_out]);
 						v128::storeu(tmp2, &_output[i_out + 4]);
@@ -516,8 +599,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 					}
 					break;
 
-				default:
-					; // Don't do anything
+				default:; // Don't do anything
 				}
 			}
 			else
@@ -534,13 +616,31 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				switch (lpcm_param->channelNumber)
 				{
 				case CELL_ADEC_LPCM_DVD_CH_MONO: // Set channel_num to two for mono as well
-				case CELL_ADEC_LPCM_DVD_CH_STEREO:  channel_num = 2; break;
-				case 4:                             channel_num = 3; output_size = output_size * 2 / 3; break;
-				case 5:                             channel_num = 4; output_size = output_size * 2 / 4; break;
-				case CELL_ADEC_LPCM_DVD_CH_3_2:     channel_num = 5; output_size = output_size * 2 / 5; break;
-				case CELL_ADEC_LPCM_DVD_CH_3_2_LFE: channel_num = 6; output_size = output_size * 2 / 6; break;
-				case CELL_ADEC_LPCM_DVD_CH_3_4:     channel_num = 7; output_size = output_size * 2 / 7; break;
-				case CELL_ADEC_LPCM_DVD_CH_3_4_LFE: channel_num = 8; output_size = output_size * 2 / 8; break;
+				case CELL_ADEC_LPCM_DVD_CH_STEREO: channel_num = 2; break;
+				case 4:
+					channel_num = 3;
+					output_size = output_size * 2 / 3;
+					break;
+				case 5:
+					channel_num = 4;
+					output_size = output_size * 2 / 4;
+					break;
+				case CELL_ADEC_LPCM_DVD_CH_3_2:
+					channel_num = 5;
+					output_size = output_size * 2 / 5;
+					break;
+				case CELL_ADEC_LPCM_DVD_CH_3_2_LFE:
+					channel_num = 6;
+					output_size = output_size * 2 / 6;
+					break;
+				case CELL_ADEC_LPCM_DVD_CH_3_4:
+					channel_num = 7;
+					output_size = output_size * 2 / 7;
+					break;
+				case CELL_ADEC_LPCM_DVD_CH_3_4_LFE:
+					channel_num = 8;
+					output_size = output_size * 2 / 8;
+					break;
 				default: fmt::throw_exception("Unreachable"); // Parameters get verified in adecSetLpcmDvdParams()
 				}
 
@@ -562,9 +662,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						const v128 s16be = gv_unpacklo32(tmp1, tmp2);
 
 						// Convert endianess if necessary and shift left by 16
-						const v128 _s32 = std::endian::native == std::endian::little
-							? gv_shuffle8(s16be, v128::normal_array_t<s8>{ -1, -1, 1, 0, -1, -1, 3, 2, -1, -1, 5, 4, -1, -1, 7, 6 })
-							: gv_unpacklo16(s16be, gv_bcst16(0));
+						const v128 _s32 = std::endian::native == std::endian::little ? gv_shuffle8(s16be, v128::normal_array_t<s8>{-1, -1, 1, 0, -1, -1, 3, 2, -1, -1, 5, 4, -1, -1, 7, 6}) : gv_unpacklo16(s16be, gv_bcst16(0));
 
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
@@ -576,9 +674,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 					{
 						const v128 s16be = gv_loadu32(&input_s16[i_in]);
 
-						const v128 _s32 = std::endian::native == std::endian::little
-							? gv_shuffle8(s16be, v128::normal_array_t<s8>{ -1, -1, 1, 0, -1, -1, 3, 2, -1, -1, 5, 4, -1, -1, 7, 6 })
-							: gv_unpacklo16(s16be, gv_bcst16(0));
+						const v128 _s32 = std::endian::native == std::endian::little ? gv_shuffle8(s16be, v128::normal_array_t<s8>{-1, -1, 1, 0, -1, -1, 3, 2, -1, -1, 5, 4, -1, -1, 7, 6}) : gv_unpacklo16(s16be, gv_bcst16(0));
 
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
 
@@ -594,23 +690,15 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 					const s64 next_samples_offset = channel_num * 5;
 
 					// If channel_num is odd, the low bits of samples three and four are in different bytes
-					alignas(alignof(v128)) static constexpr auto shuffle_ctrl_same_offset = std::endian::native == std::endian::little
-						? v128::normal_array_t<s8>{ -1, 8, 1, 0, -1, 8, 3, 2, -1, 11, 5, 4, -1, 11, 7, 6 }
-						: v128::normal_array_t<s8>{ 0, 1, 8, -1, 2, 3, 8, -1, 4, 5, 11, -1, 6, 7, 11, -1 };
+					alignas(alignof(v128)) static constexpr auto shuffle_ctrl_same_offset = std::endian::native == std::endian::little ? v128::normal_array_t<s8>{-1, 8, 1, 0, -1, 8, 3, 2, -1, 11, 5, 4, -1, 11, 7, 6} : v128::normal_array_t<s8>{0, 1, 8, -1, 2, 3, 8, -1, 4, 5, 11, -1, 6, 7, 11, -1};
 
-					alignas(alignof(v128)) static constexpr auto shuffle_ctrl_different_offset = std::endian::native == std::endian::little
-						? v128::normal_array_t<s8>{ -1, 8, 1, 0, -1, 8, 3, 2, -1, 10, 5, 4, -1, 11, 7, 6 }
-						: v128::normal_array_t<s8>{ 0, 1, 8, -1, 2, 3, 8, -1, 4, 5, 10, -1, 6, 7, 11, -1 };
+					alignas(alignof(v128)) static constexpr auto shuffle_ctrl_different_offset = std::endian::native == std::endian::little ? v128::normal_array_t<s8>{-1, 8, 1, 0, -1, 8, 3, 2, -1, 10, 5, 4, -1, 11, 7, 6} : v128::normal_array_t<s8>{0, 1, 8, -1, 2, 3, 8, -1, 4, 5, 10, -1, 6, 7, 11, -1};
 
 					const v128 shuffle_ctrl = channel_num & 1 ? v128::loadu(&shuffle_ctrl_different_offset) : v128::loadu(&shuffle_ctrl_same_offset);
 
-					alignas(alignof(v128)) static constexpr auto low_bits_mask_same_offset = std::endian::native == std::endian::little
-						? v128::normal_array_t<u8>{ 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff }
-						: v128::normal_array_t<u8>{ 0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00 };
+					alignas(alignof(v128)) static constexpr auto low_bits_mask_same_offset = std::endian::native == std::endian::little ? v128::normal_array_t<u8>{0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff} : v128::normal_array_t<u8>{0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00};
 
-					alignas(alignof(v128)) static constexpr auto low_bits_mask_different_offset = std::endian::native == std::endian::little
-						? v128::normal_array_t<u8>{ 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff }
-						: v128::normal_array_t<u8>{ 0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0xf0, 0x00 };
+					alignas(alignof(v128)) static constexpr auto low_bits_mask_different_offset = std::endian::native == std::endian::little ? v128::normal_array_t<u8>{0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff} : v128::normal_array_t<u8>{0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0xf0, 0x00};
 
 					const v128 low_bits_mask = channel_num & 1 ? v128::loadu(&low_bits_mask_different_offset) : v128::loadu(&low_bits_mask_same_offset);
 
@@ -655,9 +743,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						s24be = gv_insert16<5>(s24be, read_from_ptr<u16>(&input_u8[i_in + low_bytes_3_4_offset]));
 
 						// Reorder bytes to form four 32-bit integer samples
-						const v128 _s32 = std::endian::native == std::endian::little
-							? gv_shuffle8(s24be, v128::normal_array_t<s8>{ -1, 8, 1, 0, -1, 9, 3, 2, -1, 10, 5, 4, -1, 11, 7, 6 })
-							: gv_shuffle8(s24be, v128::normal_array_t<s8>{ 0, 1, 8, -1, 2, 3, 9, -1, 4, 5, 10, -1, 6, 7, 11, -1 });
+						const v128 _s32 = std::endian::native == std::endian::little ? gv_shuffle8(s24be, v128::normal_array_t<s8>{-1, 8, 1, 0, -1, 9, 3, 2, -1, 10, 5, 4, -1, 11, 7, 6}) : gv_shuffle8(s24be, v128::normal_array_t<s8>{0, 1, 8, -1, 2, 3, 9, -1, 4, 5, 10, -1, 6, 7, 11, -1});
 
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
@@ -687,7 +773,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 			output_locked = true;
 			error_occurred |= static_cast<u32>(sys_mutex_unlock(ppu, output_mutex) != CELL_OK);
 
-			const vm::var<CellAdecLpcmInfo> bsi_info{{ lpcm_param->channelNumber, lpcm_param->sampleRate, static_cast<u32>(output_size) }};
+			const vm::var<CellAdecLpcmInfo> bsi_info{{lpcm_param->channelNumber, lpcm_param->sampleRate, static_cast<u32>(output_size)}};
 
 			notify_pcm_out.cbFunc(ppu, cmd.pcm_handle, output, static_cast<u32>(output_size), notify_pcm_out.cbArg, vm::make_var<vm::bcptr<void>>(bsi_info), ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_HDMV, error_occurred ? static_cast<s32>(CELL_ADEC_ERROR_FATAL) : CELL_OK);
 			break;
@@ -717,7 +803,7 @@ error_code LpcmDecContext::send_command(ppu_thread& ppu, auto&&... args)
 	// LLE copies the parameters directly into the context
 	if constexpr (type == LpcmDecCmdType::start_seq)
 	{
-		*lpcm_param = { args... };
+		*lpcm_param = {args...};
 	}
 
 	if (error_code ret = sys_mutex_lock(ppu, queue_mutex, 0); ret != CELL_OK)
@@ -728,8 +814,7 @@ error_code LpcmDecContext::send_command(ppu_thread& ppu, auto&&... args)
 
 	cmd_queue.emplace(type, std::forward<decltype(args)>(args)...);
 
-	if (error_code ret = sys_mutex_unlock(ppu, queue_mutex); ret != CELL_OK
-		|| (ret = cmd_available.release(ppu)) != CELL_OK)
+	if (error_code ret = sys_mutex_unlock(ppu, queue_mutex); ret != CELL_OK || (ret = cmd_available.release(ppu)) != CELL_OK)
 	{
 		ensure(sys_mutex_unlock(ppu, queue_size_mutex) == CELL_OK); // Error code isn't checked on LLE
 		return ret;
@@ -775,14 +860,11 @@ error_code _CellAdecCoreOpGetMemSize_lpcm(vm::ptr<CellAdecAttr> attr)
 	cellAdec.notice("_CellAdecCoreOpGetMemSize_lpcm(attr=*0x%x)", attr);
 
 	constexpr u32 mem_size =
-		utils::align(static_cast<u32>(sizeof(LpcmDecContext)), 0x80)
-		+ utils::align(static_cast<u32>(sizeof(CellAdecParamLpcm)), 0x80)
-		+ 0x100 // Command data for Spurs task
-		+ LPCM_DEC_OUTPUT_BUFFER_SIZE
-		+ 0x2900 // sizeof(CellSpurs) + sizeof(CellSpursTaskset)
-		+ 0x3b400 // Spurs context
-		+ 0x300 // (sizeof(CellSpursQueue) + 0x80 + queue buffer) * 2
-		+ 0x855; // Unused
+		utils::align(static_cast<u32>(sizeof(LpcmDecContext)), 0x80) + utils::align(static_cast<u32>(sizeof(CellAdecParamLpcm)), 0x80) + 0x100 // Command data for Spurs task
+		+ LPCM_DEC_OUTPUT_BUFFER_SIZE + 0x2900                                                                                                 // sizeof(CellSpurs) + sizeof(CellSpursTaskset)
+		+ 0x3b400                                                                                                                              // Spurs context
+		+ 0x300                                                                                                                                // (sizeof(CellSpursQueue) + 0x80 + queue buffer) * 2
+		+ 0x855;                                                                                                                               // Unused
 
 	static_assert(mem_size == 0x7ebd5);
 
@@ -797,8 +879,8 @@ error_code _CellAdecCoreOpOpenExt_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> 
 	cellAdec.notice("_CellAdecCoreOpOpenExt_lpcm(handle=*0x%x, notifyAuDone=*0x%x, notifyAuDoneArg=0x%x, notifyPcmOut=*0x%x, notifyPcmOutArg=0x%x, notifyError=*0x%x, notifyErrorArg=0x%x, notifySeqDone=*0x%x, notifySeqDoneArg=0x%x, res=*0x%x, spursRes=*0x%x)",
 		handle, notifyAuDone, notifyAuDoneArg, notifyPcmOut, notifyPcmOutArg, notifyError, notifyErrorArg, notifySeqDone, notifySeqDoneArg, res, spursRes);
 
-	ensure(!!handle && !!res); // Not checked on LLE
-	ensure(handle.aligned(0x80)); // LLE doesn't check the alignment or aligns the address itself
+	ensure(!!handle && !!res);                                                                                                                                        // Not checked on LLE
+	ensure(handle.aligned(0x80));                                                                                                                                     // LLE doesn't check the alignment or aligns the address itself
 	ensure(!!notifyAuDone && !!notifyAuDoneArg && !!notifyPcmOut && !!notifyPcmOutArg && !!notifyError && !!notifyErrorArg && !!notifySeqDone && !!notifySeqDoneArg); // These should always be set
 
 	const u32 end_of_context_addr = handle.addr() + utils::align(static_cast<u32>(sizeof(LpcmDecContext)), 0x80);
@@ -807,18 +889,18 @@ error_code _CellAdecCoreOpOpenExt_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> 
 	handle->cmd_queue.back = 0;
 	handle->cmd_queue.size = 0;
 	handle->run_thread = true;
-	handle->notify_au_done = { notifyAuDone, notifyAuDoneArg };
-	handle->notify_pcm_out = { notifyPcmOut, notifyPcmOutArg };
-	handle->notify_error = { notifyError, notifyErrorArg };
-	handle->notify_seq_done = { notifySeqDone, notifySeqDoneArg };
+	handle->notify_au_done = {notifyAuDone, notifyAuDoneArg};
+	handle->notify_pcm_out = {notifyPcmOut, notifyPcmOutArg};
+	handle->notify_error = {notifyError, notifyErrorArg};
+	handle->notify_seq_done = {notifySeqDone, notifySeqDoneArg};
 	handle->output = vm::bptr<f32>::make(end_of_context_addr + 0x180);
 	handle->lpcm_param.set(end_of_context_addr);
 	handle->error_occurred = false;
 
-	const vm::var<sys_mutex_attribute_t> mutex_attr{{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem04"_u64 } }};
-	const vm::var<sys_mutex_attribute_t> output_mutex_attr{{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem05"_u64 } }};
-	const vm::var<sys_mutex_attribute_t> queue_mutex_attr{{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem06"_u64 } }};
-	const vm::var<sys_cond_attribute_t> cond_attr{{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec03"_u64 } }};
+	const vm::var<sys_mutex_attribute_t> mutex_attr{{SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, {"_adem04"_u64}}};
+	const vm::var<sys_mutex_attribute_t> output_mutex_attr{{SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, {"_adem05"_u64}}};
+	const vm::var<sys_mutex_attribute_t> queue_mutex_attr{{SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, {"_adem06"_u64}}};
+	const vm::var<sys_cond_attribute_t> cond_attr{{SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, {"_adec03"_u64}}};
 
 	error_code ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::queue_size_mutex), mutex_attr);
 	ret = ret ? ret : sys_cond_create(ppu, handle.ptr(&LpcmDecContext::queue_size_cond), handle->queue_size_mutex, cond_attr);
@@ -865,8 +947,7 @@ error_code _CellAdecCoreOpClose_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> ha
 
 	cellAdec.notice("_CellAdecCoreOpClose_lpcm(handle=*0x%x)", handle);
 
-	if (error_code ret = sys_mutex_lock(ppu, handle->queue_size_mutex, 0); ret != CELL_OK
-		|| (ret = sys_mutex_lock(ppu, handle->queue_mutex, 0)) != CELL_OK)
+	if (error_code ret = sys_mutex_lock(ppu, handle->queue_size_mutex, 0); ret != CELL_OK || (ret = sys_mutex_lock(ppu, handle->queue_mutex, 0)) != CELL_OK)
 	{
 		return ret;
 	}
@@ -1007,7 +1088,6 @@ u32 _CellAdecCoreOpGetBsiInfoSize_lpcm()
 
 	return sizeof(CellAdecLpcmInfo);
 }
-
 
 // cellAdec abstraction layer, operates the individual decoders
 
@@ -1195,29 +1275,29 @@ error_code AdecContext::correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 co
 
 	switch (correct_pts_type)
 	{
-	case ADEC_CORRECT_PTS_VALUE_TYPE_EAC3:    return ppu_execute<&_SceAdecCorrectPtsValue_Ddp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHD:   return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP:    return ppu_execute<&_SceAdecCorrectPtsValue_Celp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_M2AAC:   return ppu_execute<&_SceAdecCorrectPtsValue_Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_EAC3: return ppu_execute<&_SceAdecCorrectPtsValue_Ddp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHD: return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP: return ppu_execute<&_SceAdecCorrectPtsValue_Celp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_M2AAC: return ppu_execute<&_SceAdecCorrectPtsValue_Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L2: return ppu_execute<&_SceAdecCorrectPtsValue_mpmc>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_TRUEHD:  return ppu_execute<&_SceAdecCorrectPtsValue_truehd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTS:     return ppu_execute<&_SceAdecCorrectPtsValue_DtsCore>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_TRUEHD: return ppu_execute<&_SceAdecCorrectPtsValue_truehd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTS: return ppu_execute<&_SceAdecCorrectPtsValue_DtsCore>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	case ADEC_CORRECT_PTS_VALUE_TYPE_M4AAC:
 		switch (type.audioCodecType)
 		{
-		case CELL_ADEC_TYPE_M4AAC:         return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-		case CELL_ADEC_TYPE_M4AAC_2CH:     return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2ch>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		case CELL_ADEC_TYPE_M4AAC: return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		case CELL_ADEC_TYPE_M4AAC_2CH: return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2ch>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 		case CELL_ADEC_TYPE_M4AAC_2CH_MOD: return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2chmod>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-		default:                           return CELL_OK;
+		default: return CELL_OK;
 		}
 
-	case ADEC_CORRECT_PTS_VALUE_TYPE_WMA:            return ppu_execute<&_SceAdecCorrectPtsValue_wma>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSLBR:         return ppu_execute<&_SceAdecCorrectPtsValue_DtsLbr>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L1:        return ppu_execute<&_SceAdecCorrectPtsValue_mpmcl1>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_MP3S:           return ppu_execute<&_SceAdecCorrectPtsValue_Mp3s>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP8:          return ppu_execute<&_SceAdecCorrectPtsValue_Celp8>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_WMAPRO:         return ppu_execute<&_SceAdecCorrectPtsValue_WmaPro>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
-	case ADEC_CORRECT_PTS_VALUE_TYPE_WMALSL:         return ppu_execute<&_SceAdecCorrectPtsValue_WmaLsl>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMA: return ppu_execute<&_SceAdecCorrectPtsValue_wma>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSLBR: return ppu_execute<&_SceAdecCorrectPtsValue_DtsLbr>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L1: return ppu_execute<&_SceAdecCorrectPtsValue_mpmcl1>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MP3S: return ppu_execute<&_SceAdecCorrectPtsValue_Mp3s>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP8: return ppu_execute<&_SceAdecCorrectPtsValue_Celp8>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMAPRO: return ppu_execute<&_SceAdecCorrectPtsValue_WmaPro>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMALSL: return ppu_execute<&_SceAdecCorrectPtsValue_WmaLsl>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK1: // Same as below
 	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK2: return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd_Core>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	}
@@ -1239,18 +1319,18 @@ error_code AdecContext::correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 co
 		{
 			switch (correct_pts_type)
 			{
-			case ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_HDMV:      return 450;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_DVD:       return 150;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_HDMV: return 450;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_DVD: return 150;
 			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz: return 3840;
 			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz: return 4180;
 			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz: return 5760;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_AC3:            return 2880;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3:         return 4180;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_48000Hz:    return 2160;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_44100Hz:    return 2351;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_32000Hz:    return 3240;
-			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3MULTI:    return 3840;
-			default:                                         return 0;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_AC3: return 2880;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3: return 4180;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_48000Hz: return 2160;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_44100Hz: return 2351;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_32000Hz: return 3240;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3MULTI: return 3840;
+			default: return 0;
 			}
 		}();
 
@@ -1282,39 +1362,39 @@ static vm::cptr<CellAdecCoreOps> get_core_ops(s32 type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_INVALID1:      fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID1");
-	case CELL_ADEC_TYPE_LPCM_PAMF:     return g_cell_adec_core_ops_lpcm;
-	case CELL_ADEC_TYPE_AC3:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cell_libac3dec.variables.find(0xc58bb170)->second.export_addr);
-	case CELL_ADEC_TYPE_ATRACX:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x4944af9a)->second.export_addr);
-	case CELL_ADEC_TYPE_MP3:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMP3dec.variables.find(0x84276a23)->second.export_addr);
-	case CELL_ADEC_TYPE_ATRAC3:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtrac3dec.variables.find(0x60487d65)->second.export_addr);
-	case CELL_ADEC_TYPE_MPEG_L2:       return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM2BCdec.variables.find(0x300afe4d)->second.export_addr);
-	case CELL_ADEC_TYPE_M2AAC:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM2AACdec.variables.find(0xac2f0831)->second.export_addr);
-	case CELL_ADEC_TYPE_EAC3:          return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDDPdec.variables.find(0xf5e9c15c)->second.export_addr);
-	case CELL_ADEC_TYPE_TRUEHD:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellTRHDdec.variables.find(0xe88e381b)->second.export_addr);
-	case CELL_ADEC_TYPE_DTS:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSdec.variables.find(0x15248ec5)->second.export_addr);
-	case CELL_ADEC_TYPE_CELP:          return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellCelpDec.variables.find(0xffe42c22)->second.export_addr);
-	case CELL_ADEC_TYPE_LPCM_BLURAY:   return g_cell_adec_core_ops_lpcm;
-	case CELL_ADEC_TYPE_ATRACX_2CH:    return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x076b33ab)->second.export_addr);
-	case CELL_ADEC_TYPE_ATRACX_6CH:    return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x1d210eaa)->second.export_addr);
-	case CELL_ADEC_TYPE_ATRACX_8CH:    return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0xe9a86e54)->second.export_addr);
-	case CELL_ADEC_TYPE_M4AAC:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec.variables.find(0xab61278d)->second.export_addr);
-	case CELL_ADEC_TYPE_LPCM_DVD:      return g_cell_adec_core_ops_lpcm;
-	case CELL_ADEC_TYPE_WMA:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellWMAdec.variables.find(0x88320b10)->second.export_addr);
-	case CELL_ADEC_TYPE_DTSLBR:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSLBRdec.variables.find(0x8c50af52)->second.export_addr);
-	case CELL_ADEC_TYPE_M4AAC_2CH:     return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec2ch.variables.find(0xe996c664)->second.export_addr);
-	case CELL_ADEC_TYPE_DTSHD:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSHDdec.variables.find(0x51ac2b6c)->second.export_addr);
-	case CELL_ADEC_TYPE_MPEG_L1:       return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMPL1dec.variables.find(0xbbc70551)->second.export_addr);
-	case CELL_ADEC_TYPE_MP3S:          return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMP3Sdec.variables.find(0x292cdf0a)->second.export_addr);
+	case CELL_ADEC_TYPE_INVALID1: fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID1");
+	case CELL_ADEC_TYPE_LPCM_PAMF: return g_cell_adec_core_ops_lpcm;
+	case CELL_ADEC_TYPE_AC3: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cell_libac3dec.variables.find(0xc58bb170)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRACX: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x4944af9a)->second.export_addr);
+	case CELL_ADEC_TYPE_MP3: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMP3dec.variables.find(0x84276a23)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRAC3: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtrac3dec.variables.find(0x60487d65)->second.export_addr);
+	case CELL_ADEC_TYPE_MPEG_L2: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM2BCdec.variables.find(0x300afe4d)->second.export_addr);
+	case CELL_ADEC_TYPE_M2AAC: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM2AACdec.variables.find(0xac2f0831)->second.export_addr);
+	case CELL_ADEC_TYPE_EAC3: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDDPdec.variables.find(0xf5e9c15c)->second.export_addr);
+	case CELL_ADEC_TYPE_TRUEHD: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellTRHDdec.variables.find(0xe88e381b)->second.export_addr);
+	case CELL_ADEC_TYPE_DTS: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSdec.variables.find(0x15248ec5)->second.export_addr);
+	case CELL_ADEC_TYPE_CELP: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellCelpDec.variables.find(0xffe42c22)->second.export_addr);
+	case CELL_ADEC_TYPE_LPCM_BLURAY: return g_cell_adec_core_ops_lpcm;
+	case CELL_ADEC_TYPE_ATRACX_2CH: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x076b33ab)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRACX_6CH: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x1d210eaa)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRACX_8CH: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0xe9a86e54)->second.export_addr);
+	case CELL_ADEC_TYPE_M4AAC: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec.variables.find(0xab61278d)->second.export_addr);
+	case CELL_ADEC_TYPE_LPCM_DVD: return g_cell_adec_core_ops_lpcm;
+	case CELL_ADEC_TYPE_WMA: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellWMAdec.variables.find(0x88320b10)->second.export_addr);
+	case CELL_ADEC_TYPE_DTSLBR: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSLBRdec.variables.find(0x8c50af52)->second.export_addr);
+	case CELL_ADEC_TYPE_M4AAC_2CH: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec2ch.variables.find(0xe996c664)->second.export_addr);
+	case CELL_ADEC_TYPE_DTSHD: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSHDdec.variables.find(0x51ac2b6c)->second.export_addr);
+	case CELL_ADEC_TYPE_MPEG_L1: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMPL1dec.variables.find(0xbbc70551)->second.export_addr);
+	case CELL_ADEC_TYPE_MP3S: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMP3Sdec.variables.find(0x292cdf0a)->second.export_addr);
 	case CELL_ADEC_TYPE_M4AAC_2CH_MOD: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec2chmod.variables.find(0xdbd26836)->second.export_addr);
-	case CELL_ADEC_TYPE_CELP8:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellCelp8Dec.variables.find(0xf0190c6c)->second.export_addr);
-	case CELL_ADEC_TYPE_INVALID2:      fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID2");
-	case CELL_ADEC_TYPE_INVALID3:      fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID3");
-	case CELL_ADEC_TYPE_RESERVED22:    fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_RESERVED22");
-	case CELL_ADEC_TYPE_RESERVED23:    fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_RESERVED23");
-	case CELL_ADEC_TYPE_DTSHDCORE:     return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSHDCOREdec.variables.find(0x6c8f4f1c)->second.export_addr);
-	case CELL_ADEC_TYPE_ATRAC3MULTI:   return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtrac3multidec.variables.find(0xc20c6bd7)->second.export_addr);
-	default:                           fmt::throw_exception("Invalid audio codec: %d", type);
+	case CELL_ADEC_TYPE_CELP8: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellCelp8Dec.variables.find(0xf0190c6c)->second.export_addr);
+	case CELL_ADEC_TYPE_INVALID2: fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID2");
+	case CELL_ADEC_TYPE_INVALID3: fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID3");
+	case CELL_ADEC_TYPE_RESERVED22: fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_RESERVED22");
+	case CELL_ADEC_TYPE_RESERVED23: fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_RESERVED23");
+	case CELL_ADEC_TYPE_DTSHDCORE: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSHDCOREdec.variables.find(0x6c8f4f1c)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRAC3MULTI: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtrac3multidec.variables.find(0xc20c6bd7)->second.export_addr);
+	default: fmt::throw_exception("Invalid audio codec: %d", type);
 	}
 }
 
@@ -1530,14 +1610,14 @@ error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAd
 	_this->callback = *cb;
 	_this->core_handle = core_handle;
 	_this->core_ops = core_ops;
-	_this->previous_pts = { CODEC_TS_INVALID, CODEC_TS_INVALID };
+	_this->previous_pts = {CODEC_TS_INVALID, CODEC_TS_INVALID};
 	_this->frames_num = pcm_handle_num;
 	_this->reserved1 = 0;
 	_this->frames_head = -1;
 	_this->frames_tail = -1;
 	_this->frames = frames;
 	_this->bitstream_info_size = bitstream_info_size;
-	_this->mutex_attribute = { SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem03"_u64 } };
+	_this->mutex_attribute = {SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, {"_adem03"_u64}};
 
 	_this->pcm_queue.init(ppu, _this.ptr(&AdecContext::pcm_queue));
 	_this->pcm_item_queue.init(ppu, _this.ptr(&AdecContext::pcm_item_queue));
@@ -1590,8 +1670,8 @@ error_code cellAdecOpenExt(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::ptr<
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	const vm::var<CellAdecResource> _res{{ res->totalMemSize, res->startAddr, res->ppuThreadPriority, 0, res->ppuThreadStackSize }};
-	const vm::var<CellAdecResourceSpurs> spursRes{{ res->spurs_addr, res->priority, res->maxContention }};
+	const vm::var<CellAdecResource> _res{{res->totalMemSize, res->startAddr, res->ppuThreadPriority, 0, res->ppuThreadStackSize}};
+	const vm::var<CellAdecResourceSpurs> spursRes{{res->spurs_addr, res->priority, res->maxContention}};
 
 	return adecOpen(ppu, type, _res, cb, handle, spursRes);
 }
@@ -2031,181 +2111,181 @@ error_code cellAdecGetPcmItem(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::
 }
 
 DECLARE(ppu_module_manager::cellAdec)("cellAdec", []()
-{
-	REG_FUNC(cellAdec, cellAdecQueryAttr);
-	REG_FUNC(cellAdec, cellAdecOpen);
-	REG_FUNC(cellAdec, cellAdecOpenEx);
-	REG_FUNC(cellAdec, cellAdecOpenExt); // 0xdf982d2c
-	REG_FUNC(cellAdec, cellAdecClose);
-	REG_FUNC(cellAdec, cellAdecStartSeq);
-	REG_FUNC(cellAdec, cellAdecEndSeq);
-	REG_FUNC(cellAdec, cellAdecDecodeAu);
-	REG_FUNC(cellAdec, cellAdecGetPcm);
-	REG_FUNC(cellAdec, cellAdecGetPcmItem);
-
-	REG_HIDDEN_FUNC(adecNotifyAuDone);
-	REG_HIDDEN_FUNC(adecNotifyPcmOut);
-	REG_HIDDEN_FUNC(adecNotifyError);
-	REG_HIDDEN_FUNC(adecNotifySeqDone);
-
-	ppu_static_variable& lpcm_gvar = REG_VAR(cellAdec, g_cell_adec_core_ops_lpcm);
-	lpcm_gvar.flags = MFF_HIDDEN;
-	lpcm_gvar.init = []
 	{
-		g_cell_adec_core_ops_lpcm->getMemSize.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetMemSize_lpcm)));
-		g_cell_adec_core_ops_lpcm->open.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpOpen_lpcm)));
-		g_cell_adec_core_ops_lpcm->close.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpClose_lpcm)));
-		g_cell_adec_core_ops_lpcm->startSeq.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpStartSeq_lpcm)));
-		g_cell_adec_core_ops_lpcm->endSeq.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpEndSeq_lpcm)));
-		g_cell_adec_core_ops_lpcm->decodeAu.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpDecodeAu_lpcm)));
-		g_cell_adec_core_ops_lpcm->getVersion.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetVersion_lpcm)));
-		g_cell_adec_core_ops_lpcm->realign.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpRealign_lpcm)));
-		g_cell_adec_core_ops_lpcm->releasePcm.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpReleasePcm_lpcm)));
-		g_cell_adec_core_ops_lpcm->getPcmHandleNum.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetPcmHandleNum_lpcm)));
-		g_cell_adec_core_ops_lpcm->getBsiInfoSize.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetBsiInfoSize_lpcm)));
-		g_cell_adec_core_ops_lpcm->openExt.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpOpenExt_lpcm)));
-	};
+		REG_FUNC(cellAdec, cellAdecQueryAttr);
+		REG_FUNC(cellAdec, cellAdecOpen);
+		REG_FUNC(cellAdec, cellAdecOpenEx);
+		REG_FUNC(cellAdec, cellAdecOpenExt); // 0xdf982d2c
+		REG_FUNC(cellAdec, cellAdecClose);
+		REG_FUNC(cellAdec, cellAdecStartSeq);
+		REG_FUNC(cellAdec, cellAdecEndSeq);
+		REG_FUNC(cellAdec, cellAdecDecodeAu);
+		REG_FUNC(cellAdec, cellAdecGetPcm);
+		REG_FUNC(cellAdec, cellAdecGetPcmItem);
 
-	REG_HIDDEN_FUNC(_CellAdecCoreOpGetMemSize_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpOpen_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpClose_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpStartSeq_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpEndSeq_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpDecodeAu_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpGetVersion_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpRealign_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpReleasePcm_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpGetPcmHandleNum_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpGetBsiInfoSize_lpcm);
-	REG_HIDDEN_FUNC(_CellAdecCoreOpOpenExt_lpcm);
+		REG_HIDDEN_FUNC(adecNotifyAuDone);
+		REG_HIDDEN_FUNC(adecNotifyPcmOut);
+		REG_HIDDEN_FUNC(adecNotifyError);
+		REG_HIDDEN_FUNC(adecNotifySeqDone);
 
-	REG_HIDDEN_FUNC(lpcmDecEntry);
-});
+		ppu_static_variable& lpcm_gvar = REG_VAR(cellAdec, g_cell_adec_core_ops_lpcm);
+		lpcm_gvar.flags = MFF_HIDDEN;
+		lpcm_gvar.init = []
+		{
+			g_cell_adec_core_ops_lpcm->getMemSize.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetMemSize_lpcm)));
+			g_cell_adec_core_ops_lpcm->open.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpOpen_lpcm)));
+			g_cell_adec_core_ops_lpcm->close.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpClose_lpcm)));
+			g_cell_adec_core_ops_lpcm->startSeq.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpStartSeq_lpcm)));
+			g_cell_adec_core_ops_lpcm->endSeq.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpEndSeq_lpcm)));
+			g_cell_adec_core_ops_lpcm->decodeAu.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpDecodeAu_lpcm)));
+			g_cell_adec_core_ops_lpcm->getVersion.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetVersion_lpcm)));
+			g_cell_adec_core_ops_lpcm->realign.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpRealign_lpcm)));
+			g_cell_adec_core_ops_lpcm->releasePcm.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpReleasePcm_lpcm)));
+			g_cell_adec_core_ops_lpcm->getPcmHandleNum.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetPcmHandleNum_lpcm)));
+			g_cell_adec_core_ops_lpcm->getBsiInfoSize.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetBsiInfoSize_lpcm)));
+			g_cell_adec_core_ops_lpcm->openExt.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpOpenExt_lpcm)));
+		};
+
+		REG_HIDDEN_FUNC(_CellAdecCoreOpGetMemSize_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpOpen_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpClose_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpStartSeq_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpEndSeq_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpDecodeAu_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpGetVersion_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpRealign_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpReleasePcm_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpGetPcmHandleNum_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpGetBsiInfoSize_lpcm);
+		REG_HIDDEN_FUNC(_CellAdecCoreOpOpenExt_lpcm);
+
+		REG_HIDDEN_FUNC(lpcmDecEntry);
+	});
 
 DECLARE(ppu_module_manager::cell_libac3dec)("cell_libac3dec", []
-{
-	REG_VNID(cell_libac3dec, 0xc58bb170, g_cell_adec_core_ops_ac3);
-});
+	{
+		REG_VNID(cell_libac3dec, 0xc58bb170, g_cell_adec_core_ops_ac3);
+	});
 
 DECLARE(ppu_module_manager::cellAtrac3dec)("cellAtrac3dec", []
-{
-	REG_VNID(cellAtrac3dec, 0x60487d65, g_cell_adec_core_ops_atrac3);
-});
+	{
+		REG_VNID(cellAtrac3dec, 0x60487d65, g_cell_adec_core_ops_atrac3);
+	});
 
 DECLARE(ppu_module_manager::cellAtrac3multidec)("cellAtrac3multidec", []
-{
-	REG_VNID(cellAtrac3multidec, 0xc20c6bd7, g_cell_adec_core_ops_atrac3multi);
-});
+	{
+		REG_VNID(cellAtrac3multidec, 0xc20c6bd7, g_cell_adec_core_ops_atrac3multi);
+	});
 
 DECLARE(ppu_module_manager::cellCelp8Dec)("cellCelp8Dec", []
-{
-	REG_VNID(cellCelp8Dec, 0xf0190c6c, g_cell_adec_core_ops_Celp8);
-	REG_FUNC(cellCelp8Dec, _SceAdecCorrectPtsValue_Celp8);
-});
+	{
+		REG_VNID(cellCelp8Dec, 0xf0190c6c, g_cell_adec_core_ops_Celp8);
+		REG_FUNC(cellCelp8Dec, _SceAdecCorrectPtsValue_Celp8);
+	});
 
 DECLARE(ppu_module_manager::cellCelpDec)("cellCelpDec", []
-{
-	REG_VNID(cellCelpDec, 0xffe42c22, g_cell_adec_core_ops_Celp);
-	REG_FUNC(cellCelpDec, _SceAdecCorrectPtsValue_Celp);
-});
+	{
+		REG_VNID(cellCelpDec, 0xffe42c22, g_cell_adec_core_ops_Celp);
+		REG_FUNC(cellCelpDec, _SceAdecCorrectPtsValue_Celp);
+	});
 
 DECLARE(ppu_module_manager::cellDDPdec)("cellDDPdec", []
-{
-	REG_VNID(cellDDPdec, 0xf5e9c15c, g_cell_adec_core_ops_Ddp);
-	REG_FUNC(cellDDPdec, _SceAdecCorrectPtsValue_Ddp);
-});
+	{
+		REG_VNID(cellDDPdec, 0xf5e9c15c, g_cell_adec_core_ops_Ddp);
+		REG_FUNC(cellDDPdec, _SceAdecCorrectPtsValue_Ddp);
+	});
 
 DECLARE(ppu_module_manager::cellDTSdec)("cellDTSdec", []
-{
-	REG_VNID(cellDTSdec, 0x15248ec5, g_cell_adec_core_ops_DtsCore);
-	REG_FUNC(cellDTSdec, _SceAdecCorrectPtsValue_DtsCore);
-});
+	{
+		REG_VNID(cellDTSdec, 0x15248ec5, g_cell_adec_core_ops_DtsCore);
+		REG_FUNC(cellDTSdec, _SceAdecCorrectPtsValue_DtsCore);
+	});
 
 DECLARE(ppu_module_manager::cellDTSHDCOREdec)("cellDTSHDCOREdec", []
-{
-	REG_VNID(cellDTSHDCOREdec, 0x6c8f4f1c, g_cell_adec_core_ops_DtsHd_Core);
-	REG_FUNC(cellDTSHDCOREdec, _SceAdecCorrectPtsValue_DtsHd_Core);
-});
+	{
+		REG_VNID(cellDTSHDCOREdec, 0x6c8f4f1c, g_cell_adec_core_ops_DtsHd_Core);
+		REG_FUNC(cellDTSHDCOREdec, _SceAdecCorrectPtsValue_DtsHd_Core);
+	});
 
 DECLARE(ppu_module_manager::cellDTSHDdec)("cellDTSHDdec", []
-{
-	REG_VNID(cellDTSHDdec, 0x51ac2b6c, g_cell_adec_core_ops_DtsHd);
-	REG_FUNC(cellDTSHDdec, _SceAdecCorrectPtsValue_DtsHd);
-});
+	{
+		REG_VNID(cellDTSHDdec, 0x51ac2b6c, g_cell_adec_core_ops_DtsHd);
+		REG_FUNC(cellDTSHDdec, _SceAdecCorrectPtsValue_DtsHd);
+	});
 
 DECLARE(ppu_module_manager::cellDTSLBRdec)("cellDTSLBRdec", []
-{
-	REG_VNID(cellDTSLBRdec, 0x8c50af52, g_cell_adec_core_ops_DtsLbr);
-	REG_FUNC(cellDTSLBRdec, _SceAdecCorrectPtsValue_DtsLbr);
-});
+	{
+		REG_VNID(cellDTSLBRdec, 0x8c50af52, g_cell_adec_core_ops_DtsLbr);
+		REG_FUNC(cellDTSLBRdec, _SceAdecCorrectPtsValue_DtsLbr);
+	});
 
 DECLARE(ppu_module_manager::cellM2AACdec)("cellM2AACdec", []
-{
-	REG_VNID(cellM2AACdec, 0xac2f0831, g_cell_adec_core_ops_Aac);
-	REG_FUNC(cellM2AACdec, _SceAdecCorrectPtsValue_Aac);
-});
+	{
+		REG_VNID(cellM2AACdec, 0xac2f0831, g_cell_adec_core_ops_Aac);
+		REG_FUNC(cellM2AACdec, _SceAdecCorrectPtsValue_Aac);
+	});
 
 DECLARE(ppu_module_manager::cellM2BCdec)("cellM2BCdec", []
-{
-	REG_VNID(cellM2BCdec, 0x300afe4d, g_cell_adec_core_ops_mpmc);
-	REG_FUNC(cellM2BCdec, _SceAdecCorrectPtsValue_mpmc);
-});
+	{
+		REG_VNID(cellM2BCdec, 0x300afe4d, g_cell_adec_core_ops_mpmc);
+		REG_FUNC(cellM2BCdec, _SceAdecCorrectPtsValue_mpmc);
+	});
 
 DECLARE(ppu_module_manager::cellM4AacDec)("cellM4AacDec", []
-{
-	REG_VNID(cellM4AacDec, 0xab61278d, g_cell_adec_core_ops_M4Aac);
-	REG_FUNC(cellM4AacDec, _SceAdecCorrectPtsValue_M4Aac);
-});
+	{
+		REG_VNID(cellM4AacDec, 0xab61278d, g_cell_adec_core_ops_M4Aac);
+		REG_FUNC(cellM4AacDec, _SceAdecCorrectPtsValue_M4Aac);
+	});
 
 DECLARE(ppu_module_manager::cellM4AacDec2ch)("cellM4AacDec2ch", []
-{
-	REG_VNID(cellM4AacDec2ch, 0xe996c664, g_cell_adec_core_ops_M4Aac2ch);
-	REG_FUNC(cellM4AacDec2ch, _SceAdecCorrectPtsValue_M4Aac2ch);
-});
+	{
+		REG_VNID(cellM4AacDec2ch, 0xe996c664, g_cell_adec_core_ops_M4Aac2ch);
+		REG_FUNC(cellM4AacDec2ch, _SceAdecCorrectPtsValue_M4Aac2ch);
+	});
 
 DECLARE(ppu_module_manager::cellM4AacDec2chmod)("cellM4AacDec2chmod", []
-{
-	REG_VNID(cellM4AacDec2chmod, 0xdbd26836, g_cell_adec_core_ops_M4Aac2chmod);
-	REG_FUNC(cellM4AacDec2chmod, _SceAdecCorrectPtsValue_M4Aac2chmod);
-});
+	{
+		REG_VNID(cellM4AacDec2chmod, 0xdbd26836, g_cell_adec_core_ops_M4Aac2chmod);
+		REG_FUNC(cellM4AacDec2chmod, _SceAdecCorrectPtsValue_M4Aac2chmod);
+	});
 
 DECLARE(ppu_module_manager::cellMP3dec)("cellMP3dec", []
-{
-	REG_VNID(cellMP3dec, 0x84276a23, g_cell_adec_core_ops_Mp3);
-});
+	{
+		REG_VNID(cellMP3dec, 0x84276a23, g_cell_adec_core_ops_Mp3);
+	});
 
 DECLARE(ppu_module_manager::cellMP3Sdec)("cellMP3Sdec", []
-{
-	REG_VNID(cellMP3Sdec, 0x292cdf0a, g_cell_adec_core_ops_Mp3s);
-	REG_FUNC(cellMP3Sdec, _SceAdecCorrectPtsValue_Mp3s);
-});
+	{
+		REG_VNID(cellMP3Sdec, 0x292cdf0a, g_cell_adec_core_ops_Mp3s);
+		REG_FUNC(cellMP3Sdec, _SceAdecCorrectPtsValue_Mp3s);
+	});
 
 DECLARE(ppu_module_manager::cellMPL1dec)("cellMPL1dec", []
-{
-	REG_VNID(cellMPL1dec, 0xbbc70551, g_cell_adec_core_ops_mpmcl1);
-	REG_FUNC(cellMPL1dec, _SceAdecCorrectPtsValue_mpmcl1);
-});
+	{
+		REG_VNID(cellMPL1dec, 0xbbc70551, g_cell_adec_core_ops_mpmcl1);
+		REG_FUNC(cellMPL1dec, _SceAdecCorrectPtsValue_mpmcl1);
+	});
 
 DECLARE(ppu_module_manager::cellTRHDdec)("cellTRHDdec", []
-{
-	REG_VNID(cellTRHDdec, 0xe88e381b, g_cell_adec_core_ops_truehd);
-	REG_FUNC(cellTRHDdec, _SceAdecCorrectPtsValue_truehd);
-});
+	{
+		REG_VNID(cellTRHDdec, 0xe88e381b, g_cell_adec_core_ops_truehd);
+		REG_FUNC(cellTRHDdec, _SceAdecCorrectPtsValue_truehd);
+	});
 
 DECLARE(ppu_module_manager::cellWMAdec)("cellWMAdec", []
-{
-	REG_VNID(cellWMAdec, 0x88320b10, g_cell_adec_core_ops_wma);
-	REG_FUNC(cellWMAdec, _SceAdecCorrectPtsValue_wma);
-});
+	{
+		REG_VNID(cellWMAdec, 0x88320b10, g_cell_adec_core_ops_wma);
+		REG_FUNC(cellWMAdec, _SceAdecCorrectPtsValue_wma);
+	});
 
 DECLARE(ppu_module_manager::cellWMALSLdec)("cellWMALSLdec", []
-{
-	REG_VNID(cellWMALSLdec, 0x602aab16, g_cell_adec_core_ops_WmaLsl);
-	REG_FUNC(cellWMALSLdec, _SceAdecCorrectPtsValue_WmaLsl);
-});
+	{
+		REG_VNID(cellWMALSLdec, 0x602aab16, g_cell_adec_core_ops_WmaLsl);
+		REG_FUNC(cellWMALSLdec, _SceAdecCorrectPtsValue_WmaLsl);
+	});
 
 DECLARE(ppu_module_manager::cellWMAPROdec)("cellWMAPROdec", []
-{
-	REG_VNID(cellWMAPROdec, 0xa8bac670, g_cell_adec_core_ops_WmaPro);
-	REG_FUNC(cellWMAPROdec, _SceAdecCorrectPtsValue_WmaPro);
-});
+	{
+		REG_VNID(cellWMAPROdec, 0xa8bac670, g_cell_adec_core_ops_WmaPro);
+		REG_FUNC(cellWMAPROdec, _SceAdecCorrectPtsValue_WmaPro);
+	});

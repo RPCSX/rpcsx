@@ -7,21 +7,18 @@
 LOG_CHANNEL(static_hle);
 
 // for future use
-DECLARE(ppu_module_manager::static_hle) ("static_hle", []()
-{
-});
+DECLARE(ppu_module_manager::static_hle)("static_hle", []() {});
 
-std::vector<std::array<std::string, 6>> shle_patterns_list
-{
-	{ "2BA5000778630020788400207C6B1B78419D00702C2500004D82002028A5000F", "FF", "36D0", "05C4", "sys_libc", "memcpy" },
-	{ "2BA5000778630020788400207C6B1B78419D00702C2500004D82002028A5000F", "5C", "87A0", "05C4", "sys_libc", "memcpy" },
-	{ "2B8500077CA32A14788406207C6A1B78409D009C3903000198830000788B45E4", "B4", "1453", "00D4", "sys_libc", "memset" },
-	{ "280500087C661B7840800020280500004D8200207CA903A69886000038C60001", "F8", "F182", "0118", "sys_libc", "memset" },
-	{ "2B8500077CA32A14788406207C6A1B78409D009C3903000198830000788B45E4", "70", "DFDA", "00D4", "sys_libc", "memset" },
-	{ "7F832000FB61FFD8FBE1FFF8FB81FFE0FBA1FFE8FBC1FFF07C7B1B787C9F2378", "FF", "25B5", "12D4", "sys_libc", "memmove" },
-	{ "2B850007409D00B07C6923785520077E2F800000409E00ACE8030000E9440000", "FF", "71F1", "0158", "sys_libc", "memcmp" },
-	{ "280500007CE32050788B0760418200E028850100786A07607C2A580040840210", "FF", "87F2", "0470", "sys_libc", "memcmp" },
-	{ "2B850007409D00B07C6923785520077E2F800000409E00ACE8030000E9440000", "68", "EF18", "0158", "sys_libc", "memcmp" },
+std::vector<std::array<std::string, 6>> shle_patterns_list{
+	{"2BA5000778630020788400207C6B1B78419D00702C2500004D82002028A5000F", "FF", "36D0", "05C4", "sys_libc", "memcpy"},
+	{"2BA5000778630020788400207C6B1B78419D00702C2500004D82002028A5000F", "5C", "87A0", "05C4", "sys_libc", "memcpy"},
+	{"2B8500077CA32A14788406207C6A1B78409D009C3903000198830000788B45E4", "B4", "1453", "00D4", "sys_libc", "memset"},
+	{"280500087C661B7840800020280500004D8200207CA903A69886000038C60001", "F8", "F182", "0118", "sys_libc", "memset"},
+	{"2B8500077CA32A14788406207C6A1B78409D009C3903000198830000788B45E4", "70", "DFDA", "00D4", "sys_libc", "memset"},
+	{"7F832000FB61FFD8FBE1FFF8FB81FFE0FBA1FFE8FBC1FFF07C7B1B787C9F2378", "FF", "25B5", "12D4", "sys_libc", "memmove"},
+	{"2B850007409D00B07C6923785520077E2F800000409E00ACE8030000E9440000", "FF", "71F1", "0158", "sys_libc", "memcmp"},
+	{"280500007CE32050788B0760418200E028850100786A07607C2A580040840210", "FF", "87F2", "0470", "sys_libc", "memcmp"},
+	{"2B850007409D00B07C6923785520077E2F800000409E00ACE8030000E9440000", "68", "EF18", "0158", "sys_libc", "memcmp"},
 };
 
 statichle_handler::statichle_handler(int)
@@ -83,10 +80,10 @@ bool statichle_handler::load_patterns()
 			dapat.start_pattern[j] = char_to_u8(pattern[0][j * 2], pattern[0][(j * 2) + 1]);
 
 		dapat.crc16_length = ::narrow<u8>(char_to_u8(pattern[1][0], pattern[1][1]));
-		dapat.crc16        = (char_to_u8(pattern[2][0], pattern[2][1]) << 8) | char_to_u8(pattern[2][2], pattern[2][3]);
+		dapat.crc16 = (char_to_u8(pattern[2][0], pattern[2][1]) << 8) | char_to_u8(pattern[2][2], pattern[2][3]);
 		dapat.total_length = (char_to_u8(pattern[3][0], pattern[3][1]) << 8) | char_to_u8(pattern[3][2], pattern[3][3]);
-		dapat._module      = pattern[4];
-		dapat.name         = pattern[5];
+		dapat._module = pattern[4];
+		dapat.name = pattern[5];
 
 		dapat.fnid = ppu_generate_id(dapat.name.c_str());
 
@@ -119,9 +116,9 @@ u16 statichle_handler::gen_CRC16(const u8* data_p, usz length)
 		}
 	} while (--length != 0);
 
-	crc  = ~crc;
+	crc = ~crc;
 	data = crc;
-	crc  = (crc << 8) | ((data >> 8) & 0xff);
+	crc = (crc << 8) | ((data >> 8) & 0xff);
 	return static_cast<u16>(crc);
 }
 
@@ -162,14 +159,14 @@ bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32
 			return false;
 		}
 
-		const auto sfunc   = &::at32(smodule->functions, pat.fnid);
-		const u32 target   = g_fxo->get<ppu_function_manager>().func_addr(sfunc->index, true);
+		const auto sfunc = &::at32(smodule->functions, pat.fnid);
+		const u32 target = g_fxo->get<ppu_function_manager>().func_addr(sfunc->index, true);
 
 		// write stub
-		vm::write32(addr, ppu_instructions::LIS(0, (target&0xFFFF0000)>>16));
-		vm::write32(addr+4, ppu_instructions::ORI(0, 0, target&0xFFFF));
-		vm::write32(addr+8, ppu_instructions::MTCTR(0));
-		vm::write32(addr+12, ppu_instructions::BCTR());
+		vm::write32(addr, ppu_instructions::LIS(0, (target & 0xFFFF0000) >> 16));
+		vm::write32(addr + 4, ppu_instructions::ORI(0, 0, target & 0xFFFF));
+		vm::write32(addr + 8, ppu_instructions::MTCTR(0));
+		vm::write32(addr + 12, ppu_instructions::BCTR());
 
 		return true;
 	}

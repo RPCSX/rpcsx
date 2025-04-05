@@ -16,40 +16,35 @@ namespace vk
 		u32 cs_wave_y = 1;
 
 		cs_resolve_base()
-		{}
+		{
+		}
 
 		virtual ~cs_resolve_base()
-		{}
+		{
+		}
 
 		void build(const std::string& format_prefix, bool unresolve, bool bgra_swap);
 
 		std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout() override
 		{
-			return
-			{
-				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 }
-			};
+			return {
+				{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2}};
 		}
 
 		void declare_inputs() override
 		{
 			std::vector<vk::glsl::program_input> inputs =
-			{
 				{
-					::glsl::program_domain::glsl_compute_program,
-					vk::glsl::program_input_type::input_type_texture,
-					{}, {},
-					0,
-					"multisampled"
-				},
-				{
-					::glsl::program_domain::glsl_compute_program,
-					vk::glsl::program_input_type::input_type_texture,
-					{}, {},
-					1,
-					"resolve"
-				}
-			};
+					{::glsl::program_domain::glsl_compute_program,
+						vk::glsl::program_input_type::input_type_texture,
+						{}, {},
+						0,
+						"multisampled"},
+					{::glsl::program_domain::glsl_compute_program,
+						vk::glsl::program_input_type::input_type_texture,
+						{}, {},
+						1,
+						"resolve"}};
 
 			m_program->load_uniforms(inputs);
 		}
@@ -58,8 +53,8 @@ namespace vk
 		{
 			auto msaa_view = multisampled->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
 			auto resolved_view = resolve->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
-			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, "multisampled", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
-			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, "resolve", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
+			m_program->bind_uniform({VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout}, "multisampled", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
+			m_program->bind_uniform({VK_NULL_HANDLE, resolved_view->value, resolve->current_layout}, "resolve", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
 		}
 
 		void run(const vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
@@ -123,7 +118,7 @@ namespace vk
 			constant.offset = 0;
 			constant.size = 16;
 
-			return { constant };
+			return {constant};
 		}
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
@@ -167,7 +162,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				{ 0, 0, resolve_image->width(), resolve_image->height() },
+				{0, 0, resolve_image->width(), resolve_image->height()},
 				resolve_image, src_view,
 				render_pass);
 		}
@@ -190,7 +185,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				{ 0, 0, msaa_image->width(), msaa_image->height() },
+				{0, 0, msaa_image->width(), msaa_image->height()},
 				msaa_image, src_view,
 				render_pass);
 		}
@@ -204,10 +199,10 @@ namespace vk
 		stencilonly_resolve()
 		{
 			renderpass_config.enable_stencil_test(
-				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
-				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
-				0xFF,                                                                 // Full write-through
-				0xFF);                                                                // Write active bit
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                // Always pass
+				0xFF,                                                                // Full write-through
+				0xFF);                                                               // Write active bit
 
 			renderpass_config.set_stencil_mask(0xFF);
 			renderpass_config.set_depth_mask(false);
@@ -249,7 +244,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				{ 0, 0, resolve_image->width(), resolve_image->height() },
+				{0, 0, resolve_image->width(), resolve_image->height()},
 				resolve_image, stencil_view,
 				render_pass);
 		}
@@ -263,10 +258,10 @@ namespace vk
 		stencilonly_unresolve()
 		{
 			renderpass_config.enable_stencil_test(
-				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
-				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
-				0xFF,                                                                 // Full write-through
-				0xFF);                                                                // Write active bit
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                // Always pass
+				0xFF,                                                                // Full write-through
+				0xFF);                                                               // Write active bit
 
 			renderpass_config.set_stencil_mask(0xFF);
 			renderpass_config.set_depth_mask(false);
@@ -311,7 +306,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				{ 0, 0, msaa_image->width(), msaa_image->height() },
+				{0, 0, msaa_image->width(), msaa_image->height()},
 				msaa_image, stencil_view,
 				render_pass);
 		}
@@ -322,10 +317,10 @@ namespace vk
 		depthstencil_resolve_EXT()
 		{
 			renderpass_config.enable_stencil_test(
-				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
-				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
-				0xFF,                                                                 // Full write-through
-				0);                                                                   // Unused
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                // Always pass
+				0xFF,                                                                // Full write-through
+				0);                                                                  // Unused
 
 			renderpass_config.set_stencil_mask(0xFF);
 			m_num_usable_samplers = 2;
@@ -341,8 +336,8 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				{ 0, 0, resolve_image->width(), resolve_image->height() },
-				resolve_image, { depth_view, stencil_view },
+				{0, 0, resolve_image->width(), resolve_image->height()},
+				resolve_image, {depth_view, stencil_view},
 				render_pass);
 		}
 	};
@@ -352,10 +347,10 @@ namespace vk
 		depthstencil_unresolve_EXT()
 		{
 			renderpass_config.enable_stencil_test(
-				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
-				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
-				0xFF,                                                                 // Full write-through
-				0);                                                                   // Unused
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                // Always pass
+				0xFF,                                                                // Full write-through
+				0);                                                                  // Unused
 
 			renderpass_config.set_stencil_mask(0xFF);
 			m_num_usable_samplers = 2;
@@ -374,14 +369,14 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				{ 0, 0, msaa_image->width(), msaa_image->height() },
-				msaa_image, { depth_view, stencil_view },
+				{0, 0, msaa_image->width(), msaa_image->height()},
+				msaa_image, {depth_view, stencil_view},
 				render_pass);
 		}
 	};
 
-	//void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
-	//void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
+	// void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
+	// void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 	void reset_resolve_resources();
 	void clear_resolve_helpers();
-}
+} // namespace vk

@@ -14,7 +14,7 @@ class cg_disasm_window : public QWidget
 	Q_OBJECT
 
 private Q_SLOTS:
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 
 private:
 	void ShowDisasm() const;

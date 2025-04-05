@@ -16,4 +16,4 @@ namespace rsx
 		// Patch transform constants. Units are in 32x4 units
 		virtual void patch_transform_constants(context* /*ctx*/, u32 /*index*/, u32 /*count*/) {};
 	};
-}
+} // namespace rsx

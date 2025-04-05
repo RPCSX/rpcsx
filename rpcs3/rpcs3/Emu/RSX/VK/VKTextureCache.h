@@ -19,15 +19,15 @@ namespace vk
 
 	struct texture_cache_traits
 	{
-		using commandbuffer_type      = vk::command_buffer;
-		using section_storage_type    = vk::cached_texture_section;
-		using texture_cache_type      = vk::texture_cache;
+		using commandbuffer_type = vk::command_buffer;
+		using section_storage_type = vk::cached_texture_section;
+		using texture_cache_type = vk::texture_cache;
 		using texture_cache_base_type = rsx::texture_cache<texture_cache_type, texture_cache_traits>;
-		using image_resource_type     = vk::image*;
-		using image_view_type         = vk::image_view*;
-		using image_storage_type      = vk::image;
-		using texture_format          = VkFormat;
-		using viewable_image_type     = vk::viewable_image*;
+		using image_resource_type = vk::image*;
+		using image_view_type = vk::image_view*;
+		using image_storage_type = vk::image;
+		using texture_format = VkFormat;
+		using viewable_image_type = vk::viewable_image*;
 	};
 
 	class cached_texture_section : public rsx::cached_texture_section<vk::cached_texture_section, vk::texture_cache_traits>
@@ -37,7 +37,7 @@ namespace vk
 
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
-		//DMA relevant data
+		// DMA relevant data
 		std::unique_ptr<vk::event> dma_fence;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image* vram_texture = nullptr;
@@ -181,7 +181,7 @@ namespace vk
 
 		bool is_flushed() const
 		{
-			//This memory section was flushable, but a flush has already removed protection
+			// This memory section was flushable, but a flush has already removed protection
 			return flushed;
 		}
 
@@ -231,8 +231,8 @@ namespace vk
 				const auto filter = (target->aspect() == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
 				vk::copy_scaled_image(cmd, locked_resource, target,
-					{ 0, 0, static_cast<s32>(locked_resource->width()), static_cast<s32>(locked_resource->height()) },
-					{ 0, 0, static_cast<s32>(transfer_width), static_cast<s32>(transfer_height) },
+					{0, 0, static_cast<s32>(locked_resource->width()), static_cast<s32>(locked_resource->height())},
+					{0, 0, static_cast<s32>(transfer_width), static_cast<s32>(transfer_height)},
 					1, true, filter);
 
 				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -310,8 +310,7 @@ namespace vk
 					tiled_region.tile->bank,
 					tiled_region.tile->pitch,
 					width,
-					height
-				);
+					height);
 				std::memcpy(real_data, out_data.data(), flush_length);
 			}
 #endif
@@ -349,7 +348,8 @@ namespace vk
 		}
 
 		void finish_flush()
-		{}
+		{
+		}
 
 		/**
 		 * Misc
@@ -408,8 +408,7 @@ namespace vk
 			std::unique_ptr<vk::viewable_image> data;
 
 			cached_image_t() = default;
-			cached_image_t(u64 key_, std::unique_ptr<vk::viewable_image>& data_) :
-				key(key_), data(std::move(data_)) {}
+			cached_image_t(u64 key_, std::unique_ptr<vk::viewable_image>& data_) : key(key_), data(std::move(data_)) {}
 		};
 
 	public:
@@ -423,7 +422,6 @@ namespace vk
 		void on_section_destroyed(cached_texture_section& tex) override;
 
 	private:
-
 		// Vulkan internals
 		vk::render_device* m_device;
 		vk::memory_type_mapping m_memory_types;
@@ -434,7 +432,7 @@ namespace vk
 		// Stuff that has been dereferenced by the GPU goes into these
 		const u32 max_cached_image_pool_size = 256;
 		std::deque<cached_image_t> m_cached_images;
-		atomic_t<u64> m_cached_memory_size = { 0 };
+		atomic_t<u64> m_cached_memory_size = {0};
 		shared_mutex m_cached_pool_lock;
 
 		// Blocks some operations when exiting
@@ -525,4 +523,4 @@ namespace vk
 
 		bool is_overallocated() const;
 	};
-}
+} // namespace vk

@@ -33,32 +33,32 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	m_button_box->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 
 	connect(m_button_box, &QDialogButtonBox::clicked, this, [this](QAbstractButton* button)
-	{
-		if (button == m_button_box->button(QDialogButtonBox::Apply))
 		{
-			g_cfg_raw_mouse.save();
-		}
-		else if (button == m_button_box->button(QDialogButtonBox::Save))
-		{
-			g_cfg_raw_mouse.save();
-			accept();
-		}
-		else if (button == m_button_box->button(QDialogButtonBox::RestoreDefaults))
-		{
-			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset settings of all players?")) != QMessageBox::Yes)
-				return;
-			reset_config();
-		}
-		else if (button == m_button_box->button(QDialogButtonBox::Cancel))
-		{
-			// Restore config
-			if (!g_cfg_raw_mouse.load())
+			if (button == m_button_box->button(QDialogButtonBox::Apply))
 			{
-				cfg_log.notice("Could not restore raw mouse config. Using defaults.");
+				g_cfg_raw_mouse.save();
 			}
-			reject();
-		}
-	});
+			else if (button == m_button_box->button(QDialogButtonBox::Save))
+			{
+				g_cfg_raw_mouse.save();
+				accept();
+			}
+			else if (button == m_button_box->button(QDialogButtonBox::RestoreDefaults))
+			{
+				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset settings of all players?")) != QMessageBox::Yes)
+					return;
+				reset_config();
+			}
+			else if (button == m_button_box->button(QDialogButtonBox::Cancel))
+			{
+				// Restore config
+				if (!g_cfg_raw_mouse.load())
+				{
+					cfg_log.notice("Could not restore raw mouse config. Using defaults.");
+				}
+				reject();
+			}
+		});
 
 	if (!g_cfg_raw_mouse.load())
 	{
@@ -71,13 +71,13 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	g_raw_mouse_handler->set_is_for_gui(true);
 	g_raw_mouse_handler->Init(std::max(max_devices, ::size32(g_cfg_raw_mouse.players)));
 	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 button_code, bool pressed)
-	{
-		mouse_press(device_name, button_code, pressed);
-	});
+		{
+			mouse_press(device_name, button_code, pressed);
+		});
 	g_raw_mouse_handler->set_key_press_callback([this](const std::string& device_name, s32 scan_code, bool pressed)
-	{
-		key_press(device_name, scan_code, pressed);
-	});
+		{
+			key_press(device_name, scan_code, pressed);
+		});
 
 	m_buttons = new QButtonGroup(this);
 	connect(m_buttons, &QButtonGroup::idClicked, this, &raw_mouse_settings_dialog::on_button_click);
@@ -85,34 +85,34 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	connect(&m_update_timer, &QTimer::timeout, this, &raw_mouse_settings_dialog::on_enumeration);
 
 	connect(&m_remap_timer, &QTimer::timeout, this, [this]()
-	{
-		auto button = m_buttons->button(m_button_id);
-
-		if (--m_seconds <= 0)
 		{
+			auto button = m_buttons->button(m_button_id);
+
+			if (--m_seconds <= 0)
+			{
+				if (button)
+				{
+					if (const int button_id = m_buttons->id(button); button_id >= 0)
+					{
+						auto& config = ::at32(g_cfg_raw_mouse.players, m_tab_widget->currentIndex());
+						const std::string name = raw_mouse_config::get_button_name(config->get_button_by_index(button_id % button_count).to_string());
+						button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
+					}
+				}
+				reactivate_buttons();
+				return;
+			}
 			if (button)
 			{
-				if (const int button_id = m_buttons->id(button); button_id >= 0)
-				{
-					auto& config = ::at32(g_cfg_raw_mouse.players, m_tab_widget->currentIndex());
-					const std::string name = raw_mouse_config::get_button_name(config->get_button_by_index(button_id % button_count).to_string());
-					button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
-				}
+				button->setText(tr("[ Waiting %1 ]").arg(m_seconds));
 			}
-			reactivate_buttons();
-			return;
-		}
-		if (button)
-		{
-			button->setText(tr("[ Waiting %1 ]").arg(m_seconds));
-		}
-	});
+		});
 
 	connect(&m_mouse_release_timer, &QTimer::timeout, this, [this]()
-	{
-		m_mouse_release_timer.stop();
-		m_disable_mouse_release_event = false;
-	});
+		{
+			m_mouse_release_timer.stop();
+			m_disable_mouse_release_event = false;
+		});
 
 	add_tabs(m_tab_widget);
 
@@ -123,9 +123,9 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	m_palette = m_push_buttons[0][CELL_MOUSE_BUTTON_1]->palette(); // save normal palette
 
 	connect(m_tab_widget, &QTabWidget::currentChanged, this, [this](int index)
-	{
-		handle_device_change(get_current_device_name(index));
-	});
+		{
+			handle_device_change(get_current_device_name(index));
+		});
 
 	on_enumeration();
 
@@ -226,21 +226,21 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		update_combo_box(player);
 
 		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
-		{
-			if (index < 0 || !combo)
-				return;
+			{
+				if (index < 0 || !combo)
+					return;
 
-			const QVariant data = combo->itemData(index);
-			if (!data.isValid() || !data.canConvert<QString>())
-				return;
+				const QVariant data = combo->itemData(index);
+				if (!data.isValid() || !data.canConvert<QString>())
+					return;
 
-			const std::string device_name = data.toString().toStdString();
+				const std::string device_name = data.toString().toStdString();
 
-			auto& config = ::at32(g_cfg_raw_mouse.players, player)->device;
-			config.from_string(device_name);
+				auto& config = ::at32(g_cfg_raw_mouse.players, player)->device;
+				config.from_string(device_name);
 
-			handle_device_change(device_name);
-		});
+				handle_device_change(device_name);
+			});
 
 		h_layout->addWidget(combo);
 		gb->setLayout(h_layout);
@@ -282,10 +282,10 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		mouse_acceleration_spin_box->setRange(0.1, 10.0);
 		mouse_acceleration_spin_box->setValue(config->mouse_acceleration.get() / 100.0);
 		connect(mouse_acceleration_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [player](double value)
-		{
-			auto& config = ::at32(g_cfg_raw_mouse.players, player)->mouse_acceleration;
-			config.set(std::clamp(value * 100.0, config.min, config.max));
-		});
+			{
+				auto& config = ::at32(g_cfg_raw_mouse.players, player)->mouse_acceleration;
+				config.set(std::clamp(value * 100.0, config.min, config.max));
+			});
 
 		h_layout->addWidget(mouse_acceleration_spin_box);
 		gb->setLayout(h_layout);
@@ -430,7 +430,10 @@ bool raw_mouse_settings_dialog::is_device_active(const std::string& device_name)
 
 	const auto& mice = g_raw_mouse_handler->get_mice();
 
-	return std::any_of(mice.cbegin(), mice.cend(), [&device_name](const auto& entry){ return entry.second.device_name() == device_name; });
+	return std::any_of(mice.cbegin(), mice.cend(), [&device_name](const auto& entry)
+		{
+			return entry.second.device_name() == device_name;
+		});
 }
 
 std::string raw_mouse_settings_dialog::get_current_device_name(int player)

@@ -17,7 +17,7 @@ namespace
 		// This is probably wrong and should be assigned per fd or something
 		atomic_ptr<lv2_event_queue> asyncequeue;
 	};
-}
+} // namespace
 
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 {
@@ -260,19 +260,26 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		// see ata_hdd for explanation
 		switch (dev_num)
 		{
-		case 0: buffer->sector_count = 0x80000;
+		case 0:
+			buffer->sector_count = 0x80000;
 			break;
-		case 1: buffer->sector_count = 0x75F8;
+		case 1:
+			buffer->sector_count = 0x75F8;
 			break;
-		case 2: buffer->sector_count = 0x63E00;
+		case 2:
+			buffer->sector_count = 0x63E00;
 			break;
-		case 3: buffer->sector_count = 0x8000;
+		case 3:
+			buffer->sector_count = 0x8000;
 			break;
-		case 4: buffer->sector_count = 0x400;
+		case 4:
+			buffer->sector_count = 0x400;
 			break;
-		case 5: buffer->sector_count = 0x2000;
+		case 5:
+			buffer->sector_count = 0x2000;
 			break;
-		case 6: buffer->sector_count = 0x200;
+		case 6:
+			buffer->sector_count = 0x200;
 			break;
 		}
 	}
@@ -294,13 +301,17 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		// see ata_hdd for explanation
 		switch (dev_num)
 		{
-		case 0: buffer->sector_count = 0x8000;
+		case 0:
+			buffer->sector_count = 0x8000;
 			break;
-		case 1: buffer->sector_count = 0x77F8;
+		case 1:
+			buffer->sector_count = 0x77F8;
 			break;
-		case 2: buffer->sector_count = 0x100; // offset, 0x20000
+		case 2:
+			buffer->sector_count = 0x100; // offset, 0x20000
 			break;
-		case 3: buffer->sector_count = 0x400;
+		case 3:
+			buffer->sector_count = 0x400;
 			break;
 		}
 	}
@@ -322,7 +333,8 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		// see ata_hdd for explanation
 		switch (dev_num)
 		{
-		case 0: buffer->sector_count = 0x7FFFFFFF;
+		case 0:
+			buffer->sector_count = 0x7FFFFFFF;
 			break;
 		}
 	}
@@ -338,8 +350,14 @@ error_code sys_storage_get_device_config(vm::ptr<u32> storages, vm::ptr<u32> dev
 {
 	sys_storage.todo("sys_storage_get_device_config(storages=*0x%x, devices=*0x%x)", storages, devices);
 
-	if (storages) *storages = 6; else return CELL_EFAULT;
-	if (devices)  *devices = 17; else return CELL_EFAULT;
+	if (storages)
+		*storages = 6;
+	else
+		return CELL_EFAULT;
+	if (devices)
+		*devices = 17;
+	else
+		return CELL_EFAULT;
 
 	return CELL_OK;
 }

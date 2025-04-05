@@ -145,7 +145,7 @@ bool nt_p2p_port::recv_data()
 {
 	::sockaddr_storage native_addr{};
 	::socklen_t native_addrlen = sizeof(native_addr);
-	const auto recv_res        = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), ::size32(p2p_recv_data), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+	const auto recv_res = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), ::size32(p2p_recv_data), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
 	if (recv_res == -1)
 	{
@@ -180,7 +180,7 @@ bool nt_p2p_port::recv_data()
 			return true;
 		}
 
-		const u8 subset      = p2p_recv_data[2];
+		const u8 subset = p2p_recv_data[2];
 		const auto data_size = recv_res - VPORT_0_HEADER_SIZE;
 		std::vector<u8> vport_0_data(p2p_recv_data.data() + VPORT_0_HEADER_SIZE, p2p_recv_data.data() + VPORT_0_HEADER_SIZE + data_size);
 
@@ -197,7 +197,7 @@ bool nt_p2p_port::recv_data()
 			signaling_message msg;
 			msg.src_addr = reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr;
 			msg.src_port = std::bit_cast<u16, be_t<u16>>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-			msg.data     = std::move(vport_0_data);
+			msg.data = std::move(vport_0_data);
 
 			{
 				std::lock_guard lock(s_sign_mutex);
@@ -233,11 +233,11 @@ bool nt_p2p_port::recv_data()
 		{
 			sys_net_sockaddr_in_p2p p2p_addr{};
 
-			p2p_addr.sin_len    = sizeof(sys_net_sockaddr_in);
+			p2p_addr.sin_len = sizeof(sys_net_sockaddr_in);
 			p2p_addr.sin_family = SYS_NET_AF_INET;
-			p2p_addr.sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
-			p2p_addr.sin_vport  = src_vport;
-			p2p_addr.sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			p2p_addr.sin_addr = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+			p2p_addr.sin_vport = src_vport;
+			p2p_addr.sin_port = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
 
 			auto& bound_sockets = ::at32(bound_p2p_vports, dst_vport);
 
@@ -296,7 +296,7 @@ bool nt_p2p_port::recv_data()
 		}
 
 		// Validate checksum
-		u16 given_checksum   = tcp_header->checksum;
+		u16 given_checksum = tcp_header->checksum;
 		tcp_header->checksum = 0;
 		if (given_checksum != u2s_tcp_checksum(reinterpret_cast<const le_t<u16>*>(p2p_data.data()), p2p_data.size()))
 		{

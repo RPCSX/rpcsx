@@ -40,11 +40,11 @@ error_code sceAdAsyncCloseContext()
 }
 
 DECLARE(ppu_module_manager::libad_async)("libad_async", []()
-{
-	REG_FUNC(libad_async, sceAdAsyncOpenContext);
-	REG_FUNC(libad_async, sceAdAsyncConnectContext);
-	REG_FUNC(libad_async, sceAdAsyncSpaceOpen);
-	REG_FUNC(libad_async, sceAdAsyncFlushReports);
-	REG_FUNC(libad_async, sceAdAsyncSpaceClose);
-	REG_FUNC(libad_async, sceAdAsyncCloseContext);
-});
+	{
+		REG_FUNC(libad_async, sceAdAsyncOpenContext);
+		REG_FUNC(libad_async, sceAdAsyncConnectContext);
+		REG_FUNC(libad_async, sceAdAsyncSpaceOpen);
+		REG_FUNC(libad_async, sceAdAsyncFlushReports);
+		REG_FUNC(libad_async, sceAdAsyncSpaceClose);
+		REG_FUNC(libad_async, sceAdAsyncCloseContext);
+	});

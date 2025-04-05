@@ -13,8 +13,8 @@ namespace vk
 	};
 
 	atomic_t<u64> g_cached_renderpass_key = 0;
-	VkRenderPass  g_cached_renderpass = VK_NULL_HANDLE;
-	std::unordered_map<VkCommandBuffer, active_renderpass_info_t>  g_current_renderpass;
+	VkRenderPass g_cached_renderpass = VK_NULL_HANDLE;
+	std::unordered_map<VkCommandBuffer, active_renderpass_info_t> g_current_renderpass;
 
 	shared_mutex g_renderpass_cache_mutex;
 	std::unordered_map<u64, VkRenderPass> g_renderpass_cache;
@@ -64,15 +64,16 @@ namespace vk
 
 		struct
 		{
-			u64 color_format  : 8;
-			u64 depth_format  : 8;
-			u64 sample_count  : 6;
-			u64 layout_blob   : 15;
+			u64 color_format : 8;
+			u64 depth_format : 8;
+			u64 sample_count : 6;
+			u64 layout_blob : 15;
 			u64 input_attachments_mask : 5;
 		};
 
 		renderpass_key_blob(u64 encoded_) : encoded(encoded_)
-		{}
+		{
+		}
 
 		// Encoders
 		inline void set_layout(u32 index, VkImageLayout layout)
@@ -266,7 +267,7 @@ namespace vk
 		}
 
 		u32 attachment_count = 0;
-		for (const auto &layout : rtv_layouts)
+		for (const auto& layout : rtv_layouts)
 		{
 			VkAttachmentDescription color_attachment_description = {};
 			color_attachment_description.format = color_format;
@@ -279,7 +280,7 @@ namespace vk
 			color_attachment_description.finalLayout = layout;
 
 			attachments.push_back(color_attachment_description);
-			attachment_references.push_back({ attachment_count++, layout });
+			attachment_references.push_back({attachment_count++, layout});
 		}
 
 		if (depth_format)
@@ -295,14 +296,14 @@ namespace vk
 			depth_attachment_description.finalLayout = dsv_layout;
 			attachments.push_back(depth_attachment_description);
 
-			attachment_references.push_back({ attachment_count, dsv_layout });
+			attachment_references.push_back({attachment_count, dsv_layout});
 		}
 
 		VkSubpassDescription subpass = {};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = attachment_count;
-		subpass.pColorAttachments = attachment_count? attachment_references.data() : nullptr;
-		subpass.pDepthStencilAttachment = depth_format? &attachment_references.back() : nullptr;
+		subpass.pColorAttachments = attachment_count ? attachment_references.data() : nullptr;
+		subpass.pDepthStencilAttachment = depth_format ? &attachment_references.back() : nullptr;
 
 		const auto input_attachments = key.get_input_attachments();
 		if (!input_attachments.empty())
@@ -333,7 +334,7 @@ namespace vk
 		g_current_renderpass.clear();
 
 		// Destroy cache
-		for (const auto &renderpass : g_renderpass_cache)
+		for (const auto& renderpass : g_renderpass_cache)
 		{
 			VK_GET_SYMBOL(vkDestroyRenderPass)(dev, renderpass.second, nullptr);
 		}
@@ -363,7 +364,7 @@ namespace vk
 		rp_begin.renderArea.extent.height = framebuffer_region.height;
 
 		VK_GET_SYMBOL(vkCmdBeginRenderPass)(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-		renderpass_info = { pass, target };
+		renderpass_info = {pass, target};
 	}
 
 	void begin_renderpass(VkDevice dev, const vk::command_buffer& cmd, u64 renderpass_key, VkFramebuffer target, const coordu& framebuffer_region)
@@ -393,4 +394,4 @@ namespace vk
 		const auto& active = g_current_renderpass[cmd];
 		op(cmd, active.pass, active.fbo);
 	}
-}
+} // namespace vk

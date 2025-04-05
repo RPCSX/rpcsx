@@ -31,6 +31,5 @@ namespace rsx
 				set_padding(4, 0, 2, 8);
 			}
 		};
-	}
-}
-
+	} // namespace overlays
+} // namespace rsx

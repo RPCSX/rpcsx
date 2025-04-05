@@ -7,11 +7,11 @@
 class table_item_delegate : public QStyledItemDelegate
 {
 public:
-	explicit table_item_delegate(QObject *parent = nullptr, bool has_icons = false);
+	explicit table_item_delegate(QObject* parent = nullptr, bool has_icons = false);
 
-	void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override;
+	void initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const override;
 
-	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+	void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 protected:
 	bool m_has_icons{};

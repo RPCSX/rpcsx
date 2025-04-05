@@ -79,7 +79,7 @@ struct EmuCallbacks
 	std::function<void(bool enabled)> enable_disc_eject;
 	std::function<void(bool enabled)> enable_disc_insert;
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
-	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit, 3 for set_value
+	std::function<void(s32, s32)> handle_taskbar_progress;        // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit, 3 for set_value
 	std::function<void()> init_kb_handler;
 	std::function<void()> init_mouse_handler;
 	std::function<void(std::string_view title_id)> init_pad_handler;
@@ -102,9 +102,12 @@ struct EmuCallbacks
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 	std::function<std::string(const cfg::_base*, u32)> get_localized_setting;
 	std::function<void(const std::string&)> play_sound;
-	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info; // (filename, sub_type, width, height, CellSearchOrientation)
+	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info;    // (filename, sub_type, width, height, CellSearchOrientation)
 	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
-	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
+	std::string (*resolve_path)(std::string_view) = [](std::string_view arg)
+	{
+		return std::string{arg};
+	}; // Resolve path using Qt
 	std::function<std::vector<std::string>()> get_font_dirs;
 	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
 	std::function<void(u32)> add_breakpoint;
@@ -127,7 +130,7 @@ class Emulator final
 
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
-	atomic_t<u64> m_stop_ctr{1}; // Increments when emulation is stopped
+	atomic_t<u64> m_stop_ctr{1};         // Increments when emulation is stopped
 	atomic_t<bool> m_emu_state_close_pending = false;
 	atomic_t<u64> m_restrict_emu_state_change{0};
 
@@ -212,7 +215,9 @@ public:
 	// Blocking call from the GUI thread
 	void BlockingCallFromMainThread(std::function<void()>&& func, std::source_location src_loc = std::source_location::current()) const;
 
-	enum class stop_counter_t : u64{};
+	enum class stop_counter_t : u64
+	{
+	};
 
 	// Returns a different value each time we start a new emulation.
 	stop_counter_t GetEmulationIdentifier(bool subtract_one = false) const
@@ -312,7 +317,10 @@ public:
 		return m_hash;
 	}
 
-	void SetExecutableHash(std::string hash) { m_hash = std::move(hash); }
+	void SetExecutableHash(std::string hash)
+	{
+		m_hash = std::move(hash);
+	}
 
 	const std::string& GetCat() const
 	{
@@ -432,8 +440,8 @@ private:
 		bool prepared = false;
 		std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 	};
-public:
 
+public:
 	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false, bool continuous_mode = false);
@@ -442,19 +450,55 @@ public:
 	bool Quit(bool force_quit);
 	static void CleanUp();
 
-	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused() const { system_state state = m_state; return state >= system_state::paused && state <= system_state::frozen; }
-	bool IsPausedOrReady() const { return m_state >= system_state::paused; }
-	bool IsStopped(bool test_fully = false) const { return test_fully ? m_state == system_state::stopped : m_state <= system_state::stopping; }
-	bool IsReady()   const { return m_state == system_state::ready; }
-	bool IsStarting() const { return m_state == system_state::starting; }
-	auto GetStatus(bool fixup = true) const { system_state state = m_state; return fixup && state == system_state::frozen ? system_state::paused : fixup && state == system_state::stopping ? system_state::stopped : state; }
+	bool IsRunning() const
+	{
+		return m_state == system_state::running;
+	}
+	bool IsPaused() const
+	{
+		system_state state = m_state;
+		return state >= system_state::paused && state <= system_state::frozen;
+	}
+	bool IsPausedOrReady() const
+	{
+		return m_state >= system_state::paused;
+	}
+	bool IsStopped(bool test_fully = false) const
+	{
+		return test_fully ? m_state == system_state::stopped : m_state <= system_state::stopping;
+	}
+	bool IsReady() const
+	{
+		return m_state == system_state::ready;
+	}
+	bool IsStarting() const
+	{
+		return m_state == system_state::starting;
+	}
+	auto GetStatus(bool fixup = true) const
+	{
+		system_state state = m_state;
+		return fixup && state == system_state::frozen ? system_state::paused : fixup && state == system_state::stopping ? system_state::stopped :
+		                                                                                                                  state;
+	}
 
-	bool HasGui() const { return m_has_gui; }
-	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
+	bool HasGui() const
+	{
+		return m_has_gui;
+	}
+	void SetHasGui(bool has_gui)
+	{
+		m_has_gui = has_gui;
+	}
 
-	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
-	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
+	void SetDefaultRenderer(video_renderer renderer)
+	{
+		m_default_renderer = renderer;
+	}
+	void SetDefaultGraphicsAdapter(std::string adapter)
+	{
+		m_default_graphics_adapter = std::move(adapter);
+	}
 
 	std::string GetFormattedTitle(double fps) const;
 

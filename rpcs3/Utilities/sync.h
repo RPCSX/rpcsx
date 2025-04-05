@@ -9,7 +9,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
-#include <Windows.h>
+#include <windows.h>
 #include <ctime>
 #elif __linux__
 #include <sys/syscall.h>
@@ -20,12 +20,18 @@
 #endif
 
 #ifdef _WIN32
+#if !defined(NTSTATUS)
+typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
+#endif
+
+#ifndef __GNUC__
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForSingleObject, NTSTATUS(HANDLE Handle, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForAlertByThreadId, NTSTATUS(PVOID Address, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtAlertThreadByThreadId, NTSTATUS(DWORD_PTR ThreadId));
+#endif
 
 constexpr NTSTATUS NTSTATUS_SUCCESS = 0;
 constexpr NTSTATUS NTSTATUS_ALERTED = 0x101;
@@ -81,9 +87,9 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 	{
 		struct waiter
 		{
-			 uint val;
-			 uint mask;
-			 std::condition_variable cv;
+			uint val;
+			uint mask;
+			std::condition_variable cv;
 		};
 
 		std::mutex mutex;

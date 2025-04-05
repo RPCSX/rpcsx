@@ -29,6 +29,7 @@ Q_SIGNALS:
 	void GuiRepaintRequest();
 	void EmuSettingsApplied();
 	void signal_restore_dependant_defaults();
+
 private:
 	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const;
 

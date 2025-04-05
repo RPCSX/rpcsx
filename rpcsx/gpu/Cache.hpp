@@ -246,7 +246,8 @@ private:
 
     std::uint32_t slotOffset = 0;
     rx::MemoryTableWithPayload<Access> bufferMemoryTable;
-    rx::MemoryTableWithPayload<std::pair<ImageBufferKey, Access>> imageMemoryTable;
+    rx::MemoryTableWithPayload<std::pair<ImageBufferKey, Access>>
+        imageMemoryTable;
     std::vector<std::pair<std::uint32_t, std::uint64_t>> resourceSlotToAddress;
     std::vector<Cache::Sampler> samplerResources;
     std::vector<Cache::ImageView> imageResources[3];

@@ -1,7 +1,7 @@
 #include "console.h"
 
 #ifdef _WIN32
-#include "Windows.h"
+#include <windows.h>
 #include <stdio.h>
 #endif
 
@@ -58,4 +58,4 @@ namespace utils
 		std::cerr << str;
 #endif
 	}
-}
+} // namespace utils

@@ -31,7 +31,7 @@ namespace
 			return VK_FORMAT_R16G16B16A16_SFLOAT;
 		}
 	}
-}
+} // namespace
 
 void VKGSRender::reinitialize_swapchain()
 {
@@ -70,7 +70,7 @@ void VKGSRender::reinitialize_swapchain()
 	m_current_command_buffer->reset();
 	m_current_command_buffer->begin();
 
-	for (auto &ctx : frame_context_storage)
+	for (auto& ctx : frame_context_storage)
 	{
 		if (ctx.present_image == umax)
 			continue;
@@ -121,7 +121,7 @@ void VKGSRender::reinitialize_swapchain()
 	should_reinitialize_swapchain = false;
 }
 
-void VKGSRender::present(vk::frame_context_t *ctx)
+void VKGSRender::present(vk::frame_context_t* ctx)
 {
 	ensure(ctx->present_image != umax);
 
@@ -231,7 +231,7 @@ void VKGSRender::queue_swap_request()
 	advance_queued_frames();
 }
 
-void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
+void VKGSRender::frame_context_cleanup(vk::frame_context_t* ctx)
 {
 	ensure(ctx->swap_command_buffer);
 
@@ -378,7 +378,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 		}
 	}
 	else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
-			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
+		surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
 		// The render might have been done offscreen or in software and a blit used to display
@@ -390,14 +390,14 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 	// But in some cases, let's just say some devs are creative.
 	const auto expected_format = RSX_display_format_to_vk_format(avconfig.format);
 
-	if (!image_to_flip) [[ unlikely ]]
+	if (!image_to_flip) [[unlikely]]
 	{
 		// Read from cell
 		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
-		const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
+		const u32 lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
 		const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
 
-		for (const auto & section : overlap)
+		for (const auto& section : overlap)
 		{
 			if (!section->is_synchronized())
 			{
@@ -423,7 +423,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 
 		if (dst_img)
 		{
-			const areai src_rect = { 0, 0, static_cast<int>(info->width), static_cast<int>(info->height) };
+			const areai src_rect = {0, 0, static_cast<int>(info->width), static_cast<int>(info->height)};
 			const areai dst_rect = src_rect;
 
 			dst_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -541,15 +541,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::viewable_image *image_to_flip = nullptr, *image_to_flip2 = nullptr;
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		vk::present_surface_info present_info
-		{
+		vk::present_surface_info present_info{
 			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
 			.format = av_format,
 			.width = buffer_width,
 			.height = buffer_height,
 			.pitch = buffer_pitch,
-			.eye = 0
-		};
+			.eye = 0};
 		image_to_flip = get_present_source(&present_info, avconfig);
 
 		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
@@ -587,13 +585,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
-	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull :
+	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES ? 0ull :
 #ifdef ANDROID
-		1000ull
+	                                                                           1000ull
 #else
-		100000000ull
+	                                                                           100000000ull
 #endif
-	;
+		;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
 	{
 		switch (status)
@@ -606,7 +604,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			// before acquireNextImage can return successfully. This is despite the driver reporting 2 swap chain images available
 			// This makes fullscreen performance slower than windowed performance as throughput is lowered due to losing one presentable image
 			// Found on AMD Crimson 17.7.2
-
 
 			// Whatever returned from status, this is now a spin
 			timeout = 0ull;
@@ -646,19 +643,19 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	areai aspect_ratio;
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		const auto converted = avconfig.aspect_convert_region({ buffer_width, buffer_height }, m_swapchain_dims);
+		const auto converted = avconfig.aspect_convert_region({buffer_width, buffer_height}, m_swapchain_dims);
 		aspect_ratio = static_cast<areai>(converted);
 	}
 	else
 	{
-		aspect_ratio = { 0, 0, s32(m_swapchain_dims.width), s32(m_swapchain_dims.height) };
+		aspect_ratio = {0, 0, s32(m_swapchain_dims.width), s32(m_swapchain_dims.height)};
 	}
 
 	// Blit contents to screen..
 	VkImage target_image = m_swapchain->get_image(m_current_frame->present_image);
 	const auto present_layout = m_swapchain->get_optimal_present_layout();
 
-	const VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	const VkImageSubresourceRange subresource_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 	VkImageLayout target_layout = present_layout;
 
 	VkRenderPass single_target_pass = VK_NULL_HANDLE;
@@ -668,7 +665,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
-		VkClearColorValue clear_black {};
+		VkClearColorValue clear_black{};
 		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
 
@@ -701,20 +698,22 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
-			if (image_to_flip) calibration_src.push_back(image_to_flip);
-			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
+			if (image_to_flip)
+				calibration_src.push_back(image_to_flip);
+			if (image_to_flip2)
+				calibration_src.push_back(image_to_flip2);
 
 			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
 			{
 				// Run upscaling pass before the rest of the output effects pipeline
 				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
 				VkImageBlit request = {};
-				request.srcSubresource = { image_to_flip->aspect(), 0, 0, 1 };
-				request.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-				request.srcOffsets[0] = { 0, 0, 0 };
-				request.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
-				request.dstOffsets[0] = { 0, 0, 0 };
-				request.dstOffsets[1] = { aspect_ratio.width(), aspect_ratio.height(), 1 };
+				request.srcSubresource = {image_to_flip->aspect(), 0, 0, 1};
+				request.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+				request.srcOffsets[0] = {0, 0, 0};
+				request.srcOffsets[1] = {s32(buffer_width), s32(buffer_height), 1};
+				request.dstOffsets[0] = {0, 0, 0};
+				request.dstOffsets[1] = {aspect_ratio.width(), aspect_ratio.height(), 1};
 
 				for (unsigned i = 0; i < calibration_src.size(); ++i)
 				{
@@ -743,12 +742,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			// Do raw transfer here as there is no image object associated with textures owned by the driver (TODO)
 			VkImageBlit rgn = {};
-			rgn.srcSubresource = { image_to_flip->aspect(), 0, 0, 1 };
-			rgn.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-			rgn.srcOffsets[0] = { 0, 0, 0 };
-			rgn.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
-			rgn.dstOffsets[0] = { aspect_ratio.x1, aspect_ratio.y1, 0 };
-			rgn.dstOffsets[1] = { aspect_ratio.x2, aspect_ratio.y2, 1 };
+			rgn.srcSubresource = {image_to_flip->aspect(), 0, 0, 1};
+			rgn.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+			rgn.srcOffsets[0] = {0, 0, 0};
+			rgn.srcOffsets[1] = {s32(buffer_width), s32(buffer_height), 1};
+			rgn.dstOffsets[0] = {aspect_ratio.x1, aspect_ratio.y1, 0};
+			rgn.dstOffsets[1] = {aspect_ratio.x2, aspect_ratio.y2, 1};
 
 			if (target_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			{
@@ -767,19 +766,19 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 
 			VkBufferImageCopy copy_info;
-			copy_info.bufferOffset                    = 0;
-			copy_info.bufferRowLength                 = 0;
-			copy_info.bufferImageHeight               = 0;
-			copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+			copy_info.bufferOffset = 0;
+			copy_info.bufferRowLength = 0;
+			copy_info.bufferImageHeight = 0;
+			copy_info.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			copy_info.imageSubresource.baseArrayLayer = 0;
-			copy_info.imageSubresource.layerCount     = 1;
-			copy_info.imageSubresource.mipLevel       = 0;
-			copy_info.imageOffset.x                   = 0;
-			copy_info.imageOffset.y                   = 0;
-			copy_info.imageOffset.z                   = 0;
-			copy_info.imageExtent.width               = buffer_width;
-			copy_info.imageExtent.height              = buffer_height;
-			copy_info.imageExtent.depth               = 1;
+			copy_info.imageSubresource.layerCount = 1;
+			copy_info.imageSubresource.mipLevel = 0;
+			copy_info.imageOffset.x = 0;
+			copy_info.imageOffset.y = 0;
+			copy_info.imageOffset.z = 0;
+			copy_info.imageExtent.width = buffer_width;
+			copy_info.imageExtent.height = buffer_height;
+			copy_info.imageExtent.depth = 1;
 
 			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
@@ -864,14 +863,10 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
 			const auto texture_copies_ellided = m_texture_cache.get_texture_copies_ellided_this_frame();
 			const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
-			const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
-				? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
-				: 0;
+			const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count ? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count : 0;
 			const auto program_cache_lookups = info.stats.program_cache_lookups_total;
 			const auto program_cache_ellided = info.stats.program_cache_lookups_ellided;
-			const auto program_cache_ellision_rate = program_cache_lookups
-				? (program_cache_ellided * 100) / program_cache_lookups
-				: 0;
+			const auto program_cache_ellision_rate = program_cache_lookups ? (program_cache_ellided * 100) / program_cache_lookups : 0;
 
 			rsx::overlays::set_debug_overlay_text(fmt::format(
 				"Internal Resolution:      %s\n"
@@ -897,8 +892,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
 				num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided,
 				vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio,
-				program_cache_ellided, program_cache_lookups, program_cache_ellision_rate)
-			);
+				program_cache_ellided, program_cache_lookups, program_cache_ellision_rate));
 		}
 
 		direct_fbo->release();

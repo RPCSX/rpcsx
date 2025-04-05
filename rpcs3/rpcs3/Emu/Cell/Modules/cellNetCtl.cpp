@@ -18,75 +18,75 @@ template <>
 void fmt_class_string<CellNetCtlError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_NET_CTL_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_NET_CTL_ERROR_NOT_TERMINATED);
-			STR_CASE(CELL_NET_CTL_ERROR_HANDLER_MAX);
-			STR_CASE(CELL_NET_CTL_ERROR_ID_NOT_FOUND);
-			STR_CASE(CELL_NET_CTL_ERROR_INVALID_ID);
-			STR_CASE(CELL_NET_CTL_ERROR_INVALID_CODE);
-			STR_CASE(CELL_NET_CTL_ERROR_INVALID_ADDR);
-			STR_CASE(CELL_NET_CTL_ERROR_NOT_CONNECTED);
-			STR_CASE(CELL_NET_CTL_ERROR_NOT_AVAIL);
-			STR_CASE(CELL_NET_CTL_ERROR_INVALID_TYPE);
-			STR_CASE(CELL_NET_CTL_ERROR_INVALID_SIZE);
-			STR_CASE(CELL_NET_CTL_ERROR_NET_DISABLED);
-			STR_CASE(CELL_NET_CTL_ERROR_NET_NOT_CONNECTED);
-			STR_CASE(CELL_NET_CTL_ERROR_NP_NO_ACCOUNT);
-			STR_CASE(CELL_NET_CTL_ERROR_NP_RESERVED1);
-			STR_CASE(CELL_NET_CTL_ERROR_NP_RESERVED2);
-			STR_CASE(CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED);
-			STR_CASE(CELL_NET_CTL_ERROR_DIALOG_CANCELED);
-			STR_CASE(CELL_NET_CTL_ERROR_DIALOG_ABORTED);
+			switch (error)
+			{
+				STR_CASE(CELL_NET_CTL_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_NET_CTL_ERROR_NOT_TERMINATED);
+				STR_CASE(CELL_NET_CTL_ERROR_HANDLER_MAX);
+				STR_CASE(CELL_NET_CTL_ERROR_ID_NOT_FOUND);
+				STR_CASE(CELL_NET_CTL_ERROR_INVALID_ID);
+				STR_CASE(CELL_NET_CTL_ERROR_INVALID_CODE);
+				STR_CASE(CELL_NET_CTL_ERROR_INVALID_ADDR);
+				STR_CASE(CELL_NET_CTL_ERROR_NOT_CONNECTED);
+				STR_CASE(CELL_NET_CTL_ERROR_NOT_AVAIL);
+				STR_CASE(CELL_NET_CTL_ERROR_INVALID_TYPE);
+				STR_CASE(CELL_NET_CTL_ERROR_INVALID_SIZE);
+				STR_CASE(CELL_NET_CTL_ERROR_NET_DISABLED);
+				STR_CASE(CELL_NET_CTL_ERROR_NET_NOT_CONNECTED);
+				STR_CASE(CELL_NET_CTL_ERROR_NP_NO_ACCOUNT);
+				STR_CASE(CELL_NET_CTL_ERROR_NP_RESERVED1);
+				STR_CASE(CELL_NET_CTL_ERROR_NP_RESERVED2);
+				STR_CASE(CELL_NET_CTL_ERROR_NET_CABLE_NOT_CONNECTED);
+				STR_CASE(CELL_NET_CTL_ERROR_DIALOG_CANCELED);
+				STR_CASE(CELL_NET_CTL_ERROR_DIALOG_ABORTED);
 
-			STR_CASE(CELL_NET_CTL_ERROR_WLAN_DEAUTHED);
-			STR_CASE(CELL_NET_CTL_ERROR_WLAN_KEYINFO_EXCHNAGE_TIMEOUT);
-			STR_CASE(CELL_NET_CTL_ERROR_WLAN_ASSOC_FAILED);
-			STR_CASE(CELL_NET_CTL_ERROR_WLAN_AP_DISAPPEARED);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_INIT);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_NO_PADO);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_NO_PADS);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_GET_PADT);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_SERVICE_NAME);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_AC_SYSTEM);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_GENERIC);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_STATUS_AUTH);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_STATUS_NETWORK);
-			STR_CASE(CELL_NET_CTL_ERROR_PPPOE_STATUS_TERMINATE);
-			STR_CASE(CELL_NET_CTL_ERROR_DHCP_LEASE_TIME);
+				STR_CASE(CELL_NET_CTL_ERROR_WLAN_DEAUTHED);
+				STR_CASE(CELL_NET_CTL_ERROR_WLAN_KEYINFO_EXCHNAGE_TIMEOUT);
+				STR_CASE(CELL_NET_CTL_ERROR_WLAN_ASSOC_FAILED);
+				STR_CASE(CELL_NET_CTL_ERROR_WLAN_AP_DISAPPEARED);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_INIT);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_NO_PADO);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_NO_PADS);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_GET_PADT);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_SERVICE_NAME);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_AC_SYSTEM);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_SESSION_GENERIC);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_STATUS_AUTH);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_STATUS_NETWORK);
+				STR_CASE(CELL_NET_CTL_ERROR_PPPOE_STATUS_TERMINATE);
+				STR_CASE(CELL_NET_CTL_ERROR_DHCP_LEASE_TIME);
 
-			STR_CASE(CELL_GAMEUPDATE_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_INVALID_ADDR);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_INVALID_SIZE);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_INVALID_MEMORY_CONTAINER);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_INSUFFICIENT_MEMORY_CONTAINER);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_BUSY);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_NOT_START);
-			STR_CASE(CELL_GAMEUPDATE_ERROR_LOAD_FAILED);
-		}
+				STR_CASE(CELL_GAMEUPDATE_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_INVALID_ADDR);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_INVALID_SIZE);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_INVALID_MEMORY_CONTAINER);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_INSUFFICIENT_MEMORY_CONTAINER);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_BUSY);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_NOT_START);
+				STR_CASE(CELL_GAMEUPDATE_ERROR_LOAD_FAILED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<CellNetCtlState>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellNetCtlState value)
-	{
-		switch (value)
 		{
-		case CELL_NET_CTL_STATE_Disconnected: return "Disconnected";
-		case CELL_NET_CTL_STATE_Connecting: return "Connecting";
-		case CELL_NET_CTL_STATE_IPObtaining: return "Obtaining IP";
-		case CELL_NET_CTL_STATE_IPObtained: return "IP Obtained";
-		}
+			switch (value)
+			{
+			case CELL_NET_CTL_STATE_Disconnected: return "Disconnected";
+			case CELL_NET_CTL_STATE_Connecting: return "Connecting";
+			case CELL_NET_CTL_STATE_IPObtaining: return "Obtaining IP";
+			case CELL_NET_CTL_STATE_IPObtained: return "IP Obtained";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct CellGameUpdateResult
@@ -228,7 +228,7 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	// case CELL_NET_CTL_INFO_WLAN_SECURITY: break;
 	// case CELL_NET_CTL_INFO_8021X_TYPE: break;
 	// case CELL_NET_CTL_INFO_8021X_AUTH_NAME: break;
-	case CELL_NET_CTL_INFO_RSSI: info->rssi = 100; break; // wireless: value ranges from 0-100 indicating wireless connection strength
+	case CELL_NET_CTL_INFO_RSSI: info->rssi = 100; break;     // wireless: value ranges from 0-100 indicating wireless connection strength
 	case CELL_NET_CTL_INFO_CHANNEL: info->channel = 1; break; // wireless: channel used to connect to the AP?
 	case CELL_NET_CTL_INFO_IP_CONFIG: info->ip_config = CELL_NET_CTL_IP_STATIC; break;
 	case CELL_NET_CTL_INFO_DHCP_HOSTNAME: strcpy_trunc(info->dhcp_hostname, nph.get_hostname()); break;
@@ -428,10 +428,10 @@ error_code cellGameUpdateCheckStartAsync(vm::cptr<CellGameUpdateParam> param, vm
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsync(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
+			return CELL_OK;
+		});
 	return CELL_OK;
 }
 
@@ -439,10 +439,10 @@ error_code cellGameUpdateCheckFinishAsync(vm::ptr<CellGameUpdateCallback> cb_fun
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsync(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK, userdata);
+			return CELL_OK;
+		});
 	return CELL_OK;
 }
 
@@ -450,10 +450,10 @@ error_code cellGameUpdateCheckStartWithoutDialogAsync(vm::ptr<CellGameUpdateCall
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartWithoutDialogAsync(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			cb_func(ppu, CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK, userdata);
+			return CELL_OK;
+		});
 	return CELL_OK;
 }
 
@@ -467,10 +467,10 @@ error_code cellGameUpdateCheckStartAsyncEx(vm::cptr<CellGameUpdateParam> param, 
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartAsyncEx(param=*0x%x, cb_func=*0x%x, userdata=*0x%x)", param, cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK}), userdata);
-		return CELL_OK;
-	});
+		{
+			cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK}), userdata);
+			return CELL_OK;
+		});
 	return CELL_OK;
 }
 
@@ -478,10 +478,10 @@ error_code cellGameUpdateCheckFinishAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK}), userdata);
-		return CELL_OK;
-	});
+		{
+			cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK}), userdata);
+			return CELL_OK;
+		});
 	return CELL_OK;
 }
 
@@ -489,47 +489,47 @@ error_code cellGameUpdateCheckStartWithoutDialogAsyncEx(vm::ptr<CellGameUpdateCa
 {
 	cellNetCtl.todo("cellGameUpdateCheckStartWithoutDialogAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK}), userdata);
-		return CELL_OK;
-	});
+		{
+			cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_NO_UPDATE, CELL_OK}), userdata);
+			return CELL_OK;
+		});
 	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellNetCtl)("cellNetCtl", []()
-{
-	REG_FUNC(cellNetCtl, cellNetCtlInit);
-	REG_FUNC(cellNetCtl, cellNetCtlTerm);
+	{
+		REG_FUNC(cellNetCtl, cellNetCtlInit);
+		REG_FUNC(cellNetCtl, cellNetCtlTerm);
 
-	REG_FUNC(cellNetCtl, cellNetCtlGetState);
-	REG_FUNC(cellNetCtl, cellNetCtlAddHandler);
-	REG_FUNC(cellNetCtl, cellNetCtlDelHandler);
+		REG_FUNC(cellNetCtl, cellNetCtlGetState);
+		REG_FUNC(cellNetCtl, cellNetCtlAddHandler);
+		REG_FUNC(cellNetCtl, cellNetCtlDelHandler);
 
-	REG_FUNC(cellNetCtl, cellNetCtlGetInfo);
+		REG_FUNC(cellNetCtl, cellNetCtlGetInfo);
 
-	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogLoadAsync);
-	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogAbortAsync);
-	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogUnloadAsync);
+		REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogLoadAsync);
+		REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogAbortAsync);
+		REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogUnloadAsync);
 
-	REG_FUNC(cellNetCtl, cellNetCtlGetNatInfo);
+		REG_FUNC(cellNetCtl, cellNetCtlGetNatInfo);
 
-	REG_FUNC(cellNetCtl, cellNetCtlAddHandlerGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlConnectGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlDelHandlerGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlDisconnectGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlGetInfoGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlGetScanInfoGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlGetStateGameInt);
-	REG_FUNC(cellNetCtl, cellNetCtlScanGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlAddHandlerGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlConnectGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlDelHandlerGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlDisconnectGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlGetInfoGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlGetScanInfoGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlGetStateGameInt);
+		REG_FUNC(cellNetCtl, cellNetCtlScanGameInt);
 
-	REG_FUNC(cellNetCtl, cellGameUpdateInit);
-	REG_FUNC(cellNetCtl, cellGameUpdateTerm);
+		REG_FUNC(cellNetCtl, cellGameUpdateInit);
+		REG_FUNC(cellNetCtl, cellGameUpdateTerm);
 
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartAsync);
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckFinishAsync);
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartWithoutDialogAsync);
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckAbort);
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartAsyncEx);
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckFinishAsyncEx);
-	REG_FUNC(cellNetCtl, cellGameUpdateCheckStartWithoutDialogAsyncEx);
-});
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckStartAsync);
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckFinishAsync);
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckStartWithoutDialogAsync);
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckAbort);
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckStartAsyncEx);
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckFinishAsyncEx);
+		REG_FUNC(cellNetCtl, cellGameUpdateCheckStartWithoutDialogAsyncEx);
+	});

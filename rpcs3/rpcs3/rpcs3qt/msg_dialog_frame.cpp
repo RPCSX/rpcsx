@@ -9,7 +9,10 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {
 	state = MsgDialogState::Open;
 
-	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
+	static const auto& barWidth = []()
+	{
+		return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();
+	};
 
 	Close(true);
 
@@ -25,7 +28,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(m_text);
 
-	auto l_AddGauge = [this, layout](QProgressBar* &bar, QLabel* &text)
+	auto l_AddGauge = [this, layout](QProgressBar*& bar, QLabel*& text)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
@@ -82,16 +85,18 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		}
 
 		connect(m_button_yes, &QAbstractButton::clicked, [this]()
-		{
-			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_YES);
-			m_dialog->accept();
-		});
+			{
+				if (on_close)
+					on_close(CELL_MSGDIALOG_BUTTON_YES);
+				m_dialog->accept();
+			});
 
 		connect(m_button_no, &QAbstractButton::clicked, [this]()
-		{
-			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_NO);
-			m_dialog->accept();
-		});
+			{
+				if (on_close)
+					on_close(CELL_MSGDIALOG_BUTTON_NO);
+				m_dialog->accept();
+			});
 	}
 
 	if (type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK)
@@ -112,21 +117,23 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		}
 
 		connect(m_button_ok, &QAbstractButton::clicked, [this]()
-		{
-			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_OK);
-			m_dialog->accept();
-		});
+			{
+				if (on_close)
+					on_close(CELL_MSGDIALOG_BUTTON_OK);
+				m_dialog->accept();
+			});
 	}
 
 	m_dialog->setLayout(layout);
 
 	connect(m_dialog, &QDialog::rejected, [this]()
-	{
-		if (!type.disable_cancel)
 		{
-			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
-		}
-	});
+			if (!type.disable_cancel)
+			{
+				if (on_close)
+					on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+			}
+		});
 
 	// Fix size
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);

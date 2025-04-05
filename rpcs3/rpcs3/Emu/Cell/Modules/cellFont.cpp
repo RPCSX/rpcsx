@@ -12,38 +12,38 @@ template <>
 void fmt_class_string<CellFontError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_FONT_ERROR_FATAL);
-			STR_CASE(CELL_FONT_ERROR_INVALID_PARAMETER);
-			STR_CASE(CELL_FONT_ERROR_UNINITIALIZED);
-			STR_CASE(CELL_FONT_ERROR_INITIALIZE_FAILED);
-			STR_CASE(CELL_FONT_ERROR_INVALID_CACHE_BUFFER);
-			STR_CASE(CELL_FONT_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_FONT_ERROR_ALLOCATION_FAILED);
-			STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_FONTSET);
-			STR_CASE(CELL_FONT_ERROR_OPEN_FAILED);
-			STR_CASE(CELL_FONT_ERROR_READ_FAILED);
-			STR_CASE(CELL_FONT_ERROR_FONT_OPEN_FAILED);
-			STR_CASE(CELL_FONT_ERROR_FONT_NOT_FOUND);
-			STR_CASE(CELL_FONT_ERROR_FONT_OPEN_MAX);
-			STR_CASE(CELL_FONT_ERROR_FONT_CLOSE_FAILED);
-			STR_CASE(CELL_FONT_ERROR_ALREADY_OPENED);
-			STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_FUNCTION);
-			STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_CODE);
-			STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_GLYPH);
-			STR_CASE(CELL_FONT_ERROR_BUFFER_SIZE_NOT_ENOUGH);
-			STR_CASE(CELL_FONT_ERROR_RENDERER_ALREADY_BIND);
-			STR_CASE(CELL_FONT_ERROR_RENDERER_UNBIND);
-			STR_CASE(CELL_FONT_ERROR_RENDERER_INVALID);
-			STR_CASE(CELL_FONT_ERROR_RENDERER_ALLOCATION_FAILED);
-			STR_CASE(CELL_FONT_ERROR_ENOUGH_RENDERING_BUFFER);
-			STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_SURFACE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_FONT_ERROR_FATAL);
+				STR_CASE(CELL_FONT_ERROR_INVALID_PARAMETER);
+				STR_CASE(CELL_FONT_ERROR_UNINITIALIZED);
+				STR_CASE(CELL_FONT_ERROR_INITIALIZE_FAILED);
+				STR_CASE(CELL_FONT_ERROR_INVALID_CACHE_BUFFER);
+				STR_CASE(CELL_FONT_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_FONT_ERROR_ALLOCATION_FAILED);
+				STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_FONTSET);
+				STR_CASE(CELL_FONT_ERROR_OPEN_FAILED);
+				STR_CASE(CELL_FONT_ERROR_READ_FAILED);
+				STR_CASE(CELL_FONT_ERROR_FONT_OPEN_FAILED);
+				STR_CASE(CELL_FONT_ERROR_FONT_NOT_FOUND);
+				STR_CASE(CELL_FONT_ERROR_FONT_OPEN_MAX);
+				STR_CASE(CELL_FONT_ERROR_FONT_CLOSE_FAILED);
+				STR_CASE(CELL_FONT_ERROR_ALREADY_OPENED);
+				STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_FUNCTION);
+				STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_CODE);
+				STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_GLYPH);
+				STR_CASE(CELL_FONT_ERROR_BUFFER_SIZE_NOT_ENOUGH);
+				STR_CASE(CELL_FONT_ERROR_RENDERER_ALREADY_BIND);
+				STR_CASE(CELL_FONT_ERROR_RENDERER_UNBIND);
+				STR_CASE(CELL_FONT_ERROR_RENDERER_INVALID);
+				STR_CASE(CELL_FONT_ERROR_RENDERER_ALLOCATION_FAILED);
+				STR_CASE(CELL_FONT_ERROR_ENOUGH_RENDERING_BUFFER);
+				STR_CASE(CELL_FONT_ERROR_NO_SUPPORT_SURFACE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Functions
@@ -223,22 +223,22 @@ error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFon
 	std::string file;
 	switch (fontType->type)
 	{
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN:         file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";  break;
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN:   file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN.TTF";  break;
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_BOLD_LATIN:    file = "/dev_flash/data/font/SCE-PS3-RD-B-LATIN.TTF";  break;
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN2:        file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN2.TTF"; break;
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN2:  file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN2.TTF"; break;
-	case CELL_FONT_TYPE_RODIN_SANS_SERIF_BOLD_LATIN2:   file = "/dev_flash/data/font/SCE-PS3-RD-B-LATIN2.TTF"; break;
-	case CELL_FONT_TYPE_MATISSE_SERIF_LATIN:            file = "/dev_flash/data/font/SCE-PS3-MT-R-LATIN.TTF";  break;
-	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_JAPANESE:       file = "/dev_flash/data/font/SCE-PS3-NR-R-JPN.TTF";    break;
-	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_LIGHT_JAPANESE: file = "/dev_flash/data/font/SCE-PS3-NR-L-JPN.TTF";    break;
-	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_BOLD_JAPANESE:  file = "/dev_flash/data/font/SCE-PS3-NR-B-JPN.TTF";    break;
-	case CELL_FONT_TYPE_YD_GOTHIC_KOREAN:               file = "/dev_flash/data/font/SCE-PS3-YG-R-KOR.TTF";    break;
-	case CELL_FONT_TYPE_SEURAT_MARU_GOTHIC_LATIN:       file = "/dev_flash/data/font/SCE-PS3-SR-R-LATIN.TTF";  break;
-	case CELL_FONT_TYPE_SEURAT_MARU_GOTHIC_LATIN2:      file = "/dev_flash/data/font/SCE-PS3-SR-R-LATIN2.TTF"; break;
-	case CELL_FONT_TYPE_VAGR_SANS_SERIF_ROUND:          file = "/dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF";  break;
-	case CELL_FONT_TYPE_VAGR_SANS_SERIF_ROUND_LATIN2:   file = "/dev_flash/data/font/SCE-PS3-VR-R-LATIN2.TTF"; break;
-	case CELL_FONT_TYPE_SEURAT_MARU_GOTHIC_JAPANESE:    file = "/dev_flash/data/font/SCE-PS3-SR-R-JPN.TTF";    break;
+	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN: file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF"; break;
+	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN: file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN.TTF"; break;
+	case CELL_FONT_TYPE_RODIN_SANS_SERIF_BOLD_LATIN: file = "/dev_flash/data/font/SCE-PS3-RD-B-LATIN.TTF"; break;
+	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LATIN2: file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN2.TTF"; break;
+	case CELL_FONT_TYPE_RODIN_SANS_SERIF_LIGHT_LATIN2: file = "/dev_flash/data/font/SCE-PS3-RD-L-LATIN2.TTF"; break;
+	case CELL_FONT_TYPE_RODIN_SANS_SERIF_BOLD_LATIN2: file = "/dev_flash/data/font/SCE-PS3-RD-B-LATIN2.TTF"; break;
+	case CELL_FONT_TYPE_MATISSE_SERIF_LATIN: file = "/dev_flash/data/font/SCE-PS3-MT-R-LATIN.TTF"; break;
+	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_JAPANESE: file = "/dev_flash/data/font/SCE-PS3-NR-R-JPN.TTF"; break;
+	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_LIGHT_JAPANESE: file = "/dev_flash/data/font/SCE-PS3-NR-L-JPN.TTF"; break;
+	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_BOLD_JAPANESE: file = "/dev_flash/data/font/SCE-PS3-NR-B-JPN.TTF"; break;
+	case CELL_FONT_TYPE_YD_GOTHIC_KOREAN: file = "/dev_flash/data/font/SCE-PS3-YG-R-KOR.TTF"; break;
+	case CELL_FONT_TYPE_SEURAT_MARU_GOTHIC_LATIN: file = "/dev_flash/data/font/SCE-PS3-SR-R-LATIN.TTF"; break;
+	case CELL_FONT_TYPE_SEURAT_MARU_GOTHIC_LATIN2: file = "/dev_flash/data/font/SCE-PS3-SR-R-LATIN2.TTF"; break;
+	case CELL_FONT_TYPE_VAGR_SANS_SERIF_ROUND: file = "/dev_flash/data/font/SCE-PS3-VR-R-LATIN.TTF"; break;
+	case CELL_FONT_TYPE_VAGR_SANS_SERIF_ROUND_LATIN2: file = "/dev_flash/data/font/SCE-PS3-VR-R-LATIN2.TTF"; break;
+	case CELL_FONT_TYPE_SEURAT_MARU_GOTHIC_JAPANESE: file = "/dev_flash/data/font/SCE-PS3-SR-R-JPN.TTF"; break;
 
 	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_JP_SET:
 	case CELL_FONT_TYPE_NEWRODIN_GOTHIC_LATIN_SET:
@@ -282,10 +282,10 @@ error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFon
 		break;
 
 	default:
-		return { CELL_FONT_ERROR_NO_SUPPORT_FONTSET, fontType->type };
+		return {CELL_FONT_ERROR_NO_SUPPORT_FONTSET, fontType->type};
 	}
 
-	error_code ret = cellFontOpenFontFile(library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
+	error_code ret = cellFontOpenFontFile(library, vm::make_str(file), 0, 0, font); // TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
 
 	return ret;
@@ -379,15 +379,15 @@ void cellFontRenderSurfaceInit(vm::ptr<CellFontRenderSurface> surface, vm::ptr<v
 	const u32 width = w & ~w >> 0x1f;
 	const u32 height = h & ~h >> 0x1f;
 
-	surface->buffer        = buffer;
-	surface->widthByte     = bufferWidthByte;
+	surface->buffer = buffer;
+	surface->widthByte = bufferWidthByte;
 	surface->pixelSizeByte = pixelSizeByte;
-	surface->width         = width;
-	surface->height        = height;
-	surface->sc_x0         = 0;
-	surface->sc_y0         = 0;
-	surface->sc_x1         = width;
-	surface->sc_y1         = height;
+	surface->width = width;
+	surface->height = height;
+	surface->sc_x0 = 0;
+	surface->sc_y0 = 0;
+	surface->sc_x1 = width;
+	surface->sc_y1 = height;
 }
 
 void cellFontRenderSurfaceSetScissor(vm::ptr<CellFontRenderSurface> surface, s32 x0, s32 y0, u32 w, u32 h)
@@ -527,8 +527,8 @@ error_code cellFontSetScalePixel(vm::ptr<CellFont> font, f32 w, f32 h)
 	font->scale_y = h;
 
 	// TODO:
-	//font->scalePointH = (h * something) / font->resolutionDpiV;
-	//font->scalePointW = (w * something) / font->resolutionDpiH;
+	// font->scalePointH = (h * something) / font->resolutionDpiV;
+	// font->scalePointW = (w * something) / font->resolutionDpiH;
 
 	return CELL_OK;
 }
@@ -554,7 +554,7 @@ error_code cellFontGetHorizontalLayout(vm::ptr<CellFont> font, vm::ptr<CellFontH
 	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
 
 	layout->baseLineY = ascent * scale;
-	layout->lineHeight = (ascent-descent+lineGap) * scale;
+	layout->lineHeight = (ascent - descent + lineGap) * scale;
 	layout->effectHeight = lineGap * scale;
 
 	return CELL_OK;
@@ -575,14 +575,14 @@ error_code cellFontBindRenderer(vm::ptr<CellFont> font, vm::ptr<CellFontRenderer
 	}
 
 	// TODO
-	//renderer->systemReserved[2] = (void *)font->resolutionDpiH;
-	//renderer->systemReserved[3] = (void *)font->resolutionDpiV;
-	//renderer->systemReserved[4] = (void *)font->scalePointW;
-	//renderer->systemReserved[5] = (void *)font->scalePointH;
-	//renderer->systemReserved[6] = (void *)font->scalePixelW;
-	//renderer->systemReserved[7] = (void *)font->scalePixelH;
-	//renderer->systemReserved[8] = *(void **)&font->font_weight;
-	//renderer->systemReserved[9] = *(void **)&font->field_0x5c;
+	// renderer->systemReserved[2] = (void *)font->resolutionDpiH;
+	// renderer->systemReserved[3] = (void *)font->resolutionDpiV;
+	// renderer->systemReserved[4] = (void *)font->scalePointW;
+	// renderer->systemReserved[5] = (void *)font->scalePointH;
+	// renderer->systemReserved[6] = (void *)font->scalePixelW;
+	// renderer->systemReserved[7] = (void *)font->scalePixelH;
+	// renderer->systemReserved[8] = *(void **)&font->font_weight;
+	// renderer->systemReserved[9] = *(void **)&font->field_0x5c;
 
 	font->renderer_addr = renderer.addr();
 
@@ -651,21 +651,21 @@ error_code cellFontSetupRenderScalePixel(vm::ptr<CellFont> font, f32 w, f32 h)
 
 	// TODO:
 
-	//if (w == something)
+	// if (w == something)
 	//{
 	//	w = font->scalePixelW;
-	//}
+	// }
 
-	//if (h == something)
+	// if (h == something)
 	//{
 	//	h = font->scalePixelH;
-	//}
+	// }
 
-	//font->field_0x14 + 0x10 = (w * something) / font->resolutionDpiH;
-	//font->field_0x14 + 0x14 = (h * something) / font->resolutionDpiV;
-	//font->field_0x14 + 0x18 = w;
-	//font->field_0x14 + 0x1c = h;
-	//font->field_0x78 = 0;
+	// font->field_0x14 + 0x10 = (w * something) / font->resolutionDpiH;
+	// font->field_0x14 + 0x14 = (h * something) / font->resolutionDpiV;
+	// font->field_0x14 + 0x18 = w;
+	// font->field_0x14 + 0x1c = h;
+	// font->field_0x78 = 0;
 
 	return CELL_OK;
 }
@@ -791,7 +791,7 @@ error_code cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<f32> slantPara
 error_code cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId, vm::ptr<u32> fontCode)
 {
 	cellFont.todo("cellFontGetFontIdCode(font=*0x%x, code=%d, fontId=*0x%x, fontCode=*0x%x)", font, code, fontId, fontCode);
-	
+
 	if (fontId)
 	{
 		*fontId = 0;
@@ -891,8 +891,8 @@ error_code cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr
 	stbtt_GetCodepointHMetrics(font->stbfont, code, &advanceWidth, &leftSideBearing);
 
 	// TODO: Add the rest of the information
-	metrics->width = (x1-x0) * scale;
-	metrics->height = (y1-y0) * scale;
+	metrics->width = (x1 - x0) * scale;
+	metrics->height = (y1 - y0) * scale;
 	metrics->h_bearingX = leftSideBearing * scale;
 	metrics->h_bearingY = 0.f;
 	metrics->h_advance = advanceWidth * scale;
@@ -913,10 +913,10 @@ error_code cellFontGraphicsSetFontRGBA(vm::ptr<CellFontGraphicsDrawContext> cont
 	}
 
 	// TODO
-	//context->field_0x70 = fontRGBA[0];
-	//context->field_0x74 = fontRGBA[1];
-	//context->field_0x78 = fontRGBA[2];
-	//context->field_0x7c = fontRGBA[3];
+	// context->field_0x70 = fontRGBA[0];
+	// context->field_0x74 = fontRGBA[1];
+	// context->field_0x78 = fontRGBA[2];
+	// context->field_0x7c = fontRGBA[3];
 
 	return CELL_OK;
 }
@@ -960,10 +960,10 @@ error_code cellFontGraphicsSetScalePixel(vm::ptr<CellFontGraphicsDrawContext> co
 	}
 
 	// TODO
-	//context->field_0x10 = (w * something) / context->field_0x8;
-	//context->field_0x14 = (h * something) / context->field_0xc;
-	//context->field_0x18 = w;
-	//context->field_0x1c = h;
+	// context->field_0x10 = (w * something) / context->field_0x8;
+	// context->field_0x14 = (h * something) / context->field_0xc;
+	// context->field_0x18 = w;
+	// context->field_0x1c = h;
 
 	return CELL_OK;
 }
@@ -1017,10 +1017,10 @@ error_code cellFontGlyphSetupVertexesGlyph(vm::ptr<CellFontGlyph> glyph, f32 con
 {
 	cellFont.todo("cellFontGlyphSetupVertexesGlyph(glyph=*0x%x, controlDistance=%f, mappedBuf=*0x%x, mappedBufSize=0x%x, vGlyph=*0x%x, dataSize=*0x%x)", glyph, controlDistance, mappedBuf, mappedBufSize, vGlyph, dataSize);
 
-	//if (in_r8)
+	// if (in_r8)
 	//{
 	//	*in_r8 = 0; // ???
-	//}
+	// }
 
 	if (!dataSize)
 	{
@@ -1043,7 +1043,7 @@ error_code cellFontGlyphSetupVertexesGlyph(vm::ptr<CellFontGlyph> glyph, f32 con
 error_code cellFontGetVerticalLayout(vm::ptr<CellFont> font, vm::ptr<CellFontVerticalLayout> layout)
 {
 	cellFont.todo("cellFontGetVerticalLayout(font=*0x%x, layout=*0x%x)", font, layout);
-	
+
 	if (!layout)
 	{
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
@@ -1095,10 +1095,10 @@ error_code cellFontSetScalePoint(vm::ptr<CellFont> font, f32 w, f32 h)
 	}
 
 	// TODO
-	//font->scalePointW = w;
-	//font->scalePointH = h;
-	//font->scalePixelW = (w * font->resolutionDpiH) / something;
-	//font->scalePixelH = (h * font->resolutionDpiV) / something;
+	// font->scalePointW = w;
+	// font->scalePointH = h;
+	// font->scalePixelW = (w * font->resolutionDpiH) / something;
+	// font->scalePixelH = (h * font->resolutionDpiV) / something;
 
 	return CELL_OK;
 }
@@ -1123,8 +1123,8 @@ error_code cellFontSetupRenderEffectSlant(vm::ptr<CellFont> font, f32 effectSlan
 	}
 
 	// TODO:
-	//font->effectSlant = effectSlant; // TODO: probably clamped
-	//font->field_0x78 = 0;
+	// font->effectSlant = effectSlant; // TODO: probably clamped
+	// font->field_0x78 = 0;
 
 	return CELL_OK;
 }
@@ -1139,10 +1139,10 @@ error_code cellFontGraphicsSetLineRGBA(vm::ptr<CellFontGraphicsDrawContext> cont
 	}
 
 	// TODO
-	//context->lineColorR = lineRGBA[0];
-	//context->lineColorG = lineRGBA[1];
-	//context->lineColorB = lineRGBA[2];
-	//context->lineColorA = lineRGBA[3];
+	// context->lineColorR = lineRGBA[0];
+	// context->lineColorG = lineRGBA[1];
+	// context->lineColorB = lineRGBA[2];
+	// context->lineColorA = lineRGBA[3];
 
 	return CELL_OK;
 }
@@ -1156,7 +1156,7 @@ error_code cellFontGraphicsSetDrawType(vm::ptr<CellFontGraphicsDrawContext> cont
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
-    //context->field_0x42 = type; // TODO
+	// context->field_0x42 = type; // TODO
 
 	return CELL_OK;
 }
@@ -1188,72 +1188,72 @@ error_code cellFontGraphicsSetupDrawContext(vm::cptr<CellFontGraphics> graphics,
 	}
 
 	// TODO
-	//context->magic = 0xcf50;
-	//context->field_0x50 = something;
-	//context->field_0x54 = something;
-	//context->field_0x58 = something;
-	//context->field_0x5c = something;
-	//context->field_0x2 = 0;
-	//context->field_0x8 = 72;
-	//context->field_0x42 = 1;
-	//context->field_0x4c = 0;
-	//context->field_0x4 = 0;
-	//context->field_0xc = 72;
-	//context->field_0x14 = 0;
-	//context->field_0x10 = 0;
-	//context->field_0x1c = 0;
-	//context->field_0x18 = 0;
-	//context->field_0x20 = 0;
-	//context->field_0x24 = 0;
-	//context->field_0x28 = 0;
-	//context->field_0x2c = 0;
-	//context->field_0x30 = 0;
-	//context->field_0x34 = 0;
-	//context->field_0x38 = 0;
-	//context->field_0x3c = 0;
-	//context->field_0x40 = 0;
-	//context->field_0x44 = 0;
-	//context->field_0x48 = 0;
-	//context->field_0x7c = something;
-	//context->field_0x78 = something;
-	//context->field_0x74 = something;
-	//context->field_0x70 = something;
-	//context->lineColorB = 0.0;
-	//context->lineColorG = 0.0;
-	//context->lineColorR = 0.0;
-	//context->lineColorA = something;
-	//context->field_0xc0 = 0;
-	//context->field_0x80 = something;
-	//context->field_0xbc = something;
-	//context->field_0xa8 = something;
-	//context->field_0x94 = something;
-	//context->field_0xb8 = 0;
-	//context->field_0xb4 = 0;
-	//context->field_0xb0 = 0;
-	//context->field_0xac = 0;
-	//context->field_0xa4 = 0;
-	//context->field_0xa0 = 0;
-	//context->field_0x9c = 0;
-	//context->field_0x98 = 0;
-	//context->field_0x90 = 0;
-	//context->field_0x8c = 0;
-	//context->field_0x88 = 0;
-	//context->field_0x84 = 0;
-	//context->field_0xfc = 0;
-	//context->field_0xf8 = 0;
-	//context->field_0xf4 = 0;
-	//context->field_0xf0 = 0;
-	//context->field_0xec = 0;
-	//context->field_0xe8 = 0;
-	//context->field_0xe4 = 0;
-	//context->field_0xe0 = 0;
-	//context->field_0xdc = 0;
-	//context->field_0xd8 = 0;
-	//context->field_0xd4 = 0;
-	//context->field_0xd0 = 0;
-	//context->field_0xcc = 0;
-	//context->field_0xc8 = 0;
-	//context->field_0xc4 = 0;
+	// context->magic = 0xcf50;
+	// context->field_0x50 = something;
+	// context->field_0x54 = something;
+	// context->field_0x58 = something;
+	// context->field_0x5c = something;
+	// context->field_0x2 = 0;
+	// context->field_0x8 = 72;
+	// context->field_0x42 = 1;
+	// context->field_0x4c = 0;
+	// context->field_0x4 = 0;
+	// context->field_0xc = 72;
+	// context->field_0x14 = 0;
+	// context->field_0x10 = 0;
+	// context->field_0x1c = 0;
+	// context->field_0x18 = 0;
+	// context->field_0x20 = 0;
+	// context->field_0x24 = 0;
+	// context->field_0x28 = 0;
+	// context->field_0x2c = 0;
+	// context->field_0x30 = 0;
+	// context->field_0x34 = 0;
+	// context->field_0x38 = 0;
+	// context->field_0x3c = 0;
+	// context->field_0x40 = 0;
+	// context->field_0x44 = 0;
+	// context->field_0x48 = 0;
+	// context->field_0x7c = something;
+	// context->field_0x78 = something;
+	// context->field_0x74 = something;
+	// context->field_0x70 = something;
+	// context->lineColorB = 0.0;
+	// context->lineColorG = 0.0;
+	// context->lineColorR = 0.0;
+	// context->lineColorA = something;
+	// context->field_0xc0 = 0;
+	// context->field_0x80 = something;
+	// context->field_0xbc = something;
+	// context->field_0xa8 = something;
+	// context->field_0x94 = something;
+	// context->field_0xb8 = 0;
+	// context->field_0xb4 = 0;
+	// context->field_0xb0 = 0;
+	// context->field_0xac = 0;
+	// context->field_0xa4 = 0;
+	// context->field_0xa0 = 0;
+	// context->field_0x9c = 0;
+	// context->field_0x98 = 0;
+	// context->field_0x90 = 0;
+	// context->field_0x8c = 0;
+	// context->field_0x88 = 0;
+	// context->field_0x84 = 0;
+	// context->field_0xfc = 0;
+	// context->field_0xf8 = 0;
+	// context->field_0xf4 = 0;
+	// context->field_0xf0 = 0;
+	// context->field_0xec = 0;
+	// context->field_0xe8 = 0;
+	// context->field_0xe4 = 0;
+	// context->field_0xe0 = 0;
+	// context->field_0xdc = 0;
+	// context->field_0xd8 = 0;
+	// context->field_0xd4 = 0;
+	// context->field_0xd0 = 0;
+	// context->field_0xcc = 0;
+	// context->field_0xc8 = 0;
+	// context->field_0xc4 = 0;
 
 	return CELL_OK;
 }
@@ -1364,20 +1364,20 @@ error_code cellFontDeleteGlyph(vm::ptr<CellFont> font, vm::ptr<CellFontGlyph> gl
 error_code cellFontExtend(u32 a1, u32 a2, u32 a3)
 {
 	cellFont.todo("cellFontExtend(a1=0x%x, a2=0x%x, a3=0x%x)", a1, a2, a3);
-	//In a test I did: a1=0xcfe00000, a2=0x0, a3=(pointer to something)
+	// In a test I did: a1=0xcfe00000, a2=0x0, a3=(pointer to something)
 	if (a1 == 0xcfe00000)
 	{
 		if (a2 != 0 || a3 == 0)
 		{
-			//Something happens
+			// Something happens
 		}
 		if (vm::read32(a3) == 0u)
 		{
-			//Something happens
+			// Something happens
 		}
-		//Something happens
+		// Something happens
 	}
-	//Something happens?
+	// Something happens?
 	return CELL_OK;
 }
 
@@ -1728,21 +1728,21 @@ error_code cellFontSetupRenderScalePoint(vm::ptr<CellFont> font, f32 w, f32 h)
 
 	// TODO:
 
-	//if (w == something)
+	// if (w == something)
 	//{
 	//	w = font->scalePointW;
-	//}
+	// }
 
-	//if (h == something)
+	// if (h == something)
 	//{
 	//	h = font->scalePointH;
-	//}
+	// }
 
-	//font->field_0x14 + 0x10 = w;
-	//font->field_0x14 + 0x14 = h;
-	//font->field_0x14 + 0x18 = (w * font->resolutionDpiH / something;
-	//font->field_0x14 + 0x1c = (h * font->resolutionDpiV / something;
-	//font->field_0x78 = 0;
+	// font->field_0x14 + 0x10 = w;
+	// font->field_0x14 + 0x14 = h;
+	// font->field_0x14 + 0x18 = (w * font->resolutionDpiH / something;
+	// font->field_0x14 + 0x1c = (h * font->resolutionDpiV / something;
+	// font->field_0x78 = 0;
 
 	return CELL_OK;
 }
@@ -1763,23 +1763,23 @@ error_code cellFontGlyphGetVerticalShift(vm::ptr<CellFontGlyph> glyph, vm::ptr<f
 
 	// TODO
 
-	//fVar1 = glyph->Outline.generateEnv + 0x4c;
-	//fVar2 = glyph->Outline.generateEnv + 0x48;
+	// fVar1 = glyph->Outline.generateEnv + 0x4c;
+	// fVar2 = glyph->Outline.generateEnv + 0x48;
 
-	//if (fVar1 == something)
+	// if (fVar1 == something)
 	//{
 	//	fVar1 = (glyph->Outline.generateEnv + 0x4) / (glyph->Outline.generateEnv + 0x14) * (glyph->Outline.generateEnv + 0x18);
-	//}
+	// }
 
-	//if (shiftX)
+	// if (shiftX)
 	//{
 	//	*shiftX = glyph->Outline.generateEnv + 0x38;
-	//}
+	// }
 
-	//if (shiftY)
+	// if (shiftY)
 	//{
 	//	*shiftY = -fVar2 + fVar1 + (glyph->Outline.generateEnv + 0x3c);
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -2016,10 +2016,10 @@ error_code cellFontGraphicsGetFontRGBA(vm::ptr<CellFontGraphicsDrawContext> cont
 	}
 
 	// TODO
-	//fontRGBA[0] = context->field_0x70;
-	//fontRGBA[1] = context->field_0x74;
-	//fontRGBA[2] = context->field_0x78;
-	//fontRGBA[3] = context->field_0x7c;
+	// fontRGBA[0] = context->field_0x70;
+	// fontRGBA[1] = context->field_0x74;
+	// fontRGBA[2] = context->field_0x78;
+	// fontRGBA[3] = context->field_0x7c;
 
 	return CELL_OK;
 }
@@ -2035,7 +2035,7 @@ error_code cellFontGlyphGetOutlineVertexes(vm::ptr<CellFontGlyph> glyph, f32 con
 
 	if (!bbox)
 	{
-		//bbox = something; // TODO
+		// bbox = something; // TODO
 	}
 
 	if (glyph->Outline.contoursCount == 0)
@@ -2048,10 +2048,10 @@ error_code cellFontGlyphGetOutlineVertexes(vm::ptr<CellFontGlyph> glyph, f32 con
 			vcount[3] = 0;
 		}
 
-		//if (in_r7)
+		// if (in_r7)
 		//{
 		//	*in_r7 = 0; // ???
-		//}
+		// }
 
 		return CELL_OK;
 	}
@@ -2169,7 +2169,6 @@ error_code cellFontGetRenderEffectSlant(vm::ptr<CellFont> font, vm::ptr<f32> eff
 	return CELL_OK;
 }
 
-
 error_code cellFontGetScalePoint(vm::ptr<CellFont> font, vm::ptr<f32> w, vm::ptr<f32> h)
 {
 	cellFont.todo("cellFontGetScalePoint(font=*0x%x, w=*0x%x, h=*0x%x)", font, w, h);
@@ -2192,7 +2191,6 @@ error_code cellFontGetScalePoint(vm::ptr<CellFont> font, vm::ptr<f32> w, vm::ptr
 	return CELL_OK;
 }
 
-
 error_code cellFontGraphicsGetLineRGBA(vm::ptr<CellFontGraphicsDrawContext> context, vm::ptr<f32> lineRGBA)
 {
 	cellFont.todo("cellFontGraphicsGetLineRGBA(context=*0x%x, lineRGBA=*0x%x)", context, lineRGBA);
@@ -2208,10 +2206,10 @@ error_code cellFontGraphicsGetLineRGBA(vm::ptr<CellFontGraphicsDrawContext> cont
 	}
 
 	// TODO
-	//lineRGBA[0] = context->lineColorR;
-	//lineRGBA[1] = context->lineColorG;
-	//lineRGBA[2] = context->lineColorB;
-	//lineRGBA[3] = context->lineColorA;
+	// lineRGBA[0] = context->lineColorR;
+	// lineRGBA[1] = context->lineColorG;
+	// lineRGBA[2] = context->lineColorB;
+	// lineRGBA[3] = context->lineColorA;
 
 	return CELL_OK;
 }
@@ -2229,90 +2227,89 @@ error_code cellFontStatic()
 }
 
 DECLARE(ppu_module_manager::cellFont)("cellFont", []()
-{
-
-	REG_FUNC(cellFont, cellFontSetFontsetOpenMode);
-	REG_FUNC(cellFont, cellFontSetFontOpenMode);
-	REG_FUNC(cellFont, cellFontCreateRenderer);
-	REG_FUNC(cellFont, cellFontGetHorizontalLayout);
-	REG_FUNC(cellFont, cellFontDestroyRenderer);
-	REG_FUNC(cellFont, cellFontSetupRenderScalePixel);
-	REG_FUNC(cellFont, cellFontOpenFontInstance);
-	REG_FUNC(cellFont, cellFontSetScalePixel);
-	REG_FUNC(cellFont, cellFontGetRenderCharGlyphMetrics);
-	REG_FUNC(cellFont, cellFontEndLibrary);
-	REG_FUNC(cellFont, cellFontBindRenderer);
-	REG_FUNC(cellFont, cellFontEnd);
-	REG_FUNC(cellFont, cellFontSetEffectSlant);
-	REG_FUNC(cellFont, cellFontGetEffectSlant);
-	REG_FUNC(cellFont, cellFontRenderCharGlyphImage);
-	REG_FUNC(cellFont, cellFontRenderSurfaceInit);
-	REG_FUNC(cellFont, cellFontGetFontIdCode);
-	REG_FUNC(cellFont, cellFontOpenFontset);
-	REG_FUNC(cellFont, cellFontCloseFont);
-	REG_FUNC(cellFont, cellFontRenderSurfaceSetScissor);
-	REG_FUNC(cellFont, cellFontGetCharGlyphMetrics);
-	REG_FUNC(cellFont, cellFontInitializeWithRevision);
-	REG_FUNC(cellFont, cellFontGraphicsSetFontRGBA);
-	REG_FUNC(cellFont, cellFontOpenFontsetOnMemory);
-	REG_FUNC(cellFont, cellFontOpenFontFile);
-	REG_FUNC(cellFont, cellFontGraphicsSetScalePixel);
-	REG_FUNC(cellFont, cellFontGraphicsGetScalePixel);
-	REG_FUNC(cellFont, cellFontSetEffectWeight);
-	REG_FUNC(cellFont, cellFontGlyphSetupVertexesGlyph);
-	REG_FUNC(cellFont, cellFontGetVerticalLayout);
-	REG_FUNC(cellFont, cellFontGetRenderCharGlyphMetricsVertical);
-	REG_FUNC(cellFont, cellFontSetScalePoint);
-	REG_FUNC(cellFont, cellFontSetupRenderEffectSlant);
-	REG_FUNC(cellFont, cellFontGraphicsSetLineRGBA);
-	REG_FUNC(cellFont, cellFontGraphicsSetDrawType);
-	REG_FUNC(cellFont, cellFontEndGraphics);
-	REG_FUNC(cellFont, cellFontGraphicsSetupDrawContext);
-	REG_FUNC(cellFont, cellFontOpenFontMemory);
-	REG_FUNC(cellFont, cellFontSetupRenderEffectWeight);
-	REG_FUNC(cellFont, cellFontGlyphGetOutlineControlDistance);
-	REG_FUNC(cellFont, cellFontGlyphGetVertexesGlyphSize);
-	REG_FUNC(cellFont, cellFontGenerateCharGlyph);
-	REG_FUNC(cellFont, cellFontDeleteGlyph);
-	REG_FUNC(cellFont, cellFontExtend);
-	REG_FUNC(cellFont, cellFontRenderCharGlyphImageVertical);
-	REG_FUNC(cellFont, cellFontSetResolutionDpi);
-	REG_FUNC(cellFont, cellFontGetCharGlyphMetricsVertical);
-	REG_FUNC(cellFont, cellFontUnbindRenderer);
-	REG_FUNC(cellFont, cellFontGetRevisionFlags);
-	REG_FUNC(cellFont, cellFontGetRenderEffectWeight);
-	REG_FUNC(cellFont, cellFontGraphicsGetDrawType);
-	REG_FUNC(cellFont, cellFontGetKerning);
-	REG_FUNC(cellFont, cellFontGetRenderScaledKerning);
-	REG_FUNC(cellFont, cellFontGetRenderScalePixel);
-	REG_FUNC(cellFont, cellFontGlyphGetScalePixel);
-	REG_FUNC(cellFont, cellFontGlyphGetHorizontalShift);
-	REG_FUNC(cellFont, cellFontRenderCharGlyphImageHorizontal);
-	REG_FUNC(cellFont, cellFontGetEffectWeight);
-	REG_FUNC(cellFont, cellFontGetScalePixel);
-	REG_FUNC(cellFont, cellFontClearFileCache);
-	REG_FUNC(cellFont, cellFontAdjustFontScaling);
-	REG_FUNC(cellFont, cellFontSetupRenderScalePoint);
-	REG_FUNC(cellFont, cellFontGlyphGetVerticalShift);
-	REG_FUNC(cellFont, cellFontGetGlyphExpandBufferInfo);
-	REG_FUNC(cellFont, cellFontGetLibrary);
-	REG_FUNC(cellFont, cellFontVertexesGlyphRelocate);
-	REG_FUNC(cellFont, cellFontGetInitializedRevisionFlags);
-	REG_FUNC(cellFont, cellFontGetResolutionDpi);
-	REG_FUNC(cellFont, cellFontGlyphRenderImageVertical);
-	REG_FUNC(cellFont, cellFontGlyphRenderImageHorizontal);
-	REG_FUNC(cellFont, cellFontAdjustGlyphExpandBuffer);
-	REG_FUNC(cellFont, cellFontGetRenderScalePoint);
-	REG_FUNC(cellFont, cellFontGraphicsGetFontRGBA);
-	REG_FUNC(cellFont, cellFontGlyphGetOutlineVertexes);
-	REG_FUNC(cellFont, cellFontDelete);
-	REG_FUNC(cellFont, cellFontPatchWorks);
-	REG_FUNC(cellFont, cellFontGlyphRenderImage);
-	REG_FUNC(cellFont, cellFontGetBindingRenderer);
-	REG_FUNC(cellFont, cellFontGenerateCharGlyphVertical);
-	REG_FUNC(cellFont, cellFontGetRenderEffectSlant);
-	REG_FUNC(cellFont, cellFontGetScalePoint);
-	REG_FUNC(cellFont, cellFontGraphicsGetLineRGBA);
-	REG_FUNC(cellFont, cellFontControl);
-	REG_FUNC(cellFont, cellFontStatic);
-});
+	{
+		REG_FUNC(cellFont, cellFontSetFontsetOpenMode);
+		REG_FUNC(cellFont, cellFontSetFontOpenMode);
+		REG_FUNC(cellFont, cellFontCreateRenderer);
+		REG_FUNC(cellFont, cellFontGetHorizontalLayout);
+		REG_FUNC(cellFont, cellFontDestroyRenderer);
+		REG_FUNC(cellFont, cellFontSetupRenderScalePixel);
+		REG_FUNC(cellFont, cellFontOpenFontInstance);
+		REG_FUNC(cellFont, cellFontSetScalePixel);
+		REG_FUNC(cellFont, cellFontGetRenderCharGlyphMetrics);
+		REG_FUNC(cellFont, cellFontEndLibrary);
+		REG_FUNC(cellFont, cellFontBindRenderer);
+		REG_FUNC(cellFont, cellFontEnd);
+		REG_FUNC(cellFont, cellFontSetEffectSlant);
+		REG_FUNC(cellFont, cellFontGetEffectSlant);
+		REG_FUNC(cellFont, cellFontRenderCharGlyphImage);
+		REG_FUNC(cellFont, cellFontRenderSurfaceInit);
+		REG_FUNC(cellFont, cellFontGetFontIdCode);
+		REG_FUNC(cellFont, cellFontOpenFontset);
+		REG_FUNC(cellFont, cellFontCloseFont);
+		REG_FUNC(cellFont, cellFontRenderSurfaceSetScissor);
+		REG_FUNC(cellFont, cellFontGetCharGlyphMetrics);
+		REG_FUNC(cellFont, cellFontInitializeWithRevision);
+		REG_FUNC(cellFont, cellFontGraphicsSetFontRGBA);
+		REG_FUNC(cellFont, cellFontOpenFontsetOnMemory);
+		REG_FUNC(cellFont, cellFontOpenFontFile);
+		REG_FUNC(cellFont, cellFontGraphicsSetScalePixel);
+		REG_FUNC(cellFont, cellFontGraphicsGetScalePixel);
+		REG_FUNC(cellFont, cellFontSetEffectWeight);
+		REG_FUNC(cellFont, cellFontGlyphSetupVertexesGlyph);
+		REG_FUNC(cellFont, cellFontGetVerticalLayout);
+		REG_FUNC(cellFont, cellFontGetRenderCharGlyphMetricsVertical);
+		REG_FUNC(cellFont, cellFontSetScalePoint);
+		REG_FUNC(cellFont, cellFontSetupRenderEffectSlant);
+		REG_FUNC(cellFont, cellFontGraphicsSetLineRGBA);
+		REG_FUNC(cellFont, cellFontGraphicsSetDrawType);
+		REG_FUNC(cellFont, cellFontEndGraphics);
+		REG_FUNC(cellFont, cellFontGraphicsSetupDrawContext);
+		REG_FUNC(cellFont, cellFontOpenFontMemory);
+		REG_FUNC(cellFont, cellFontSetupRenderEffectWeight);
+		REG_FUNC(cellFont, cellFontGlyphGetOutlineControlDistance);
+		REG_FUNC(cellFont, cellFontGlyphGetVertexesGlyphSize);
+		REG_FUNC(cellFont, cellFontGenerateCharGlyph);
+		REG_FUNC(cellFont, cellFontDeleteGlyph);
+		REG_FUNC(cellFont, cellFontExtend);
+		REG_FUNC(cellFont, cellFontRenderCharGlyphImageVertical);
+		REG_FUNC(cellFont, cellFontSetResolutionDpi);
+		REG_FUNC(cellFont, cellFontGetCharGlyphMetricsVertical);
+		REG_FUNC(cellFont, cellFontUnbindRenderer);
+		REG_FUNC(cellFont, cellFontGetRevisionFlags);
+		REG_FUNC(cellFont, cellFontGetRenderEffectWeight);
+		REG_FUNC(cellFont, cellFontGraphicsGetDrawType);
+		REG_FUNC(cellFont, cellFontGetKerning);
+		REG_FUNC(cellFont, cellFontGetRenderScaledKerning);
+		REG_FUNC(cellFont, cellFontGetRenderScalePixel);
+		REG_FUNC(cellFont, cellFontGlyphGetScalePixel);
+		REG_FUNC(cellFont, cellFontGlyphGetHorizontalShift);
+		REG_FUNC(cellFont, cellFontRenderCharGlyphImageHorizontal);
+		REG_FUNC(cellFont, cellFontGetEffectWeight);
+		REG_FUNC(cellFont, cellFontGetScalePixel);
+		REG_FUNC(cellFont, cellFontClearFileCache);
+		REG_FUNC(cellFont, cellFontAdjustFontScaling);
+		REG_FUNC(cellFont, cellFontSetupRenderScalePoint);
+		REG_FUNC(cellFont, cellFontGlyphGetVerticalShift);
+		REG_FUNC(cellFont, cellFontGetGlyphExpandBufferInfo);
+		REG_FUNC(cellFont, cellFontGetLibrary);
+		REG_FUNC(cellFont, cellFontVertexesGlyphRelocate);
+		REG_FUNC(cellFont, cellFontGetInitializedRevisionFlags);
+		REG_FUNC(cellFont, cellFontGetResolutionDpi);
+		REG_FUNC(cellFont, cellFontGlyphRenderImageVertical);
+		REG_FUNC(cellFont, cellFontGlyphRenderImageHorizontal);
+		REG_FUNC(cellFont, cellFontAdjustGlyphExpandBuffer);
+		REG_FUNC(cellFont, cellFontGetRenderScalePoint);
+		REG_FUNC(cellFont, cellFontGraphicsGetFontRGBA);
+		REG_FUNC(cellFont, cellFontGlyphGetOutlineVertexes);
+		REG_FUNC(cellFont, cellFontDelete);
+		REG_FUNC(cellFont, cellFontPatchWorks);
+		REG_FUNC(cellFont, cellFontGlyphRenderImage);
+		REG_FUNC(cellFont, cellFontGetBindingRenderer);
+		REG_FUNC(cellFont, cellFontGenerateCharGlyphVertical);
+		REG_FUNC(cellFont, cellFontGetRenderEffectSlant);
+		REG_FUNC(cellFont, cellFontGetScalePoint);
+		REG_FUNC(cellFont, cellFontGraphicsGetLineRGBA);
+		REG_FUNC(cellFont, cellFontControl);
+		REG_FUNC(cellFont, cellFontStatic);
+	});

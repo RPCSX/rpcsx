@@ -1,8 +1,8 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
-#include "orbis/utils/Logs.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/utils/Logs.hpp"
 #include <thread>
 
 struct XptFile : orbis::File {};

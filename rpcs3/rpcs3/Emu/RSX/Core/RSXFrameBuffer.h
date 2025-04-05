@@ -39,4 +39,4 @@ namespace rsx
 		u32 aa_factors[2];
 		bool ignore_change;
 	};
-}
+} // namespace rsx

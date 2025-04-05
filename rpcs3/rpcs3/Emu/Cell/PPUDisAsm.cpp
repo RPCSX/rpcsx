@@ -39,7 +39,7 @@ u32 PPUDisAsm::disasm(u32 pc)
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
 
-	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
+	(this->*(s_ppu_disasm.decode(m_op)))({m_op});
 
 	if (m_offset != vm::g_sudo_addr)
 	{
@@ -102,7 +102,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 	for (u32 i = pc; i >= m_start_pc && (m_offset != vm::g_sudo_addr || vm::check_addr(i, vm::page_executable));)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
-		const ppu_opcode_t op{ opcode };
+		const ppu_opcode_t op{opcode};
 
 		const auto type = s_ppu_itype.decode(opcode);
 
@@ -112,22 +112,23 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 			return {};
 		}
 
-		// Get constant register value
-		#define GET_CONST_OP_REG(var, reg, op) \
-		{\
-			/* Search for the constant value of the register*/\
-			const auto [const_op, value] = try_get_const_op_gpr_value(reg, i - 4, TTL - 1);\
-		\
-			if (const_op != const_op::op)\
-			{\
-				/* Cannot compute constant value if register/operation is not constant*/\
-				return {};\
-			}\
-		\
-			var = value;\
-		} void() /*<- Require a semicolon*/
+// Get constant register value
+#define GET_CONST_OP_REG(var, reg, op)                                                  \
+	{                                                                                   \
+		/* Search for the constant value of the register*/                              \
+		const auto [const_op, value] = try_get_const_op_gpr_value(reg, i - 4, TTL - 1); \
+                                                                                        \
+		if (const_op != const_op::op)                                                   \
+		{                                                                               \
+			/* Cannot compute constant value if register/operation is not constant*/    \
+			return {};                                                                  \
+		}                                                                               \
+                                                                                        \
+		var = value;                                                                    \
+	}                                                                                   \
+	void() /*<- Require a semicolon*/
 
-		#define GET_CONST_REG(var, reg) GET_CONST_OP_REG(var, reg, form)
+#define GET_CONST_REG(var, reg) GET_CONST_OP_REG(var, reg, form)
 
 		switch (type)
 		{
@@ -147,7 +148,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 				GET_CONST_REG(reg_ra, op.ra);
 			}
 
-			return { form, reg_ra + (type == ppu_itype::ADDIS ? op.simm16 * 65536 : op.simm16) };
+			return {form, reg_ra + (type == ppu_itype::ADDIS ? op.simm16 * 65536 : op.simm16)};
 		}
 		case ppu_itype::ORI:
 		{
@@ -167,7 +168,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { form, reg_rs | op.uimm16 };
+			return {form, reg_rs | op.uimm16};
 		}
 		case ppu_itype::ORIS:
 		{
@@ -186,7 +187,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { form, reg_rs | (u64{op.uimm16} << 16)};
+			return {form, reg_rs | (u64{op.uimm16} << 16)};
 		}
 		case ppu_itype::XORIS:
 		{
@@ -199,7 +200,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 			if (const_op == none)
 			{
-				return { xor_mask, (u64{op.uimm16} << 16) };
+				return {xor_mask, (u64{op.uimm16} << 16)};
 			}
 
 			if (const_op != form)
@@ -208,7 +209,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 				return {};
 			}
 
-			return { form, reg_rs ^ (u64{op.uimm16} << 16)};
+			return {form, reg_rs ^ (u64{op.uimm16} << 16)};
 		}
 		case ppu_itype::RLDICR:
 		{
@@ -221,7 +222,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { form, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63)) };
+			return {form, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63))};
 		}
 		case ppu_itype::OR:
 		{
@@ -246,7 +247,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 				GET_CONST_REG(reg_rb, op.rb);
 			}
 
-			return { form, reg_rs | reg_rb };
+			return {form, reg_rs | reg_rb};
 		}
 		case ppu_itype::XOR:
 		{
@@ -257,7 +258,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 			if (op.rs == op.rb)
 			{
-				return { form, 0 };
+				return {form, 0};
 			}
 
 			const auto [const_op_rs, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
@@ -266,16 +267,16 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 			if (const_op_rs == form && const_op_rb == form)
 			{
 				// Normally it is not the case
-				return { form, reg_rs ^ reg_rb };
+				return {form, reg_rs ^ reg_rb};
 			}
 
 			if (const_op_rs == form && const_op_rb == none)
 			{
-				return { xor_mask, reg_rs };
+				return {xor_mask, reg_rs};
 			}
 			else if (const_op_rb == form && const_op_rs == none)
 			{
-				return { xor_mask, reg_rb };
+				return {xor_mask, reg_rb};
 			}
 
 			return {};
@@ -362,46 +363,56 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 	case 0b00000:
 	case 0b00001:
 	{
-		info = {"bdnzf", 'f'}; break;
+		info = {"bdnzf", 'f'};
+		break;
 	}
 	case 0b00010:
 	case 0b00011:
 	{
-		info = {"bdzf", 'f'}; break;
+		info = {"bdzf", 'f'};
+		break;
 	}
 	case 0b01000:
 	case 0b01001:
 	{
-		info = {"bdnzt", 't'}; break;
+		info = {"bdnzt", 't'};
+		break;
 	}
 	case 0b01010:
 	case 0b01011:
 	{
-		info = {"bdzt", 't'}; break;
+		info = {"bdzt", 't'};
+		break;
 	}
 	case 0b10010:
 	{
-		info.first = "bdz"; break;
+		info.first = "bdz";
+		break;
 	}
 	case 0b11010:
 	{
-		info = {"bdz", '-'}; break;
+		info = {"bdz", '-'};
+		break;
 	}
 	case 0b11011:
 	{
-		info = {"bdz", '+'}; break;
+		info = {"bdz", '+'};
+		break;
 	}
 	case 0b10000:
 	{
-		info.first = "bdnz"; break;
+		info.first = "bdnz";
+		break;
 	}
 	case 0b11000:
 	{
-		info = {"bdnz", '-'}; break;
+		info = {"bdnz", '-'};
+		break;
 	}
 	case 0b11001:
 	{
-		info = {"bdnz", '+'}; break;
+		info = {"bdnz", '+'};
+		break;
 	}
 	case 0b00100:
 	{
@@ -479,10 +490,10 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		}
 		break;
 	}
-	//case 0b10100:
+	// case 0b10100:
 	//{
 	//	info.first = "b"; break;
-	//}
+	// }
 	default: break;
 	}
 
@@ -1338,9 +1349,12 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 	}
 
 	std::string final = inst;
-	if (lk) final += 'l';
-	if (aa) final += 'a';
-	if (sign) final += sign;
+	if (lk)
+		final += 'l';
+	if (aa)
+		final += 'a';
+	if (sign)
+		final += sign;
 
 	// Check if need to display full BI value
 	if (sign == 't' || sign == 'f')
@@ -1428,16 +1442,16 @@ void PPUDisAsm::B(ppu_opcode_t op)
 	case 0:
 		switch (aa)
 		{
-		case 0:	DisAsm_BRANCH("b", li);		break;
-		case 1:	DisAsm_BRANCH_A("ba", li);	break;
+		case 0: DisAsm_BRANCH("b", li); break;
+		case 1: DisAsm_BRANCH_A("ba", li); break;
 		}
 		break;
 
 	case 1:
 		switch (aa)
 		{
-		case 0: DisAsm_BRANCH("bl", li);	break;
-		case 1: DisAsm_BRANCH_A("bla", li);	break;
+		case 0: DisAsm_BRANCH("bl", li); break;
+		case 1: DisAsm_BRANCH_A("bla", li); break;
 		}
 		break;
 	}
@@ -1470,7 +1484,8 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 	}
 
 	std::string final = std::string(inst) + (lk ? "lrl" : "lr");
-	if (sign) final += sign;
+	if (sign)
+		final += sign;
 
 	// Check if need to display full BI value
 	if (sign == 't' || sign == 'f')
@@ -1575,7 +1590,8 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 
 	std::string final = inst;
 	final += lk ? "ctrl"sv : "ctr"sv;
-	if (sign) final += sign;
+	if (sign)
+		final += sign;
 
 	DisAsm_CR_BRANCH_HINT(final, bi / 4, bh);
 }
@@ -1608,8 +1624,13 @@ void PPUDisAsm::RLWNM(ppu_opcode_t op)
 
 void PPUDisAsm::ORI(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
-	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0)
+	{
+		last_opcode += "nop";
+		return;
+	}
+	if (op.uimm16 == 0)
+		return DisAsm_R2("mr", op.ra, op.rs);
 	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
 
 	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
@@ -1621,7 +1642,11 @@ void PPUDisAsm::ORI(ppu_opcode_t op)
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0)
+	{
+		last_opcode += "nop";
+		return;
+	}
 	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
 
 	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)

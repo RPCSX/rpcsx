@@ -2,7 +2,7 @@
 
 #include "Emu/Io/usb_device.h"
 
-class usb_device_topshotfearmaster: public usb_device_emulated
+class usb_device_topshotfearmaster : public usb_device_emulated
 {
 public:
 	usb_device_topshotfearmaster(u32 controller_index, const std::array<u8, 7>& location);

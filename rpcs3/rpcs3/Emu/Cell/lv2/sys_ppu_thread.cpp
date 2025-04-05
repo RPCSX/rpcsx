@@ -96,17 +96,17 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 		// Get joiner ID
 		old_status = ppu.joiner.fetch_op([](ppu_join_status& status)
-		{
-			if (status == ppu_join_status::joinable)
 			{
-				// Joinable, not joined
-				status = ppu_join_status::zombie;
-				return;
-			}
+				if (status == ppu_join_status::joinable)
+				{
+					// Joinable, not joined
+					status = ppu_join_status::zombie;
+					return;
+				}
 
-			// Set deleted thread status
-			status = ppu_join_status::exited;
-		});
+				// Set deleted thread status
+				status = ppu_join_status::exited;
+			});
 
 		if (old_status >= ppu_join_status::max)
 		{
@@ -191,34 +191,34 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	}
 
 	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
-	{
-		CellError result = thread.joiner.atomic_op([&](ppu_join_status& value) -> CellError
 		{
-			switch (value)
+			CellError result = thread.joiner.atomic_op([&](ppu_join_status& value) -> CellError
+				{
+					switch (value)
+					{
+					case ppu_join_status::joinable:
+						value = ppu_join_status{ppu.id};
+						return {};
+					case ppu_join_status::zombie:
+						value = ppu_join_status::exited;
+						return CELL_EAGAIN;
+					case ppu_join_status::exited:
+						return CELL_ESRCH;
+					case ppu_join_status::detached:
+					default:
+						return CELL_EINVAL;
+					}
+				});
+
+			if (!result)
 			{
-			case ppu_join_status::joinable:
-				value = ppu_join_status{ppu.id};
-				return {};
-			case ppu_join_status::zombie:
-				value = ppu_join_status::exited;
-				return CELL_EAGAIN;
-			case ppu_join_status::exited:
-				return CELL_ESRCH;
-			case ppu_join_status::detached:
-			default:
-				return CELL_EINVAL;
+				lv2_obj::prepare_for_sleep(ppu);
+				lv2_obj::sleep(ppu);
 			}
+
+			notify.cleanup();
+			return result;
 		});
-
-		if (!result)
-		{
-			lv2_obj::prepare_for_sleep(ppu);
-			lv2_obj::sleep(ppu);
-		}
-
-		notify.cleanup();
-		return result;
-	});
 
 	if (!thread)
 	{
@@ -275,29 +275,29 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 	CellError result = CELL_ESRCH;
 
 	auto [ptr, _] = idm::withdraw<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
-	{
-		result = thread.joiner.atomic_op([](ppu_join_status& value) -> CellError
 		{
-			switch (value)
-			{
-			case ppu_join_status::joinable:
-				value = ppu_join_status::detached;
-				return {};
-			case ppu_join_status::detached:
-				return CELL_EINVAL;
-			case ppu_join_status::zombie:
-				value = ppu_join_status::exited;
-				return CELL_EAGAIN;
-			case ppu_join_status::exited:
-				return CELL_ESRCH;
-			default:
-				return CELL_EBUSY;
-			}
-		});
+			result = thread.joiner.atomic_op([](ppu_join_status& value) -> CellError
+				{
+					switch (value)
+					{
+					case ppu_join_status::joinable:
+						value = ppu_join_status::detached;
+						return {};
+					case ppu_join_status::detached:
+						return CELL_EINVAL;
+					case ppu_join_status::zombie:
+						value = ppu_join_status::exited;
+						return CELL_EAGAIN;
+					case ppu_join_status::exited:
+						return CELL_ESRCH;
+					default:
+						return CELL_EBUSY;
+					}
+				});
 
-		// Remove ID on EAGAIN
-		return result != CELL_EAGAIN;
-	});
+			// Remove ID on EAGAIN
+			return result != CELL_EAGAIN;
+		});
 
 	if (result)
 	{
@@ -349,9 +349,9 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 	}
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread)
-	{
-		lv2_obj::set_priority(thread, prio);
-	});
+		{
+			lv2_obj::set_priority(thread, prio);
+		});
 
 	if (!thread)
 	{
@@ -392,16 +392,16 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 	{
 		bool check_state = false;
 		const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
-		{
-			if (reader_lock lock(lv2_obj::g_mutex); cpu_flag::suspend - ppu.state)
 			{
-				prio = thread.prio.load().prio;
-			}
-			else
-			{
-				check_state = true;
-			}
-		});
+				if (reader_lock lock(lv2_obj::g_mutex); cpu_flag::suspend - ppu.state)
+				{
+					prio = thread.prio.load().prio;
+				}
+				else
+				{
+					check_state = true;
+				}
+			});
 
 		if (check_state)
 		{
@@ -528,18 +528,18 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		}
 	}
 
-	const u32 tid = idm::import<named_thread<ppu_thread>>([&]()
-	{
-		ppu_thread_params p;
-		p.stack_addr = stack_base;
-		p.stack_size = stack_size;
-		p.tls_addr = tls;
-		p.entry = entry;
-		p.arg0 = arg;
-		p.arg1 = unk;
+	const u32 tid = idm::import <named_thread<ppu_thread>>([&]()
+		{
+			ppu_thread_params p;
+			p.stack_addr = stack_base;
+			p.stack_size = stack_size;
+			p.tls_addr = tls;
+			p.entry = entry;
+			p.arg0 = arg;
+			p.arg1 = unk;
 
-		return stx::make_shared<named_thread<ppu_thread>>(p, ppu_name, prio, 1 - static_cast<int>(flags & 3));
-	});
+			return stx::make_shared<named_thread<ppu_thread>>(p, ppu_name, prio, 1 - static_cast<int>(flags & 3));
+		});
 
 	if (!tid)
 	{
@@ -562,22 +562,21 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	sys_ppu_thread.trace("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
-	{
-		if (!thread.state.test_and_reset(cpu_flag::stop))
 		{
-			// Already started
-			return CELL_EBUSY;
-		}
+			if (!thread.state.test_and_reset(cpu_flag::stop))
+			{
+				// Already started
+				return CELL_EBUSY;
+			}
 
-		ensure(lv2_obj::awake(&thread));
+			ensure(lv2_obj::awake(&thread));
 
-		thread.cmd_list
-		({
-			{ppu_cmd::entry_call, 0},
+			thread.cmd_list({
+				{ppu_cmd::entry_call, 0},
+			});
+
+			return {};
 		});
-
-		return {};
-	});
 
 	if (!thread)
 	{

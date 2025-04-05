@@ -6,8 +6,7 @@ namespace rsx
 {
 	void invalidation_cause::flag_bits_from_cause(enum_type cause)
 	{
-		constexpr const std::array s_lookup_table
-		{
+		constexpr const std::array s_lookup_table{
 			std::make_pair<enum_type, u32>(enum_type::read, flags::cause_is_read),
 			std::make_pair<enum_type, u32>(enum_type::deferred_read, flags::cause_is_read | flags::cause_is_deferred),
 			std::make_pair<enum_type, u32>(enum_type::write, flags::cause_is_write),
@@ -29,9 +28,9 @@ namespace rsx
 		}
 
 		if (cause == enum_type::superseded_by_fbo &&
-			g_cfg.video.strict_texture_flushing) [[ unlikely ]]
+			g_cfg.video.strict_texture_flushing) [[unlikely]]
 		{
 			m_flag_bits &= ~flags::cause_skips_flush;
 		}
 	}
-}
+} // namespace rsx

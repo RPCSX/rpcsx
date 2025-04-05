@@ -1,8 +1,8 @@
 #include "spv.hpp"
 #include "dialect.hpp"
 #include "ir/Kind.hpp"
-#include <spirv-tools/optimizer.hpp>
 #include <iostream>
+#include <spirv-tools/optimizer.hpp>
 
 using namespace shader;
 
@@ -152,8 +152,8 @@ std::string shader::spv::disassembly(std::span<const std::uint32_t> spv,
   spv_context spvContext = spvContextCreate(target_env);
   spv_diagnostic diagnostic = nullptr;
 
-  int options = SPV_BINARY_TO_TEXT_OPTION_COMMENT |
-                SPV_BINARY_TO_TEXT_OPTION_INDENT;
+  int options =
+      SPV_BINARY_TO_TEXT_OPTION_COMMENT | SPV_BINARY_TO_TEXT_OPTION_INDENT;
   if (pretty) {
     options |= SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES;
   }

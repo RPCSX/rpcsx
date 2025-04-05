@@ -14,27 +14,27 @@ namespace psf
 {
 	enum sound_format_flag : s32
 	{
-		lpcm_2   = 1 << 0, // Linear PCM 2 Ch.
+		lpcm_2 = 1 << 0,   // Linear PCM 2 Ch.
 		lpcm_5_1 = 1 << 2, // Linear PCM 5.1 Ch.
 		lpcm_7_1 = 1 << 4, // Linear PCM 7.1 Ch.
-		ac3      = 1 << 8, // Dolby Digital 5.1 Ch.
-		dts      = 1 << 9, // DTS 5.1 Ch.
+		ac3 = 1 << 8,      // Dolby Digital 5.1 Ch.
+		dts = 1 << 9,      // DTS 5.1 Ch.
 	};
 
 	enum resolution_flag : s32
 	{
-		_480      = 1 << 0,
-		_576      = 1 << 1,
-		_720      = 1 << 2,
-		_1080     = 1 << 3,
+		_480 = 1 << 0,
+		_576 = 1 << 1,
+		_720 = 1 << 2,
+		_1080 = 1 << 3,
 		_480_16_9 = 1 << 4,
 		_576_16_9 = 1 << 5,
 	};
 
 	enum class format : u16
 	{
-		array   = 0x0004, // claimed to be a non-NTS string (char array)
-		string  = 0x0204,
+		array = 0x0004, // claimed to be a non-NTS string (char array)
+		string = 0x0204,
 		integer = 0x0404,
 	};
 
@@ -49,7 +49,7 @@ namespace psf
 	class entry final
 	{
 		format m_type{};
-		u32 m_max_size{}; // Entry max size (supplementary info, stored in PSF format)
+		u32 m_max_size{};      // Entry max size (supplementary info, stored in PSF format)
 		u32 m_value_integer{}; // TODO: is it really unsigned?
 		std::string m_value_string{};
 
@@ -65,11 +65,17 @@ namespace psf
 		const std::string& as_string() const;
 		u32 as_integer() const;
 
-		entry& operator =(std::string_view value);
-		entry& operator =(u32 value);
+		entry& operator=(std::string_view value);
+		entry& operator=(u32 value);
 
-		format type() const { return m_type; }
-		u32 max(bool with_nts) const { return m_max_size - (!with_nts && m_type == format::string ? 1 : 0); }
+		format type() const
+		{
+			return m_type;
+		}
+		u32 max(bool with_nts) const
+		{
+			return m_max_size - (!with_nts && m_type == format::string ? 1 : 0);
+		}
 		u32 size() const;
 		bool is_valid() const;
 	};
@@ -91,8 +97,14 @@ namespace psf
 	// Load PSF registry from SFO binary format
 	load_result_t load(const fs::file&, std::string_view filename);
 	load_result_t load(const std::string& filename);
-	inline registry load_object(const fs::file& f, std::string_view filename) { return load(f, filename).sfo; }
-	inline registry load_object(const std::string& filename) { return load(filename).sfo; }
+	inline registry load_object(const fs::file& f, std::string_view filename)
+	{
+		return load(f, filename).sfo;
+	}
+	inline registry load_object(const std::string& filename)
+	{
+		return load(filename).sfo;
+	}
 
 	// Convert PSF registry to SFO binary format
 	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});
@@ -146,4 +158,4 @@ namespace psf
 	{
 		return cat.size() == 2u && cat[1] != 'D' && cat != "DG"sv && cat != "MS"sv;
 	}
-}
+} // namespace psf

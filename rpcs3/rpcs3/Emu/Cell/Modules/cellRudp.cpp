@@ -10,51 +10,51 @@ template <>
 void fmt_class_string<CellRudpError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_RUDP_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_RUDP_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_CONTEXT_ID);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_ARGUMENT);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_OPTION);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_MUXMODE);
-			STR_CASE(CELL_RUDP_ERROR_MEMORY);
-			STR_CASE(CELL_RUDP_ERROR_INTERNAL);
-			STR_CASE(CELL_RUDP_ERROR_CONN_RESET);
-			STR_CASE(CELL_RUDP_ERROR_CONN_REFUSED);
-			STR_CASE(CELL_RUDP_ERROR_CONN_TIMEOUT);
-			STR_CASE(CELL_RUDP_ERROR_CONN_VERSION_MISMATCH);
-			STR_CASE(CELL_RUDP_ERROR_CONN_TRANSPORT_TYPE_MISMATCH);
-			STR_CASE(CELL_RUDP_ERROR_QUALITY_LEVEL_MISMATCH);
-			STR_CASE(CELL_RUDP_ERROR_THREAD);
-			STR_CASE(CELL_RUDP_ERROR_THREAD_IN_USE);
-			STR_CASE(CELL_RUDP_ERROR_NOT_ACCEPTABLE);
-			STR_CASE(CELL_RUDP_ERROR_MSG_TOO_LARGE);
-			STR_CASE(CELL_RUDP_ERROR_NOT_BOUND);
-			STR_CASE(CELL_RUDP_ERROR_CANCELLED);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_VPORT);
-			STR_CASE(CELL_RUDP_ERROR_WOULDBLOCK);
-			STR_CASE(CELL_RUDP_ERROR_VPORT_IN_USE);
-			STR_CASE(CELL_RUDP_ERROR_VPORT_EXHAUSTED);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_SOCKET);
-			STR_CASE(CELL_RUDP_ERROR_BUFFER_TOO_SMALL);
-			STR_CASE(CELL_RUDP_ERROR_MSG_MALFORMED);
-			STR_CASE(CELL_RUDP_ERROR_ADDR_IN_USE);
-			STR_CASE(CELL_RUDP_ERROR_ALREADY_BOUND);
-			STR_CASE(CELL_RUDP_ERROR_ALREADY_EXISTS);
-			STR_CASE(CELL_RUDP_ERROR_INVALID_POLL_ID);
-			STR_CASE(CELL_RUDP_ERROR_TOO_MANY_CONTEXTS);
-			STR_CASE(CELL_RUDP_ERROR_IN_PROGRESS);
-			STR_CASE(CELL_RUDP_ERROR_NO_EVENT_HANDLER);
-			STR_CASE(CELL_RUDP_ERROR_PAYLOAD_TOO_LARGE);
-			STR_CASE(CELL_RUDP_ERROR_END_OF_DATA);
-			STR_CASE(CELL_RUDP_ERROR_ALREADY_ESTABLISHED);
-			STR_CASE(CELL_RUDP_ERROR_KEEP_ALIVE_FAILURE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_RUDP_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_RUDP_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_CONTEXT_ID);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_ARGUMENT);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_OPTION);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_MUXMODE);
+				STR_CASE(CELL_RUDP_ERROR_MEMORY);
+				STR_CASE(CELL_RUDP_ERROR_INTERNAL);
+				STR_CASE(CELL_RUDP_ERROR_CONN_RESET);
+				STR_CASE(CELL_RUDP_ERROR_CONN_REFUSED);
+				STR_CASE(CELL_RUDP_ERROR_CONN_TIMEOUT);
+				STR_CASE(CELL_RUDP_ERROR_CONN_VERSION_MISMATCH);
+				STR_CASE(CELL_RUDP_ERROR_CONN_TRANSPORT_TYPE_MISMATCH);
+				STR_CASE(CELL_RUDP_ERROR_QUALITY_LEVEL_MISMATCH);
+				STR_CASE(CELL_RUDP_ERROR_THREAD);
+				STR_CASE(CELL_RUDP_ERROR_THREAD_IN_USE);
+				STR_CASE(CELL_RUDP_ERROR_NOT_ACCEPTABLE);
+				STR_CASE(CELL_RUDP_ERROR_MSG_TOO_LARGE);
+				STR_CASE(CELL_RUDP_ERROR_NOT_BOUND);
+				STR_CASE(CELL_RUDP_ERROR_CANCELLED);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_VPORT);
+				STR_CASE(CELL_RUDP_ERROR_WOULDBLOCK);
+				STR_CASE(CELL_RUDP_ERROR_VPORT_IN_USE);
+				STR_CASE(CELL_RUDP_ERROR_VPORT_EXHAUSTED);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_SOCKET);
+				STR_CASE(CELL_RUDP_ERROR_BUFFER_TOO_SMALL);
+				STR_CASE(CELL_RUDP_ERROR_MSG_MALFORMED);
+				STR_CASE(CELL_RUDP_ERROR_ADDR_IN_USE);
+				STR_CASE(CELL_RUDP_ERROR_ALREADY_BOUND);
+				STR_CASE(CELL_RUDP_ERROR_ALREADY_EXISTS);
+				STR_CASE(CELL_RUDP_ERROR_INVALID_POLL_ID);
+				STR_CASE(CELL_RUDP_ERROR_TOO_MANY_CONTEXTS);
+				STR_CASE(CELL_RUDP_ERROR_IN_PROGRESS);
+				STR_CASE(CELL_RUDP_ERROR_NO_EVENT_HANDLER);
+				STR_CASE(CELL_RUDP_ERROR_PAYLOAD_TOO_LARGE);
+				STR_CASE(CELL_RUDP_ERROR_END_OF_DATA);
+				STR_CASE(CELL_RUDP_ERROR_ALREADY_ESTABLISHED);
+				STR_CASE(CELL_RUDP_ERROR_KEEP_ALIVE_FAILURE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct rudp_info
@@ -309,42 +309,42 @@ error_code cellRudpProcessEvents()
 }
 
 DECLARE(ppu_module_manager::cellRudp)("cellRudp", []()
-{
-	REG_FUNC(cellRudp, cellRudpInit);
-	REG_FUNC(cellRudp, cellRudpEnd);
-	REG_FUNC(cellRudp, cellRudpEnableInternalIOThread);
-	REG_FUNC(cellRudp, cellRudpSetEventHandler);
-	REG_FUNC(cellRudp, cellRudpSetMaxSegmentSize);
-	REG_FUNC(cellRudp, cellRudpGetMaxSegmentSize);
+	{
+		REG_FUNC(cellRudp, cellRudpInit);
+		REG_FUNC(cellRudp, cellRudpEnd);
+		REG_FUNC(cellRudp, cellRudpEnableInternalIOThread);
+		REG_FUNC(cellRudp, cellRudpSetEventHandler);
+		REG_FUNC(cellRudp, cellRudpSetMaxSegmentSize);
+		REG_FUNC(cellRudp, cellRudpGetMaxSegmentSize);
 
-	REG_FUNC(cellRudp, cellRudpCreateContext);
-	REG_FUNC(cellRudp, cellRudpSetOption);
-	REG_FUNC(cellRudp, cellRudpGetOption);
+		REG_FUNC(cellRudp, cellRudpCreateContext);
+		REG_FUNC(cellRudp, cellRudpSetOption);
+		REG_FUNC(cellRudp, cellRudpGetOption);
 
-	REG_FUNC(cellRudp, cellRudpGetContextStatus);
-	REG_FUNC(cellRudp, cellRudpGetStatus);
-	REG_FUNC(cellRudp, cellRudpGetLocalInfo);
-	REG_FUNC(cellRudp, cellRudpGetRemoteInfo);
+		REG_FUNC(cellRudp, cellRudpGetContextStatus);
+		REG_FUNC(cellRudp, cellRudpGetStatus);
+		REG_FUNC(cellRudp, cellRudpGetLocalInfo);
+		REG_FUNC(cellRudp, cellRudpGetRemoteInfo);
 
-	REG_FUNC(cellRudp, cellRudpAccept);
-	REG_FUNC(cellRudp, cellRudpBind);
-	REG_FUNC(cellRudp, cellRudpListen);
-	REG_FUNC(cellRudp, cellRudpInitiate);
-	REG_FUNC(cellRudp, cellRudpActivate);
-	REG_FUNC(cellRudp, cellRudpTerminate);
+		REG_FUNC(cellRudp, cellRudpAccept);
+		REG_FUNC(cellRudp, cellRudpBind);
+		REG_FUNC(cellRudp, cellRudpListen);
+		REG_FUNC(cellRudp, cellRudpInitiate);
+		REG_FUNC(cellRudp, cellRudpActivate);
+		REG_FUNC(cellRudp, cellRudpTerminate);
 
-	REG_FUNC(cellRudp, cellRudpRead);
-	REG_FUNC(cellRudp, cellRudpWrite);
-	REG_FUNC(cellRudp, cellRudpGetSizeReadable);
-	REG_FUNC(cellRudp, cellRudpGetSizeWritable);
-	REG_FUNC(cellRudp, cellRudpFlush);
+		REG_FUNC(cellRudp, cellRudpRead);
+		REG_FUNC(cellRudp, cellRudpWrite);
+		REG_FUNC(cellRudp, cellRudpGetSizeReadable);
+		REG_FUNC(cellRudp, cellRudpGetSizeWritable);
+		REG_FUNC(cellRudp, cellRudpFlush);
 
-	REG_FUNC(cellRudp, cellRudpPollCreate);
-	REG_FUNC(cellRudp, cellRudpPollDestroy);
-	REG_FUNC(cellRudp, cellRudpPollControl);
-	REG_FUNC(cellRudp, cellRudpPollWait);
-	REG_FUNC(cellRudp, cellRudpPollCancel);
+		REG_FUNC(cellRudp, cellRudpPollCreate);
+		REG_FUNC(cellRudp, cellRudpPollDestroy);
+		REG_FUNC(cellRudp, cellRudpPollControl);
+		REG_FUNC(cellRudp, cellRudpPollWait);
+		REG_FUNC(cellRudp, cellRudpPollCancel);
 
-	REG_FUNC(cellRudp, cellRudpNetReceived);
-	REG_FUNC(cellRudp, cellRudpProcessEvents);
-});
+		REG_FUNC(cellRudp, cellRudpNetReceived);
+		REG_FUNC(cellRudp, cellRudpProcessEvents);
+	});

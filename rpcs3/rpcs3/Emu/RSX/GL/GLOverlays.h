@@ -110,11 +110,11 @@ namespace gl
 	// TODO: Replace with a proper manager
 	extern std::unordered_map<u32, std::unique_ptr<gl::overlay_pass>> g_overlay_passes;
 
-	template<class T>
+	template <class T>
 	T* get_overlay_pass()
 	{
 		u32 index = stx::typeindex<id_manager::typeinfo, T>();
-		auto &e = g_overlay_passes[index];
+		auto& e = g_overlay_passes[index];
 
 		if (!e)
 		{
@@ -126,4 +126,4 @@ namespace gl
 	}
 
 	void destroy_overlay_passes();
-}
+} // namespace gl

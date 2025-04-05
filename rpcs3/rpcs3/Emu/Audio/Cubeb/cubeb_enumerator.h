@@ -7,14 +7,12 @@
 class cubeb_enumerator final : public audio_device_enumerator
 {
 public:
-
 	cubeb_enumerator();
 	~cubeb_enumerator() override;
 
 	std::vector<audio_device> get_output_devices() override;
 
 private:
-
 	cubeb* ctx{};
 #ifdef _WIN32
 	bool com_init_success = false;

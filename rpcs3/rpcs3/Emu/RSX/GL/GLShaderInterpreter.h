@@ -64,7 +64,7 @@ namespace gl
 			glsl::program prog;
 			texture_pool_allocator allocator;
 		};
-	}
+	} // namespace interpreter
 
 	class shader_interpreter
 	{
@@ -86,4 +86,4 @@ namespace gl
 		glsl::program* get(const interpreter::program_metadata& fp_metadata, u32 vp_ctrl, u32 fp_ctrl);
 		bool is_interpreter(const glsl::program* program) const;
 	};
-}
+} // namespace gl

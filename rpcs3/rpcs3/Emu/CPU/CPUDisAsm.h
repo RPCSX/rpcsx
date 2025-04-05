@@ -10,7 +10,7 @@ enum class cpu_disasm_mode
 	interpreter,
 	normal,
 	compiler_elf,
-	list, // RSX exclusive
+	list,            // RSX exclusive
 	survey_cmd_size, // RSX exclusive
 };
 
@@ -30,36 +30,36 @@ protected:
 	{
 		switch (m_mode)
 		{
-			case cpu_disasm_mode::dump:
-			{
-				last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
-					static_cast<u8>(m_op >> 24),
-					static_cast<u8>(m_op >> 16),
-					static_cast<u8>(m_op >> 8),
-					static_cast<u8>(m_op >> 0), last_opcode);
-				break;
-			}
+		case cpu_disasm_mode::dump:
+		{
+			last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
+				static_cast<u8>(m_op >> 24),
+				static_cast<u8>(m_op >> 16),
+				static_cast<u8>(m_op >> 8),
+				static_cast<u8>(m_op >> 0), last_opcode);
+			break;
+		}
 
-			case cpu_disasm_mode::interpreter:
-			{
-				last_opcode.insert(0, fmt::format("[%08x]  %02x %02x %02x %02x: ", dump_pc,
-					static_cast<u8>(m_op >> 24),
-					static_cast<u8>(m_op >> 16),
-					static_cast<u8>(m_op >> 8),
-					static_cast<u8>(m_op >> 0)));
-				break;
-			}
+		case cpu_disasm_mode::interpreter:
+		{
+			last_opcode.insert(0, fmt::format("[%08x]  %02x %02x %02x %02x: ", dump_pc,
+									  static_cast<u8>(m_op >> 24),
+									  static_cast<u8>(m_op >> 16),
+									  static_cast<u8>(m_op >> 8),
+									  static_cast<u8>(m_op >> 0)));
+			break;
+		}
 
-			case cpu_disasm_mode::compiler_elf:
-			{
-				last_opcode += '\n';
-				break;
-			}
-			case cpu_disasm_mode::normal:
-			{
-				break;
-			}
-			default: fmt::throw_exception("Unreachable");
+		case cpu_disasm_mode::compiler_elf:
+		{
+			last_opcode += '\n';
+			break;
+		}
+		case cpu_disasm_mode::normal:
+		{
+			break;
+		}
+		default: fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -98,10 +98,7 @@ public:
 
 protected:
 	CPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0, const cpu_thread* cpu = nullptr)
-		: m_mode(mode)
-		, m_offset(offset - start_pc)
-		, m_start_pc(start_pc)
-		, m_cpu(cpu)
+		: m_mode(mode), m_offset(offset - start_pc), m_start_pc(start_pc), m_cpu(cpu)
 	{
 	}
 

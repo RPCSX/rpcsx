@@ -9,30 +9,30 @@
 // Return codes
 enum CellPrxError : u32
 {
-	CELL_PRX_ERROR_ERROR                       = 0x80011001, // Error state
-	CELL_PRX_ERROR_ILLEGAL_PERM                = 0x800110d1, // No permission to execute API
-	CELL_PRX_ERROR_UNKNOWN_MODULE              = 0x8001112e, // Specified PRX could not be found
-	CELL_PRX_ERROR_ALREADY_STARTED             = 0x80011133, // Specified PRX is already started
-	CELL_PRX_ERROR_NOT_STARTED                 = 0x80011134, // Specified PRX is not started
-	CELL_PRX_ERROR_ALREADY_STOPPED             = 0x80011135, // Specified PRX is already stopped
-	CELL_PRX_ERROR_CAN_NOT_STOP                = 0x80011136, // Specified PRX must not be stopped
-	CELL_PRX_ERROR_NOT_REMOVABLE               = 0x80011138, // Specified PRX must not be deleted
-	CELL_PRX_ERROR_LIBRARY_NOT_YET_LINKED      = 0x8001113a, // Called unlinked function
-	CELL_PRX_ERROR_LIBRARY_FOUND               = 0x8001113b, // Specified library is already registered
-	CELL_PRX_ERROR_LIBRARY_NOTFOUND            = 0x8001113c, // Specified library is not registered
-	CELL_PRX_ERROR_ILLEGAL_LIBRARY             = 0x8001113d, // Library structure is invalid
-	CELL_PRX_ERROR_LIBRARY_INUSE               = 0x8001113e, // Library cannot be deleted because it is linked
-	CELL_PRX_ERROR_ALREADY_STOPPING            = 0x8001113f, // Specified PRX is in the process of stopping
-	CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE        = 0x80011148, // Specified PRX format is invalid and cannot be loaded
-	CELL_PRX_ERROR_INVAL                       = 0x80011324, // Argument value is invalid
-	CELL_PRX_ERROR_ILLEGAL_PROCESS             = 0x80011801, // Specified process does not exist
-	CELL_PRX_ERROR_NO_LIBLV2                   = 0x80011881, // liblv2.sprx does not exist
-	CELL_PRX_ERROR_UNSUPPORTED_ELF_TYPE        = 0x80011901, // ELF type of specified file is not supported
-	CELL_PRX_ERROR_UNSUPPORTED_ELF_CLASS       = 0x80011902, // ELF class of specified file is not supported
-	CELL_PRX_ERROR_UNDEFINED_SYMBOL            = 0x80011904, // References undefined symbols
+	CELL_PRX_ERROR_ERROR = 0x80011001,                       // Error state
+	CELL_PRX_ERROR_ILLEGAL_PERM = 0x800110d1,                // No permission to execute API
+	CELL_PRX_ERROR_UNKNOWN_MODULE = 0x8001112e,              // Specified PRX could not be found
+	CELL_PRX_ERROR_ALREADY_STARTED = 0x80011133,             // Specified PRX is already started
+	CELL_PRX_ERROR_NOT_STARTED = 0x80011134,                 // Specified PRX is not started
+	CELL_PRX_ERROR_ALREADY_STOPPED = 0x80011135,             // Specified PRX is already stopped
+	CELL_PRX_ERROR_CAN_NOT_STOP = 0x80011136,                // Specified PRX must not be stopped
+	CELL_PRX_ERROR_NOT_REMOVABLE = 0x80011138,               // Specified PRX must not be deleted
+	CELL_PRX_ERROR_LIBRARY_NOT_YET_LINKED = 0x8001113a,      // Called unlinked function
+	CELL_PRX_ERROR_LIBRARY_FOUND = 0x8001113b,               // Specified library is already registered
+	CELL_PRX_ERROR_LIBRARY_NOTFOUND = 0x8001113c,            // Specified library is not registered
+	CELL_PRX_ERROR_ILLEGAL_LIBRARY = 0x8001113d,             // Library structure is invalid
+	CELL_PRX_ERROR_LIBRARY_INUSE = 0x8001113e,               // Library cannot be deleted because it is linked
+	CELL_PRX_ERROR_ALREADY_STOPPING = 0x8001113f,            // Specified PRX is in the process of stopping
+	CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE = 0x80011148,        // Specified PRX format is invalid and cannot be loaded
+	CELL_PRX_ERROR_INVAL = 0x80011324,                       // Argument value is invalid
+	CELL_PRX_ERROR_ILLEGAL_PROCESS = 0x80011801,             // Specified process does not exist
+	CELL_PRX_ERROR_NO_LIBLV2 = 0x80011881,                   // liblv2.sprx does not exist
+	CELL_PRX_ERROR_UNSUPPORTED_ELF_TYPE = 0x80011901,        // ELF type of specified file is not supported
+	CELL_PRX_ERROR_UNSUPPORTED_ELF_CLASS = 0x80011902,       // ELF class of specified file is not supported
+	CELL_PRX_ERROR_UNDEFINED_SYMBOL = 0x80011904,            // References undefined symbols
 	CELL_PRX_ERROR_UNSUPPORTED_RELOCATION_TYPE = 0x80011905, // Uses unsupported relocation type
-	CELL_PRX_ERROR_ELF_IS_REGISTERED           = 0x80011910, // Fixed ELF is already registered
-	CELL_PRX_ERROR_NO_EXIT_ENTRY               = 0x80011911,
+	CELL_PRX_ERROR_ELF_IS_REGISTERED = 0x80011910,           // Fixed ELF is already registered
+	CELL_PRX_ERROR_NO_EXIT_ENTRY = 0x80011911,
 };
 
 enum
@@ -63,17 +63,17 @@ struct sys_prx_segment_info_t
 
 struct sys_prx_module_info_t
 {
-	be_t<u64> size; // 0
-	char name[30]; // 8
-	char version[2]; // 0x26
-	be_t<u32> modattribute; // 0x28
-	be_t<u32> start_entry; // 0x2c
-	be_t<u32> stop_entry; // 0x30
-	be_t<u32> all_segments_num; // 0x34
-	vm::bptr<char> filename; // 0x38
-	be_t<u32> filename_size; // 0x3c
+	be_t<u64> size;                            // 0
+	char name[30];                             // 8
+	char version[2];                           // 0x26
+	be_t<u32> modattribute;                    // 0x28
+	be_t<u32> start_entry;                     // 0x2c
+	be_t<u32> stop_entry;                      // 0x30
+	be_t<u32> all_segments_num;                // 0x34
+	vm::bptr<char> filename;                   // 0x38
+	be_t<u32> filename_size;                   // 0x3c
 	vm::bptr<sys_prx_segment_info_t> segments; // 0x40
-	be_t<u32> segments_num; // 0x44
+	be_t<u32> segments_num;                    // 0x44
 };
 
 struct sys_prx_module_info_v2_t : sys_prx_module_info_t
@@ -138,27 +138,27 @@ struct sys_prx_get_module_list_option_t
 
 struct sys_prx_register_module_0x20_t
 {
-	be_t<u64> size; // 0x0
-	be_t<u32> toc; // 0x8
-	be_t<u32> toc_size; // 0xC
-	vm::bptr<void> stubs_ea; // 0x10
-	be_t<u32> stubs_size; // 0x14
+	be_t<u64> size;               // 0x0
+	be_t<u32> toc;                // 0x8
+	be_t<u32> toc_size;           // 0xC
+	vm::bptr<void> stubs_ea;      // 0x10
+	be_t<u32> stubs_size;         // 0x14
 	vm::bptr<void> error_handler; // 0x18
-	char pad[4]; // 0x1C
+	char pad[4];                  // 0x1C
 };
 
 struct sys_prx_register_module_0x30_type_1_t
 {
-	be_t<u64> size; // 0x0
-	be_t<u64> type; // 0x8
-	be_t<u32> unk3; // 0x10
-	be_t<u32> unk4; // 0x14
+	be_t<u64> size;                // 0x0
+	be_t<u64> type;                // 0x8
+	be_t<u32> unk3;                // 0x10
+	be_t<u32> unk4;                // 0x14
 	vm::bptr<void> lib_entries_ea; // 0x18
-	be_t<u32> lib_entries_size; // 0x1C
-	vm::bptr<void> lib_stub_ea; // 0x20
-	be_t<u32> lib_stub_size; // 0x24
-	vm::bptr<void> error_handler; // 0x28
-	char pad[4]; // 0x2C
+	be_t<u32> lib_entries_size;    // 0x1C
+	vm::bptr<void> lib_stub_ea;    // 0x20
+	be_t<u32> lib_stub_size;       // 0x24
+	vm::bptr<void> error_handler;  // 0x28
+	char pad[4];                   // 0x2C
 };
 
 enum : u32
@@ -169,8 +169,8 @@ enum : u32
 	SYS_PRX_START_OK = 0,
 
 	SYS_PRX_STOP_SUCCESS = 0,
-	SYS_PRX_STOP_OK      = 0,
-	SYS_PRX_STOP_FAILED  = 1
+	SYS_PRX_STOP_OK = 0,
+	SYS_PRX_STOP_FAILED = 1
 };
 
 // Unofficial names for PRX state
@@ -179,8 +179,8 @@ enum : u32
 	PRX_STATE_INITIALIZED,
 	PRX_STATE_STARTING, // In-between state between initialized and started (internal)
 	PRX_STATE_STARTED,
-	PRX_STATE_STOPPING, // In-between state between started and stopped (internal)
-	PRX_STATE_STOPPED, // Last state, the module cannot be restarted
+	PRX_STATE_STOPPING,  // In-between state between started and stopped (internal)
+	PRX_STATE_STOPPED,   // Last state, the module cannot be restarted
 	PRX_STATE_DESTROYED, // Last state, the module cannot be restarted
 };
 
@@ -212,7 +212,7 @@ struct lv2_prx final : ppu_module<lv2_obj>
 	std::basic_string<char> m_loaded_flags;
 	std::basic_string<char> m_external_loaded_flags;
 
-	void load_exports(); // (Re)load exports
+	void load_exports();    // (Re)load exports
 	void restore_exports(); // For savestates
 	void unload_exports();
 
@@ -231,16 +231,16 @@ enum : u64
 // PPC
 enum
 {
-	SYS_PRX_R_PPC_ADDR32    = 1,
+	SYS_PRX_R_PPC_ADDR32 = 1,
 	SYS_PRX_R_PPC_ADDR16_LO = 4,
 	SYS_PRX_R_PPC_ADDR16_HI = 5,
 	SYS_PRX_R_PPC_ADDR16_HA = 6,
 
-	SYS_PRX_R_PPC64_ADDR32      = SYS_PRX_R_PPC_ADDR32,
-	SYS_PRX_R_PPC64_ADDR16_LO   = SYS_PRX_R_PPC_ADDR16_LO,
-	SYS_PRX_R_PPC64_ADDR16_HI   = SYS_PRX_R_PPC_ADDR16_HI,
-	SYS_PRX_R_PPC64_ADDR16_HA   = SYS_PRX_R_PPC_ADDR16_HA,
-	SYS_PRX_R_PPC64_ADDR64      = 38,
+	SYS_PRX_R_PPC64_ADDR32 = SYS_PRX_R_PPC_ADDR32,
+	SYS_PRX_R_PPC64_ADDR16_LO = SYS_PRX_R_PPC_ADDR16_LO,
+	SYS_PRX_R_PPC64_ADDR16_HI = SYS_PRX_R_PPC_ADDR16_HI,
+	SYS_PRX_R_PPC64_ADDR16_HA = SYS_PRX_R_PPC_ADDR16_HA,
+	SYS_PRX_R_PPC64_ADDR64 = 38,
 	SYS_PRX_VARLINK_TERMINATE32 = 0x00000000
 };
 

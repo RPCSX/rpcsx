@@ -14,7 +14,7 @@
 
 LOG_CHANNEL(edat_log, "EDAT");
 
-void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
+void generate_key(int crypto_mode, int version, unsigned char* key_final, unsigned char* iv_final, unsigned char* key, unsigned char* iv)
 {
 	int mode = crypto_mode & 0xF0000000;
 	uchar temp_iv[16]{};
@@ -42,7 +42,7 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 	}
 }
 
-void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsigned char *hash)
+void generate_hash(int hash_mode, int version, unsigned char* hash_final, unsigned char* hash)
 {
 	int mode = hash_mode & 0xF0000000;
 	uchar temp_iv[16]{};
@@ -67,7 +67,7 @@ void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsign
 	};
 }
 
-bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, unsigned char *out, usz length, unsigned char *key, unsigned char *iv, unsigned char *hash, unsigned char *test_hash)
+bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char* in, unsigned char* out, usz length, unsigned char* key, unsigned char* iv, unsigned char* hash, unsigned char* test_hash)
 {
 	// Setup buffers for key, iv and hash.
 	unsigned char key_final[0x10] = {};
@@ -82,11 +82,11 @@ bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, uns
 	else
 		generate_hash(hash_mode, version, hash_final_10, hash);
 
-	if ((crypto_mode & 0xFF) == 0x01)  // No algorithm.
+	if ((crypto_mode & 0xFF) == 0x01) // No algorithm.
 	{
 		memcpy(out, in, length);
 	}
-	else if ((crypto_mode & 0xFF) == 0x02)  // AES128-CBC
+	else if ((crypto_mode & 0xFF) == 0x02) // AES128-CBC
 	{
 		aescbc128_decrypt(key_final, iv_final, in, out, length);
 	}
@@ -100,11 +100,11 @@ bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, uns
 	{
 		return hmac_hash_compare(hash_final_14, 0x14, in, length, test_hash, 0x14);
 	}
-	else if ((hash_mode & 0xFF) == 0x02)  // 0x10 AES-CMAC
+	else if ((hash_mode & 0xFF) == 0x02) // 0x10 AES-CMAC
 	{
 		return cmac_hash_compare(hash_final_10, 0x10, in, length, test_hash, 0x10);
 	}
-	else if ((hash_mode & 0xFF) == 0x04) //0x10 SHA1-HMAC
+	else if ((hash_mode & 0xFF) == 0x04) // 0x10 SHA1-HMAC
 	{
 		return hmac_hash_compare(hash_final_10, 0x10, in, length, test_hash, 0x10);
 	}
@@ -143,10 +143,10 @@ std::tuple<u64, s32, s32> dec_section(unsigned char* metadata)
 	return std::make_tuple(offset, length, compression_end);
 }
 
-u128 get_block_key(int block, NPD_HEADER *npd)
+u128 get_block_key(int block, NPD_HEADER* npd)
 {
 	unsigned char empty_key[0x10] = {};
-	unsigned char *src_key = (npd->version <= 1) ? empty_key : npd->dev_hash;
+	unsigned char* src_key = (npd->version <= 1) ? empty_key : npd->dev_hash;
 	u128 dest_key{};
 	std::memcpy(&dest_key, src_key, 0xC);
 
@@ -158,15 +158,15 @@ u128 get_block_key(int block, NPD_HEADER *npd)
 // for out data, allocate a buffer the size of 'edat->block_size'
 // Also, set 'in file' to the beginning of the encrypted data, which may be offset if inside another file, but normally just reset to beginning of file
 // returns number of bytes written, -1 for error
-s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *npd, u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
+s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER* edat, NPD_HEADER* npd, u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
 {
 	// Get metadata info and setup buffers.
 	const int metadata_section_size = ((edat->flags & EDAT_COMPRESSED_FLAG) != 0 || (edat->flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
 	const int metadata_offset = 0x100;
 
-	u8 hash[0x10] = { 0 };
-	u8 key_result[0x10] = { 0 };
-	u8 hash_result[0x14] = { 0 };
+	u8 hash[0x10] = {0};
+	u8 key_result[0x10] = {0};
+	u8 hash_result[0x14] = {0};
 
 	u64 offset = 0;
 	u64 metadata_sec_offset = 0;
@@ -258,7 +258,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 
 	if ((edat->flags & EDAT_FLAG_0x10) != 0)
 	{
-		aesecb128_encrypt(crypt_key, key_result, hash);  // If FLAG 0x10 is set, encrypt again to get the final hash.
+		aesecb128_encrypt(crypt_key, key_result, hash); // If FLAG 0x10 is set, encrypt again to get the final hash.
 	}
 	else
 	{
@@ -344,10 +344,10 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 // set file offset to beginning before calling
 bool check_data(u8* key, EDAT_HEADER* edat, NPD_HEADER* npd, const fs::file* f, bool verbose)
 {
-	u8 header[0xA0] = { 0 };
-	u8 empty_header[0xA0] = { 0 };
-	u8 header_hash[0x10] = { 0 };
-	u8 metadata_hash[0x10] = { 0 };
+	u8 header[0xA0] = {0};
+	u8 empty_header[0xA0] = {0};
+	u8 header_hash[0x10] = {0};
+	u8 metadata_hash[0x10] = {0};
 
 	const u64 file_offset = f->pos();
 
@@ -402,8 +402,8 @@ bool check_data(u8* key, EDAT_HEADER* edat, NPD_HEADER* npd, const fs::file* f, 
 	}
 
 	// Setup header key and iv buffers.
-	unsigned char header_key[0x10] = { 0 };
-	unsigned char header_iv[0x10] = { 0 };
+	unsigned char header_key[0x10] = {0};
+	unsigned char header_iv[0x10] = {0};
 
 	// Test the header hash (located at offset 0xA0).
 	if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), header, empty_header, 0xA0, header_key, header_iv, key, header_hash))
@@ -474,12 +474,12 @@ bool check_data(u8* key, EDAT_HEADER* edat, NPD_HEADER* npd, const fs::file* f, 
 	if ((edat->flags & EDAT_DEBUG_DATA_FLAG) == 0)
 	{
 		// Setup buffers.
-		unsigned char metadata_signature[0x28] = { 0 };
-		unsigned char header_signature[0x28] = { 0 };
-		unsigned char signature_hash[20] = { 0 };
-		unsigned char signature_r[0x15] = { 0 };
-		unsigned char signature_s[0x15] = { 0 };
-		unsigned char zero_buf[0x15] = { 0 };
+		unsigned char metadata_signature[0x28] = {0};
+		unsigned char header_signature[0x28] = {0};
+		unsigned char signature_hash[20] = {0};
+		unsigned char signature_r[0x15] = {0};
+		unsigned char signature_s[0x15] = {0};
+		unsigned char zero_buf[0x15] = {0};
 
 		// Setup ECDSA curve and public key.
 		ecdsa_set_curve(VSH_CURVE_P, VSH_CURVE_A, VSH_CURVE_B, VSH_CURVE_N, VSH_CURVE_GX, VSH_CURVE_GY);
@@ -503,7 +503,7 @@ bool check_data(u8* key, EDAT_HEADER* edat, NPD_HEADER* npd, const fs::file* f, 
 		else
 		{
 			// Setup signature hash.
-			if ((edat->flags & EDAT_FLAG_0x20) != 0) //Sony failed again, they used buffer from 0x100 with half size of real metadata.
+			if ((edat->flags & EDAT_FLAG_0x20) != 0) // Sony failed again, they used buffer from 0x100 with half size of real metadata.
 			{
 				const usz metadata_buf_size = block_num * 0x10;
 
@@ -553,7 +553,7 @@ bool check_data(u8* key, EDAT_HEADER* edat, NPD_HEADER* npd, const fs::file* f, 
 	return true;
 }
 
-bool validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
+bool validate_dev_klic(const u8* klicensee, NPD_HEADER* npd)
 {
 	if ((npd->license & 0x3) != 0x3)
 	{
@@ -718,7 +718,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 }
 
 // Decrypts full file
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic)
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8* custom_klic)
 {
 	if (!input)
 	{
@@ -758,16 +758,16 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 		memcpy(&devklic, NP_PSP_KEY_2, 0x10);
 		break;
 	case 8:
+	{
+		if (custom_klic != NULL)
+			memcpy(&devklic, custom_klic, 0x10);
+		else
 		{
-			if (custom_klic != NULL)
-				memcpy(&devklic, custom_klic, 0x10);
-			else
-			{
-				edat_log.error("Invalid custom klic!");
-				return fs::file{};
-			}
-			break;
+			edat_log.error("Invalid custom klic!");
+			return fs::file{};
 		}
+		break;
+	}
 	default:
 		edat_log.error("Invalid mode!");
 		return fs::file{};
@@ -829,7 +829,7 @@ bool EDATADecrypter::ReadHeader()
 			//
 		}
 		// Type 2: Use key from RAP file (RIF key). (also used for type 1 at the moment)
-		else 
+		else
 		{
 			const std::string rap_path = rpcs3::utils::get_rap_file_path(npdHeader.content_id);
 
@@ -853,7 +853,7 @@ bool EDATADecrypter::ReadHeader()
 
 	// k the ecdsa_verify function in this check_data function takes a ridiculous amount of time
 	// like it slows down load time by a factor of x20, at least, so its ignored for now
-	//if (!check_data(reinterpret_cast<u8*>(&dec_key), &edatHeader, &npdHeader, &edata_file, false))
+	// if (!check_data(reinterpret_cast<u8*>(&dec_key), &edatHeader, &npdHeader, &edata_file, false))
 	//{
 	//	edat_log.error("NPDRM check_data() failed!");
 	//	return false;

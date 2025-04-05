@@ -19,4 +19,4 @@ namespace cfg_adapter
 
 	/** Returns the string for a given setting.*/
 	std::string get_setting_name(emu_settings_type type);
-}
+} // namespace cfg_adapter

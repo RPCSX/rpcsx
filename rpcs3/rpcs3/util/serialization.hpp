@@ -6,14 +6,12 @@
 namespace utils
 {
 	template <typename T>
-	concept FastRandomAccess = requires (const T& obj)
-	{
+	concept FastRandomAccess = requires(const T& obj) {
 		std::data(obj)[std::size(obj)];
 	};
 
 	template <typename T>
-	concept Reservable = requires (T& obj)
-	{
+	concept Reservable = requires(T& obj) {
 		obj.reserve(std::size(obj));
 	};
 
@@ -21,8 +19,7 @@ namespace utils
 	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || typename T::enable_bitcopy()();
 
 	template <typename T>
-	concept TupleAlike = (!FastRandomAccess<T>) && requires ()
-	{
+	concept TupleAlike = (!FastRandomAccess<T>) && requires() {
 		std::tuple_size<std::remove_cvref_t<T>>::value;
 	};
 
@@ -70,10 +67,11 @@ namespace utils
 
 	struct serial
 	{
-private:
+	private:
 		bool m_is_writing = true;
 		bool m_expect_little_data = false;
-public:
+
+	public:
 		std::vector<u8> data;
 		usz data_offset = 0;
 		usz pos = 0;
@@ -95,15 +93,17 @@ public:
 
 		void add_padding(usz padding)
 		{
-			if (m_is_writing) return;
+			if (m_is_writing)
+				return;
 			pos += padding;
 		}
 
 		// Add padding needed between two members
 		template <typename T, typename T2, typename T3>
-		void add_padding(T T2::*const first, T3 T2::*const second)
+		void add_padding(T T2::* const first, T3 T2::* const second)
 		{
-			if (m_is_writing) return;
+			if (m_is_writing)
+				return;
 
 			const u32 offset1 = ::offset32(first) + sizeof(T);
 			const u32 offset2 = ::offset32(second);
@@ -133,7 +133,8 @@ public:
 			data.reserve(data.size() + size);
 		}
 
-		template <typename Func> requires (std::is_convertible_v<std::invoke_result_t<Func>, const void*>)
+		template <typename Func>
+			requires(std::is_convertible_v<std::invoke_result_t<Func>, const void*>)
 		bool raw_serialize(Func&& memory_provider, usz size)
 		{
 			if (!size)
@@ -188,7 +189,8 @@ public:
 			return raw_serialize(FN(ptr), size);
 		}
 
-		template <typename T> requires Integral<T>
+		template <typename T>
+			requires Integral<T>
 		bool serialize_vle(T&& value)
 		{
 			for (auto i = value;;)
@@ -206,7 +208,8 @@ public:
 			return true;
 		}
 
-		template <typename T> requires Integral<T>
+		template <typename T>
+			requires Integral<T>
 		bool deserialize_vle(T& value)
 		{
 			value = {};
@@ -240,7 +243,8 @@ public:
 		}
 
 		// Enabled for fundamental types, enumerations and if specified explicitly that type can be saved in pure bitwise manner
-		template <typename T> requires Bitcopy<T>
+		template <typename T>
+			requires Bitcopy<T>
 		bool serialize(T& obj)
 		{
 			return raw_serialize(std::addressof(obj), sizeof(obj));
@@ -257,7 +261,8 @@ public:
 
 		// std::vector, std::basic_string
 		// Discourage using std::pair/tuple with vectors because it eliminates the possibility of bitwise optimization
-		template <typename T> requires FastRandomAccess<T> && ListAlike<T> && (!TupleAlike<typename T::value_type>)
+		template <typename T>
+			requires FastRandomAccess<T> && ListAlike<T> && (!TupleAlike<typename T::value_type>)
 		bool serialize(T& obj)
 		{
 			if (is_writing())
@@ -297,7 +302,12 @@ public:
 
 			if constexpr (Bitcopy<typename T::value_type>)
 			{
-				if (!raw_serialize([&](){ obj.resize(size); return obj.data(); }, sizeof(obj[0]) * size))
+				if (!raw_serialize([&]()
+						{
+							obj.resize(size);
+							return obj.data();
+						},
+						sizeof(obj[0]) * size))
 				{
 					obj.clear();
 					return false;
@@ -322,7 +332,8 @@ public:
 		}
 
 		// C-array, std::array, std::span (span must be supplied with size and address, this function does not modify it)
-		template <typename T> requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
+		template <typename T>
+			requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
 		bool serialize(T& obj)
 		{
 			if constexpr (Bitcopy<std::remove_reference_t<decltype(std::declval<T>()[0])>>)
@@ -359,7 +370,8 @@ public:
 		}
 
 		// std::deque, std::list, std::(unordered_)set, std::(unordered_)map, std::(unordered_)multiset, std::(unordered_)multimap
-		template <typename T> requires (!FastRandomAccess<T>) && ListAlike<T>
+		template <typename T>
+			requires(!FastRandomAccess<T>) && ListAlike<T>
 		bool serialize(T& obj)
 		{
 			if (is_writing())
@@ -449,22 +461,24 @@ public:
 		}
 
 		// std::pair, std::tuple
-		template <typename T> requires TupleAlike<T>
+		template <typename T>
+			requires TupleAlike<T>
 		bool serialize(T& obj)
 		{
 			return serialize_tuple(obj);
 		}
 
 		// Wrapper for serialize(T&), allows to pass multiple objects at once
-		template <typename... Args> requires (sizeof...(Args) != 0)
+		template <typename... Args>
+			requires(sizeof...(Args) != 0)
 		bool operator()(Args&&... args) noexcept
 		{
-			return ((AUDIT(!std::is_const_v<std::remove_reference_t<Args>> || is_writing())
-				, serialize(as_nonconst(args))), ...);
+			return ((AUDIT(!std::is_const_v<std::remove_reference_t<Args>> || is_writing()), serialize(as_nonconst(args))), ...);
 		}
 
 		// Code style utility, for when utils::serial is a pointer for example
-		template <typename... Args> requires (sizeof...(Args) > 1 || !(std::is_convertible_v<Args&&, Args&> && ...))
+		template <typename... Args>
+			requires(sizeof...(Args) > 1 || !(std::is_convertible_v<Args &&, Args&> && ...))
 		bool serialize(Args&&... args)
 		{
 			return this->operator()(std::forward<Args>(args)...);
@@ -549,8 +563,9 @@ public:
 			ensure(m_file_handler->handle_file_op(*this, 0, umax, nullptr));
 		}
 
-		template <typename T> requires (std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
-			std::is_constructible_v<std::remove_const_t<T>, stx::exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
+		template <typename T>
+			requires(std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
+																				  std::is_constructible_v<std::remove_const_t<T>, stx::exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
 		operator T() noexcept
 		{
 			AUDIT(!is_writing());
@@ -570,9 +585,9 @@ public:
 
 				static_assert(tup_size == 2 || tup_size == 4, "Unimplemented tuple serialization!");
 
-				using first_t  = typename std::tuple_element<std::min(0, tup_size - 1), type>::type;
+				using first_t = typename std::tuple_element<std::min(0, tup_size - 1), type>::type;
 				using second_t = typename std::tuple_element<std::min(1, tup_size - 1), type>::type;
-				using third_t  = typename std::tuple_element<std::min(2, tup_size - 1), type>::type;
+				using third_t = typename std::tuple_element<std::min(2, tup_size - 1), type>::type;
 				using fourth_t = typename std::tuple_element<std::min(3, tup_size - 1), type>::type;
 
 				first_t first = this->operator first_t();
@@ -582,11 +597,11 @@ public:
 					second_t second = this->operator second_t();
 					third_t third = this->operator third_t();
 
-					return type{ std::move(first), std::move(second), std::move(third), this->operator fourth_t() };
+					return type{std::move(first), std::move(second), std::move(third), this->operator fourth_t()};
 				}
 				else
 				{
-					return type{ std::move(first), this->operator second_t() };
+					return type{std::move(first), this->operator second_t()};
 				}
 			}
 			else if constexpr (std::is_constructible_v<type, stx::exact_t<serial&>>)
@@ -619,19 +634,22 @@ public:
 			return std::min<usz>(m_max_data, m_file_handler ? m_file_handler->get_size(*this, recommended) : (data.empty() ? 0 : data_offset + data.size()));
 		}
 
-		template <typename T> requires (Bitcopy<T>)
+		template <typename T>
+			requires(Bitcopy<T>)
 		usz predict_object_size(const T&)
 		{
 			return sizeof(T);
 		}
 
-		template <typename T> requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
+		template <typename T>
+			requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
 		usz predict_object_size(const T& obj)
 		{
 			return std::size(obj) * sizeof(obj[0]);
 		}
 
-		template <typename T> requires (std::is_copy_constructible_v<std::remove_reference_t<T>> && std::is_constructible_v<std::remove_reference_t<T>>)
+		template <typename T>
+			requires(std::is_copy_constructible_v<std::remove_reference_t<T>> && std::is_constructible_v<std::remove_reference_t<T>>)
 		usz try_read(T&& obj)
 		{
 			if (is_writing())
@@ -651,7 +669,8 @@ public:
 			return end_pos - size;
 		}
 
-		template <typename T> requires (std::is_copy_constructible_v<T> && std::is_constructible_v<T> && Bitcopy<T>)
+		template <typename T>
+			requires(std::is_copy_constructible_v<T> && std::is_constructible_v<T> && Bitcopy<T>)
 		std::pair<bool, T> try_read()
 		{
 			if (is_writing())
@@ -694,4 +713,4 @@ public:
 			return true;
 		}
 	};
-}
+} // namespace utils

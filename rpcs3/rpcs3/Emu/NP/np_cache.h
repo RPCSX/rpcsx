@@ -51,7 +51,7 @@ namespace np
 	{
 		void update(const SceNpMatching2RoomDataInternal* sce_roomdata);
 
-		u32 num_slots                                    = 0;
+		u32 num_slots = 0;
 		SceNpMatching2RoomPasswordSlotMask mask_password = 0;
 		std::optional<SceNpMatching2SessionPassword> password;
 

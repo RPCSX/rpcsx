@@ -99,7 +99,7 @@ class debugger_frame : public custom_dock_widget
 	void open_breakpoints_settings();
 
 public:
-	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = nullptr);
+	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget* parent = nullptr);
 
 	void SaveSettings() const;
 	void ChangeColors() const;
@@ -120,6 +120,7 @@ public:
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */
 	bool eventFilter(QObject* object, QEvent* event) override;
+
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;

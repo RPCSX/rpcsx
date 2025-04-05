@@ -19,7 +19,8 @@ struct bf_base
 	using compact_type = std::conditional_t<can_be_packed, std::conditional_t<std::is_unsigned_v<vtype>, uint, int>, vtype>;
 
 	// Datatype bitsize
-	static constexpr uint bitmax = sizeof(T) * 8; static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
+	static constexpr uint bitmax = sizeof(T) * 8;
+	static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
 
 	// Field bitsize
 	static constexpr uint bitsize = N;
@@ -44,7 +45,8 @@ struct bf_t : bf_base<T, N>
 	using compact_type = typename bf_t::compact_type;
 
 	// Field offset
-	static constexpr uint bitpos = I; static_assert(bitpos + N <= bf_t::bitmax, "bf_t<> error: I out of bounds");
+	static constexpr uint bitpos = I;
+	static_assert(bitpos + N <= bf_t::bitmax, "bf_t<> error: I out of bounds");
 
 	// Get bitmask of size N, at I pos
 	static constexpr utype data_mask()
@@ -92,64 +94,64 @@ struct bf_t : bf_base<T, N>
 	}
 
 	// Store bitfield value
-	bf_t& operator =(compact_type value) noexcept
+	bf_t& operator=(compact_type value) noexcept
 	{
 		this->m_data = static_cast<vtype>((this->m_data & ~data_mask()) | insert(value));
 		return *this;
 	}
 
-	compact_type operator ++(int)
+	compact_type operator++(int)
 	{
 		compact_type result = *this;
 		*this = static_cast<compact_type>(result + 1u);
 		return result;
 	}
 
-	bf_t& operator ++()
+	bf_t& operator++()
 	{
 		return *this = static_cast<compact_type>(*this + 1u);
 	}
 
-	compact_type operator --(int)
+	compact_type operator--(int)
 	{
 		compact_type result = *this;
 		*this = static_cast<compact_type>(result - 1u);
 		return result;
 	}
 
-	bf_t& operator --()
+	bf_t& operator--()
 	{
 		return *this = static_cast<compact_type>(*this - 1u);
 	}
 
-	bf_t& operator +=(compact_type right)
+	bf_t& operator+=(compact_type right)
 	{
 		return *this = static_cast<compact_type>(*this + right);
 	}
 
-	bf_t& operator -=(compact_type right)
+	bf_t& operator-=(compact_type right)
 	{
 		return *this = static_cast<compact_type>(*this - right);
 	}
 
-	bf_t& operator *=(compact_type right)
+	bf_t& operator*=(compact_type right)
 	{
 		return *this = static_cast<compact_type>(*this * right);
 	}
 
-	bf_t& operator &=(compact_type right)
+	bf_t& operator&=(compact_type right)
 	{
 		this->m_data &= static_cast<vtype>(((static_cast<utype>(right + 0u) & bf_t::vmask) << bitpos) | ~(bf_t::vmask << bitpos));
 		return *this;
 	}
 
-	bf_t& operator |=(compact_type right)
+	bf_t& operator|=(compact_type right)
 	{
 		this->m_data |= static_cast<vtype>((static_cast<utype>(right + 0u) & bf_t::vmask) << bitpos);
 		return *this;
 	}
 
-	bf_t& operator ^=(compact_type right)
+	bf_t& operator^=(compact_type right)
 	{
 		this->m_data ^= static_cast<vtype>((static_cast<utype>(right + 0u) & bf_t::vmask) << bitpos);
 		return *this;
@@ -157,13 +159,19 @@ struct bf_t : bf_base<T, N>
 };
 
 template <typename T, uint I, uint N>
-struct std::common_type<bf_t<T, I, N>, bf_t<T, I, N>> : std::common_type<T> {};
+struct std::common_type<bf_t<T, I, N>, bf_t<T, I, N>> : std::common_type<T>
+{
+};
 
 template <typename T, uint I, uint N, typename T2>
-struct std::common_type<bf_t<T, I, N>, T2> : std::common_type<T2, std::common_type_t<T>> {};
+struct std::common_type<bf_t<T, I, N>, T2> : std::common_type<T2, std::common_type_t<T>>
+{
+};
 
 template <typename T, uint I, uint N, typename T2>
-struct std::common_type<T2, bf_t<T, I, N>> : std::common_type<std::common_type_t<T>, T2> {};
+struct std::common_type<T2, bf_t<T, I, N>> : std::common_type<std::common_type_t<T>, T2>
+{
+};
 
 // Field pack (concatenated from left to right)
 template <typename F = void, typename... Fields>
@@ -199,7 +207,7 @@ struct cf_t : bf_base<typename F::type, F::bitsize + cf_t<Fields...>::bitsize>
 	}
 
 	// Store value
-	cf_t& operator =(compact_type value) noexcept
+	cf_t& operator=(compact_type value) noexcept
 	{
 		this->m_data = (this->m_data & ~data_mask()) | insert(value);
 		return *this;

@@ -1,5 +1,5 @@
 // This makes debugging on windows less painful
-//#define HAVE_LIBEVDEV
+// #define HAVE_LIBEVDEV
 
 #ifdef HAVE_LIBEVDEV
 
@@ -19,24 +19,24 @@
 LOG_CHANNEL(evdev_log, "evdev");
 
 evdev_joystick_handler::evdev_joystick_handler()
-    : PadHandlerBase(pad_handler::evdev)
+	: PadHandlerBase(pad_handler::evdev)
 {
 	init_configs();
 
 	// Define border values
-	thumb_max     = 255;
-	trigger_min   = 0;
-	trigger_max   = 255;
+	thumb_max = 255;
+	trigger_min = 0;
+	trigger_max = 255;
 
 	// set capabilities
-	b_has_config    = true;
-	b_has_rumble    = true;
-	b_has_motion    = true;
+	b_has_config = true;
+	b_has_rumble = true;
+	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_orientation = true;
 
 	m_trigger_threshold = trigger_max / 2;
-	m_thumb_threshold   = thumb_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 
 	m_dev = std::make_shared<EvdevDevice>();
 }
@@ -48,34 +48,35 @@ evdev_joystick_handler::~evdev_joystick_handler()
 
 void evdev_joystick_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = ::at32(rev_axis_list, ABS_X);
-	cfg->ls_down.def  = ::at32(axis_list, ABS_Y);
+	cfg->ls_left.def = ::at32(rev_axis_list, ABS_X);
+	cfg->ls_down.def = ::at32(axis_list, ABS_Y);
 	cfg->ls_right.def = ::at32(axis_list, ABS_X);
-	cfg->ls_up.def    = ::at32(rev_axis_list, ABS_Y);
-	cfg->rs_left.def  = ::at32(rev_axis_list, ABS_RX);
-	cfg->rs_down.def  = ::at32(axis_list, ABS_RY);
+	cfg->ls_up.def = ::at32(rev_axis_list, ABS_Y);
+	cfg->rs_left.def = ::at32(rev_axis_list, ABS_RX);
+	cfg->rs_down.def = ::at32(axis_list, ABS_RY);
 	cfg->rs_right.def = ::at32(axis_list, ABS_RX);
-	cfg->rs_up.def    = ::at32(rev_axis_list, ABS_RY);
-	cfg->start.def    = ::at32(button_list, BTN_START);
-	cfg->select.def   = ::at32(button_list, BTN_SELECT);
-	cfg->ps.def       = ::at32(button_list, BTN_MODE);
-	cfg->square.def   = ::at32(button_list, BTN_X);
-	cfg->cross.def    = ::at32(button_list, BTN_A);
-	cfg->circle.def   = ::at32(button_list, BTN_B);
+	cfg->rs_up.def = ::at32(rev_axis_list, ABS_RY);
+	cfg->start.def = ::at32(button_list, BTN_START);
+	cfg->select.def = ::at32(button_list, BTN_SELECT);
+	cfg->ps.def = ::at32(button_list, BTN_MODE);
+	cfg->square.def = ::at32(button_list, BTN_X);
+	cfg->cross.def = ::at32(button_list, BTN_A);
+	cfg->circle.def = ::at32(button_list, BTN_B);
 	cfg->triangle.def = ::at32(button_list, BTN_Y);
-	cfg->left.def     = ::at32(rev_axis_list, ABS_HAT0X);
-	cfg->down.def     = ::at32(axis_list, ABS_HAT0Y);
-	cfg->right.def    = ::at32(axis_list, ABS_HAT0X);
-	cfg->up.def       = ::at32(rev_axis_list, ABS_HAT0Y);
-	cfg->r1.def       = ::at32(button_list, BTN_TR);
-	cfg->r2.def       = ::at32(axis_list, ABS_RZ);
-	cfg->r3.def       = ::at32(button_list, BTN_THUMBR);
-	cfg->l1.def       = ::at32(button_list, BTN_TL);
-	cfg->l2.def       = ::at32(axis_list, ABS_Z);
-	cfg->l3.def       = ::at32(button_list, BTN_THUMBL);
+	cfg->left.def = ::at32(rev_axis_list, ABS_HAT0X);
+	cfg->down.def = ::at32(axis_list, ABS_HAT0Y);
+	cfg->right.def = ::at32(axis_list, ABS_HAT0X);
+	cfg->up.def = ::at32(rev_axis_list, ABS_HAT0Y);
+	cfg->r1.def = ::at32(button_list, BTN_TR);
+	cfg->r2.def = ::at32(axis_list, ABS_RZ);
+	cfg->r3.def = ::at32(button_list, BTN_THUMBR);
+	cfg->l1.def = ::at32(button_list, BTN_TL);
+	cfg->l2.def = ::at32(axis_list, ABS_Z);
+	cfg->l3.def = ::at32(button_list, BTN_THUMBL);
 
 	cfg->motion_sensor_x.axis.def = ::at32(motion_axis_list, ABS_X);
 	cfg->motion_sensor_y.axis.def = ::at32(motion_axis_list, ABS_Y);
@@ -89,12 +90,12 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
 	cfg->rstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
-	cfg->lstickdeadzone.def    = 30; // between 0 and 255
-	cfg->rstickdeadzone.def    = 30; // between 0 and 255
-	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
-	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
+	cfg->lstickdeadzone.def = 30;                                       // between 0 and 255
+	cfg->rstickdeadzone.def = 30;                                       // between 0 and 255
+	cfg->ltriggerthreshold.def = 0;                                     // between 0 and 255
+	cfg->rtriggerthreshold.def = 0;                                     // between 0 and 255
+	cfg->lpadsquircling.def = 8000;
+	cfg->rpadsquircling.def = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -466,7 +467,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 		if (diff > button_press_threshold && value > pressed_button.value)
 		{
-			pressed_button = { .value = value, .name = name };
+			pressed_button = {.value = value, .name = name};
 		}
 	};
 
@@ -559,7 +560,8 @@ void evdev_joystick_handler::get_motion_sensors(const std::string& padId, const 
 				if (sensor.m_keyCode != evt.code)
 					continue;
 
-				preview_values[i] = get_sensor_value(dev, sensor, evt);;
+				preview_values[i] = get_sensor_value(dev, sensor, evt);
+				;
 				is_dirty = true;
 			}
 		}
@@ -619,15 +621,15 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u8 large, u8 small)
 
 	if (libevdev_has_event_code(device->device, EV_FF, FF_RUMBLE))
 	{
-		effect.type                      = FF_RUMBLE;
-		effect.id                        = device->effect_id;
-		effect.direction                 = 0;
+		effect.type = FF_RUMBLE;
+		effect.id = device->effect_id;
+		effect.direction = 0;
 		effect.u.rumble.strong_magnitude = large * 257;
-		effect.u.rumble.weak_magnitude   = small * 257;
-		effect.replay.length             = 0;
-		effect.replay.delay              = 0;
-		effect.trigger.button            = 0;
-		effect.trigger.interval          = 0;
+		effect.u.rumble.weak_magnitude = small * 257;
+		effect.replay.length = 0;
+		effect.replay.delay = 0;
+		effect.trigger.button = 0;
+		effect.trigger.interval = 0;
 	}
 	else
 	{
@@ -645,8 +647,8 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u8 large, u8 small)
 	device->effect_id = effect.id;
 
 	input_event play;
-	play.type  = EV_FF;
-	play.code  = device->effect_id;
+	play.type = EV_FF;
+	play.code = device->effect_id;
 	play.value = 1;
 
 	if (write(fd, &play, sizeof(play)) == -1)
@@ -690,9 +692,9 @@ std::vector<pad_list_entry> evdev_joystick_handler::list_devices()
 		// Check if the entry starts with event (a 5-letter word)
 		if (et.name.size() > 5 && et.name.starts_with("event"))
 		{
-			const int fd         = open(("/dev/input/" + et.name).c_str(), O_RDONLY | O_NONBLOCK);
+			const int fd = open(("/dev/input/" + et.name).c_str(), O_RDONLY | O_NONBLOCK);
 			struct libevdev* dev = NULL;
-			const int rc         = libevdev_new_from_fd(fd, &dev);
+			const int rc = libevdev_new_from_fd(fd, &dev);
 			if (rc < 0)
 			{
 				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -749,9 +751,9 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 		if (et.name.size() > 5 && et.name.starts_with("event"))
 		{
 			const std::string path = "/dev/input/" + et.name;
-			const int fd           = open(path.c_str(), O_RDWR | O_NONBLOCK);
-			struct libevdev* dev   = NULL;
-			const int rc           = libevdev_new_from_fd(fd, &dev);
+			const int fd = open(path.c_str(), O_RDWR | O_NONBLOCK);
+			struct libevdev* dev = NULL;
+			const int rc = libevdev_new_from_fd(fd, &dev);
 			if (rc < 0)
 			{
 				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -783,7 +785,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 					// Let's log axis information while we are in the settings in order to identify problems more easily.
 					for (const auto& [code, axis_name] : axis_list)
 					{
-						if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
+						if (const input_absinfo* info = libevdev_get_abs_info(dev, code))
 						{
 							const char* code_name = libevdev_event_code_get_name(EV_ABS, code);
 							evdev_log.notice("Axis info for %s: %s (%s) => minimum=%d, maximum=%d, fuzz=%d, flat=%d, resolution=%d",
@@ -793,8 +795,8 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 				}
 
 				// Alright, now that we've confirmed we haven't added this joystick yet, les do dis.
-				m_dev->device     = dev;
-				m_dev->path       = path;
+				m_dev->device = dev;
+				m_dev->path = path;
 				m_dev->has_rumble = libevdev_has_event_type(dev, EV_FF);
 				m_dev->has_motion = libevdev_has_property(dev, INPUT_PROP_ACCELEROMETER);
 
@@ -826,9 +828,9 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 		if (et.name.size() > 5 && et.name.starts_with("event"))
 		{
 			const std::string path = "/dev/input/" + et.name;
-			const int fd           = open(path.c_str(), O_RDWR | O_NONBLOCK);
-			struct libevdev* dev   = NULL;
-			const int rc           = libevdev_new_from_fd(fd, &dev);
+			const int fd = open(path.c_str(), O_RDWR | O_NONBLOCK);
+			struct libevdev* dev = NULL;
+			const int rc = libevdev_new_from_fd(fd, &dev);
 			if (rc < 0)
 			{
 				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
@@ -857,7 +859,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 				// A device must not mix regular directional axes and accelerometer axes on the same event node.
 				for (const auto& [code, axis_name] : axis_list)
 				{
-					if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
+					if (const input_absinfo* info = libevdev_get_abs_info(dev, code))
 					{
 						const bool is_accel = code == ABS_X || code == ABS_Y || code == ABS_Z;
 						const char* code_name = libevdev_event_code_get_name(EV_ABS, code);
@@ -867,8 +869,8 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 				}
 
 				std::shared_ptr<EvdevDevice> motion_device = std::make_shared<EvdevDevice>();
-				motion_device->device     = dev;
-				motion_device->path       = path;
+				motion_device->device = dev;
+				motion_device->path = path;
 				motion_device->has_motion = true;
 
 				if (in_settings)
@@ -1302,11 +1304,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 		if (is_axis)
 		{
-			m_dev->all_buttons.push_back(EvdevButton{ code, is_reverse ? 1 : 0, EV_ABS });
+			m_dev->all_buttons.push_back(EvdevButton{code, is_reverse ? 1 : 0, EV_ABS});
 		}
 		else
 		{
-			m_dev->all_buttons.push_back(EvdevButton{ code, -1, EV_KEY });
+			m_dev->all_buttons.push_back(EvdevButton{code, -1, EV_KEY});
 		}
 
 		return index;
@@ -1345,7 +1347,8 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		e_sensor.shift = sensor.shift.get();
 
 		const std::set<u32> keys = FindKeyCodes<u32, u32>(motion_axis_list, sensor.axis);
-		if (!keys.empty()) e_sensor.code = *keys.begin(); // We should only have one key for each of our sensors
+		if (!keys.empty())
+			e_sensor.code = *keys.begin(); // We should only have one key for each of our sensors
 		return e_sensor;
 	};
 
@@ -1359,8 +1362,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		}
 	}
 
-	pad->Init
-	(
+	pad->Init(
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
@@ -1368,8 +1370,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pclass_profile,
 		cfg->vendor_id,
 		cfg->product_id,
-		cfg->pressure_intensity
-	);
+		cfg->pressure_intensity);
 
 	if (b_has_pressure_intensity_button)
 	{
@@ -1389,28 +1390,28 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_orientation_reset_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->circle), CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->cross), CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->square), CELL_PAD_CTRL_SQUARE);
 
 	m_dev->trigger_left = find_buttons(cfg->l2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left,         CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left, CELL_PAD_CTRL_L2);
 
 	m_dev->trigger_right = find_buttons(cfg->r2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right,        CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right, CELL_PAD_CTRL_R2);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->ps),       CELL_PAD_CTRL_PS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->l1), CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->r1), CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->start), CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->select), CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->l3), CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->r3), CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->ps), CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->up), CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->down), CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->left), CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_buttons(cfg->right), CELL_PAD_CTRL_RIGHT);
 
 	if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD)
 	{
@@ -1422,17 +1423,17 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_buttons(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
 	}
 
-	m_dev->axis_left[0]  = find_buttons(cfg->ls_right);
-	m_dev->axis_left[1]  = find_buttons(cfg->ls_left);
-	m_dev->axis_left[2]  = find_buttons(cfg->ls_up);
-	m_dev->axis_left[3]  = find_buttons(cfg->ls_down);
+	m_dev->axis_left[0] = find_buttons(cfg->ls_right);
+	m_dev->axis_left[1] = find_buttons(cfg->ls_left);
+	m_dev->axis_left[2] = find_buttons(cfg->ls_up);
+	m_dev->axis_left[3] = find_buttons(cfg->ls_down);
 	m_dev->axis_right[0] = find_buttons(cfg->rs_right);
 	m_dev->axis_right[1] = find_buttons(cfg->rs_left);
 	m_dev->axis_right[2] = find_buttons(cfg->rs_up);
 	m_dev->axis_right[3] = find_buttons(cfg->rs_down);
 
-	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev->axis_left[1],  m_dev->axis_left[0]);
-	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev->axis_left[3],  m_dev->axis_left[2]);
+	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, m_dev->axis_left[1], m_dev->axis_left[0]);
+	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, m_dev->axis_left[3], m_dev->axis_left[2]);
 	pad->m_sticks[2] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev->axis_right[1], m_dev->axis_right[0]);
 	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev->axis_right[3], m_dev->axis_right[2]);
 
@@ -1498,7 +1499,10 @@ bool evdev_joystick_handler::check_button_set(const std::set<u32>& indices, cons
 
 bool evdev_joystick_handler::check_button_sets(const std::array<std::set<u32>, 4>& sets, const u32 code)
 {
-	return std::any_of(sets.begin(), sets.end(), [this, code](const std::set<u32>& indices) { return check_button_set(indices, code); });
+	return std::any_of(sets.begin(), sets.end(), [this, code](const std::set<u32>& indices)
+		{
+			return check_button_set(indices, code);
+		});
 };
 
 bool evdev_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)

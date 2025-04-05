@@ -36,7 +36,7 @@ namespace rsx
 				{
 					// Stride must be updated even if the stream is disabled
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
-					info.locations.push_back({ index, false, 1 });
+					info.locations.push_back({index, false, 1});
 
 					if (input_mask & (1u << index))
 					{
@@ -64,7 +64,7 @@ namespace rsx
 		result.interleaved_blocks.reserve(16);
 		result.referenced_registers.reserve(16);
 
-		for (auto [ref_mask, index] = std::tuple{ input_mask, u8(0) }; ref_mask; ++index, ref_mask >>= 1)
+		for (auto [ref_mask, index] = std::tuple{input_mask, u8(0)}; ref_mask; ++index, ref_mask >>= 1)
 		{
 			ensure(index < rsx::limits::vertex_count);
 
@@ -159,7 +159,7 @@ namespace rsx
 					}
 
 					alloc_new_block = false;
-					block->locations.push_back({ index, modulo, info.frequency() });
+					block->locations.push_back({index, modulo, info.frequency()});
 					block->interleaved = true;
 					break;
 				}
@@ -171,7 +171,7 @@ namespace rsx
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
 					block.locations.reserve(16);
-					block.locations.push_back({ index, modulo, info.frequency() });
+					block.locations.push_back({index, modulo, info.frequency()});
 
 					if (block.attribute_stride == 0)
 					{
@@ -193,10 +193,10 @@ namespace rsx
 
 	std::span<const std::byte> draw_command_processor::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
-		if (!m_element_push_buffer.empty()) [[ unlikely ]]
+		if (!m_element_push_buffer.empty()) [[unlikely]]
 		{
 			// Indices provided via immediate mode
-			return { reinterpret_cast<const std::byte*>(m_element_push_buffer.data()), ::narrow<u32>(m_element_push_buffer.size() * sizeof(u32)) };
+			return {reinterpret_cast<const std::byte*>(m_element_push_buffer.data()), ::narrow<u32>(m_element_push_buffer.size() * sizeof(u32))};
 		}
 
 		const rsx::index_array_type type = REGS(m_ctx)->index_type();
@@ -209,18 +209,16 @@ namespace rsx
 		const u32 count = draw_indexed_clause.get_elements_count();
 
 		const auto ptr = vm::_ptr<const std::byte>(address);
-		return { ptr + first * type_size, count * type_size };
+		return {ptr + first * type_size, count * type_size};
 	}
 
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
-		draw_command_processor::get_draw_command(const rsx::rsx_state& state) const
+	draw_command_processor::get_draw_command(const rsx::rsx_state& state) const
 	{
-		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::indexed) [[ likely ]]
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::indexed) [[likely]]
 		{
-			return draw_indexed_array_command
-			{
-				get_raw_index_array(state.current_draw_clause)
-			};
+			return draw_indexed_array_command{
+				get_raw_index_array(state.current_draw_clause)};
 		}
 
 		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::array)
@@ -276,8 +274,8 @@ namespace rsx
 		{
 			for (auto& push_buf : m_vertex_push_buffers)
 			{
-				//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
-				//REGS(m_ctx)->register_vertex_info[index].size = 0;
+				// Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
+				// REGS(m_ctx)->register_vertex_info[index].size = 0;
 
 				push_buf.clear();
 			}
@@ -573,8 +571,10 @@ namespace rsx
 		float scale_y = REGS(m_ctx)->viewport_scale_y() / (clip_h / 2.f);
 		float offset_y = (REGS(m_ctx)->viewport_offset_y() - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
-		if (flip_y) scale_y *= -1;
-		if (flip_y) offset_y *= -1;
+		if (flip_y)
+			scale_y *= -1;
+		if (flip_y)
+			offset_y *= -1;
 
 		const float scale_z = REGS(m_ctx)->viewport_scale_z();
 		const float offset_z = REGS(m_ctx)->viewport_offset_z();
@@ -589,14 +589,14 @@ namespace rsx
 	void draw_command_processor::fill_user_clip_data(void* buffer) const
 	{
 		const rsx::user_clip_plane_op clip_plane_control[6] =
-		{
-			REGS(m_ctx)->clip_plane_0_enabled(),
-			REGS(m_ctx)->clip_plane_1_enabled(),
-			REGS(m_ctx)->clip_plane_2_enabled(),
-			REGS(m_ctx)->clip_plane_3_enabled(),
-			REGS(m_ctx)->clip_plane_4_enabled(),
-			REGS(m_ctx)->clip_plane_5_enabled(),
-		};
+			{
+				REGS(m_ctx)->clip_plane_0_enabled(),
+				REGS(m_ctx)->clip_plane_1_enabled(),
+				REGS(m_ctx)->clip_plane_2_enabled(),
+				REGS(m_ctx)->clip_plane_3_enabled(),
+				REGS(m_ctx)->clip_plane_4_enabled(),
+				REGS(m_ctx)->clip_plane_5_enabled(),
+			};
 
 		u8 data_block[64];
 		s32* clip_enabled_flags = reinterpret_cast<s32*>(data_block);
@@ -631,12 +631,12 @@ namespace rsx
 	}
 
 	/**
-	* Fill buffer with vertex program constants.
-	* Buffer must be at least 512 float4 wide.
-	*/
+	 * Fill buffer with vertex program constants.
+	 * Buffer must be at least 512 float4 wide.
+	 */
 	void draw_command_processor::fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table) const
 	{
-		if (!reloc_table.empty()) [[ likely ]]
+		if (!reloc_table.empty()) [[likely]]
 		{
 			char* dst = reinterpret_cast<char*>(buffer);
 			for (const auto& index : reloc_table)
@@ -804,9 +804,7 @@ namespace rsx
 				continue;
 			}
 
-			const int translated_offset = full_reupload
-				? instance_config.patch_load_offset
-				: prog->translate_constants_range(instance_config.patch_load_offset, instance_config.patch_load_count);
+			const int translated_offset = full_reupload ? instance_config.patch_load_offset : prog->translate_constants_range(instance_config.patch_load_offset, instance_config.patch_load_count);
 
 			if (translated_offset >= 0)
 			{
@@ -817,8 +815,8 @@ namespace rsx
 
 				// Update indirection table
 				for (auto i = translated_offset, count = 0;
-					 static_cast<u32>(count) < instance_config.patch_load_count;
-					 ++i, ++count)
+					static_cast<u32>(count) < instance_config.patch_load_count;
+					++i, ++count)
 				{
 					instancing_indirection_table[i] = redirection_loc + count;
 				}
@@ -857,4 +855,4 @@ namespace rsx
 		constants_data_array_buffer.reserve(constants_data.size_bytes());
 		std::memcpy(constants_data_array_buffer.data(), constants_data.data(), constants_data.size_bytes());
 	}
-}
+} // namespace rsx

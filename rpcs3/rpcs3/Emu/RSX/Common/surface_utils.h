@@ -113,20 +113,20 @@ namespace rsx
 		areai src_rect() const
 		{
 			ensure(width);
-			return { src_x, src_y, src_x + width, src_y + height };
+			return {src_x, src_y, src_x + width, src_y + height};
 		}
 
 		areai dst_rect() const
 		{
 			ensure(width);
-			return { dst_x, dst_y, dst_x + u16(width * transfer_scale_x + 0.5f), dst_y + u16(height * transfer_scale_y + 0.5f) };
+			return {dst_x, dst_y, dst_x + u16(width * transfer_scale_x + 0.5f), dst_y + u16(height * transfer_scale_y + 0.5f)};
 		}
 	};
 
 	template <typename image_storage_type>
 	struct render_target_descriptor : public rsx::ref_counted
 	{
-		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
+		u64 last_use_tag = 0; // tag indicating when this block was last confirmed to have been written to
 		u32 base_addr = 0;
 
 #if (ENABLE_SURFACE_CACHE_DEBUG)
@@ -142,9 +142,9 @@ namespace rsx
 		u32 native_pitch = 0;
 		u16 surface_width = 0;
 		u16 surface_height = 0;
-		u8  spp = 1;
-		u8  samples_x = 1;
-		u8  samples_y = 1;
+		u8 spp = 1;
+		u8 samples_x = 1;
+		u8 samples_y = 1;
 
 		rsx::address_range memory_range;
 
@@ -161,15 +161,13 @@ namespace rsx
 		{
 			rsx::surface_color_format gcm_color_format;
 			rsx::surface_depth_format2 gcm_depth_format;
-		}
-		format_info;
+		} format_info;
 
 		struct
 		{
 			u64 timestamp = 0;
 			bool locked = false;
-		}
-		texture_cache_metadata;
+		} texture_cache_metadata;
 
 		render_target_descriptor() {}
 
@@ -190,7 +188,7 @@ namespace rsx
 			texture_cache_metadata = {};
 		}
 
-		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
+		template <rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
 		T get_surface_width() const
 		{
 			if constexpr (Metrics == rsx::surface_metrics::samples)
@@ -211,7 +209,7 @@ namespace rsx
 			}
 		}
 
-		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
+		template <rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
 		T get_surface_height() const
 		{
 			if constexpr (Metrics == rsx::surface_metrics::samples)
@@ -256,20 +254,20 @@ namespace rsx
 		{
 			switch (aa)
 			{
-				case rsx::surface_antialiasing::center_1_sample:
-					samples_x = samples_y = spp = 1;
-					break;
-				case rsx::surface_antialiasing::diagonal_centered_2_samples:
-					samples_x = spp = 2;
-					samples_y = 1;
-					break;
-				case rsx::surface_antialiasing::square_centered_4_samples:
-				case rsx::surface_antialiasing::square_rotated_4_samples:
-					samples_x = samples_y = 2;
-					spp = 4;
-					break;
-				default:
-					fmt::throw_exception("Unknown AA mode 0x%x", static_cast<u8>(aa));
+			case rsx::surface_antialiasing::center_1_sample:
+				samples_x = samples_y = spp = 1;
+				break;
+			case rsx::surface_antialiasing::diagonal_centered_2_samples:
+				samples_x = spp = 2;
+				samples_y = 1;
+				break;
+			case rsx::surface_antialiasing::square_centered_4_samples:
+			case rsx::surface_antialiasing::square_rotated_4_samples:
+				samples_x = samples_y = 2;
+				spp = 4;
+				break;
+			default:
+				fmt::throw_exception("Unknown AA mode 0x%x", static_cast<u8>(aa));
 			}
 		}
 
@@ -315,12 +313,10 @@ namespace rsx
 
 		inline u32 get_gcm_format() const
 		{
-			return
-			(
+			return (
 				is_depth_surface() ?
 					get_compatible_gcm_format(format_info.gcm_depth_format).first :
-					get_compatible_gcm_format(format_info.gcm_color_format).first
-			);
+					get_compatible_gcm_format(format_info.gcm_color_format).first);
 		}
 
 		inline bool dirty() const
@@ -396,20 +392,20 @@ namespace rsx
 
 			base_addr = address;
 
-			const u32 size_x = (native_pitch > 8)? (native_pitch - 8) : 0u;
+			const u32 size_x = (native_pitch > 8) ? (native_pitch - 8) : 0u;
 			const u32 size_y = u32(surface_height * samples_y) - 1u;
 			const position2u samples[] =
-			{
-				// NOTE: Sorted by probability to catch dirty flag
-				{0, 0},
-				{size_x, size_y},
-				{size_x / 2, size_y / 2},
+				{
+					// NOTE: Sorted by probability to catch dirty flag
+					{0, 0},
+					{size_x, size_y},
+					{size_x / 2, size_y / 2},
 
-				// Auxilliary, highly unlikely to ever catch anything
-				// NOTE: Currently unused as length of samples is truncated to 3
-				{size_x, 0},
-				{0, size_y},
-			};
+					// Auxilliary, highly unlikely to ever catch anything
+			        // NOTE: Currently unused as length of samples is truncated to 3
+					{size_x, 0},
+					{0, size_y},
+				};
 
 			for (uint n = 0; n < memory_tag_samples.size(); ++n)
 			{
@@ -424,7 +420,7 @@ namespace rsx
 
 		void sync_tag()
 		{
-			for (auto &e : memory_tag_samples)
+			for (auto& e : memory_tag_samples)
 			{
 				e.second = *reinterpret_cast<nse_t<u64, 1>*>(vm::g_sudo_addr + e.first);
 			}
@@ -456,7 +452,7 @@ namespace rsx
 
 		void clear_rw_barrier()
 		{
-			for (auto &e : old_contents)
+			for (auto& e : old_contents)
 			{
 				ensure(dynamic_cast<rsx::ref_counted*>(e.source))->release();
 			}
@@ -465,18 +461,18 @@ namespace rsx
 		}
 
 		template <typename T>
-		u32 prepare_rw_barrier_for_transfer(T *target)
+		u32 prepare_rw_barrier_for_transfer(T* target)
 		{
 			if (old_contents.size() <= 1)
 				return 0;
 
 			// Sort here before doing transfers since surfaces may have been updated in the meantime
-			std::sort(old_contents.begin(), old_contents.end(), [](const auto& a, const auto &b)
-			{
-				const auto _a = static_cast<const T*>(a.source);
-				const auto _b = static_cast<const T*>(b.source);
-				return (_a->last_use_tag < _b->last_use_tag);
-			});
+			std::sort(old_contents.begin(), old_contents.end(), [](const auto& a, const auto& b)
+				{
+					const auto _a = static_cast<const T*>(a.source);
+					const auto _b = static_cast<const T*>(b.source);
+					return (_a->last_use_tag < _b->last_use_tag);
+				});
 
 			// Try and optimize by omitting possible overlapped transfers
 			for (usz i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
@@ -495,7 +491,7 @@ namespace rsx
 			return 0;
 		}
 
-		template<typename T>
+		template <typename T>
 		void set_old_contents(T* other)
 		{
 			ensure(old_contents.empty());
@@ -510,7 +506,7 @@ namespace rsx
 			other->add_ref();
 		}
 
-		template<typename T>
+		template <typename T>
 		void set_old_contents_region(const T& region, bool normalized)
 		{
 			// NOTE: This method will not perform pitch verification!
@@ -518,7 +514,7 @@ namespace rsx
 			ensure(region.source != static_cast<decltype(region.source)>(this));
 
 			old_contents.push_back(region.template cast<image_storage_type>());
-			auto &slice = old_contents.back();
+			auto& slice = old_contents.back();
 			region.source->add_ref();
 
 			// Reverse normalization process if needed
@@ -589,8 +585,8 @@ namespace rsx
 
 			set_old_contents_region(region, true);
 			return (region.width == parent_w && region.height == parent_h) ?
-				surface_inheritance_result::full :
-				surface_inheritance_result::partial;
+			           surface_inheritance_result::full :
+			           surface_inheritance_result::partial;
 		}
 
 		void on_write(u64 write_tag = 0,
@@ -655,7 +651,7 @@ namespace rsx
 			const u16 internal_width = get_surface_width<rsx::surface_metrics::bytes>();
 			const u16 internal_height = get_surface_height<rsx::surface_metrics::bytes>();
 
-			return { 0, 0, internal_width, internal_height };
+			return {0, 0, internal_width, internal_height};
 		}
 
 		inline rsx::address_range get_memory_range() const
@@ -666,7 +662,8 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(area_base<T>& area)
 		{
-			if (spp == 1) [[likely]] return;
+			if (spp == 1) [[likely]]
+				return;
 
 			area.x1 /= samples_x;
 			area.x2 /= samples_x;
@@ -677,7 +674,8 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(area_base<T>& area)
 		{
-			if (spp == 1) [[likely]] return;
+			if (spp == 1) [[likely]]
+				return;
 
 			area.x1 *= samples_x;
 			area.x2 *= samples_x;
@@ -688,7 +686,8 @@ namespace rsx
 		template <typename T>
 		void transform_samples_to_pixels(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (spp == 1) [[likely]] return;
+			if (spp == 1) [[likely]]
+				return;
 
 			x1 /= samples_x;
 			x2 /= samples_x;
@@ -699,7 +698,8 @@ namespace rsx
 		template <typename T>
 		void transform_pixels_to_samples(T& x1, T& x2, T& y1, T& y2)
 		{
-			if (spp == 1) [[likely]] return;
+			if (spp == 1) [[likely]]
+				return;
 
 			x1 *= samples_x;
 			x2 *= samples_x;
@@ -707,7 +707,7 @@ namespace rsx
 			y2 *= samples_y;
 		}
 
-		template<typename T>
+		template <typename T>
 		void transform_blit_coordinates(rsx::surface_access access_type, area_base<T>& region)
 		{
 			if (spp == 1 || sample_layout == rsx::surface_sample_layout::ps3)
@@ -765,7 +765,7 @@ namespace rsx
 
 			rsx_pitch = ref->get_rsx_pitch();
 			last_use_tag = ref->last_use_tag;
-			raster_type = ref->raster_type;     // Can't actually cut up swizzled data
+			raster_type = ref->raster_type; // Can't actually cut up swizzled data
 		}
 
 		bool is_locked() const
@@ -780,4 +780,4 @@ namespace rsx
 			return (texture_cache_metadata.timestamp < last_use_tag);
 		}
 	};
-}
+} // namespace rsx

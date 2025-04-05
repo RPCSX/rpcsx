@@ -110,7 +110,7 @@ protected:
 	}
 	void DisAsm_F1_R2(std::string_view op, u32 f0, u32 r0, u32 r1)
 	{
-		if(m_mode == cpu_disasm_mode::compiler_elf)
+		if (m_mode == cpu_disasm_mode::compiler_elf)
 		{
 			fmt::append(last_opcode, "%-*s f%d,r%d,r%d", PadOp(), op, f0, r0, r1);
 			return;
@@ -120,7 +120,7 @@ protected:
 	}
 	void DisAsm_F1_IMM_R1_RC(std::string_view op, u32 f0, s32 imm0, u32 r0, u32 rc)
 	{
-		if(m_mode == cpu_disasm_mode::compiler_elf)
+		if (m_mode == cpu_disasm_mode::compiler_elf)
 		{
 			fmt::append(last_opcode, "%-*s f%d,r%d,%s", PadOp(op, rc ? 1 : 0), op, f0, r0, SignedHex(imm0));
 			insert_char_if(op, !!rc);
@@ -208,7 +208,7 @@ protected:
 	}
 	void DisAsm_R2_IMM(std::string_view op, u32 r0, u32 r1, s32 imm0)
 	{
-		if(m_mode == cpu_disasm_mode::compiler_elf)
+		if (m_mode == cpu_disasm_mode::compiler_elf)
 		{
 			fmt::append(last_opcode, "%-*s r%d,r%d,%s", PadOp(), op, r0, r1, SignedHex(imm0));
 			return;

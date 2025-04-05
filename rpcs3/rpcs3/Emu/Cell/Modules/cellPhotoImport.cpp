@@ -13,31 +13,31 @@ LOG_CHANNEL(cellPhotoImportUtil, "cellPhotoImport");
 // Return Codes
 enum CellPhotoImportError : u32
 {
-	CELL_PHOTO_IMPORT_ERROR_BUSY         = 0x8002c701,
-	CELL_PHOTO_IMPORT_ERROR_INTERNAL     = 0x8002c702,
-	CELL_PHOTO_IMPORT_ERROR_PARAM        = 0x8002c703,
+	CELL_PHOTO_IMPORT_ERROR_BUSY = 0x8002c701,
+	CELL_PHOTO_IMPORT_ERROR_INTERNAL = 0x8002c702,
+	CELL_PHOTO_IMPORT_ERROR_PARAM = 0x8002c703,
 	CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR = 0x8002c704,
-	CELL_PHOTO_IMPORT_ERROR_COPY         = 0x8002c705,
-	CELL_PHOTO_IMPORT_ERROR_INITIALIZE   = 0x8002c706,
+	CELL_PHOTO_IMPORT_ERROR_COPY = 0x8002c705,
+	CELL_PHOTO_IMPORT_ERROR_INITIALIZE = 0x8002c706,
 };
 
-template<>
+template <>
 void fmt_class_string<CellPhotoImportError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_PHOTO_IMPORT_ERROR_BUSY);
-			STR_CASE(CELL_PHOTO_IMPORT_ERROR_INTERNAL);
-			STR_CASE(CELL_PHOTO_IMPORT_ERROR_PARAM);
-			STR_CASE(CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR);
-			STR_CASE(CELL_PHOTO_IMPORT_ERROR_COPY);
-			STR_CASE(CELL_PHOTO_IMPORT_ERROR_INITIALIZE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_PHOTO_IMPORT_ERROR_BUSY);
+				STR_CASE(CELL_PHOTO_IMPORT_ERROR_INTERNAL);
+				STR_CASE(CELL_PHOTO_IMPORT_ERROR_PARAM);
+				STR_CASE(CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR);
+				STR_CASE(CELL_PHOTO_IMPORT_ERROR_COPY);
+				STR_CASE(CELL_PHOTO_IMPORT_ERROR_INITIALIZE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 enum CellPhotoImportVersion : u32
@@ -47,10 +47,10 @@ enum CellPhotoImportVersion : u32
 
 enum
 {
-	CELL_PHOTO_IMPORT_HDD_PATH_MAX           = 1055,
+	CELL_PHOTO_IMPORT_HDD_PATH_MAX = 1055,
 	CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH = 64,
-	CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE    = 128,
-	CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE  = 1024
+	CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE = 128,
+	CELL_PHOTO_IMPORT_GAME_COMMENT_MAX_SIZE = 1024
 };
 
 enum CellPhotoImportFormatType
@@ -146,129 +146,129 @@ error_code select_photo(std::string dst_dir)
 		[&pi_manager, dst_dir](s32 status, utils::media_info info)
 		{
 			sysutil_register_cb([&pi_manager, dst_dir, info, status](ppu_thread& ppu) -> s32
-			{
-				*g_filedata_sub = {};
-				*g_filedata = {};
-
-				u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_CANCEL};
-
-				if (result == CELL_OK)
 				{
-					fs::stat_t f_info{};
+					*g_filedata_sub = {};
+					*g_filedata = {};
 
-					if (!fs::get_stat(info.path, f_info) || f_info.is_directory)
-					{
-						cellPhotoImportUtil.error("Path does not belong to a valid file: '%s'", info.path);
-						result = CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct ?
-						pi_manager.is_busy = false;
-						pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
-						return CELL_OK;
-					}
+					u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_CANCEL};
 
-					if (f_info.size > pi_manager.param.fileSizeMax)
+					if (result == CELL_OK)
 					{
-						cellPhotoImportUtil.error("File size is too large: %d (fileSizeMax=%d)", f_info.size, pi_manager.param.fileSizeMax);
-						result = CELL_PHOTO_IMPORT_ERROR_COPY; // TODO: is this correct ?
-						pi_manager.is_busy = false;
-						pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
-						return CELL_OK;
-					}
+						fs::stat_t f_info{};
 
-					const std::string filename = info.path.substr(info.path.find_last_of(fs::delim) + 1);
-					const std::string title = info.get_metadata("title", filename);
-					const std::string dst_path = dst_dir + "/" + filename;
-					std::string sub_type = info.sub_type;
+						if (!fs::get_stat(info.path, f_info) || f_info.is_directory)
+						{
+							cellPhotoImportUtil.error("Path does not belong to a valid file: '%s'", info.path);
+							result = CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct ?
+							pi_manager.is_busy = false;
+							pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
+							return CELL_OK;
+						}
 
-					strcpy_trunc(g_filedata->dstFileName, filename);
-					strcpy_trunc(g_filedata->photo_title, title);
-					strcpy_trunc(g_filedata->game_title, Emu.GetTitle());
-					strcpy_trunc(g_filedata->game_comment, ""); // TODO
+						if (f_info.size > pi_manager.param.fileSizeMax)
+						{
+							cellPhotoImportUtil.error("File size is too large: %d (fileSizeMax=%d)", f_info.size, pi_manager.param.fileSizeMax);
+							result = CELL_PHOTO_IMPORT_ERROR_COPY; // TODO: is this correct ?
+							pi_manager.is_busy = false;
+							pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
+							return CELL_OK;
+						}
 
-					g_filedata->data_sub = g_filedata_sub;
-					g_filedata->data_sub->width = info.width;
-					g_filedata->data_sub->height = info.height;
+						const std::string filename = info.path.substr(info.path.find_last_of(fs::delim) + 1);
+						const std::string title = info.get_metadata("title", filename);
+						const std::string dst_path = dst_dir + "/" + filename;
+						std::string sub_type = info.sub_type;
 
-					cellPhotoImportUtil.notice("Raw image data: filename='%s', title='%s', game='%s', sub_type='%s', width=%d, height=%d, orientation=%d ",
-						filename, title, Emu.GetTitle(), sub_type, info.width, info.height, info.orientation);
+						strcpy_trunc(g_filedata->dstFileName, filename);
+						strcpy_trunc(g_filedata->photo_title, title);
+						strcpy_trunc(g_filedata->game_title, Emu.GetTitle());
+						strcpy_trunc(g_filedata->game_comment, ""); // TODO
 
-					// Fallback to extension if necessary
-					if (sub_type.empty())
-					{
-						sub_type = get_file_extension(filename);
-					}
+						g_filedata->data_sub = g_filedata_sub;
+						g_filedata->data_sub->width = info.width;
+						g_filedata->data_sub->height = info.height;
 
-					if (!sub_type.empty())
-					{
-						sub_type = fmt::to_lower(sub_type);
-					}
+						cellPhotoImportUtil.notice("Raw image data: filename='%s', title='%s', game='%s', sub_type='%s', width=%d, height=%d, orientation=%d ",
+							filename, title, Emu.GetTitle(), sub_type, info.width, info.height, info.orientation);
 
-					if (sub_type == "jpg" || sub_type == "jpeg")
-					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_JPEG;
-					}
-					else if (sub_type == "png")
-					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_PNG;
-					}
-					else if (sub_type == "tif" || sub_type == "tiff")
-					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_TIFF;
-					}
-					else if (sub_type == "bmp")
-					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_BMP;
-					}
-					else if (sub_type == "gif")
-					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_GIF;
-					}
-					else if (sub_type == "mpo")
-					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_MPO;
+						// Fallback to extension if necessary
+						if (sub_type.empty())
+						{
+							sub_type = get_file_extension(filename);
+						}
+
+						if (!sub_type.empty())
+						{
+							sub_type = fmt::to_lower(sub_type);
+						}
+
+						if (sub_type == "jpg" || sub_type == "jpeg")
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_JPEG;
+						}
+						else if (sub_type == "png")
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_PNG;
+						}
+						else if (sub_type == "tif" || sub_type == "tiff")
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_TIFF;
+						}
+						else if (sub_type == "bmp")
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_BMP;
+						}
+						else if (sub_type == "gif")
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_GIF;
+						}
+						else if (sub_type == "mpo")
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_MPO;
+						}
+						else
+						{
+							g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_UNKNOWN;
+						}
+
+						switch (info.orientation)
+						{
+						default:
+						case CELL_SEARCH_ORIENTATION_UNKNOWN:
+						case CELL_SEARCH_ORIENTATION_TOP_LEFT:
+							g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_0;
+							break;
+						case CELL_SEARCH_ORIENTATION_TOP_RIGHT:
+							g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_90;
+							break;
+						case CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT:
+							g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_180;
+							break;
+						case CELL_SEARCH_ORIENTATION_BOTTOM_LEFT:
+							g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_270;
+							break;
+						}
+
+						cellPhotoImportUtil.notice("Media list dialog: Copying '%s' to '%s'...", info.path, dst_path);
+
+						if (!fs::copy_file(info.path, dst_path, false))
+						{
+							cellPhotoImportUtil.error("Failed to copy '%s' to '%s'. Error = '%s'", info.path, dst_path, fs::g_tls_error);
+							result = CELL_PHOTO_IMPORT_ERROR_COPY;
+						}
+
+						cellPhotoImportUtil.notice("Cell image data: dstFileName='%s', photo_title='%s', game_title='%s', format=%d, width=%d, height=%d, rotate=%d ",
+							g_filedata->dstFileName, g_filedata->photo_title, g_filedata->game_title, static_cast<s32>(g_filedata->data_sub->format), g_filedata->data_sub->width, g_filedata->data_sub->height, static_cast<s32>(g_filedata->data_sub->rotate));
 					}
 					else
 					{
-						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_UNKNOWN;
+						cellPhotoImportUtil.notice("Media list dialog was canceled");
 					}
 
-					switch (info.orientation)
-					{
-					default:
-					case CELL_SEARCH_ORIENTATION_UNKNOWN:
-					case CELL_SEARCH_ORIENTATION_TOP_LEFT:
-						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_0;
-						break;
-					case CELL_SEARCH_ORIENTATION_TOP_RIGHT:
-						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_90;
-						break;
-					case CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT:
-						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_180;
-						break;
-					case CELL_SEARCH_ORIENTATION_BOTTOM_LEFT:
-						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_270;
-						break;
-					}
-
-					cellPhotoImportUtil.notice("Media list dialog: Copying '%s' to '%s'...", info.path, dst_path);
-
-					if (!fs::copy_file(info.path, dst_path, false))
-					{
-						cellPhotoImportUtil.error("Failed to copy '%s' to '%s'. Error = '%s'", info.path, dst_path, fs::g_tls_error);
-						result = CELL_PHOTO_IMPORT_ERROR_COPY;
-					}
-
-					cellPhotoImportUtil.notice("Cell image data: dstFileName='%s', photo_title='%s', game_title='%s', format=%d, width=%d, height=%d, rotate=%d ",
-						g_filedata->dstFileName, g_filedata->photo_title, g_filedata->game_title, static_cast<s32>(g_filedata->data_sub->format), g_filedata->data_sub->width, g_filedata->data_sub->height, static_cast<s32>(g_filedata->data_sub->rotate));
-				}
-				else
-				{
-					cellPhotoImportUtil.notice("Media list dialog was canceled");
-				}
-
-				pi_manager.is_busy = false;
-				pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
-				return CELL_OK;
-			});
+					pi_manager.is_busy = false;
+					pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
+					return CELL_OK;
+				});
 		});
 
 	if (error != CELL_OK)
@@ -333,10 +333,10 @@ error_code cellPhotoImport2(u32 version, vm::cptr<char> dstHddPath, vm::ptr<Cell
 }
 
 DECLARE(ppu_module_manager::cellPhotoImportUtil)("cellPhotoImportUtil", []()
-{
-	REG_FUNC(cellPhotoImportUtil, cellPhotoImport);
-	REG_FUNC(cellPhotoImportUtil, cellPhotoImport2);
+	{
+		REG_FUNC(cellPhotoImportUtil, cellPhotoImport);
+		REG_FUNC(cellPhotoImportUtil, cellPhotoImport2);
 
-	REG_VAR(cellPhotoImportUtil, g_filedata_sub).flag(MFF_HIDDEN);
-	REG_VAR(cellPhotoImportUtil, g_filedata).flag(MFF_HIDDEN);
-});
+		REG_VAR(cellPhotoImportUtil, g_filedata_sub).flag(MFF_HIDDEN);
+		REG_VAR(cellPhotoImportUtil, g_filedata).flag(MFF_HIDDEN);
+	});

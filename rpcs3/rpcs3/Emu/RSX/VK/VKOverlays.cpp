@@ -53,17 +53,17 @@ namespace vk
 
 		if (m_num_uniform_buffers)
 		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_num_uniform_buffers });
+			descriptor_pool_sizes.push_back({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_num_uniform_buffers});
 		};
 
 		if (m_num_usable_samplers)
 		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_num_usable_samplers });
+			descriptor_pool_sizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_num_usable_samplers});
 		}
 
 		if (m_num_input_attachments)
 		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, m_num_input_attachments });
+			descriptor_pool_sizes.push_back({VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, m_num_input_attachments});
 		}
 
 		// Reserve descriptor pools
@@ -121,7 +121,7 @@ namespace vk
 	std::vector<vk::glsl::program_input> overlay_pass::get_vertex_inputs()
 	{
 		check_heap();
-		return{};
+		return {};
 	}
 
 	std::vector<vk::glsl::program_input> overlay_pass::get_fragment_inputs()
@@ -132,17 +132,17 @@ namespace vk
 		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding)
 		{
 			const std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, name });
+			fs_inputs.push_back({::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer, {}, {}, 0, name});
 		}
 
 		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "fs" + std::to_string(n) });
+			fs_inputs.push_back({::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture, {}, {}, binding, "fs" + std::to_string(n)});
 		}
 
 		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding)
 		{
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "sp" + std::to_string(n) });
+			fs_inputs.push_back({::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture, {}, {}, binding, "sp" + std::to_string(n)});
 		}
 
 		return fs_inputs;
@@ -182,8 +182,8 @@ namespace vk
 		dynamic_state_info.dynamicStateCount = ::size32(dynamic_state_descriptors);
 		dynamic_state_info.pDynamicStates = dynamic_state_descriptors.data();
 
-		VkVertexInputBindingDescription vb = { 0, 16, VK_VERTEX_INPUT_RATE_VERTEX };
-		VkVertexInputAttributeDescription via = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 0 };
+		VkVertexInputBindingDescription vb = {0, 16, VK_VERTEX_INPUT_RATE_VERTEX};
+		VkVertexInputAttributeDescription via = {0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 0};
 		VkPipelineVertexInputStateCreateInfo vi = {};
 		vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vi.vertexBindingDescriptionCount = 1;
@@ -223,7 +223,7 @@ namespace vk
 
 	void overlay_pass::load_program(vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
 	{
-		vk::glsl::program *program = nullptr;
+		vk::glsl::program* program = nullptr;
 		const auto key = get_pipeline_key(pass);
 
 		auto found = m_program_cache.find(key);
@@ -245,12 +245,12 @@ namespace vk
 
 		if (m_num_uniform_buffers > 0)
 		{
-			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, m_descriptor_set);
+			program->bind_uniform({m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u)}, 0, m_descriptor_set);
 		}
 
 		for (uint n = 0; n < src.size(); ++n)
 		{
-			VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
+			VkDescriptorImageInfo info = {m_sampler->value, src[n]->value, src[n]->image()->current_layout};
 			program->bind_uniform(info, "fs" + std::to_string(n), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_descriptor_set);
 		}
 
@@ -300,7 +300,7 @@ namespace vk
 	vk::framebuffer* overlay_pass::get_framebuffer(vk::image* target, VkRenderPass render_pass)
 	{
 		VkDevice dev = (*vk::get_current_renderer());
-		return vk::get_framebuffer(dev, target->width(), target->height(), m_num_input_attachments > 0, render_pass, { target });
+		return vk::get_framebuffer(dev, target->width(), target->height(), m_num_input_attachments > 0, render_pass, {target});
 	}
 
 	void overlay_pass::emit_geometry(vk::command_buffer& cmd)
@@ -319,7 +319,7 @@ namespace vk
 		vp.maxDepth = 1.f;
 		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
-		VkRect2D vs = { { static_cast<s32>(x), static_cast<s32>(y) }, { w, h } };
+		VkRect2D vs = {{static_cast<s32>(x), static_cast<s32>(y)}, {w, h}};
 		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &vs);
 	}
 
@@ -331,7 +331,7 @@ namespace vk
 		load_program(cmd, render_pass, src);
 		set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 
-		vk::begin_renderpass(cmd, render_pass, fbo->value, { positionu{0u, 0u}, sizeu{fbo->width(), fbo->height()} });
+		vk::begin_renderpass(cmd, render_pass, fbo->value, {positionu{0u, 0u}, sizeu{fbo->width(), fbo->height()}});
 		emit_geometry(cmd);
 	}
 
@@ -346,7 +346,7 @@ namespace vk
 
 	void overlay_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::image* target, vk::image_view* src, VkRenderPass render_pass)
 	{
-		std::vector<vk::image_view*> views = { src };
+		std::vector<vk::image_view*> views = {src};
 		run(cmd, viewport, target, views, render_pass);
 	}
 
@@ -354,25 +354,21 @@ namespace vk
 		: m_texture_type(rsx::overlays::texture_sampling_mode::none)
 	{
 		vs_src =
-		#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
-		;
+#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
+			;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
-		;
+#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
+			;
 
 		vs_src = fmt::replace_all(vs_src,
-		{
-			{ "%preprocessor", "// %preprocessor" },
-			{ "%push_block", "push_constant" }
-		});
+			{{"%preprocessor", "// %preprocessor"},
+				{"%push_block", "push_constant"}});
 
 		fs_src = fmt::replace_all(fs_src,
-		{
-			{ "%preprocessor", "// %preprocessor" },
-			{ "%push_block_offset", "layout(offset=68)" },
-			{ "%push_block", "push_constant" }
-		});
+			{{"%preprocessor", "// %preprocessor"},
+				{"%push_block_offset", "layout(offset=68)"},
+				{"%push_block", "push_constant"}});
 
 		// 2 input textures
 		m_num_usable_samplers = 2;
@@ -401,16 +397,14 @@ namespace vk
 
 		upload_heap.unmap();
 
-		const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layers };
-		VkBufferImageCopy region
-		{
+		const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layers};
+		VkBufferImageCopy region{
 			.bufferOffset = offset,
 			.bufferRowLength = w,
 			.bufferImageHeight = h,
-			.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, layers },
+			.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, layers},
 			.imageOffset = {},
-			.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u }
-		};
+			.imageExtent = {static_cast<u32>(w), static_cast<u32>(h), 1u}};
 		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
 		VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
@@ -455,7 +449,7 @@ namespace vk
 		auto& dev = cmd.get_command_pool().get_owner();
 		u64 storage_key = 1;
 
-		for (const auto &res : configuration.texture_raw_data)
+		for (const auto& res : configuration.texture_raw_data)
 		{
 			upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->get_data(), -1);
 		}
@@ -525,7 +519,7 @@ namespace vk
 		const std::vector<u8>& bytes = font->get_glyph_data();
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, image_size.width, image_size.height, image_size.depth,
-				true, false, bytes.data(), -1);
+			true, false, bytes.data(), -1);
 	}
 
 	vk::image_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
@@ -547,24 +541,18 @@ namespace vk
 		}
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h, 1,
-				false, true, desc->get_data(), owner_uid);
+			false, true, desc->get_data(), owner_uid);
 	}
 
 	std::vector<VkPushConstantRange> ui_overlay_renderer::get_push_constants()
 	{
-		return
-		{
-			{
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		return {
+			{.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 				.offset = 0,
-				.size = 68
-			},
-			{
-				.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+				.size = 68},
+			{.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
 				.offset = 68,
-				.size = 12
-			}
-		};
+				.size = 12}};
 	}
 
 	void ui_overlay_renderer::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
@@ -596,8 +584,8 @@ namespace vk
 
 		rsx::overlays::vertex_options vert_opts;
 		const auto vert_config = vert_opts
-			.disable_vertex_snap(m_disable_vertex_snap)
-			.get();
+		                             .disable_vertex_snap(m_disable_vertex_snap)
+		                             .get();
 		push_buf[16] = std::bit_cast<f32>(vert_config);
 
 		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
@@ -605,10 +593,10 @@ namespace vk
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts;
 		const auto frag_config = frag_opts
-			.texture_mode(m_texture_type)
-			.clip_fragments(m_clip_enabled)
-			.pulse_glow(m_pulse_glow)
-			.get();
+		                             .texture_mode(m_texture_type)
+		                             .clip_fragments(m_clip_enabled)
+		                             .pulse_glow(m_pulse_glow)
+		                             .get();
 
 		push_buf[0] = std::bit_cast<f32>(frag_config);
 		push_buf[1] = m_time;
@@ -623,21 +611,21 @@ namespace vk
 
 		switch (type)
 		{
-			case rsx::overlays::primitive_type::quad_list:
-			case rsx::overlays::primitive_type::triangle_strip:
-				renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
-				break;
-			case rsx::overlays::primitive_type::line_list:
-				renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
-				break;
-			case rsx::overlays::primitive_type::line_strip:
-				renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
-				break;
-			case rsx::overlays::primitive_type::triangle_fan:
-				renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
-				break;
-			default:
-				fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
+		case rsx::overlays::primitive_type::quad_list:
+		case rsx::overlays::primitive_type::triangle_strip:
+			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+			break;
+		case rsx::overlays::primitive_type::line_list:
+			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+			break;
+		case rsx::overlays::primitive_type::line_strip:
+			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
+			break;
+		case rsx::overlays::primitive_type::triangle_fan:
+			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN);
+			break;
+		default:
+			fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 		}
 	}
 
@@ -662,16 +650,14 @@ namespace vk
 	}
 
 	void ui_overlay_renderer::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
-			vk::data_heap& upload_heap, rsx::overlays::overlay& ui)
+		vk::data_heap& upload_heap, rsx::overlays::overlay& ui)
 	{
 		m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
-		m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
+		m_viewport = {{static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1)}, {static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height())}};
 
-		std::vector<vk::image_view*> image_views
-		{
+		std::vector<vk::image_view*> image_views{
 			vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D),
-			vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D_ARRAY)
-		};
+			vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D_ARRAY)};
 
 		if (ui.status_flags & rsx::overlays::status_bits::invalidate_image_cache)
 		{
@@ -706,9 +692,7 @@ namespace vk
 				break;
 			case rsx::overlays::image_resource_id::font_file:
 				src = find_font(command.config.font_ref, cmd, upload_heap);
-				m_texture_type = src->image()->layers() == 1
-					? rsx::overlays::texture_sampling_mode::font2D
-					: rsx::overlays::texture_sampling_mode::font3D;
+				m_texture_type = src->image()->layers() == 1 ? rsx::overlays::texture_sampling_mode::font2D : rsx::overlays::texture_sampling_mode::font3D;
 				break;
 			case rsx::overlays::image_resource_id::raw_image:
 				src = find_temp_image(static_cast<rsx::overlays::image_info_base*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
@@ -771,7 +755,7 @@ namespace vk
 		constant.offset = 0;
 		constant.size = 32;
 
-		return { constant };
+		return {constant};
 	}
 
 	void attachment_clear_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
@@ -807,11 +791,15 @@ namespace vk
 	{
 		region = rect;
 
-		color4f mask = { 0.f, 0.f, 0.f, 0.f };
-		if (clearmask & 0x10) mask.r = 1.f;
-		if (clearmask & 0x20) mask.g = 1.f;
-		if (clearmask & 0x40) mask.b = 1.f;
-		if (clearmask & 0x80) mask.a = 1.f;
+		color4f mask = {0.f, 0.f, 0.f, 0.f};
+		if (clearmask & 0x10)
+			mask.r = 1.f;
+		if (clearmask & 0x20)
+			mask.g = 1.f;
+		if (clearmask & 0x40)
+			mask.b = 1.f;
+		if (clearmask & 0x80)
+			mask.a = 1.f;
 
 		if (mask != colormask || color != clear_color)
 		{
@@ -826,7 +814,7 @@ namespace vk
 		renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
 		// Render fullscreen quad
-		overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target, std::vector<vk::image_view*>{}, render_pass);
+		overlay_pass::run(cmd, {0, 0, target->width(), target->height()}, target, std::vector<vk::image_view*>{}, render_pass);
 	}
 
 	stencil_clear_pass::stencil_clear_pass()
@@ -872,10 +860,10 @@ namespace vk
 
 		// Stencil setup. Replace all pixels in the scissor region with stencil_clear with the correct write mask.
 		renderpass_config.enable_stencil_test(
-			VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
-			VK_COMPARE_OP_ALWAYS,                                                 // Always pass
-			0xFF,                                                                 // Full write-through
-			stencil_clear);                                                       // Write active bit
+			VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, // Always replace
+			VK_COMPARE_OP_ALWAYS,                                                // Always pass
+			0xFF,                                                                // Full write-through
+			stencil_clear);                                                      // Write active bit
 
 		renderpass_config.set_stencil_mask(stencil_write_mask);
 		renderpass_config.set_depth_mask(false);
@@ -883,24 +871,24 @@ namespace vk
 		// Coverage sampling disabled, but actually report correct number of samples
 		renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
-		overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target, std::vector<vk::image_view*>{}, render_pass);
+		overlay_pass::run(cmd, {0, 0, target->width(), target->height()}, target, std::vector<vk::image_view*>{}, render_pass);
 	}
 
 	video_out_calibration_pass::video_out_calibration_pass()
 	{
 		vs_src =
-		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
-		;
+#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+			;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
-		;
+#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
+			;
 
 		std::pair<std::string_view, std::string> repl_list[] =
-		{
-			{ "%sampler_binding", fmt::format("(%d + x)", sampler_location(0)) },
-			{ "%set_decorator", "set=0" },
-		};
+			{
+				{"%sampler_binding", fmt::format("(%d + x)", sampler_location(0))},
+				{"%set_decorator", "set=0"},
+			};
 		fs_src = fmt::replace_all(fs_src, repl_list);
 
 		renderpass_config.set_depth_mask(false);
@@ -917,7 +905,7 @@ namespace vk
 		constant.offset = 0;
 		constant.size = 16;
 
-		return { constant };
+		return {constant};
 	}
 
 	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
@@ -929,7 +917,7 @@ namespace vk
 		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
 	{
 		config.gamma = gamma;
-		config.limit_range = limited_rgb? 1 : 0;
+		config.limit_range = limited_rgb ? 1 : 0;
 		config.stereo_display_mode = static_cast<u8>(stereo_mode);
 		config.stereo_image_count = std::min(::size32(src), 2u);
 
@@ -954,4 +942,4 @@ namespace vk
 			img->pop_layout(cmd);
 		}
 	}
-}
+} // namespace vk

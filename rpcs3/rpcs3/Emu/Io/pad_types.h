@@ -91,26 +91,26 @@ enum PortSettings
 enum Digital1Flags : u32
 {
 	CELL_PAD_CTRL_SELECT = 0x00000001,
-	CELL_PAD_CTRL_L3     = 0x00000002,
-	CELL_PAD_CTRL_R3     = 0x00000004,
-	CELL_PAD_CTRL_START  = 0x00000008,
-	CELL_PAD_CTRL_UP     = 0x00000010,
-	CELL_PAD_CTRL_RIGHT  = 0x00000020,
-	CELL_PAD_CTRL_DOWN   = 0x00000040,
-	CELL_PAD_CTRL_LEFT   = 0x00000080,
-	CELL_PAD_CTRL_PS     = 0x00000100,
+	CELL_PAD_CTRL_L3 = 0x00000002,
+	CELL_PAD_CTRL_R3 = 0x00000004,
+	CELL_PAD_CTRL_START = 0x00000008,
+	CELL_PAD_CTRL_UP = 0x00000010,
+	CELL_PAD_CTRL_RIGHT = 0x00000020,
+	CELL_PAD_CTRL_DOWN = 0x00000040,
+	CELL_PAD_CTRL_LEFT = 0x00000080,
+	CELL_PAD_CTRL_PS = 0x00000100,
 };
 
 enum Digital2Flags : u32
 {
-	CELL_PAD_CTRL_L2       = 0x00000001,
-	CELL_PAD_CTRL_R2       = 0x00000002,
-	CELL_PAD_CTRL_L1       = 0x00000004,
-	CELL_PAD_CTRL_R1       = 0x00000008,
+	CELL_PAD_CTRL_L2 = 0x00000001,
+	CELL_PAD_CTRL_R2 = 0x00000002,
+	CELL_PAD_CTRL_L1 = 0x00000004,
+	CELL_PAD_CTRL_R1 = 0x00000008,
 	CELL_PAD_CTRL_TRIANGLE = 0x00000010,
-	CELL_PAD_CTRL_CIRCLE   = 0x00000020,
-	CELL_PAD_CTRL_CROSS    = 0x00000040,
-	CELL_PAD_CTRL_SQUARE   = 0x00000080,
+	CELL_PAD_CTRL_CIRCLE = 0x00000020,
+	CELL_PAD_CTRL_CROSS = 0x00000040,
+	CELL_PAD_CTRL_SQUARE = 0x00000080,
 };
 
 enum
@@ -120,11 +120,11 @@ enum
 
 enum DeviceCapability
 {
-	CELL_PAD_CAPABILITY_PS3_CONFORMITY = 0x00000001, // PS3 Conformity Controller
-	CELL_PAD_CAPABILITY_PRESS_MODE = 0x00000002, // Press mode supported
-	CELL_PAD_CAPABILITY_SENSOR_MODE = 0x00000004, // Sensor mode supported
+	CELL_PAD_CAPABILITY_PS3_CONFORMITY = 0x00000001,  // PS3 Conformity Controller
+	CELL_PAD_CAPABILITY_PRESS_MODE = 0x00000002,      // Press mode supported
+	CELL_PAD_CAPABILITY_SENSOR_MODE = 0x00000004,     // Sensor mode supported
 	CELL_PAD_CAPABILITY_HP_ANALOG_STICK = 0x00000008, // High Precision analog stick
-	CELL_PAD_CAPABILITY_ACTUATOR = 0x00000010, // Motor supported
+	CELL_PAD_CAPABILITY_ACTUATOR = 0x00000010,        // Motor supported
 };
 
 enum DeviceType
@@ -137,20 +137,20 @@ enum DeviceType
 // Controller types
 enum
 {
-	CELL_PAD_PCLASS_TYPE_STANDARD   = 0x00,
-	CELL_PAD_PCLASS_TYPE_GUITAR     = 0x01,
-	CELL_PAD_PCLASS_TYPE_DRUM       = 0x02,
-	CELL_PAD_PCLASS_TYPE_DJ         = 0x03,
-	CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
+	CELL_PAD_PCLASS_TYPE_STANDARD = 0x00,
+	CELL_PAD_PCLASS_TYPE_GUITAR = 0x01,
+	CELL_PAD_PCLASS_TYPE_DRUM = 0x02,
+	CELL_PAD_PCLASS_TYPE_DJ = 0x03,
+	CELL_PAD_PCLASS_TYPE_DANCEMAT = 0x04,
 	CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
 	CELL_PAD_PCLASS_TYPE_SKATEBOARD = 0x8001,
 
 	// these are used together with pad->is_fake_pad to capture input events for usbd/gem/move without conflicting with cellPad
-	CELL_PAD_FAKE_TYPE_FIRST               = 0xa000,
-	CELL_PAD_FAKE_TYPE_GUNCON3             = 0xa000,
-	CELL_PAD_FAKE_TYPE_TOP_SHOT_ELITE      = 0xa001,
+	CELL_PAD_FAKE_TYPE_FIRST = 0xa000,
+	CELL_PAD_FAKE_TYPE_GUNCON3 = 0xa000,
+	CELL_PAD_FAKE_TYPE_TOP_SHOT_ELITE = 0xa001,
 	CELL_PAD_FAKE_TYPE_TOP_SHOT_FEARMASTER = 0xa002,
-	CELL_PAD_FAKE_TYPE_GAMETABLET          = 0xa003,
+	CELL_PAD_FAKE_TYPE_GAMETABLET = 0xa003,
 	CELL_PAD_FAKE_TYPE_LAST,
 
 	CELL_PAD_PCLASS_TYPE_MAX // last item
@@ -164,70 +164,70 @@ enum
 enum
 {
 	// Basic
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_1       = 0x00000001,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_2       = 0x00000002,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_3       = 0x00000004,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_4       = 0x00000008,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_5       = 0x00000010,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_UP     = 0x00000020,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_DOWN   = 0x00000040,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_WHAMMYBAR    = 0x00000080,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_1 = 0x00000001,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_2 = 0x00000002,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_3 = 0x00000004,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_4 = 0x00000008,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_5 = 0x00000010,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_UP = 0x00000020,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_STRUM_DOWN = 0x00000040,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_WHAMMYBAR = 0x00000080,
 	// All Basic                                = 0x000000FF
 
 	// Optional
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H1      = 0x00000100,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H2      = 0x00000200,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H3      = 0x00000400,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H4      = 0x00000800,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H5      = 0x00001000,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_5WAY_EFFECT  = 0x00002000,
-	CELL_PAD_PCLASS_PROFILE_GUITAR_TILT_SENS    = 0x00004000,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H1 = 0x00000100,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H2 = 0x00000200,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H3 = 0x00000400,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H4 = 0x00000800,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_FRET_H5 = 0x00001000,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_5WAY_EFFECT = 0x00002000,
+	CELL_PAD_PCLASS_PROFILE_GUITAR_TILT_SENS = 0x00004000,
 	// All                                      = 0x00007FFF
 };
 
 // Profile of a Drum Type Controller
 enum
 {
-	CELL_PAD_PCLASS_PROFILE_DRUM_SNARE     = 0x00000001,
-	CELL_PAD_PCLASS_PROFILE_DRUM_TOM       = 0x00000002,
-	CELL_PAD_PCLASS_PROFILE_DRUM_TOM2      = 0x00000004,
+	CELL_PAD_PCLASS_PROFILE_DRUM_SNARE = 0x00000001,
+	CELL_PAD_PCLASS_PROFILE_DRUM_TOM = 0x00000002,
+	CELL_PAD_PCLASS_PROFILE_DRUM_TOM2 = 0x00000004,
 	CELL_PAD_PCLASS_PROFILE_DRUM_TOM_FLOOR = 0x00000008,
-	CELL_PAD_PCLASS_PROFILE_DRUM_KICK      = 0x00000010,
+	CELL_PAD_PCLASS_PROFILE_DRUM_KICK = 0x00000010,
 	CELL_PAD_PCLASS_PROFILE_DRUM_CYM_HiHAT = 0x00000020,
 	CELL_PAD_PCLASS_PROFILE_DRUM_CYM_CRASH = 0x00000040,
-	CELL_PAD_PCLASS_PROFILE_DRUM_CYM_RIDE  = 0x00000080,
-	CELL_PAD_PCLASS_PROFILE_DRUM_KICK2     = 0x00000100,
+	CELL_PAD_PCLASS_PROFILE_DRUM_CYM_RIDE = 0x00000080,
+	CELL_PAD_PCLASS_PROFILE_DRUM_KICK2 = 0x00000100,
 	// All                                 = 0x000001FF
 };
 
 // Profile of a DJ Deck Type Controller
 enum
 {
-	CELL_PAD_PCLASS_PROFILE_DJ_MIXER_ATTACK     = 0x00000001,
+	CELL_PAD_PCLASS_PROFILE_DJ_MIXER_ATTACK = 0x00000001,
 	CELL_PAD_PCLASS_PROFILE_DJ_MIXER_CROSSFADER = 0x00000002,
-	CELL_PAD_PCLASS_PROFILE_DJ_MIXER_DSP_DIAL   = 0x00000004,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM1    = 0x00000008,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM2    = 0x00000010,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM3    = 0x00000020,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_PLATTER    = 0x00000040,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM1    = 0x00000080,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM2    = 0x00000100,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM3    = 0x00000200,
-	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_PLATTER    = 0x00000400,
+	CELL_PAD_PCLASS_PROFILE_DJ_MIXER_DSP_DIAL = 0x00000004,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM1 = 0x00000008,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM2 = 0x00000010,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_STREAM3 = 0x00000020,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK1_PLATTER = 0x00000040,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM1 = 0x00000080,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM2 = 0x00000100,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_STREAM3 = 0x00000200,
+	CELL_PAD_PCLASS_PROFILE_DJ_DECK2_PLATTER = 0x00000400,
 	// All                                      = 0x000007FF
 };
 
 // Profile of a Dance Mat Type Controller
 enum
 {
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_CIRCLE   = 0x00000001,
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_CROSS    = 0x00000002,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_CIRCLE = 0x00000001,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_CROSS = 0x00000002,
 	CELL_PAD_PCLASS_PROFILE_DANCEMAT_TRIANGLE = 0x00000004,
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_SQUARE   = 0x00000008,
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_RIGHT    = 0x00000010,
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_LEFT     = 0x00000020,
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_UP       = 0x00000040,
-	CELL_PAD_PCLASS_PROFILE_DANCEMAT_DOWN     = 0x00000080,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_SQUARE = 0x00000008,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_RIGHT = 0x00000010,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_LEFT = 0x00000020,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_UP = 0x00000040,
+	CELL_PAD_PCLASS_PROFILE_DANCEMAT_DOWN = 0x00000080,
 	// All                                    = 0x000000FF
 };
 
@@ -263,63 +263,63 @@ enum ButtonDataOffset
 enum CellPadPeriphGuitarBtnDataOffset
 {
 	// Basic
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_1      = 24,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_2      = 25,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_3      = 26,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_4      = 27,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_5      = 28,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_UP    = 29,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_DOWN  = 30,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_WHAMMYBAR   = 31, // 128-255
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_1 = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_2 = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_3 = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_4 = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_5 = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_UP = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_DOWN = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_WHAMMYBAR = 31, // 128-255
 
 	// Optional
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H1     = 32, // ROCKBAND Stratocaster
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H2     = 33,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H3     = 34,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H4     = 35,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H5     = 36,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H1 = 32, // ROCKBAND Stratocaster
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H2 = 33,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H3 = 34,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H4 = 35,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H5 = 36,
 	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_5WAY_EFFECT = 37,
-	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_TILT_SENS   = 38,
+	CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_TILT_SENS = 38,
 };
 
 enum CellPadPeriphDrumBtnDataOffset
 {
-	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_SNARE     = 24,
-	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM       = 25,
-	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM2      = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_SNARE = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM2 = 26,
 	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM_FLOOR = 27,
-	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK      = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK = 28,
 	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_HiHAT = 29,
 	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_CRASH = 30,
-	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_RIDE  = 31,
-	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK2     = 32,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_RIDE = 31,
+	CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK2 = 32,
 };
 
 enum CellPadPeriphDJBtnDataOffset
 {
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_ATTACK     = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_ATTACK = 24,
 	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_CROSSFADER = 25,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_DSP_DIAL   = 26,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM1    = 27,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM2    = 28,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM3    = 29,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_PLATTER    = 30,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM1    = 31,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM2    = 32,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM3    = 33,
-	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_PLATTER    = 34,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_DSP_DIAL = 26,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM1 = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM2 = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM3 = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_PLATTER = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM1 = 31,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM2 = 32,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM3 = 33,
+	CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_PLATTER = 34,
 };
 
 enum CellPadPeriphDanceMatBtnDataOffset
 {
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CIRCLE   = 24,
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CROSS    = 25,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CIRCLE = 24,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CROSS = 25,
 	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_TRIANGLE = 26,
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_SQUARE   = 27,
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_RIGHT    = 28,
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_LEFT     = 29,
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_UP       = 30,
-	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_DOWN     = 31,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_SQUARE = 27,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_RIGHT = 28,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_LEFT = 29,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_UP = 30,
+	CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_DOWN = 31,
 };
 
 enum
@@ -346,18 +346,18 @@ static constexpr u16 DEFAULT_MOTION_G = 512;
 // Fake helper enum
 enum PressurePiggybackFlags : u32
 {
-	CELL_PAD_CTRL_PRESS_RIGHT    = CELL_PAD_BTN_OFFSET_PRESS_RIGHT,
-	CELL_PAD_CTRL_PRESS_LEFT     = CELL_PAD_BTN_OFFSET_PRESS_LEFT,
-	CELL_PAD_CTRL_PRESS_UP       = CELL_PAD_BTN_OFFSET_PRESS_UP,
-	CELL_PAD_CTRL_PRESS_DOWN     = CELL_PAD_BTN_OFFSET_PRESS_DOWN,
+	CELL_PAD_CTRL_PRESS_RIGHT = CELL_PAD_BTN_OFFSET_PRESS_RIGHT,
+	CELL_PAD_CTRL_PRESS_LEFT = CELL_PAD_BTN_OFFSET_PRESS_LEFT,
+	CELL_PAD_CTRL_PRESS_UP = CELL_PAD_BTN_OFFSET_PRESS_UP,
+	CELL_PAD_CTRL_PRESS_DOWN = CELL_PAD_BTN_OFFSET_PRESS_DOWN,
 	CELL_PAD_CTRL_PRESS_TRIANGLE = CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE,
-	CELL_PAD_CTRL_PRESS_CIRCLE   = CELL_PAD_BTN_OFFSET_PRESS_CIRCLE,
-	CELL_PAD_CTRL_PRESS_CROSS    = CELL_PAD_BTN_OFFSET_PRESS_CROSS,
-	CELL_PAD_CTRL_PRESS_SQUARE   = CELL_PAD_BTN_OFFSET_PRESS_SQUARE,
-	CELL_PAD_CTRL_PRESS_L1       = CELL_PAD_BTN_OFFSET_PRESS_L1,
-	CELL_PAD_CTRL_PRESS_R1       = CELL_PAD_BTN_OFFSET_PRESS_R1,
-	CELL_PAD_CTRL_PRESS_L2       = CELL_PAD_BTN_OFFSET_PRESS_L2,
-	CELL_PAD_CTRL_PRESS_R2       = CELL_PAD_BTN_OFFSET_PRESS_R2,
+	CELL_PAD_CTRL_PRESS_CIRCLE = CELL_PAD_BTN_OFFSET_PRESS_CIRCLE,
+	CELL_PAD_CTRL_PRESS_CROSS = CELL_PAD_BTN_OFFSET_PRESS_CROSS,
+	CELL_PAD_CTRL_PRESS_SQUARE = CELL_PAD_BTN_OFFSET_PRESS_SQUARE,
+	CELL_PAD_CTRL_PRESS_L1 = CELL_PAD_BTN_OFFSET_PRESS_L1,
+	CELL_PAD_CTRL_PRESS_R1 = CELL_PAD_BTN_OFFSET_PRESS_R1,
+	CELL_PAD_CTRL_PRESS_L2 = CELL_PAD_BTN_OFFSET_PRESS_L2,
+	CELL_PAD_CTRL_PRESS_R2 = CELL_PAD_BTN_OFFSET_PRESS_R2,
 };
 
 constexpr u32 special_button_offset = 666; // Must not conflict with other CELL offsets like ButtonDataOffset
@@ -374,18 +374,16 @@ struct Button
 	u32 m_offset = 0;
 	std::set<u32> m_key_codes{};
 	u32 m_outKeyCode = 0;
-	u16 m_value    = 0;
+	u16 m_value = 0;
 	bool m_pressed = false;
 
 	u16 m_actual_value = 0;              // only used in keyboard_pad_handler
-	bool m_analog      = false;          // only used in keyboard_pad_handler
-	bool m_trigger     = false;          // only used in keyboard_pad_handler
+	bool m_analog = false;               // only used in keyboard_pad_handler
+	bool m_trigger = false;              // only used in keyboard_pad_handler
 	std::map<u32, u16> m_pressed_keys{}; // only used in keyboard_pad_handler
 
 	Button(u32 offset, std::set<u32> key_codes, u32 outKeyCode)
-		: m_offset(offset)
-		, m_key_codes(std::move(key_codes))
-		, m_outKeyCode(outKeyCode)
+		: m_offset(offset), m_key_codes(std::move(key_codes)), m_outKeyCode(outKeyCode)
 	{
 		if (offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
@@ -397,7 +395,7 @@ struct Button
 		else if (offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
 			if (outKeyCode == CELL_PAD_CTRL_CROSS || outKeyCode == CELL_PAD_CTRL_CIRCLE || outKeyCode == CELL_PAD_CTRL_SQUARE || outKeyCode == CELL_PAD_CTRL_TRIANGLE || outKeyCode == CELL_PAD_CTRL_L1 ||
-			    outKeyCode == CELL_PAD_CTRL_R1)
+				outKeyCode == CELL_PAD_CTRL_R1)
 			{
 				m_analog = true;
 			}
@@ -421,10 +419,9 @@ struct AnalogStick
 
 	AnalogStick() {}
 	AnalogStick(u32 offset, std::set<u32> key_codes_min, std::set<u32> key_codes_max)
-		: m_offset(offset)
-		, m_key_codes_min(std::move(key_codes_min))
-		, m_key_codes_max(std::move(key_codes_max))
-	{}
+		: m_offset(offset), m_key_codes_min(std::move(key_codes_min)), m_key_codes_max(std::move(key_codes_max))
+	{
+	}
 };
 
 struct AnalogSensor
@@ -437,12 +434,9 @@ struct AnalogSensor
 
 	AnalogSensor() {}
 	AnalogSensor(u32 offset, u32 key_code, b8 mirrored, s16 shift, u16 value)
-		: m_offset(offset)
-		, m_keyCode(key_code)
-		, m_mirrored(mirrored)
-		, m_shift(shift)
-		, m_value(value)
-	{}
+		: m_offset(offset), m_keyCode(key_code), m_mirrored(mirrored), m_shift(shift), m_value(value)
+	{
+	}
 };
 
 struct VibrateMotor
@@ -452,9 +446,9 @@ struct VibrateMotor
 
 	VibrateMotor() {}
 	VibrateMotor(bool is_large_motor, u8 value)
-		: m_is_large_motor(is_large_motor)
-		, m_value(value)
-	{}
+		: m_is_large_motor(is_large_motor), m_value(value)
+	{
+	}
 };
 
 struct ps_move_data
@@ -473,14 +467,14 @@ struct ps_move_data
 	bool magnetometer_enabled = false;
 	bool orientation_enabled = false;
 
-	static constexpr std::array<f32, 4> default_quaternion { 1.0f, 0.0f, 0.0f, 0.0f };
+	static constexpr std::array<f32, 4> default_quaternion{1.0f, 0.0f, 0.0f, 0.0f};
 	std::array<f32, 4> quaternion = default_quaternion; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
-	f32 accelerometer_x = 0.0f; // linear velocity in m/s²
-	f32 accelerometer_y = 0.0f; // linear velocity in m/s²
-	f32 accelerometer_z = 0.0f; // linear velocity in m/s²
-	f32 gyro_x = 0.0f; // angular velocity in rad/s
-	f32 gyro_y = 0.0f; // angular velocity in rad/s
-	f32 gyro_z = 0.0f; // angular velocity in rad/s
+	f32 accelerometer_x = 0.0f;                         // linear velocity in m/s²
+	f32 accelerometer_y = 0.0f;                         // linear velocity in m/s²
+	f32 accelerometer_z = 0.0f;                         // linear velocity in m/s²
+	f32 gyro_x = 0.0f;                                  // angular velocity in rad/s
+	f32 gyro_y = 0.0f;                                  // angular velocity in rad/s
+	f32 gyro_z = 0.0f;                                  // angular velocity in rad/s
 	f32 magnetometer_x = 0.0f;
 	f32 magnetometer_y = 0.0f;
 	f32 magnetometer_z = 0.0f;
@@ -506,17 +500,17 @@ struct Pad
 
 	u64 m_disconnection_timer{0};
 
-	s32 m_pressure_intensity_button_index{-1}; // Special button index. -1 if not set.
+	s32 m_pressure_intensity_button_index{-1};  // Special button index. -1 if not set.
 	bool m_pressure_intensity_button_pressed{}; // Last sensitivity button press state, used for toggle.
-	bool m_pressure_intensity_toggled{}; // Whether the sensitivity is toggled on or off.
-	u8 m_pressure_intensity{127}; // 0-255
-	bool m_adjust_pressure_last{}; // only used in keyboard_pad_handler
+	bool m_pressure_intensity_toggled{};        // Whether the sensitivity is toggled on or off.
+	u8 m_pressure_intensity{127};               // 0-255
+	bool m_adjust_pressure_last{};              // only used in keyboard_pad_handler
 	bool get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id);
 
-	s32 m_analog_limiter_button_index{-1}; // Special button index. -1 if not set.
+	s32 m_analog_limiter_button_index{-1};  // Special button index. -1 if not set.
 	bool m_analog_limiter_button_pressed{}; // Last sensitivity button press state, used for toggle.
-	bool m_analog_limiter_toggled{}; // Whether the sensitivity is toggled on or off.
-	bool m_analog_limiter_enabled_last{}; // only used in keyboard_pad_handler
+	bool m_analog_limiter_toggled{};        // Whether the sensitivity is toggled on or off.
+	bool m_analog_limiter_enabled_last{};   // only used in keyboard_pad_handler
 	bool get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id);
 
 	s32 m_orientation_reset_button_index{-1}; // Special button index. -1 if not set.
@@ -573,11 +567,7 @@ struct Pad
 	ps_move_data move_data{};
 
 	explicit Pad(pad_handler handler, u32 player_id, u32 port_status, u32 device_capability, u32 device_type)
-		: m_pad_handler(handler)
-		, m_player_id(player_id)
-		, m_port_status(port_status)
-		, m_device_capability(device_capability)
-		, m_device_type(device_type)
+		: m_pad_handler(handler), m_player_id(player_id), m_port_status(port_status), m_device_capability(device_capability), m_device_type(device_type)
 	{
 	}
 

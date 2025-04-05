@@ -3,12 +3,11 @@
 #include "sys_event.h"
 #include "Emu/Memory/vm_ptr.h"
 
-
 // Timer State
 enum : u32
 {
 	SYS_TIMER_STATE_STOP = 0,
-	SYS_TIMER_STATE_RUN  = 1,
+	SYS_TIMER_STATE_RUN = 1,
 };
 
 struct sys_timer_information_t
@@ -48,13 +47,13 @@ struct lv2_timer : lv2_obj
 		{
 			info.timer_state = state;
 			info.next_expire = expire;
-			info.period      = period;
+			info.period = period;
 		}
 		else
 		{
 			info.timer_state = SYS_TIMER_STATE_STOP;
 			info.next_expire = 0;
-			info.period      = 0;
+			info.period = 0;
 		}
 	}
 

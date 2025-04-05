@@ -22,13 +22,13 @@ struct UsbTransfer;
 // Usb descriptors
 enum : u8
 {
-	USB_DESCRIPTOR_DEVICE       = 0x01,
-	USB_DESCRIPTOR_CONFIG       = 0x02,
-	USB_DESCRIPTOR_STRING       = 0x03,
-	USB_DESCRIPTOR_INTERFACE    = 0x04,
-	USB_DESCRIPTOR_ENDPOINT     = 0x05,
-	USB_DESCRIPTOR_HID          = 0x21,
-	USB_DESCRIPTOR_ACI          = 0x24,
+	USB_DESCRIPTOR_DEVICE = 0x01,
+	USB_DESCRIPTOR_CONFIG = 0x02,
+	USB_DESCRIPTOR_STRING = 0x03,
+	USB_DESCRIPTOR_INTERFACE = 0x04,
+	USB_DESCRIPTOR_ENDPOINT = 0x05,
+	USB_DESCRIPTOR_HID = 0x21,
+	USB_DESCRIPTOR_ACI = 0x24,
 	USB_DESCRIPTOR_ENDPOINT_ASI = 0x25,
 };
 
@@ -92,21 +92,21 @@ struct UsbTransfer
 	u32 transfer_id = 0;
 
 	s32 result = 0;
-	u32 count  = 0;
+	u32 count = 0;
 	UsbDeviceIsoRequest iso_request{};
 
 	std::vector<u8> setup_buf;
 	libusb_transfer* transfer = nullptr;
-	bool busy                 = false;
+	bool busy = false;
 
 	// For control transfers
-	u8 *control_destbuf = nullptr;
+	u8* control_destbuf = nullptr;
 
 	// For fake transfers
-	bool fake           = false;
-	u64 expected_time   = 0;
+	bool fake = false;
+	u64 expected_time = 0;
 	s32 expected_result = 0;
-	u32 expected_count  = 0;
+	u32 expected_count = 0;
 };
 
 // Usb descriptor helper
@@ -163,7 +163,8 @@ struct UsbDescriptorNode
 		for (const auto& node : subnodes)
 		{
 			const u32 remaining = max_size - size;
-			if (remaining == 0) break;
+			if (remaining == 0)
+				break;
 			size += node.write_data(ptr + size, remaining);
 		}
 		return size;
@@ -186,8 +187,8 @@ public:
 	virtual bool set_interface(u8 int_num);
 
 	virtual void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) = 0;
-	virtual void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)                                                     = 0;
-	virtual void isochronous_transfer(UsbTransfer* transfer)                                                                                        = 0;
+	virtual void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) = 0;
+	virtual void isochronous_transfer(UsbTransfer* transfer) = 0;
 
 public:
 	// device ID if the device has been ldded(0 otherwise)
@@ -196,7 +197,7 @@ public:
 	UsbDescriptorNode device;
 
 protected:
-	u8 current_config    = 1;
+	u8 current_config = 1;
 	u8 current_interface = 0;
 	std::array<u8, 7> location{};
 
@@ -223,7 +224,7 @@ protected:
 	void send_libusb_transfer(libusb_transfer* transfer);
 
 protected:
-	libusb_device* lusb_device        = nullptr;
+	libusb_device* lusb_device = nullptr;
 	libusb_device_handle* lusb_handle = nullptr;
 };
 

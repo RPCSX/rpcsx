@@ -6,13 +6,14 @@
 #include <QDialog>
 #include <QTableWidget>
 
-//Used to display the information of a savedata.
-class save_data_info_dialog :public QDialog
+// Used to display the information of a savedata.
+class save_data_info_dialog : public QDialog
 {
 	Q_OBJECT
 
 public:
 	explicit save_data_info_dialog(SaveDataEntry save, QWidget* parent = nullptr);
+
 private:
 	void UpdateData();
 

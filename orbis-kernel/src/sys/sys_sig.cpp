@@ -140,14 +140,15 @@ orbis::SysResult orbis::sys_sigreturn(Thread *thread, ptr<UContext> sigcntxp) {
   ORBIS_LOG_WARNING(__FUNCTION__, sigcntxp);
 
   // auto sigRet = thread->sigReturns.front();
-  // thread->sigReturns.erase(thread->sigReturns.begin(), thread->sigReturns.begin() + 1);
-  // writeRegister(thread->context, RegisterId::rip, sigRet.rip);
-  // writeRegister(thread->context, RegisterId::rsp, sigRet.rsp);
-  // ORBIS_LOG_ERROR(__FUNCTION__, sigRet.rip, sigRet.rsp);
+  // thread->sigReturns.erase(thread->sigReturns.begin(),
+  // thread->sigReturns.begin() + 1); writeRegister(thread->context,
+  // RegisterId::rip, sigRet.rip); writeRegister(thread->context,
+  // RegisterId::rsp, sigRet.rsp); ORBIS_LOG_ERROR(__FUNCTION__, sigRet.rip,
+  // sigRet.rsp);
   return {};
 }
 
 orbis::SysResult orbis::nosys(Thread *thread) {
   thread->sendSignal(kSigSys);
-  return{};
+  return {};
 }

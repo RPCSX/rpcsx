@@ -36,24 +36,24 @@ namespace stx
 				while (true)
 				{
 					auto [val, ok] = _this->m_state.fetch_op([](u32& value)
-					{
-						if (value == 0)
 						{
-							value = 1;
-							return true;
-						}
-
-						if constexpr (Forced()())
-						{
-							if (value & c_init_bit)
+							if (value == 0)
 							{
-								value -= c_init_bit - 1;
+								value = 1;
 								return true;
 							}
-						}
 
-						return false;
-					});
+							if constexpr (Forced()())
+							{
+								if (value & c_init_bit)
+								{
+									value -= c_init_bit - 1;
+									return true;
+								}
+							}
+
+							return false;
+						});
 
 					if (val == 0)
 					{
@@ -266,16 +266,16 @@ namespace stx
 				: _this(&mtx)
 			{
 				auto [val, ok] = _this->m_state.fetch_op([](u32& value)
-				{
-					if (value & c_init_bit)
 					{
-						// Add "access lock"
-						value += 1;
-						return true;
-					}
+						if (value & c_init_bit)
+						{
+							// Add "access lock"
+							value += 1;
+							return true;
+						}
 
-					return false;
-				});
+						return false;
+					});
 
 				if (!ok)
 				{
@@ -337,4 +337,4 @@ namespace stx
 	using init_lock = init_mutex::init_lock;
 	using reset_lock = init_mutex::reset_lock;
 	using access_lock = init_mutex::access_lock;
-}
+} // namespace stx

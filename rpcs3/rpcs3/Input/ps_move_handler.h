@@ -11,30 +11,30 @@ namespace reports
 	struct ps_move_input_report_common
 	{
 		//                                      ID    Size   Description
-		u8 report_id{};                      // 0x00    1    HID Report ID (always 0x01)
-		u8 buttons_1{};                      // 0x01    1    Buttons 1 (Start, Select)
-		u8 buttons_2{};                      // 0x02    1    Buttons 2 (X, Square, Circle, Triangle)
-		u8 buttons_3{};                      // 0x03    1+   Buttons 3 (PS, Move, T) and EXT
-		u8 sequence_number{};                // 0x04    1-   Sequence number
-		u8 trigger_1{};                      // 0x05    1    T button values (1st half-frame)
-		u8 trigger_2{};                      // 0x06    1    T button values (2nd half-frame)
-		u32 magic{};                         // 0x07    4    always 0x7F7F7F7F
-		u8 timestamp_upper{};                // 0x0B    1    Timestamp (upper byte)
-		u8 battery_level{};                  // 0x0C    1    Battery level. 0x05 = max, 0xEE = USB charging
-		s16 accel_x_1{};                     // 0x0D    2    X-axis accelerometer (1st half-frame)
-		s16 accel_y_1{};                     // 0x0F    2    Z-axis accelerometer (1st half-frame)
-		s16 accel_z_1{};                     // 0x11    2    Y-axis accelerometer (1st half-frame)
-		s16 accel_x_2{};                     // 0x13    2    X-axis accelerometer (2nd half-frame)
-		s16 accel_y_2{};                     // 0x15    2    Z-axis accelerometer (2nd half-frame)
-		s16 accel_z_2{};                     // 0x17    2    Y-axis accelerometer (2nd half-frame)
-		s16 gyro_x_1{};                      // 0x19    2    X-axis gyroscope (1st half-frame)
-		s16 gyro_y_1{};                      // 0x1B    2    Z-axis gyroscope (1st half-frame)
-		s16 gyro_z_1{};                      // 0x1D    2    Y-axis gyroscope (1st half-frame)
-		s16 gyro_x_2{};                      // 0x1F    2    X-axis gyroscope (2nd half-frame)
-		s16 gyro_y_2{};                      // 0x21    2    Z-axis gyroscope (2nd half-frame)
-		s16 gyro_z_2{};                      // 0x23    2    Y-axis gyroscope (2nd half-frame)
-		u8 temperature{};                    // 0x25    1+   Temperature
-		u8 magnetometer_x{};                 // 0x26    1+   Temperature + X-axis magnetometer
+		u8 report_id{};       // 0x00    1    HID Report ID (always 0x01)
+		u8 buttons_1{};       // 0x01    1    Buttons 1 (Start, Select)
+		u8 buttons_2{};       // 0x02    1    Buttons 2 (X, Square, Circle, Triangle)
+		u8 buttons_3{};       // 0x03    1+   Buttons 3 (PS, Move, T) and EXT
+		u8 sequence_number{}; // 0x04    1-   Sequence number
+		u8 trigger_1{};       // 0x05    1    T button values (1st half-frame)
+		u8 trigger_2{};       // 0x06    1    T button values (2nd half-frame)
+		u32 magic{};          // 0x07    4    always 0x7F7F7F7F
+		u8 timestamp_upper{}; // 0x0B    1    Timestamp (upper byte)
+		u8 battery_level{};   // 0x0C    1    Battery level. 0x05 = max, 0xEE = USB charging
+		s16 accel_x_1{};      // 0x0D    2    X-axis accelerometer (1st half-frame)
+		s16 accel_y_1{};      // 0x0F    2    Z-axis accelerometer (1st half-frame)
+		s16 accel_z_1{};      // 0x11    2    Y-axis accelerometer (1st half-frame)
+		s16 accel_x_2{};      // 0x13    2    X-axis accelerometer (2nd half-frame)
+		s16 accel_y_2{};      // 0x15    2    Z-axis accelerometer (2nd half-frame)
+		s16 accel_z_2{};      // 0x17    2    Y-axis accelerometer (2nd half-frame)
+		s16 gyro_x_1{};       // 0x19    2    X-axis gyroscope (1st half-frame)
+		s16 gyro_y_1{};       // 0x1B    2    Z-axis gyroscope (1st half-frame)
+		s16 gyro_z_1{};       // 0x1D    2    Y-axis gyroscope (1st half-frame)
+		s16 gyro_x_2{};       // 0x1F    2    X-axis gyroscope (2nd half-frame)
+		s16 gyro_y_2{};       // 0x21    2    Z-axis gyroscope (2nd half-frame)
+		s16 gyro_z_2{};       // 0x23    2    Y-axis gyroscope (2nd half-frame)
+		u8 temperature{};     // 0x25    1+   Temperature
+		u8 magnetometer_x{};  // 0x26    1+   Temperature + X-axis magnetometer
 	};
 #pragma pack(pop)
 
@@ -59,9 +59,9 @@ namespace reports
 		ps_move_input_report_common common{};
 
 		//                                      ID    Size   Description
-		u16 timestamp2;                      // 0x27    2    same as common timestamp
-		u16 unk;                             // 0x29    2    Unknown
-		u8 timestamp_lower;                  // 0x2B    1    Timestamp (lower byte)
+		u16 timestamp2;     // 0x27    2    same as common timestamp
+		u16 unk;            // 0x29    2    Unknown
+		u8 timestamp_lower; // 0x2B    1    Timestamp (lower byte)
 	};
 #pragma pack(pop)
 
@@ -95,7 +95,7 @@ namespace reports
 	{
 		std::array<u8, std::max(PSMOVE_ZCM1_CALIBRATION_BLOB_SIZE, PSMOVE_ZCM2_CALIBRATION_BLOB_SIZE)> data{};
 	};
-}
+} // namespace reports
 
 enum
 {

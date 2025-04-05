@@ -31,8 +31,8 @@ namespace np
 		}
 
 		joinDate.tick = sce_member->joinDate.tick;
-		memberId      = sce_member->memberId;
-		teamId        = sce_member->teamId;
+		memberId = sce_member->memberId;
+		teamId = sce_member->teamId;
 		if (sce_member->roomGroup)
 		{
 			group_id = sce_member->roomGroup->groupId;
@@ -42,7 +42,7 @@ namespace np
 			group_id = 0;
 		}
 
-		natType  = sce_member->natType;
+		natType = sce_member->natType;
 		flagAttr = sce_member->flagAttr;
 
 		for (u32 i = 0; i < sce_member->roomMemberBinAttrInternalNum; i++)
@@ -53,7 +53,7 @@ namespace np
 
 	void room_cache::update(const SceNpMatching2RoomDataInternal* sce_roomdata)
 	{
-		num_slots     = sce_roomdata->maxSlot;
+		num_slots = sce_roomdata->maxSlot;
 		mask_password = sce_roomdata->passwordSlotMask;
 
 		groups.clear();
@@ -139,20 +139,20 @@ namespace np
 		{
 			join_mask |= (1ull << ((member.first >> 4) - 1));
 		}
-		slots.joinedSlotMask   = join_mask;
+		slots.joinedSlotMask = join_mask;
 		slots.passwordSlotMask = room.mask_password;
 
 		u64 joinable_slot_mask = (static_cast<u64>(1) << room.num_slots) - 1;
-		u16 num_private_slots  = std::popcount(room.mask_password & joinable_slot_mask);
-		u16 num_public_slots   = room.num_slots - num_private_slots;
+		u16 num_private_slots = std::popcount(room.mask_password & joinable_slot_mask);
+		u16 num_public_slots = room.num_slots - num_private_slots;
 
-		slots.publicSlotNum  = num_public_slots;
+		slots.publicSlotNum = num_public_slots;
 		slots.privateSlotNum = num_private_slots;
 
 		u16 open_private_slots = num_private_slots - std::popcount(join_mask & room.mask_password);
-		u16 open_public_slots  = num_public_slots - std::popcount(join_mask & (~room.mask_password));
+		u16 open_public_slots = num_public_slots - std::popcount(join_mask & (~room.mask_password));
 
-		slots.openPublicSlotNum  = open_public_slots;
+		slots.openPublicSlotNum = open_public_slots;
 		slots.openPrivateSlotNum = open_private_slots;
 
 		return {CELL_OK, slots};
@@ -242,10 +242,10 @@ namespace np
 			memset(ptr_member, 0, sizeof(SceNpMatching2RoomMemberDataInternal));
 			memcpy(&ptr_member->userInfo.npId, &member.userInfo.npId, sizeof(SceNpId));
 			ptr_member->joinDate.tick = member.joinDate.tick;
-			ptr_member->memberId      = member.memberId;
-			ptr_member->teamId        = member.teamId;
-			ptr_member->natType       = member.natType;
-			ptr_member->flagAttr      = member.flagAttr;
+			ptr_member->memberId = member.memberId;
+			ptr_member->teamId = member.teamId;
+			ptr_member->natType = member.natType;
+			ptr_member->flagAttr = member.flagAttr;
 		}
 
 		u32 needed_data_size = 0;
@@ -310,7 +310,7 @@ namespace np
 		if (num_binattrs)
 		{
 			ptr_member->roomMemberBinAttrInternal.set(mem.allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * num_binattrs));
-			ptr_member->roomMemberBinAttrInternalNum         = num_binattrs;
+			ptr_member->roomMemberBinAttrInternalNum = num_binattrs;
 			SceNpMatching2RoomMemberBinAttrInternal* bin_ptr = ptr_member->roomMemberBinAttrInternal.get_ptr();
 
 			u32 actual_cnt = 0;
@@ -320,8 +320,8 @@ namespace np
 				{
 					const auto& bin = ::at32(member.bins, binattrs_list[i]);
 					bin_ptr[actual_cnt].updateDate.tick = bin.updateDate.tick;
-					bin_ptr[actual_cnt].data.id         = bin.id;
-					bin_ptr[actual_cnt].data.size       = ::size32(bin.data);
+					bin_ptr[actual_cnt].data.id = bin.id;
+					bin_ptr[actual_cnt].data.size = ::size32(bin.data);
 					bin_ptr[actual_cnt].data.ptr.set(mem.allocate(::size32(bin.data)));
 					std::memcpy(bin_ptr[actual_cnt].data.ptr.get_ptr(), bin.data.data(), bin.data.size());
 					actual_cnt++;

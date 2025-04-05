@@ -8,14 +8,14 @@ template <>
 void fmt_class_string<CellRemotePlayError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellRemotePlayError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_REMOTEPLAY_ERROR_INTERNAL);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_REMOTEPLAY_ERROR_INTERNAL);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellRemotePlayGetStatus()
@@ -72,15 +72,14 @@ error_code cellRemotePlayBreak()
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::cellRemotePlay)("cellRemotePlay", []()
-{
-	REG_FUNC(cellRemotePlay, cellRemotePlayGetStatus);
-	REG_FUNC(cellRemotePlay, cellRemotePlaySetComparativeVolume);
-	REG_FUNC(cellRemotePlay, cellRemotePlayGetPeerInfo);
-	REG_FUNC(cellRemotePlay, cellRemotePlayGetSharedMemory);
-	REG_FUNC(cellRemotePlay, cellRemotePlayEncryptAllData);
-	REG_FUNC(cellRemotePlay, cellRemotePlayStopPeerVideoOut);
-	REG_FUNC(cellRemotePlay, cellRemotePlayGetComparativeVolume);
-	REG_FUNC(cellRemotePlay, cellRemotePlayBreak);
-});
+	{
+		REG_FUNC(cellRemotePlay, cellRemotePlayGetStatus);
+		REG_FUNC(cellRemotePlay, cellRemotePlaySetComparativeVolume);
+		REG_FUNC(cellRemotePlay, cellRemotePlayGetPeerInfo);
+		REG_FUNC(cellRemotePlay, cellRemotePlayGetSharedMemory);
+		REG_FUNC(cellRemotePlay, cellRemotePlayEncryptAllData);
+		REG_FUNC(cellRemotePlay, cellRemotePlayStopPeerVideoOut);
+		REG_FUNC(cellRemotePlay, cellRemotePlayGetComparativeVolume);
+		REG_FUNC(cellRemotePlay, cellRemotePlayBreak);
+	});

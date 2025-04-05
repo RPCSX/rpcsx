@@ -21,18 +21,18 @@ enum sys_rsx_error : s32
 	SYS_RSX_CONTEXT_ATTRIBUTE_ERROR = -17
 };
 
-template<>
+template <>
 void fmt_class_string<sys_rsx_error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-		STR_CASE(SYS_RSX_CONTEXT_ATTRIBUTE_ERROR);
-		}
+			switch (error)
+			{
+				STR_CASE(SYS_RSX_CONTEXT_ATTRIBUTE_ERROR);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 static u64 rsx_timeStamp()
@@ -265,7 +265,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	*lpar_driver_info = dma_address + 0x100000;
 	*lpar_reports = dma_address + 0x200000;
 
-	auto &reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports));
+	auto& reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports));
 	std::memset(&reports, 0, sizeof(RsxReports));
 
 	for (usz i = 0; i < std::size(reports.notify); ++i)
@@ -286,7 +286,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 		reports.report[i].pad = -1;
 	}
 
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(vm::cast(*lpar_driver_info));
+	auto& driverInfo = vm::_ref<RsxDriverInfo>(vm::cast(*lpar_driver_info));
 
 	std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
 
@@ -303,16 +303,15 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	render->driver_info = vm::cast(*lpar_driver_info);
 
-	auto &dmaControl = vm::_ref<RsxDmaControl>(vm::cast(*lpar_dma_control));
+	auto& dmaControl = vm::_ref<RsxDmaControl>(vm::cast(*lpar_dma_control));
 	dmaControl.get = 0;
 	dmaControl.put = 0;
 	dmaControl.ref = 0; // Set later to -1 by cellGcmSys
 
-	if ((false/*system_mode & something*/ || g_cfg.video.decr_memory_layout)
-		&& g_cfg.core.debug_console_mode)
-		rsx::get_current_renderer()->main_mem_size = 0x20000000; //512MB
+	if ((false /*system_mode & something*/ || g_cfg.video.decr_memory_layout) && g_cfg.core.debug_console_mode)
+		rsx::get_current_renderer()->main_mem_size = 0x20000000; // 512MB
 	else
-		rsx::get_current_renderer()->main_mem_size = 0x10000000; //256MB
+		rsx::get_current_renderer()->main_mem_size = 0x10000000; // 256MB
 
 	vm::var<sys_event_queue_attribute_t, vm::page_allocator<>> attr;
 	attr->protocol = SYS_SYNC_PRIORITY;
@@ -445,7 +444,8 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 		// TODO: Investigate relaxed memory ordering
 		const u32 prev_ea = table.ea[io + i];
 		table.ea[io + i].release((ea + i) << 20);
-		if (prev_ea + 1) table.io[prev_ea >> 20].release(-1); // Clear previous mapping if exists
+		if (prev_ea + 1)
+			table.io[prev_ea >> 20].release(-1); // Clear previous mapping if exists
 		table.io[ea + i].release((io + i) << 20);
 	}
 
@@ -467,7 +467,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 
 	const auto render = rsx::get_current_renderer();
 
 	if (!size || size & 0xFFFFF || io & 0xFFFFF || context_id != 0x55555555 ||
-			render->main_mem_size < io + u64{size})
+		render->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
@@ -487,7 +487,8 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 
 
 		const u32 ea_entry = table.ea[io];
 		table.ea[io++].release(-1);
-		if (ea_entry + 1) table.io[ea_entry >> 20].release(-1);
+		if (ea_entry + 1)
+			table.io[ea_entry >> 20].release(-1);
 	}
 
 	return CELL_OK;
@@ -519,15 +520,15 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	if (!render->dma_address)
 	{
-		return { CELL_EINVAL, "dma_address is 0" };
+		return {CELL_EINVAL, "dma_address is 0"};
 	}
 
 	if (context_id != 0x55555555)
 	{
-		return { CELL_EINVAL, "context_id is 0x%x", context_id };
+		return {CELL_EINVAL, "context_id is 0x%x", context_id};
 	}
 
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(render->driver_info);
+	auto& driverInfo = vm::_ref<RsxDriverInfo>(render->driver_info);
 	switch (package_id)
 	{
 	case 0x001: // FIFO
@@ -683,9 +684,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		ensure(a3 < 2);
 
 		driverInfo.head[a3].flipFlags.atomic_op([&](be_t<u32>& flipStatus)
-		{
-			flipStatus = (flipStatus & static_cast<u32>(a4)) | static_cast<u32>(a5);
-		});
+			{
+				flipStatus = (flipStatus & static_cast<u32>(a4)) | static_cast<u32>(a5);
+			});
 		break;
 	}
 	case 0x10D: // Called by cellGcmInitCursor
@@ -693,10 +694,10 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	case 0x300: // Tiles
 	{
-		//a4 high bits = ret.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31);
-		//a4 low bits = ret.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31);
-		//a5 high bits = ret.pitch = (pitch / 0x100) << 8;
-		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
+		// a4 high bits = ret.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31);
+		// a4 low bits = ret.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31);
+		// a5 high bits = ret.pitch = (pitch / 0x100) << 8;
+		// a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
 		ensure(a3 < std::size(render->tiles));
 
@@ -713,7 +714,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u32 pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
 		const u32 comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
 		const u32 base = (a5 & 0xFFFFFFFF) & 0x7FF;
-		//const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
+		// const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
 		const bool bound = ((a4 >> 32) & 0x3) != 0;
 
 		const auto range = utils::address_range::start_length(offset, size);
@@ -722,7 +723,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		{
 			if (!size || !pitch)
 			{
-				return { CELL_EINVAL, "size or pitch are 0 (size=%d, pitch=%d)", size, pitch };
+				return {CELL_EINVAL, "size or pitch are 0 (size=%d, pitch=%d)", size, pitch};
 			}
 
 			u32 limit = -1;
@@ -736,7 +737,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			if (!range.valid() || range.end >= limit)
 			{
-				return { CELL_EINVAL, "range invalid (valid=%d, end=%d, limit=%d)", range.valid(), range.end, limit };
+				return {CELL_EINVAL, "range invalid (valid=%d, end=%d, limit=%d)", range.valid(), range.end, limit};
 			}
 
 			// Hardcoded value in gcm
@@ -758,7 +759,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			{
 				if (render->iomap_table.ea[io] == umax)
 				{
-					return { CELL_EINVAL, "iomap_table ea is umax" };
+					return {CELL_EINVAL, "iomap_table ea is umax"};
 				}
 			}
 		}
@@ -775,12 +776,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	}
 	case 0x301: // Depth-buffer (Z-cull)
 	{
-		//a4 high = region = (1 << 0) | (zFormat << 4) | (aaFormat << 8);
-		//a4 low = size = ((width >> 6) << 22) | ((height >> 6) << 6);
-		//a5 high = start = cullStart&(~0xFFF);
-		//a5 low = offset = offset;
-		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
-		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
+		// a4 high = region = (1 << 0) | (zFormat << 4) | (aaFormat << 8);
+		// a4 low = size = ((width >> 6) << 22) | ((height >> 6) << 6);
+		// a5 high = start = cullStart&(~0xFFF);
+		// a5 low = offset = offset;
+		// a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
+		// a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
 
 		if (a3 >= std::size(render->zculls))
 		{
@@ -806,7 +807,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			// width and height are not allowed to be zero (checked by range.valid())
 			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= render->local_mem_size)
 			{
-				return { CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, render->local_mem_size };
+				return {CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, render->local_mem_size};
 			}
 
 			if (a5 & 0xF0000000)
@@ -821,7 +822,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		std::lock_guard lock(render->sys_rsx_mtx);
 
-		auto &zcull = render->zculls[a3];
+		auto& zcull = render->zculls[a3];
 
 		zcull.zFormat = ((a4 >> 32) >> 4) & 0xF;
 		zcull.aaFormat = ((a4 >> 32) >> 8) & 0xF;
@@ -872,7 +873,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (cpu_thread::get_current<ppu_thread>())
 		{
 			// VBLANK/RSX thread only
-			return { CELL_EINVAL, "wrong thread" };
+			return {CELL_EINVAL, "wrong thread"};
 		}
 
 		// NOTE: There currently seem to only be 2 active heads on PS3
@@ -880,14 +881,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		driverInfo.head[a3].lastSecondVTime.atomic_op([&](be_t<u64>& time)
-		{
-			a4 = std::max<u64>(a4, time + 1);
-			time = a4;
-		});
+			{
+				a4 = std::max<u64>(a4, time + 1);
+				time = a4;
+			});
 
 		// Time point is supplied in argument 4 (todo: convert it to MFTB rate and use it)
 		const u64 current_time = rsx_timeStamp();
-
 
 		// Note: not atomic
 		driverInfo.head[a3].lastVTimeLow = static_cast<u32>(current_time);
@@ -915,7 +915,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	}
 
 	default:
-		return { CELL_EINVAL, "unsupported package id %d", package_id };
+		return {CELL_EINVAL, "unsupported package id %d", package_id};
 	}
 
 	return CELL_OK;

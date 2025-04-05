@@ -66,5 +66,5 @@ namespace rsx
 			update_animation_frame(compiled_resources);
 			return compiled_resources;
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

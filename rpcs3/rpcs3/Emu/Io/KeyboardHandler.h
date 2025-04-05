@@ -11,15 +11,15 @@
 
 enum QtKeys
 {
-	Key_Shift      = 0x01000020,
-	Key_Control    = 0x01000021,
-	Key_Meta       = 0x01000022,
-	Key_Alt        = 0x01000023,
-	Key_CapsLock   = 0x01000024,
-	Key_NumLock    = 0x01000025,
+	Key_Shift = 0x01000020,
+	Key_Control = 0x01000021,
+	Key_Meta = 0x01000022,
+	Key_Alt = 0x01000023,
+	Key_CapsLock = 0x01000024,
+	Key_NumLock = 0x01000025,
 	Key_ScrollLock = 0x01000026,
-	Key_Super_L    = 0x01000053,
-	Key_Super_R    = 0x01000054
+	Key_Super_L = 0x01000053,
+	Key_Super_R = 0x01000054
 };
 
 // See https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
@@ -34,7 +34,7 @@ enum native_key : u32
 	alt_r = 0xE038,
 	meta_l = 0xE05B,
 	meta_r = 0xE05C,
-#elif defined (__APPLE__)
+#elif defined(__APPLE__)
 	ctrl_l = 0x3B,  // kVK_Control
 	ctrl_r = 0x3E,  // kVK_RightControl
 	shift_l = 0x38, // kVK_Shift
@@ -72,9 +72,7 @@ struct KbButton
 
 	KbButton() = default;
 	KbButton(u32 keyCode, u32 outKeyCode, bool pressed = false)
-		: m_keyCode(keyCode)
-		, m_outKeyCode(outKeyCode)
-		, m_pressed(pressed)
+		: m_keyCode(keyCode), m_outKeyCode(outKeyCode), m_pressed(pressed)
 	{
 	}
 };
@@ -126,12 +124,30 @@ public:
 
 	static bool IsMetaKey(u32 code);
 
-	KbInfo& GetInfo() { return m_info; }
-	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
-	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
-	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
-	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
-	identifier id() const { return m_id; }
+	KbInfo& GetInfo()
+	{
+		return m_info;
+	}
+	std::vector<Keyboard>& GetKeyboards()
+	{
+		return m_keyboards;
+	}
+	KbData& GetData(const u32 keyboard)
+	{
+		return m_keyboards[keyboard].m_data;
+	}
+	KbExtraData& GetExtraData(const u32 keyboard)
+	{
+		return m_keyboards[keyboard].m_extra_data;
+	}
+	KbConfig& GetConfig(const u32 keyboard)
+	{
+		return m_keyboards[keyboard].m_config;
+	}
+	identifier id() const
+	{
+		return m_id;
+	}
 
 	void ReleaseAllKeys();
 

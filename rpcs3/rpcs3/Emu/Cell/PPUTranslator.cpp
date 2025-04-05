@@ -29,9 +29,7 @@ extern const ppu_decoder<ppu_itype> g_ppu_itype;
 extern const ppu_decoder<ppu_iname> g_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module<lv2_obj>& info, ExecutionEngine& engine)
-	: cpu_translator(_module, false)
-	, m_info(info)
-	, m_pure_attr()
+	: cpu_translator(_module, false), m_info(info), m_pure_attr()
 {
 	// Bind context
 	cpu_translator::initialize(context, engine);
@@ -44,10 +42,10 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		// Base reg table definition
 		// Assume all functions named __0x... are PPU functions and take the m_exec as the first arg
 		std::vector<std::pair<std::string, aarch64::gpr>> base_reg_lookup = {
-			{ "__0x", aarch64::x20 }, // PPU blocks
-			{ "__indirect", aarch64::x20 }, // Indirect jumps
-			{ "ppu_", aarch64::x19 }, // Fixed JIT helpers (e.g ppu_gateway)
-			{ "__", aarch64::x19 }    // Probably link table entries
+			{"__0x", aarch64::x20},       // PPU blocks
+			{"__indirect", aarch64::x20}, // Indirect jumps
+			{"ppu_", aarch64::x19},       // Fixed JIT helpers (e.g ppu_gateway)
+			{"__", aarch64::x19}          // Probably link table entries
 		};
 
 		// Build list of imposter functions built by the patch manager.
@@ -59,14 +57,13 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		}
 
 		aarch64::GHC_frame_preservation_pass::config_t config =
-		{
-			.debug_info = false,         // Set to "true" to insert debug frames on x27
-			.use_stack_frames = false,   // We don't need this since the PPU GW allocates global scratch on the stack
-			.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
-			.exclusion_callback = {},    // Unused, we don't have special exclusion functions on PPU
-			.base_register_lookup = base_reg_lookup,
-			.faux_function_list = std::move(faux_functions_list)
-		};
+			{
+				.debug_info = false,       // Set to "true" to insert debug frames on x27
+				.use_stack_frames = false, // We don't need this since the PPU GW allocates global scratch on the stack
+				.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
+				.exclusion_callback = {}, // Unused, we don't have special exclusion functions on PPU
+				.base_register_lookup = base_reg_lookup,
+				.faux_function_list = std::move(faux_functions_list)};
 
 		// Create transform pass
 		std::unique_ptr<translator_pass> ghc_fixup_pass = std::make_unique<aarch64::GHC_frame_preservation_pass>(config);
@@ -85,19 +82,19 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	thread_struct.emplace_back(ArrayType::get(GetType<char>(), off0));
 	thread_struct.emplace_back(GetType<u32>()); // state
 	thread_struct.emplace_back(ArrayType::get(GetType<char>(), off1 - off0 - 4));
-	thread_struct.insert(thread_struct.end(), 32, GetType<u64>()); // gpr[0..31]
-	thread_struct.insert(thread_struct.end(), 32, GetType<f64>()); // fpr[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<u64>());    // gpr[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<f64>());    // fpr[0..31]
 	thread_struct.insert(thread_struct.end(), 32, GetType<u32[4]>()); // vr[0..31]
-	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // cr[0..31]
-	thread_struct.insert(thread_struct.end(), 32, GetType<bool>()); // fpscr
-	thread_struct.insert(thread_struct.end(), 2, GetType<u64>()); // lr, ctr
-	thread_struct.insert(thread_struct.end(), 2, GetType<u32>()); // vrsave, cia
-	thread_struct.insert(thread_struct.end(), 3, GetType<bool>()); // so, ov, ca
-	thread_struct.insert(thread_struct.end(), 1, GetType<u8>()); // cnt
-	thread_struct.insert(thread_struct.end(), 1, GetType<bool>()); // nj
-	thread_struct.emplace_back(ArrayType::get(GetType<char>(), 3)); // Padding
-	thread_struct.insert(thread_struct.end(), 1, GetType<u32[4]>()); // sat
-	thread_struct.insert(thread_struct.end(), 1, GetType<u32>()); // jm_mask
+	thread_struct.insert(thread_struct.end(), 32, GetType<bool>());   // cr[0..31]
+	thread_struct.insert(thread_struct.end(), 32, GetType<bool>());   // fpscr
+	thread_struct.insert(thread_struct.end(), 2, GetType<u64>());     // lr, ctr
+	thread_struct.insert(thread_struct.end(), 2, GetType<u32>());     // vrsave, cia
+	thread_struct.insert(thread_struct.end(), 3, GetType<bool>());    // so, ov, ca
+	thread_struct.insert(thread_struct.end(), 1, GetType<u8>());      // cnt
+	thread_struct.insert(thread_struct.end(), 1, GetType<bool>());    // nj
+	thread_struct.emplace_back(ArrayType::get(GetType<char>(), 3));   // Padding
+	thread_struct.insert(thread_struct.end(), 1, GetType<u32[4]>());  // sat
+	thread_struct.insert(thread_struct.end(), 1, GetType<u32>());     // jm_mask
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
@@ -125,14 +122,14 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 			// Comment out types we haven't confirmed as used and working
 			case 10:
 			case 11:
-			// case 12:
-			// case 13:
-			// case 26:
-			// case 28:
-			{
-				ppu_log.notice("Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
-				continue;
-			}
+				// case 12:
+				// case 13:
+				// case 26:
+				// case 28:
+				{
+					ppu_log.notice("Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
+					continue;
+				}
 
 			// Ignore 64-bit relocations
 			case 20:
@@ -240,7 +237,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 	const auto body = BasicBlock::Create(m_context, "__body", m_function);
 
-	//Call(GetType<void>(), "__trace", GetAddr());
+	// Call(GetType<void>(), "__trace", GetAddr());
 	if (need_check)
 	{
 		// Check status register in the entry block
@@ -327,7 +324,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	ensure(m_module->getFunction("__resolve_symbols") == nullptr);
 	ensure(info.jit_bounds);
 
-	m_function = cast<Function>(m_module->getOrInsertFunction("__resolve_symbols", FunctionType::get(get_type<void>(), { get_type<u8*>(), get_type<u64>() }, false)).getCallee());
+	m_function = cast<Function>(m_module->getOrInsertFunction("__resolve_symbols", FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u64>()}, false)).getCallee());
 
 	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
 	m_ir = &irb;
@@ -339,14 +336,15 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	m_seg0 = m_function->getArg(1);
 
 	const auto ftype = FunctionType::get(get_type<void>(), {
-		get_type<u8*>(), // Exec base
-		GetContextType()->getPointerTo(), // PPU context
-		get_type<u64>(), // Segment address (for PRX)
-		get_type<u8*>(), // Memory base
-		get_type<u64>(), // r0
-		get_type<u64>(), // r1
-		get_type<u64>(), // r2
-		}, false);
+															   get_type<u8*>(),                  // Exec base
+															   GetContextType()->getPointerTo(), // PPU context
+															   get_type<u64>(),                  // Segment address (for PRX)
+															   get_type<u8*>(),                  // Memory base
+															   get_type<u64>(),                  // r0
+															   get_type<u64>(),                  // r1
+															   get_type<u64>(),                  // r2
+														   },
+		false);
 
 	// Store function addresses in PPU jumptable using internal resolving instead of patching it externally.
 	// Because, LLVM processed it extremely slow. (regression)
@@ -750,7 +748,8 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 
 	if (!m_is_be)
 	{
-		std::vector<u32> data; data.reserve(indices.size());
+		std::vector<u32> data;
+		data.reserve(indices.size());
 
 		const u32 mask = cast<FixedVectorType>(type)->getNumElements() - 1;
 
@@ -763,7 +762,7 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 		return m_ir->CreateShuffleVector(left, right, ConstantDataVector::get(m_context, data));
 	}
 
-	return m_ir->CreateShuffleVector(left, right, ConstantDataVector::get(m_context, { indices.begin(), indices.end() }));
+	return m_ir->CreateShuffleVector(left, right, ConstantDataVector::get(m_context, {indices.begin(), indices.end()}));
 }
 
 Value* PPUTranslator::SExt(Value* value, Type* type)
@@ -945,7 +944,6 @@ void PPUTranslator::CompilationError(const std::string& error)
 	ppu_log.error("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
 }
 
-
 void PPUTranslator::MFVSCR(ppu_opcode_t op)
 {
 	const auto vsat = g_cfg.core.ppu_set_sat_bit ? ZExt(IsNotZero(RegLoad(m_sat)), GetType<u32>()) : m_ir->getInt32(0);
@@ -1109,7 +1107,8 @@ void PPUTranslator::VCMPBFP(ppu_opcode_t op)
 	const auto nge = sext<s32[4]>(fcmp_uno(a < -b)) & 0x4000'0000;
 	const auto r = eval(nle | nge);
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, m_ir->getFalse(), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, m_ir->getFalse(), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQFP(ppu_opcode_t op)
@@ -1117,7 +1116,8 @@ void PPUTranslator::VCMPEQFP(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 	const auto r = eval(sext<s32[4]>(fcmp_ord(a == b)));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQUB(ppu_opcode_t op)
@@ -1125,7 +1125,8 @@ void PPUTranslator::VCMPEQUB(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
 	const auto r = eval(sext<s8[16]>(a == b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQUH(ppu_opcode_t op)
@@ -1133,7 +1134,8 @@ void PPUTranslator::VCMPEQUH(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
 	const auto r = eval(sext<s16[8]>(a == b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQUW(ppu_opcode_t op)
@@ -1141,7 +1143,8 @@ void PPUTranslator::VCMPEQUW(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
 	const auto r = eval(sext<s32[4]>(a == b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGEFP(ppu_opcode_t op)
@@ -1149,7 +1152,8 @@ void PPUTranslator::VCMPGEFP(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 	const auto r = eval(sext<s32[4]>(fcmp_ord(a >= b)));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTFP(ppu_opcode_t op)
@@ -1157,7 +1161,8 @@ void PPUTranslator::VCMPGTFP(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 	const auto r = eval(sext<s32[4]>(fcmp_ord(a > b)));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTSB(ppu_opcode_t op)
@@ -1165,7 +1170,8 @@ void PPUTranslator::VCMPGTSB(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<s8[16]>(op.va, op.vb);
 	const auto r = eval(sext<s8[16]>(a > b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTSH(ppu_opcode_t op)
@@ -1173,7 +1179,8 @@ void PPUTranslator::VCMPGTSH(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
 	const auto r = eval(sext<s16[8]>(a > b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTSW(ppu_opcode_t op)
@@ -1181,7 +1188,8 @@ void PPUTranslator::VCMPGTSW(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
 	const auto r = eval(sext<s32[4]>(a > b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTUB(ppu_opcode_t op)
@@ -1189,7 +1197,8 @@ void PPUTranslator::VCMPGTUB(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
 	const auto r = eval(sext<s8[16]>(a > b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTUH(ppu_opcode_t op)
@@ -1197,7 +1206,8 @@ void PPUTranslator::VCMPGTUH(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
 	const auto r = eval(sext<s16[8]>(a > b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTUW(ppu_opcode_t op)
@@ -1205,7 +1215,8 @@ void PPUTranslator::VCMPGTUW(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
 	const auto r = eval(sext<s32[4]>(a > b));
 	set_vr(op.vd, r);
-	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
+	if (op.oe)
+		SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCTSXS(ppu_opcode_t op)
@@ -1218,7 +1229,7 @@ void PPUTranslator::VCTSXS(ppu_opcode_t op)
 	const auto sat_h = fcmp_ord(scaled >= fsplat<f32[4]>(std::pow(2, 31)));
 	value_t<s32[4]> converted = eval(fpcast<s32[4]>(select(sat_l, const1, scaled)));
 	if (g_cfg.core.ppu_fix_vnan)
-		converted = eval(select(is_nan, splat<s32[4]>(0), converted));  // NaN -> 0
+		converted = eval(select(is_nan, splat<s32[4]>(0), converted)); // NaN -> 0
 	set_vr(op.vd, select(sat_h, splat<s32[4]>(0x7fff'ffff), converted));
 	set_sat(sext<s32[4]>(sat_l) | sext<s32[4]>(sat_h));
 }
@@ -1785,7 +1796,6 @@ void PPUTranslator::VSEL(ppu_opcode_t op)
 			return;
 		}
 
-
 		bool sel_8 = true;
 		for (u32 i = 0; i < 16; i++)
 		{
@@ -1798,7 +1808,7 @@ void PPUTranslator::VSEL(ppu_opcode_t op)
 
 		if (sel_8)
 		{
-			set_vr(op.vd, select(bitcast<s8[16]>(c) != 0,get_vr<u8[16]>(op.vb), get_vr<u8[16]>(op.va)));
+			set_vr(op.vd, select(bitcast<s8[16]>(c) != 0, get_vr<u8[16]>(op.vb), get_vr<u8[16]>(op.va)));
 			return;
 		}
 	}
@@ -2189,7 +2199,8 @@ void PPUTranslator::ADDIC(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, imm);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, imm));
-	if (op.main & 1) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.main & 1)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ADDI(ppu_opcode_t op)
@@ -2257,14 +2268,14 @@ void PPUTranslator::SC(ppu_opcode_t op)
 		if (index < 1024)
 		{
 			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
-			//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
+			// Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 			m_ir->CreateRetVoid();
 			return;
 		}
 	}
 
 	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
-	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
+	// Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 	m_ir->CreateRetVoid();
 }
 
@@ -2424,7 +2435,8 @@ void PPUTranslator::RLWIMI(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLWINM(ppu_opcode_t op)
@@ -2475,7 +2487,8 @@ void PPUTranslator::RLWINM(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLWNM(ppu_opcode_t op)
@@ -2506,7 +2519,8 @@ void PPUTranslator::RLWNM(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ORI(ppu_opcode_t op)
@@ -2583,7 +2597,8 @@ void PPUTranslator::RLDICL(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLDICR(ppu_opcode_t op)
@@ -2610,7 +2625,8 @@ void PPUTranslator::RLDICR(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLDIC(ppu_opcode_t op)
@@ -2636,7 +2652,8 @@ void PPUTranslator::RLDIC(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLDIMI(ppu_opcode_t op)
@@ -2668,7 +2685,8 @@ void PPUTranslator::RLDIMI(ppu_opcode_t op)
 	}
 
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLDCL(ppu_opcode_t op)
@@ -2678,7 +2696,8 @@ void PPUTranslator::RLDCL(ppu_opcode_t op)
 
 	const auto result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs), GetGpr(op.rb)), mask);
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::RLDCR(ppu_opcode_t op)
@@ -2688,7 +2707,8 @@ void PPUTranslator::RLDCR(ppu_opcode_t op)
 
 	const auto result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs), GetGpr(op.rb)), mask);
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::CMP(ppu_opcode_t op)
@@ -2728,8 +2748,10 @@ void PPUTranslator::SUBFC(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(b, a);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULE(result, b));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::ADDC(ppu_opcode_t op)
@@ -2739,12 +2761,13 @@ void PPUTranslator::ADDC(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, b);
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, b));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 
 	if (op.oe)
 	{
-		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
-		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		// const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
+		// SetOverflow(m_ir->CreateExtractValue(s, {1}));
 		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, m_ir->CreateNot(b)), m_ir->CreateXor(a, result)), m_ir->getInt64(0)));
 	}
 }
@@ -2755,7 +2778,8 @@ void PPUTranslator::MULHDU(ppu_opcode_t op)
 	const auto b = ZExt(GetGpr(op.rb));
 	const auto result = Trunc(m_ir->CreateLShr(m_ir->CreateMul(a, b), 64));
 	SetGpr(op.rd, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::MULHWU(ppu_opcode_t op)
@@ -2763,7 +2787,8 @@ void PPUTranslator::MULHWU(ppu_opcode_t op)
 	const auto a = ZExt(GetGpr(op.ra, 32));
 	const auto b = ZExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateLShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::MFOCRF(ppu_opcode_t op)
@@ -2779,7 +2804,10 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 			return;
 		}
 	}
-	else if (std::none_of(m_cr + 0, m_cr + 32, [](auto* p) { return p; }))
+	else if (std::none_of(m_cr + 0, m_cr + 32, [](auto* p)
+				 {
+					 return p;
+				 }))
 	{
 		// MFCR (optimized)
 		Value* ln0 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(m_thread_type, m_thread, 99), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
@@ -2822,7 +2850,7 @@ void PPUTranslator::LWARX(ppu_opcode_t op)
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
 		Call(GetType<void>(), "__resinterp", m_thread);
-		//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
+		// Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 		m_ir->CreateRetVoid();
 		return;
 	}
@@ -2847,14 +2875,16 @@ void PPUTranslator::SLW(ppu_opcode_t op)
 	const auto shift_res = m_ir->CreateShl(GetGpr(op.rs), shift_num);
 	const auto result = m_ir->CreateAnd(shift_res, 0xffffffff);
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::CNTLZW(ppu_opcode_t op)
 {
 	const auto result = Call(GetType<u32>(), "llvm.ctlz.i32", GetGpr(op.rs, 32), m_ir->getFalse());
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt32(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt32(0));
 }
 
 void PPUTranslator::SLD(ppu_opcode_t op)
@@ -2863,14 +2893,16 @@ void PPUTranslator::SLD(ppu_opcode_t op)
 	const auto shift_arg = GetGpr(op.rs);
 	const auto result = Trunc(m_ir->CreateShl(ZExt(shift_arg), ZExt(shift_num)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::AND(ppu_opcode_t op)
 {
 	const auto result = op.rs == op.rb ? GetGpr(op.rs) : m_ir->CreateAnd(GetGpr(op.rs), GetGpr(op.rb));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::CMPL(ppu_opcode_t op)
@@ -2895,12 +2927,13 @@ void PPUTranslator::SUBF(ppu_opcode_t op)
 	const auto b = GetGpr(op.rb);
 	const auto result = m_ir->CreateSub(b, a);
 	SetGpr(op.rd, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 
 	if (op.oe)
 	{
-		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::ssub_with_overflow), {b, m_ir->CreateNot(a)});
-		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		// const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::ssub_with_overflow), {b, m_ir->CreateNot(a)});
+		// SetOverflow(m_ir->CreateExtractValue(s, {1}));
 		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, b), m_ir->CreateXor(m_ir->CreateNot(a), result)), m_ir->getInt64(0)));
 	}
 }
@@ -2929,14 +2962,16 @@ void PPUTranslator::CNTLZD(ppu_opcode_t op)
 {
 	const auto result = Call(GetType<u64>(), "llvm.ctlz.i64", GetGpr(op.rs), m_ir->getFalse());
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ANDC(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateAnd(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::TD(ppu_opcode_t op)
@@ -2956,7 +2991,8 @@ void PPUTranslator::MULHD(ppu_opcode_t op)
 	const auto b = SExt(GetGpr(op.rb));
 	const auto result = Trunc(m_ir->CreateLShr(m_ir->CreateMul(a, b), 64));
 	SetGpr(op.rd, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::MULHW(ppu_opcode_t op)
@@ -2964,7 +3000,8 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 	const auto a = SExt(GetGpr(op.ra, 32));
 	const auto b = SExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateAShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::LDARX(ppu_opcode_t op)
@@ -2974,7 +3011,7 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
 		Call(GetType<void>(), "__resinterp", m_thread);
-		//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
+		// Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 		m_ir->CreateRetVoid();
 		return;
 	}
@@ -2995,7 +3032,7 @@ void PPUTranslator::LVX(ppu_opcode_t op)
 {
 	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), ~0xfull);
 	const auto data = ReadMemory(addr, GetType<u8[16]>(), m_is_be, 16);
-	SetVr(op.vd, m_is_be ? data : Shuffle(data, nullptr, { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }));
+	SetVr(op.vd, m_is_be ? data : Shuffle(data, nullptr, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}));
 }
 
 void PPUTranslator::NEG(ppu_opcode_t op)
@@ -3003,8 +3040,10 @@ void PPUTranslator::NEG(ppu_opcode_t op)
 	const auto reg = GetGpr(op.ra);
 	const auto result = m_ir->CreateNeg(reg);
 	SetGpr(op.rd, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) SetOverflow(m_ir->CreateICmpEQ(result, m_ir->getInt64(1ull << 63)));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		SetOverflow(m_ir->CreateICmpEQ(result, m_ir->getInt64(1ull << 63)));
 }
 
 void PPUTranslator::LBZUX(ppu_opcode_t op)
@@ -3018,7 +3057,8 @@ void PPUTranslator::NOR(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateNot(op.rs == op.rb ? GetGpr(op.rs) : m_ir->CreateOr(GetGpr(op.rs), GetGpr(op.rb)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::STVEBX(ppu_opcode_t op)
@@ -3036,8 +3076,10 @@ void PPUTranslator::SUBFE(ppu_opcode_t op)
 	const auto r2 = m_ir->CreateAdd(r1, ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, r2);
 	SetCarry(m_ir->CreateOr(m_ir->CreateICmpULT(r1, a), m_ir->CreateICmpULT(r2, r1)));
-	if (op.rc) SetCrFieldSignedCmp(0, r2, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, r2, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::ADDE(ppu_opcode_t op)
@@ -3049,8 +3091,10 @@ void PPUTranslator::ADDE(ppu_opcode_t op)
 	const auto r2 = m_ir->CreateAdd(r1, ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, r2);
 	SetCarry(m_ir->CreateOr(m_ir->CreateICmpULT(r1, a), m_ir->CreateICmpULT(r2, r1)));
-	if (op.rc) SetCrFieldSignedCmp(0, r2, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, r2, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::MTOCRF(ppu_opcode_t op)
@@ -3070,24 +3114,71 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 		// MTCRF
 	}
 
-	static u8 s_table[64]
-	{
-		0, 0, 0, 0,
-		0, 0, 0, 1,
-		0, 0, 1, 0,
-		0, 0, 1, 1,
-		0, 1, 0, 0,
-		0, 1, 0, 1,
-		0, 1, 1, 0,
-		0, 1, 1, 1,
-		1, 0, 0, 0,
-		1, 0, 0, 1,
-		1, 0, 1, 0,
-		1, 0, 1, 1,
-		1, 1, 0, 0,
-		1, 1, 0, 1,
-		1, 1, 1, 0,
-		1, 1, 1, 1,
+	static u8 s_table[64]{
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		1,
+		0,
+		0,
+		1,
+		0,
+		0,
+		0,
+		1,
+		1,
+		0,
+		1,
+		0,
+		0,
+		0,
+		1,
+		0,
+		1,
+		0,
+		1,
+		1,
+		0,
+		0,
+		1,
+		1,
+		1,
+		1,
+		0,
+		0,
+		0,
+		1,
+		0,
+		0,
+		1,
+		1,
+		0,
+		1,
+		0,
+		1,
+		0,
+		1,
+		1,
+		1,
+		1,
+		0,
+		0,
+		1,
+		1,
+		0,
+		1,
+		1,
+		1,
+		1,
+		0,
+		1,
+		1,
+		1,
+		1,
 	};
 
 	if (!m_mtocr_table)
@@ -3164,8 +3255,10 @@ void PPUTranslator::ADDZE(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, a));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::SUBFZE(ppu_opcode_t op)
@@ -3175,8 +3268,10 @@ void PPUTranslator::SUBFZE(ppu_opcode_t op)
 	const auto result = m_ir->CreateAdd(a, ZExt(c, GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateICmpULT(result, a));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::STDCX(ppu_opcode_t op)
@@ -3193,7 +3288,7 @@ void PPUTranslator::STBX(ppu_opcode_t op)
 void PPUTranslator::STVX(ppu_opcode_t op)
 {
 	const auto value = GetVr(op.vs, VrType::vi8);
-	const auto data = m_is_be ? value : Shuffle(value, nullptr, { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 });
+	const auto data = m_is_be ? value : Shuffle(value, nullptr, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 	WriteMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), data, m_is_be, 16);
 }
 
@@ -3204,8 +3299,10 @@ void PPUTranslator::SUBFME(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(a, ZExt(m_ir->CreateNot(c), GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateOr(c, IsNotZero(a)));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::MULLD(ppu_opcode_t op)
@@ -3214,8 +3311,10 @@ void PPUTranslator::MULLD(ppu_opcode_t op)
 	const auto b = GetGpr(op.rb);
 	const auto result = m_ir->CreateMul(a, b);
 	SetGpr(op.rd, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::ADDME(ppu_opcode_t op)
@@ -3225,8 +3324,10 @@ void PPUTranslator::ADDME(ppu_opcode_t op)
 	const auto result = m_ir->CreateSub(a, ZExt(m_ir->CreateNot(c), GetType<u64>()));
 	SetGpr(op.rd, result);
 	SetCarry(m_ir->CreateOr(c, IsNotZero(a)));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::MULLW(ppu_opcode_t op)
@@ -3235,8 +3336,10 @@ void PPUTranslator::MULLW(ppu_opcode_t op)
 	const auto b = SExt(GetGpr(op.rb, 32));
 	const auto result = m_ir->CreateMul(a, b);
 	SetGpr(op.rd, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) UNK(op);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.oe)
+		UNK(op);
 }
 
 void PPUTranslator::DCBTST(ppu_opcode_t)
@@ -3259,12 +3362,13 @@ void PPUTranslator::ADD(ppu_opcode_t op)
 
 	if (op.oe)
 	{
-		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
-		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		// const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
+		// SetOverflow(m_ir->CreateExtractValue(s, {1}));
 		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, m_ir->CreateNot(b)), m_ir->CreateXor(a, result)), m_ir->getInt64(0)));
 	}
 
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::DCBT(ppu_opcode_t)
@@ -3280,7 +3384,8 @@ void PPUTranslator::EQV(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateNot(m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ECIWX(ppu_opcode_t op)
@@ -3299,7 +3404,8 @@ void PPUTranslator::XOR(ppu_opcode_t op)
 {
 	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(0)) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::MFSPR(ppu_opcode_t op)
@@ -3401,7 +3507,8 @@ void PPUTranslator::ORC(ppu_opcode_t op)
 {
 	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(-1)) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ECOWX(ppu_opcode_t op)
@@ -3420,7 +3527,8 @@ void PPUTranslator::OR(ppu_opcode_t op)
 {
 	const auto result = op.rs == op.rb ? GetGpr(op.rs) : m_ir->CreateOr(GetGpr(op.rs), GetGpr(op.rb));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::DIVDU(ppu_opcode_t op)
@@ -3430,8 +3538,10 @@ void PPUTranslator::DIVDU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(-1), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
-	if (op.oe) SetOverflow(o);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
+	if (op.oe)
+		SetOverflow(o);
 }
 
 void PPUTranslator::DIVWU(ppu_opcode_t op)
@@ -3441,8 +3551,10 @@ void PPUTranslator::DIVWU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(0xffffffff), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
-	if (op.oe) SetOverflow(o);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
+	if (op.oe)
+		SetOverflow(o);
 }
 
 void PPUTranslator::MTSPR(ppu_opcode_t op)
@@ -3476,7 +3588,8 @@ void PPUTranslator::NAND(ppu_opcode_t op)
 {
 	const auto result = m_ir->CreateNot(op.rs == op.rb ? GetGpr(op.rs) : m_ir->CreateAnd(GetGpr(op.rs), GetGpr(op.rb)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::STVXL(ppu_opcode_t op)
@@ -3491,8 +3604,10 @@ void PPUTranslator::DIVD(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt64(1ull << 63)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(1ull << 63), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
-	if (op.oe) SetOverflow(o);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
+	if (op.oe)
+		SetOverflow(o);
 }
 
 void PPUTranslator::DIVW(ppu_opcode_t op)
@@ -3502,8 +3617,10 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(s32{smin})), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(s32{smin}), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
-	if (op.oe) SetOverflow(o);
+	if (op.rc)
+		SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
+	if (op.oe)
+		SetOverflow(o);
 }
 
 void PPUTranslator::LVLX(ppu_opcode_t op)
@@ -3540,7 +3657,8 @@ void PPUTranslator::SRW(ppu_opcode_t op)
 	const auto shift_arg = m_ir->CreateAnd(GetGpr(op.rs), 0xffffffff);
 	const auto result = m_ir->CreateLShr(shift_arg, shift_num);
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::SRD(ppu_opcode_t op)
@@ -3549,7 +3667,8 @@ void PPUTranslator::SRD(ppu_opcode_t op)
 	const auto shift_arg = GetGpr(op.rs);
 	const auto result = Trunc(m_ir->CreateLShr(ZExt(shift_arg), ZExt(shift_num)));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::LVRX(ppu_opcode_t op)
@@ -3744,19 +3863,21 @@ void PPUTranslator::SRAW(ppu_opcode_t op)
 	const auto result = m_ir->CreateAShr(arg_ext, shift_num);
 	SetGpr(op.ra, result);
 	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt32(0)), m_ir->CreateICmpNE(arg_ext, m_ir->CreateShl(result, shift_num))));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::SRAD(ppu_opcode_t op)
 {
 	const auto shift_num = ZExt(m_ir->CreateAnd(GetGpr(op.rb), 0x7f)); // i128
 	const auto shift_arg = GetGpr(op.rs);
-	const auto arg_ext = SExt(shift_arg); // i128
+	const auto arg_ext = SExt(shift_arg);                      // i128
 	const auto res_128 = m_ir->CreateAShr(arg_ext, shift_num); // i128
 	const auto result = Trunc(res_128);
 	SetGpr(op.ra, result);
 	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(arg_ext, m_ir->CreateShl(res_128, shift_num))));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::LVRXL(ppu_opcode_t op)
@@ -3775,7 +3896,8 @@ void PPUTranslator::SRAWI(ppu_opcode_t op)
 	const auto result = SExt(res_32);
 	SetGpr(op.ra, result);
 	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt32(0)), m_ir->CreateICmpNE(shift_arg, m_ir->CreateShl(res_32, op.sh32))));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::SRADI(ppu_opcode_t op)
@@ -3784,7 +3906,8 @@ void PPUTranslator::SRADI(ppu_opcode_t op)
 	const auto result = m_ir->CreateAShr(shift_arg, op.sh64);
 	SetGpr(op.ra, result);
 	SetCarry(m_ir->CreateAnd(m_ir->CreateICmpSLT(shift_arg, m_ir->getInt64(0)), m_ir->CreateICmpNE(shift_arg, m_ir->CreateShl(result, op.sh64))));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::EIEIO(ppu_opcode_t)
@@ -3807,7 +3930,8 @@ void PPUTranslator::EXTSH(ppu_opcode_t op)
 {
 	const auto result = SExt(GetGpr(op.rs, 16), GetType<s64>());
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::STVRXL(ppu_opcode_t op)
@@ -3819,7 +3943,8 @@ void PPUTranslator::EXTSB(ppu_opcode_t op)
 {
 	const auto result = SExt(GetGpr(op.rs, 8), GetType<s64>());
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::STFIWX(ppu_opcode_t op)
@@ -3831,7 +3956,8 @@ void PPUTranslator::EXTSW(ppu_opcode_t op)
 {
 	const auto result = SExt(GetGpr(op.rs, 32));
 	SetGpr(op.ra, result);
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc)
+		SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ICBI(ppu_opcode_t)
@@ -3862,7 +3988,7 @@ void PPUTranslator::LWZ(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);                                                               // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	if (m_may_be_mmio)
@@ -3919,7 +4045,7 @@ void PPUTranslator::LWZU(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);                                                               // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
@@ -3965,7 +4091,7 @@ void PPUTranslator::STW(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculation
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);                                                               // Stack register and TLS address register are unlikely to be used in MMIO address calculation
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	if (m_may_be_mmio)
@@ -4013,7 +4139,7 @@ void PPUTranslator::STW(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm;
 	WriteMemory(addr, value);
 
-	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
+	// Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
 	if (auto ci = llvm::dyn_cast<ConstantInt>(value))
 	{
 		if (ci->getZExtValue() == 0xAAAAAAAA)
@@ -4033,7 +4159,7 @@ void PPUTranslator::STWU(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);// Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);                                                               // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, false, true); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
@@ -4183,7 +4309,7 @@ void PPUTranslator::LFS(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);                                                               // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	SetFpr(op.frd, ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm, GetType<f32>()));
@@ -4199,7 +4325,7 @@ void PPUTranslator::LFSU(ppu_opcode_t op)
 		m_rel = nullptr;
 	}
 
-	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u); // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
+	m_may_be_mmio &= (op.ra != 1u && op.ra != 13u);                                                               // Stack register and TLS address register are unlikely to be used in MMIO address calculatio
 	m_may_be_mmio &= op.simm16 == 0 || spu_thread::test_is_problem_state_register_offset(op.uimm16, true, false); // Either exact MMIO address or MMIO base with completing s16 address offset
 
 	const auto addr = m_ir->CreateAdd(GetGpr(op.ra), imm);
@@ -4378,14 +4504,14 @@ void PPUTranslator::FDIVS(ppu_opcode_t op)
 	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFDiv(a, b), GetType<f32>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fdivs_get_fr", a, b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fdivs_get_fi", a, b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_ox", a, b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_ux", a, b));
-	//SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_zx", a, b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxidi, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_vxidi", a, b));
-	//SetFPSCRException(m_fpscr_vxzdz, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_vxzdz", a, b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fdivs_get_fr", a, b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fdivs_get_fi", a, b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_ox", a, b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_ux", a, b));
+	// SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_zx", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxidi, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_vxidi", a, b));
+	// SetFPSCRException(m_fpscr_vxzdz, Call(GetType<bool>(), m_pure_attr, "__fdivs_get_vxzdz", a, b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4396,12 +4522,12 @@ void PPUTranslator::FSUBS(ppu_opcode_t op)
 	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFSub(a, b), GetType<f32>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsubs_get_fr", a, b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsubs_get_fi", a, b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_ox", a, b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_ux", a, b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_vxisi", a, b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsubs_get_fr", a, b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsubs_get_fi", a, b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_ox", a, b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_ux", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fsubs_get_vxisi", a, b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4412,12 +4538,12 @@ void PPUTranslator::FADDS(ppu_opcode_t op)
 	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFAdd(a, b), GetType<f32>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fadds_get_fr", a, b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fadds_get_fi", a, b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fadds_get_ox", a, b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fadds_get_ux", a, b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fadds_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fadds_get_vxisi", a, b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fadds_get_fr", a, b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fadds_get_fi", a, b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fadds_get_ox", a, b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fadds_get_ux", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fadds_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fadds_get_vxisi", a, b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4427,12 +4553,12 @@ void PPUTranslator::FSQRTS(ppu_opcode_t op)
 	const auto result = m_ir->CreateFPTrunc(Call(GetType<f64>(), "llvm.sqrt.f64", b), GetType<f32>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_fr", b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_fi", b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_ox", b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_ux", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_vxsnan", b));
-	//SetFPSCRException(m_fpscr_vxsqrt, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_vxsqrt", b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_fr", b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_fi", b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_ox", b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_ux", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_vxsnan", b));
+	// SetFPSCRException(m_fpscr_vxsqrt, Call(GetType<bool>(), m_pure_attr, "__fsqrts_get_vxsqrt", b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4445,9 +4571,9 @@ void PPUTranslator::FRES(ppu_opcode_t op)
 
 	const auto a = GetFpr(op.frb);
 	const auto b = bitcast<u64>(a);
-	const auto n = m_ir->CreateFCmpUNO(a, a); // test for NaN
+	const auto n = m_ir->CreateFCmpUNO(a, a);                       // test for NaN
 	const auto e = m_ir->CreateAnd(m_ir->CreateLShr(b, 52), 0x7ff); // double exp
-	const auto i = m_ir->CreateAnd(m_ir->CreateLShr(b, 45), 0x7f); // mantissa LUT index
+	const auto i = m_ir->CreateAnd(m_ir->CreateLShr(b, 45), 0x7f);  // mantissa LUT index
 	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(m_fres_table->getValueType(), m_fres_table, {m_ir->getInt64(0), i}));
 	assert(ptr->getResultElementType() == get_type<u32>());
 	const auto m = m_ir->CreateShl(ZExt(m_ir->CreateLoad(ptr->getResultElementType(), ptr)), 29);
@@ -4457,13 +4583,13 @@ void PPUTranslator::FRES(ppu_opcode_t op)
 	const auto r = bitcast<f64>(m_ir->CreateSelect(n, m_ir->CreateOr(b, 0x8'0000'0000'0000), m_ir->CreateOr(s, m_ir->CreateAnd(b, 0x8000'0000'0000'0000))));
 	SetFpr(op.frd, m_ir->CreateFPTrunc(r, GetType<f32>()));
 
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fi);
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_xx);
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fres_get_ox", b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fres_get_ux", b));
-	//SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fres_get_zx", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fres_get_vxsnan", b));
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fi);
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_xx);
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fres_get_ox", b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fres_get_ux", b));
+	// SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fres_get_zx", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fres_get_vxsnan", b));
 	SetFPRF(r, op.rc != 0);
 }
 
@@ -4474,12 +4600,12 @@ void PPUTranslator::FMULS(ppu_opcode_t op)
 	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFMul(a, c), GetType<f32>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmuls_get_fr", a, c));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmuls_get_fi", a, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_ox", a, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_ux", a, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_vxsnan", a, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_vximz", a, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmuls_get_fr", a, c));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmuls_get_fi", a, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_ox", a, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_ux", a, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_vxsnan", a, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmuls_get_vximz", a, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4501,13 +4627,13 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 
 	SetFpr(op.frd, m_ir->CreateFPTrunc(result, GetType<f32>()));
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4529,13 +4655,13 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 
 	SetFpr(op.frd, m_ir->CreateFPTrunc(result, GetType<f32>()));
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4557,13 +4683,13 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 
 	SetFpr(op.frd, m_ir->CreateFPTrunc(m_ir->CreateFNeg(result), GetType<f32>()));
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4585,13 +4711,13 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 
 	SetFpr(op.frd, m_ir->CreateFPTrunc(m_ir->CreateFNeg(result), GetType<f32>()));
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadds_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4599,7 +4725,8 @@ void PPUTranslator::MTFSB1(ppu_opcode_t op)
 {
 	SetFPSCRBit(op.crbd, m_ir->getTrue(), true);
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::MCRFS(ppu_opcode_t op)
@@ -4615,7 +4742,8 @@ void PPUTranslator::MTFSB0(ppu_opcode_t op)
 {
 	SetFPSCRBit(op.crbd, m_ir->getFalse(), false);
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::MTFSFI(ppu_opcode_t op)
@@ -4630,7 +4758,8 @@ void PPUTranslator::MTFSFI(ppu_opcode_t op)
 
 	SetFPSCRBit(op.crfd * 4 + 3, m_ir->getInt1((op.i & 1) != 0), false);
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::MFFS(ppu_opcode_t op)
@@ -4644,7 +4773,8 @@ void PPUTranslator::MFFS(ppu_opcode_t op)
 
 	SetFpr(op.frd, result);
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::MTFSF(ppu_opcode_t op)
@@ -4659,7 +4789,8 @@ void PPUTranslator::MTFSF(ppu_opcode_t op)
 		}
 	}
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::FCMPU(ppu_opcode_t op)
@@ -4672,7 +4803,7 @@ void PPUTranslator::FCMPU(ppu_opcode_t op)
 	const auto un = m_ir->CreateFCmpUNO(a, b);
 	SetCrField(op.crfd, lt, gt, eq, un);
 	SetFPCC(lt, gt, eq, un);
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fcmpu_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fcmpu_get_vxsnan", a, b));
 }
 
 void PPUTranslator::FRSP(ppu_opcode_t op)
@@ -4681,11 +4812,11 @@ void PPUTranslator::FRSP(ppu_opcode_t op)
 	const auto result = m_ir->CreateFPTrunc(b, GetType<f32>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__frsp_get_fr", b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__frsp_get_fi", b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__frsp_get_ox", b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__frsp_get_ux", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__frsp_get_vxsnan", b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__frsp_get_fr", b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__frsp_get_fi", b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__frsp_get_ox", b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__frsp_get_ux", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__frsp_get_vxsnan", b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4701,12 +4832,12 @@ void PPUTranslator::FCTIW(ppu_opcode_t op)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.aarch64.neon.fcvtns.i32.f64", b)));
 #endif
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fctiw_get_vxsnan", b));
-	//SetFPSCRException(m_fpscr_vxcvi, m_ir->CreateOr(sat_l, sat_h));
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_c);
-	//SetFPCC(GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), op.rc != 0);
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fctiw_get_vxsnan", b));
+	// SetFPSCRException(m_fpscr_vxcvi, m_ir->CreateOr(sat_l, sat_h));
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_c);
+	// SetFPCC(GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), op.rc != 0);
 }
 
 void PPUTranslator::FCTIWZ(ppu_opcode_t op)
@@ -4729,14 +4860,14 @@ void PPUTranslator::FDIV(ppu_opcode_t op)
 	const auto result = m_ir->CreateFDiv(a, b);
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fdiv_get_fr", a, b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fdiv_get_fi", a, b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_ox", a, b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_ux", a, b));
-	//SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_zx", a, b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxidi, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_vxidi", a, b));
-	//SetFPSCRException(m_fpscr_vxzdz, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_vxzdz", a, b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fdiv_get_fr", a, b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fdiv_get_fi", a, b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_ox", a, b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_ux", a, b));
+	// SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_zx", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxidi, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_vxidi", a, b));
+	// SetFPSCRException(m_fpscr_vxzdz, Call(GetType<bool>(), m_pure_attr, "__fdiv_get_vxzdz", a, b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4747,12 +4878,12 @@ void PPUTranslator::FSUB(ppu_opcode_t op)
 	const auto result = m_ir->CreateFSub(a, b);
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsub_get_fr", a, b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsub_get_fi", a, b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsub_get_ox", a, b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsub_get_ux", a, b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsub_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fsub_get_vxisi", a, b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsub_get_fr", a, b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsub_get_fi", a, b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsub_get_ox", a, b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsub_get_ux", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsub_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fsub_get_vxisi", a, b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4763,12 +4894,12 @@ void PPUTranslator::FADD(ppu_opcode_t op)
 	const auto result = m_ir->CreateFAdd(a, b);
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fadd_get_fr", a, b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fadd_get_fi", a, b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fadd_get_ox", a, b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fadd_get_ux", a, b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fadd_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fadd_get_vxisi", a, b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fadd_get_fr", a, b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fadd_get_fi", a, b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fadd_get_ox", a, b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fadd_get_ux", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fadd_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fadd_get_vxisi", a, b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4778,12 +4909,12 @@ void PPUTranslator::FSQRT(ppu_opcode_t op)
 	const auto result = Call(GetType<f64>(), "llvm.sqrt.f64", b);
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_fr", b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_fi", b));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_ox", b));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_ux", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_vxsnan", b));
-	//SetFPSCRException(m_fpscr_vxsqrt, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_vxsqrt", b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_fr", b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_fi", b));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_ox", b));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_ux", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_vxsnan", b));
+	// SetFPSCRException(m_fpscr_vxsqrt, Call(GetType<bool>(), m_pure_attr, "__fsqrt_get_vxsqrt", b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4794,7 +4925,8 @@ void PPUTranslator::FSEL(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 	SetFpr(op.frd, m_ir->CreateSelect(m_ir->CreateFCmpOGE(a, ConstantFP::get(GetType<f64>(), 0.0)), c, b));
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::FMUL(ppu_opcode_t op)
@@ -4804,12 +4936,12 @@ void PPUTranslator::FMUL(ppu_opcode_t op)
 	const auto result = m_ir->CreateFMul(a, c);
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmul_get_fr", a, c));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmul_get_fi", a, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmul_get_ox", a, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmul_get_ux", a, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmul_get_vxsnan", a, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmul_get_vximz", a, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmul_get_fr", a, c));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmul_get_fi", a, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmul_get_ox", a, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmul_get_ux", a, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmul_get_vxsnan", a, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmul_get_vximz", a, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4827,12 +4959,12 @@ void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 	const auto result = m_ir->CreateBitCast(m_ir->CreateShl(ZExt(v), 32), GetType<f64>());
 	SetFpr(op.frd, result);
 
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fi);
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_xx);
-	//SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__frsqrte_get_zx", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__frsqrte_get_vxsnan", b));
-	//SetFPSCRException(m_fpscr_vxsqrt, Call(GetType<bool>(), m_pure_attr, "__frsqrte_get_vxsqrt", b));
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fi);
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_xx);
+	// SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__frsqrte_get_zx", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__frsqrte_get_vxsnan", b));
+	// SetFPSCRException(m_fpscr_vxsqrt, Call(GetType<bool>(), m_pure_attr, "__frsqrte_get_vxsqrt", b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4854,13 +4986,13 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4873,7 +5005,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	llvm::Value* result;
 	if (g_cfg.core.use_accurate_dfma)
 	{
-		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}
 	else
 	{
@@ -4882,13 +5014,13 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4910,13 +5042,13 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 
 	SetFpr(op.frd, m_ir->CreateFNeg(result));
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4938,13 +5070,13 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 
 	SetFpr(op.frd, m_ir->CreateFNeg(result));
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
-	//SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
-	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
-	//SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
-	//SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
+	// SetFPSCRException(m_fpscr_ox, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ox", a, b, c));
+	// SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_ux", a, b, c));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxsnan", a, b, c));
+	// SetFPSCRException(m_fpscr_vxisi, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vxisi", a, b, c));
+	// SetFPSCRException(m_fpscr_vximz, Call(GetType<bool>(), m_pure_attr, "__fmadd_get_vximz", a, b, c));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -4958,8 +5090,8 @@ void PPUTranslator::FCMPO(ppu_opcode_t op)
 	const auto un = m_ir->CreateFCmpUNO(a, b);
 	SetCrField(op.crfd, lt, gt, eq, un);
 	SetFPCC(lt, gt, eq, un);
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fcmpo_get_vxsnan", a, b));
-	//SetFPSCRException(m_fpscr_vxvc, Call(GetType<bool>(), m_pure_attr, "__fcmpo_get_vxvc", a, b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fcmpo_get_vxsnan", a, b));
+	// SetFPSCRException(m_fpscr_vxvc, Call(GetType<bool>(), m_pure_attr, "__fcmpo_get_vxvc", a, b));
 }
 
 void PPUTranslator::FNEG(ppu_opcode_t op)
@@ -4967,28 +5099,32 @@ void PPUTranslator::FNEG(ppu_opcode_t op)
 	const auto b = GetFpr(op.frb);
 	SetFpr(op.frd, m_ir->CreateFNeg(b));
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::FMR(ppu_opcode_t op)
 {
 	SetFpr(op.frd, GetFpr(op.frb));
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::FNABS(ppu_opcode_t op)
 {
 	SetFpr(op.frd, m_ir->CreateFNeg(Call(GetType<f64>(), "llvm.fabs.f64", GetFpr(op.frb))));
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::FABS(ppu_opcode_t op)
 {
 	SetFpr(op.frd, Call(GetType<f64>(), "llvm.fabs.f64", GetFpr(op.frb)));
 
-	if (op.rc) SetCrFieldFPCC(1);
+	if (op.rc)
+		SetCrFieldFPCC(1);
 }
 
 void PPUTranslator::FCTID(ppu_opcode_t op)
@@ -5003,13 +5139,12 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.aarch64.neon.fcvtns.i64.f64", b)));
 #endif
 
-
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fr", b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fi", b));
-	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fctid_get_vxsnan", b));
-	//SetFPSCRException(m_fpscr_vxcvi, m_ir->CreateOr(sat_l, sat_h));
-	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_c);
-	//SetFPCC(GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), op.rc != 0);
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fr", b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fi", b));
+	// SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fctid_get_vxsnan", b));
+	// SetFPSCRException(m_fpscr_vxcvi, m_ir->CreateOr(sat_l, sat_h));
+	// m_ir->CreateStore(GetUndef<bool>(), m_fpscr_c);
+	// SetFPCC(GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>(), op.rc != 0);
 }
 
 void PPUTranslator::FCTIDZ(ppu_opcode_t op)
@@ -5031,8 +5166,8 @@ void PPUTranslator::FCFID(ppu_opcode_t op)
 	const auto result = m_ir->CreateSIToFP(b, GetType<f64>());
 	SetFpr(op.frd, result);
 
-	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fcfid_get_fr", b));
-	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fcfid_get_fi", b));
+	// SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fcfid_get_fr", b));
+	// SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fcfid_get_fi", b));
 	SetFPRF(result, op.rc != 0);
 }
 
@@ -5040,10 +5175,9 @@ void PPUTranslator::UNK(ppu_opcode_t op)
 {
 	FlushRegisters();
 	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode));
-	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
+	// Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 	m_ir->CreateRetVoid();
 }
-
 
 Value* PPUTranslator::GetGpr(u32 r, u32 num_bits)
 {
@@ -5078,7 +5212,8 @@ void PPUTranslator::SetFpr(u32 r, Value* val)
 	const auto f64_val =
 		val->getType() == GetType<s32>() ? bitcast(SExt(val), GetType<f64>()) :
 		val->getType() == GetType<s64>() ? bitcast(val, GetType<f64>()) :
-		val->getType() == GetType<f32>() ? m_ir->CreateFPExt(val, GetType<f64>()) : val;
+		val->getType() == GetType<f32>() ? m_ir->CreateFPExt(val, GetType<f64>()) :
+										   val;
 
 	RegStore(f64_val, m_fpr[r]);
 }
@@ -5092,9 +5227,9 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 	switch (type)
 	{
 	case VrType::vi32: _type = GetType<u32[4]>(); break;
-	case VrType::vi8 : _type = GetType<u8[16]>(); break;
+	case VrType::vi8: _type = GetType<u8[16]>(); break;
 	case VrType::vi16: _type = GetType<u16[8]>(); break;
-	case VrType::vf  : _type = GetType<f32[4]>(); break;
+	case VrType::vf: _type = GetType<f32[4]>(); break;
 	case VrType::i128: _type = GetType<u128>(); break;
 	default: ensure(false);
 	}
@@ -5170,65 +5305,67 @@ void PPUTranslator::SetFPCC(Value* lt, Value* gt, Value* eq, Value* un, bool set
 	SetFPSCRBit(17, gt, false);
 	SetFPSCRBit(18, eq, false);
 	SetFPSCRBit(19, un, false);
-	if (set_cr) SetCrField(1, lt, gt, eq, un);
+	if (set_cr)
+		SetCrField(1, lt, gt, eq, un);
 }
 
 void PPUTranslator::SetFPRF(Value* value, bool /*set_cr*/)
 {
-	//const bool is32 =
-		value->getType()->isFloatTy() ? true :
-		value->getType()->isDoubleTy() ? false : ensure(false);
+	// const bool is32 =
+	value->getType()->isFloatTy()  ? true :
+	value->getType()->isDoubleTy() ? false :
+									 ensure(false);
 
-	//const auto zero = ConstantFP::get(value->getType(), 0.0);
-	//const auto is_nan = m_ir->CreateFCmpUNO(value, zero);
-	//const auto is_inf = Call(GetType<bool>(), m_pure_attr, is32 ? "__is_inf32" : "__is_inf", value); // TODO
-	//const auto is_denorm = Call(GetType<bool>(), m_pure_attr, is32 ? "__is_denorm32" : "__is_denorm", value); // TODO
-	//const auto is_neg_zero = Call(GetType<bool>(), m_pure_attr, is32 ? "__is_neg_zero32" : "__is_neg_zero", value); // TODO
+	// const auto zero = ConstantFP::get(value->getType(), 0.0);
+	// const auto is_nan = m_ir->CreateFCmpUNO(value, zero);
+	// const auto is_inf = Call(GetType<bool>(), m_pure_attr, is32 ? "__is_inf32" : "__is_inf", value); // TODO
+	// const auto is_denorm = Call(GetType<bool>(), m_pure_attr, is32 ? "__is_denorm32" : "__is_denorm", value); // TODO
+	// const auto is_neg_zero = Call(GetType<bool>(), m_pure_attr, is32 ? "__is_neg_zero32" : "__is_neg_zero", value); // TODO
 
-	//const auto cc = m_ir->CreateOr(is_nan, m_ir->CreateOr(is_denorm, is_neg_zero));
-	//const auto lt = m_ir->CreateFCmpOLT(value, zero);
-	//const auto gt = m_ir->CreateFCmpOGT(value, zero);
-	//const auto eq = m_ir->CreateFCmpOEQ(value, zero);
-	//const auto un = m_ir->CreateOr(is_nan, is_inf);
-	//m_ir->CreateStore(cc, m_fpscr_c);
-	//SetFPCC(lt, gt, eq, un, set_cr);
+	// const auto cc = m_ir->CreateOr(is_nan, m_ir->CreateOr(is_denorm, is_neg_zero));
+	// const auto lt = m_ir->CreateFCmpOLT(value, zero);
+	// const auto gt = m_ir->CreateFCmpOGT(value, zero);
+	// const auto eq = m_ir->CreateFCmpOEQ(value, zero);
+	// const auto un = m_ir->CreateOr(is_nan, is_inf);
+	// m_ir->CreateStore(cc, m_fpscr_c);
+	// SetFPCC(lt, gt, eq, un, set_cr);
 }
 
 void PPUTranslator::SetFPSCR_FR(Value* /*value*/)
 {
-	//m_ir->CreateStore(value, m_fpscr_fr);
+	// m_ir->CreateStore(value, m_fpscr_fr);
 }
 
 void PPUTranslator::SetFPSCR_FI(Value* /*value*/)
 {
-	//m_ir->CreateStore(value, m_fpscr_fi);
-	//SetFPSCRException(m_fpscr_xx, value);
+	// m_ir->CreateStore(value, m_fpscr_fi);
+	// SetFPSCRException(m_fpscr_xx, value);
 }
 
 void PPUTranslator::SetFPSCRException(Value* /*ptr*/, Value* /*value*/)
 {
-	//m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(ptr), value), ptr);
-	//m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(m_fpscr_fx), value), m_fpscr_fx);
+	// m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(ptr), value), ptr);
+	// m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(m_fpscr_fx), value), m_fpscr_fx);
 }
 
 Value* PPUTranslator::GetFPSCRBit(u32 n)
 {
-	//if (n == 1 && m_fpscr[24])
+	// if (n == 1 && m_fpscr[24])
 	//{
 	//	// Floating-Point Enabled Exception Summary (FEX) 24-29
 	//	Value* value = m_ir->CreateLoad(m_fpscr[24]);
 	//	for (u32 i = 25; i <= 29; i++) value = m_ir->CreateOr(value, m_ir->CreateLoad(m_fpscr[i]));
 	//	return value;
-	//}
+	// }
 
-	//if (n == 2 && m_fpscr[7])
+	// if (n == 2 && m_fpscr[7])
 	//{
 	//	// Floating-Point Invalid Operation Exception Summary (VX) 7-12, 21-23
 	//	Value* value = m_ir->CreateLoad(m_fpscr[7]);
 	//	for (u32 i = 8; i <= 12; i++) value = m_ir->CreateOr(value, m_ir->CreateLoad(m_fpscr[i]));
 	//	for (u32 i = 21; i <= 23; i++) value = m_ir->CreateOr(value, m_ir->CreateLoad(m_fpscr[i]));
 	//	return value;
-	//}
+	// }
 
 	if (n < 16 || n > 19)
 	{
@@ -5238,11 +5375,11 @@ Value* PPUTranslator::GetFPSCRBit(u32 n)
 	// Get bit
 	const auto value = RegLoad(m_fc[n]);
 
-	//if (n == 0 || (n >= 3 && n <= 12) || (n >= 21 && n <= 23))
+	// if (n == 0 || (n >= 3 && n <= 12) || (n >= 21 && n <= 23))
 	//{
 	//	// Clear FX or exception bits
 	//	m_ir->CreateStore(m_ir->getFalse(), m_fpscr[n]);
-	//}
+	// }
 
 	return value;
 }
@@ -5251,22 +5388,22 @@ void PPUTranslator::SetFPSCRBit(u32 n, Value* value, bool /*update_fx*/)
 {
 	if (n < 16 || n > 19)
 	{
-		//CompilationError("SetFPSCRBit(): inaccessible bit " + std::to_string(n));
+		// CompilationError("SetFPSCRBit(): inaccessible bit " + std::to_string(n));
 		return; // ???
 	}
 
-	//if (update_fx)
+	// if (update_fx)
 	//{
 	//	if ((n >= 3 && n <= 12) || (n >= 21 && n <= 23))
 	//	{
 	//		// Update FX bit if necessary
 	//		m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(m_fpscr_fx), value), m_fpscr_fx);
 	//	}
-	//}
+	// }
 
-	//if (n >= 24 && n <= 28) CompilationError("SetFPSCRBit: exception enable bit " + std::to_string(n));
-	//if (n == 29) CompilationError("SetFPSCRBit: NI bit");
-	//if (n >= 30) CompilationError("SetFPSCRBit: RN bit");
+	// if (n >= 24 && n <= 28) CompilationError("SetFPSCRBit: exception enable bit " + std::to_string(n));
+	// if (n == 29) CompilationError("SetFPSCRBit: NI bit");
+	// if (n >= 30) CompilationError("SetFPSCRBit: RN bit");
 
 	// Store the bit
 	RegStore(value, m_fc[n]);
@@ -5309,11 +5446,16 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 		trap_condition = m_ir->CreateOr(trap_condition, cond);
 	};
 
-	if (to & 0x10) add_condition(m_ir->CreateICmpSLT(left, right));
-	if (to & 0x8) add_condition(m_ir->CreateICmpSGT(left, right));
-	if (to & 0x4) add_condition(m_ir->CreateICmpEQ(left, right));
-	if (to & 0x2) add_condition(m_ir->CreateICmpULT(left, right));
-	if (to & 0x1) add_condition(m_ir->CreateICmpUGT(left, right));
+	if (to & 0x10)
+		add_condition(m_ir->CreateICmpSLT(left, right));
+	if (to & 0x8)
+		add_condition(m_ir->CreateICmpSGT(left, right));
+	if (to & 0x4)
+		add_condition(m_ir->CreateICmpEQ(left, right));
+	if (to & 0x2)
+		add_condition(m_ir->CreateICmpULT(left, right));
+	if (to & 0x1)
+		add_condition(m_ir->CreateICmpUGT(left, right));
 
 	return trap_condition ? trap_condition : m_ir->getFalse();
 }
@@ -5321,7 +5463,7 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 void PPUTranslator::Trap()
 {
 	Call(GetType<void>(), "__trap", m_thread, GetAddr());
-	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
+	// Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 	m_ir->CreateRetVoid();
 }
 
@@ -5336,13 +5478,15 @@ Value* PPUTranslator::CheckBranchCondition(u32 bo, u32 bi)
 	const auto ctr = bo2 ? nullptr : m_ir->CreateSub(RegLoad(m_ctr), m_ir->getInt64(1));
 
 	// Store counter if necessary
-	if (ctr) RegStore(ctr, m_ctr);
+	if (ctr)
+		RegStore(ctr, m_ctr);
 
 	// Generate counter condition
 	const auto use_ctr = bo2 ? nullptr : m_ir->CreateICmp(bo3 ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE, ctr, m_ir->getInt64(0));
 
 	// Generate condition bit access
-	const auto use_cond = bo0 ? nullptr : bo1 ? GetCrb(bi) : m_ir->CreateNot(GetCrb(bi));
+	const auto use_cond = bo0 ? nullptr : bo1 ? GetCrb(bi) :
+	                                            m_ir->CreateNot(GetCrb(bi));
 
 	if (use_ctr && use_cond)
 	{
@@ -5371,22 +5515,23 @@ MDNode* PPUTranslator::CheckBranchProbability(u32 bo)
 
 void PPUTranslator::build_interpreter()
 {
-#define BUILD_VEC_INST(i) { \
+#define BUILD_VEC_INST(i)                                                                                                                              \
+	{                                                                                                                                                  \
 		m_function = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("op_" #i, get_type<void>(), m_thread_type->getPointerTo()).getCallee()); \
-		std::fill(std::begin(m_globals), std::end(m_globals), nullptr); \
-		std::fill(std::begin(m_locals), std::end(m_locals), nullptr); \
-		IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function)); \
-		m_ir = &irb; \
-		m_thread = m_function->getArg(0); \
-		ppu_opcode_t op{}; \
-		op.vd = 0; \
-		op.va = 1; \
-		op.vb = 2; \
-		op.vc = 3; \
-		this->i(op); \
-		FlushRegisters(); \
-		m_ir->CreateRetVoid(); \
-		run_transforms(*m_function); \
+		std::fill(std::begin(m_globals), std::end(m_globals), nullptr);                                                                                \
+		std::fill(std::begin(m_locals), std::end(m_locals), nullptr);                                                                                  \
+		IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));                                                                         \
+		m_ir = &irb;                                                                                                                                   \
+		m_thread = m_function->getArg(0);                                                                                                              \
+		ppu_opcode_t op{};                                                                                                                             \
+		op.vd = 0;                                                                                                                                     \
+		op.va = 1;                                                                                                                                     \
+		op.vb = 2;                                                                                                                                     \
+		op.vc = 3;                                                                                                                                     \
+		this->i(op);                                                                                                                                   \
+		FlushRegisters();                                                                                                                              \
+		m_ir->CreateRetVoid();                                                                                                                         \
+		run_transforms(*m_function);                                                                                                                   \
 	}
 
 	BUILD_VEC_INST(VADDCUW);
@@ -5545,8 +5690,6 @@ void PPUTranslator::build_interpreter()
 	BUILD_VEC_INST(VUPKLSH);
 	BUILD_VEC_INST(VXOR);
 #undef BUILD_VEC_INST
-
-
 }
 
 #endif

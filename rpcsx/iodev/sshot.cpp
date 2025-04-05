@@ -7,7 +7,7 @@
 struct ScreenShotFile : orbis::File {};
 
 static orbis::ErrorCode sshot_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                    void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled sshot ioctl", request);
   thread->where();
@@ -31,4 +31,6 @@ struct ScreenShotDevice : IoDevice {
   }
 };
 
-IoDevice *createScreenShotCharacterDevice() { return orbis::knew<ScreenShotDevice>(); }
+IoDevice *createScreenShotCharacterDevice() {
+  return orbis::knew<ScreenShotDevice>();
+}

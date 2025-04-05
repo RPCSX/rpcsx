@@ -43,8 +43,7 @@ namespace vm
 		const u32 m_mem_size;
 
 		_var_base(std::pair<vm::addr_t, u32> alloc_info)
-			: pointer(alloc_info.first)
-			, m_mem_size(alloc_info.second)
+			: pointer(alloc_info.first), m_mem_size(alloc_info.second)
 		{
 		}
 
@@ -57,12 +56,12 @@ namespace vm
 		using enable_bitcopy = std::false_type; // Disable bitcopy inheritence
 
 		_var_base()
-		    : _var_base(A::alloc(sizeof(T), alignof(T)))
+			: _var_base(A::alloc(sizeof(T), alignof(T)))
 		{
 		}
 
 		_var_base(const T& right)
-		    : _var_base()
+			: _var_base()
 		{
 			std::memcpy(pointer::get_ptr(), &right, sizeof(T));
 		}
@@ -86,9 +85,7 @@ namespace vm
 		const u32 m_size;
 
 		_var_base(u32 count, std::pair<vm::addr_t, u32> alloc_info)
-			: pointer(alloc_info.first)
-			, m_mem_size(alloc_info.second)
-		    , m_size(u32{sizeof(T)} * count)
+			: pointer(alloc_info.first), m_mem_size(alloc_info.second), m_size(u32{sizeof(T)} * count)
 		{
 		}
 
@@ -100,7 +97,7 @@ namespace vm
 		using enable_bitcopy = std::false_type; // Disable bitcopy inheritence
 
 		_var_base(u32 count)
-		    : _var_base(count, A::alloc(u32{sizeof(T)} * count, alignof(T)))
+			: _var_base(count, A::alloc(u32{sizeof(T)} * count, alignof(T)))
 		{
 		}
 

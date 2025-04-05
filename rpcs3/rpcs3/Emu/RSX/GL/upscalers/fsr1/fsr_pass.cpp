@@ -34,26 +34,25 @@ namespace gl
 		{
 			// Just use AMD-provided source with minimal modification
 			const char* shader_core =
-				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ubershader.glsl"
+#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ubershader.glsl"
 				;
 
 			// Replacements
 			const char* ffx_a_contents =
-				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_a_flattened.inc"
+#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_a_flattened.inc"
 				;
 
 			const char* ffx_fsr_contents =
-				#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_fsr1_flattened.inc"
+#include "Emu/RSX/Program/Upscalers/FSR1/fsr_ffx_fsr1_flattened.inc"
 				;
 
 			const std::pair<std::string_view, std::string> replacement_table[] =
-			{
-				{ "%FFX_DEFINITIONS%", config_definitions },
-				{ "%FFX_A_IMPORT%", ffx_a_contents },
-				{ "%FFX_FSR_IMPORT%", ffx_fsr_contents },
-				{ "layout(set=0,", "layout(" },
-				{ "%push_block%", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(0)) }
-			};
+				{
+					{"%FFX_DEFINITIONS%", config_definitions},
+					{"%FFX_A_IMPORT%", ffx_a_contents},
+					{"%FFX_FSR_IMPORT%", ffx_fsr_contents},
+					{"layout(set=0,", "layout("},
+					{"%push_block%", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(0))}};
 
 			m_src = shader_core;
 			m_src = fmt::replace_all(m_src, replacement_table);
@@ -117,13 +116,14 @@ namespace gl
 
 		easu_pass::easu_pass()
 			: fsr_pass(
-				"#define SAMPLE_EASU 1\n"
-				"#define SAMPLE_RCAS 0\n"
-				"#define SAMPLE_BILINEAR 0\n"
-				"#define SAMPLE_SLOW_FALLBACK 1",
-				80 // 5*VEC4
-			)
-		{}
+				  "#define SAMPLE_EASU 1\n"
+				  "#define SAMPLE_RCAS 0\n"
+				  "#define SAMPLE_BILINEAR 0\n"
+				  "#define SAMPLE_SLOW_FALLBACK 1",
+				  80 // 5*VEC4
+			  )
+		{
+		}
 
 		void easu_pass::configure()
 		{
@@ -134,20 +134,21 @@ namespace gl
 			auto con3 = &m_constants_buf[12];
 
 			FsrEasuCon(con0, con1, con2, con3,
-				static_cast<f32>(m_input_size.width), static_cast<f32>(m_input_size.height),     // Incoming viewport size to upscale (actual size)
-				static_cast<f32>(m_input_image->width()), static_cast<f32>(m_input_image->height()),     // Size of the raw image to upscale (in case viewport does not cover it all)
-				static_cast<f32>(m_output_size.width), static_cast<f32>(m_output_size.height));  // Size of output viewport (target size)
+				static_cast<f32>(m_input_size.width), static_cast<f32>(m_input_size.height),         // Incoming viewport size to upscale (actual size)
+				static_cast<f32>(m_input_image->width()), static_cast<f32>(m_input_image->height()), // Size of the raw image to upscale (in case viewport does not cover it all)
+				static_cast<f32>(m_output_size.width), static_cast<f32>(m_output_size.height));      // Size of output viewport (target size)
 		}
 
 		rcas_pass::rcas_pass()
 			: fsr_pass(
-				"#define SAMPLE_RCAS 1\n"
-				"#define SAMPLE_EASU 0\n"
-				"#define SAMPLE_BILINEAR 0\n"
-				"#define SAMPLE_SLOW_FALLBACK 1",
-				32 // 2*VEC4
-			)
-		{}
+				  "#define SAMPLE_RCAS 1\n"
+				  "#define SAMPLE_EASU 0\n"
+				  "#define SAMPLE_BILINEAR 0\n"
+				  "#define SAMPLE_SLOW_FALLBACK 1",
+				  32 // 2*VEC4
+			  )
+		{
+		}
 
 		void rcas_pass::configure()
 		{
@@ -155,7 +156,7 @@ namespace gl
 			auto cas_attenuation = 2.f - (g_cfg.video.vk.rcas_sharpening_intensity / 50.f);
 			FsrRcasCon(&m_constants_buf[0], cas_attenuation);
 		}
-	}
+	} // namespace FidelityFX
 
 	fsr_upscale_pass::~fsr_upscale_pass()
 	{
@@ -258,4 +259,4 @@ namespace gl
 
 		return src_image;
 	}
-}
+} // namespace gl

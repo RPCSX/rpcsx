@@ -91,7 +91,6 @@ struct BatchJobSidebandBufferRa {
 };
 static_assert(sizeof(BatchJobSidebandBufferRa) == 0x10);
 
-
 struct AjmOutputBuffer {
   orbis::ptr<std::byte> pOutput;
   orbis::size_t size;

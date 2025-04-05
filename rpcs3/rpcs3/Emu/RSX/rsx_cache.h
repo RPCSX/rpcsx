@@ -23,11 +23,11 @@ namespace rsx
 	{
 		using unpacked_type = lf_fifo<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>,
 #ifdef ANDROID
-		200
+			200
 #else
-		1000 // TODO: Determine best size
+			1000 // TODO: Determine best size
 #endif
-		>;
+			>;
 
 		struct pipeline_data
 		{
@@ -58,8 +58,8 @@ namespace rsx
 			u16 fp_shadow_textures;
 			u16 fp_redirected_textures;
 			u16 fp_multisampled_textures;
-			u8  fp_mrt_count;
-			u8  fp_reserved0;
+			u8 fp_mrt_count;
+			u8 fp_reserved0;
 			u16 fp_reserved1;
 			u32 fp_reserved2;
 
@@ -79,7 +79,7 @@ namespace rsx
 		}
 
 		void load_shaders(uint nb_workers, unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count,
-		    shader_loading_dialog* dlg)
+			shader_loading_dialog* dlg)
 		{
 			atomic_t<u32> processed(0);
 
@@ -176,9 +176,9 @@ namespace rsx
 			else
 			{
 				named_thread_group workers("RSX Worker ", nb_workers, [&]()
-				{
-					worker(entry_count);
-				});
+					{
+						worker(entry_count);
+					});
 
 				u32 current_progress = 0;
 				u32 last_update_progress = 0;
@@ -186,7 +186,8 @@ namespace rsx
 				{
 					thread_ctrl::wait_for(16'000); // Around 60fps should be good enough
 
-					if (Emu.IsStopped()) break;
+					if (Emu.IsStopped())
+						break;
 
 					current_progress = std::min(processed.load(), entry_count);
 
@@ -206,11 +207,8 @@ namespace rsx
 		}
 
 	public:
-
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
-			: version_prefix(std::move(version_prefix_str))
-			, pipeline_class_name(std::move(pipeline_class))
-			, m_storage(storage)
+			: version_prefix(std::move(version_prefix_str)), pipeline_class_name(std::move(pipeline_class)), m_storage(storage)
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)
 			{
@@ -222,7 +220,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void load(shader_loading_dialog* dlg, Args&& ...args)
+		void load(shader_loading_dialog* dlg, Args&&... args)
 		{
 			if (root_path.empty())
 			{
@@ -286,7 +284,7 @@ namespace rsx
 			dlg->close();
 		}
 
-		void store(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
+		void store(const pipeline_storage_type& pipeline, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
 		{
 			if (root_path.empty())
 			{
@@ -317,22 +315,22 @@ namespace rsx
 			}
 
 			const u32 state_params[] =
-			{
-				data.vp_ctrl0,
-				data.vp_ctrl1,
-				data.fp_ctrl,
-				data.vp_texture_dimensions,
-				data.fp_texture_dimensions,
-				data.fp_texcoord_control,
-				data.fp_height,
-				data.fp_pixel_layout,
-				data.fp_lighting_flags,
-				data.fp_shadow_textures,
-				data.fp_redirected_textures,
-				data.vp_multisampled_textures,
-				data.fp_multisampled_textures,
-				data.fp_mrt_count,
-			};
+				{
+					data.vp_ctrl0,
+					data.vp_ctrl1,
+					data.fp_ctrl,
+					data.vp_texture_dimensions,
+					data.fp_texture_dimensions,
+					data.fp_texcoord_control,
+					data.fp_height,
+					data.fp_pixel_layout,
+					data.fp_lighting_flags,
+					data.fp_shadow_textures,
+					data.fp_redirected_textures,
+					data.vp_multisampled_textures,
+					data.fp_multisampled_textures,
+					data.fp_mrt_count,
+				};
 			const usz state_hash = rpcs3::hash_array(state_params);
 
 			const std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
@@ -345,7 +343,8 @@ namespace rsx
 			RSXVertexProgram vp = {};
 
 			fs::file f(fmt::format("%s/raw/%llX.vp", root_path, program_hash));
-			if (f) f.read(vp.data, f.size() / sizeof(u32));
+			if (f)
+				f.read(vp.data, f.size() / sizeof(u32));
 
 			return vp;
 		}
@@ -370,7 +369,7 @@ namespace rsx
 			return fp;
 		}
 
-		std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> unpack(pipeline_data &data)
+		std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> unpack(pipeline_data& data)
 		{
 			std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> result;
 			auto& [pipeline, vp, fp] = result;
@@ -412,7 +411,7 @@ namespace rsx
 			return result;
 		}
 
-		pipeline_data pack(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
+		pipeline_data pack(const pipeline_storage_type& pipeline, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
 		{
 			pipeline_data data_block = {};
 			data_block.pipeline_properties = pipeline;
@@ -434,7 +433,7 @@ namespace rsx
 			{
 				if (!index && !vp.jump_table.empty())
 				{
-					for (auto &address : vp.jump_table)
+					for (auto& address : vp.jump_table)
 					{
 						data_block.vp_jump_table[index++] = static_cast<u16>(address);
 					}
@@ -468,7 +467,10 @@ namespace rsx
 		{
 		public:
 			virtual ~default_vertex_cache() = default;
-			virtual const storage_type* find_vertex_range(u32 /*local_addr*/, u32 /*data_length*/) { return nullptr; }
+			virtual const storage_type* find_vertex_range(u32 /*local_addr*/, u32 /*data_length*/)
+			{
+				return nullptr;
+			}
 			virtual void store_range(u32 /*local_addr*/, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}
 		};
@@ -497,7 +499,6 @@ namespace rsx
 			}
 
 		public:
-
 			const storage_type* find_vertex_range(u32 local_addr, u32 data_length) override
 			{
 				const auto key = hash(local_addr, data_length);
@@ -526,5 +527,5 @@ namespace rsx
 				vertex_ranges.clear();
 			}
 		};
-	}
-}
+	} // namespace vertex_cache
+} // namespace rsx

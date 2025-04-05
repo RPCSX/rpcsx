@@ -112,10 +112,10 @@ struct ParamItem
 	int location;
 
 	ParamItem(std::string _name, int _location, std::string _value = "")
-		: name(std::move(_name))
-		, value(std::move(_value)),
-		location(_location)
-	{ }
+		: name(std::move(_name)), value(std::move(_value)),
+		  location(_location)
+	{
+	}
 };
 
 struct ParamType
@@ -125,17 +125,16 @@ struct ParamType
 	std::vector<ParamItem> items;
 
 	ParamType(const ParamFlag _flag, std::string _type)
-		: flag(_flag)
-		, type(std::move(_type))
+		: flag(_flag), type(std::move(_type))
 	{
 	}
 
 	bool HasItem(const std::string& name) const
 	{
 		return std::any_of(items.cbegin(), items.cend(), [&name](const auto& item)
-		{
-			return item.name == name;
-		});
+			{
+				return item.name == name;
+			});
 	}
 
 	bool ReplaceOrInsert(const std::string& name, const ParamItem& item)
@@ -168,7 +167,7 @@ struct ParamArray
 {
 	std::vector<ParamType> params[PF_PARAM_COUNT];
 
-	ParamType* SearchParam(const ParamFlag &flag, const std::string& type)
+	ParamType* SearchParam(const ParamFlag& flag, const std::string& type)
 	{
 		for (auto& param : params[flag])
 		{
@@ -183,9 +182,9 @@ struct ParamArray
 	{
 		const auto& p = params[flag];
 		return std::any_of(p.cbegin(), p.cend(), [&name](const auto& param)
-		{
-			return param.HasItem(name);
-		});
+			{
+				return param.HasItem(name);
+			});
 	}
 
 	bool HasParam(const ParamFlag flag, const std::string& type, const std::string& name)
@@ -200,7 +199,8 @@ struct ParamArray
 
 		if (t)
 		{
-			if (!t->HasItem(name)) t->items.emplace_back(name, -1, value);
+			if (!t->HasItem(name))
+				t->items.emplace_back(name, -1, value);
 		}
 		else
 		{
@@ -217,7 +217,8 @@ struct ParamArray
 
 		if (t)
 		{
-			if (!t->HasItem(name)) t->items.emplace_back(name, location);
+			if (!t->HasItem(name))
+				t->items.emplace_back(name, location);
 		}
 		else
 		{
@@ -267,7 +268,7 @@ public:
 			simple_var = simple_var.substr(brace_pos);
 		}
 
-		auto var_blocks = fmt::split(simple_var, { "." });
+		auto var_blocks = fmt::split(simple_var, {"."});
 
 		ensure((!var_blocks.empty()));
 
@@ -293,12 +294,11 @@ public:
 		std::unordered_map<char, char> swizzle;
 
 		static std::unordered_map<uint, char> pos_to_swizzle =
-		{
-			{ 0, 'x' },
-			{ 1, 'y' },
-			{ 2, 'z' },
-			{ 3, 'w' }
-		};
+			{
+				{0, 'x'},
+				{1, 'y'},
+				{2, 'z'},
+				{3, 'w'}};
 
 		for (const auto& p : pos_to_swizzle)
 		{
@@ -338,7 +338,7 @@ public:
 			return name;
 		}
 
-		return name + "." + fmt::merge({ swizzles }, ".");
+		return name + "." + fmt::merge({swizzles}, ".");
 	}
 
 	std::string match_size(const std::string& other_var) const
@@ -375,7 +375,8 @@ public:
 			auto remaining = this_size - other_size;
 			std::string result = other_var;
 
-			while (remaining--) result += "x";
+			while (remaining--)
+				result += "x";
 			return result;
 		}
 	}
@@ -395,22 +396,22 @@ struct vertex_reg_info
 {
 	enum mask_test_type : u8
 	{
-		any = 0,   // Any bit set
-		none = 1,  // No bits set
-		all = 2,   // All bits set
-		xall = 3   // Some bits set
+		any = 0,  // Any bit set
+		none = 1, // No bits set
+		all = 2,  // All bits set
+		xall = 3  // Some bits set
 	};
 
-	std::string name;           // output name
-	bool need_declare;          // needs explicit declaration as output (not language in-built)
-	std::string src_reg;        // reg to get data from
-	std::string src_reg_mask;   // input swizzle mask
-	bool need_cast;             // needs casting
-	std::string cond;           // update on condition
-	std::string default_val;    // fallback value on cond fail
-	std::string dst_alias;      // output name override
-	bool check_mask;            // check program output control mask for this output
-	u32  check_mask_value;      // program output control mask for testing
+	std::string name;         // output name
+	bool need_declare;        // needs explicit declaration as output (not language in-built)
+	std::string src_reg;      // reg to get data from
+	std::string src_reg_mask; // input swizzle mask
+	bool need_cast;           // needs casting
+	std::string cond;         // update on condition
+	std::string default_val;  // fallback value on cond fail
+	std::string dst_alias;    // output name override
+	bool check_mask;          // check program output control mask for this output
+	u32 check_mask_value;     // program output control mask for testing
 
 	mask_test_type check_flags; // whole mask must match
 

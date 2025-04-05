@@ -6,8 +6,7 @@ LOG_CHANNEL(ps_move);
 cfg_ps_moves g_cfg_move;
 
 cfg_ps_moves::cfg_ps_moves()
-	: cfg::node()
-	, path(fs::get_config_dir(true) + "ps_move.yml")
+	: cfg::node(), path(fs::get_config_dir(true) + "ps_move.yml")
 {
 }
 
@@ -15,7 +14,7 @@ bool cfg_ps_moves::load()
 {
 	ps_move.notice("Loading PS Move config from '%s'", path);
 
-	if (fs::file cfg_file{ path, fs::read })
+	if (fs::file cfg_file{path, fs::read})
 	{
 		return from_string(cfg_file.to_string());
 	}

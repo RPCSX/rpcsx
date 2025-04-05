@@ -12,4 +12,3 @@ namespace countries
 	};
 	extern const std::array<country_code, 72> g_countries;
 } // namespace countries
-

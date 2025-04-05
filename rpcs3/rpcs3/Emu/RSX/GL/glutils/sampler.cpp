@@ -4,8 +4,8 @@
 #include "Emu/RSX/gcm_enums.h"
 #include "Emu/RSX/Common/TextureUtils.h"
 
-//GLenum wrap_mode(rsx::texture_wrap_mode wrap);
-//float max_aniso(rsx::texture_max_anisotropy aniso);
+// GLenum wrap_mode(rsx::texture_wrap_mode wrap);
+// float max_aniso(rsx::texture_max_anisotropy aniso);
 
 namespace gl
 {
@@ -102,10 +102,12 @@ namespace gl
 				{
 				case GL_NEAREST_MIPMAP_NEAREST:
 				case GL_NEAREST_MIPMAP_LINEAR:
-					min_filter = GL_NEAREST; break;
+					min_filter = GL_NEAREST;
+					break;
 				case GL_LINEAR_MIPMAP_NEAREST:
 				case GL_LINEAR_MIPMAP_LINEAR:
-					min_filter = GL_LINEAR; break;
+					min_filter = GL_LINEAR;
+					break;
 				default:
 					rsx_log.error("No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
 					min_filter = GL_NEAREST;
@@ -133,7 +135,7 @@ namespace gl
 		if (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8 ||
 			texture_format == CELL_GCM_TEXTURE_DEPTH16_FLOAT || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT)
 		{
-			//NOTE: The stored texture function is reversed wrt the textureProj compare function
+			// NOTE: The stored texture function is reversed wrt the textureProj compare function
 			GLenum compare_mode = static_cast<GLenum>(tex.zfunc()) | GL_NEVER;
 
 			switch (compare_mode)
@@ -189,4 +191,4 @@ namespace gl
 		set_parameteri(GL_TEXTURE_MAX_LOD, 0);
 		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
-}
+} // namespace gl

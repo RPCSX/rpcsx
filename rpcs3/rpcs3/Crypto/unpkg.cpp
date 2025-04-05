@@ -17,8 +17,7 @@
 LOG_CHANNEL(pkg_log, "PKG");
 
 package_reader::package_reader(const std::string& path, fs::file file)
-	: m_path(path)
-	, m_file(std::move(file))
+	: m_path(path), m_file(std::move(file))
 {
 	if (!m_file && !m_file.open(path))
 	{
@@ -108,10 +107,10 @@ bool package_reader::read_header()
 		pkg_log.notice("Extended header: main_and_ext_headers_hmac_offset = 0x%x = %d", ext_header.main_and_ext_headers_hmac_offset, ext_header.main_and_ext_headers_hmac_offset);
 		pkg_log.notice("Extended header: metadata_header_hmac_offset = 0x%x = %d", ext_header.metadata_header_hmac_offset, ext_header.metadata_header_hmac_offset);
 		pkg_log.notice("Extended header: tail_offset = 0x%x = %d", ext_header.tail_offset, ext_header.tail_offset);
-		//pkg_log.notice("Extended header: padding1 = 0x%x = %d", ext_header.padding1, ext_header.padding1);
+		// pkg_log.notice("Extended header: padding1 = 0x%x = %d", ext_header.padding1, ext_header.padding1);
 		pkg_log.notice("Extended header: pkg_key_id = 0x%x = %d", ext_header.pkg_key_id, ext_header.pkg_key_id);
 		pkg_log.notice("Extended header: full_header_hmac_offset = 0x%x = %d", ext_header.full_header_hmac_offset, ext_header.full_header_hmac_offset);
-		//pkg_log.notice("Extended header: padding2 = 0x%x = %d", ext_header.padding2, ext_header.padding2);
+		// pkg_log.notice("Extended header: padding2 = 0x%x = %d", ext_header.padding2, ext_header.padding2);
 	}
 
 	if (m_header.pkg_magic != std::bit_cast<le_t<u32>>("\x7FPKG"_u32))
@@ -128,7 +127,7 @@ bool package_reader::read_header()
 
 	switch (const u16 type = m_header.pkg_type)
 	{
-	case PKG_RELEASE_TYPE_DEBUG:   break;
+	case PKG_RELEASE_TYPE_DEBUG: break;
 	case PKG_RELEASE_TYPE_RELEASE: break;
 	default:
 	{
@@ -500,7 +499,9 @@ bool package_reader::set_decryption_key()
 		// TODO: Not all the keys seem to match the content types. I was only able to install a dlc (0x16) with PKG_AES_KEY_VITA_1
 
 		aes_context ctx;
-		aes_setkey_enc(&ctx, m_metadata.content_type == 0x15u ? PKG_AES_KEY_VITA_1 : m_metadata.content_type == 0x16u ? PKG_AES_KEY_VITA_2 : PKG_AES_KEY_VITA_3, 128);
+		aes_setkey_enc(&ctx, m_metadata.content_type == 0x15u ? PKG_AES_KEY_VITA_1 : m_metadata.content_type == 0x16u ? PKG_AES_KEY_VITA_2 :
+																														PKG_AES_KEY_VITA_3,
+			128);
 		aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const uchar*>(&m_header.klicensee), m_dec_key.data());
 		return true;
 	}
@@ -661,9 +662,9 @@ package_install_result package_reader::check_target_app_version() const
 		return {package_install_result::error_type::other};
 	}
 
-	const auto category       = psf::get_string(m_psf, "CATEGORY", "");
-	const auto title_id       = psf::get_string(m_psf, "TITLE_ID", "");
-	const auto app_ver        = psf::get_string(m_psf, "APP_VER", "");
+	const auto category = psf::get_string(m_psf, "CATEGORY", "");
+	const auto title_id = psf::get_string(m_psf, "TITLE_ID", "");
+	const auto app_ver = psf::get_string(m_psf, "APP_VER", "");
 	const auto target_app_ver = psf::get_string(m_psf, "TARGET_APP_VER", "");
 
 	if (category != "GD")
@@ -708,7 +709,7 @@ package_install_result package_reader::check_target_app_version() const
 	const auto installed_psf = psf::load_object(installed_sfo_file, sfo_path);
 
 	const auto installed_title_id = psf::get_string(installed_psf, "TITLE_ID", "");
-	const auto installed_app_ver  = psf::get_string(installed_psf, "APP_VER", "");
+	const auto installed_app_ver = psf::get_string(installed_psf, "APP_VER", "");
 
 	if (title_id != installed_title_id || installed_app_ver.empty())
 	{
@@ -915,14 +916,12 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
 
-			m_install_entries.push_back({
-				.weak_reference = map_ptr,
+			m_install_entries.push_back({.weak_reference = map_ptr,
 				.name = std::string(name),
 				.file_offset = entry.file_offset,
 				.file_size = entry.file_size,
 				.type = entry.type,
-				.pad = entry.pad
-			});
+				.pad = entry.pad});
 
 			if (map_ptr->second && !(entry.type & PKG_FILE_ENTRY_OVERWRITE))
 			{
@@ -946,7 +945,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	return true;
 }
 
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic);
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8* custom_klic);
 
 void package_reader::extract_worker()
 {
@@ -956,15 +955,16 @@ void package_reader::extract_worker()
 	{
 		// Make sure m_entry_indexer does not exceed m_install_entries
 		const usz index = m_entry_indexer.fetch_op([this](usz& v)
-		{
-			if (v < m_install_entries.size())
-			{
-				v++;
-				return true;
-			}
+											 {
+												 if (v < m_install_entries.size())
+												 {
+													 v++;
+													 return true;
+												 }
 
-			return false;
-		}).first;
+												 return false;
+											 })
+		                      .first;
 
 		if (index >= m_install_entries.size())
 		{
@@ -1027,7 +1027,7 @@ void package_reader::extract_worker()
 				pkg_log.warning("NPDRM EDAT!");
 			}
 
-			if (fs::file out{ path, did_overwrite ? fs::rewrite : fs::write_new })
+			if (fs::file out{path, did_overwrite ? fs::rewrite : fs::write_new})
 			{
 				bool extract_success = true;
 
@@ -1038,9 +1038,7 @@ void package_reader::extract_worker()
 					usz m_pos;
 
 					explicit pkg_file_reader(std::function<u64(u64, void* buffer, u64)> read_func, const install_entry& entry) noexcept
-						: m_read_func(std::move(read_func))
-						, m_entry(entry)
-						, m_pos(0)
+						: m_read_func(std::move(read_func)), m_entry(entry), m_pos(0)
 					{
 					}
 
@@ -1078,7 +1076,8 @@ void package_reader::extract_worker()
 						const s64 new_pos =
 							whence == fs::seek_set ? offset :
 							whence == fs::seek_cur ? offset + m_pos :
-							whence == fs::seek_end ? offset + size() : -1;
+							whence == fs::seek_end ? offset + size() :
+													 -1;
 
 						if (new_pos < 0)
 						{
@@ -1107,78 +1106,79 @@ void package_reader::extract_worker()
 				read_cache.clear();
 
 				auto reader = std::make_unique<pkg_file_reader>([&, cache_off = u64{umax}](usz pos, void* ptr, usz size) mutable -> u64
-				{
-					if (pos >= entry.file_size || !size)
 					{
-						return 0;
-					}
-
-					size = std::min<u64>(entry.file_size - pos, size);
-
-					u64 size_cache_end = 0;
-					u64 read_size = 0;
-
-					// Check if exists in cache
-					if (!read_cache.empty() && cache_off <= pos && pos < cache_off + read_cache.size())
-					{
-						read_size = std::min<u64>(pos + size, cache_off + read_cache.size()) - pos;
-
-						std::memcpy(ptr, read_cache.data() + (pos - cache_off), read_size);
-						pos += read_size;
-					}
-					else if (!read_cache.empty() && cache_off < pos + size && cache_off + read_cache.size() >= pos + size)
-					{
-						size_cache_end = size - (std::max<u64>(cache_off, pos) - pos);
-
-						std::memcpy(static_cast<u8*>(ptr) + (cache_off - pos), read_cache.data(), size_cache_end);
-						size -= size_cache_end;
-					}
-
-					if (pos >= entry.file_size || !size)
-					{
-						return read_size + size_cache_end;
-					}
-
-					// Try to cache for later
-					if (size <= BUF_SIZE && !size_cache_end && !read_size)
-					{
-						const u64 block_size = std::min<u64>({BUF_SIZE, std::max<u64>(size * 5 / 3, 65536), entry.file_size - pos});
-
-						read_cache.resize(block_size + BUF_PADDING);
-						cache_off = pos;
-
-						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), read_cache.data());
-
-						if (!advance_size)
+						if (pos >= entry.file_size || !size)
 						{
-							cache_off = umax;
 							return 0;
 						}
 
-						read_cache.resize(advance_size);
+						size = std::min<u64>(entry.file_size - pos, size);
 
-						size = std::min<usz>(advance_size, size);
-						std::memcpy(ptr, read_cache.data(), size);
-						return size;
-					}
+						u64 size_cache_end = 0;
+						u64 read_size = 0;
 
-					while (read_size < size)
-					{
-						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
-
-						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), static_cast<u8*>(ptr) + read_size);
-
-						if (!advance_size)
+						// Check if exists in cache
+						if (!read_cache.empty() && cache_off <= pos && pos < cache_off + read_cache.size())
 						{
-							break;
+							read_size = std::min<u64>(pos + size, cache_off + read_cache.size()) - pos;
+
+							std::memcpy(ptr, read_cache.data() + (pos - cache_off), read_size);
+							pos += read_size;
+						}
+						else if (!read_cache.empty() && cache_off < pos + size && cache_off + read_cache.size() >= pos + size)
+						{
+							size_cache_end = size - (std::max<u64>(cache_off, pos) - pos);
+
+							std::memcpy(static_cast<u8*>(ptr) + (cache_off - pos), read_cache.data(), size_cache_end);
+							size -= size_cache_end;
 						}
 
-						read_size += advance_size;
-						pos += advance_size;
-					}
+						if (pos >= entry.file_size || !size)
+						{
+							return read_size + size_cache_end;
+						}
 
-					return read_size + size_cache_end;
-				}, entry);
+						// Try to cache for later
+						if (size <= BUF_SIZE && !size_cache_end && !read_size)
+						{
+							const u64 block_size = std::min<u64>({BUF_SIZE, std::max<u64>(size * 5 / 3, 65536), entry.file_size - pos});
+
+							read_cache.resize(block_size + BUF_PADDING);
+							cache_off = pos;
+
+							const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), read_cache.data());
+
+							if (!advance_size)
+							{
+								cache_off = umax;
+								return 0;
+							}
+
+							read_cache.resize(advance_size);
+
+							size = std::min<usz>(advance_size, size);
+							std::memcpy(ptr, read_cache.data(), size);
+							return size;
+						}
+
+						while (read_size < size)
+						{
+							const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
+
+							const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), static_cast<u8*>(ptr) + read_size);
+
+							if (!advance_size)
+							{
+								break;
+							}
+
+							read_size += advance_size;
+							pos += advance_size;
+						}
+
+						return read_size + size_cache_end;
+					},
+					entry);
 
 				fs::file in_data;
 				in_data.reset(std::move(reader));
@@ -1308,9 +1308,9 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 			const usz thread_count = std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
 
 			named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(thread_count), 1) - 1, [&]()
-			{
-				reader.extract_worker();
-			});
+				{
+					reader.extract_worker();
+				});
 
 			reader.extract_worker();
 			workers.join();
@@ -1373,7 +1373,8 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
 {
-	if (m_file) m_file.seek(new_offset, damode);
+	if (m_file)
+		m_file.seek(new_offset, damode);
 }
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
@@ -1412,12 +1413,12 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 	{
 		// Debug key
 		be_t<u64> input[8] =
-		{
-			m_header.qa_digest[0],
-			m_header.qa_digest[0],
-			m_header.qa_digest[1],
-			m_header.qa_digest[1],
-		};
+			{
+				m_header.qa_digest[0],
+				m_header.qa_digest[0],
+				m_header.qa_digest[1],
+				m_header.qa_digest[1],
+			};
 
 		for (u64 i = 0; i < blocks; i++)
 		{

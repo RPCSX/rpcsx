@@ -16,7 +16,10 @@ public:
 	virtual ~raw_mouse();
 
 	void update_window_handle();
-	display_handle_t window_handle() const { return m_window_handle; }
+	display_handle_t window_handle() const
+	{
+		return m_window_handle;
+	}
 
 	void center_cursor();
 
@@ -25,10 +28,19 @@ public:
 	void update_values(s32 scan_code, bool pressed);
 #endif
 
-	const std::string& device_name() const { return m_device_name; }
-	u32 index() const { return m_index; }
+	const std::string& device_name() const
+	{
+		return m_device_name;
+	}
+	u32 index() const
+	{
+		return m_index;
+	}
 	void set_index(u32 index);
-	void request_reload() { m_reload_requested = true; }
+	void request_reload()
+	{
+		m_reload_requested = true;
+	}
 
 private:
 	struct mouse_button
@@ -69,10 +81,19 @@ public:
 
 	void Init(const u32 max_connect) override;
 
-	void set_is_for_gui(bool value) { m_is_for_gui = value; }
-	bool is_for_gui() const { return m_is_for_gui; }
+	void set_is_for_gui(bool value)
+	{
+		m_is_for_gui = value;
+	}
+	bool is_for_gui() const
+	{
+		return m_is_for_gui;
+	}
 
-	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
+	const std::map<void*, raw_mouse>& get_mice() const
+	{
+		return m_raw_mice;
+	};
 
 	void set_mouse_press_callback(std::function<void(const std::string&, s32, bool)> cb)
 	{

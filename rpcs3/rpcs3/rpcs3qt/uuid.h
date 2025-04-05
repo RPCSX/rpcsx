@@ -13,5 +13,5 @@ namespace gui
 		bool create_new_uuid(std::string& uuid);
 
 		void log_uuid();
-	}
-}
+	} // namespace utils
+} // namespace gui

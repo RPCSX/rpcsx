@@ -11,25 +11,25 @@
 
 LOG_CHANNEL(cellSysutil);
 
-template<>
+template <>
 void fmt_class_string<CellAudioOutError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_AUDIO_OUT_ERROR_NOT_IMPLEMENTED);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_PARAMETER_OUT_OF_RANGE);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE);
-			STR_CASE(CELL_AUDIO_OUT_ERROR_CONDITION_BUSY);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_AUDIO_OUT_ERROR_NOT_IMPLEMENTED);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_PARAMETER_OUT_OF_RANGE);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE);
+				STR_CASE(CELL_AUDIO_OUT_ERROR_CONDITION_BUSY);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 audio_out_configuration::audio_out_configuration()
@@ -43,17 +43,22 @@ audio_out_configuration::audio_out_configuration()
 	const psf::registry sfo = psf::load_object(Emu.GetSfoDir(true) + "/PARAM.SFO");
 	const s32 sound_format = psf::get_integer(sfo, "SOUND_FORMAT", psf::sound_format_flag::lpcm_2); // Default to Linear PCM 2 Ch.
 
-	const bool supports_lpcm_2   = (sound_format & psf::sound_format_flag::lpcm_2);   // Linear PCM 2 Ch.
+	const bool supports_lpcm_2 = (sound_format & psf::sound_format_flag::lpcm_2);     // Linear PCM 2 Ch.
 	const bool supports_lpcm_5_1 = (sound_format & psf::sound_format_flag::lpcm_5_1); // Linear PCM 5.1 Ch.
 	const bool supports_lpcm_7_1 = (sound_format & psf::sound_format_flag::lpcm_7_1); // Linear PCM 7.1 Ch.
-	const bool supports_ac3      = (sound_format & psf::sound_format_flag::ac3);      // Dolby Digital 5.1 Ch.
-	const bool supports_dts      = (sound_format & psf::sound_format_flag::dts);      // DTS 5.1 Ch.
+	const bool supports_ac3 = (sound_format & psf::sound_format_flag::ac3);           // Dolby Digital 5.1 Ch.
+	const bool supports_dts = (sound_format & psf::sound_format_flag::dts);           // DTS 5.1 Ch.
 
-	if (supports_lpcm_2)   cellSysutil.notice("cellAudioOut: found support for Linear PCM 2 Ch.");
-	if (supports_lpcm_5_1) cellSysutil.notice("cellAudioOut: found support for Linear PCM 5.1 Ch.");
-	if (supports_lpcm_7_1) cellSysutil.notice("cellAudioOut: found support for Linear PCM 7.1 Ch.");
-	if (supports_ac3)      cellSysutil.notice("cellAudioOut: found support for Dolby Digital 5.1 Ch.");
-	if (supports_dts)      cellSysutil.notice("cellAudioOut: found support for DTS 5.1 Ch.");
+	if (supports_lpcm_2)
+		cellSysutil.notice("cellAudioOut: found support for Linear PCM 2 Ch.");
+	if (supports_lpcm_5_1)
+		cellSysutil.notice("cellAudioOut: found support for Linear PCM 5.1 Ch.");
+	if (supports_lpcm_7_1)
+		cellSysutil.notice("cellAudioOut: found support for Linear PCM 7.1 Ch.");
+	if (supports_ac3)
+		cellSysutil.notice("cellAudioOut: found support for Dolby Digital 5.1 Ch.");
+	if (supports_dts)
+		cellSysutil.notice("cellAudioOut: found support for DTS 5.1 Ch.");
 
 	std::array<bool, 2> initial_mode_selected = {};
 
@@ -73,7 +78,7 @@ audio_out_configuration::audio_out_configuration()
 		{
 			// Pre-select the first available sound mode
 			output.channels = channel;
-			output.encoder  = type;
+			output.encoder = type;
 			output.sound_mode = output.sound_modes.back();
 
 			selected = true;
@@ -460,8 +465,8 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 
 	// Return the active config.
 	CellAudioOutConfiguration _config{};
-	_config.channel   = out.channels;
-	_config.encoder   = out.encoder;
+	_config.channel = out.channels;
+	_config.encoder = out.encoder;
 	_config.downMixer = out.downmixer;
 
 	*config = _config;
@@ -573,7 +578,6 @@ error_code cellAudioOutUnregisterCallback(u32 slot)
 	cellSysutil.todo("cellAudioOutUnregisterCallback(slot=%d)", slot);
 	return CELL_OK;
 }
-
 
 void cellSysutil_AudioOut_init()
 {

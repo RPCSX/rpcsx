@@ -16,51 +16,49 @@ extern bool is_input_allowed();
 
 LOG_CHANNEL(cellPad);
 
-template<>
+template <>
 void fmt_class_string<CellPadError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_PAD_ERROR_FATAL);
-			STR_CASE(CELL_PAD_ERROR_INVALID_PARAMETER);
-			STR_CASE(CELL_PAD_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_PAD_ERROR_UNINITIALIZED);
-			STR_CASE(CELL_PAD_ERROR_RESOURCE_ALLOCATION_FAILED);
-			STR_CASE(CELL_PAD_ERROR_DATA_READ_FAILED);
-			STR_CASE(CELL_PAD_ERROR_NO_DEVICE);
-			STR_CASE(CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD);
-			STR_CASE(CELL_PAD_ERROR_TOO_MANY_DEVICES);
-			STR_CASE(CELL_PAD_ERROR_EBUSY);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_PAD_ERROR_FATAL);
+				STR_CASE(CELL_PAD_ERROR_INVALID_PARAMETER);
+				STR_CASE(CELL_PAD_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_PAD_ERROR_UNINITIALIZED);
+				STR_CASE(CELL_PAD_ERROR_RESOURCE_ALLOCATION_FAILED);
+				STR_CASE(CELL_PAD_ERROR_DATA_READ_FAILED);
+				STR_CASE(CELL_PAD_ERROR_NO_DEVICE);
+				STR_CASE(CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD);
+				STR_CASE(CELL_PAD_ERROR_TOO_MANY_DEVICES);
+				STR_CASE(CELL_PAD_ERROR_EBUSY);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_PADFILTER_ERROR_INVALID_PARAMETER);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_PADFILTER_ERROR_INVALID_PARAMETER);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 extern void sys_io_serialize(utils::serial& ar);
 
 pad_info::pad_info(utils::serial& ar)
-	: max_connect(ar)
-	, port_setting(ar)
-	, reported_info(ar)
+	: max_connect(ar), port_setting(ar), reported_info(ar)
 {
-	//reported_info = {};
+	// reported_info = {};
 	sys_io_serialize(ar);
 }
 
@@ -120,8 +118,7 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		">         PID:  0x%04x\n"
 		">         VID:  0x%04x\n"
 		"> Device Type:  0x%08x\n"
-		">  Class Type:  0x%08x\n"
-		,
+		">  Class Type:  0x%08x\n",
 		data.len,
 		"on", data.len >= CELL_PAD_LEN_CHANGE_DEFAULT ? "on" : "off",
 		(setting & CELL_PAD_SETTING_PRESS_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_PRESS_ON ? "on" : "off",
@@ -156,8 +153,7 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		pad.m_product_id,
 		pad.m_vendor_id,
 		pad.m_device_type,
-		pad.m_class_type
-	);
+		pad.m_class_type);
 
 	rsx::overlays::set_debug_overlay_text(std::move(text));
 }
@@ -465,18 +461,18 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			{
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_PRESS_RIGHT:    set_value(pad->m_press_right,    button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_RIGHT: set_value(pad->m_press_right, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_LEFT: set_value(pad->m_press_left, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_UP: set_value(pad->m_press_up, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_DOWN: set_value(pad->m_press_down, button.m_value, true); break;
 				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_R2:       set_value(pad->m_press_R2,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_CIRCLE: set_value(pad->m_press_circle, button.m_value, true, 255, 63); break;     // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CROSS: set_value(pad->m_press_cross, button.m_value, true, 255, 63); break;       // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_SQUARE: set_value(pad->m_press_square, button.m_value, true, 255, 63); break;     // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_L1: set_value(pad->m_press_L1, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_R1: set_value(pad->m_press_R1, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_L2: set_value(pad->m_press_L2, button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_R2: set_value(pad->m_press_R2, button.m_value, true); break;
 				default: break;
 				}
 				break;
@@ -523,7 +519,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	{
 		// report back new data every ~10 ms even if the input doesn't change
 		// this is observed behaviour when using a Dualshock 3 controller
-		static std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> last_update = { };
+		static std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> last_update = {};
 		const auto now = steady_clock::now();
 
 		if (btnChanged || pad->m_buffer_cleared || now - last_update[port_no] >= 10ms)
@@ -628,64 +624,64 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	}
 	case CELL_PAD_PCLASS_TYPE_GUITAR:
 	{
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_1]      = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_2]      = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_3]      = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_4]      = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_5]      = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_UP]    = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_DOWN]  = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_WHAMMYBAR]   = 0x80; // 0x80 – 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H1]     = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H2]     = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H3]     = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H4]     = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H5]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_1] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_2] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_3] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_4] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_5] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_UP] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_STRUM_DOWN] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_WHAMMYBAR] = 0x80; // 0x80 – 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H1] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H2] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H3] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H4] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_FRET_H5] = get_pressure_value(0, 0x0, 0xFF);
 		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_5WAY_EFFECT] = 0x0019; // One of 5 values: 0x0019, 0x004C, 0x007F (or 0x0096), 0x00B2, 0x00E5 (or 0x00E2)
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_TILT_SENS]   = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_GUITAR_TILT_SENS] = get_pressure_value(0, 0x0, 0xFF);
 		break;
 	}
 	case CELL_PAD_PCLASS_TYPE_DRUM:
 	{
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_SNARE]     = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM]       = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM2]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_SNARE] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM2] = get_pressure_value(0, 0x0, 0xFF);
 		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_TOM_FLOOR] = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK]      = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK] = get_pressure_value(0, 0x0, 0xFF);
 		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_HiHAT] = get_pressure_value(0, 0x0, 0xFF);
 		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_CRASH] = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_RIDE]  = get_pressure_value(0, 0x0, 0xFF);
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK2]     = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_CYM_RIDE] = get_pressure_value(0, 0x0, 0xFF);
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DRUM_KICK2] = get_pressure_value(0, 0x0, 0xFF);
 		break;
 	}
 	case CELL_PAD_PCLASS_TYPE_DJ:
 	{
 		// First deck
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_ATTACK]     = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_CROSSFADER] = 0;    // 0x0 - 0x3FF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_DSP_DIAL]   = 0;    // 0x0 - 0x3FF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM1]    = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM2]    = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM3]    = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_PLATTER]    = 0x80; // 0x0 - 0xFF (neutral: 0x80)
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_ATTACK] = 0;     // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_CROSSFADER] = 0; // 0x0 - 0x3FF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_MIXER_DSP_DIAL] = 0;   // 0x0 - 0x3FF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM1] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM2] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_STREAM3] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK1_PLATTER] = 0x80; // 0x0 - 0xFF (neutral: 0x80)
 
 		// Second deck
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM1]    = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM2]    = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM3]    = 0;    // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_PLATTER]    = 0x80; // 0x0 - 0xFF (neutral: 0x80)
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM1] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM2] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_STREAM3] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DJ_DECK2_PLATTER] = 0x80; // 0x0 - 0xFF (neutral: 0x80)
 		break;
 	}
 	case CELL_PAD_PCLASS_TYPE_DANCEMAT:
 	{
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CIRCLE]   = 0; // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CROSS]    = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CIRCLE] = 0;   // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_CROSS] = 0;    // 0x0 or 0xFF
 		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_TRIANGLE] = 0; // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_SQUARE]   = 0; // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_RIGHT]    = 0; // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_LEFT]     = 0; // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_UP]       = 0; // 0x0 or 0xFF
-		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_DOWN]     = 0; // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_SQUARE] = 0;   // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_RIGHT] = 0;    // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_LEFT] = 0;     // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_UP] = 0;       // 0x0 or 0xFF
+		data->button[CELL_PAD_PCLASS_BTN_OFFSET_DANCEMAT_DOWN] = 0;     // 0x0 or 0xFF
 		break;
 	}
 	}
@@ -1321,10 +1317,10 @@ void cellPad_init()
 	REG_FUNC(sys_io, cellPadPeriphGetInfo);
 	REG_FUNC(sys_io, cellPadPeriphGetData);
 	REG_FUNC(sys_io, cellPadSetPortSetting);
-	REG_FUNC(sys_io, cellPadInfoPressMode); //
-	REG_FUNC(sys_io, cellPadInfoSensorMode); //
-	REG_FUNC(sys_io, cellPadSetPressMode); //
-	REG_FUNC(sys_io, cellPadSetSensorMode); //
+	REG_FUNC(sys_io, cellPadInfoPressMode);     //
+	REG_FUNC(sys_io, cellPadInfoSensorMode);    //
+	REG_FUNC(sys_io, cellPadSetPressMode);      //
+	REG_FUNC(sys_io, cellPadSetSensorMode);     //
 	REG_FUNC(sys_io, cellPadGetCapabilityInfo); //
 	REG_FUNC(sys_io, cellPadLddRegisterController);
 	REG_FUNC(sys_io, cellPadLddDataInsert);

@@ -18,23 +18,23 @@ template <>
 void fmt_class_string<CellHttpUtilError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_HTTP_UTIL_ERROR_NO_MEMORY);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_NO_BUFFER);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_NO_STRING);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INSUFFICIENT);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_URI);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_HEADER);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_REQUEST);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_RESPONSE);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_LENGTH);
-			STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_CHARACTER);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_HTTP_UTIL_ERROR_NO_MEMORY);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_NO_BUFFER);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_NO_STRING);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INSUFFICIENT);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_URI);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_HEADER);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_REQUEST);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_RESPONSE);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_LENGTH);
+				STR_CASE(CELL_HTTP_UTIL_ERROR_INVALID_CHARACTER);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<void> pool, u32 size, vm::ptr<u32> required)
@@ -55,7 +55,7 @@ error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm
 	}
 
 	LUrlParser::clParseURL URL = LUrlParser::clParseURL::ParseURL(str.get_ptr());
-	if ( URL.IsValid() )
+	if (URL.IsValid())
 	{
 		std::string scheme = URL.m_Scheme;
 		std::string host = URL.m_Host;
@@ -70,7 +70,7 @@ error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm
 		u32 passwordOffset = usernameOffset + ::size32(username) + 1;
 		u32 totalSize = passwordOffset + ::size32(password) + 1;
 
-		//called twice, first to setup pool, then to populate.
+		// called twice, first to setup pool, then to populate.
 		if (!uri)
 		{
 			*required = totalSize;
@@ -105,35 +105,35 @@ error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm
 	else
 	{
 		std::string parseError;
-		switch(URL.m_ErrorCode)
+		switch (URL.m_ErrorCode)
 		{
-			case LUrlParser::LUrlParserError_Ok:
-				parseError = "No error, URL was parsed fine";
-				break;
-			case LUrlParser::LUrlParserError_Uninitialized:
-				parseError = "Error, LUrlParser is uninitialized";
-				break;
-			case LUrlParser::LUrlParserError_NoUrlCharacter:
-				parseError = "Error, the URL has invalid characters";
-				break;
-			case LUrlParser::LUrlParserError_InvalidSchemeName:
-				parseError = "Error, the URL has an invalid scheme";
-				break;
-			case LUrlParser::LUrlParserError_NoDoubleSlash:
-				parseError = "Error, the URL did not contain a double slash";
-				break;
-			case LUrlParser::LUrlParserError_NoAtSign:
-				parseError = "Error, the URL did not contain an @ sign";
-				break;
-			case LUrlParser::LUrlParserError_UnexpectedEndOfLine:
-				parseError = "Error, unexpectedly got the end of the line";
-				break;
-			case LUrlParser::LUrlParserError_NoSlash:
-				parseError = "Error, URI didn't contain a slash";
-				break;
-			default:
-				parseError = "Error, unknown error #" + std::to_string(static_cast<int>(URL.m_ErrorCode));
-				break;
+		case LUrlParser::LUrlParserError_Ok:
+			parseError = "No error, URL was parsed fine";
+			break;
+		case LUrlParser::LUrlParserError_Uninitialized:
+			parseError = "Error, LUrlParser is uninitialized";
+			break;
+		case LUrlParser::LUrlParserError_NoUrlCharacter:
+			parseError = "Error, the URL has invalid characters";
+			break;
+		case LUrlParser::LUrlParserError_InvalidSchemeName:
+			parseError = "Error, the URL has an invalid scheme";
+			break;
+		case LUrlParser::LUrlParserError_NoDoubleSlash:
+			parseError = "Error, the URL did not contain a double slash";
+			break;
+		case LUrlParser::LUrlParserError_NoAtSign:
+			parseError = "Error, the URL did not contain an @ sign";
+			break;
+		case LUrlParser::LUrlParserError_UnexpectedEndOfLine:
+			parseError = "Error, unexpectedly got the end of the line";
+			break;
+		case LUrlParser::LUrlParserError_NoSlash:
+			parseError = "Error, URI didn't contain a slash";
+			break;
+		default:
+			parseError = "Error, unknown error #" + std::to_string(static_cast<int>(URL.m_ErrorCode));
+			break;
 		}
 		cellHttpUtil.error("%s, while parsing URI, %s.", parseError, str.get_ptr());
 		return -1;
@@ -828,28 +828,28 @@ error_code cellHttpUtilBase64Decoder(vm::ptr<char> output, vm::cptr<void> in, u3
 }
 
 DECLARE(ppu_module_manager::cellHttpUtil)("cellHttpUtil", []()
-{
-	REG_FUNC(cellHttpUtil, cellHttpUtilParseUri);
-	REG_FUNC(cellHttpUtil, cellHttpUtilParseUriPath);
-	REG_FUNC(cellHttpUtil, cellHttpUtilParseProxy);
-	REG_FUNC(cellHttpUtil, cellHttpUtilParseStatusLine);
-	REG_FUNC(cellHttpUtil, cellHttpUtilParseHeader);
+	{
+		REG_FUNC(cellHttpUtil, cellHttpUtilParseUri);
+		REG_FUNC(cellHttpUtil, cellHttpUtilParseUriPath);
+		REG_FUNC(cellHttpUtil, cellHttpUtilParseProxy);
+		REG_FUNC(cellHttpUtil, cellHttpUtilParseStatusLine);
+		REG_FUNC(cellHttpUtil, cellHttpUtilParseHeader);
 
-	REG_FUNC(cellHttpUtil, cellHttpUtilBuildRequestLine);
-	REG_FUNC(cellHttpUtil, cellHttpUtilBuildHeader);
-	REG_FUNC(cellHttpUtil, cellHttpUtilBuildUri);
+		REG_FUNC(cellHttpUtil, cellHttpUtilBuildRequestLine);
+		REG_FUNC(cellHttpUtil, cellHttpUtilBuildHeader);
+		REG_FUNC(cellHttpUtil, cellHttpUtilBuildUri);
 
-	REG_FUNC(cellHttpUtil, cellHttpUtilCopyUri);
-	REG_FUNC(cellHttpUtil, cellHttpUtilMergeUriPath);
-	REG_FUNC(cellHttpUtil, cellHttpUtilSweepPath);
-	REG_FUNC(cellHttpUtil, cellHttpUtilCopyStatusLine);
-	REG_FUNC(cellHttpUtil, cellHttpUtilCopyHeader);
-	REG_FUNC(cellHttpUtil, cellHttpUtilAppendHeaderValue);
+		REG_FUNC(cellHttpUtil, cellHttpUtilCopyUri);
+		REG_FUNC(cellHttpUtil, cellHttpUtilMergeUriPath);
+		REG_FUNC(cellHttpUtil, cellHttpUtilSweepPath);
+		REG_FUNC(cellHttpUtil, cellHttpUtilCopyStatusLine);
+		REG_FUNC(cellHttpUtil, cellHttpUtilCopyHeader);
+		REG_FUNC(cellHttpUtil, cellHttpUtilAppendHeaderValue);
 
-	REG_FUNC(cellHttpUtil, cellHttpUtilEscapeUri);
-	REG_FUNC(cellHttpUtil, cellHttpUtilUnescapeUri);
-	REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlEncode);
-	REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlDecode);
-	REG_FUNC(cellHttpUtil, cellHttpUtilBase64Encoder);
-	REG_FUNC(cellHttpUtil, cellHttpUtilBase64Decoder);
-});
+		REG_FUNC(cellHttpUtil, cellHttpUtilEscapeUri);
+		REG_FUNC(cellHttpUtil, cellHttpUtilUnescapeUri);
+		REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlEncode);
+		REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlDecode);
+		REG_FUNC(cellHttpUtil, cellHttpUtilBase64Encoder);
+		REG_FUNC(cellHttpUtil, cellHttpUtilBase64Decoder);
+	});

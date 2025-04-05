@@ -47,7 +47,8 @@ void shared_mutex::impl_lock_shared(unsigned val) {
   if ((old % c_sig) + c_one >= c_sig)
     std::abort(); // "shared_mutex overflow"
 
-  while (impl_wait() != std::errc{}) {}
+  while (impl_wait() != std::errc{}) {
+  }
   lock_downgrade();
 }
 void shared_mutex::impl_unlock_shared(unsigned old) {
@@ -80,7 +81,7 @@ std::errc shared_mutex::impl_wait() {
     }
   }
 
-  return{};
+  return {};
 }
 void shared_mutex::impl_signal() {
   m_value += c_sig;
@@ -120,7 +121,8 @@ void shared_mutex::impl_lock(unsigned val) {
 
   if ((old % c_sig) + c_one >= c_sig)
     std::abort(); // "shared_mutex overflow"
-  while (impl_wait() != std::errc{}) {}
+  while (impl_wait() != std::errc{}) {
+  }
 }
 void shared_mutex::impl_unlock(unsigned old) {
   if (old - c_one >= c_err)
@@ -152,7 +154,8 @@ void shared_mutex::impl_lock_upgrade() {
     return;
   }
 
-  while (impl_wait() != std::errc{}) {}
+  while (impl_wait() != std::errc{}) {
+  }
 }
 bool shared_mutex::lock_forced(int count) {
   if (count == 0)

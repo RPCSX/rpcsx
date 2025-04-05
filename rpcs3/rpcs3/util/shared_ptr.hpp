@@ -42,7 +42,8 @@ namespace stx
 	{
 	};
 
-	template <usz Size, usz Align> requires (Align > Size)
+	template <usz Size, usz Align>
+		requires(Align > Size)
 	struct align_filler<Size, Align>
 	{
 		char dummy[Align - Size];
@@ -121,7 +122,8 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		single_ptr(single_ptr<U>&& r) noexcept
 		{
 			m_ptr = r.m_ptr;
@@ -143,7 +145,8 @@ namespace stx
 			return *this;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		single_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
 			single_ptr(std::move(r)).swap(*this);
@@ -171,7 +174,8 @@ namespace stx
 			return m_ptr;
 		}
 
-		element_type& operator*() const noexcept requires (!std::is_void_v<element_type>)
+		element_type& operator*() const noexcept
+			requires(!std::is_void_v<element_type>)
 		{
 			return *m_ptr;
 		}
@@ -181,12 +185,14 @@ namespace stx
 			return m_ptr;
 		}
 
-		element_type& operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type> && std::is_array_v<T>)
+		element_type& operator[](std::ptrdiff_t idx) const noexcept
+			requires(!std::is_void_v<element_type> && std::is_array_v<T>)
 		{
 			return m_ptr[idx];
 		}
 
-		template <typename... Args> requires (std::is_invocable_v<T, Args&&...>)
+		template <typename... Args>
+			requires(std::is_invocable_v<T, Args && ...>)
 		decltype(auto) operator()(Args&&... args) const noexcept
 		{
 			return std::invoke(*m_ptr, std::forward<Args>(args)...);
@@ -198,7 +204,8 @@ namespace stx
 		}
 
 		// "Moving" "static cast"
-		template <typename U> requires PtrSame<T, U>
+		template <typename U>
+			requires PtrSame<T, U>
 		explicit operator single_ptr<U>() && noexcept
 		{
 			single_ptr<U> r;
@@ -206,7 +213,8 @@ namespace stx
 			return r;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		bool operator==(const single_ptr<U>& r) const noexcept
 		{
 			return get() == r.get();
@@ -256,7 +264,7 @@ namespace stx
 	}
 
 	template <typename T, bool Init = true, usz Align = alignof(std::remove_extent_t<T>)>
-		requires (std::is_unbounded_array_v<T> && std::is_default_constructible_v<std::remove_extent_t<T>>)
+		requires(std::is_unbounded_array_v<T> && std::is_default_constructible_v<std::remove_extent_t<T>>)
 	static single_ptr<T> make_single(usz count) noexcept
 	{
 		static_assert(sizeof(shared_data<T>) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
@@ -363,7 +371,8 @@ namespace stx
 		template <typename Type>
 		friend shared_ptr<Type> make_shared_from_this(const Type* _this) noexcept;
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_ptr(const shared_ptr<U>& r) noexcept
 		{
 			m_ptr = r.m_ptr;
@@ -377,14 +386,16 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_ptr(shared_ptr<U>&& r) noexcept
 		{
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_ptr(single_ptr<U>&& r) noexcept
 		{
 			m_ptr = r.m_ptr;
@@ -404,7 +415,8 @@ namespace stx
 
 		[[deprecated("Use null_ptr")]] shared_ptr& operator=(std::nullptr_t) = delete;
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
 			shared_ptr(r).swap(*this);
@@ -417,14 +429,16 @@ namespace stx
 			return *this;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
 			shared_ptr(std::move(r)).swap(*this);
@@ -448,7 +462,8 @@ namespace stx
 		}
 
 		// Converts to unique (single) ptr if reference is 1. Nullifies self on success.
-		template <typename U> requires PtrSame<T, U>
+		template <typename U>
+			requires PtrSame<T, U>
 		single_ptr<U> try_convert_to_single_ptr() noexcept
 		{
 			if (const auto o = m_ptr ? d() : nullptr; o && o->refs == 1u)
@@ -472,7 +487,8 @@ namespace stx
 			return m_ptr;
 		}
 
-		element_type& operator*() const noexcept requires (!std::is_void_v<element_type>)
+		element_type& operator*() const noexcept
+			requires(!std::is_void_v<element_type>)
 		{
 			return *m_ptr;
 		}
@@ -482,12 +498,14 @@ namespace stx
 			return m_ptr;
 		}
 
-		element_type& operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type> && std::is_array_v<T>)
+		element_type& operator[](std::ptrdiff_t idx) const noexcept
+			requires(!std::is_void_v<element_type> && std::is_array_v<T>)
 		{
 			return m_ptr[idx];
 		}
 
-		template <typename... Args> requires (std::is_invocable_v<T, Args&&...>)
+		template <typename... Args>
+			requires(std::is_invocable_v<T, Args && ...>)
 		decltype(auto) operator()(Args&&... args) const noexcept
 		{
 			return std::invoke(*m_ptr, std::forward<Args>(args)...);
@@ -511,7 +529,8 @@ namespace stx
 		}
 
 		// Basic "static cast" support
-		template <typename U> requires PtrSame<T, U>
+		template <typename U>
+			requires PtrSame<T, U>
 		explicit operator shared_ptr<U>() const& noexcept
 		{
 			if (m_ptr)
@@ -525,7 +544,8 @@ namespace stx
 		}
 
 		// "Moving" "static cast"
-		template <typename U> requires PtrSame<T, U>
+		template <typename U>
+			requires PtrSame<T, U>
 		explicit operator shared_ptr<U>() && noexcept
 		{
 			shared_ptr<U> r;
@@ -533,7 +553,8 @@ namespace stx
 			return r;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		bool operator==(const shared_ptr<U>& r) const noexcept
 		{
 			return get() == r.get();
@@ -541,21 +562,21 @@ namespace stx
 	};
 
 	template <typename T, typename... Args>
-		requires(!std::is_unbounded_array_v<T> && std::is_constructible_v<std::remove_extent_t<T>, Args&& ...>)
+		requires(!std::is_unbounded_array_v<T> && std::is_constructible_v<std::remove_extent_t<T>, Args && ...>)
 	static shared_ptr<T> make_shared(Args&&... args) noexcept
 	{
 		return make_single<T>(std::forward<Args>(args)...);
 	}
 
 	template <typename T, bool Init = true>
-		requires (std::is_unbounded_array_v<T> && std::is_default_constructible_v<std::remove_extent_t<T>>)
+		requires(std::is_unbounded_array_v<T> && std::is_default_constructible_v<std::remove_extent_t<T>>)
 	static shared_ptr<T> make_shared(usz count) noexcept
 	{
 		return make_single<T, Init>(count);
 	}
 
 	template <typename T>
-		requires (std::is_constructible_v<std::remove_reference_t<T>, T&&>)
+		requires(std::is_constructible_v<std::remove_reference_t<T>, T &&>)
 	static shared_ptr<std::remove_reference_t<T>> make_shared_value(T&& value) noexcept
 	{
 		return make_single_value(std::forward<T>(value));
@@ -610,17 +631,17 @@ namespace stx
 
 		// Helper struct to check if a type is an instance of a template
 		template <typename T1, template <typename> class Template>
-		struct is_instance_of : std::false_type {};
+		struct is_instance_of : std::false_type
+		{
+		};
 
 		template <typename T1, template <typename> class Template>
-		struct is_instance_of<Template<T1>, Template> : std::true_type {};
+		struct is_instance_of<Template<T1>, Template> : std::true_type
+		{
+		};
 
 		template <typename T1>
-		static constexpr bool is_stx_pointer = false
-			|| is_instance_of<std::remove_cvref_t<T1>, shared_ptr>::value
-			|| is_instance_of<std::remove_cvref_t<T1>, single_ptr>::value
-			|| is_instance_of<std::remove_cvref_t<T1>, atomic_ptr>::value
-			|| std::is_same_v<std::remove_cvref_t<T1>, null_ptr_t>;
+		static constexpr bool is_stx_pointer = false || is_instance_of<std::remove_cvref_t<T1>, shared_ptr>::value || is_instance_of<std::remove_cvref_t<T1>, single_ptr>::value || is_instance_of<std::remove_cvref_t<T1>, atomic_ptr>::value || std::is_same_v<std::remove_cvref_t<T1>, null_ptr_t>;
 
 	public:
 		using element_type = std::remove_extent_t<T>;
@@ -630,10 +651,8 @@ namespace stx
 		constexpr atomic_ptr() noexcept = default;
 
 		// Optimized value construct
-		template <typename... Args> requires (true
-			&& sizeof...(Args) != 0
-			&& !(sizeof...(Args) == 1 && (is_stx_pointer<Args> || ...))
-			&& std::is_constructible_v<element_type, Args&&...>)
+		template <typename... Args>
+			requires(true && sizeof...(Args) != 0 && !(sizeof...(Args) == 1 && (is_stx_pointer<Args> || ...)) && std::is_constructible_v<element_type, Args && ...>)
 		explicit atomic_ptr(Args&&... args) noexcept
 		{
 			shared_type r = make_single<T>(std::forward<Args>(args)...);
@@ -641,7 +660,8 @@ namespace stx
 			d()->refs.raw() += c_ref_mask;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		atomic_ptr(const shared_ptr<U>& r) noexcept
 		{
 			// Obtain a ref + as many refs as an atomic_ptr can additionally reference
@@ -652,7 +672,8 @@ namespace stx
 			}
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		atomic_ptr(shared_ptr<U>&& r) noexcept
 		{
 			if (uptr rval = to_val(r.m_ptr))
@@ -664,7 +685,8 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		atomic_ptr(single_ptr<U>&& r) noexcept
 		{
 			if (uptr rval = to_val(r.m_ptr))
@@ -692,7 +714,8 @@ namespace stx
 		}
 
 		// Optimized value assignment
-		atomic_ptr& operator=(std::remove_cv_t<T> value) noexcept requires (!is_stx_pointer<T>)
+		atomic_ptr& operator=(std::remove_cv_t<T> value) noexcept
+			requires(!is_stx_pointer<T>)
 		{
 			shared_type r = make_single<T>(std::move(value));
 			r.d()->refs.raw() += c_ref_mask;
@@ -702,21 +725,24 @@ namespace stx
 			return *this;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		atomic_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
 			store(r);
 			return *this;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		atomic_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
 			store(std::move(r));
 			return *this;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		atomic_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
 			store(std::move(r));
@@ -734,15 +760,15 @@ namespace stx
 
 			// Add reference
 			const auto [prev, did_ref] = m_val.fetch_op([](uptr& val)
-			{
-				if (val >> c_ref_size)
 				{
-					val++;
-					return true;
-				}
+					if (val >> c_ref_size)
+					{
+						val++;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			if (!did_ref)
 			{
@@ -756,15 +782,15 @@ namespace stx
 
 			// Dereference if still the same pointer
 			const auto [_, did_deref] = m_val.fetch_op([prev = prev](uptr& val)
-			{
-				if (val >> c_ref_size == prev >> c_ref_size)
 				{
-					val--;
-					return true;
-				}
+					if (val >> c_ref_size == prev >> c_ref_size)
+					{
+						val--;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			if (!did_deref)
 			{
@@ -783,15 +809,15 @@ namespace stx
 
 			// Add reference
 			const auto [prev, did_ref] = m_val.fetch_op([](uptr& val)
-			{
-				if (val >> c_ref_size)
 				{
-					val++;
-					return true;
-				}
+					if (val >> c_ref_size)
+					{
+						val++;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			// Set fake unreferenced pointer
 			if (did_ref)
@@ -824,15 +850,15 @@ namespace stx
 
 			// Dereference if still the same pointer
 			const auto [_, did_deref] = m_val.fetch_op([prev = prev](uptr& val)
-			{
-				if (val >> c_ref_size == prev >> c_ref_size)
 				{
-					val--;
-					return true;
-				}
+					if (val >> c_ref_size == prev >> c_ref_size)
+					{
+						val--;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			if (did_deref)
 			{
@@ -852,10 +878,8 @@ namespace stx
 
 		// Create an object from variadic args
 		// If a type needs shared_type to be constructed, std::reference_wrapper can be used
-		template <typename... Args> requires (true
-			&& sizeof...(Args) != 0
-			&& !(sizeof...(Args) == 1 && (is_stx_pointer<Args> || ...))
-			&& std::is_constructible_v<element_type, Args&&...>)
+		template <typename... Args>
+			requires(true && sizeof...(Args) != 0 && !(sizeof...(Args) == 1 && (is_stx_pointer<Args> || ...)) && std::is_constructible_v<element_type, Args && ...>)
 		void store(Args&&... args) noexcept
 		{
 			shared_type r = make_single<T>(std::forward<Args>(args)...);
@@ -877,10 +901,8 @@ namespace stx
 			old.m_val.raw() = m_val.exchange(to_val(std::exchange(value.m_ptr, nullptr)));
 		}
 
-		template <typename... Args> requires (true
-			&& sizeof...(Args) != 0
-			&& !(sizeof...(Args) == 1 && (is_stx_pointer<Args> || ...))
-			&& std::is_constructible_v<element_type, Args&...>)
+		template <typename... Args>
+			requires(true && sizeof...(Args) != 0 && !(sizeof...(Args) == 1 && (is_stx_pointer<Args> || ...)) && std::is_constructible_v<element_type, Args&...>)
 		[[nodiscard]] shared_type exchange(Args&&... args) noexcept
 		{
 			shared_type r = make_single<T>(std::forward<Args>(args)...);
@@ -924,18 +946,18 @@ namespace stx
 			atomic_ptr old;
 
 			const uptr _val = m_val.fetch_op([&](uptr& val)
-			{
-				if (val >> c_ref_size == _old)
 				{
-					// Set new value
-					val = _new << c_ref_size;
-				}
-				else if (val)
-				{
-					// Reference previous value
-					val++;
-				}
-			});
+					if (val >> c_ref_size == _old)
+					{
+						// Set new value
+						val = _new << c_ref_size;
+					}
+					else if (val)
+					{
+						// Reference previous value
+						val++;
+					}
+				});
 
 			if (_val >> c_ref_size == _old)
 			{
@@ -967,15 +989,15 @@ namespace stx
 
 			// Dereference if still the same pointer
 			const auto [_, did_deref] = m_val.fetch_op([_val](uptr& val)
-			{
-				if (val >> c_ref_size == _val >> c_ref_size)
 				{
-					val--;
-					return true;
-				}
+					if (val >> c_ref_size == _val >> c_ref_size)
+					{
+						val--;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			if (!did_deref)
 			{
@@ -987,7 +1009,8 @@ namespace stx
 		}
 
 		// Unoptimized
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_type compare_and_swap(const shared_ptr<U>& cmp, shared_type exch)
 		{
 			shared_type old = cmp;
@@ -996,7 +1019,8 @@ namespace stx
 		}
 
 		// More lightweight than compare_exchange
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		bool compare_and_swap_test(const shared_ptr<U>& cmp, shared_type exch)
 		{
 			const uptr _old = reinterpret_cast<uptr>(cmp.m_ptr);
@@ -1010,16 +1034,16 @@ namespace stx
 			atomic_ptr old;
 
 			const auto [_val, ok] = m_val.fetch_op([&](uptr& val)
-			{
-				if (val >> c_ref_size == _old)
 				{
-					// Set new value
-					val = _new << c_ref_size;
-					return true;
-				}
+					if (val >> c_ref_size == _old)
+					{
+						// Set new value
+						val = _new << c_ref_size;
+						return true;
+					}
 
-				return false;
-			});
+					return false;
+				});
 
 			if (ok)
 			{
@@ -1035,7 +1059,8 @@ namespace stx
 		}
 
 		// Unoptimized
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		shared_type compare_and_swap(const single_ptr<U>& cmp, shared_type exch)
 		{
 			shared_type old = cmp;
@@ -1044,7 +1069,8 @@ namespace stx
 		}
 
 		// Supplementary
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		bool compare_and_swap_test(const single_ptr<U>& cmp, shared_type exch)
 		{
 			return compare_and_swap_test(reinterpret_cast<const shared_ptr<U>&>(cmp), std::move(exch));
@@ -1096,13 +1122,15 @@ namespace stx
 			return m_val != 0;
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		bool is_equal(const shared_ptr<U>& r) const noexcept
 		{
 			return static_cast<volatile const void*>(observe()) == r.get();
 		}
 
-		template <typename U> requires same_ptr_implicit_v<T, U>
+		template <typename U>
+			requires same_ptr_implicit_v<T, U>
 		bool is_equal(const single_ptr<U>& r) const noexcept
 		{
 			return static_cast<volatile const void*>(observe()) == r.get();
@@ -1151,7 +1179,7 @@ namespace stx
 		}
 
 	} null_ptr;
-}
+} // namespace stx
 
 template <typename T>
 struct std::hash<stx::single_ptr<T>>
@@ -1171,11 +1199,11 @@ struct std::hash<stx::shared_ptr<T>>
 	}
 };
 
-using stx::null_ptr;
-using stx::single_ptr;
-using stx::shared_ptr;
 using stx::atomic_ptr;
-using stx::make_single;
 using stx::make_shared;
-using stx::make_single_value;
 using stx::make_shared_value;
+using stx::make_single;
+using stx::make_single_value;
+using stx::null_ptr;
+using stx::shared_ptr;
+using stx::single_ptr;

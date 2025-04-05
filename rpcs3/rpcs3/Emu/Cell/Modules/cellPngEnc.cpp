@@ -9,23 +9,23 @@ template <>
 void fmt_class_string<CellPngEncError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellPngEncError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_PNGENC_ERROR_ARG);
-		STR_CASE(CELL_PNGENC_ERROR_SEQ);
-		STR_CASE(CELL_PNGENC_ERROR_BUSY);
-		STR_CASE(CELL_PNGENC_ERROR_EMPTY);
-		STR_CASE(CELL_PNGENC_ERROR_RESET);
-		STR_CASE(CELL_PNGENC_ERROR_FATAL);
-		STR_CASE(CELL_PNGENC_ERROR_STREAM_ABORT);
-		STR_CASE(CELL_PNGENC_ERROR_STREAM_SKIP);
-		STR_CASE(CELL_PNGENC_ERROR_STREAM_OVERFLOW);
-		STR_CASE(CELL_PNGENC_ERROR_STREAM_FILE_OPEN);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_PNGENC_ERROR_ARG);
+				STR_CASE(CELL_PNGENC_ERROR_SEQ);
+				STR_CASE(CELL_PNGENC_ERROR_BUSY);
+				STR_CASE(CELL_PNGENC_ERROR_EMPTY);
+				STR_CASE(CELL_PNGENC_ERROR_RESET);
+				STR_CASE(CELL_PNGENC_ERROR_FATAL);
+				STR_CASE(CELL_PNGENC_ERROR_STREAM_ABORT);
+				STR_CASE(CELL_PNGENC_ERROR_STREAM_SKIP);
+				STR_CASE(CELL_PNGENC_ERROR_STREAM_OVERFLOW);
+				STR_CASE(CELL_PNGENC_ERROR_STREAM_FILE_OPEN);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct png_encoder
@@ -53,11 +53,8 @@ bool check_config(vm::cptr<CellPngEncConfig> config)
 
 u32 get_mem_size(vm::cptr<CellPngEncConfig> config)
 {
-	return config->addMemSize
-		+ (config->enableSpu ? 0x78200 : 0x47a00)
-		+ (config->maxBitDepth >> 1) * config->maxWidth * 7;
+	return config->addMemSize + (config->enableSpu ? 0x78200 : 0x47a00) + (config->maxBitDepth >> 1) * config->maxWidth * 7;
 }
-
 
 error_code cellPngEncQueryAttr(vm::cptr<CellPngEncConfig> config, vm::ptr<CellPngEncAttr> attr)
 {
@@ -225,14 +222,14 @@ error_code cellPngEncReset(u32 handle)
 }
 
 DECLARE(ppu_module_manager::cellPngEnc)("cellPngEnc", []()
-{
-	REG_FUNC(cellPngEnc, cellPngEncQueryAttr);
-	REG_FUNC(cellPngEnc, cellPngEncOpen);
-	REG_FUNC(cellPngEnc, cellPngEncOpenEx);
-	REG_FUNC(cellPngEnc, cellPngEncClose);
-	REG_FUNC(cellPngEnc, cellPngEncWaitForInput);
-	REG_FUNC(cellPngEnc, cellPngEncEncodePicture);
-	REG_FUNC(cellPngEnc, cellPngEncWaitForOutput);
-	REG_FUNC(cellPngEnc, cellPngEncGetStreamInfo);
-	REG_FUNC(cellPngEnc, cellPngEncReset);
-});
+	{
+		REG_FUNC(cellPngEnc, cellPngEncQueryAttr);
+		REG_FUNC(cellPngEnc, cellPngEncOpen);
+		REG_FUNC(cellPngEnc, cellPngEncOpenEx);
+		REG_FUNC(cellPngEnc, cellPngEncClose);
+		REG_FUNC(cellPngEnc, cellPngEncWaitForInput);
+		REG_FUNC(cellPngEnc, cellPngEncEncodePicture);
+		REG_FUNC(cellPngEnc, cellPngEncWaitForOutput);
+		REG_FUNC(cellPngEnc, cellPngEncGetStreamInfo);
+		REG_FUNC(cellPngEnc, cellPngEncReset);
+	});

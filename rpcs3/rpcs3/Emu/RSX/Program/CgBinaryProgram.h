@@ -38,36 +38,36 @@ using CgBinaryProgram = struct CgBinaryProgram;
 // fragment programs have their constants embedded in the microcode
 struct CgBinaryEmbeddedConstant
 {
-	be_t<u32> ucodeCount;       // occurrences
-	be_t<u32> ucodeOffset[1];   // offsets that need to be patched follow
+	be_t<u32> ucodeCount;     // occurrences
+	be_t<u32> ucodeOffset[1]; // offsets that need to be patched follow
 };
 
 // describe a binary program parameter (CgParameter is opaque)
 struct CgBinaryParameter
 {
-	CGtype                          type;          // cgGetParameterType()
-	CGresource                      res;           // cgGetParameterResource()
-	CGenum                          var;           // cgGetParameterVariability()
-	CGint                           resIndex;      // cgGetParameterResourceIndex()
-	CgBinaryStringOffset            name;          // cgGetParameterName()
-	CgBinaryFloatOffset             defaultValue;  // default constant value
-	CgBinaryEmbeddedConstantOffset  embeddedConst; // embedded constant information
-	CgBinaryStringOffset            semantic;      // cgGetParameterSemantic()
-	CGenum                          direction;     // cgGetParameterDirection()
-	CGint                           paramno;       // 0..n: cgGetParameterIndex() -1: globals
-	CGbool                          isReferenced;  // cgIsParameterReferenced()
-	CGbool                          isShared;	   // cgIsParameterShared()
+	CGtype type;                                  // cgGetParameterType()
+	CGresource res;                               // cgGetParameterResource()
+	CGenum var;                                   // cgGetParameterVariability()
+	CGint resIndex;                               // cgGetParameterResourceIndex()
+	CgBinaryStringOffset name;                    // cgGetParameterName()
+	CgBinaryFloatOffset defaultValue;             // default constant value
+	CgBinaryEmbeddedConstantOffset embeddedConst; // embedded constant information
+	CgBinaryStringOffset semantic;                // cgGetParameterSemantic()
+	CGenum direction;                             // cgGetParameterDirection()
+	CGint paramno;                                // 0..n: cgGetParameterIndex() -1: globals
+	CGbool isReferenced;                          // cgIsParameterReferenced()
+	CGbool isShared;                              // cgIsParameterShared()
 };
 
 // attributes needed for vshaders
 struct CgBinaryVertexProgram
 {
-	CgBinarySize  instructionCount;       // #instructions
-	CgBinarySize  instructionSlot;        // load address (indexed reads!)
-	CgBinarySize  registerCount;          // R registers count
-	CGbitfield  attributeInputMask;       // attributes vs reads from
-	CGbitfield  attributeOutputMask;      // attributes vs writes (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
-	CGbitfield  userClipMask;             // user clip plane enables (for SET_USER_CLIP_PLANE_CONTROL)
+	CgBinarySize instructionCount;  // #instructions
+	CgBinarySize instructionSlot;   // load address (indexed reads!)
+	CgBinarySize registerCount;     // R registers count
+	CGbitfield attributeInputMask;  // attributes vs reads from
+	CGbitfield attributeOutputMask; // attributes vs writes (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
+	CGbitfield userClipMask;        // user clip plane enables (for SET_USER_CLIP_PLANE_CONTROL)
 };
 
 typedef enum
@@ -80,16 +80,16 @@ typedef enum
 // attributes needed for pshaders
 struct CgBinaryFragmentProgram
 {
-	CgBinarySize instructionCount;        // #instructions
-	CGbitfield   attributeInputMask;      // attributes fp reads (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
-	CGbitfield   partialTexType;          // texid 0..15 use two bits each marking whether the texture format requires partial load: see CgBinaryPartialTexType
-	CGbitfield16 texCoordsInputMask;      // tex coords used by frag prog. (tex<n> is bit n)
-	CGbitfield16 texCoords2D;             // tex coords that are 2d        (tex<n> is bit n)
-	CGbitfield16 texCoordsCentroid;       // tex coords that are centroid  (tex<n> is bit n)
-	u8           registerCount;           // R registers count
-	u8           outputFromH0;            // final color from R0 or H0
-	u8           depthReplace;            // fp generated z depth value
-	u8           pixelKill;               // fp uses kill operations
+	CgBinarySize instructionCount;   // #instructions
+	CGbitfield attributeInputMask;   // attributes fp reads (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
+	CGbitfield partialTexType;       // texid 0..15 use two bits each marking whether the texture format requires partial load: see CgBinaryPartialTexType
+	CGbitfield16 texCoordsInputMask; // tex coords used by frag prog. (tex<n> is bit n)
+	CGbitfield16 texCoords2D;        // tex coords that are 2d        (tex<n> is bit n)
+	CGbitfield16 texCoordsCentroid;  // tex coords that are centroid  (tex<n> is bit n)
+	u8 registerCount;                // R registers count
+	u8 outputFromH0;                 // final color from R0 or H0
+	u8 depthReplace;                 // fp generated z depth value
+	u8 pixelKill;                    // fp uses kill operations
 };
 
 struct CgBinaryProgram
@@ -111,8 +111,8 @@ struct CgBinaryProgram
 	CgBinaryOffset program;
 
 	// raw ucode data
-	CgBinarySize    ucodeSize;
-	CgBinaryOffset  ucode;
+	CgBinarySize ucodeSize;
+	CgBinaryOffset ucode;
 
 	// variable length data follows
 	u8 data[1];
@@ -156,8 +156,14 @@ class CgBinaryDisasm
 	std::vector<u32> m_data;
 
 public:
-	std::string GetArbShader() const { return m_arb_shader; }
-	std::string GetGlslShader() const { return m_glsl_shader; }
+	std::string GetArbShader() const
+	{
+		return m_arb_shader;
+	}
+	std::string GetGlslShader() const
+	{
+		return m_glsl_shader;
+	}
 
 	// FP functions
 	std::string GetMask() const;
@@ -167,7 +173,8 @@ public:
 	std::string AddTexDisAsm() const;
 	std::string FormatDisAsm(const std::string& code);
 	std::string GetCondDisAsm() const;
-	template<typename T> std::string GetSrcDisAsm(T src);
+	template <typename T>
+	std::string GetSrcDisAsm(T src);
 
 	// VP functions
 	std::string GetMaskDisasm(bool is_sca) const;
@@ -189,12 +196,12 @@ public:
 	void SetDSTVecDisasm(const std::string& code);
 	void SetDSTScaDisasm(const std::string& code);
 
-
 	CgBinaryDisasm(const std::string& path)
 		: m_path(path)
 	{
 		fs::file f(path);
-		if (!f) return;
+		if (!f)
+			return;
 
 		m_buffer_size = f.size();
 		m_buffer = new u8[m_buffer_size];
@@ -261,7 +268,7 @@ public:
 		return fmt::format("num %d ", num) + offsets;
 	}
 
-	template<typename T>
+	template <typename T>
 	T& GetCgRef(const u32 offset)
 	{
 		return reinterpret_cast<T&>(m_buffer[offset]);
@@ -359,8 +366,8 @@ public:
 			std::vector<u32> be_data;
 
 			// Swap bytes. FP decompiler expects input in BE
-			for (u32* ptr = reinterpret_cast<u32*>(m_buffer + m_offset),
-				*end = reinterpret_cast<u32*>(m_buffer + m_buffer_size);
+			for (u32 *ptr = reinterpret_cast<u32*>(m_buffer + m_offset),
+					 *end = reinterpret_cast<u32*>(m_buffer + m_buffer_size);
 				ptr < end; ++ptr)
 			{
 				be_data.push_back(std::bit_cast<be_t<u32>>(*ptr));
@@ -373,7 +380,8 @@ public:
 			prog.ucode_length = metadata.program_ucode_length;
 			prog.total_length = metadata.program_ucode_length + metadata.program_start_offset;
 			prog.data = reinterpret_cast<u8*>(be_data.data()) + metadata.program_start_offset;
-			for (u32 i = 0; i < 16; ++i) prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
+			for (u32 i = 0; i < 16; ++i)
+				prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
 			GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, unused).Task();
 #endif
@@ -418,14 +426,18 @@ public:
 
 			RSXVertexProgram prog;
 			program_hash_util::vertex_program_utils::analyse_vertex_program(vdata, 0, prog);
-			for (u32 i = 0; i < 4; ++i) prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
+			for (u32 i = 0; i < 4; ++i)
+				prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
 			GLVertexDecompilerThread(prog, m_glsl_shader, param_array).Task();
 #endif
 		}
 	}
 
-	static u32 GetData(const u32 d) { return d << 16 | d >> 16; }
+	static u32 GetData(const u32 d)
+	{
+		return d << 16 | d >> 16;
+	}
 	void TaskFP();
 	void TaskVP();
 };

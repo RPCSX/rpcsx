@@ -10,10 +10,8 @@ namespace rsx
 	{
 		save_dialog::save_dialog_entry::save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path)
 		{
-			std::unique_ptr<overlay_element> image = resource_id != image_resource_id::raw_image
-				? std::make_unique<video_view>(video_path, resource_id)
-				: !icon_buf.empty() ? std::make_unique<video_view>(video_path, icon_buf)
-				                    : std::make_unique<video_view>(video_path, resource_config::standard_image_resource::save); // Fallback
+			std::unique_ptr<overlay_element> image = resource_id != image_resource_id::raw_image ? std::make_unique<video_view>(video_path, resource_id) : !icon_buf.empty() ? std::make_unique<video_view>(video_path, icon_buf) :
+			                                                                                                                                                                   std::make_unique<video_view>(video_path, resource_config::standard_image_resource::save); // Fallback
 			image->set_size(160, 110);
 			image->set_padding(36, 36, 11, 11); // Square image, 88x88
 
@@ -22,10 +20,10 @@ namespace rsx
 				image->set_padding(0, 0, 11, 11); // Half sized icon, 320x176->160x88
 			}
 
-			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
+			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
 			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
-			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(text2);
+			std::unique_ptr<overlay_element> subtext = std::make_unique<label>(text2);
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
@@ -39,7 +37,7 @@ namespace rsx
 
 			// Make back color transparent for text
 			header_text->back_color.a = 0.f;
-			subtext->back_color.a     = 0.f;
+			subtext->back_color.a = 0.f;
 
 			static_cast<vertical_layout*>(text_stack.get())->pack_padding = 5;
 			static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
@@ -84,7 +82,7 @@ namespace rsx
 			m_dim_background = std::make_unique<overlay_element>();
 			m_dim_background->set_size(virtual_width, virtual_height);
 
-			m_list        = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_description = std::make_unique<label>();
 			m_time_thingy = std::make_unique<label>();
 
@@ -102,8 +100,8 @@ namespace rsx
 			m_time_thingy->auto_resize();
 
 			m_dim_background->back_color.a = 0.5f;
-			m_description->back_color.a    = 0.f;
-			m_time_thingy->back_color.a    = 0.f;
+			m_description->back_color.a = 0.f;
+			m_time_thingy->back_color.a = 0.f;
 
 			fade_animation.duration_sec = 0.15f;
 
@@ -123,7 +121,8 @@ namespace rsx
 
 		void save_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (fade_animation.active) return;
+			if (fade_animation.active)
+				return;
 
 			bool close_dialog = false;
 
@@ -334,4 +333,4 @@ namespace rsx
 			return return_code;
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

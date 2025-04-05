@@ -58,7 +58,7 @@ namespace vk
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(const VkGraphicsPipelineCreateInfo& create_info, VkPipelineLayout pipe_layout,
-			const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs)
+		const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs)
 	{
 		VkPipeline pipeline;
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreateGraphicsPipelines)(*m_device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline));
@@ -67,8 +67,8 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(const vk::pipeline_props &create_info, VkShaderModule modules[2], VkPipelineLayout pipe_layout,
-			const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs)
+	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(const vk::pipeline_props& create_info, VkShaderModule modules[2], VkPipelineLayout pipe_layout,
+		const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs)
 	{
 		VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 		shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -111,7 +111,7 @@ namespace vk
 		dynamic_state_info.pDynamicStates = dynamic_state_descriptors.data();
 		dynamic_state_info.dynamicStateCount = ::size32(dynamic_state_descriptors);
 
-		VkPipelineVertexInputStateCreateInfo vi = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		VkPipelineVertexInputStateCreateInfo vi = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
 		VkPipelineViewportStateCreateInfo vp = {};
 		vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -256,4 +256,4 @@ namespace vk
 
 		return g_pipe_compilers.get()->begin() + (thread_index % g_num_pipe_compilers);
 	}
-}
+} // namespace vk

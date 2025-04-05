@@ -123,15 +123,16 @@ struct watchdog_t
 			old_time = std::exchange(current_time, get_system_time());
 
 			const auto old = control.fetch_op([&](control_t& data)
-			{
-				if (data.needs_restart)
-				{
-					data.needs_restart = false;
-					return true;
-				}
+										{
+											if (data.needs_restart)
+											{
+												data.needs_restart = false;
+												return true;
+											}
 
-				return false;
-			}).first;
+											return false;
+										})
+			                     .first;
 
 			if (old.active && old.needs_restart)
 			{
@@ -145,9 +146,9 @@ struct watchdog_t
 				sys_game.success("Watchdog timeout! Restarting the game...");
 
 				Emu.CallFromMainThread([]()
-				{
-					Emu.Restart(false);
-				});
+					{
+						Emu.Restart(false);
+					});
 
 				return;
 			}
@@ -177,17 +178,18 @@ error_code _sys_game_watchdog_start(u32 timeout)
 	timeout &= -64;
 
 	if (!g_fxo->get<named_thread<watchdog_t>>().control.fetch_op([&](watchdog_t::control_t& data)
-	{
-		if (data.active)
-		{
-			return false;
-		}
+														   {
+															   if (data.active)
+															   {
+																   return false;
+															   }
 
-		data.needs_restart = true;
-		data.active = true;
-		data.timeout = timeout;
-		return true;
-	}).second)
+															   data.needs_restart = true;
+															   data.active = true;
+															   data.timeout = timeout;
+															   return true;
+														   })
+			.second)
 	{
 		return CELL_EABORT;
 	}
@@ -200,15 +202,15 @@ error_code _sys_game_watchdog_stop()
 	sys_game.trace("sys_game_watchdog_stop()");
 
 	g_fxo->get<named_thread<watchdog_t>>().control.fetch_op([](watchdog_t::control_t& data)
-	{
-		if (!data.active)
 		{
-			return false;
-		}
+			if (!data.active)
+			{
+				return false;
+			}
 
-		data.active = false;
-		return true;
-	});
+			data.active = false;
+			return true;
+		});
 
 	return CELL_OK;
 }
@@ -218,15 +220,15 @@ error_code _sys_game_watchdog_clear()
 	sys_game.trace("sys_game_watchdog_clear()");
 
 	g_fxo->get<named_thread<watchdog_t>>().control.fetch_op([](watchdog_t::control_t& data)
-	{
-		if (!data.active || data.needs_restart)
 		{
-			return false;
-		}
+			if (!data.active || data.needs_restart)
+			{
+				return false;
+			}
 
-		data.needs_restart = true;
-		return true;
-	});
+			data.needs_restart = true;
+			return true;
+		});
 
 	return CELL_OK;
 }

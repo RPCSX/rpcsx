@@ -20,4 +20,4 @@ namespace input
 
 	void set_mouse_and_keyboard(active_mouse_and_keyboard device);
 	void toggle_mouse_and_keyboard();
-}
+} // namespace input

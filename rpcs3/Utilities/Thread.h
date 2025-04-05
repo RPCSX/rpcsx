@@ -27,8 +27,8 @@ enum class thread_state : u32
 {
 	created = 0,  // Initial state
 	aborting = 1, // The thread has been joined in the destructor or explicitly aborted
-	errored = 2, // Set after the emergency_exit call
-	finished = 3,  // Final state, always set at the end of thread execution
+	errored = 2,  // Set after the emergency_exit call
+	finished = 3, // Final state, always set at the end of thread execution
 	mask = 3,
 	destroying_context = 7, // Special value assigned to destroy data explicitly before the destructor
 };
@@ -46,7 +46,8 @@ struct result_storage
 	using type = void;
 };
 
-template <typename Ctx, typename... Args> requires (!std::is_void_v<std::invoke_result_t<Ctx, Args&&...>>)
+template <typename Ctx, typename... Args>
+	requires(!std::is_void_v<std::invoke_result_t<Ctx, Args && ...>>)
 struct result_storage<Ctx, Args...>
 {
 	using T = std::invoke_result_t<Ctx, Args&&...>;
@@ -81,8 +82,7 @@ struct result_storage<Ctx, Args...>
 };
 
 template <typename T>
-concept NamedThreadName = requires (const T&)
-{
+concept NamedThreadName = requires(const T&) {
 	std::string(T::thread_name);
 };
 
@@ -96,7 +96,7 @@ class thread_future
 	thread_future* prev{};
 
 protected:
-	atomic_t<void(*)(thread_base*, thread_future*)> exec{};
+	atomic_t<void (*)(thread_base*, thread_future*)> exec{};
 
 	atomic_t<u32> done{0};
 
@@ -122,7 +122,7 @@ public:
 #ifdef _WIN32
 	using native_entry = uint(__stdcall*)(void* arg);
 #else
-	using native_entry = void*(*)(void* arg);
+	using native_entry = void* (*)(void* arg);
 #endif
 
 	const native_entry entry_point;
@@ -161,7 +161,7 @@ private:
 	static native_entry finalize(u64 _self) noexcept;
 
 	// Make entry point
-	static native_entry make_trampoline(u64(*entry)(thread_base* _base));
+	static native_entry make_trampoline(u64 (*entry)(thread_base* _base));
 
 	friend class thread_ctrl;
 
@@ -201,7 +201,7 @@ class thread_ctrl final
 	static thread_local thread_base* g_tls_this_thread;
 
 	// Error handling details
-	static thread_local void(*g_tls_error_callback)();
+	static thread_local void (*g_tls_error_callback)();
 
 	// Target cpu core layout
 	static atomic_t<native_core_arrangement> g_native_core_layout;
@@ -306,13 +306,20 @@ public:
 	template <typename T, typename U>
 	static inline void wait_on(T& wait, U old, u64 usec = -1)
 	{
-		wait_on_custom<1>([&](atomic_wait::list<3>& list) { list.template set<0>(wait, old); }, usec);
+		wait_on_custom<1>([&](atomic_wait::list<3>& list)
+			{
+				list.template set<0>(wait, old);
+			},
+			usec);
 	}
 
 	template <typename T>
 	static inline void wait_on(T& wait)
 	{
-		wait_on_custom<1>([&](atomic_wait::list<3>& list) { list.template set<0>(wait); });
+		wait_on_custom<1>([&](atomic_wait::list<3>& list)
+			{
+				list.template set<0>(wait);
+			});
 	}
 
 	// Exit.
@@ -386,8 +393,7 @@ class thread_future_t : public thread_future, result_storage<Ctx, std::condition
 
 public:
 	thread_future_t(Ctx&& func, Args&&... args) noexcept
-		: m_args(std::forward<Args>(args)...)
-		, m_func(std::forward<Ctx>(func))
+		: m_args(std::forward<Args>(args)...), m_func(std::forward<Ctx>(func))
 	{
 		thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
 		{
@@ -472,13 +478,13 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 	u64 entry_point2()
 	{
 		thread::initialize([]()
-		{
-			if constexpr (!result::empty)
 			{
-				// Construct using default constructor in the case of failure
-				static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->init();
-			}
-		});
+				if constexpr (!result::empty)
+				{
+					// Construct using default constructor in the case of failure
+					static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->init();
+				}
+			});
 
 		if constexpr (result::empty)
 		{
@@ -527,37 +533,37 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 
 public:
 	// Forwarding constructor with default name (also potentially the default constructor)
-	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (!(std::is_same_v<std::remove_cvref_t<Args>, stx::launch_retainer> || ...)) && (NamedThreadName<Context>)
+	template <typename... Args>
+		requires(std::is_constructible_v<Context, Args && ...>) && (!(std::is_same_v<std::remove_cvref_t<Args>, stx::launch_retainer> || ...)) && (NamedThreadName<Context>)
 	named_thread(Args&&... args) noexcept
-		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, std::string(Context::thread_name))
+		: Context(std::forward<Args>(args)...), thread(trampoline, std::string(Context::thread_name))
 	{
 		thread::start();
 	}
 
 	// Forwarding constructor with default name, does not automatically run the thread
-	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (NamedThreadName<Context>)
+	template <typename... Args>
+		requires(std::is_constructible_v<Context, Args && ...>) && (NamedThreadName<Context>)
 	named_thread(const stx::launch_retainer&, Args&&... args) noexcept
-		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, std::string(Context::thread_name))
+		: Context(std::forward<Args>(args)...), thread(trampoline, std::string(Context::thread_name))
 	{
 		// Create a stand-by thread context
 		m_sync |= static_cast<u32>(thread_state::finished);
 	}
 
 	// Normal forwarding constructor
-	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (!NamedThreadName<Context>)
+	template <typename... Args>
+		requires(std::is_constructible_v<Context, Args && ...>) && (!NamedThreadName<Context>)
 	named_thread(std::string name, Args&&... args) noexcept
-		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, std::move(name))
+		: Context(std::forward<Args>(args)...), thread(trampoline, std::move(name))
 	{
 		thread::start();
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
-	named_thread(std::string_view name, Context&& f) noexcept requires (!NamedThreadName<Context>)
-		: Context(std::forward<Context>(f))
-		, thread(trampoline, std::string(name))
+	named_thread(std::string_view name, Context&& f) noexcept
+		requires(!NamedThreadName<Context>)
+		: Context(std::forward<Context>(f)), thread(trampoline, std::string(name))
 	{
 		thread::start();
 	}
@@ -683,7 +689,11 @@ public:
 
 		// Try to abort by assigning thread_state::aborting/finished
 		// Join thread by thread_state::finished
-		if (s >= thread_state::aborting && thread::m_sync.fetch_op([](u32& v) { return !(v & 3) && (v |= 1); }).second)
+		if (s >= thread_state::aborting && thread::m_sync.fetch_op([](u32& v)
+															 {
+																 return !(v & 3) && (v |= 1);
+															 })
+											   .second)
 		{
 			notify_sync = true;
 		}
@@ -747,8 +757,7 @@ class named_thread_group final
 public:
 	// Lambda constructor, also the implicit deduction guide candidate
 	named_thread_group(std::string_view name, u32 count, Context&& f) noexcept
-		: m_count(count)
-		, m_threads(nullptr)
+		: m_count(count), m_threads(nullptr)
 	{
 		if (count == 0)
 		{
@@ -771,8 +780,7 @@ public:
 	// Constructor with a function performed before adding more threads
 	template <typename CheckAndPrepare>
 	named_thread_group(std::string_view name, u32 count, Context&& f, CheckAndPrepare&& check) noexcept
-		: m_count(count)
-		, m_threads(nullptr)
+		: m_count(count), m_threads(nullptr)
 	{
 		if (count == 0)
 		{
@@ -812,8 +820,7 @@ public:
 
 	// Default constructor
 	named_thread_group(std::string_view name, u32 count) noexcept
-		: m_count(count)
-		, m_threads(nullptr)
+		: m_count(count), m_threads(nullptr)
 	{
 		if (count == 0)
 		{
@@ -840,7 +847,7 @@ public:
 
 		for (u32 i = 0; i < m_count; i++)
 		{
-			std::as_const(*std::launder(m_threads + i))();
+			std::as_const (*std::launder(m_threads + i))();
 
 			if (std::as_const(*std::launder(m_threads + i)) != thread_state::finished)
 				result = false;

@@ -30,9 +30,9 @@ namespace rsx
 
 		struct osk_panel
 		{
-			const color4f default_bg = { 0.7f, 0.7f, 0.7f, 1.f };
-			const color4f special_bg = { 0.2f, 0.7f, 0.7f, 1.f };
-			const color4f special2_bg = { 0.83f, 0.81f, 0.57f, 1.f };
+			const color4f default_bg = {0.7f, 0.7f, 0.7f, 1.f};
+			const color4f special_bg = {0.2f, 0.7f, 0.7f, 1.f};
+			const color4f special2_bg = {0.83f, 0.81f, 0.57f, 1.f};
 
 			u32 osk_panel_mode = 0;
 			u16 num_rows = 0;
@@ -194,5 +194,5 @@ namespace rsx
 		{
 			osk_panel_password(callback_t shift_cb, callback_t layer_cb, callback_t space_cb, callback_t delete_cb, callback_t enter_cb);
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

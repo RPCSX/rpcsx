@@ -34,10 +34,7 @@ struct lv2_storage
 	const u64 flags;
 
 	lv2_storage(u64 device_id, fs::file&& file, u64 mode, u64 flags)
-		: device_id(device_id)
-		, file(std::move(file))
-		, mode(mode)
-		, flags(flags)
+		: device_id(device_id), file(std::move(file)), mode(mode), flags(flags)
 	{
 	}
 };

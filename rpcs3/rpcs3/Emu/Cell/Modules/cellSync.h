@@ -9,31 +9,31 @@
 // Return Codes
 enum CellSyncError : u32
 {
-	CELL_SYNC_ERROR_AGAIN                  = 0x80410101,
-	CELL_SYNC_ERROR_INVAL                  = 0x80410102,
-	CELL_SYNC_ERROR_NOSYS                  = 0x80410103,
-	CELL_SYNC_ERROR_NOMEM                  = 0x80410104,
-	CELL_SYNC_ERROR_SRCH                   = 0x80410105,
-	CELL_SYNC_ERROR_NOENT                  = 0x80410106,
-	CELL_SYNC_ERROR_NOEXEC                 = 0x80410107,
-	CELL_SYNC_ERROR_DEADLK                 = 0x80410108,
-	CELL_SYNC_ERROR_PERM                   = 0x80410109,
-	CELL_SYNC_ERROR_BUSY                   = 0x8041010A,
-	CELL_SYNC_ERROR_ABORT                  = 0x8041010C,
-	CELL_SYNC_ERROR_FAULT                  = 0x8041010D,
-	CELL_SYNC_ERROR_CHILD                  = 0x8041010E,
-	CELL_SYNC_ERROR_STAT                   = 0x8041010F,
-	CELL_SYNC_ERROR_ALIGN                  = 0x80410110,
-	CELL_SYNC_ERROR_NULL_POINTER           = 0x80410111,
-	CELL_SYNC_ERROR_NOT_SUPPORTED_THREAD   = 0x80410112,
-	CELL_SYNC_ERROR_NO_NOTIFIER            = 0x80410113,
+	CELL_SYNC_ERROR_AGAIN = 0x80410101,
+	CELL_SYNC_ERROR_INVAL = 0x80410102,
+	CELL_SYNC_ERROR_NOSYS = 0x80410103,
+	CELL_SYNC_ERROR_NOMEM = 0x80410104,
+	CELL_SYNC_ERROR_SRCH = 0x80410105,
+	CELL_SYNC_ERROR_NOENT = 0x80410106,
+	CELL_SYNC_ERROR_NOEXEC = 0x80410107,
+	CELL_SYNC_ERROR_DEADLK = 0x80410108,
+	CELL_SYNC_ERROR_PERM = 0x80410109,
+	CELL_SYNC_ERROR_BUSY = 0x8041010A,
+	CELL_SYNC_ERROR_ABORT = 0x8041010C,
+	CELL_SYNC_ERROR_FAULT = 0x8041010D,
+	CELL_SYNC_ERROR_CHILD = 0x8041010E,
+	CELL_SYNC_ERROR_STAT = 0x8041010F,
+	CELL_SYNC_ERROR_ALIGN = 0x80410110,
+	CELL_SYNC_ERROR_NULL_POINTER = 0x80410111,
+	CELL_SYNC_ERROR_NOT_SUPPORTED_THREAD = 0x80410112,
+	CELL_SYNC_ERROR_NO_NOTIFIER = 0x80410113,
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE = 0x80410114,
 };
 
 enum CellSyncError1 : u32
 {
-	CELL_SYNC_ERROR_SHOTAGE                = 0x80410112,
-	CELL_SYNC_ERROR_UNKNOWNKEY             = 0x80410113,
+	CELL_SYNC_ERROR_SHOTAGE = 0x80410112,
+	CELL_SYNC_ERROR_UNKNOWNKEY = 0x80410113,
 };
 
 struct CellSyncMutex
@@ -342,20 +342,20 @@ struct alignas(128) CellSyncLFQueue
 		atomic_t<push3_t> push3;
 	};
 
-	be_t<u32> m_size;              // 0x10
-	be_t<u32> m_depth;             // 0x14
-	vm::bcptr<void, u64> m_buffer; // 0x18
-	u8 m_bs[4];                    // 0x20
-	be_t<u32> m_direction;         // 0x24 CellSyncQueueDirection
-	be_t<u32> m_v1;                // 0x28
-	atomic_be_t<s32> init;         // 0x2C
-	atomic_t<push2_t> push2;       // 0x30
-	be_t<u16> m_hs1[15];           // 0x32
-	atomic_t<pop2_t> pop2;         // 0x50
-	be_t<u16> m_hs2[15];           // 0x52
+	be_t<u32> m_size;               // 0x10
+	be_t<u32> m_depth;              // 0x14
+	vm::bcptr<void, u64> m_buffer;  // 0x18
+	u8 m_bs[4];                     // 0x20
+	be_t<u32> m_direction;          // 0x24 CellSyncQueueDirection
+	be_t<u32> m_v1;                 // 0x28
+	atomic_be_t<s32> init;          // 0x2C
+	atomic_t<push2_t> push2;        // 0x30
+	be_t<u16> m_hs1[15];            // 0x32
+	atomic_t<pop2_t> pop2;          // 0x50
+	be_t<u16> m_hs2[15];            // 0x52
 	vm::bptr<void, u64> m_eaSignal; // 0x70
-	be_t<u32> m_v2;                // 0x78
-	be_t<u32> m_eq_id;             // 0x7C
+	be_t<u32> m_v2;                 // 0x78
+	be_t<u32> m_eq_id;              // 0x7C
 };
 
 CHECK_SIZE_ALIGN(CellSyncLFQueue, 128, 128);

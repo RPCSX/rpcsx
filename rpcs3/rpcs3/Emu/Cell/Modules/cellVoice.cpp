@@ -7,35 +7,35 @@
 
 LOG_CHANNEL(cellVoice);
 
-template<>
+template <>
 void fmt_class_string<CellVoiceError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_VOICE_ERROR_ADDRESS_INVALID);
-			STR_CASE(CELL_VOICE_ERROR_ARGUMENT_INVALID);
-			STR_CASE(CELL_VOICE_ERROR_CONTAINER_INVALID);
-			STR_CASE(CELL_VOICE_ERROR_DEVICE_NOT_PRESENT);
-			STR_CASE(CELL_VOICE_ERROR_EVENT_DISPATCH);
-			STR_CASE(CELL_VOICE_ERROR_EVENT_QUEUE);
-			STR_CASE(CELL_VOICE_ERROR_GENERAL);
-			STR_CASE(CELL_VOICE_ERROR_LIBVOICE_INITIALIZED);
-			STR_CASE(CELL_VOICE_ERROR_LIBVOICE_NOT_INIT);
-			STR_CASE(CELL_VOICE_ERROR_NOT_IMPLEMENTED);
-			STR_CASE(CELL_VOICE_ERROR_PORT_INVALID);
-			STR_CASE(CELL_VOICE_ERROR_RESOURCE_INSUFFICIENT);
-			STR_CASE(CELL_VOICE_ERROR_SERVICE_ATTACHED);
-			STR_CASE(CELL_VOICE_ERROR_SERVICE_DETACHED);
-			STR_CASE(CELL_VOICE_ERROR_SERVICE_HANDLE);
-			STR_CASE(CELL_VOICE_ERROR_SERVICE_NOT_FOUND);
-			STR_CASE(CELL_VOICE_ERROR_SHAREDMEMORY);
-			STR_CASE(CELL_VOICE_ERROR_TOPOLOGY);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_VOICE_ERROR_ADDRESS_INVALID);
+				STR_CASE(CELL_VOICE_ERROR_ARGUMENT_INVALID);
+				STR_CASE(CELL_VOICE_ERROR_CONTAINER_INVALID);
+				STR_CASE(CELL_VOICE_ERROR_DEVICE_NOT_PRESENT);
+				STR_CASE(CELL_VOICE_ERROR_EVENT_DISPATCH);
+				STR_CASE(CELL_VOICE_ERROR_EVENT_QUEUE);
+				STR_CASE(CELL_VOICE_ERROR_GENERAL);
+				STR_CASE(CELL_VOICE_ERROR_LIBVOICE_INITIALIZED);
+				STR_CASE(CELL_VOICE_ERROR_LIBVOICE_NOT_INIT);
+				STR_CASE(CELL_VOICE_ERROR_NOT_IMPLEMENTED);
+				STR_CASE(CELL_VOICE_ERROR_PORT_INVALID);
+				STR_CASE(CELL_VOICE_ERROR_RESOURCE_INSUFFICIENT);
+				STR_CASE(CELL_VOICE_ERROR_SERVICE_ATTACHED);
+				STR_CASE(CELL_VOICE_ERROR_SERVICE_DETACHED);
+				STR_CASE(CELL_VOICE_ERROR_SERVICE_HANDLE);
+				STR_CASE(CELL_VOICE_ERROR_SERVICE_NOT_FOUND);
+				STR_CASE(CELL_VOICE_ERROR_SHAREDMEMORY);
+				STR_CASE(CELL_VOICE_ERROR_TOPOLOGY);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 void voice_manager::reset()
@@ -173,7 +173,8 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 	// Id: bits [8,15] seem to contain a "random" value
 	// bits [0,7] are based on creation counter modulo 0xa0
 	// The rest are set to zero and ignored.
-	manager.id_ctr++; manager.id_ctr %= 0xa0;
+	manager.id_ctr++;
+	manager.id_ctr %= 0xa0;
 
 	// It isn't known whether bits[8,15] are guaranteed to be non-zero
 	constexpr u32 min_value = 1;
@@ -884,40 +885,40 @@ error_code cellVoiceDebugTopology()
 }
 
 DECLARE(ppu_module_manager::cellVoice)("cellVoice", []()
-{
-	REG_FUNC(cellVoice, cellVoiceConnectIPortToOPort);
-	REG_FUNC(cellVoice, cellVoiceCreateNotifyEventQueue);
-	REG_FUNC(cellVoice, cellVoiceCreatePort);
-	REG_FUNC(cellVoice, cellVoiceDeletePort);
-	REG_FUNC(cellVoice, cellVoiceDisconnectIPortFromOPort);
-	REG_FUNC(cellVoice, cellVoiceEnd);
-	REG_FUNC(cellVoice, cellVoiceGetBitRate);
-	REG_FUNC(cellVoice, cellVoiceGetMuteFlag);
-	REG_FUNC(cellVoice, cellVoiceGetPortAttr);
-	REG_FUNC(cellVoice, cellVoiceGetPortInfo);
-	REG_FUNC(cellVoice, cellVoiceGetSignalState);
-	REG_FUNC(cellVoice, cellVoiceGetVolume);
-	REG_FUNC(cellVoice, cellVoiceInit);
-	REG_FUNC(cellVoice, cellVoiceInitEx);
-	REG_FUNC(cellVoice, cellVoicePausePort);
-	REG_FUNC(cellVoice, cellVoicePausePortAll);
-	REG_FUNC(cellVoice, cellVoiceRemoveNotifyEventQueue);
-	REG_FUNC(cellVoice, cellVoiceResetPort);
-	REG_FUNC(cellVoice, cellVoiceResumePort);
-	REG_FUNC(cellVoice, cellVoiceResumePortAll);
-	REG_FUNC(cellVoice, cellVoiceSetBitRate);
-	REG_FUNC(cellVoice, cellVoiceSetMuteFlag);
-	REG_FUNC(cellVoice, cellVoiceSetMuteFlagAll);
-	REG_FUNC(cellVoice, cellVoiceSetNotifyEventQueue);
-	REG_FUNC(cellVoice, cellVoiceSetPortAttr);
-	REG_FUNC(cellVoice, cellVoiceSetVolume);
-	REG_FUNC(cellVoice, cellVoiceStart);
-	REG_FUNC(cellVoice, cellVoiceStartEx);
-	REG_FUNC(cellVoice, cellVoiceStop);
-	REG_FUNC(cellVoice, cellVoiceUpdatePort);
-	REG_FUNC(cellVoice, cellVoiceWriteToIPort);
-	REG_FUNC(cellVoice, cellVoiceWriteToIPortEx);
-	REG_FUNC(cellVoice, cellVoiceWriteToIPortEx2);
-	REG_FUNC(cellVoice, cellVoiceReadFromOPort);
-	REG_FUNC(cellVoice, cellVoiceDebugTopology);
-});
+	{
+		REG_FUNC(cellVoice, cellVoiceConnectIPortToOPort);
+		REG_FUNC(cellVoice, cellVoiceCreateNotifyEventQueue);
+		REG_FUNC(cellVoice, cellVoiceCreatePort);
+		REG_FUNC(cellVoice, cellVoiceDeletePort);
+		REG_FUNC(cellVoice, cellVoiceDisconnectIPortFromOPort);
+		REG_FUNC(cellVoice, cellVoiceEnd);
+		REG_FUNC(cellVoice, cellVoiceGetBitRate);
+		REG_FUNC(cellVoice, cellVoiceGetMuteFlag);
+		REG_FUNC(cellVoice, cellVoiceGetPortAttr);
+		REG_FUNC(cellVoice, cellVoiceGetPortInfo);
+		REG_FUNC(cellVoice, cellVoiceGetSignalState);
+		REG_FUNC(cellVoice, cellVoiceGetVolume);
+		REG_FUNC(cellVoice, cellVoiceInit);
+		REG_FUNC(cellVoice, cellVoiceInitEx);
+		REG_FUNC(cellVoice, cellVoicePausePort);
+		REG_FUNC(cellVoice, cellVoicePausePortAll);
+		REG_FUNC(cellVoice, cellVoiceRemoveNotifyEventQueue);
+		REG_FUNC(cellVoice, cellVoiceResetPort);
+		REG_FUNC(cellVoice, cellVoiceResumePort);
+		REG_FUNC(cellVoice, cellVoiceResumePortAll);
+		REG_FUNC(cellVoice, cellVoiceSetBitRate);
+		REG_FUNC(cellVoice, cellVoiceSetMuteFlag);
+		REG_FUNC(cellVoice, cellVoiceSetMuteFlagAll);
+		REG_FUNC(cellVoice, cellVoiceSetNotifyEventQueue);
+		REG_FUNC(cellVoice, cellVoiceSetPortAttr);
+		REG_FUNC(cellVoice, cellVoiceSetVolume);
+		REG_FUNC(cellVoice, cellVoiceStart);
+		REG_FUNC(cellVoice, cellVoiceStartEx);
+		REG_FUNC(cellVoice, cellVoiceStop);
+		REG_FUNC(cellVoice, cellVoiceUpdatePort);
+		REG_FUNC(cellVoice, cellVoiceWriteToIPort);
+		REG_FUNC(cellVoice, cellVoiceWriteToIPortEx);
+		REG_FUNC(cellVoice, cellVoiceWriteToIPortEx2);
+		REG_FUNC(cellVoice, cellVoiceReadFromOPort);
+		REG_FUNC(cellVoice, cellVoiceDebugTopology);
+	});

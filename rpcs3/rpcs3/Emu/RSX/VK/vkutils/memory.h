@@ -43,7 +43,7 @@ namespace vk
 		size_t count() const;
 
 		operator bool() const;
-		bool operator == (const memory_type_info& other) const;
+		bool operator==(const memory_type_info& other) const;
 
 		memory_type_info get(const render_device& dev, u32 access_flags, u32 type_mask) const;
 
@@ -73,9 +73,8 @@ namespace vk
 
 	protected:
 		VkDevice m_device;
-		VkFlags  m_allocation_flags;
+		VkFlags m_allocation_flags;
 	};
-
 
 	// Memory Allocator - Vulkan Memory Allocator
 	// https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
@@ -105,7 +104,6 @@ namespace vk
 		VmaAllocator m_allocator;
 		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> stats;
 	};
-
 
 	// Memory Allocator - built-in Vulkan device memory allocate/free
 
@@ -142,7 +140,7 @@ namespace vk
 		u64 size() const;
 
 		memory_block(const memory_block&) = delete;
-		memory_block(memory_block&&)      = delete;
+		memory_block(memory_block&&) = delete;
 
 	protected:
 		memory_block() = default;
@@ -179,8 +177,8 @@ namespace vk
 	void vmm_notify_memory_freed(void* handle);
 	void vmm_reset();
 	void vmm_check_memory_usage();
-	u64  vmm_get_application_memory_usage(const memory_type_info& memory_type);
-	u64  vmm_get_application_pool_usage(vmm_allocation_pool pool);
+	u64 vmm_get_application_memory_usage(const memory_type_info& memory_type);
+	u64 vmm_get_application_pool_usage(vmm_allocation_pool pool);
 	bool vmm_handle_memory_pressure(rsx::problem_severity severity);
 	rsx::problem_severity vmm_determine_memory_load_severity();
 
@@ -189,4 +187,4 @@ namespace vk
 	void vmm_notify_object_freed(vmm_allocation_pool pool);
 
 	mem_allocator_base* get_current_mem_allocator();
-}
+} // namespace vk

@@ -21,7 +21,11 @@
 #include <linux/uinput.h>
 #include <fcntl.h>
 #include <unistd.h>
-#define CHECK_IOCTRL_RET(res) if (res == -1) { gui_log.error("gui_pad_thread: ioctl failed (errno=%d=%s)", res, strerror(errno)); }
+#define CHECK_IOCTRL_RET(res)                                                              \
+	if (res == -1)                                                                         \
+	{                                                                                      \
+		gui_log.error("gui_pad_thread: ioctl failed (errno=%d=%s)", res, strerror(errno)); \
+	}
 #elif defined(__APPLE__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -42,7 +46,10 @@ atomic_t<bool> gui_pad_thread::m_reset = false;
 
 gui_pad_thread::gui_pad_thread()
 {
-	m_thread = std::make_unique<named_thread<std::function<void()>>>("Gui Pad Thread", [this](){ run(); });
+	m_thread = std::make_unique<named_thread<std::function<void()>>>("Gui Pad Thread", [this]()
+		{
+			run();
+		});
 }
 
 gui_pad_thread::~gui_pad_thread()
@@ -330,7 +337,7 @@ void gui_pad_thread::process_input()
 		case pad_button::cross: key = KEY_ENTER; break;
 		case pad_button::square: key = KEY_BACKSPACE; break;
 		case pad_button::triangle: key = KEY_TAB; break;
-#elif defined (__APPLE__)
+#elif defined(__APPLE__)
 		case pad_button::dpad_up: key = kVK_UpArrow; break;
 		case pad_button::dpad_down: key = kVK_DownArrow; break;
 		case pad_button::dpad_left: key = kVK_LeftArrow; break;
@@ -342,10 +349,22 @@ void gui_pad_thread::process_input()
 #endif
 		case pad_button::L1: btn = mouse_button::left; break;
 		case pad_button::R1: btn = mouse_button::right; break;
-		case pad_button::rs_up: wheel = mouse_wheel::vertical; wheel_delta = 10.0f * wheel_multiplier; break;
-		case pad_button::rs_down: wheel = mouse_wheel::vertical; wheel_delta = -10.0f * wheel_multiplier; break;
-		case pad_button::rs_left: wheel = mouse_wheel::horizontal; wheel_delta = -10.0f * wheel_multiplier; break;
-		case pad_button::rs_right: wheel = mouse_wheel::horizontal; wheel_delta = 10.0f * wheel_multiplier; break;
+		case pad_button::rs_up:
+			wheel = mouse_wheel::vertical;
+			wheel_delta = 10.0f * wheel_multiplier;
+			break;
+		case pad_button::rs_down:
+			wheel = mouse_wheel::vertical;
+			wheel_delta = -10.0f * wheel_multiplier;
+			break;
+		case pad_button::rs_left:
+			wheel = mouse_wheel::horizontal;
+			wheel_delta = -10.0f * wheel_multiplier;
+			break;
+		case pad_button::rs_right:
+			wheel = mouse_wheel::horizontal;
+			wheel_delta = 10.0f * wheel_multiplier;
+			break;
 		case pad_button::ls_up: m_mouse_delta_y -= (abs(value - 128) / 255.f) * move_multiplier; break;
 		case pad_button::ls_down: m_mouse_delta_y += (abs(value - 128) / 255.f) * move_multiplier; break;
 		case pad_button::ls_left: m_mouse_delta_x -= (abs(value - 128) / 255.f) * move_multiplier; break;
@@ -395,9 +414,7 @@ void gui_pad_thread::process_input()
 			}
 			else if (is_auto_repeat_button)
 			{
-				if (m_last_auto_repeat_button == button_id
-				    && m_input_timer.GetMsSince(m_initial_timestamp) > ms_threshold
-				    && m_input_timer.GetMsSince(m_timestamp) > m_auto_repeat_buttons.at(button_id))
+				if (m_last_auto_repeat_button == button_id && m_input_timer.GetMsSince(m_initial_timestamp) > ms_threshold && m_input_timer.GetMsSince(m_timestamp) > m_auto_repeat_buttons.at(button_id))
 				{
 					// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 					m_timestamp = steady_clock::now();
@@ -765,8 +782,10 @@ void gui_pad_thread::send_mouse_move_event(int delta_x, int delta_y)
 		gui_log.error("gui_pad_thread: SendInput() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
 #elif defined(__linux__)
-	if (delta_x) emit_event(EV_REL, REL_X, delta_x);
-	if (delta_y) emit_event(EV_REL, REL_Y, delta_y);
+	if (delta_x)
+		emit_event(EV_REL, REL_X, delta_x);
+	if (delta_y)
+		emit_event(EV_REL, REL_Y, delta_y);
 	emit_event(EV_SYN, SYN_REPORT, 0);
 #elif defined(__APPLE__)
 	CGDirectDisplayID display = CGMainDisplayID();

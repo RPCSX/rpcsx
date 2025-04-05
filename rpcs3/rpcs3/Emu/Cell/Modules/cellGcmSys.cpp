@@ -14,23 +14,23 @@
 
 LOG_CHANNEL(cellGcmSys);
 
-template<>
+template <>
 void fmt_class_string<CellGcmError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-		STR_CASE(CELL_GCM_ERROR_FAILURE);
-		STR_CASE(CELL_GCM_ERROR_NO_IO_PAGE_TABLE);
-		STR_CASE(CELL_GCM_ERROR_INVALID_ENUM);
-		STR_CASE(CELL_GCM_ERROR_INVALID_VALUE);
-		STR_CASE(CELL_GCM_ERROR_INVALID_ALIGNMENT);
-		STR_CASE(CELL_GCM_ERROR_ADDRESS_OVERWRAP);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_GCM_ERROR_FAILURE);
+				STR_CASE(CELL_GCM_ERROR_NO_IO_PAGE_TABLE);
+				STR_CASE(CELL_GCM_ERROR_INVALID_ENUM);
+				STR_CASE(CELL_GCM_ERROR_INVALID_VALUE);
+				STR_CASE(CELL_GCM_ERROR_INVALID_ALIGNMENT);
+				STR_CASE(CELL_GCM_ERROR_ADDRESS_OVERWRAP);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 namespace rsx
@@ -53,7 +53,7 @@ namespace rsx
 
 		return sizeof(u32);
 	}
-}
+} // namespace rsx
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 
@@ -66,8 +66,7 @@ const u32 tiled_pitches[] = {
 	0x00003400, 0x00003800, 0x00004000, 0x00005000,
 	0x00006000, 0x00006800, 0x00007000, 0x00008000,
 	0x0000A000, 0x0000C000, 0x0000D000, 0x0000E000,
-	0x00010000
-};
+	0x00010000};
 
 // Auxiliary functions
 
@@ -181,7 +180,8 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 
 	// If entry not in use, return NULL
 	u16 entry = g_fxo->get<gcm_config>().offsetTable.eaAddress[241];
-	if (entry == 0xFFFF) {
+	if (entry == 0xFFFF)
+	{
 		return 0;
 	}
 
@@ -205,7 +205,8 @@ u32 cellGcmGetReport(u32 type, u32 index)
 		cellGcmSys.error("cellGcmGetReport: Wrong local index (%d)", index);
 	}
 
-	if (type < 1 || type > 5) {
+	if (type < 1 || type > 5)
+	{
 		return -1;
 	}
 
@@ -352,8 +353,10 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys.trace("cellGcmGetTiledPitchSize(size=%d)", size);
 
-	for (usz i = 0; i < std::size(tiled_pitches) - 1; i++) {
-		if (tiled_pitches[i] < size && size <= tiled_pitches[i + 1]) {
+	for (usz i = 0; i < std::size(tiled_pitches) - 1; i++)
+	{
+		if (tiled_pitches[i] < size && size <= tiled_pitches[i + 1])
+		{
 			return tiled_pitches[i + 1];
 		}
 	}
@@ -387,7 +390,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	gcm_cfg.local_size = 0;
 	gcm_cfg.local_addr = 0;
 
-	//if (!gcm_cfg.local_size && !gcm_cfg.local_addr)
+	// if (!gcm_cfg.local_size && !gcm_cfg.local_addr)
 	{
 		gcm_cfg.local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
 		gcm_cfg.local_addr = rsx::constants::local_mem_base;
@@ -423,8 +426,8 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 
 	gcm_cfg.current_config.ioSize = ioSize;
 	gcm_cfg.current_config.ioAddress = ioAddress;
-	gcm_cfg.current_config.localSize =  gcm_cfg.local_size;
-	gcm_cfg.current_config.localAddress =  gcm_cfg.local_addr;
+	gcm_cfg.current_config.localSize = gcm_cfg.local_size;
+	gcm_cfg.current_config.localAddress = gcm_cfg.local_addr;
 	gcm_cfg.current_config.memoryFrequency = 650000000;
 	gcm_cfg.current_config.coreFrequency = 500000000;
 
@@ -436,7 +439,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 
 	gcm_cfg.gcm_info.context_addr = rsx_ctxaddr;
 	gcm_cfg.gcm_info.control_addr = render->dma_address;
-	gcm_cfg.current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
+	gcm_cfg.current_context.begin.set(g_defaultCommandBufferBegin + 4096);        // 4 kb reserved at the beginning
 	gcm_cfg.current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
 	gcm_cfg.current_context.current = gcm_cfg.current_context.begin;
 	gcm_cfg.current_context.callback.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(cellGcmCallback)));
@@ -586,7 +589,7 @@ ret_type gcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u3
 		}
 	}
 
-	const u32 cmd_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, { id });
+	const u32 cmd_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, {id});
 
 	if (!old_api && ctxt.addr() == gcm_cfg.gcm_info.context_addr)
 	{
@@ -700,7 +703,7 @@ void cellGcmSetUserCommand(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u3
 		}
 	}
 
-	rsx::make_command(ctxt->current, GCM_SET_USER_COMMAND, { cause });
+	rsx::make_command(ctxt->current, GCM_SET_USER_COMMAND, {cause});
 }
 
 void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
@@ -726,14 +729,14 @@ void cellGcmSetWaitFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt)
 		}
 	}
 
-	rsx::make_command(ctxt->current, NV406E_SEMAPHORE_OFFSET, { 0x10u, 0 });
+	rsx::make_command(ctxt->current, NV406E_SEMAPHORE_OFFSET, {0x10u, 0});
 }
 
 void cellGcmSetWaitFlipUnsafe(vm::ptr<CellGcmContextData> ctxt)
 {
 	cellGcmSys.trace("cellGcmSetWaitFlipUnsafe(ctxt=*0x%x)", ctxt);
 
-	rsx::make_command(ctxt->current, NV406E_SEMAPHORE_OFFSET, { 0x10u, 0 });
+	rsx::make_command(ctxt->current, NV406E_SEMAPHORE_OFFSET, {0x10u, 0});
 }
 
 void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
@@ -1085,7 +1088,8 @@ error_code cellGcmMapMainMemory(ppu_thread& ppu, u32 ea, u32 size, vm::ptr<u32> 
 {
 	cellGcmSys.warning("cellGcmMapMainMemory(ea=0x%x, size=0x%x, offset=*0x%x)", ea, size, offset);
 
-	if (!size || (ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
+	if (!size || (ea & 0xFFFFF) || (size & 0xFFFFF))
+		return CELL_GCM_ERROR_FAILURE;
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
@@ -1314,7 +1318,7 @@ void _cellGcmSetFlipCommandWithWaitLabel(ppu_thread& ppu, vm::ptr<CellGcmContext
 {
 	cellGcmSys.warning("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
 
-	rsx::make_command(ctx->current, NV406E_SEMAPHORE_OFFSET, { label_index * 0x10, label_value });
+	rsx::make_command(ctx->current, NV406E_SEMAPHORE_OFFSET, {label_index * 0x10, label_value});
 
 	if (auto error = gcmSetPrepareFlip<true>(ppu, ctx, id); error < 0)
 	{
@@ -1415,9 +1419,7 @@ error_code cellGcmGpadCaptureSnapshot(u32 num)
 	return CELL_OK;
 }
 
-
 //----------------------------------------------------------------------------
-
 
 /**
  * Using current to determine what is the next useable command buffer.
@@ -1498,123 +1500,123 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 //----------------------------------------------------------------------------
 
 DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
-{
-	// Data Retrieval
-	REG_FUNC(cellGcmSys, cellGcmGetCurrentField);
-	REG_FUNC(cellGcmSys, cellGcmGetLabelAddress);
-	REG_FUNC(cellGcmSys, cellGcmGetNotifyDataAddress);
-	REG_FUNC(cellGcmSys, _cellGcmFunc12);
-	REG_FUNC(cellGcmSys, cellGcmGetReport);
-	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddress);
-	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddressLocation);
-	REG_FUNC(cellGcmSys, cellGcmGetReportDataLocation);
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE);     // HLE-ing this allows for optimizations around reports
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation);
+	{
+		// Data Retrieval
+		REG_FUNC(cellGcmSys, cellGcmGetCurrentField);
+		REG_FUNC(cellGcmSys, cellGcmGetLabelAddress);
+		REG_FUNC(cellGcmSys, cellGcmGetNotifyDataAddress);
+		REG_FUNC(cellGcmSys, _cellGcmFunc12);
+		REG_FUNC(cellGcmSys, cellGcmGetReport);
+		REG_FUNC(cellGcmSys, cellGcmGetReportDataAddress);
+		REG_FUNC(cellGcmSys, cellGcmGetReportDataAddressLocation);
+		REG_FUNC(cellGcmSys, cellGcmGetReportDataLocation);
+		REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE); // HLE-ing this allows for optimizations around reports
+		REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation);
 
-	// Command Buffer Control
-	REG_FUNC(cellGcmSys, cellGcmGetControlRegister);
-	REG_FUNC(cellGcmSys, cellGcmGetDefaultCommandWordSize);
-	REG_FUNC(cellGcmSys, cellGcmGetDefaultSegmentWordSize);
-	REG_FUNC(cellGcmSys, cellGcmInitDefaultFifoMode);
-	REG_FUNC(cellGcmSys, cellGcmSetDefaultFifoSize);
+		// Command Buffer Control
+		REG_FUNC(cellGcmSys, cellGcmGetControlRegister);
+		REG_FUNC(cellGcmSys, cellGcmGetDefaultCommandWordSize);
+		REG_FUNC(cellGcmSys, cellGcmGetDefaultSegmentWordSize);
+		REG_FUNC(cellGcmSys, cellGcmInitDefaultFifoMode);
+		REG_FUNC(cellGcmSys, cellGcmSetDefaultFifoSize);
 
-	// Hardware Resource Management
-	REG_FUNC(cellGcmSys, cellGcmBindTile);
-	REG_FUNC(cellGcmSys, cellGcmBindZcull);
-	REG_FUNC(cellGcmSys, cellGcmDumpGraphicsError);
-	REG_FUNC(cellGcmSys, cellGcmGetConfiguration);
-	REG_FUNC(cellGcmSys, cellGcmGetDisplayBufferByFlipIndex);
-	REG_FUNC(cellGcmSys, cellGcmGetFlipStatus);
-	REG_FUNC(cellGcmSys, cellGcmGetFlipStatus2);
-	REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime);
-	REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime2);
-	REG_FUNC(cellGcmSys, cellGcmGetLastSecondVTime);
-	REG_FUNC(cellGcmSys, cellGcmGetTiledPitchSize);
-	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount);
-	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount2);
-	REG_FUNC(cellGcmSys, cellGcmSysGetLastVBlankTime);
-	REG_FUNC(cellGcmSys, _cellGcmFunc1);
-	REG_FUNC(cellGcmSys, _cellGcmFunc15);
-	REG_FUNC(cellGcmSys, _cellGcmInitBody);
-	REG_FUNC(cellGcmSys, cellGcmInitSystemMode);
-	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus);
-	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus2);
-	REG_FUNC(cellGcmSys, cellGcmSetDebugOutputLevel);
-	REG_FUNC(cellGcmSys, cellGcmSetDisplayBuffer);
-	REG_FUNC(cellGcmSys, cellGcmSetFlip); //
-	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler2);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate2);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipMode);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipMode2);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipStatus);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipStatus2);
-	REG_FUNC(cellGcmSys, cellGcmSetGraphicsHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetPrepareFlip);
-	REG_FUNC(cellGcmSys, cellGcmSetQueueHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetSecondVFrequency);
-	REG_FUNC(cellGcmSys, cellGcmSetSecondVHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetTileInfo);
-	REG_FUNC(cellGcmSys, cellGcmSetUserHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetUserCommand); //
-	REG_FUNC(cellGcmSys, cellGcmSetVBlankFrequency);
-	REG_FUNC(cellGcmSys, cellGcmSetVBlankHandler);
-	REG_FUNC(cellGcmSys, cellGcmSetWaitFlip); //
-	REG_FUNC(cellGcmSys, cellGcmSetWaitFlipUnsafe); //
-	REG_FUNC(cellGcmSys, cellGcmSetZcull);
-	REG_FUNC(cellGcmSys, cellGcmSortRemapEaIoAddress);
-	REG_FUNC(cellGcmSys, cellGcmUnbindTile);
-	REG_FUNC(cellGcmSys, cellGcmUnbindZcull);
-	REG_FUNC(cellGcmSys, cellGcmGetTileInfo);
-	REG_FUNC(cellGcmSys, cellGcmGetZcullInfo);
-	REG_FUNC(cellGcmSys, cellGcmGetDisplayInfo);
-	REG_FUNC(cellGcmSys, cellGcmGetCurrentDisplayBufferId);
-	REG_FUNC(cellGcmSys, cellGcmSetInvalidateTile);
-	REG_FUNC(cellGcmSys, cellGcmTerminate);
+		// Hardware Resource Management
+		REG_FUNC(cellGcmSys, cellGcmBindTile);
+		REG_FUNC(cellGcmSys, cellGcmBindZcull);
+		REG_FUNC(cellGcmSys, cellGcmDumpGraphicsError);
+		REG_FUNC(cellGcmSys, cellGcmGetConfiguration);
+		REG_FUNC(cellGcmSys, cellGcmGetDisplayBufferByFlipIndex);
+		REG_FUNC(cellGcmSys, cellGcmGetFlipStatus);
+		REG_FUNC(cellGcmSys, cellGcmGetFlipStatus2);
+		REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime);
+		REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime2);
+		REG_FUNC(cellGcmSys, cellGcmGetLastSecondVTime);
+		REG_FUNC(cellGcmSys, cellGcmGetTiledPitchSize);
+		REG_FUNC(cellGcmSys, cellGcmGetVBlankCount);
+		REG_FUNC(cellGcmSys, cellGcmGetVBlankCount2);
+		REG_FUNC(cellGcmSys, cellGcmSysGetLastVBlankTime);
+		REG_FUNC(cellGcmSys, _cellGcmFunc1);
+		REG_FUNC(cellGcmSys, _cellGcmFunc15);
+		REG_FUNC(cellGcmSys, _cellGcmInitBody);
+		REG_FUNC(cellGcmSys, cellGcmInitSystemMode);
+		REG_FUNC(cellGcmSys, cellGcmResetFlipStatus);
+		REG_FUNC(cellGcmSys, cellGcmResetFlipStatus2);
+		REG_FUNC(cellGcmSys, cellGcmSetDebugOutputLevel);
+		REG_FUNC(cellGcmSys, cellGcmSetDisplayBuffer);
+		REG_FUNC(cellGcmSys, cellGcmSetFlip); //
+		REG_FUNC(cellGcmSys, cellGcmSetFlipHandler);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipHandler2);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate2);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipMode);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipMode2);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipStatus);
+		REG_FUNC(cellGcmSys, cellGcmSetFlipStatus2);
+		REG_FUNC(cellGcmSys, cellGcmSetGraphicsHandler);
+		REG_FUNC(cellGcmSys, cellGcmSetPrepareFlip);
+		REG_FUNC(cellGcmSys, cellGcmSetQueueHandler);
+		REG_FUNC(cellGcmSys, cellGcmSetSecondVFrequency);
+		REG_FUNC(cellGcmSys, cellGcmSetSecondVHandler);
+		REG_FUNC(cellGcmSys, cellGcmSetTileInfo);
+		REG_FUNC(cellGcmSys, cellGcmSetUserHandler);
+		REG_FUNC(cellGcmSys, cellGcmSetUserCommand); //
+		REG_FUNC(cellGcmSys, cellGcmSetVBlankFrequency);
+		REG_FUNC(cellGcmSys, cellGcmSetVBlankHandler);
+		REG_FUNC(cellGcmSys, cellGcmSetWaitFlip);       //
+		REG_FUNC(cellGcmSys, cellGcmSetWaitFlipUnsafe); //
+		REG_FUNC(cellGcmSys, cellGcmSetZcull);
+		REG_FUNC(cellGcmSys, cellGcmSortRemapEaIoAddress);
+		REG_FUNC(cellGcmSys, cellGcmUnbindTile);
+		REG_FUNC(cellGcmSys, cellGcmUnbindZcull);
+		REG_FUNC(cellGcmSys, cellGcmGetTileInfo);
+		REG_FUNC(cellGcmSys, cellGcmGetZcullInfo);
+		REG_FUNC(cellGcmSys, cellGcmGetDisplayInfo);
+		REG_FUNC(cellGcmSys, cellGcmGetCurrentDisplayBufferId);
+		REG_FUNC(cellGcmSys, cellGcmSetInvalidateTile);
+		REG_FUNC(cellGcmSys, cellGcmTerminate);
 
-	// Memory Mapping
-	REG_FUNC(cellGcmSys, cellGcmAddressToOffset);
-	REG_FUNC(cellGcmSys, cellGcmGetMaxIoMapSize);
-	REG_FUNC(cellGcmSys, cellGcmGetOffsetTable);
-	REG_FUNC(cellGcmSys, cellGcmIoOffsetToAddress);
-	REG_FUNC(cellGcmSys, cellGcmMapEaIoAddress);
-	REG_FUNC(cellGcmSys, cellGcmMapEaIoAddressWithFlags);
-	REG_FUNC(cellGcmSys, cellGcmMapLocalMemory);
-	REG_FUNC(cellGcmSys, cellGcmMapMainMemory);
-	REG_FUNC(cellGcmSys, cellGcmReserveIoMapSize);
-	REG_FUNC(cellGcmSys, cellGcmUnmapEaIoAddress);
-	REG_FUNC(cellGcmSys, cellGcmUnmapIoAddress);
-	REG_FUNC(cellGcmSys, cellGcmUnreserveIoMapSize);
+		// Memory Mapping
+		REG_FUNC(cellGcmSys, cellGcmAddressToOffset);
+		REG_FUNC(cellGcmSys, cellGcmGetMaxIoMapSize);
+		REG_FUNC(cellGcmSys, cellGcmGetOffsetTable);
+		REG_FUNC(cellGcmSys, cellGcmIoOffsetToAddress);
+		REG_FUNC(cellGcmSys, cellGcmMapEaIoAddress);
+		REG_FUNC(cellGcmSys, cellGcmMapEaIoAddressWithFlags);
+		REG_FUNC(cellGcmSys, cellGcmMapLocalMemory);
+		REG_FUNC(cellGcmSys, cellGcmMapMainMemory);
+		REG_FUNC(cellGcmSys, cellGcmReserveIoMapSize);
+		REG_FUNC(cellGcmSys, cellGcmUnmapEaIoAddress);
+		REG_FUNC(cellGcmSys, cellGcmUnmapIoAddress);
+		REG_FUNC(cellGcmSys, cellGcmUnreserveIoMapSize);
 
-	// Cursor
-	REG_FUNC(cellGcmSys, cellGcmInitCursor);
-	REG_FUNC(cellGcmSys, cellGcmSetCursorEnable);
-	REG_FUNC(cellGcmSys, cellGcmSetCursorDisable);
-	REG_FUNC(cellGcmSys, cellGcmSetCursorImageOffset);
-	REG_FUNC(cellGcmSys, cellGcmSetCursorPosition);
-	REG_FUNC(cellGcmSys, cellGcmUpdateCursor);
+		// Cursor
+		REG_FUNC(cellGcmSys, cellGcmInitCursor);
+		REG_FUNC(cellGcmSys, cellGcmSetCursorEnable);
+		REG_FUNC(cellGcmSys, cellGcmSetCursorDisable);
+		REG_FUNC(cellGcmSys, cellGcmSetCursorImageOffset);
+		REG_FUNC(cellGcmSys, cellGcmSetCursorPosition);
+		REG_FUNC(cellGcmSys, cellGcmUpdateCursor);
 
-	// Functions for Maintaining Compatibility
-	REG_FUNC(cellGcmSys, cellGcmSetDefaultCommandBuffer);
-	REG_FUNC(cellGcmSys, cellGcmSetDefaultCommandBufferAndSegmentWordSize);
+		// Functions for Maintaining Compatibility
+		REG_FUNC(cellGcmSys, cellGcmSetDefaultCommandBuffer);
+		REG_FUNC(cellGcmSys, cellGcmSetDefaultCommandBufferAndSegmentWordSize);
 
-	// Other
-	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand);
-	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand2);
-	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommandWithWaitLabel);
-	REG_FUNC(cellGcmSys, cellGcmSetTile);
-	REG_FUNC(cellGcmSys, _cellGcmFunc2);
-	REG_FUNC(cellGcmSys, _cellGcmFunc3);
-	REG_FUNC(cellGcmSys, _cellGcmFunc4);
-	REG_FUNC(cellGcmSys, _cellGcmFunc13);
-	REG_FUNC(cellGcmSys, _cellGcmFunc38);
+		// Other
+		REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand);
+		REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand2);
+		REG_FUNC(cellGcmSys, _cellGcmSetFlipCommandWithWaitLabel);
+		REG_FUNC(cellGcmSys, cellGcmSetTile);
+		REG_FUNC(cellGcmSys, _cellGcmFunc2);
+		REG_FUNC(cellGcmSys, _cellGcmFunc3);
+		REG_FUNC(cellGcmSys, _cellGcmFunc4);
+		REG_FUNC(cellGcmSys, _cellGcmFunc13);
+		REG_FUNC(cellGcmSys, _cellGcmFunc38);
 
-	// GPAD
-	REG_FUNC(cellGcmSys, cellGcmGpadGetStatus);
-	REG_FUNC(cellGcmSys, cellGcmGpadNotifyCaptureSurface);
-	REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
+		// GPAD
+		REG_FUNC(cellGcmSys, cellGcmGpadGetStatus);
+		REG_FUNC(cellGcmSys, cellGcmGpadNotifyCaptureSurface);
+		REG_FUNC(cellGcmSys, cellGcmGpadCaptureSnapshot);
 
-	// Special
-	REG_HIDDEN_FUNC(cellGcmCallback);
-});
+		// Special
+		REG_HIDDEN_FUNC(cellGcmCallback);
+	});

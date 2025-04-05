@@ -7,8 +7,7 @@
 namespace rsx
 {
 	template <typename T>
-	concept SpanLike = requires(T t)
-	{
+	concept SpanLike = requires(T t) {
 		{ t.data() } -> std::convertible_to<void*>;
 		{ t.size_bytes() } -> std::convertible_to<usz>;
 	};
@@ -43,12 +42,14 @@ namespace rsx
 		template <Integral T>
 		io_buffer(void* ptr, T size)
 			: m_ptr(ptr), m_size(size)
-		{}
+		{
+		}
 
 		template <Integral T>
 		io_buffer(const void* ptr, T size)
 			: m_ptr(const_cast<void*>(ptr)), m_size(size)
-		{}
+		{
+		}
 
 		void reserve(usz size) const
 		{
@@ -57,7 +58,7 @@ namespace rsx
 
 		std::pair<void*, usz> raw() const
 		{
-			return { m_ptr, m_size };
+			return {m_ptr, m_size};
 		}
 
 		template <Integral T = u8>
@@ -76,11 +77,11 @@ namespace rsx
 			return m_size;
 		}
 
-		template<typename T>
+		template <typename T>
 		std::span<T> as_span() const
 		{
 			auto bytes = data();
-			return { utils::bless<T>(bytes), m_size / sizeof(T) };
+			return {utils::bless<T>(bytes), m_size / sizeof(T)};
 		}
 
 		bool empty() const
@@ -88,4 +89,4 @@ namespace rsx
 			return m_size == 0;
 		}
 	};
-}
+} // namespace rsx

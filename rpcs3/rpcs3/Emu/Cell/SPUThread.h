@@ -34,54 +34,54 @@ extern const u32 spu_frsqest_fraction_lut[64];
 extern const u32 spu_frsqest_exponent_lut[256];
 
 // JIT Block
-using spu_function_t = void(*)(spu_thread&, void*, u8*);
+using spu_function_t = void (*)(spu_thread&, void*, u8*);
 
 // SPU Channels
 enum : u32
 {
-	SPU_RdEventStat     = 0,  // Read event status with mask applied
-	SPU_WrEventMask     = 1,  // Write event mask
-	SPU_WrEventAck      = 2,  // Write end of event processing
-	SPU_RdSigNotify1    = 3,  // Signal notification 1
-	SPU_RdSigNotify2    = 4,  // Signal notification 2
-	SPU_WrDec           = 7,  // Write decrementer count
-	SPU_RdDec           = 8,  // Read decrementer count
-	SPU_RdEventMask     = 11, // Read event mask
-	SPU_RdMachStat      = 13, // Read SPU run status
-	SPU_WrSRR0          = 14, // Write SPU machine state save/restore register 0 (SRR0)
-	SPU_RdSRR0          = 15, // Read SPU machine state save/restore register 0 (SRR0)
-	SPU_WrOutMbox       = 28, // Write outbound mailbox contents
-	SPU_RdInMbox        = 29, // Read inbound mailbox contents
-	SPU_WrOutIntrMbox   = 30, // Write outbound interrupt mailbox contents (interrupting PPU)
-	SPU_Set_Bkmk_Tag    = 69, // Causes an event that can be logged in the performance monitor logic if enabled in the SPU
-	SPU_PM_Start_Ev     = 70, // Starts the performance monitor event if enabled
-	SPU_PM_Stop_Ev      = 71, // Stops the performance monitor event if enabled
+	SPU_RdEventStat = 0,    // Read event status with mask applied
+	SPU_WrEventMask = 1,    // Write event mask
+	SPU_WrEventAck = 2,     // Write end of event processing
+	SPU_RdSigNotify1 = 3,   // Signal notification 1
+	SPU_RdSigNotify2 = 4,   // Signal notification 2
+	SPU_WrDec = 7,          // Write decrementer count
+	SPU_RdDec = 8,          // Read decrementer count
+	SPU_RdEventMask = 11,   // Read event mask
+	SPU_RdMachStat = 13,    // Read SPU run status
+	SPU_WrSRR0 = 14,        // Write SPU machine state save/restore register 0 (SRR0)
+	SPU_RdSRR0 = 15,        // Read SPU machine state save/restore register 0 (SRR0)
+	SPU_WrOutMbox = 28,     // Write outbound mailbox contents
+	SPU_RdInMbox = 29,      // Read inbound mailbox contents
+	SPU_WrOutIntrMbox = 30, // Write outbound interrupt mailbox contents (interrupting PPU)
+	SPU_Set_Bkmk_Tag = 69,  // Causes an event that can be logged in the performance monitor logic if enabled in the SPU
+	SPU_PM_Start_Ev = 70,   // Starts the performance monitor event if enabled
+	SPU_PM_Stop_Ev = 71,    // Stops the performance monitor event if enabled
 };
 
 // MFC Channels
 enum : u32
 {
-	MFC_WrMSSyncReq     = 9,  // Write multisource synchronization request
-	MFC_RdTagMask       = 12, // Read tag mask
-	MFC_LSA             = 16, // Write local memory address command parameter
-	MFC_EAH             = 17, // Write high order DMA effective address command parameter
-	MFC_EAL             = 18, // Write low order DMA effective address command parameter
-	MFC_Size            = 19, // Write DMA transfer size command parameter
-	MFC_TagID           = 20, // Write tag identifier command parameter
-	MFC_Cmd             = 21, // Write and enqueue DMA command with associated class ID
-	MFC_WrTagMask       = 22, // Write tag mask
-	MFC_WrTagUpdate     = 23, // Write request for conditional or unconditional tag status update
-	MFC_RdTagStat       = 24, // Read tag status with mask applied
+	MFC_WrMSSyncReq = 9,      // Write multisource synchronization request
+	MFC_RdTagMask = 12,       // Read tag mask
+	MFC_LSA = 16,             // Write local memory address command parameter
+	MFC_EAH = 17,             // Write high order DMA effective address command parameter
+	MFC_EAL = 18,             // Write low order DMA effective address command parameter
+	MFC_Size = 19,            // Write DMA transfer size command parameter
+	MFC_TagID = 20,           // Write tag identifier command parameter
+	MFC_Cmd = 21,             // Write and enqueue DMA command with associated class ID
+	MFC_WrTagMask = 22,       // Write tag mask
+	MFC_WrTagUpdate = 23,     // Write request for conditional or unconditional tag status update
+	MFC_RdTagStat = 24,       // Read tag status with mask applied
 	MFC_RdListStallStat = 25, // Read DMA list stall-and-notify status
-	MFC_WrListStallAck  = 26, // Write DMA list stall-and-notify acknowledge
-	MFC_RdAtomicStat    = 27, // Read completion status of last completed immediate MFC atomic update command
+	MFC_WrListStallAck = 26,  // Write DMA list stall-and-notify acknowledge
+	MFC_RdAtomicStat = 27,    // Read completion status of last completed immediate MFC atomic update command
 };
 
 // SPU Events
 enum : u32
 {
 	SPU_EVENT_MS = 0x1000, // Multisource Synchronization event
-	SPU_EVENT_A  = 0x800,  // Privileged Attention event
+	SPU_EVENT_A = 0x800,   // Privileged Attention event
 	SPU_EVENT_LR = 0x400,  // Lock Line Reservation Lost event
 	SPU_EVENT_S1 = 0x200,  // Signal Notification Register 1 available
 	SPU_EVENT_S2 = 0x100,  // Signal Notification Register 2 available
@@ -93,7 +93,7 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2, // Mask of implemented events
+	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2, // Mask of implemented events
 	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
 	SPU_EVENT_INTR_BUSY_CHECK = SPU_EVENT_IMPLEMENTED & ~SPU_EVENT_INTR_IMPLEMENTED,
 };
@@ -101,37 +101,37 @@ enum : u32
 // SPU Class 0 Interrupts
 enum : u64
 {
-	SPU_INT0_STAT_DMA_ALIGNMENT_INT   = (1ull << 0),
+	SPU_INT0_STAT_DMA_ALIGNMENT_INT = (1ull << 0),
 	SPU_INT0_STAT_INVALID_DMA_CMD_INT = (1ull << 1),
-	SPU_INT0_STAT_SPU_ERROR_INT       = (1ull << 2),
+	SPU_INT0_STAT_SPU_ERROR_INT = (1ull << 2),
 };
 
 // SPU Class 2 Interrupts
 enum : u64
 {
-	SPU_INT2_STAT_MAILBOX_INT                  = (1ull << 0),
-	SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT      = (1ull << 1),
-	SPU_INT2_STAT_SPU_HALT_OR_STEP_INT         = (1ull << 2),
+	SPU_INT2_STAT_MAILBOX_INT = (1ull << 0),
+	SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT = (1ull << 1),
+	SPU_INT2_STAT_SPU_HALT_OR_STEP_INT = (1ull << 2),
 	SPU_INT2_STAT_DMA_TAG_GROUP_COMPLETION_INT = (1ull << 3),
-	SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT    = (1ull << 4),
+	SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT = (1ull << 4),
 };
 
 enum : u32
 {
 	SPU_RUNCNTL_STOP_REQUEST = 0,
-	SPU_RUNCNTL_RUN_REQUEST  = 1,
+	SPU_RUNCNTL_RUN_REQUEST = 1,
 };
 
 // SPU Status Register bits (not accurate)
 enum : u32
 {
-	SPU_STATUS_STOPPED             = 0x0,
-	SPU_STATUS_RUNNING             = 0x1,
-	SPU_STATUS_STOPPED_BY_STOP     = 0x2,
-	SPU_STATUS_STOPPED_BY_HALT     = 0x4,
+	SPU_STATUS_STOPPED = 0x0,
+	SPU_STATUS_RUNNING = 0x1,
+	SPU_STATUS_STOPPED_BY_STOP = 0x2,
+	SPU_STATUS_STOPPED_BY_HALT = 0x4,
 	SPU_STATUS_WAITING_FOR_CHANNEL = 0x8,
-	SPU_STATUS_SINGLE_STEP         = 0x10,
-	SPU_STATUS_IS_ISOLATED         = 0x80,
+	SPU_STATUS_SINGLE_STEP = 0x10,
+	SPU_STATUS_IS_ISOLATED = 0x80,
 };
 
 enum : s32
@@ -141,10 +141,10 @@ enum : s32
 
 enum : u32
 {
-	SYS_SPU_THREAD_BASE_LOW  = 0xf0000000,
-	SYS_SPU_THREAD_OFFSET    = 0x100000,
-	SYS_SPU_THREAD_SNR1      = 0x5400c,
-	SYS_SPU_THREAD_SNR2      = 0x5C00c,
+	SYS_SPU_THREAD_BASE_LOW = 0xf0000000,
+	SYS_SPU_THREAD_OFFSET = 0x100000,
+	SYS_SPU_THREAD_SNR1 = 0x5400c,
+	SYS_SPU_THREAD_SNR2 = 0x5C00c,
 };
 
 enum
@@ -171,12 +171,12 @@ enum
 
 enum : u32
 {
-	RAW_SPU_BASE_ADDR   = 0xE0000000,
-	RAW_SPU_OFFSET      = 0x00100000,
-	RAW_SPU_LS_OFFSET   = 0x00000000,
+	RAW_SPU_BASE_ADDR = 0xE0000000,
+	RAW_SPU_OFFSET = 0x00100000,
+	RAW_SPU_LS_OFFSET = 0x00000000,
 	RAW_SPU_PROB_OFFSET = 0x00040000,
 
-	SPU_FAKE_BASE_ADDR  = 0xE8000000,
+	SPU_FAKE_BASE_ADDR = 0xE8000000,
 };
 
 struct spu_channel_op_state
@@ -196,10 +196,10 @@ struct alignas(16) spu_channel
 	atomic_t<u64> jostling_value{};
 
 public:
-	static constexpr u32 off_wait  = 32;
+	static constexpr u32 off_wait = 32;
 	static constexpr u32 off_occupy = 32;
 	static constexpr u32 off_count = 63;
-	static constexpr u64 bit_wait  = 1ull << off_wait;
+	static constexpr u64 bit_wait = 1ull << off_wait;
 	static constexpr u64 bit_occupy = 1ull << off_occupy;
 	static constexpr u64 bit_count = 1ull << off_count;
 
@@ -207,15 +207,16 @@ public:
 	bool try_push(u32 value)
 	{
 		return data.fetch_op([value](u64& data)
-		{
-			if (!(data & bit_count)) [[likely]]
-			{
-				data = bit_count | value;
-				return true;
-			}
+					   {
+						   if (!(data & bit_count)) [[likely]]
+						   {
+							   data = bit_count | value;
+							   return true;
+						   }
 
-			return false;
-		}).second;
+						   return false;
+					   })
+		    .second;
 	}
 
 	// Push unconditionally, may require notification
@@ -226,23 +227,23 @@ public:
 		while (true)
 		{
 			const auto [old, pushed_to_data] = data.fetch_op([&](u64& data)
-			{
-				if (data & bit_occupy)
 				{
-					return false;
-				}
+					if (data & bit_occupy)
+					{
+						return false;
+					}
 
-				if (to_or)
-				{
-					data = bit_count | (static_cast<u32>(data) | value);
-				}
-				else
-				{
-					data = bit_count | value;
-				}
+					if (to_or)
+					{
+						data = bit_count | (static_cast<u32>(data) | value);
+					}
+					else
+					{
+						data = bit_count | value;
+					}
 
-				return true;
-			});
+					return true;
+				});
 
 			if (!pushed_to_data)
 			{
@@ -260,7 +261,7 @@ public:
 				if (!this->data.bit_test_reset(off_wait))
 				{
 					// Could be fatal or at emulation stopping, to be checked by the caller
-					return { (old & bit_count) == 0, 0, false, false };
+					return {(old & bit_count) == 0, 0, false, false};
 				}
 
 				if (!postpone_notify)
@@ -270,7 +271,7 @@ public:
 			}
 
 			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs
-			return { (old & bit_count) == 0, 1, (old & bit_wait) != 0, true };
+			return {(old & bit_count) == 0, 1, (old & bit_wait) != 0, true};
 		}
 	}
 
@@ -283,16 +284,17 @@ public:
 	bool try_pop(u32& out)
 	{
 		return data.fetch_op([&out](u64& data)
-		{
-			if (data & bit_count) [[likely]]
-			{
-				out = static_cast<u32>(data);
-				data = 0;
-				return true;
-			}
+					   {
+						   if (data & bit_count) [[likely]]
+						   {
+							   out = static_cast<u32>(data);
+							   data = 0;
+							   return true;
+						   }
 
-			return false;
-		}).second;
+						   return false;
+					   })
+		    .second;
 	}
 
 	// Reading without modification
@@ -317,16 +319,16 @@ public:
 		constexpr u64 mask = bit_count | bit_occupy;
 
 		const u64 old = data.fetch_op([&](u64& data)
-		{
-			if ((data & mask) == mask)
 			{
-				// Insert the pending value, leave no time in which the channel has no data
-				data = bit_count | static_cast<u32>(jostling_value);
-				return;
-			}
+				if ((data & mask) == mask)
+				{
+					// Insert the pending value, leave no time in which the channel has no data
+					data = bit_count | static_cast<u32>(jostling_value);
+					return;
+				}
 
-			data &= ~(mask | bit_wait);
-		});
+				data &= ~(mask | bit_wait);
+			});
 
 		if (old & bit_wait)
 		{
@@ -374,9 +376,9 @@ struct spu_channel_4_t
 	atomic_t<u64> jostling_value;
 	atomic_t<u32> value3;
 
-	static constexpr u32 off_wait  = 0;
+	static constexpr u32 off_wait = 0;
 	static constexpr u32 off_occupy = 7;
-	static constexpr u64 bit_wait  = 1ull << off_wait;
+	static constexpr u64 bit_wait = 1ull << off_wait;
 	static constexpr u64 bit_occupy = 1ull << off_occupy;
 	static constexpr u64 jostling_flag = 1ull << 63;
 
@@ -400,22 +402,22 @@ struct spu_channel_4_t
 	uint try_pop(u32& out)
 	{
 		return values.atomic_op([&](sync_var_t& data)
-		{
-			const uint result = data.count;
-
-			if (result != 0)
 			{
-				data.waiting = 0;
-				data.count--;
-				out = data.value0;
+				const uint result = data.count;
 
-				data.value0 = data.value1;
-				data.value1 = data.value2;
-				data.value2 = this->value3;
-			}
+				if (result != 0)
+				{
+					data.waiting = 0;
+					data.count--;
+					out = data.value0;
 
-			return result;
-		});
+					data.value0 = data.value1;
+					data.value1 = data.value2;
+					data.value2 = this->value3;
+				}
+
+				return result;
+			});
 	}
 
 	// Returns [previous count, value] (if aborted 0 count is returned)
@@ -445,7 +447,7 @@ struct spu_channel_4_t
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
 	{
-		this->values.raw() = { 0, static_cast<u8>(count), {}, value0, value1, value2 };
+		this->values.raw() = {0, static_cast<u8>(count), {}, value0, value1, value2};
 		this->value3 = value3;
 	}
 };
@@ -485,12 +487,11 @@ struct spu_imm_table_t
 	public:
 		scale_table_t();
 
-		FORCE_INLINE const v128& operator [](s32 scale) const
+		FORCE_INLINE const v128& operator[](s32 scale) const
 		{
 			return m_data[scale + 155];
 		}
-	}
-	const scale;
+	} const scale;
 
 	spu_imm_table_t();
 };
@@ -499,20 +500,20 @@ extern const spu_imm_table_t g_spu_imm;
 
 enum FPSCR_EX
 {
-	//Single-precision exceptions
-	FPSCR_SOVF = 1 << 2,    //Overflow
-	FPSCR_SUNF = 1 << 1,    //Underflow
-	FPSCR_SDIFF = 1 << 0,   //Different (could be IEEE non-compliant)
-	//Double-precision exceptions
-	FPSCR_DOVF = 1 << 13,   //Overflow
-	FPSCR_DUNF = 1 << 12,   //Underflow
-	FPSCR_DINX = 1 << 11,   //Inexact
-	FPSCR_DINV = 1 << 10,   //Invalid operation
-	FPSCR_DNAN = 1 << 9,    //NaN
-	FPSCR_DDENORM = 1 << 8, //Denormal
+	// Single-precision exceptions
+	FPSCR_SOVF = 1 << 2,  // Overflow
+	FPSCR_SUNF = 1 << 1,  // Underflow
+	FPSCR_SDIFF = 1 << 0, // Different (could be IEEE non-compliant)
+	                      // Double-precision exceptions
+	FPSCR_DOVF = 1 << 13,   // Overflow
+	FPSCR_DUNF = 1 << 12,   // Underflow
+	FPSCR_DINX = 1 << 11,   // Inexact
+	FPSCR_DINV = 1 << 10,   // Invalid operation
+	FPSCR_DNAN = 1 << 9,    // NaN
+	FPSCR_DDENORM = 1 << 8, // Denormal
 };
 
-//Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
+// Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
 class SPU_FPSCR
 {
 public:
@@ -530,20 +531,20 @@ public:
 		memset(this, 0, sizeof(*this));
 	}
 
-	//slice -> 0 - 1 (double-precision slice index)
-	//NOTE: slices follow v128 indexing, i.e. slice 0 is RIGHT end of register!
-	//roundTo -> FPSCR_RN_*
+	// slice -> 0 - 1 (double-precision slice index)
+	// NOTE: slices follow v128 indexing, i.e. slice 0 is RIGHT end of register!
+	// roundTo -> FPSCR_RN_*
 	void setSliceRounding(u8 slice, u8 roundTo)
 	{
-		int shift = 8 + 2*slice;
-		//rounding is located in the left end of the FPSCR
+		int shift = 8 + 2 * slice;
+		// rounding is located in the left end of the FPSCR
 		this->_u32[3] = (this->_u32[3] & ~(3 << shift)) | (roundTo << shift);
 	}
 
-	//Slice 0 or 1
+	// Slice 0 or 1
 	u8 checkSliceRounding(u8 slice) const
 	{
-		switch(slice)
+		switch (slice)
 		{
 		case 0:
 			return this->_u32[3] >> 8 & 0x3;
@@ -556,24 +557,24 @@ public:
 		}
 	}
 
-	//Single-precision exception flags (all 4 slices)
-	//slice -> slice number (0-3)
-	//exception: FPSCR_S* bitmask
+	// Single-precision exception flags (all 4 slices)
+	// slice -> slice number (0-3)
+	// exception: FPSCR_S* bitmask
 	void setSinglePrecisionExceptionFlags(u8 slice, u32 exceptions)
 	{
 		_u32[slice] |= exceptions;
 	}
 
-	//Single-precision divide-by-zero flags (all 4 slices)
-	//slice -> slice number (0-3)
+	// Single-precision divide-by-zero flags (all 4 slices)
+	// slice -> slice number (0-3)
 	void setDivideByZeroFlag(u8 slice)
 	{
 		_u32[0] |= 1 << (8 + slice);
 	}
 
-	//Double-precision exception flags
-	//slice -> slice number (0-1)
-	//exception: FPSCR_D* bitmask
+	// Double-precision exception flags
+	// slice -> slice number (0-1)
+	// exception: FPSCR_D* bitmask
 	void setDoublePrecisionExceptionFlags(u8 slice, u32 exceptions)
 	{
 		_u32[1 + slice] |= exceptions;
@@ -622,7 +623,9 @@ enum class spu_debugger_mode : u32
 	max_mode,
 };
 
-enum class spu_block_hash : u64 {};
+enum class spu_block_hash : u64
+{
+};
 
 class spu_thread : public cpu_thread
 {
@@ -655,7 +658,10 @@ public:
 	spu_thread(utils::serial& ar, lv2_spu_group* group = nullptr);
 	void serialize_common(utils::serial& ar);
 	void save(utils::serial& ar);
-	bool savable() const { return get_type() != spu_type::threaded; } // Threaded SPUs are saved as part of the SPU group
+	bool savable() const
+	{
+		return get_type() != spu_type::threaded;
+	} // Threaded SPUs are saved as part of the SPU group
 
 	u32 pc = 0;
 	u32 dbg_step_pc = 0;
@@ -741,7 +747,7 @@ public:
 	bool interrupts_enabled = false;
 
 	u64 ch_dec_start_timestamp = 0; // timestamp of writing decrementer value
-	u32 ch_dec_value = 0; // written decrementer value
+	u32 ch_dec_value = 0;           // written decrementer value
 	bool is_dec_frozen = false;
 	std::pair<u32, u32> read_dec() const; // Read decrementer
 
@@ -751,23 +757,23 @@ public:
 	struct alignas(8) status_npc_sync_var
 	{
 		u32 status; // SPU Status register
-		u32 npc; // SPU Next Program Counter register
+		u32 npc;    // SPU Next Program Counter register
 	};
 
 	atomic_t<status_npc_sync_var> status_npc{};
 	std::array<spu_int_ctrl_t, 3> int_ctrl{}; // SPU Class 0, 1, 2 Interrupt Management
 
 	std::array<std::pair<u32, shared_ptr<lv2_event_queue>>, 32> spuq{}; // Event Queue Keys for SPU Thread
-	shared_ptr<lv2_event_queue> spup[64]; // SPU Ports
-	spu_channel exit_status{}; // Threaded SPU exit status (not a channel, but the interface fits)
-	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
-	lv2_spu_group* const group; // SPU Thread Group (access by the spu threads in the group only! From other threads obtain a shared pointer to group using group ID)
-	const u32 index; // SPU index
+	shared_ptr<lv2_event_queue> spup[64];                               // SPU Ports
+	spu_channel exit_status{};                                          // Threaded SPU exit status (not a channel, but the interface fits)
+	atomic_t<u32> last_exit_status;                                     // Value to be written in exit_status after checking group termination
+	lv2_spu_group* const group;                                         // SPU Thread Group (access by the spu threads in the group only! From other threads obtain a shared pointer to group using group ID)
+	const u32 index;                                                    // SPU index
 	const spu_type thread_type;
 	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
-	const u32 option; // sys_spu_thread_initialize option
-	const u32 lv2_id; // The actual id that is used by syscalls
+	const u32 option;                // sys_spu_thread_initialize option
+	const u32 lv2_id;                // The actual id that is used by syscalls
 	u32 spurs_addr = 0;
 	bool spurs_waited = false;
 	bool spurs_entered_wait = false;
@@ -816,8 +822,8 @@ public:
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
-	u64 start_time{}; // Starting time of STOP or RDCH bloking function
-	bool unsavable = false; // Flag indicating whether saving the spu thread state is currently unsafe
+	u64 start_time{};           // Starting time of STOP or RDCH bloking function
+	bool unsavable = false;     // Flag indicating whether saving the spu thread state is currently unsafe
 
 	atomic_t<spu_debugger_mode> debugger_mode{};
 
@@ -828,7 +834,7 @@ public:
 	bool stop_flag_removal_protection = false;
 
 	std::array<std::array<u8, 4>, SPU_LS_SIZE / 128> getllar_wait_time{};
- 
+
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
 	bool do_dma_check(const spu_mfc_cmd& args);
@@ -862,14 +868,14 @@ public:
 	void wakeup_delay(u32 div = 1) const;
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
-	template<typename T>
+	template <typename T>
 	to_be_t<T>* _ptr(u32 lsa) const
 	{
 		return reinterpret_cast<to_be_t<T>*>(ls + (lsa % SPU_LS_SIZE));
 	}
 
 	// Convert specified SPU LS address to a reference of specified (possibly converted to BE) type
-	template<typename T>
+	template <typename T>
 	to_be_t<T>& _ref(u32 lsa) const
 	{
 		return *_ptr<T>(lsa);
@@ -920,12 +926,12 @@ public:
 		const spu_thread* _this;
 
 		operator std::string() const;
-	} thread_name{ this };
+	} thread_name{this};
 
 	union spu_prio_t
 	{
 		u64 all;
-		bf_t<s64, 0, 9> prio; // Thread priority (0..3071) (firs 9-bits)
+		bf_t<s64, 0, 9> prio;   // Thread priority (0..3071) (firs 9-bits)
 		bf_t<s64, 9, 55> order; // Thread enqueue order (TODO, last 52-bits)
 	};
 
@@ -941,7 +947,7 @@ public:
 		{
 			return static_cast<std::conditional_t<std::is_void_v<Func>, Func, decltype(_this->group)>>(_this->group)->prio.atomic_op(std::move(func));
 		}
-	} prio{ this };
+	} prio{this};
 };
 
 class spu_function_logger

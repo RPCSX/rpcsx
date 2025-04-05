@@ -11,8 +11,7 @@ struct EvlgFile : orbis::File {};
 struct EvlgDevice : IoDevice {
   int outputFd;
 
-  EvlgDevice(int outputFd)
-      : outputFd(outputFd) {}
+  EvlgDevice(int outputFd) : outputFd(outputFd) {}
 
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
@@ -20,14 +19,14 @@ struct EvlgDevice : IoDevice {
 };
 
 static orbis::ErrorCode evlg_ioctl(orbis::File *file, std::uint64_t request,
-                                      void *argp, orbis::Thread *thread) {
+                                   void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled evlg ioctl", request);
   return {};
 }
 
 static orbis::ErrorCode evlg_write(orbis::File *file, orbis::Uio *uio,
-                                      orbis::Thread *thread) {
+                                   orbis::Thread *thread) {
   auto dev = dynamic_cast<EvlgDevice *>(file->device.get());
 
   for (auto vec : std::span(uio->iov, uio->iovcnt)) {
@@ -44,9 +43,8 @@ static const orbis::FileOps fileOps = {
 };
 
 orbis::ErrorCode EvlgDevice::open(orbis::Ref<orbis::File> *file,
-                                     const char *path, std::uint32_t flags,
-                                     std::uint32_t mode,
-                                     orbis::Thread *thread) {
+                                  const char *path, std::uint32_t flags,
+                                  std::uint32_t mode, orbis::Thread *thread) {
   auto newFile = orbis::knew<EvlgFile>();
   newFile->ops = &fileOps;
   newFile->device = this;

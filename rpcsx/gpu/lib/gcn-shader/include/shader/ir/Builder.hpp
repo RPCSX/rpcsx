@@ -81,4 +81,4 @@ public:
     return result;
   }
 };
-} // namespace ir
+} // namespace shader::ir

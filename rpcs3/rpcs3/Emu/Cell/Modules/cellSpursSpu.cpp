@@ -126,7 +126,7 @@ void cellSpursModuleExit(spu_thread& spu)
 	spu.pc = ctxt->exitToKernelAddr;
 
 	// TODO: use g_escape for actual long jump
-	//throw SpursModuleExit();
+	// throw SpursModuleExit();
 }
 
 // Execute a DMA operation
@@ -179,7 +179,8 @@ void sys_spu_thread_exit(spu_thread& spu, s32 status)
 {
 	// Cancel any pending status update requests
 	spu.set_ch_value(MFC_WrTagUpdate, 0);
-	while (spu.get_ch_count(MFC_RdTagStat) != 1);
+	while (spu.get_ch_count(MFC_RdTagStat) != 1)
+		;
 	spu.get_ch_value(MFC_RdTagStat);
 
 	// Wait for all pending DMA operations to complete
@@ -195,7 +196,8 @@ void sys_spu_thread_group_exit(spu_thread& spu, s32 status)
 {
 	// Cancel any pending status update requests
 	spu.set_ch_value(MFC_WrTagUpdate, 0);
-	while (spu.get_ch_count(MFC_RdTagStat) != 1);
+	while (spu.get_ch_count(MFC_RdTagStat) != 1)
+		;
 	spu.get_ch_value(MFC_RdTagStat);
 
 	// Wait for all pending DMA operations to complete
@@ -235,7 +237,8 @@ s32 sys_spu_thread_switch_system_module(spu_thread& spu, u32 status)
 
 	// Cancel any pending status update requests
 	spu.set_ch_value(MFC_WrTagUpdate, 0);
-	while (spu.get_ch_count(MFC_RdTagStat) != 1);
+	while (spu.get_ch_count(MFC_RdTagStat) != 1)
+		;
 	spu.get_ch_value(MFC_RdTagStat);
 
 	// Wait for all pending DMA operations to complete
@@ -248,8 +251,7 @@ s32 sys_spu_thread_switch_system_module(spu_thread& spu, u32 status)
 		spu.set_ch_value(SPU_WrOutMbox, status);
 		spu.stop_and_signal(0x120);
 		result = static_cast<u32>(spu.get_ch_value(SPU_RdInMbox));
-	}
-	while (result == CELL_EBUSY);
+	} while (result == CELL_EBUSY);
 
 	return result;
 }
@@ -271,7 +273,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 	u32 wklSelectedId;
 	u32 pollStatus;
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
+	// vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
 	{
 		// lock the first 0x80 bytes of spurs
 		auto spurs = ctxt->spurs.get_ptr();
@@ -317,10 +319,10 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 			{
 				u16 runnable = ctxt->wklRunnable1 & (0x8000 >> i);
 				u16 wklSignal = spurs->wklSignal1.load() & (0x8000 >> i);
-				u8  wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
-				u8  readyCount = spurs->wklReadyCount1[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklReadyCount1[i].load();
-				u8  idleSpuCount = spurs->wklIdleSpuCountOrReadyCount2[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklIdleSpuCountOrReadyCount2[i].load();
-				u8  requestCount = readyCount + idleSpuCount;
+				u8 wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
+				u8 readyCount = spurs->wklReadyCount1[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklReadyCount1[i].load();
+				u8 idleSpuCount = spurs->wklIdleSpuCountOrReadyCount2[i] > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->wklIdleSpuCountOrReadyCount2[i].load();
+				u8 requestCount = readyCount + idleSpuCount;
 
 				// For a workload to be considered for scheduling:
 				// 1. Its priority must not be 0
@@ -434,7 +436,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		}
 
 		std::memcpy(ctxt, spurs, 128);
-	}//);
+	} //);
 
 	u64 result = u64{wklSelectedId} << 32;
 	result |= pollStatus;
@@ -455,7 +457,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 	u32 wklSelectedId;
 	u32 pollStatus;
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
+	// vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
 	{
 		// lock the first 0x80 bytes of spurs
 		auto spurs = ctxt->spurs.get_ptr();
@@ -504,11 +506,11 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 			{
 				u32 j = i & 0x0f;
 				u16 runnable = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->wklRunnable1 & (0x8000 >> j) : ctxt->wklRunnable2 & (0x8000 >> j);
-				u8  priority = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->priority[j] & 0x0F : ctxt->priority[j] >> 4;
-				u8  maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklMaxContention[j] & 0x0F : spurs->wklMaxContention[j] >> 4;
+				u8 priority = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->priority[j] & 0x0F : ctxt->priority[j] >> 4;
+				u8 maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklMaxContention[j] & 0x0F : spurs->wklMaxContention[j] >> 4;
 				u16 wklSignal = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklSignal1.load() & (0x8000 >> j) : spurs->wklSignal2.load() & (0x8000 >> j);
-				u8  wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
-				u8  readyCount = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklReadyCount1[j] : spurs->wklIdleSpuCountOrReadyCount2[j];
+				u8 wklFlag = spurs->wklFlag.flag.load() == 0u ? spurs->wklFlagReceiver == i ? 1 : 0 : 0;
+				u8 readyCount = i < CELL_SPURS_MAX_WORKLOAD ? spurs->wklReadyCount1[j] : spurs->wklIdleSpuCountOrReadyCount2[j];
 
 				// For a workload to be considered for scheduling:
 				// 1. Its priority must be greater than 0
@@ -576,7 +578,8 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 				ctxt->wklLocPendingContention[i] = 0;
 			}
 
-			ctxt->wklLocContention[wklSelectedId & 0x0F] = wklSelectedId < CELL_SPURS_MAX_WORKLOAD ? 0x01 : wklSelectedId < CELL_SPURS_MAX_WORKLOAD2 ? 0x10 : 0;
+			ctxt->wklLocContention[wklSelectedId & 0x0F] = wklSelectedId < CELL_SPURS_MAX_WORKLOAD ? 0x01 : wklSelectedId < CELL_SPURS_MAX_WORKLOAD2 ? 0x10 :
+			                                                                                                                                           0;
 			ctxt->wklCurrentId = wklSelectedId;
 		}
 		else if (wklSelectedId != ctxt->wklCurrentId)
@@ -594,7 +597,8 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 				ctxt->wklLocPendingContention[i] = 0;
 			}
 
-			ctxt->wklLocPendingContention[wklSelectedId & 0x0F] = wklSelectedId < CELL_SPURS_MAX_WORKLOAD ? 0x01 : wklSelectedId < CELL_SPURS_MAX_WORKLOAD2 ? 0x10 : 0;
+			ctxt->wklLocPendingContention[wklSelectedId & 0x0F] = wklSelectedId < CELL_SPURS_MAX_WORKLOAD ? 0x01 : wklSelectedId < CELL_SPURS_MAX_WORKLOAD2 ? 0x10 :
+			                                                                                                                                                  0;
 		}
 		else
 		{
@@ -607,7 +611,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		}
 
 		std::memcpy(ctxt, spurs, 128);
-	}//);
+	} //);
 
 	u64 result = u64{wklSelectedId} << 32;
 	result |= pollStatus;
@@ -625,9 +629,9 @@ void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus)
 	auto wid = static_cast<u32>(widAndPollStatus >> 32);
 
 	// DMA in the workload info for the selected workload
-	auto wklInfoOffset = wid < CELL_SPURS_MAX_WORKLOAD ? &ctxt->spurs->wklInfo1[wid] :
-		wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? &ctxt->spurs->wklInfo2[wid & 0xf] :
-		&ctxt->spurs->wklInfoSysSrv;
+	auto wklInfoOffset = wid < CELL_SPURS_MAX_WORKLOAD               ? &ctxt->spurs->wklInfo1[wid] :
+	                     wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? &ctxt->spurs->wklInfo2[wid & 0xf] :
+	                                                                   &ctxt->spurs->wklInfoSysSrv;
 
 	const auto wklInfo = spu._ptr<CellSpurs::WorkloadInfo>(0x3FFE0);
 	std::memcpy(wklInfo, wklInfoOffset, 0x20);
@@ -638,10 +642,10 @@ void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus)
 		switch (wklInfo->addr.addr())
 		{
 		case SPURS_IMG_ADDR_SYS_SRV_WORKLOAD:
-			//spu.RegisterHleFunction(0xA00, spursSysServiceEntry);
+			// spu.RegisterHleFunction(0xA00, spursSysServiceEntry);
 			break;
 		case SPURS_IMG_ADDR_TASKSET_PM:
-			//spu.RegisterHleFunction(0xA00, spursTasksetEntry);
+			// spu.RegisterHleFunction(0xA00, spursTasksetEntry);
 			break;
 		default:
 			std::memcpy(spu._ptr<void>(0xA00), wklInfo->addr.get_ptr(), wklInfo->size);
@@ -724,10 +728,10 @@ bool spursKernelEntry(spu_thread& spu)
 	}
 
 	// Register SPURS kernel HLE functions
-	//spu.UnregisterHleFunctions(0, 0x40000/*LS_BOTTOM*/);
-	//spu.RegisterHleFunction(isKernel2 ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR, spursKernelEntry);
-	//spu.RegisterHleFunction(ctxt->exitToKernelAddr, spursKernelWorkloadExit);
-	//spu.RegisterHleFunction(ctxt->selectWorkloadAddr, isKernel2 ? spursKernel2SelectWorkload : spursKernel1SelectWorkload);
+	// spu.UnregisterHleFunctions(0, 0x40000/*LS_BOTTOM*/);
+	// spu.RegisterHleFunction(isKernel2 ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR, spursKernelEntry);
+	// spu.RegisterHleFunction(ctxt->exitToKernelAddr, spursKernelWorkloadExit);
+	// spu.RegisterHleFunction(ctxt->selectWorkloadAddr, isKernel2 ? spursKernel2SelectWorkload : spursKernel1SelectWorkload);
 
 	// Start the system service
 	spursKernelDispatchWorkload(spu, u64{CELL_SPURS_SYS_SERVICE_WORKLOAD_ID} << 32);
@@ -742,7 +746,7 @@ bool spursKernelEntry(spu_thread& spu)
 bool spursSysServiceEntry(spu_thread& spu)
 {
 	const auto ctxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
-	//auto arg = spu.gpr[4]._u64[1];
+	// auto arg = spu.gpr[4]._u64[1];
 	auto pollStatus = spu.gpr[5]._u32[3];
 
 	{
@@ -770,7 +774,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 	while (true)
 	{
 		const auto spurs = spu._ptr<CellSpurs>(0x100);
-		//vm::reservation_acquire(ctxt->spurs.addr());
+		// vm::reservation_acquire(ctxt->spurs.addr());
 
 		// Find the number of SPUs that are idling in this SPURS instance
 		u32 nIdlingSpus = 0;
@@ -858,7 +862,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 			continue;
 		}
 
-		//if (vm::reservation_update(vm::cast(ctxt->spurs.addr()), spu._ptr<void>(0x100), 128) && (shouldExit || foundReadyWorkload))
+		// if (vm::reservation_update(vm::cast(ctxt->spurs.addr()), spu._ptr<void>(0x100), 128) && (shouldExit || foundReadyWorkload))
 		{
 			break;
 		}
@@ -886,9 +890,9 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 	{
 		ctxt->sysSrvInitialised = 1;
 
-		//vm::reservation_acquire(ctxt->spurs.addr());
+		// vm::reservation_acquire(ctxt->spurs.addr());
 
-		//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), [&]()
+		// vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), [&]()
 		{
 			auto spurs = ctxt->spurs.get_ptr();
 
@@ -902,7 +906,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 			spurs->sysSrvOnSpu |= 1 << ctxt->spuNum;
 
 			std::memcpy(spu._ptr<void>(0x2D80), spurs->wklState1, 128);
-		}//);
+		} //);
 
 		ctxt->traceBuffer = 0;
 		ctxt->traceMsgCount = -1;
@@ -944,7 +948,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 			pkt.data.stop = SPURS_GUID_SYS_WKL;
 			cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 
-			//spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
+			// spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 			break;
 		}
 
@@ -978,7 +982,7 @@ void spursSysServiceProcessRequests(spu_thread& spu, SpursKernelContext* ctxt)
 	bool updateWorkload = false;
 	bool terminate = false;
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr() + OFFSET_32(CellSpurs, wklState1)), 128, [&]()
+	// vm::reservation_op(vm::cast(ctxt->spurs.addr() + OFFSET_32(CellSpurs, wklState1)), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1003,7 +1007,7 @@ void spursSysServiceProcessRequests(spu_thread& spu, SpursKernelContext* ctxt)
 		}
 
 		std::memcpy(spu._ptr<void>(0x2D80), spurs->wklState1, 128);
-	}//);
+	} //);
 
 	// Process update workload message
 	if (updateWorkload)
@@ -1057,7 +1061,7 @@ void spursSysServiceActivateWorkload(spu_thread& spu, SpursKernelContext* ctxt)
 		}
 	}
 
-	//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
+	// vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1114,7 +1118,7 @@ void spursSysServiceActivateWorkload(spu_thread& spu, SpursKernelContext* ctxt)
 		}
 
 		std::memcpy(spu._ptr<void>(0x2D80), spurs->wklState1, 128);
-	}//);
+	} //);
 
 	if (wklShutdownBitSet)
 	{
@@ -1129,7 +1133,7 @@ void spursSysServiceUpdateShutdownCompletionEvents(spu_thread& spu, SpursKernelC
 	// workloads that have a shutdown completion hook registered
 	u32 wklNotifyBitSet;
 	[[maybe_unused]] u8 spuPort;
-	//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
+	// vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1157,7 +1161,7 @@ void spursSysServiceUpdateShutdownCompletionEvents(spu_thread& spu, SpursKernelC
 		}
 
 		std::memcpy(spu._ptr<void>(0x2D80), spurs->wklState1, 128);
-	}//);
+	} //);
 
 	if (wklNotifyBitSet)
 	{
@@ -1181,7 +1185,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 	bool notify;
 
 	u8 sysSrvMsgUpdateTrace;
-	//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
+	// vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 		auto& trace = spurs->sysSrvTrace.raw();
@@ -1205,12 +1209,12 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 		}
 
 		std::memcpy(spu._ptr<void>(0x2D80), spurs->wklState1, 128);
-	}//);
+	} //);
 
 	// Get trace parameters from CellSpurs and store them in the LS
 	if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) || (arg3 != 0))
 	{
-		//vm::reservation_acquire(ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr());
+		// vm::reservation_acquire(ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr());
 		auto spurs = spu._ptr<CellSpurs>(0x80 - offset32(&CellSpurs::traceBuffer));
 
 		if (ctxt->traceMsgCount != 0xffu || spurs->traceBuffer.addr() == 0u)
@@ -1246,7 +1250,7 @@ void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelConte
 
 	bool do_return = false;
 
-	//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
+	// vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1260,13 +1264,14 @@ void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelConte
 		spurs->sysSrvPreemptWklId[ctxt->spuNum] = 0xFF;
 
 		std::memcpy(spu._ptr<void>(0x2D80), spurs->wklState1, 128);
-	}//);
+	} //);
 
-	if (do_return) return;
+	if (do_return)
+		return;
 
 	spursSysServiceActivateWorkload(spu, ctxt);
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
+	// vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1282,7 +1287,7 @@ void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelConte
 		}
 
 		std::memcpy(spu._ptr<void>(0x100), spurs, 128);
-	}//);
+	} //);
 
 	// Set the current workload id to the id of the pre-empted workload since cellSpursModulePutTrace
 	// uses the current worload id to determine the workload to which the trace belongs
@@ -1334,9 +1339,9 @@ bool spursTasksetEntry(spu_thread& spu)
 	ctxt->taskId = 0xFFFFFFFF;
 
 	// Register SPURS takset policy module HLE functions
-	//spu.UnregisterHleFunctions(CELL_SPURS_TASKSET_PM_ENTRY_ADDR, 0x40000/*LS_BOTTOM*/);
-	//spu.RegisterHleFunction(CELL_SPURS_TASKSET_PM_ENTRY_ADDR, spursTasksetEntry);
-	//spu.RegisterHleFunction(ctxt->syscallAddr, spursTasksetSyscallEntry);
+	// spu.UnregisterHleFunctions(CELL_SPURS_TASKSET_PM_ENTRY_ADDR, 0x40000/*LS_BOTTOM*/);
+	// spu.RegisterHleFunction(CELL_SPURS_TASKSET_PM_ENTRY_ADDR, spursTasksetEntry);
+	// spu.RegisterHleFunction(ctxt->syscallAddr, spursTasksetSyscallEntry);
 
 	{
 		// Initialise the taskset policy module
@@ -1368,9 +1373,9 @@ bool spursTasksetSyscallEntry(spu_thread& spu)
 
 		// Resume the previously executing task if the syscall did not cause a context switch
 		fmt::throw_exception("Broken (TODO)");
-		//if (spu.m_is_branch == false) {
-		//    spursTasksetResumeTask(spu);
-		//}
+		// if (spu.m_is_branch == false) {
+		//     spursTasksetResumeTask(spu);
+		// }
 	}
 
 	return false;
@@ -1419,7 +1424,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 	s32 rc = CELL_OK;
 	s32 numNewlyReadyTasks = 0;
 
-	//vm::reservation_op(vm::cast(ctxt->taskset.addr()), 128, [&]()
+	// vm::reservation_op(vm::cast(ctxt->taskset.addr()), 128, [&]()
 	{
 		auto taskset = ctxt->taskset;
 		v128 waiting = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::waiting));
@@ -1445,7 +1450,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		}
 
 		v128 readyButNotRunning;
-		u8   selectedTaskId;
+		u8 selectedTaskId;
 		v128 signalled0 = (signalled & (ready | pready));
 		v128 ready0 = (signalled | ready | pready);
 
@@ -1602,7 +1607,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::signalled)) = signalled;
 
 		std::memcpy(spu._ptr<void>(0x2700), spu._ptr<void>(0x100), 128); // Copy data
-	}//);
+	} //);
 
 	// Increment the ready count of the workload by the number of tasks that have become ready
 	if (numNewlyReadyTasks)
@@ -1610,13 +1615,13 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		auto spurs = kernelCtxt->spurs;
 
 		vm::light_op(spurs->readyCount(kernelCtxt->wklCurrentId), [&](atomic_t<u8>& val)
-		{
-			val.fetch_op([&](u8& val)
 			{
-				const s32 _new = val + numNewlyReadyTasks;
-				val = static_cast<u8>(std::clamp<s32>(_new, 0, 0xFF));
+				val.fetch_op([&](u8& val)
+					{
+						const s32 _new = val + numNewlyReadyTasks;
+						val = static_cast<u8>(std::clamp<s32>(_new, 0, 0xFF));
+					});
 			});
-		});
 	}
 
 	return rc;
@@ -1686,7 +1691,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	auto ctxt = spu._ptr<SpursTasksetContext>(0x2700);
 	auto taskInfo = spu._ptr<CellSpursTaskset::TaskInfo>(0x2780);
 
-	//spursDmaWaitForCompletion(spu, 0xFFFFFFFF);
+	// spursDmaWaitForCompletion(spu, 0xFFFFFFFF);
 
 	if (taskInfo->context_save_storage_and_alloc_ls_blocks == 0u)
 	{
@@ -1733,7 +1738,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 		}
 	}
 
-	//spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
+	// spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 	return CELL_OK;
 }
 
@@ -1781,7 +1786,7 @@ void spursTasksetDispatch(spu_thread& spu)
 			spursHalt(spu);
 		}
 
-		//spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
+		// spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 
 		ctxt->savedContextLr = v128::from32r(entryPoint);
 		ctxt->guidAddr = lowestLoadAddr;
@@ -1841,7 +1846,7 @@ void spursTasksetDispatch(spu_thread& spu)
 			}
 		}
 
-		//spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
+		// spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 
 		// Restore saved registers
 		spu.fpscr.Write(ctxt->savedContextFpscr.value());
@@ -1876,7 +1881,7 @@ s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 	// for DMA completion
 	if ((syscallNum & 0x10) == 0)
 	{
-		//spursDmaWaitForCompletion(spu, 0xFFFFFFFF);
+		// spursDmaWaitForCompletion(spu, 0xFFFFFFFF);
 	}
 
 	s32 rc = 0;
@@ -1932,7 +1937,7 @@ s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 		if (args == 0)
 		{ // TODO: Figure this out
 			spu_log.error("args == 0");
-			//spursHalt(spu);
+			// spursHalt(spu);
 		}
 
 		if (spursTasksetPollStatus(spu) || spursTasksetProcessRequest(spu, SPURS_TASKSET_REQUEST_WAIT_WKL_FLAG, nullptr, nullptr) != 1)
@@ -2019,7 +2024,7 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 
 		if (prog.p_type == 1u /* PT_LOAD */)
 		{
-			if (skipWriteableSegments == false || (prog.p_flags & 2u /*PF_W*/ ) == 0u)
+			if (skipWriteableSegments == false || (prog.p_flags & 2u /*PF_W*/) == 0u)
 			{
 				if (prog.p_vaddr < CELL_SPURS_TASK_TOP || prog.p_vaddr + prog.p_memsz > CELL_SPURS_TASK_BOTTOM)
 				{
@@ -2048,7 +2053,8 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 	}
 
 	*entryPoint = obj.header.e_entry;
-	if (lowestLoadAddr) *lowestLoadAddr = _lowestLoadAddr;
+	if (lowestLoadAddr)
+		*lowestLoadAddr = _lowestLoadAddr;
 
 	return CELL_OK;
 }
@@ -2058,11 +2064,11 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 //----------------------------------------------------------------------------
 bool spursJobChainEntry(spu_thread& spu)
 {
-	//const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
-	//auto kernelCtxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
+	// const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
+	// auto kernelCtxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
 
-	//auto arg = spu.gpr[4]._u64[1];
-	//auto pollStatus = spu.gpr[5]._u32[3];
+	// auto arg = spu.gpr[4]._u64[1];
+	// auto pollStatus = spu.gpr[5]._u32[3];
 
 	// TODO
 	return false;
@@ -2075,31 +2081,34 @@ void spursJobchainPopUrgentCommand(spu_thread& spu)
 
 	const bool alterQueue = ctxt->unkFlag0;
 	vm::reservation_op(spu, jc, [&](CellSpursJobChain_x00& op)
-	{
-		const auto ls = reinterpret_cast<CellSpursJobChain_x00*>(ctxt->tempAreaJobChain);
-
-		struct alignas(16) { v128 first, second; } data;
-		std::memcpy(&data, &op.urgentCmds, sizeof(op.urgentCmds));
-
-		if (!alterQueue)
 		{
-			// Read the queue, do not modify it
-		}
-		else
-		{
-			// Move FIFO queue contents one command up
-			data.first._u64[0] = data.first._u64[1];
-			data.first._u64[1] = data.second._u64[0];
-			data.second._u64[0] = data.second._u64[1];
-			data.second._u64[1] = 0;
-		}
+			const auto ls = reinterpret_cast<CellSpursJobChain_x00*>(ctxt->tempAreaJobChain);
 
-		// Writeback
-		std::memcpy(&ls->urgentCmds, &data, sizeof(op.urgentCmds));
+			struct alignas(16)
+			{
+				v128 first, second;
+			} data;
+			std::memcpy(&data, &op.urgentCmds, sizeof(op.urgentCmds));
 
-		std::memcpy(&ls->isHalted, &op.unk0[0], 1); // Maybe intended to set it to false
-		ls->unk5 = 0;
-		ls->sizeJobDescriptor = op.maxGrabbedJob;
-		std::memcpy(&op, ls, 128);
-	});
+			if (!alterQueue)
+			{
+				// Read the queue, do not modify it
+			}
+			else
+			{
+				// Move FIFO queue contents one command up
+				data.first._u64[0] = data.first._u64[1];
+				data.first._u64[1] = data.second._u64[0];
+				data.second._u64[0] = data.second._u64[1];
+				data.second._u64[1] = 0;
+			}
+
+			// Writeback
+			std::memcpy(&ls->urgentCmds, &data, sizeof(op.urgentCmds));
+
+			std::memcpy(&ls->isHalted, &op.unk0[0], 1); // Maybe intended to set it to false
+			ls->unk5 = 0;
+			ls->sizeJobDescriptor = op.maxGrabbedJob;
+			std::memcpy(&op, ls, 128);
+		});
 }

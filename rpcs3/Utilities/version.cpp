@@ -99,4 +99,4 @@ namespace utils
 
 		return 0;
 	}
-}
+} // namespace utils

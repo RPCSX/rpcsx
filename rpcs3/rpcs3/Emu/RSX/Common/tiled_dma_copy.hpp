@@ -51,7 +51,7 @@ namespace rsx
 		// 2. Calculate bank selector
 		// There's a lot of weird math here, but it's just a variant of (tile_selector % 4) to pick a value between [0..3]
 		uint32_t bank_selector = 0;
-		const uint32_t bank_distribution_lookup[16] = { 0, 1, 2, 3, 2, 3, 0, 1, 1, 2, 3, 0, 3, 0, 1, 2 };
+		const uint32_t bank_distribution_lookup[16] = {0, 1, 2, 3, 2, 3, 0, 1, 1, 2, 3, 0, 3, 0, 1, 2};
 
 		if (conf.factor == 1)
 		{
@@ -133,14 +133,14 @@ namespace rsx
 			const uint32_t base = (pitch >> 8);
 			if ((pitch & (pitch - 1)) == 0)
 			{
-				return { 1u, base };
+				return {1u, base};
 			}
 
-			for (const auto prime : { 3, 5, 7, 11, 13 })
+			for (const auto prime : {3, 5, 7, 11, 13})
 			{
 				if ((base % prime) == 0)
 				{
-					return { prime, base / prime };
+					return {prime, base / prime};
 				}
 			}
 
@@ -168,8 +168,7 @@ namespace rsx
 			.image_width = image_width,
 			.image_height = image_height,
 			.image_pitch = row_pitch_in_bytes,
-			.image_bpp = sizeof(T)
-		};
+			.image_bpp = sizeof(T)};
 
 		for (u16 row = 0; row < image_height; ++row)
 		{
@@ -196,4 +195,4 @@ namespace rsx
 #undef RSX_TILE_HEIGHT
 #undef RSX_DMA_OP_ENCODE_TILE
 #undef RSX_DMA_OP_DECODE_TILE
-}
+} // namespace rsx

@@ -104,7 +104,7 @@ flow_layout::position flow_widget::find_item(flow_widget_item* item)
 		}
 	}
 
-	return flow_layout::position{ .row = -1, .col = - 1};
+	return flow_layout::position{.row = -1, .col = -1};
 }
 
 flow_layout::position flow_widget::find_next_item(flow_layout::position current_pos, flow_navigation value)
@@ -123,8 +123,10 @@ flow_layout::position flow_widget::find_next_item(flow_layout::position current_
 		case flow_navigation::down:
 			// Go down one row. Beware of last row which might have less columns.
 			for (const auto& pos : m_flow_layout->positions())
-			{;
-				if (pos.col != current_pos.col) continue;
+			{
+				;
+				if (pos.col != current_pos.col)
+					continue;
 				if (pos.row == current_pos.row + 1)
 				{
 					current_pos.row = pos.row;
@@ -143,8 +145,10 @@ flow_layout::position flow_widget::find_next_item(flow_layout::position current_
 			// Go right one column. Beware of last row which might have less columns.
 			for (const auto& pos : m_flow_layout->positions())
 			{
-				if (pos.row > current_pos.row) break;
-				if (pos.row < current_pos.row) continue;
+				if (pos.row > current_pos.row)
+					break;
+				if (pos.row < current_pos.row)
+					continue;
 				if (pos.col == current_pos.col + 1)
 				{
 					current_pos.col = pos.col;
@@ -160,8 +164,10 @@ flow_layout::position flow_widget::find_next_item(flow_layout::position current_
 			// Go to last column. Beware of last row which might have less columns.
 			for (const auto& pos : m_flow_layout->positions())
 			{
-				if (pos.row > current_pos.row) break;
-				if (pos.row < current_pos.row) continue;
+				if (pos.row > current_pos.row)
+					break;
+				if (pos.row < current_pos.row)
+					continue;
 				current_pos.col = std::max(current_pos.col, pos.col);
 			}
 			break;
@@ -173,7 +179,8 @@ flow_layout::position flow_widget::find_next_item(flow_layout::position current_
 			// Go to bottom row. Beware of last row which might have less columns.
 			for (const auto& pos : m_flow_layout->positions())
 			{
-				if (pos.col != current_pos.col) continue;
+				if (pos.col != current_pos.col)
+					continue;
 				current_pos.row = std::max(current_pos.row, pos.row);
 			}
 			break;
@@ -235,7 +242,8 @@ void flow_widget::on_navigate(flow_navigation value)
 
 void flow_widget::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (!ev) return;
+	if (!ev)
+		return;
 
 	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
 	// So we have to ignore this event when another button is pressed.

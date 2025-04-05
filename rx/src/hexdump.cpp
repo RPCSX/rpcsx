@@ -50,7 +50,7 @@ void rx::hexdump(std::span<std::byte> bytes) {
           for (std::size_t j = i - 16; j < i; ++j) {
             auto c = unsigned(bytes[j]);
             std::print(stderr, "{:c}",
-                         (std::isprint(c) && c != '\n') ? c : '.');
+                       (std::isprint(c) && c != '\n') ? c : '.');
           }
         }
       }

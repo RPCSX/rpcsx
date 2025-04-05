@@ -287,7 +287,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		}
 
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
-		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
+		const bool is_stick = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
 		const bool is_touch_motion = !is_trigger && !is_stick && get_is_touch_pad_motion(device, keycode);
 		const bool is_button = !is_trigger && !is_stick && !is_touch_motion;
 
@@ -307,7 +307,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 			if (diff > button_press_threshold && value > pressed_button.value)
 			{
-				pressed_button = { .value = value, .name = name };
+				pressed_button = {.value = value, .name = name};
 			}
 		}
 	}
@@ -470,8 +470,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 		}
 	}
 
-	pad->Init
-	(
+	pad->Init(
 		CELL_PAD_STATUS_DISCONNECTED,
 		capabilities,
 		CELL_PAD_DEV_TYPE_STANDARD,
@@ -479,8 +478,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pclass_profile,
 		config->vendor_id,
 		config->product_id,
-		config->pressure_intensity
-	);
+		config->pressure_intensity);
 
 	if (b_has_pressure_intensity_button)
 	{
@@ -552,48 +550,48 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::
 	if (!device || !cfg)
 		return mapping;
 
-	device->trigger_code_left  = FindKeyCodes<u32, u64>(button_list, cfg->l2);
+	device->trigger_code_left = FindKeyCodes<u32, u64>(button_list, cfg->l2);
 	device->trigger_code_right = FindKeyCodes<u32, u64>(button_list, cfg->r2);
-	device->axis_code_left[0]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_left);
-	device->axis_code_left[1]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_right);
-	device->axis_code_left[2]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_down);
-	device->axis_code_left[3]  = FindKeyCodes<u32, u64>(button_list, cfg->ls_up);
+	device->axis_code_left[0] = FindKeyCodes<u32, u64>(button_list, cfg->ls_left);
+	device->axis_code_left[1] = FindKeyCodes<u32, u64>(button_list, cfg->ls_right);
+	device->axis_code_left[2] = FindKeyCodes<u32, u64>(button_list, cfg->ls_down);
+	device->axis_code_left[3] = FindKeyCodes<u32, u64>(button_list, cfg->ls_up);
 	device->axis_code_right[0] = FindKeyCodes<u32, u64>(button_list, cfg->rs_left);
 	device->axis_code_right[1] = FindKeyCodes<u32, u64>(button_list, cfg->rs_right);
 	device->axis_code_right[2] = FindKeyCodes<u32, u64>(button_list, cfg->rs_down);
 	device->axis_code_right[3] = FindKeyCodes<u32, u64>(button_list, cfg->rs_up);
 
-	mapping[button::up]       = FindKeyCodes<u32, u32>(button_list, cfg->up);
-	mapping[button::down]     = FindKeyCodes<u32, u32>(button_list, cfg->down);
-	mapping[button::left]     = FindKeyCodes<u32, u32>(button_list, cfg->left);
-	mapping[button::right]    = FindKeyCodes<u32, u32>(button_list, cfg->right);
-	mapping[button::cross]    = FindKeyCodes<u32, u32>(button_list, cfg->cross);
-	mapping[button::square]   = FindKeyCodes<u32, u32>(button_list, cfg->square);
-	mapping[button::circle]   = FindKeyCodes<u32, u32>(button_list, cfg->circle);
+	mapping[button::up] = FindKeyCodes<u32, u32>(button_list, cfg->up);
+	mapping[button::down] = FindKeyCodes<u32, u32>(button_list, cfg->down);
+	mapping[button::left] = FindKeyCodes<u32, u32>(button_list, cfg->left);
+	mapping[button::right] = FindKeyCodes<u32, u32>(button_list, cfg->right);
+	mapping[button::cross] = FindKeyCodes<u32, u32>(button_list, cfg->cross);
+	mapping[button::square] = FindKeyCodes<u32, u32>(button_list, cfg->square);
+	mapping[button::circle] = FindKeyCodes<u32, u32>(button_list, cfg->circle);
 	mapping[button::triangle] = FindKeyCodes<u32, u32>(button_list, cfg->triangle);
-	mapping[button::start]    = FindKeyCodes<u32, u32>(button_list, cfg->start);
-	mapping[button::select]   = FindKeyCodes<u32, u32>(button_list, cfg->select);
-	mapping[button::l1]       = FindKeyCodes<u32, u32>(button_list, cfg->l1);
-	mapping[button::l2]       = narrow_set(device->trigger_code_left);
-	mapping[button::l3]       = FindKeyCodes<u32, u32>(button_list, cfg->l3);
-	mapping[button::r1]       = FindKeyCodes<u32, u32>(button_list, cfg->r1);
-	mapping[button::r2]       = narrow_set(device->trigger_code_right);
-	mapping[button::r3]       = FindKeyCodes<u32, u32>(button_list, cfg->r3);
-	mapping[button::ls_left]  = narrow_set(device->axis_code_left[0]);
+	mapping[button::start] = FindKeyCodes<u32, u32>(button_list, cfg->start);
+	mapping[button::select] = FindKeyCodes<u32, u32>(button_list, cfg->select);
+	mapping[button::l1] = FindKeyCodes<u32, u32>(button_list, cfg->l1);
+	mapping[button::l2] = narrow_set(device->trigger_code_left);
+	mapping[button::l3] = FindKeyCodes<u32, u32>(button_list, cfg->l3);
+	mapping[button::r1] = FindKeyCodes<u32, u32>(button_list, cfg->r1);
+	mapping[button::r2] = narrow_set(device->trigger_code_right);
+	mapping[button::r3] = FindKeyCodes<u32, u32>(button_list, cfg->r3);
+	mapping[button::ls_left] = narrow_set(device->axis_code_left[0]);
 	mapping[button::ls_right] = narrow_set(device->axis_code_left[1]);
-	mapping[button::ls_down]  = narrow_set(device->axis_code_left[2]);
-	mapping[button::ls_up]    = narrow_set(device->axis_code_left[3]);
-	mapping[button::rs_left]  = narrow_set(device->axis_code_right[0]);
+	mapping[button::ls_down] = narrow_set(device->axis_code_left[2]);
+	mapping[button::ls_up] = narrow_set(device->axis_code_left[3]);
+	mapping[button::rs_left] = narrow_set(device->axis_code_right[0]);
 	mapping[button::rs_right] = narrow_set(device->axis_code_right[1]);
-	mapping[button::rs_down]  = narrow_set(device->axis_code_right[2]);
-	mapping[button::rs_up]    = narrow_set(device->axis_code_right[3]);
-	mapping[button::ps]       = FindKeyCodes<u32, u32>(button_list, cfg->ps);
+	mapping[button::rs_down] = narrow_set(device->axis_code_right[2]);
+	mapping[button::rs_up] = narrow_set(device->axis_code_right[3]);
+	mapping[button::ps] = FindKeyCodes<u32, u32>(button_list, cfg->ps);
 
-	mapping[button::skateboard_ir_nose]    = FindKeyCodes<u32, u32>(button_list, cfg->ir_nose);
-	mapping[button::skateboard_ir_tail]    = FindKeyCodes<u32, u32>(button_list, cfg->ir_tail);
-	mapping[button::skateboard_ir_left]    = FindKeyCodes<u32, u32>(button_list, cfg->ir_left);
-	mapping[button::skateboard_ir_right]   = FindKeyCodes<u32, u32>(button_list, cfg->ir_right);
-	mapping[button::skateboard_tilt_left]  = FindKeyCodes<u32, u32>(button_list, cfg->tilt_left);
+	mapping[button::skateboard_ir_nose] = FindKeyCodes<u32, u32>(button_list, cfg->ir_nose);
+	mapping[button::skateboard_ir_tail] = FindKeyCodes<u32, u32>(button_list, cfg->ir_tail);
+	mapping[button::skateboard_ir_left] = FindKeyCodes<u32, u32>(button_list, cfg->ir_left);
+	mapping[button::skateboard_ir_right] = FindKeyCodes<u32, u32>(button_list, cfg->ir_right);
+	mapping[button::skateboard_tilt_left] = FindKeyCodes<u32, u32>(button_list, cfg->tilt_left);
 	mapping[button::skateboard_tilt_right] = FindKeyCodes<u32, u32>(button_list, cfg->tilt_right);
 
 	if (b_has_pressure_intensity_button)
@@ -745,7 +743,7 @@ void PadHandlerBase::process()
 	for (usz i = 0; i < m_bindings.size(); ++i)
 	{
 		auto& device = m_bindings[i].device;
-		auto& pad    = m_bindings[i].pad;
+		auto& pad = m_bindings[i].pad;
 
 		if (!device || !pad)
 			continue;
@@ -884,11 +882,13 @@ void PadHandlerBase::set_raw_orientation(Pad& pad)
 
 void PadHandlerBase::get_orientation(const pad_ensemble& binding) const
 {
-	if (!b_has_orientation) return;
+	if (!b_has_orientation)
+		return;
 
 	const auto& pad = binding.pad;
 	const auto& device = binding.device;
-	if (!pad || !device) return;
+	if (!pad || !device)
+		return;
 
 	if (pad->move_data.calibration_requested)
 	{
@@ -937,32 +937,26 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	ensure(ahrs->settings.convention == FusionConvention::FusionConventionEnu); // East-North-Up
 
 	const FusionVector accelerometer{
-		.axis {
+		.axis{
 			.x = -move_data.accelerometer_x,
 			.y = +move_data.accelerometer_y,
-			.z = +move_data.accelerometer_z
-		}
-	};
+			.z = +move_data.accelerometer_z}};
 
 	const FusionVector gyroscope{
-		.axis {
+		.axis{
 			.x = +PadHandlerBase::rad_to_degree(move_data.gyro_x),
 			.y = +PadHandlerBase::rad_to_degree(move_data.gyro_z),
-			.z = -PadHandlerBase::rad_to_degree(move_data.gyro_y)
-		}
-	};
+			.z = -PadHandlerBase::rad_to_degree(move_data.gyro_y)}};
 
-	FusionVector magnetometer {};
+	FusionVector magnetometer{};
 
 	if (move_data.magnetometer_enabled)
 	{
 		magnetometer = FusionVector{
-			.axis {
+			.axis{
 				.x = move_data.magnetometer_x,
 				.y = move_data.magnetometer_y,
-				.z = move_data.magnetometer_z
-			}
-		};
+				.z = move_data.magnetometer_z}};
 	}
 
 	// Update Fusion

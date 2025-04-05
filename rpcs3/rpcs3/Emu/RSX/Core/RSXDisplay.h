@@ -24,7 +24,7 @@ namespace rsx
 			return static_cast<u32>(width) * height * samples_x * samples_y;
 		}
 
-		inline bool operator > (const framebuffer_dimensions_t& that) const
+		inline bool operator>(const framebuffer_dimensions_t& that) const
 		{
 			return samples_total() > that.samples_total();
 		}
@@ -124,4 +124,4 @@ namespace rsx
 		vblank_thread& operator=(thread_state);
 		vblank_thread& operator=(const vblank_thread&) = delete;
 	};
-}
+} // namespace rsx

@@ -20,8 +20,8 @@ namespace rsx
 	{
 		enum class texture_sampling_mode;
 		struct overlay;
-	}
-}
+	} // namespace overlays
+} // namespace rsx
 
 namespace vk
 {
@@ -97,8 +97,14 @@ namespace vk
 			return {};
 		}
 
-		int sampler_location(int index) const { return 1 + index; }
-		int input_attachment_location(int index) const { return 1 + m_num_usable_samplers + index; }
+		int sampler_location(int index) const
+		{
+			return 1 + index;
+		}
+		int input_attachment_location(int index) const
+		{
+			return 1 + m_num_usable_samplers + index;
+		}
 
 		template <typename T>
 		void upload_vertex_data(T* data, u32 count)
@@ -178,13 +184,13 @@ namespace vk
 		void emit_geometry(vk::command_buffer& cmd) override;
 
 		void run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
-				vk::data_heap& upload_heap, rsx::overlays::overlay& ui);
+			vk::data_heap& upload_heap, rsx::overlays::overlay& ui);
 	};
 
 	struct attachment_clear_pass : public overlay_pass
 	{
-		color4f clear_color = { 0.f, 0.f, 0.f, 0.f };
-		color4f colormask = { 1.f, 1.f, 1.f, 1.f };
+		color4f clear_color = {0.f, 0.f, 0.f, 0.f};
+		color4f colormask = {1.f, 1.f, 1.f, 1.f};
 		VkRect2D region = {};
 
 		attachment_clear_pass();
@@ -216,14 +222,13 @@ namespace vk
 			struct
 			{
 				float gamma;
-				int   limit_range;
-				int   stereo_display_mode;
-				int   stereo_image_count;
+				int limit_range;
+				int stereo_display_mode;
+				int stereo_image_count;
 			};
 
 			float data[4];
-		}
-		config = {};
+		} config = {};
 
 		video_out_calibration_pass();
 
@@ -238,7 +243,7 @@ namespace vk
 	// TODO: Replace with a proper manager
 	extern std::unordered_map<u32, std::unique_ptr<vk::overlay_pass>> g_overlay_passes;
 
-	template<class T>
+	template <class T>
 	T* get_overlay_pass()
 	{
 		u32 index = stx::typeindex<id_manager::typeinfo, T>();
@@ -254,4 +259,4 @@ namespace vk
 	}
 
 	void reset_overlay_passes();
-}
+} // namespace vk

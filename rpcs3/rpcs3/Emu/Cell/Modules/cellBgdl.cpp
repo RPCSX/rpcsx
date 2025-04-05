@@ -30,9 +30,9 @@ error_code cellBGDLGetMode(vm::ptr<CellBGDLMode> mode)
 }
 
 DECLARE(ppu_module_manager::cellBGDL)("cellBGDLUtility", []()
-{
-	REG_FUNC(cellBGDLUtility, cellBGDLGetInfo);
-	REG_FUNC(cellBGDLUtility, cellBGDLGetInfo2);
-	REG_FUNC(cellBGDLUtility, cellBGDLSetMode);
-	REG_FUNC(cellBGDLUtility, cellBGDLGetMode);
-});
+	{
+		REG_FUNC(cellBGDLUtility, cellBGDLGetInfo);
+		REG_FUNC(cellBGDLUtility, cellBGDLGetInfo2);
+		REG_FUNC(cellBGDLUtility, cellBGDLSetMode);
+		REG_FUNC(cellBGDLUtility, cellBGDLGetMode);
+	});

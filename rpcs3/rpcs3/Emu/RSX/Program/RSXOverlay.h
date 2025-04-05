@@ -19,7 +19,7 @@ namespace rsx
 		{
 			u32 value = 0;
 
-			enum e_offsets: s32
+			enum e_offsets : s32
 			{
 				fragment_clip_bit = 0,
 				pulse_glow_bit = 1,
@@ -73,5 +73,5 @@ namespace rsx
 				return value;
 			}
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -25,40 +25,48 @@ struct serial_ver_t
 
 static std::array<serial_ver_t, 27> s_serial_versions;
 
-#define SERIALIZATION_VER(name, identifier, ...) \
-\
-	const bool s_##name##_serialization_fill = []() { auto& e = ::s_serial_versions[identifier]; if (e.compatible_versions.empty()) { e.compatible_versions = {__VA_ARGS__}; e.ver_name = #name; } return true; }();\
-\
-	extern void using_##name##_serialization()\
-	{\
-		ensure(Emu.IsStopped());\
-		::s_serial_versions[identifier].used = true;\
-	}\
-\
-	extern s32 get_##name##_serialization_version()\
-	{\
-		return ::s_serial_versions[identifier].current_version;\
+#define SERIALIZATION_VER(name, identifier, ...)                \
+                                                                \
+	const bool s_##name##_serialization_fill = []() {           \
+		auto& e = ::s_serial_versions[identifier];              \
+		if (e.compatible_versions.empty())                      \
+		{                                                       \
+			e.compatible_versions = {__VA_ARGS__};              \
+			e.ver_name = #name;                                 \
+		}                                                       \
+		return true;                                            \
+	}();                                                        \
+                                                                \
+	extern void using_##name##_serialization()                  \
+	{                                                           \
+		ensure(Emu.IsStopped());                                \
+		::s_serial_versions[identifier].used = true;            \
+	}                                                           \
+                                                                \
+	extern s32 get_##name##_serialization_version()             \
+	{                                                           \
+		return ::s_serial_versions[identifier].current_version; \
 	}
 
-SERIALIZATION_VER(global_version, 0,                            19) // For stuff not listed here
-SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
-SERIALIZATION_VER(spu, 2,                                       1)
-SERIALIZATION_VER(lv2_sync, 3,                                  1)
-SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/)
-SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
-SERIALIZATION_VER(lv2_memory, 8,                                1)
-SERIALIZATION_VER(lv2_config, 9,                                1)
+SERIALIZATION_VER(global_version, 0, 19) // For stuff not listed here
+SERIALIZATION_VER(ppu, 1, 1, 2 /*PPU sleep order*/, 3 /*PPU FNID and module*/)
+SERIALIZATION_VER(spu, 2, 1)
+SERIALIZATION_VER(lv2_sync, 3, 1)
+SERIALIZATION_VER(lv2_vm, 4, 1)
+SERIALIZATION_VER(lv2_net, 5, 1, 2 /*TCP Feign conection loss*/)
+SERIALIZATION_VER(lv2_fs, 6, 1, 2 /*NPDRM key saving*/)
+SERIALIZATION_VER(lv2_prx_overlay, 7, 1)
+SERIALIZATION_VER(lv2_memory, 8, 1)
+SERIALIZATION_VER(lv2_config, 9, 1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/)
+	SERIALIZATION_VER(rsx, 10, 1, 2 /*Pending flip*/, 3 /*avconf scan_mode*/)
 }
 
 namespace np
 {
-	SERIALIZATION_VER(sceNp, 11,                                1)
+	SERIALIZATION_VER(sceNp, 11, 1)
 }
 
 #ifdef _MSC_VER
@@ -67,24 +75,24 @@ SERIALIZATION_VER(rsx, 10)
 SERIALIZATION_VER(sceNp, 11)
 #endif
 
-SERIALIZATION_VER(cellVdec, 12,                                 1)
-SERIALIZATION_VER(cellAudio, 13,                                1)
-SERIALIZATION_VER(cellCamera, 14,                               1, 2/*gem_camera_shared*/)
-SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/, 3/*video_conversion*/)
-SERIALIZATION_VER(sceNpTrophy, 16,                              1)
-SERIALIZATION_VER(cellMusic, 17,                                1)
-SERIALIZATION_VER(cellVoice, 18,                                1)
-SERIALIZATION_VER(cellGcm, 19,                                  1)
-SERIALIZATION_VER(sysPrxForUser, 20,                            1)
-SERIALIZATION_VER(cellSaveData, 21,                             1)
-SERIALIZATION_VER(cellAudioOut, 22,                             1)
-SERIALIZATION_VER(sys_io, 23,                                   2)
+SERIALIZATION_VER(cellVdec, 12, 1)
+SERIALIZATION_VER(cellAudio, 13, 1)
+SERIALIZATION_VER(cellCamera, 14, 1, 2 /*gem_camera_shared*/)
+SERIALIZATION_VER(cellGem, 15, 1, 2 /*calibration_status_flags*/, 3 /*video_conversion*/)
+SERIALIZATION_VER(sceNpTrophy, 16, 1)
+SERIALIZATION_VER(cellMusic, 17, 1)
+SERIALIZATION_VER(cellVoice, 18, 1)
+SERIALIZATION_VER(cellGcm, 19, 1)
+SERIALIZATION_VER(sysPrxForUser, 20, 1)
+SERIALIZATION_VER(cellSaveData, 21, 1)
+SERIALIZATION_VER(cellAudioOut, 22, 1)
+SERIALIZATION_VER(sys_io, 23, 2)
 
 // Misc versions for HLE/LLE not included so main version would not invalidated
-SERIALIZATION_VER(LLE, 24,                                      1)
-SERIALIZATION_VER(HLE, 25,                                      1)
+SERIALIZATION_VER(LLE, 24, 1)
+SERIALIZATION_VER(HLE, 25, 1)
 
-SERIALIZATION_VER(cellSysutil, 26,                              1, 2/*AVC2 Muting,Volume*/)
+SERIALIZATION_VER(cellSysutil, 26, 1, 2 /*AVC2 Muting,Volume*/)
 
 template <>
 void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
@@ -465,7 +473,7 @@ namespace stx
 		ar.breathe();
 		return saved;
 	}
-}
+} // namespace stx
 
 // MSVC bug workaround, see above similar case
 extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit)
@@ -484,15 +492,15 @@ bool hle_locks_t::try_lock()
 	while (true)
 	{
 		auto [old, success] = lock_val.fetch_op([](s64& value)
-		{
-			if (value >= 0)
 			{
-				value++;
-				return true;
-			}
+				if (value >= 0)
+				{
+					value++;
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		if (success)
 		{
@@ -537,9 +545,8 @@ bool hle_locks_t::try_finalize(std::function<bool()> test)
 	ensure(lock_val.compare_and_swap_test(waiting_for_evaluation, finalized));
 
 	// Sanity check when debugging (the result is not expected to change after finalization)
-	//ensure(test());
+	// ensure(test());
 
 	lock_val.notify_all();
 	return true;
 }
-

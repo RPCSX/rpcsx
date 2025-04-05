@@ -42,9 +42,9 @@ namespace rsx
 
 			std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 			rpcn::friend_data m_friend_data;
-			atomic_t<bool> m_list_dirty { true };
-			atomic_t<friends_list_dialog_page> m_current_page { friends_list_dialog_page::friends };
-			atomic_t<friends_list_dialog_page> m_last_page { friends_list_dialog_page::friends };
+			atomic_t<bool> m_list_dirty{true};
+			atomic_t<friends_list_dialog_page> m_current_page{friends_list_dialog_page::friends};
+			atomic_t<friends_list_dialog_page> m_last_page{friends_list_dialog_page::friends};
 
 			void reload();
 
@@ -62,5 +62,5 @@ namespace rsx
 
 			static bool rpcn_configured();
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

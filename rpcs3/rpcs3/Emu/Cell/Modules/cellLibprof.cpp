@@ -28,9 +28,9 @@ error_code cellUserTraceTerminate()
 }
 
 DECLARE(ppu_module_manager::cellLibprof)("cellLibprof", []()
-{
-	REG_FUNC(cellLibprof, cellUserTraceInit);
-	REG_FUNC(cellLibprof, cellUserTraceRegister);
-	REG_FUNC(cellLibprof, cellUserTraceUnregister);
-	REG_FUNC(cellLibprof, cellUserTraceTerminate);
-});
+	{
+		REG_FUNC(cellLibprof, cellUserTraceInit);
+		REG_FUNC(cellLibprof, cellUserTraceRegister);
+		REG_FUNC(cellLibprof, cellUserTraceUnregister);
+		REG_FUNC(cellLibprof, cellUserTraceTerminate);
+	});

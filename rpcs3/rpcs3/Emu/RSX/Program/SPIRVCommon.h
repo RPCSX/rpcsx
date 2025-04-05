@@ -4,7 +4,7 @@ namespace glsl
 {
 	enum program_domain : unsigned char;
 	enum glsl_rules : unsigned char;
-}
+} // namespace glsl
 
 namespace spirv
 {
@@ -12,4 +12,4 @@ namespace spirv
 
 	void initialize_compiler_context();
 	void finalize_compiler_context();
-}
+} // namespace spirv

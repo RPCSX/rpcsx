@@ -273,10 +273,10 @@ u32 usb_device_emulated::get_status(bool self_powered, bool remote_wakeup, u8* b
 
 void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time   = usb_device::get_timestamp() + 100;
+	transfer->expected_time = usb_device::get_timestamp() + 100;
 
 	switch (bmRequestType)
 	{

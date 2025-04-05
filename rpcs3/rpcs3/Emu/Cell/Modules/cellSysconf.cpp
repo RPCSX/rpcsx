@@ -6,18 +6,18 @@
 
 LOG_CHANNEL(cellSysconf);
 
-template<>
+template <>
 void fmt_class_string<CellSysConfError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SYSCONF_ERROR_PARAM);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SYSCONF_ERROR_PARAM);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellSysconfAbort()
@@ -31,10 +31,10 @@ error_code cellSysconfOpen(u32 type, vm::ptr<CellSysconfCallback> func, vm::ptr<
 	cellSysconf.todo("cellSysconfOpen(type=%d, func=*0x%x, userdata=*0x%x, extparam=*0x%x, id=%d)", type, func, userdata, extparam, id);
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		func(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			func(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -58,6 +58,6 @@ void cellSysutil_Sysconf_init()
 }
 
 DECLARE(ppu_module_manager::cellSysconf)("cellSysconfExtUtility", []()
-{
-	REG_FUNC(cellSysconfExtUtility, cellSysconfBtGetDeviceList);
-});
+	{
+		REG_FUNC(cellSysconfExtUtility, cellSysconfBtGetDeviceList);
+	});

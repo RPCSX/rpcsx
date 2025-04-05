@@ -11,5 +11,5 @@ namespace rsx
 		{
 			static void impl(context* ctx, u32 reg, u32 arg);
 		};
-	}
-}
+	} // namespace nv308a
+} // namespace rsx

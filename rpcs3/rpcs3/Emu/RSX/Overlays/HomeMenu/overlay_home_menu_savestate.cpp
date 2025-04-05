@@ -18,36 +18,45 @@ namespace rsx
 				get_localized_string(suspend_mode ? localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT : localized_string_id::HOME_MENU_SAVESTATE_SAVE));
 
 			add_item(save_state, [suspend_mode](pad_button btn) -> page_navigation
-			{
-				if (btn != pad_button::cross) return page_navigation::stay;
-				rsx_log.notice("User selected savestate in home menu");
-				Emu.CallFromMainThread([suspend_mode]()
 				{
-					if (!suspend_mode)
-					{
-						Emu.after_kill_callback = []() { Emu.Restart(); };
+					if (btn != pad_button::cross)
+						return page_navigation::stay;
+					rsx_log.notice("User selected savestate in home menu");
+					Emu.CallFromMainThread([suspend_mode]()
+						{
+							if (!suspend_mode)
+							{
+								Emu.after_kill_callback = []()
+								{
+									Emu.Restart();
+								};
 
-						// Make sure we keep the game window opened
-						Emu.SetContinuousMode(true);
-					}
-					Emu.Kill(false, true);
+								// Make sure we keep the game window opened
+								Emu.SetContinuousMode(true);
+							}
+							Emu.Kill(false, true);
+						});
+					return page_navigation::exit;
 				});
-				return page_navigation::exit;
-			});
 
-			if (!suspend_mode && boot_last_savestate(true)) {
+			if (!suspend_mode && boot_last_savestate(true))
+			{
 				std::unique_ptr<overlay_element> reload_state = std::make_unique<home_menu_entry>(
 					get_localized_string(localized_string_id::HOME_MENU_RELOAD_SAVESTATE));
 
 				add_item(reload_state, [](pad_button btn) -> page_navigation
-				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-					rsx_log.notice("User selected reload savestate in home menu");
-					Emu.CallFromMainThread([]() { boot_last_savestate(false); });
-					return page_navigation::exit;
-				});
+					{
+						if (btn != pad_button::cross)
+							return page_navigation::stay;
+						rsx_log.notice("User selected reload savestate in home menu");
+						Emu.CallFromMainThread([]()
+							{
+								boot_last_savestate(false);
+							});
+						return page_navigation::exit;
+					});
 			}
 			apply_layout();
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

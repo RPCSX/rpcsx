@@ -59,15 +59,15 @@ void shared_mutex::imp_wait()
 	while (true)
 	{
 		const auto [old, ok] = m_value.fetch_op([](u32& value)
-		{
-			if (value >= c_sig)
 			{
-				value -= c_sig;
-				return true;
-			}
+				if (value >= c_sig)
+				{
+					value -= c_sig;
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		if (ok)
 		{

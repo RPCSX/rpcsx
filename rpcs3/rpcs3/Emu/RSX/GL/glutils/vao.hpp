@@ -39,9 +39,7 @@ namespace gl
 
 	public:
 		buffer_pointer(vao* vao, u32 offset = 0, u32 stride = 0)
-			: m_vao(vao)
-			, m_offset(offset)
-			, m_stride(stride)
+			: m_vao(vao), m_offset(offset), m_stride(stride)
 		{
 		}
 
@@ -110,7 +108,7 @@ namespace gl
 			return m_normalize;
 		}
 
-		buffer_pointer& operator >> (u32 value)
+		buffer_pointer& operator>>(u32 value)
 		{
 			return stride(value);
 		}
@@ -125,7 +123,7 @@ namespace gl
 
 	class vao
 	{
-		template<buffer::target BindId, uint GetStateId>
+		template <buffer::target BindId, uint GetStateId>
 		class entry
 		{
 			vao& m_parent;
@@ -137,7 +135,7 @@ namespace gl
 			{
 			}
 
-			entry& operator = (const buffer& buf) noexcept
+			entry& operator=(const buffer& buf) noexcept
 			{
 				m_parent.bind();
 				buf.bind(BindId);
@@ -149,10 +147,10 @@ namespace gl
 		GLuint m_id = GL_NONE;
 
 	public:
-		entry<buffer::target::pixel_pack, GL_PIXEL_PACK_BUFFER_BINDING> pixel_pack_buffer{ this };
-		entry<buffer::target::pixel_unpack, GL_PIXEL_UNPACK_BUFFER_BINDING> pixel_unpack_buffer{ this };
-		entry<buffer::target::array, GL_ARRAY_BUFFER_BINDING> array_buffer{ this };
-		entry<buffer::target::element_array, GL_ELEMENT_ARRAY_BUFFER_BINDING> element_array_buffer{ this };
+		entry<buffer::target::pixel_pack, GL_PIXEL_PACK_BUFFER_BINDING> pixel_pack_buffer{this};
+		entry<buffer::target::pixel_unpack, GL_PIXEL_UNPACK_BUFFER_BINDING> pixel_unpack_buffer{this};
+		entry<buffer::target::array, GL_ARRAY_BUFFER_BINDING> array_buffer{this};
+		entry<buffer::target::element_array, GL_ELEMENT_ARRAY_BUFFER_BINDING> element_array_buffer{this};
 
 		vao() = default;
 		vao(const vao&) = delete;
@@ -179,8 +177,8 @@ namespace gl
 			vao_.set_id(my_old_id);
 		}
 
-		vao& operator = (const vao& rhs) = delete;
-		vao& operator = (vao&& rhs) noexcept
+		vao& operator=(const vao& rhs) = delete;
+		vao& operator=(vao&& rhs) noexcept
 		{
 			swap(rhs);
 			return *this;
@@ -243,30 +241,30 @@ namespace gl
 
 		void enable_for_attribute(GLuint index) noexcept
 		{
-			enable_for_attributes({ index });
+			enable_for_attributes({index});
 		}
 
 		void disable_for_attribute(GLuint index) noexcept
 		{
-			disable_for_attributes({ index });
+			disable_for_attributes({index});
 		}
 
-		buffer_pointer operator + (u32 offset) noexcept
+		buffer_pointer operator+(u32 offset) noexcept
 		{
-			return{ this, offset };
+			return {this, offset};
 		}
 
-		buffer_pointer operator >> (u32 stride) noexcept
+		buffer_pointer operator>>(u32 stride) noexcept
 		{
-			return{ this, {}, stride };
+			return {this, {}, stride};
 		}
 
 		operator buffer_pointer() noexcept
 		{
-			return{ this };
+			return {this};
 		}
 
-		attrib_t operator [] (u32 index) const noexcept;
+		attrib_t operator[](u32 index) const noexcept;
 	};
 
 	class attrib_t
@@ -284,23 +282,63 @@ namespace gl
 			return m_location;
 		}
 
-		void operator = (float rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs); }
-		void operator = (double rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs); }
+		void operator=(float rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib1f(location(), rhs);
+		}
+		void operator=(double rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib1d(location(), rhs);
+		}
 
-		void operator = (const color1f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1f(location(), rhs.r); }
-		void operator = (const color1d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib1d(location(), rhs.r); }
-		void operator = (const color2f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2f(location(), rhs.r, rhs.g); }
-		void operator = (const color2d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib2d(location(), rhs.r, rhs.g); }
-		void operator = (const color3f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b); }
-		void operator = (const color3d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b); }
-		void operator = (const color4f& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
-		void operator = (const color4d& rhs) const { glDisableVertexAttribArray(location()); glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a); }
+		void operator=(const color1f& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib1f(location(), rhs.r);
+		}
+		void operator=(const color1d& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib1d(location(), rhs.r);
+		}
+		void operator=(const color2f& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib2f(location(), rhs.r, rhs.g);
+		}
+		void operator=(const color2d& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib2d(location(), rhs.r, rhs.g);
+		}
+		void operator=(const color3f& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib3f(location(), rhs.r, rhs.g, rhs.b);
+		}
+		void operator=(const color3d& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib3d(location(), rhs.r, rhs.g, rhs.b);
+		}
+		void operator=(const color4f& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib4f(location(), rhs.r, rhs.g, rhs.b, rhs.a);
+		}
+		void operator=(const color4d& rhs) const
+		{
+			glDisableVertexAttribArray(location());
+			glVertexAttrib4d(location(), rhs.r, rhs.g, rhs.b, rhs.a);
+		}
 
-		void operator = (buffer_pointer& pointer) const
+		void operator=(buffer_pointer& pointer) const
 		{
 			pointer.get_vao().enable_for_attribute(m_location);
 			glVertexAttribPointer(location(), pointer.size(), static_cast<GLenum>(pointer.get_type()), pointer.normalize(),
-				pointer.stride(), reinterpret_cast<const void*>(u64{ pointer.offset() }));
+				pointer.stride(), reinterpret_cast<const void*>(u64{pointer.offset()}));
 		}
 	};
-}
+} // namespace gl

@@ -137,7 +137,7 @@ namespace reports
 		// 8 axis (0x2621), value range 0 to 255, 1 byte each (8 bytes total)
 		std::array<u8, 8> data{};
 	};
-}
+} // namespace reports
 
 class skateboard_device : public HidDevice
 {

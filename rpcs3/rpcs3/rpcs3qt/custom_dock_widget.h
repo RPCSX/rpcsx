@@ -11,17 +11,17 @@ private:
 	bool m_is_title_bar_visible = true;
 
 public:
-	explicit custom_dock_widget(const QString &title, QWidget *parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags())
+	explicit custom_dock_widget(const QString& title, QWidget* parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags())
 		: QDockWidget(title, parent, flags)
 	{
 		m_title_bar_widget.reset(titleBarWidget());
 
-		connect(this, &QDockWidget::topLevelChanged, [this](bool/* topLevel*/)
-		{
-			SetTitleBarVisible(m_is_title_bar_visible);
-			style()->unpolish(this);
-			style()->polish(this);
-		});
+		connect(this, &QDockWidget::topLevelChanged, [this](bool /* topLevel*/)
+			{
+				SetTitleBarVisible(m_is_title_bar_visible);
+				style()->unpolish(this);
+				style()->polish(this);
+			});
 	}
 
 	void SetTitleBarVisible(bool visible)

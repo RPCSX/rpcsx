@@ -20,15 +20,18 @@ namespace gl
 
 					if (string_begin == std::string::npos)
 					{
-						if (c == '\n') break;
-						if (is_space) continue;
+						if (c == '\n')
+							break;
+						if (is_space)
+							continue;
 
 						string_begin = i;
 					}
 
 					if (is_space)
 					{
-						if (!count) break;
+						if (!count)
+							break;
 					}
 					else if (c == '(')
 					{
@@ -46,11 +49,10 @@ namespace gl
 			auto is_exempt = [&source](const std::string_view& token) -> bool
 			{
 				const char* handled_keywords[] =
-				{
-					"SSBO_LOCATION(x)",
-					"UBO_LOCATION(x)",
-					"IMAGE_LOCATION(x)"
-				};
+					{
+						"SSBO_LOCATION(x)",
+						"UBO_LOCATION(x)",
+						"IMAGE_LOCATION(x)"};
 
 				for (const auto& keyword : handled_keywords)
 				{
@@ -139,7 +141,7 @@ namespace gl
 			flush_command_queue(m_init_fence);
 		}
 
-		void shader::create(::glsl::program_domain type_, const std::string & src)
+		void shader::create(::glsl::program_domain type_, const std::string& src)
 		{
 			type = type_;
 			source = src;
@@ -205,7 +207,7 @@ namespace gl
 			return *this;
 		}
 
-		bool program::uniforms_t::has_location(const std::string & name, int* location)
+		bool program::uniforms_t::has_location(const std::string& name, int* location)
 		{
 			auto found = locations.find(name);
 			if (found != locations.end())
@@ -314,5 +316,5 @@ namespace gl
 				rsx_log.error("Validation failed: %s", error_msg.c_str());
 			}
 		}
-	}
-}
+	} // namespace glsl
+} // namespace gl

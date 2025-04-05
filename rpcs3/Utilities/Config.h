@@ -36,16 +36,16 @@ namespace cfg
 	enum class type : unsigned
 	{
 		node = 0, // cfg::node type
-		_bool, // cfg::_bool type
-		_enum, // cfg::_enum type
-		_int, // cfg::_int type
-		uint, // cfg::uint type
-		string, // cfg::string type
-		set, // cfg::set_entry type
-		map, // cfg::map_entry type
+		_bool,    // cfg::_bool type
+		_enum,    // cfg::_enum type
+		_int,     // cfg::_int type
+		uint,     // cfg::uint type
+		string,   // cfg::string type
+		set,      // cfg::set_entry type
+		map,      // cfg::map_entry type
 		node_map, // cfg::node_map_entry type
-		log, // cfg::log_entry type
-		device, // cfg::device_entry type
+		log,      // cfg::log_entry type
+		device,   // cfg::device_entry type
 	};
 
 	// Config tree entry abstract base class
@@ -75,19 +75,34 @@ namespace cfg
 		virtual ~_base() = default;
 
 		// Get unique ID
-		u32 get_id() const { return m_id; }
+		u32 get_id() const
+		{
+			return m_id;
+		}
 
 		// Get parent
-		_base* get_parent() const { return m_parent; }
+		_base* get_parent() const
+		{
+			return m_parent;
+		}
 
 		// Get type
-		type get_type() const { return m_type; }
+		type get_type() const
+		{
+			return m_type;
+		}
 
 		// Get name
-		const std::string& get_name() const { return m_name; }
+		const std::string& get_name() const
+		{
+			return m_name;
+		}
 
 		// Get dynamic property for reloading configs during games
-		bool get_is_dynamic() const { return m_dynamic; }
+		bool get_is_dynamic() const
+		{
+			return m_dynamic;
+		}
 
 		// Reset defaults
 		virtual void from_default() = 0;
@@ -99,7 +114,7 @@ namespace cfg
 		}
 
 		virtual nlohmann::ordered_json to_json() const = 0;
-		virtual bool from_json(const nlohmann::json &, bool dynamic = false) = 0;
+		virtual bool from_json(const nlohmann::json&, bool dynamic = false) = 0;
 
 		// Convert default to string (optional)
 		virtual std::string def_to_string() const
@@ -154,7 +169,7 @@ namespace cfg
 
 		// Deserialize node
 		bool from_string(std::string_view value, bool dynamic = false) override;
-		bool from_json(const nlohmann::json &, bool dynamic = false) override;
+		bool from_json(const nlohmann::json&, bool dynamic = false) override;
 
 		// Set default values
 		void from_default() override;
@@ -168,9 +183,7 @@ namespace cfg
 		bool def;
 
 		_bool(node* owner, std::string name, bool def = false, bool dynamic = false)
-			: _base(type::_bool, owner, std::move(name), dynamic)
-			, m_value(def)
-			, def(def)
+			: _base(type::_bool, owner, std::move(name), dynamic), m_value(def), def(def)
 		{
 		}
 
@@ -193,8 +206,7 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "bool"},
 				{"value", m_value.load()},
 				{"default", def},
@@ -226,7 +238,7 @@ namespace cfg
 			return true;
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_boolean())
 			{
@@ -253,9 +265,7 @@ namespace cfg
 		const T def;
 
 		_enum(node* owner, const std::string& name, T value = {}, bool dynamic = false)
-			: _base(type::_enum, owner, name, dynamic)
-			, m_value(value)
-			, def(value)
+			: _base(type::_enum, owner, name, dynamic), m_value(value), def(value)
 		{
 		}
 
@@ -293,8 +303,7 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "enum"},
 				{"value", to_string()},
 				{"default", def_to_string()},
@@ -323,7 +332,7 @@ namespace cfg
 			return false;
 		}
 
-		bool from_json(const nlohmann::json &json, bool dynamic) override
+		bool from_json(const nlohmann::json& json, bool dynamic) override
 		{
 			if (!json.is_string())
 			{
@@ -360,13 +369,9 @@ namespace cfg
 		static constexpr s64 min = Min;
 
 		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false,
-				std::function<s64()> min_fn = nullptr,
-				std::function<s64()> max_fn = nullptr)
-			: _base(type::_int, owner, name, dynamic)
-			, m_value(def)
-			, m_min_fn(std::move(min_fn))
-			, m_max_fn(std::move(max_fn))
-			, def(def)
+			std::function<s64()> min_fn = nullptr,
+			std::function<s64()> max_fn = nullptr)
+			: _base(type::_int, owner, name, dynamic), m_value(def), m_min_fn(std::move(min_fn)), m_max_fn(std::move(max_fn)), def(def)
 		{
 		}
 
@@ -412,8 +417,7 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "int"},
 				{"value", to_string()},
 				{"default", def_to_string()},
@@ -439,7 +443,7 @@ namespace cfg
 			return false;
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_number_integer())
 			{
@@ -485,9 +489,7 @@ namespace cfg
 		static constexpr float_type min = Min;
 
 		_float(node* owner, const std::string& name, float_type def = std::min<float_type>(Max, std::max<float_type>(Min, 0)), bool dynamic = false)
-			: _base(type::_int, owner, name, dynamic)
-			, m_value(def)
-			, def(def)
+			: _base(type::_int, owner, name, dynamic), m_value(def), def(def)
 		{
 		}
 
@@ -519,8 +521,7 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "float"},
 				{"value", to_string()},
 				{"default", def_to_string()},
@@ -552,7 +553,7 @@ namespace cfg
 			return false;
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_number_float())
 			{
@@ -606,9 +607,7 @@ namespace cfg
 		static constexpr u64 min = Min;
 
 		uint(node* owner, const std::string& name, int_type def = std::max<int_type>(Min, 0), bool dynamic = false)
-			: _base(type::uint, owner, name, dynamic)
-			, m_value(def)
-			, def(def)
+			: _base(type::uint, owner, name, dynamic), m_value(def), def(def)
 		{
 		}
 
@@ -634,8 +633,7 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "uint"},
 				{"value", to_string()},
 				{"default", def_to_string()},
@@ -661,7 +659,7 @@ namespace cfg
 			return false;
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_number_unsigned())
 			{
@@ -705,9 +703,7 @@ namespace cfg
 		std::string def;
 
 		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
-			: _base(type::string, owner, std::move(name), dynamic)
-			, m_value(def)
-			, def(std::move(def))
+			: _base(type::string, owner, std::move(name), dynamic), m_value(def), def(std::move(def))
 		{
 		}
 
@@ -725,8 +721,7 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "string"},
 				{"value", to_string()},
 				{"default", def_to_string()},
@@ -744,7 +739,7 @@ namespace cfg
 			return true;
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_string())
 			{
@@ -782,13 +777,12 @@ namespace cfg
 
 		std::vector<std::string> to_list() const override
 		{
-			return { m_set.begin(), m_set.end() };
+			return {m_set.begin(), m_set.end()};
 		}
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "set"},
 				{"value", to_list()},
 			};
@@ -796,12 +790,12 @@ namespace cfg
 
 		bool from_list(std::vector<std::string>&& list) override
 		{
-			m_set = { std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()) };
+			m_set = {std::make_move_iterator(list.begin()), std::make_move_iterator(list.end())};
 
 			return true;
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_array())
 			{
@@ -813,7 +807,7 @@ namespace cfg
 			std::vector<std::string> string_array;
 			string_array.reserve(array.size());
 
-			for (auto &elem : array)
+			for (auto& elem : array)
 			{
 				if (!elem.is_string())
 				{
@@ -827,7 +821,7 @@ namespace cfg
 		}
 	};
 
-	template<typename T>
+	template <typename T>
 	using map_of_type = std::map<std::string, T, std::less<>>;
 
 	class map_entry : public _base
@@ -847,22 +841,20 @@ namespace cfg
 
 		nlohmann::ordered_json to_json() const override
 		{
-			return
-			{ 
+			return {
 				{"type", "map"},
 				{"value", m_map},
 			};
 		}
 
-
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_object())
 			{
 				return false;
 			}
 
-			for (auto &elem : json.get<nlohmann::json::object_t>())
+			for (auto& elem : json.get<nlohmann::json::object_t>())
 			{
 				set_value(elem.first, elem.second);
 			}
@@ -915,22 +907,21 @@ namespace cfg
 				values[key] = level_string;
 			}
 
-			return
-			{ 
+			return {
 				{"type", "log_map"},
 				{"values", values},
 				{"levels", levels},
 			};
 		}
 
-		bool from_json(const nlohmann::json &json, bool) override
+		bool from_json(const nlohmann::json& json, bool) override
 		{
 			if (!json.is_object())
 			{
 				return false;
 			}
 
-			for  (auto [key, valueString] : json.get<nlohmann::json::object_t>())
+			for (auto [key, valueString] : json.get<nlohmann::json::object_t>())
 			{
 				if (!valueString.is_string())
 				{
@@ -978,7 +969,7 @@ namespace cfg
 			};
 		}
 
-		bool from_json(const nlohmann::json &json)
+		bool from_json(const nlohmann::json& json)
 		{
 			if (json.contains("path"))
 			{
@@ -1031,8 +1022,7 @@ namespace cfg
 
 	public:
 		device_entry(node* owner, const std::string& name, map_of_type<device_info> def = {})
-			: _base(type::device, owner, name, true)
-			, m_map(std::move(def))
+			: _base(type::device, owner, name, true), m_map(std::move(def))
 		{
 			m_default = m_map;
 		}
@@ -1042,7 +1032,7 @@ namespace cfg
 			return {};
 		}
 
-		bool from_json(const nlohmann::json &, bool) override
+		bool from_json(const nlohmann::json&, bool) override
 		{
 			return false;
 		}
@@ -1061,4 +1051,4 @@ namespace cfg
 
 		void from_default() override;
 	};
-}
+} // namespace cfg

@@ -125,11 +125,8 @@ namespace spirv
 
 	bool compile_glsl_to_spv(std::vector<u32>& spv, std::string& shader, ::glsl::program_domain domain, ::glsl::glsl_rules rules)
 	{
-		EShLanguage lang = (domain == ::glsl::glsl_fragment_program)
-			? EShLangFragment
-			: (domain == ::glsl::glsl_vertex_program)
-				? EShLangVertex
-				: EShLangCompute;
+		EShLanguage lang = (domain == ::glsl::glsl_fragment_program) ? EShLangFragment : (domain == ::glsl::glsl_vertex_program) ? EShLangVertex :
+		                                                                                                                           EShLangCompute;
 
 		glslang::EShClient client;
 		glslang::EShTargetClientVersion target_version;
@@ -171,11 +168,11 @@ namespace spirv
 				glslang::GlslangToSpv(*program.getIntermediate(lang), spv, &options);
 
 				// Now we optimize
-				//spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
-				//optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());      // Remove duplicate constants
-				//optimizer.RegisterPass(spvtools::CreateMergeReturnPass());        // Huge savings in vertex interpreter and likely normal vertex shaders
-				//optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());      // Remove dead code
-				//optimizer.Run(spv.data(), spv.size(), &spv);
+				// spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
+				// optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());      // Remove duplicate constants
+				// optimizer.RegisterPass(spvtools::CreateMergeReturnPass());        // Huge savings in vertex interpreter and likely normal vertex shaders
+				// optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());      // Remove dead code
+				// optimizer.Run(spv.data(), spv.size(), &spv);
 			}
 		}
 		else
@@ -197,4 +194,4 @@ namespace spirv
 	{
 		glslang::FinalizeProcess();
 	}
-}
+} // namespace spirv

@@ -42,15 +42,16 @@ protected:
 	bool try_wait()
 	{
 		return m_value.fetch_op([](u32& value)
-		{
-			if (value & c_value_mask)
-			{
-				value -= c_value;
-				return true;
-			}
+						  {
+							  if (value & c_value_mask)
+							  {
+								  value -= c_value;
+								  return true;
+							  }
 
-			return false;
-		}).second;
+							  return false;
+						  })
+		    .second;
 	}
 
 	void post(u32 _max)

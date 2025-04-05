@@ -250,7 +250,8 @@ bool music_selection_context::load_playlist()
 
 void music_selection_context::set_track(std::string_view track)
 {
-	if (track.empty()) return;
+	if (track.empty())
+		return;
 
 	if (playlist.empty())
 	{

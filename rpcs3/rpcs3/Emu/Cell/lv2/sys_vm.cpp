@@ -8,10 +8,7 @@
 #include "Emu/Cell/timers.hpp"
 
 sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
-	: ct(ct)
-	, addr(_addr)
-	, size(vsize)
-	, psize(psize)
+	: ct(ct), addr(_addr), size(vsize), psize(psize)
 {
 	// Write ID
 	g_ids[addr >> 28].release(idm::last_id());
@@ -37,10 +34,7 @@ struct sys_vm_global_t
 };
 
 sys_vm_t::sys_vm_t(utils::serial& ar)
-	: ct(lv2_memory_container::search(ar))
-	, addr(ar)
-	, size(ar)
-	, psize(ar)
+	: ct(lv2_memory_container::search(ar)), addr(ar), size(ar), psize(ar)
 {
 	g_ids[addr >> 28].release(idm::last_id());
 	g_fxo->need<sys_vm_global_t>();
@@ -73,17 +67,18 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64
 	}
 
 	if (!g_fxo->get<sys_vm_global_t>().total_vsize.fetch_op([vsize, has_root = g_ps3_process_info.has_root_perm()](u32& size)
-	{
-		// A single process can hold up to 256MB of virtual memory, even on DECR
-		// VSH can hold more
-		if ((has_root ? 0x1E000000 : 0x10000000) - size < vsize)
-		{
-			return false;
-		}
+													  {
+														  // A single process can hold up to 256MB of virtual memory, even on DECR
+		                                                  // VSH can hold more
+														  if ((has_root ? 0x1E000000 : 0x10000000) - size < vsize)
+														  {
+															  return false;
+														  }
 
-		size += static_cast<u32>(vsize);
-		return true;
-	}).second)
+														  size += static_cast<u32>(vsize);
+														  return true;
+													  })
+			.second)
 	{
 		return CELL_EBUSY;
 	}
@@ -140,14 +135,14 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 
 	// Free block and info
 	const auto vmo = idm::withdraw<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo)
-	{
-		// Free block
-		ensure(vm::unmap(addr).second);
+		{
+			// Free block
+			ensure(vm::unmap(addr).second);
 
-		// Return memory
-		vmo.ct->free(vmo.psize);
-		g_fxo->get<sys_vm_global_t>().total_vsize -= vmo.size;
-	});
+			// Return memory
+			vmo.ct->free(vmo.psize);
+			g_fxo->get<sys_vm_global_t>().total_vsize -= vmo.size;
+		});
 
 	if (!vmo)
 	{
@@ -169,20 +164,20 @@ error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u64 size)
 	}
 
 	const auto block = idm::check<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo) -> CellError
-	{
-		if (vmo.addr != addr)
 		{
-			return CELL_EINVAL;
-		}
+			if (vmo.addr != addr)
+			{
+				return CELL_EINVAL;
+			}
 
-		if (!vmo.ct->take(size))
-		{
-			return CELL_ENOMEM;
-		}
+			if (!vmo.ct->take(size))
+			{
+				return CELL_ENOMEM;
+			}
 
-		vmo.psize += static_cast<u32>(size);
-		return {};
-	});
+			vmo.psize += static_cast<u32>(size);
+			return {};
+		});
 
 	if (!block)
 	{
@@ -209,31 +204,31 @@ error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u64 size)
 	}
 
 	const auto block = idm::check<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo) -> CellError
-	{
-		if (vmo.addr != addr)
 		{
-			return CELL_EINVAL;
-		}
-
-		auto [_, ok] = vmo.psize.fetch_op([&](u32& value)
-		{
-			if (value <= size || value - size < 0x100000ull)
+			if (vmo.addr != addr)
 			{
-				return false;
+				return CELL_EINVAL;
 			}
 
-			value -= static_cast<u32>(size);
-			return true;
+			auto [_, ok] = vmo.psize.fetch_op([&](u32& value)
+				{
+					if (value <= size || value - size < 0x100000ull)
+					{
+						return false;
+					}
+
+					value -= static_cast<u32>(size);
+					return true;
+				});
+
+			if (!ok)
+			{
+				return CELL_EBUSY;
+			}
+
+			vmo.ct->free(size);
+			return {};
 		});
-
-		if (!ok)
-		{
-			return CELL_EBUSY;
-		}
-
-		vmo.ct->free(size);
-		return {};
-	});
 
 	if (!block)
 	{

@@ -46,41 +46,41 @@ void game_list::create_header_actions(QList<QAction*>& actions, std::function<bo
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this, &actions](const QPoint& pos)
-	{
-		QMenu* configure = new QMenu(this);
-		configure->addActions(actions);
-		configure->exec(horizontalHeader()->viewport()->mapToGlobal(pos));
-	});
+		{
+			QMenu* configure = new QMenu(this);
+			configure->addActions(actions);
+			configure->exec(horizontalHeader()->viewport()->mapToGlobal(pos));
+		});
 
 	for (int col = 0; col < actions.count(); ++col)
 	{
 		actions[col]->setCheckable(true);
 
 		connect(actions[col], &QAction::triggered, this, [this, &actions, get_visibility, set_visibility, col](bool checked)
-		{
-			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
 			{
-				int c = 0;
-				for (int i = 0; i < actions.count(); ++i)
+				if (!checked) // be sure to have at least one column left so you can call the context menu at all time
 				{
-					if (get_visibility(i) && ++c > 1)
-						break;
+					int c = 0;
+					for (int i = 0; i < actions.count(); ++i)
+					{
+						if (get_visibility(i) && ++c > 1)
+							break;
+					}
+					if (c < 2)
+					{
+						actions[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
+						return;
+					}
 				}
-				if (c < 2)
+
+				setColumnHidden(col, !checked); // Negate because it's a set col hidden and we have menu say show.
+				set_visibility(col, checked);
+
+				if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
 				{
-					actions[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
-					return;
+					fix_narrow_columns();
 				}
-			}
-
-			setColumnHidden(col, !checked); // Negate because it's a set col hidden and we have menu say show.
-			set_visibility(col, checked);
-
-			if (checked) // handle hidden columns that have zero width after showing them (stuck between others)
-			{
-				fix_narrow_columns();
-			}
-		});
+			});
 	}
 
 	sync_header_actions(actions, get_visibility);
@@ -145,7 +145,8 @@ void game_list::mouseMoveEvent(QMouseEvent* event)
 
 void game_list::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (!ev) return;
+	if (!ev)
+		return;
 
 	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
 	// So we have to ignore this event when another button is pressed.

@@ -28,5 +28,5 @@ namespace rsx
 
 			animation_color_interpolate fade_animation{};
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

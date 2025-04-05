@@ -122,7 +122,7 @@ void headless_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.close_gs_frame = [](){};
+	callbacks.close_gs_frame = []() {};
 	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
 	{
 		if (g_cfg.video.renderer != video_renderer::null)
@@ -132,49 +132,75 @@ void headless_application::InitializeCallbacks()
 		return std::unique_ptr<GSFrameBase>();
 	};
 
-	callbacks.get_msg_dialog                 = []() -> std::shared_ptr<MsgDialogBase> { return std::shared_ptr<MsgDialogBase>(); };
-	callbacks.get_osk_dialog                 = []() -> std::shared_ptr<OskDialogBase> { return std::shared_ptr<OskDialogBase>(); };
-	callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };
-	callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::unique_ptr<TrophyNotificationBase>(); };
+	callbacks.get_msg_dialog = []() -> std::shared_ptr<MsgDialogBase>
+	{
+		return std::shared_ptr<MsgDialogBase>();
+	};
+	callbacks.get_osk_dialog = []() -> std::shared_ptr<OskDialogBase>
+	{
+		return std::shared_ptr<OskDialogBase>();
+	};
+	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase>
+	{
+		return std::unique_ptr<SaveDialogBase>();
+	};
+	callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase>
+	{
+		return std::unique_ptr<TrophyNotificationBase>();
+	};
 
-	callbacks.on_run    = [](bool /*start_playtime*/) {};
-	callbacks.on_pause  = []() {};
+	callbacks.on_run = [](bool /*start_playtime*/) {};
+	callbacks.on_pause = []() {};
 	callbacks.on_resume = []() {};
-	callbacks.on_stop   = []() {};
-	callbacks.on_ready  = []() {};
+	callbacks.on_stop = []() {};
+	callbacks.on_ready = []() {};
 	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int /*seconds_waiting_already*/)
 	{
 		if (!closed_successfully || !*closed_successfully)
 		{
 			report_fatal_error(tr("Stopping emulator took too long."
-						"\nSome thread has probably deadlocked. Aborting.").toStdString());
+								  "\nSome thread has probably deadlocked. Aborting.")
+					.toStdString());
 		}
 	};
 
-	callbacks.on_save_state_progress = [](std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)
-	{
-	};
+	callbacks.on_save_state_progress = [](std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>) {};
 
-	callbacks.enable_disc_eject  = [](bool) {};
+	callbacks.enable_disc_eject = [](bool) {};
 	callbacks.enable_disc_insert = [](bool) {};
 
 	callbacks.on_missing_fw = []() {};
 
 	callbacks.handle_taskbar_progress = [](s32, s32) {};
 
-	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
-	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
-	callbacks.get_localized_setting   = [](const cfg::_base*, u32) -> std::string { return {}; };
+	callbacks.get_localized_string = [](localized_string_id, const char*) -> std::string
+	{
+		return {};
+	};
+	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string
+	{
+		return {};
+	};
+	callbacks.get_localized_setting = [](const cfg::_base*, u32) -> std::string
+	{
+		return {};
+	};
 
-	callbacks.play_sound = [](const std::string&){};
-	callbacks.add_breakpoint = [](u32 /*addr*/){};
+	callbacks.play_sound = [](const std::string&) {};
+	callbacks.add_breakpoint = [](u32 /*addr*/) {};
 
-	callbacks.display_sleep_control_supported = [](){ return false; };
-	callbacks.enable_display_sleep = [](bool /*enabled*/){};
+	callbacks.display_sleep_control_supported = []()
+	{
+		return false;
+	};
+	callbacks.enable_display_sleep = [](bool /*enabled*/) {};
 
-	callbacks.check_microphone_permissions = [](){};
+	callbacks.check_microphone_permissions = []() {};
 
-	callbacks.make_video_source = [](){ return nullptr; };
+	callbacks.make_video_source = []()
+	{
+		return nullptr;
+	};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

@@ -9,34 +9,34 @@ template <>
 void fmt_class_string<CellAtracError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellAtracError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_ATRAC_ERROR_API_FAIL);
-		STR_CASE(CELL_ATRAC_ERROR_READSIZE_OVER_BUFFER);
-		STR_CASE(CELL_ATRAC_ERROR_UNKNOWN_FORMAT);
-		STR_CASE(CELL_ATRAC_ERROR_READSIZE_IS_TOO_SMALL);
-		STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_SAMPLING_RATE);
-		STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_DATA);
-		STR_CASE(CELL_ATRAC_ERROR_NO_DECODER);
-		STR_CASE(CELL_ATRAC_ERROR_UNSET_DATA);
-		STR_CASE(CELL_ATRAC_ERROR_DECODER_WAS_CREATED);
-		STR_CASE(CELL_ATRAC_ERROR_ALLDATA_WAS_DECODED);
-		STR_CASE(CELL_ATRAC_ERROR_NODATA_IN_BUFFER);
-		STR_CASE(CELL_ATRAC_ERROR_NOT_ALIGNED_OUT_BUFFER);
-		STR_CASE(CELL_ATRAC_ERROR_NEED_SECOND_BUFFER);
-		STR_CASE(CELL_ATRAC_ERROR_ALLDATA_IS_ONMEMORY);
-		STR_CASE(CELL_ATRAC_ERROR_ADD_DATA_IS_TOO_BIG);
-		STR_CASE(CELL_ATRAC_ERROR_NONEED_SECOND_BUFFER);
-		STR_CASE(CELL_ATRAC_ERROR_UNSET_LOOP_NUM);
-		STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_SAMPLE);
-		STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_RESET_BYTE);
-		STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_PPU_THREAD_PRIORITY);
-		STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_SPU_THREAD_PRIORITY);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_ATRAC_ERROR_API_FAIL);
+				STR_CASE(CELL_ATRAC_ERROR_READSIZE_OVER_BUFFER);
+				STR_CASE(CELL_ATRAC_ERROR_UNKNOWN_FORMAT);
+				STR_CASE(CELL_ATRAC_ERROR_READSIZE_IS_TOO_SMALL);
+				STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_SAMPLING_RATE);
+				STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_DATA);
+				STR_CASE(CELL_ATRAC_ERROR_NO_DECODER);
+				STR_CASE(CELL_ATRAC_ERROR_UNSET_DATA);
+				STR_CASE(CELL_ATRAC_ERROR_DECODER_WAS_CREATED);
+				STR_CASE(CELL_ATRAC_ERROR_ALLDATA_WAS_DECODED);
+				STR_CASE(CELL_ATRAC_ERROR_NODATA_IN_BUFFER);
+				STR_CASE(CELL_ATRAC_ERROR_NOT_ALIGNED_OUT_BUFFER);
+				STR_CASE(CELL_ATRAC_ERROR_NEED_SECOND_BUFFER);
+				STR_CASE(CELL_ATRAC_ERROR_ALLDATA_IS_ONMEMORY);
+				STR_CASE(CELL_ATRAC_ERROR_ADD_DATA_IS_TOO_BIG);
+				STR_CASE(CELL_ATRAC_ERROR_NONEED_SECOND_BUFFER);
+				STR_CASE(CELL_ATRAC_ERROR_UNSET_LOOP_NUM);
+				STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_SAMPLE);
+				STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_RESET_BYTE);
+				STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_PPU_THREAD_PRIORITY);
+				STR_CASE(CELL_ATRAC_ERROR_ILLEGAL_SPU_THREAD_PRIORITY);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellAtracSetDataAndGetMemSize(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u8> pucBufferAddr, u32 uiReadByte, u32 uiBufferByte, vm::ptr<u32> puiWorkMemByte)
@@ -235,37 +235,37 @@ error_code cellAtracGetSamplingRate()
 }
 
 DECLARE(ppu_module_manager::cellAtrac)("cellAtrac", []()
-{
-	REG_FUNC(cellAtrac, cellAtracSetDataAndGetMemSize);
+	{
+		REG_FUNC(cellAtrac, cellAtracSetDataAndGetMemSize);
 
-	REG_FUNC(cellAtrac, cellAtracCreateDecoder);
-	REG_FUNC(cellAtrac, cellAtracCreateDecoderExt);
-	REG_FUNC(cellAtrac, cellAtracDeleteDecoder);
+		REG_FUNC(cellAtrac, cellAtracCreateDecoder);
+		REG_FUNC(cellAtrac, cellAtracCreateDecoderExt);
+		REG_FUNC(cellAtrac, cellAtracDeleteDecoder);
 
-	REG_FUNC(cellAtrac, cellAtracDecode);
+		REG_FUNC(cellAtrac, cellAtracDecode);
 
-	REG_FUNC(cellAtrac, cellAtracGetStreamDataInfo);
-	REG_FUNC(cellAtrac, cellAtracAddStreamData);
-	REG_FUNC(cellAtrac, cellAtracGetRemainFrame);
-	REG_FUNC(cellAtrac, cellAtracGetVacantSize);
-	REG_FUNC(cellAtrac, cellAtracIsSecondBufferNeeded);
-	REG_FUNC(cellAtrac, cellAtracGetSecondBufferInfo);
-	REG_FUNC(cellAtrac, cellAtracSetSecondBuffer);
+		REG_FUNC(cellAtrac, cellAtracGetStreamDataInfo);
+		REG_FUNC(cellAtrac, cellAtracAddStreamData);
+		REG_FUNC(cellAtrac, cellAtracGetRemainFrame);
+		REG_FUNC(cellAtrac, cellAtracGetVacantSize);
+		REG_FUNC(cellAtrac, cellAtracIsSecondBufferNeeded);
+		REG_FUNC(cellAtrac, cellAtracGetSecondBufferInfo);
+		REG_FUNC(cellAtrac, cellAtracSetSecondBuffer);
 
-	REG_FUNC(cellAtrac, cellAtracGetChannel);
-	REG_FUNC(cellAtrac, cellAtracGetMaxSample);
-	REG_FUNC(cellAtrac, cellAtracGetNextSample);
-	REG_FUNC(cellAtrac, cellAtracGetSoundInfo);
-	REG_FUNC(cellAtrac, cellAtracGetNextDecodePosition);
-	REG_FUNC(cellAtrac, cellAtracGetBitrate);
+		REG_FUNC(cellAtrac, cellAtracGetChannel);
+		REG_FUNC(cellAtrac, cellAtracGetMaxSample);
+		REG_FUNC(cellAtrac, cellAtracGetNextSample);
+		REG_FUNC(cellAtrac, cellAtracGetSoundInfo);
+		REG_FUNC(cellAtrac, cellAtracGetNextDecodePosition);
+		REG_FUNC(cellAtrac, cellAtracGetBitrate);
 
-	REG_FUNC(cellAtrac, cellAtracGetLoopInfo);
-	REG_FUNC(cellAtrac, cellAtracSetLoopNum);
+		REG_FUNC(cellAtrac, cellAtracGetLoopInfo);
+		REG_FUNC(cellAtrac, cellAtracSetLoopNum);
 
-	REG_FUNC(cellAtrac, cellAtracGetBufferInfoForResetting);
-	REG_FUNC(cellAtrac, cellAtracResetPlayPosition);
+		REG_FUNC(cellAtrac, cellAtracGetBufferInfoForResetting);
+		REG_FUNC(cellAtrac, cellAtracResetPlayPosition);
 
-	REG_FUNC(cellAtrac, cellAtracGetInternalErrorInfo);
+		REG_FUNC(cellAtrac, cellAtracGetInternalErrorInfo);
 
-	REG_FUNC(cellAtrac, cellAtracGetSamplingRate);
-});
+		REG_FUNC(cellAtrac, cellAtracGetSamplingRate);
+	});

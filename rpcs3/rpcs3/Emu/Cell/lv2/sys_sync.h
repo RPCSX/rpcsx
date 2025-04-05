@@ -12,48 +12,48 @@
 // attr_protocol (waiting scheduling policy)
 enum lv2_protocol : u8
 {
-	SYS_SYNC_FIFO                = 0x1, // First In, First Out Order
-	SYS_SYNC_PRIORITY            = 0x2, // Priority Order
-	SYS_SYNC_PRIORITY_INHERIT    = 0x3, // Basic Priority Inheritance Protocol
-	SYS_SYNC_RETRY               = 0x4, // Not selected while unlocking
+	SYS_SYNC_FIFO = 0x1,             // First In, First Out Order
+	SYS_SYNC_PRIORITY = 0x2,         // Priority Order
+	SYS_SYNC_PRIORITY_INHERIT = 0x3, // Basic Priority Inheritance Protocol
+	SYS_SYNC_RETRY = 0x4,            // Not selected while unlocking
 };
 
 enum : u32
 {
-	SYS_SYNC_ATTR_PROTOCOL_MASK  = 0xf,
+	SYS_SYNC_ATTR_PROTOCOL_MASK = 0xf,
 };
 
 // attr_recursive (recursive locks policy)
 enum
 {
-	SYS_SYNC_RECURSIVE           = 0x10,
-	SYS_SYNC_NOT_RECURSIVE       = 0x20,
+	SYS_SYNC_RECURSIVE = 0x10,
+	SYS_SYNC_NOT_RECURSIVE = 0x20,
 	SYS_SYNC_ATTR_RECURSIVE_MASK = 0xf0,
 };
 
 // attr_pshared (sharing among processes policy)
 enum
 {
-	SYS_SYNC_PROCESS_SHARED      = 0x100,
-	SYS_SYNC_NOT_PROCESS_SHARED  = 0x200,
-	SYS_SYNC_ATTR_PSHARED_MASK   = 0xf00,
+	SYS_SYNC_PROCESS_SHARED = 0x100,
+	SYS_SYNC_NOT_PROCESS_SHARED = 0x200,
+	SYS_SYNC_ATTR_PSHARED_MASK = 0xf00,
 };
 
 // attr_flags (creation policy)
 enum
 {
-	SYS_SYNC_NEWLY_CREATED       = 0x1, // Create new object, fails if specified IPC key exists
-	SYS_SYNC_NOT_CREATE          = 0x2, // Reference existing object, fails if IPC key not found
-	SYS_SYNC_NOT_CARE            = 0x3, // Reference existing object, create new one if IPC key not found
-	SYS_SYNC_ATTR_FLAGS_MASK     = 0xf,
+	SYS_SYNC_NEWLY_CREATED = 0x1, // Create new object, fails if specified IPC key exists
+	SYS_SYNC_NOT_CREATE = 0x2,    // Reference existing object, fails if IPC key not found
+	SYS_SYNC_NOT_CARE = 0x3,      // Reference existing object, create new one if IPC key not found
+	SYS_SYNC_ATTR_FLAGS_MASK = 0xf,
 };
 
 // attr_adaptive
 enum
 {
-	SYS_SYNC_ADAPTIVE            = 0x1000,
-	SYS_SYNC_NOT_ADAPTIVE        = 0x2000,
-	SYS_SYNC_ATTR_ADAPTIVE_MASK  = 0xf000,
+	SYS_SYNC_ADAPTIVE = 0x1000,
+	SYS_SYNC_NOT_ADAPTIVE = 0x2000,
+	SYS_SYNC_ATTR_ADAPTIVE_MASK = 0xf000,
 };
 
 enum ppu_thread_status : u32;
@@ -89,10 +89,14 @@ public:
 	SAVESTATE_INIT_POS(4); // Dependency on PPUs
 
 	lv2_obj() noexcept = default;
-	lv2_obj(u32 i) noexcept : exists{ i } {}
-	lv2_obj(lv2_obj&& rhs) noexcept : exists{ +rhs.exists } {}
+	lv2_obj(u32 i) noexcept : exists{i} {}
+	lv2_obj(lv2_obj&& rhs) noexcept : exists{+rhs.exists} {}
 	lv2_obj(utils::serial&) noexcept {}
-	lv2_obj& operator=(lv2_obj&& rhs) noexcept { exists = +rhs.exists; return *this; }
+	lv2_obj& operator=(lv2_obj&& rhs) noexcept
+	{
+		exists = +rhs.exists;
+		return *this;
+	}
 	void save(utils::serial&) {}
 
 	// Existence validation (workaround for shared-ptr ref-counting)
@@ -233,19 +237,19 @@ public:
 		atomic_storage<T>::release(first, object);
 
 		object->prio.atomic_op([order = ++g_priority_order_tag](std::common_type_t<decltype(std::declval<T>()->prio.load())>& prio)
-		{
-			if constexpr (requires { +std::declval<decltype(prio)>().preserve_bit; } )
 			{
-				if (prio.preserve_bit)
+				if constexpr (requires { +std::declval<decltype(prio)>().preserve_bit; })
 				{
-					// Restoring state on load
-					prio.preserve_bit = 0;
-					return;
+					if (prio.preserve_bit)
+					{
+						// Restoring state on load
+						prio.preserve_bit = 0;
+						return;
+					}
 				}
-			}
 
-			prio.order = order;
-		});
+				prio.order = order;
+			});
 	}
 
 private:
@@ -343,63 +347,63 @@ public:
 		// EAGAIN for IDM IDs shortage
 		CellError error = CELL_EAGAIN;
 
-		if (!idm::import<lv2_obj, T>([&]() -> shared_ptr<T>
-		{
-			shared_ptr<T> result = make();
-
-			auto finalize_construct = [&]() -> shared_ptr<T>
-			{
-				if ((error = result->on_id_create()))
+		if (!idm::import <lv2_obj, T>([&]() -> shared_ptr<T>
 				{
-					result.reset();
-				}
+					shared_ptr<T> result = make();
 
-				return std::move(result);
-			};
+					auto finalize_construct = [&]() -> shared_ptr<T>
+					{
+						if ((error = result->on_id_create()))
+						{
+							result.reset();
+						}
 
-			if (pshared != SYS_SYNC_PROCESS_SHARED)
-			{
-				// Creation of unique (non-shared) object handle
-				return finalize_construct();
-			}
+						return std::move(result);
+					};
 
-			auto& ipc_container = g_fxo->get<ipc_manager<T, u64>>();
+					if (pshared != SYS_SYNC_PROCESS_SHARED)
+					{
+						// Creation of unique (non-shared) object handle
+						return finalize_construct();
+					}
 
-			if (flags == SYS_SYNC_NOT_CREATE)
-			{
-				result = ipc_container.get(ipc_key);
+					auto& ipc_container = g_fxo->get<ipc_manager<T, u64>>();
 
-				if (!result)
-				{
-					error = CELL_ESRCH;
+					if (flags == SYS_SYNC_NOT_CREATE)
+					{
+						result = ipc_container.get(ipc_key);
+
+						if (!result)
+						{
+							error = CELL_ESRCH;
+							return result;
+						}
+
+						// Run on_id_create() on existing object
+						return finalize_construct();
+					}
+
+					bool added = false;
+					std::tie(added, result) = ipc_container.add(ipc_key, finalize_construct, flags != SYS_SYNC_NEWLY_CREATED);
+
+					if (!added)
+					{
+						if (flags == SYS_SYNC_NEWLY_CREATED)
+						{
+							// Object already exists but flags does not allow it
+							error = CELL_EEXIST;
+
+							// We specified we do not want to peek pointer's value, result must be empty
+							AUDIT(!result);
+							return result;
+						}
+
+						// Run on_id_create() on existing object
+						return finalize_construct();
+					}
+
 					return result;
-				}
-
-				// Run on_id_create() on existing object
-				return finalize_construct();
-			}
-
-			bool added = false;
-			std::tie(added, result) = ipc_container.add(ipc_key, finalize_construct, flags != SYS_SYNC_NEWLY_CREATED);
-
-			if (!added)
-			{
-				if (flags == SYS_SYNC_NEWLY_CREATED)
-				{
-					// Object already exists but flags does not allow it
-					error = CELL_EEXIST;
-
-					// We specified we do not want to peek pointer's value, result must be empty
-					AUDIT(!result);
-					return result;
-				}
-
-				// Run on_id_create() on existing object
-				return finalize_construct();
-			}
-
-			return result;
-		}))
+				}))
 		{
 			return error;
 		}
@@ -430,9 +434,9 @@ public:
 			g_fxo->need<ipc_manager<T, u64>>();
 
 			g_fxo->get<ipc_manager<T, u64>>().add(ipc_key, [&]()
-			{
-				return make;
-			});
+				{
+					return make;
+				});
 		}
 
 		// Ensure no error
@@ -444,7 +448,10 @@ public:
 	static std::function<void(void*)> load_func(shared_ptr<T> make, u64 pshared = umax)
 	{
 		const u64 key = make->key;
-		return [ptr = load<T>(key, make, pshared)](void* storage) { *static_cast<atomic_ptr<Storage>*>(storage) = ptr; };
+		return [ptr = load<T>(key, make, pshared)](void* storage)
+		{
+			*static_cast<atomic_ptr<Storage>*>(storage) = ptr;
+		};
 	}
 
 	static bool wait_timeout(u64 usec, ppu_thread* cpu = {}, bool scale = true, bool is_usleep = false);

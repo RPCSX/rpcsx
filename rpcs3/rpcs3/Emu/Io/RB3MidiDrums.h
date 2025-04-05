@@ -9,102 +9,102 @@
 
 namespace rb3drums
 {
-struct KitState
-{
-	std::chrono::steady_clock::time_point expiry;
+	struct KitState
+	{
+		std::chrono::steady_clock::time_point expiry;
 
-	u8 kick_pedal{};
-	u8 hihat_pedal{};
+		u8 kick_pedal{};
+		u8 hihat_pedal{};
 
-	u8 snare{};
-	u8 snare_rim{};
-	u8 hi_tom{};
-	u8 low_tom{};
-	u8 floor_tom{};
+		u8 snare{};
+		u8 snare_rim{};
+		u8 hi_tom{};
+		u8 low_tom{};
+		u8 floor_tom{};
 
-	u8 hihat{};
-	u8 ride{};
-	u8 crash{};
+		u8 hihat{};
+		u8 ride{};
+		u8 crash{};
 
-	// Buttons triggered by combos.
-	bool start{};
-	bool select{};
+		// Buttons triggered by combos.
+		bool start{};
+		bool select{};
 
-	// Special flag that keeps kick pedal held until toggled off.
-	// This is used in rb3 to access the category select dropdown in the song list.
-	bool toggle_hold_kick{};
+		// Special flag that keeps kick pedal held until toggled off.
+		// This is used in rb3 to access the category select dropdown in the song list.
+		bool toggle_hold_kick{};
 
-	bool is_cymbal() const;
-	bool is_drum() const;
-};
+		bool is_cymbal() const;
+		bool is_drum() const;
+	};
 
 } // namespace rb3drums
 
 namespace midi
 {
 
-enum class Id : u8
-{
-	// Each 'Note' can be triggered by multiple different numbers.
-	// Keeping them flattened in an enum for simplicity / switch statement usage.
+	enum class Id : u8
+	{
+		// Each 'Note' can be triggered by multiple different numbers.
+		// Keeping them flattened in an enum for simplicity / switch statement usage.
 
-	// These follow the rockband 3 midi pro adapter support.
-	Snare0 = 38,
-	Snare1 = 31,
-	Snare2 = 34,
-	Snare3 = 37,
-	Snare4 = 39,
-	HiTom0 = 48,
-	HiTom1 = 50,
-	LowTom0 = 45,
-	LowTom1 = 47,
-	FloorTom0 = 41,
-	FloorTom1 = 43,
-	Hihat0 = 22,
-	Hihat1 = 26,
-	Hihat2 = 42,
-	Hihat3 = 54,
-	Ride0 = 51,
-	Ride1 = 53,
-	Ride2 = 56,
-	Ride3 = 59,
-	Crash0 = 49,
-	Crash1 = 52,
-	Crash2 = 55,
-	Crash3 = 57,
-	Kick0 = 33,
-	Kick1 = 35,
-	Kick2 = 36,
-	HihatPedal = 44,
+		// These follow the rockband 3 midi pro adapter support.
+		Snare0 = 38,
+		Snare1 = 31,
+		Snare2 = 34,
+		Snare3 = 37,
+		Snare4 = 39,
+		HiTom0 = 48,
+		HiTom1 = 50,
+		LowTom0 = 45,
+		LowTom1 = 47,
+		FloorTom0 = 41,
+		FloorTom1 = 43,
+		Hihat0 = 22,
+		Hihat1 = 26,
+		Hihat2 = 42,
+		Hihat3 = 54,
+		Ride0 = 51,
+		Ride1 = 53,
+		Ride2 = 56,
+		Ride3 = 59,
+		Crash0 = 49,
+		Crash1 = 52,
+		Crash2 = 55,
+		Crash3 = 57,
+		Kick0 = 33,
+		Kick1 = 35,
+		Kick2 = 36,
+		HihatPedal = 44,
 
-	// These are from alesis nitro mesh max. ymmv.
-	SnareRim = 40, // midi pro adapter counts this as snare.
-	HihatWithPedalUp = 46, // The midi pro adapter considers this a normal hihat hit.
-	HihatPedalPartial = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
+		// These are from alesis nitro mesh max. ymmv.
+		SnareRim = 40,          // midi pro adapter counts this as snare.
+		HihatWithPedalUp = 46,  // The midi pro adapter considers this a normal hihat hit.
+		HihatPedalPartial = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
 
-	// Internal value used for converting midi CC.
-	// Values past 127 are not used in midi notes.
-	MidiCC = 255,
-};
+		// Internal value used for converting midi CC.
+		// Values past 127 are not used in midi notes.
+		MidiCC = 255,
+	};
 
-// Intermediate mapping regardless of which midi ids triggered it.
-enum class Note : u8
-{
-	Invalid,
-	Kick,
-	HihatPedal,
-	Snare,
-	SnareRim,
-	HiTom,
-	LowTom,
-	FloorTom,
-	HihatWithPedalUp,
-	Hihat,
-	Ride,
-	Crash,
-};
+	// Intermediate mapping regardless of which midi ids triggered it.
+	enum class Note : u8
+	{
+		Invalid,
+		Kick,
+		HihatPedal,
+		Snare,
+		SnareRim,
+		HiTom,
+		LowTom,
+		FloorTom,
+		HihatWithPedalUp,
+		Hihat,
+		Ride,
+		Crash,
+	};
 
-}
+} // namespace midi
 
 class usb_device_rb3_midi_drums : public usb_device_emulated
 {
@@ -128,7 +128,7 @@ private:
 		std::string name;
 		std::vector<u8> notes;
 		std::function<rb3drums::KitState()> create_state;
-	
+
 		Definition(std::string name, const std::string_view csv, const std::function<rb3drums::KitState()> create_state);
 	};
 

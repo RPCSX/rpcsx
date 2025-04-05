@@ -39,9 +39,9 @@ static inline std::array<u32, 4> get_cpuid(u32 func, u32 subfunc)
 #ifdef _MSC_VER
 	__cpuidex(regs, func, subfunc);
 #else
-	__asm__ volatile("cpuid" : "=a" (regs[0]), "=b" (regs[1]), "=c" (regs[2]), "=d" (regs[3]) : "a" (func), "c" (subfunc));
+	__asm__ volatile("cpuid" : "=a"(regs[0]), "=b"(regs[1]), "=c"(regs[2]), "=d"(regs[3]) : "a"(func), "c"(subfunc));
 #endif
-	return {0u+regs[0], 0u+regs[1], 0u+regs[2], 0u+regs[3]};
+	return {0u + regs[0], 0u + regs[1], 0u + regs[2], 0u + regs[3]};
 }
 
 static inline u64 get_xgetbv(u32 xcr)
@@ -63,7 +63,7 @@ namespace Darwin_Version
 	extern int getNSmajorVersion();
 	extern int getNSminorVersion();
 	extern int getNSpatchVersion();
-}
+} // namespace Darwin_Version
 
 namespace Darwin_ProcessInfo
 {
@@ -81,15 +81,15 @@ namespace utils
 		DWORD len = sizeof(val);
 		if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(&val), &len))
 		{
-			return { false, 0 };
+			return {false, 0};
 		}
-		return { true, val };
+		return {true, val};
 	};
 
 	const auto read_reg_sz = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, std::string>
 	{
 		constexpr usz MAX_SZ_LEN = 255;
-		char sz[MAX_SZ_LEN + 1] {};
+		char sz[MAX_SZ_LEN + 1]{};
 		DWORD sz_len = MAX_SZ_LEN;
 
 		// Safety; null terminate
@@ -99,7 +99,7 @@ namespace utils
 		// Read string
 		if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(sz), &sz_len))
 		{
-			return { false, "" };
+			return {false, ""};
 		}
 
 		// Safety, force null terminator
@@ -107,7 +107,7 @@ namespace utils
 		{
 			sz[sz_len] = 0;
 		}
-		return { true, sz };
+		return {true, sz};
 	};
 
 	// Alternative way to read OS version using the registry.
@@ -152,7 +152,7 @@ namespace utils
 		return fmt::format("Operating system: %s, Version %s", product_name, version_id);
 	}
 #endif
-}
+} // namespace utils
 
 bool utils::has_ssse3()
 {
@@ -621,7 +621,7 @@ std::string utils::get_firmware_version()
 
 utils::OS_version utils::get_OS_version()
 {
-	OS_version res {};
+	OS_version res{};
 
 #if _WIN32
 	res.type = "windows";
@@ -660,24 +660,28 @@ utils::OS_version utils::get_OS_version()
 		const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
 		const auto [check_build, version_patch] = read_reg_sz(hKey, "CurrentBuildNumber");
 
-		if (check_major) res.version_major = version_major;
-		if (check_minor) res.version_minor = version_minor;
-		if (check_build) res.version_patch = stoi(version_patch);
+		if (check_major)
+			res.version_major = version_major;
+		if (check_minor)
+			res.version_minor = version_minor;
+		if (check_build)
+			res.version_patch = stoi(version_patch);
 
 		RegCloseKey(hKey);
 	}
 #endif
-#elif defined (__APPLE__)
+#elif defined(__APPLE__)
 	res.version_major = Darwin_Version::getNSmajorVersion();
 	res.version_minor = Darwin_Version::getNSminorVersion();
 	res.version_patch = Darwin_Version::getNSpatchVersion();
 #else
 	if (struct utsname details = {}; !uname(&details))
 	{
-		const std::vector<std::string> version_list = fmt::split(details.release, { "." });
+		const std::vector<std::string> version_list = fmt::split(details.release, {"."});
 		const auto get_version_part = [&version_list](usz i) -> usz
 		{
-			if (version_list.size() <= i) return 0;
+			if (version_list.size() <= i)
+				return 0;
 			if (const auto [success, version_part] = string_to_number(version_list[i]); success)
 			{
 				return version_part;
@@ -724,7 +728,7 @@ std::string utils::get_OS_version_string()
 	static const auto s_windows_version = utils::get_fallback_windows_version();
 	return s_windows_version;
 #endif
-#elif defined (__APPLE__)
+#elif defined(__APPLE__)
 	const int major_version = Darwin_Version::getNSmajorVersion();
 	const int minor_version = Darwin_Version::getNSminorVersion();
 	const int patch_version = Darwin_Version::getNSpatchVersion();
@@ -800,7 +804,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 	{
 #ifdef ARCH_ARM64
 		u64 r = 0;
-		__asm__ volatile("mrs %0, cntfrq_el0" : "=r" (r));
+		__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(r));
 		return r;
 #endif
 
@@ -848,7 +852,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		printf("[TSC calibration] Available clock sources: '%s'\n", clock_sources.c_str());
 
 		// Check if the Kernel has blacklisted the TSC
-		const auto available_clocks = fmt::split(clock_sources, { " " });
+		const auto available_clocks = fmt::split(clock_sources, {" "});
 		const bool tsc_reliable = std::find(available_clocks.begin(), available_clocks.end(), "tsc") != available_clocks.end();
 
 		if (!tsc_reliable)
@@ -1058,8 +1062,8 @@ std::pair<bool, usz> utils::string_to_number(std::string_view str)
 
 	if (str.data() + str.size() == eval)
 	{
-		return { true, number };
+		return {true, number};
 	}
 
-	return { false, 0 };
+	return {false, 0};
 }

@@ -35,7 +35,10 @@ namespace vk
 		u32 max_invocations_x = 65535;
 
 		compute_task() = default;
-		virtual ~compute_task() { destroy(); }
+		virtual ~compute_task()
+		{
+			destroy();
+		}
 
 		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout();
 
@@ -140,7 +143,7 @@ namespace vk
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset);
 	};
 
-	template<bool _SwapBytes = false>
+	template <bool _SwapBytes = false>
 	struct cs_gather_d24x8 : cs_interleave_task
 	{
 		cs_gather_d24x8()
@@ -159,19 +162,19 @@ namespace vk
 			if constexpr (!_SwapBytes)
 			{
 				work_kernel +=
-				"		data[index] = value;\n";
+					"		data[index] = value;\n";
 			}
 			else
 			{
 				work_kernel +=
-				"		data[index] = bswap_u32(value);\n";
+					"		data[index] = bswap_u32(value);\n";
 			}
 
 			cs_shuffle_base::build("");
 		}
 	};
 
-	template<bool _SwapBytes = false, bool _DepthFloat = false>
+	template <bool _SwapBytes = false, bool _DepthFloat = false>
 	struct cs_gather_d32x8 : cs_interleave_task
 	{
 		cs_gather_d32x8()
@@ -184,12 +187,12 @@ namespace vk
 			if constexpr (!_DepthFloat)
 			{
 				work_kernel +=
-				"		depth = f32_to_d24(data[index + z_offset]);\n";
+					"		depth = f32_to_d24(data[index + z_offset]);\n";
 			}
 			else
 			{
 				work_kernel +=
-				"		depth = f32_to_d24f(data[index + z_offset]);\n";
+					"		depth = f32_to_d24f(data[index + z_offset]);\n";
 			}
 
 			work_kernel +=
@@ -202,12 +205,12 @@ namespace vk
 			if constexpr (!_SwapBytes)
 			{
 				work_kernel +=
-				"		data[index] = value;\n";
+					"		data[index] = value;\n";
 			}
 			else
 			{
 				work_kernel +=
-				"		data[index] = bswap_u32(value);\n";
+					"		data[index] = bswap_u32(value);\n";
 			}
 
 			cs_shuffle_base::build("");
@@ -219,7 +222,7 @@ namespace vk
 		cs_scatter_d24x8();
 	};
 
-	template<bool _DepthFloat = false>
+	template <bool _DepthFloat = false>
 	struct cs_scatter_d32x8 : cs_interleave_task
 	{
 		cs_scatter_d32x8()
@@ -233,12 +236,12 @@ namespace vk
 			if constexpr (!_DepthFloat)
 			{
 				work_kernel +=
-				"		data[index + z_offset] = d24_to_f32(value >> 8);\n";
+					"		data[index + z_offset] = d24_to_f32(value >> 8);\n";
 			}
 			else
 			{
 				work_kernel +=
-				"		data[index + z_offset] = d24f_to_f32(value >> 8);\n";
+					"		data[index + z_offset] = d24f_to_f32(value >> 8);\n";
 			}
 
 			work_kernel +=
@@ -251,7 +254,7 @@ namespace vk
 		}
 	};
 
-	template<typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
+	template <typename From, typename To, bool _SwapSrc = false, bool _SwapDst = false>
 	struct cs_fconvert_task : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
@@ -354,7 +357,7 @@ namespace vk
 
 		void bind_resources() override
 		{
-			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({m_data->value, m_data_offset, m_ssbo_length}, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
@@ -371,7 +374,7 @@ namespace vk
 				data_offset = src_offset;
 			}
 
-			u32 parameters[4] = { src_length, src_offset - data_offset, dst_offset - data_offset, 0 };
+			u32 parameters[4] = {src_length, src_offset - data_offset, dst_offset - data_offset, 0};
 			set_parameters(cmd, parameters, 4);
 			cs_shuffle_base::run(cmd, data, src_length, data_offset);
 		}
@@ -400,8 +403,7 @@ namespace vk
 				u32 logd;
 				u32 mipmaps;
 			};
-		}
-		params;
+		} params;
 
 		const vk::buffer* src_buffer = nullptr;
 		const vk::buffer* dst_buffer = nullptr;
@@ -420,8 +422,8 @@ namespace vk
 			create();
 
 			m_src =
-			#include "../Program/GLSLSnippets/GPUDeswizzle.glsl"
-			;
+#include "../Program/GLSLSnippets/GPUDeswizzle.glsl"
+				;
 
 			std::string transform;
 			if constexpr (_SwapBytes)
@@ -441,22 +443,21 @@ namespace vk
 			}
 
 			const std::pair<std::string_view, std::string> syntax_replace[] =
-			{
-				{ "%loc", "0" },
-				{ "%set", "set = 0" },
-				{ "%push_block", "push_constant" },
-				{ "%ws", std::to_string(optimal_group_size) },
-				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },
-				{ "%f", transform }
-			};
+				{
+					{"%loc", "0"},
+					{"%set", "set = 0"},
+					{"%push_block", "push_constant"},
+					{"%ws", std::to_string(optimal_group_size)},
+					{"%_wordcount", std::to_string(sizeof(_BlockType) / 4)},
+					{"%f", transform}};
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
 		}
 
 		void bind_resources() override
 		{
-			m_program->bind_buffer({ src_buffer->value, in_offset, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({src_buffer->value, in_offset, block_length}, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({dst_buffer->value, out_offset, block_length}, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
@@ -525,13 +526,13 @@ namespace vk
 		u16 image_width;
 		u16 image_height;
 		u32 image_pitch;
-		u8  image_bpp;
+		u8 image_bpp;
 	};
 
 	template <RSX_detiler_op Op>
 	struct cs_tile_memcpy : compute_task
 	{
-#pragma pack (push, 1)
+#pragma pack(push, 1)
 		struct
 		{
 			u32 prime;
@@ -548,7 +549,7 @@ namespace vk
 			u32 image_pitch;
 			u32 image_bpp;
 		} params;
-#pragma pack (pop)
+#pragma pack(pop)
 
 		const vk::buffer* src_buffer = nullptr;
 		const vk::buffer* dst_buffer = nullptr;
@@ -566,17 +567,16 @@ namespace vk
 			create();
 
 			m_src =
-			#include "../Program/GLSLSnippets/RSXMemoryTiling.glsl"
+#include "../Program/GLSLSnippets/RSXMemoryTiling.glsl"
 				;
 
 			const std::pair<std::string_view, std::string> syntax_replace[] =
-			{
-				{ "%loc", "0" },
-				{ "%set", "set = 0" },
-				{ "%push_block", "push_constant" },
-				{ "%ws", std::to_string(optimal_group_size) },
-				{ "%op", std::to_string(Op) }
-			};
+				{
+					{"%loc", "0"},
+					{"%set", "set = 0"},
+					{"%push_block", "push_constant"},
+					{"%ws", std::to_string(optimal_group_size)},
+					{"%op", std::to_string(Op)}};
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
 		}
@@ -584,8 +584,8 @@ namespace vk
 		void bind_resources() override
 		{
 			const auto op = static_cast<int>(Op);
-			m_program->bind_buffer({ src_buffer->value, in_offset, in_block_length }, 0 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ dst_buffer->value, out_offset, out_block_length }, 1 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({src_buffer->value, in_offset, in_block_length}, 0 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({dst_buffer->value, out_offset, out_block_length}, 1 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
@@ -603,8 +603,7 @@ namespace vk
 
 			const auto tile_aligned_height = std::min(
 				utils::align<u32>(config.image_height, 64),
-				utils::aligned_div(config.tile_size - config.tile_base_offset, config.tile_pitch)
-			);
+				utils::aligned_div(config.tile_size - config.tile_base_offset, config.tile_pitch));
 
 			if constexpr (Op == RSX_detiler_op::decode)
 			{
@@ -622,14 +621,14 @@ namespace vk
 				const u32 base = (pitch >> 8);
 				if ((pitch & (pitch - 1)) == 0)
 				{
-					return { 1u, base };
+					return {1u, base};
 				}
 
-				for (const auto prime : { 3, 5, 7, 11, 13 })
+				for (const auto prime : {3, 5, 7, 11, 13})
 				{
 					if ((base % prime) == 0)
 					{
-						return { prime, base / prime };
+						return {prime, base / prime};
 					}
 				}
 
@@ -665,11 +664,11 @@ namespace vk
 	// TODO: Replace with a proper manager
 	extern std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
-	template<class T>
+	template <class T>
 	T* get_compute_task()
 	{
 		u32 index = stx::typeindex<id_manager::typeinfo, T>();
-		auto &e = g_compute_tasks[index];
+		auto& e = g_compute_tasks[index];
 
 		if (!e)
 		{
@@ -681,4 +680,4 @@ namespace vk
 	}
 
 	void reset_compute_tasks();
-}
+} // namespace vk

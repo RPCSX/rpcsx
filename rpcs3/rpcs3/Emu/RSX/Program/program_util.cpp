@@ -24,13 +24,17 @@ namespace rsx
 		case 0:
 			return;
 		case 1:
-			std::memcpy(dst, src, sizeof(TIU_slot)); return;
+			std::memcpy(dst, src, sizeof(TIU_slot));
+			return;
 		case 3:
-			std::memcpy(dst, src, sizeof(TIU_slot) * 2); return;
+			std::memcpy(dst, src, sizeof(TIU_slot) * 2);
+			return;
 		case 7:
-			std::memcpy(dst, src, sizeof(TIU_slot) * 3); return;
+			std::memcpy(dst, src, sizeof(TIU_slot) * 3);
+			return;
 		case 15:
-			std::memcpy(dst, src, sizeof(TIU_slot) * 4); return;
+			std::memcpy(dst, src, sizeof(TIU_slot) * 4);
+			return;
 		default:
 			break;
 		};
@@ -76,12 +80,12 @@ namespace rsx
 		texture_dimensions |= static_cast<u32>(type) << offset;
 	}
 
-	bool fragment_program_texture_state::operator == (const fragment_program_texture_state& other) const
+	bool fragment_program_texture_state::operator==(const fragment_program_texture_state& other) const
 	{
 		return texture_dimensions == other.texture_dimensions &&
-			redirected_textures == other.redirected_textures &&
-			shadow_textures == other.shadow_textures &&
-			multisampled_textures == other.multisampled_textures;
+		       redirected_textures == other.redirected_textures &&
+		       shadow_textures == other.shadow_textures &&
+		       multisampled_textures == other.multisampled_textures;
 	}
 
 	void vertex_program_texture_state::clear(u32 index)
@@ -104,10 +108,10 @@ namespace rsx
 		texture_dimensions |= static_cast<u32>(type) << offset;
 	}
 
-	bool vertex_program_texture_state::operator == (const vertex_program_texture_state& other) const
+	bool vertex_program_texture_state::operator==(const vertex_program_texture_state& other) const
 	{
 		return texture_dimensions == other.texture_dimensions &&
-			multisampled_textures == other.multisampled_textures;
+		       multisampled_textures == other.multisampled_textures;
 	}
 
 	int VertexProgramBase::translate_constants_range(int first_index, int count) const
@@ -184,4 +188,4 @@ namespace rsx
 
 		return false;
 	}
-}
+} // namespace rsx

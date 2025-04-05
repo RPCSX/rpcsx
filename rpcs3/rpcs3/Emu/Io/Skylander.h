@@ -31,7 +31,7 @@ public:
 protected:
 	shared_mutex sky_mutex;
 
-	bool activated       = true;
+	bool activated = true;
 	u8 interrupt_counter = 0;
 	u8 r = 0, g = 0, b = 0;
 

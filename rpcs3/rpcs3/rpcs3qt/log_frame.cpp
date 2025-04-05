@@ -54,7 +54,7 @@ struct gui_listener : logs::listener
 
 		if (msg <= enabled)
 		{
-			packet_t p,* _new = &p;
+			packet_t p, *_new = &p;
 			_new->sev = msg;
 
 			if ((msg == logs::level::fatal || show_prefix) && !prefix.empty())
@@ -222,56 +222,56 @@ void log_frame::CreateAndConnectActions()
 
 		// This sets the log level properly when the action is triggered.
 		connect(act, &QAction::triggered, [this, logLevel]()
-		{
-			s_gui_listener.enabled = std::max(logLevel, logs::level::fatal);
-			m_gui_settings->SetValue(gui::l_level, static_cast<uint>(logLevel));
-		});
+			{
+				s_gui_listener.enabled = std::max(logLevel, logs::level::fatal);
+				m_gui_settings->SetValue(gui::l_level, static_cast<uint>(logLevel));
+			});
 	};
 
 	m_clear_act = new QAction(tr("Clear"), this);
 	connect(m_clear_act, &QAction::triggered, [this]()
-	{
-		m_old_log_text.clear();
-		m_log->clear();
-		s_gui_listener.clear();
-	});
+		{
+			m_old_log_text.clear();
+			m_log->clear();
+			s_gui_listener.clear();
+		});
 
 	m_clear_tty_act = new QAction(tr("Clear"), this);
 	connect(m_clear_tty_act, &QAction::triggered, [this]()
-	{
-		m_old_tty_text.clear();
-		m_tty->clear();
-	});
+		{
+			m_old_tty_text.clear();
+			m_tty->clear();
+		});
 
 	m_perform_goto_on_debugger = new QAction(tr("Go-To On The Debugger"), this);
 	connect(m_perform_goto_on_debugger, &QAction::triggered, [this]()
-	{
-		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
-		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText(), true);
-	});
+		{
+			QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
+			Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText(), true);
+		});
 
 	m_perform_goto_thread_on_debugger = new QAction(tr("Show Thread On The Debugger"), this);
 	connect(m_perform_goto_thread_on_debugger, &QAction::triggered, [this]()
-	{
-		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
-		Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText(), false);
-	});
+		{
+			QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
+			Q_EMIT PerformGoToOnDebugger(pte->textCursor().selectedText(), false);
+		});
 
 	m_stack_act_tty = new QAction(tr("Stack Mode (TTY)"), this);
 	m_stack_act_tty->setCheckable(true);
 	connect(m_stack_act_tty, &QAction::toggled, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::l_stack_tty, checked);
-		m_stack_tty = checked;
-	});
+		{
+			m_gui_settings->SetValue(gui::l_stack_tty, checked);
+			m_stack_tty = checked;
+		});
 
 	m_ansi_act_tty = new QAction(tr("ANSI Code (TTY)"), this);
 	m_ansi_act_tty->setCheckable(true);
 	connect(m_ansi_act_tty, &QAction::toggled, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::l_ansi_code, checked);
-		m_ansi_tty = checked;
-	});
+		{
+			m_gui_settings->SetValue(gui::l_ansi_code, checked);
+			m_ansi_tty = checked;
+		});
 
 	m_tty_channel_acts = new QActionGroup(this);
 	// Special Channel: All
@@ -279,10 +279,10 @@ void log_frame::CreateAndConnectActions()
 	all_channels_act->setCheckable(true);
 	all_channels_act->setChecked(m_tty_channel == -1);
 	connect(all_channels_act, &QAction::triggered, [this]()
-	{
-		m_tty_channel = -1;
-		m_tty_input->setPlaceholderText(tr("All user channels"));
-	});
+		{
+			m_tty_channel = -1;
+			m_tty_input->setPlaceholderText(tr("All user channels"));
+		});
 
 	for (int i = 3; i < 16; i++)
 	{
@@ -290,10 +290,10 @@ void log_frame::CreateAndConnectActions()
 		act->setCheckable(true);
 		act->setChecked(i == m_tty_channel);
 		connect(act, &QAction::triggered, [this, i]()
-		{
-			m_tty_channel = i;
-			m_tty_input->setPlaceholderText(tr("Channel %0").arg(m_tty_channel));
-		});
+			{
+				m_tty_channel = i;
+				m_tty_input->setPlaceholderText(tr("Channel %0").arg(m_tty_channel));
+			});
 	}
 
 	// Action groups make these actions mutually exclusive.
@@ -311,33 +311,33 @@ void log_frame::CreateAndConnectActions()
 	m_stack_act_log = new QAction(tr("Stack Mode (Log)"), this);
 	m_stack_act_log->setCheckable(true);
 	connect(m_stack_act_log, &QAction::toggled, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::l_stack, checked);
-		m_stack_log = checked;
-	});
+		{
+			m_gui_settings->SetValue(gui::l_stack, checked);
+			m_stack_log = checked;
+		});
 
 	m_stack_act_err = new QAction(tr("Stack Cell Errors"), this);
 	m_stack_act_err->setCheckable(true);
 	connect(m_stack_act_err, &QAction::toggled, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::l_stack_err, checked);
-		g_log_all_errors = !checked;
-	});
+		{
+			m_gui_settings->SetValue(gui::l_stack_err, checked);
+			g_log_all_errors = !checked;
+		});
 
 	m_show_prefix_act = new QAction(tr("Show Thread Prefix"), this);
 	m_show_prefix_act->setCheckable(true);
 	connect(m_show_prefix_act, &QAction::toggled, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::l_prefix, checked);
-		s_gui_listener.show_prefix = checked;
-	});
+		{
+			m_gui_settings->SetValue(gui::l_prefix, checked);
+			s_gui_listener.show_prefix = checked;
+		});
 
 	m_tty_act = new QAction(tr("Enable TTY"), this);
 	m_tty_act->setCheckable(true);
 	connect(m_tty_act, &QAction::triggered, [this](bool checked)
-	{
-		m_gui_settings->SetValue(gui::l_tty, checked);
-	});
+		{
+			m_gui_settings->SetValue(gui::l_tty, checked);
+		});
 
 	l_initAct(m_nothing_act, logs::level::fatal);
 	l_initAct(m_fatal_act, logs::level::fatal);
@@ -349,93 +349,93 @@ void log_frame::CreateAndConnectActions()
 	l_initAct(m_trace_act, logs::level::trace);
 
 	connect(m_log, &QWidget::customContextMenuRequested, [this](const QPoint& pos)
-	{
-		QMenu* menu = m_log->createStandardContextMenu();
-		menu->addAction(m_clear_act);
-		menu->addAction(m_perform_goto_on_debugger);
-		menu->addAction(m_perform_goto_thread_on_debugger);
+		{
+			QMenu* menu = m_log->createStandardContextMenu();
+			menu->addAction(m_clear_act);
+			menu->addAction(m_perform_goto_on_debugger);
+			menu->addAction(m_perform_goto_thread_on_debugger);
 
-		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
-		Q_EMIT PerformGoToOnDebugger("", true, true, goto_signal_accepted);
-		m_perform_goto_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
-		m_perform_goto_thread_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
-		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the debugger."));
-		m_perform_goto_thread_on_debugger->setToolTip(tr("Show the thread that corresponds to the thread ID from the log text on the debugger."));
+			std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
+			Q_EMIT PerformGoToOnDebugger("", true, true, goto_signal_accepted);
+			m_perform_goto_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
+			m_perform_goto_thread_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
+			m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the debugger."));
+			m_perform_goto_thread_on_debugger->setToolTip(tr("Show the thread that corresponds to the thread ID from the log text on the debugger."));
 
-		menu->addSeparator();
-		menu->addActions(m_log_level_acts->actions());
-		menu->addSeparator();
-		menu->addAction(m_stack_act_log);
-		menu->addAction(m_stack_act_err);
-		menu->addAction(m_show_prefix_act);
-		menu->exec(m_log->viewport()->mapToGlobal(pos));
-	});
+			menu->addSeparator();
+			menu->addActions(m_log_level_acts->actions());
+			menu->addSeparator();
+			menu->addAction(m_stack_act_log);
+			menu->addAction(m_stack_act_err);
+			menu->addAction(m_show_prefix_act);
+			menu->exec(m_log->viewport()->mapToGlobal(pos));
+		});
 
 	connect(m_tty, &QWidget::customContextMenuRequested, [this](const QPoint& pos)
-	{
-		QMenu* menu = m_tty->createStandardContextMenu();
-		menu->addAction(m_clear_tty_act);
-		menu->addAction(m_perform_goto_on_debugger);
+		{
+			QMenu* menu = m_tty->createStandardContextMenu();
+			menu->addAction(m_clear_tty_act);
+			menu->addAction(m_perform_goto_on_debugger);
 
-		std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
-		Q_EMIT PerformGoToOnDebugger("", false, true, goto_signal_accepted);
-		m_perform_goto_on_debugger->setEnabled(m_tty->textCursor().hasSelection() && *goto_signal_accepted);
-		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the TTY text on the debugger."));
+			std::shared_ptr<bool> goto_signal_accepted = std::make_shared<bool>(false);
+			Q_EMIT PerformGoToOnDebugger("", false, true, goto_signal_accepted);
+			m_perform_goto_on_debugger->setEnabled(m_tty->textCursor().hasSelection() && *goto_signal_accepted);
+			m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the TTY text on the debugger."));
 
-		menu->addSeparator();
-		menu->addAction(m_tty_act);
-		menu->addAction(m_stack_act_tty);
-		menu->addAction(m_ansi_act_tty);
-		menu->addSeparator();
-		menu->addActions(m_tty_channel_acts->actions());
-		menu->exec(m_tty->viewport()->mapToGlobal(pos));
-	});
+			menu->addSeparator();
+			menu->addAction(m_tty_act);
+			menu->addAction(m_stack_act_tty);
+			menu->addAction(m_ansi_act_tty);
+			menu->addSeparator();
+			menu->addActions(m_tty_channel_acts->actions());
+			menu->exec(m_tty->viewport()->mapToGlobal(pos));
+		});
 
-	connect(m_tabWidget, &QTabWidget::currentChanged, [this](int/* index*/)
-	{
-		if (m_find_dialog)
-			m_find_dialog->close();
-	});
+	connect(m_tabWidget, &QTabWidget::currentChanged, [this](int /* index*/)
+		{
+			if (m_find_dialog)
+				m_find_dialog->close();
+		});
 
 	connect(m_tty_input, &QLineEdit::returnPressed, [this]()
-	{
-		std::string text = m_tty_input->text().toStdString();
-
 		{
-			std::lock_guard lock(g_tty_mutex);
+			std::string text = m_tty_input->text().toStdString();
 
+			{
+				std::lock_guard lock(g_tty_mutex);
+
+				if (m_tty_channel == -1)
+				{
+					for (int i = 3; i < 16; i++)
+					{
+						g_tty_input[i].push_back(text + "\n");
+					}
+				}
+				else
+				{
+					g_tty_input[m_tty_channel].push_back(text + "\n");
+				}
+			}
+
+			// Write to tty
 			if (m_tty_channel == -1)
 			{
-				for (int i = 3; i < 16; i++)
-				{
-					g_tty_input[i].push_back(text + "\n");
-				}
+				text = "All channels > " + text + "\n";
 			}
 			else
 			{
-				g_tty_input[m_tty_channel].push_back(text + "\n");
+				text = fmt::format("Ch.%d > %s\n", m_tty_channel, text);
 			}
-		}
 
-		// Write to tty
-		if (m_tty_channel == -1)
-		{
-			text = "All channels > " + text + "\n";
-		}
-		else
-		{
-			text = fmt::format("Ch.%d > %s\n", m_tty_channel, text);
-		}
+			if (g_tty)
+			{
+				g_tty_size -= (1ll << 48);
+				g_tty.write(text.c_str(), text.size());
+				g_tty_size += (1ll << 48) + text.size();
+			}
 
-		if (g_tty)
-		{
-			g_tty_size -= (1ll << 48);
-			g_tty.write(text.c_str(), text.size());
-			g_tty_size += (1ll << 48) + text.size();
-		}
-
-		m_tty_input->clear();
-	});
+			m_tty_input->clear();
+		});
 }
 
 void log_frame::LoadSettings()
@@ -515,17 +515,15 @@ void log_frame::RepaintTextColors()
 	// Repaint log with new colors
 	QString html = m_log->document()->toHtml();
 
-	const QHash<int, QChar> log_chars
-	{
-		{ static_cast<int>(logs::level::always),  '-' },
-		{ static_cast<int>(logs::level::fatal),   'F' },
-		{ static_cast<int>(logs::level::error),   'E' },
-		{ static_cast<int>(logs::level::todo),    'U' },
-		{ static_cast<int>(logs::level::success), 'S' },
-		{ static_cast<int>(logs::level::warning), 'W' },
-		{ static_cast<int>(logs::level::notice),  '!' },
-		{ static_cast<int>(logs::level::trace),   'T' }
-	};
+	const QHash<int, QChar> log_chars{
+		{static_cast<int>(logs::level::always), '-'},
+		{static_cast<int>(logs::level::fatal), 'F'},
+		{static_cast<int>(logs::level::error), 'E'},
+		{static_cast<int>(logs::level::todo), 'U'},
+		{static_cast<int>(logs::level::success), 'S'},
+		{static_cast<int>(logs::level::warning), 'W'},
+		{static_cast<int>(logs::level::notice), '!'},
+		{static_cast<int>(logs::level::trace), 'T'}};
 
 	const auto replace_color = [&](logs::level lvl)
 	{
@@ -575,7 +573,11 @@ void log_frame::UpdateUI()
 				str_index += buf_line.size() + 1;
 
 				// Ignore control characters and greater/equal to 0x80
-				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c) { return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F); }), buf_line.end());
+				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
+								   {
+									   return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F);
+								   }),
+					buf_line.end());
 
 				// save old scroll bar state
 				QScrollBar* sb = m_tty->verticalScrollBar();
@@ -583,7 +585,7 @@ void log_frame::UpdateUI()
 				const bool is_max = sb_pos == sb->maximum();
 
 				// save old selection
-				QTextCursor text_cursor{ m_tty->document() };
+				QTextCursor text_cursor{m_tty->document()};
 				const int sel_pos = text_cursor.position();
 				int sel_start = text_cursor.selectionStart();
 				int sel_end = text_cursor.selectionEnd();
@@ -684,7 +686,10 @@ void log_frame::UpdateUI()
 		}
 	}
 
-	const auto font_start_tag = [](const QColor& color) -> const QString { return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">"); };
+	const auto font_start_tag = [](const QColor& color) -> const QString
+	{
+		return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">");
+	};
 	const QString font_start_tag_stack = "<font color = \"" % m_color_stack.name() % "\">";
 	static const QString font_end_tag = QStringLiteral("</font>");
 
@@ -692,9 +697,9 @@ void log_frame::UpdateUI()
 	{
 		const qsizetype nline = text.indexOf(QChar('\n'));
 		const qsizetype spaces = text.indexOf(QStringLiteral("  "));
-		const qsizetype html = std::max<qsizetype>({ text.indexOf(QChar('<')), text.indexOf(QChar('>')), text.indexOf(QChar('&')), text.indexOf(QChar('\"')) });
+		const qsizetype html = std::max<qsizetype>({text.indexOf(QChar('<')), text.indexOf(QChar('>')), text.indexOf(QChar('&')), text.indexOf(QChar('\"'))});
 
-		const qsizetype pos = std::max<qsizetype>({ html, nline, spaces });
+		const qsizetype pos = std::max<qsizetype>({html, nline, spaces});
 
 		if (pos < 0)
 		{
@@ -899,7 +904,8 @@ void log_frame::UpdateUI()
 		s_gui_listener.pop();
 
 		// Limit processing time
-		if (steady_clock::now() >= log_timeout) break;
+		if (steady_clock::now() >= log_timeout)
+			break;
 	}
 
 	if (!patch_first_stacked_message())
@@ -908,7 +914,7 @@ void log_frame::UpdateUI()
 	}
 }
 
-void log_frame::closeEvent(QCloseEvent *event)
+void log_frame::closeEvent(QCloseEvent* event)
 {
 	QDockWidget::closeEvent(event);
 	Q_EMIT LogFrameClosed();

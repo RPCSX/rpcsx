@@ -41,7 +41,7 @@ namespace
 		dateTime.setSecsSinceEpoch(time);
 		return dateTime.toString("yyyy-MM-dd HH:mm:ss");
 	}
-}
+} // namespace
 
 enum SaveColumns
 {
@@ -62,10 +62,7 @@ enum SaveUserRole
 };
 
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir, QWidget* parent)
-	: QDialog(parent)
-	, m_dir(std::move(dir))
-	, m_gui_settings(std::move(gui_settings))
-	, m_persistent_settings(std::move(persistent_settings))
+	: QDialog(parent), m_dir(std::move(dir)), m_gui_settings(std::move(gui_settings)), m_persistent_settings(std::move(persistent_settings))
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
@@ -127,7 +124,7 @@ void save_manager_dialog::Init()
 	m_button_delete->setDisabled(true);
 
 	// Details layout
-	QVBoxLayout *vbox_details = new QVBoxLayout();
+	QVBoxLayout* vbox_details = new QVBoxLayout();
 	vbox_details->addWidget(m_details_icon);
 	vbox_details->addWidget(m_details_title);
 	vbox_details->addWidget(m_details_subtitle);
@@ -141,7 +138,7 @@ void save_manager_dialog::Init()
 	vbox_details->setAlignment(m_button_folder, Qt::AlignHCenter);
 
 	// List + Details
-	QHBoxLayout *hbox_content = new QHBoxLayout();
+	QHBoxLayout* hbox_content = new QHBoxLayout();
 	hbox_content->addWidget(m_list);
 	hbox_content->addLayout(vbox_details);
 
@@ -171,54 +168,54 @@ void save_manager_dialog::Init()
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
 	connect(m_button_delete, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
 	connect(m_button_folder, &QAbstractButton::clicked, [this]()
-	{
-		const int idx = m_list->currentRow();
-		QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
-		if (!item)
 		{
-			return;
-		}
-		const int idx_real = item->data(Qt::UserRole).toInt();
-		const QString path = QString::fromStdString(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
-		gui::utils::open_dir(path);
-	});
+			const int idx = m_list->currentRow();
+			QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
+			if (!item)
+			{
+				return;
+			}
+			const int idx_real = item->data(Qt::UserRole).toInt();
+			const QString path = QString::fromStdString(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
+			gui::utils::open_dir(path);
+		});
 	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_manager_dialog::ShowContextMenu);
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
-	{
-		if (col != SaveColumns::Note)
 		{
-			return;
-		}
-		QTableWidgetItem* user_item = m_list->item(row, SaveColumns::Name);
-		QTableWidgetItem* text_item = m_list->item(row, SaveColumns::Note);
-		if (!user_item || !text_item)
-		{
-			return;
-		}
-		const int original_index = user_item->data(Qt::UserRole).toInt();
-		const SaveDataEntry originalEntry = ::at32(m_save_entries, original_index);
-		const QString original_dir_name = QString::fromStdString(originalEntry.dirName);
-		QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
-		notes[original_dir_name] = text_item->text();
-		m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
-	});
+			if (col != SaveColumns::Note)
+			{
+				return;
+			}
+			QTableWidgetItem* user_item = m_list->item(row, SaveColumns::Name);
+			QTableWidgetItem* text_item = m_list->item(row, SaveColumns::Note);
+			if (!user_item || !text_item)
+			{
+				return;
+			}
+			const int original_index = user_item->data(Qt::UserRole).toInt();
+			const SaveDataEntry originalEntry = ::at32(m_save_entries, original_index);
+			const QString original_dir_name = QString::fromStdString(originalEntry.dirName);
+			QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+			notes[original_dir_name] = text_item->text();
+			m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
+		});
 	connect(m_list, &QTableWidget::itemSelectionChanged, this, &save_manager_dialog::UpdateDetails);
 	connect(this, &save_manager_dialog::IconReady, this, [this](int index, const QPixmap& pixmap)
-	{
-		if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
 		{
-			item->setData(SaveUserRole::PixmapScaled, pixmap);
-			item->image_change_callback();
-		}
-	});
+			if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
+			{
+				item->setData(SaveUserRole::PixmapScaled, pixmap);
+				item->image_change_callback();
+			}
+		});
 	connect(search_bar, &QLineEdit::textChanged, this, &save_manager_dialog::text_changed);
 }
 
 /**
-* This certainly isn't ideal for this code, as it essentially copies cellSaveData.  But, I have no other choice without adding public methods to cellSaveData.
-*/
+ * This certainly isn't ideal for this code, as it essentially copies cellSaveData.  But, I have no other choice without adding public methods to cellSaveData.
+ */
 std::vector<SaveDataEntry> save_manager_dialog::GetSaveEntries(const std::string& base_dir)
 {
 	std::vector<SaveDataEntry> save_entries;
@@ -249,47 +246,47 @@ std::vector<SaveDataEntry> save_manager_dialog::GetSaveEntries(const std::string
 	connect(&future_watcher, &QFutureWatcher<void>::progressRangeChanged, &progress_dialog, &QProgressDialog::setRange);
 	connect(&future_watcher, &QFutureWatcher<void>::progressValueChanged, &progress_dialog, &QProgressDialog::setValue);
 	connect(&progress_dialog, &QProgressDialog::canceled, this, [this, &future_watcher]()
-	{
-		future_watcher.cancel();
-		close(); // It's pointless to show an empty window
-	});
+		{
+			future_watcher.cancel();
+			close(); // It's pointless to show an empty window
+		});
 
 	shared_mutex mutex;
 
 	future_watcher.setFuture(QtConcurrent::map(indices, [&](int index)
-	{
-		const fs::dir_entry& entry = ::at32(dir_list, index);
-		gui_log.trace("Loading trophy dir: %s", entry.name);
-
-		// PSF parameters
-		const auto [psf, errc] = psf::load(base_dir + entry.name + "/PARAM.SFO");
-
-		if (psf.empty())
 		{
-			gui_log.error("Failed to load savedata: %s (%s)", base_dir + "/" + entry.name, errc);
-			return;
-		}
+			const fs::dir_entry& entry = ::at32(dir_list, index);
+			gui_log.trace("Loading trophy dir: %s", entry.name);
 
-		SaveDataEntry save_entry2 {};
-		save_entry2.dirName = psf::get_string(psf, "SAVEDATA_DIRECTORY");
-		save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
-		save_entry2.title = psf::get_string(psf, "TITLE");
-		save_entry2.subtitle = psf::get_string(psf, "SUB_TITLE");
-		save_entry2.details = psf::get_string(psf, "DETAIL");
+			// PSF parameters
+			const auto [psf, errc] = psf::load(base_dir + entry.name + "/PARAM.SFO");
 
-		for (const auto& entry2 : fs::dir(base_dir + entry.name))
-		{
-			save_entry2.size += entry2.size;
-		}
+			if (psf.empty())
+			{
+				gui_log.error("Failed to load savedata: %s (%s)", base_dir + "/" + entry.name, errc);
+				return;
+			}
 
-		save_entry2.atime = entry.atime;
-		save_entry2.mtime = entry.mtime;
-		save_entry2.ctime = entry.ctime;
-		save_entry2.isNew = false;
+			SaveDataEntry save_entry2{};
+			save_entry2.dirName = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+			save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
+			save_entry2.title = psf::get_string(psf, "TITLE");
+			save_entry2.subtitle = psf::get_string(psf, "SUB_TITLE");
+			save_entry2.details = psf::get_string(psf, "DETAIL");
 
-		std::scoped_lock lock(mutex);
-		save_entries.emplace_back(save_entry2);
-	}));
+			for (const auto& entry2 : fs::dir(base_dir + entry.name))
+			{
+				save_entry2.size += entry2.size;
+			}
+
+			save_entry2.atime = entry.atime;
+			save_entry2.mtime = entry.mtime;
+			save_entry2.ctime = entry.ctime;
+			save_entry2.isNew = false;
+
+			std::scoped_lock lock(mutex);
+			save_entries.emplace_back(save_entry2);
+		}));
 
 	progress_dialog.exec();
 	future_watcher.waitForFinished();
@@ -353,22 +350,22 @@ void save_manager_dialog::UpdateList()
 		}
 
 		icon_item->set_image_change_callback([this, icon_item](const QVideoFrame& frame)
-		{
-			if (!icon_item)
 			{
-				return;
-			}
+				if (!icon_item)
+				{
+					return;
+				}
 
-			if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
-			{
-				icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
-			}
-			else
-			{
-				icon_item->setData(Qt::DecorationRole, icon_item->data(SaveUserRole::PixmapScaled).value<QPixmap>());
-				icon_item->stop_movie();
-			}
-		});
+				if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
+				{
+					icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
+				}
+				else
+				{
+					icon_item->setData(Qt::DecorationRole, icon_item->data(SaveUserRole::PixmapScaled).value<QPixmap>());
+					icon_item->stop_movie();
+				}
+			});
 		m_list->setItem(i, SaveColumns::Icon, icon_item);
 
 		custom_table_widget_item* titleItem = new custom_table_widget_item(title);
@@ -451,77 +448,77 @@ void save_manager_dialog::UpdateIcons()
 		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, SaveColumns::Icon)))
 		{
 			icon_item->set_icon_load_func([this, cancel = icon_item->icon_loading_aborted(), dpr, localized_icon](int index)
-			{
-				if (cancel && cancel->load())
 				{
-					return;
-				}
-
-				QPixmap icon;
-
-				if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
-				{
-					if (!item->data(SaveUserRole::PixmapLoaded).toBool())
+					if (cancel && cancel->load())
 					{
-						// Load game icon
-						if (QTableWidgetItem* user_item = m_list->item(index, SaveColumns::Name))
+						return;
+					}
+
+					QPixmap icon;
+
+					if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
+					{
+						if (!item->data(SaveUserRole::PixmapLoaded).toBool())
 						{
-							const int idx_real = user_item->data(Qt::UserRole).toInt();
-							const SaveDataEntry& entry = ::at32(m_save_entries, idx_real);
-
-							if (!icon.load(QString::fromStdString(m_dir + entry.dirName + "/" + localized_icon)) &&
-								!icon.load(QString::fromStdString(m_dir + entry.dirName + "/ICON0.PNG")))
+							// Load game icon
+							if (QTableWidgetItem* user_item = m_list->item(index, SaveColumns::Name))
 							{
-								gui_log.warning("Loading icon for save %s failed", entry.dirName);
-								icon = QPixmap(320, 176);
-								icon.fill(m_icon_color);
-							}
+								const int idx_real = user_item->data(Qt::UserRole).toInt();
+								const SaveDataEntry& entry = ::at32(m_save_entries, idx_real);
 
-							item->setData(SaveUserRole::PixmapLoaded, true);
-							item->setData(SaveUserRole::Pixmap, icon);
+								if (!icon.load(QString::fromStdString(m_dir + entry.dirName + "/" + localized_icon)) &&
+									!icon.load(QString::fromStdString(m_dir + entry.dirName + "/ICON0.PNG")))
+								{
+									gui_log.warning("Loading icon for save %s failed", entry.dirName);
+									icon = QPixmap(320, 176);
+									icon.fill(m_icon_color);
+								}
+
+								item->setData(SaveUserRole::PixmapLoaded, true);
+								item->setData(SaveUserRole::Pixmap, icon);
+							}
+							else
+							{
+								gui_log.error("Loading icon for save failed (table item is null)");
+							}
 						}
 						else
 						{
-							gui_log.error("Loading icon for save failed (table item is null)");
+							icon = item->data(SaveUserRole::Pixmap).value<QPixmap>();
 						}
 					}
-					else
+
+					if (cancel && cancel->load())
 					{
-						icon = item->data(SaveUserRole::Pixmap).value<QPixmap>();
+						return;
 					}
-				}
 
-				if (cancel && cancel->load())
-				{
-					return;
-				}
+					QPixmap new_icon(icon.size() * dpr);
+					new_icon.setDevicePixelRatio(dpr);
+					new_icon.fill(m_icon_color);
 
-				QPixmap new_icon(icon.size() * dpr);
-				new_icon.setDevicePixelRatio(dpr);
-				new_icon.fill(m_icon_color);
+					if (!icon.isNull())
+					{
+						QPainter painter(&new_icon);
+						painter.setRenderHint(QPainter::SmoothPixmapTransform);
+						painter.drawPixmap(QPoint(0, 0), icon);
+						painter.end();
+					}
 
-				if (!icon.isNull())
-				{
-					QPainter painter(&new_icon);
-					painter.setRenderHint(QPainter::SmoothPixmapTransform);
-					painter.drawPixmap(QPoint(0, 0), icon);
-					painter.end();
-				}
+					new_icon = new_icon.scaled(m_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 
-				new_icon = new_icon.scaled(m_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-
-				if (!cancel || !cancel->load())
-				{
-					Q_EMIT IconReady(index, new_icon);
-				}
-			});
+					if (!cancel || !cancel->load())
+					{
+						Q_EMIT IconReady(index, new_icon);
+					}
+				});
 		}
 	}
 }
 
 /**
-* Copied method to do sort from save_data_list_dialog
-*/
+ * Copied method to do sort from save_data_list_dialog
+ */
 void save_manager_dialog::OnSort(int logicalIndex)
 {
 	if (logicalIndex >= 0)
@@ -609,16 +606,16 @@ void save_manager_dialog::ShowContextMenu(const QPoint& pos)
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
 	connect(showDirAct, &QAction::triggered, [this, idx]()
-	{
-		QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
-		if (!item)
 		{
-			return;
-		}
-		const int idx_real = item->data(Qt::UserRole).toInt();
-		const QString path = QString::fromStdString(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
-		gui::utils::open_dir(path);
-	});
+			QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
+			if (!item)
+			{
+				return;
+			}
+			const int idx_real = item->data(Qt::UserRole).toInt();
+			const QString path = QString::fromStdString(m_dir + ::at32(m_save_entries, idx_real).dirName + "/");
+			gui::utils::open_dir(path);
+		});
 
 	menu->exec(m_list->viewport()->mapToGlobal(pos));
 }
@@ -630,7 +627,7 @@ void save_manager_dialog::SetIconSize(int size)
 	m_gui_settings->SetValue(gui::sd_icon_size, size, false); // Don't sync while sliding
 }
 
-void save_manager_dialog::closeEvent(QCloseEvent *event)
+void save_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
 

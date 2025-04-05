@@ -32,7 +32,7 @@ enum : u64
 enum : s32
 {
 	SYS_EVENT_PORT_LOCAL = 1,
-	SYS_EVENT_PORT_IPC   = 3, // Unofficial name
+	SYS_EVENT_PORT_IPC = 3, // Unofficial name
 };
 
 // Event Port Name
@@ -45,21 +45,21 @@ enum : u64
 enum : u32
 {
 	SYS_SPU_THREAD_EVENT_USER = 1,
-	SYS_SPU_THREAD_EVENT_DMA  = 2, // not supported
+	SYS_SPU_THREAD_EVENT_DMA = 2, // not supported
 };
 
 // Event Source Key
 enum : u64
 {
-	SYS_SPU_THREAD_EVENT_USER_KEY      = 0xFFFFFFFF53505501ull,
-	SYS_SPU_THREAD_EVENT_DMA_KEY       = 0xFFFFFFFF53505502ull,
+	SYS_SPU_THREAD_EVENT_USER_KEY = 0xFFFFFFFF53505501ull,
+	SYS_SPU_THREAD_EVENT_DMA_KEY = 0xFFFFFFFF53505502ull,
 	SYS_SPU_THREAD_EVENT_EXCEPTION_KEY = 0xFFFFFFFF53505503ull,
 };
 
 struct sys_event_queue_attribute_t
 {
 	be_t<u32> protocol; // SYS_SYNC_PRIORITY or SYS_SYNC_FIFO
-	be_t<s32> type; // SYS_PPU_QUEUE or SYS_SPU_QUEUE
+	be_t<s32> type;     // SYS_PPU_QUEUE or SYS_SPU_QUEUE
 
 	union
 	{
@@ -123,12 +123,11 @@ struct lv2_event_port final : lv2_obj
 	const s32 type; // Port type, either IPC or local
 	const u64 name; // Event source (generated from id and process id if not set)
 
-	atomic_t<usz> is_busy = 0; // Counts threads waiting on event sending
+	atomic_t<usz> is_busy = 0;         // Counts threads waiting on event sending
 	shared_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 
 	lv2_event_port(s32 type, u64 name)
-		: type(type)
-		, name(name)
+		: type(type), name(name)
 	{
 	}
 

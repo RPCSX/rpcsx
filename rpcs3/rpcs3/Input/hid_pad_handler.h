@@ -120,8 +120,8 @@ protected:
 	static s16 apply_calibration(s32 raw_value, const CalibData& calib_data)
 	{
 		const s32 biased = raw_value - calib_data.bias;
-		const s32 quot   = calib_data.sens_numer / calib_data.sens_denom;
-		const s32 rem    = calib_data.sens_numer % calib_data.sens_denom;
+		const s32 quot = calib_data.sens_numer / calib_data.sens_denom;
+		const s32 rem = calib_data.sens_numer % calib_data.sens_denom;
 		const s32 output = (quot * biased) + ((rem * biased) / calib_data.sens_denom);
 
 		return static_cast<s16>(std::clamp<s32>(output, s16{smin}, s16{smax}));

@@ -7,11 +7,11 @@
 // Patch utilities specific to PPU code
 struct ppu_patch_block_registry_t
 {
-    ppu_patch_block_registry_t() = default;
-    ppu_patch_block_registry_t(const ppu_patch_block_registry_t&) = delete;
-    ppu_patch_block_registry_t& operator=(const ppu_patch_block_registry_t&) = delete;
+	ppu_patch_block_registry_t() = default;
+	ppu_patch_block_registry_t(const ppu_patch_block_registry_t&) = delete;
+	ppu_patch_block_registry_t& operator=(const ppu_patch_block_registry_t&) = delete;
 
-    std::unordered_set<u32> block_addresses{};
+	std::unordered_set<u32> block_addresses{};
 };
 
 void ppu_register_range(u32 addr, u32 size);

@@ -12,5 +12,5 @@ namespace rsx
 		void semaphore_acquire(context* ctx, u32 reg, u32 arg);
 
 		void semaphore_release(context* ctx, u32 reg, u32 arg);
-	}
-}
+	} // namespace nv406e
+} // namespace rsx

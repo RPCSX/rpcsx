@@ -19,9 +19,15 @@ public:
 	void add_widget(flow_widget_item* widget);
 	void clear();
 
-	std::vector<flow_widget_item*>& items() { return m_widgets; }
+	std::vector<flow_widget_item*>& items()
+	{
+		return m_widgets;
+	}
 	flow_widget_item* selected_item() const;
-	QScrollArea* scroll_area() const { return m_scroll_area; }
+	QScrollArea* scroll_area() const
+	{
+		return m_scroll_area;
+	}
 
 	void paintEvent(QPaintEvent* event) override;
 

@@ -13,27 +13,26 @@ extern bool is_input_allowed();
 
 LOG_CHANNEL(cellKb);
 
-template<>
+template <>
 void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_KB_ERROR_FATAL);
-			STR_CASE(CELL_KB_ERROR_INVALID_PARAMETER);
-			STR_CASE(CELL_KB_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_KB_ERROR_UNINITIALIZED);
-			STR_CASE(CELL_KB_ERROR_RESOURCE_ALLOCATION_FAILED);
-			STR_CASE(CELL_KB_ERROR_READ_FAILED);
-			STR_CASE(CELL_KB_ERROR_NO_DEVICE);
-			STR_CASE(CELL_KB_ERROR_SYS_SETTING_FAILED);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_KB_ERROR_FATAL);
+				STR_CASE(CELL_KB_ERROR_INVALID_PARAMETER);
+				STR_CASE(CELL_KB_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_KB_ERROR_UNINITIALIZED);
+				STR_CASE(CELL_KB_ERROR_RESOURCE_ALLOCATION_FAILED);
+				STR_CASE(CELL_KB_ERROR_READ_FAILED);
+				STR_CASE(CELL_KB_ERROR_NO_DEVICE);
+				STR_CASE(CELL_KB_ERROR_SYS_SETTING_FAILED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
-
 
 KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 {
@@ -49,11 +48,11 @@ KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 	if (max_connect)
 	{
 		Emu.PostponeInitCode([this, max_connect]()
-		{
-			std::lock_guard<std::mutex> lock(m_mutex);
-			AddConsumer(keyboard_consumer::identifier::cellKb, max_connect);
-			auto lk = init.init();
-		});
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				AddConsumer(keyboard_consumer::identifier::cellKb, max_connect);
+				auto lk = init.init();
+			});
 	}
 }
 
@@ -183,14 +182,21 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (is_num_lock)
 	{
-		//if (rawcode == CELL_KEYC_KPAD_NUMLOCK)  return 0x00 | CELL_KB_KEYPAD;                                     // 'Num Lock' (unreachable)
-		if (rawcode == CELL_KEYC_KPAD_SLASH)    return 0x2F | CELL_KB_KEYPAD;                                     // '/'
-		if (rawcode == CELL_KEYC_KPAD_ASTERISK) return 0x2A | CELL_KB_KEYPAD;                                     // '*'
-		if (rawcode == CELL_KEYC_KPAD_MINUS)    return 0x2D | CELL_KB_KEYPAD;                                     // '-'
-		if (rawcode == CELL_KEYC_KPAD_PLUS)     return 0x2B | CELL_KB_KEYPAD;                                     // '+'
-		if (rawcode == CELL_KEYC_KPAD_ENTER)    return 0x0A | CELL_KB_KEYPAD;                                     // '\n'
-		if (rawcode == CELL_KEYC_KPAD_0)        return 0x30 | CELL_KB_KEYPAD;                                     // '0'
-		if (rawcode >= CELL_KEYC_KPAD_1 && rawcode <= CELL_KEYC_KPAD_9) return (rawcode - 0x28) | CELL_KB_KEYPAD; // '1' - '9'
+		// if (rawcode == CELL_KEYC_KPAD_NUMLOCK)  return 0x00 | CELL_KB_KEYPAD;                                     // 'Num Lock' (unreachable)
+		if (rawcode == CELL_KEYC_KPAD_SLASH)
+			return 0x2F | CELL_KB_KEYPAD; // '/'
+		if (rawcode == CELL_KEYC_KPAD_ASTERISK)
+			return 0x2A | CELL_KB_KEYPAD; // '*'
+		if (rawcode == CELL_KEYC_KPAD_MINUS)
+			return 0x2D | CELL_KB_KEYPAD; // '-'
+		if (rawcode == CELL_KEYC_KPAD_PLUS)
+			return 0x2B | CELL_KB_KEYPAD; // '+'
+		if (rawcode == CELL_KEYC_KPAD_ENTER)
+			return 0x0A | CELL_KB_KEYPAD; // '\n'
+		if (rawcode == CELL_KEYC_KPAD_0)
+			return 0x30 | CELL_KB_KEYPAD; // '0'
+		if (rawcode >= CELL_KEYC_KPAD_1 && rawcode <= CELL_KEYC_KPAD_9)
+			return (rawcode - 0x28) | CELL_KB_KEYPAD; // '1' - '9'
 	}
 
 	// ASCII
@@ -211,77 +217,139 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (arrange == CELL_KB_MAPPING_106) // (Japanese)
 	{
-		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
-		if (rawcode == CELL_KEYC_2) return get_ascii('2', '"');
-		if (rawcode == CELL_KEYC_3) return get_ascii('3', '#');
-		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
-		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
-		if (rawcode == CELL_KEYC_6) return get_ascii('6', '&');
-		if (rawcode == CELL_KEYC_7) return get_ascii('7', '\'');
-		if (rawcode == CELL_KEYC_8) return get_ascii('8', '(');
-		if (rawcode == CELL_KEYC_9) return get_ascii('9', ')');
-		if (rawcode == CELL_KEYC_0) return get_ascii('0', '~');
+		if (rawcode == CELL_KEYC_1)
+			return get_ascii('1', '!');
+		if (rawcode == CELL_KEYC_2)
+			return get_ascii('2', '"');
+		if (rawcode == CELL_KEYC_3)
+			return get_ascii('3', '#');
+		if (rawcode == CELL_KEYC_4)
+			return get_ascii('4', '$');
+		if (rawcode == CELL_KEYC_5)
+			return get_ascii('5', '%');
+		if (rawcode == CELL_KEYC_6)
+			return get_ascii('6', '&');
+		if (rawcode == CELL_KEYC_7)
+			return get_ascii('7', '\'');
+		if (rawcode == CELL_KEYC_8)
+			return get_ascii('8', '(');
+		if (rawcode == CELL_KEYC_9)
+			return get_ascii('9', ')');
+		if (rawcode == CELL_KEYC_0)
+			return get_ascii('0', '~');
 
-		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106) return get_ascii('^', '~');
-		if (rawcode == CELL_KEYC_ATMARK_106)            return get_ascii('@', '`');
-		if (rawcode == CELL_KEYC_LEFT_BRACKET_106)      return get_ascii('[', '{');
-		if (rawcode == CELL_KEYC_RIGHT_BRACKET_106)     return get_ascii(']', '}');
-		if (rawcode == CELL_KEYC_SEMICOLON)             return get_ascii(';', '+');
-		if (rawcode == CELL_KEYC_COLON_106)             return get_ascii(':', '*');
-		if (rawcode == CELL_KEYC_COMMA)                 return get_ascii(',', '<');
-		if (rawcode == CELL_KEYC_PERIOD)                return get_ascii('.', '>');
-		if (rawcode == CELL_KEYC_SLASH)                 return get_ascii('/', '?');
-		if (rawcode == CELL_KEYC_BACKSLASH_106)         return get_ascii('\\', '_');
-		if (rawcode == CELL_KEYC_YEN_106)               return get_ascii(190, '|'); // ¥
+		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106)
+			return get_ascii('^', '~');
+		if (rawcode == CELL_KEYC_ATMARK_106)
+			return get_ascii('@', '`');
+		if (rawcode == CELL_KEYC_LEFT_BRACKET_106)
+			return get_ascii('[', '{');
+		if (rawcode == CELL_KEYC_RIGHT_BRACKET_106)
+			return get_ascii(']', '}');
+		if (rawcode == CELL_KEYC_SEMICOLON)
+			return get_ascii(';', '+');
+		if (rawcode == CELL_KEYC_COLON_106)
+			return get_ascii(':', '*');
+		if (rawcode == CELL_KEYC_COMMA)
+			return get_ascii(',', '<');
+		if (rawcode == CELL_KEYC_PERIOD)
+			return get_ascii('.', '>');
+		if (rawcode == CELL_KEYC_SLASH)
+			return get_ascii('/', '?');
+		if (rawcode == CELL_KEYC_BACKSLASH_106)
+			return get_ascii('\\', '_');
+		if (rawcode == CELL_KEYC_YEN_106)
+			return get_ascii(190, '|'); // ¥
 	}
 	else if (arrange == CELL_KB_MAPPING_101) // (US)
 	{
-		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
-		if (rawcode == CELL_KEYC_2) return get_ascii('2', '@');
-		if (rawcode == CELL_KEYC_3) return get_ascii('3', '#');
-		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
-		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
-		if (rawcode == CELL_KEYC_6) return get_ascii('6', '^');
-		if (rawcode == CELL_KEYC_7) return get_ascii('7', '&');
-		if (rawcode == CELL_KEYC_8) return get_ascii('8', '*');
-		if (rawcode == CELL_KEYC_9) return get_ascii('9', '(');
-		if (rawcode == CELL_KEYC_0) return get_ascii('0', ')');
+		if (rawcode == CELL_KEYC_1)
+			return get_ascii('1', '!');
+		if (rawcode == CELL_KEYC_2)
+			return get_ascii('2', '@');
+		if (rawcode == CELL_KEYC_3)
+			return get_ascii('3', '#');
+		if (rawcode == CELL_KEYC_4)
+			return get_ascii('4', '$');
+		if (rawcode == CELL_KEYC_5)
+			return get_ascii('5', '%');
+		if (rawcode == CELL_KEYC_6)
+			return get_ascii('6', '^');
+		if (rawcode == CELL_KEYC_7)
+			return get_ascii('7', '&');
+		if (rawcode == CELL_KEYC_8)
+			return get_ascii('8', '*');
+		if (rawcode == CELL_KEYC_9)
+			return get_ascii('9', '(');
+		if (rawcode == CELL_KEYC_0)
+			return get_ascii('0', ')');
 
-		if (rawcode == CELL_KEYC_MINUS)             return get_ascii('-', '_');
-		if (rawcode == CELL_KEYC_EQUAL_101)         return get_ascii('=', '+');
-		if (rawcode == CELL_KEYC_LEFT_BRACKET_101)  return get_ascii('[', '{');
-		if (rawcode == CELL_KEYC_RIGHT_BRACKET_101) return get_ascii(']', '}');
-		if (rawcode == CELL_KEYC_BACKSLASH_101)     return get_ascii('\\', '|');
-		if (rawcode == CELL_KEYC_SEMICOLON)         return get_ascii(';', ':');
-		if (rawcode == CELL_KEYC_QUOTATION_101)     return get_ascii('\'', '"');
-		if (rawcode == CELL_KEYC_COMMA)             return get_ascii(',', '<');
-		if (rawcode == CELL_KEYC_PERIOD)            return get_ascii('.', '>');
-		if (rawcode == CELL_KEYC_SLASH)             return get_ascii('/', '?');
-		if (rawcode == CELL_KEYC_BACK_QUOTE)        return get_ascii('`', '~');
+		if (rawcode == CELL_KEYC_MINUS)
+			return get_ascii('-', '_');
+		if (rawcode == CELL_KEYC_EQUAL_101)
+			return get_ascii('=', '+');
+		if (rawcode == CELL_KEYC_LEFT_BRACKET_101)
+			return get_ascii('[', '{');
+		if (rawcode == CELL_KEYC_RIGHT_BRACKET_101)
+			return get_ascii(']', '}');
+		if (rawcode == CELL_KEYC_BACKSLASH_101)
+			return get_ascii('\\', '|');
+		if (rawcode == CELL_KEYC_SEMICOLON)
+			return get_ascii(';', ':');
+		if (rawcode == CELL_KEYC_QUOTATION_101)
+			return get_ascii('\'', '"');
+		if (rawcode == CELL_KEYC_COMMA)
+			return get_ascii(',', '<');
+		if (rawcode == CELL_KEYC_PERIOD)
+			return get_ascii('.', '>');
+		if (rawcode == CELL_KEYC_SLASH)
+			return get_ascii('/', '?');
+		if (rawcode == CELL_KEYC_BACK_QUOTE)
+			return get_ascii('`', '~');
 	}
 	else if (arrange == CELL_KB_MAPPING_GERMAN_GERMANY)
 	{
-		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
-		if (rawcode == CELL_KEYC_2) return get_ascii('2', '"');
-		if (rawcode == CELL_KEYC_3) return get_ascii('3', 245); // §
-		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
-		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
-		if (rawcode == CELL_KEYC_6) return get_ascii('6', '&');
-		if (rawcode == CELL_KEYC_7) return get_ascii('7', '/', '{');
-		if (rawcode == CELL_KEYC_8) return get_ascii('8', '(', '[');
-		if (rawcode == CELL_KEYC_9) return get_ascii('9', ')', ']');
-		if (rawcode == CELL_KEYC_0) return get_ascii('0', '=', '}');
+		if (rawcode == CELL_KEYC_1)
+			return get_ascii('1', '!');
+		if (rawcode == CELL_KEYC_2)
+			return get_ascii('2', '"');
+		if (rawcode == CELL_KEYC_3)
+			return get_ascii('3', 245); // §
+		if (rawcode == CELL_KEYC_4)
+			return get_ascii('4', '$');
+		if (rawcode == CELL_KEYC_5)
+			return get_ascii('5', '%');
+		if (rawcode == CELL_KEYC_6)
+			return get_ascii('6', '&');
+		if (rawcode == CELL_KEYC_7)
+			return get_ascii('7', '/', '{');
+		if (rawcode == CELL_KEYC_8)
+			return get_ascii('8', '(', '[');
+		if (rawcode == CELL_KEYC_9)
+			return get_ascii('9', ')', ']');
+		if (rawcode == CELL_KEYC_0)
+			return get_ascii('0', '=', '}');
 
-		if (rawcode == CELL_KEYC_MINUS)                 return get_ascii('-', '_');
-		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106) return get_ascii('^', 248); // °
-		if (rawcode == CELL_KEYC_COMMA)                 return get_ascii(',', ';');
-		if (rawcode == CELL_KEYC_PERIOD)                return get_ascii('.', ':');
-		if (rawcode == CELL_KEYC_KPAD_PLUS)             return get_ascii('+', '*', '~');
-		if (rawcode == CELL_KEYC_LESS)                  return get_ascii('<', '>', '|');
-		if (rawcode == CELL_KEYC_HASHTAG)               return get_ascii('#', '\'');
-		if (rawcode == CELL_KEYC_SSHARP)                return get_ascii(225, '?', '\\'); // ß
-		if (rawcode == CELL_KEYC_BACK_QUOTE)            return get_ascii(239, '`'); // ´
-		if (rawcode == CELL_KEYC_Q)                     return get_ascii('q', 'Q', '@');
+		if (rawcode == CELL_KEYC_MINUS)
+			return get_ascii('-', '_');
+		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106)
+			return get_ascii('^', 248); // °
+		if (rawcode == CELL_KEYC_COMMA)
+			return get_ascii(',', ';');
+		if (rawcode == CELL_KEYC_PERIOD)
+			return get_ascii('.', ':');
+		if (rawcode == CELL_KEYC_KPAD_PLUS)
+			return get_ascii('+', '*', '~');
+		if (rawcode == CELL_KEYC_LESS)
+			return get_ascii('<', '>', '|');
+		if (rawcode == CELL_KEYC_HASHTAG)
+			return get_ascii('#', '\'');
+		if (rawcode == CELL_KEYC_SSHARP)
+			return get_ascii(225, '?', '\\'); // ß
+		if (rawcode == CELL_KEYC_BACK_QUOTE)
+			return get_ascii(239, '`'); // ´
+		if (rawcode == CELL_KEYC_Q)
+			return get_ascii('q', 'Q', '@');
 	}
 
 	if (rawcode >= CELL_KEYC_A && rawcode <= CELL_KEYC_Z) // 'A' - 'Z'
@@ -293,13 +361,19 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 		return rawcode + 0x5D; // Return lowercase if none or both are active.
 	}
-	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9) return rawcode + 0x13; // '1' - '9'
-	if (rawcode == CELL_KEYC_0) return 0x30;                                     // '0'
-	if (rawcode == CELL_KEYC_ENTER) return 0x0A;                                 // '\n'
-	//if (rawcode == CELL_KEYC_ESC) return 0x1B;                                   // 'ESC' (unreachable)
-	if (rawcode == CELL_KEYC_BS) return 0x08;                                    // '\b'
-	if (rawcode == CELL_KEYC_TAB) return 0x09;                                   // '\t'
-	if (rawcode == CELL_KEYC_SPACE) return 0x20;                                 // 'space'
+	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9)
+		return rawcode + 0x13; // '1' - '9'
+	if (rawcode == CELL_KEYC_0)
+		return 0x30; // '0'
+	if (rawcode == CELL_KEYC_ENTER)
+		return 0x0A; // '\n'
+	// if (rawcode == CELL_KEYC_ESC) return 0x1B;                                   // 'ESC' (unreachable)
+	if (rawcode == CELL_KEYC_BS)
+		return 0x08; // '\b'
+	if (rawcode == CELL_KEYC_TAB)
+		return 0x09; // '\t'
+	if (rawcode == CELL_KEYC_SPACE)
+		return 0x20; // 'space'
 
 	// TODO: Add more keys and layouts
 

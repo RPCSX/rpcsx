@@ -6,7 +6,7 @@
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <shlobj.h>
 #include <winnls.h>
 #include <shobjidl.h>
@@ -67,12 +67,12 @@ namespace gui::utils
 	}
 
 	bool create_shortcut(const std::string& name,
-	    [[maybe_unused]] const std::string& serial,
-	    [[maybe_unused]] const std::string& target_cli_args,
-	    [[maybe_unused]] const std::string& description,
-	    [[maybe_unused]] const std::string& src_icon_path,
-	    [[maybe_unused]] const std::string& target_icon_dir,
-	    shortcut_location location)
+		[[maybe_unused]] const std::string& serial,
+		[[maybe_unused]] const std::string& target_cli_args,
+		[[maybe_unused]] const std::string& description,
+		[[maybe_unused]] const std::string& src_icon_path,
+		[[maybe_unused]] const std::string& target_icon_dir,
+		shortcut_location location)
 	{
 		if (name.empty())
 		{
@@ -148,7 +148,8 @@ namespace gui::utils
 
 		const auto cleanup = [&](bool return_value, const std::string& fail_reason) -> bool
 		{
-			if (!return_value) sys_log.error("Failed to create shortcut: %s", fail_reason);
+			if (!return_value)
+				sys_log.error("Failed to create shortcut: %s", fail_reason);
 			CoUninitialize();
 			return return_value;
 		};
@@ -157,8 +158,8 @@ namespace gui::utils
 		if (FAILED(res))
 			return cleanup(false, "CoCreateInstance failed");
 
-		const std::string working_dir{ fs::get_executable_dir() };
-		const std::string rpcs3_path{ working_dir + "rpcs3.exe" };
+		const std::string working_dir{fs::get_executable_dir()};
+		const std::string rpcs3_path{working_dir + "rpcs3.exe"};
 
 		const std::wstring w_target_file = utf8_to_wchar(rpcs3_path);
 		res = pShellLink->SetPath(w_target_file.c_str());
@@ -259,31 +260,32 @@ namespace gui::utils
 		}
 
 		const std::string plist_content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-										  "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
-										  "<plist version=\"1.0\">\n"
-										  "<dict>\n"
-										  "\t<key>CFBundleExecutable</key>\n"
-										  "\t<string>launcher</string>\n"
-										  "\t<key>CFBundleIconFile</key>\n"
-										  "\t<string>shortcut.icns</string>\n"
-										  "\t<key>CFBundleInfoDictionaryVersion</key>\n"
-										  "\t<string>1.0</string>\n"
-										  "\t<key>CFBundlePackageType</key>\n"
-										  "\t<string>APPL</string>\n"
-										  "\t<key>CFBundleSignature</key>\n"
-										  "\t<string>\?\?\?\?</string>\n"
+		                                  "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+		                                  "<plist version=\"1.0\">\n"
+		                                  "<dict>\n"
+		                                  "\t<key>CFBundleExecutable</key>\n"
+		                                  "\t<string>launcher</string>\n"
+		                                  "\t<key>CFBundleIconFile</key>\n"
+		                                  "\t<string>shortcut.icns</string>\n"
+		                                  "\t<key>CFBundleInfoDictionaryVersion</key>\n"
+		                                  "\t<string>1.0</string>\n"
+		                                  "\t<key>CFBundlePackageType</key>\n"
+		                                  "\t<string>APPL</string>\n"
+		                                  "\t<key>CFBundleSignature</key>\n"
+		                                  "\t<string>\?\?\?\?</string>\n"
 #if defined(ARCH_ARM64)
-										  "\t<key>CFBundleIdentifier</key>\n"
-										  "\t<string>net.rpcs3" + (serial.empty() ? "" : ("." + serial)) + "</string>\n"
-										  "\t<key>LSArchitecturePriority</key>\n"
-										  "\t<array>\n"
-										  "\t\t<string>arm64</string>\n"
-										  "\t</array>\n"
-										  "\t<key>LSRequiresNativeExecution</key>\n"
-										  "\t<true/>\n"
+		                                  "\t<key>CFBundleIdentifier</key>\n"
+		                                  "\t<string>net.rpcs3" +
+		                                  (serial.empty() ? "" : ("." + serial)) + "</string>\n"
+		                                                                           "\t<key>LSArchitecturePriority</key>\n"
+		                                                                           "\t<array>\n"
+		                                                                           "\t\t<string>arm64</string>\n"
+		                                                                           "\t</array>\n"
+		                                                                           "\t<key>LSRequiresNativeExecution</key>\n"
+		                                                                           "\t<true/>\n"
 #endif
-										  "</dict>\n"
-										  "</plist>\n";
+		                                                                           "</dict>\n"
+		                                                                           "</plist>\n";
 
 		fs::file plist_file(plist_path, fs::read + fs::rewrite);
 		if (!plist_file)
@@ -373,4 +375,4 @@ namespace gui::utils
 		return true;
 #endif
 	}
-}
+} // namespace gui::utils

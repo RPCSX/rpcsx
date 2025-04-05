@@ -16,7 +16,8 @@ namespace vk
 
 		gc_callback_t(std::function<void()> callback)
 			: m_callback(callback)
-		{}
+		{
+		}
 
 		~gc_callback_t()
 		{
@@ -38,12 +39,24 @@ namespace vk
 
 		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache = VK_TRUE);
 
-		operator VkDescriptorPool() { return m_current_pool_handle; }
-		FORCE_INLINE bool valid() const { return !m_device_subpools.empty(); }
-		FORCE_INLINE u32 max_sets() const { return m_create_info.maxSets; }
+		operator VkDescriptorPool()
+		{
+			return m_current_pool_handle;
+		}
+		FORCE_INLINE bool valid() const
+		{
+			return !m_device_subpools.empty();
+		}
+		FORCE_INLINE u32 max_sets() const
+		{
+			return m_create_info.maxSets;
+		}
 
 	private:
-		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const { return (required_count + already_used_count) <= m_create_info.maxSets; };
+		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const
+		{
+			return (required_count + already_used_count) <= m_create_info.maxSets;
+		};
 		void reset(u32 subpool_id, VkDescriptorPoolResetFlags flags);
 		void next_subpool();
 
@@ -86,7 +99,7 @@ namespace vk
 		descriptor_set(const descriptor_set&) = delete;
 
 		void swap(descriptor_set& other);
-		descriptor_set& operator = (VkDescriptorSet set);
+		descriptor_set& operator=(VkDescriptorSet set);
 
 		VkDescriptorSet* ptr();
 		VkDescriptorSet value() const;
@@ -115,16 +128,16 @@ namespace vk
 		struct WriteDescriptorSetT : public VkWriteDescriptorSet
 		{
 			WriteDescriptorSetT(
-				VkStructureType                  sType,
-				const void*                      pNext,
-				VkDescriptorSet                  dstSet,
-				uint32_t                         dstBinding,
-				uint32_t                         dstArrayElement,
-				uint32_t                         descriptorCount,
-				VkDescriptorType                 descriptorType,
-				const VkDescriptorImageInfo*     pImageInfo,
-				const VkDescriptorBufferInfo*    pBufferInfo,
-				const VkBufferView*              pTexelBufferView)
+				VkStructureType sType,
+				const void* pNext,
+				VkDescriptorSet dstSet,
+				uint32_t dstBinding,
+				uint32_t dstArrayElement,
+				uint32_t descriptorCount,
+				VkDescriptorType descriptorType,
+				const VkDescriptorImageInfo* pImageInfo,
+				const VkDescriptorBufferInfo* pBufferInfo,
+				const VkBufferView* pTexelBufferView)
 			{
 				this->sType = sType,
 				this->pNext = pNext,
@@ -152,5 +165,5 @@ namespace vk
 		void flush();
 
 		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings);
-	}
-}
+	} // namespace descriptors
+} // namespace vk

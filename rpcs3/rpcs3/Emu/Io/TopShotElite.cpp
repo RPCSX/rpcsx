@@ -12,43 +12,43 @@ LOG_CHANNEL(topshotelite_log);
 #define TSE_CALIB_LOG false
 // 0 < Calib_Top < Calib_Bottom < 0x2ff
 // 0 < Calib_Right < Calib_Left < 0x3ff
-constexpr u16 TSE_CALIB_TOP    = 20;
+constexpr u16 TSE_CALIB_TOP = 20;
 constexpr u16 TSE_CALIB_BOTTOM = 840;
-constexpr u16 TSE_CALIB_LEFT   = 930;
-constexpr u16 TSE_CALIB_RIGHT  = 95;
-constexpr u16 TSE_CALIB_DIST   = 95;
+constexpr u16 TSE_CALIB_LEFT = 930;
+constexpr u16 TSE_CALIB_RIGHT = 95;
+constexpr u16 TSE_CALIB_DIST = 95;
 
 template <>
 void fmt_class_string<topshotelite_btn>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](topshotelite_btn value)
-	{
-		switch (value)
 		{
-		case topshotelite_btn::trigger: return "Trigger";
-		case topshotelite_btn::reload: return "Reload";
-		case topshotelite_btn::square: return "Square";
-		case topshotelite_btn::cross: return "Cross";
-		case topshotelite_btn::circle: return "Circle";
-		case topshotelite_btn::triangle: return "Triangle";
-		case topshotelite_btn::select: return "Select";
-		case topshotelite_btn::start: return "Start";
-		case topshotelite_btn::l3: return "L3";
-		case topshotelite_btn::r3: return "R3";
-		case topshotelite_btn::ps: return "PS";
-		case topshotelite_btn::dpad_up: return "D-Pad Up";
-		case topshotelite_btn::dpad_down: return "D-Pad Down";
-		case topshotelite_btn::dpad_left: return "D-Pad Left";
-		case topshotelite_btn::dpad_right: return "D-Pad Right";
-		case topshotelite_btn::ls_x: return "Left Stick X-Axis";
-		case topshotelite_btn::ls_y: return "Left Stick Y-Axis";
-		case topshotelite_btn::rs_x: return "Right Stick X-Axis";
-		case topshotelite_btn::rs_y: return "Right Stick Y-Axis";
-		case topshotelite_btn::count: return "Count";
-		}
+			switch (value)
+			{
+			case topshotelite_btn::trigger: return "Trigger";
+			case topshotelite_btn::reload: return "Reload";
+			case topshotelite_btn::square: return "Square";
+			case topshotelite_btn::cross: return "Cross";
+			case topshotelite_btn::circle: return "Circle";
+			case topshotelite_btn::triangle: return "Triangle";
+			case topshotelite_btn::select: return "Select";
+			case topshotelite_btn::start: return "Start";
+			case topshotelite_btn::l3: return "L3";
+			case topshotelite_btn::r3: return "R3";
+			case topshotelite_btn::ps: return "PS";
+			case topshotelite_btn::dpad_up: return "D-Pad Up";
+			case topshotelite_btn::dpad_down: return "D-Pad Down";
+			case topshotelite_btn::dpad_left: return "D-Pad Left";
+			case topshotelite_btn::dpad_right: return "D-Pad Right";
+			case topshotelite_btn::ls_x: return "Left Stick X-Axis";
+			case topshotelite_btn::ls_y: return "Left Stick Y-Axis";
+			case topshotelite_btn::rs_x: return "Right Stick X-Axis";
+			case topshotelite_btn::rs_y: return "Right Stick Y-Axis";
+			case topshotelite_btn::count: return "Count";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 #pragma pack(push, 1)
@@ -58,15 +58,15 @@ struct TopShotElite_data
 	uint8_t btn_cross : 1;
 	uint8_t btn_circle : 1;
 	uint8_t btn_triangle : 1;
-	uint8_t btn_reload: 1;
-	uint8_t btn_trigger: 1;
+	uint8_t btn_reload : 1;
+	uint8_t btn_trigger : 1;
 	uint8_t : 2;
 
 	uint8_t btn_select : 1;
 	uint8_t btn_start : 1;
 	uint8_t btn_l3 : 1;
 	uint8_t btn_r3 : 1;
-	uint8_t btn_ps: 1;
+	uint8_t btn_ps : 1;
 	uint8_t : 3;
 
 	uint8_t dpad;
@@ -112,60 +112,58 @@ enum
 };
 
 usb_device_topshotelite::usb_device_topshotelite(u32 controller_index, const std::array<u8, 7>& location)
-	: usb_device_emulated(location)
-	, m_controller_index(controller_index)
-	, m_mode(0)
+	: usb_device_emulated(location), m_controller_index(controller_index), m_mode(0)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
-		UsbDeviceDescriptor {
-			.bcdUSB             = 0x0100,
-			.bDeviceClass       = 0x00,
-			.bDeviceSubClass    = 0x00,
-			.bDeviceProtocol    = 0x00,
-			.bMaxPacketSize0    = 0x20,
-			.idVendor           = 0x12ba,
-			.idProduct          = 0x04a0,
-			.bcdDevice          = 0x0108,
-			.iManufacturer      = 0x01,
-			.iProduct           = 0x02,
-			.iSerialNumber      = 0x03,
+		UsbDeviceDescriptor{
+			.bcdUSB = 0x0100,
+			.bDeviceClass = 0x00,
+			.bDeviceSubClass = 0x00,
+			.bDeviceProtocol = 0x00,
+			.bMaxPacketSize0 = 0x20,
+			.idVendor = 0x12ba,
+			.idProduct = 0x04a0,
+			.bcdDevice = 0x0108,
+			.iManufacturer = 0x01,
+			.iProduct = 0x02,
+			.iSerialNumber = 0x03,
 			.bNumConfigurations = 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG,
-		UsbDeviceConfiguration {
-			.wTotalLength        = 0x0029,
-			.bNumInterfaces      = 0x01,
+		UsbDeviceConfiguration{
+			.wTotalLength = 0x0029,
+			.bNumInterfaces = 0x01,
 			.bConfigurationValue = 0x01,
-			.iConfiguration      = 0x00,
-			.bmAttributes        = 0x80,
-			.bMaxPower           = 0x32}));
+			.iConfiguration = 0x00,
+			.bmAttributes = 0x80,
+			.bMaxPower = 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE,
-		UsbDeviceInterface {
-			.bInterfaceNumber   = 0x00,
-			.bAlternateSetting  = 0x00,
-			.bNumEndpoints      = 0x02,
-			.bInterfaceClass    = 0x03,
+		UsbDeviceInterface{
+			.bInterfaceNumber = 0x00,
+			.bAlternateSetting = 0x00,
+			.bNumEndpoints = 0x02,
+			.bInterfaceClass = 0x03,
 			.bInterfaceSubClass = 0x00,
 			.bInterfaceProtocol = 0x00,
-			.iInterface         = 0x00}));
+			.iInterface = 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID,
-		UsbDeviceHID {
-			.bcdHID            = 0x0110,
-			.bCountryCode      = 0x00,
-			.bNumDescriptors   = 0x01,
-			.bDescriptorType   = 0x22,
+		UsbDeviceHID{
+			.bcdHID = 0x0110,
+			.bCountryCode = 0x00,
+			.bNumDescriptors = 0x01,
+			.bDescriptorType = 0x22,
 			.wDescriptorLength = 0x0089}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x81,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0040,
-			.bInterval        = 0x0a}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0040,
+			.bInterval = 0x0a}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x02,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0040,
-			.bInterval        = 0x0a}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0040,
+			.bInterval = 0x0a}));
 
 	add_string("GuitarHero for Playstation (R) 3");
 	add_string("GuitarHero for Playstation (R) 3");
@@ -177,10 +175,10 @@ usb_device_topshotelite::~usb_device_topshotelite()
 
 void usb_device_topshotelite::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time   = get_timestamp() + 100;
+	transfer->expected_time = get_timestamp() + 100;
 
 	switch (bmRequestType)
 	{
@@ -391,9 +389,9 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 
 		set_sensor_pos(&ts, led_lx, led_ly, led_rx, led_ry, detect_l, detect_r);
 
-		#if TSE_CALIB_LOG
-			topshotelite_log.error("L: %d x %d, R: %d x %d", led_lx + TSE_CALIB_DIST, led_ly, led_rx - TSE_CALIB_DIST, led_ry);
-		#endif
+#if TSE_CALIB_LOG
+		topshotelite_log.error("L: %d x %d, R: %d x %d", led_lx + TSE_CALIB_DIST, led_ly, led_rx - TSE_CALIB_DIST, led_ry);
+#endif
 	}
 
 	prepare_data(&ts, buf);

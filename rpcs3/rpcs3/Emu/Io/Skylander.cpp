@@ -51,7 +51,7 @@ void sky_portal::deactivate()
 		// check if at the end of the updates there would be a figure on the portal
 		if (!s.queued_status.empty())
 		{
-			s.status        = s.queued_status.back();
+			s.status = s.queued_status.back();
 			s.queued_status = std::queue<u8>();
 		}
 
@@ -158,7 +158,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 	std::lock_guard lock(sky_mutex);
 
 	const u32 sky_serial = read_from_ptr<le_t<u32>>(buf);
-	u8 found_slot  = 0xFF;
+	u8 found_slot = 0xFF;
 
 	// mimics spot retaining on the portal
 	for (u8 i = 0; i < 8; i++)
@@ -183,7 +183,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 	skylander& thesky = skylanders[found_slot];
 	memcpy(thesky.data.data(), buf, thesky.data.size());
 	thesky.sky_file = std::move(in_file);
-	thesky.status   = 3;
+	thesky.status = 3;
 	thesky.queued_status.push(3);
 	thesky.queued_status.push(1);
 	thesky.last_id = sky_serial;
@@ -194,7 +194,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 usb_device_skylander::usb_device_skylander(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
-	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x40, 0x1430, 0x0150, 0x0100, 0x01, 0x02, 0x00, 0x01});
+	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x40, 0x1430, 0x0150, 0x0100, 0x01, 0x02, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0xFA}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x02, 0x03, 0x00, 0x00, 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x00, 0x01, 0x22, 0x001d}));
@@ -228,7 +228,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 		switch (bRequest)
 		{
 		case 0x09:
-			transfer->expected_count  = buf_size;
+			transfer->expected_count = buf_size;
 			transfer->expected_result = HC_CC_NOERR;
 			// 100 usec, control transfers are very fast
 			transfer->expected_time = get_timestamp() + 100;
@@ -242,7 +242,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				// Activate command
 				ensure(buf_size == 2 || buf_size == 32);
 				q_result = {0x41, buf[1], 0xFF, 0x77, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				    0x00, 0x00};
+					0x00, 0x00};
 				q_queries.push(q_result);
 				g_skyportal.activate();
 				break;
@@ -298,7 +298,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				// Shutdowns the portal
 				ensure(buf_size == 2 || buf_size == 32);
 				q_result = {
-				    0x52, 0x02, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+					0x52, 0x02, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 				q_queries.push(q_result);
 				g_skyportal.deactivate();
 				break;
@@ -347,8 +347,8 @@ void usb_device_skylander::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoin
 {
 	ensure(buf_size == 0x20);
 
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 
 	if (endpoint == 0x02)

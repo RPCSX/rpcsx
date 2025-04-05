@@ -12,7 +12,7 @@
 class qt_camera_video_sink final : public QVideoSink
 {
 public:
-	qt_camera_video_sink(bool front_facing, QObject *parent = nullptr);
+	qt_camera_video_sink(bool front_facing, QObject* parent = nullptr);
 	virtual ~qt_camera_video_sink();
 
 	bool present(const QVideoFrame& frame);
@@ -30,7 +30,7 @@ private:
 
 	bool m_front_facing = false;
 	bool m_mirrored = false; // Set by cellCamera
-	s32 m_format = 2; // CELL_CAMERA_RAW8, set by cellCamera
+	s32 m_format = 2;        // CELL_CAMERA_RAW8, set by cellCamera
 	u32 m_bytesize = 0;
 	u32 m_width = 640;
 	u32 m_height = 480;

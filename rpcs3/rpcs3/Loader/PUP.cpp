@@ -63,7 +63,8 @@ pup_object::pup_object(fs::file&& file) : m_file(std::move(file))
 
 fs::file pup_object::get_file(u64 entry_id) const
 {
-	if (m_error != pup_error::ok) return {};
+	if (m_error != pup_error::ok)
+		return {};
 
 	for (const PUPFileEntry& file_entry : m_file_tbl)
 	{

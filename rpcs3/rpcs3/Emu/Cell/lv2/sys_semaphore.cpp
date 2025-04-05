@@ -11,10 +11,7 @@
 LOG_CHANNEL(sys_semaphore);
 
 lv2_sema::lv2_sema(utils::serial& ar)
-	: protocol(ar)
-	, key(ar)
-	, name(ar)
-	, max(ar)
+	: protocol(ar), key(ar), name(ar), max(ar)
 {
 	ar(val);
 }
@@ -65,9 +62,9 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 	}
 
 	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, ipc_key, _attr.flags, [&]
-	{
-		return make_shared<lv2_sema>(protocol, ipc_key, _attr.name_u64, max_val, initial_val);
-	}))
+			{
+				return make_shared<lv2_sema>(protocol, ipc_key, _attr.name_u64, max_val, initial_val);
+			}))
 	{
 		return error;
 	}
@@ -85,15 +82,15 @@ error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 	sys_semaphore.trace("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
 
 	const auto sem = idm::withdraw<lv2_obj, lv2_sema>(sem_id, [](lv2_sema& sema) -> CellError
-	{
-		if (sema.val < 0)
 		{
-			return CELL_EBUSY;
-		}
+			if (sema.val < 0)
+			{
+				return CELL_EBUSY;
+			}
 
-		lv2_obj::on_id_destroy(sema, sema.key);
-		return {};
-	});
+			lv2_obj::on_id_destroy(sema, sema.key);
+			return {};
+		});
 
 	if (!sem)
 	{
@@ -120,30 +117,30 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&, notify = lv2_obj::notify_all_t()](lv2_sema& sema)
-	{
-		const s32 val = sema.val;
-
-		if (val > 0)
 		{
-			if (sema.val.compare_and_swap_test(val, val - 1))
+			const s32 val = sema.val;
+
+			if (val > 0)
 			{
-				return true;
+				if (sema.val.compare_and_swap_test(val, val - 1))
+				{
+					return true;
+				}
 			}
-		}
 
-		lv2_obj::prepare_for_sleep(ppu);
+			lv2_obj::prepare_for_sleep(ppu);
 
-		std::lock_guard lock(sema.mutex);
+			std::lock_guard lock(sema.mutex);
 
-		if (sema.val-- <= 0)
-		{
-			sema.sleep(ppu, timeout);
-			lv2_obj::emplace(sema.sq, &ppu);
-			return false;
-		}
+			if (sema.val-- <= 0)
+			{
+				sema.sleep(ppu, timeout);
+				lv2_obj::emplace(sema.sq, &ppu);
+				return false;
+			}
 
-		return true;
-	});
+			return true;
+		});
 
 	if (!sem)
 	{
@@ -186,7 +183,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 
 		if (ppu.state & cpu_flag::signal)
- 		{
+		{
 			continue;
 		}
 
@@ -210,12 +207,12 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				}
 
 				ensure(0 > sem->val.fetch_op([](s32& val)
-				{
-					if (val < 0)
-					{
-						val++;
-					}
-				}));
+							   {
+								   if (val < 0)
+								   {
+									   val++;
+								   }
+							   }));
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
@@ -237,9 +234,9 @@ error_code sys_semaphore_trywait(ppu_thread& ppu, u32 sem_id)
 	sys_semaphore.trace("sys_semaphore_trywait(sem_id=0x%x)", sem_id);
 
 	const auto sem = idm::check<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
-	{
-		return sema.val.try_dec(0);
-	});
+		{
+			return sema.val.try_dec(0);
+		});
 
 	if (!sem)
 	{
@@ -261,19 +258,19 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
-	{
-		const s32 val = sema.val;
-
-		if (val >= 0 && count > 0 && count <= sema.max - val)
 		{
-			if (sema.val.compare_and_swap_test(val, val + count))
-			{
-				return true;
-			}
-		}
+			const s32 val = sema.val;
 
-		return false;
-	});
+			if (val >= 0 && count > 0 && count <= sema.max - val)
+			{
+				if (sema.val.compare_and_swap_test(val, val + count))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		});
 
 	if (!sem)
 	{
@@ -305,15 +302,15 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		}
 
 		const auto [val, ok] = sem->val.fetch_op([&](s32& val)
-		{
-			if (count + 0u <= sem->max + 0u - val)
 			{
-				val += count;
-				return true;
-			}
+				if (count + 0u <= sem->max + 0u - val)
+				{
+					val += count;
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		if (!ok)
 		{
@@ -344,9 +341,9 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 	sys_semaphore.trace("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
 
 	const auto sema = idm::check<lv2_obj, lv2_sema>(sem_id, [](lv2_sema& sema)
-	{
-		return std::max<s32>(0, sema.val);
-	});
+		{
+			return std::max<s32>(0, sema.val);
+		});
 
 	if (!sema)
 	{

@@ -26,7 +26,8 @@ namespace vk
 				// Check for spurious 'new' events when the aux context is taking over
 				for (const auto& set_ : m_notification_list)
 				{
-					if (set_ == set) return;
+					if (set_ == set)
+						return;
 				}
 
 				m_notification_list.push_back(set);
@@ -54,7 +55,7 @@ namespace vk
 			rsx::simple_array<descriptor_set*> m_notification_list;
 
 			dispatch_manager(const dispatch_manager&) = delete;
-			dispatch_manager& operator = (const dispatch_manager&) = delete;
+			dispatch_manager& operator=(const dispatch_manager&) = delete;
 		};
 
 		void init()
@@ -107,7 +108,7 @@ namespace vk
 			CHECK_RESULT(VK_GET_SYMBOL(vkCreateDescriptorSetLayout)(*g_render_device, &infos, nullptr, &result));
 			return result;
 		}
-	}
+	} // namespace descriptors
 
 	void descriptor_pool::create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 max_sets)
 	{
@@ -133,7 +134,8 @@ namespace vk
 
 	void descriptor_pool::destroy()
 	{
-		if (m_device_subpools.empty()) return;
+		if (m_device_subpools.empty())
+			return;
 
 		for (auto& pool : m_device_subpools)
 		{
@@ -216,7 +218,7 @@ namespace vk
 		if (m_current_subpool_index != umax)
 		{
 			// Enqueue release using gc
-			auto release_func = [subpool_index=m_current_subpool_index, this]()
+			auto release_func = [subpool_index = m_current_subpool_index, this]()
 			{
 				this->reset(subpool_index, 0);
 			};
@@ -260,10 +262,8 @@ namespace vk
 			std::lock_guard lock(m_subpool_lock);
 
 			m_device_subpools.push_back(
-			{
-				.handle = subpool,
-				.busy = VK_FALSE
-			});
+				{.handle = subpool,
+					.busy = VK_FALSE});
 
 			m_current_subpool_index = m_device_subpools.size() - 1;
 
@@ -320,7 +320,7 @@ namespace vk
 		init(other_handle);
 	}
 
-	descriptor_set& descriptor_set::operator = (VkDescriptorSet set)
+	descriptor_set& descriptor_set::operator=(VkDescriptorSet set)
 	{
 		init(set);
 		return *this;
@@ -346,16 +346,16 @@ namespace vk
 		m_push_type_mask |= (1ull << type);
 		m_buffer_view_pool.push_back(buffer_view);
 		m_pending_writes.emplace_back(
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-			nullptr,                                   // pNext
-			m_handle,                                  // dstSet
-			binding,                                   // dstBinding
-			0,                                         // dstArrayElement
-			1,                                         // descriptorCount
-			type,                                      // descriptorType
-			nullptr,                                   // pImageInfo
-			nullptr,                                   // pBufferInfo
-			&m_buffer_view_pool.back()                 // pTexelBufferView
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+			nullptr,                                // pNext
+			m_handle,                               // dstSet
+			binding,                                // dstBinding
+			0,                                      // dstArrayElement
+			1,                                      // descriptorCount
+			type,                                   // descriptorType
+			nullptr,                                // pImageInfo
+			nullptr,                                // pBufferInfo
+			&m_buffer_view_pool.back()              // pTexelBufferView
 		);
 	}
 
@@ -364,16 +364,16 @@ namespace vk
 		m_push_type_mask |= (1ull << type);
 		m_buffer_info_pool.push_back(buffer_info);
 		m_pending_writes.emplace_back(
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-			nullptr,                                   // pNext
-			m_handle,                                  // dstSet
-			binding,                                   // dstBinding
-			0,                                         // dstArrayElement
-			1,                                         // descriptorCount
-			type,                                      // descriptorType
-			nullptr,                                   // pImageInfo
-			&m_buffer_info_pool.back(),                // pBufferInfo
-			nullptr                                    // pTexelBufferView
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+			nullptr,                                // pNext
+			m_handle,                               // dstSet
+			binding,                                // dstBinding
+			0,                                      // dstArrayElement
+			1,                                      // descriptorCount
+			type,                                   // descriptorType
+			nullptr,                                // pImageInfo
+			&m_buffer_info_pool.back(),             // pBufferInfo
+			nullptr                                 // pTexelBufferView
 		);
 	}
 
@@ -382,34 +382,34 @@ namespace vk
 		m_push_type_mask |= (1ull << type);
 		m_image_info_pool.push_back(image_info);
 		m_pending_writes.emplace_back(
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-			nullptr,                                   // pNext
-			m_handle,                                  // dstSet
-			binding,                                   // dstBinding
-			0,                                         // dstArrayElement
-			1,                                         // descriptorCount
-			type,                                      // descriptorType
-			&m_image_info_pool.back(),                 // pImageInfo
-			nullptr,                                   // pBufferInfo
-			nullptr                                    // pTexelBufferView
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+			nullptr,                                // pNext
+			m_handle,                               // dstSet
+			binding,                                // dstBinding
+			0,                                      // dstArrayElement
+			1,                                      // descriptorCount
+			type,                                   // descriptorType
+			&m_image_info_pool.back(),              // pImageInfo
+			nullptr,                                // pBufferInfo
+			nullptr                                 // pTexelBufferView
 		);
 	}
 
 	void descriptor_set::push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding)
 	{
 		VkWriteDescriptorSet writer =
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-			nullptr,                                   // pNext
-			m_handle,                                  // dstSet
-			binding,                                   // dstBinding
-			0,                                         // dstArrayElement
-			count,                                     // descriptorCount
-			type,                                      // descriptorType
-			image_info,                                // pImageInfo
-			nullptr,                                   // pBufferInfo
-			nullptr                                    // pTexelBufferView
-		};
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+				nullptr,                                // pNext
+				m_handle,                               // dstSet
+				binding,                                // dstBinding
+				0,                                      // dstArrayElement
+				count,                                  // descriptorCount
+				type,                                   // descriptorType
+				image_info,                             // pImageInfo
+				nullptr,                                // pBufferInfo
+				nullptr                                 // pTexelBufferView
+			};
 		VK_GET_SYMBOL(vkUpdateDescriptorSets)(*g_render_device, 1, &writer, 0, nullptr);
 	}
 
@@ -458,4 +458,4 @@ namespace vk
 		m_buffer_info_pool.clear();
 		m_buffer_view_pool.clear();
 	}
-}
+} // namespace vk

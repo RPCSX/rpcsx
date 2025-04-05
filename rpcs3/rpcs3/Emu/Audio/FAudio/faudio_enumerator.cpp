@@ -11,7 +11,7 @@ LOG_CHANNEL(faudio_dev_enum);
 
 faudio_enumerator::faudio_enumerator() : audio_device_enumerator()
 {
-	FAudio *tmp{};
+	FAudio* tmp{};
 
 	if (u32 res = FAudioCreate(&tmp, 0, FAUDIO_DEFAULT_PROCESSOR))
 	{
@@ -65,11 +65,10 @@ std::vector<audio_device_enumerator::audio_device> faudio_enumerator::get_output
 		}
 
 		audio_device dev =
-		{
-			.id = std::to_string(dev_idx),
-			.name = utf16_to_utf8(std::bit_cast<char16_t*>(&dev_info.DisplayName[0])),
-			.max_ch = dev_info.OutputFormat.Format.nChannels
-		};
+			{
+				.id = std::to_string(dev_idx),
+				.name = utf16_to_utf8(std::bit_cast<char16_t*>(&dev_info.DisplayName[0])),
+				.max_ch = dev_info.OutputFormat.Format.nChannels};
 
 		if (dev.name.empty())
 		{
@@ -81,9 +80,9 @@ std::vector<audio_device_enumerator::audio_device> faudio_enumerator::get_output
 	}
 
 	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
-	{
-		return a.name < b.name;
-	});
+		{
+			return a.name < b.name;
+		});
 
 	return device_list;
 }

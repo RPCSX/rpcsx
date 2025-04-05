@@ -8,9 +8,9 @@ LOG_CHANNEL(key_vault_log, "KEY_VAULT");
 SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct)
 {
 	version_start = ver_start;
-	version_end   = ver_end;
-	revision      = rev;
-	self_type     = type;
+	version_end = ver_end;
+	revision = rev;
+	self_type = type;
 	hex_to_bytes(erk, e.c_str(), 0);
 	hex_to_bytes(riv, r.c_str(), 0);
 	hex_to_bytes(pub, pb.c_str(), 0);
@@ -787,19 +787,19 @@ void rap_to_rif(const unsigned char* rap, unsigned char* rif)
 		}
 		for (i = 15; i >= 1; --i)
 		{
-			const int p  = RAP_PBOX[i];
+			const int p = RAP_PBOX[i];
 			const int pp = RAP_PBOX[i - 1];
 			key[p] ^= key[pp];
 		}
 		int o = 0;
 		for (i = 0; i < 16; ++i)
 		{
-			const int p             = RAP_PBOX[i];
-			const unsigned char kc  = key[p] - o;
+			const int p = RAP_PBOX[i];
+			const unsigned char kc = key[p] - o;
 			const unsigned char ec2 = RAP_E2[p];
 			if (o != 1 || kc != 0xFF)
 			{
-				o      = kc < ec2 ? 1 : 0;
+				o = kc < ec2 ? 1 : 0;
 				key[p] = kc - ec2;
 			}
 			else if (kc == 0xFF)

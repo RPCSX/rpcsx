@@ -30,7 +30,7 @@ std::vector<u8> unzip(const void* src, usz size)
 	zs.avail_in = static_cast<uInt>(size);
 	zs.next_in = reinterpret_cast<const u8*>(src);
 	zs.avail_out = static_cast<uInt>(out.size());
-	zs.next_out  = out.data();
+	zs.next_out = out.data();
 
 	while (zs.avail_in)
 	{

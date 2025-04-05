@@ -1,27 +1,27 @@
 #pragma once
 
 #include "dialect/builtin.hpp" // IWYU pragma: export
-#include "dialect/ds.hpp"     // IWYU pragma: export
-#include "dialect/exp.hpp"    // IWYU pragma: export
-#include "dialect/memssa.hpp" // IWYU pragma: export
-#include "dialect/mimg.hpp"   // IWYU pragma: export
-#include "dialect/mtbuf.hpp"  // IWYU pragma: export
-#include "dialect/mubuf.hpp"  // IWYU pragma: export
-#include "dialect/smrd.hpp"   // IWYU pragma: export
-#include "dialect/sop1.hpp"   // IWYU pragma: export
-#include "dialect/sop2.hpp"   // IWYU pragma: export
-#include "dialect/sopc.hpp"   // IWYU pragma: export
-#include "dialect/sopk.hpp"   // IWYU pragma: export
-#include "dialect/sopp.hpp"   // IWYU pragma: export
-#include "dialect/vintrp.hpp" // IWYU pragma: export
-#include "dialect/vop1.hpp"   // IWYU pragma: export
-#include "dialect/vop2.hpp"   // IWYU pragma: export
-#include "dialect/vop3.hpp"   // IWYU pragma: export
-#include "dialect/vopc.hpp"   // IWYU pragma: export
+#include "dialect/ds.hpp"      // IWYU pragma: export
+#include "dialect/exp.hpp"     // IWYU pragma: export
+#include "dialect/memssa.hpp"  // IWYU pragma: export
+#include "dialect/mimg.hpp"    // IWYU pragma: export
+#include "dialect/mtbuf.hpp"   // IWYU pragma: export
+#include "dialect/mubuf.hpp"   // IWYU pragma: export
+#include "dialect/smrd.hpp"    // IWYU pragma: export
+#include "dialect/sop1.hpp"    // IWYU pragma: export
+#include "dialect/sop2.hpp"    // IWYU pragma: export
+#include "dialect/sopc.hpp"    // IWYU pragma: export
+#include "dialect/sopk.hpp"    // IWYU pragma: export
+#include "dialect/sopp.hpp"    // IWYU pragma: export
+#include "dialect/vintrp.hpp"  // IWYU pragma: export
+#include "dialect/vop1.hpp"    // IWYU pragma: export
+#include "dialect/vop2.hpp"    // IWYU pragma: export
+#include "dialect/vop3.hpp"    // IWYU pragma: export
+#include "dialect/vopc.hpp"    // IWYU pragma: export
 
 #include "dialect/spv.hpp" // IWYU pragma: export
 
-#include "dialect/amdgpu.hpp"  // IWYU pragma: export
+#include "dialect/amdgpu.hpp" // IWYU pragma: export
 #include <concepts>
 
 namespace shader::ir {
@@ -75,4 +75,4 @@ constexpr bool operator==(L lhs, R rhs)
 {
   return getTypeId(lhs) == rhs;
 }
-} // namespace ir
+} // namespace shader::ir

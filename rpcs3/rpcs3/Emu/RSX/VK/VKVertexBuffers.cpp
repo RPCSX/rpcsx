@@ -13,25 +13,25 @@ namespace vk
 		switch (mode)
 		{
 		case rsx::primitive_type::lines:
-			return { VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false };
+			return {VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false};
 		case rsx::primitive_type::line_loop:
-			return { VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, true };
+			return {VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, true};
 		case rsx::primitive_type::line_strip:
-			return { VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, false };
+			return {VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, false};
 		case rsx::primitive_type::points:
-			return { VK_PRIMITIVE_TOPOLOGY_POINT_LIST, false };
+			return {VK_PRIMITIVE_TOPOLOGY_POINT_LIST, false};
 		case rsx::primitive_type::triangles:
-			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false };
+			return {VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false};
 		case rsx::primitive_type::triangle_strip:
 		case rsx::primitive_type::quad_strip:
-			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, false };
+			return {VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, false};
 		case rsx::primitive_type::triangle_fan:
 #ifndef __APPLE__
-			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN, false };
+			return {VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN, false};
 #endif
 		case rsx::primitive_type::quads:
 		case rsx::primitive_type::polygon:
-			return { VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true };
+			return {VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true};
 		default:
 			fmt::throw_exception("Unsupported primitive topology 0x%x", static_cast<u8>(mode));
 		}
@@ -53,7 +53,7 @@ namespace vk
 		}
 		fmt::throw_exception("Invalid index array type (%u)", static_cast<u8>(type));
 	}
-}
+} // namespace vk
 
 namespace
 {
@@ -88,8 +88,7 @@ namespace
 	struct draw_command_visitor
 	{
 		draw_command_visitor(vk::data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
-			: m_index_buffer_ring_info(index_buffer_ring_info)
-			, m_vertex_layout(layout)
+			: m_index_buffer_ring_info(index_buffer_ring_info), m_vertex_layout(layout)
 		{
 		}
 
@@ -109,10 +108,10 @@ namespace
 					generate_emulating_index_buffer(rsx::method_registers.current_draw_clause,
 						vertex_count, m_index_buffer_ring_info);
 
-				return{ prims, false, min_index, max_index, index_count, 0, index_info };
+				return {prims, false, min_index, max_index, index_count, 0, index_info};
 			}
 
-			return{ prims, false, min_index, max_index, vertex_count, 0, {} };
+			return {prims, false, min_index, max_index, vertex_count, 0, {}};
 		}
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
@@ -122,8 +121,8 @@ namespace
 			const bool emulate_restart = rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
 
 			rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
-				rsx::index_array_type::u32 :
-				rsx::method_registers.index_type();
+			                                       rsx::index_array_type::u32 :
+			                                       rsx::method_registers.index_type();
 
 			u32 type_size = get_index_type_size(index_type);
 
@@ -132,7 +131,8 @@ namespace
 				index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, index_count);
 			u32 upload_size = index_count * type_size;
 
-			if (emulate_restart) upload_size *= 2;
+			if (emulate_restart)
+				upload_size *= 2;
 
 			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<64>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
@@ -150,8 +150,8 @@ namespace
 			}
 
 			/**
-			* Upload index (and expands it if primitive type is not natively supported).
-			*/
+			 * Upload index (and expands it if primitive type is not natively supported).
+			 */
 			u32 min_index, max_index;
 			std::tie(min_index, max_index, index_count) = write_index_array_data_to_buffer(
 				dst,
@@ -159,13 +159,16 @@ namespace
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(),
-				[](auto prim) { return !vk::is_primitive_native(prim); });
+				[](auto prim)
+				{
+					return !vk::is_primitive_native(prim);
+				});
 
 			if (min_index >= max_index)
 			{
-				//empty set, do not draw
+				// empty set, do not draw
 				m_index_buffer_ring_info.unmap();
-				return{ prims, false, 0, 0, 0, 0, {} };
+				return {prims, false, 0, 0, 0, 0, {}};
 			}
 
 			if (emulate_restart)
@@ -191,7 +194,7 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
-			auto &draw_clause = rsx::method_registers.current_draw_clause;
+			auto& draw_clause = rsx::method_registers.current_draw_clause;
 			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(draw_clause.primitive);
 
 			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
@@ -199,20 +202,20 @@ namespace
 
 			if (!primitives_emulated)
 			{
-				return{ prims, false, 0, vertex_count - 1, vertex_count, 0, {} };
+				return {prims, false, 0, vertex_count - 1, vertex_count, 0, {}};
 			}
 
 			u32 index_count;
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
 			std::tie(index_count, index_info) = generate_emulating_index_buffer(draw_clause, vertex_count, m_index_buffer_ring_info);
-			return{ prims, false, 0, vertex_count - 1, index_count, 0, index_info };
+			return {prims, false, 0, vertex_count - 1, index_count, 0, index_info};
 		}
 
 	private:
 		vk::data_heap& m_index_buffer_ring_info;
 		rsx::vertex_input_layout& m_vertex_layout;
 	};
-}
+} // namespace
 
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
@@ -229,19 +232,19 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		index_base = result.min_index;
 	}
 
-	//Do actual vertex upload
+	// Do actual vertex upload
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 	u32 persistent_range_base = -1, volatile_range_base = -1;
 	usz persistent_offset = -1, volatile_offset = -1;
 
 	if (required.first > 0)
 	{
-		//Check if cacheable
-		//Only data in the 'persistent' block may be cached
-		//TODO: make vertex cache keep local data beyond frame boundaries and hook notify command
+		// Check if cacheable
+		// Only data in the 'persistent' block may be cached
+		// TODO: make vertex cache keep local data beyond frame boundaries and hook notify command
 		bool in_cache = false;
 		bool to_store = false;
-		u32  storage_address = -1;
+		u32 storage_address = -1;
 
 		m_frame_stats.vertex_cache_request_count++;
 
@@ -273,7 +276,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 			if (to_store)
 			{
-				//store ref in vertex cache
+				// store ref in vertex cache
 				m_vertex_cache->store_range(storage_address, required.first, static_cast<u32>(persistent_offset));
 			}
 		}
@@ -285,15 +288,15 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		volatile_range_base = static_cast<u32>(volatile_offset);
 	}
 
-	//Write all the data once if possible
+	// Write all the data once if possible
 	if (required.first && required.second && volatile_offset > persistent_offset)
 	{
-		//Do this once for both to save time on map/unmap cycles
+		// Do this once for both to save time on map/unmap cycles
 		const usz block_end = (volatile_offset + required.second);
 		const usz block_size = block_end - persistent_offset;
 		const usz volatile_offset_in_block = volatile_offset - persistent_offset;
 
-		void *block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
+		void* block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
 		m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, static_cast<char*>(block_mapping) + volatile_offset_in_block);
 		m_attrib_ring_info.unmap();
 	}
@@ -301,14 +304,14 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	{
 		if (required.first > 0 && persistent_offset != umax)
 		{
-			void *persistent_mapping = m_attrib_ring_info.map(persistent_offset, required.first);
+			void* persistent_mapping = m_attrib_ring_info.map(persistent_offset, required.first);
 			m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping, nullptr);
 			m_attrib_ring_info.unmap();
 		}
 
 		if (required.second > 0)
 		{
-			void *volatile_mapping = m_attrib_ring_info.map(volatile_offset, required.second);
+			void* volatile_mapping = m_attrib_ring_info.map(volatile_offset, required.second);
 			m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, nullptr, volatile_mapping);
 			m_attrib_ring_info.unmap();
 		}
@@ -341,7 +344,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			if (m_persistent_attribute_storage)
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
 
-			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
+			// View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
 			const usz view_size = (persistent_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : m_texbuffer_view_size;
 			m_persistent_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_range_base, view_size);
 			persistent_range_base = 0;
@@ -363,12 +366,12 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		}
 	}
 
-	return{ result.native_primitive_type,                 // Primitive
-			result.vertex_draw_count,                     // Vertex count
-			vertex_count,                                 // Allocated vertex count
-			vertex_base,                                  // First vertex in stream
-			index_base,                                   // Index of vertex at data location 0
-			result.vertex_index_offset,                   // Index offset
-			persistent_range_base, volatile_range_base,   // Binding range
-			result.index_info };                          // Index buffer info
+	return {result.native_primitive_type,           // Primitive
+		result.vertex_draw_count,                   // Vertex count
+		vertex_count,                               // Allocated vertex count
+		vertex_base,                                // First vertex in stream
+		index_base,                                 // Index of vertex at data location 0
+		result.vertex_index_offset,                 // Index offset
+		persistent_range_base, volatile_range_base, // Binding range
+		result.index_info};                         // Index buffer info
 }

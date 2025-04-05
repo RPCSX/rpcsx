@@ -21,7 +21,7 @@ namespace rsx
 
 	framebuffer_dimensions_t framebuffer_dimensions_t::make(u16 width, u16 height, rsx::surface_antialiasing aa)
 	{
-		framebuffer_dimensions_t result { .width = width, .height = height };
+		framebuffer_dimensions_t result{.width = width, .height = height};
 		switch (aa)
 		{
 		case rsx::surface_antialiasing::center_1_sample:
@@ -84,7 +84,7 @@ namespace rsx
 		{
 			messages.sort(FN(x.samples > y.samples));
 			return real_stats[messages.front().id]
-				.to_string(g_cfg.video.antialiasing_level == msaa_level::none);
+			    .to_string(g_cfg.video.antialiasing_level == msaa_level::none);
 		}
 
 		if (messages.size() > 1)
@@ -100,8 +100,8 @@ namespace rsx
 		}
 
 		const auto text = messages
-			.sort(FN(static_cast<u8>(x.aa_mode) > static_cast<u8>(y.aa_mode)))
-			.map(FN(real_stats[x.id].to_string()));
+		                      .sort(FN(static_cast<u8>(x.aa_mode) > static_cast<u8>(y.aa_mode)))
+		                      .map(FN(real_stats[x.id].to_string()));
 		return fmt::merge(text, ", ");
 	}
-}
+} // namespace rsx

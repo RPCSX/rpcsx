@@ -40,50 +40,50 @@ namespace vk
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
 				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
-				features2.pNext           = &shader_support_info;
+				features2.pNext = &shader_support_info;
 			}
 
 			if (device_extensions.is_supported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
 			{
 				descriptor_indexing_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
 				descriptor_indexing_info.pNext = features2.pNext;
-				features2.pNext                = &descriptor_indexing_info;
-				descriptor_indexing_support    = true;
+				features2.pNext = &descriptor_indexing_info;
+				descriptor_indexing_support = true;
 			}
 
 			if (device_extensions.is_supported(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
 			{
 				fbo_loops_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
 				fbo_loops_info.pNext = features2.pNext;
-				features2.pNext      = &fbo_loops_info;
+				features2.pNext = &fbo_loops_info;
 			}
 
 			if (device_extensions.is_supported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
 			{
 				shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
 				shader_barycentric_info.pNext = features2.pNext;
-				features2.pNext               = &shader_barycentric_info;
+				features2.pNext = &shader_barycentric_info;
 			}
 
 			if (device_extensions.is_supported(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME))
 			{
 				custom_border_color_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
 				custom_border_color_info.pNext = features2.pNext;
-				features2.pNext                = &custom_border_color_info;
+				features2.pNext = &custom_border_color_info;
 			}
 
 			if (device_extensions.is_supported(VK_EXT_BORDER_COLOR_SWIZZLE_EXTENSION_NAME))
 			{
 				border_color_swizzle_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
 				border_color_swizzle_info.pNext = features2.pNext;
-				features2.pNext                 = &border_color_swizzle_info;
+				features2.pNext = &border_color_swizzle_info;
 			}
 
 			if (device_extensions.is_supported(VK_EXT_DEVICE_FAULT_EXTENSION_NAME))
 			{
 				device_fault_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
 				device_fault_info.pNext = features2.pNext;
-				features2.pNext         = &device_fault_info;
+				features2.pNext = &device_fault_info;
 			}
 
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(VK_GET_SYMBOL(vkGetInstanceProcAddr)(parent, "vkGetPhysicalDeviceFeatures2KHR"));
@@ -92,21 +92,23 @@ namespace vk
 
 			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
-			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
+			shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
 
 			custom_border_color_support.supported = !!custom_border_color_info.customBorderColors && !!custom_border_color_info.customBorderColorWithoutFormat;
 			custom_border_color_support.swizzle_extension_supported = border_color_swizzle_info.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
 			custom_border_color_support.require_border_color_remap = !border_color_swizzle_info.borderColorSwizzleFromImage;
 
-			optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
-			optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+			optional_features_support.barycentric_coords = !!shader_barycentric_info.fragmentShaderBarycentric;
+			optional_features_support.framebuffer_loops = !!fbo_loops_info.attachmentFeedbackLoopLayout;
 			optional_features_support.extended_device_fault = !!device_fault_info.deviceFault;
 
 			features = features2.features;
 
 			if (descriptor_indexing_support)
 			{
-#define SET_DESCRIPTOR_BITFLAG(field, bit) if (descriptor_indexing_info.field) descriptor_indexing_support.update_after_bind_mask |= (1ull << bit)
+#define SET_DESCRIPTOR_BITFLAG(field, bit) \
+	if (descriptor_indexing_info.field)    \
+	descriptor_indexing_support.update_after_bind_mask |= (1ull << bit)
 				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
@@ -118,15 +120,15 @@ namespace vk
 			}
 		}
 
-		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
-		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
-		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
-		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+		optional_features_support.shader_stencil_export = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+		optional_features_support.conditional_rendering = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+		optional_features_support.external_memory_host = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		optional_features_support.sampler_mirror_clamped = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+		optional_features_support.synchronization_2 = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 
-		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+		optional_features_support.debug_utils = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		optional_features_support.surface_capabilities_2 = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 		// Post-initialization checks
 		if (!custom_border_color_support.swizzle_extension_supported)
@@ -136,8 +138,7 @@ namespace vk
 		}
 
 		// v3dv and PanVK support BC1-BC3 which is all we require, support is reported as false since not all formats are supported
-		optional_features_support.texture_compression_bc = features.textureCompressionBC
-				|| get_driver_vendor() == driver_vendor::V3DV || get_driver_vendor() == driver_vendor::PANVK;
+		optional_features_support.texture_compression_bc = features.textureCompressionBC || get_driver_vendor() == driver_vendor::V3DV || get_driver_vendor() == driver_vendor::PANVK;
 	}
 
 	void physical_device::get_physical_device_properties(bool allow_extensions)
@@ -203,7 +204,7 @@ namespace vk
 
 	void physical_device::create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
 	{
-		dev    = pdev;
+		dev = pdev;
 		parent = context;
 
 		get_physical_device_features(allow_extensions);
@@ -373,8 +374,8 @@ namespace vk
 			// 10 + 8 + 8 + 6
 			const auto major_version = props.driverVersion >> 22;
 			const auto minor_version = (props.driverVersion >> 14) & 0xff;
-			const auto patch         = (props.driverVersion >> 6) & 0xff;
-			const auto revision      = (props.driverVersion & 0x3f);
+			const auto patch = (props.driverVersion >> 6) & 0xff;
+			const auto revision = (props.driverVersion & 0x3f);
 
 			return fmt::format("%u.%u.%u.%u", major_version, minor_version, patch, revision);
 		}
@@ -441,7 +442,7 @@ namespace vk
 	// Render Device - The actual usable device
 	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx)
 	{
-		float queue_priorities[1] = { 0.f };
+		float queue_priorities[1] = {0.f};
 		pgpu = &pdev;
 
 		ensure(graphics_queue_idx == present_queue_idx || present_queue_idx == umax); // TODO
@@ -487,7 +488,7 @@ namespace vk
 		}
 
 		// Set up instance information
-		std::vector<const char*> requested_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+		std::vector<const char*> requested_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 		// Enable hardware features manually
 		// Currently we require:
@@ -555,7 +556,6 @@ namespace vk
 		{
 			requested_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
 		}
-
 
 		enabled_features.robustBufferAccess = ensure(pgpu->features.robustBufferAccess, "robustBufferAccess is unsupported");
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
@@ -710,7 +710,9 @@ namespace vk
 		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{};
 		if (pgpu->descriptor_indexing_support)
 		{
-#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_indexing_support.update_after_bind_mask & (1ull << bit)) indexing_features.field = VK_TRUE
+#define SET_DESCRIPTOR_BITFLAG(field, bit)                                        \
+	if (pgpu->descriptor_indexing_support.update_after_bind_mask & (1ull << bit)) \
+	indexing_features.field = VK_TRUE
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
@@ -932,13 +934,14 @@ namespace vk
 		rsx_log.notice("Dumping requested features...");
 		const auto& supported_features = pgpu->features;
 
-#define TEST_VK_FEATURE(name) \
-		if (requested_features.name) {\
-			if (supported_features.name) \
-				rsx_log.notice("[Supported] "#name); \
-			else \
-				rsx_log.error("[Not supported] "#name); \
-		}
+#define TEST_VK_FEATURE(name)                        \
+	if (requested_features.name)                     \
+	{                                                \
+		if (supported_features.name)                 \
+			rsx_log.notice("[Supported] " #name);    \
+		else                                         \
+			rsx_log.error("[Not supported] " #name); \
+	}
 
 		TEST_VK_FEATURE(robustBufferAccess);
 		TEST_VK_FEATURE(fullDrawIndexUint32);
@@ -1030,16 +1033,14 @@ namespace vk
 		for (u32 i = 0; i < memory_properties.memoryHeapCount; ++i)
 		{
 			memory_heap_map.push_back(
-			{
-				.heap = memory_properties.memoryHeaps[i],
-				.types = {}
-			});
+				{.heap = memory_properties.memoryHeaps[i],
+					.types = {}});
 		}
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
 			auto& type_info = memory_properties.memoryTypes[i];
-			memory_heap_map[type_info.heapIndex].types.push_back({ i, type_info.propertyFlags, 0 });
+			memory_heap_map[type_info.heapIndex].types.push_back({i, type_info.propertyFlags, 0});
 		}
 
 		auto find_memory_type_with_property = [&memory_heap_map](VkFlags desired_flags, VkFlags excluded_flags)
@@ -1048,12 +1049,12 @@ namespace vk
 
 			for (auto& heap : memory_heap_map)
 			{
-				for (auto &type : heap.types)
+				for (auto& type : heap.types)
 				{
 					if (((type.flags & desired_flags) == desired_flags) && !(type.flags & excluded_flags))
 					{
 						// Match, only once allowed per heap!
-						results.push_back({ type.type_index, type.flags, heap.heap.size });
+						results.push_back({type.type_index, type.flags, heap.heap.size});
 						break;
 					}
 				}
@@ -1096,14 +1097,14 @@ namespace vk
 		if (device_local_types.size() > 1)
 		{
 			std::sort(device_local_types.begin(), device_local_types.end(), [](const auto& a, const auto& b)
-			{
-				if (a.flags == b.flags)
 				{
-					return a.size > b.size;
-				}
+					if (a.flags == b.flags)
+					{
+						return a.size > b.size;
+					}
 
-				return (a.flags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) || (b.flags != VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT && a.size > b.size);
-			});
+					return (a.flags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) || (b.flags != VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT && a.size > b.size);
+				});
 		}
 
 		for (const auto& type : device_local_types)
@@ -1182,4 +1183,4 @@ namespace vk
 		result.total_descriptor_bindings = result.vertex_textures_first_bind_slot + 4;
 		return result;
 	}
-}
+} // namespace vk

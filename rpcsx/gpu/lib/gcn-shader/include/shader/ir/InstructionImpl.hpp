@@ -66,4 +66,4 @@ struct InstructionImpl : NodeImpl {
 
   Node clone(Context &context, CloneMap &map) const override;
 };
-} // namespace ir
+} // namespace shader::ir

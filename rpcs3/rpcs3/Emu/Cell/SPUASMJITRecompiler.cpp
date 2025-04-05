@@ -133,8 +133,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	this->qw1 = &x86::rcx;
 #endif
 
-	const std::array<const x86::Xmm*, 16> vec_vars
-	{
+	const std::array<const x86::Xmm*, 16> vec_vars{
 		&x86::xmm0,
 		&x86::xmm1,
 		&x86::xmm2,
@@ -195,9 +194,9 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	if (utils::has_avx())
 	{
 		// How to check dirty AVX state
-		//c->pxor(x86::xmm0, x86::xmm0);
-		//c->vptest(x86::ymm0, x86::ymm0);
-		//c->jnz(label_stop);
+		// c->pxor(x86::xmm0, x86::xmm0);
+		// c->vptest(x86::ymm0, x86::ymm0);
+		// c->jnz(label_stop);
 	}
 
 	// Get bit mask of valid code words for a given range (up to 128 bytes)
@@ -323,10 +322,10 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 				c->kmovw(x86::k7, x86::word_ptr(label));
 
 				consts.emplace_back([=, this]
-				{
-					c->bind(label);
-					c->dq(cmask);
-				});
+					{
+						c->bind(label);
+						c->dq(cmask);
+					});
 
 				c->setExtraReg(x86::k7);
 				c->z().vmovdqa32(x86::zmm0, x86::zmmword_ptr(*qw1, j - ls_off));
@@ -405,7 +404,8 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 
 			for (u32 i = starta; i < starta + 32; i += 4)
 			{
-				words.push_back(i >= start ? func.data[(i - start) / 4] : i + 32 < end ? func.data[(i + 32 - start) / 4] : 0);
+				words.push_back(i >= start ? func.data[(i - start) / 4] : i + 32 < end ? func.data[(i + 32 - start) / 4] :
+																						 0);
 			}
 		}
 		else
@@ -527,7 +527,8 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 
 			for (u32 i = starta; i < starta + 32; i += 4)
 			{
-				words.push_back(i >= start ? func.data[(i - start) / 4] : i + 32 < end ? func.data[(i + 32 - start) / 4] : 0);
+				words.push_back(i >= start ? func.data[(i - start) / 4] : i + 32 < end ? func.data[(i + 32 - start) / 4] :
+																						 0);
 			}
 		}
 		else
@@ -679,9 +680,8 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			words.push_back(w3);
 
 			// PSHUFD immediate table for all possible hole mask values, holes repeat highest valid word
-			static constexpr s32 s_pshufd_imm[16]
-			{
-				-1, // invalid index
+			static constexpr s32 s_pshufd_imm[16]{
+				-1,         // invalid index
 				0b00000000, // copy 0
 				0b01010101, // copy 1
 				0b01010100, // copy 1
@@ -771,7 +771,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	for (u32 i = 0; i < func.data.size(); i++)
 	{
 		const u32 pos = start + i * 4;
-		const u32 op  = std::bit_cast<be_t<u32>>(func.data[i]);
+		const u32 op = std::bit_cast<be_t<u32>>(func.data[i]);
 
 		if (!op)
 		{
@@ -809,7 +809,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		}
 
 		// Tracing
-		//c->lea(x86::r14, get_pc(m_pos));
+		// c->lea(x86::r14, get_pc(m_pos));
 
 		// Execute recompiler function
 		(this->*s_spu_decoder.decode(op))({op});
@@ -932,7 +932,8 @@ spu_recompiler::XmmLink spu_recompiler::XmmAlloc() // get empty xmm register
 {
 	for (auto& v : vec)
 	{
-		if (v) return{ v };
+		if (v)
+			return {v};
 	}
 
 	fmt::throw_exception("Out of Xmm Vars");
@@ -963,12 +964,12 @@ inline asmjit::x86::Mem spu_recompiler::XmmConst(const v128& data)
 		xmm_label = c->newLabel();
 
 		consts.emplace_back([=, this]
-		{
-			c->align(asmjit::AlignMode::kData, 16);
-			c->bind(xmm_label);
-			c->dq(data._u64[0]);
-			c->dq(data._u64[1]);
-		});
+			{
+				c->align(asmjit::AlignMode::kData, 16);
+				c->bind(xmm_label);
+				c->dq(data._u64[0]);
+				c->dq(data._u64[1]);
+			});
 	}
 
 	return asmjit::x86::oword_ptr(xmm_label);
@@ -1189,24 +1190,24 @@ void spu_recompiler::branch_set_link(u32 target)
 			c->mov(x86::dword_ptr(*qw1, 12), pc0->r32());
 
 			after.emplace_back([=, this, target = local->second]
-			{
-				// Clear return info after use
-				c->align(AlignMode::kCode, 16);
-				c->bind(ret);
-				c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
-				c->and_(qw1->r32(), 0x3fff0);
-				c->pcmpeqd(x86::xmm0, x86::xmm0);
-				c->movdqa(x86::dqword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)), x86::xmm0);
-
-				// Set block hash for profiling (if enabled)
-				if (g_cfg.core.spu_prof)
 				{
-					c->mov(x86::rax, m_hash_start | 0xffff);
-					c->mov(SPU_OFF_64(block_hash), x86::rax);
-				}
+					// Clear return info after use
+					c->align(AlignMode::kCode, 16);
+					c->bind(ret);
+					c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
+					c->and_(qw1->r32(), 0x3fff0);
+					c->pcmpeqd(x86::xmm0, x86::xmm0);
+					c->movdqa(x86::dqword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)), x86::xmm0);
 
-				c->jmp(target);
-			});
+					// Set block hash for profiling (if enabled)
+					if (g_cfg.core.spu_prof)
+					{
+						c->mov(x86::rax, m_hash_start | 0xffff);
+						c->mov(SPU_OFF_64(block_hash), x86::rax);
+					}
+
+					c->jmp(target);
+				});
 		}
 	}
 }
@@ -1356,16 +1357,16 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		c->jnc(wait);
 
 		after.emplace_back([=, this, pos = m_pos]
-		{
-			c->bind(wait);
-			c->lea(addr->r64(), get_pc(pos));
-			c->and_(*addr, 0x3fffc);
-			c->mov(SPU_OFF_32(pc), *addr);
-			c->mov(arg1->r32(), +op.ra);
-			c->mov(*arg0, *cpu);
-			c->call(spu_rdch);
-			c->jmp(ret);
-		});
+			{
+				c->bind(wait);
+				c->lea(addr->r64(), get_pc(pos));
+				c->and_(*addr, 0x3fffc);
+				c->mov(SPU_OFF_32(pc), *addr);
+				c->mov(arg1->r32(), +op.ra);
+				c->mov(*arg0, *cpu);
+				c->call(spu_rdch);
+				c->jmp(ret);
+			});
 
 		if (sync)
 		{
@@ -1534,13 +1535,13 @@ void spu_recompiler::RCHCNT(spu_opcode_t op)
 
 	switch (op.ra)
 	{
-	case SPU_WrOutMbox:       return ch_cnt(SPU_OFF_64(ch_out_mbox), true);
-	case SPU_WrOutIntrMbox:   return ch_cnt(SPU_OFF_64(ch_out_intr_mbox), true);
-	case MFC_RdTagStat:       return ch_cnt(SPU_OFF_64(ch_tag_stat));
+	case SPU_WrOutMbox: return ch_cnt(SPU_OFF_64(ch_out_mbox), true);
+	case SPU_WrOutIntrMbox: return ch_cnt(SPU_OFF_64(ch_out_intr_mbox), true);
+	case MFC_RdTagStat: return ch_cnt(SPU_OFF_64(ch_tag_stat));
 	case MFC_RdListStallStat: return ch_cnt(SPU_OFF_64(ch_stall_stat));
-	case SPU_RdSigNotify1:    return ch_cnt(SPU_OFF_64(ch_snr1));
-	case SPU_RdSigNotify2:    return ch_cnt(SPU_OFF_64(ch_snr2));
-	case MFC_RdAtomicStat:    return ch_cnt(SPU_OFF_64(ch_atomic_stat));
+	case SPU_RdSigNotify1: return ch_cnt(SPU_OFF_64(ch_snr1));
+	case SPU_RdSigNotify2: return ch_cnt(SPU_OFF_64(ch_snr2));
+	case MFC_RdAtomicStat: return ch_cnt(SPU_OFF_64(ch_atomic_stat));
 
 	case MFC_WrTagUpdate:
 	{
@@ -1861,7 +1862,7 @@ void spu_recompiler::SHL(spu_opcode_t op)
 	}
 }
 
-void spu_recompiler::ROTH(spu_opcode_t op) //nf
+void spu_recompiler::ROTH(spu_opcode_t op) // nf
 {
 	if (utils::has_avx512())
 	{
@@ -1926,7 +1927,7 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 		c->movdqa(vt, XmmConst(v128::from32p(0xffff0000))); // mask: select high words
 		c->vpsrld(v4, vb, 16);
 		c->vpsubusw(v5, vb, vt); // clear high words (using saturation sub for throughput)
-		c->vpandn(vb, vt, va); // clear high words
+		c->vpandn(vb, vt, va);   // clear high words
 		c->vpsrlvd(va, va, v4);
 		c->vpsrlvd(vb, vb, v5);
 		c->vpblendw(vt, vb, va, 0xaa); // can use vpblendvb with 0xffff0000 mask (vt)
@@ -2045,7 +2046,7 @@ void spu_recompiler::SHLH(spu_opcode_t op)
 		c->movdqa(vt, XmmConst(v128::from32p(0xffff0000))); // mask: select high words
 		c->vpsrld(v4, vb, 16);
 		c->vpsubusw(v5, vb, vt); // clear high words (using saturation sub for throughput)
-		c->vpand(vb, vt, va); // clear low words
+		c->vpand(vb, vt, va);    // clear low words
 		c->vpsllvd(va, va, v5);
 		c->vpsllvd(vb, vb, v4);
 		c->vpblendw(vt, vb, va, 0x55);
@@ -2307,16 +2308,16 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->jc(wait);
 
 		after.emplace_back([=, this, pos = m_pos]
-		{
-			c->bind(wait);
-			c->lea(addr->r64(), get_pc(pos));
-			c->and_(*addr, 0x3fffc);
-			c->mov(SPU_OFF_32(pc), *addr);
-			c->mov(arg1->r32(), +op.ra);
-			c->mov(*arg0, *cpu);
-			c->call(spu_wrch);
-			c->jmp(ret);
-		});
+			{
+				c->bind(wait);
+				c->lea(addr->r64(), get_pc(pos));
+				c->and_(*addr, 0x3fffc);
+				c->mov(SPU_OFF_32(pc), *addr);
+				c->mov(arg1->r32(), +op.ra);
+				c->mov(*arg0, *cpu);
+				c->call(spu_wrch);
+				c->jmp(ret);
+			});
 
 		c->bts(*qw0, spu_channel::off_count);
 		c->lock().cmpxchg(SPU_OFF_64(ch_out_mbox), *qw0);
@@ -2334,16 +2335,16 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->jnz(upd);
 
 		after.emplace_back([=, this, pos = m_pos]
-		{
-			c->bind(upd);
-			c->lea(addr->r64(), get_pc(pos));
-			c->and_(*addr, 0x3fffc);
-			c->mov(SPU_OFF_32(pc), *addr);
-			c->mov(arg1->r32(), MFC_WrTagMask);
-			c->mov(*arg0, *cpu);
-			c->call(spu_wrch);
-			c->jmp(ret);
-		});
+			{
+				c->bind(upd);
+				c->lea(addr->r64(), get_pc(pos));
+				c->and_(*addr, 0x3fffc);
+				c->mov(SPU_OFF_32(pc), *addr);
+				c->mov(arg1->r32(), MFC_WrTagMask);
+				c->mov(*arg0, *cpu);
+				c->call(spu_wrch);
+				c->jmp(ret);
+			});
 
 		c->bind(ret);
 		return;
@@ -2358,20 +2359,20 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->ja(fail);
 
 		after.emplace_back([=, this, pos = m_pos]
-		{
-			c->bind(fail);
-			c->lea(addr->r64(), get_pc(pos));
-			c->and_(*addr, 0x3fffc);
-			c->mov(SPU_OFF_32(pc), *addr);
-			c->mov(arg1->r32(), +op.ra);
-			c->mov(*arg0, *cpu);
-			c->call(spu_wrch);
-			c->jmp(ret);
+			{
+				c->bind(fail);
+				c->lea(addr->r64(), get_pc(pos));
+				c->and_(*addr, 0x3fffc);
+				c->mov(SPU_OFF_32(pc), *addr);
+				c->mov(arg1->r32(), +op.ra);
+				c->mov(*arg0, *cpu);
+				c->call(spu_wrch);
+				c->jmp(ret);
 
-			c->bind(zero);
-			c->mov(SPU_OFF_32(ch_tag_upd), qw0->r32());
-			c->jmp(ret);
-		});
+				c->bind(zero);
+				c->mov(SPU_OFF_32(ch_tag_upd), qw0->r32());
+				c->jmp(ret);
+			});
 
 		// addr = completed mask, will be compared with qw1
 		c->mov(*addr, SPU_OFF_32(mfc_fence));
@@ -2510,13 +2511,13 @@ void spu_recompiler::BIZ(spu_opcode_t op)
 	c->je(branch_label);
 
 	after.emplace_back([=, this, jt = m_targets[m_pos].size() > 1]
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-		c->and_(*addr, 0x3fffc);
-		branch_indirect(op, jt);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
+			c->and_(*addr, 0x3fffc);
+			branch_indirect(op, jt);
+		});
 }
 
 void spu_recompiler::BINZ(spu_opcode_t op)
@@ -2526,13 +2527,13 @@ void spu_recompiler::BINZ(spu_opcode_t op)
 	c->jne(branch_label);
 
 	after.emplace_back([=, this, jt = m_targets[m_pos].size() > 1]
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-		c->and_(*addr, 0x3fffc);
-		branch_indirect(op, jt);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
+			c->and_(*addr, 0x3fffc);
+			branch_indirect(op, jt);
+		});
 }
 
 void spu_recompiler::BIHZ(spu_opcode_t op)
@@ -2542,13 +2543,13 @@ void spu_recompiler::BIHZ(spu_opcode_t op)
 	c->je(branch_label);
 
 	after.emplace_back([=, this, jt = m_targets[m_pos].size() > 1]
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-		c->and_(*addr, 0x3fffc);
-		branch_indirect(op, jt);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
+			c->and_(*addr, 0x3fffc);
+			branch_indirect(op, jt);
+		});
 }
 
 void spu_recompiler::BIHNZ(spu_opcode_t op)
@@ -2558,13 +2559,13 @@ void spu_recompiler::BIHNZ(spu_opcode_t op)
 	c->jne(branch_label);
 
 	after.emplace_back([=, this, jt = m_targets[m_pos].size() > 1]
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-		c->and_(*addr, 0x3fffc);
-		branch_indirect(op, jt);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
+			c->and_(*addr, 0x3fffc);
+			branch_indirect(op, jt);
+		});
 }
 
 void spu_recompiler::STOPD(spu_opcode_t)
@@ -2662,12 +2663,12 @@ void spu_recompiler::BISLED(spu_opcode_t op)
 	c->jne(branch_label);
 
 	after.emplace_back([=, this]()
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		c->and_(*addr, 0x3fffc);
-		branch_indirect(op, true, false);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			c->and_(*addr, 0x3fffc);
+			branch_indirect(op, true, false);
+		});
 }
 
 void spu_recompiler::HBR([[maybe_unused]] spu_opcode_t op)
@@ -3065,7 +3066,7 @@ void spu_recompiler::ORX(spu_opcode_t op)
 
 void spu_recompiler::CBD(spu_opcode_t op)
 {
-	//if (op.ra == 1)
+	// if (op.ra == 1)
 	//{
 	//	// assuming that SP % 16 is always zero
 	//	const XmmLink& vr = XmmAlloc();
@@ -3074,10 +3075,11 @@ void spu_recompiler::CBD(spu_opcode_t op)
 	//	c->movdqa(vr, XmmConst(value));
 	//	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 	//	return;
-	//}
+	// }
 
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.i7) c->add(*addr, +op.i7);
+	if (op.i7)
+		c->add(*addr, +op.i7);
 	c->not_(*addr);
 	c->and_(*addr, 0xf);
 
@@ -3089,7 +3091,7 @@ void spu_recompiler::CBD(spu_opcode_t op)
 
 void spu_recompiler::CHD(spu_opcode_t op)
 {
-	//if (op.ra == 1)
+	// if (op.ra == 1)
 	//{
 	//	// assuming that SP % 16 is always zero
 	//	const XmmLink& vr = XmmAlloc();
@@ -3098,10 +3100,11 @@ void spu_recompiler::CHD(spu_opcode_t op)
 	//	c->movdqa(vr, XmmConst(value));
 	//	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 	//	return;
-	//}
+	// }
 
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.i7) c->add(*addr, +op.i7);
+	if (op.i7)
+		c->add(*addr, +op.i7);
 	c->not_(*addr);
 	c->and_(*addr, 0xe);
 
@@ -3113,7 +3116,7 @@ void spu_recompiler::CHD(spu_opcode_t op)
 
 void spu_recompiler::CWD(spu_opcode_t op)
 {
-	//if (op.ra == 1)
+	// if (op.ra == 1)
 	//{
 	//	// assuming that SP % 16 is always zero
 	//	const XmmLink& vr = XmmAlloc();
@@ -3122,10 +3125,11 @@ void spu_recompiler::CWD(spu_opcode_t op)
 	//	c->movdqa(vr, XmmConst(value));
 	//	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 	//	return;
-	//}
+	// }
 
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.i7) c->add(*addr, +op.i7);
+	if (op.i7)
+		c->add(*addr, +op.i7);
 	c->not_(*addr);
 	c->and_(*addr, 0xc);
 
@@ -3137,7 +3141,7 @@ void spu_recompiler::CWD(spu_opcode_t op)
 
 void spu_recompiler::CDD(spu_opcode_t op)
 {
-	//if (op.ra == 1)
+	// if (op.ra == 1)
 	//{
 	//	// assuming that SP % 16 is always zero
 	//	const XmmLink& vr = XmmAlloc();
@@ -3146,10 +3150,11 @@ void spu_recompiler::CDD(spu_opcode_t op)
 	//	c->movdqa(vr, XmmConst(value));
 	//	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 	//	return;
-	//}
+	// }
 
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.i7) c->add(*addr, +op.i7);
+	if (op.i7)
+		c->add(*addr, +op.i7);
 	c->not_(*addr);
 	c->and_(*addr, 0x8);
 
@@ -3324,15 +3329,15 @@ void spu_recompiler::HGT(spu_opcode_t op)
 	c->jg(label);
 
 	after.emplace_back([=, this, pos = m_pos]
-	{
-		c->bind(label);
-		c->lea(addr->r64(), get_pc(pos));
-		c->and_(*addr, 0x3fffc);
-		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
-		c->jmp(ret);
-	});
+		{
+			c->bind(label);
+			c->lea(addr->r64(), get_pc(pos));
+			c->and_(*addr, 0x3fffc);
+			c->mov(SPU_OFF_32(pc), *addr);
+			c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+			c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+			c->jmp(ret);
+		});
 }
 
 void spu_recompiler::CLZ(spu_opcode_t op)
@@ -3439,28 +3444,28 @@ void spu_recompiler::FCGT(spu_opcode_t op)
 
 	c->pxor(tmp0, tmp0);
 	c->pxor(tmp1, tmp1);
-	c->cmpps(tmp0, SPU_OFF_128(gpr, op.ra), 3);  //tmp0 is true if a is extended (nan/inf)
-	c->cmpps(tmp1, SPU_OFF_128(gpr, op.rb), 3);  //tmp1 is true if b is extended (nan/inf)
+	c->cmpps(tmp0, SPU_OFF_128(gpr, op.ra), 3); // tmp0 is true if a is extended (nan/inf)
+	c->cmpps(tmp1, SPU_OFF_128(gpr, op.rb), 3); // tmp1 is true if b is extended (nan/inf)
 
-	//compute lower a and b
+	// compute lower a and b
 	c->movaps(tmp2, last_exp_bit);
 	c->movaps(tmp3, last_exp_bit);
-	c->pandn(tmp2, SPU_OFF_128(gpr, op.ra));  //tmp2 = lowered_a
-	c->pandn(tmp3, SPU_OFF_128(gpr, op.rb));  //tmp3 = lowered_b
+	c->pandn(tmp2, SPU_OFF_128(gpr, op.ra)); // tmp2 = lowered_a
+	c->pandn(tmp3, SPU_OFF_128(gpr, op.rb)); // tmp3 = lowered_b
 
-	//lower a if extended
+	// lower a if extended
 	c->movaps(tmpv, tmp0);
 	c->pand(tmpv, tmp2);
 	c->pandn(tmp0, SPU_OFF_128(gpr, op.ra));
 	c->orps(tmp0, tmpv);
 
-	//lower b if extended
+	// lower b if extended
 	c->movaps(tmpv, tmp1);
 	c->pand(tmpv, tmp3);
 	c->pandn(tmp1, SPU_OFF_128(gpr, op.rb));
 	c->orps(tmp1, tmpv);
 
-	//flush to 0 if denormalized
+	// flush to 0 if denormalized
 	c->pxor(tmpv, tmpv);
 	c->movaps(tmp2, SPU_OFF_128(gpr, op.ra));
 	c->movaps(tmp3, SPU_OFF_128(gpr, op.rb));
@@ -3506,7 +3511,7 @@ void spu_recompiler::FM(spu_opcode_t op)
 	const XmmLink& tmp4 = XmmGet(op.ra, XmmType::Float);
 	const XmmLink& tmp5 = XmmGet(op.rb, XmmType::Float);
 
-	//check denormals
+	// check denormals
 	c->pxor(tmp0, tmp0);
 	c->movaps(tmp1, all_exp_bits);
 	c->movaps(tmp2, all_exp_bits);
@@ -3514,32 +3519,32 @@ void spu_recompiler::FM(spu_opcode_t op)
 	c->andps(tmp2, tmp5);
 	c->cmpps(tmp1, tmp0, 0);
 	c->cmpps(tmp2, tmp0, 0);
-	c->orps(tmp1, tmp2);  //denormal operand mask
+	c->orps(tmp1, tmp2); // denormal operand mask
 
-	//compute result with flushed denormal inputs
+	// compute result with flushed denormal inputs
 	c->movaps(tmp2, tmp4);
-	c->mulps(tmp2, tmp5); //primary result
+	c->mulps(tmp2, tmp5); // primary result
 	c->movaps(tmp3, tmp2);
 	c->andps(tmp3, all_exp_bits);
-	c->cmpps(tmp3, tmp0, 0); //denom mask from result
+	c->cmpps(tmp3, tmp0, 0); // denom mask from result
 	c->orps(tmp3, tmp1);
-	c->andnps(tmp3, tmp2); //flushed result
+	c->andnps(tmp3, tmp2); // flushed result
 
-	//compute results for the extended path
+	// compute results for the extended path
 	c->andps(tmp2, all_exp_bits);
-	c->cmpps(tmp2, all_exp_bits, 0); //extended mask
+	c->cmpps(tmp2, all_exp_bits, 0); // extended mask
 	c->movaps(tmp4, sign_bits);
 	c->movaps(tmp5, sign_bits);
 	c->movaps(tmp0, sign_bits);
 	c->andps(tmp4, SPU_OFF_128(gpr, op.ra));
 	c->andps(tmp5, SPU_OFF_128(gpr, op.rb));
-	c->xorps(tmp4, tmp5); //sign mask
+	c->xorps(tmp4, tmp5); // sign mask
 	c->pandn(tmp0, tmp2);
-	c->orps(tmp4, tmp0); //add result sign back to original extended value
-	c->movaps(tmp5, tmp1); //denormal mask (operands)
-	c->andnps(tmp5, tmp4); //max_float with sign bit (nan/-nan) where not denormal or zero
+	c->orps(tmp4, tmp0);   // add result sign back to original extended value
+	c->movaps(tmp5, tmp1); // denormal mask (operands)
+	c->andnps(tmp5, tmp4); // max_float with sign bit (nan/-nan) where not denormal or zero
 
-	//select result
+	// select result
 	c->movaps(tmp0, tmp2);
 	c->andnps(tmp0, tmp3);
 	c->andps(tmp2, tmp5);
@@ -3591,10 +3596,10 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 
 	c->pxor(tmp0, tmp0);
 	c->pxor(tmp1, tmp1);
-	c->cmpps(tmp0, SPU_OFF_128(gpr, op.ra), 3);  //tmp0 is true if a is extended (nan/inf)
-	c->cmpps(tmp1, SPU_OFF_128(gpr, op.rb), 3);  //tmp1 is true if b is extended (nan/inf)
+	c->cmpps(tmp0, SPU_OFF_128(gpr, op.ra), 3); // tmp0 is true if a is extended (nan/inf)
+	c->cmpps(tmp1, SPU_OFF_128(gpr, op.rb), 3); // tmp1 is true if b is extended (nan/inf)
 
-	//flush to 0 if denormalized
+	// flush to 0 if denormalized
 	c->pxor(tmpv, tmpv);
 	c->movaps(tmp2, SPU_OFF_128(gpr, op.ra));
 	c->movaps(tmp3, SPU_OFF_128(gpr, op.rb));
@@ -3605,15 +3610,15 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 	c->pandn(tmp2, SPU_OFF_128(gpr, op.ra));
 	c->pandn(tmp3, SPU_OFF_128(gpr, op.rb));
 
-	//Set tmp1 to true where a is extended but b is not extended
-	//This is a simplification since absolute values remove necessity of lowering
-	c->xorps(tmp0, tmp1);   //tmp0 is true when either a or b is extended
-	c->pandn(tmp1, tmp0);   //tmp1 is true if b is not extended and a is extended
+	// Set tmp1 to true where a is extended but b is not extended
+	// This is a simplification since absolute values remove necessity of lowering
+	c->xorps(tmp0, tmp1); // tmp0 is true when either a or b is extended
+	c->pandn(tmp1, tmp0); // tmp1 is true if b is not extended and a is extended
 
 	c->andps(tmp2, remove_sign_bits);
 	c->andps(tmp3, remove_sign_bits);
 	c->cmpps(tmp3, tmp2, 1);
-	c->orps(tmp3, tmp1);    //Force result to all true if a is extended but b is not
+	c->orps(tmp3, tmp1); // Force result to all true if a is extended but b is not
 	c->movaps(SPU_OFF_128(gpr, op.rt), tmp3);
 }
 
@@ -3665,15 +3670,15 @@ void spu_recompiler::HLGT(spu_opcode_t op)
 	c->ja(label);
 
 	after.emplace_back([=, this, pos = m_pos]
-	{
-		c->bind(label);
-		c->lea(addr->r64(), get_pc(pos));
-		c->and_(*addr, 0x3fffc);
-		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
-		c->jmp(ret);
-	});
+		{
+			c->bind(label);
+			c->lea(addr->r64(), get_pc(pos));
+			c->and_(*addr, 0x3fffc);
+			c->mov(SPU_OFF_32(pc), *addr);
+			c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+			c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+			c->jmp(ret);
+		});
 }
 
 void spu_recompiler::DFMA(spu_opcode_t op)
@@ -3753,7 +3758,7 @@ void spu_recompiler::SFX(spu_opcode_t op)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
 }
 
-void spu_recompiler::CGX(spu_opcode_t op) //nf
+void spu_recompiler::CGX(spu_opcode_t op) // nf
 {
 	const XmmLink& vt = XmmGet(op.rt, XmmType::Int);
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
@@ -3786,7 +3791,7 @@ void spu_recompiler::CGX(spu_opcode_t op) //nf
 	c->movdqa(SPU_OFF_128(gpr, op.rt), res);
 }
 
-void spu_recompiler::BGX(spu_opcode_t op) //nf
+void spu_recompiler::BGX(spu_opcode_t op) // nf
 {
 	const XmmLink& vt = XmmGet(op.rt, XmmType::Int);
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
@@ -4010,7 +4015,7 @@ void spu_recompiler::FI(spu_opcode_t op)
 
 	c->movdqa(temp_reg2, temp_reg);
 	c->pand(temp_reg2, vb_base);
-	c->psrld(temp_reg2, 8); // only shift right by 8 if exponent is adjusted
+	c->psrld(temp_reg2, 8);                                 // only shift right by 8 if exponent is adjusted
 	c->xorps(vb_base, XmmConst(v128::from32p(0xFFFFFFFF))); // Invert the mask
 	c->pand(temp_reg, vb_base);
 	c->psrld(temp_reg, 9); // shift right by 9 if not adjusted
@@ -4036,26 +4041,27 @@ void spu_recompiler::HEQ(spu_opcode_t op)
 	c->je(label);
 
 	after.emplace_back([=, this, pos = m_pos]
-	{
-		c->bind(label);
-		c->lea(addr->r64(), get_pc(pos));
-		c->and_(*addr, 0x3fffc);
-		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
-		c->jmp(ret);
-	});
+		{
+			c->bind(label);
+			c->lea(addr->r64(), get_pc(pos));
+			c->and_(*addr, 0x3fffc);
+			c->mov(SPU_OFF_32(pc), *addr);
+			c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+			c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+			c->jmp(ret);
+		});
 }
 
 void spu_recompiler::CFLTS(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
 	const XmmLink& vi = XmmAlloc();
-	if (op.i8 != 173) c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
+	if (op.i8 != 173)
+		c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
 	c->movaps(vi, XmmConst(v128::fromf32p(std::exp2(31.f))));
 	c->cmpps(vi, va, 2);
 	c->cvttps2dq(va, va); // convert to ints with truncation
-	c->pxor(va, vi); // fix result saturation (0x80000000 -> 0x7fffffff)
+	c->pxor(va, vi);      // fix result saturation (0x80000000 -> 0x7fffffff)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -4065,7 +4071,8 @@ void spu_recompiler::CFLTU(spu_opcode_t op)
 	const XmmLink& vs = XmmAlloc();
 	const XmmLink& vs2 = XmmAlloc();
 	const XmmLink& vs3 = XmmAlloc();
-	if (op.i8 != 173) c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
+	if (op.i8 != 173)
+		c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(173 - op.i8)))))); // scale
 
 	if (utils::has_avx512())
 	{
@@ -4097,7 +4104,8 @@ void spu_recompiler::CSFLT(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	c->cvtdq2ps(va, va); // convert to floats
-	if (op.i8 != 155) c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
+	if (op.i8 != 155)
+		c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
 	c->movaps(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -4114,13 +4122,14 @@ void spu_recompiler::CUFLT(spu_opcode_t op)
 	{
 		c->movdqa(v1, va);
 		c->pand(va, XmmConst(v128::from32p(0x7fffffff)));
-		c->cvtdq2ps(va, va); // convert to floats
-		c->psrad(v1, 31); // generate mask from sign bit
+		c->cvtdq2ps(va, va);                                     // convert to floats
+		c->psrad(v1, 31);                                        // generate mask from sign bit
 		c->andps(v1, XmmConst(v128::fromf32p(std::exp2(31.f)))); // generate correction component
-		c->addps(va, v1); // add correction component
+		c->addps(va, v1);                                        // add correction component
 	}
 
-	if (op.i8 != 155) c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
+	if (op.i8 != 155)
+		c->mulps(va, XmmConst(v128::fromf32p(std::exp2(static_cast<float>(static_cast<s16>(op.i8 - 155)))))); // scale
 	c->movaps(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -4138,11 +4147,11 @@ void spu_recompiler::BRZ(spu_opcode_t op)
 	c->je(branch_label);
 
 	after.emplace_back([=, this]()
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		branch_fixed(target);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			branch_fixed(target);
+		});
 }
 
 void spu_recompiler::STQA(spu_opcode_t op)
@@ -4178,11 +4187,11 @@ void spu_recompiler::BRNZ(spu_opcode_t op)
 	c->jne(branch_label);
 
 	after.emplace_back([=, this]()
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		branch_fixed(target);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			branch_fixed(target);
+		});
 }
 
 void spu_recompiler::BRHZ(spu_opcode_t op)
@@ -4199,11 +4208,11 @@ void spu_recompiler::BRHZ(spu_opcode_t op)
 	c->je(branch_label);
 
 	after.emplace_back([=, this]()
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		branch_fixed(target);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			branch_fixed(target);
+		});
 }
 
 void spu_recompiler::BRHNZ(spu_opcode_t op)
@@ -4220,11 +4229,11 @@ void spu_recompiler::BRHNZ(spu_opcode_t op)
 	c->jne(branch_label);
 
 	after.emplace_back([=, this]()
-	{
-		c->align(asmjit::AlignMode::kCode, 16);
-		c->bind(branch_label);
-		branch_fixed(target);
-	});
+		{
+			c->align(asmjit::AlignMode::kCode, 16);
+			c->bind(branch_label);
+			branch_fixed(target);
+		});
 }
 
 void spu_recompiler::STQR(spu_opcode_t op)
@@ -4388,7 +4397,8 @@ void spu_recompiler::IOHL(spu_opcode_t op)
 void spu_recompiler::ORI(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	if (op.si10) c->por(va, XmmConst(v128::from32p(op.si10)));
+	if (op.si10)
+		c->por(va, XmmConst(v128::from32p(op.si10)));
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -4462,7 +4472,8 @@ void spu_recompiler::AHI(spu_opcode_t op)
 void spu_recompiler::STQD(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.si10) c->add(*addr, op.si10 * 16);
+	if (op.si10)
+		c->add(*addr, op.si10 * 16);
 	c->and_(*addr, 0x3fff0);
 
 	if (utils::has_ssse3())
@@ -4485,7 +4496,8 @@ void spu_recompiler::STQD(spu_opcode_t op)
 void spu_recompiler::LQD(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.si10) c->add(*addr, op.si10 * 16);
+	if (op.si10)
+		c->add(*addr, op.si10 * 16);
 	c->and_(*addr, 0x3fff0);
 
 	if (utils::has_ssse3())
@@ -4557,15 +4569,15 @@ void spu_recompiler::HGTI(spu_opcode_t op)
 	c->jg(label);
 
 	after.emplace_back([=, this, pos = m_pos]
-	{
-		c->bind(label);
-		c->lea(addr->r64(), get_pc(pos));
-		c->and_(*addr, 0x3fffc);
-		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
-		c->jmp(ret);
-	});
+		{
+			c->bind(label);
+			c->lea(addr->r64(), get_pc(pos));
+			c->and_(*addr, 0x3fffc);
+			c->mov(SPU_OFF_32(pc), *addr);
+			c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+			c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+			c->jmp(ret);
+		});
 }
 
 void spu_recompiler::CLGTI(spu_opcode_t op)
@@ -4601,15 +4613,15 @@ void spu_recompiler::HLGTI(spu_opcode_t op)
 	c->ja(label);
 
 	after.emplace_back([=, this, pos = m_pos]
-	{
-		c->bind(label);
-		c->lea(addr->r64(), get_pc(pos));
-		c->and_(*addr, 0x3fffc);
-		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
-		c->jmp(ret);
-	});
+		{
+			c->bind(label);
+			c->lea(addr->r64(), get_pc(pos));
+			c->and_(*addr, 0x3fffc);
+			c->mov(SPU_OFF_32(pc), *addr);
+			c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+			c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+			c->jmp(ret);
+		});
 }
 
 void spu_recompiler::MPYI(spu_opcode_t op)
@@ -4663,15 +4675,15 @@ void spu_recompiler::HEQI(spu_opcode_t op)
 	c->je(label);
 
 	after.emplace_back([=, this, pos = m_pos]
-	{
-		c->bind(label);
-		c->lea(addr->r64(), get_pc(pos));
-		c->and_(*addr, 0x3fffc);
-		c->mov(SPU_OFF_32(pc), *addr);
-		c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
-		c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
-		c->jmp(ret);
-	});
+		{
+			c->bind(label);
+			c->lea(addr->r64(), get_pc(pos));
+			c->and_(*addr, 0x3fffc);
+			c->mov(SPU_OFF_32(pc), *addr);
+			c->mov(addr->r64(), reinterpret_cast<u64>(vm::base(0xffdead00)));
+			c->mov(asmjit::x86::dword_ptr(addr->r64()), "HALT"_u32);
+			c->jmp(ret);
+		});
 }
 
 void spu_recompiler::HBRA([[maybe_unused]] spu_opcode_t op)
@@ -4783,7 +4795,7 @@ void spu_recompiler::SHUFB(spu_opcode_t op)
 		c->pcmpgtb(vc, vm);
 		c->pand(va, vc);
 		c->pandn(vc, vb);
-		c->por(vc, va); // Select result value from va or vb
+		c->por(vc, va);   // Select result value from va or vb
 		c->pavgb(vt, v5); // Generate result constant: AVG(0xff, 0x00) == 0x80
 		c->por(vt, vc);
 	}
@@ -4818,8 +4830,8 @@ void spu_recompiler::FNMS(spu_opcode_t op)
 	c->andps(vb, mask);
 	c->cmpps(va, mask, 4); // va = ra == extended
 	c->cmpps(vb, mask, 4); // vb = rb == extended
-	c->andps(va, v1); // va = ra & ~ra_extended
-	c->andps(vb, v2); // vb = rb & ~rb_extended
+	c->andps(va, v1);      // va = ra & ~ra_extended
+	c->andps(vb, v2);      // vb = rb & ~rb_extended
 
 	c->mulps(va, vb);
 	c->movaps(vb, SPU_OFF_128(gpr, op.rc));
@@ -4841,8 +4853,8 @@ void spu_recompiler::FMA(spu_opcode_t op)
 	c->andps(vb, mask);
 	c->cmpps(va, mask, 4); // va = ra == extended
 	c->cmpps(vb, mask, 4); // vb = rb == extended
-	c->andps(va, v1); // va = ra & ~ra_extended
-	c->andps(vb, v2); // vb = rb & ~rb_extended
+	c->andps(va, v1);      // va = ra & ~ra_extended
+	c->andps(vb, v2);      // vb = rb & ~rb_extended
 
 	c->mulps(va, vb);
 	c->addps(va, SPU_OFF_128(gpr, op.rc));
@@ -4863,8 +4875,8 @@ void spu_recompiler::FMS(spu_opcode_t op)
 	c->andps(vb, mask);
 	c->cmpps(va, mask, 4); // va = ra == extended
 	c->cmpps(vb, mask, 4); // vb = rb == extended
-	c->andps(va, v1); // va = ra & ~ra_extended
-	c->andps(vb, v2); // vb = rb & ~rb_extended
+	c->andps(va, v1);      // va = ra & ~ra_extended
+	c->andps(vb, v2);      // vb = rb & ~rb_extended
 
 	c->mulps(va, vb);
 	c->subps(va, SPU_OFF_128(gpr, op.rc));

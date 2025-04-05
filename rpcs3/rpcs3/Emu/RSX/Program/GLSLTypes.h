@@ -40,14 +40,14 @@ namespace glsl
 		bool ROP_output_rounding : 1;
 
 		// Texturing spec
-		bool require_texture_ops : 1;           // Global switch to enable/disable all texture code
-		bool require_depth_conversion : 1;      // Include DSV<->RTV bitcast emulation
-		bool require_tex_shadow_ops : 1;        // Include shadow compare emulation
-		bool require_msaa_ops : 1;              // Include MSAA<->Resolved bitcast emulation
-		bool require_texture_expand : 1;        // Include sign-expansion emulation
-		bool require_tex1D_ops : 1;             // Include 1D texture stuff
-		bool require_tex2D_ops : 1;             // Include 2D texture stuff
-		bool require_tex3D_ops : 1;             // Include 3D texture stuff (including cubemap)
-		bool require_shadowProj_ops : 1;        // Include shadow2DProj projection textures (1D is unsupported anyway)
+		bool require_texture_ops : 1;      // Global switch to enable/disable all texture code
+		bool require_depth_conversion : 1; // Include DSV<->RTV bitcast emulation
+		bool require_tex_shadow_ops : 1;   // Include shadow compare emulation
+		bool require_msaa_ops : 1;         // Include MSAA<->Resolved bitcast emulation
+		bool require_texture_expand : 1;   // Include sign-expansion emulation
+		bool require_tex1D_ops : 1;        // Include 1D texture stuff
+		bool require_tex2D_ops : 1;        // Include 2D texture stuff
+		bool require_tex3D_ops : 1;        // Include 3D texture stuff (including cubemap)
+		bool require_shadowProj_ops : 1;   // Include shadow2DProj projection textures (1D is unsupported anyway)
 	};
-};
+}; // namespace glsl

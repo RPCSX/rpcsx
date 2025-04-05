@@ -62,5 +62,5 @@ namespace rsx
 		};
 
 		error_code show_media_list_dialog(media_list_dialog::media_type type, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished);
-	}
-}
+	} // namespace overlays
+} // namespace rsx

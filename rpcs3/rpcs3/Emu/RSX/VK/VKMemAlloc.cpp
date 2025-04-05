@@ -19,15 +19,43 @@
 class VmaRWMutex
 {
 public:
-	void LockRead() { m_mutex.lock_shared(); }
-	void UnlockRead() { m_mutex.unlock_shared(); }
-	bool TryLockRead() { return m_mutex.try_lock_shared(); }
-	void LockWrite() { m_mutex.lock(); }
-	void UnlockWrite() { m_mutex.unlock(); }
-	bool TryLockWrite() { return m_mutex.try_lock(); }
-	void Lock() { m_mutex.lock(); }
-	void Unlock() { m_mutex.unlock(); }
-	bool TryLock() { return m_mutex.try_lock(); }
+	void LockRead()
+	{
+		m_mutex.lock_shared();
+	}
+	void UnlockRead()
+	{
+		m_mutex.unlock_shared();
+	}
+	bool TryLockRead()
+	{
+		return m_mutex.try_lock_shared();
+	}
+	void LockWrite()
+	{
+		m_mutex.lock();
+	}
+	void UnlockWrite()
+	{
+		m_mutex.unlock();
+	}
+	bool TryLockWrite()
+	{
+		return m_mutex.try_lock();
+	}
+	void Lock()
+	{
+		m_mutex.lock();
+	}
+	void Unlock()
+	{
+		m_mutex.unlock();
+	}
+	bool TryLock()
+	{
+		return m_mutex.try_lock();
+	}
+
 private:
 	shared_mutex m_mutex;
 };

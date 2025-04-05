@@ -20,9 +20,9 @@ namespace rsx
 
 		sendmessage_dialog::list_entry::list_entry(const std::string& msg)
 		{
-			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
-			std::unique_ptr<overlay_element> text_label  = std::make_unique<label>(msg);
+			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
+			std::unique_ptr<overlay_element> text_label = std::make_unique<label>(msg);
 
 			padding->set_size(1, 1);
 			text_label->set_size(800, 40);
@@ -69,8 +69,10 @@ namespace rsx
 
 		void sendmessage_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (fade_animation.active) return;
-			if (m_confirmation_dialog_open) return; // Ignore input while the confirmation dialog is open
+			if (fade_animation.active)
+				return;
+			if (m_confirmation_dialog_open)
+				return; // Ignore input while the confirmation dialog is open
 
 			bool close_dialog = false;
 
@@ -196,7 +198,10 @@ namespace rsx
 					// Only add online friends to the list
 					if (online_data.online)
 					{
-						if (std::any_of(m_entry_names.cbegin(), m_entry_names.cend(), [&name](const std::string& entry){ return entry == name; }))
+						if (std::any_of(m_entry_names.cbegin(), m_entry_names.cend(), [&name](const std::string& entry)
+								{
+									return entry == name;
+								}))
 							continue;
 
 						m_entry_names.push_back(name);
@@ -219,8 +224,11 @@ namespace rsx
 			// Block until the user exits the dialog
 			overlayman.attach_thread_input(
 				uid, "Sendmessage dialog", nullptr,
-				[notify](s32) { *notify = true; notify->notify_one(); }
-			);
+				[notify](s32)
+				{
+					*notify = true;
+					notify->notify_one();
+				});
 
 			bool confirmation_error = false;
 
@@ -342,7 +350,7 @@ namespace rsx
 			{
 				status_flags |= status_bits::invalidate_image_cache;
 			}
-			
+
 			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540, false);
 			m_list->set_pos(20, 85);
 
@@ -389,7 +397,10 @@ namespace rsx
 
 			const auto add_friend = [&]()
 			{
-				if (std::any_of(m_entry_names.cbegin(), m_entry_names.cend(), [&username](const std::string& entry){ return entry == username; }))
+				if (std::any_of(m_entry_names.cbegin(), m_entry_names.cend(), [&username](const std::string& entry)
+						{
+							return entry == username;
+						}))
 					return;
 
 				const std::string current_selection = get_current_selection();
@@ -446,4 +457,4 @@ namespace rsx
 			}
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

@@ -17,10 +17,10 @@ MouseHandlerBase::MouseHandlerBase(utils::serial* ar)
 	if (m_info.max_connect)
 	{
 		Emu.PostponeInitCode([this]()
-		{
-			Init(m_info.max_connect);
-			auto lk = init.init();
-		});
+			{
+				Init(m_info.max_connect);
+				auto lk = init.init();
+			});
 	}
 }
 
@@ -143,9 +143,9 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 		mouse.x_pos = x_pos_new;
 		mouse.y_pos = y_pos_new;
 
-		//CellMouseRawData& rawdata = GetRawData(p);
-		//rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
-		//rawdata.len++;
+		// CellMouseRawData& rawdata = GetRawData(p);
+		// rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
+		// rawdata.len++;
 
 		datalist.push_back(std::move(new_data));
 	}

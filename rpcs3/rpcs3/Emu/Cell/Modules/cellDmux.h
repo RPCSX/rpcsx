@@ -4,13 +4,13 @@
 #include "cellPamf.h"
 
 // Error Codes
-enum CellDmuxError :u32
+enum CellDmuxError : u32
 {
-	CELL_DMUX_ERROR_ARG     = 0x80610201,
-	CELL_DMUX_ERROR_SEQ     = 0x80610202,
-	CELL_DMUX_ERROR_BUSY    = 0x80610203,
-	CELL_DMUX_ERROR_EMPTY   = 0x80610204,
-	CELL_DMUX_ERROR_FATAL   = 0x80610205,
+	CELL_DMUX_ERROR_ARG = 0x80610201,
+	CELL_DMUX_ERROR_SEQ = 0x80610202,
+	CELL_DMUX_ERROR_BUSY = 0x80610203,
+	CELL_DMUX_ERROR_EMPTY = 0x80610204,
+	CELL_DMUX_ERROR_FATAL = 0x80610205,
 };
 
 enum CellDmuxStreamType : s32
@@ -206,14 +206,14 @@ struct CellDmuxResourceSpurs
 /*
 struct CellDmuxResource2Ex
 {
-	b8 isResourceEx; //true
-	CellDmuxResourceEx resourceEx;
+    b8 isResourceEx; //true
+    CellDmuxResourceEx resourceEx;
 };
 
 struct CellDmuxResource2NoEx
 {
-	b8 isResourceEx; //false
-	CellDmuxResource resource;
+    b8 isResourceEx; //false
+    CellDmuxResource resource;
 };
 */
 

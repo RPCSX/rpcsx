@@ -110,9 +110,9 @@ enum class ErrorCode : int {
 };
 } // namespace orbis
 
-#define ORBIS_RET_ON_ERROR(...) \
-  do { \
-    if (auto errc___ = (__VA_ARGS__); errc___ != ::orbis::ErrorCode{}) { \
-      return errc___; \
-    } \
+#define ORBIS_RET_ON_ERROR(...)                                                \
+  do {                                                                         \
+    if (auto errc___ = (__VA_ARGS__); errc___ != ::orbis::ErrorCode{}) {       \
+      return errc___;                                                          \
+    }                                                                          \
   } while (false)

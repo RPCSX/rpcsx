@@ -37,4 +37,4 @@ namespace utils
 
 		static u32 get_current_thread_count();
 	};
-}
+} // namespace utils

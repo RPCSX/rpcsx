@@ -14,4 +14,4 @@ namespace vk
 
 	void remove_unused_framebuffers();
 	void clear_framebuffer_cache();
-}
+} // namespace vk

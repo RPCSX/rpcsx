@@ -57,16 +57,16 @@ namespace rsx
 
 	enum eng_interrupt_reason : u32
 	{
-		backend_interrupt       = 0x0001,        // Backend-related interrupt
-		memory_config_interrupt = 0x0002,        // Memory configuration changed
-		display_interrupt       = 0x0004,        // Display handling
-		pipe_flush_interrupt    = 0x0008,        // Flush pipelines
-		dma_control_interrupt   = 0x0010,        // DMA interrupt
+		backend_interrupt = 0x0001,       // Backend-related interrupt
+		memory_config_interrupt = 0x0002, // Memory configuration changed
+		display_interrupt = 0x0004,       // Display handling
+		pipe_flush_interrupt = 0x0008,    // Flush pipelines
+		dma_control_interrupt = 0x0010,   // DMA interrupt
 
 		all_interrupt_bits = memory_config_interrupt | backend_interrupt | display_interrupt | pipe_flush_interrupt
 	};
 
-	enum result_flags: u8
+	enum result_flags : u8
 	{
 		result_none = 0,
 		result_error = 1,
@@ -108,8 +108,8 @@ namespace rsx
 		display_flip_info_t m_queued_flip{};
 
 		void cpu_task() override;
-	protected:
 
+	protected:
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
 
@@ -120,7 +120,7 @@ namespace rsx
 		// FIFO
 	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
-		atomic_t<bool> rsx_thread_running{ false };
+		atomic_t<bool> rsx_thread_running{false};
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 		std::string dump_misc() const override;
 
@@ -172,8 +172,8 @@ namespace rsx
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
-		atomic_t<u32> external_interrupt_lock{ 0 };
-		atomic_t<bool> external_interrupt_ack{ false };
+		atomic_t<u32> external_interrupt_lock{0};
+		atomic_t<bool> external_interrupt_ack{false};
 		atomic_t<u32> is_initialized{0};
 
 		bool is_fifo_idle() const;
@@ -195,14 +195,13 @@ namespace rsx
 		// Performance approximation counters
 		struct
 		{
-			atomic_t<u64> idle_time{ 0 };  // Time spent idling in microseconds
+			atomic_t<u64> idle_time{0};    // Time spent idling in microseconds
 			u64 last_update_timestamp = 0; // Timestamp of last load update
 			u64 FIFO_idle_timestamp = 0;   // Timestamp of when FIFO queue becomes idle
 			FIFO::state state = FIFO::state::running;
 			u32 approximate_load = 0;
 			u32 sampled_frames = 0;
-		}
-		performance_counters;
+		} performance_counters;
 
 		enum class flip_request : u32
 		{
@@ -213,18 +212,24 @@ namespace rsx
 		};
 
 		atomic_bitmask_t<flip_request> async_flip_requested{};
-		u8 async_flip_buffer{ 0 };
+		u8 async_flip_buffer{0};
 
 		void capture_frame(const std::string& name);
-		const backend_configuration& get_backend_config() const { return backend_config; }
+		const backend_configuration& get_backend_config() const
+		{
+			return backend_config;
+		}
 
-		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
+		const draw_command_processor* draw_processor() const
+		{
+			return &m_draw_processor;
+		}
 
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;
 
 		// I hate this flag, but until hle is closer to lle, its needed
-		bool isHLE{ false };
+		bool isHLE{false};
 		bool serialized = false;
 
 		u32 flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
@@ -254,7 +259,7 @@ namespace rsx
 		u32 get_zeta_surface_address() const;
 
 	protected:
-		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
+		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout& layout);
 		bool get_scissor(areau& region, bool clip_viewport);
 
 		RSXVertexProgram current_vertex_program = {};
@@ -312,7 +317,7 @@ namespace rsx
 		u32 prevent_preempt_increase_tickets = 0;
 		u64 preempt_fail_old_preempt_count = 0;
 
-		atomic_t<s32> async_tasks_pending{ 0 };
+		atomic_t<s32> async_tasks_pending{0};
 
 		reports::conditional_render_eval cond_render_ctrl;
 
@@ -352,8 +357,11 @@ namespace rsx
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		virtual void flip(const display_flip_info_t& info) = 0;
 		virtual u64 timestamp();
-		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}
+		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/)
+		{
+			return false;
+		}
+		virtual void on_invalidate_memory_range(const address_range& /*range*/, rsx::invalidation_cause) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// control
@@ -364,7 +372,7 @@ namespace rsx
 		void clear_zcull_stats(u32 type);
 		void check_zcull_status(bool framebuffer_swap);
 		void get_zcull_stats(u32 type, vm::addr_t sink);
-		u32  copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination);
+		u32 copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination);
 
 		void enable_conditional_rendering(vm::addr_t ref);
 		void disable_conditional_rendering();
@@ -375,10 +383,12 @@ namespace rsx
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
-		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
+		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/)
+		{
+			return false;
+		}
 
 	protected:
-
 		/**
 		 * Computes VRAM requirements needed to upload raw vertex streams
 		 * result.first contains persistent memory requirements
@@ -395,8 +405,10 @@ namespace rsx
 		void handle_invalidated_memory_range();
 
 	public:
-
-		draw_command_processor& GRAPH_frontend() { return m_draw_processor; }
+		draw_command_processor& GRAPH_frontend()
+		{
+			return m_draw_processor;
+		}
 
 		/**
 		 * Notify that a section of memory has been mapped
@@ -427,15 +439,26 @@ namespace rsx
 		 * Load an image from memory with optional scaling and rotation.
 		 * Returns false to tell the HW decoder to perform the operation on the CPU as a fallback when the operation cannot be safely accelerated.
 		 */
-		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
-
+		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/)
+		{
+			return false;
+		}
 
 		// Program public "get" handlers
-		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
+		virtual std::pair<std::string, std::string> get_programs() const
+		{
+			return std::make_pair("", "");
+		}
 
-		bool is_current_vertex_program_instanced() const { return !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS); }
+		bool is_current_vertex_program_instanced() const
+		{
+			return !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS);
+		}
 
-		virtual bool is_current_program_interpreted() const { return false; }
+		virtual bool is_current_program_interpreted() const
+		{
+			return false;
+		}
 
 	public:
 		void reset();
@@ -452,7 +475,10 @@ namespace rsx
 		u32 get_load();
 
 		// Get stats object
-		frame_statistics_t& get_stats() { return m_frame_stats; }
+		frame_statistics_t& get_stats()
+		{
+			return m_frame_stats;
+		}
 
 		// Returns true if the current thread is the active RSX thread
 		inline bool is_current_thread() const
@@ -470,4 +496,4 @@ namespace rsx
 	{
 		return g_fxo->get<rsx::thread>().get_backend_config();
 	}
-}
+} // namespace rsx

@@ -61,18 +61,18 @@ private:
 
 	void WaitAndAbortGameRepaintThreads();
 
-	void closeEvent(QCloseEvent *event) override;
-	bool eventFilter(QObject *object, QEvent *event) override;
+	void closeEvent(QCloseEvent* event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<game_info> m_game_info;
 	std::vector<std::unique_ptr<game_savestates_data>> m_savestate_db; //! Holds all the savestate information.
 	std::mutex m_savestate_db_mtx;
-	QComboBox* m_game_combo; //! Lets you choose a game
-	QSplitter* m_splitter; //! Contains the game and savestate tables
+	QComboBox* m_game_combo;      //! Lets you choose a game
+	QSplitter* m_splitter;        //! Contains the game and savestate tables
 	game_list* m_savestate_table; //! UI element to display savestate stuff.
-	game_list* m_game_table; //! UI element to display games.
+	game_list* m_game_table;      //! UI element to display games.
 
 	QList<QAction*> m_savestate_column_acts;
 	QList<QAction*> m_game_column_acts;

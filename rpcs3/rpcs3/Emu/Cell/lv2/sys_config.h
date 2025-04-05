@@ -42,42 +42,44 @@ class lv2_config_service;
 class lv2_config_service_listener;
 class lv2_config_service_event;
 
-
 // Known sys_config service IDs
-enum sys_config_service_id : s64 {
-	SYS_CONFIG_SERVICE_PADMANAGER  = 0x11,
+enum sys_config_service_id : s64
+{
+	SYS_CONFIG_SERVICE_PADMANAGER = 0x11,
 	SYS_CONFIG_SERVICE_PADMANAGER2 = 0x12, // lv2 seems to send padmanager events to both 0x11 and 0x12
-	SYS_CONFIG_SERVICE_0x20        = 0x20,
-	SYS_CONFIG_SERVICE_0x30        = 0x30,
+	SYS_CONFIG_SERVICE_0x20 = 0x20,
+	SYS_CONFIG_SERVICE_0x30 = 0x30,
 
-	SYS_CONFIG_SERVICE_USER_BASE     = static_cast<s64>(UINT64_C(0x8000'0000'0000'0000)),
-	SYS_CONFIG_SERVICE_USER_LIBPAD   = SYS_CONFIG_SERVICE_USER_BASE +      1,
-	SYS_CONFIG_SERVICE_USER_LIBKB    = SYS_CONFIG_SERVICE_USER_BASE +      2,
-	SYS_CONFIG_SERVICE_USER_LIBMOUSE = SYS_CONFIG_SERVICE_USER_BASE +      3,
-	SYS_CONFIG_SERVICE_USER_0x1000   = SYS_CONFIG_SERVICE_USER_BASE + 0x1000,
-	SYS_CONFIG_SERVICE_USER_0x1010   = SYS_CONFIG_SERVICE_USER_BASE + 0x1010,
-	SYS_CONFIG_SERVICE_USER_0x1011   = SYS_CONFIG_SERVICE_USER_BASE + 0x1011,
-	SYS_CONFIG_SERVICE_USER_0x1013   = SYS_CONFIG_SERVICE_USER_BASE + 0x1013,
-	SYS_CONFIG_SERVICE_USER_0x1020   = SYS_CONFIG_SERVICE_USER_BASE + 0x1020,
-	SYS_CONFIG_SERVICE_USER_0x1030   = SYS_CONFIG_SERVICE_USER_BASE + 0x1030,
+	SYS_CONFIG_SERVICE_USER_BASE = static_cast<s64>(UINT64_C(0x8000'0000'0000'0000)),
+	SYS_CONFIG_SERVICE_USER_LIBPAD = SYS_CONFIG_SERVICE_USER_BASE + 1,
+	SYS_CONFIG_SERVICE_USER_LIBKB = SYS_CONFIG_SERVICE_USER_BASE + 2,
+	SYS_CONFIG_SERVICE_USER_LIBMOUSE = SYS_CONFIG_SERVICE_USER_BASE + 3,
+	SYS_CONFIG_SERVICE_USER_0x1000 = SYS_CONFIG_SERVICE_USER_BASE + 0x1000,
+	SYS_CONFIG_SERVICE_USER_0x1010 = SYS_CONFIG_SERVICE_USER_BASE + 0x1010,
+	SYS_CONFIG_SERVICE_USER_0x1011 = SYS_CONFIG_SERVICE_USER_BASE + 0x1011,
+	SYS_CONFIG_SERVICE_USER_0x1013 = SYS_CONFIG_SERVICE_USER_BASE + 0x1013,
+	SYS_CONFIG_SERVICE_USER_0x1020 = SYS_CONFIG_SERVICE_USER_BASE + 0x1020,
+	SYS_CONFIG_SERVICE_USER_0x1030 = SYS_CONFIG_SERVICE_USER_BASE + 0x1030,
 };
 
-enum sys_config_service_listener_type : u32 {
-	SYS_CONFIG_SERVICE_LISTENER_ONCE      = 0,
+enum sys_config_service_listener_type : u32
+{
+	SYS_CONFIG_SERVICE_LISTENER_ONCE = 0,
 	SYS_CONFIG_SERVICE_LISTENER_REPEATING = 1
 };
 
-enum sys_config_event_source : u64 {
+enum sys_config_event_source : u64
+{
 	SYS_CONFIG_EVENT_SOURCE_SERVICE = 1,
-	SYS_CONFIG_EVENT_SOURCE_IO      = 2
+	SYS_CONFIG_EVENT_SOURCE_IO = 2
 };
-
 
 /*
  * Dynamic-sized struct to describe a sys_config_service_event
  * We never allocate it - the guest does it for us and provides a pointer
  */
-struct sys_config_service_event_t {
+struct sys_config_service_event_t
+{
 	// Handle to the service listener for whom this event is destined
 	be_t<u32> service_listener_handle;
 
@@ -107,19 +109,18 @@ struct sys_config_service_event_t {
 	u8 data[1];
 };
 
-
 /*
  * Event data structure for SYS_CONFIG_SERVICE_PADMANAGER
  * This is a guess
  */
-struct sys_config_padmanager_data_t {
+struct sys_config_padmanager_data_t
+{
 	be_t<u16> unk[5]; // hid device type ?
 	be_t<u16> vid;
 	be_t<u16> pid;
 	be_t<u16> unk2[6]; // bluetooth address?
 };
 static_assert(sizeof(sys_config_padmanager_data_t) == 26);
-
 
 /*
  * Global sys_config state
@@ -244,12 +245,7 @@ public:
 
 	// Constructors (should not be used directly)
 	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8* _data, usz size) noexcept
-		: timestamp(get_system_time())
-		, id(_id)
-		, user_id(_user_id)
-		, verbosity(_verbosity)
-		, padding(_padding)
-		, data(&_data[0], &_data[size])
+		: timestamp(get_system_time()), id(_id), user_id(_user_id), verbosity(_verbosity), padding(_padding), data(&_data[0], &_data[size])
 	{
 	}
 
@@ -267,16 +263,28 @@ public:
 	}
 
 	// Registration
-	bool is_registered() const { return registered; }
+	bool is_registered() const
+	{
+		return registered;
+	}
 	void unregister();
 
 	// Notify listeners
 	void notify() const;
 
 	// Utilities
-	usz get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
-	shared_ptr<lv2_config_service> get_shared_ptr () const { return stx::make_shared_from_this<lv2_config_service>(this); }
-	u32 get_id() const { return idm_id; }
+	usz get_size() const
+	{
+		return sizeof(sys_config_service_event_t) - 1 + data.size();
+	}
+	shared_ptr<lv2_config_service> get_shared_ptr() const
+	{
+		return stx::make_shared_from_this<lv2_config_service>(this);
+	}
+	u32 get_id() const
+	{
+		return idm_id;
+	}
 };
 
 /*
@@ -310,12 +318,9 @@ public:
 
 	// Constructors (should not be used directly)
 	lv2_config_service_listener(shared_ptr<lv2_config_handle> _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8* _data, usz size) noexcept
-		: handle(std::move(_handle))
-		, service_id(_service_id)
-		, min_verbosity(_min_verbosity)
-		, type(_type)
-		, data(&_data[0], &_data[size])
-	{}
+		: handle(std::move(_handle)), service_id(_service_id), min_verbosity(_min_verbosity), type(_type), data(&_data[0], &_data[size])
+	{
+	}
 
 	// Factory
 	template <typename... Args>
@@ -340,8 +345,14 @@ public:
 	void notify_all();
 
 	// Utilities
-	u32 get_id() const { return idm_id; }
-	shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return stx::make_shared_from_this<lv2_config_service_listener>(this); }
+	u32 get_id() const
+	{
+		return idm_id;
+	}
+	shared_ptr<lv2_config_service_listener> get_shared_ptr() const
+	{
+		return stx::make_shared_from_this<lv2_config_service_listener>(this);
+	}
 };
 
 /*
@@ -374,10 +385,7 @@ public:
 
 	// Constructors (should not be used directly)
 	lv2_config_service_event(shared_ptr<lv2_config_handle> _handle, shared_ptr<lv2_config_service> _service, const lv2_config_service_listener& _listener) noexcept
-		: id(get_next_id())
-		, handle(std::move(_handle))
-		, service(std::move(_service))
-		, listener(_listener)
+		: id(get_next_id()), handle(std::move(_handle)), service(std::move(_service)), listener(_listener)
 	{
 	}
 
@@ -400,10 +408,13 @@ public:
 	bool notify() const;
 
 	// Write event to buffer
-	void write(sys_config_service_event_t *dst) const;
+	void write(sys_config_service_event_t* dst) const;
 
 	// Check if the buffer can fit the current event, return false otherwise
-	bool check_buffer_size(usz size) const { return service->get_size() <= size; }
+	bool check_buffer_size(usz size) const
+	{
+		return service->get_size() <= size;
+	}
 };
 
 /*

@@ -147,10 +147,10 @@ public:
 	static const spu_function_t g_gateway;
 
 	// Longjmp to the end of the gateway function (native CC)
-	static void(*const g_escape)(spu_thread*);
+	static void (*const g_escape)(spu_thread*);
 
 	// Similar to g_escape, but doing tail call to the new function.
-	static void(*const g_tail_escape)(spu_thread*, spu_function_t, u8*);
+	static void (*const g_tail_escape)(spu_thread*, spu_function_t, u8*);
 
 	// Interpreter table (spu_itype -> ptr)
 	static std::array<u64, 256> g_interpreter_table;

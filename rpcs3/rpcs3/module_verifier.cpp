@@ -7,7 +7,7 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include <Windows.h>
+#include <windows.h>
 #include <Shlwapi.h>
 
 #include <util/types.hpp>
@@ -29,12 +29,11 @@ void WIN32_module_verifier::run_module_verification()
 	};
 
 	const std::vector<module_info_t> special_module_infos = {
-		{ L"vulkan-1.dll", "Vulkan Runtime", "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime.exe" },
-		{ L"msvcp140.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" },
-		{ L"vcruntime140.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" },
-		{ L"msvcp140_1.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" },
-		{ L"vcruntime140_1.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe" }
-	};
+		{L"vulkan-1.dll", "Vulkan Runtime", "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime.exe"},
+		{L"msvcp140.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe"},
+		{L"vcruntime140.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe"},
+		{L"msvcp140_1.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe"},
+		{L"vcruntime140_1.dll", "Microsoft Visual C++ 2015-2022 Redistributable", "https://aka.ms/vs/17/release/VC_redist.x64.exe"}};
 
 	WCHAR windir[MAX_PATH];
 	if (!GetWindowsDirectory(windir, MAX_PATH))
@@ -74,8 +73,7 @@ void WIN32_module_verifier::run_module_verification()
 					module.package_name,
 					module_name,
 					module.dl_link,
-					module.dl_link
-				);
+					module.dl_link);
 
 				sys_log.error("Found incorrectly installed module: '%s' (path='%s', windows='%s')", module_name, path, win_path);
 

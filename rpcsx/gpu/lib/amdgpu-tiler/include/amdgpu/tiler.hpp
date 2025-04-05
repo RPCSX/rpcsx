@@ -139,8 +139,12 @@ struct TileMode {
     return *this;
   }
 
-  constexpr auto operator<=>(const TileMode &other) const { return raw <=> other.raw; }
-  constexpr bool operator==(const TileMode &other) const { return raw == other.raw; }
+  constexpr auto operator<=>(const TileMode &other) const {
+    return raw <=> other.raw;
+  }
+  constexpr bool operator==(const TileMode &other) const {
+    return raw == other.raw;
+  }
 };
 
 struct MacroTileMode {

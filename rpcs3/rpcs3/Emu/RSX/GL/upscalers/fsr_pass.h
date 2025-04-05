@@ -47,7 +47,7 @@ namespace gl
 		public:
 			rcas_pass();
 		};
-	}
+	} // namespace FidelityFX
 
 	class fsr_upscale_pass : public upscaler
 	{
@@ -56,12 +56,12 @@ namespace gl
 		~fsr_upscale_pass();
 
 		gl::texture* scale_output(
-			gl::command_context& cmd,               // State
-			gl::texture* src,                       // Source input
-			const areai& src_region,                // Scaling request information
-			const areai& dst_region,                // Ditto
-			gl::flags32_t mode                      // Mode
-		) override;
+			gl::command_context& cmd, // State
+			gl::texture* src,         // Source input
+			const areai& src_region,  // Scaling request information
+			const areai& dst_region,  // Ditto
+			gl::flags32_t mode        // Mode
+			) override;
 
 	private:
 		std::unique_ptr<gl::viewable_image> m_output_left;
@@ -73,4 +73,4 @@ namespace gl
 		void dispose_images();
 		void initialize_image(u32 output_w, u32 output_h, rsx::flags32_t mode);
 	};
-}
+} // namespace gl

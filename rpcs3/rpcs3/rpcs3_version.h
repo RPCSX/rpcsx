@@ -12,4 +12,4 @@ namespace rpcs3
 	std::string get_verbose_version();
 	bool is_release_build();
 	bool is_local_build();
-}
+} // namespace rpcs3

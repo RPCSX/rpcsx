@@ -13,8 +13,7 @@ private:
 
 public:
 	explicit richtext_item_delegate(QObject* parent = nullptr)
-		: QStyledItemDelegate(parent)
-		, m_document(new QTextDocument(this))
+		: QStyledItemDelegate(parent), m_document(new QTextDocument(this))
 	{
 	}
 
@@ -46,7 +45,7 @@ public:
 #endif
 
 		const int margin = (option.rect.height() - opt.fontMetrics.height() - margin_adjustement);
-		QRect text_rect  = style->subElementRect(QStyle::SE_ItemViewItemText, &opt, nullptr);
+		QRect text_rect = style->subElementRect(QStyle::SE_ItemViewItemText, &opt, nullptr);
 
 		if (index.column() != 0)
 		{

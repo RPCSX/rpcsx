@@ -14,15 +14,16 @@ inline void try_start(spu_thread& spu)
 		reader_lock lock(spu.run_ctrl_mtx);
 
 		if (spu.status_npc.fetch_op([](spu_thread::status_npc_sync_var& value)
-		{
-			if (value.status & SPU_STATUS_RUNNING)
-			{
-				return false;
-			}
+							  {
+								  if (value.status & SPU_STATUS_RUNNING)
+								  {
+									  return false;
+								  }
 
-			value.status = SPU_STATUS_RUNNING | (value.status & SPU_STATUS_IS_ISOLATED);
-			return true;
-		}).second)
+								  value.status = SPU_STATUS_RUNNING | (value.status & SPU_STATUS_IS_ISOLATED);
+								  return true;
+							  })
+				.second)
 		{
 			spu.state -= cpu_flag::stop;
 			notify = true;
@@ -305,15 +306,15 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	case SPU_NPC_offs:
 	{
 		status_npc.fetch_op([value = value & 0x3fffd](status_npc_sync_var& state)
-		{
-			if (!(state.status & SPU_STATUS_RUNNING))
 			{
-				state.npc = value;
-				return true;
-			}
+				if (!(state.status & SPU_STATUS_RUNNING))
+				{
+					state.npc = value;
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		return true;
 	}
@@ -400,7 +401,7 @@ void spu_load_exec(const spu_exec_object& elf)
 	spu->status_npc = {SPU_STATUS_RUNNING, elf.header.e_entry};
 	atomic_storage<u32>::release(spu->pc, elf.header.e_entry);
 
-	const auto funcs = spu->discover_functions(0, { spu->ls , SPU_LS_SIZE }, true, umax);
+	const auto funcs = spu->discover_functions(0, {spu->ls, SPU_LS_SIZE}, true, umax);
 
 	if (spu_log.notice && !funcs.empty())
 	{

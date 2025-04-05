@@ -45,11 +45,7 @@ struct lv2_event_flag final : lv2_obj
 	ppu_thread* sq{};
 
 	lv2_event_flag(u32 protocol, u64 key, s32 type, u64 name, u64 pattern) noexcept
-		: protocol{static_cast<u8>(protocol)}
-		, key(key)
-		, type(type)
-		, name(name)
-		, pattern(pattern)
+		: protocol{static_cast<u8>(protocol)}, key(key), type(type), name(name), pattern(pattern)
 	{
 	}
 

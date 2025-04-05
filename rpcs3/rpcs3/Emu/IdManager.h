@@ -20,17 +20,17 @@ enum class thread_state : u32;
 extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool tag_bit);
 
 template <typename T>
-concept IdmCompatible = requires () { u32{T::id_base}, u32{T::id_step}, u32{T::id_count}; };
+concept IdmCompatible = requires() { u32{T::id_base}, u32{T::id_step}, u32{T::id_count}; };
 
 template <typename T>
-concept IdmBaseCompatible = (std::is_final_v<T> ? IdmCompatible<T> : !!(requires () { u32{T::id_step}, u32{T::id_count}; }));
+concept IdmBaseCompatible = (std::is_final_v<T> ? IdmCompatible<T> : !!(requires() { u32{T::id_step}, u32{T::id_count}; }));
 
 template <typename T>
 concept IdmSavable = IdmBaseCompatible<T> && T::savestate_init_pos != 0 && (requires(T& t, utils::serial& ar) { t.save(stx::exact_t<utils::serial&>(ar)); });
 
 // If id_base is declared in base type, than storage type must declare id_type
 template <typename Base, typename Type>
-concept IdmTypesCompatible = PtrSame<Base, Type> && IdmCompatible<Type> && IdmBaseCompatible<Base> && (std::is_same_v<Base, Type> || !IdmCompatible<Base> || !!(requires () { u32{Type::id_type}; }));
+concept IdmTypesCompatible = PtrSame<Base, Type> && IdmCompatible<Type> && IdmBaseCompatible<Base> && (std::is_same_v<Base, Type> || !IdmCompatible<Base> || !!(requires() { u32{Type::id_type}; }));
 
 // Helper namespace
 namespace id_manager
@@ -46,7 +46,8 @@ namespace id_manager
 		return {0, 0};
 	}
 
-	template <typename T> requires requires () { T::id_invl_range.first + T::id_invl_range.second; }
+	template <typename T>
+		requires requires() { T::id_invl_range.first + T::id_invl_range.second; }
 	constexpr std::pair<u32, u32> get_invl_range()
 	{
 		return T::id_invl_range;
@@ -58,7 +59,8 @@ namespace id_manager
 		return false;
 	}
 
-	template <typename T> requires requires () { bool{T::id_lowest}; }
+	template <typename T>
+		requires requires() { bool{T::id_lowest}; }
 	consteval bool get_force_lowest_id()
 	{
 		return T::id_lowest;
@@ -73,10 +75,10 @@ namespace id_manager
 	{
 		static_assert(IdmCompatible<T>, "ID object must specify: id_base, id_step, id_count");
 
-		static constexpr u32 base = T::id_base; // First ID (N = 0)
-		static constexpr u32 step = T::id_step; // Any ID: N * id_setp + id_base
+		static constexpr u32 base = T::id_base;   // First ID (N = 0)
+		static constexpr u32 step = T::id_step;   // Any ID: N * id_setp + id_base
 		static constexpr u32 count = T::id_count; // Limit: N < id_count
-		static constexpr u32 invalid = -+!base; // Invalid ID sample
+		static constexpr u32 invalid = -+!base;   // Invalid ID sample
 
 		static constexpr std::pair<u32, u32> invl_range = get_invl_range<T>();
 		static constexpr bool uses_lowest_id = get_force_lowest_id<T>();
@@ -84,7 +86,7 @@ namespace id_manager
 		static_assert(u32{count} && u32{step} && u64{step} * (count - 1) + base < u32{umax} + u64{base != 0 ? 1 : 0}, "ID traits: invalid object range");
 
 		// TODO: Add more conditions
-		static_assert(!invl_range.second || (u64{invl_range.second} + invl_range.first <= 32 /*....*/ ));
+		static_assert(!invl_range.second || (u64{invl_range.second} + invl_range.first <= 32 /*....*/));
 	};
 
 	static constexpr u32 get_index(u32 id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range)
@@ -108,8 +110,7 @@ namespace id_manager
 	template <typename T>
 	struct id_traits_load_func
 	{
-		static constexpr pointer_keeper(*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper
-		{
+		static constexpr pointer_keeper (*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper {
 			stx::shared_ptr<T> ptr;
 
 			if constexpr (std::is_constructible_v<T, stx::exact_t<const stx::launch_retainer&>, stx::exact_t<utils::serial&>>)
@@ -121,7 +122,10 @@ namespace id_manager
 				ptr = stx::make_shared<T>(stx::exact_t<utils::serial&>(ar));
 			}
 
-			return [ptr](void* storage) { *static_cast<stx::atomic_ptr<T>*>(storage) = ptr; };
+			return [ptr](void* storage)
+			{
+				*static_cast<stx::atomic_ptr<T>*>(storage) = ptr;
+			};
 		};
 	};
 
@@ -129,8 +133,7 @@ namespace id_manager
 		requires requires() { &T::load; }
 	struct id_traits_load_func<T>
 	{
-		static constexpr pointer_keeper(*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper
-		{
+		static constexpr pointer_keeper (*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper {
 			return T::load(stx::exact_t<utils::serial&>(ar));
 		};
 	};
@@ -138,14 +141,20 @@ namespace id_manager
 	template <typename T>
 	struct id_traits_savable_func
 	{
-		static constexpr bool(*savable)(void*) = [](void*) -> bool { return true; };
+		static constexpr bool (*savable)(void*) = [](void*) -> bool
+		{
+			return true;
+		};
 	};
 
 	template <typename T>
 		requires requires { &T::savable; }
 	struct id_traits_savable_func<T>
 	{
-		static constexpr bool(*savable)(void* ptr) = [](void* ptr) -> bool { return static_cast<const T*>(ptr)->savable(); };
+		static constexpr bool (*savable)(void* ptr) = [](void* ptr) -> bool
+		{
+			return static_cast<const T*>(ptr)->savable();
+		};
 	};
 
 	struct dummy_construct
@@ -166,9 +175,9 @@ namespace id_manager
 	struct typeinfo
 	{
 	public:
-		std::function<void(void*)>(*load)(utils::serial&);
-		void(*save)(utils::serial&, void*);
-		bool(*savable)(void* ptr);
+		std::function<void(void*)> (*load)(utils::serial&);
+		void (*save)(utils::serial&, void*);
+		bool (*savable)(void* ptr);
 
 		u32 base;
 		u32 step;
@@ -184,7 +193,8 @@ namespace id_manager
 		}
 
 		// Specified type ID for containers which their types may be sharing an overlapping IDs range
-		template <typename T> requires requires () { u32{T::id_type}; }
+		template <typename T>
+			requires requires() { u32{T::id_type}; }
 		static consteval u32 get_type()
 		{
 			return T::id_type;
@@ -201,12 +211,19 @@ namespace id_manager
 			if constexpr (std::is_same_v<C, T>)
 			{
 				info =
-				{
-					+id_traits_load_func<C>::load,
-					+[](utils::serial& ar, void* obj) { static_cast<C*>(obj)->save(ar); },
-					+id_traits_savable_func<C>::savable,
-					id_traits<C>::base, id_traits<C>::step, id_traits<C>::count, id_traits<C>::uses_lowest_id, id_traits<C>::invl_range,
-				};
+					{
+						+id_traits_load_func<C>::load,
+						+[](utils::serial& ar, void* obj)
+						{
+							static_cast<C*>(obj)->save(ar);
+						},
+						+id_traits_savable_func<C>::savable,
+						id_traits<C>::base,
+						id_traits<C>::step,
+						id_traits<C>::count,
+						id_traits<C>::uses_lowest_id,
+						id_traits<C>::invl_range,
+					};
 
 				const u128 key = u128{get_type<C>()} << 64 | std::bit_cast<u64>(C::savestate_init_pos);
 
@@ -225,12 +242,16 @@ namespace id_manager
 			else
 			{
 				info =
-				{
-					nullptr,
-					nullptr,
-					nullptr,
-					id_traits<Type>::base, id_traits<Type>::step, id_traits<Type>::count, id_traits<Type>::uses_lowest_id, id_traits<Type>::invl_range,
-				};
+					{
+						nullptr,
+						nullptr,
+						nullptr,
+						id_traits<Type>::base,
+						id_traits<Type>::step,
+						id_traits<Type>::count,
+						id_traits<Type>::uses_lowest_id,
+						id_traits<Type>::invl_range,
+					};
 			}
 
 			return info;
@@ -245,15 +266,14 @@ namespace id_manager
 	// ID value with additional type stored
 	class id_key
 	{
-		u32 m_value = 0; // ID value
-		u32 m_base = umax;  // ID base (must be unique for each type in the same container)
+		u32 m_value = 0;   // ID value
+		u32 m_base = umax; // ID base (must be unique for each type in the same container)
 
 	public:
 		id_key() noexcept = default;
 
 		id_key(u32 value, u32 type) noexcept
-			: m_value(value)
-			, m_base(type)
+			: m_value(value), m_base(type)
 		{
 		}
 
@@ -296,7 +316,8 @@ namespace id_manager
 		static constexpr double savestate_init_pos_original = T::savestate_init_pos;
 		static constexpr double savestate_init_pos = std::bit_cast<double>(std::bit_cast<u64>(savestate_init_pos_original) - 1);
 
-		id_map(utils::serial& ar) noexcept requires IdmSavable<T>
+		id_map(utils::serial& ar) noexcept
+			requires IdmSavable<T>
 		{
 			while (true)
 			{
@@ -341,11 +362,13 @@ namespace id_manager
 			}
 		}
 
-		void save(utils::serial& ar) requires IdmSavable<T>
+		void save(utils::serial& ar)
+			requires IdmSavable<T>
 		{
 			for (const auto& p : vec_data)
 			{
-				if (!p) continue;
+				if (!p)
+					continue;
 
 				auto& key = vec_keys[&p - vec_data.data()];
 
@@ -376,7 +399,8 @@ namespace id_manager
 			serial_breathe_and_tag(ar, g_fxo->get_name<id_map<T>>(), true);
 		}
 
-		id_map& operator=(thread_state state) noexcept requires (std::is_assignable_v<T&, thread_state>)
+		id_map& operator=(thread_state state) noexcept
+			requires(std::is_assignable_v<T&, thread_state>)
 		{
 			if (highest_index)
 			{
@@ -401,7 +425,7 @@ namespace id_manager
 			return *this;
 		}
 	};
-}
+} // namespace id_manager
 
 // Object manager for emulated process. Multiple objects of specified arbitrary type are given unique IDs.
 class idm
@@ -513,7 +537,7 @@ class idm
 			{
 				if (!id_manager::id_traits<Type>::invl_range.second || key.value() == id)
 				{
-					return { &data, &key };
+					return {&data, &key};
 				}
 			}
 		}
@@ -567,7 +591,6 @@ class idm
 	}
 
 public:
-
 	// Remove all objects of a type
 	template <typename T>
 	static inline void clear()
@@ -592,10 +615,14 @@ public:
 	}
 
 	// Add a new ID of specified type with specified constructor arguments (returns object or null_ptr)
-	template <typename T, typename Make = T, typename... Args> requires (std::is_constructible_v<Make, Args&&...>)
+	template <typename T, typename Make = T, typename... Args>
+		requires(std::is_constructible_v<Make, Args && ...>)
 	static inline stx::shared_ptr<Make> make_ptr(Args&&... args)
 	{
-		if (auto pair = create_id<T, Make>([&] { return stx::make_shared<Make>(std::forward<Args>(args)...); }))
+		if (auto pair = create_id<T, Make>([&]
+				{
+					return stx::make_shared<Make>(std::forward<Args>(args)...);
+				}))
 		{
 			return pair;
 		}
@@ -604,10 +631,14 @@ public:
 	}
 
 	// Add a new ID of specified type with specified constructor arguments (returns id)
-	template <typename T, typename Make = T, typename... Args> requires (std::is_constructible_v<Make, Args&&...>)
+	template <typename T, typename Make = T, typename... Args>
+		requires(std::is_constructible_v<Make, Args && ...>)
 	static inline u32 make(Args&&... args)
 	{
-		if (create_id<T, Make>([&] { return stx::make_shared<Make>(std::forward<Args>(args)...); }))
+		if (create_id<T, Make>([&]
+				{
+					return stx::make_shared<Make>(std::forward<Args>(args)...);
+				}))
 		{
 			return last_id();
 		}
@@ -633,7 +664,11 @@ public:
 		requires IdmTypesCompatible<T, Made>
 	static inline u32 import_existing(stx::shared_ptr<Made> ptr, u32 id = id_manager::id_traits<Made>::invalid)
 	{
-		return import<T, Made>([&]() -> stx::shared_ptr<Made> { return std::move(ptr); }, id);
+		return import <T, Made>([&]() -> stx::shared_ptr<Made>
+			{
+				return std::move(ptr);
+			},
+			id);
 	}
 
 	// Check the ID without locking (can be called from other method)

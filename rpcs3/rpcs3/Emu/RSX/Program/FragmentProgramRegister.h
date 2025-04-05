@@ -53,18 +53,18 @@ namespace rsx
 		bool floating_h0() const
 		{
 			return content_mask[0] == content_mask[1] &&
-				content_mask[1] == content_mask[2] &&
-				content_mask[2] == content_mask[3] &&
-				content_mask[3] == data_type_bits::undefined;
+			       content_mask[1] == content_mask[2] &&
+			       content_mask[2] == content_mask[3] &&
+			       content_mask[3] == data_type_bits::undefined;
 		}
 
 		// Return true if the second half register is all undefined
 		bool floating_h1() const
 		{
 			return content_mask[4] == content_mask[5] &&
-				content_mask[5] == content_mask[6] &&
-				content_mask[6] == content_mask[7] &&
-				content_mask[7] == data_type_bits::undefined;
+			       content_mask[5] == content_mask[6] &&
+			       content_mask[6] == content_mask[7] &&
+			       content_mask[7] == data_type_bits::undefined;
 		}
 
 		// Return true if any of the half-words are 16-bit
@@ -107,5 +107,4 @@ namespace rsx
 			return false;
 		}
 	};
-}
-
+} // namespace rsx

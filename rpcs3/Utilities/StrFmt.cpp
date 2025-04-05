@@ -8,10 +8,11 @@
 #include <codecvt>
 #include <algorithm>
 #include <string_view>
+#include <string>
 #include "Thread.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #else
 #include <errno.h>
 #endif
@@ -568,19 +569,18 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 	if (std::string_view full_func{loc.function_name() ? loc.function_name() : ""}; !full_func.empty())
 	{
 		// Remove useless disambiguators
-		std::string func = fmt::replace_all(std::string(full_func), {
-			{"struct ", ""},
-			{"class ", ""},
-			{"enum ", ""},
-			{"typename ", ""},
+		std::string func = fmt::replace_all(std::string(full_func), {{"struct ", ""},
+																		{"class ", ""},
+																		{"enum ", ""},
+																		{"typename ", ""},
 #ifdef _MSC_VER
-			{"__cdecl ", ""},
+																		{"__cdecl ", ""},
 #endif
-			{"unsigned long long", "ullong"},
-			//{"unsigned long", "ulong"}, // ullong
-			{"unsigned int", "uint"},
-			{"unsigned short", "ushort"},
-			{"unsigned char", "uchar"}});
+																		{"unsigned long long", "ullong"},
+																		//{"unsigned long", "ulong"}, // ullong
+																		{"unsigned int", "uint"},
+																		{"unsigned short", "ushort"},
+																		{"unsigned char", "uchar"}});
 
 		// Remove function argument signature for long names
 		for (usz index = func.find_first_of('('); index != umax && func.size() >= 100u; index = func.find_first_of('(', index))
@@ -670,7 +670,7 @@ namespace fmt
 	}
 
 	struct cfmt_src;
-}
+} // namespace fmt
 
 // Temporary implementation
 struct fmt::cfmt_src
@@ -713,14 +713,16 @@ struct fmt::cfmt_src
 	usz type(usz extra) const
 	{
 // Hack: use known function pointers to determine type
-#define TYPE(type) \
-		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+#define TYPE(type)                                                \
+	if (sup[extra].fmt_string == &fmt_class_string<type>::format) \
+		return sizeof(type);
 
 		TYPE(int);
 		TYPE(llong);
 		TYPE(schar);
 		TYPE(short);
-		if constexpr (std::is_signed_v<char>) TYPE(char);
+		if constexpr (std::is_signed_v<char>)
+			TYPE(char);
 		TYPE(long);
 		TYPE(s128);
 
@@ -731,14 +733,14 @@ struct fmt::cfmt_src
 		return 0;
 	}
 
-	static constexpr usz size_char  = 1;
+	static constexpr usz size_char = 1;
 	static constexpr usz size_short = 2;
-	static constexpr usz size_int   = 0;
-	static constexpr usz size_long  = sizeof(ulong);
+	static constexpr usz size_int = 0;
+	static constexpr usz size_long = sizeof(ulong);
 	static constexpr usz size_llong = sizeof(ullong);
-	static constexpr usz size_size  = sizeof(usz);
-	static constexpr usz size_max   = sizeof(std::uintmax_t);
-	static constexpr usz size_diff  = sizeof(std::ptrdiff_t);
+	static constexpr usz size_size = sizeof(usz);
+	static constexpr usz size_max = sizeof(std::uintmax_t);
+	static constexpr usz size_diff = sizeof(std::ptrdiff_t);
 };
 
 void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup, const u64* args) noexcept
@@ -806,7 +808,7 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 			continue;
 		}
 
-		result.emplace_back(std::string(piece));
+		result.emplace_back(piece);
 	}
 
 	if (result.empty() && !is_skip_empty)

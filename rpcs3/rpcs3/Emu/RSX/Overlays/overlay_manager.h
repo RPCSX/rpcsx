@@ -71,7 +71,7 @@ namespace rsx
 			}
 
 			// Allocates object and adds to internal list. Returns pointer to created object
-			template <typename T, typename ...Args>
+			template <typename T, typename... Args>
 			std::shared_ptr<T> create(Args&&... args)
 			{
 				auto object = std::make_shared<T>(std::forward<Args>(args)...);
@@ -161,11 +161,11 @@ namespace rsx
 
 			// Enable input thread attach to the specified interface
 			void attach_thread_input(
-				u32 uid,                                                 // The input target
-				const std::string_view& name,                            // The name of the target
-				std::function<void()> on_input_loop_enter = nullptr,     // [optional] What to do before running the input routine
-				std::function<void(s32)> on_input_loop_exit = nullptr,   // [optional] What to do with the result if any
-				std::function<s32()> input_loop_override = nullptr);     // [optional] What to do during the input loop. By default calls user_interface::run_input_loop
+				u32 uid,                                               // The input target
+				const std::string_view& name,                          // The name of the target
+				std::function<void()> on_input_loop_enter = nullptr,   // [optional] What to do before running the input routine
+				std::function<void(s32)> on_input_loop_exit = nullptr, // [optional] What to do with the result if any
+				std::function<s32()> input_loop_override = nullptr);   // [optional] What to do during the input loop. By default calls user_interface::run_input_loop
 
 		private:
 			struct overlay_input_thread
@@ -182,13 +182,9 @@ namespace rsx
 					std::function<void()> on_input_loop_enter,
 					std::function<void(s32)> on_input_loop_exit,
 					std::function<s32()> input_loop_override)
-					: name(name)
-					, target(iface)
-					, input_loop_prologue(on_input_loop_enter)
-					, input_loop_epilogue(on_input_loop_exit)
-					, input_loop_override(input_loop_override)
-					, prologue_completed(false)
-				{}
+					: name(name), target(iface), input_loop_prologue(on_input_loop_enter), input_loop_epilogue(on_input_loop_exit), input_loop_override(input_loop_override), prologue_completed(false)
+				{
+				}
 
 				// Attributes
 				std::string_view name;
@@ -209,5 +205,5 @@ namespace rsx
 			std::shared_ptr<named_thread<overlay_input_thread>> m_input_thread;
 			void input_thread_loop();
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -64,4 +64,4 @@ namespace rsx
 			}
 		}
 	}
-}
+} // namespace rsx

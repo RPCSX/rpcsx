@@ -28,9 +28,7 @@ public:
 			: has_adapters(false) {}
 
 		render_info(QStringList adapters, bool supported, emu_settings_type type)
-			: adapters(std::move(adapters))
-			, type(type)
-			, supported(supported) {}
+			: adapters(std::move(adapters)), type(type), supported(supported) {}
 	};
 
 	bool abort_requested = false;

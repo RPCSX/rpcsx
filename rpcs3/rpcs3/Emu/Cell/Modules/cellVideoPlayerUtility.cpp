@@ -106,22 +106,22 @@ error_code cellVideoPlayerPlaybackControl()
 }
 
 DECLARE(ppu_module_manager::cellVideoPlayerUtility)("cellVideoPlayerUtility", []()
-{
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerInitialize);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetStartPosition);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetVolume);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerFinalize);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetStopPosition);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerClose);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetTransferPictureInfo);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetDownloadPosition);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerStartThumbnail);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerEndThumbnail);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerOpen);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetVolume);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetOutputStereoPicture);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetPlaybackStatus);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetTransferComplete);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetOutputPicture);
-	REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerPlaybackControl);
-});
+	{
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerInitialize);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetStartPosition);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetVolume);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerFinalize);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetStopPosition);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerClose);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetTransferPictureInfo);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetDownloadPosition);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerStartThumbnail);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerEndThumbnail);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerOpen);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetVolume);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetOutputStereoPicture);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetPlaybackStatus);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerSetTransferComplete);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerGetOutputPicture);
+		REG_FUNC(cellVideoPlayerUtility, cellVideoPlayerPlaybackControl);
+	});

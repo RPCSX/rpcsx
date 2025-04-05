@@ -11,10 +11,7 @@
 LOG_CHANNEL(sys_event_flag);
 
 lv2_event_flag::lv2_event_flag(utils::serial& ar)
-	: protocol(ar)
-	, key(ar)
-	, type(ar)
-	, name(ar)
+	: protocol(ar), key(ar), type(ar), name(ar)
 {
 	ar(pattern);
 }
@@ -61,14 +58,14 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 	const u64 ipc_key = lv2_obj::get_key(_attr);
 
 	if (const auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, ipc_key, _attr.flags, [&]
-	{
-		return make_shared<lv2_event_flag>(
-			_attr.protocol,
-			ipc_key,
-			_attr.type,
-			_attr.name_u64,
-			init);
-	}))
+			{
+				return make_shared<lv2_event_flag>(
+					_attr.protocol,
+					ipc_key,
+					_attr.type,
+					_attr.name_u64,
+					init);
+			}))
 	{
 		return error;
 	}
@@ -85,15 +82,15 @@ error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id)
 	sys_event_flag.warning("sys_event_flag_destroy(id=0x%x)", id);
 
 	const auto flag = idm::withdraw<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag) -> CellError
-	{
-		if (flag.sq)
 		{
-			return CELL_EBUSY;
-		}
+			if (flag.sq)
+			{
+				return CELL_EBUSY;
+			}
 
-		lv2_obj::on_id_destroy(flag, flag.key);
-		return {};
-	});
+			lv2_obj::on_id_destroy(flag, flag.key);
+			return {};
+		});
 
 	if (!flag)
 	{
@@ -143,37 +140,39 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	}
 
 	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id, [&, notify = lv2_obj::notify_all_t()](lv2_event_flag& flag) -> CellError
-	{
-		if (flag.pattern.fetch_op([&](u64& pat)
 		{
-			return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
-		}).second)
-		{
-			// TODO: is it possible to return EPERM in this case?
-			return {};
-		}
+			if (flag.pattern.fetch_op([&](u64& pat)
+								{
+									return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
+								})
+					.second)
+			{
+				// TODO: is it possible to return EPERM in this case?
+				return {};
+			}
 
-		lv2_obj::prepare_for_sleep(ppu);
+			lv2_obj::prepare_for_sleep(ppu);
 
-		std::lock_guard lock(flag.mutex);
+			std::lock_guard lock(flag.mutex);
 
-		if (flag.pattern.fetch_op([&](u64& pat)
-		{
-			return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
-		}).second)
-		{
-			return {};
-		}
+			if (flag.pattern.fetch_op([&](u64& pat)
+								{
+									return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
+								})
+					.second)
+			{
+				return {};
+			}
 
-		if (flag.type == SYS_SYNC_WAITER_SINGLE && flag.sq)
-		{
-			return CELL_EPERM;
-		}
+			if (flag.type == SYS_SYNC_WAITER_SINGLE && flag.sq)
+			{
+				return CELL_EPERM;
+			}
 
-		flag.sleep(ppu, timeout);
-		lv2_obj::emplace(flag.sq, &ppu);
-		return CELL_EBUSY;
-	});
+			flag.sleep(ppu, timeout);
+			lv2_obj::emplace(flag.sq, &ppu);
+			return CELL_EBUSY;
+		});
 
 	if (!flag)
 	{
@@ -222,7 +221,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 
 		if (ppu.state & cpu_flag::signal)
- 		{
+		{
 			continue;
 		}
 
@@ -298,12 +297,13 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 	u64 pattern{};
 
 	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
-	{
-		return flag.pattern.fetch_op([&](u64& pat)
 		{
-			return lv2_event_flag::check_pattern(pat, bitptn, mode, &pattern);
-		}).second;
-	});
+			return flag.pattern.fetch_op([&](u64& pat)
+								   {
+									   return lv2_event_flag::check_pattern(pat, bitptn, mode, &pattern);
+								   })
+		        .second;
+		});
 
 	if (!flag)
 	{
@@ -423,18 +423,18 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 			dependant_mask &= ~bitptn;
 
 			auto [new_val, ok] = flag->pattern.fetch_op([&](u64& x)
-			{
-				if ((x ^ pattern) & dependant_mask)
 				{
-					return false;
-				}
+					if ((x ^ pattern) & dependant_mask)
+					{
+						return false;
+					}
 
-				x |= bitptn;
+					x |= bitptn;
 
-				// Clear the bit-wise difference
-				x &= ~((pattern | bitptn) & ~to_write);
-				return true;
-			});
+					// Clear the bit-wise difference
+					x &= ~((pattern | bitptn) & ~to_write);
+					return true;
+				});
 
 			if (ok)
 			{
@@ -478,9 +478,9 @@ error_code sys_event_flag_clear(ppu_thread& ppu, u32 id, u64 bitptn)
 	sys_event_flag.trace("sys_event_flag_clear(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
 	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
-	{
-		flag.pattern &= bitptn;
-	});
+		{
+			flag.pattern &= bitptn;
+		});
 
 	if (!flag)
 	{
@@ -496,7 +496,8 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 	sys_event_flag.trace("sys_event_flag_cancel(id=0x%x, num=*0x%x)", id, num);
 
-	if (num) *num = 0;
+	if (num)
+		*num = 0;
 
 	const auto flag = idm::get_unlocked<lv2_obj, lv2_event_flag>(id);
 
@@ -541,7 +542,8 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 	static_cast<void>(ppu.test_stopped());
 
-	if (num) *num = value;
+	if (num)
+		*num = value;
 	return CELL_OK;
 }
 
@@ -552,15 +554,16 @@ error_code sys_event_flag_get(ppu_thread& ppu, u32 id, vm::ptr<u64> flags)
 	sys_event_flag.trace("sys_event_flag_get(id=0x%x, flags=*0x%x)", id, flags);
 
 	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [](lv2_event_flag& flag)
-	{
-		return +flag.pattern;
-	});
+		{
+			return +flag.pattern;
+		});
 
 	ppu.check_state();
 
 	if (!flag)
 	{
-		if (flags) *flags = 0;
+		if (flags)
+			*flags = 0;
 		return CELL_ESRCH;
 	}
 

@@ -17,8 +17,8 @@ typedef QList<q_size_pair> q_size_list;
 namespace gui
 {
 	const QString savedata = "SaveData";
-	const QString users    = "Users";
-}
+	const QString users = "Users";
+} // namespace gui
 
 // Parent Class for GUI settings
 class settings : public QObject

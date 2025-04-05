@@ -9,8 +9,9 @@ struct Hmd2GenDataDevice : public IoDevice {
 };
 struct Hmd2GenDataFile : public orbis::File {};
 
-static orbis::ErrorCode hmd2_gen_data_ioctl(orbis::File *file, std::uint64_t request,
-                                      void *argp, orbis::Thread *thread) {
+static orbis::ErrorCode hmd2_gen_data_ioctl(orbis::File *file,
+                                            std::uint64_t request, void *argp,
+                                            orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled hmd2_gen_data ioctl", request);
   return {};
 }
@@ -20,8 +21,9 @@ static const orbis::FileOps ops = {
 };
 
 orbis::ErrorCode Hmd2GenDataDevice::open(orbis::Ref<orbis::File> *file,
-                                    const char *path, std::uint32_t flags,
-                                    std::uint32_t mode, orbis::Thread *thread) {
+                                         const char *path, std::uint32_t flags,
+                                         std::uint32_t mode,
+                                         orbis::Thread *thread) {
   auto newFile = orbis::knew<Hmd2GenDataFile>();
   newFile->device = this;
   newFile->ops = &ops;
@@ -29,4 +31,6 @@ orbis::ErrorCode Hmd2GenDataDevice::open(orbis::Ref<orbis::File> *file,
   return {};
 }
 
-IoDevice *createHmd2GenDataCharacterDevice() { return orbis::knew<Hmd2GenDataDevice>(); }
+IoDevice *createHmd2GenDataCharacterDevice() {
+  return orbis::knew<Hmd2GenDataDevice>();
+}

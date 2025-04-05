@@ -8,17 +8,16 @@ namespace vk
 	using swapchain_ANDROID = native_swapchain_base;
 	using swapchain_NATIVE = swapchain_ANDROID;
 
-	[[maybe_unused]] static
-	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle, WSI_config* /*config*/)
+	[[maybe_unused]] static VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle, WSI_config* /*config*/)
 	{
 		VkSurfaceKHR result = VK_NULL_HANDLE;
 
-        VkAndroidSurfaceCreateInfoKHR createInfo = {};
+		VkAndroidSurfaceCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-		createInfo.window = std::get<ANativeWindow *>(window_handle);
+		createInfo.window = std::get<ANativeWindow*>(window_handle);
 
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreateAndroidSurfaceKHR)(vk_instance, &createInfo, nullptr, &result));
 		return result;
 	}
 #endif
-}
+} // namespace vk

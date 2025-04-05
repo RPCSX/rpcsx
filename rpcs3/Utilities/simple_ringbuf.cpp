@@ -30,7 +30,8 @@ simple_ringbuf::simple_ringbuf(const simple_ringbuf& other)
 
 simple_ringbuf& simple_ringbuf::operator=(const simple_ringbuf& other)
 {
-	if (this == &other) return *this;
+	if (this == &other)
+		return *this;
 
 	ctr_state old = other.rw_ptr.load();
 
@@ -61,7 +62,8 @@ simple_ringbuf::simple_ringbuf(simple_ringbuf&& other)
 
 simple_ringbuf& simple_ringbuf::operator=(simple_ringbuf&& other)
 {
-	if (this == &other) return *this;
+	if (this == &other)
+		return *this;
 
 	const ctr_state other_rw_ptr = other.rw_ptr.load();
 	buf = std::move(other.buf);
@@ -117,20 +119,21 @@ void simple_ringbuf::set_buf_size(u64 size)
 void simple_ringbuf::writer_flush(u64 cnt)
 {
 	rw_ptr.atomic_op([&](ctr_state& val)
-	{
-		const u64 used = get_used_size(val);
-		if (used == 0) return;
+		{
+			const u64 used = get_used_size(val);
+			if (used == 0)
+				return;
 
-		val.write_ptr += buf.size() - std::min<u64>(used, cnt);
-	});
+			val.write_ptr += buf.size() - std::min<u64>(used, cnt);
+		});
 }
 
 void simple_ringbuf::reader_flush(u64 cnt)
 {
 	rw_ptr.atomic_op([&](ctr_state& val)
-	{
-		val.read_ptr += std::min(get_used_size(val), cnt);
-	});
+		{
+			val.read_ptr += std::min(get_used_size(val), cnt);
+		});
 }
 
 u64 simple_ringbuf::push(const void* data, u64 size, bool force)
@@ -138,33 +141,33 @@ u64 simple_ringbuf::push(const void* data, u64 size, bool force)
 	ensure(data != nullptr);
 
 	return rw_ptr.atomic_op([&](ctr_state& val) -> u64
-	{
-		const u64 buf_size  = buf.size();
-		const u64 old       = val.write_ptr % buf_size;
-		const u64 free_size = get_free_size(val);
-		const u64 to_push   = std::min(size, free_size);
-		const auto b_data   = static_cast<const u8*>(data);
-
-		if (!to_push || (!force && free_size < size))
 		{
-			return 0;
-		}
+			const u64 buf_size = buf.size();
+			const u64 old = val.write_ptr % buf_size;
+			const u64 free_size = get_free_size(val);
+			const u64 to_push = std::min(size, free_size);
+			const auto b_data = static_cast<const u8*>(data);
 
-		if (old + to_push > buf_size)
-		{
-			const auto first_write_sz = buf_size - old;
-			memcpy(&buf[old], b_data, first_write_sz);
-			memcpy(&buf[0], b_data + first_write_sz, to_push - first_write_sz);
-		}
-		else
-		{
-			memcpy(&buf[old], b_data, to_push);
-		}
+			if (!to_push || (!force && free_size < size))
+			{
+				return 0;
+			}
 
-		val.write_ptr += to_push;
+			if (old + to_push > buf_size)
+			{
+				const auto first_write_sz = buf_size - old;
+				memcpy(&buf[old], b_data, first_write_sz);
+				memcpy(&buf[0], b_data + first_write_sz, to_push - first_write_sz);
+			}
+			else
+			{
+				memcpy(&buf[old], b_data, to_push);
+			}
 
-		return to_push;
-	});
+			val.write_ptr += to_push;
+
+			return to_push;
+		});
 }
 
 u64 simple_ringbuf::pop(void* data, u64 size, bool force)
@@ -172,31 +175,31 @@ u64 simple_ringbuf::pop(void* data, u64 size, bool force)
 	ensure(data != nullptr);
 
 	return rw_ptr.atomic_op([&](ctr_state& val) -> u64
-	{
-		const u64 buf_size  = buf.size();
-		const u64 old       = val.read_ptr % buf_size;
-		const u64 used_size = get_used_size(val);
-		const u64 to_pop    = std::min(size, used_size);
-		const auto b_data   = static_cast<u8*>(data);
-
-		if (!to_pop || (!force && used_size < size))
 		{
-			return 0;
-		}
+			const u64 buf_size = buf.size();
+			const u64 old = val.read_ptr % buf_size;
+			const u64 used_size = get_used_size(val);
+			const u64 to_pop = std::min(size, used_size);
+			const auto b_data = static_cast<u8*>(data);
 
-		if (old + to_pop > buf_size)
-		{
-			const auto first_read_sz = buf_size - old;
-			memcpy(b_data, &buf[old], first_read_sz);
-			memcpy(b_data + first_read_sz, &buf[0], to_pop - first_read_sz);
-		}
-		else
-		{
-			memcpy(b_data, &buf[old], to_pop);
-		}
+			if (!to_pop || (!force && used_size < size))
+			{
+				return 0;
+			}
 
-		val.read_ptr += to_pop;
+			if (old + to_pop > buf_size)
+			{
+				const auto first_read_sz = buf_size - old;
+				memcpy(b_data, &buf[old], first_read_sz);
+				memcpy(b_data + first_read_sz, &buf[0], to_pop - first_read_sz);
+			}
+			else
+			{
+				memcpy(b_data, &buf[old], to_pop);
+			}
 
-		return to_pop;
-	});
+			val.read_ptr += to_pop;
+
+			return to_pop;
+		});
 }

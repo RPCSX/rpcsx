@@ -62,7 +62,10 @@ namespace rsx
 			error_code progress_bar_reset(u32 index);
 			error_code progress_bar_set_limit(u32 index, u32 limit);
 
-			msg_dialog_source source() const { return m_source; }
+			msg_dialog_source source() const
+			{
+				return m_source;
+			}
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -204,8 +204,8 @@ bool TROPUSRLoader::Generate(std::string_view filepath, std::string_view configp
 			default: trophy_grade = trophy_grade::unknown; break;
 			}
 
-			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, ::size32(m_table4), 0, trophy_id, trophy_grade, trophy_pid };
-			TROPUSREntry6 entry6 = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, ::size32(m_table6), 0, trophy_id };
+			TROPUSREntry4 entry4 = {4, u32{sizeof(TROPUSREntry4)} - 0x10, ::size32(m_table4), 0, trophy_id, trophy_grade, trophy_pid};
+			TROPUSREntry6 entry6 = {6, u32{sizeof(TROPUSREntry6)} - 0x10, ::size32(m_table6), 0, trophy_id};
 
 			m_table4.push_back(entry4);
 			m_table6.push_back(entry6);
@@ -213,9 +213,9 @@ bool TROPUSRLoader::Generate(std::string_view filepath, std::string_view configp
 	}
 
 	u64 offset = sizeof(TROPUSRHeader) + 2 * sizeof(TROPUSRTableHeader);
-	TROPUSRTableHeader table4header = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, 1, ::size32(m_table4), offset };
+	TROPUSRTableHeader table4header = {4, u32{sizeof(TROPUSREntry4)} - 0x10, 1, ::size32(m_table4), offset};
 	offset += m_table4.size() * sizeof(TROPUSREntry4);
-	TROPUSRTableHeader table6header = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, 1, ::size32(m_table6), offset };
+	TROPUSRTableHeader table6header = {6, u32{sizeof(TROPUSREntry6)} - 0x10, 1, ::size32(m_table6), offset};
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();

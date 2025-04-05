@@ -26,7 +26,7 @@ namespace rsx
 		void clear()
 		{
 			m_front = buffer_size;
-			m_size  = 0;
+			m_size = 0;
 		}
 
 		usz size() const
@@ -73,27 +73,25 @@ namespace rsx
 	template <typename traits>
 	struct texture_cache_predictor_key
 	{
-		using texture_format       = typename traits::texture_format;
+		using texture_format = typename traits::texture_format;
 		using section_storage_type = typename traits::section_storage_type;
 
-		address_range          cpu_range;
-		texture_format         format;
+		address_range cpu_range;
+		texture_format format;
 		texture_upload_context context;
 
 		// Constructors
 		texture_cache_predictor_key() = default;
 
 		texture_cache_predictor_key(const address_range& _cpu_range, texture_format _format, texture_upload_context _context)
-		    : cpu_range(_cpu_range)
-		    , format(_format)
-			, context(_context)
-		{}
+			: cpu_range(_cpu_range), format(_format), context(_context)
+		{
+		}
 
 		texture_cache_predictor_key(const section_storage_type& section)
-		    : cpu_range(section.get_section_range())
-		    , format(section.get_format())
-			, context(section.get_context())
-		{}
+			: cpu_range(section.get_section_range()), format(section.get_format()), context(section.get_context())
+		{
+		}
 
 		// Methods
 		bool operator==(const texture_cache_predictor_key& other) const
@@ -105,7 +103,7 @@ namespace rsx
 	/**
 	 * Predictor entry
 	 */
-	template<typename traits>
+	template <typename traits>
 	class texture_cache_predictor_entry
 	{
 	public:
@@ -121,14 +119,14 @@ namespace rsx
 		static const u32 max_write_history_size = 16;
 		texture_cache_predictor_entry_history_queue<max_write_history_size> write_history;
 
-		static const u32 max_confidence      = 8; // Cannot be more "confident" than this value
+		static const u32 max_confidence = 8;      // Cannot be more "confident" than this value
 		static const u32 confident_threshold = 6; // We are confident if confidence >= confidence_threshold
 		static const u32 starting_confidence = 3;
 
-		static const u32 confidence_guessed_flush    =  2; // Confidence granted when we correctly guess there will be a flush
-		static const u32 confidence_guessed_no_flush =  1; // Confidence granted when we correctly guess there won't be a flush
-		static const u32 confidence_incorrect_guess  = -2; // Confidence granted when our guess is incorrect
-		static const u32 confidence_mispredict       = -4; // Confidence granted when a speculative flush is incorrect
+		static const u32 confidence_guessed_flush = 2;    // Confidence granted when we correctly guess there will be a flush
+		static const u32 confidence_guessed_no_flush = 1; // Confidence granted when we correctly guess there won't be a flush
+		static const u32 confidence_incorrect_guess = -2; // Confidence granted when our guess is incorrect
+		static const u32 confidence_mispredict = -4;      // Confidence granted when a speculative flush is incorrect
 
 		u32 confidence;
 
@@ -207,8 +205,8 @@ namespace rsx
 				// For more than one entry, we try and find a pattern, and assume it holds
 
 				const u32 stop_when_found_matches = 4;
-				u32 matches_found                 = 0;
-				u32 guess                         = -1;
+				u32 matches_found = 0;
+				u32 guess = -1;
 
 				for (u32 i = 0; i < history_size; i++)
 				{
@@ -234,7 +232,7 @@ namespace rsx
 					// If we found more matches than all other comparisons, we take a guess
 					if (cur_matches_found > matches_found)
 					{
-						guess         = write_history[i];
+						guess = write_history[i];
 						matches_found = cur_matches_found;
 					}
 
@@ -257,9 +255,9 @@ namespace rsx
 	public:
 		void reset()
 		{
-			confidence                = starting_confidence;
+			confidence = starting_confidence;
 			m_writes_since_last_flush = 0;
-			m_guessed_writes          = -1;
+			m_guessed_writes = -1;
 			write_history.clear();
 		}
 
@@ -315,15 +313,15 @@ namespace rsx
 	public:
 		// Traits
 		using section_storage_type = typename traits::section_storage_type;
-		using texture_cache_type   = typename traits::texture_cache_base_type;
+		using texture_cache_type = typename traits::texture_cache_base_type;
 
-		using key_type    = texture_cache_predictor_key<traits>;
+		using key_type = texture_cache_predictor_key<traits>;
 		using mapped_type = texture_cache_predictor_entry<traits>;
-		using map_type    = std::unordered_map<key_type, mapped_type>;
+		using map_type = std::unordered_map<key_type, mapped_type>;
 
-		using value_type     = typename map_type::value_type;
-		using size_type      = typename map_type::size_type;
-		using iterator       = typename map_type::iterator;
+		using value_type = typename map_type::value_type;
+		using size_type = typename map_type::size_type;
+		using iterator = typename map_type::iterator;
 		using const_iterator = typename map_type::const_iterator;
 
 	private:
@@ -337,17 +335,38 @@ namespace rsx
 
 		// Constructors
 		texture_cache_predictor(texture_cache_type* tex_cache)
-		    : m_tex_cache(tex_cache) {}
+			: m_tex_cache(tex_cache) {}
 		~texture_cache_predictor() = default;
 
 		// Trait wrappers
-		constexpr iterator begin() noexcept { return m_entries.begin(); }
-		constexpr const_iterator begin() const noexcept { return m_entries.begin(); }
-		inline iterator end() noexcept { return m_entries.end(); }
-		inline const_iterator end() const noexcept { return m_entries.end(); }
-		bool empty() const noexcept { return m_entries.empty(); }
-		size_type size() const noexcept { return m_entries.size(); }
-		void clear() { m_entries.clear(); }
+		constexpr iterator begin() noexcept
+		{
+			return m_entries.begin();
+		}
+		constexpr const_iterator begin() const noexcept
+		{
+			return m_entries.begin();
+		}
+		inline iterator end() noexcept
+		{
+			return m_entries.end();
+		}
+		inline const_iterator end() const noexcept
+		{
+			return m_entries.end();
+		}
+		bool empty() const noexcept
+		{
+			return m_entries.empty();
+		}
+		size_type size() const noexcept
+		{
+			return m_entries.size();
+		}
+		void clear()
+		{
+			m_entries.clear();
+		}
 
 		mapped_type& operator[](const key_type& key)
 		{

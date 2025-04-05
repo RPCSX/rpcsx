@@ -20,21 +20,21 @@ template <>
 void fmt_class_string<CellGifDecError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_GIFDEC_ERROR_OPEN_FILE);
-			STR_CASE(CELL_GIFDEC_ERROR_STREAM_FORMAT);
-			STR_CASE(CELL_GIFDEC_ERROR_SEQ);
-			STR_CASE(CELL_GIFDEC_ERROR_ARG);
-			STR_CASE(CELL_GIFDEC_ERROR_FATAL);
-			STR_CASE(CELL_GIFDEC_ERROR_SPU_UNSUPPORT);
-			STR_CASE(CELL_GIFDEC_ERROR_SPU_ERROR);
-			STR_CASE(CELL_GIFDEC_ERROR_CB_PARAM);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_GIFDEC_ERROR_OPEN_FILE);
+				STR_CASE(CELL_GIFDEC_ERROR_STREAM_FORMAT);
+				STR_CASE(CELL_GIFDEC_ERROR_SEQ);
+				STR_CASE(CELL_GIFDEC_ERROR_ARG);
+				STR_CASE(CELL_GIFDEC_ERROR_FATAL);
+				STR_CASE(CELL_GIFDEC_ERROR_SPU_UNSUPPORT);
+				STR_CASE(CELL_GIFDEC_ERROR_SPU_ERROR);
+				STR_CASE(CELL_GIFDEC_ERROR_CB_PARAM);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellGifDecCreate(vm::ptr<GifDecoder> mainHandle, vm::cptr<CellGifDecThreadInParam> threadInParam, vm::ptr<CellGifDecThreadOutParam> threadOutParam)
@@ -301,14 +301,14 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 	}
 
 	const u8 packedField = buffer[10];
-	current_info.SWidth                  = buffer[6] + buffer[7] * 0x100;
-	current_info.SHeight                 = buffer[8] + buffer[9] * 0x100;
-	current_info.SGlobalColorTableFlag   = packedField >> 7;
-	current_info.SColorResolution        = ((packedField >> 4) & 7)+1;
-	current_info.SSortFlag               = (packedField >> 3) & 1;
-	current_info.SSizeOfGlobalColorTable = (packedField & 7)+1;
-	current_info.SBackGroundColor        = buffer[11];
-	current_info.SPixelAspectRatio       = buffer[12];
+	current_info.SWidth = buffer[6] + buffer[7] * 0x100;
+	current_info.SHeight = buffer[8] + buffer[9] * 0x100;
+	current_info.SGlobalColorTableFlag = packedField >> 7;
+	current_info.SColorResolution = ((packedField >> 4) & 7) + 1;
+	current_info.SSortFlag = (packedField >> 3) & 1;
+	current_info.SSizeOfGlobalColorTable = (packedField & 7) + 1;
+	current_info.SBackGroundColor = buffer[11];
+	current_info.SPixelAspectRatio = buffer[12];
 
 	*info = current_info;
 
@@ -379,9 +379,9 @@ error_code cellGifDecSetParameter(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStr
 	CellGifDecInfo& current_info = subHandle->info;
 	CellGifDecOutParam& current_outParam = subHandle->outParam;
 
-	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3) / 8;
-	current_outParam.outputWidth      = current_info.SWidth;
-	current_outParam.outputHeight     = current_info.SHeight;
+	current_outParam.outputWidthByte = (current_info.SWidth * current_info.SColorResolution * 3) / 8;
+	current_outParam.outputWidth = current_info.SWidth;
+	current_outParam.outputHeight = current_info.SHeight;
 	current_outParam.outputColorSpace = inParam->colorSpace;
 	switch (current_outParam.outputColorSpace)
 	{
@@ -389,8 +389,8 @@ error_code cellGifDecSetParameter(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStr
 	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
 	default: return CELL_GIFDEC_ERROR_ARG; // Not supported color space
 	}
-	current_outParam.outputBitDepth = 0;   // Unimplemented
-	current_outParam.useMemorySpace = 0;   // Unimplemented
+	current_outParam.outputBitDepth = 0; // Unimplemented
+	current_outParam.useMemorySpace = 0; // Unimplemented
 
 	*outParam = current_outParam;
 
@@ -429,9 +429,9 @@ error_code cellGifDecExtSetParameter(vm::ptr<GifDecoder> mainHandle, vm::ptr<Gif
 	CellGifDecInfo& current_info = subHandle->info;
 	CellGifDecOutParam& current_outParam = subHandle->outParam;
 
-	current_outParam.outputWidthByte  = (current_info.SWidth * current_info.SColorResolution * 3) / 8;
-	current_outParam.outputWidth      = current_info.SWidth;
-	current_outParam.outputHeight     = current_info.SHeight;
+	current_outParam.outputWidthByte = (current_info.SWidth * current_info.SColorResolution * 3) / 8;
+	current_outParam.outputWidth = current_info.SWidth;
+	current_outParam.outputHeight = current_info.SHeight;
 	current_outParam.outputColorSpace = inParam->colorSpace;
 	switch (current_outParam.outputColorSpace)
 	{
@@ -439,8 +439,8 @@ error_code cellGifDecExtSetParameter(vm::ptr<GifDecoder> mainHandle, vm::ptr<Gif
 	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
 	default: return CELL_GIFDEC_ERROR_ARG; // Not supported color space
 	}
-	current_outParam.outputBitDepth = 0;   // Unimplemented
-	current_outParam.useMemorySpace = 0;   // Unimplemented
+	current_outParam.outputBitDepth = 0; // Unimplemented
+	current_outParam.useMemorySpace = 0; // Unimplemented
 
 	*outParam = current_outParam;
 
@@ -487,7 +487,7 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	const u64 fileSize = subHandle->fileSize;
 	const CellGifDecOutParam& current_outParam = subHandle->outParam;
 
-	//Copy the GIF file to a buffer
+	// Copy the GIF file to a buffer
 	std::unique_ptr<u8[]> gif(new u8[fileSize]);
 
 	switch (subHandle->src.srcSelect)
@@ -506,13 +506,11 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	default: break; // TODO
 	}
 
-	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
+	// Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
 	int width, height, actual_components;
-	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
-		(
-			stbi_load_from_memory(gif.get(), ::narrow<int>(fileSize), &width, &height, &actual_components, 4),
-			&::free
-		);
+	auto image = std::unique_ptr<unsigned char, decltype(&::free)>(
+		stbi_load_from_memory(gif.get(), ::narrow<int>(fileSize), &width, &height, &actual_components, 4),
+		&::free);
 
 	if (!image)
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
@@ -521,7 +519,7 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	constexpr char nComponents = 4;
 	const u32 image_size = width * height * nComponents;
 
-	switch(current_outParam.outputColorSpace)
+	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 	{
@@ -545,7 +543,7 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	{
 		if (bytesPerLine > width * nComponents) // Check if we need padding
 		{
-			//TODO: find out if we can't do padding without an extra copy
+			// TODO: find out if we can't do padding without an extra copy
 			const int linesize = std::min(bytesPerLine, width * nComponents);
 			const auto output = std::make_unique<char[]>(linesize);
 			for (int i = 0; i < height; i++)
@@ -664,18 +662,18 @@ error_code cellGifDecDestroy(vm::ptr<GifDecoder> mainHandle)
 }
 
 DECLARE(ppu_module_manager::cellGifDec)("cellGifDec", []()
-{
-	REG_FUNC(cellGifDec, cellGifDecCreate);
-	REG_FUNC(cellGifDec, cellGifDecExtCreate);
-	REG_FUNC(cellGifDec, cellGifDecOpen);
-	REG_FUNC(cellGifDec, cellGifDecReadHeader);
-	REG_FUNC(cellGifDec, cellGifDecSetParameter);
-	REG_FUNC(cellGifDec, cellGifDecDecodeData);
-	REG_FUNC(cellGifDec, cellGifDecClose);
-	REG_FUNC(cellGifDec, cellGifDecDestroy);
+	{
+		REG_FUNC(cellGifDec, cellGifDecCreate);
+		REG_FUNC(cellGifDec, cellGifDecExtCreate);
+		REG_FUNC(cellGifDec, cellGifDecOpen);
+		REG_FUNC(cellGifDec, cellGifDecReadHeader);
+		REG_FUNC(cellGifDec, cellGifDecSetParameter);
+		REG_FUNC(cellGifDec, cellGifDecDecodeData);
+		REG_FUNC(cellGifDec, cellGifDecClose);
+		REG_FUNC(cellGifDec, cellGifDecDestroy);
 
-	REG_FUNC(cellGifDec, cellGifDecExtOpen);
-	REG_FUNC(cellGifDec, cellGifDecExtReadHeader);
-	REG_FUNC(cellGifDec, cellGifDecExtSetParameter);
-	REG_FUNC(cellGifDec, cellGifDecExtDecodeData);
-});
+		REG_FUNC(cellGifDec, cellGifDecExtOpen);
+		REG_FUNC(cellGifDec, cellGifDecExtReadHeader);
+		REG_FUNC(cellGifDec, cellGifDecExtSetParameter);
+		REG_FUNC(cellGifDec, cellGifDecExtDecodeData);
+	});

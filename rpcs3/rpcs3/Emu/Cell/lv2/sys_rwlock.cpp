@@ -11,9 +11,7 @@
 LOG_CHANNEL(sys_rwlock);
 
 lv2_rwlock::lv2_rwlock(utils::serial& ar)
-	: protocol(ar)
-	, key(ar)
-	, name(ar)
+	: protocol(ar), key(ar), name(ar)
 {
 	ar(owner);
 }
@@ -53,9 +51,9 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 	const u64 ipc_key = lv2_obj::get_key(_attr);
 
 	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, ipc_key, _attr.flags, [&]
-	{
-		return make_shared<lv2_rwlock>(protocol, ipc_key, _attr.name_u64);
-	}))
+			{
+				return make_shared<lv2_rwlock>(protocol, ipc_key, _attr.name_u64);
+			}))
 	{
 		return error;
 	}
@@ -72,15 +70,15 @@ error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 	sys_rwlock.warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::withdraw<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rw) -> CellError
-	{
-		if (rw.owner)
 		{
-			return CELL_EBUSY;
-		}
+			if (rw.owner)
+			{
+				return CELL_EBUSY;
+			}
 
-		lv2_obj::on_id_destroy(rw, rw.key);
-		return {};
-	});
+			lv2_obj::on_id_destroy(rw, rw.key);
+			return {};
+		});
 
 	if (!rwlock)
 	{
@@ -102,42 +100,42 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&, notify = lv2_obj::notify_all_t()](lv2_rwlock& rwlock)
-	{
-		const s64 val = rwlock.owner;
-
-		if (val <= 0 && !(val & 1))
 		{
-			if (rwlock.owner.compare_and_swap_test(val, val - 2))
-			{
-				return true;
-			}
-		}
+			const s64 val = rwlock.owner;
 
-		lv2_obj::prepare_for_sleep(ppu);
-
-		std::lock_guard lock(rwlock.mutex);
-
-		const s64 _old = rwlock.owner.fetch_op([&](s64& val)
-		{
 			if (val <= 0 && !(val & 1))
 			{
-				val -= 2;
+				if (rwlock.owner.compare_and_swap_test(val, val - 2))
+				{
+					return true;
+				}
 			}
-			else
+
+			lv2_obj::prepare_for_sleep(ppu);
+
+			std::lock_guard lock(rwlock.mutex);
+
+			const s64 _old = rwlock.owner.fetch_op([&](s64& val)
+				{
+					if (val <= 0 && !(val & 1))
+					{
+						val -= 2;
+					}
+					else
+					{
+						val |= 1;
+					}
+				});
+
+			if (_old > 0 || _old & 1)
 			{
-				val |= 1;
+				rwlock.sleep(ppu, timeout);
+				lv2_obj::emplace(rwlock.rq, &ppu);
+				return false;
 			}
+
+			return true;
 		});
-
-		if (_old > 0 || _old & 1)
-		{
-			rwlock.sleep(ppu, timeout);
-			lv2_obj::emplace(rwlock.rq, &ppu);
-			return false;
-		}
-
-		return true;
-	});
 
 	if (!rwlock)
 	{
@@ -180,7 +178,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		}
 
 		if (ppu.state & cpu_flag::signal)
- 		{
+		{
 			continue;
 		}
 
@@ -230,20 +228,20 @@ error_code sys_rwlock_tryrlock(ppu_thread& ppu, u32 rw_lock_id)
 	sys_rwlock.trace("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::check<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)
-	{
-		auto [_, ok] = rwlock.owner.fetch_op([](s64& val)
 		{
-			if (val <= 0 && !(val & 1))
-			{
-				val -= 2;
-				return true;
-			}
+			auto [_, ok] = rwlock.owner.fetch_op([](s64& val)
+				{
+					if (val <= 0 && !(val & 1))
+					{
+						val -= 2;
+						return true;
+					}
 
-			return false;
+					return false;
+				});
+
+			return ok;
 		});
-
-		return ok;
-	});
 
 	if (!rwlock)
 	{
@@ -265,19 +263,19 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 	sys_rwlock.trace("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)
-	{
-		const s64 val = rwlock.owner;
-
-		if (val < 0 && !(val & 1))
 		{
-			if (rwlock.owner.compare_and_swap_test(val, val + 2))
-			{
-				return true;
-			}
-		}
+			const s64 val = rwlock.owner;
 
-		return false;
-	});
+			if (val < 0 && !(val & 1))
+			{
+				if (rwlock.owner.compare_and_swap_test(val, val + 2))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		});
 
 	if (!rwlock)
 	{
@@ -296,12 +294,12 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 
 		// Remove one reader
 		const s64 _old = rwlock->owner.fetch_op([](s64& val)
-		{
-			if (val < -1)
 			{
-				val += 2;
-			}
-		});
+				if (val < -1)
+				{
+					val += 2;
+				}
+			});
 
 		if (_old >= 0)
 		{
@@ -341,45 +339,45 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&, notify = lv2_obj::notify_all_t()](lv2_rwlock& rwlock) -> s64
-	{
-		const s64 val = rwlock.owner;
-
-		if (val == 0)
 		{
-			if (rwlock.owner.compare_and_swap_test(0, ppu.id << 1))
-			{
-				return 0;
-			}
-		}
-		else if (val >> 1 == ppu.id)
-		{
-			return val;
-		}
+			const s64 val = rwlock.owner;
 
-		lv2_obj::prepare_for_sleep(ppu);
-
-		std::lock_guard lock(rwlock.mutex);
-
-		const s64 _old = rwlock.owner.fetch_op([&](s64& val)
-		{
 			if (val == 0)
 			{
-				val = ppu.id << 1;
+				if (rwlock.owner.compare_and_swap_test(0, ppu.id << 1))
+				{
+					return 0;
+				}
 			}
-			else
+			else if (val >> 1 == ppu.id)
 			{
-				val |= 1;
+				return val;
 			}
+
+			lv2_obj::prepare_for_sleep(ppu);
+
+			std::lock_guard lock(rwlock.mutex);
+
+			const s64 _old = rwlock.owner.fetch_op([&](s64& val)
+				{
+					if (val == 0)
+					{
+						val = ppu.id << 1;
+					}
+					else
+					{
+						val |= 1;
+					}
+				});
+
+			if (_old != 0)
+			{
+				rwlock.sleep(ppu, timeout);
+				lv2_obj::emplace(rwlock.wq, &ppu);
+			}
+
+			return _old;
 		});
-
-		if (_old != 0)
-		{
-			rwlock.sleep(ppu, timeout);
-			lv2_obj::emplace(rwlock.wq, &ppu);
-		}
-
-		return _old;
-	});
 
 	if (!rwlock)
 	{
@@ -427,7 +425,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		}
 
 		if (ppu.state & cpu_flag::signal)
- 		{
+		{
 			continue;
 		}
 
@@ -461,10 +459,10 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 					}
 
 					rwlock->owner.atomic_op([&](s64& owner)
-					{
-						owner -= 2 * size; // Add readers to value
-						owner &= -2; // Clear wait bit
-					});
+						{
+							owner -= 2 * size; // Add readers to value
+							owner &= -2;       // Clear wait bit
+						});
 
 					lv2_obj::awake_all();
 				}
@@ -493,12 +491,12 @@ error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 	sys_rwlock.trace("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::check<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
-	{
-		const s64 val = rwlock.owner;
+		{
+			const s64 val = rwlock.owner;
 
-		// Return previous value
-		return val ? val : rwlock.owner.compare_and_swap(0, ppu.id << 1);
-	});
+			// Return previous value
+			return val ? val : rwlock.owner.compare_and_swap(0, ppu.id << 1);
+		});
 
 	if (!rwlock)
 	{
@@ -525,12 +523,12 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 	sys_rwlock.trace("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
-	{
-		const s64 val = rwlock.owner;
+		{
+			const s64 val = rwlock.owner;
 
-		// Return previous value
-		return val != ppu.id << 1 ? val : rwlock.owner.compare_and_swap(val, 0);
-	});
+			// Return previous value
+			return val != ppu.id << 1 ? val : rwlock.owner.compare_and_swap(val, 0);
+		});
 
 	if (!rwlock)
 	{

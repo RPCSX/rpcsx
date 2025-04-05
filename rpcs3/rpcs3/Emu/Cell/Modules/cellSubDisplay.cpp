@@ -6,26 +6,26 @@
 
 LOG_CHANNEL(cellSubDisplay);
 
-template<>
+template <>
 void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-		STR_CASE(CELL_SUBDISPLAY_ERROR_OUT_OF_MEMORY);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_FATAL);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_FOUND);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_INVALID_VALUE);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_INITIALIZED);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_SUPPORTED);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_SET_SAMPLE);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_AUDIOOUT_IS_BUSY);
-		STR_CASE(CELL_SUBDISPLAY_ERROR_ZERO_REGISTERED);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SUBDISPLAY_ERROR_OUT_OF_MEMORY);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_FATAL);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_FOUND);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_INVALID_VALUE);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_SUPPORTED);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_SET_SAMPLE);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_AUDIOOUT_IS_BUSY);
+				STR_CASE(CELL_SUBDISPLAY_ERROR_ZERO_REGISTERED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 enum class sub_display_status : u32
@@ -53,7 +53,6 @@ struct sub_display_manager
 	// Touch data
 	std::array<CellSubDisplayTouchInfo, CELL_SUBDISPLAY_TOUCH_MAX_TOUCH_INFO> touch_info{};
 };
-
 
 error_code check_param(CellSubDisplayParam* param)
 {
@@ -183,10 +182,10 @@ error_code cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 
 	switch (pParam->version)
 	{
-		case CELL_SUBDISPLAY_VERSION_0001: return not_an_error(CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE);
-		case CELL_SUBDISPLAY_VERSION_0002: return not_an_error(CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE);
-		case CELL_SUBDISPLAY_VERSION_0003: return not_an_error(CELL_SUBDISPLAY_0003_MEMORY_CONTAINER_SIZE);
-		default: break;
+	case CELL_SUBDISPLAY_VERSION_0001: return not_an_error(CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE);
+	case CELL_SUBDISPLAY_VERSION_0002: return not_an_error(CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE);
+	case CELL_SUBDISPLAY_VERSION_0003: return not_an_error(CELL_SUBDISPLAY_0003_MEMORY_CONTAINER_SIZE);
+	default: break;
 	}
 
 	return CELL_SUBDISPLAY_ERROR_INVALID_VALUE;
@@ -392,23 +391,23 @@ error_code cellSubDisplayGetTouchInfo(s32 groupId, vm::ptr<CellSubDisplayTouchIn
 }
 
 DECLARE(ppu_module_manager::cellSubDisplay)("cellSubDisplay", []()
-{
-	// Initialization / Termination Functions
-	REG_FUNC(cellSubDisplay, cellSubDisplayInit);
-	REG_FUNC(cellSubDisplay, cellSubDisplayEnd);
-	REG_FUNC(cellSubDisplay, cellSubDisplayGetRequiredMemory);
-	REG_FUNC(cellSubDisplay, cellSubDisplayStart);
-	REG_FUNC(cellSubDisplay, cellSubDisplayStop);
+	{
+		// Initialization / Termination Functions
+		REG_FUNC(cellSubDisplay, cellSubDisplayInit);
+		REG_FUNC(cellSubDisplay, cellSubDisplayEnd);
+		REG_FUNC(cellSubDisplay, cellSubDisplayGetRequiredMemory);
+		REG_FUNC(cellSubDisplay, cellSubDisplayStart);
+		REG_FUNC(cellSubDisplay, cellSubDisplayStop);
 
-	// Data Setting Functions
-	REG_FUNC(cellSubDisplay, cellSubDisplayGetVideoBuffer);
-	REG_FUNC(cellSubDisplay, cellSubDisplayAudioOutBlocking);
-	REG_FUNC(cellSubDisplay, cellSubDisplayAudioOutNonBlocking);
+		// Data Setting Functions
+		REG_FUNC(cellSubDisplay, cellSubDisplayGetVideoBuffer);
+		REG_FUNC(cellSubDisplay, cellSubDisplayAudioOutBlocking);
+		REG_FUNC(cellSubDisplay, cellSubDisplayAudioOutNonBlocking);
 
-	// Peer Status Acquisition Functions
-	REG_FUNC(cellSubDisplay, cellSubDisplayGetPeerNum);
-	REG_FUNC(cellSubDisplay, cellSubDisplayGetPeerList);
+		// Peer Status Acquisition Functions
+		REG_FUNC(cellSubDisplay, cellSubDisplayGetPeerNum);
+		REG_FUNC(cellSubDisplay, cellSubDisplayGetPeerList);
 
-	//
-	REG_FUNC(cellSubDisplay, cellSubDisplayGetTouchInfo);
-});
+		//
+		REG_FUNC(cellSubDisplay, cellSubDisplayGetTouchInfo);
+	});

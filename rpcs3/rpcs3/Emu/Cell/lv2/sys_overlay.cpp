@@ -71,7 +71,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 	sys_overlay.success("Loaded overlay: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
 	*ovlmid = idm::last_id();
-	*entry  = ovlm->entry;
+	*entry = ovlm->entry;
 
 	return CELL_OK;
 }
@@ -94,7 +94,7 @@ std::function<void(void*)> lv2_overlay::load(utils::serial& ar)
 	{
 		u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 		file = make_file_view(std::move(file), offset, umax);
-		ovlm = ppu_load_overlay(ppu_exec_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, 0, &ar).first;
+		ovlm = ppu_load_overlay(ppu_exec_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, 0, &ar).first;
 
 		if (!ovlm)
 		{

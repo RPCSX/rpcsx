@@ -48,7 +48,7 @@ namespace pad
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
 	atomic_t<bool> g_home_menu_requested{false};
-}
+} // namespace pad
 
 namespace rsx
 {
@@ -89,28 +89,26 @@ void pad_thread::Init()
 		if (m_pads[i])
 		{
 			pad_settings[i] =
-			{
-				m_pads[i]->m_port_status,
-				m_pads[i]->m_device_capability,
-				m_pads[i]->m_device_type,
-				m_pads[i]->m_class_type,
-				m_pads[i]->m_vendor_id,
-				m_pads[i]->m_product_id,
-				m_pads[i]->ldd
-			};
+				{
+					m_pads[i]->m_port_status,
+					m_pads[i]->m_device_capability,
+					m_pads[i]->m_device_type,
+					m_pads[i]->m_class_type,
+					m_pads[i]->m_vendor_id,
+					m_pads[i]->m_product_id,
+					m_pads[i]->ldd};
 		}
 		else
 		{
 			pad_settings[i] =
-			{
-				CELL_PAD_STATUS_DISCONNECTED,
-				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
-				CELL_PAD_DEV_TYPE_STANDARD,
-				CELL_PAD_PCLASS_TYPE_STANDARD,
-				0,
-				0,
-				false
-			};
+				{
+					CELL_PAD_STATUS_DISCONNECTED,
+					CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
+					CELL_PAD_DEV_TYPE_STANDARD,
+					CELL_PAD_PCLASS_TYPE_STANDARD,
+					0,
+					0,
+					false};
 		}
 	}
 
@@ -223,8 +221,7 @@ void pad_thread::Init()
 			}
 		}
 
-		pad->is_fake_pad = ((g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::fake) && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
-			|| (pad->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && pad->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
+		pad->is_fake_pad = ((g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::fake) && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM))) || (pad->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && pad->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
 		connect_usb_controller(i, input::get_product_by_vid_pid(pad->m_vendor_id, pad->m_product_id));
 	}
 
@@ -339,27 +336,27 @@ void pad_thread::operator()()
 			}
 
 			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
-			{
-				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (!pad::g_enabled || !is_input_allowed())
+					while (thread_ctrl::state() != thread_state::aborting)
 					{
-						thread_ctrl::wait_for(30'000);
-						continue;
+						if (!pad::g_enabled || !is_input_allowed())
+						{
+							thread_ctrl::wait_for(30'000);
+							continue;
+						}
+
+						handler->process();
+
+						u64 pad_sleep = g_cfg.io.pad_sleep;
+
+						if (Emu.IsPaused())
+						{
+							pad_sleep = std::max<u64>(pad_sleep, 30'000);
+						}
+
+						thread_ctrl::wait_for(pad_sleep);
 					}
-
-					handler->process();
-
-					u64 pad_sleep = g_cfg.io.pad_sleep;
-
-					if (Emu.IsPaused())
-					{
-						pad_sleep = std::max<u64>(pad_sleep, 30'000);
-					}
-
-					thread_ctrl::wait_for(pad_sleep);
-				}
-			}));
+				}));
 		}
 
 		input_log.notice("Pad threads started");
@@ -440,13 +437,12 @@ void pad_thread::operator()()
 
 				for (const auto& button : pad->m_buttons)
 				{
-					if (button.m_pressed && (
-						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-						button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-						button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-						button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-						button.m_outKeyCode == CELL_PAD_CTRL_START ||
-						button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
+					if (button.m_pressed && (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+												button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+												button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+												button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+												button.m_outKeyCode == CELL_PAD_CTRL_START ||
+												button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
 					{
 						any_button_pressed = true;
 						break;
@@ -477,7 +473,7 @@ void pad_thread::operator()()
 
 				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
 				// NOTE: Rock Band 3 doesn't seem to care about the len. It's always 0.
-				if (pad->ldd /*&& pad->ldd_data.len >= 1 */&& !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
+				if (pad->ldd /*&& pad->ldd_data.len >= 1 */ && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
 				{
 					ps_button_pressed = true;
 					break;
@@ -521,9 +517,9 @@ void pad_thread::operator()()
 			m_resume_emulation_flag = false;
 
 			Emu.BlockingCallFromMainThread([]()
-			{
-				Emu.Resume();
-			});
+				{
+					Emu.Resume();
+				});
 		}
 
 		u64 pad_sleep = g_cfg.io.pad_sleep;
@@ -609,8 +605,7 @@ void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 	static const input::product_info product = input::get_product_info(input::product_type::playstation_3_controller);
 
 	m_pads[handle]->ldd = true;
-	m_pads[handle]->Init
-	(
+	m_pads[handle]->Init(
 		port_status ? *port_status : CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
 		CELL_PAD_DEV_TYPE_LDD,
@@ -618,8 +613,7 @@ void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 		product.pclass_profile,
 		product.vendor_id,
 		product.product_id,
-		50
-	);
+		50);
 
 	input_log.notice("Pad %d: LDD, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
 		handle, m_pads[handle]->m_vendor_id, m_pads[handle]->m_product_id, m_pads[handle]->m_class_type, m_pads[handle]->m_class_profile);
@@ -689,7 +683,7 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	case pad_handler::evdev:
 		return std::make_shared<evdev_joystick_handler>();
 #endif
-    case pad_handler::virtual_pad:
+	case pad_handler::virtual_pad:
 		return std::make_shared<virtual_pad_handler>();
 	}
 
@@ -736,13 +730,13 @@ void pad_thread::open_home_menu()
 		input_log.notice("opening home menu...");
 
 		const error_code result = manager->create<rsx::overlays::home_menu_dialog>()->show([this](s32 status)
-		{
-			input_log.notice("closing home menu with status %d", status);
+			{
+				input_log.notice("closing home menu with status %d", status);
 
-			m_home_menu_open = false;
+				m_home_menu_open = false;
 
-			send_close_home_menu_cmds();
-		});
+				send_close_home_menu_cmds();
+			});
 
 		(result ? input_log.error : input_log.notice)("opened home menu with result %d", s32{result});
 	}

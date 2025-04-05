@@ -8,12 +8,12 @@ LOG_CHANNEL(cellSysutilNpEula);
 
 enum SceNpEulaStatus
 {
-	SCE_NP_EULA_UNKNOWN          = 0,
-	SCE_NP_EULA_ACCEPTED         = 1,
+	SCE_NP_EULA_UNKNOWN = 0,
+	SCE_NP_EULA_ACCEPTED = 1,
 	SCE_NP_EULA_ALREADY_ACCEPTED = 2,
-	SCE_NP_EULA_REJECTED         = 3,
-	SCE_NP_EULA_ABORTED          = 4,
-	SCE_NP_EULA_ERROR            = 5,
+	SCE_NP_EULA_REJECTED = 3,
+	SCE_NP_EULA_ABORTED = 4,
+	SCE_NP_EULA_ERROR = 5,
 };
 
 using SceNpEulaVersion = u32;
@@ -46,12 +46,12 @@ error_code sceNpEulaCheckEulaStatus(vm::cptr<SceNpCommunicationId> communication
 	cb_infos.status = SCE_NP_EULA_ALREADY_ACCEPTED;
 
 	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-	{
-		auto& cb_infos = g_fxo->get<sceNpEulaCallbacksRegistered>();
-		cbFunc(cb_ppu, cb_infos.status, CELL_OK, 1, cbFuncArg);
-		cb_infos.sceNpEulaCheckEulaStatus_callback_registered = false;
-		return 0;
-	});
+		{
+			auto& cb_infos = g_fxo->get<sceNpEulaCallbacksRegistered>();
+			cbFunc(cb_ppu, cb_infos.status, CELL_OK, 1, cbFuncArg);
+			cb_infos.sceNpEulaCheckEulaStatus_callback_registered = false;
+			return 0;
+		});
 
 	return CELL_OK;
 }
@@ -96,8 +96,8 @@ error_code sceNpEulaShowCurrentEula(vm::cptr<SceNpCommunicationId> communication
 }
 
 DECLARE(ppu_module_manager::cellSysutilNpEula)("cellSysutilNpEula", []()
-{
-	REG_FUNC(cellSysutilNpEula, sceNpEulaCheckEulaStatus);
-	REG_FUNC(cellSysutilNpEula, sceNpEulaAbort);
-	REG_FUNC(cellSysutilNpEula, sceNpEulaShowCurrentEula);
-});
+	{
+		REG_FUNC(cellSysutilNpEula, sceNpEulaCheckEulaStatus);
+		REG_FUNC(cellSysutilNpEula, sceNpEulaAbort);
+		REG_FUNC(cellSysutilNpEula, sceNpEulaShowCurrentEula);
+	});

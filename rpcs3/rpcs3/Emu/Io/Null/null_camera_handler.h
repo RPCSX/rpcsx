@@ -7,10 +7,22 @@ class null_camera_handler final : public camera_handler_base
 public:
 	null_camera_handler() : camera_handler_base() {}
 
-	void open_camera() override { set_state(camera_handler_state::open); }
-	void close_camera() override { set_state(camera_handler_state::closed); }
-	void start_camera() override { set_state(camera_handler_state::running); }
-	void stop_camera() override { set_state(camera_handler_state::open); }
+	void open_camera() override
+	{
+		set_state(camera_handler_state::open);
+	}
+	void close_camera() override
+	{
+		set_state(camera_handler_state::closed);
+	}
+	void start_camera() override
+	{
+		set_state(camera_handler_state::running);
+	}
+	void stop_camera() override
+	{
+		set_state(camera_handler_state::open);
+	}
 
 	void set_format(s32 format, u32 bytesize) override
 	{

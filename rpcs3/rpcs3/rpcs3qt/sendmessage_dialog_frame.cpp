@@ -49,7 +49,7 @@ error_code sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::
 
 	QHBoxLayout* hbox_btns = new QHBoxLayout();
 	hbox_btns->addStretch();
-	QPushButton* btn_ok     = new QPushButton(tr("Ok"));
+	QPushButton* btn_ok = new QPushButton(tr("Ok"));
 	QPushButton* btn_cancel = new QPushButton(tr("Cancel"));
 	hbox_btns->addWidget(btn_ok);
 	hbox_btns->addWidget(btn_cancel);
@@ -100,25 +100,25 @@ error_code sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::
 
 	QTimer timer;
 	connect(&timer, &QTimer::timeout, this, [this, &nps, &timer]()
-	{
-		bool abort = Emu.IsStopped();
-
-		if (!abort && nps.abort_gui_flag.exchange(false))
 		{
-			sendmessage_dlg_log.warning("Aborted by sceNp!");
-			abort = true;
-		}
+			bool abort = Emu.IsStopped();
 
-		if (abort)
-		{
-			if (m_dialog)
+			if (!abort && nps.abort_gui_flag.exchange(false))
 			{
-				m_dialog->close();
+				sendmessage_dlg_log.warning("Aborted by sceNp!");
+				abort = true;
 			}
 
-			timer.stop();
-		}
-	});
+			if (abort)
+			{
+				if (m_dialog)
+				{
+					m_dialog->close();
+				}
+
+				timer.stop();
+			}
+		});
 	timer.start(10ms);
 
 	m_dialog->exec();

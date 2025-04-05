@@ -11,8 +11,8 @@ struct CaymanRegDevice : IoDevice {
 };
 
 static orbis::ErrorCode cayman_reg_ioctl(orbis::File *file,
-                                        std::uint64_t request, void *argp,
-                                        orbis::Thread *thread) {
+                                         std::uint64_t request, void *argp,
+                                         orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled cayman_reg ioctl", request);
   thread->where();
   return {};
@@ -23,9 +23,9 @@ static const orbis::FileOps fileOps = {
 };
 
 orbis::ErrorCode CaymanRegDevice::open(orbis::Ref<orbis::File> *file,
-                                      const char *path, std::uint32_t flags,
-                                      std::uint32_t mode,
-                                      orbis::Thread *thread) {
+                                       const char *path, std::uint32_t flags,
+                                       std::uint32_t mode,
+                                       orbis::Thread *thread) {
   auto newFile = orbis::knew<orbis::File>();
   newFile->ops = &fileOps;
   newFile->device = this;

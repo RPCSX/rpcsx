@@ -6,9 +6,7 @@
 #include <QPainterPath>
 
 pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_player_led, bool player_led_enabled, bool has_battery, bool has_battery_led, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
-    : QDialog(parent)
-    , ui(new Ui::pad_led_settings_dialog)
-    , m_initial{colorR, colorG, colorB, player_led_enabled, led_low_battery_blink, led_battery_indicator, led_battery_indicator_brightness}
+	: QDialog(parent), ui(new Ui::pad_led_settings_dialog), m_initial{colorR, colorG, colorB, player_led_enabled, led_low_battery_blink, led_battery_indicator, led_battery_indicator_brightness}
 {
 	ui->setupUi(this);
 	setModal(true);
@@ -27,40 +25,40 @@ pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, in
 	ui->gb_indicator_brightness->setEnabled(has_battery && has_battery_led && has_rgb); // Let's restrict this to rgb capable devices for now
 
 	connect(ui->bb_dialog_buttons, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
-	{
-		if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Ok))
 		{
-			read_form_values();
-			accept();
-		}
-		else if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Cancel))
-		{
-			m_new = m_initial;
-			reject();
-		}
-		else if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Apply))
-		{
-			read_form_values();
-		}
-		Q_EMIT pass_led_settings(m_new);
-	});
+			if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Ok))
+			{
+				read_form_values();
+				accept();
+			}
+			else if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Cancel))
+			{
+				m_new = m_initial;
+				reject();
+			}
+			else if (button == ui->bb_dialog_buttons->button(QDialogButtonBox::Apply))
+			{
+				read_form_values();
+			}
+			Q_EMIT pass_led_settings(m_new);
+		});
 
 	if (has_rgb)
 	{
 		connect(ui->b_colorpicker, &QPushButton::clicked, [this]()
-		{
-			const QColor led_color(m_new.color_r, m_new.color_g, m_new.color_b);
-			QColorDialog dlg(led_color, this);
-			dlg.setWindowTitle(tr("LED Color"));
-			if (dlg.exec() == QColorDialog::Accepted)
 			{
-				const QColor new_color = dlg.selectedColor();
-				m_new.color_r = new_color.red();
-				m_new.color_g = new_color.green();
-				m_new.color_b = new_color.blue();
-				redraw_color_sample();
-			}
-		});
+				const QColor led_color(m_new.color_r, m_new.color_g, m_new.color_b);
+				QColorDialog dlg(led_color, this);
+				dlg.setWindowTitle(tr("LED Color"));
+				if (dlg.exec() == QColorDialog::Accepted)
+				{
+					const QColor new_color = dlg.selectedColor();
+					m_new.color_r = new_color.red();
+					m_new.color_g = new_color.green();
+					m_new.color_b = new_color.blue();
+					redraw_color_sample();
+				}
+			});
 
 		if (ui->gb_battery_status->isEnabled())
 		{

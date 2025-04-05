@@ -41,7 +41,7 @@ namespace rsx
 			if (clip_w == 0 || clip_h == 0)
 			{
 				rsx_log.warning("NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
-				return { false, src_info, dst_info };
+				return {false, src_info, dst_info};
 			}
 
 			if (in_w == 0 || in_h == 0)
@@ -53,9 +53,11 @@ namespace rsx
 			u16 clip_x = REGS(ctx)->blit_engine_clip_x();
 			u16 clip_y = REGS(ctx)->blit_engine_clip_y();
 
-			//Fit onto dst
-			if (clip_x && (out_x + clip_x + clip_w) > out_w) clip_x = 0;
-			if (clip_y && (out_y + clip_y + clip_h) > out_h) clip_y = 0;
+			// Fit onto dst
+			if (clip_x && (out_x + clip_x + clip_w) > out_w)
+				clip_x = 0;
+			if (clip_y && (out_y + clip_y + clip_h) > out_h)
+				clip_y = 0;
 
 			u16 in_pitch = REGS(ctx)->blit_engine_input_pitch();
 
@@ -72,14 +74,14 @@ namespace rsx
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown operation (0x%x)", REGS(ctx)->registers[NV3089_SET_OPERATION]);
 				RSX(ctx)->recover_fifo();
-				return { false, src_info, dst_info };
+				return {false, src_info, dst_info};
 			}
 
 			if (!src_color_format)
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", REGS(ctx)->registers[NV3089_SET_COLOR_FORMAT]);
 				RSX(ctx)->recover_fifo();
-				return { false, src_info, dst_info };
+				return {false, src_info, dst_info};
 			}
 
 			const u32 src_offset = REGS(ctx)->blit_engine_input_offset();
@@ -106,7 +108,7 @@ namespace rsx
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", REGS(ctx)->registers[NV3062_SET_COLOR_FORMAT]);
 					RSX(ctx)->recover_fifo();
-					return { false, src_info, dst_info };
+					return {false, src_info, dst_info};
 				}
 				else
 				{
@@ -124,7 +126,7 @@ namespace rsx
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", REGS(ctx)->registers[NV309E_SET_FORMAT]);
 					RSX(ctx)->recover_fifo();
-					return { false, src_info, dst_info };
+					return {false, src_info, dst_info};
 				}
 				else
 				{
@@ -135,7 +137,7 @@ namespace rsx
 			}
 			default:
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(REGS(ctx)->blit_engine_context_surface()));
-				return { false, src_info, dst_info };
+				return {false, src_info, dst_info};
 			}
 
 			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
@@ -201,7 +203,7 @@ namespace rsx
 					!src_address || !dst_address)
 				{
 					RSX(ctx)->recover_fifo();
-					return { false, src_info, dst_info };
+					return {false, src_info, dst_info};
 				}
 
 				RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, data_length);
@@ -212,7 +214,7 @@ namespace rsx
 					if (RSX(ctx)->copy_zcull_stats(src_address, data_length, dst_address) == data_length)
 					{
 						// All writes deferred
-						return { false, src_info, dst_info };
+						return {false, src_info, dst_info};
 					}
 				}
 			}
@@ -225,7 +227,7 @@ namespace rsx
 					!src_address || !dst_address)
 				{
 					RSX(ctx)->recover_fifo();
-					return { false, src_info, dst_info };
+					return {false, src_info, dst_info};
 				}
 
 				RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, data_length);
@@ -239,7 +241,7 @@ namespace rsx
 			{
 				// NULL operation
 				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
-				return { false, src_info, dst_info };
+				return {false, src_info, dst_info};
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
@@ -273,7 +275,7 @@ namespace rsx
 			{
 				rsx_log.error("NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
 					REGS(ctx)->blit_engine_ds_dx(), REGS(ctx)->blit_engine_dt_dy());
-				return { false, src_info, dst_info };
+				return {false, src_info, dst_info};
 			}
 
 			src_info.format = src_color_format;
@@ -306,7 +308,7 @@ namespace rsx
 			dst_info.pixels = pixels_dst;
 			dst_info.swizzled = (REGS(ctx)->blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
 
-			return { true, src_info, dst_info };
+			return {true, src_info, dst_info};
 		}
 
 		void linear_copy(
@@ -324,7 +326,7 @@ namespace rsx
 		{
 			std::vector<u8> temp2;
 
-			if (!need_convert) [[ likely ]]
+			if (!need_convert) [[likely]]
 			{
 				const bool is_overlapping = !src_is_modified && dst.dma == src.dma && [&]() -> bool
 				{
@@ -333,71 +335,71 @@ namespace rsx
 					return src_range.overlaps(dst_range);
 				}();
 
-					if (is_overlapping) [[ unlikely ]]
+				if (is_overlapping) [[unlikely]]
+				{
+					if (need_clip)
 					{
-						if (need_clip)
-						{
-							temp2.resize(dst.pitch * dst.clip_height);
-							clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
-							return;
-						}
-
-						if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
-						{
-							const u32 buffer_pitch = dst.bpp * out_w;
-							temp2.resize(buffer_pitch * out_h);
-							std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
-
-							// Read the whole buffer from source
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(buf, pixels, buffer_pitch);
-								pixels += src.pitch;
-								buf += buffer_pitch;
-							}
-
-							buf = temp2.data(), pixels = dst.pixels;
-
-							// Write to destination
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(pixels, buf, buffer_pitch);
-								pixels += dst.pitch;
-								buf += buffer_pitch;
-							}
-
-							return;
-						}
-
-						std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
+						temp2.resize(dst.pitch * dst.clip_height);
+						clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
 						return;
 					}
 
-					if (need_clip) [[ unlikely ]]
+					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
 					{
-						clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
-						return;
-					}
+						const u32 buffer_pitch = dst.bpp * out_w;
+						temp2.resize(buffer_pitch * out_h);
+						std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
 
-					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[ unlikely ]]
-					{
-						u8* dst_pixels = dst.pixels, * src_pixels = src.pixels;
-
+						// Read the whole buffer from source
 						for (u32 y = 0; y < out_h; ++y)
 						{
-							std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
-							dst_pixels += dst.pitch;
-							src_pixels += src.pitch;
+							std::memcpy(buf, pixels, buffer_pitch);
+							pixels += src.pitch;
+							buf += buffer_pitch;
+						}
+
+						buf = temp2.data(), pixels = dst.pixels;
+
+						// Write to destination
+						for (u32 y = 0; y < out_h; ++y)
+						{
+							std::memcpy(pixels, buf, buffer_pitch);
+							pixels += dst.pitch;
+							buf += buffer_pitch;
 						}
 
 						return;
 					}
 
-					std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
+					std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
 					return;
+				}
+
+				if (need_clip) [[unlikely]]
+				{
+					clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
+					return;
+				}
+
+				if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[unlikely]]
+				{
+					u8 *dst_pixels = dst.pixels, *src_pixels = src.pixels;
+
+					for (u32 y = 0; y < out_h; ++y)
+					{
+						std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
+						dst_pixels += dst.pitch;
+						src_pixels += src.pitch;
+					}
+
+					return;
+				}
+
+				std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
+				return;
 			}
 
-			if (need_clip) [[ unlikely ]]
+			if (need_clip) [[unlikely]]
 			{
 				temp2.resize(dst.pitch * std::max<u32>(dst.height, dst.clip_height));
 
@@ -544,7 +546,7 @@ namespace rsx
 
 				if (flip_x)
 				{
-					if (src.bpp == 4) [[ likely ]]
+					if (src.bpp == 4) [[likely]]
 					{
 						rsx::memcpy_r<u32>(dst_pixels, src_pixels, src.width);
 						continue;
@@ -646,9 +648,7 @@ namespace rsx
 
 			if (tiled_region)
 			{
-				const auto tile_func = dst.bpp == 4
-					? rsx::tile_texel_data32
-					: rsx::tile_texel_data16;
+				const auto tile_func = dst.bpp == 4 ? rsx::tile_texel_data32 : rsx::tile_texel_data16;
 
 				tile_func(
 					real_dst,
@@ -659,9 +659,8 @@ namespace rsx
 					tiled_region.tile->bank,
 					tiled_region.tile->pitch,
 					dst.clip_width,
-					dst.clip_height
-				);
+					dst.clip_height);
 			}
 		}
-	}
-}
+	} // namespace nv3089
+} // namespace rsx

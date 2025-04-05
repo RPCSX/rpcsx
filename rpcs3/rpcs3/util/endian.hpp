@@ -245,7 +245,7 @@ namespace stx
 			}
 		}
 
-private:
+	private:
 		// Compatible bit pattern cast
 		template <typename To, typename Test = int, typename T2>
 		static constexpr To right_arg_cast(const T2& rhs) noexcept
@@ -294,7 +294,7 @@ private:
 			return value() == rhs;
 		}
 
-private:
+	private:
 		template <typename T2>
 		static constexpr bool check_args_for_bitwise_op()
 		{
@@ -311,7 +311,7 @@ private:
 			return false;
 		}
 
-public:
+	public:
 		template <typename T2>
 		constexpr auto operator&(const T2& rhs) const noexcept
 		{
@@ -469,18 +469,24 @@ public:
 			return result;
 		}
 	};
-}
+} // namespace stx
 
 // Specializations
 
 template <typename T, bool Swap, usz Align, typename T2, bool Swap2, usz Align2>
-struct std::common_type<stx::se_t<T, Swap, Align>, stx::se_t<T2, Swap2, Align2>> : std::common_type<T, T2> {};
+struct std::common_type<stx::se_t<T, Swap, Align>, stx::se_t<T2, Swap2, Align2>> : std::common_type<T, T2>
+{
+};
 
 template <typename T, bool Swap, usz Align, typename T2>
-struct std::common_type<stx::se_t<T, Swap, Align>, T2> : std::common_type<T, std::common_type_t<T2>> {};
+struct std::common_type<stx::se_t<T, Swap, Align>, T2> : std::common_type<T, std::common_type_t<T2>>
+{
+};
 
 template <typename T, typename T2, bool Swap2, usz Align2>
-struct std::common_type<T, stx::se_t<T2, Swap2, Align2>> : std::common_type<std::common_type_t<T>, T2> {};
+struct std::common_type<T, stx::se_t<T2, Swap2, Align2>> : std::common_type<std::common_type_t<T>, T2>
+{
+};
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop

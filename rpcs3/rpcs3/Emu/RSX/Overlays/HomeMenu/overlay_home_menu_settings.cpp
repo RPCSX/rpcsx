@@ -139,5 +139,5 @@ namespace rsx
 
 			apply_layout();
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -78,7 +78,7 @@ namespace rsx
 				fmt::throw_exception("Unexpected media type");
 			}
 
-			char title[384]{}; // CELL_SEARCH_TITLE_LEN_MAX
+			char title[384]{};  // CELL_SEARCH_TITLE_LEN_MAX
 			char artist[384]{}; // CELL_SEARCH_TITLE_LEN_MAX
 
 			if (entry.type == media_type::directory)
@@ -88,13 +88,13 @@ namespace rsx
 			else
 			{
 				utils::parse_metadata(title, entry.info, "title", entry.name.substr(0, entry.name.find_last_of('.')), 384); // CELL_SEARCH_TITLE_LEN_MAX
-				utils::parse_metadata(artist, entry.info, "artist", "Unknown Artist", 384); // CELL_SEARCH_TITLE_LEN_MAX
+				utils::parse_metadata(artist, entry.info, "artist", "Unknown Artist", 384);                                 // CELL_SEARCH_TITLE_LEN_MAX
 			}
 
-			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
+			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
 			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(title);
-			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(artist);
+			std::unique_ptr<overlay_element> subtext = std::make_unique<label>(artist);
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
@@ -108,7 +108,7 @@ namespace rsx
 
 			// Make back color transparent for text
 			header_text->back_color.a = 0.f;
-			subtext->back_color.a     = 0.f;
+			subtext->back_color.a = 0.f;
 
 			static_cast<vertical_layout*>(text_stack.get())->pack_padding = 5;
 			static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
@@ -365,9 +365,9 @@ namespace rsx
 			else
 			{
 				// Try to peek into the file
-				const s32 av_media_type = type == media_list_dialog::media_type::photo ? -1
-				                        : type == media_list_dialog::media_type::video ? 0 /*AVMEDIA_TYPE_VIDEO*/
-				                        : 1 /*AVMEDIA_TYPE_AUDIO*/;
+				const s32 av_media_type = type == media_list_dialog::media_type::photo ? -1 : type == media_list_dialog::media_type::video ? 0 /*AVMEDIA_TYPE_VIDEO*/
+				                                                                                                                             :
+				                                                                                                                             1 /*AVMEDIA_TYPE_AUDIO*/;
 				auto [success, info] = utils::get_media_info(media_path, av_media_type);
 				if (success)
 				{
@@ -394,44 +394,44 @@ namespace rsx
 			}
 
 			g_fxo->get<named_thread<media_list_dialog_thread>>()([=]()
-			{
-				media_list_dialog::media_entry root_media_entry{};
-				root_media_entry.type = media_list_dialog::media_type::directory;
+				{
+					media_list_dialog::media_entry root_media_entry{};
+					root_media_entry.type = media_list_dialog::media_type::directory;
 
-				if (fs::is_dir(path))
-				{
-					parse_media_recursive(0, path, title, type, root_media_entry);
-				}
-				else
-				{
-					rsx_log.error("Media list: Failed to open path: '%s'", path);
-				}
+					if (fs::is_dir(path))
+					{
+						parse_media_recursive(0, path, title, type, root_media_entry);
+					}
+					else
+					{
+						rsx_log.error("Media list: Failed to open path: '%s'", path);
+					}
 
-				media_list_dialog::media_entry media{};
-				s32 result = 0;
-				u32 focused = 0;
+					media_list_dialog::media_entry media{};
+					s32 result = 0;
+					u32 focused = 0;
 
-				if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
-				{
-					result = manager->create<rsx::overlays::media_list_dialog>()->show(&root_media_entry, media, title, focused, true);
-				}
-				else
-				{
-					result = user_interface::selection_code::canceled;
-					rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
-				}
+					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+					{
+						result = manager->create<rsx::overlays::media_list_dialog>()->show(&root_media_entry, media, title, focused, true);
+					}
+					else
+					{
+						result = user_interface::selection_code::canceled;
+						rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
+					}
 
-				if (result >= 0 && media.type == type)
-				{
-					on_finished(CELL_OK, media.info);
-				}
-				else
-				{
-					on_finished(result, {});
-				}
-			});
+					if (result >= 0 && media.type == type)
+					{
+						on_finished(CELL_OK, media.info);
+					}
+					else
+					{
+						on_finished(result, {});
+					}
+				});
 
 			return CELL_OK;
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

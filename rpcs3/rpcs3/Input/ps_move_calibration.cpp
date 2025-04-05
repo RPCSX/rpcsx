@@ -32,12 +32,11 @@ static inline f32 psmove_calibration_decode_float(const u8* data, u32 offset)
 	{
 		uint32_t u32;
 		float f;
-	} v {
-		.u32 = static_cast<u32>( (data[offset]     & 0xFF) |
-		                        ((data[offset + 1] & 0xFF) << 8) |
-		                        ((data[offset + 2] & 0xFF) << 16) |
-		                        ((data[offset + 3] & 0xFF) << 24))
-	};
+	} v{
+		.u32 = static_cast<u32>((data[offset] & 0xFF) |
+								((data[offset + 1] & 0xFF) << 8) |
+								((data[offset + 2] & 0xFF) << 16) |
+								((data[offset + 3] & 0xFF) << 24))};
 
 	return v.f;
 }

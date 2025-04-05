@@ -25,7 +25,7 @@ namespace vk
 			u64 compiler_opt;
 			vk::pipeline_props properties;
 
-			bool operator == (const pipeline_key& other) const
+			bool operator==(const pipeline_key& other) const
 			{
 				return other.compiler_opt == compiler_opt && other.properties == properties;
 			}
@@ -78,7 +78,7 @@ namespace vk
 		u32 get_vertex_instruction_location() const;
 		u32 get_fragment_instruction_location() const;
 
-		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set);
+		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set& set);
 		VkDescriptorSet allocate_descriptor_set();
 	};
-}
+} // namespace vk

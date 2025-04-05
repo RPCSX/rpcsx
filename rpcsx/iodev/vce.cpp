@@ -12,12 +12,12 @@ static orbis::ErrorCode vce_ioctl(orbis::File *file, std::uint64_t request,
   switch (request) {
   case 0xc0048406:
     *reinterpret_cast<std::uint32_t *>(argp) = 0x700;
-    return{};
+    return {};
 
   case 0x80488401:
     auto unkAddress = *reinterpret_cast<std::uint64_t *>(argp);
     ORBIS_LOG_ERROR(__FUNCTION__, request, unkAddress);
-    return{};
+    return {};
   }
 
   ORBIS_LOG_FATAL("Unhandled vce ioctl", request);

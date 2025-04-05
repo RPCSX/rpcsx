@@ -13,27 +13,23 @@ struct GLTraits
 	using pipeline_storage_type = std::unique_ptr<gl::glsl::program>;
 	using pipeline_properties = void*;
 
-	static
-	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, usz /*ID*/)
+	static void recompile_fragment_program(const RSXFragmentProgram& RSXFP, fragment_program_type& fragmentProgramData, usz /*ID*/)
 	{
 		fragmentProgramData.Decompile(RSXFP);
 	}
 
-	static
-	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, usz /*ID*/)
+	static void recompile_vertex_program(const RSXVertexProgram& RSXVP, vertex_program_type& vertexProgramData, usz /*ID*/)
 	{
 		vertexProgramData.Decompile(RSXVP);
 	}
 
-	static
-	void validate_pipeline_properties(const vertex_program_type&, const fragment_program_type&, pipeline_properties&)
+	static void validate_pipeline_properties(const vertex_program_type&, const fragment_program_type&, pipeline_properties&)
 	{
 	}
 
-	static
-	pipeline_type* build_pipeline(
-		const vertex_program_type &vertexProgramData,
-		const fragment_program_type &fragmentProgramData,
+	static pipeline_type* build_pipeline(
+		const vertex_program_type& vertexProgramData,
+		const fragment_program_type& fragmentProgramData,
 		const pipeline_properties&,
 		bool compile_async,
 		std::function<pipeline_type*(pipeline_storage_type&)> callback)
@@ -41,8 +37,7 @@ struct GLTraits
 		auto compiler = gl::get_pipe_compiler();
 		auto flags = (compile_async) ? gl::pipe_compiler::COMPILE_DEFERRED : gl::pipe_compiler::COMPILE_INLINE;
 
-		auto post_create_func = [vp = &vertexProgramData.shader, fp = &fragmentProgramData.shader]
-		(gl::glsl::program* program)
+		auto post_create_func = [vp = &vertexProgramData.shader, fp = &fragmentProgramData.shader](gl::glsl::program* program)
 		{
 			if (!vp->compiled())
 			{
@@ -122,18 +117,18 @@ struct GLProgramBuffer : public program_state_cache<GLTraits>
 		return 0;
 	}
 
-	u64 get_hash(const RSXVertexProgram &prog)
+	u64 get_hash(const RSXVertexProgram& prog)
 	{
 		return program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(prog);
 	}
 
-	u64 get_hash(const RSXFragmentProgram &prog)
+	u64 get_hash(const RSXFragmentProgram& prog)
 	{
 		return program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(prog);
 	}
 
 	template <typename... Args>
-	void add_pipeline_entry(const RSXVertexProgram& vp, const RSXFragmentProgram& fp, void* &props, Args&& ...args)
+	void add_pipeline_entry(const RSXVertexProgram& vp, const RSXFragmentProgram& fp, void*& props, Args&&... args)
 	{
 		get_graphics_pipeline(nullptr, vp, fp, props, false, false, std::forward<Args>(args)...);
 	}

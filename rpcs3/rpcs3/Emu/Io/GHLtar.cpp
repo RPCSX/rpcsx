@@ -13,35 +13,35 @@ template <>
 void fmt_class_string<ghltar_btn>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](ghltar_btn value)
-	{
-		switch (value)
 		{
-		case ghltar_btn::w1: return "W1";
-		case ghltar_btn::w2: return "W2";
-		case ghltar_btn::w3: return "W3";
-		case ghltar_btn::b1: return "B1";
-		case ghltar_btn::b2: return "B2";
-		case ghltar_btn::b3: return "B3";
-		case ghltar_btn::start: return "Start";
-		case ghltar_btn::hero_power: return "Hero Power";
-		case ghltar_btn::ghtv: return "GHTV";
-		case ghltar_btn::strum_down: return "Strum Down";
-		case ghltar_btn::strum_up: return "Strum Up";
-		case ghltar_btn::dpad_left: return "D-Pad Left";
-		case ghltar_btn::dpad_right: return "D-Pad Right";
-		case ghltar_btn::whammy: return "Whammy";
-		case ghltar_btn::tilt: return "Tilt";
-		case ghltar_btn::count: return "Count";
-		}
+			switch (value)
+			{
+			case ghltar_btn::w1: return "W1";
+			case ghltar_btn::w2: return "W2";
+			case ghltar_btn::w3: return "W3";
+			case ghltar_btn::b1: return "B1";
+			case ghltar_btn::b2: return "B2";
+			case ghltar_btn::b3: return "B3";
+			case ghltar_btn::start: return "Start";
+			case ghltar_btn::hero_power: return "Hero Power";
+			case ghltar_btn::ghtv: return "GHTV";
+			case ghltar_btn::strum_down: return "Strum Down";
+			case ghltar_btn::strum_up: return "Strum Up";
+			case ghltar_btn::dpad_left: return "D-Pad Left";
+			case ghltar_btn::dpad_right: return "D-Pad Right";
+			case ghltar_btn::whammy: return "Whammy";
+			case ghltar_btn::tilt: return "Tilt";
+			case ghltar_btn::count: return "Count";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 usb_device_ghltar::usb_device_ghltar(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
 {
-	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x12BA, 0x074B, 0x0100, 0x01, 0x02, 0x00, 0x01});
+	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x12BA, 0x074B, 0x0100, 0x01, 0x02, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x96}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x02, 0x03, 0x00, 0x00, 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x00, 0x01, 0x22, 0x001d}));
@@ -70,20 +70,20 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 	// Control transfers are nearly instant
 	switch (bmRequestType)
 	{
-		case 0x21:
-			switch (bRequest)
-			{
-			case 0x09:
-				// Do nothing here - not sure what it should do.
-				break;
-			default:
-				ghltar_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
-				break;
-			}
+	case 0x21:
+		switch (bRequest)
+		{
+		case 0x09:
+			// Do nothing here - not sure what it should do.
 			break;
 		default:
-			usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
+			ghltar_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bRequest=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bRequest, bmRequestType);
 			break;
+		}
+		break;
+	default:
+		usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
+		break;
 	}
 }
 
@@ -93,8 +93,8 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 {
 	ensure(buf_size >= 27);
 
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow(6ms, TODO accurate measurement)
 	// But make the emulated guitar reply in 1ms for better input behavior
@@ -132,11 +132,11 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 
 	buf[4] = 0x80; // Strummer
 
-	buf[5]  = 0x80; // Hero Power (when buf[19] == 0x00 or 0xFF, set to that.)
-	buf[6]  = 0x80; // Whammy
+	buf[5] = 0x80;  // Hero Power (when buf[19] == 0x00 or 0xFF, set to that.)
+	buf[6] = 0x80;  // Whammy
 	buf[19] = 0x80; // Accelerometer
 
-	buf[3]  = 0x80; // Unknown, always 0x80
+	buf[3] = 0x80;  // Unknown, always 0x80
 	buf[22] = 0x01; // Unknown, always 0x01
 	buf[24] = 0x02; // Unknown, always 0x02
 	buf[26] = 0x02; // Unknown, always 0x02
@@ -150,7 +150,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_pad_thread();
-	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
+	const auto& pad = ::at32(handler->GetPads(), m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{

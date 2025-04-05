@@ -12,7 +12,7 @@ class vfs_tool_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	vfs_tool_dialog(QWidget *parent);
+	vfs_tool_dialog(QWidget* parent);
 	virtual ~vfs_tool_dialog();
 
 private:

@@ -37,7 +37,7 @@ namespace vk
 		}
 
 		m_use_host_scheduler = (mode == vk_gpu_scheduler_mode::safe) || g_cfg.video.strict_rendering_mode;
-		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler? "'Safe'" : "'Fast'");
+		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler ? "'Safe'" : "'Fast'");
 
 		m_dependency_info = queue_dependency;
 	}
@@ -183,4 +183,4 @@ namespace vk
 		m_events_pool.clear();
 		m_semaphore_pool.clear();
 	}
-}
+} // namespace vk

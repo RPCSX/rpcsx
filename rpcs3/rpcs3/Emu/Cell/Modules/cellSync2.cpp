@@ -14,29 +14,29 @@ vm::gvar<CellSync2Notifier> gCellSync2NotifierPpuFiber;
 vm::gvar<CellSync2Notifier> gCellSync2NotifierSpursTask;
 vm::gvar<CellSync2Notifier> gCellSync2NotifierSpursJobQueueJob;
 
-template<>
+template <>
 void fmt_class_string<CellSync2Error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-		STR_CASE(CELL_SYNC2_ERROR_AGAIN);
-		STR_CASE(CELL_SYNC2_ERROR_INVAL);
-		STR_CASE(CELL_SYNC2_ERROR_NOMEM);
-		STR_CASE(CELL_SYNC2_ERROR_DEADLK);
-		STR_CASE(CELL_SYNC2_ERROR_PERM);
-		STR_CASE(CELL_SYNC2_ERROR_BUSY);
-		STR_CASE(CELL_SYNC2_ERROR_STAT);
-		STR_CASE(CELL_SYNC2_ERROR_ALIGN);
-		STR_CASE(CELL_SYNC2_ERROR_NULL_POINTER);
-		STR_CASE(CELL_SYNC2_ERROR_NOT_SUPPORTED_THREAD);
-		STR_CASE(CELL_SYNC2_ERROR_NO_NOTIFIER);
-		STR_CASE(CELL_SYNC2_ERROR_NO_SPU_CONTEXT_STORAGE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SYNC2_ERROR_AGAIN);
+				STR_CASE(CELL_SYNC2_ERROR_INVAL);
+				STR_CASE(CELL_SYNC2_ERROR_NOMEM);
+				STR_CASE(CELL_SYNC2_ERROR_DEADLK);
+				STR_CASE(CELL_SYNC2_ERROR_PERM);
+				STR_CASE(CELL_SYNC2_ERROR_BUSY);
+				STR_CASE(CELL_SYNC2_ERROR_STAT);
+				STR_CASE(CELL_SYNC2_ERROR_ALIGN);
+				STR_CASE(CELL_SYNC2_ERROR_NULL_POINTER);
+				STR_CASE(CELL_SYNC2_ERROR_NOT_SUPPORTED_THREAD);
+				STR_CASE(CELL_SYNC2_ERROR_NO_NOTIFIER);
+				STR_CASE(CELL_SYNC2_ERROR_NO_SPU_CONTEXT_STORAGE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u32 sdkVersion)
@@ -48,8 +48,8 @@ error_code _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> a
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
-						CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
-						CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
+	                    CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
+	                    CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
 	attr->maxWaiters = 15;
 	attr->recursive = false;
 	strcpy_trunc(attr->name, "CellSync2Mutex");
@@ -215,8 +215,8 @@ error_code _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttr
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
-						CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
-						CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
+	                    CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
+	                    CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
 	attr->maxWaiters = 1;
 	strcpy_trunc(attr->name, "CellSync2Semaphore");
 
@@ -317,8 +317,8 @@ error_code _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> a
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
-						CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
-						CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
+	                    CELL_SYNC2_THREAD_TYPE_SPURS_TASK | CELL_SYNC2_THREAD_TYPE_SPURS_JOB |
+	                    CELL_SYNC2_THREAD_TYPE_SPURS_JOBQUEUE_JOB;
 	attr->elementSize = 16;
 	attr->depth = 1024;
 	attr->maxPushWaiters = 15;
@@ -427,47 +427,47 @@ error_code cellSync2QueueGetDepth(vm::ptr<CellSync2Queue> queue, vm::ptr<u32> de
 }
 
 DECLARE(ppu_module_manager::cellSync2)("cellSync2", []()
-{
-	REG_VAR(cellSync2, gCellSync2CallerThreadTypePpuThread);
-	REG_VAR(cellSync2, gCellSync2NotifierPpuThread);
-	REG_VAR(cellSync2, gCellSync2CallerThreadTypePpuFiber);
-	REG_VAR(cellSync2, gCellSync2NotifierPpuFiber);
-	REG_VAR(cellSync2, gCellSync2NotifierSpursTask);
-	REG_VAR(cellSync2, gCellSync2NotifierSpursJobQueueJob);
+	{
+		REG_VAR(cellSync2, gCellSync2CallerThreadTypePpuThread);
+		REG_VAR(cellSync2, gCellSync2NotifierPpuThread);
+		REG_VAR(cellSync2, gCellSync2CallerThreadTypePpuFiber);
+		REG_VAR(cellSync2, gCellSync2NotifierPpuFiber);
+		REG_VAR(cellSync2, gCellSync2NotifierSpursTask);
+		REG_VAR(cellSync2, gCellSync2NotifierSpursJobQueueJob);
 
-	REG_FUNC(cellSync2, _cellSync2MutexAttributeInitialize);
-	REG_FUNC(cellSync2, cellSync2MutexEstimateBufferSize);
-	REG_FUNC(cellSync2, cellSync2MutexInitialize);
-	REG_FUNC(cellSync2, cellSync2MutexFinalize);
-	REG_FUNC(cellSync2, cellSync2MutexLock);
-	REG_FUNC(cellSync2, cellSync2MutexTryLock);
-	REG_FUNC(cellSync2, cellSync2MutexUnlock);
+		REG_FUNC(cellSync2, _cellSync2MutexAttributeInitialize);
+		REG_FUNC(cellSync2, cellSync2MutexEstimateBufferSize);
+		REG_FUNC(cellSync2, cellSync2MutexInitialize);
+		REG_FUNC(cellSync2, cellSync2MutexFinalize);
+		REG_FUNC(cellSync2, cellSync2MutexLock);
+		REG_FUNC(cellSync2, cellSync2MutexTryLock);
+		REG_FUNC(cellSync2, cellSync2MutexUnlock);
 
-	REG_FUNC(cellSync2, _cellSync2CondAttributeInitialize);
-	REG_FUNC(cellSync2, cellSync2CondEstimateBufferSize);
-	REG_FUNC(cellSync2, cellSync2CondInitialize);
-	REG_FUNC(cellSync2, cellSync2CondFinalize);
-	REG_FUNC(cellSync2, cellSync2CondWait);
-	REG_FUNC(cellSync2, cellSync2CondSignal);
-	REG_FUNC(cellSync2, cellSync2CondSignalAll);
+		REG_FUNC(cellSync2, _cellSync2CondAttributeInitialize);
+		REG_FUNC(cellSync2, cellSync2CondEstimateBufferSize);
+		REG_FUNC(cellSync2, cellSync2CondInitialize);
+		REG_FUNC(cellSync2, cellSync2CondFinalize);
+		REG_FUNC(cellSync2, cellSync2CondWait);
+		REG_FUNC(cellSync2, cellSync2CondSignal);
+		REG_FUNC(cellSync2, cellSync2CondSignalAll);
 
-	REG_FUNC(cellSync2, _cellSync2SemaphoreAttributeInitialize);
-	REG_FUNC(cellSync2, cellSync2SemaphoreEstimateBufferSize);
-	REG_FUNC(cellSync2, cellSync2SemaphoreInitialize);
-	REG_FUNC(cellSync2, cellSync2SemaphoreFinalize);
-	REG_FUNC(cellSync2, cellSync2SemaphoreAcquire);
-	REG_FUNC(cellSync2, cellSync2SemaphoreTryAcquire);
-	REG_FUNC(cellSync2, cellSync2SemaphoreRelease);
-	REG_FUNC(cellSync2, cellSync2SemaphoreGetCount);
+		REG_FUNC(cellSync2, _cellSync2SemaphoreAttributeInitialize);
+		REG_FUNC(cellSync2, cellSync2SemaphoreEstimateBufferSize);
+		REG_FUNC(cellSync2, cellSync2SemaphoreInitialize);
+		REG_FUNC(cellSync2, cellSync2SemaphoreFinalize);
+		REG_FUNC(cellSync2, cellSync2SemaphoreAcquire);
+		REG_FUNC(cellSync2, cellSync2SemaphoreTryAcquire);
+		REG_FUNC(cellSync2, cellSync2SemaphoreRelease);
+		REG_FUNC(cellSync2, cellSync2SemaphoreGetCount);
 
-	REG_FUNC(cellSync2, _cellSync2QueueAttributeInitialize);
-	REG_FUNC(cellSync2, cellSync2QueueEstimateBufferSize);
-	REG_FUNC(cellSync2, cellSync2QueueInitialize);
-	REG_FUNC(cellSync2, cellSync2QueueFinalize);
-	REG_FUNC(cellSync2, cellSync2QueuePush);
-	REG_FUNC(cellSync2, cellSync2QueueTryPush);
-	REG_FUNC(cellSync2, cellSync2QueuePop);
-	REG_FUNC(cellSync2, cellSync2QueueTryPop);
-	REG_FUNC(cellSync2, cellSync2QueueGetSize);
-	REG_FUNC(cellSync2, cellSync2QueueGetDepth);
-});
+		REG_FUNC(cellSync2, _cellSync2QueueAttributeInitialize);
+		REG_FUNC(cellSync2, cellSync2QueueEstimateBufferSize);
+		REG_FUNC(cellSync2, cellSync2QueueInitialize);
+		REG_FUNC(cellSync2, cellSync2QueueFinalize);
+		REG_FUNC(cellSync2, cellSync2QueuePush);
+		REG_FUNC(cellSync2, cellSync2QueueTryPush);
+		REG_FUNC(cellSync2, cellSync2QueuePop);
+		REG_FUNC(cellSync2, cellSync2QueueTryPop);
+		REG_FUNC(cellSync2, cellSync2QueueGetSize);
+		REG_FUNC(cellSync2, cellSync2QueueGetDepth);
+	});

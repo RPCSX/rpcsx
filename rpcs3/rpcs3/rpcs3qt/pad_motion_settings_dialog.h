@@ -45,14 +45,20 @@ private:
 
 	// Input thread. Its Callback handles the input
 	std::unique_ptr<named_thread<std::function<void()>>> m_input_thread;
-	enum class input_thread_state { paused, pausing, active };
+	enum class input_thread_state
+	{
+		paused,
+		pausing,
+		active
+	};
 	atomic_t<input_thread_state> m_input_thread_state{input_thread_state::paused};
 	struct motion_callback_data
 	{
 		bool success = false;
 		bool has_new_data = false;
 		std::string pad_name;
-		std::array<u16, 4> preview_values{{ DEFAULT_MOTION_X, DEFAULT_MOTION_Y, DEFAULT_MOTION_Z, DEFAULT_MOTION_G}};;
+		std::array<u16, 4> preview_values{{DEFAULT_MOTION_X, DEFAULT_MOTION_Y, DEFAULT_MOTION_Z, DEFAULT_MOTION_G}};
+		;
 	} m_motion_callback_data;
 	QTimer m_timer_input;
 	std::mutex m_input_mutex;

@@ -122,7 +122,7 @@ namespace asmjit
 	{
 		build_spu_gpr_load(c, x, bf_t<u32, I, N>{}, store);
 	}
-}
+} // namespace asmjit
 
 template <spu_exec_bit... Flags>
 bool UNK(spu_thread&, spu_opcode_t op)
@@ -130,7 +130,6 @@ bool UNK(spu_thread&, spu_opcode_t op)
 	spu_log.fatal("Unknown/Illegal instruction (0x%08x)", op.opcode);
 	return false;
 }
-
 
 void spu_interpreter::set_interrupt_status(spu_thread& spu, spu_opcode_t op)
 {
@@ -153,7 +152,6 @@ void spu_interpreter::set_interrupt_status(spu_thread& spu, spu_opcode_t op)
 		spu.do_mfc();
 	}
 }
-
 
 template <spu_exec_bit... Flags>
 bool STOP(spu_thread& spu, spu_opcode_t op)
@@ -405,14 +403,14 @@ bool ROTI(spu_thread& spu, spu_opcode_t op)
 template <spu_exec_bit... Flags>
 bool ROTMI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = _mm_srli_epi32(spu.gpr[op.ra], (0-op.i7) & 0x3f);
+	spu.gpr[op.rt] = _mm_srli_epi32(spu.gpr[op.ra], (0 - op.i7) & 0x3f);
 	return true;
 }
 
 template <spu_exec_bit... Flags>
 bool ROTMAI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = _mm_srai_epi32(spu.gpr[op.ra], (0-op.i7) & 0x3f);
+	spu.gpr[op.rt] = _mm_srai_epi32(spu.gpr[op.ra], (0 - op.i7) & 0x3f);
 	return true;
 }
 
@@ -435,14 +433,14 @@ bool ROTHI(spu_thread& spu, spu_opcode_t op)
 template <spu_exec_bit... Flags>
 bool ROTHMI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = _mm_srli_epi16(spu.gpr[op.ra], (0-op.i7) & 0x1f);
+	spu.gpr[op.rt] = _mm_srli_epi16(spu.gpr[op.ra], (0 - op.i7) & 0x1f);
 	return true;
 }
 
 template <spu_exec_bit... Flags>
 bool ROTMAHI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = _mm_srai_epi16(spu.gpr[op.ra], (0-op.i7) & 0x1f);
+	spu.gpr[op.rt] = _mm_srai_epi16(spu.gpr[op.ra], (0 - op.i7) & 0x1f);
 	return true;
 }
 
@@ -954,7 +952,7 @@ template <spu_exec_bit... Flags>
 bool ROTQMBII(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra];
-	const s32 n = (0-op.i7) & 0x7;
+	const s32 n = (0 - op.i7) & 0x7;
 	spu.gpr[op.rt] = _mm_or_si128(_mm_srli_epi64(a, n), _mm_slli_epi64(_mm_srli_si128(a, 8), 64 - n));
 	return true;
 }
@@ -1137,20 +1135,20 @@ bool FCGT(spu_thread& spu, spu_opcode_t op)
 	// branching simulated using bitwise ops and_not+or
 
 	const auto zero = _mm_set1_ps(0.f);
-	const auto nan_check_a = _mm_cmpunord_ps(spu.gpr[op.ra], zero);    //mask true where a is extended
-	const auto nan_check_b = _mm_cmpunord_ps(spu.gpr[op.rb], zero);    //mask true where b is extended
+	const auto nan_check_a = _mm_cmpunord_ps(spu.gpr[op.ra], zero); // mask true where a is extended
+	const auto nan_check_b = _mm_cmpunord_ps(spu.gpr[op.rb], zero); // mask true where b is extended
 
-	//calculate lowered a and b. The mantissa bits are left untouched for now unless its proven they should be flushed
+	// calculate lowered a and b. The mantissa bits are left untouched for now unless its proven they should be flushed
 	const auto last_exp_bit = _mm_castsi128_ps(_mm_set1_epi32(0x00800000));
-	const auto lowered_a =_mm_andnot_ps(last_exp_bit, spu.gpr[op.ra]);      //a is lowered to largest unextended value with sign
-	const auto lowered_b = _mm_andnot_ps(last_exp_bit, spu.gpr[op.rb]);		//b is lowered to largest unextended value with sign
+	const auto lowered_a = _mm_andnot_ps(last_exp_bit, spu.gpr[op.ra]); // a is lowered to largest unextended value with sign
+	const auto lowered_b = _mm_andnot_ps(last_exp_bit, spu.gpr[op.rb]); // b is lowered to largest unextended value with sign
 
-	//check if a and b are denormalized
+	// check if a and b are denormalized
 	const auto all_exp_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7f800000));
 	const auto denorm_check_a = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.ra]));
 	const auto denorm_check_b = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.rb]));
 
-	//set a and b to their lowered values if they are extended
+	// set a and b to their lowered values if they are extended
 	const auto a_values_lowered = _mm_and_ps(nan_check_a, lowered_a);
 	const auto original_a_masked = _mm_andnot_ps(nan_check_a, spu.gpr[op.ra]);
 	const auto a_final1 = _mm_or_ps(a_values_lowered, original_a_masked);
@@ -1159,7 +1157,7 @@ bool FCGT(spu_thread& spu, spu_opcode_t op)
 	const auto original_b_masked = _mm_andnot_ps(nan_check_b, spu.gpr[op.rb]);
 	const auto b_final1 = _mm_or_ps(b_values_lowered, original_b_masked);
 
-	//Flush denormals to zero
+	// Flush denormals to zero
 	const auto final_a = _mm_andnot_ps(denorm_check_a, a_final1);
 	const auto final_b = _mm_andnot_ps(denorm_check_b, b_final1);
 
@@ -1195,23 +1193,23 @@ bool FM(spu_thread& spu, spu_opcode_t op)
 	const auto sign_bits = _mm_castsi128_ps(_mm_set1_epi32(0x80000000));
 	const auto all_exp_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7f800000));
 
-	//check denormals
+	// check denormals
 	const auto denorm_check_a = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.ra]));
 	const auto denorm_check_b = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.rb]));
 	const auto denorm_operand_mask = _mm_or_ps(denorm_check_a, denorm_check_b);
 
-	//compute result with flushed denormal inputs
+	// compute result with flushed denormal inputs
 	const auto primary_result = _mm_mul_ps(spu.gpr[op.ra], spu.gpr[op.rb]);
 	const auto denom_result_mask = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, primary_result));
 	const auto flushed_result = _mm_andnot_ps(_mm_or_ps(denom_result_mask, denorm_operand_mask), primary_result);
 
-	//check for extended
+	// check for extended
 	const auto nan_check = _mm_cmpeq_ps(_mm_and_ps(primary_result, all_exp_bits), all_exp_bits);
 	const auto sign_mask = _mm_xor_ps(_mm_and_ps(sign_bits, spu.gpr[op.ra]), _mm_and_ps(sign_bits, spu.gpr[op.rb]));
 	const auto extended_result = _mm_or_ps(sign_mask, _mm_andnot_ps(sign_bits, primary_result));
 	const auto final_extended = _mm_andnot_ps(denorm_operand_mask, extended_result);
 
-	//if nan, result = ext, else result = flushed
+	// if nan, result = ext, else result = flushed
 	const auto set1 = _mm_andnot_ps(nan_check, flushed_result);
 	const auto set2 = _mm_and_ps(nan_check, final_extended);
 
@@ -1236,22 +1234,22 @@ bool ORC(spu_thread& spu, spu_opcode_t op)
 template <spu_exec_bit... Flags>
 bool FCMGT(spu_thread& spu, spu_opcode_t op)
 {
-	//IMPL NOTES: See FCGT
+	// IMPL NOTES: See FCGT
 
 	const auto zero = _mm_set1_ps(0.f);
-	const auto nan_check_a = _mm_cmpunord_ps(spu.gpr[op.ra], zero);    //mask true where a is extended
-	const auto nan_check_b = _mm_cmpunord_ps(spu.gpr[op.rb], zero);    //mask true where b is extended
+	const auto nan_check_a = _mm_cmpunord_ps(spu.gpr[op.ra], zero); // mask true where a is extended
+	const auto nan_check_b = _mm_cmpunord_ps(spu.gpr[op.rb], zero); // mask true where b is extended
 
-	//check if a and b are denormalized
+	// check if a and b are denormalized
 	const auto all_exp_bits = _mm_castsi128_ps(_mm_set1_epi32(0x7f800000));
 	const auto denorm_check_a = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.ra]));
 	const auto denorm_check_b = _mm_cmpeq_ps(zero, _mm_and_ps(all_exp_bits, spu.gpr[op.rb]));
 
-	//Flush denormals to zero
+	// Flush denormals to zero
 	const auto final_a = _mm_andnot_ps(denorm_check_a, spu.gpr[op.ra]);
 	const auto final_b = _mm_andnot_ps(denorm_check_b, spu.gpr[op.rb]);
 
-	//Mask to make a > b if a is extended but b is not (is this necessary on x86?)
+	// Mask to make a > b if a is extended but b is not (is this necessary on x86?)
 	const auto nan_mask = _mm_andnot_ps(nan_check_b, _mm_xor_ps(nan_check_a, nan_check_b));
 
 	const auto sign_mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
@@ -1525,8 +1523,8 @@ bool FI(spu_thread& spu, spu_opcode_t op)
 	// TODO
 	const auto mask_se = _mm_castsi128_ps(_mm_set1_epi32(0xff800000)); // sign and exponent mask
 	const auto mask_bf = _mm_castsi128_ps(_mm_set1_epi32(0x007ffc00)); // base fraction mask
-	const auto mask_sf = _mm_set1_epi32(0x000003ff); // step fraction mask
-	const auto mask_yf = _mm_set1_epi32(0x0007ffff); // Y fraction mask (bits 13..31)
+	const auto mask_sf = _mm_set1_epi32(0x000003ff);                   // step fraction mask
+	const auto mask_yf = _mm_set1_epi32(0x0007ffff);                   // Y fraction mask (bits 13..31)
 	const auto base = _mm_or_ps(_mm_and_ps(spu.gpr[op.rb], mask_bf), _mm_castsi128_ps(_mm_set1_epi32(0x3f800000)));
 	const auto step = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(spu.gpr[op.rb], mask_sf)), _mm_set1_ps(std::exp2(-13.f)));
 	const auto y = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(spu.gpr[op.ra], mask_yf)), _mm_set1_ps(std::exp2(-19.f)));
@@ -1543,7 +1541,6 @@ bool HEQ(spu_thread& spu, spu_opcode_t op)
 	}
 	return true;
 }
-
 
 template <spu_exec_bit... Flags>
 bool CFLTS(spu_thread& spu, spu_opcode_t op)
@@ -1577,7 +1574,6 @@ bool CUFLT(spu_thread& spu, spu_opcode_t op)
 	spu.gpr[op.rt] = _mm_mul_ps(_mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(a, _mm_set1_epi32(0x7fffffff))), fix), g_spu_imm.scale[op.i8 - 155]);
 	return true;
 }
-
 
 template <spu_exec_bit... Flags>
 bool BRZ(spu_thread& spu, spu_opcode_t op)
@@ -1720,7 +1716,6 @@ bool IOHL(spu_thread& spu, spu_opcode_t op)
 	spu.gpr[op.rt] = _mm_or_si128(spu.gpr[op.rt], _mm_set1_epi32(op.i16));
 	return true;
 }
-
 
 template <spu_exec_bit... Flags>
 bool ORI(spu_thread& spu, spu_opcode_t op)
@@ -1936,7 +1931,6 @@ bool HEQI(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-
 template <spu_exec_bit... Flags>
 bool HBRA(spu_thread&, spu_opcode_t)
 {
@@ -1955,7 +1949,6 @@ bool ILA(spu_thread& spu, spu_opcode_t op)
 	spu.gpr[op.rt] = _mm_set1_epi32(op.i18);
 	return true;
 }
-
 
 template <spu_exec_bit... Flags>
 bool SELB(spu_thread& spu, spu_opcode_t op)
@@ -1990,76 +1983,76 @@ bool SHUFB(spu_thread& spu, spu_opcode_t op)
 
 #if defined(ARCH_X64)
 const spu_intrp_func_t optimized_shufb = build_function_asm<spu_intrp_func_t>("spu_shufb", [](asmjit::x86::Assembler& c, auto& /*args*/)
-{
-	using namespace asmjit;
-
-	const auto& va = x86::xmm0;
-	const auto& vb = x86::xmm1;
-	const auto& vc = x86::xmm2;
-	const auto& vt = x86::xmm3;
-	const auto& vm = x86::xmm4;
-	const auto& v5 = x86::xmm5;
-
-	Label xc0 = c.newLabel();
-	Label xe0 = c.newLabel();
-	Label x0f = c.newLabel();
-
-	build_spu_gpr_load(c, va, s_op.ra);
-	build_spu_gpr_load(c, vb, s_op.rb);
-	build_spu_gpr_load(c, vc, s_op.rc);
-
-	if (utils::has_avx())
 	{
-		c.vpand(v5, vc, x86::oword_ptr(xe0));
-		c.vpxor(vc, vc, x86::oword_ptr(x0f));
-		c.vpshufb(va, va, vc);
-		c.vpslld(vt, vc, 3);
-		c.vmovdqa(vm, x86::oword_ptr(xc0));
-		c.vpcmpeqb(v5, v5, vm);
-		c.vpshufb(vb, vb, vc);
-		c.vpand(vc, vc, vm);
-		c.vpblendvb(vb, va, vb, vt);
-		c.vpcmpeqb(vt, vc, vm);
-		c.vpavgb(vt, vt, v5);
-		c.vpor(vt, vt, vb);
-	}
-	else
-	{
-		c.movdqa(v5, vc);
-		c.pand(v5, x86::oword_ptr(xe0));
-		c.movdqa(vt, vc);
-		c.movdqa(vm, x86::oword_ptr(xc0));
-		c.pand(vt, vm);
-		c.pxor(vc, x86::oword_ptr(x0f));
-		c.pshufb(va, vc);
-		c.pshufb(vb, vc);
-		c.pslld(vc, 3);
-		c.pcmpeqb(v5, vm);
-		c.pcmpeqb(vt, vm);
-		c.pcmpeqb(vm, vm);
-		c.pcmpgtb(vc, vm);
-		c.pand(va, vc);
-		c.pandn(vc, vb);
-		c.por(vc, va);
-		c.pavgb(vt, v5);
-		c.por(vt, vc);
-	}
+		using namespace asmjit;
 
-	build_spu_gpr_store(c, vt, s_op.rt4);
-	c.mov(x86::eax, 1);
-	c.ret();
+		const auto& va = x86::xmm0;
+		const auto& vb = x86::xmm1;
+		const auto& vc = x86::xmm2;
+		const auto& vt = x86::xmm3;
+		const auto& vm = x86::xmm4;
+		const auto& v5 = x86::xmm5;
 
-	c.align(AlignMode::kData, 16);
-	c.bind(xc0);
-	c.dq(0xc0c0c0c0c0c0c0c0);
-	c.dq(0xc0c0c0c0c0c0c0c0);
-	c.bind(xe0);
-	c.dq(0xe0e0e0e0e0e0e0e0);
-	c.dq(0xe0e0e0e0e0e0e0e0);
-	c.bind(x0f);
-	c.dq(0x0f0f0f0f0f0f0f0f);
-	c.dq(0x0f0f0f0f0f0f0f0f);
-});
+		Label xc0 = c.newLabel();
+		Label xe0 = c.newLabel();
+		Label x0f = c.newLabel();
+
+		build_spu_gpr_load(c, va, s_op.ra);
+		build_spu_gpr_load(c, vb, s_op.rb);
+		build_spu_gpr_load(c, vc, s_op.rc);
+
+		if (utils::has_avx())
+		{
+			c.vpand(v5, vc, x86::oword_ptr(xe0));
+			c.vpxor(vc, vc, x86::oword_ptr(x0f));
+			c.vpshufb(va, va, vc);
+			c.vpslld(vt, vc, 3);
+			c.vmovdqa(vm, x86::oword_ptr(xc0));
+			c.vpcmpeqb(v5, v5, vm);
+			c.vpshufb(vb, vb, vc);
+			c.vpand(vc, vc, vm);
+			c.vpblendvb(vb, va, vb, vt);
+			c.vpcmpeqb(vt, vc, vm);
+			c.vpavgb(vt, vt, v5);
+			c.vpor(vt, vt, vb);
+		}
+		else
+		{
+			c.movdqa(v5, vc);
+			c.pand(v5, x86::oword_ptr(xe0));
+			c.movdqa(vt, vc);
+			c.movdqa(vm, x86::oword_ptr(xc0));
+			c.pand(vt, vm);
+			c.pxor(vc, x86::oword_ptr(x0f));
+			c.pshufb(va, vc);
+			c.pshufb(vb, vc);
+			c.pslld(vc, 3);
+			c.pcmpeqb(v5, vm);
+			c.pcmpeqb(vt, vm);
+			c.pcmpeqb(vm, vm);
+			c.pcmpgtb(vc, vm);
+			c.pand(va, vc);
+			c.pandn(vc, vb);
+			c.por(vc, va);
+			c.pavgb(vt, v5);
+			c.por(vt, vc);
+		}
+
+		build_spu_gpr_store(c, vt, s_op.rt4);
+		c.mov(x86::eax, 1);
+		c.ret();
+
+		c.align(AlignMode::kData, 16);
+		c.bind(xc0);
+		c.dq(0xc0c0c0c0c0c0c0c0);
+		c.dq(0xc0c0c0c0c0c0c0c0);
+		c.bind(xe0);
+		c.dq(0xe0e0e0e0e0e0e0e0);
+		c.dq(0xe0e0e0e0e0e0e0e0);
+		c.bind(x0f);
+		c.dq(0x0f0f0f0f0f0f0f0f);
+		c.dq(0x0f0f0f0f0f0f0f0f);
+	});
 #endif
 
 template <spu_exec_bit... Flags>
@@ -3145,8 +3138,10 @@ spu_interpreter_rt_base::spu_interpreter_rt_base() noexcept
 	ptrs = std::make_unique<decltype(ptrs)::element_type>();
 
 	// Initialize instructions with their own sets of supported flags
-#define INIT(name, ...) \
-	ptrs->name = spu_exec_select<>::select<__VA_ARGS__>(selected, []<spu_exec_bit... Flags>(){ return &::name<Flags...>; }); \
+#define INIT(name, ...)                                                                         \
+	ptrs->name = spu_exec_select<>::select<__VA_ARGS__>(selected, []<spu_exec_bit... Flags>() { \
+		return &::name<Flags...>;                                                               \
+	});
 
 	using enum spu_exec_bit;
 
@@ -3357,7 +3352,6 @@ spu_interpreter_rt_base::~spu_interpreter_rt_base()
 }
 
 spu_interpreter_rt::spu_interpreter_rt() noexcept
-	: spu_interpreter_rt_base()
-	, table(*ptrs)
+	: spu_interpreter_rt_base(), table(*ptrs)
 {
 }

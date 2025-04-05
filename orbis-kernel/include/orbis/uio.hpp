@@ -1,7 +1,7 @@
 #pragma once
 
-#include "orbis-config.hpp"
 #include "error/ErrorCode.hpp"
+#include "orbis-config.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -49,8 +49,7 @@ struct Uio {
     return {};
   }
 
-  template<typename T>
-  ErrorCode write(const T &object) {
+  template <typename T> ErrorCode write(const T &object) {
     return write(&object, sizeof(T));
   }
 };

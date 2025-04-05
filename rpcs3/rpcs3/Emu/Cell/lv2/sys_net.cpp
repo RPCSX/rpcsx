@@ -237,15 +237,10 @@ void fmt_class_string<struct in_addr>::format(std::string& out, u64 arg)
 }
 
 lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
-	: family(ar)
-	, type(_type)
-	, protocol(ar)
-	, so_nbio(ar)
-	, so_error(ar)
-	, so_tcp_maxseg(ar)
+	: family(ar), type(_type), protocol(ar), so_nbio(ar), so_error(ar), so_tcp_maxseg(ar)
 #ifdef _WIN32
-	, so_reuseaddr(ar)
-	, so_reuseport(ar)
+	  ,
+	  so_reuseaddr(ar), so_reuseport(ar)
 {
 #else
 {
@@ -289,7 +284,11 @@ std::function<void(void*)> lv2_socket::load(utils::serial& ar)
 		sock_lv2->bind(sock_lv2->last_bound_addr);
 	}
 
-	return [ptr = sock_lv2](void* storage) { *static_cast<atomic_ptr<lv2_socket>*>(storage) = ptr; };;
+	return [ptr = sock_lv2](void* storage)
+	{
+		*static_cast<atomic_ptr<lv2_socket>*>(storage) = ptr;
+	};
+	;
 }
 
 void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
@@ -356,7 +355,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 			if (success)
 			{
-				result  = res;
+				result = res;
 				sn_addr = res_addr;
 				new_socket = std::move(res_socket);
 				return true;
@@ -371,7 +370,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 						auto [success, res, res_socket, res_addr] = sock.accept(false);
 						if (success)
 						{
-							result  = res;
+							result = res;
 							sn_addr = res_addr;
 							new_socket = std::move(res_socket);
 							lv2_obj::awake(&ppu);
@@ -443,7 +442,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 	if (addr)
 	{
 		*paddrlen = sizeof(sys_net_sockaddr_in);
-		*addr     = sn_addr;
+		*addr = sn_addr;
 	}
 
 	// Socket ID
@@ -515,7 +514,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		return -SYS_NET_EBADF;
 	}
 
-	s32 result               = 0;
+	s32 result = 0;
 	sys_net_sockaddr sn_addr = *addr;
 
 	const auto sock = idm::check<lv2_socket>(s, [&, notify = lv2_obj::notify_all_t()](lv2_socket& sock)
@@ -618,7 +617,7 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 			if (res == CELL_OK)
 			{
 				*paddrlen = sizeof(sys_net_sockaddr);
-				*addr     = sn_addr;
+				*addr = sn_addr;
 			}
 
 			return res;
@@ -656,7 +655,7 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 			if (res == CELL_OK)
 			{
 				*paddrlen = sizeof(sys_net_sockaddr);
-				*addr     = sn_addr;
+				*addr = sn_addr;
 			}
 
 			return res;
@@ -885,7 +884,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		if (addr)
 		{
 			*paddrlen = sizeof(sys_net_sockaddr_in);
-			*addr     = sn_addr;
+			*addr = sn_addr;
 		}
 
 		return not_an_error(result);
@@ -976,7 +975,6 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 	{
 		return not_an_error(result);
 	}
-
 
 	return sys_net_error{result};
 }
@@ -1285,7 +1283,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		for (s32 i = 0; i < nfds; i++)
 		{
-			_fds[i].fd         = -1;
+			_fds[i].fd = -1;
 			fds_buf[i].revents = 0;
 
 			if (fds_buf[i].fd < 0)
@@ -1785,9 +1783,9 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 		std::vector<u32> sockets;
 
 		idm::select<lv2_socket>([&](u32 id, lv2_socket&)
-		{
-			sockets.emplace_back(id);
-		});
+			{
+				sockets.emplace_back(id);
+			});
 
 		s32 failed = 0;
 
@@ -1849,7 +1847,7 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 		char buffer[nameserver.size() + 80]{};
 		std::memcpy(buffer, nameserver.data(), nameserver.size());
 
-		auto& nph          = g_fxo->get<named_thread<np::np_handler>>();
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		const auto dns_str = np::ip_to_string(nph.get_dns_ip());
 		std::memcpy(buffer + nameserver.size() - 1, dns_str.data(), dns_str.size());
 

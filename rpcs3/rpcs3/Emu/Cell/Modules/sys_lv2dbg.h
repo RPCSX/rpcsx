@@ -11,8 +11,6 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
-
-
 // Error Codes
 enum CellLv2DbgError : u32
 {
@@ -152,7 +150,7 @@ struct sys_dbg_spu_thread_context2_t
 {
 	sys_dbg_spu_gpr_t gpr[128];
 	be_t<u32> npc;
-	sys_dbg_spu_fpscr_t	fpscr;
+	sys_dbg_spu_fpscr_t fpscr;
 	be_t<u32> srr0;
 	be_t<u32> spu_status;
 	be_t<u64> spu_cfg;
@@ -198,7 +196,7 @@ struct sys_dbg_rwlock_information_t
 
 struct sys_dbg_event_queue_information_t
 {
-	sys_event_queue_attribute_t	attr;
+	sys_event_queue_attribute_t attr;
 	be_t<u64> event_queue_key;
 	be_t<s32> queue_size;
 	vm::bptr<u64> wait_id_list;
@@ -221,7 +219,7 @@ struct sys_dbg_semaphore_information_t
 
 struct sys_dbg_lwmutex_information_t
 {
-	sys_lwmutex_attribute_t	attr;
+	sys_lwmutex_attribute_t attr;
 	be_t<u64> owner;
 	be_t<s32> lock_counter;
 	vm::bptr<u64> wait_id_list;

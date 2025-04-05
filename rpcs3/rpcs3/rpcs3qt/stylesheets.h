@@ -6,8 +6,7 @@ namespace gui
 {
 	namespace stylesheets
 	{
-		const QString default_style_sheet
-		(
+		const QString default_style_sheet(
 			// main window toolbar search
 			"QLineEdit#mw_searchbar { padding: 0 1em; background: #fdfdfd; selection-background-color: #148aff; margin: .8em; color:#000000; }"
 
@@ -106,7 +105,6 @@ namespace gui
 			// Top menu bar (Workaround for transparent menus in Qt 6.7.3)
 			"QMenu { color: #000; background-color: #F0F0F0; alternate-background-color: #f2f2f2; }"
 			"QMenu::item:selected { background: #90C8F6; }"
-			"QMenu::item:disabled { color: #787878; }"
-		);
+			"QMenu::item:disabled { color: #787878; }");
 	}
-}
+} // namespace gui

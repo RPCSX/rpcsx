@@ -52,7 +52,7 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 	QHBoxLayout* hbox_btns = new QHBoxLayout();
 	hbox_btns->addStretch();
 	QPushButton* btn_accept = new QPushButton(tr("Accept"));
-	QPushButton* btn_deny   = new QPushButton(tr("Deny"));
+	QPushButton* btn_deny = new QPushButton(tr("Deny"));
 	QPushButton* btn_cancel = new QPushButton(tr("Cancel"));
 	hbox_btns->addWidget(btn_accept);
 	hbox_btns->addWidget(btn_deny);
@@ -61,8 +61,8 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 
 	m_dialog->setLayout(vbox_global);
 
-	error_code result           = CELL_CANCEL;
-	const bool preserve         = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
+	error_code result = CELL_CANCEL;
+	const bool preserve = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
 	const bool include_bootable = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE;
 
 	auto accept_or_deny = [preserve, this, &result, &recv_result, &chosen_msg_id](SceNpBasicMessageRecvAction result_from_action)
@@ -75,8 +75,8 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 		}
 
 		chosen_msg_id = selected[0]->data(Qt::UserRole).toULongLong();
-		recv_result   = result_from_action;
-		result        = CELL_OK;
+		recv_result = result_from_action;
+		result = CELL_OK;
 
 		if (!preserve)
 		{
@@ -87,11 +87,17 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 	};
 
 	connect(btn_accept, &QAbstractButton::clicked, this, [&accept_or_deny]()
-		{ accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT); });
+		{
+			accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT);
+		});
 	connect(btn_deny, &QAbstractButton::clicked, this, [&accept_or_deny]()
-		{ accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_DENY); });
+		{
+			accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_DENY);
+		});
 	connect(btn_cancel, &QAbstractButton::clicked, this, [this]()
-		{ m_dialog->close(); });
+		{
+			m_dialog->close();
+		});
 	connect(this, &recvmessage_dialog_frame::signal_new_message, this, &recvmessage_dialog_frame::slot_new_message);
 
 	// Get list of messages
@@ -105,25 +111,25 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 
 	QTimer timer;
 	connect(&timer, &QTimer::timeout, this, [this, &nps, &timer]()
-	{
-		bool abort = Emu.IsStopped();
-
-		if (!abort && nps.abort_gui_flag.exchange(false))
 		{
-			recvmessage_dlg_log.warning("Aborted by sceNp!");
-			abort = true;
-		}
+			bool abort = Emu.IsStopped();
 
-		if (abort)
-		{
-			if (m_dialog)
+			if (!abort && nps.abort_gui_flag.exchange(false))
 			{
-				m_dialog->close();
+				recvmessage_dlg_log.warning("Aborted by sceNp!");
+				abort = true;
 			}
 
-			timer.stop();
-		}
-	});
+			if (abort)
+			{
+				if (m_dialog)
+				{
+					m_dialog->close();
+				}
+
+				timer.stop();
+			}
+		});
 	timer.start(10ms);
 
 	m_dialog->exec();
@@ -149,7 +155,7 @@ void recvmessage_dialog_frame::slot_new_message(recvmessage_signal_struct msg_an
 void recvmessage_dialog_frame::callback_handler(shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 {
 	recvmessage_signal_struct signal_struct = {
-		.msg    = new_msg,
+		.msg = new_msg,
 		.msg_id = msg_id,
 	};
 

@@ -47,8 +47,7 @@ namespace rsx
 				const auto angle = degrees_to_radians * ((i * 90) / (num_patch_points - 1));
 				result[i + 1].vec2(
 					std::fmaf(std::cos(angle), scale[0], offset[0]),
-					std::fmaf(std::sin(angle), scale[1], offset[1])
-				);
+					std::fmaf(std::sin(angle), scale[1], offset[1]));
 			}
 
 			return result;
@@ -75,7 +74,8 @@ namespace rsx
 
 		image_info::~image_info()
 		{
-			if (data) stbi_image_free(data);
+			if (data)
+				stbi_image_free(data);
 		}
 
 		void image_info::load_data(const std::vector<u8>& bytes, bool grayscaled)
@@ -110,8 +110,7 @@ namespace rsx
 
 		void resource_config::load_files()
 		{
-			const std::array<std::string, 15> texture_resource_files
-			{
+			const std::array<std::string, 15> texture_resource_files{
 				"fade_top.png",
 				"fade_bottom.png",
 				"select.png",
@@ -126,8 +125,7 @@ namespace rsx
 				"R2.png",
 				"save.png",
 				"new.png",
-				"spinner-24.png"
-			};
+				"spinner-24.png"};
 			for (const std::string& res : texture_resource_files)
 			{
 				// First check the global config dir
@@ -138,7 +136,7 @@ namespace rsx
 				// Check the DATADIR if defined
 				if (info->get_data() == nullptr)
 				{
-					const std::string data_dir (DATADIR);
+					const std::string data_dir(DATADIR);
 					const std::string image_data = data_dir + "/Icons/ui/" + res;
 					info = std::make_unique<image_info>(image_data);
 				}
@@ -154,10 +152,10 @@ namespace rsx
 					// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
 					if (info->get_data() == nullptr)
 					{
-						char result[ PATH_MAX ];
+						char result[PATH_MAX];
 #if defined(__APPLE__)
 						u32 bufsize = PATH_MAX;
-						const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
+						const bool success = _NSGetExecutablePath(result, &bufsize) == 0;
 #elif defined(KERN_PROC_PATHNAME)
 						usz bufsize = PATH_MAX;
 						int mib[] = {
@@ -172,13 +170,13 @@ namespace rsx
 							-1,
 #endif
 						};
-						const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
+						const bool success = sysctl(mib, sizeof(mib) / sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
 #elif defined(__linux__)
-						const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
+						const bool success = readlink("/proc/self/exe", result, PATH_MAX) >= 0;
 #elif defined(__sun)
-						const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
+						const bool success = readlink("/proc/self/path/a.out", result, PATH_MAX) >= 0;
 #else
-						const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
+						const bool success = readlink("/proc/curproc/file", result, PATH_MAX) >= 0;
 #endif
 						if (success)
 						{
@@ -221,7 +219,7 @@ namespace rsx
 			font_ref = nullptr;
 		}
 
-		void compiled_resource::command_config::set_font(font *ref)
+		void compiled_resource::command_config::set_font(font* ref)
 		{
 			texture_ref = image_resource_id::font_file;
 			font_ref = ref;
@@ -247,7 +245,7 @@ namespace rsx
 
 			for (usz n = old_size; n < draw_commands.size(); ++n)
 			{
-				for (auto &v : draw_commands[n].verts)
+				for (auto& v : draw_commands[n].verts)
 				{
 					v += vertex(x_offset, y_offset, 0.f, 0.f);
 				}
@@ -262,7 +260,7 @@ namespace rsx
 
 			for (usz n = old_size; n < draw_commands.size(); ++n)
 			{
-				for (auto &v : draw_commands[n].verts)
+				for (auto& v : draw_commands[n].verts)
 				{
 					v += vertex(x_offset, y_offset, 0.f, 0.f);
 				}
@@ -688,7 +686,10 @@ namespace rsx
 
 		bool layout_container::is_compiled()
 		{
-			if (m_is_compiled && std::any_of(m_items.cbegin(), m_items.cend(), [](const auto& item){ return item && !item->is_compiled(); }))
+			if (m_is_compiled && std::any_of(m_items.cbegin(), m_items.cend(), [](const auto& item)
+									 {
+										 return item && !item->is_compiled();
+									 }))
 			{
 				m_is_compiled = false;
 			}
@@ -834,7 +835,7 @@ namespace rsx
 				compiled_resource result = overlay_element::get_compiled();
 				const f32 global_x_offset = static_cast<f32>(-scroll_offset_value);
 
-				for (auto &item : m_items)
+				for (auto& item : m_items)
 				{
 					if (!item)
 					{
@@ -885,7 +886,7 @@ namespace rsx
 		{
 			if (!is_compiled())
 			{
-				auto& result  = overlay_element::get_compiled();
+				auto& result = overlay_element::get_compiled();
 				auto& cmd_img = result.draw_commands.front();
 
 				cmd_img.config.set_image_resource(image_resource_ref);
@@ -964,7 +965,7 @@ namespace rsx
 					if (cmd.config.texture_ref == image_resource_id::font_file)
 					{
 						// Text, translate geometry to the right
-						for (auto &v : cmd.verts)
+						for (auto& v : cmd.verts)
 						{
 							v.values[0] += m_text_offset_x;
 							v.values[1] += m_text_offset_y;
@@ -1063,21 +1064,19 @@ namespace rsx
 
 					// Generate the quadrants
 					const f32 corners[4][2] =
-					{
-						{ f32(x + radius), f32(y + radius) },
-						{ f32(x + radius), f32(y + h) - radius },
-						{ f32(x + w) - radius, f32(y + radius) },
-						{ f32(x + w) - radius, f32(y + h) - radius }
-					};
+						{
+							{f32(x + radius), f32(y + radius)},
+							{f32(x + radius), f32(y + h) - radius},
+							{f32(x + w) - radius, f32(y + radius)},
+							{f32(x + w) - radius, f32(y + h) - radius}};
 
 					const f32 radius_f = static_cast<f32>(radius);
 					const f32 scale[4][2] =
-					{
-						{ -radius_f, -radius_f },
-						{ -radius_f, +radius_f },
-						{ +radius_f, -radius_f },
-						{ +radius_f, +radius_f }
-					};
+						{
+							{-radius_f, -radius_f},
+							{-radius_f, +radius_f},
+							{+radius_f, -radius_f},
+							{+radius_f, +radius_f}};
 
 					for (int i = 0; i < 4; ++i)
 					{
@@ -1094,5 +1093,5 @@ namespace rsx
 
 			return compiled_resources;
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -11,7 +11,6 @@ namespace gl
 		mutable bool signaled = false;
 
 	public:
-
 		fence() = default;
 		~fence() = default;
 
@@ -126,4 +125,4 @@ namespace gl
 			glWaitSync(m_value, 0, GL_TIMEOUT_IGNORED);
 		}
 	};
-}
+} // namespace gl

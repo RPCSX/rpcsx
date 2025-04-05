@@ -93,12 +93,12 @@ namespace gl
 
 			attachment(fbo& parent)
 				: m_parent(parent)
-			{}
+			{
+			}
 
 		public:
 			attachment(fbo& parent, type type)
-				: m_id(static_cast<int>(type))
-				, m_parent(parent)
+				: m_id(static_cast<int>(type)), m_parent(parent)
 			{
 			}
 
@@ -123,16 +123,16 @@ namespace gl
 				return 0;
 			}
 
-			void operator = (const texture& rhs)
+			void operator=(const texture& rhs)
 			{
 				ensure(rhs.get_target() == texture::target::texture2D ||
-					rhs.get_target() == texture::target::texture2DMS);
+					   rhs.get_target() == texture::target::texture2DMS);
 
 				m_parent.m_resource_bindings[m_id] = rhs.id();
 				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs.id(), 0);
 			}
 
-			void operator = (const GLuint rhs)
+			void operator=(const GLuint rhs)
 			{
 				m_parent.m_resource_bindings[m_id] = rhs;
 				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs, 0);
@@ -148,7 +148,7 @@ namespace gl
 
 			attachment operator[](int index) const
 			{
-				return{ m_parent, type(id() + index) };
+				return {m_parent, type(id() + index)};
 			}
 
 			std::vector<attachment> range(int from, int count) const
@@ -161,21 +161,22 @@ namespace gl
 				return result;
 			}
 
-			using attachment::operator =;
+			using attachment::operator=;
 		};
 
 		struct null_attachment : public attachment
 		{
 			null_attachment(fbo& parent)
 				: attachment(parent)
-			{}
+			{
+			}
 		};
 
-		indexed_attachment color{ *this, attachment::type::color };
-		attachment depth{ *this, attachment::type::depth };
-		attachment stencil{ *this, attachment::type::stencil };
-		attachment depth_stencil{ *this, attachment::type::depth_stencil };
-		null_attachment no_color{ *this };
+		indexed_attachment color{*this, attachment::type::color};
+		attachment depth{*this, attachment::type::depth};
+		attachment stencil{*this, attachment::type::stencil};
+		attachment depth_stencil{*this, attachment::type::depth_stencil};
+		null_attachment no_color{*this};
 
 		enum class target
 		{
@@ -248,4 +249,4 @@ namespace gl
 	};
 
 	extern const fbo screen;
-}
+} // namespace gl

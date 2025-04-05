@@ -38,7 +38,7 @@ private:
 	static void GenerateUser(const std::string& user_id, const std::string& username);
 	static bool ValidateUsername(const QString& text_to_validate);
 
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 
 	void closeEvent(QCloseEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;

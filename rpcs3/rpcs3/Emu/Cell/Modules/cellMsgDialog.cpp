@@ -18,28 +18,28 @@
 
 LOG_CHANNEL(cellSysutil);
 
-template<>
+template <>
 void fmt_class_string<CellMsgDialogError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_MSGDIALOG_ERROR_PARAM);
-			STR_CASE(CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_MSGDIALOG_ERROR_PARAM);
+				STR_CASE(CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<msg_dialog_source>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto src)
-	{
-		switch (src)
 		{
+			switch (src)
+			{
 			case msg_dialog_source::_cellMsgDialog: return "cellMsgDialog";
 			case msg_dialog_source::_cellSaveData: return "cellSaveData";
 			case msg_dialog_source::_cellGame: return "cellGame";
@@ -48,10 +48,10 @@ void fmt_class_string<msg_dialog_source>::format(std::string& out, u64 arg)
 			case msg_dialog_source::_sceNpTrophy: return "sceNpTrophy";
 			case msg_dialog_source::sys_progress: return "sys_progress";
 			case msg_dialog_source::shader_loading: return "shader_loading";
-		}
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 MsgDialogBase::~MsgDialogBase()
@@ -166,7 +166,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 {
 	cellSysutil.notice("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, source=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x, return_code=*0x%x)", is_blocking, type, msgString, source, callback, userData, extParam, return_code);
 
-	const MsgDialogType _type{ type };
+	const MsgDialogType _type{type};
 
 	if (return_code)
 	{
@@ -188,29 +188,29 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		const auto notify = std::make_shared<atomic_t<u32>>(0);
 
 		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, source, [callback, userData, &return_code, is_blocking, notify](s32 status)
-		{
-			if (is_blocking && return_code)
 			{
-				*return_code = status;
-			}
-
-			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
-
-			if (callback)
-			{
-				sysutil_register_cb([=](ppu_thread& ppu) -> s32
+				if (is_blocking && return_code)
 				{
-					callback(ppu, status, userData);
-					return CELL_OK;
-				});
-			}
+					*return_code = status;
+				}
 
-			if (is_blocking && notify)
-			{
-				*notify = 1;
-				notify->notify_one();
-			}
-		});
+				sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+
+				if (callback)
+				{
+					sysutil_register_cb([=](ppu_thread& ppu) -> s32
+						{
+							callback(ppu, status, userData);
+							return CELL_OK;
+						});
+				}
+
+				if (is_blocking && notify)
+				{
+					*notify = 1;
+					notify->notify_one();
+				}
+			});
 
 		// Wait for on_close
 		while (is_blocking && !Emu.IsStopped() && !*notify)
@@ -252,10 +252,10 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			if (callback)
 			{
 				sysutil_register_cb([=](ppu_thread& ppu) -> s32
-				{
-					callback(ppu, status, userData);
-					return CELL_OK;
-				});
+					{
+						callback(ppu, status, userData);
+						return CELL_OK;
+					});
 			}
 
 			g_fxo->get<msg_dlg_thread>().wait_until = 0;
@@ -275,10 +275,10 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 	// Run asynchronously in GUI thread
 	Emu.CallFromMainThread([&, msg_string = std::move(msg_string)]()
-	{
-		dlg->Create(msg_string);
-		lv2_obj::awake(&ppu);
-	});
+		{
+			dlg->Create(msg_string);
+			lv2_obj::awake(&ppu);
+		});
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
@@ -335,7 +335,7 @@ void close_msg_dialog()
 	}
 }
 
-void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
+void exit_game(s32 /* buttonType*/, vm::ptr<void> /* userData*/)
 {
 	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
 }
@@ -351,14 +351,12 @@ error_code open_exit_dialog(const std::string& message, bool is_exit_requested, 
 		callback.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(exit_game)));
 	}
 
-	const error_code res = open_msg_dialog
-	(
+	const error_code res = open_msg_dialog(
 		true,
 		CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
 		vm::make_str(message),
 		source,
-		callback
-	);
+		callback);
 
 	if (res != CELL_OK)
 	{
@@ -503,7 +501,7 @@ error_code cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallba
 	case 0x8001003C: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003C; break; // Incorrect version in sys_load_param.
 	case 0x8001003D: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003D; break; // Pointer is null.
 	case 0x8001003E: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_8001003E; break; // Pointer is null.
-	default:         string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_DEFAULT;  break; // An error has occurred.
+	default: string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_DEFAULT; break;          // An error has occurred.
 	}
 
 	const std::string error = get_localized_string(string_id, fmt::format("%08x", errorCode).c_str());
@@ -576,7 +574,7 @@ error_code cellMsgDialogAbort()
 
 	g_fxo->get<msg_dlg_thread>().wait_until = 0;
 	g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
-	input::SetIntercepted(false);     // so we need to reenable the pads here
+	input::SetIntercepted(false);    // so we need to reenable the pads here
 	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 
 	return CELL_OK;
@@ -624,10 +622,10 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallFromMainThread([=, msg = std::string{ msgString.get_ptr() }]
-	{
-		dlg->ProgressBarSetMsg(progressBarIndex, msg);
-	});
+	Emu.CallFromMainThread([=, msg = std::string{msgString.get_ptr()}]
+		{
+			dlg->ProgressBarSetMsg(progressBarIndex, msg);
+		});
 
 	return CELL_OK;
 }
@@ -657,9 +655,9 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 	}
 
 	Emu.CallFromMainThread([=]
-	{
-		dlg->ProgressBarReset(progressBarIndex);
-	});
+		{
+			dlg->ProgressBarReset(progressBarIndex);
+		});
 
 	return CELL_OK;
 }
@@ -689,9 +687,9 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 	}
 
 	Emu.CallFromMainThread([=]
-	{
-		dlg->ProgressBarInc(progressBarIndex, delta);
-	});
+		{
+			dlg->ProgressBarInc(progressBarIndex, delta);
+		});
 
 	return CELL_OK;
 }

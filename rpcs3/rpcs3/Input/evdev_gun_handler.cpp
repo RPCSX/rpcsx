@@ -1,5 +1,5 @@
 // This makes debugging on windows less painful
-//#define HAVE_LIBEVDEV
+// #define HAVE_LIBEVDEV
 
 #ifdef HAVE_LIBEVDEV
 
@@ -17,8 +17,7 @@ LOG_CHANNEL(evdev_log, "evdev");
 
 constexpr usz max_devices = 8;
 
-const std::map<gun_button, int> button_map
-{
+const std::map<gun_button, int> button_map{
 	{gun_button::btn_left, BTN_LEFT},
 	{gun_button::btn_right, BTN_RIGHT},
 	{gun_button::btn_middle, BTN_MIDDLE},
@@ -29,8 +28,7 @@ const std::map<gun_button, int> button_map
 	{gun_button::btn_5, BTN_5},
 	{gun_button::btn_6, BTN_6},
 	{gun_button::btn_7, BTN_7},
-	{gun_button::btn_8, BTN_8}
-};
+	{gun_button::btn_8, BTN_8}};
 
 struct event_udev_entry
 {
@@ -242,9 +240,9 @@ bool evdev_gun_handler::init()
 
 		// Sort the udev entries by devnode name so that they are created in the proper order
 		std::sort(sorted_devices.begin(), sorted_devices.end(), [](const event_udev_entry& a, const event_udev_entry& b)
-		{
-			return event_strcmp_events(a.devnode, b.devnode);
-		});
+			{
+				return event_strcmp_events(a.devnode, b.devnode);
+			});
 
 		for (const event_udev_entry& entry : sorted_devices)
 		{
@@ -275,7 +273,7 @@ bool evdev_gun_handler::init()
 				evdev_gun gun{};
 				gun.device = device;
 
-				for (int code : { ABS_X, ABS_Y })
+				for (int code : {ABS_X, ABS_Y})
 				{
 					if (const input_absinfo* info = libevdev_get_abs_info(device, code))
 					{

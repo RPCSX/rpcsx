@@ -59,4 +59,4 @@ namespace
 	static_assert(!is_same_ptr<B, E>());
 	static_assert(is_same_ptr<F, C>());
 	static_assert(is_same_ptr<C, F>());
-}
+} // namespace

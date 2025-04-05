@@ -24,4 +24,4 @@ namespace vk
 
 	using renderpass_op_callback_t = std::function<void(const vk::command_buffer&, VkRenderPass, VkFramebuffer)>;
 	void renderpass_op(const vk::command_buffer& cmd, const renderpass_op_callback_t& op);
-}
+} // namespace vk

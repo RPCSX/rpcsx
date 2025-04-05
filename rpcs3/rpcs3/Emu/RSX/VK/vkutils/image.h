@@ -9,19 +9,19 @@
 
 #include <stack>
 
-//using enum rsx::format_class;
+// using enum rsx::format_class;
 using namespace ::rsx::format_class_;
 
 #define VK_DISABLE_COMPONENT_SWIZZLE 0
 
 namespace vk
 {
-	enum : u32// special remap_encoding enums
+	enum : u32 // special remap_encoding enums
 	{
-		VK_REMAP_IDENTITY = 0xCAFEBABE,                   // Special view encoding to return an identity image view
-		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF,          // Special encoding for multisampled images; returns a multisampled image view
-		VK_IMAGE_CREATE_ALLOW_NULL_RPCS3 = 0x80000000,    // Special flag that allows null images to be created if there is no memory
-		VK_IMAGE_CREATE_SHAREABLE_RPCS3  = 0x40000000,    // Special flag to create a shareable image
+		VK_REMAP_IDENTITY = 0xCAFEBABE,                // Special view encoding to return an identity image view
+		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF,       // Special encoding for multisampled images; returns a multisampled image view
+		VK_IMAGE_CREATE_ALLOW_NULL_RPCS3 = 0x80000000, // Special flag that allows null images to be created if there is no memory
+		VK_IMAGE_CREATE_SHAREABLE_RPCS3 = 0x40000000,  // Special flag to create a shareable image
 
 		VK_IMAGE_CREATE_SPECIAL_FLAGS_RPCS3 = (VK_IMAGE_CREATE_ALLOW_NULL_RPCS3 | VK_IMAGE_CREATE_SHAREABLE_RPCS3)
 	};
@@ -41,7 +41,7 @@ namespace vk
 
 	public:
 		VkImage value = VK_NULL_HANDLE;
-		VkComponentMapping native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		u32 current_queue_family = VK_QUEUE_FAMILY_IGNORED;
 		VkImageCreateInfo info = {};
@@ -107,8 +107,8 @@ namespace vk
 
 		image_view(VkDevice dev, vk::image* resource,
 			VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM,
-			const VkComponentMapping& mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
-			const VkImageSubresourceRange& range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			const VkComponentMapping& mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
+			const VkImageSubresourceRange& range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
 		~image_view();
 
@@ -139,4 +139,4 @@ namespace vk
 
 		void set_native_component_layout(VkComponentMapping new_layout);
 	};
-}
+} // namespace vk

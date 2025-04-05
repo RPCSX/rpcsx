@@ -6,10 +6,10 @@ To enable bs_t<>, enum scope must contain `__bitset_enum_max` entry.
 
 enum class flagzz : u32
 {
-	flag1, // Bit indices start from zero
-	flag2,
+    flag1, // Bit indices start from zero
+    flag2,
 
-	__bitset_enum_max // It must be the last value
+    __bitset_enum_max // It must be the last value
 };
 
 This also enables helper operators for this enum type.
@@ -26,8 +26,7 @@ Intersection (&) and symmetric difference (^) is also available.
 #include "Utilities/StrFmt.h"
 
 template <typename T>
-concept BitSetEnum = std::is_enum_v<T> && requires(T x)
-{
+concept BitSetEnum = std::is_enum_v<T> && requires(T x) {
 	T::__bitset_enum_max;
 };
 
@@ -91,56 +90,56 @@ public:
 	}
 
 	// Copy
-	constexpr bs_t operator +() const
+	constexpr bs_t operator+() const
 	{
 		return *this;
 	}
 
-	constexpr bs_t& operator +=(bs_t rhs)
+	constexpr bs_t& operator+=(bs_t rhs)
 	{
 		m_data |= static_cast<under>(rhs);
 		return *this;
 	}
 
-	constexpr bs_t& operator -=(bs_t rhs)
+	constexpr bs_t& operator-=(bs_t rhs)
 	{
 		m_data &= ~static_cast<under>(rhs);
 		return *this;
 	}
 
-	constexpr bs_t& operator &=(bs_t rhs)
+	constexpr bs_t& operator&=(bs_t rhs)
 	{
 		m_data &= static_cast<under>(rhs);
 		return *this;
 	}
 
-	constexpr bs_t& operator ^=(bs_t rhs)
+	constexpr bs_t& operator^=(bs_t rhs)
 	{
 		m_data ^= static_cast<under>(rhs);
 		return *this;
 	}
 
-	friend constexpr bs_t operator +(bs_t lhs, bs_t rhs)
+	friend constexpr bs_t operator+(bs_t lhs, bs_t rhs)
 	{
 		return bs_t(0, lhs.m_data | rhs.m_data);
 	}
 
-	friend constexpr bs_t operator -(bs_t lhs, bs_t rhs)
+	friend constexpr bs_t operator-(bs_t lhs, bs_t rhs)
 	{
 		return bs_t(0, lhs.m_data & ~rhs.m_data);
 	}
 
-	friend constexpr bs_t operator &(bs_t lhs, bs_t rhs)
+	friend constexpr bs_t operator&(bs_t lhs, bs_t rhs)
 	{
 		return bs_t(0, lhs.m_data & rhs.m_data);
 	}
 
-	friend constexpr bs_t operator ^(bs_t lhs, bs_t rhs)
+	friend constexpr bs_t operator^(bs_t lhs, bs_t rhs)
 	{
 		return bs_t(0, lhs.m_data ^ rhs.m_data);
 	}
 
-	constexpr bool operator ==(bs_t rhs) const noexcept
+	constexpr bool operator==(bs_t rhs) const noexcept
 	{
 		return m_data == rhs.m_data;
 	}
@@ -179,63 +178,71 @@ public:
 
 // Unary '+' operator: promote plain enum value to bitset value
 template <BitSetEnum T>
-constexpr bs_t<T> operator +(T bit)
+constexpr bs_t<T> operator+(T bit)
 {
 	return bs_t<T>(bit);
 }
 
 // Binary '+' operator: bitset union
-template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
-constexpr bs_t<T> operator +(T lhs, const U& rhs)
+template <BitSetEnum T, typename U>
+	requires(std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator+(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) + bs_t<T>(rhs);
 }
 
 // Binary '+' operator: bitset union
-template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
-constexpr bs_t<T> operator +(const U& lhs, T rhs)
+template <typename U, BitSetEnum T>
+	requires(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator+(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) + bs_t<T>(rhs);
 }
 
 // Binary '-' operator: bitset difference
-template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
-constexpr bs_t<T> operator -(T lhs, const U& rhs)
+template <BitSetEnum T, typename U>
+	requires(std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator-(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) - bs_t<T>(rhs);
 }
 
 // Binary '-' operator: bitset difference
-template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
-constexpr bs_t<T> operator -(const U& lhs, T rhs)
+template <typename U, BitSetEnum T>
+	requires(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator-(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) - bs_t<T>(rhs);
 }
 
 // Binary '&' operator: bitset intersection
-template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
-constexpr bs_t<T> operator &(T lhs, const U& rhs)
+template <BitSetEnum T, typename U>
+	requires(std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator&(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) & bs_t<T>(rhs);
 }
 
 // Binary '&' operator: bitset intersection
-template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
-constexpr bs_t<T> operator &(const U& lhs, T rhs)
+template <typename U, BitSetEnum T>
+	requires(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator&(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) & bs_t<T>(rhs);
 }
 
 // Binary '^' operator: bitset symmetric difference
-template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
-constexpr bs_t<T> operator ^(T lhs, const U& rhs)
+template <BitSetEnum T, typename U>
+	requires(std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator^(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
 }
 
 // Binary '^' operator: bitset symmetric difference
-template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
-constexpr bs_t<T> operator ^(const U& lhs, T rhs)
+template <typename U, BitSetEnum T>
+	requires(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator^(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
 }
@@ -261,7 +268,7 @@ public:
 
 	atomic_bs_t(const atomic_bs_t&) = delete;
 
-	atomic_bs_t& operator =(const atomic_bs_t&) = delete;
+	atomic_bs_t& operator=(const atomic_bs_t&) = delete;
 
 	explicit constexpr atomic_bs_t(bs_t value)
 		: base(value)
@@ -285,7 +292,7 @@ public:
 		return static_cast<under>(base::load());
 	}
 
-	bs_t operator +() const
+	bs_t operator+() const
 	{
 		return base::load();
 	}
@@ -300,7 +307,7 @@ public:
 		return bs_t(0, atomic_storage<under>::or_fetch(m_data.m_data, rhs.m_data));
 	}
 
-	bs_t operator +=(const bs_t& rhs)
+	bs_t operator+=(const bs_t& rhs)
 	{
 		return add_fetch(rhs);
 	}
@@ -315,7 +322,7 @@ public:
 		return bs_t(0, atomic_storage<under>::and_fetch(m_data.m_data, ~rhs.m_data));
 	}
 
-	bs_t operator -=(const bs_t& rhs)
+	bs_t operator-=(const bs_t& rhs)
 	{
 		return sub_fetch(rhs);
 	}
@@ -330,7 +337,7 @@ public:
 		return bs_t(0, atomic_storage<under>::and_fetch(m_data.m_data, rhs.m_data));
 	}
 
-	bs_t operator &=(const bs_t& rhs)
+	bs_t operator&=(const bs_t& rhs)
 	{
 		return and_fetch(rhs);
 	}
@@ -345,14 +352,14 @@ public:
 		return bs_t(0, atomic_storage<under>::xor_fetch(m_data.m_data, rhs.m_data));
 	}
 
-	bs_t operator ^=(const bs_t& rhs)
+	bs_t operator^=(const bs_t& rhs)
 	{
 		return xor_fetch(rhs);
 	}
 
 	auto fetch_or(const bs_t&) = delete;
 	auto or_fetch(const bs_t&) = delete;
-	auto operator |=(const bs_t&) = delete;
+	auto operator|=(const bs_t&) = delete;
 
 	bool test_and_set(T rhs)
 	{

@@ -32,7 +32,7 @@ using std::chrono::steady_clock;
 using namespace std::literals;
 
 #ifndef __has_builtin
-	#define __has_builtin(x) 0
+#define __has_builtin(x) 0
 #endif
 
 #ifdef _MSC_VER
@@ -52,11 +52,14 @@ using namespace std::literals;
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
 #define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
-#define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
+#define CHECK_SIZE_ALIGN(type, size, align) \
+	CHECK_SIZE(type, size);                 \
+	CHECK_ALIGN(type, align)
 
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
-#define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
+#define STR_CASE(...) \
+	case __VA_ARGS__: return #__VA_ARGS__
 
 #if defined(_DEBUG) || defined(_AUDIT)
 #define AUDIT(...) (static_cast<void>(ensure(__VA_ARGS__)))
@@ -96,15 +99,17 @@ namespace utils
 
 	template <typename F>
 	fn_helper(F&& f) -> fn_helper<F>;
-}
+} // namespace utils
 
 // Shorter lambda.
-#define FN(...) \
-	::utils::fn_helper([&]( \
-		[[maybe_unused]] auto&& x, \
-		[[maybe_unused]] auto&& y, \
-		[[maybe_unused]] auto&& z, \
-		[[maybe_unused]] auto&& w){ return (__VA_ARGS__); })
+#define FN(...)                                         \
+	::utils::fn_helper([&](                             \
+						   [[maybe_unused]] auto&& x,   \
+						   [[maybe_unused]] auto&& y,   \
+						   [[maybe_unused]] auto&& z,   \
+						   [[maybe_unused]] auto&& w) { \
+		return (__VA_ARGS__);                           \
+	})
 
 #if __cpp_lib_bit_cast < 201806L
 namespace std
@@ -114,31 +119,31 @@ namespace std
 	{
 		return __builtin_bit_cast(To, from);
 	}
-}
+} // namespace std
 #endif
 
-#if defined(__INTELLISENSE__) || (defined (__clang__) && (__clang_major__ <= 16))
+#if defined(__INTELLISENSE__) || (defined(__clang__) && (__clang_major__ <= 16))
 #define consteval constexpr
 #define constinit
 #endif
 
-using schar  = signed char;
-using uchar  = unsigned char;
+using schar = signed char;
+using uchar = unsigned char;
 using ushort = unsigned short;
-using uint   = unsigned int;
-using ulong  = unsigned long;
+using uint = unsigned int;
+using ulong = unsigned long;
 using ullong = unsigned long long;
-using llong  = long long;
+using llong = long long;
 
 using uptr = std::uintptr_t;
 
-using u8  = std::uint8_t;
+using u8 = std::uint8_t;
 using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
 using usz = std::size_t;
 
-using s8  = std::int8_t;
+using s8 = std::int8_t;
 using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
@@ -196,7 +201,7 @@ namespace stx
 
 	template <typename T>
 	struct generator;
-}
+} // namespace stx
 
 using stx::se_t;
 
@@ -275,16 +280,14 @@ struct alignas(16) u128
 	template <typename T>
 		requires std::is_unsigned_v<T>
 	constexpr u128(T arg) noexcept
-		: lo(arg)
-		, hi(0)
+		: lo(arg), hi(0)
 	{
 	}
 
 	template <typename T>
 		requires std::is_signed_v<T>
 	constexpr u128(T arg) noexcept
-		: lo(s64{arg})
-		, hi(s64{arg} >> 63)
+		: lo(s64{arg}), hi(s64{arg} >> 63)
 	{
 	}
 
@@ -591,7 +594,9 @@ struct get_int_impl<16>
 	using stype = s128;
 };
 
-enum class f16 : u16{};
+enum class f16 : u16
+{
+};
 
 using f32 = float;
 using f64 = double;
@@ -717,19 +722,22 @@ constexpr struct smax_impl_t
 // Compare signed or unsigned type with its max value
 constexpr struct amax_impl_t
 {
-	template <typename T> requires SignedInt<T> || UnsignedInt<T>
-	constexpr bool operator ==(const T& rhs) const
+	template <typename T>
+		requires SignedInt<T> || UnsignedInt<T>
+	constexpr bool operator==(const T& rhs) const
 	{
 		return rhs == max_v<T>;
 	}
 
-	template <typename T> requires SignedInt<T> || UnsignedInt<T>
-	constexpr std::strong_ordering operator <=>(const T& rhs) const
+	template <typename T>
+		requires SignedInt<T> || UnsignedInt<T>
+	constexpr std::strong_ordering operator<=>(const T& rhs) const
 	{
 		return max_v<T> <=> rhs;
 	}
 
-	template <typename T> requires SignedInt<T> || UnsignedInt<T>
+	template <typename T>
+		requires SignedInt<T> || UnsignedInt<T>
 	constexpr operator T() const
 	{
 		return max_v<T>;
@@ -739,19 +747,22 @@ constexpr struct amax_impl_t
 // Compare signed or unsigned type with its minimal value (like zero or INT_MIN)
 constexpr struct amin_impl_t
 {
-	template <typename T> requires SignedInt<T> || UnsignedInt<T>
-	constexpr bool operator ==(const T& rhs) const
+	template <typename T>
+		requires SignedInt<T> || UnsignedInt<T>
+	constexpr bool operator==(const T& rhs) const
 	{
 		return rhs == min_v<T>;
 	}
 
-	template <typename T> requires SignedInt<T> || UnsignedInt<T>
-	constexpr std::strong_ordering operator <=>(const T& rhs) const
+	template <typename T>
+		requires SignedInt<T> || UnsignedInt<T>
+	constexpr std::strong_ordering operator<=>(const T& rhs) const
 	{
 		return min_v<T> <=> rhs;
 	}
 
-	template <typename T> requires SignedInt<T> || UnsignedInt<T>
+	template <typename T>
+		requires SignedInt<T> || UnsignedInt<T>
 	constexpr operator T() const
 	{
 		return min_v<T>;
@@ -759,7 +770,7 @@ constexpr struct amin_impl_t
 } amin;
 
 template <typename T, typename T2>
-inline u32 offset32(T T2::*const mptr)
+inline u32 offset32(T T2::* const mptr)
 {
 #ifdef _MSC_VER
 	return std::bit_cast<u32>(mptr);
@@ -796,7 +807,7 @@ template <typename Arg>
 struct offset32_detail;
 
 template <typename T, typename T2, typename Arg, typename... Args>
-inline u32 offset32(T T2::*const mptr, const Arg& arg, const Args&... args)
+inline u32 offset32(T T2::* const mptr, const Arg& arg, const Args&... args)
 {
 	return offset32_detail<Arg>::offset32(mptr, arg, args...);
 }
@@ -805,7 +816,7 @@ template <typename Arg>
 struct offset32_detail
 {
 	template <typename T, typename T2, typename... Args>
-	static inline u32 offset32(T T2::*const mptr, const Arg& arg, const Args&... args)
+	static inline u32 offset32(T T2::* const mptr, const Arg& arg, const Args&... args)
 	{
 		return ::offset32(mptr, args...) + offset32_array<T>::index32(arg);
 	}
@@ -815,7 +826,7 @@ template <typename T3, typename T4>
 struct offset32_detail<T3 T4::*>
 {
 	template <typename T, typename T2, typename... Args>
-	static inline u32 offset32(T T2::*const mptr, T3 T4::*const mptr2, const Args&... args)
+	static inline u32 offset32(T T2::* const mptr, T3 T4::* const mptr2, const Args&... args)
 	{
 		return ::offset32(mptr) + ::offset32(mptr2, args...);
 	}
@@ -856,13 +867,13 @@ struct const_str_t
 
 	char8_t chars[Size + 1]{};
 
-	constexpr const_str_t(const char(&a)[Size + 1])
+	constexpr const_str_t(const char (&a)[Size + 1])
 	{
 		for (usz i = 0; i <= Size; i++)
 			chars[i] = a[i];
 	}
 
-	constexpr const_str_t(const char8_t(&a)[Size + 1])
+	constexpr const_str_t(const char8_t (&a)[Size + 1])
 	{
 		for (usz i = 0; i <= Size; i++)
 			chars[i] = a[i];
@@ -891,22 +902,19 @@ struct const_str_t<umax>
 	};
 
 	constexpr const_str_t()
-		: size(0)
-		, chars(nullptr)
+		: size(0), chars(nullptr)
 	{
 	}
 
 	template <usz N>
-	constexpr const_str_t(const char8_t(&a)[N])
-		: size(N - 1)
-		, chars(+a)
+	constexpr const_str_t(const char8_t (&a)[N])
+		: size(N - 1), chars(+a)
 	{
 	}
 
 	template <usz N>
-	constexpr const_str_t(const char(&a)[N])
-		: size(N - 1)
-		, chars2(+a)
+	constexpr const_str_t(const char (&a)[N])
+		: size(N - 1), chars2(+a)
 	{
 	}
 
@@ -922,10 +930,10 @@ struct const_str_t<umax>
 };
 
 template <usz Size>
-const_str_t(const char(&a)[Size]) -> const_str_t<Size - 1>;
+const_str_t(const char (&a)[Size]) -> const_str_t<Size - 1>;
 
 template <usz Size>
-const_str_t(const char8_t(&a)[Size]) -> const_str_t<Size - 1>;
+const_str_t(const char8_t (&a)[Size]) -> const_str_t<Size - 1>;
 
 using const_str = const_str_t<>;
 
@@ -934,7 +942,7 @@ namespace fmt
 	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object);
 	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size);
 	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size);
-}
+} // namespace fmt
 
 // No full implementation to ease on header weight
 template <typename T>
@@ -948,7 +956,7 @@ std::conditional_t<std::is_integral_v<std::remove_cvref_t<T>>, usz, std::string_
 	}
 	else if constexpr (std::is_array_v<type> && std::is_constructible_v<std::string_view, type>)
 	{
-		return { obj, std::size(obj) - 1 };
+		return {obj, std::size(obj) - 1};
 	}
 	else
 	{
@@ -967,7 +975,8 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(), std::sourc
 	fmt::raw_verify_error(src_loc, msg, 0);
 }
 
-template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
+template <typename T, typename F>
+	requires(std::is_invocable_v<F, T &&>)
 constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(), std::source_location src_loc = std::source_location::current()) noexcept
 {
 	if (std::forward<F>(pred)(std::forward<T>(arg))) [[likely]]
@@ -978,7 +987,8 @@ constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(), 
 	fmt::raw_verify_error(src_loc, msg, 0);
 }
 
-template <typename To, typename From> requires (std::is_integral_v<decltype(std::declval<To>() + std::declval<From>())>)
+template <typename To, typename From>
+	requires(std::is_integral_v<decltype(std::declval<To>() + std::declval<From>())>)
 [[nodiscard]] constexpr To narrow(const From& value, std::source_location src_loc = std::source_location::current())
 {
 	// Narrow check
@@ -1011,7 +1021,8 @@ template <typename To, typename From> requires (std::is_integral_v<decltype(std:
 }
 
 // Returns u32 size() for container
-template <typename CT> requires requires (const CT& x) { std::size(x); }
+template <typename CT>
+	requires requires(const CT& x) { std::size(x); }
 [[nodiscard]] constexpr u32 size32(const CT& container, std::source_location src_loc = std::source_location::current())
 {
 	// TODO: Support std::array
@@ -1028,7 +1039,8 @@ template <typename CT> requires requires (const CT& x) { std::size(x); }
 	}
 }
 
-template <typename CT, typename T> requires requires (CT&& x) { std::size(x); std::data(x); } || requires (CT&& x) { std::size(x); x.front(); }
+template <typename CT, typename T>
+	requires requires(CT&& x) { std::size(x); std::data(x); } || requires(CT&& x) { std::size(x); x.front(); }
 [[nodiscard]] constexpr auto& at32(CT&& container, T&& index, std::source_location src_loc = std::source_location::current())
 {
 	// Make sure the index is within u32 range
@@ -1041,13 +1053,14 @@ template <typename CT, typename T> requires requires (CT&& x) { std::size(x); st
 	return *it;
 }
 
-template <typename CT, typename T> requires requires (CT&& x, T&& y) { x.count(y); x.find(y); }
+template <typename CT, typename T>
+	requires requires(CT&& x, T&& y) { x.count(y); x.find(y); }
 [[nodiscard]] constexpr auto& at32(CT&& container, T&& index, std::source_location src_loc = std::source_location::current())
 {
 	// Associative container
 	const auto found = container.find(std::forward<T>(index));
 	usz csv = umax;
-	if constexpr ((requires () { container.size(); }))
+	if constexpr ((requires() { container.size(); }))
 		csv = container.size();
 	if (found == container.end()) [[unlikely]]
 		fmt::raw_range_error(src_loc, format_object_simplified(index), csv);
@@ -1078,7 +1091,7 @@ struct fill_array_t
 	template <typename U, usz N, usz... M, usz... Idx>
 	constexpr std::array<U, N> fill(std::index_sequence<M...>, std::index_sequence<Idx...>) const
 	{
-		return{(static_cast<void>(Idx), U(get<T, M>()...))...};
+		return {(static_cast<void>(Idx), U(get<T, M>()...))...};
 	}
 
 	template <typename U, usz N>
@@ -1095,13 +1108,13 @@ constexpr auto fill_array(const T&... args)
 }
 
 template <typename X, typename Y>
-concept PtrCastable = requires(const volatile X* x, const volatile Y* y)
-{
+concept PtrCastable = requires(const volatile X* x, const volatile Y* y) {
 	static_cast<const volatile Y*>(x);
 	static_cast<const volatile X*>(y);
 };
 
-template <typename X, typename Y> requires PtrCastable<X, Y>
+template <typename X, typename Y>
+	requires PtrCastable<X, Y>
 consteval bool is_same_ptr()
 {
 	if constexpr (std::is_void_v<X> || std::is_void_v<Y> || std::is_same_v<std::remove_cv_t<X>, std::remove_cv_t<Y>>)
@@ -1135,7 +1148,8 @@ consteval bool is_same_ptr()
 	}
 }
 
-template <typename X, typename Y> requires PtrCastable<X, Y>
+template <typename X, typename Y>
+	requires PtrCastable<X, Y>
 constexpr bool is_same_ptr(const volatile Y* ptr)
 {
 	return static_cast<const volatile X*>(ptr) == static_cast<const volatile void*>(ptr);
@@ -1156,14 +1170,26 @@ namespace stx
 		explicit exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
 		exact_t& operator=(const exact_t&) = delete;
 
-		template <typename U> requires (std::is_same_v<U&, T>)
-		operator U&() const noexcept { return obj; };
+		template <typename U>
+			requires(std::is_same_v<U&, T>)
+		operator U&() const noexcept
+		{
+			return obj;
+		};
 
-		template <typename U> requires (std::is_same_v<const U&, T>)
-		operator const U&() const noexcept { return obj; };
+		template <typename U>
+			requires(std::is_same_v<const U&, T>)
+		operator const U&() const noexcept
+		{
+			return obj;
+		};
 
-		template <typename U> requires (std::is_same_v<U, T> && std::is_copy_constructible_v<T>)
-		operator U() const noexcept { return obj; };
+		template <typename U>
+			requires(std::is_same_v<U, T> && std::is_copy_constructible_v<T>)
+		operator U() const noexcept
+		{
+			return obj;
+		};
 	};
 
 	template <typename T>
@@ -1171,7 +1197,7 @@ namespace stx
 	{
 		return stx::exact_t<T&>(static_cast<T&>(obj));
 	}
-}
+} // namespace stx
 
 // Read object of type T from raw pointer, array, string, vector, or any contiguous container
 template <typename T, typename U>
@@ -1183,7 +1209,8 @@ constexpr T read_from_ptr(U&& array, usz pos = 0)
 	if (!std::is_constant_evaluated())
 		std::memcpy(+buf, &array[pos], sizeof(buf));
 	else
-		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++);
+		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++)
+			;
 	return std::bit_cast<T>(buf);
 }
 
@@ -1207,7 +1234,9 @@ constexpr void write_to_ptr(U&& array, const T& value)
 		ensure(!"Unimplemented");
 }
 
-constexpr struct aref_tag_t{} aref_tag{};
+constexpr struct aref_tag_t
+{
+} aref_tag{};
 
 template <typename T, typename U>
 class aref final
@@ -1244,14 +1273,16 @@ public:
 		return *this;
 	}
 
-	template <typename MT, typename T2> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
-	aref<MT, U> ref(MT T2::*const mptr) const
+	template <typename MT, typename T2>
+		requires(std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
+	aref<MT, U> ref(MT T2::* const mptr) const
 	{
 		return aref<MT, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U));
 	}
 
-	template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
-	aref<ET, U> ref(MT T2::*const mptr, usz index) const
+	template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>>
+		requires(std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
+	aref<ET, U> ref(MT T2::* const mptr, usz index) const
 	{
 		return aref<ET, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U) + sizeof(ET) / sizeof(U) * index);
 	}
@@ -1322,26 +1353,30 @@ namespace utils
 template <typename T>
 extern bool serialize(utils::serial& ar, T& obj);
 
-#define USING_SERIALIZATION_VERSION(name) []()\
-{\
-	extern void using_##name##_serialization();\
-	using_##name##_serialization();\
+#define USING_SERIALIZATION_VERSION(name) []()  \
+{                                               \
+	extern void using_##name##_serialization(); \
+	using_##name##_serialization();             \
 }()
 
-#define GET_OR_USE_SERIALIZATION_VERSION(cond, name) [&]()\
-{\
-	extern void using_##name##_serialization();\
-	extern s32 get_##name##_serialization_version();\
-	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version());\
+#define GET_OR_USE_SERIALIZATION_VERSION(cond, name) [&]()                                                         \
+{                                                                                                                  \
+	extern void using_##name##_serialization();                                                                    \
+	extern s32 get_##name##_serialization_version();                                                               \
+	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version()); \
 }()
 
-#define GET_SERIALIZATION_VERSION(name) []()\
-{\
-	extern s32 get_##name##_serialization_version();\
-	return get_##name##_serialization_version();\
+#define GET_SERIALIZATION_VERSION(name) []()         \
+{                                                    \
+	extern s32 get_##name##_serialization_version(); \
+	return get_##name##_serialization_version();     \
 }()
 
 #define ENABLE_BITWISE_SERIALIZATION using enable_bitcopy = std::true_type;
 #define SAVESTATE_INIT_POS(...) static constexpr double savestate_init_pos = (__VA_ARGS__)
 
-#define UNUSED(expr) do { (void)(expr); } while (0)
+#define UNUSED(expr)  \
+	do                \
+	{                 \
+		(void)(expr); \
+	} while (0)

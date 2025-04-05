@@ -7,19 +7,19 @@ LOG_CHANNEL(cellKey2char);
 // Return Codes
 enum CellKey2CharError : u32
 {
-	CELL_K2C_ERROR_FATAL               = 0x80121301,
-	CELL_K2C_ERROR_INVALID_HANDLE      = 0x80121302,
-	CELL_K2C_ERROR_INVALID_PARAMETER   = 0x80121303,
+	CELL_K2C_ERROR_FATAL = 0x80121301,
+	CELL_K2C_ERROR_INVALID_HANDLE = 0x80121302,
+	CELL_K2C_ERROR_INVALID_PARAMETER = 0x80121303,
 	CELL_K2C_ERROR_ALREADY_INITIALIZED = 0x80121304,
-	CELL_K2C_ERROR_UNINITIALIZED       = 0x80121305,
-	CELL_K2C_ERROR_OTHER               = 0x80121306,
+	CELL_K2C_ERROR_UNINITIALIZED = 0x80121305,
+	CELL_K2C_ERROR_OTHER = 0x80121306,
 };
 
 // Modes
 enum
 {
 	CELL_KEY2CHAR_MODE_ENGLISH = 0,
-	CELL_KEY2CHAR_MODE_NATIVE  = 1,
+	CELL_KEY2CHAR_MODE_NATIVE = 1,
 	CELL_KEY2CHAR_MODE_NATIVE2 = 2
 };
 
@@ -41,23 +41,23 @@ struct CellKey2CharHandle
 	u8 data[SCE_KEY2CHAR_HANDLE_SIZE];
 };
 
-template<>
+template <>
 void fmt_class_string<CellKey2CharError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_K2C_ERROR_FATAL);
-			STR_CASE(CELL_K2C_ERROR_INVALID_HANDLE);
-			STR_CASE(CELL_K2C_ERROR_INVALID_PARAMETER);
-			STR_CASE(CELL_K2C_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_K2C_ERROR_UNINITIALIZED);
-			STR_CASE(CELL_K2C_ERROR_OTHER);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_K2C_ERROR_FATAL);
+				STR_CASE(CELL_K2C_ERROR_INVALID_HANDLE);
+				STR_CASE(CELL_K2C_ERROR_INVALID_PARAMETER);
+				STR_CASE(CELL_K2C_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_K2C_ERROR_UNINITIALIZED);
+				STR_CASE(CELL_K2C_ERROR_OTHER);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellKey2CharOpen(vm::ptr<CellKey2CharHandle> handle)
@@ -184,10 +184,10 @@ error_code cellKey2CharSetArrangement(vm::ptr<CellKey2CharHandle> handle, s32 ar
 }
 
 DECLARE(ppu_module_manager::cellKey2char)("cellKey2char", []()
-{
-	REG_FUNC(cellKey2char, cellKey2CharOpen);
-	REG_FUNC(cellKey2char, cellKey2CharClose);
-	REG_FUNC(cellKey2char, cellKey2CharGetChar);
-	REG_FUNC(cellKey2char, cellKey2CharSetMode);
-	REG_FUNC(cellKey2char, cellKey2CharSetArrangement);
-});
+	{
+		REG_FUNC(cellKey2char, cellKey2CharOpen);
+		REG_FUNC(cellKey2char, cellKey2CharClose);
+		REG_FUNC(cellKey2char, cellKey2CharGetChar);
+		REG_FUNC(cellKey2char, cellKey2CharSetMode);
+		REG_FUNC(cellKey2char, cellKey2CharSetArrangement);
+	});

@@ -33,7 +33,7 @@ struct rXmlDocument
 {
 	rXmlDocument();
 	rXmlDocument(const rXmlDocument& other) = delete;
-	rXmlDocument &operator=(const rXmlDocument& other) = delete;
+	rXmlDocument& operator=(const rXmlDocument& other) = delete;
 	pugi::xml_parse_result Read(std::string_view data);
 	virtual std::shared_ptr<rXmlNode> GetRoot();
 

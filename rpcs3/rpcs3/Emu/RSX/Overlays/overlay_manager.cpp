@@ -11,9 +11,9 @@ namespace rsx
 		{
 			m_input_thread = std::make_shared<named_thread<overlay_input_thread>>();
 			(*m_input_thread)([this]()
-			{
-				input_thread_loop();
-			});
+				{
+					input_thread_loop();
+				});
 		}
 
 		display_manager::~display_manager()
@@ -25,13 +25,12 @@ namespace rsx
 
 				// Wake it if it is asleep
 				const input_thread_context_t wakeup_node =
-				{
-					"stop_node",
-					nullptr,
-					nullptr,
-					nullptr,
-					nullptr
-				};
+					{
+						"stop_node",
+						nullptr,
+						nullptr,
+						nullptr,
+						nullptr};
 				m_input_token_stack.push(wakeup_node);
 
 				// Wait for join
@@ -104,14 +103,12 @@ namespace rsx
 				cleanup_internal();
 			}
 
-			m_dirty_list.erase
-			(
+			m_dirty_list.erase(
 				std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::shared_ptr<overlay>& e)
-				{
-					return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
-				}),
-				m_dirty_list.end()
-			);
+					{
+						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
+					}),
+				m_dirty_list.end());
 		}
 
 		bool display_manager::remove_type(u32 type_id)
@@ -248,13 +245,13 @@ namespace rsx
 
 					s32 result = 0;
 
-					if (!input_context.input_loop_override) [[ likely ]]
+					if (!input_context.input_loop_override) [[likely]]
 					{
 						result = input_context.target->run_input_loop([this]()
-						{
-							// Stop if interrupt status is set or input stack is empty
-							return !m_input_thread_interrupted || !m_input_token_stack;
-						});
+							{
+								// Stop if interrupt status is set or input stack is empty
+								return !m_input_thread_interrupted || !m_input_token_stack;
+							});
 					}
 					else
 					{
@@ -308,5 +305,5 @@ namespace rsx
 				}
 			}
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

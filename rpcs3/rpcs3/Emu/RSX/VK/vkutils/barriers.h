@@ -7,7 +7,7 @@ namespace vk
 	class image;
 	class command_buffer;
 
-	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
+	// Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
 	void insert_texture_barrier(const vk::command_buffer& cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range, bool preserve_renderpass = false);
 	void insert_texture_barrier(const vk::command_buffer& cmd, vk::image* image, VkImageLayout new_layout, bool preserve_renderpass = false);
 
@@ -25,4 +25,4 @@ namespace vk
 		VkAccessFlags src_access = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
 		VkAccessFlags dst_access = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
 		bool preserve_renderpass = false);
-}
+} // namespace vk

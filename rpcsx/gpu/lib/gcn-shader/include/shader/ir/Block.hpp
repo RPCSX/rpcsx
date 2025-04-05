@@ -49,4 +49,4 @@ struct BlockImpl : ValueImpl, RegionLikeImpl {
     os << "}";
   }
 };
-} // namespace ir
+} // namespace shader::ir

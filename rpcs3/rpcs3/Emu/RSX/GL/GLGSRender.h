@@ -37,12 +37,12 @@ namespace gl
 		u32 vertex_index_offset;
 		u32 persistent_mapping_offset;
 		u32 volatile_mapping_offset;
-		std::optional<std::tuple<GLenum, u32> > index_info;
+		std::optional<std::tuple<GLenum, u32>> index_info;
 	};
 
 	struct work_item
 	{
-		u32  address_to_flush = 0;
+		u32 address_to_flush = 0;
 		gl::texture_cache::thrashed_set section_data;
 
 		volatile bool processed = false;
@@ -67,20 +67,20 @@ namespace gl
 		u32 width;
 		u32 height;
 		u32 pitch;
-		u8  eye;
+		u8 eye;
 	};
-}
+} // namespace gl
 
 class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
-	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
-	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
-	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
+	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];        // Fragment textures
+	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count]; // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
+	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];          // Vertex textures
 
-	gl::glsl::program *m_program = nullptr;
+	gl::glsl::program* m_program = nullptr;
 	gl::glsl::program* m_prev_program = nullptr;
-	const GLFragmentProgram *m_fragment_prog = nullptr;
-	const GLVertexProgram *m_vertex_prog = nullptr;
+	const GLFragmentProgram* m_fragment_prog = nullptr;
+	const GLVertexProgram* m_vertex_prog = nullptr;
 
 	rsx::flags32_t m_interpreter_state = 0;
 	gl::shader_interpreter m_shader_interpreter;
@@ -163,7 +163,6 @@ public:
 	virtual ~GLGSRender();
 
 private:
-
 	gl::driver_state gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
@@ -223,7 +222,7 @@ protected:
 	void do_local_task(rsx::FIFO::state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
+	void on_invalidate_memory_range(const utils::address_range& range, rsx::invalidation_cause cause) override;
 	void notify_tile_unbound(u32 tile) override;
 	void on_semaphore_acquire_wait() override;
 };

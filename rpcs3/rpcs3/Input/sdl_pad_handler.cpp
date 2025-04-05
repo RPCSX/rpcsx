@@ -26,7 +26,7 @@ public:
 
 	static sdl_instance& get_instance()
 	{
-		static sdl_instance instance {};
+		static sdl_instance instance{};
 		return instance;
 	}
 
@@ -54,64 +54,65 @@ public:
 
 		SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
 		SDL_SetLogOutputFunction([](void*, int category, SDL_LogPriority priority, const char* message)
-		{
-			std::string category_name;
-			switch (category)
 			{
-			case SDL_LOG_CATEGORY_APPLICATION:
-				category_name = "app";
-				break;
-			case SDL_LOG_CATEGORY_ERROR:
-				category_name = "error";
-				break;
-			case SDL_LOG_CATEGORY_ASSERT:
-				category_name = "assert";
-				break;
-			case SDL_LOG_CATEGORY_SYSTEM:
-				category_name = "system";
-				break;
-			case SDL_LOG_CATEGORY_AUDIO:
-				category_name = "audio";
-				break;
-			case SDL_LOG_CATEGORY_VIDEO:
-				category_name = "video";
-				break;
-			case SDL_LOG_CATEGORY_RENDER:
-				category_name = "render";
-				break;
-			case SDL_LOG_CATEGORY_INPUT:
-				category_name = "input";
-				break;
-			case SDL_LOG_CATEGORY_TEST:
-				category_name = "test";
-				break;
-			default:
-				category_name = fmt::format("unknown(%d)", category);
-				break;
-			}
+				std::string category_name;
+				switch (category)
+				{
+				case SDL_LOG_CATEGORY_APPLICATION:
+					category_name = "app";
+					break;
+				case SDL_LOG_CATEGORY_ERROR:
+					category_name = "error";
+					break;
+				case SDL_LOG_CATEGORY_ASSERT:
+					category_name = "assert";
+					break;
+				case SDL_LOG_CATEGORY_SYSTEM:
+					category_name = "system";
+					break;
+				case SDL_LOG_CATEGORY_AUDIO:
+					category_name = "audio";
+					break;
+				case SDL_LOG_CATEGORY_VIDEO:
+					category_name = "video";
+					break;
+				case SDL_LOG_CATEGORY_RENDER:
+					category_name = "render";
+					break;
+				case SDL_LOG_CATEGORY_INPUT:
+					category_name = "input";
+					break;
+				case SDL_LOG_CATEGORY_TEST:
+					category_name = "test";
+					break;
+				default:
+					category_name = fmt::format("unknown(%d)", category);
+					break;
+				}
 
-			switch (priority)
-			{
-			case SDL_LOG_PRIORITY_VERBOSE:
-			case SDL_LOG_PRIORITY_DEBUG:
-				sdl_log.trace("%s: %s", category_name, message);
-				break;
-			case SDL_LOG_PRIORITY_INFO:
-				sdl_log.notice("%s: %s", category_name, message);
-				break;
-			case SDL_LOG_PRIORITY_WARN:
-				sdl_log.warning("%s: %s", category_name, message);
-				break;
-			case SDL_LOG_PRIORITY_ERROR:
-				sdl_log.error("%s: %s", category_name, message);
-				break;
-			case SDL_LOG_PRIORITY_CRITICAL:
-				sdl_log.error("%s: %s", category_name, message);
-				break;
-			default:
-				break;
-			}
-		}, nullptr);
+				switch (priority)
+				{
+				case SDL_LOG_PRIORITY_VERBOSE:
+				case SDL_LOG_PRIORITY_DEBUG:
+					sdl_log.trace("%s: %s", category_name, message);
+					break;
+				case SDL_LOG_PRIORITY_INFO:
+					sdl_log.notice("%s: %s", category_name, message);
+					break;
+				case SDL_LOG_PRIORITY_WARN:
+					sdl_log.warning("%s: %s", category_name, message);
+					break;
+				case SDL_LOG_PRIORITY_ERROR:
+					sdl_log.error("%s: %s", category_name, message);
+					break;
+				case SDL_LOG_PRIORITY_CRITICAL:
+					sdl_log.error("%s: %s", category_name, message);
+					break;
+				default:
+					break;
+				}
+			},
+			nullptr);
 
 		m_initialized = true;
 		return true;
@@ -124,44 +125,44 @@ private:
 sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 {
 	button_list =
-	{
-		{ SDLKeyCodes::None,     ""         },
-		{ SDLKeyCodes::South,    "South"    },
-		{ SDLKeyCodes::East,     "East"     },
-		{ SDLKeyCodes::West,     "West"     },
-		{ SDLKeyCodes::North,    "North"    },
-		{ SDLKeyCodes::Left,     "Left"     },
-		{ SDLKeyCodes::Right,    "Right"    },
-		{ SDLKeyCodes::Up,       "Up"       },
-		{ SDLKeyCodes::Down,     "Down"     },
-		{ SDLKeyCodes::LB,       "LB"       },
-		{ SDLKeyCodes::RB,       "RB"       },
-		{ SDLKeyCodes::Back,     "Back"     },
-		{ SDLKeyCodes::Start,    "Start"    },
-		{ SDLKeyCodes::LS,       "LS"       },
-		{ SDLKeyCodes::RS,       "RS"       },
-		{ SDLKeyCodes::Guide,    "Guide"    },
-		{ SDLKeyCodes::Misc1,    "Misc 1"   },
-		{ SDLKeyCodes::RPaddle1, "R Paddle 1" },
-		{ SDLKeyCodes::LPaddle1, "L Paddle 1" },
-		{ SDLKeyCodes::RPaddle2, "R Paddle 2" },
-		{ SDLKeyCodes::LPaddle2, "L Paddle 2" },
-		{ SDLKeyCodes::Touchpad, "Touchpad" },
-		{ SDLKeyCodes::Touch_L,  "Touch Left" },
-		{ SDLKeyCodes::Touch_R,  "Touch Right" },
-		{ SDLKeyCodes::Touch_U,  "Touch Up" },
-		{ SDLKeyCodes::Touch_D,  "Touch Down" },
-		{ SDLKeyCodes::LT,       "LT"       },
-		{ SDLKeyCodes::RT,       "RT"       },
-		{ SDLKeyCodes::LSXNeg,   "LS X-"    },
-		{ SDLKeyCodes::LSXPos,   "LS X+"    },
-		{ SDLKeyCodes::LSYPos,   "LS Y+"    },
-		{ SDLKeyCodes::LSYNeg,   "LS Y-"    },
-		{ SDLKeyCodes::RSXNeg,   "RS X-"    },
-		{ SDLKeyCodes::RSXPos,   "RS X+"    },
-		{ SDLKeyCodes::RSYPos,   "RS Y+"    },
-		{ SDLKeyCodes::RSYNeg,   "RS Y-"    },
-	};
+		{
+			{SDLKeyCodes::None, ""},
+			{SDLKeyCodes::South, "South"},
+			{SDLKeyCodes::East, "East"},
+			{SDLKeyCodes::West, "West"},
+			{SDLKeyCodes::North, "North"},
+			{SDLKeyCodes::Left, "Left"},
+			{SDLKeyCodes::Right, "Right"},
+			{SDLKeyCodes::Up, "Up"},
+			{SDLKeyCodes::Down, "Down"},
+			{SDLKeyCodes::LB, "LB"},
+			{SDLKeyCodes::RB, "RB"},
+			{SDLKeyCodes::Back, "Back"},
+			{SDLKeyCodes::Start, "Start"},
+			{SDLKeyCodes::LS, "LS"},
+			{SDLKeyCodes::RS, "RS"},
+			{SDLKeyCodes::Guide, "Guide"},
+			{SDLKeyCodes::Misc1, "Misc 1"},
+			{SDLKeyCodes::RPaddle1, "R Paddle 1"},
+			{SDLKeyCodes::LPaddle1, "L Paddle 1"},
+			{SDLKeyCodes::RPaddle2, "R Paddle 2"},
+			{SDLKeyCodes::LPaddle2, "L Paddle 2"},
+			{SDLKeyCodes::Touchpad, "Touchpad"},
+			{SDLKeyCodes::Touch_L, "Touch Left"},
+			{SDLKeyCodes::Touch_R, "Touch Right"},
+			{SDLKeyCodes::Touch_U, "Touch Up"},
+			{SDLKeyCodes::Touch_D, "Touch Down"},
+			{SDLKeyCodes::LT, "LT"},
+			{SDLKeyCodes::RT, "RT"},
+			{SDLKeyCodes::LSXNeg, "LS X-"},
+			{SDLKeyCodes::LSXPos, "LS X+"},
+			{SDLKeyCodes::LSYPos, "LS Y+"},
+			{SDLKeyCodes::LSYNeg, "LS Y-"},
+			{SDLKeyCodes::RSXNeg, "RS X-"},
+			{SDLKeyCodes::RSXPos, "RS X+"},
+			{SDLKeyCodes::RSYPos, "RS Y+"},
+			{SDLKeyCodes::RSYNeg, "RS Y-"},
+		};
 
 	init_configs();
 
@@ -204,34 +205,35 @@ sdl_pad_handler::~sdl_pad_handler()
 
 void sdl_pad_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = ::at32(button_list, SDLKeyCodes::LSXNeg);
-	cfg->ls_down.def  = ::at32(button_list, SDLKeyCodes::LSYNeg);
+	cfg->ls_left.def = ::at32(button_list, SDLKeyCodes::LSXNeg);
+	cfg->ls_down.def = ::at32(button_list, SDLKeyCodes::LSYNeg);
 	cfg->ls_right.def = ::at32(button_list, SDLKeyCodes::LSXPos);
-	cfg->ls_up.def    = ::at32(button_list, SDLKeyCodes::LSYPos);
-	cfg->rs_left.def  = ::at32(button_list, SDLKeyCodes::RSXNeg);
-	cfg->rs_down.def  = ::at32(button_list, SDLKeyCodes::RSYNeg);
+	cfg->ls_up.def = ::at32(button_list, SDLKeyCodes::LSYPos);
+	cfg->rs_left.def = ::at32(button_list, SDLKeyCodes::RSXNeg);
+	cfg->rs_down.def = ::at32(button_list, SDLKeyCodes::RSYNeg);
 	cfg->rs_right.def = ::at32(button_list, SDLKeyCodes::RSXPos);
-	cfg->rs_up.def    = ::at32(button_list, SDLKeyCodes::RSYPos);
-	cfg->start.def    = ::at32(button_list, SDLKeyCodes::Start);
-	cfg->select.def   = ::at32(button_list, SDLKeyCodes::Back);
-	cfg->ps.def       = ::at32(button_list, SDLKeyCodes::Guide);
-	cfg->square.def   = ::at32(button_list, SDLKeyCodes::West);
-	cfg->cross.def    = ::at32(button_list, SDLKeyCodes::South);
-	cfg->circle.def   = ::at32(button_list, SDLKeyCodes::East);
+	cfg->rs_up.def = ::at32(button_list, SDLKeyCodes::RSYPos);
+	cfg->start.def = ::at32(button_list, SDLKeyCodes::Start);
+	cfg->select.def = ::at32(button_list, SDLKeyCodes::Back);
+	cfg->ps.def = ::at32(button_list, SDLKeyCodes::Guide);
+	cfg->square.def = ::at32(button_list, SDLKeyCodes::West);
+	cfg->cross.def = ::at32(button_list, SDLKeyCodes::South);
+	cfg->circle.def = ::at32(button_list, SDLKeyCodes::East);
 	cfg->triangle.def = ::at32(button_list, SDLKeyCodes::North);
-	cfg->left.def     = ::at32(button_list, SDLKeyCodes::Left);
-	cfg->down.def     = ::at32(button_list, SDLKeyCodes::Down);
-	cfg->right.def    = ::at32(button_list, SDLKeyCodes::Right);
-	cfg->up.def       = ::at32(button_list, SDLKeyCodes::Up);
-	cfg->r1.def       = ::at32(button_list, SDLKeyCodes::RB);
-	cfg->r2.def       = ::at32(button_list, SDLKeyCodes::RT);
-	cfg->r3.def       = ::at32(button_list, SDLKeyCodes::RS);
-	cfg->l1.def       = ::at32(button_list, SDLKeyCodes::LB);
-	cfg->l2.def       = ::at32(button_list, SDLKeyCodes::LT);
-	cfg->l3.def       = ::at32(button_list, SDLKeyCodes::LS);
+	cfg->left.def = ::at32(button_list, SDLKeyCodes::Left);
+	cfg->down.def = ::at32(button_list, SDLKeyCodes::Down);
+	cfg->right.def = ::at32(button_list, SDLKeyCodes::Right);
+	cfg->up.def = ::at32(button_list, SDLKeyCodes::Up);
+	cfg->r1.def = ::at32(button_list, SDLKeyCodes::RB);
+	cfg->r2.def = ::at32(button_list, SDLKeyCodes::RT);
+	cfg->r3.def = ::at32(button_list, SDLKeyCodes::RS);
+	cfg->l1.def = ::at32(button_list, SDLKeyCodes::LB);
+	cfg->l2.def = ::at32(button_list, SDLKeyCodes::LT);
+	cfg->l3.def = ::at32(button_list, SDLKeyCodes::LS);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, SDLKeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, SDLKeyCodes::None);
@@ -240,12 +242,12 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
 	cfg->rstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
-	cfg->lstickdeadzone.def    = 8000; // between 0 and SDL_JOYSTICK_AXIS_MAX
-	cfg->rstickdeadzone.def    = 8000; // between 0 and SDL_JOYSTICK_AXIS_MAX
-	cfg->ltriggerthreshold.def = 0; // between 0 and SDL_JOYSTICK_AXIS_MAX
-	cfg->rtriggerthreshold.def = 0; // between 0 and SDL_JOYSTICK_AXIS_MAX
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
+	cfg->lstickdeadzone.def = 8000;                                     // between 0 and SDL_JOYSTICK_AXIS_MAX
+	cfg->rstickdeadzone.def = 8000;                                     // between 0 and SDL_JOYSTICK_AXIS_MAX
+	cfg->ltriggerthreshold.def = 0;                                     // between 0 and SDL_JOYSTICK_AXIS_MAX
+	cfg->rtriggerthreshold.def = 0;                                     // between 0 and SDL_JOYSTICK_AXIS_MAX
+	cfg->lpadsquircling.def = 8000;
+	cfg->rpadsquircling.def = 8000;
 
 	// Set default color value
 	cfg->colorR.def = 0;
@@ -253,9 +255,9 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	cfg->colorB.def = 20;
 
 	// Set default LED options
-	cfg->led_battery_indicator.def            = false;
+	cfg->led_battery_indicator.def = false;
 	cfg->led_battery_indicator_brightness.def = 10;
-	cfg->led_low_battery_blink.def            = true;
+	cfg->led_low_battery_blink.def = true;
 
 	// apply defaults
 	cfg->from_default();
@@ -269,9 +271,9 @@ bool sdl_pad_handler::Init()
 	bool instance_success;
 
 	Emu.BlockingCallFromMainThread([&instance_success]()
-	{
-		instance_success = sdl_instance::get_instance().initialize();
-	});
+		{
+			instance_success = sdl_instance::get_instance().initialize();
+		});
 
 	if (!instance_success)
 		return false;
@@ -655,11 +657,16 @@ u32 sdl_pad_handler::get_battery_color(int power_level, u32 brightness) const
 {
 	u32 combined_color{};
 
-	if (power_level < 20)      combined_color = 0xFF00;
-	else if (power_level < 40) combined_color = 0xFF33;
-	else if (power_level < 60) combined_color = 0xFFCC;
-	else if (power_level < 80) combined_color = 0x66FF;
-	else                       combined_color = 0x00FF;
+	if (power_level < 20)
+		combined_color = 0xFF00;
+	else if (power_level < 40)
+		combined_color = 0xFF33;
+	else if (power_level < 60)
+		combined_color = 0xFFCC;
+	else if (power_level < 80)
+		combined_color = 0x66FF;
+	else
+		combined_color = 0x00FF;
 
 	const u32 red = (combined_color >> 8) * brightness / 100;
 	const u32 green = (combined_color & 0xff) * brightness / 100;
@@ -686,7 +693,7 @@ u32 sdl_pad_handler::get_battery_level(const std::string& padId)
 		}
 	}
 
-	 return 0;
+	return 0;
 }
 
 void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
@@ -750,9 +757,9 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 		}
 		else
 		{
-			//const f32 gyro_x = dev->values_gyro[0]; // Angular speed around the x axis (pitch)
+			// const f32 gyro_x = dev->values_gyro[0]; // Angular speed around the x axis (pitch)
 			const f32 gyro_y = dev->values_gyro[1]; // Angular speed around the y axis (yaw)
-			//const f32 gyro_z = dev->values_gyro[2]; // Angular speed around the z axis (roll)
+			// const f32 gyro_z = dev->values_gyro[2]; // Angular speed around the z axis (roll)
 
 			// Convert to ds3. The ds3 resolution is 123/90°/sec. The SDL gyro is measured in rad/sec.
 			const f32 degree = rad_to_degree(gyro_y);
@@ -899,7 +906,8 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 void sdl_pad_handler::set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small)
 {
-	if (!dev || !dev->sdl.gamepad) return;
+	if (!dev || !dev->sdl.gamepad)
+		return;
 
 	constexpr u32 rumble_duration_ms = static_cast<u32>((min_output_interval + 100ms).count()); // Some number higher than the min_output_interval.
 
@@ -1029,9 +1037,9 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 	{
 		for (const SDLDevice::touch_point& finger : touchpad.fingers)
 		{
-			bool down = false; // true means the finger is touching the pad
-			f32 x = 0.0f; // 0 = left, 1 = right
-			f32 y = 0.0f; // 0 = top, 1 = bottom
+			bool down = false;   // true means the finger is touching the pad
+			f32 x = 0.0f;        // 0 = left, 1 = right
+			f32 y = 0.0f;        // 0 = top, 1 = bottom
 			f32 pressure = 0.0f; // In the current SDL version the pressure is always 1 if the state is 1
 
 			if (!SDL_GetGamepadTouchpadFinger(dev->sdl.gamepad, touchpad.index, finger.index, &down, &x, &y, &pressure))
@@ -1070,8 +1078,7 @@ pad_preview_values sdl_pad_handler::get_preview_values(const std::unordered_map<
 		::at32(data, LSXPos) - ::at32(data, LSXNeg),
 		::at32(data, LSYPos) - ::at32(data, LSYNeg),
 		::at32(data, RSXPos) - ::at32(data, RSXNeg),
-		::at32(data, RSYPos) - ::at32(data, RSYNeg)
-	};
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)};
 }
 
 std::string sdl_pad_handler::button_to_string(SDL_GamepadButton button)

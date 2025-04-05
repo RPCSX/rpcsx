@@ -4,9 +4,8 @@
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 
-vfs_tool_dialog::vfs_tool_dialog(QWidget *parent)
-	: QDialog(parent)
-	, ui(new Ui::vfs_tool_dialog)
+vfs_tool_dialog::vfs_tool_dialog(QWidget* parent)
+	: QDialog(parent), ui(new Ui::vfs_tool_dialog)
 {
 	setAttribute(Qt::WA_DeleteOnClose);
 
@@ -44,8 +43,7 @@ void vfs_tool_dialog::handle_vfs_path(const QString& path)
 		vfs_get_path,
 		vfs_retrieve_path,
 		vfs_escape_path,
-		vfs_unescape_path
-	);
+		vfs_unescape_path);
 
 	ui->resultEdit->setPlainText(QString::fromStdString(result));
 }

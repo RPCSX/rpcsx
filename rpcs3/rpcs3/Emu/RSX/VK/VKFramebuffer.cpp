@@ -16,22 +16,23 @@ namespace vk
 
 		struct
 		{
-			u64 width  : 16;   // Width of FBO
-			u64 height : 16;   // Height of FBO
-			u64 ia_ref : 1;    // Input attachment references?
+			u64 width : 16;  // Width of FBO
+			u64 height : 16; // Height of FBO
+			u64 ia_ref : 1;  // Input attachment references?
 		};
 
 		framebuffer_storage_key(u16 width_, u16 height_, VkBool32 has_input_attachments)
 			: width(width_), height(height_), ia_ref(has_input_attachments)
-		{}
+		{
+		}
 	};
 
 	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkBool32 has_input_attachments, VkRenderPass renderpass, const std::vector<vk::image*>& image_list)
 	{
 		framebuffer_storage_key key(width, height, has_input_attachments);
-		auto &queue = g_framebuffers_cache[key.encoded];
+		auto& queue = g_framebuffers_cache[key.encoded];
 
-		for (auto &fbo : queue)
+		for (auto& fbo : queue)
 		{
 			if (fbo->matches(image_list, width, height))
 			{
@@ -42,9 +43,9 @@ namespace vk
 		std::vector<std::unique_ptr<vk::image_view>> image_views;
 		image_views.reserve(image_list.size());
 
-		for (auto &e : image_list)
+		for (auto& e : image_list)
 		{
-			const VkImageSubresourceRange subres = { e->aspect(), 0, 1, 0, 1 };
+			const VkImageSubresourceRange subres = {e->aspect(), 0, 1, 0, 1};
 			image_views.push_back(std::make_unique<vk::image_view>(dev, e, VK_IMAGE_VIEW_TYPE_2D, vk::default_component_map, subres));
 		}
 
@@ -58,9 +59,9 @@ namespace vk
 	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkBool32 has_input_attachments, VkRenderPass renderpass, VkFormat format, VkImage attachment)
 	{
 		framebuffer_storage_key key(width, height, has_input_attachments);
-		auto &queue = g_framebuffers_cache[key.encoded];
+		auto& queue = g_framebuffers_cache[key.encoded];
 
-		for (const auto &e : queue)
+		for (const auto& e : queue)
 		{
 			if (e->attachments[0]->info.image == attachment)
 			{
@@ -68,7 +69,7 @@ namespace vk
 			}
 		}
 
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 		std::vector<std::unique_ptr<vk::image_view>> views;
 
 		views.push_back(std::make_unique<vk::image_view>(dev, attachment, VK_IMAGE_VIEW_TYPE_2D, format, vk::default_component_map, range));
@@ -86,11 +87,10 @@ namespace vk
 		{
 			It->second.erase(
 				std::remove_if(It->second.begin(), It->second.end(), [](const auto& fbo)
-				{
-					return (fbo->unused_check_count() >= 2);
-				}),
-				It->second.end()
-			);
+					{
+						return (fbo->unused_check_count() >= 2);
+					}),
+				It->second.end());
 
 			if (It->second.empty())
 			{
@@ -107,4 +107,4 @@ namespace vk
 	{
 		g_framebuffers_cache.clear();
 	}
-}
+} // namespace vk

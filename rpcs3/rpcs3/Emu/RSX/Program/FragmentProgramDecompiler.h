@@ -36,7 +36,7 @@ class FragmentProgramDecompiler
 	SRC0 src0;
 	SRC1 src1;
 	SRC2 src2;
-	u32  opflags;
+	u32 opflags;
 
 	std::string main;
 	u32& m_size;
@@ -72,17 +72,21 @@ class FragmentProgramDecompiler
 	std::string ClampValue(const std::string& code, u32 precision);
 
 	/**
-	* Returns true if the dst set is not a vector (i.e only a single component)
-	*/
+	 * Returns true if the dst set is not a vector (i.e only a single component)
+	 */
 	bool DstExpectsSca() const;
 
 	void AddCodeCond(const std::string& lhs, const std::string& rhs);
 	std::string GetRawCond();
 	std::string GetCond();
-	template<typename T> std::string GetSRC(T src);
+	template <typename T>
+	std::string GetSRC(T src);
 	std::string BuildCode();
 
-	static u32 GetData(const u32 d) { return d << 16 | d >> 16; }
+	static u32 GetData(const u32 d)
+	{
+		return d << 16 | d >> 16;
+	}
 
 	/**
 	 * Emits code if opcode is an SCT/SCB one and returns true,
@@ -92,14 +96,14 @@ class FragmentProgramDecompiler
 	bool handle_sct_scb(u32 opcode);
 
 	/**
-	* Emits code if opcode is an TEX SRB one and returns true,
-	* otherwise do nothing and return false.
-	* NOTE: What does TEX SRB means ???
-	*/
+	 * Emits code if opcode is an TEX SRB one and returns true,
+	 * otherwise do nothing and return false.
+	 * NOTE: What does TEX SRB means ???
+	 */
 	bool handle_tex_srb(u32 opcode);
 
 protected:
-	const RSXFragmentProgram &m_prog;
+	const RSXFragmentProgram& m_prog;
 	u32 m_ctrl = 0;
 
 	/** returns the type name of float vectors.
@@ -117,29 +121,29 @@ protected:
 
 	/** returns string calling comparison function on 2 args passed as strings.
 	 */
-	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;
+	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) = 0;
 
 	/** Insert header of shader file (eg #version, "system constants"...)
 	 */
-	virtual void insertHeader(std::stringstream &OS) = 0;
+	virtual void insertHeader(std::stringstream& OS) = 0;
 	/** Insert global declaration of fragments inputs.
 	 */
-	virtual void insertInputs(std::stringstream &OS) = 0;
+	virtual void insertInputs(std::stringstream& OS) = 0;
 	/** insert global declaration of fragments outputs.
-	*/
-	virtual void insertOutputs(std::stringstream &OS) = 0;
+	 */
+	virtual void insertOutputs(std::stringstream& OS) = 0;
 	/** insert declaration of shader constants.
-	*/
-	virtual void insertConstants(std::stringstream &OS) = 0;
+	 */
+	virtual void insertConstants(std::stringstream& OS) = 0;
 	/** insert helper function definitions.
-	*/
-	virtual void insertGlobalFunctions(std::stringstream &OS) = 0;
+	 */
+	virtual void insertGlobalFunctions(std::stringstream& OS) = 0;
 	/** insert beginning of main (signature, temporary declaration...)
-	*/
-	virtual void insertMainStart(std::stringstream &OS) = 0;
+	 */
+	virtual void insertMainStart(std::stringstream& OS) = 0;
 	/** insert end of main function (return value, output copy...)
 	 */
-	virtual void insertMainEnd(std::stringstream &OS) = 0;
+	virtual void insertMainEnd(std::stringstream& OS) = 0;
 
 public:
 	enum : u16
@@ -189,19 +193,17 @@ public:
 		bool has_tex2D = false;
 		bool has_tex3D = false;
 		bool has_texShadowProj = false;
-	}
-	properties;
+	} properties;
 
 	struct
 	{
 		bool has_native_half_support = false;
 		bool emulate_depth_compare = false;
 		bool has_low_precision_rounding = false;
-	}
-	device_props;
+	} device_props;
 
 	ParamArray m_parr;
-	FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size);
+	FragmentProgramDecompiler(const RSXFragmentProgram& prog, u32& size);
 	FragmentProgramDecompiler(const FragmentProgramDecompiler&) = delete;
 	FragmentProgramDecompiler(FragmentProgramDecompiler&&) = delete;
 	std::string Decompile();

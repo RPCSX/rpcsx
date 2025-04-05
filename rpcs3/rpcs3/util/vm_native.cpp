@@ -5,7 +5,7 @@
 #include "Utilities/File.h"
 #include "util/dyn_lib.hpp"
 #include "Utilities/lockless.h"
-#include <Windows.h>
+#include <windows.h>
 #include <span>
 #else
 #include <sys/mman.h>
@@ -32,18 +32,18 @@
 #define __NR_memfd_create 279
 #endif
 
-static int memfd_create_(const char *name, uint flags)
+static int memfd_create_(const char* name, uint flags)
 {
 	return syscall(__NR_memfd_create, name, flags);
 }
 #elif defined(__FreeBSD__)
-# if __FreeBSD__ < 13
+#if __FreeBSD__ < 13
 // XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
 #define MFD_CLOEXEC O_CLOEXEC
 #define memfd_create_(name, flags) shm_open(SHM_ANON, O_RDWR | flags, 0600)
-# else
+#else
 #define memfd_create_ memfd_create
-# endif
+#endif
 #endif
 
 namespace utils
@@ -112,17 +112,18 @@ namespace utils
 		}
 
 		return s_is_mapping.for_each([addr](const map_info_t& info)
-		{
-			if (info.state == 1)
-			{
-				if (addr >= info.addr && addr < info.addr + info.size)
-				{
-					return true;
-				}
-			}
+							   {
+								   if (info.state == 1)
+								   {
+									   if (addr >= info.addr && addr < info.addr + info.size)
+									   {
+										   return true;
+									   }
+								   }
 
-			return false;
-		}).second;
+								   return false;
+							   })
+		    .second;
 	}
 
 	u64 unmap_mappping_memory(u64 addr, u64 size)
@@ -133,20 +134,21 @@ namespace utils
 		}
 
 		return s_is_mapping.for_each([addr, size](map_info_t& info) -> u64
-		{
-			if (info.state == 1)
-			{
-				if (addr == info.addr && size == info.size)
-				{
-					if (info.state.compare_and_swap_test(1, 0))
-					{
-						return info.size;
-					}
-				}
-			}
+							   {
+								   if (info.state == 1)
+								   {
+									   if (addr == info.addr && size == info.size)
+									   {
+										   if (info.state.compare_and_swap_test(1, 0))
+										   {
+											   return info.size;
+										   }
+									   }
+								   }
 
-			return 0;
-		}).second;
+								   return 0;
+							   })
+		    .second;
 	}
 
 	bool map_mappping_memory(u64 addr, u64 size)
@@ -157,17 +159,19 @@ namespace utils
 		}
 
 		ensure(s_is_mapping.for_each([addr, size](map_info_t& info)
-		{
-			if (!info.addr && info.state.compare_and_swap_test(0, 2))
-			{
-				info.addr = addr;
-				info.size = size;
-				info.state = 1;
-				return true;
-			}
+							   {
+								   if (!info.addr && info.state.compare_and_swap_test(0, 2))
+								   {
+									   info.addr = addr;
+									   info.size = size;
+									   info.state = 1;
+									   return true;
+								   }
 
-			return false;
-		}, false).second);
+								   return false;
+							   },
+							   false)
+				.second);
 
 		return true;
 	}
@@ -195,7 +199,7 @@ namespace utils
 	}
 
 	// Convert memory protection (internal)
-	static auto operator +(protection prot)
+	static auto operator+(protection prot)
 	{
 #ifdef _WIN32
 		DWORD _prot = PAGE_NOACCESS;
@@ -348,7 +352,7 @@ namespace utils
 		// The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
 		// so this isn't completely undefined behavior.
 		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, PROT_NONE,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 #endif
@@ -378,7 +382,7 @@ namespace utils
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 #if defined(__APPLE__) && defined(ARCH_ARM64)
 		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, +prot,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
+		ensure(::mmap(pointer, size, +prot, MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 #endif
@@ -483,11 +487,10 @@ namespace utils
 	}
 
 	shm::shm(u64 size, u32 flags)
-		: m_flags(flags)
-		, m_size(utils::align(size, 0x10000))
+		: m_flags(flags), m_size(utils::align(size, 0x10000))
 	{
 #ifdef _WIN32
-		const ULARGE_INTEGER max_size{ .QuadPart = m_size };
+		const ULARGE_INTEGER max_size{.QuadPart = m_size};
 		m_handle = ensure(::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, max_size.HighPart, max_size.LowPart, nullptr));
 #elif defined(__linux__) || defined(__FreeBSD__)
 		m_file = -1;
@@ -772,7 +775,7 @@ namespace utils
 		if (stats.st_blocks * 512 >= 0x100000 && ::lseek(m_file, 0, SEEK_DATA) ^ stats.st_size && errno != ENXIO)
 		{
 			fmt::throw_exception("Failed to initialize sparse file in '%s'\n"
-				"It seems this filesystem doesn't support sparse files (%d).\n",
+								 "It seems this filesystem doesn't support sparse files (%d).\n",
 				storage.empty() ? fs::get_cache_dir().c_str() : storage.c_str(), +errno);
 		}
 #endif
@@ -1010,7 +1013,7 @@ namespace utils
 			ensure(::VirtualQuery(target - 1, &mem, sizeof(mem)) && ::VirtualQuery(target + m_size, &mem2, sizeof(mem2)));
 
 			const auto size1 = mem.State == MEM_RESERVE ? target - static_cast<u8*>(mem.AllocationBase) : 0;
-			const auto size2 =  mem2.State == MEM_RESERVE ? mem2.RegionSize : 0;
+			const auto size2 = mem2.State == MEM_RESERVE ? mem2.RegionSize : 0;
 
 			if (!size1 && !size2)
 			{

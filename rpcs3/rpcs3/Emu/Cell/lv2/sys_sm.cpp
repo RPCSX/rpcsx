@@ -7,17 +7,28 @@
 
 #include "sys_sm.h"
 
-
 LOG_CHANNEL(sys_sm);
 
 error_code sys_sm_get_params(vm::ptr<u8> a, vm::ptr<u8> b, vm::ptr<u32> c, vm::ptr<u64> d)
 {
 	sys_sm.todo("sys_sm_get_params(a=*0x%x, b=*0x%x, c=*0x%x, d=*0x%x)", a, b, c, d);
 
-	if (a) *a = 0; else return CELL_EFAULT;
-	if (b) *b = 0; else return CELL_EFAULT;
-	if (c) *c = 0x200; else return CELL_EFAULT;
-	if (d) *d = 7; else return CELL_EFAULT;
+	if (a)
+		*a = 0;
+	else
+		return CELL_EFAULT;
+	if (b)
+		*b = 0;
+	else
+		return CELL_EFAULT;
+	if (c)
+		*c = 0x200;
+	else
+		return CELL_EFAULT;
+	if (d)
+		*d = 7;
+	else
+		return CELL_EFAULT;
 
 	return CELL_OK;
 }
@@ -35,9 +46,18 @@ error_code sys_sm_get_ext_event2(vm::ptr<u64> a1, vm::ptr<u64> a2, vm::ptr<u64> 
 	// a2 looks to be used if a1 is either 5 or 3?
 	// a3 looks to be ignored in vsh
 
-	if (a1) *a1 = 0; else return CELL_EFAULT;
-	if (a2) *a2 = 0; else return CELL_EFAULT;
-	if (a3) *a3 = 0; else return CELL_EFAULT;
+	if (a1)
+		*a1 = 0;
+	else
+		return CELL_EFAULT;
+	if (a2)
+		*a2 = 0;
+	else
+		return CELL_EFAULT;
+	if (a3)
+		*a3 = 0;
+	else
+		return CELL_EFAULT;
 
 	// eagain for no event
 	return not_an_error(CELL_EAGAIN);

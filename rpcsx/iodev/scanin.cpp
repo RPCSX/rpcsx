@@ -7,7 +7,7 @@
 struct ScaninFile : orbis::File {};
 
 static orbis::ErrorCode scanin_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                     void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled scanin ioctl", request);
   thread->where();

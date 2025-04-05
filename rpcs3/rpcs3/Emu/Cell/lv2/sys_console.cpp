@@ -3,7 +3,6 @@
 
 #include "sys_console.h"
 
-
 LOG_CHANNEL(sys_console);
 
 error_code sys_console_write(vm::cptr<char> buf, u32 len)

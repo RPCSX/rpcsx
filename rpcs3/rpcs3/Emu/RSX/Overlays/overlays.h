@@ -11,7 +11,6 @@
 #include <mutex>
 #include <set>
 
-
 // Definition of user interface implementations
 namespace rsx
 {
@@ -76,8 +75,7 @@ namespace rsx
 				pad_button::ls_up,
 				pad_button::ls_down,
 				pad_button::ls_left,
-				pad_button::ls_right
-			};
+				pad_button::ls_right};
 
 			atomic_t<bool> m_stop_input_loop = false;
 			atomic_t<bool> m_interactive = false;
@@ -85,7 +83,7 @@ namespace rsx
 			atomic_t<bool> m_stop_pad_interception = false;
 			atomic_t<bool> m_input_thread_detached = false;
 			atomic_t<u32> thread_bits = 0;
-			bool m_keyboard_input_enabled = false; // Allow keyboard input
+			bool m_keyboard_input_enabled = false;     // Allow keyboard input
 			bool m_keyboard_pad_handler_active = true; // Initialized as true to prevent keyboard input until proven otherwise.
 			bool m_allow_input_on_pause = false;
 
@@ -115,11 +113,18 @@ namespace rsx
 				user_interface* m_parent;
 				u32 m_thread_bit;
 			};
+
 		public:
 			s32 return_code = 0; // CELL_OK
 
-			bool is_detached() const { return m_input_thread_detached; }
-			void detach_input() { m_input_thread_detached.store(true); }
+			bool is_detached() const
+			{
+				return m_input_thread_detached;
+			}
+			void detach_input()
+			{
+				m_input_thread_detached.store(true);
+			}
 
 			compiled_resource get_compiled() override = 0;
 
@@ -150,11 +155,11 @@ namespace rsx
 				{
 					std::lock_guard lock(mutex);
 					dirty = false;
-					return { true, std::move(text) };
+					return {true, std::move(text)};
 				}
 
-				return { false, {} };
+				return {false, {}};
 			}
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

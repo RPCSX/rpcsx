@@ -15,7 +15,7 @@ namespace vk
 		// 1. Any sample has been determined to have passed the Z test
 		// 2. The backend has fully processed the query and found no hits
 
-		u32 result[2] = { 0, 0 };
+		u32 result[2] = {0, 0};
 		switch (const auto error = VK_GET_SYMBOL(vkGetQueryPoolResults)(*owner, *query.pool, index, 1, 8, result, 8, flags | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
 		{
 		case VK_SUCCESS:
@@ -187,7 +187,7 @@ namespace vk
 		VK_GET_SYMBOL(vkCmdCopyQueryPoolResults)(cmd, *query_slot_status[index].pool, index, count, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
 	}
 
-	void query_pool_manager::free_query(vk::command_buffer&/*cmd*/, u32 index)
+	void query_pool_manager::free_query(vk::command_buffer& /*cmd*/, u32 index)
 	{
 		// Release reference and discard
 		auto& query = query_slot_status[index];
@@ -248,4 +248,4 @@ namespace vk
 	{
 		m_pool_man->on_query_pool_released(m_object);
 	}
-}
+} // namespace vk

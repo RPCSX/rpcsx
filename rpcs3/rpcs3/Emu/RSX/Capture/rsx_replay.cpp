@@ -247,4 +247,4 @@ namespace rsx
 
 		get_current_cpu_thread()->state += (cpu_flag::exit + cpu_flag::wait);
 	}
-}
+} // namespace rsx

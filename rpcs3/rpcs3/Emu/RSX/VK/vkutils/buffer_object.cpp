@@ -10,8 +10,8 @@ namespace vk
 		info.buffer = buffer;
 		info.format = format;
 		info.offset = offset;
-		info.range  = size;
-		info.sType  = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+		info.range = size;
+		info.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreateBufferView)(m_device, &info, nullptr, &value));
 	}
 
@@ -131,4 +131,4 @@ namespace vk
 	{
 		return static_cast<u32>(info.size);
 	}
-}
+} // namespace vk

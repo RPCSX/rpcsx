@@ -13,27 +13,27 @@ template <>
 void fmt_class_string<guncon3_btn>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](guncon3_btn value)
-	{
-		switch (value)
 		{
-		case guncon3_btn::trigger: return "Trigger";
-		case guncon3_btn::a1: return "A1";
-		case guncon3_btn::a2: return "A2";
-		case guncon3_btn::a3: return "A3";
-		case guncon3_btn::b1: return "B1";
-		case guncon3_btn::b2: return "B2";
-		case guncon3_btn::b3: return "B3";
-		case guncon3_btn::c1: return "C1";
-		case guncon3_btn::c2: return "C2";
-		case guncon3_btn::as_x: return "A-stick X-Axis";
-		case guncon3_btn::as_y: return "A-stick Y-Axis";
-		case guncon3_btn::bs_x: return "B-stick X-Axis";
-		case guncon3_btn::bs_y: return "B-stick Y-Axis";
-		case guncon3_btn::count: return "Count";
-		}
+			switch (value)
+			{
+			case guncon3_btn::trigger: return "Trigger";
+			case guncon3_btn::a1: return "A1";
+			case guncon3_btn::a2: return "A2";
+			case guncon3_btn::a3: return "A3";
+			case guncon3_btn::b1: return "B1";
+			case guncon3_btn::b2: return "B2";
+			case guncon3_btn::b3: return "B3";
+			case guncon3_btn::c1: return "C1";
+			case guncon3_btn::c2: return "C2";
+			case guncon3_btn::as_x: return "A-stick X-Axis";
+			case guncon3_btn::as_y: return "A-stick Y-Axis";
+			case guncon3_btn::bs_x: return "B-stick X-Axis";
+			case guncon3_btn::bs_y: return "B-stick Y-Axis";
+			case guncon3_btn::count: return "Count";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 static const u8 KEY_TABLE[] = {
@@ -52,8 +52,7 @@ static const u8 KEY_TABLE[] = {
 	0x75, 0xC3, 0x10, 0x31, 0xB5, 0xD3, 0x69, 0x84, 0x89, 0xBA, 0xD6, 0x89, 0xBD, 0x70, 0x19, 0x8E,
 	0x58, 0xA8, 0x3D, 0x9B, 0x5D, 0xF0, 0x49, 0xE8, 0xAD, 0x9D, 0x7A, 0x0D, 0x7E, 0x24, 0xDA, 0xFC,
 	0x0D, 0x14, 0xC5, 0x23, 0x91, 0x11, 0xF5, 0xC0, 0x4B, 0xCD, 0x44, 0x1C, 0xC5, 0x21, 0xDF, 0x61,
-	0x54, 0xED, 0xA2, 0x81, 0xB7, 0xE5, 0x74, 0x94, 0xB0, 0x47, 0xEE, 0xF1, 0xA5, 0xBB, 0x21, 0xC8
-};
+	0x54, 0xED, 0xA2, 0x81, 0xB7, 0xE5, 0x74, 0x94, 0xB0, 0x47, 0xEE, 0xF1, 0xA5, 0xBB, 0x21, 0xC8};
 
 #pragma pack(push, 1)
 struct GunCon3_data
@@ -118,58 +117,55 @@ static void guncon3_encode(const GunCon3_data* gc, u8* data, const u8* key)
 		data[i] = byte;
 	}
 
-	data[13] = ((((((key[7] + data[0] - data[1] - data[2]) ^ data[3])
-			 + data[4] + data[5]) ^ data[6]) ^ data[7])
-			 + data[8] + data[9] - data[10] - data[11]) ^ data[12];
+	data[13] = ((((((key[7] + data[0] - data[1] - data[2]) ^ data[3]) + data[4] + data[5]) ^ data[6]) ^ data[7]) + data[8] + data[9] - data[10] - data[11]) ^ data[12];
 }
 
 usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8, 7>& location)
-	: usb_device_emulated(location)
-	, m_controller_index(controller_index)
+	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
-		UsbDeviceDescriptor {
-			.bcdUSB             = 0x0110,
-			.bDeviceClass       = 0x00,
-			.bDeviceSubClass    = 0x00,
-			.bDeviceProtocol    = 0x00,
-			.bMaxPacketSize0    = 0x08,
-			.idVendor           = 0x0b9a,
-			.idProduct          = 0x0800,
-			.bcdDevice          = 0x8000,
-			.iManufacturer      = 0x00,
-			.iProduct           = 0x00,
-			.iSerialNumber      = 0x00,
+		UsbDeviceDescriptor{
+			.bcdUSB = 0x0110,
+			.bDeviceClass = 0x00,
+			.bDeviceSubClass = 0x00,
+			.bDeviceProtocol = 0x00,
+			.bMaxPacketSize0 = 0x08,
+			.idVendor = 0x0b9a,
+			.idProduct = 0x0800,
+			.bcdDevice = 0x8000,
+			.iManufacturer = 0x00,
+			.iProduct = 0x00,
+			.iSerialNumber = 0x00,
 			.bNumConfigurations = 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG,
-		UsbDeviceConfiguration {
-			.wTotalLength        = 0x0020,
-			.bNumInterfaces      = 0x01,
+		UsbDeviceConfiguration{
+			.wTotalLength = 0x0020,
+			.bNumInterfaces = 0x01,
 			.bConfigurationValue = 0x01,
-			.iConfiguration      = 0x00,
-			.bmAttributes        = 0x00,
-			.bMaxPower           = 0x32}));
+			.iConfiguration = 0x00,
+			.bmAttributes = 0x00,
+			.bMaxPower = 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE,
-		UsbDeviceInterface {
-			.bInterfaceNumber   = 0x00,
-			.bAlternateSetting  = 0x00,
-			.bNumEndpoints      = 0x02,
-			.bInterfaceClass    = 0xff,
+		UsbDeviceInterface{
+			.bInterfaceNumber = 0x00,
+			.bAlternateSetting = 0x00,
+			.bNumEndpoints = 0x02,
+			.bInterfaceClass = 0xff,
 			.bInterfaceSubClass = 0x00,
 			.bInterfaceProtocol = 0x00,
-			.iInterface         = 0x00}));
+			.iInterface = 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x02,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0008,
-			.bInterval        = 0x10}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0008,
+			.bInterval = 0x10}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x82,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x000f,
-			.bInterval        = 0x04}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x000f,
+			.bInterval = 0x04}));
 }
 
 usb_device_guncon3::~usb_device_guncon3()
@@ -178,10 +174,10 @@ usb_device_guncon3::~usb_device_guncon3()
 
 void usb_device_guncon3::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time   = get_timestamp() + 100;
+	transfer->expected_time = get_timestamp() + 100;
 
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
 }

@@ -26,7 +26,7 @@ namespace rsx
 		{
 			ENABLE_BITWISE_SERIALIZATION;
 
-			u32 offset; // Offset in rsx address space
+			u32 offset;   // Offset in rsx address space
 			u32 location; // rsx memory location of the block
 			u64 data_state;
 		};
@@ -97,18 +97,18 @@ namespace rsx
 			template <typename T>
 			usz operator()(const T& key) const noexcept
 			{
-				if constexpr (!!(requires (const T& a) { a.data[0]; }))
+				if constexpr (!!(requires(const T& a) { a.data[0]; }))
 				{
-					return std::hash<std::string_view>{}(std::string_view{ reinterpret_cast<const char*>(key.data.data()), key.data.size() * sizeof(key.data[0]) });
+					return std::hash<std::string_view>{}(std::string_view{reinterpret_cast<const char*>(key.data.data()), key.data.size() * sizeof(key.data[0])});
 				}
 
-				return std::hash<std::string_view>{}(std::string_view{ reinterpret_cast<const char*>(&key), sizeof(key) });
+				return std::hash<std::string_view>{}(std::string_view{reinterpret_cast<const char*>(&key), sizeof(key)});
 			}
 
 			template <typename T>
 			bool operator()(const T& keya, const T& keyb) const noexcept
 			{
-				if constexpr (!!(requires (const T& a) { a.data[0]; }))
+				if constexpr (!!(requires(const T& a) { a.data[0]; }))
 				{
 					if (keya.data.size() != keyb.data.size())
 					{
@@ -157,7 +157,6 @@ namespace rsx
 		}
 	};
 
-
 	class rsx_replay_thread : public cpu_thread
 	{
 		struct rsx_context
@@ -186,16 +185,16 @@ namespace rsx
 
 	public:
 		rsx_replay_thread(std::unique_ptr<frame_capture_data>&& frame_data)
-			: cpu_thread(0)
-			, frame(std::move(frame_data))
+			: cpu_thread(0), frame(std::move(frame_data))
 		{
 		}
 
 		using cpu_thread::operator=;
 		void cpu_task() override;
+
 	private:
 		be_t<u32> allocate_context();
 		std::vector<u32> alloc_write_fifo(be_t<u32> context_id) const;
 		void apply_frame_state(be_t<u32> context_id, const frame_capture_data::replay_command& replay_cmd);
 	};
-}
+} // namespace rsx

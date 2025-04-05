@@ -65,11 +65,11 @@ namespace rsx
 		primitive_type primitive{};
 		draw_command command{};
 
-		bool is_immediate_draw{};          // Set if part of the draw is submitted via push registers
-		bool is_disjoint_primitive{};      // Set if primitive type does not rely on adjacency information
-		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
-		bool is_rendering{};               // Set while we're actually pushing the draw calls to host GPU
-		bool is_trivial_instanced_draw{};  // Set if the draw call can be executed on the host GPU as a single instanced draw.
+		bool is_immediate_draw{};         // Set if part of the draw is submitted via push registers
+		bool is_disjoint_primitive{};     // Set if primitive type does not rely on adjacency information
+		bool primitive_barrier_enable{};  // Set once to signal that a primitive restart barrier can be inserted
+		bool is_rendering{};              // Set while we're actually pushing the draw calls to host GPU
+		bool is_trivial_instanced_draw{}; // Set if the draw call can be executed on the host GPU as a single instanced draw.
 
 		simple_array<u32> inline_vertex_array{};
 
@@ -133,13 +133,13 @@ namespace rsx
 
 					if (draw_command_ranges[index].first > first)
 					{
-						insert_draw_command(index, { 0, first, count });
+						insert_draw_command(index, {0, first, count});
 						return;
 					}
 				}
 			}
 
-			append_draw_command({ 0, first, count });
+			append_draw_command({0, first, count});
 		}
 
 		/**
@@ -217,9 +217,7 @@ namespace rsx
 
 		primitive_class classify_mode() const
 		{
-			return primitive >= rsx::primitive_type::triangles
-				? primitive_class::polygon
-				: primitive_class::non_polygon;
+			return primitive >= rsx::primitive_type::triangles ? primitive_class::polygon : primitive_class::non_polygon;
 		}
 
 		void reset(rsx::primitive_type type);
@@ -314,16 +312,16 @@ namespace rsx
 					break;
 
 				const u32 count = barrier.address - previous_barrier;
-				ret.push_back({ 0, vertex_counter, count });
+				ret.push_back({0, vertex_counter, count});
 				previous_barrier = barrier.address;
 				vertex_counter += count;
 			}
 
 			ensure(!ret.empty());
 			ensure(previous_barrier < limit);
-			ret.push_back({ 0, vertex_counter, limit - previous_barrier });
+			ret.push_back({0, vertex_counter, limit - previous_barrier});
 
 			return ret;
 		}
 	};
-}
+} // namespace rsx

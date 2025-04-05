@@ -8,9 +8,9 @@ namespace np
 {
 	void BinAttr_to_SceNpMatching2BinAttr(event_data& edata, const BinAttr* bin_attr, SceNpMatching2BinAttr* binattr_info)
 	{
-		binattr_info->id   = bin_attr->id();
+		binattr_info->id = bin_attr->id();
 		binattr_info->size = bin_attr->data()->size();
-		auto* ptr          = edata.allocate<u8>(binattr_info->size, binattr_info->ptr);
+		auto* ptr = edata.allocate<u8>(binattr_info->size, binattr_info->ptr);
 		for (flatbuffers::uoffset_t i = 0; i < bin_attr->data()->size(); i++)
 		{
 			ptr[i] = bin_attr->data()->Get(i);
@@ -37,13 +37,13 @@ namespace np
 	void RoomBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(event_data& edata, const BinAttrInternal* fb_attr, SceNpMatching2RoomBinAttrInternal* binattr_info)
 	{
 		binattr_info->updateDate.tick = fb_attr->updateDate();
-		binattr_info->updateMemberId  = fb_attr->updateMemberId();
+		binattr_info->updateMemberId = fb_attr->updateMemberId();
 		BinAttr_to_SceNpMatching2BinAttr(edata, fb_attr->data(), &binattr_info->data);
 	}
 
 	void RoomGroup_to_SceNpMatching2RoomGroup(const RoomGroup* fb_group, SceNpMatching2RoomGroup* sce_group)
 	{
-		sce_group->groupId      = fb_group->groupId();
+		sce_group->groupId = fb_group->groupId();
 		sce_group->withPassword = fb_group->withPassword();
 		sce_group->withLabel = fb_group->label() ? 1 : 0;
 		if (fb_group->label())
@@ -53,7 +53,7 @@ namespace np
 				sce_group->label.data[l_index] = fb_group->label()->Get(l_index);
 			}
 		}
-		sce_group->slotNum           = fb_group->slotNum();
+		sce_group->slotNum = fb_group->slotNum();
 		sce_group->curGroupMemberNum = fb_group->curGroupMemberNum();
 	}
 
@@ -61,7 +61,7 @@ namespace np
 	{
 		for (flatbuffers::uoffset_t i = 0; i < fb_groups->size(); i++)
 		{
-			const auto* fb_group               = fb_groups->Get(i);
+			const auto* fb_group = fb_groups->Get(i);
 			SceNpMatching2RoomGroup* sce_group = &sce_groups[i];
 			RoomGroup_to_SceNpMatching2RoomGroup(fb_group, sce_group);
 		}
@@ -104,13 +104,13 @@ namespace np
 
 	void RoomDataExternal_to_SceNpMatching2RoomDataExternal(event_data& edata, const RoomDataExternal* room, SceNpMatching2RoomDataExternal* room_info, bool include_onlinename, bool include_avatarurl)
 	{
-		room_info->serverId           = room->serverId();
-		room_info->worldId            = room->worldId();
-		room_info->lobbyId            = room->lobbyId();
-		room_info->roomId             = room->roomId();
-		room_info->maxSlot            = room->maxSlot();
-		room_info->curMemberNum       = room->curMemberNum();
-		room_info->passwordSlotMask   = room->passwordSlotMask();
+		room_info->serverId = room->serverId();
+		room_info->worldId = room->worldId();
+		room_info->lobbyId = room->lobbyId();
+		room_info->roomId = room->roomId();
+		room_info->maxSlot = room->maxSlot();
+		room_info->curMemberNum = room->curMemberNum();
+		room_info->passwordSlotMask = room->passwordSlotMask();
 
 		s32 sdk_ver;
 		process_get_sdk_version(process_getpid(), sdk_ver);
@@ -140,7 +140,7 @@ namespace np
 		if (room->roomGroup() && room->roomGroup()->size() != 0)
 		{
 			room_info->roomGroupNum = room->roomGroup()->size();
-			auto* ptr_groups        = edata.allocate<SceNpMatching2RoomGroup>(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum, room_info->roomGroup);
+			auto* ptr_groups = edata.allocate<SceNpMatching2RoomGroup>(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum, room_info->roomGroup);
 			RoomGroups_to_SceNpMatching2RoomGroups(room->roomGroup(), ptr_groups);
 		}
 
@@ -149,11 +149,11 @@ namespace np
 		if (room->roomSearchableIntAttrExternal() && room->roomSearchableIntAttrExternal()->size() != 0)
 		{
 			room_info->roomSearchableIntAttrExternalNum = room->roomSearchableIntAttrExternal()->size();
-			auto* ptr_int_attr                          = edata.allocate<SceNpMatching2IntAttr>(sizeof(SceNpMatching2IntAttr) * room_info->roomSearchableIntAttrExternalNum, room_info->roomSearchableIntAttrExternal);
+			auto* ptr_int_attr = edata.allocate<SceNpMatching2IntAttr>(sizeof(SceNpMatching2IntAttr) * room_info->roomSearchableIntAttrExternalNum, room_info->roomSearchableIntAttrExternal);
 			for (flatbuffers::uoffset_t a_index = 0; a_index < room->roomSearchableIntAttrExternal()->size(); a_index++)
 			{
-				auto fb_int_attr          = room->roomSearchableIntAttrExternal()->Get(a_index);
-				ptr_int_attr[a_index].id  = fb_int_attr->id();
+				auto fb_int_attr = room->roomSearchableIntAttrExternal()->Get(a_index);
+				ptr_int_attr[a_index].id = fb_int_attr->id();
 				ptr_int_attr[a_index].num = fb_int_attr->num();
 			}
 		}
@@ -161,14 +161,14 @@ namespace np
 		if (room->roomSearchableBinAttrExternal() && room->roomSearchableBinAttrExternal()->size() != 0)
 		{
 			room_info->roomSearchableBinAttrExternalNum = room->roomSearchableBinAttrExternal()->size();
-			auto* ptr_bin_attr                          = edata.allocate<SceNpMatching2BinAttr>(sizeof(SceNpMatching2BinAttr) * room_info->roomSearchableBinAttrExternalNum, room_info->roomSearchableBinAttrExternal);
+			auto* ptr_bin_attr = edata.allocate<SceNpMatching2BinAttr>(sizeof(SceNpMatching2BinAttr) * room_info->roomSearchableBinAttrExternalNum, room_info->roomSearchableBinAttrExternal);
 			BinAttrs_to_SceNpMatching2BinAttrs(edata, room->roomSearchableBinAttrExternal(), ptr_bin_attr);
 		}
 
 		if (room->roomBinAttrExternal() && room->roomBinAttrExternal()->size() != 0)
 		{
 			room_info->roomBinAttrExternalNum = room->roomBinAttrExternal()->size();
-			auto* ptr_bin_attr                = edata.allocate<SceNpMatching2BinAttr>(sizeof(SceNpMatching2BinAttr) * room_info->roomBinAttrExternalNum, room_info->roomBinAttrExternal);
+			auto* ptr_bin_attr = edata.allocate<SceNpMatching2BinAttr>(sizeof(SceNpMatching2BinAttr) * room_info->roomBinAttrExternalNum, room_info->roomBinAttrExternal);
 			BinAttrs_to_SceNpMatching2BinAttrs(edata, room->roomBinAttrExternal(), ptr_bin_attr);
 		}
 	}
@@ -177,7 +177,7 @@ namespace np
 	{
 		search_resp->range.size = resp->rooms() ? resp->rooms()->size() : 0;
 		search_resp->range.startIndex = resp->startIndex();
-		search_resp->range.total      = resp->total();
+		search_resp->range.total = resp->total();
 
 		SceNpMatching2RoomDataExternal* prev_room = nullptr;
 		for (flatbuffers::uoffset_t i = 0; i < search_resp->range.size; i++)
@@ -209,18 +209,18 @@ namespace np
 
 	u16 RoomDataInternal_to_SceNpMatching2RoomDataInternal(event_data& edata, const RoomDataInternal* resp, SceNpMatching2RoomDataInternal* room_info, const SceNpId& npid, bool include_onlinename, bool include_avatarurl)
 	{
-		u16 member_id               = 0;
-		room_info->serverId         = resp->serverId();
-		room_info->worldId          = resp->worldId();
-		room_info->lobbyId          = resp->lobbyId();
-		room_info->roomId           = resp->roomId();
+		u16 member_id = 0;
+		room_info->serverId = resp->serverId();
+		room_info->worldId = resp->worldId();
+		room_info->lobbyId = resp->lobbyId();
+		room_info->roomId = resp->roomId();
 		room_info->passwordSlotMask = resp->passwordSlotMask();
-		room_info->maxSlot          = resp->maxSlot();
+		room_info->maxSlot = resp->maxSlot();
 
 		if (resp->roomGroup() && resp->roomGroup()->size() != 0)
 		{
 			room_info->roomGroupNum = resp->roomGroup()->size();
-			auto* ptr_groups        = edata.allocate<SceNpMatching2RoomGroup>(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum, room_info->roomGroup);
+			auto* ptr_groups = edata.allocate<SceNpMatching2RoomGroup>(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum, room_info->roomGroup);
 			RoomGroups_to_SceNpMatching2RoomGroups(resp->roomGroup(), ptr_groups);
 		}
 
@@ -229,7 +229,7 @@ namespace np
 
 		for (flatbuffers::uoffset_t i = 0; i < resp->memberList()->size(); i++)
 		{
-			auto fb_member                                   = resp->memberList()->Get(i);
+			auto fb_member = resp->memberList()->Get(i);
 			SceNpMatching2RoomMemberDataInternal* sce_member = &room_info->memberList.members[i];
 
 			if (i < (resp->memberList()->size() - 1))
@@ -269,17 +269,17 @@ namespace np
 		if (resp->roomBinAttrInternal() && resp->roomBinAttrInternal()->size() != 0)
 		{
 			room_info->roomBinAttrInternalNum = resp->roomBinAttrInternal()->size();
-			auto* ptr_bin_attr                = edata.allocate<SceNpMatching2RoomBinAttrInternal>(sizeof(SceNpMatching2RoomBinAttrInternal) * room_info->roomBinAttrInternalNum, room_info->roomBinAttrInternal);
+			auto* ptr_bin_attr = edata.allocate<SceNpMatching2RoomBinAttrInternal>(sizeof(SceNpMatching2RoomBinAttrInternal) * room_info->roomBinAttrInternalNum, room_info->roomBinAttrInternal);
 
 			for (u32 b_index = 0; b_index < room_info->roomBinAttrInternalNum; b_index++)
 			{
-				auto fb_bin_attr                      = resp->roomBinAttrInternal()->Get(b_index);
+				auto fb_bin_attr = resp->roomBinAttrInternal()->Get(b_index);
 				ptr_bin_attr[b_index].updateDate.tick = fb_bin_attr->updateDate();
-				ptr_bin_attr[b_index].updateMemberId  = fb_bin_attr->updateMemberId();
+				ptr_bin_attr[b_index].updateMemberId = fb_bin_attr->updateMemberId();
 
-				ptr_bin_attr[b_index].data.id   = fb_bin_attr->data()->id();
+				ptr_bin_attr[b_index].data.id = fb_bin_attr->data()->id();
 				ptr_bin_attr[b_index].data.size = fb_bin_attr->data()->data()->size();
-				auto* ptr_bin_attr_data         = edata.allocate<u8>(ptr_bin_attr[b_index].data.size, ptr_bin_attr[b_index].data.ptr);
+				auto* ptr_bin_attr_data = edata.allocate<u8>(ptr_bin_attr[b_index].data.size, ptr_bin_attr[b_index].data.ptr);
 				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < ptr_bin_attr[b_index].data.size; tmp_index++)
 				{
 					ptr_bin_attr_data[tmp_index] = fb_bin_attr->data()->data()->Get(tmp_index);
@@ -294,8 +294,8 @@ namespace np
 	{
 		UserInfo_to_SceNpUserInfo2(edata, member_data->userInfo(), &sce_member_data->userInfo, include_onlinename, include_avatarurl);
 		sce_member_data->joinDate.tick = member_data->joinDate();
-		sce_member_data->memberId      = member_data->memberId();
-		sce_member_data->teamId        = member_data->teamId();
+		sce_member_data->memberId = member_data->memberId();
+		sce_member_data->teamId = member_data->teamId();
 
 		if (const auto* fb_roomgroup = member_data->roomGroup())
 		{
@@ -313,21 +313,21 @@ namespace np
 			}
 		}
 
-		sce_member_data->natType  = member_data->natType();
+		sce_member_data->natType = member_data->natType();
 		sce_member_data->flagAttr = member_data->flagAttr();
 
 		if (member_data->roomMemberBinAttrInternal() && member_data->roomMemberBinAttrInternal()->size() != 0)
 		{
 			sce_member_data->roomMemberBinAttrInternalNum = member_data->roomMemberBinAttrInternal()->size();
-			auto* sce_binattrs                            = edata.allocate<SceNpMatching2RoomMemberBinAttrInternal>(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * sce_member_data->roomMemberBinAttrInternalNum, sce_member_data->roomMemberBinAttrInternal);
+			auto* sce_binattrs = edata.allocate<SceNpMatching2RoomMemberBinAttrInternal>(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * sce_member_data->roomMemberBinAttrInternalNum, sce_member_data->roomMemberBinAttrInternal);
 			for (u32 b_index = 0; b_index < sce_member_data->roomMemberBinAttrInternalNum; b_index++)
 			{
-				const auto fb_battr                   = member_data->roomMemberBinAttrInternal()->Get(b_index);
+				const auto fb_battr = member_data->roomMemberBinAttrInternal()->Get(b_index);
 				sce_binattrs[b_index].updateDate.tick = fb_battr->updateDate();
 
-				sce_binattrs[b_index].data.id   = fb_battr->data()->id();
+				sce_binattrs[b_index].data.id = fb_battr->data()->id();
 				sce_binattrs[b_index].data.size = fb_battr->data()->data()->size();
-				auto* sce_binattr_data          = edata.allocate<u8>(sce_binattrs[b_index].data.size, sce_binattrs[b_index].data.ptr);
+				auto* sce_binattr_data = edata.allocate<u8>(sce_binattrs[b_index].data.size, sce_binattrs[b_index].data.ptr);
 				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < sce_binattrs[b_index].data.size; tmp_index++)
 				{
 					sce_binattr_data[tmp_index] = fb_battr->data()->data()->Get(tmp_index);
@@ -350,7 +350,7 @@ namespace np
 
 		if (update_info->roomMemberDataInternal())
 		{
-			auto fb_member              = update_info->roomMemberDataInternal();
+			auto fb_member = update_info->roomMemberDataInternal();
 			auto* ptr_roomemberinternal = edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), sce_update_info->roomMemberDataInternal);
 
 			// TODO: Pass room_info
@@ -360,7 +360,7 @@ namespace np
 
 	void RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(const RoomUpdateInfo* update_info, SceNpMatching2RoomUpdateInfo* sce_update_info)
 	{
-		sce_update_info->errorCode  = 0;
+		sce_update_info->errorCode = 0;
 		sce_update_info->eventCause = 0;
 		if (update_info->optData())
 		{
@@ -382,7 +382,7 @@ namespace np
 			sce_update_info->newFlagAttr = sce_update_info->newRoomDataInternal.ptr(&SceNpMatching2RoomDataInternal::flagAttr);
 			edata.add_relocation<u32>(sce_update_info->newFlagAttr);
 			auto* ptr_sce_prevflag = edata.allocate<SceNpMatching2FlagAttr>(sizeof(SceNpMatching2FlagAttr), sce_update_info->prevFlagAttr);
-			*ptr_sce_prevflag      = update_info->prevFlagAttr();
+			*ptr_sce_prevflag = update_info->prevFlagAttr();
 		}
 
 		if (sce_room_data->passwordSlotMask != update_info->prevRoomPasswordSlotMask())
@@ -390,7 +390,7 @@ namespace np
 			sce_update_info->newRoomPasswordSlotMask = sce_update_info->newRoomDataInternal.ptr(&SceNpMatching2RoomDataInternal::passwordSlotMask);
 			edata.add_relocation<u64>(sce_update_info->newRoomPasswordSlotMask);
 			auto* ptr_sce_prevpass = edata.allocate<SceNpMatching2RoomPasswordSlotMask>(sizeof(SceNpMatching2RoomPasswordSlotMask), sce_update_info->prevRoomPasswordSlotMask);
-			*ptr_sce_prevpass      = update_info->prevRoomPasswordSlotMask();
+			*ptr_sce_prevpass = update_info->prevRoomPasswordSlotMask();
 		}
 
 		if (update_info->newRoomGroup() && update_info->newRoomGroup()->size() != 0)
@@ -438,7 +438,7 @@ namespace np
 			sce_update_info->newFlagAttr = sce_update_info->newRoomMemberDataInternal.ptr(&SceNpMatching2RoomMemberDataInternal::flagAttr);
 			edata.add_relocation<u32>(sce_update_info->newFlagAttr);
 			auto* ptr_sce_prevflag = edata.allocate<SceNpMatching2FlagAttr>(sizeof(SceNpMatching2FlagAttr), sce_update_info->prevFlagAttr);
-			*ptr_sce_prevflag      = update_info->prevFlagAttr();
+			*ptr_sce_prevflag = update_info->prevFlagAttr();
 		}
 
 		if (sce_update_info->newRoomMemberDataInternal->teamId != update_info->prevTeamId())
@@ -475,9 +475,9 @@ namespace np
 	void GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(const GetPingInfoResponse* resp, SceNpMatching2SignalingGetPingInfoResponse* sce_resp)
 	{
 		sce_resp->serverId = resp->serverId();
-		sce_resp->worldId  = resp->worldId();
-		sce_resp->roomId   = resp->roomId();
-		sce_resp->rtt      = resp->rtt();
+		sce_resp->worldId = resp->worldId();
+		sce_resp->roomId = resp->roomId();
+		sce_resp->rtt = resp->rtt();
 	}
 
 	void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(event_data& edata, const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi, bool include_onlinename, bool include_avatarurl)
@@ -516,7 +516,7 @@ namespace np
 
 		if (auto msg = mi->msg())
 		{
-			sce_mi->msgLen     = msg->size();
+			sce_mi->msgLen = msg->size();
 			auto* ptr_msg_data = static_cast<u8*>(edata.allocate<void>(msg->size(), sce_mi->msg));
 			for (u32 i = 0; i < msg->size(); i++)
 			{

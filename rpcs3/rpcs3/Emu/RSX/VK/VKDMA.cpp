@@ -13,13 +13,13 @@
 namespace vk
 {
 	static constexpr usz s_dma_block_length = 0x00010000;
-	static constexpr u32 s_dma_block_mask   = 0xFFFF0000;
+	static constexpr u32 s_dma_block_mask = 0xFFFF0000;
 
 	std::unordered_map<u32, std::unique_ptr<dma_block>> g_dma_pool;
 	shared_mutex g_dma_mutex;
 
 	// Validation
-	atomic_t<u64> s_allocated_dma_pool_size{ 0 };
+	atomic_t<u64> s_allocated_dma_pool_size{0};
 
 	dma_block::~dma_block()
 	{
@@ -77,7 +77,7 @@ namespace vk
 		auto src = vm::get_super_ptr<u8>(base_address);
 
 		if (rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL ||
-			vm::check_addr(base_address, 0, static_cast<u32>(size))) [[ likely ]]
+			vm::check_addr(base_address, 0, static_cast<u32>(size))) [[likely]]
 		{
 			// Linear virtual memory space. Copy all at once.
 			std::memcpy(dst, src, size);
@@ -185,7 +185,7 @@ namespace vk
 		ensure(range.end <= end());
 
 		// mark_dirty(range);
-		return { (range.start - base_address), allocated_memory.get() };
+		return {(range.start - base_address), allocated_memory.get()};
 	}
 
 	dma_block* dma_block::head()
@@ -310,7 +310,7 @@ namespace vk
 				(vk::get_driver_vendor() == driver_vendor::NVIDIA) ?
 					test_host_pointer(base_address, expected_length) :
 #endif
-				true;
+					true;
 
 			if (!allow_host_buffers)
 			{
@@ -350,7 +350,7 @@ namespace vk
 		auto last_block = (map_range.end & s_dma_block_mask);
 		if (first_block == last_block) [[likely]]
 		{
-			auto &block_info = g_dma_pool[first_block];
+			auto& block_info = g_dma_pool[first_block];
 			ensure(!block_info);
 
 			create_dma_block(block_info, first_block, s_dma_block_length);
@@ -442,7 +442,7 @@ namespace vk
 		ensure(s_allocated_dma_pool_size == g_dma_pool.size() * s_dma_block_length);
 	}
 
-	template<bool load>
+	template <bool load>
 	void sync_dma_impl(u32 local_address, u32 length)
 	{
 		reader_lock lock(g_dma_mutex);
@@ -501,4 +501,4 @@ namespace vk
 	{
 		g_dma_pool.clear();
 	}
-}
+} // namespace vk

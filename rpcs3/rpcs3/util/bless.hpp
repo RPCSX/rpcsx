@@ -10,12 +10,12 @@ namespace utils
 		return (T*)ptr;
 #elif defined(ARCH_X64)
 		T* result;
-		__asm__("movq %1, %0;" : "=r" (result) : "r" (ptr) : "memory");
+		__asm__("movq %1, %0;" : "=r"(result) : "r"(ptr) : "memory");
 		return result;
 #elif defined(ARCH_ARM64)
 		T* result;
-		__asm__("mov %0, %1" : "=r" (result) : "r" (ptr) : "memory");
+		__asm__("mov %0, %1" : "=r"(result) : "r"(ptr) : "memory");
 		return result;
 #endif
 	}
-}
+} // namespace utils

@@ -45,8 +45,8 @@ namespace gl
 
 	// https://www.khronos.org/opengl/wiki/Debug_Output
 	void APIENTRY log_debug(GLenum source, GLenum type, GLuint id,
-	  GLenum severity, GLsizei /*length*/, const GLchar* message,
-	  const void* /*user_param*/)
+		GLenum severity, GLsizei /*length*/, const GLchar* message,
+		const void* /*user_param*/)
 	{
 		// Message source
 		std::string str_source;
@@ -128,8 +128,8 @@ namespace gl
 			rsx_log.error("log_debug(type=%d): Unknown message type", type);
 		}
 
-	  switch (severity)
-	  {
+		switch (severity)
+		{
 		// All OpenGL Errors, shader compilation/linking errors, or highly-dangerous undefined behavior
 		case GL_DEBUG_SEVERITY_HIGH:
 		// Major performance warnings, shader compilation/linking warnings, or the use of deprecated functionality
@@ -149,13 +149,13 @@ namespace gl
 			rsx_log.error("log_debug(severity=%d): Unknown severity level", severity);
 			rsx_log.error("[DEBUG_OUTPUT] [%s] [%s] [%d]: %s", str_source, str_type, id, message);
 			return;
-	  }
+		}
 	}
 
 	void enable_debugging()
 	{
-	  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	  glDebugMessageCallback(log_debug, nullptr);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageCallback(log_debug, nullptr);
 	}
 
 	const capabilities& get_driver_caps()
@@ -186,4 +186,4 @@ namespace gl
 			fmt::throw_exception("unknown primitive type");
 		}
 	}
-}
+} // namespace gl

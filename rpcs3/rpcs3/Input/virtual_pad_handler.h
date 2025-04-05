@@ -4,7 +4,7 @@
 
 class virtual_pad_handler final : public PadHandlerBase
 {
-	using on_connect_cb = std::function<bool(const std::shared_ptr<Pad> &)>;
+	using on_connect_cb = std::function<bool(const std::shared_ptr<Pad>&)>;
 	static on_connect_cb mOnConnect;
 
 public:

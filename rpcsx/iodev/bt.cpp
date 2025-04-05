@@ -6,7 +6,7 @@
 struct BtFile : orbis::File {};
 
 static orbis::ErrorCode bt_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                 void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled bt ioctl", request);
   return {};

@@ -12,66 +12,66 @@ template <>
 void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](DualSenseDevice::DualSenseDataMode mode)
-	{
-		switch (mode)
 		{
-		case DualSenseDevice::DualSenseDataMode::Simple: return "Simple";
-		case DualSenseDevice::DualSenseDataMode::Enhanced: return "Enhanced";
-		}
+			switch (mode)
+			{
+			case DualSenseDevice::DualSenseDataMode::Simple: return "Simple";
+			case DualSenseDevice::DualSenseDataMode::Enhanced: return "Enhanced";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 namespace
 {
 	constexpr id_pair SONY_DUALSENSE_ID_0 = {0x054C, 0x0CE6}; // DualSense
 	constexpr id_pair SONY_DUALSENSE_ID_1 = {0x054C, 0x0DF2}; // DualSense Edge
-}
+} // namespace
 
 dualsense_pad_handler::dualsense_pad_handler()
-    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
+	: hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0, SONY_DUALSENSE_ID_1})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
-	{
-		{ DualSenseKeyCodes::None,     "" },
-		{ DualSenseKeyCodes::Triangle, "Triangle" },
-		{ DualSenseKeyCodes::Circle,   "Circle" },
-		{ DualSenseKeyCodes::Cross,    "Cross" },
-		{ DualSenseKeyCodes::Square,   "Square" },
-		{ DualSenseKeyCodes::Left,     "Left" },
-		{ DualSenseKeyCodes::Right,    "Right" },
-		{ DualSenseKeyCodes::Up,       "Up" },
-		{ DualSenseKeyCodes::Down,     "Down" },
-		{ DualSenseKeyCodes::R1,       "R1" },
-		{ DualSenseKeyCodes::R2,       "R2" },
-		{ DualSenseKeyCodes::R3,       "R3" },
-		{ DualSenseKeyCodes::Options,  "Options" },
-		{ DualSenseKeyCodes::Share,    "Share" },
-		{ DualSenseKeyCodes::PSButton, "PS Button" },
-		{ DualSenseKeyCodes::Mic,      "Mic" },
-		{ DualSenseKeyCodes::TouchPad, "Touch Pad" },
-		{ DualSenseKeyCodes::Touch_L,  "Touch Left" },
-		{ DualSenseKeyCodes::Touch_R,  "Touch Right" },
-		{ DualSenseKeyCodes::Touch_U,  "Touch Up" },
-		{ DualSenseKeyCodes::Touch_D,  "Touch Down" },
-		{ DualSenseKeyCodes::L1,       "L1" },
-		{ DualSenseKeyCodes::L2,       "L2" },
-		{ DualSenseKeyCodes::L3,       "L3" },
-		{ DualSenseKeyCodes::LSXNeg,   "LS X-" },
-		{ DualSenseKeyCodes::LSXPos,   "LS X+" },
-		{ DualSenseKeyCodes::LSYPos,   "LS Y+" },
-		{ DualSenseKeyCodes::LSYNeg,   "LS Y-" },
-		{ DualSenseKeyCodes::RSXNeg,   "RS X-" },
-		{ DualSenseKeyCodes::RSXPos,   "RS X+" },
-		{ DualSenseKeyCodes::RSYPos,   "RS Y+" },
-		{ DualSenseKeyCodes::RSYNeg,   "RS Y-" },
-		{ DualSenseKeyCodes::EdgeFnL,  "FN L" },
-		{ DualSenseKeyCodes::EdgeFnR,  "FN R" },
-		{ DualSenseKeyCodes::EdgeLB,   "LB" },
-		{ DualSenseKeyCodes::EdgeRB,   "RB" },
-	};
+		{
+			{DualSenseKeyCodes::None, ""},
+			{DualSenseKeyCodes::Triangle, "Triangle"},
+			{DualSenseKeyCodes::Circle, "Circle"},
+			{DualSenseKeyCodes::Cross, "Cross"},
+			{DualSenseKeyCodes::Square, "Square"},
+			{DualSenseKeyCodes::Left, "Left"},
+			{DualSenseKeyCodes::Right, "Right"},
+			{DualSenseKeyCodes::Up, "Up"},
+			{DualSenseKeyCodes::Down, "Down"},
+			{DualSenseKeyCodes::R1, "R1"},
+			{DualSenseKeyCodes::R2, "R2"},
+			{DualSenseKeyCodes::R3, "R3"},
+			{DualSenseKeyCodes::Options, "Options"},
+			{DualSenseKeyCodes::Share, "Share"},
+			{DualSenseKeyCodes::PSButton, "PS Button"},
+			{DualSenseKeyCodes::Mic, "Mic"},
+			{DualSenseKeyCodes::TouchPad, "Touch Pad"},
+			{DualSenseKeyCodes::Touch_L, "Touch Left"},
+			{DualSenseKeyCodes::Touch_R, "Touch Right"},
+			{DualSenseKeyCodes::Touch_U, "Touch Up"},
+			{DualSenseKeyCodes::Touch_D, "Touch Down"},
+			{DualSenseKeyCodes::L1, "L1"},
+			{DualSenseKeyCodes::L2, "L2"},
+			{DualSenseKeyCodes::L3, "L3"},
+			{DualSenseKeyCodes::LSXNeg, "LS X-"},
+			{DualSenseKeyCodes::LSXPos, "LS X+"},
+			{DualSenseKeyCodes::LSYPos, "LS Y+"},
+			{DualSenseKeyCodes::LSYNeg, "LS Y-"},
+			{DualSenseKeyCodes::RSXNeg, "RS X-"},
+			{DualSenseKeyCodes::RSXPos, "RS X+"},
+			{DualSenseKeyCodes::RSYPos, "RS Y+"},
+			{DualSenseKeyCodes::RSYNeg, "RS Y-"},
+			{DualSenseKeyCodes::EdgeFnL, "FN L"},
+			{DualSenseKeyCodes::EdgeFnR, "FN R"},
+			{DualSenseKeyCodes::EdgeLB, "LB"},
+			{DualSenseKeyCodes::EdgeRB, "RB"},
+		};
 
 	init_configs();
 
@@ -96,7 +96,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
 
 	m_trigger_threshold = trigger_max / 2;
-	m_thumb_threshold   = thumb_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 void dualsense_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_device_view path, std::wstring_view wide_serial)
@@ -192,7 +192,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerat
 	}
 
 	device->has_calib_data = true;
-	device->path           = path;
+	device->path = path;
 
 	// Get feature set
 	if (const hid_device_info* info = hid_get_device_info(device->hidDevice))
@@ -222,34 +222,35 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerat
 
 void dualsense_pad_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = ::at32(button_list, DualSenseKeyCodes::LSXNeg);
-	cfg->ls_down.def  = ::at32(button_list, DualSenseKeyCodes::LSYNeg);
+	cfg->ls_left.def = ::at32(button_list, DualSenseKeyCodes::LSXNeg);
+	cfg->ls_down.def = ::at32(button_list, DualSenseKeyCodes::LSYNeg);
 	cfg->ls_right.def = ::at32(button_list, DualSenseKeyCodes::LSXPos);
-	cfg->ls_up.def    = ::at32(button_list, DualSenseKeyCodes::LSYPos);
-	cfg->rs_left.def  = ::at32(button_list, DualSenseKeyCodes::RSXNeg);
-	cfg->rs_down.def  = ::at32(button_list, DualSenseKeyCodes::RSYNeg);
+	cfg->ls_up.def = ::at32(button_list, DualSenseKeyCodes::LSYPos);
+	cfg->rs_left.def = ::at32(button_list, DualSenseKeyCodes::RSXNeg);
+	cfg->rs_down.def = ::at32(button_list, DualSenseKeyCodes::RSYNeg);
 	cfg->rs_right.def = ::at32(button_list, DualSenseKeyCodes::RSXPos);
-	cfg->rs_up.def    = ::at32(button_list, DualSenseKeyCodes::RSYPos);
-	cfg->start.def    = ::at32(button_list, DualSenseKeyCodes::Options);
-	cfg->select.def   = ::at32(button_list, DualSenseKeyCodes::Share);
-	cfg->ps.def       = ::at32(button_list, DualSenseKeyCodes::PSButton);
-	cfg->square.def   = ::at32(button_list, DualSenseKeyCodes::Square);
-	cfg->cross.def    = ::at32(button_list, DualSenseKeyCodes::Cross);
-	cfg->circle.def   = ::at32(button_list, DualSenseKeyCodes::Circle);
+	cfg->rs_up.def = ::at32(button_list, DualSenseKeyCodes::RSYPos);
+	cfg->start.def = ::at32(button_list, DualSenseKeyCodes::Options);
+	cfg->select.def = ::at32(button_list, DualSenseKeyCodes::Share);
+	cfg->ps.def = ::at32(button_list, DualSenseKeyCodes::PSButton);
+	cfg->square.def = ::at32(button_list, DualSenseKeyCodes::Square);
+	cfg->cross.def = ::at32(button_list, DualSenseKeyCodes::Cross);
+	cfg->circle.def = ::at32(button_list, DualSenseKeyCodes::Circle);
 	cfg->triangle.def = ::at32(button_list, DualSenseKeyCodes::Triangle);
-	cfg->left.def     = ::at32(button_list, DualSenseKeyCodes::Left);
-	cfg->down.def     = ::at32(button_list, DualSenseKeyCodes::Down);
-	cfg->right.def    = ::at32(button_list, DualSenseKeyCodes::Right);
-	cfg->up.def       = ::at32(button_list, DualSenseKeyCodes::Up);
-	cfg->r1.def       = ::at32(button_list, DualSenseKeyCodes::R1);
-	cfg->r2.def       = ::at32(button_list, DualSenseKeyCodes::R2);
-	cfg->r3.def       = ::at32(button_list, DualSenseKeyCodes::R3);
-	cfg->l1.def       = ::at32(button_list, DualSenseKeyCodes::L1);
-	cfg->l2.def       = ::at32(button_list, DualSenseKeyCodes::L2);
-	cfg->l3.def       = ::at32(button_list, DualSenseKeyCodes::L3);
+	cfg->left.def = ::at32(button_list, DualSenseKeyCodes::Left);
+	cfg->down.def = ::at32(button_list, DualSenseKeyCodes::Down);
+	cfg->right.def = ::at32(button_list, DualSenseKeyCodes::Right);
+	cfg->up.def = ::at32(button_list, DualSenseKeyCodes::Up);
+	cfg->r1.def = ::at32(button_list, DualSenseKeyCodes::R1);
+	cfg->r2.def = ::at32(button_list, DualSenseKeyCodes::R2);
+	cfg->r3.def = ::at32(button_list, DualSenseKeyCodes::R3);
+	cfg->l1.def = ::at32(button_list, DualSenseKeyCodes::L1);
+	cfg->l2.def = ::at32(button_list, DualSenseKeyCodes::L2);
+	cfg->l3.def = ::at32(button_list, DualSenseKeyCodes::L3);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, DualSenseKeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, DualSenseKeyCodes::None);
@@ -258,12 +259,12 @@ void dualsense_pad_handler::init_config(cfg_pad* cfg)
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
 	cfg->rstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
-	cfg->lstickdeadzone.def    = 40; // between 0 and 255
-	cfg->rstickdeadzone.def    = 40; // between 0 and 255
-	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
-	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
+	cfg->lstickdeadzone.def = 40;                                       // between 0 and 255
+	cfg->rstickdeadzone.def = 40;                                       // between 0 and 255
+	cfg->ltriggerthreshold.def = 0;                                     // between 0 and 255
+	cfg->rtriggerthreshold.def = 0;                                     // between 0 and 255
+	cfg->lpadsquircling.def = 8000;
+	cfg->rpadsquircling.def = 8000;
 
 	// Set default color value
 	cfg->colorR.def = 0;
@@ -271,9 +272,9 @@ void dualsense_pad_handler::init_config(cfg_pad* cfg)
 	cfg->colorB.def = 20;
 
 	// Set default LED options
-	cfg->led_battery_indicator.def            = false;
+	cfg->led_battery_indicator.def = false;
 	cfg->led_battery_indicator_brightness.def = 10;
-	cfg->led_low_battery_blink.def            = true;
+	cfg->led_low_battery_blink.def = true;
 
 	// apply defaults
 	cfg->from_default();
@@ -305,12 +306,12 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 	{
 		if (res == sizeof(dualsense_input_report_bt))
 		{
-			device->data_mode     = DualSenseDevice::DualSenseDataMode::Simple;
+			device->data_mode = DualSenseDevice::DualSenseDataMode::Simple;
 			device->bt_controller = true;
 		}
 		else
 		{
-			device->data_mode     = DualSenseDevice::DualSenseDataMode::Enhanced;
+			device->data_mode = DualSenseDevice::DualSenseDataMode::Enhanced;
 			device->bt_controller = false;
 		}
 
@@ -319,7 +320,7 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 	}
 	case 0x31:
 	{
-		device->data_mode     = DualSenseDevice::DualSenseDataMode::Enhanced;
+		device->data_mode = DualSenseDevice::DualSenseDataMode::Enhanced;
 		device->bt_controller = true;
 
 		offset = offsetof(dualsense_input_report_bt, common);
@@ -408,9 +409,9 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dev) const
 				return false;
 			}
 
-			const u8 btHdr        = 0xA3;
-			const u32 crcHdr      = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-			const u32 crcCalc     = CRCPP::CRC::Calculate(buf.data(), (DUALSENSE_CALIBRATION_REPORT_SIZE - 4), crcTable, crcHdr);
+			const u8 btHdr = 0xA3;
+			const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+			const u32 crcCalc = CRCPP::CRC::Calculate(buf.data(), (DUALSENSE_CALIBRATION_REPORT_SIZE - 4), crcTable, crcHdr);
 			const u32 crcReported = read_u32(&buf[DUALSENSE_CALIBRATION_REPORT_SIZE - 4]);
 
 			if (crcCalc == crcReported)
@@ -437,22 +438,22 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dev) const
 	}
 
 	dev->calib_data[CalibIndex::PITCH].bias = read_s16(&buf[1]);
-	dev->calib_data[CalibIndex::YAW].bias   = read_s16(&buf[3]);
-	dev->calib_data[CalibIndex::ROLL].bias  = read_s16(&buf[5]);
+	dev->calib_data[CalibIndex::YAW].bias = read_s16(&buf[3]);
+	dev->calib_data[CalibIndex::ROLL].bias = read_s16(&buf[5]);
 
-	const s16 pitch_plus  = read_s16(&buf[7]);
+	const s16 pitch_plus = read_s16(&buf[7]);
 	const s16 pitch_minus = read_s16(&buf[9]);
-	const s16 yaw_plus    = read_s16(&buf[11]);
-	const s16 yaw_minus   = read_s16(&buf[13]);
-	const s16 roll_plus   = read_s16(&buf[15]);
-	const s16 roll_minus  = read_s16(&buf[17]);
+	const s16 yaw_plus = read_s16(&buf[11]);
+	const s16 yaw_minus = read_s16(&buf[13]);
+	const s16 roll_plus = read_s16(&buf[15]);
+	const s16 roll_minus = read_s16(&buf[17]);
 
 	// Confirm correctness. Need confirmation with dongle with no active controller
 	if (pitch_plus <= 0 || yaw_plus <= 0 || roll_plus <= 0 ||
-	    pitch_minus >= 0 || yaw_minus >= 0 || roll_minus >= 0)
+		pitch_minus >= 0 || yaw_minus >= 0 || roll_minus >= 0)
 	{
 		dualsense_log.error("get_calibration_data: calibration data check failed! pitch_plus=%d, pitch_minus=%d, roll_plus=%d, roll_minus=%d, yaw_plus=%d, yaw_minus=%d",
-		    pitch_plus, pitch_minus, roll_plus, roll_minus, yaw_plus, yaw_minus);
+			pitch_plus, pitch_minus, roll_plus, roll_minus, yaw_plus, yaw_minus);
 	}
 
 	const s32 gyro_speed_scale = read_s16(&buf[19]) + read_s16(&buf[21]);
@@ -466,26 +467,26 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dev) const
 	dev->calib_data[CalibIndex::ROLL].sens_numer = gyro_speed_scale * DUALSENSE_GYRO_RES_PER_DEG_S;
 	dev->calib_data[CalibIndex::ROLL].sens_denom = roll_plus - roll_minus;
 
-	const s16 accel_x_plus  = read_s16(&buf[23]);
+	const s16 accel_x_plus = read_s16(&buf[23]);
 	const s16 accel_x_minus = read_s16(&buf[25]);
-	const s16 accel_y_plus  = read_s16(&buf[27]);
+	const s16 accel_y_plus = read_s16(&buf[27]);
 	const s16 accel_y_minus = read_s16(&buf[29]);
-	const s16 accel_z_plus  = read_s16(&buf[31]);
+	const s16 accel_z_plus = read_s16(&buf[31]);
 	const s16 accel_z_minus = read_s16(&buf[33]);
 
 	const s32 accel_x_range = accel_x_plus - accel_x_minus;
 	const s32 accel_y_range = accel_y_plus - accel_y_minus;
 	const s32 accel_z_range = accel_z_plus - accel_z_minus;
 
-	dev->calib_data[CalibIndex::X].bias       = accel_x_plus - accel_x_range / 2;
+	dev->calib_data[CalibIndex::X].bias = accel_x_plus - accel_x_range / 2;
 	dev->calib_data[CalibIndex::X].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
 	dev->calib_data[CalibIndex::X].sens_denom = accel_x_range;
 
-	dev->calib_data[CalibIndex::Y].bias       = accel_y_plus - accel_y_range / 2;
+	dev->calib_data[CalibIndex::Y].bias = accel_y_plus - accel_y_range / 2;
 	dev->calib_data[CalibIndex::Y].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
 	dev->calib_data[CalibIndex::Y].sens_denom = accel_y_range;
 
-	dev->calib_data[CalibIndex::Z].bias       = accel_z_plus - accel_z_range / 2;
+	dev->calib_data[CalibIndex::Z].bias = accel_z_plus - accel_z_range / 2;
 	dev->calib_data[CalibIndex::Z].sens_numer = 2 * DUALSENSE_ACC_RES_PER_G;
 	dev->calib_data[CalibIndex::Z].sens_denom = accel_z_range;
 
@@ -614,7 +615,7 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 		return;
 
 	pad->m_battery_level = dev->battery_level;
-	pad->m_cable_state   = dev->cable_state;
+	pad->m_cable_state = dev->cable_state;
 
 	const dualsense_input_report_common& input = dev->report;
 
@@ -677,57 +678,57 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	switch (data)
 	{
 	case 0x08: // none pressed
-		keyBuffer[DualSenseKeyCodes::Up]    = 0;
-		keyBuffer[DualSenseKeyCodes::Down]  = 0;
-		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Up] = 0;
+		keyBuffer[DualSenseKeyCodes::Down] = 0;
+		keyBuffer[DualSenseKeyCodes::Left] = 0;
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	case 0x07: // NW...left and up
-		keyBuffer[DualSenseKeyCodes::Up]    = 255;
-		keyBuffer[DualSenseKeyCodes::Down]  = 0;
-		keyBuffer[DualSenseKeyCodes::Left]  = 255;
+		keyBuffer[DualSenseKeyCodes::Up] = 255;
+		keyBuffer[DualSenseKeyCodes::Down] = 0;
+		keyBuffer[DualSenseKeyCodes::Left] = 255;
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	case 0x06: // W..left
-		keyBuffer[DualSenseKeyCodes::Up]    = 0;
-		keyBuffer[DualSenseKeyCodes::Down]  = 0;
-		keyBuffer[DualSenseKeyCodes::Left]  = 255;
+		keyBuffer[DualSenseKeyCodes::Up] = 0;
+		keyBuffer[DualSenseKeyCodes::Down] = 0;
+		keyBuffer[DualSenseKeyCodes::Left] = 255;
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	case 0x05: // SW..left down
-		keyBuffer[DualSenseKeyCodes::Up]    = 0;
-		keyBuffer[DualSenseKeyCodes::Down]  = 255;
-		keyBuffer[DualSenseKeyCodes::Left]  = 255;
+		keyBuffer[DualSenseKeyCodes::Up] = 0;
+		keyBuffer[DualSenseKeyCodes::Down] = 255;
+		keyBuffer[DualSenseKeyCodes::Left] = 255;
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	case 0x04: // S..down
-		keyBuffer[DualSenseKeyCodes::Up]    = 0;
-		keyBuffer[DualSenseKeyCodes::Down]  = 255;
-		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Up] = 0;
+		keyBuffer[DualSenseKeyCodes::Down] = 255;
+		keyBuffer[DualSenseKeyCodes::Left] = 0;
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	case 0x03: // SE..down and right
-		keyBuffer[DualSenseKeyCodes::Up]    = 0;
-		keyBuffer[DualSenseKeyCodes::Down]  = 255;
-		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Up] = 0;
+		keyBuffer[DualSenseKeyCodes::Down] = 255;
+		keyBuffer[DualSenseKeyCodes::Left] = 0;
 		keyBuffer[DualSenseKeyCodes::Right] = 255;
 		break;
 	case 0x02: // E... right
-		keyBuffer[DualSenseKeyCodes::Up]    = 0;
-		keyBuffer[DualSenseKeyCodes::Down]  = 0;
-		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Up] = 0;
+		keyBuffer[DualSenseKeyCodes::Down] = 0;
+		keyBuffer[DualSenseKeyCodes::Left] = 0;
 		keyBuffer[DualSenseKeyCodes::Right] = 255;
 		break;
 	case 0x01: // NE.. up right
-		keyBuffer[DualSenseKeyCodes::Up]    = 255;
-		keyBuffer[DualSenseKeyCodes::Down]  = 0;
-		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Up] = 255;
+		keyBuffer[DualSenseKeyCodes::Down] = 0;
+		keyBuffer[DualSenseKeyCodes::Left] = 0;
 		keyBuffer[DualSenseKeyCodes::Right] = 255;
 		break;
 	case 0x00: // n.. up
-		keyBuffer[DualSenseKeyCodes::Up]    = 255;
-		keyBuffer[DualSenseKeyCodes::Down]  = 0;
-		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Up] = 255;
+		keyBuffer[DualSenseKeyCodes::Down] = 0;
+		keyBuffer[DualSenseKeyCodes::Left] = 0;
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	default:
@@ -735,25 +736,25 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	}
 
 	data = (is_simple_mode ? input.z : input.buttons[0]) >> 4;
-	keyBuffer[DualSenseKeyCodes::Square]   = ((data & 0x01) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::Cross]    = ((data & 0x02) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::Circle]   = ((data & 0x04) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::Square] = ((data & 0x01) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::Cross] = ((data & 0x02) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::Circle] = ((data & 0x04) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::Triangle] = ((data & 0x08) != 0) ? 255 : 0;
 
 	data = (is_simple_mode ? input.rz : input.buttons[1]);
-	keyBuffer[DualSenseKeyCodes::L1]      = ((data & 0x01) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::R1]      = ((data & 0x02) != 0) ? 255 : 0;
-	//keyBuffer[DualSenseKeyCodes::L2]      = ((data & 0x04) != 0) ? 255 : 0; // active when L2 is pressed
-	//keyBuffer[DualSenseKeyCodes::R2]      = ((data & 0x08) != 0) ? 255 : 0; // active when R2 is pressed
-	keyBuffer[DualSenseKeyCodes::Share]   = ((data & 0x10) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::L1] = ((data & 0x01) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::R1] = ((data & 0x02) != 0) ? 255 : 0;
+	// keyBuffer[DualSenseKeyCodes::L2]      = ((data & 0x04) != 0) ? 255 : 0; // active when L2 is pressed
+	// keyBuffer[DualSenseKeyCodes::R2]      = ((data & 0x08) != 0) ? 255 : 0; // active when R2 is pressed
+	keyBuffer[DualSenseKeyCodes::Share] = ((data & 0x10) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::Options] = ((data & 0x20) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::L3]      = ((data & 0x40) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::R3]      = ((data & 0x80) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::L3] = ((data & 0x40) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::R3] = ((data & 0x80) != 0) ? 255 : 0;
 
 	data = (is_simple_mode ? input.seq_number : input.buttons[2]);
 	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::Mic]      = ((data & 0x04) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::Mic] = ((data & 0x04) != 0) ? 255 : 0;
 
 	// Touch Pad
 	for (const dualsense_touch_point& point : input.points)
@@ -793,8 +794,7 @@ pad_preview_values dualsense_pad_handler::get_preview_values(const std::unordere
 		::at32(data, LSXPos) - ::at32(data, LSXNeg),
 		::at32(data, LSYPos) - ::at32(data, LSYNeg),
 		::at32(data, RSXPos) - ::at32(data, RSXNeg),
-		::at32(data, RSYPos) - ::at32(data, RSYNeg)
-	};
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)};
 }
 
 dualsense_pad_handler::~dualsense_pad_handler()
@@ -808,7 +808,7 @@ dualsense_pad_handler::~dualsense_pad_handler()
 			controller.second->large_motor = 0;
 
 			// Turns off the lights (disabled due to user complaints)
-			//controller.second->release_leds = true;
+			// controller.second->release_leds = true;
 
 			if (send_output_report(controller.second.get()) == -1)
 			{
@@ -851,7 +851,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 		common.valid_flag_1 |= VALID_FLAG_1_POWER_SAVE_CONTROL_ENABLE;
 		common.valid_flag_2 |= VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION;
 
-		common.motor_left  = device->large_motor;
+		common.motor_left = device->large_motor;
 		common.motor_right = device->small_motor;
 
 		if (device->update_lightbar)
@@ -909,16 +909,17 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	if (device->bt_controller)
 	{
 		const u8 seq_tag = (device->bt_sequence << 4) | 0x0;
-		if (++device->bt_sequence >= 16) device->bt_sequence = 0;
+		if (++device->bt_sequence >= 16)
+			device->bt_sequence = 0;
 
 		dualsense_output_report_bt report{};
 		report.report_id = 0x31; // report id for bluetooth
-		report.seq_tag   = seq_tag;
-		report.tag       = 0x10; // magic number
-		report.common    = std::move(common);
+		report.seq_tag = seq_tag;
+		report.tag = 0x10; // magic number
+		report.common = std::move(common);
 
-		const u8 btHdr    = 0xA2;
-		const u32 crcHdr  = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
+		const u8 btHdr = 0xA2;
+		const u32 crcHdr = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
 		const u32 crcCalc = CRCPP::CRC::Calculate(&report.report_id, (sizeof(dualsense_output_report_bt) - 4), crcTable, crcHdr);
 
 		write_to_ptr(report.crc32, crcCalc);
@@ -928,7 +929,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 	dualsense_output_report_usb report{};
 	report.report_id = 0x02; // report id for usb
-	report.common    = std::move(common);
+	report.common = std::move(common);
 
 	return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
 }
@@ -948,7 +949,7 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
 	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrateMotors);
 
-	const bool wireless    = dev->cable_state == 0;
+	const bool wireless = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level <= 1;
 	const bool is_blinking = dev->led_delay_on > 0 || dev->led_delay_off > 0;
 

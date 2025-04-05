@@ -25,7 +25,7 @@
 #define VK_MAX_ASYNC_FRAMES 2
 
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
-#define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
+#define GENERAL_WAIT_TIMEOUT 2000000ull   // 2 seconds
 
 namespace vk
 {
@@ -256,8 +256,8 @@ namespace vk
 
 	struct flush_request_task
 	{
-		atomic_t<bool> pending_state{ false };  //Flush request status; true if rsx::thread is yet to service this request
-		atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
+		atomic_t<bool> pending_state{false}; // Flush request status; true if rsx::thread is yet to service this request
+		atomic_t<int> num_waiters{0};        // Number of threads waiting for this request to be serviced
 		bool hard_sync = false;
 
 		flush_request_task() = default;
@@ -309,7 +309,7 @@ namespace vk
 		u32 width;
 		u32 height;
 		u32 pitch;
-		u8  eye;
+		u8 eye;
 	};
 
 	struct draw_call_t
@@ -317,7 +317,7 @@ namespace vk
 		u32 subdraw_id;
 	};
 
-	template<int Count>
+	template <int Count>
 	class command_buffer_chain
 	{
 		atomic_t<u32> m_current_index = 0;
@@ -377,4 +377,4 @@ namespace vk
 			return &m_cb_list[m_current_index % Count];
 		}
 	};
-}
+} // namespace vk

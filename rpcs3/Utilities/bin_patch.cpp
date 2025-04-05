@@ -21,73 +21,73 @@ template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](YAML::NodeType::value value)
-	{
-		switch (value)
 		{
-		case YAML::NodeType::Undefined: return "Undefined";
-		case YAML::NodeType::Null: return "Null";
-		case YAML::NodeType::Scalar: return "Scalar";
-		case YAML::NodeType::Sequence: return "Sequence";
-		case YAML::NodeType::Map: return "Map";
-		}
+			switch (value)
+			{
+			case YAML::NodeType::Undefined: return "Undefined";
+			case YAML::NodeType::Null: return "Null";
+			case YAML::NodeType::Scalar: return "Scalar";
+			case YAML::NodeType::Sequence: return "Sequence";
+			case YAML::NodeType::Map: return "Map";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<patch_configurable_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](patch_configurable_type value)
-	{
-		switch (value)
 		{
-		case patch_configurable_type::double_range: return "double_range";
-		case patch_configurable_type::double_enum: return "double_enum";
-		case patch_configurable_type::long_range: return "long_range";
-		case patch_configurable_type::long_enum: return "long_enum";
-		}
+			switch (value)
+			{
+			case patch_configurable_type::double_range: return "double_range";
+			case patch_configurable_type::double_enum: return "double_enum";
+			case patch_configurable_type::long_range: return "long_range";
+			case patch_configurable_type::long_enum: return "long_enum";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](patch_type value)
-	{
-		switch (value)
 		{
-		case patch_type::invalid: return "invalid";
-		case patch_type::alloc: return "alloc";
-		case patch_type::code_alloc: return "calloc";
-		case patch_type::jump: return "jump";
-		case patch_type::jump_link: return "jumpl";
-		case patch_type::jump_func: return "jumpf";
-		case patch_type::load: return "load";
-		case patch_type::byte: return "byte";
-		case patch_type::le16: return "le16";
-		case patch_type::le32: return "le32";
-		case patch_type::le64: return "le64";
-		case patch_type::bef32: return "bef32";
-		case patch_type::bef64: return "bef64";
-		case patch_type::be16: return "be16";
-		case patch_type::be32: return "be32";
-		case patch_type::bd32: return "bd32";
-		case patch_type::be64: return "be64";
-		case patch_type::bd64: return "bd64";
-		case patch_type::lef32: return "lef32";
-		case patch_type::lef64: return "lef64";
-		case patch_type::bp_exec: return "bpex";
-		case patch_type::utf8: return "utf8";
-		case patch_type::c_utf8: return "cutf8";
-		case patch_type::move_file: return "move_file";
-		case patch_type::hide_file: return "hide_file";
-		}
+			switch (value)
+			{
+			case patch_type::invalid: return "invalid";
+			case patch_type::alloc: return "alloc";
+			case patch_type::code_alloc: return "calloc";
+			case patch_type::jump: return "jump";
+			case patch_type::jump_link: return "jumpl";
+			case patch_type::jump_func: return "jumpf";
+			case patch_type::load: return "load";
+			case patch_type::byte: return "byte";
+			case patch_type::le16: return "le16";
+			case patch_type::le32: return "le32";
+			case patch_type::le64: return "le64";
+			case patch_type::bef32: return "bef32";
+			case patch_type::bef64: return "bef64";
+			case patch_type::be16: return "be16";
+			case patch_type::be32: return "be32";
+			case patch_type::bd32: return "bd32";
+			case patch_type::be64: return "be64";
+			case patch_type::bd64: return "bd64";
+			case patch_type::lef32: return "lef32";
+			case patch_type::lef64: return "lef64";
+			case patch_type::bp_exec: return "bpex";
+			case patch_type::utf8: return "utf8";
+			case patch_type::c_utf8: return "cutf8";
+			case patch_type::move_file: return "move_file";
+			case patch_type::hide_file: return "hide_file";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 void patch_engine::patch_config_value::set_and_check_value(f64 new_value, std::string_view name)
@@ -97,7 +97,10 @@ void patch_engine::patch_config_value::set_and_check_value(f64 new_value, std::s
 	case patch_configurable_type::double_enum:
 	case patch_configurable_type::long_enum:
 	{
-		if (std::none_of(allowed_values.begin(), allowed_values.end(), [&new_value](const patch_allowed_value& allowed_value){ return allowed_value.value == new_value; }))
+		if (std::none_of(allowed_values.begin(), allowed_values.end(), [&new_value](const patch_allowed_value& allowed_value)
+				{
+					return allowed_value.value == new_value;
+				}))
 		{
 			patch_log.error("Can't set configurable enumerated value '%s' to %f. Using default value %f", name, new_value, value);
 			return;
@@ -243,7 +246,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		// Find or create an entry matching the key/hash in our map
 		patch_container& container = patches_map[main_key];
-		container.hash    = main_key;
+		container.hash = main_key;
 		container.version = version;
 
 		// Go through each patch
@@ -268,10 +271,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				continue;
 			}
 
-			struct patch_info info {};
+			struct patch_info info{};
 			info.description = description;
-			info.hash        = main_key;
-			info.version     = version;
+			info.hash = main_key;
+			info.version = version;
 			info.source_path = path;
 
 			if (const auto games_node = patches_entry.second[patch_key::games])
@@ -329,7 +332,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							is_valid = false;
 							continue;
 						}
-						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return std::isalnum(c); }))
+						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c)
+														   {
+															   return std::isalnum(c);
+														   }))
 						{
 							append_log_message(log_messages, fmt::format("Error: Serial '%s' invalid (patch: %s, key: %s, location: %s, file: %s)", serial, description, main_key, get_yaml_node_location(serial_node), path), &patch_log.error);
 							is_valid = false;
@@ -457,7 +463,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 								const std::string& str_type = config_value_type_node.Scalar();
 								bool is_valid_type = false;
 
-								for (patch_configurable_type type : { patch_configurable_type::double_range, patch_configurable_type::double_enum, patch_configurable_type::long_range, patch_configurable_type::long_enum })
+								for (patch_configurable_type type : {patch_configurable_type::double_range, patch_configurable_type::double_enum, patch_configurable_type::long_range, patch_configurable_type::long_enum})
 								{
 									if (str_type == fmt::format("%s", type))
 									{
@@ -558,7 +564,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 													new_allowed_value.label = allowed_value.first.Scalar();
 													new_allowed_value.value = get_and_check_config_value(allowed_value.second);
 
-													if (std::any_of(config_value.allowed_values.begin(), config_value.allowed_values.end(), [&new_allowed_value](const patch_allowed_value& other){ return new_allowed_value.value == other.value || new_allowed_value.label == other.label; }))
+													if (std::any_of(config_value.allowed_values.begin(), config_value.allowed_values.end(), [&new_allowed_value](const patch_allowed_value& other)
+															{
+																return new_allowed_value.value == other.value || new_allowed_value.label == other.label;
+															}))
 													{
 														append_log_message(log_messages, fmt::format("Error: Skipping configurable allowed value. Another entry with the same label or value already exists. (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
 														is_valid = false;
@@ -581,7 +590,10 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 												is_valid = false;
 											}
 
-											if (std::none_of(config_value.allowed_values.begin(), config_value.allowed_values.end(), [&config_value](const patch_allowed_value& other){ return other.value == config_value.value; }))
+											if (std::none_of(config_value.allowed_values.begin(), config_value.allowed_values.end(), [&config_value](const patch_allowed_value& other)
+													{
+														return other.value == config_value.value;
+													}))
 											{
 												append_log_message(log_messages, fmt::format("Error: Configurable value was not found in allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_allowed_values_node), path), &patch_log.error);
 												is_valid = false;
@@ -643,7 +655,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 				if (!importing)
 				{
-					patch_log.warning("A lower patch version was found ('%s' vs '%s') for %s: %s (in file %s)", existing_version, info.patch_version, main_key, description,  container.patch_info_map[description].source_path);
+					patch_log.warning("A lower patch version was found ('%s' vs '%s') for %s: %s (in file %s)", existing_version, info.patch_version, main_key, description, container.patch_info_map[description].source_path);
 				}
 			}
 
@@ -685,8 +697,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return false;
 	}
 
-	const auto type_node  = node[0];
-	const auto addr_node  = node[1];
+	const auto type_node = node[0];
+	const auto addr_node = node[1];
 	const auto value_node = node[2];
 
 	const auto type = get_patch_type(type_node);
@@ -738,10 +750,10 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	}
 
 	patch_data p_data{};
-	p_data.type            = type;
-	p_data.offset          = addr_node.as<u32>(0) + modifier;
+	p_data.type = type;
+	p_data.offset = addr_node.as<u32>(0) + modifier;
 	p_data.original_offset = addr_node.Scalar();
-	p_data.original_value  = value_node.Scalar();
+	p_data.original_value = value_node.Scalar();
 
 	const bool is_config_value = info.default_config_values.contains(p_data.original_value);
 	const patch_config_value config_value = is_config_value ? ::at32(info.default_config_values, p_data.original_value) : patch_config_value{};
@@ -954,7 +966,8 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 	for (const patch_engine::patch_data& p : patch.data_list)
 	{
-		if (p.type != patch_type::alloc) continue;
+		if (p.type != patch_type::alloc)
+			continue;
 
 		// Do not allow null address or if resultant ptr is not a VM ptr
 		if (const u32 alloc_at = (p.offset & -4096); alloc_at >> 16)
@@ -1008,14 +1021,14 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 		// Revert in case of failure
 		std::for_each(applied.begin() + old_applied_size, applied.end(), [&](u32 index)
-		{
-			const u32 addr = std::exchange(patch.data_list[index].alloc_addr, 0);
+			{
+				const u32 addr = std::exchange(patch.data_list[index].alloc_addr, 0);
 
-			vm::dealloc(addr);
+				vm::dealloc(addr);
 
-			auto alloc_map = vm::get(vm::any, addr);
-			unmap_vm_area(alloc_map);
-		});
+				auto alloc_map = vm::get(vm::any, addr);
+				unmap_vm_area(alloc_map);
+			});
 
 		applied.resize(old_applied_size);
 		return old_applied_size;
@@ -1568,12 +1581,11 @@ void patch_engine::apply(std::vector<u32>& applied_total, const std::string& nam
 	// Sort specific patches after global patches
 	// So they will determine the end results
 	const auto patch_super_list =
-	{
-		&patches_for_all_serials_and_all_versions,
-		&patches_for_all_serials_and_this_version,
-		&patches_for_this_serial_and_all_versions,
-		&patches_for_this_serial_and_this_version
-	};
+		{
+			&patches_for_all_serials_and_all_versions,
+			&patches_for_all_serials_and_this_version,
+			&patches_for_this_serial_and_all_versions,
+			&patches_for_this_serial_and_this_version};
 
 	// Filter by patch group (reverse so specific patches will be prioritized over globals)
 	for (auto it = std::rbegin(patch_super_list); it != std::rend(patch_super_list); it++)
@@ -1790,11 +1802,16 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 				}
 			}
 
-			if (!new_info.patch_version.empty()) info.patch_version = new_info.patch_version;
-			if (!new_info.author.empty())        info.author        = new_info.author;
-			if (!new_info.notes.empty())         info.notes         = new_info.notes;
-			if (!new_info.data_list.empty())     info.data_list     = new_info.data_list;
-			if (!new_info.source_path.empty())   info.source_path   = new_info.source_path;
+			if (!new_info.patch_version.empty())
+				info.patch_version = new_info.patch_version;
+			if (!new_info.author.empty())
+				info.author = new_info.author;
+			if (!new_info.notes.empty())
+				info.notes = new_info.notes;
+			if (!new_info.data_list.empty())
+				info.data_list = new_info.data_list;
+			if (!new_info.source_path.empty())
+				info.source_path = new_info.source_path;
 
 			count++;
 		}
@@ -1850,10 +1867,14 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 			out << YAML::EndMap;
 
-			if (!info.author.empty())        out << patch_key::author        << info.author;
-			if (!info.patch_version.empty()) out << patch_key::patch_version << info.patch_version;
-			if (!info.patch_group.empty())   out << patch_key::group         << info.patch_group;
-			if (!info.notes.empty())         out << patch_key::notes         << info.notes;
+			if (!info.author.empty())
+				out << patch_key::author << info.author;
+			if (!info.patch_version.empty())
+				out << patch_key::patch_version << info.patch_version;
+			if (!info.patch_group.empty())
+				out << patch_key::group << info.patch_group;
+			if (!info.notes.empty())
+				out << patch_key::notes << info.notes;
 
 			if (!info.default_config_values.empty())
 			{
@@ -1964,7 +1985,7 @@ patch_engine::patch_map patch_engine::load_config()
 	const std::string path = get_patch_config_path();
 	patch_log.notice("Loading patch config file %s", path);
 
-	if (fs::file f{ path })
+	if (fs::file f{path})
 	{
 		auto [root, error] = yaml_load(f.to_string());
 

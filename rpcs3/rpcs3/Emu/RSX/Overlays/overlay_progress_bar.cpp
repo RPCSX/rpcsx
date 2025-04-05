@@ -22,7 +22,7 @@ namespace rsx
 
 		void progress_bar::set_limit(f32 limit)
 		{
-			m_limit     = limit;
+			m_limit = limit;
 			m_is_compiled = false;
 		}
 

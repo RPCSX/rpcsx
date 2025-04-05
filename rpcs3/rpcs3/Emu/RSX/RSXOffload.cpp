@@ -22,7 +22,7 @@ namespace rsx
 
 		thread_base* current_thread_ = nullptr;
 
-		void operator ()()
+		void operator()()
 		{
 			if (!g_cfg.video.multithreaded_rsx)
 			{
@@ -97,7 +97,7 @@ namespace rsx
 	}
 
 	// General transport
-	void dma_manager::copy(void *dst, std::vector<u8>& src, u32 length) const
+	void dma_manager::copy(void* dst, std::vector<u8>& src, u32 length) const
 	{
 		if (length <= max_immediate_transfer_size || !g_cfg.video.multithreaded_rsx)
 		{
@@ -110,7 +110,7 @@ namespace rsx
 		}
 	}
 
-	void dma_manager::copy(void *dst, void *src, u32 length) const
+	void dma_manager::copy(void* dst, void* src, u32 length) const
 	{
 		if (length <= max_immediate_transfer_size || !g_cfg.video.multithreaded_rsx)
 		{
@@ -126,7 +126,7 @@ namespace rsx
 	}
 
 	// Vertex utilities
-	void dma_manager::emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count)
+	void dma_manager::emulate_as_indexed(void* dst, rsx::primitive_type primitive, u32 count)
 	{
 		if (!g_cfg.video.multithreaded_rsx)
 		{
@@ -216,7 +216,7 @@ namespace rsx
 	{
 		const auto m_current_job = ensure(m_thread->m_current_job);
 
-		void *address = nullptr;
+		void* address = nullptr;
 		u32 range = m_current_job->length;
 
 		switch (m_current_job->type)
@@ -239,4 +239,4 @@ namespace rsx
 
 		return utils::address_range::start_length(vm::get_addr(address), range);
 	}
-}
+} // namespace rsx

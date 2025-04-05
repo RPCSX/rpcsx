@@ -28,151 +28,150 @@ extern void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size,
 LOG_CHANNEL(sys_prx);
 
 // <string: firmware sprx, int: should hle if 1>
-extern const std::map<std::string_view, int> g_prx_list
-{
-	{ "/dev_flash/sys/internal/libfs_utility_init.sprx", 1 },
-	{ "libaacenc.sprx", 0 },
-	{ "libaacenc_spurs.sprx", 0 },
-	{ "libac3dec.sprx", 0 },
-	{ "libac3dec2.sprx", 0 },
-	{ "libadec.sprx", 1 },
-	{ "libadec2.sprx", 0 },
-	{ "libadec_internal.sprx", 0 },
-	{ "libad_async.sprx", 0 },
-	{ "libad_billboard_util.sprx", 0 },
-	{ "libad_core.sprx", 0 },
-	{ "libapostsrc_mini.sprx", 0 },
-	{ "libasfparser2_astd.sprx", 0 },
-	{ "libat3dec.sprx", 0 },
-	{ "libat3multidec.sprx", 0 },
-	{ "libatrac3multi.sprx", 0 },
-	{ "libatrac3plus.sprx", 0 },
-	{ "libatxdec.sprx", 1 },
-	{ "libatxdec2.sprx", 0 },
-	{ "libaudio.sprx", 1 },
-	{ "libavcdec.sprx", 0 },
-	{ "libavcenc.sprx", 0 },
-	{ "libavcenc_small.sprx", 0 },
-	{ "libavchatjpgdec.sprx", 0 },
-	{ "libbeisobmf.sprx", 0 },
-	{ "libbemp2sys.sprx", 0 },
-	{ "libcamera.sprx", 1 },
-	{ "libcelp8dec.sprx", 0 },
-	{ "libcelp8enc.sprx", 0 },
-	{ "libcelpdec.sprx", 0 },
-	{ "libcelpenc.sprx", 0 },
-	{ "libddpdec.sprx", 0 },
-	{ "libdivxdec.sprx", 0 },
-	{ "libdmux.sprx", 0 },
-	{ "libdmuxpamf.sprx", 0 },
-	{ "libdtslbrdec.sprx", 0 },
-	{ "libfiber.sprx", 0 },
-	{ "libfont.sprx", 0 },
-	{ "libfontFT.sprx", 0 },
-	{ "libfreetype.sprx", 0 },
-	{ "libfreetypeTT.sprx", 0 },
-	{ "libfs.sprx", 0 },
-	{ "libfs_155.sprx", 0 },
-	{ "libgcm_sys.sprx", 0 },
-	{ "libgem.sprx", 1 },
-	{ "libgifdec.sprx", 0 },
-	{ "libhttp.sprx", 0 },
-	{ "libio.sprx", 1 },
-	{ "libjpgdec.sprx", 0 },
-	{ "libjpgenc.sprx", 0 },
-	{ "libkey2char.sprx", 0 },
-	{ "libl10n.sprx", 0 },
-	{ "liblv2.sprx", 0 },
-	{ "liblv2coredump.sprx", 0 },
-	{ "liblv2dbg_for_cex.sprx", 0 },
-	{ "libm2bcdec.sprx", 0 },
-	{ "libm4aacdec.sprx", 0 },
-	{ "libm4aacdec2ch.sprx", 0 },
-	{ "libm4hdenc.sprx", 0 },
-	{ "libm4venc.sprx", 0 },
-	{ "libmedi.sprx", 1 },
-	{ "libmic.sprx", 1 },
-	{ "libmp3dec.sprx", 0 },
-	{ "libmp4.sprx", 0 },
-	{ "libmpl1dec.sprx", 0 },
-	{ "libmvcdec.sprx", 0 },
-	{ "libnet.sprx", 0 },
-	{ "libnetctl.sprx", 1 },
-	{ "libpamf.sprx", 1 },
-	{ "libpngdec.sprx", 0 },
-	{ "libpngenc.sprx", 0 },
-	{ "libresc.sprx", 0 },
-	{ "librtc.sprx", 1 },
-	{ "librudp.sprx", 0 },
-	{ "libsail.sprx", 0 },
-	{ "libsail_avi.sprx", 0 },
-	{ "libsail_rec.sprx", 0 },
-	{ "libsjvtd.sprx", 0 },
-	{ "libsmvd2.sprx", 0 },
-	{ "libsmvd4.sprx", 0 },
-	{ "libspurs_jq.sprx", 0 },
-	{ "libsre.sprx", 0 },
-	{ "libssl.sprx", 0 },
-	{ "libsvc1d.sprx", 0 },
-	{ "libsync2.sprx", 0 },
-	{ "libsysmodule.sprx", 0 },
-	{ "libsysutil.sprx", 1 },
-	{ "libsysutil_ap.sprx", 1 },
-	{ "libsysutil_authdialog.sprx", 1 },
-	{ "libsysutil_avc2.sprx", 1 },
-	{ "libsysutil_avconf_ext.sprx", 1 },
-	{ "libsysutil_avc_ext.sprx", 1 },
-	{ "libsysutil_bgdl.sprx", 1 },
-	{ "libsysutil_cross_controller.sprx", 1 },
-	{ "libsysutil_dec_psnvideo.sprx", 1 },
-	{ "libsysutil_dtcp_ip.sprx", 1 },
-	{ "libsysutil_game.sprx", 1 },
-	{ "libsysutil_game_exec.sprx", 1 },
-	{ "libsysutil_imejp.sprx", 1 },
-	{ "libsysutil_misc.sprx", 1 },
-	{ "libsysutil_music.sprx", 1 },
-	{ "libsysutil_music_decode.sprx", 1 },
-	{ "libsysutil_music_export.sprx", 1 },
-	{ "libsysutil_np.sprx", 1 },
-	{ "libsysutil_np2.sprx", 1 },
-	{ "libsysutil_np_clans.sprx", 1 },
-	{ "libsysutil_np_commerce2.sprx", 1 },
-	{ "libsysutil_np_eula.sprx", 1 },
-	{ "libsysutil_np_installer.sprx", 1 },
-	{ "libsysutil_np_sns.sprx", 1 },
-	{ "libsysutil_np_trophy.sprx", 1 },
-	{ "libsysutil_np_tus.sprx", 1 },
-	{ "libsysutil_np_util.sprx", 1 },
-	{ "libsysutil_oskdialog_ext.sprx", 1 },
-	{ "libsysutil_pesm.sprx", 1 },
-	{ "libsysutil_photo_decode.sprx", 1 },
-	{ "libsysutil_photo_export.sprx", 1 },
-	{ "libsysutil_photo_export2.sprx", 1 },
-	{ "libsysutil_photo_import.sprx", 1 },
-	{ "libsysutil_photo_network_sharing.sprx", 1 },
-	{ "libsysutil_print.sprx", 1 },
-	{ "libsysutil_rec.sprx", 1 },
-	{ "libsysutil_remoteplay.sprx", 1 },
-	{ "libsysutil_rtcalarm.sprx", 1 },
-	{ "libsysutil_savedata.sprx", 1 },
-	{ "libsysutil_savedata_psp.sprx", 1 },
-	{ "libsysutil_screenshot.sprx", 1 },
-	{ "libsysutil_search.sprx", 1 },
-	{ "libsysutil_storagedata.sprx", 1 },
-	{ "libsysutil_subdisplay.sprx", 1 },
-	{ "libsysutil_syschat.sprx", 1 },
-	{ "libsysutil_sysconf_ext.sprx", 1 },
-	{ "libsysutil_userinfo.sprx", 1 },
-	{ "libsysutil_video_export.sprx", 1 },
-	{ "libsysutil_video_player.sprx", 1 },
-	{ "libsysutil_video_upload.sprx", 1 },
-	{ "libusbd.sprx", 0 },
-	{ "libusbpspcm.sprx", 0 },
-	{ "libvdec.sprx", 1 },
-	{ "libvoice.sprx", 1 },
-	{ "libvpost.sprx", 0 },
-	{ "libvpost2.sprx", 0 },
-	{ "libwmadec.sprx", 0 },
+extern const std::map<std::string_view, int> g_prx_list{
+	{"/dev_flash/sys/internal/libfs_utility_init.sprx", 1},
+	{"libaacenc.sprx", 0},
+	{"libaacenc_spurs.sprx", 0},
+	{"libac3dec.sprx", 0},
+	{"libac3dec2.sprx", 0},
+	{"libadec.sprx", 1},
+	{"libadec2.sprx", 0},
+	{"libadec_internal.sprx", 0},
+	{"libad_async.sprx", 0},
+	{"libad_billboard_util.sprx", 0},
+	{"libad_core.sprx", 0},
+	{"libapostsrc_mini.sprx", 0},
+	{"libasfparser2_astd.sprx", 0},
+	{"libat3dec.sprx", 0},
+	{"libat3multidec.sprx", 0},
+	{"libatrac3multi.sprx", 0},
+	{"libatrac3plus.sprx", 0},
+	{"libatxdec.sprx", 1},
+	{"libatxdec2.sprx", 0},
+	{"libaudio.sprx", 1},
+	{"libavcdec.sprx", 0},
+	{"libavcenc.sprx", 0},
+	{"libavcenc_small.sprx", 0},
+	{"libavchatjpgdec.sprx", 0},
+	{"libbeisobmf.sprx", 0},
+	{"libbemp2sys.sprx", 0},
+	{"libcamera.sprx", 1},
+	{"libcelp8dec.sprx", 0},
+	{"libcelp8enc.sprx", 0},
+	{"libcelpdec.sprx", 0},
+	{"libcelpenc.sprx", 0},
+	{"libddpdec.sprx", 0},
+	{"libdivxdec.sprx", 0},
+	{"libdmux.sprx", 0},
+	{"libdmuxpamf.sprx", 0},
+	{"libdtslbrdec.sprx", 0},
+	{"libfiber.sprx", 0},
+	{"libfont.sprx", 0},
+	{"libfontFT.sprx", 0},
+	{"libfreetype.sprx", 0},
+	{"libfreetypeTT.sprx", 0},
+	{"libfs.sprx", 0},
+	{"libfs_155.sprx", 0},
+	{"libgcm_sys.sprx", 0},
+	{"libgem.sprx", 1},
+	{"libgifdec.sprx", 0},
+	{"libhttp.sprx", 0},
+	{"libio.sprx", 1},
+	{"libjpgdec.sprx", 0},
+	{"libjpgenc.sprx", 0},
+	{"libkey2char.sprx", 0},
+	{"libl10n.sprx", 0},
+	{"liblv2.sprx", 0},
+	{"liblv2coredump.sprx", 0},
+	{"liblv2dbg_for_cex.sprx", 0},
+	{"libm2bcdec.sprx", 0},
+	{"libm4aacdec.sprx", 0},
+	{"libm4aacdec2ch.sprx", 0},
+	{"libm4hdenc.sprx", 0},
+	{"libm4venc.sprx", 0},
+	{"libmedi.sprx", 1},
+	{"libmic.sprx", 1},
+	{"libmp3dec.sprx", 0},
+	{"libmp4.sprx", 0},
+	{"libmpl1dec.sprx", 0},
+	{"libmvcdec.sprx", 0},
+	{"libnet.sprx", 0},
+	{"libnetctl.sprx", 1},
+	{"libpamf.sprx", 1},
+	{"libpngdec.sprx", 0},
+	{"libpngenc.sprx", 0},
+	{"libresc.sprx", 0},
+	{"librtc.sprx", 1},
+	{"librudp.sprx", 0},
+	{"libsail.sprx", 0},
+	{"libsail_avi.sprx", 0},
+	{"libsail_rec.sprx", 0},
+	{"libsjvtd.sprx", 0},
+	{"libsmvd2.sprx", 0},
+	{"libsmvd4.sprx", 0},
+	{"libspurs_jq.sprx", 0},
+	{"libsre.sprx", 0},
+	{"libssl.sprx", 0},
+	{"libsvc1d.sprx", 0},
+	{"libsync2.sprx", 0},
+	{"libsysmodule.sprx", 0},
+	{"libsysutil.sprx", 1},
+	{"libsysutil_ap.sprx", 1},
+	{"libsysutil_authdialog.sprx", 1},
+	{"libsysutil_avc2.sprx", 1},
+	{"libsysutil_avconf_ext.sprx", 1},
+	{"libsysutil_avc_ext.sprx", 1},
+	{"libsysutil_bgdl.sprx", 1},
+	{"libsysutil_cross_controller.sprx", 1},
+	{"libsysutil_dec_psnvideo.sprx", 1},
+	{"libsysutil_dtcp_ip.sprx", 1},
+	{"libsysutil_game.sprx", 1},
+	{"libsysutil_game_exec.sprx", 1},
+	{"libsysutil_imejp.sprx", 1},
+	{"libsysutil_misc.sprx", 1},
+	{"libsysutil_music.sprx", 1},
+	{"libsysutil_music_decode.sprx", 1},
+	{"libsysutil_music_export.sprx", 1},
+	{"libsysutil_np.sprx", 1},
+	{"libsysutil_np2.sprx", 1},
+	{"libsysutil_np_clans.sprx", 1},
+	{"libsysutil_np_commerce2.sprx", 1},
+	{"libsysutil_np_eula.sprx", 1},
+	{"libsysutil_np_installer.sprx", 1},
+	{"libsysutil_np_sns.sprx", 1},
+	{"libsysutil_np_trophy.sprx", 1},
+	{"libsysutil_np_tus.sprx", 1},
+	{"libsysutil_np_util.sprx", 1},
+	{"libsysutil_oskdialog_ext.sprx", 1},
+	{"libsysutil_pesm.sprx", 1},
+	{"libsysutil_photo_decode.sprx", 1},
+	{"libsysutil_photo_export.sprx", 1},
+	{"libsysutil_photo_export2.sprx", 1},
+	{"libsysutil_photo_import.sprx", 1},
+	{"libsysutil_photo_network_sharing.sprx", 1},
+	{"libsysutil_print.sprx", 1},
+	{"libsysutil_rec.sprx", 1},
+	{"libsysutil_remoteplay.sprx", 1},
+	{"libsysutil_rtcalarm.sprx", 1},
+	{"libsysutil_savedata.sprx", 1},
+	{"libsysutil_savedata_psp.sprx", 1},
+	{"libsysutil_screenshot.sprx", 1},
+	{"libsysutil_search.sprx", 1},
+	{"libsysutil_storagedata.sprx", 1},
+	{"libsysutil_subdisplay.sprx", 1},
+	{"libsysutil_syschat.sprx", 1},
+	{"libsysutil_sysconf_ext.sprx", 1},
+	{"libsysutil_userinfo.sprx", 1},
+	{"libsysutil_video_export.sprx", 1},
+	{"libsysutil_video_player.sprx", 1},
+	{"libsysutil_video_upload.sprx", 1},
+	{"libusbd.sprx", 0},
+	{"libusbpspcm.sprx", 0},
+	{"libvdec.sprx", 1},
+	{"libvoice.sprx", 1},
+	{"libvpost.sprx", 0},
+	{"libvpost2.sprx", 0},
+	{"libwmadec.sprx", 0},
 };
 
 bool ppu_register_library_lock(std::string_view libname, bool lock_lib);
@@ -393,7 +392,8 @@ void lv2_prx::save(utils::serial& ar)
 
 	for (const ppu_segment& seg : segs)
 	{
-		if (seg.type == 0x1u && seg.size) ar(seg.addr);
+		if (seg.type == 0x1u && seg.size)
+			ar(seg.addr);
 	}
 }
 
@@ -633,7 +633,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case PRX_STATE_INITIALIZED: return CELL_PRX_ERROR_NOT_STARTED;
 		case PRX_STATE_STOPPED: return CELL_PRX_ERROR_ALREADY_STOPPED;
 		case PRX_STATE_STOPPING: return CELL_PRX_ERROR_ALREADY_STOPPING; // Internal error
-		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
+		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR;            // Internal error
 		case PRX_STATE_DESTROYED: return CELL_ESRCH;
 		case PRX_STATE_STARTED: break;
 		default:
@@ -677,7 +677,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case PRX_STATE_INITIALIZED: return CELL_PRX_ERROR_NOT_STARTED;
 		case PRX_STATE_STOPPED: return CELL_PRX_ERROR_ALREADY_STOPPED;
 		case PRX_STATE_STOPPING: return CELL_PRX_ERROR_ALREADY_STOPPING; // Internal error
-		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
+		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR;            // Internal error
 		case PRX_STATE_DESTROYED: return CELL_ESRCH;
 		case PRX_STATE_STARTED: break;
 		default:
@@ -694,7 +694,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		{
 			// Disables stop function execution (but the real value can be read through _sys_prx_get_module_info)
 			sys_prx.todo("_sys_prx_stop_module(): cmd is 8 (stop function = *0x%x)", prx->stop);
-			//prx->stop = vm::null;
+			// prx->stop = vm::null;
 		}
 
 		return CELL_OK;
@@ -710,26 +710,27 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 
 	// Get the PRX, free the used memory and delete the object and its ID
 	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id, [](lv2_prx& prx) -> CellPrxError
-	{
-		switch (prx.state.fetch_op([](u32& value)
 		{
-			if (value == PRX_STATE_INITIALIZED || value == PRX_STATE_STOPPED)
+			switch (prx.state.fetch_op([](u32& value)
+								 {
+									 if (value == PRX_STATE_INITIALIZED || value == PRX_STATE_STOPPED)
+									 {
+										 value = PRX_STATE_DESTROYED;
+										 return true;
+									 }
+
+									 return false;
+								 })
+					.first)
 			{
-				value = PRX_STATE_DESTROYED;
-				return true;
+			case PRX_STATE_INITIALIZED:
+			case PRX_STATE_STOPPED:
+				return {};
+			default: break;
 			}
 
-			return false;
-		}).first)
-		{
-		case PRX_STATE_INITIALIZED:
-		case PRX_STATE_STOPPED:
-			return {};
-		default: break;
-		}
-
-		return CELL_PRX_ERROR_NOT_REMOVABLE;
-	});
+			return CELL_PRX_ERROR_NOT_REMOVABLE;
+		});
 
 	if (!prx)
 	{
@@ -749,7 +750,7 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 
 	ppu_finalize(*prx);
 
-	//s32 result = prx->exit ? prx->exit() : CELL_OK;
+	// s32 result = prx->exit ? prx->exit() : CELL_OK;
 
 	return CELL_OK;
 }
@@ -845,8 +846,8 @@ error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::pt
 	}
 
 	sys_prx.warning("opt: size=0x%x, type=0x%x, unk3=0x%x, unk4=0x%x, lib_entries_ea=%s, lib_entries_size=0x%x"
-		", lib_stub_ea=%s, lib_stub_size=0x%x, error_handler=%s", info.size, info.type, info.unk3, info.unk4
-		, info.lib_entries_ea, info.lib_entries_size, info.lib_stub_ea, info.lib_stub_size, info.error_handler);
+					", lib_stub_ea=%s, lib_stub_size=0x%x, error_handler=%s",
+		info.size, info.type, info.unk3, info.unk4, info.lib_entries_ea, info.lib_entries_size, info.lib_stub_ea, info.lib_stub_size, info.error_handler);
 
 	if (info.type & 0x1)
 	{
@@ -894,21 +895,21 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 	if (flags.front())
 	{
 		const bool success = idm::select<lv2_obj, lv2_prx>([&](u32 /*id*/, lv2_prx& prx)
-		{
-			if (prx.state == PRX_STATE_INITIALIZED)
 			{
-				for (u32 lib_addr = prx.exports_start, index = 0; lib_addr < prx.exports_end; index++, lib_addr += vm::read8(lib_addr) ? vm::read8(lib_addr) : sizeof_lib)
+				if (prx.state == PRX_STATE_INITIALIZED)
 				{
-					if (std::memcpy(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
+					for (u32 lib_addr = prx.exports_start, index = 0; lib_addr < prx.exports_end; index++, lib_addr += vm::read8(lib_addr) ? vm::read8(lib_addr) : sizeof_lib)
 					{
-						atomic_storage<char>::release(prx.m_external_loaded_flags[index], true);
-						return true;
+						if (std::memcpy(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
+						{
+							atomic_storage<char>::release(prx.m_external_loaded_flags[index], true);
+							return true;
+						}
 					}
 				}
-			}
 
-			return false;
-		}).ret;
+				return false;
+			}).ret;
 
 		if (!success)
 		{
@@ -983,21 +984,21 @@ error_code _sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_
 			const std::string liblv2_path = vfs::get("/dev_flash/sys/external/liblv2.sprx");
 
 			idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx)
-			{
-				if (count >= max_count)
 				{
-					return true;
-				}
+					if (count >= max_count)
+					{
+						return true;
+					}
 
-				if (prx.path == liblv2_path)
-				{
-					// Hide liblv2.sprx for now
+					if (prx.path == liblv2_path)
+					{
+						// Hide liblv2.sprx for now
+						return false;
+					}
+
+					idlist[count++] = id;
 					return false;
-				}
-
-				idlist[count++] = id;
-				return false;
-			});
+				});
 		}
 
 		pInfo->count = count;
@@ -1062,7 +1063,8 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		u32 i = 0;
 		for (; i < prx->segs.size() && i < pOpt->info->segments_num; i++)
 		{
-			if (!prx->segs[i].addr) continue; // TODO: Check this
+			if (!prx->segs[i].addr)
+				continue; // TODO: Check this
 			pOpt->info->segments[i].index = i;
 			pOpt->info->segments[i].base = prx->segs[i].addr;
 			pOpt->info->segments[i].filesz = prx->segs[i].filesz;
@@ -1096,14 +1098,14 @@ error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, 
 	}
 
 	const auto [prx, id] = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx) -> u32
-	{
-		if (strncmp(module_name.c_str(), prx.module_info_name, sizeof(prx.module_info_name)) == 0)
 		{
-			return id;
-		}
+			if (strncmp(module_name.c_str(), prx.module_info_name, sizeof(prx.module_info_name)) == 0)
+			{
+				return id;
+			}
 
-		return 0;
-	});
+			return 0;
+		});
 
 	if (!id)
 	{
@@ -1126,17 +1128,17 @@ error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)
 	}
 
 	const auto [prx, id] = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx) -> u32
-	{
-		for (const ppu_segment& seg : prx.segs)
 		{
-			if (seg.size && addr >= seg.addr && addr < seg.addr + seg.size)
+			for (const ppu_segment& seg : prx.segs)
 			{
-				return id;
+				if (seg.size && addr >= seg.addr && addr < seg.addr + seg.size)
+				{
+					return id;
+				}
 			}
-		}
 
-		return 0;
-	});
+			return 0;
+		});
 
 	if (!id)
 	{
@@ -1166,35 +1168,35 @@ template <>
 void fmt_class_string<CellPrxError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellPrxError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_PRX_ERROR_ERROR);
-		STR_CASE(CELL_PRX_ERROR_ILLEGAL_PERM);
-		STR_CASE(CELL_PRX_ERROR_UNKNOWN_MODULE);
-		STR_CASE(CELL_PRX_ERROR_ALREADY_STARTED);
-		STR_CASE(CELL_PRX_ERROR_NOT_STARTED);
-		STR_CASE(CELL_PRX_ERROR_ALREADY_STOPPED);
-		STR_CASE(CELL_PRX_ERROR_CAN_NOT_STOP);
-		STR_CASE(CELL_PRX_ERROR_NOT_REMOVABLE);
-		STR_CASE(CELL_PRX_ERROR_LIBRARY_NOT_YET_LINKED);
-		STR_CASE(CELL_PRX_ERROR_LIBRARY_FOUND);
-		STR_CASE(CELL_PRX_ERROR_LIBRARY_NOTFOUND);
-		STR_CASE(CELL_PRX_ERROR_ILLEGAL_LIBRARY);
-		STR_CASE(CELL_PRX_ERROR_LIBRARY_INUSE);
-		STR_CASE(CELL_PRX_ERROR_ALREADY_STOPPING);
-		STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE);
-		STR_CASE(CELL_PRX_ERROR_INVAL);
-		STR_CASE(CELL_PRX_ERROR_ILLEGAL_PROCESS);
-		STR_CASE(CELL_PRX_ERROR_NO_LIBLV2);
-		STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_ELF_TYPE);
-		STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_ELF_CLASS);
-		STR_CASE(CELL_PRX_ERROR_UNDEFINED_SYMBOL);
-		STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_RELOCATION_TYPE);
-		STR_CASE(CELL_PRX_ERROR_ELF_IS_REGISTERED);
-		STR_CASE(CELL_PRX_ERROR_NO_EXIT_ENTRY);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_PRX_ERROR_ERROR);
+				STR_CASE(CELL_PRX_ERROR_ILLEGAL_PERM);
+				STR_CASE(CELL_PRX_ERROR_UNKNOWN_MODULE);
+				STR_CASE(CELL_PRX_ERROR_ALREADY_STARTED);
+				STR_CASE(CELL_PRX_ERROR_NOT_STARTED);
+				STR_CASE(CELL_PRX_ERROR_ALREADY_STOPPED);
+				STR_CASE(CELL_PRX_ERROR_CAN_NOT_STOP);
+				STR_CASE(CELL_PRX_ERROR_NOT_REMOVABLE);
+				STR_CASE(CELL_PRX_ERROR_LIBRARY_NOT_YET_LINKED);
+				STR_CASE(CELL_PRX_ERROR_LIBRARY_FOUND);
+				STR_CASE(CELL_PRX_ERROR_LIBRARY_NOTFOUND);
+				STR_CASE(CELL_PRX_ERROR_ILLEGAL_LIBRARY);
+				STR_CASE(CELL_PRX_ERROR_LIBRARY_INUSE);
+				STR_CASE(CELL_PRX_ERROR_ALREADY_STOPPING);
+				STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE);
+				STR_CASE(CELL_PRX_ERROR_INVAL);
+				STR_CASE(CELL_PRX_ERROR_ILLEGAL_PROCESS);
+				STR_CASE(CELL_PRX_ERROR_NO_LIBLV2);
+				STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_ELF_TYPE);
+				STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_ELF_CLASS);
+				STR_CASE(CELL_PRX_ERROR_UNDEFINED_SYMBOL);
+				STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_RELOCATION_TYPE);
+				STR_CASE(CELL_PRX_ERROR_ELF_IS_REGISTERED);
+				STR_CASE(CELL_PRX_ERROR_NO_EXIT_ENTRY);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }

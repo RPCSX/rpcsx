@@ -139,7 +139,7 @@ usz decrypt_binaries_t::decrypt(std::string_view klic_input)
 			{
 				const std::string exec_ext = fmt::to_lower(_module).ends_with(".sprx") ? ".prx" : ".elf";
 				const std::string new_path = file_magic == "NPD\0"_u32 ? old_path + ".unedat" :
-					old_path.substr(0, old_path.find_last_of('.')) + exec_ext;
+				                                                         old_path.substr(0, old_path.find_last_of('.')) + exec_ext;
 
 				if (fs::file new_file{new_path, fs::rewrite})
 				{

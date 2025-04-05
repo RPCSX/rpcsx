@@ -71,7 +71,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 	bool case_insensitive = false;
 
 	// First characters for case insensitive search
-	const char first_chars[2]{ static_cast<char>(::tolower(wstr[0])), static_cast<char>(::toupper(wstr[0])) };
+	const char first_chars[2]{static_cast<char>(::tolower(wstr[0])), static_cast<char>(::toupper(wstr[0]))};
 	std::string_view insensitive_search{first_chars, 2};
 
 	if (insensitive_search[0] == insensitive_search[1])
@@ -190,267 +190,272 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 	vm::writer_lock rlock;
 
 	const named_thread_group workers("Memory Searcher "sv, max_threads, [&]()
-	{
-		if (mode == as_inst || mode == as_fake_spu_inst || mode == as_regex_inst || mode == as_regex_fake_spu_inst)
 		{
-			auto disasm = m_disasm->copy_type_erased();
-			disasm->change_mode(cpu_disasm_mode::normal);
+			if (mode == as_inst || mode == as_fake_spu_inst || mode == as_regex_inst || mode == as_regex_fake_spu_inst)
+			{
+				auto disasm = m_disasm->copy_type_erased();
+				disasm->change_mode(cpu_disasm_mode::normal);
 
-			SPUDisAsm spu_dis(cpu_disasm_mode::normal, static_cast<const u8*>(m_ptr));
+				SPUDisAsm spu_dis(cpu_disasm_mode::normal, static_cast<const u8*>(m_ptr));
 
-			const usz limit = std::min(m_size, m_ptr == vm::g_sudo_addr ? 0xFFFF'0000 : m_size);
+				const usz limit = std::min(m_size, m_ptr == vm::g_sudo_addr ? 0xFFFF'0000 : m_size);
+
+				while (true)
+				{
+					u32 addr;
+
+					const bool ok = avail_addr.fetch_op([&](u32& val)
+												  {
+													  if (val < limit && val != umax)
+													  {
+														  while (m_ptr == vm::g_sudo_addr && !vm::check_addr(val, mode == as_inst ? vm::page_executable : 0))
+														  {
+															  // Skip unmapped memory
+															  val = utils::align(val + 1, 0x10000);
+
+															  if (!val)
+															  {
+																  return false;
+															  }
+														  }
+
+														  addr = val;
+
+														  // Iterate 16k instructions at a time
+														  val += 0x10000;
+
+														  if (!val)
+														  {
+															  // Overflow detection
+															  val = -1;
+														  }
+
+														  return true;
+													  }
+
+													  return false;
+												  })
+				                        .second;
+
+					if (!ok)
+					{
+						return;
+					}
+
+					u32 spu_base_pc = 0;
+
+					if (mode == as_fake_spu_inst)
+					{
+						// Check if we can extend the limits of SPU decoder so it can use the previous 64k block
+					    // For SPU instruction patterns
+						spu_base_pc = (addr >= 0x10000 && (m_ptr != vm::g_sudo_addr || vm::check_addr(addr - 0x10000, 0))) ? 0x10000 : 0;
+
+						// Set base for SPU decoder
+						spu_dis.change_ptr(static_cast<const u8*>(m_ptr) + addr - spu_base_pc);
+					}
+
+					for (u32 i = 0; i < 0x10000; i += 4)
+					{
+						if (mode == as_fake_spu_inst ? spu_dis.disasm(spu_base_pc + i) : disasm->disasm(addr + i))
+						{
+							auto& last = mode == as_fake_spu_inst ? spu_dis.last_opcode : disasm->last_opcode;
+
+							if (case_insensitive)
+							{
+								std::transform(last.begin(), last.end(), last.begin(), ::tolower);
+							}
+
+							std::smatch sm;
+
+							if (mode & (as_regex_inst | as_regex_fake_spu_inst) ? std::regex_search(last, sm, std::regex(wstr)) : last.find(wstr) != umax)
+							{
+								gui_log.success("Found instruction at 0x%08x: '%s'", addr + i, last);
+								found++;
+							}
+						}
+					}
+				}
+
+				return;
+			}
+
+			u32 local_found = 0;
+
+			u32 addr = 0;
+			bool ok = false;
+
+			const u64 addr_limit = (m_size >= block_size ? m_size - block_size : 0);
 
 			while (true)
 			{
-				u32 addr;
-
-				const bool ok = avail_addr.fetch_op([&](u32& val)
+				if (!(addr % block_size))
 				{
-					if (val < limit && val != umax)
-					{
-						while (m_ptr == vm::g_sudo_addr && !vm::check_addr(val, mode == as_inst ? vm::page_executable : 0))
+					std::tie(addr, ok) = avail_addr.fetch_op([&](u32& val)
 						{
-							// Skip unmapped memory
-							val = utils::align(val + 1, 0x10000);
+							if (val <= addr_limit)
+							{
+								// Iterate in 32MB blocks
+								val += block_size;
 
-							if (!val)
+								if (!val)
+									val = -1; // Overflow detection
+
+								return true;
+							}
+
+							return false;
+						});
+				}
+
+				if (!ok)
+				{
+					break;
+				}
+
+				if (![&]()
+					{
+						if (m_ptr != vm::g_sudo_addr)
+						{
+							// Always valid
+							return true;
+						}
+
+						// Skip unmapped memory
+						for (const u32 end = utils::align(addr + 1, block_size) - 0x1000; !vm::check_addr(addr, 0); addr += 0x1000)
+						{
+							if (addr == end)
 							{
 								return false;
 							}
 						}
 
-						addr = val;
-
-						// Iterate 16k instructions at a time
-						val += 0x10000;
-
-						if (!val)
-						{
-							// Overflow detection
-							val = -1;
-						}
-
 						return true;
+					}())
+				{
+					if (addr == 0u - 0x1000)
+					{
+						break;
 					}
 
-					return false;
-				}).second;
-
-				if (!ok)
-				{
-					return;
+					// The entire block is unmapped
+					addr += 0x1000;
+					continue;
 				}
 
-				u32 spu_base_pc = 0;
+				const u64 end_mem = std::min<u64>(utils::align<u64>(addr + 1, block_size), m_size);
 
-				if (mode == as_fake_spu_inst)
+				u64 addr_max = m_ptr == vm::g_sudo_addr ? addr : end_mem;
+
+				// Determine allocation size quickly
+				while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), vm::page_1m_size))
 				{
-					// Check if we can extend the limits of SPU decoder so it can use the previous 64k block
-					// For SPU instruction patterns
-					spu_base_pc = (addr >= 0x10000 && (m_ptr != vm::g_sudo_addr || vm::check_addr(addr - 0x10000, 0))) ? 0x10000 : 0;
-
-					// Set base for SPU decoder
-					spu_dis.change_ptr(static_cast<const u8*>(m_ptr) + addr - spu_base_pc);
+					addr_max += 0x100000;
 				}
 
-				for (u32 i = 0; i < 0x10000; i += 4)
+				while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), vm::page_64k_size))
 				{
-					if (mode == as_fake_spu_inst ? spu_dis.disasm(spu_base_pc + i) : disasm->disasm(addr + i))
+					addr_max += 0x10000;
+				}
+
+				while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), 0))
+				{
+					addr_max += 0x1000;
+				}
+
+				auto get_ptr = [&](u32 address)
+				{
+					return static_cast<const char*>(m_ptr) + address;
+				};
+
+				std::string_view section{get_ptr(addr), addr_max - addr};
+
+				usz first_char = 0;
+
+				auto log_occurance = [&](std::string_view& test_sv, bool always_log_str)
+				{
+					// Cut out a view which may or may not be suffixed by a single null character
+				    // This view is a peek at the full string which resides in PS3 memory
+					test_sv = test_sv.substr(0, std::max<usz>(wstr.size(), 100));
+					const usz null_pos = test_sv.find_first_of("\n\0"sv, wstr.size());
+					test_sv = test_sv.substr(0, null_pos);
+
+					const usz start = test_sv.data() - get_ptr(0);
+
+					if (!always_log_str && test_sv.size() == wstr.size())
 					{
-						auto& last = mode == as_fake_spu_inst ? spu_dis.last_opcode : disasm->last_opcode;
+						// Shorthand logging for identical strings
+						gui_log.success("Found at 0x%08x", start);
+					}
+					else if (null_pos != umax)
+					{
+						gui_log.success("Found at 0x%08x: '%s'", start, test_sv);
+					}
+					else
+					{
+						gui_log.success("Found at 0x%08x: '%s'..", start, test_sv);
+					}
+				};
 
-						if (case_insensitive)
+				if (case_insensitive)
+				{
+					while (first_char = section.find_first_of(insensitive_search, first_char), first_char != umax)
+					{
+						const u32 start = addr + ::narrow<u32>(first_char);
+
+						std::string_view test_sv{get_ptr(start), addr_max - start};
+
+						// Do not use allocating functions such as fmt::to_lower
+						if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c)
+																 {
+																	 return c == ::tolower(test_sv[&c - wstr.data()]);
+																 }))
 						{
-							std::transform(last.begin(), last.end(), last.begin(), ::tolower);
+							// Force full logging if any character differs in case
+							log_occurance(test_sv, !test_sv.starts_with(wstr));
+							local_found++;
 						}
 
-						std::smatch sm;
+						// Allow overlapping strings
+						first_char++;
+					}
+				}
+				else
+				{
+					while (first_char = section.find_first_of(wstr[0], first_char), first_char != umax)
+					{
+						const u32 start = addr + ::narrow<u32>(first_char);
 
-						if (mode & (as_regex_inst | as_regex_fake_spu_inst) ? std::regex_search(last, sm, std::regex(wstr)) : last.find(wstr) != umax)
+						std::string_view test_sv{get_ptr(start), addr_max - start};
+
+						if (test_sv.starts_with(wstr))
 						{
-							gui_log.success("Found instruction at 0x%08x: '%s'", addr + i, last);
-							found++;
+							if (mode == as_string)
+							{
+								log_occurance(test_sv, false);
+							}
+							else
+							{
+								gui_log.success("Found at 0x%08x", start);
+							}
+
+							local_found++;
 						}
-					}
-				}
-			}
 
-			return;
-		}
-
-		u32 local_found = 0;
-
-		u32 addr = 0;
-		bool ok = false;
-
-		const u64 addr_limit = (m_size >= block_size ? m_size - block_size : 0);
-
-		while (true)
-		{
-			if (!(addr % block_size))
-			{
-				std::tie(addr, ok) = avail_addr.fetch_op([&](u32& val)
-				{
-					if (val <= addr_limit)
-					{
-						// Iterate in 32MB blocks
-						val += block_size;
-
-						if (!val) val = -1; // Overflow detection
-
-						return true;
-					}
-
-					return false;
-				});
-			}
-
-			if (!ok)
-			{
-				break;
-			}
-
-			if (![&]()
-			{
-				if (m_ptr != vm::g_sudo_addr)
-				{
-					// Always valid
-					return true;
-				}
-
-				// Skip unmapped memory
-				for (const u32 end = utils::align(addr + 1, block_size) - 0x1000; !vm::check_addr(addr, 0); addr += 0x1000)
-				{
-					if (addr == end)
-					{
-						return false;
+						first_char++;
 					}
 				}
 
-				return true;
-			}())
-			{
-				if (addr == 0u - 0x1000)
+				// Check if at last page
+				if (addr_max >= m_size - 0x1000)
 				{
 					break;
 				}
 
-				// The entire block is unmapped
-				addr += 0x1000;
-				continue;
+				addr = addr_max;
 			}
 
-			const u64 end_mem = std::min<u64>(utils::align<u64>(addr + 1, block_size), m_size);
-
-			u64 addr_max = m_ptr == vm::g_sudo_addr ? addr : end_mem;
-
-			// Determine allocation size quickly
-			while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), vm::page_1m_size))
-			{
-				addr_max += 0x100000;
-			}
-
-			while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), vm::page_64k_size))
-			{
-				addr_max += 0x10000;
-			}
-
-			while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), 0))
-			{
-				addr_max += 0x1000;
-			}
-
-			auto get_ptr = [&](u32 address)
-			{
-				return static_cast<const char*>(m_ptr) + address;
-			};
-
-			std::string_view section{get_ptr(addr), addr_max - addr};
-
-			usz first_char = 0;
-
-			auto log_occurance = [&](std::string_view& test_sv, bool always_log_str)
-			{
-				// Cut out a view which may or may not be suffixed by a single null character
-				// This view is a peek at the full string which resides in PS3 memory
-				test_sv = test_sv.substr(0, std::max<usz>(wstr.size(), 100));
-				const usz null_pos = test_sv.find_first_of("\n\0"sv, wstr.size());
-				test_sv = test_sv.substr(0, null_pos);
-
-				const usz start = test_sv.data() - get_ptr(0);
-
-				if (!always_log_str && test_sv.size() == wstr.size())
-				{
-					// Shorthand logging for identical strings
-					gui_log.success("Found at 0x%08x", start);
-				}
-				else if (null_pos != umax)
-				{
-					gui_log.success("Found at 0x%08x: '%s'", start, test_sv);
-				}
-				else
-				{
-					gui_log.success("Found at 0x%08x: '%s'..", start, test_sv);
-				}
-			};
-
-			if (case_insensitive)
-			{
-				while (first_char = section.find_first_of(insensitive_search, first_char), first_char != umax)
-				{
-					const u32 start = addr + ::narrow<u32>(first_char);
-
-					std::string_view test_sv{get_ptr(start), addr_max - start};
-
-					// Do not use allocating functions such as fmt::to_lower
-					if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c) { return c == ::tolower(test_sv[&c - wstr.data()]); }))
-					{
-						// Force full logging if any character differs in case
-						log_occurance(test_sv, !test_sv.starts_with(wstr));
-						local_found++;
-					}
-
-					// Allow overlapping strings
-					first_char++;
-				}
-			}
-			else
-			{
-				while (first_char = section.find_first_of(wstr[0], first_char), first_char != umax)
-				{
-					const u32 start = addr + ::narrow<u32>(first_char);
-
-					std::string_view test_sv{get_ptr(start), addr_max - start};
-
-					if (test_sv.starts_with(wstr))
-					{
-						if (mode == as_string)
-						{
-							log_occurance(test_sv, false);
-						}
-						else
-						{
-							gui_log.success("Found at 0x%08x", start);
-						}
-
-						local_found++;
-					}
-
-					first_char++;
-				}
-			}
-
-			// Check if at last page
-			if (addr_max >= m_size - 0x1000)
-			{
-				break;
-			}
-
-			addr = addr_max;
-		}
-
-		found += local_found;
-	});
+			found += local_found;
+		});
 
 	workers.join();
 

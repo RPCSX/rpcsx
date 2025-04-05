@@ -41,18 +41,19 @@ namespace rsx
 
 		void video_view::init_video(const std::string& video_path)
 		{
-			if (video_path.empty()) return;
+			if (video_path.empty())
+				return;
 
 			m_video_source = Emu.GetCallbacks().make_video_source();
 			ensure(!!m_video_source);
 
 			m_video_source->set_update_callback([this]()
-			{
-				if (m_video_active)
 				{
-					m_is_compiled = false;
-				}
-			});
+					if (m_video_active)
+					{
+						m_is_compiled = false;
+					}
+				});
 			m_video_source->set_video_path(video_path);
 		}
 
@@ -112,5 +113,5 @@ namespace rsx
 
 			return external_ref ? image_view::get_compiled() : overlay_element::get_compiled();
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

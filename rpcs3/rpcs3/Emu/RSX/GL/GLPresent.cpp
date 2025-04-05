@@ -29,7 +29,7 @@ namespace gl
 			g_vis_texture.reset(new texture(target, visual->width(), visual->height(), 1, 1, 1, ifmt, visual->format_class()));
 			glCopyImageSubData(visual->id(), target, 0, 0, 0, 0, g_vis_texture->id(), target, 0, 0, 0, 0, visual->width(), visual->height(), 1);
 		}
-	}
+	} // namespace debug
 
 	GLenum RSX_display_format_to_gl_format(u8 format)
 	{
@@ -46,7 +46,7 @@ namespace gl
 			return GL_RGBA16F;
 		}
 	}
-}
+} // namespace gl
 
 gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig)
 {
@@ -56,7 +56,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 	// See notes on the vulkan implementation on what needs to happen before that is viable.
 
 	// Check the surface store first
-	gl::command_context cmd = { gl_state };
+	gl::command_context cmd = {gl_state};
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd,
 		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::transfer_read);
@@ -101,11 +101,12 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		}
 	}
 	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
-			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
+		surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
 		// The render might have been done offscreen or in software and a blit used to display
-		if (const auto tex = surface->get_raw_texture(); tex) image = tex;
+		if (const auto tex = surface->get_raw_texture(); tex)
+			image = tex;
 	}
 
 	const GLenum expected_format = gl::RSX_display_format_to_gl_format(avconfig.format);
@@ -113,7 +114,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 
 	auto initialize_scratch_image = [&]()
 	{
-		if (!flip_image || flip_image->size2D() != sizeu{ info->width, info->height })
+		if (!flip_image || flip_image->size2D() != sizeu{info->width, info->height})
 		{
 			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, 1, expected_format, RSX_FORMAT_CLASS_COLOR);
 		}
@@ -128,7 +129,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 
 		initialize_scratch_image();
 
-		gl::command_context cmd{ gl_state };
+		gl::command_context cmd{gl_state};
 		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
@@ -143,11 +144,11 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		if (gl::formats_are_bitcast_compatible(flip_image.get(), image))
 		{
 			const position3u offset{};
-			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), 0, 0, offset, offset, { info->width, info->height, 1 });
+			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), 0, 0, offset, offset, {info->width, info->height, 1});
 		}
 		else
 		{
-			const coord3u region = { {/* offsets */}, { info->width, info->height, 1 } };
+			const coord3u region = {{/* offsets */}, {info->width, info->height, 1}};
 			gl::copy_typeless(cmd, flip_image.get(), image, region, region);
 		}
 
@@ -166,7 +167,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		return;
 	}
 
-	gl::command_context cmd{ gl_state };
+	gl::command_context cmd{gl_state};
 
 	u32 buffer_width = display_buffers[info.buffer].width;
 	u32 buffer_height = display_buffers[info.buffer].height;
@@ -209,15 +210,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Find the source image
-		gl::present_surface_info present_info
-		{
+		gl::present_surface_info present_info{
 			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
 			.format = av_format,
 			.width = buffer_width,
 			.height = buffer_height,
 			.pitch = buffer_pitch,
-			.eye = 0
-		};
+			.eye = 0};
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
@@ -261,12 +260,12 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	if (!g_cfg.video.stretch_to_display_area)
 	{
 		const sizeu csize(width, height);
-		const auto converted = avconfig.aspect_convert_region(size2u{ buffer_width, buffer_height }, csize);
+		const auto converted = avconfig.aspect_convert_region(size2u{buffer_width, buffer_height}, csize);
 		aspect_ratio = static_cast<areai>(converted);
 	}
 	else
 	{
-		aspect_ratio = { 0, 0, width, height };
+		aspect_ratio = {0, 0, width, height};
 	}
 
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
@@ -300,7 +299,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 		}
 
-		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
+		const areai screen_area = coordi({}, {static_cast<int>(buffer_width), static_cast<int>(buffer_height)});
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 		const bool backbuffer_has_alpha = m_frame->has_alpha();
 
@@ -333,7 +332,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const f32 gamma = avconfig.gamma;
 			const bool limited_range = !use_full_rgb_range_output;
 			const auto filter = m_output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
-			rsx::simple_array<gl::texture*> images{ image_to_flip, image_to_flip2 };
+			rsx::simple_array<gl::texture*> images{image_to_flip, image_to_flip2};
 
 			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
 			{
@@ -397,14 +396,10 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto texture_upload_miss_ratio = m_gl_texture_cache.get_texture_upload_miss_percentage();
 		const auto texture_copies_ellided = m_gl_texture_cache.get_texture_copies_ellided_this_frame();
 		const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
-		const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
-			? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
-			: 0;
+		const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count ? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count : 0;
 		const auto program_cache_lookups = info.stats.program_cache_lookups_total;
 		const auto program_cache_ellided = info.stats.program_cache_lookups_ellided;
-		const auto program_cache_ellision_rate = program_cache_lookups
-			? (program_cache_ellided * 100) / program_cache_lookups
-			: 0;
+		const auto program_cache_ellision_rate = program_cache_lookups ? (program_cache_ellided * 100) / program_cache_lookups : 0;
 
 		rsx::overlays::set_debug_overlay_text(fmt::format(
 			"Internal Resolution:     %s\n"
@@ -426,8 +421,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
 			num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided,
 			vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio,
-			program_cache_ellided, program_cache_lookups, program_cache_ellision_rate)
-		);
+			program_cache_ellided, program_cache_lookups, program_cache_ellision_rate));
 	}
 
 	if (gl::debug::g_vis_texture)
@@ -449,7 +443,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		display_view.y1 = vis_height;
 
 		// Blit
-		const auto src_region = areau{ 0u, 0u, gl::debug::g_vis_texture->width(), gl::debug::g_vis_texture->height() };
+		const auto src_region = areau{0u, 0u, gl::debug::g_vis_texture->width(), gl::debug::g_vis_texture->height()};
 		m_vis_buffer.blit(gl::screen, static_cast<areai>(src_region), display_view, gl::buffers::color, gl::filter::linear);
 		m_vis_buffer.remove();
 	}
@@ -463,12 +457,14 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	auto removed_textures = m_rtts.trim(cmd);
 	m_framebuffer_cache.remove_if([&](auto& fbo)
-	{
-		if (fbo.unused_check_count() >= 2) return true; // Remove if stale
-		if (fbo.references_any(removed_textures)) return true; // Remove if any of the attachments is invalid
+		{
+			if (fbo.unused_check_count() >= 2)
+				return true; // Remove if stale
+			if (fbo.references_any(removed_textures))
+				return true; // Remove if any of the attachments is invalid
 
-		return false;
-	});
+			return false;
+		});
 
 	if (m_draw_fbo && !m_graphics_state.test(rsx::rtt_config_dirty))
 	{

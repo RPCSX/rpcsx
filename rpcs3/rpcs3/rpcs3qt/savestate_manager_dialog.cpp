@@ -25,9 +25,7 @@ enum GameUserRole
 };
 
 savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings> gui_settings, const std::vector<game_info>& games)
-	: QWidget()
-	, m_gui_settings(std::move(gui_settings))
-	, m_game_info(games)
+	: QWidget(), m_gui_settings(std::move(gui_settings)), m_game_info(games)
 {
 	// Nonspecific widget settings
 	setWindowTitle(tr("Savestate Manager"));
@@ -69,8 +67,8 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 		m_game_column_acts.append(new QAction(action_text, this));
 	};
 
-	add_game_column(gui::savestate_game_list_columns::icon,       tr("Icon"),       tr("Show Icons"));
-	add_game_column(gui::savestate_game_list_columns::name,       tr("Game"),       tr("Show Games"));
+	add_game_column(gui::savestate_game_list_columns::icon, tr("Icon"), tr("Show Icons"));
+	add_game_column(gui::savestate_game_list_columns::name, tr("Game"), tr("Show Games"));
 	add_game_column(gui::savestate_game_list_columns::savestates, tr("Savestates"), tr("Show Savestates"));
 
 	// Savestate Table
@@ -143,72 +141,82 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 
 	// Make connects
 	connect(m_game_icon_slider, &QSlider::valueChanged, this, [this, game_slider_label](int val)
-	{
-		m_game_icon_size_index = val;
-		m_game_icon_size = gui_settings::SizeFromSlider(val);
-		if (game_slider_label)
 		{
-			game_slider_label->setText(tr("Game Icon Size: %0x%1").arg(m_game_icon_size.width()).arg(m_game_icon_size.height()));
-		}
-		ResizeGameIcons();
-		if (m_save_game_icon_size)
-		{
-			m_save_game_icon_size = false;
-			m_gui_settings->SetValue(gui::ss_game_icon_size, val);
-		}
-	});
+			m_game_icon_size_index = val;
+			m_game_icon_size = gui_settings::SizeFromSlider(val);
+			if (game_slider_label)
+			{
+				game_slider_label->setText(tr("Game Icon Size: %0x%1").arg(m_game_icon_size.width()).arg(m_game_icon_size.height()));
+			}
+			ResizeGameIcons();
+			if (m_save_game_icon_size)
+			{
+				m_save_game_icon_size = false;
+				m_gui_settings->SetValue(gui::ss_game_icon_size, val);
+			}
+		});
 
 	connect(m_game_icon_slider, &QSlider::sliderReleased, this, [this]()
-	{
-		m_gui_settings->SetValue(gui::ss_game_icon_size, m_game_icon_slider->value());
-	});
+		{
+			m_gui_settings->SetValue(gui::ss_game_icon_size, m_game_icon_slider->value());
+		});
 
 	connect(m_game_icon_slider, &QSlider::actionTriggered, this, [this](int action)
-	{
-		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
-		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
-			m_save_game_icon_size = true; // actionTriggered happens before the value was changed
-		}
-	});
+		{
+			if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
+			{                                 // we only want to save on mouseclicks or slider release (the other connect handles this)
+				m_save_game_icon_size = true; // actionTriggered happens before the value was changed
+			}
+		});
 
 	connect(m_savestate_table, &QTableWidget::customContextMenuRequested, this, &savestate_manager_dialog::ShowSavestateTableContextMenu);
 
 	connect(m_game_combo, &QComboBox::currentTextChanged, this, [this]
-	{
-		PopulateSavestateTable();
-	});
+		{
+			PopulateSavestateTable();
+		});
 
 	connect(m_game_table, &QTableWidget::customContextMenuRequested, this, &savestate_manager_dialog::ShowGameTableContextMenu);
 
 	connect(m_game_table, &QTableWidget::itemSelectionChanged, this, [this]
-	{
-		if (m_game_table->selectedItems().isEmpty())
 		{
-			return;
-		}
-		QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), static_cast<int>(gui::savestate_game_list_columns::name));
-		if (!item)
-		{
-			return;
-		}
-		m_game_combo->setCurrentText(item->text());
-	});
+			if (m_game_table->selectedItems().isEmpty())
+			{
+				return;
+			}
+			QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), static_cast<int>(gui::savestate_game_list_columns::name));
+			if (!item)
+			{
+				return;
+			}
+			m_game_combo->setCurrentText(item->text());
+		});
 
 	connect(this, &savestate_manager_dialog::GameIconReady, this, [this](int index, const QPixmap& pixmap)
-	{
-		if (QTableWidgetItem* icon_item = m_game_table->item(index, static_cast<int>(gui::savestate_game_list_columns::icon)))
 		{
-			icon_item->setData(Qt::DecorationRole, pixmap);
-		}
-	});
+			if (QTableWidgetItem* icon_item = m_game_table->item(index, static_cast<int>(gui::savestate_game_list_columns::icon)))
+			{
+				icon_item->setData(Qt::DecorationRole, pixmap);
+			}
+		});
 
-	m_savestate_table->create_header_actions(m_savestate_column_acts,
-		[this](int col) { return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col)); },
-		[this](int col, bool visible) { m_gui_settings->SetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col), visible); });
-	
-	m_game_table->create_header_actions(m_game_column_acts,
-		[this](int col) { return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col)); },
-		[this](int col, bool visible) { m_gui_settings->SetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col), visible); });
+	m_savestate_table->create_header_actions(m_savestate_column_acts, [this](int col)
+		{
+			return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col));
+		},
+		[this](int col, bool visible)
+		{
+			m_gui_settings->SetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col), visible);
+		});
+
+	m_game_table->create_header_actions(m_game_column_acts, [this](int col)
+		{
+			return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col));
+		},
+		[this](int col, bool visible)
+		{
+			m_gui_settings->SetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col), visible);
+		});
 
 	RepaintUI(true);
 
@@ -284,7 +292,7 @@ void savestate_manager_dialog::RepaintUI(bool restore_layout)
 	{
 		const int width_left = m_splitter->width() * 0.4;
 		const int width_right = m_splitter->width() - width_left;
-		m_splitter->setSizes({ width_left, width_right });
+		m_splitter->setSizes({width_left, width_right});
 	}
 
 	PopulateSavestateTable();
@@ -293,23 +301,29 @@ void savestate_manager_dialog::RepaintUI(bool restore_layout)
 	if (restore_layout && !m_game_table->horizontalHeader()->restoreState(game_table_state) && m_game_table->rowCount())
 	{
 		// If no settings exist, resize to contents. (disabled)
-		//m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		//m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
 	const QByteArray savestate_table_state = m_gui_settings->GetValue(gui::ss_savestate_state).toByteArray();
 	if (restore_layout && !m_savestate_table->horizontalHeader()->restoreState(savestate_table_state) && m_savestate_table->rowCount())
 	{
 		// If no settings exist, resize to contents. (disabled)
-		//m_savestate_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
-		//m_savestate_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// m_savestate_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
+		// m_savestate_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
 	if (restore_layout)
 	{
 		// Make sure the actions and the headers are synced
-		m_game_table->sync_header_actions(m_game_column_acts, [this](int col) { return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col)); });
-		m_savestate_table->sync_header_actions(m_savestate_column_acts, [this](int col) { return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col)); });
+		m_game_table->sync_header_actions(m_game_column_acts, [this](int col)
+			{
+				return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col));
+			});
+		m_savestate_table->sync_header_actions(m_savestate_column_acts, [this](int col)
+			{
+				return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col));
+			});
 	}
 
 	// Show dialog and then paint gui in order to adjust headers correctly
@@ -332,8 +346,14 @@ void savestate_manager_dialog::HandleRepaintUiRequest()
 	m_savestate_table->horizontalHeader()->restoreState(savestate_table_state);
 
 	// Make sure the actions and the headers are synced
-	m_game_table->sync_header_actions(m_game_column_acts, [this](int col) { return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col)); });
-	m_savestate_table->sync_header_actions(m_savestate_column_acts, [this](int col) { return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col)); });
+	m_game_table->sync_header_actions(m_game_column_acts, [this](int col)
+		{
+			return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col));
+		});
+	m_savestate_table->sync_header_actions(m_savestate_column_acts, [this](int col)
+		{
+			return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col));
+		});
 
 	resize(window_size);
 }
@@ -368,56 +388,56 @@ void savestate_manager_dialog::ResizeGameIcons()
 			const std::string icon_path = m_savestate_db[savestate_index]->game_icon_path;
 
 			item->set_icon_load_func([this, icon_path, savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
-			{
-				if (cancel && cancel->load())
 				{
-					return;
-				}
-
-				QPixmap icon;
-
-				if (movie_item* item = static_cast<movie_item*>(m_game_table->item(index, static_cast<int>(gui::savestate_game_list_columns::icon))))
-				{
-					if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
+					if (cancel && cancel->load())
 					{
-						// Load game icon
-						if (!icon.load(QString::fromStdString(icon_path)))
+						return;
+					}
+
+					QPixmap icon;
+
+					if (movie_item* item = static_cast<movie_item*>(m_game_table->item(index, static_cast<int>(gui::savestate_game_list_columns::icon))))
+					{
+						if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
 						{
-							gui_log.warning("Could not load savestate game icon from path %s", icon_path);
+							// Load game icon
+							if (!icon.load(QString::fromStdString(icon_path)))
+							{
+								gui_log.warning("Could not load savestate game icon from path %s", icon_path);
+							}
+							item->setData(GameUserRole::GamePixmapLoaded, true);
+							item->setData(GameUserRole::GamePixmap, icon);
 						}
-						item->setData(GameUserRole::GamePixmapLoaded, true);
-						item->setData(GameUserRole::GamePixmap, icon);
+						else
+						{
+							icon = item->data(GameUserRole::GamePixmap).value<QPixmap>();
+						}
 					}
-					else
+
+					if (cancel && cancel->load())
 					{
-						icon = item->data(GameUserRole::GamePixmap).value<QPixmap>();
+						return;
 					}
-				}
 
-				if (cancel && cancel->load())
-				{
-					return;
-				}
+					QPixmap new_icon(icon.size() * dpr);
+					new_icon.setDevicePixelRatio(dpr);
+					new_icon.fill(m_game_icon_color);
 
-				QPixmap new_icon(icon.size() * dpr);
-				new_icon.setDevicePixelRatio(dpr);
-				new_icon.fill(m_game_icon_color);
+					if (!icon.isNull())
+					{
+						QPainter painter(&new_icon);
+						painter.setRenderHint(QPainter::SmoothPixmapTransform);
+						painter.drawPixmap(QPoint(0, 0), icon);
+						painter.end();
+					}
 
-				if (!icon.isNull())
-				{
-					QPainter painter(&new_icon);
-					painter.setRenderHint(QPainter::SmoothPixmapTransform);
-					painter.drawPixmap(QPoint(0, 0), icon);
-					painter.end();
-				}
+					new_icon = new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 
-				new_icon = new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-
-				if (!cancel || !cancel->load())
-				{
-					Q_EMIT GameIconReady(index, new_icon);
-				}
-			});
+					if (!cancel || !cancel->load())
+					{
+						Q_EMIT GameIconReady(index, new_icon);
+					}
+				});
 		}
 	}
 }
@@ -446,34 +466,34 @@ void savestate_manager_dialog::ShowSavestateTableContextMenu(const QPoint& pos)
 	const std::string path = path_item->text().toStdString();
 
 	connect(show_savestate_dir, &QAction::triggered, this, [this, db_ind]()
-	{
-		gui::utils::open_dir(QString::fromStdString(m_savestate_db[db_ind]->dir_path));
-	});
+		{
+			gui::utils::open_dir(QString::fromStdString(m_savestate_db[db_ind]->dir_path));
+		});
 
 	connect(boot_savestate, &QAction::triggered, this, [this, path]()
-	{
-		gui_log.notice("Booting savestate from savestate manager...");
-		Q_EMIT RequestBoot(path);
-	});
+		{
+			gui_log.notice("Booting savestate from savestate manager...");
+			Q_EMIT RequestBoot(path);
+		});
 
 	connect(delete_savestate, &QAction::triggered, this, [this, path]()
-	{
-		gui_log.notice("Removing savestate '%s' from savestate manager...", path);
-
-		if (QMessageBox::question(this, tr("Confirm Deletion"), tr("Delete savestate '%0'?").arg(QString::fromStdString(path))) != QMessageBox::Yes)
-			return;
-
-		if (fs::remove_file(path))
 		{
-			gui_log.success("Removed savestate '%s'", path);
-			StartSavestateLoadThreads(); // Reload the savestate list
-		}
-		else
-		{
-			gui_log.error("Failed to remove file '%s' (%s)", path, fs::g_tls_error);
-			QMessageBox::warning(this, tr("Deletion Failed!"), tr("Failed to delete savestate '%0'!").arg(QString::fromStdString(path)));
-		}
-	});
+			gui_log.notice("Removing savestate '%s' from savestate manager...", path);
+
+			if (QMessageBox::question(this, tr("Confirm Deletion"), tr("Delete savestate '%0'?").arg(QString::fromStdString(path))) != QMessageBox::Yes)
+				return;
+
+			if (fs::remove_file(path))
+			{
+				gui_log.success("Removed savestate '%s'", path);
+				StartSavestateLoadThreads(); // Reload the savestate list
+			}
+			else
+			{
+				gui_log.error("Failed to remove file '%s' (%s)", path, fs::g_tls_error);
+				QMessageBox::warning(this, tr("Deletion Failed!"), tr("Failed to delete savestate '%0'!").arg(QString::fromStdString(path)));
+			}
+		});
 
 	menu->addAction(boot_savestate);
 	menu->addAction(show_savestate_dir);
@@ -502,19 +522,19 @@ void savestate_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	const QString name = name_item ? name_item->text() : "";
 
 	connect(remove_savestate_dir, &QAction::triggered, this, [this, name, db_ind]()
-	{
-		if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the savestates for:\n%0?").arg(name), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
-			const std::string path = m_savestate_db[db_ind]->dir_path;
-			ensure(path != (fs::get_config_dir() + "savestates/")); // Make sure we aren't deleting the root path by accident
-			fs::remove_all(path); // Remove the game's savestate folder
-			StartSavestateLoadThreads(); // Reload the savestate list
-		}
-	});
+			if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the savestates for:\n%0?").arg(name), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+			{
+				const std::string path = m_savestate_db[db_ind]->dir_path;
+				ensure(path != (fs::get_config_dir() + "savestates/")); // Make sure we aren't deleting the root path by accident
+				fs::remove_all(path);                                   // Remove the game's savestate folder
+				StartSavestateLoadThreads();                            // Reload the savestate list
+			}
+		});
 	connect(show_savestate_dir, &QAction::triggered, this, [this, db_ind]()
-	{
-		gui::utils::open_dir(QString::fromStdString(m_savestate_db[db_ind]->dir_path));
-	});
+		{
+			gui::utils::open_dir(QString::fromStdString(m_savestate_db[db_ind]->dir_path));
+		});
 
 	menu->addAction(show_savestate_dir);
 
@@ -522,9 +542,9 @@ void savestate_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	{
 		QAction* copy_name = new QAction(tr("&Copy Name"), menu);
 		connect(copy_name, &QAction::triggered, this, [this, name]()
-		{
-			QApplication::clipboard()->setText(name);
-		});
+			{
+				QApplication::clipboard()->setText(name);
+			});
 		menu->addAction(copy_name);
 	}
 
@@ -584,25 +604,28 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 
 	connect(&future_watcher, &QFutureWatcher<void>::progressRangeChanged, &progress_dialog, &QProgressDialog::setRange);
 	connect(&future_watcher, &QFutureWatcher<void>::progressValueChanged, &progress_dialog, &QProgressDialog::setValue);
-	connect(&future_watcher, &QFutureWatcher<void>::finished, this, [this]() { RepaintUI(true); });
+	connect(&future_watcher, &QFutureWatcher<void>::finished, this, [this]()
+		{
+			RepaintUI(true);
+		});
 	connect(&progress_dialog, &QProgressDialog::canceled, this, [this, &future_watcher]()
-	{
-		future_watcher.cancel();
-		close(); // It's pointless to show an empty window
-	});
+		{
+			future_watcher.cancel();
+			close(); // It's pointless to show an empty window
+		});
 
 	atomic_t<usz> error_count{};
 	future_watcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &game_data](const int& i)
-	{
-		gui_log.trace("Loading savestate dir: %s", game_data[i]->title_id);
-
-		if (!LoadSavestateFolderToDB(std::move(game_data[i])))
 		{
-			// TODO: add a way of showing the number of corrupted/invalid savestates in UI somewhere.
-			gui_log.error("Error occurred while parsing folder %s for savestates.", game_data[i]->title_id);
-			error_count++;
-		}
-	}));
+			gui_log.trace("Loading savestate dir: %s", game_data[i]->title_id);
+
+			if (!LoadSavestateFolderToDB(std::move(game_data[i])))
+			{
+				// TODO: add a way of showing the number of corrupted/invalid savestates in UI somewhere.
+				gui_log.error("Error occurred while parsing folder %s for savestates.", game_data[i]->title_id);
+				error_count++;
+			}
+		}));
 
 	progress_dialog.exec();
 
@@ -716,19 +739,19 @@ void savestate_manager_dialog::ReadjustSavestateTable() const
 	m_savestate_table->resizeColumnToContents(static_cast<int>(gui::savestate_list_columns::count) - 1);
 }
 
-bool savestate_manager_dialog::eventFilter(QObject *object, QEvent *event)
+bool savestate_manager_dialog::eventFilter(QObject* object, QEvent* event)
 {
 	const bool is_savestate_scroll = object == m_savestate_table->verticalScrollBar();
-	const bool is_savestate_table  = object == m_savestate_table;
-	const bool is_game_scroll      = object == m_game_table->verticalScrollBar();
-	const bool is_game_table       = object == m_game_table;
+	const bool is_savestate_table = object == m_savestate_table;
+	const bool is_game_scroll = object == m_game_table->verticalScrollBar();
+	const bool is_game_table = object == m_game_table;
 	int zoom_val = 0;
 
 	switch (event->type())
 	{
 	case QEvent::Wheel:
 	{
-		QWheelEvent *wheelEvent = static_cast<QWheelEvent *>(event);
+		QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
 
 		if (wheelEvent->modifiers() & Qt::ControlModifier && (is_savestate_scroll || is_game_scroll))
 		{
@@ -739,7 +762,7 @@ bool savestate_manager_dialog::eventFilter(QObject *object, QEvent *event)
 	}
 	case QEvent::KeyPress:
 	{
-		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+		QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
 
 		if (keyEvent && keyEvent->modifiers() == Qt::ControlModifier && (is_savestate_table || is_game_table))
 		{
@@ -771,7 +794,7 @@ bool savestate_manager_dialog::eventFilter(QObject *object, QEvent *event)
 	return QWidget::eventFilter(object, event);
 }
 
-void savestate_manager_dialog::closeEvent(QCloseEvent *event)
+void savestate_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	// Save gui settings
 	m_gui_settings->SetValue(gui::ss_geometry, saveGeometry(), false);

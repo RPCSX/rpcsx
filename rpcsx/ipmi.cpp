@@ -1037,7 +1037,8 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
               return 0;
             }
 
-            return 0x8002000 + static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
+            return 0x8002000 +
+                   static_cast<std::uint32_t>(orbis::ErrorCode::INVAL);
           });
 
   createIpmiServer(process, "SceNpEntAccess");

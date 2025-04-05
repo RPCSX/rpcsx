@@ -14,11 +14,11 @@ namespace rsx
 		enum image_resource_id : u8
 		{
 			// NOTE: 1 - 252 are user defined
-			none = 0,         // No image
-			raw_image = 252,  // Raw image data passed via image_info struct
-			font_file = 253,  // Font file
-			game_icon = 254,  // Use game icon
-			backbuffer = 255  // Use current backbuffer contents
+			none = 0,        // No image
+			raw_image = 252, // Raw image data passed via image_info struct
+			font_file = 253, // Font file
+			game_icon = 254, // Use game icon
+			backbuffer = 255 // Use current backbuffer contents
 		};
 
 		enum class primitive_type : u8
@@ -55,7 +55,11 @@ namespace rsx
 			virtual ~image_info();
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
-			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
+			const u8* get_data() const override
+			{
+				return channels == 4 ? data : data_grey.empty() ? nullptr :
+				                                                  data_grey.data();
+			}
 		};
 
 		struct resource_config
@@ -93,7 +97,7 @@ namespace rsx
 			{
 				primitive_type primitives = primitive_type::quad_list;
 
-				color4f color = { 1.f, 1.f, 1.f, 1.f };
+				color4f color = {1.f, 1.f, 1.f, 1.f};
 				bool pulse_glow = false;
 				bool disable_vertex_snap = false;
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
@@ -111,7 +115,7 @@ namespace rsx
 				command_config() = default;
 
 				void set_image_resource(u8 ref);
-				void set_font(font *ref);
+				void set_font(font* ref);
 
 				// Analog to overlay_element::set_sinus_offset
 				f32 get_sinus_value() const;
@@ -159,8 +163,8 @@ namespace rsx
 			bool wrap_text = false;
 			bool clip_text = true;
 
-			color4f back_color = { 0.f, 0.f, 0.f, 1.f };
-			color4f fore_color = { 1.f, 1.f, 1.f, 1.f };
+			color4f back_color = {0.f, 0.f, 0.f, 1.f};
+			color4f fore_color = {1.f, 1.f, 1.f, 1.f};
 			bool pulse_effect_enabled = false;
 			f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 			f32 pulse_speed_modifier = 0.005f;
@@ -193,7 +197,10 @@ namespace rsx
 			virtual ~overlay_element() = default;
 
 			virtual void refresh();
-			virtual bool is_compiled() { return m_is_compiled; }
+			virtual bool is_compiled()
+			{
+				return m_is_compiled;
+			}
 			virtual void translate(s16 _x, s16 _y);
 			virtual void scale(f32 _x, f32 _y, bool origin_scaling);
 			virtual void set_pos(s16 _x, s16 _y);
@@ -213,7 +220,10 @@ namespace rsx
 			virtual std::vector<vertex> render_text(const char32_t* string, f32 x, f32 y);
 			virtual compiled_resource& get_compiled();
 			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
-			virtual void set_selected(bool selected) { static_cast<void>(selected); }
+			virtual void set_selected(bool selected)
+			{
+				static_cast<void>(selected);
+			}
 
 		protected:
 			bool m_is_compiled = false; // Only use m_is_compiled as a getter in is_compiled() if possible
@@ -356,5 +366,5 @@ namespace rsx
 			void update();
 			compiled_resource& get_compiled() override;
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

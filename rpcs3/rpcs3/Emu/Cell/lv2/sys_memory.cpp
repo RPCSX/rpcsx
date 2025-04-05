@@ -15,15 +15,12 @@ LOG_CHANNEL(sys_memory);
 static shared_mutex s_memstats_mtx;
 
 lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
-	: size(size)
-	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
+	: size(size), id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
 {
 }
 
 lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noexcept
-	: size(ar)
-	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
-	, used(ar)
+	: size(ar), id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}, used(ar)
 {
 }
 
@@ -89,8 +86,7 @@ struct sys_memory_address_table
 
 std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
 {
-	return vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, align == 0x10000 ? 0x20000000 : utils::align(alloc_size, 0x10000000)
-		, align == 0x10000 ? (vm::page_size_64k | vm::bf0_0x1) : (vm::page_size_1m | vm::bf0_0x1));
+	return vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, align == 0x10000 ? 0x20000000 : utils::align(alloc_size, 0x10000000), align == 0x10000 ? (vm::page_size_64k | vm::bf0_0x1) : (vm::page_size_1m | vm::bf0_0x1));
 }
 
 // Todo: fix order of error checks
@@ -108,9 +104,10 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 
 	// Check allocation size
 	const u32 align =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
+		flags == SYS_MEMORY_PAGE_SIZE_1M  ? 0x100000 :
 		flags == SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
-		flags == 0 ? 0x100000 : 0;
+		flags == 0                        ? 0x100000 :
+											0;
 
 	if (!align)
 	{
@@ -170,9 +167,10 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 
 	// Check allocation size
 	const u32 align =
-		flags == SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 :
+		flags == SYS_MEMORY_PAGE_SIZE_1M  ? 0x100000 :
 		flags == SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 :
-		flags == 0 ? 0x100000 : 0;
+		flags == 0                        ? 0x100000 :
+											0;
 
 	if (!align)
 	{
@@ -185,15 +183,15 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 	}
 
 	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct) -> CellError
-	{
-		// Try to get "physical memory"
-		if (!ct.take(size))
 		{
-			return CELL_ENOMEM;
-		}
+			// Try to get "physical memory"
+			if (!ct.take(size))
+			{
+				return CELL_ENOMEM;
+			}
 
-		return {};
-	});
+			return {};
+		});
 
 	if (!ct)
 	{
@@ -265,8 +263,8 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 		return CELL_EFAULT;
 	}
 
-	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE (TODO)
-	attr->access_right = addr >> 28 == 0xdu ? SYS_MEMORY_ACCESS_RIGHT_PPU_THR : SYS_MEMORY_ACCESS_RIGHT_ANY;// (TODO)
+	attr->attribute = 0x40000ull;                                                                            // SYS_MEMORY_PROT_READ_WRITE (TODO)
+	attr->access_right = addr >> 28 == 0xdu ? SYS_MEMORY_ACCESS_RIGHT_PPU_THR : SYS_MEMORY_ACCESS_RIGHT_ANY; // (TODO)
 
 	if (vm::check_addr(addr, vm::page_1m_size))
 	{
@@ -303,9 +301,9 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 
 		// Scan other memory containers
 		idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
-		{
-			out.total_user_memory -= ct.size;
-		});
+			{
+				out.total_user_memory -= ct.size;
+			});
 	}
 
 	cpu.check_state();
@@ -367,15 +365,15 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 	std::lock_guard lock(s_memstats_mtx);
 
 	const auto ct = idm::withdraw<lv2_memory_container>(cid, [](lv2_memory_container& ct) -> CellError
-	{
-		// Check if some memory is not deallocated (the container cannot be destroyed in this case)
-		if (!ct.used.compare_and_swap_test(0, ct.size))
 		{
-			return CELL_EBUSY;
-		}
+			// Check if some memory is not deallocated (the container cannot be destroyed in this case)
+			if (!ct.used.compare_and_swap_test(0, ct.size))
+			{
+				return CELL_EBUSY;
+			}
 
-		return {};
-	});
+			return {};
+		});
 
 	if (!ct)
 	{
@@ -407,7 +405,7 @@ error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_inf
 	}
 
 	cpu.check_state();
-	mem_info->total_user_memory = ct->size; // Total container memory
+	mem_info->total_user_memory = ct->size;                // Total container memory
 	mem_info->available_user_memory = ct->size - ct->used; // Available container memory
 
 	return CELL_OK;

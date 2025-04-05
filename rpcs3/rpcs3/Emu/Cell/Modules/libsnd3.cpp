@@ -5,33 +5,33 @@
 
 LOG_CHANNEL(libsnd3);
 
-template<>
+template <>
 void fmt_class_string<CellSnd3Error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SND3_ERROR_PARAM);
-			STR_CASE(CELL_SND3_ERROR_CREATE_MUTEX);
-			STR_CASE(CELL_SND3_ERROR_SYNTH);
-			STR_CASE(CELL_SND3_ERROR_ALREADY);
-			STR_CASE(CELL_SND3_ERROR_NOTINIT);
-			STR_CASE(CELL_SND3_ERROR_SMFFULL);
-			STR_CASE(CELL_SND3_ERROR_HD3ID);
-			STR_CASE(CELL_SND3_ERROR_SMF);
-			STR_CASE(CELL_SND3_ERROR_SMFCTX);
-			STR_CASE(CELL_SND3_ERROR_FORMAT);
-			STR_CASE(CELL_SND3_ERROR_SMFID);
-			STR_CASE(CELL_SND3_ERROR_SOUNDDATAFULL);
-			STR_CASE(CELL_SND3_ERROR_VOICENUM);
-			STR_CASE(CELL_SND3_ERROR_RESERVEDVOICE);
-			STR_CASE(CELL_SND3_ERROR_REQUESTQUEFULL);
-			STR_CASE(CELL_SND3_ERROR_OUTPUTMODE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SND3_ERROR_PARAM);
+				STR_CASE(CELL_SND3_ERROR_CREATE_MUTEX);
+				STR_CASE(CELL_SND3_ERROR_SYNTH);
+				STR_CASE(CELL_SND3_ERROR_ALREADY);
+				STR_CASE(CELL_SND3_ERROR_NOTINIT);
+				STR_CASE(CELL_SND3_ERROR_SMFFULL);
+				STR_CASE(CELL_SND3_ERROR_HD3ID);
+				STR_CASE(CELL_SND3_ERROR_SMF);
+				STR_CASE(CELL_SND3_ERROR_SMFCTX);
+				STR_CASE(CELL_SND3_ERROR_FORMAT);
+				STR_CASE(CELL_SND3_ERROR_SMFID);
+				STR_CASE(CELL_SND3_ERROR_SOUNDDATAFULL);
+				STR_CASE(CELL_SND3_ERROR_VOICENUM);
+				STR_CASE(CELL_SND3_ERROR_RESERVEDVOICE);
+				STR_CASE(CELL_SND3_ERROR_REQUESTQUEFULL);
+				STR_CASE(CELL_SND3_ERROR_OUTPUTMODE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Temporarily
@@ -339,57 +339,56 @@ error_code cellSnd3SMFGetKeyOnID(u32 smfID, u32 midiChannel, vm::ptr<u32> keyOnI
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::libsnd3)("libsnd3", []()
-{
-	REG_FUNC(libsnd3, cellSnd3Init);
-	REG_FUNC(libsnd3, cellSnd3Exit);
-	REG_FUNC(libsnd3, cellSnd3Note2Pitch);
-	REG_FUNC(libsnd3, cellSnd3Pitch2Note);
-	REG_FUNC(libsnd3, cellSnd3SetOutputMode);
-	REG_FUNC(libsnd3, cellSnd3Synthesis);
-	REG_FUNC(libsnd3, cellSnd3SynthesisEx);
-	REG_FUNC(libsnd3, cellSnd3BindSoundData);
-	REG_FUNC(libsnd3, cellSnd3UnbindSoundData);
-	REG_FUNC(libsnd3, cellSnd3NoteOnByTone);
-	REG_FUNC(libsnd3, cellSnd3KeyOnByTone);
-	REG_FUNC(libsnd3, cellSnd3VoiceNoteOnByTone);
-	REG_FUNC(libsnd3, cellSnd3VoiceKeyOnByTone);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetReserveMode);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetSustainHold);
-	REG_FUNC(libsnd3, cellSnd3VoiceKeyOff);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetPitch);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetVelocity);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetPanpot);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetPanpotEx);
-	REG_FUNC(libsnd3, cellSnd3VoiceSetPitchBend);
-	REG_FUNC(libsnd3, cellSnd3VoiceAllKeyOff);
-	REG_FUNC(libsnd3, cellSnd3VoiceGetEnvelope);
-	REG_FUNC(libsnd3, cellSnd3VoiceGetStatus);
-	REG_FUNC(libsnd3, cellSnd3KeyOffByID);
-	REG_FUNC(libsnd3, cellSnd3GetVoice);
-	REG_FUNC(libsnd3, cellSnd3GetVoiceByID);
-	REG_FUNC(libsnd3, cellSnd3NoteOn);
-	REG_FUNC(libsnd3, cellSnd3NoteOff);
-	REG_FUNC(libsnd3, cellSnd3SetSustainHold);
-	REG_FUNC(libsnd3, cellSnd3SetEffectType);
-	REG_FUNC(libsnd3, cellSnd3SMFBind);
-	REG_FUNC(libsnd3, cellSnd3SMFUnbind);
-	REG_FUNC(libsnd3, cellSnd3SMFPlay);
-	REG_FUNC(libsnd3, cellSnd3SMFPlayEx);
-	REG_FUNC(libsnd3, cellSnd3SMFPause);
-	REG_FUNC(libsnd3, cellSnd3SMFResume);
-	REG_FUNC(libsnd3, cellSnd3SMFStop);
-	REG_FUNC(libsnd3, cellSnd3SMFAddTempo);
-	REG_FUNC(libsnd3, cellSnd3SMFGetTempo);
-	REG_FUNC(libsnd3, cellSnd3SMFSetPlayVelocity);
-	REG_FUNC(libsnd3, cellSnd3SMFGetPlayVelocity);
-	REG_FUNC(libsnd3, cellSnd3SMFSetPlayPanpot);
-	REG_FUNC(libsnd3, cellSnd3SMFSetPlayPanpotEx);
-	REG_FUNC(libsnd3, cellSnd3SMFGetPlayPanpot);
-	REG_FUNC(libsnd3, cellSnd3SMFGetPlayPanpotEx);
-	REG_FUNC(libsnd3, cellSnd3SMFGetPlayStatus);
-	REG_FUNC(libsnd3, cellSnd3SMFSetPlayChannel);
-	REG_FUNC(libsnd3, cellSnd3SMFGetPlayChannel);
-	REG_FUNC(libsnd3, cellSnd3SMFGetKeyOnID);
-});
+	{
+		REG_FUNC(libsnd3, cellSnd3Init);
+		REG_FUNC(libsnd3, cellSnd3Exit);
+		REG_FUNC(libsnd3, cellSnd3Note2Pitch);
+		REG_FUNC(libsnd3, cellSnd3Pitch2Note);
+		REG_FUNC(libsnd3, cellSnd3SetOutputMode);
+		REG_FUNC(libsnd3, cellSnd3Synthesis);
+		REG_FUNC(libsnd3, cellSnd3SynthesisEx);
+		REG_FUNC(libsnd3, cellSnd3BindSoundData);
+		REG_FUNC(libsnd3, cellSnd3UnbindSoundData);
+		REG_FUNC(libsnd3, cellSnd3NoteOnByTone);
+		REG_FUNC(libsnd3, cellSnd3KeyOnByTone);
+		REG_FUNC(libsnd3, cellSnd3VoiceNoteOnByTone);
+		REG_FUNC(libsnd3, cellSnd3VoiceKeyOnByTone);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetReserveMode);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetSustainHold);
+		REG_FUNC(libsnd3, cellSnd3VoiceKeyOff);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetPitch);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetVelocity);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetPanpot);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetPanpotEx);
+		REG_FUNC(libsnd3, cellSnd3VoiceSetPitchBend);
+		REG_FUNC(libsnd3, cellSnd3VoiceAllKeyOff);
+		REG_FUNC(libsnd3, cellSnd3VoiceGetEnvelope);
+		REG_FUNC(libsnd3, cellSnd3VoiceGetStatus);
+		REG_FUNC(libsnd3, cellSnd3KeyOffByID);
+		REG_FUNC(libsnd3, cellSnd3GetVoice);
+		REG_FUNC(libsnd3, cellSnd3GetVoiceByID);
+		REG_FUNC(libsnd3, cellSnd3NoteOn);
+		REG_FUNC(libsnd3, cellSnd3NoteOff);
+		REG_FUNC(libsnd3, cellSnd3SetSustainHold);
+		REG_FUNC(libsnd3, cellSnd3SetEffectType);
+		REG_FUNC(libsnd3, cellSnd3SMFBind);
+		REG_FUNC(libsnd3, cellSnd3SMFUnbind);
+		REG_FUNC(libsnd3, cellSnd3SMFPlay);
+		REG_FUNC(libsnd3, cellSnd3SMFPlayEx);
+		REG_FUNC(libsnd3, cellSnd3SMFPause);
+		REG_FUNC(libsnd3, cellSnd3SMFResume);
+		REG_FUNC(libsnd3, cellSnd3SMFStop);
+		REG_FUNC(libsnd3, cellSnd3SMFAddTempo);
+		REG_FUNC(libsnd3, cellSnd3SMFGetTempo);
+		REG_FUNC(libsnd3, cellSnd3SMFSetPlayVelocity);
+		REG_FUNC(libsnd3, cellSnd3SMFGetPlayVelocity);
+		REG_FUNC(libsnd3, cellSnd3SMFSetPlayPanpot);
+		REG_FUNC(libsnd3, cellSnd3SMFSetPlayPanpotEx);
+		REG_FUNC(libsnd3, cellSnd3SMFGetPlayPanpot);
+		REG_FUNC(libsnd3, cellSnd3SMFGetPlayPanpotEx);
+		REG_FUNC(libsnd3, cellSnd3SMFGetPlayStatus);
+		REG_FUNC(libsnd3, cellSnd3SMFSetPlayChannel);
+		REG_FUNC(libsnd3, cellSnd3SMFGetPlayChannel);
+		REG_FUNC(libsnd3, cellSnd3SMFGetKeyOnID);
+	});

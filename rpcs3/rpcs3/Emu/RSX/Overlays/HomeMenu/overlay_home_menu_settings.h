@@ -29,21 +29,23 @@ namespace rsx
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_checkbox>(setting, localized_text);
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
-				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-
-					if (setting)
 					{
-						const bool value = !setting->get();
-						rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
-						setting->set(value);
-						Emu.GetCallbacks().update_emu_settings();
-						if (m_config_changed) *m_config_changed = true;
-						refresh();
-					}
+						if (btn != pad_button::cross)
+							return page_navigation::stay;
 
-					return page_navigation::stay;
-				});
+						if (setting)
+						{
+							const bool value = !setting->get();
+							rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
+							setting->set(value);
+							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed)
+								*m_config_changed = true;
+							refresh();
+						}
+
+						return page_navigation::stay;
+					});
 			}
 
 			template <typename T>
@@ -55,40 +57,42 @@ namespace rsx
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_dropdown<T>>(setting, localized_text);
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
-				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-
-					if (setting)
 					{
-						usz new_index = 0;
-						const T value = setting->get();
-						const std::string val = fmt::format("%s", value);
-						const std::vector<std::string> list = setting->to_list();
+						if (btn != pad_button::cross)
+							return page_navigation::stay;
 
-						for (usz i = 0; i < list.size(); i++)
+						if (setting)
 						{
-							const std::string& entry = list[i];
-							if (entry == val)
+							usz new_index = 0;
+							const T value = setting->get();
+							const std::string val = fmt::format("%s", value);
+							const std::vector<std::string> list = setting->to_list();
+
+							for (usz i = 0; i < list.size(); i++)
 							{
-								new_index = (i + 1) % list.size();
-								break;
+								const std::string& entry = list[i];
+								if (entry == val)
+								{
+									new_index = (i + 1) % list.size();
+									break;
+								}
 							}
+							if (const std::string& next_value = ::at32(list, new_index); setting->from_string(next_value))
+							{
+								rsx_log.notice("User toggled dropdown in '%s'. Setting '%s' to %s", title, setting->get_name(), next_value);
+							}
+							else
+							{
+								rsx_log.error("Can't toggle dropdown in '%s'. Setting '%s' to '%s' failed", title, setting->get_name(), next_value);
+							}
+							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed)
+								*m_config_changed = true;
+							refresh();
 						}
-						if (const std::string& next_value = ::at32(list, new_index); setting->from_string(next_value))
-						{
-							rsx_log.notice("User toggled dropdown in '%s'. Setting '%s' to %s", title, setting->get_name(), next_value);
-						}
-						else
-						{
-							rsx_log.error("Can't toggle dropdown in '%s'. Setting '%s' to '%s' failed", title, setting->get_name(), next_value);
-						}
-						Emu.GetCallbacks().update_emu_settings();
-						if (m_config_changed) *m_config_changed = true;
-						refresh();
-					}
 
-					return page_navigation::stay;
-				});
+						return page_navigation::stay;
+					});
 			}
 
 			template <s64 Min, s64 Max>
@@ -100,36 +104,37 @@ namespace rsx
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_signed_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
-				{
-					if (setting)
 					{
-						s64 value = setting->get();
-						switch (btn)
+						if (setting)
 						{
-						case pad_button::dpad_left:
-						case pad_button::ls_left:
-							value = std::max(value - step_size, minimum);
-							break;
-						case pad_button::dpad_right:
-						case pad_button::ls_right:
-							value = std::min(value + step_size, maximum);
-							break;
-						default:
-							return page_navigation::stay;
+							s64 value = setting->get();
+							switch (btn)
+							{
+							case pad_button::dpad_left:
+							case pad_button::ls_left:
+								value = std::max(value - step_size, minimum);
+								break;
+							case pad_button::dpad_right:
+							case pad_button::ls_right:
+								value = std::min(value + step_size, maximum);
+								break;
+							default:
+								return page_navigation::stay;
+							}
+
+							if (value != setting->get())
+							{
+								rsx_log.notice("User toggled signed slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
+								setting->set(value);
+								Emu.GetCallbacks().update_emu_settings();
+								if (m_config_changed)
+									*m_config_changed = true;
+								refresh();
+							}
 						}
 
-						if (value != setting->get())
-						{
-							rsx_log.notice("User toggled signed slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
-							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
-							if (m_config_changed) *m_config_changed = true;
-							refresh();
-						}
-					}
-
-					return page_navigation::stay;
-				});
+						return page_navigation::stay;
+					});
 			}
 
 			template <u64 Min, u64 Max>
@@ -142,44 +147,43 @@ namespace rsx
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum, exceptions](pad_button btn) -> page_navigation
-				{
-					if (setting)
 					{
-						u64 value = setting->get();
-						switch (btn)
+						if (setting)
 						{
-						case pad_button::dpad_left:
-						case pad_button::ls_left:
-							do
+							u64 value = setting->get();
+							switch (btn)
 							{
-								value = step_size > value ? minimum : std::max(value - step_size, minimum);
+							case pad_button::dpad_left:
+							case pad_button::ls_left:
+								do
+								{
+									value = step_size > value ? minimum : std::max(value - step_size, minimum);
+								} while (exceptions.contains(value));
+								break;
+							case pad_button::dpad_right:
+							case pad_button::ls_right:
+								do
+								{
+									value = std::min(value + step_size, maximum);
+								} while (exceptions.contains(value));
+								break;
+							default:
+								return page_navigation::stay;
 							}
-							while (exceptions.contains(value));
-							break;
-						case pad_button::dpad_right:
-						case pad_button::ls_right:
-							do
+
+							if (value != setting->get())
 							{
-								value = std::min(value + step_size, maximum);
+								rsx_log.notice("User toggled unsigned slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
+								setting->set(value);
+								Emu.GetCallbacks().update_emu_settings();
+								if (m_config_changed)
+									*m_config_changed = true;
+								refresh();
 							}
-							while (exceptions.contains(value));
-							break;
-						default:
-							return page_navigation::stay;
 						}
 
-						if (value != setting->get())
-						{
-							rsx_log.notice("User toggled unsigned slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
-							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
-							if (m_config_changed) *m_config_changed = true;
-							refresh();
-						}
-					}
-
-					return page_navigation::stay;
-				});
+						return page_navigation::stay;
+					});
 			}
 
 			template <s32 Min, s32 Max>
@@ -191,36 +195,37 @@ namespace rsx
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_float_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
-				{
-					if (setting)
 					{
-						f64 value = setting->get();
-						switch (btn)
+						if (setting)
 						{
-						case pad_button::dpad_left:
-						case pad_button::ls_left:
-							value = std::max(value - step_size, static_cast<f64>(minimum));
-							break;
-						case pad_button::dpad_right:
-						case pad_button::ls_right:
-							value = std::min(value + step_size, static_cast<f64>(maximum));
-							break;
-						default:
-							return page_navigation::stay;
+							f64 value = setting->get();
+							switch (btn)
+							{
+							case pad_button::dpad_left:
+							case pad_button::ls_left:
+								value = std::max(value - step_size, static_cast<f64>(minimum));
+								break;
+							case pad_button::dpad_right:
+							case pad_button::ls_right:
+								value = std::min(value + step_size, static_cast<f64>(maximum));
+								break;
+							default:
+								return page_navigation::stay;
+							}
+
+							if (value != setting->get())
+							{
+								rsx_log.notice("User toggled float slider in '%s'. Setting '%s' to %.2f", title, setting->get_name(), value);
+								setting->set(value);
+								Emu.GetCallbacks().update_emu_settings();
+								if (m_config_changed)
+									*m_config_changed = true;
+								refresh();
+							}
 						}
 
-						if (value != setting->get())
-						{
-							rsx_log.notice("User toggled float slider in '%s'. Setting '%s' to %.2f", title, setting->get_name(), value);
-							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
-							if (m_config_changed) *m_config_changed = true;
-							refresh();
-						}
-					}
-
-					return page_navigation::stay;
-				});
+						return page_navigation::stay;
+					});
 			}
 		};
 
@@ -258,5 +263,5 @@ namespace rsx
 		{
 			home_menu_settings_debug(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

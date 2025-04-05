@@ -26,7 +26,7 @@ struct cfg_camera final : cfg::node
 
 	const std::string path;
 
-	cfg::map_entry cameras{ this, "Cameras" }; // <camera>: <width>,<height>,<min_fps>,<max_fps>,<format>
+	cfg::map_entry cameras{this, "Cameras"}; // <camera>: <width>,<height>,<min_fps>,<max_fps>,<format>
 };
 
 extern cfg_camera g_cfg_camera;

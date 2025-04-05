@@ -14,8 +14,8 @@ LOG_CHANNEL(ps_move);
 namespace gem
 {
 	extern bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
-	                                 const std::vector<u8>& video_data_in, u32 width, u32 height,
-	                                 u8* video_data_out, u32 video_data_out_size, std::string_view caller);
+		const std::vector<u8>& video_data_in, u32 width, u32 height,
+		u8* video_data_out, u32 video_data_out_size, std::string_view caller);
 }
 
 template <bool DiagnosticsEnabled>
@@ -138,41 +138,41 @@ void ps_move_tracker<DiagnosticsEnabled>::init_workers()
 		}
 
 		m_workers[index] = std::make_unique<named_thread<std::function<void()>>>(fmt::format("PS Move Worker %d", index), [this, index]()
-		{
-			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				// Notify that all work is done
+				while (thread_ctrl::state() != thread_state::aborting)
+				{
+					// Notify that all work is done
+					m_workers_finished[index].release(1);
+					m_workers_finished[index].notify_one();
+
+					// Wait for work
+					m_wake_up_workers[index].wait(0);
+					m_wake_up_workers[index].release(0);
+
+					if (thread_ctrl::state() == thread_state::aborting)
+					{
+						break;
+					}
+
+					// Find contours
+					ps_move_info& info = m_info[index];
+					ps_move_info new_info = info;
+					process_contours(new_info, index);
+
+					if (new_info.valid)
+					{
+						info = std::move(new_info);
+					}
+					else
+					{
+						info.valid = false;
+					}
+				}
+
+				// Notify one last time that all work is done
 				m_workers_finished[index].release(1);
 				m_workers_finished[index].notify_one();
-
-				// Wait for work
-				m_wake_up_workers[index].wait(0);
-				m_wake_up_workers[index].release(0);
-
-				if (thread_ctrl::state() == thread_state::aborting)
-				{
-					break;
-				}
-
-				// Find contours
-				ps_move_info& info = m_info[index];
-				ps_move_info new_info = info;
-				process_contours(new_info, index);
-
-				if (new_info.valid)
-				{
-					info = std::move(new_info);
-				}
-				else
-				{
-					info.valid = false;
-				}
-			}
-
-			// Notify one last time that all work is done
-			m_workers_finished[index].release(1);
-			m_workers_finished[index].notify_one();
-		});
+			});
 	}
 }
 
@@ -300,15 +300,18 @@ static bool is_circular_contour(const std::vector<cv::Point>& contour, f32& area
 {
 	std::vector<cv::Point> approx;
 	cv::approxPolyDP(contour, approx, 0.01 * cv::arcLength(contour, true), true);
-	if (approx.size() < 8ULL) return false;
+	if (approx.size() < 8ULL)
+		return false;
 
 	area = static_cast<f32>(cv::contourArea(contour));
-	if (area < 30.0f) return false;
+	if (area < 30.0f)
+		return false;
 
 	cv::Point2f center;
 	f32 radius;
 	cv::minEnclosingCircle(contour, center, radius);
-	if (radius < 5.0f) return false;
+	if (radius < 5.0f)
+		return false;
 
 	return true;
 }
@@ -316,8 +319,10 @@ static bool is_circular_contour(const std::vector<cv::Point>& contour, f32& area
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radius)
 {
-	if constexpr (!DiagnosticsEnabled) return;
-	if (!m_draw_overlays) return;
+	if constexpr (!DiagnosticsEnabled)
+		return;
+	if (!m_draw_overlays)
+		return;
 
 	// Map memory
 	cv::Mat rgba(cv::Size(m_width, m_height), CV_8UC4, m_image_rgba_contours.data(), 0);
@@ -518,9 +523,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	if (!m_show_all_contours) [[likely]]
 	{
 		std::vector<cv::Point> contour = std::move(contours[best_index]);
-		contours = { std::move(contour) };
-		centers = { centers[best_index] };
-		radii = { radii[best_index] };
+		contours = {std::move(contour)};
+		centers = {centers[best_index]};
+		radii = {radii[best_index]};
 	}
 
 	static const cv::Scalar contour_color(255, 0, 0, 255);
@@ -613,11 +618,11 @@ std::tuple<u8, u8, u8> ps_move_tracker<DiagnosticsEnabled>::hsv_to_rgb(u16 hue, 
 		break;
 	}
 
-	const u8 red   = static_cast<u8>(std::clamp(std::round(r * 255.0f), 0.0f, 255.0f));
+	const u8 red = static_cast<u8>(std::clamp(std::round(r * 255.0f), 0.0f, 255.0f));
 	const u8 green = static_cast<u8>(std::clamp(std::round(g * 255.0f), 0.0f, 255.0f));
-	const u8 blue  = static_cast<u8>(std::clamp(std::round(b * 255.0f), 0.0f, 255.0f));
+	const u8 blue = static_cast<u8>(std::clamp(std::round(b * 255.0f), 0.0f, 255.0f));
 
-	return { red, green, blue };
+	return {red, green, blue};
 }
 
 template <bool DiagnosticsEnabled>
@@ -647,7 +652,7 @@ std::tuple<s16, f32, f32> ps_move_tracker<DiagnosticsEnabled>::rgb_to_hsv(f32 r,
 		hue = (static_cast<s16>(60.0f * (r - g) / delta) + 240 + 360) % 360;
 	}
 
-	return { hue, saturation, cmax };
+	return {hue, saturation, cmax};
 }
 
 template class ps_move_tracker<false>;

@@ -10,5 +10,5 @@ namespace rsx
 		void capture_image_in(thread* rsx, frame_capture_data::replay_command& replay_command);
 		void capture_buffer_notify(thread* rsx, frame_capture_data::replay_command& replay_command);
 		void capture_display_tile_state(thread* rsx, frame_capture_data::replay_command& replay_command);
-	}
-}
+	} // namespace capture
+} // namespace rsx

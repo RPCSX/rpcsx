@@ -75,25 +75,24 @@ class PPUTranslator final : public cpu_translator
 	llvm::Value* nan_vec4;
 	bool m_may_be_mmio = false;
 
-#define DEF_VALUE(loc, glb, pos)\
-	llvm::Value*& loc = m_locals[pos];\
+#define DEF_VALUE(loc, glb, pos)       \
+	llvm::Value*& loc = m_locals[pos]; \
 	llvm::Value*& glb = m_globals[pos];
 
-	DEF_VALUE(m_lr, m_g_lr, 163) // LR, Link Register
+	DEF_VALUE(m_lr, m_g_lr, 163)   // LR, Link Register
 	DEF_VALUE(m_ctr, m_g_ctr, 164) // CTR, Counter Register
 	DEF_VALUE(m_vrsave, m_g_vrsave, 165)
 	DEF_VALUE(m_cia, m_g_cia, 166)
-	DEF_VALUE(m_so, m_g_so, 167) // XER.SO bit, summary overflow
-	DEF_VALUE(m_ov, m_g_ov, 168) // XER.OV bit, overflow flag
-	DEF_VALUE(m_ca, m_g_ca, 169) // XER.CA bit, carry flag
-	DEF_VALUE(m_cnt, m_g_cnt, 170) // XER.CNT
-	DEF_VALUE(m_nj, m_g_nj, 171) // VSCR.NJ bit, non-Java mode
-	DEF_VALUE(m_sat, m_g_sat, 173) // VSCR.SAT bit, sticky saturation flag
+	DEF_VALUE(m_so, m_g_so, 167)           // XER.SO bit, summary overflow
+	DEF_VALUE(m_ov, m_g_ov, 168)           // XER.OV bit, overflow flag
+	DEF_VALUE(m_ca, m_g_ca, 169)           // XER.CA bit, carry flag
+	DEF_VALUE(m_cnt, m_g_cnt, 170)         // XER.CNT
+	DEF_VALUE(m_nj, m_g_nj, 171)           // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_sat, m_g_sat, 173)         // VSCR.SAT bit, sticky saturation flag
 	DEF_VALUE(m_jm_mask, m_g_jm_mask, 174) // Java-Mode helper mask
 
 #undef DEF_VALUE
 public:
-
 	template <typename T>
 	value_t<T> get_vr(u32 vr)
 	{
@@ -185,10 +184,10 @@ public:
 	// Vector register type
 	enum class VrType
 	{
-		vi8, // i8 vector
+		vi8,  // i8 vector
 		vi16, // i16 vector
 		vi32, // i32 vector
-		vf, // f32 vector
+		vf,   // f32 vector
 		i128, // Solid 128-bit integer
 	};
 
@@ -202,10 +201,12 @@ public:
 	llvm::Value* Solid(llvm::Value*);
 
 	// Compare value with zero constant of appropriate size
-	llvm::Value* IsZero(llvm::Value*); llvm::Value* IsNotZero(llvm::Value*);
+	llvm::Value* IsZero(llvm::Value*);
+	llvm::Value* IsNotZero(llvm::Value*);
 
 	// Compare value with all-ones constant of appropriate size
-	llvm::Value* IsOnes(llvm::Value*); llvm::Value* IsNotOnes(llvm::Value*);
+	llvm::Value* IsOnes(llvm::Value*);
+	llvm::Value* IsNotOnes(llvm::Value*);
 
 	// Broadcast specified value
 	llvm::Value* Broadcast(llvm::Value* value, u32 count);
@@ -216,20 +217,22 @@ public:
 	// Create sign extension (with double size if type is nullptr)
 	llvm::Value* SExt(llvm::Value* value, llvm::Type* = nullptr);
 
-	template<usz N>
+	template <usz N>
 	std::array<llvm::Value*, N> SExt(std::array<llvm::Value*, N> values, llvm::Type* type = nullptr)
 	{
-		for (usz i = 0; i < N; i++) values[i] = SExt(values[i], type);
+		for (usz i = 0; i < N; i++)
+			values[i] = SExt(values[i], type);
 		return values;
 	}
 
 	// Create zero extension (with double size if type is nullptr)
 	llvm::Value* ZExt(llvm::Value*, llvm::Type* = nullptr);
 
-	template<usz N>
+	template <usz N>
 	std::array<llvm::Value*, N> ZExt(std::array<llvm::Value*, N> values, llvm::Type* type = nullptr)
 	{
-		for (usz i = 0; i < N; i++) values[i] = ZExt(values[i], type);
+		for (usz i = 0; i < N; i++)
+			values[i] = ZExt(values[i], type);
 		return values;
 	}
 
@@ -312,14 +315,14 @@ public:
 	void WriteMemory(llvm::Value* addr, llvm::Value* value, bool is_be = true, u32 align = 1);
 
 	// Get an undefined value with specified type
-	template<typename T>
+	template <typename T>
 	llvm::Value* GetUndef()
 	{
 		return llvm::UndefValue::get(GetType<T>());
 	}
 
 	// Call a function with attribute list
-	template<typename... Args>
+	template <typename... Args>
 	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeList attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
@@ -327,7 +330,7 @@ public:
 	}
 
 	// Call a function
-	template<typename... Args>
+	template <typename... Args>
 	llvm::CallInst* Call(llvm::Type* ret, llvm::StringRef name, Args... args)
 	{
 		return Call(ret, llvm::AttributeList{}, name, args...);
@@ -370,31 +373,70 @@ public:
 	void VCFSX(ppu_opcode_t op);
 	void VCFUX(ppu_opcode_t op);
 	void VCMPBFP(ppu_opcode_t op);
-	void VCMPBFP_(ppu_opcode_t op) { return VCMPBFP(op); }
+	void VCMPBFP_(ppu_opcode_t op)
+	{
+		return VCMPBFP(op);
+	}
 	void VCMPEQFP(ppu_opcode_t op);
-	void VCMPEQFP_(ppu_opcode_t op) { return VCMPEQFP(op); }
+	void VCMPEQFP_(ppu_opcode_t op)
+	{
+		return VCMPEQFP(op);
+	}
 	void VCMPEQUB(ppu_opcode_t op);
-	void VCMPEQUB_(ppu_opcode_t op) { return VCMPEQUB(op); }
+	void VCMPEQUB_(ppu_opcode_t op)
+	{
+		return VCMPEQUB(op);
+	}
 	void VCMPEQUH(ppu_opcode_t op);
-	void VCMPEQUH_(ppu_opcode_t op) { return VCMPEQUH(op); }
+	void VCMPEQUH_(ppu_opcode_t op)
+	{
+		return VCMPEQUH(op);
+	}
 	void VCMPEQUW(ppu_opcode_t op);
-	void VCMPEQUW_(ppu_opcode_t op) { return VCMPEQUW(op); }
+	void VCMPEQUW_(ppu_opcode_t op)
+	{
+		return VCMPEQUW(op);
+	}
 	void VCMPGEFP(ppu_opcode_t op);
-	void VCMPGEFP_(ppu_opcode_t op) { return VCMPGEFP(op); }
+	void VCMPGEFP_(ppu_opcode_t op)
+	{
+		return VCMPGEFP(op);
+	}
 	void VCMPGTFP(ppu_opcode_t op);
-	void VCMPGTFP_(ppu_opcode_t op) { return VCMPGTFP(op); }
+	void VCMPGTFP_(ppu_opcode_t op)
+	{
+		return VCMPGTFP(op);
+	}
 	void VCMPGTSB(ppu_opcode_t op);
-	void VCMPGTSB_(ppu_opcode_t op) { return VCMPGTSB(op); }
+	void VCMPGTSB_(ppu_opcode_t op)
+	{
+		return VCMPGTSB(op);
+	}
 	void VCMPGTSH(ppu_opcode_t op);
-	void VCMPGTSH_(ppu_opcode_t op) { return VCMPGTSH(op); }
+	void VCMPGTSH_(ppu_opcode_t op)
+	{
+		return VCMPGTSH(op);
+	}
 	void VCMPGTSW(ppu_opcode_t op);
-	void VCMPGTSW_(ppu_opcode_t op) { return VCMPGTSW(op); }
+	void VCMPGTSW_(ppu_opcode_t op)
+	{
+		return VCMPGTSW(op);
+	}
 	void VCMPGTUB(ppu_opcode_t op);
-	void VCMPGTUB_(ppu_opcode_t op) { return VCMPGTUB(op); }
+	void VCMPGTUB_(ppu_opcode_t op)
+	{
+		return VCMPGTUB(op);
+	}
 	void VCMPGTUH(ppu_opcode_t op);
-	void VCMPGTUH_(ppu_opcode_t op) { return VCMPGTUH(op); }
+	void VCMPGTUH_(ppu_opcode_t op)
+	{
+		return VCMPGTUH(op);
+	}
 	void VCMPGTUW(ppu_opcode_t op);
-	void VCMPGTUW_(ppu_opcode_t op) { return VCMPGTUW(op); }
+	void VCMPGTUW_(ppu_opcode_t op)
+	{
+		return VCMPGTUW(op);
+	}
 	void VCTSXS(ppu_opcode_t op);
 	void VCTUXS(ppu_opcode_t op);
 	void VEXPTEFP(ppu_opcode_t op);
@@ -743,129 +785,492 @@ public:
 
 	void UNK(ppu_opcode_t op);
 
-	void SUBFCO(ppu_opcode_t op) { return SUBFC(op); }
-	void ADDCO(ppu_opcode_t op) { return ADDC(op); }
-	void SUBFO(ppu_opcode_t op) { return SUBF(op); }
-	void NEGO(ppu_opcode_t op) { return NEG(op); }
-	void SUBFEO(ppu_opcode_t op) { return SUBFE(op); }
-	void ADDEO(ppu_opcode_t op) { return ADDE(op); }
-	void SUBFZEO(ppu_opcode_t op) { return SUBFZE(op); }
-	void ADDZEO(ppu_opcode_t op) { return ADDZE(op); }
-	void SUBFMEO(ppu_opcode_t op) { return SUBFME(op); }
-	void MULLDO(ppu_opcode_t op) { return MULLD(op); }
-	void ADDMEO(ppu_opcode_t op) { return ADDME(op); }
-	void MULLWO(ppu_opcode_t op) { return MULLW(op); }
-	void ADDO(ppu_opcode_t op) { return ADD(op); }
-	void DIVDUO(ppu_opcode_t op) { return DIVDU(op); }
-	void DIVWUO(ppu_opcode_t op) { return DIVWU(op); }
-	void DIVDO(ppu_opcode_t op) { return DIVD(op); }
-	void DIVWO(ppu_opcode_t op) { return DIVW(op); }
+	void SUBFCO(ppu_opcode_t op)
+	{
+		return SUBFC(op);
+	}
+	void ADDCO(ppu_opcode_t op)
+	{
+		return ADDC(op);
+	}
+	void SUBFO(ppu_opcode_t op)
+	{
+		return SUBF(op);
+	}
+	void NEGO(ppu_opcode_t op)
+	{
+		return NEG(op);
+	}
+	void SUBFEO(ppu_opcode_t op)
+	{
+		return SUBFE(op);
+	}
+	void ADDEO(ppu_opcode_t op)
+	{
+		return ADDE(op);
+	}
+	void SUBFZEO(ppu_opcode_t op)
+	{
+		return SUBFZE(op);
+	}
+	void ADDZEO(ppu_opcode_t op)
+	{
+		return ADDZE(op);
+	}
+	void SUBFMEO(ppu_opcode_t op)
+	{
+		return SUBFME(op);
+	}
+	void MULLDO(ppu_opcode_t op)
+	{
+		return MULLD(op);
+	}
+	void ADDMEO(ppu_opcode_t op)
+	{
+		return ADDME(op);
+	}
+	void MULLWO(ppu_opcode_t op)
+	{
+		return MULLW(op);
+	}
+	void ADDO(ppu_opcode_t op)
+	{
+		return ADD(op);
+	}
+	void DIVDUO(ppu_opcode_t op)
+	{
+		return DIVDU(op);
+	}
+	void DIVWUO(ppu_opcode_t op)
+	{
+		return DIVWU(op);
+	}
+	void DIVDO(ppu_opcode_t op)
+	{
+		return DIVD(op);
+	}
+	void DIVWO(ppu_opcode_t op)
+	{
+		return DIVW(op);
+	}
 
-	void SUBFCO_(ppu_opcode_t op) { return SUBFC(op); }
-	void ADDCO_(ppu_opcode_t op) { return ADDC(op); }
-	void SUBFO_(ppu_opcode_t op) { return SUBF(op); }
-	void NEGO_(ppu_opcode_t op) { return NEG(op); }
-	void SUBFEO_(ppu_opcode_t op) { return SUBFE(op); }
-	void ADDEO_(ppu_opcode_t op) { return ADDE(op); }
-	void SUBFZEO_(ppu_opcode_t op) { return SUBFZE(op); }
-	void ADDZEO_(ppu_opcode_t op) { return ADDZE(op); }
-	void SUBFMEO_(ppu_opcode_t op) { return SUBFME(op); }
-	void MULLDO_(ppu_opcode_t op) { return MULLD(op); }
-	void ADDMEO_(ppu_opcode_t op) { return ADDME(op); }
-	void MULLWO_(ppu_opcode_t op) { return MULLW(op); }
-	void ADDO_(ppu_opcode_t op) { return ADD(op); }
-	void DIVDUO_(ppu_opcode_t op) { return DIVDU(op); }
-	void DIVWUO_(ppu_opcode_t op) { return DIVWU(op); }
-	void DIVDO_(ppu_opcode_t op) { return DIVD(op); }
-	void DIVWO_(ppu_opcode_t op) { return DIVW(op); }
+	void SUBFCO_(ppu_opcode_t op)
+	{
+		return SUBFC(op);
+	}
+	void ADDCO_(ppu_opcode_t op)
+	{
+		return ADDC(op);
+	}
+	void SUBFO_(ppu_opcode_t op)
+	{
+		return SUBF(op);
+	}
+	void NEGO_(ppu_opcode_t op)
+	{
+		return NEG(op);
+	}
+	void SUBFEO_(ppu_opcode_t op)
+	{
+		return SUBFE(op);
+	}
+	void ADDEO_(ppu_opcode_t op)
+	{
+		return ADDE(op);
+	}
+	void SUBFZEO_(ppu_opcode_t op)
+	{
+		return SUBFZE(op);
+	}
+	void ADDZEO_(ppu_opcode_t op)
+	{
+		return ADDZE(op);
+	}
+	void SUBFMEO_(ppu_opcode_t op)
+	{
+		return SUBFME(op);
+	}
+	void MULLDO_(ppu_opcode_t op)
+	{
+		return MULLD(op);
+	}
+	void ADDMEO_(ppu_opcode_t op)
+	{
+		return ADDME(op);
+	}
+	void MULLWO_(ppu_opcode_t op)
+	{
+		return MULLW(op);
+	}
+	void ADDO_(ppu_opcode_t op)
+	{
+		return ADD(op);
+	}
+	void DIVDUO_(ppu_opcode_t op)
+	{
+		return DIVDU(op);
+	}
+	void DIVWUO_(ppu_opcode_t op)
+	{
+		return DIVWU(op);
+	}
+	void DIVDO_(ppu_opcode_t op)
+	{
+		return DIVD(op);
+	}
+	void DIVWO_(ppu_opcode_t op)
+	{
+		return DIVW(op);
+	}
 
-	void RLWIMI_(ppu_opcode_t op) { return RLWIMI(op); }
-	void RLWINM_(ppu_opcode_t op) { return RLWINM(op); }
-	void RLWNM_(ppu_opcode_t op) { return RLWNM(op); }
-	void RLDICL_(ppu_opcode_t op) { return RLDICL(op); }
-	void RLDICR_(ppu_opcode_t op) { return RLDICR(op); }
-	void RLDIC_(ppu_opcode_t op) { return RLDIC(op); }
-	void RLDIMI_(ppu_opcode_t op) { return RLDIMI(op); }
-	void RLDCL_(ppu_opcode_t op) { return RLDCL(op); }
-	void RLDCR_(ppu_opcode_t op) { return RLDCR(op); }
-	void SUBFC_(ppu_opcode_t op) { return SUBFC(op); }
-	void MULHDU_(ppu_opcode_t op) { return MULHDU(op); }
-	void ADDC_(ppu_opcode_t op) { return ADDC(op); }
-	void MULHWU_(ppu_opcode_t op) { return MULHWU(op); }
-	void SLW_(ppu_opcode_t op) { return SLW(op); }
-	void CNTLZW_(ppu_opcode_t op) { return CNTLZW(op); }
-	void SLD_(ppu_opcode_t op) { return SLD(op); }
-	void AND_(ppu_opcode_t op) { return AND(op); }
-	void SUBF_(ppu_opcode_t op) { return SUBF(op); }
-	void CNTLZD_(ppu_opcode_t op) { return CNTLZD(op); }
-	void ANDC_(ppu_opcode_t op) { return ANDC(op); }
-	void MULHD_(ppu_opcode_t op) { return MULHD(op); }
-	void MULHW_(ppu_opcode_t op) { return MULHW(op); }
-	void NEG_(ppu_opcode_t op) { return NEG(op); }
-	void NOR_(ppu_opcode_t op) { return NOR(op); }
-	void SUBFE_(ppu_opcode_t op) { return SUBFE(op); }
-	void ADDE_(ppu_opcode_t op) { return ADDE(op); }
-	void SUBFZE_(ppu_opcode_t op) { return SUBFZE(op); }
-	void ADDZE_(ppu_opcode_t op) { return ADDZE(op); }
-	void MULLD_(ppu_opcode_t op) { return MULLD(op); }
-	void SUBFME_(ppu_opcode_t op) { return SUBFME(op); }
-	void ADDME_(ppu_opcode_t op) { return ADDME(op); }
-	void MULLW_(ppu_opcode_t op) { return MULLW(op); }
-	void ADD_(ppu_opcode_t op) { return ADD(op); }
-	void EQV_(ppu_opcode_t op) { return EQV(op); }
-	void XOR_(ppu_opcode_t op) { return XOR(op); }
-	void ORC_(ppu_opcode_t op) { return ORC(op); }
-	void OR_(ppu_opcode_t op) { return OR(op); }
-	void DIVDU_(ppu_opcode_t op) { return DIVDU(op); }
-	void DIVWU_(ppu_opcode_t op) { return DIVWU(op); }
-	void NAND_(ppu_opcode_t op) { return NAND(op); }
-	void DIVD_(ppu_opcode_t op) { return DIVD(op); }
-	void DIVW_(ppu_opcode_t op) { return DIVW(op); }
-	void SRW_(ppu_opcode_t op) { return SRW(op); }
-	void SRD_(ppu_opcode_t op) { return SRD(op); }
-	void SRAW_(ppu_opcode_t op) { return SRAW(op); }
-	void SRAD_(ppu_opcode_t op) { return SRAD(op); }
-	void SRAWI_(ppu_opcode_t op) { return SRAWI(op); }
-	void SRADI_(ppu_opcode_t op) { return SRADI(op); }
-	void EXTSH_(ppu_opcode_t op) { return EXTSH(op); }
-	void EXTSB_(ppu_opcode_t op) { return EXTSB(op); }
-	void EXTSW_(ppu_opcode_t op) { return EXTSW(op); }
-	void FDIVS_(ppu_opcode_t op) { return FDIVS(op); }
-	void FSUBS_(ppu_opcode_t op) { return FSUBS(op); }
-	void FADDS_(ppu_opcode_t op) { return FADDS(op); }
-	void FSQRTS_(ppu_opcode_t op) { return FSQRTS(op); }
-	void FRES_(ppu_opcode_t op) { return FRES(op); }
-	void FMULS_(ppu_opcode_t op) { return FMULS(op); }
-	void FMADDS_(ppu_opcode_t op) { return FMADDS(op); }
-	void FMSUBS_(ppu_opcode_t op) { return FMSUBS(op); }
-	void FNMSUBS_(ppu_opcode_t op) { return FNMSUBS(op); }
-	void FNMADDS_(ppu_opcode_t op) { return FNMADDS(op); }
-	void MTFSB1_(ppu_opcode_t op) { return MTFSB1(op); }
-	void MTFSB0_(ppu_opcode_t op) { return MTFSB0(op); }
-	void MTFSFI_(ppu_opcode_t op) { return MTFSFI(op); }
-	void MFFS_(ppu_opcode_t op) { return MFFS(op); }
-	void MTFSF_(ppu_opcode_t op) { return MTFSF(op); }
-	void FRSP_(ppu_opcode_t op) { return FRSP(op); }
-	void FCTIW_(ppu_opcode_t op) { return FCTIW(op); }
-	void FCTIWZ_(ppu_opcode_t op) { return FCTIWZ(op); }
-	void FDIV_(ppu_opcode_t op) { return FDIV(op); }
-	void FSUB_(ppu_opcode_t op) { return FSUB(op); }
-	void FADD_(ppu_opcode_t op) { return FADD(op); }
-	void FSQRT_(ppu_opcode_t op) { return FSQRT(op); }
-	void FSEL_(ppu_opcode_t op) { return FSEL(op); }
-	void FMUL_(ppu_opcode_t op) { return FMUL(op); }
-	void FRSQRTE_(ppu_opcode_t op) { return FRSQRTE(op); }
-	void FMSUB_(ppu_opcode_t op) { return FMSUB(op); }
-	void FMADD_(ppu_opcode_t op) { return FMADD(op); }
-	void FNMSUB_(ppu_opcode_t op) { return FNMSUB(op); }
-	void FNMADD_(ppu_opcode_t op) { return FNMADD(op); }
-	void FNEG_(ppu_opcode_t op) { return FNEG(op); }
-	void FMR_(ppu_opcode_t op) { return FMR(op); }
-	void FNABS_(ppu_opcode_t op) { return FNABS(op); }
-	void FABS_(ppu_opcode_t op) { return FABS(op); }
-	void FCTID_(ppu_opcode_t op) { return FCTID(op); }
-	void FCTIDZ_(ppu_opcode_t op) { return FCTIDZ(op); }
-	void FCFID_(ppu_opcode_t op) { return FCFID(op); }
+	void RLWIMI_(ppu_opcode_t op)
+	{
+		return RLWIMI(op);
+	}
+	void RLWINM_(ppu_opcode_t op)
+	{
+		return RLWINM(op);
+	}
+	void RLWNM_(ppu_opcode_t op)
+	{
+		return RLWNM(op);
+	}
+	void RLDICL_(ppu_opcode_t op)
+	{
+		return RLDICL(op);
+	}
+	void RLDICR_(ppu_opcode_t op)
+	{
+		return RLDICR(op);
+	}
+	void RLDIC_(ppu_opcode_t op)
+	{
+		return RLDIC(op);
+	}
+	void RLDIMI_(ppu_opcode_t op)
+	{
+		return RLDIMI(op);
+	}
+	void RLDCL_(ppu_opcode_t op)
+	{
+		return RLDCL(op);
+	}
+	void RLDCR_(ppu_opcode_t op)
+	{
+		return RLDCR(op);
+	}
+	void SUBFC_(ppu_opcode_t op)
+	{
+		return SUBFC(op);
+	}
+	void MULHDU_(ppu_opcode_t op)
+	{
+		return MULHDU(op);
+	}
+	void ADDC_(ppu_opcode_t op)
+	{
+		return ADDC(op);
+	}
+	void MULHWU_(ppu_opcode_t op)
+	{
+		return MULHWU(op);
+	}
+	void SLW_(ppu_opcode_t op)
+	{
+		return SLW(op);
+	}
+	void CNTLZW_(ppu_opcode_t op)
+	{
+		return CNTLZW(op);
+	}
+	void SLD_(ppu_opcode_t op)
+	{
+		return SLD(op);
+	}
+	void AND_(ppu_opcode_t op)
+	{
+		return AND(op);
+	}
+	void SUBF_(ppu_opcode_t op)
+	{
+		return SUBF(op);
+	}
+	void CNTLZD_(ppu_opcode_t op)
+	{
+		return CNTLZD(op);
+	}
+	void ANDC_(ppu_opcode_t op)
+	{
+		return ANDC(op);
+	}
+	void MULHD_(ppu_opcode_t op)
+	{
+		return MULHD(op);
+	}
+	void MULHW_(ppu_opcode_t op)
+	{
+		return MULHW(op);
+	}
+	void NEG_(ppu_opcode_t op)
+	{
+		return NEG(op);
+	}
+	void NOR_(ppu_opcode_t op)
+	{
+		return NOR(op);
+	}
+	void SUBFE_(ppu_opcode_t op)
+	{
+		return SUBFE(op);
+	}
+	void ADDE_(ppu_opcode_t op)
+	{
+		return ADDE(op);
+	}
+	void SUBFZE_(ppu_opcode_t op)
+	{
+		return SUBFZE(op);
+	}
+	void ADDZE_(ppu_opcode_t op)
+	{
+		return ADDZE(op);
+	}
+	void MULLD_(ppu_opcode_t op)
+	{
+		return MULLD(op);
+	}
+	void SUBFME_(ppu_opcode_t op)
+	{
+		return SUBFME(op);
+	}
+	void ADDME_(ppu_opcode_t op)
+	{
+		return ADDME(op);
+	}
+	void MULLW_(ppu_opcode_t op)
+	{
+		return MULLW(op);
+	}
+	void ADD_(ppu_opcode_t op)
+	{
+		return ADD(op);
+	}
+	void EQV_(ppu_opcode_t op)
+	{
+		return EQV(op);
+	}
+	void XOR_(ppu_opcode_t op)
+	{
+		return XOR(op);
+	}
+	void ORC_(ppu_opcode_t op)
+	{
+		return ORC(op);
+	}
+	void OR_(ppu_opcode_t op)
+	{
+		return OR(op);
+	}
+	void DIVDU_(ppu_opcode_t op)
+	{
+		return DIVDU(op);
+	}
+	void DIVWU_(ppu_opcode_t op)
+	{
+		return DIVWU(op);
+	}
+	void NAND_(ppu_opcode_t op)
+	{
+		return NAND(op);
+	}
+	void DIVD_(ppu_opcode_t op)
+	{
+		return DIVD(op);
+	}
+	void DIVW_(ppu_opcode_t op)
+	{
+		return DIVW(op);
+	}
+	void SRW_(ppu_opcode_t op)
+	{
+		return SRW(op);
+	}
+	void SRD_(ppu_opcode_t op)
+	{
+		return SRD(op);
+	}
+	void SRAW_(ppu_opcode_t op)
+	{
+		return SRAW(op);
+	}
+	void SRAD_(ppu_opcode_t op)
+	{
+		return SRAD(op);
+	}
+	void SRAWI_(ppu_opcode_t op)
+	{
+		return SRAWI(op);
+	}
+	void SRADI_(ppu_opcode_t op)
+	{
+		return SRADI(op);
+	}
+	void EXTSH_(ppu_opcode_t op)
+	{
+		return EXTSH(op);
+	}
+	void EXTSB_(ppu_opcode_t op)
+	{
+		return EXTSB(op);
+	}
+	void EXTSW_(ppu_opcode_t op)
+	{
+		return EXTSW(op);
+	}
+	void FDIVS_(ppu_opcode_t op)
+	{
+		return FDIVS(op);
+	}
+	void FSUBS_(ppu_opcode_t op)
+	{
+		return FSUBS(op);
+	}
+	void FADDS_(ppu_opcode_t op)
+	{
+		return FADDS(op);
+	}
+	void FSQRTS_(ppu_opcode_t op)
+	{
+		return FSQRTS(op);
+	}
+	void FRES_(ppu_opcode_t op)
+	{
+		return FRES(op);
+	}
+	void FMULS_(ppu_opcode_t op)
+	{
+		return FMULS(op);
+	}
+	void FMADDS_(ppu_opcode_t op)
+	{
+		return FMADDS(op);
+	}
+	void FMSUBS_(ppu_opcode_t op)
+	{
+		return FMSUBS(op);
+	}
+	void FNMSUBS_(ppu_opcode_t op)
+	{
+		return FNMSUBS(op);
+	}
+	void FNMADDS_(ppu_opcode_t op)
+	{
+		return FNMADDS(op);
+	}
+	void MTFSB1_(ppu_opcode_t op)
+	{
+		return MTFSB1(op);
+	}
+	void MTFSB0_(ppu_opcode_t op)
+	{
+		return MTFSB0(op);
+	}
+	void MTFSFI_(ppu_opcode_t op)
+	{
+		return MTFSFI(op);
+	}
+	void MFFS_(ppu_opcode_t op)
+	{
+		return MFFS(op);
+	}
+	void MTFSF_(ppu_opcode_t op)
+	{
+		return MTFSF(op);
+	}
+	void FRSP_(ppu_opcode_t op)
+	{
+		return FRSP(op);
+	}
+	void FCTIW_(ppu_opcode_t op)
+	{
+		return FCTIW(op);
+	}
+	void FCTIWZ_(ppu_opcode_t op)
+	{
+		return FCTIWZ(op);
+	}
+	void FDIV_(ppu_opcode_t op)
+	{
+		return FDIV(op);
+	}
+	void FSUB_(ppu_opcode_t op)
+	{
+		return FSUB(op);
+	}
+	void FADD_(ppu_opcode_t op)
+	{
+		return FADD(op);
+	}
+	void FSQRT_(ppu_opcode_t op)
+	{
+		return FSQRT(op);
+	}
+	void FSEL_(ppu_opcode_t op)
+	{
+		return FSEL(op);
+	}
+	void FMUL_(ppu_opcode_t op)
+	{
+		return FMUL(op);
+	}
+	void FRSQRTE_(ppu_opcode_t op)
+	{
+		return FRSQRTE(op);
+	}
+	void FMSUB_(ppu_opcode_t op)
+	{
+		return FMSUB(op);
+	}
+	void FMADD_(ppu_opcode_t op)
+	{
+		return FMADD(op);
+	}
+	void FNMSUB_(ppu_opcode_t op)
+	{
+		return FNMSUB(op);
+	}
+	void FNMADD_(ppu_opcode_t op)
+	{
+		return FNMADD(op);
+	}
+	void FNEG_(ppu_opcode_t op)
+	{
+		return FNEG(op);
+	}
+	void FMR_(ppu_opcode_t op)
+	{
+		return FMR(op);
+	}
+	void FNABS_(ppu_opcode_t op)
+	{
+		return FNABS(op);
+	}
+	void FABS_(ppu_opcode_t op)
+	{
+		return FABS(op);
+	}
+	void FCTID_(ppu_opcode_t op)
+	{
+		return FCTID(op);
+	}
+	void FCTIDZ_(ppu_opcode_t op)
+	{
+		return FCTIDZ(op);
+	}
+	void FCFID_(ppu_opcode_t op)
+	{
+		return FCFID(op);
+	}
 
 	void build_interpreter();
 };

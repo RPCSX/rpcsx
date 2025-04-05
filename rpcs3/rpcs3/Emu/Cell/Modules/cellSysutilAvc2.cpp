@@ -10,59 +10,61 @@
 
 LOG_CHANNEL(cellSysutilAvc2);
 
-template<>
+template <>
 void fmt_class_string<CellSysutilAvc2Error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_AVC2_ERROR_UNKNOWN);
-			STR_CASE(CELL_AVC2_ERROR_NOT_SUPPORTED);
-			STR_CASE(CELL_AVC2_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_AVC2_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_AVC2_ERROR_INVALID_ARGUMENT);
-			STR_CASE(CELL_AVC2_ERROR_OUT_OF_MEMORY);
-			STR_CASE(CELL_AVC2_ERROR_ERROR_BAD_ID);
-			STR_CASE(CELL_AVC2_ERROR_INVALID_STATUS);
-			STR_CASE(CELL_AVC2_ERROR_TIMEOUT);
-			STR_CASE(CELL_AVC2_ERROR_NO_SESSION);
-			STR_CASE(CELL_AVC2_ERROR_WINDOW_ALREADY_EXISTS);
-			STR_CASE(CELL_AVC2_ERROR_TOO_MANY_WINDOWS);
-			STR_CASE(CELL_AVC2_ERROR_TOO_MANY_PEER_WINDOWS);
-			STR_CASE(CELL_AVC2_ERROR_WINDOW_NOT_FOUND);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_AVC2_ERROR_UNKNOWN);
+				STR_CASE(CELL_AVC2_ERROR_NOT_SUPPORTED);
+				STR_CASE(CELL_AVC2_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_AVC2_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_AVC2_ERROR_INVALID_ARGUMENT);
+				STR_CASE(CELL_AVC2_ERROR_OUT_OF_MEMORY);
+				STR_CASE(CELL_AVC2_ERROR_ERROR_BAD_ID);
+				STR_CASE(CELL_AVC2_ERROR_INVALID_STATUS);
+				STR_CASE(CELL_AVC2_ERROR_TIMEOUT);
+				STR_CASE(CELL_AVC2_ERROR_NO_SESSION);
+				STR_CASE(CELL_AVC2_ERROR_WINDOW_ALREADY_EXISTS);
+				STR_CASE(CELL_AVC2_ERROR_TOO_MANY_WINDOWS);
+				STR_CASE(CELL_AVC2_ERROR_TOO_MANY_PEER_WINDOWS);
+				STR_CASE(CELL_AVC2_ERROR_WINDOW_NOT_FOUND);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<CellSysutilAvc2AttributeId>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellSysutilAvc2AttributeId value)
-	{
-		switch (value)
 		{
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_EVENT_TYPE);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_INTERVAL_TIME);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_SIGNAL_LEVEL);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MAX_BITRATE);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DATA_FEC);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_PACKET_CONTENTION);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DTX_MODE);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_STATUS_DETECTION);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_SETTING_NOTIFICATION);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MUTING_NOTIFICATION);
-			STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_CAMERA_STATUS_DETECTION);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_EVENT_TYPE);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_INTERVAL_TIME);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_SIGNAL_LEVEL);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MAX_BITRATE);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DATA_FEC);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_PACKET_CONTENTION);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DTX_MODE);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_STATUS_DETECTION);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_SETTING_NOTIFICATION);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MUTING_NOTIFICATION);
+				STR_CASE(CELL_SYSUTIL_AVC2_ATTRIBUTE_CAMERA_STATUS_DETECTION);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Callback handle tag type
-struct avc2_cb_handle_t{};
+struct avc2_cb_handle_t
+{
+};
 
 struct avc2_settings
 {
@@ -368,8 +370,8 @@ error_code cellSysutilAvc2EstimateMemoryContainerSize(vm::cptr<CellSysutilAvc2In
 		else if (initparam->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		{
 			u32 estimated_size = 0x40e666;
-			u32 max_windows    = initparam->video_param.max_video_windows;
-			s32 window_count   = max_windows;
+			u32 max_windows = initparam->video_param.max_video_windows;
+			s32 window_count = max_windows;
 
 			if (initparam->video_param.video_stream_sharing == CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_2)
 			{
@@ -800,12 +802,11 @@ error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId /*ctx_id*/, u32 /*container*/, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
 	if (!init_param || !init_param->avc_init_param_version ||
-	    !(init_param->avc_init_param_version == 100 ||
-	     init_param->avc_init_param_version == 110 ||
-	     init_param->avc_init_param_version == 120 ||
-	     init_param->avc_init_param_version == 130 ||
-	     init_param->avc_init_param_version == 140)
-	)
+		!(init_param->avc_init_param_version == 100 ||
+			init_param->avc_init_param_version == 110 ||
+			init_param->avc_init_param_version == 120 ||
+			init_param->avc_init_param_version == 130 ||
+			init_param->avc_init_param_version == 140))
 	{
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 	}
@@ -817,12 +818,11 @@ error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId /*ctx_id*/, u32 /*
 	case CELL_SYSUTIL_AVC2_VOICE_CHAT:
 	{
 		if (init_param->max_players < 2 ||
-		    init_param->max_players > 64 ||
-		    init_param->spu_load_average > 100 ||
-		    init_param->voice_param.voice_quality != CELL_SYSUTIL_AVC2_VOICE_QUALITY_NORMAL ||
-		    init_param->voice_param.max_speakers == 0 ||
-		    init_param->voice_param.max_speakers > 16
-		)
+			init_param->max_players > 64 ||
+			init_param->spu_load_average > 100 ||
+			init_param->voice_param.voice_quality != CELL_SYSUTIL_AVC2_VOICE_QUALITY_NORMAL ||
+			init_param->voice_param.max_speakers == 0 ||
+			init_param->voice_param.max_speakers > 16)
 		{
 			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 		}
@@ -1135,61 +1135,60 @@ error_code cellSysutilAvc2GetWindowPosition(SceNpMatching2RoomMemberId member_id
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::cellSysutilAvc2)("cellSysutilAvc2", []()
-{
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetPlayerInfo);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2JoinChat);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StopStreaming);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2ChangeVideoResolution);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2ShowScreen);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetVideoMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowAttribute);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StopStreaming2);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetVoiceMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StartVoiceDetection);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2UnloadAsync);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StopVoiceDetection);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetAttribute);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2LoadAsync);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetSpeakerVolumeLevel);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowString);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2EstimateMemoryContainerSize);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetVideoMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetPlayerVoiceMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetStreamingTarget);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2Unload);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2DestroyWindow);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowPosition);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetSpeakerVolumeLevel);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2IsCameraAttached);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2MicRead);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetPlayerVoiceMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2JoinChatRequest);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StartStreaming);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowAttribute);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowShowStatus);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2InitParam);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowSize);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetStreamPriority);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2LeaveChatRequest);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2IsMicAttached);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2CreateWindow);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetSpeakerMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2ShowWindow);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowSize);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2EnumPlayers);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowString);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2LeaveChat);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetSpeakerMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2Load);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetAttribute);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2UnloadAsync2);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StartStreaming2);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2HideScreen);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2HideWindow);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetVoiceMuting);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetScreenShowStatus);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2Unload2);
-	REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowPosition);
-});
+	{
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetPlayerInfo);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2JoinChat);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StopStreaming);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2ChangeVideoResolution);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2ShowScreen);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetVideoMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowAttribute);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StopStreaming2);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetVoiceMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StartVoiceDetection);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2UnloadAsync);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StopVoiceDetection);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetAttribute);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2LoadAsync);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetSpeakerVolumeLevel);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowString);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2EstimateMemoryContainerSize);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetVideoMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetPlayerVoiceMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetStreamingTarget);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2Unload);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2DestroyWindow);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowPosition);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetSpeakerVolumeLevel);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2IsCameraAttached);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2MicRead);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetPlayerVoiceMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2JoinChatRequest);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StartStreaming);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowAttribute);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowShowStatus);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2InitParam);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowSize);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetStreamPriority);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2LeaveChatRequest);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2IsMicAttached);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2CreateWindow);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetSpeakerMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2ShowWindow);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetWindowSize);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2EnumPlayers);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowString);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2LeaveChat);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetSpeakerMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2Load);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2SetAttribute);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2UnloadAsync2);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2StartStreaming2);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2HideScreen);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2HideWindow);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetVoiceMuting);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetScreenShowStatus);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2Unload2);
+		REG_FUNC(cellSysutilAvc2, cellSysutilAvc2GetWindowPosition);
+	});

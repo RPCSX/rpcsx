@@ -19,10 +19,8 @@ namespace vk
 
 		ensure(g_render_device->_vkGetDeviceFaultInfoEXT);
 
-		VkDeviceFaultCountsEXT fault_counts
-		{
-			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT
-		};
+		VkDeviceFaultCountsEXT fault_counts{
+			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT};
 
 		std::vector<VkDeviceFaultAddressInfoEXT> address_info;
 		std::vector<VkDeviceFaultVendorInfoEXT> vendor_info;
@@ -37,13 +35,11 @@ namespace vk
 		vendor_info.resize(fault_counts.vendorInfoCount);
 		vendor_binary_data.resize(fault_counts.vendorBinarySize);
 
-		VkDeviceFaultInfoEXT fault_info
-		{
+		VkDeviceFaultInfoEXT fault_info{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
 			.pAddressInfos = address_info.data(),
 			.pVendorInfos = vendor_info.data(),
-			.pVendorBinaryData = vendor_binary_data.data()
-		};
+			.pVendorBinaryData = vendor_binary_data.data()};
 		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
 
 		fault_description = fault_info.description;
@@ -66,17 +62,23 @@ namespace vk
 					access_type = "access_none";
 					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT:
-					access_type = "access_read"; break;
+					access_type = "access_read";
+					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT:
-					access_type = "access_write"; break;
+					access_type = "access_write";
+					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT:
-					access_type = "access_execute"; break;
+					access_type = "access_execute";
+					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT:
-					access_type = "instruction_pointer_unknown"; break;
+					access_type = "instruction_pointer_unknown";
+					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT:
-					access_type = "instruction_pointer_invalid"; break;
+					access_type = "instruction_pointer_invalid";
+					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT:
-					access_type = "instruction_pointer_fault"; break;
+					access_type = "instruction_pointer_fault";
+					break;
 				default:
 					break;
 				}
@@ -201,7 +203,8 @@ namespace vk
 		case 0:
 			print_debug_markers();
 
-			if (!message.empty()) message += "\n\n";
+			if (!message.empty())
+				message += "\n\n";
 			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
 		case 1:
 			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc);
@@ -212,8 +215,8 @@ namespace vk
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT /*objType*/,
-	                                       u64 /*srcObject*/, usz /*location*/, s32 msgCode,
-	                                       const char* pLayerPrefix, const char* pMsg, void* /*pUserData*/)
+		u64 /*srcObject*/, usz /*location*/, s32 msgCode,
+		const char* pLayerPrefix, const char* pMsg, void* /*pUserData*/)
 	{
 		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
 		{
@@ -252,4 +255,4 @@ namespace vk
 
 		return false;
 	}
-}
+} // namespace vk

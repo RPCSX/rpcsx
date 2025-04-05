@@ -15,7 +15,8 @@ namespace vk
 	public:
 		swapchain_WIN32(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
-		{}
+		{
+		}
 
 		~swapchain_WIN32() {}
 
@@ -93,8 +94,7 @@ namespace vk
 
 	using swapchain_NATIVE = swapchain_WIN32;
 
-	[[maybe_unused]] static
-	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle, WSI_config* /*config*/)
+	[[maybe_unused]] static VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle, WSI_config* /*config*/)
 	{
 		HINSTANCE hInstance = NULL;
 		VkSurfaceKHR result = VK_NULL_HANDLE;
@@ -107,4 +107,4 @@ namespace vk
 		return result;
 	}
 #endif
-}
+} // namespace vk

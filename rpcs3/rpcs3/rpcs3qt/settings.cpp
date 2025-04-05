@@ -3,7 +3,7 @@
 #include "Utilities/File.h"
 
 settings::settings(QObject* parent) : QObject(parent),
-	m_settings_dir(ComputeSettingsDir())
+									  m_settings_dir(ComputeSettingsDir())
 {
 }
 

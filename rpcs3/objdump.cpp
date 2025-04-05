@@ -29,8 +29,11 @@
 std::string to_hex(std::uint64_t value, bool prfx = true)
 {
 	char buf[20]{}, *ptr = buf + 19;
-	do *--ptr = "0123456789abcdef"[value % 16], value /= 16; while (value);
-	if (!prfx) return ptr;
+	do
+		*--ptr = "0123456789abcdef"[value % 16], value /= 16;
+	while (value);
+	if (!prfx)
+		return ptr;
 	*--ptr = 'x';
 	*--ptr = '0';
 	return ptr;
@@ -200,7 +203,9 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			while ((dup2(fds[1], STDOUT_FILENO) == -1) && (errno == EINTR)) {}
+			while ((dup2(fds[1], STDOUT_FILENO) == -1) && (errno == EINTR))
+			{
+			}
 			close(fds[1]);
 			close(fds[0]);
 			// Fallthrough

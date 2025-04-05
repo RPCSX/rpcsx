@@ -267,7 +267,8 @@ bool ComputePipe::setShReg(Ring &ring) {
                  data[i]);
   }
 
-  std::memcpy(ring.doorbell + offset, const_cast<const uint32_t *>(data), sizeof(std::uint32_t) * len);
+  std::memcpy(ring.doorbell + offset, const_cast<const uint32_t *>(data),
+              sizeof(std::uint32_t) * len);
 
   return true;
 }
@@ -418,7 +419,8 @@ bool ComputePipe::writeData(Ring &ring) {
       *dstPointer = data[i];
     }
   } else {
-    std::memcpy(dstPointer, const_cast<const uint32_t *>(data), len * sizeof(std::uint32_t));
+    std::memcpy(dstPointer, const_cast<const uint32_t *>(data),
+                len * sizeof(std::uint32_t));
   }
 
   return true;
@@ -1190,7 +1192,8 @@ bool GraphicsPipe::writeData(Ring &ring) {
       *dstPointer = data[i];
     }
   } else {
-    std::memcpy(dstPointer, const_cast<std::uint32_t *>(data), len * sizeof(std::uint32_t));
+    std::memcpy(dstPointer, const_cast<std::uint32_t *>(data),
+                len * sizeof(std::uint32_t));
   }
 
   return true;
@@ -2147,7 +2150,8 @@ bool GraphicsPipe::setUConfigRegIndex(Ring &ring) {
   //     std::println(stderr, "writing to {} value {:x}", regName,
   //                  uint32_t(data[i]));
   //   } else {
-  //     std::println(stderr, "writing to {:x} value {:x}", id, uint32_t(data[i]));
+  //     std::println(stderr, "writing to {:x} value {:x}", id,
+  //     uint32_t(data[i]));
   //   }
   // }
 

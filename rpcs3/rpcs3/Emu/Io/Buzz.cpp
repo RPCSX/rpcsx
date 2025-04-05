@@ -13,70 +13,68 @@ template <>
 void fmt_class_string<buzz_btn>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](buzz_btn value)
-	{
-		switch (value)
 		{
-		case buzz_btn::red: return "Red";
-		case buzz_btn::yellow: return "Yellow";
-		case buzz_btn::green: return "Green";
-		case buzz_btn::orange: return "Orange";
-		case buzz_btn::blue: return "Blue";
-		case buzz_btn::count: return "Count";
-		}
+			switch (value)
+			{
+			case buzz_btn::red: return "Red";
+			case buzz_btn::yellow: return "Yellow";
+			case buzz_btn::green: return "Green";
+			case buzz_btn::orange: return "Orange";
+			case buzz_btn::blue: return "Blue";
+			case buzz_btn::count: return "Count";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, const std::array<u8, 7>& location)
-	: usb_device_emulated(location)
-	, m_first_controller(first_controller)
-	, m_last_controller(last_controller)
+	: usb_device_emulated(location), m_first_controller(first_controller), m_last_controller(last_controller)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 		UsbDeviceDescriptor{
-			.bcdUSB             = 0x0200,
-			.bDeviceClass       = 0x00,
-			.bDeviceSubClass    = 0x00,
-			.bDeviceProtocol    = 0x00,
-			.bMaxPacketSize0    = 0x08,
-			.idVendor           = 0x054c,
-			.idProduct          = 0x0002,
-			.bcdDevice          = 0x05a1,
-			.iManufacturer      = 0x02,
-			.iProduct           = 0x01,
-			.iSerialNumber      = 0x00,
+			.bcdUSB = 0x0200,
+			.bDeviceClass = 0x00,
+			.bDeviceSubClass = 0x00,
+			.bDeviceProtocol = 0x00,
+			.bMaxPacketSize0 = 0x08,
+			.idVendor = 0x054c,
+			.idProduct = 0x0002,
+			.bcdDevice = 0x05a1,
+			.iManufacturer = 0x02,
+			.iProduct = 0x01,
+			.iSerialNumber = 0x00,
 			.bNumConfigurations = 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG,
 		UsbDeviceConfiguration{
-			.wTotalLength        = 0x0022,
-			.bNumInterfaces      = 0x01,
+			.wTotalLength = 0x0022,
+			.bNumInterfaces = 0x01,
 			.bConfigurationValue = 0x01,
-			.iConfiguration      = 0x00,
-			.bmAttributes        = 0x80,
-			.bMaxPower           = 0x32}));
+			.iConfiguration = 0x00,
+			.bmAttributes = 0x80,
+			.bMaxPower = 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE,
 		UsbDeviceInterface{
-			.bInterfaceNumber   = 0x00,
-			.bAlternateSetting  = 0x00,
-			.bNumEndpoints      = 0x01,
-			.bInterfaceClass    = 0x03,
+			.bInterfaceNumber = 0x00,
+			.bAlternateSetting = 0x00,
+			.bNumEndpoints = 0x01,
+			.bInterfaceClass = 0x03,
 			.bInterfaceSubClass = 0x00,
 			.bInterfaceProtocol = 0x00,
-			.iInterface         = 0x00}));
+			.iInterface = 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID,
 		UsbDeviceHID{
-			.bcdHID            = 0x0111,
-			.bCountryCode      = 0x33,
-			.bNumDescriptors   = 0x01,
-			.bDescriptorType   = 0x22,
+			.bcdHID = 0x0111,
+			.bCountryCode = 0x33,
+			.bNumDescriptors = 0x01,
+			.bDescriptorType = 0x22,
 			.wDescriptorLength = 0x004e}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
 		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x81,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0008,
-			.bInterval        = 0x0A}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0008,
+			.bInterval = 0x0A}));
 
 	add_string("Logitech Buzz(tm) Controller V1");
 	add_string("Logitech");
@@ -105,11 +103,11 @@ u16 usb_device_buzz::get_num_emu_devices()
 
 void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	// Control transfers are nearly instant
-	transfer->expected_time   = get_timestamp() + 100;
+	transfer->expected_time = get_timestamp() + 100;
 
 	switch (bmRequestType)
 	{
@@ -122,8 +120,7 @@ void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 				buf[1] == 0xff ? "ON" : "OFF",
 				buf[2] == 0xff ? "ON" : "OFF",
 				buf[3] == 0xff ? "ON" : "OFF",
-				buf[4] == 0xff ? "ON" : "OFF"
-			);
+				buf[4] == 0xff ? "ON" : "OFF");
 			break;
 		default:
 			buzz_log.error("Unhandled Request: 0x%02X/0x%02X", bmRequestType, bRequest);
@@ -143,8 +140,8 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	const u8 max_index = 2 + (4 + 5 * m_last_controller) / 8;
 	ensure(buf_size > max_index);
 
-	transfer->fake            = true;
-	transfer->expected_count  = 5;
+	transfer->fake = true;
+	transfer->expected_count = 5;
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow (6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;
@@ -165,7 +162,7 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_pad_thread();
-	const auto& pads   = handler->GetPads();
+	const auto& pads = handler->GetPads();
 	ensure(pads.size() > m_last_controller);
 	ensure(g_cfg_buzz.players.size() > m_last_controller);
 

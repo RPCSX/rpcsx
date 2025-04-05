@@ -15,7 +15,8 @@ namespace gl
 		save_binding_state save(current_target(), *this);
 
 		GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
-		if (gl::get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
+		if (gl::get_driver_caps().vendor_MESA)
+			buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
 
 		DSA_CALL2(NamedBufferStorage, m_id, size, data, buffer_storage_flags);
 		m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
@@ -35,7 +36,8 @@ namespace gl
 	std::pair<void*, u32> ring_buffer::alloc_from_heap(u32 alloc_size, u16 alignment)
 	{
 		u32 offset = m_data_loc;
-		if (m_data_loc) offset = utils::align(offset, alignment);
+		if (m_data_loc)
+			offset = utils::align(offset, alignment);
 
 		if ((offset + alloc_size) > m_size)
 		{
@@ -53,7 +55,7 @@ namespace gl
 			offset = 0;
 		}
 
-		//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
+		// Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
 		m_data_loc = utils::align(offset + alloc_size, 256);
 		return std::make_pair(static_cast<char*>(m_memory_mapping) + offset, offset);
 	}
@@ -74,7 +76,7 @@ namespace gl
 
 	void ring_buffer::notify()
 	{
-		//Insert fence about 25% into the buffer
+		// Insert fence about 25% into the buffer
 		if (m_fence.is_empty() && (m_data_loc > (m_size >> 2)))
 			m_fence.reset();
 	}
@@ -105,9 +107,10 @@ namespace gl
 		ensure(m_memory_mapping == nullptr);
 
 		u32 offset = m_data_loc;
-		if (m_data_loc) offset = utils::align(offset, 256);
+		if (m_data_loc)
+			offset = utils::align(offset, 256);
 
-		const u32 block_size = utils::align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
+		const u32 block_size = utils::align(alloc_size + 16, 256); // Overallocate just in case we need to realign base
 
 		if ((offset + block_size) > m_size)
 		{
@@ -120,12 +123,12 @@ namespace gl
 		m_mapping_offset = m_data_loc;
 		m_alignment_offset = 0;
 
-		//When using debugging tools, the mapped base might not be aligned as expected
+		// When using debugging tools, the mapped base might not be aligned as expected
 		const u64 mapped_address_base = reinterpret_cast<u64>(m_memory_mapping);
 		if (mapped_address_base & 0xF)
 		{
-			//Unaligned result was returned. We have to modify the base address a bit
-			//We lose some memory here, but the 16 byte overallocation above makes up for it
+			// Unaligned result was returned. We have to modify the base address a bit
+			// We lose some memory here, but the 16 byte overallocation above makes up for it
 			const u64 new_base = (mapped_address_base & ~0xF) + 16;
 			const u64 diff_bytes = new_base - mapped_address_base;
 
@@ -140,20 +143,22 @@ namespace gl
 	std::pair<void*, u32> legacy_ring_buffer::alloc_from_heap(u32 alloc_size, u16 alignment)
 	{
 		u32 offset = m_data_loc;
-		if (m_data_loc) offset = utils::align(offset, alignment);
+		if (m_data_loc)
+			offset = utils::align(offset, alignment);
 
 		u32 padding = (offset - m_data_loc);
-		u32 real_size = utils::align(padding + alloc_size, alignment);	//Ensures we leave the loc pointer aligned after we exit
+		u32 real_size = utils::align(padding + alloc_size, alignment); // Ensures we leave the loc pointer aligned after we exit
 
 		if (real_size > m_mapped_bytes)
 		{
-			//Missed allocation. We take a performance hit on doing this.
-			//Overallocate slightly for the next allocation if requested size is too small
+			// Missed allocation. We take a performance hit on doing this.
+			// Overallocate slightly for the next allocation if requested size is too small
 			unmap();
 			reserve_storage_on_heap(std::max(real_size, 4096U));
 
 			offset = m_data_loc;
-			if (m_data_loc) offset = utils::align(offset, alignment);
+			if (m_data_loc)
+				offset = utils::align(offset, alignment);
 
 			padding = (offset - m_data_loc);
 			real_size = utils::align(padding + alloc_size, alignment);
@@ -217,7 +222,7 @@ namespace gl
 	{
 		ensure(m_memory_mapping == nullptr);
 		const auto allocation = ring_buffer::alloc_from_heap(alloc_size, alignment);
-		return { map_internal(allocation.second, alloc_size), allocation.second };
+		return {map_internal(allocation.second, alloc_size), allocation.second};
 	}
 
 	void transient_ring_buffer::flush()
@@ -282,16 +287,17 @@ namespace gl
 	{
 		const auto range = utils::address_range::start_length(start, length);
 		m_barriers.erase(std::remove_if(m_barriers.begin(), m_barriers.end(), [&range](auto& barrier_)
-		{
-			if (barrier_.range.overlaps(range))
-			{
-				barrier_.signal.server_wait_sync();
-				barrier_.signal.destroy();
-				return true;
-			}
+							 {
+								 if (barrier_.range.overlaps(range))
+								 {
+									 barrier_.signal.server_wait_sync();
+									 barrier_.signal.destroy();
+									 return true;
+								 }
 
-			return false;
-		}), m_barriers.end());
+								 return false;
+							 }),
+			m_barriers.end());
 	}
 
 	void scratch_ring_buffer::push_barrier(u32 start, u32 length)
@@ -306,4 +312,4 @@ namespace gl
 		barrier_.signal.create();
 		m_barriers.emplace_back(barrier_);
 	}
-}
+} // namespace gl

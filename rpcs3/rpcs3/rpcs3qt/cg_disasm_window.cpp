@@ -59,7 +59,7 @@ cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> gui_settings)
 	ShowDisasm();
 }
 
-void cg_disasm_window::ShowContextMenu(const QPoint &pos)
+void cg_disasm_window::ShowContextMenu(const QPoint& pos)
 {
 	QMenu menu;
 	QAction* clear = new QAction(tr("&Clear"));
@@ -70,19 +70,19 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 	menu.addAction(clear);
 
 	connect(clear, &QAction::triggered, [this]()
-	{
-		m_disasm_text->clear();
-		m_glsl_text->clear();
-	});
+		{
+			m_disasm_text->clear();
+			m_glsl_text->clear();
+		});
 
 	connect(open, &QAction::triggered, [this]()
-	{
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
-		if (file_path.isEmpty())
-			return;
-		m_path_last = file_path;
-		ShowDisasm();
-	});
+		{
+			const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Cg program object"), m_path_last, tr("Cg program objects (*.fpo;*.vpo);;"));
+			if (file_path.isEmpty())
+				return;
+			m_path_last = file_path;
+			ShowDisasm();
+		});
 
 	const auto obj = qobject_cast<QTextEdit*>(sender());
 

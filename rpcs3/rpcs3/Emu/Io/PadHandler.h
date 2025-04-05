@@ -9,7 +9,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-extern "C" {
+extern "C"
+{
 #include "3rdparty/fusion/fusion/Fusion/FusionAhrs.h"
 }
 #ifndef _MSC_VER
@@ -30,7 +31,7 @@ class PadDevice
 {
 public:
 	virtual ~PadDevice() = default;
-	cfg_pad* config{ nullptr };
+	cfg_pad* config{nullptr};
 	u8 player_id{0};
 	u8 large_motor{0};
 	u8 small_motor{0};
@@ -68,7 +69,8 @@ struct pad_ensemble
 
 	explicit pad_ensemble(std::shared_ptr<Pad> _pad, std::shared_ptr<PadDevice> _device, std::shared_ptr<PadDevice> _buddy_device)
 		: pad(std::move(_pad)), device(std::move(_device)), buddy_device(std::move(_buddy_device))
-	{}
+	{
+	}
 };
 
 struct pad_list_entry
@@ -78,7 +80,8 @@ struct pad_list_entry
 
 	explicit pad_list_entry(std::string _name, bool _is_buddy_only)
 		: name(std::move(_name)), is_buddy_only(_is_buddy_only)
-	{}
+	{
+	}
 };
 
 using pad_preview_values = std::array<int, 6>;
@@ -126,7 +129,7 @@ protected:
 		start,
 		select,
 		ps,
-		//reserved,
+		// reserved,
 		ls_left,
 		ls_right,
 		ls_down,
@@ -155,7 +158,7 @@ protected:
 	static constexpr u16 touch_threshold = static_cast<u16>(255 * 0.9f);
 	static constexpr auto min_output_interval = 300ms;
 
-	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
+	std::array<bool, MAX_GAMEPADS> last_connection_status{{false, false, false, false, false, false, false}};
 
 	std::string m_name_string;
 	usz m_max_devices = 0;
@@ -222,7 +225,7 @@ protected:
 
 			if (def_code != umax)
 			{
-				return { def_code };
+				return {def_code};
 			}
 		}
 
@@ -309,32 +312,86 @@ public:
 		blacklist
 	};
 
-	std::vector<pad_ensemble>& bindings() { return m_bindings; }
-	const std::string& name_string() const { return m_name_string; }
-	usz max_devices() const { return m_max_devices; }
-	bool has_config() const { return b_has_config; }
-	bool has_rumble() const { return b_has_rumble; }
-	bool has_motion() const { return b_has_motion; }
-	bool has_deadzones() const { return b_has_deadzones; }
-	bool has_led() const { return b_has_led; }
-	bool has_rgb() const { return b_has_rgb; }
-	bool has_player_led() const { return b_has_player_led; }
-	bool has_battery() const { return b_has_battery; }
-	bool has_battery_led() const { return b_has_battery_led; }
-	bool has_pressure_intensity_button() const { return b_has_pressure_intensity_button; }
-	bool has_analog_limiter_button() const { return b_has_analog_limiter_button; }
-	bool has_orientation() const { return b_has_orientation; }
+	std::vector<pad_ensemble>& bindings()
+	{
+		return m_bindings;
+	}
+	const std::string& name_string() const
+	{
+		return m_name_string;
+	}
+	usz max_devices() const
+	{
+		return m_max_devices;
+	}
+	bool has_config() const
+	{
+		return b_has_config;
+	}
+	bool has_rumble() const
+	{
+		return b_has_rumble;
+	}
+	bool has_motion() const
+	{
+		return b_has_motion;
+	}
+	bool has_deadzones() const
+	{
+		return b_has_deadzones;
+	}
+	bool has_led() const
+	{
+		return b_has_led;
+	}
+	bool has_rgb() const
+	{
+		return b_has_rgb;
+	}
+	bool has_player_led() const
+	{
+		return b_has_player_led;
+	}
+	bool has_battery() const
+	{
+		return b_has_battery;
+	}
+	bool has_battery_led() const
+	{
+		return b_has_battery_led;
+	}
+	bool has_pressure_intensity_button() const
+	{
+		return b_has_pressure_intensity_button;
+	}
+	bool has_analog_limiter_button() const
+	{
+		return b_has_analog_limiter_button;
+	}
+	bool has_orientation() const
+	{
+		return b_has_orientation;
+	}
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
 	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
-	void set_trigger_recognition_mode(trigger_recognition_mode mode) { m_trigger_recognition_mode = mode; }
+	void set_trigger_recognition_mode(trigger_recognition_mode mode)
+	{
+		m_trigger_recognition_mode = mode;
+	}
 
-	virtual bool Init() { return true; }
+	virtual bool Init()
+	{
+		return true;
+	}
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
 	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
-	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
+	virtual u32 get_battery_level(const std::string& /*padId*/)
+	{
+		return 0;
+	}
 	// Return list of devices for that handler
 	virtual std::vector<pad_list_entry> list_devices() = 0;
 	// Callback called during pad_thread::ThreadFunc
@@ -344,7 +401,10 @@ public:
 	virtual void init_config(cfg_pad* cfg) = 0;
 	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons);
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
-	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
+	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const
+	{
+		return {};
+	}
 
 	static constexpr f32 PI = 3.14159265f;
 
@@ -359,17 +419,44 @@ public:
 	};
 
 private:
-	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; }
-	virtual bool get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
-	virtual bool get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
-	virtual bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
-	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; }
+	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/)
+	{
+		return nullptr;
+	}
+	virtual bool get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/)
+	{
+		return false;
+	}
+	virtual bool get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/)
+	{
+		return false;
+	}
+	virtual bool get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/)
+	{
+		return false;
+	}
+	virtual bool get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/)
+	{
+		return false;
+	}
+	virtual bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/)
+	{
+		return false;
+	}
+	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/)
+	{
+		return connection::disconnected;
+	}
 	virtual void get_extended_info(const pad_ensemble& /*binding*/) {}
 	virtual void apply_pad_data(const pad_ensemble& /*binding*/) {}
-	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; }
-	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; }
+	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/)
+	{
+		return {};
+	}
+	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/)
+	{
+		return {};
+	}
 
 	void get_orientation(const pad_ensemble& binding) const;
 

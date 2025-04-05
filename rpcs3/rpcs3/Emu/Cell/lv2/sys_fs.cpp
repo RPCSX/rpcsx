@@ -25,32 +25,32 @@ lv2_fs_mount_point g_mp_sys_dev_dvd{"/dev_ps2disc", "CELL_FS_ISO9660", "CELL_FS_
 lv2_fs_mount_point g_mp_sys_dev_bdvd{"/dev_bdvd", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA0_BDVD_DRIVE", 2048, 0x4D955, 2048, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_dvd};
 lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", "CELL_FS_FAT", "CELL_FS_UTILITY:HDD1", 512, 0x3FFFF8, 32768, lv2_mp_flag::no_uid_gid + lv2_mp_flag::cache, &g_mp_sys_dev_bdvd};
 lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0", "CELL_FS_UFS", "CELL_FS_UTILITY:HDD0", 512, 0x24FAEA98, 4096, {}, &g_mp_sys_dev_hdd1};
-lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH3", 512, 0x400, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_hdd0}; // TODO confirm
+lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH3", 512, 0x400, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_hdd0};    // TODO confirm
 lv2_fs_mount_point g_mp_sys_dev_flash2{"/dev_flash2", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH2", 512, 0x8000, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash3}; // TODO confirm
 lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH1", 512, 0x63E00, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash2};
 lv2_fs_mount_point g_mp_sys_host_root{"/host_root", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:/", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash};
 lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_host_root};
 lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:", 512, 0x100, 512, lv2_mp_flag::read_only + lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_app_home};
 lv2_fs_mount_point g_mp_sys_no_device{};
-lv2_fs_mount_info  g_mi_sys_not_found{}; // wrapper for &g_mp_sys_no_device
+lv2_fs_mount_info g_mi_sys_not_found{}; // wrapper for &g_mp_sys_no_device
 
-template<>
+template <>
 void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](lv2_file_type type)
-	{
-		switch (type)
 		{
-		case lv2_file_type::regular: return "Regular file";
-		case lv2_file_type::sdata: return "SDATA";
-		case lv2_file_type::edata: return "EDATA";
-		}
+			switch (type)
+			{
+			case lv2_file_type::regular: return "Regular file";
+			case lv2_file_type::sdata: return "SDATA";
+			case lv2_file_type::edata: return "EDATA";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 {
 	const auto& file = get_object(arg);
@@ -82,7 +82,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 	fmt::append(out, u8"%s, '%s', Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
 }
 
-template<>
+template <>
 void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
 {
 	const auto& dir = get_object(arg);
@@ -231,7 +231,10 @@ u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
 
 bool lv2_fs_mount_info_map::is_device_mounted(std::string_view device_name) const
 {
-	return std::any_of(map.begin(), map.end(), [&](const decltype(map)::value_type& info) { return info.second.device == device_name; });
+	return std::any_of(map.begin(), map.end(), [&](const decltype(map)::value_type& info)
+		{
+			return info.second.device == device_name;
+		});
 }
 
 bool lv2_fs_mount_info_map::vfs_unmount(std::string_view vpath, bool remove_from_map)
@@ -308,10 +311,9 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 	{
 		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
 		{
-			const auto& device_alias_check = !is_path && (
-				(mp == &g_mp_sys_dev_hdd0 && mp_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv) ||
-				(mp == &g_mp_sys_dev_hdd1 && mp_name == "CELL_FS_IOS:PATA1_HDD_DRIVE"sv) ||
-				(mp == &g_mp_sys_dev_flash2 && mp_name == "CELL_FS_IOS:BUILTIN_FLASH"sv)); // TODO confirm
+			const auto& device_alias_check = !is_path && ((mp == &g_mp_sys_dev_hdd0 && mp_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv) ||
+															 (mp == &g_mp_sys_dev_hdd1 && mp_name == "CELL_FS_IOS:PATA1_HDD_DRIVE"sv) ||
+															 (mp == &g_mp_sys_dev_flash2 && mp_name == "CELL_FS_IOS:BUILTIN_FLASH"sv)); // TODO confirm
 
 			if (mp == &g_mp_sys_dev_usb)
 			{
@@ -369,14 +371,12 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 }
 
 lv2_fs_object::lv2_fs_object(std::string_view filename)
-	: name(get_name(filename))
-	, mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
+	: name(get_name(filename)), mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
 {
 }
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
-	: name(ar)
-	, mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
+	: name(ar), mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
 {
 }
 
@@ -434,10 +434,7 @@ u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 }
 
 lv2_file::lv2_file(utils::serial& ar)
-	: lv2_fs_object(ar, false)
-	, mode(ar)
-	, flags(ar)
-	, type(ar)
+	: lv2_fs_object(ar, false), mode(ar), flags(ar), type(ar)
 {
 	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_fs);
 
@@ -566,23 +563,22 @@ void lv2_file::save(utils::serial& ar)
 }
 
 lv2_dir::lv2_dir(utils::serial& ar)
-	: lv2_fs_object(ar, false)
-	, entries([&]
-	{
-		std::vector<fs::dir_entry> entries;
+	: lv2_fs_object(ar, false), entries([&]
+									{
+										std::vector<fs::dir_entry> entries;
 
-		u64 size = 0;
-		ar.deserialize_vle(size);
-		entries.resize(size);
+										u64 size = 0;
+										ar.deserialize_vle(size);
+										entries.resize(size);
 
-		for (auto& entry : entries)
-		{
-			ar(entry.name, static_cast<fs::stat_t&>(entry));
-		}
+										for (auto& entry : entries)
+										{
+											ar(entry.name, static_cast<fs::stat_t&>(entry));
+										}
 
-		return entries;
-	}())
-	, pos(ar)
+										return entries;
+									}()),
+	  pos(ar)
 {
 }
 
@@ -620,9 +616,7 @@ struct lv2_file::file_view : fs::file_base
 	u64 m_pos;
 
 	explicit file_view(const shared_ptr<lv2_file>& _file, u64 offset)
-		: m_file(_file)
-		, m_off(offset)
-		, m_pos(0)
+		: m_file(_file), m_off(offset), m_pos(0)
 	{
 	}
 
@@ -635,7 +629,7 @@ struct lv2_file::file_view : fs::file_base
 		fs::stat_t stat = m_file->file.get_stat();
 
 		// TODO: Check this on realhw
-		//stat.size = utils::sub_saturate<u64>(stat.size, m_off);
+		// stat.size = utils::sub_saturate<u64>(stat.size, m_off);
 
 		stat.is_writable = false;
 		return stat;
@@ -669,7 +663,8 @@ struct lv2_file::file_view : fs::file_base
 		const s64 new_pos =
 			whence == fs::seek_set ? offset :
 			whence == fs::seek_cur ? offset + m_pos :
-			whence == fs::seek_end ? offset + size() : -1;
+			whence == fs::seek_end ? offset + size() :
+									 -1;
 
 		if (new_pos < 0)
 		{
@@ -974,7 +969,6 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 					file.reset(std::move(edata_file));
 					break;
-
 				}
 			}
 
@@ -1059,19 +1053,19 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		return {g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath) == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, error, path};
 	}
 
-	if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> shared_ptr<lv2_file>
-	{
-		shared_ptr<lv2_file> result;
+	if (const u32 id = idm::import <lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> shared_ptr<lv2_file>
+			{
+				shared_ptr<lv2_file> result;
 
-		if (type >= lv2_file_type::sdata && !g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
-		{
-			return result;
-		}
+				if (type >= lv2_file_type::sdata && !g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
+				{
+					return result;
+				}
 
-		result = stx::make_shared<lv2_file>(ppath, std::move(file), mode, flags, real, type);
-		sys_fs.warning("sys_fs_open(): fd=%u, %s", idm::last_id(), *result);
-		return result;
-	}))
+				result = stx::make_shared<lv2_file>(ppath, std::move(file), mode, flags, real, type);
+				sys_fs.warning("sys_fs_open(): fd=%u, %s", idm::last_id(), *result);
+				return result;
+			}))
 	{
 		ppu.check_state();
 		*fd = id;
@@ -1294,14 +1288,14 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 	}
 
 	ensure(idm::withdraw<lv2_fs_object, lv2_file>(fd, [&](lv2_file& _file) -> CellError
-	{
-		if (_file.type >= lv2_file_type::sdata)
 		{
-			g_fxo->get<loaded_npdrm_keys>().npdrm_fds--;
-		}
+			if (_file.type >= lv2_file_type::sdata)
+			{
+				g_fxo->get<loaded_npdrm_keys>().npdrm_fds--;
+			}
 
-		return {};
-	}));
+			return {};
+		}));
 
 	if (file->lock == 1)
 	{
@@ -1773,7 +1767,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 	}
 
 	// Done in vfs::host::rename
-	//std::lock_guard lock(mp->mutex);
+	// std::lock_guard lock(mp->mutex);
 
 	if (!vfs::host::rename(local_from, local_to, mp.mp, false))
 	{
@@ -2030,9 +2024,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			file->file.seek(op_pos);
 		}
 
-		arg->out_size = op == 0x8000000a
-			? file->op_read(arg->buf, arg->size, op_pos)
-			: file->op_write(arg->buf, arg->size);
+		arg->out_size = op == 0x8000000a ? file->op_read(arg->buf, arg->size, op_pos) : file->op_write(arg->buf, arg->size);
 
 		if (op == 0x8000000b)
 		{
@@ -2081,15 +2073,15 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		fs::file stream;
 		stream.reset(std::move(sdata_file));
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&file = *file, &stream = stream]() -> shared_ptr<lv2_file>
-		{
-			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
-			{
-				return null_ptr;
-			}
+		if (const u32 id = idm::import <lv2_fs_object, lv2_file>([&file = *file, &stream = stream]() -> shared_ptr<lv2_file>
+				{
+					if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
+					{
+						return null_ptr;
+					}
 
-			return stx::make_shared<lv2_file>(file, std::move(stream), file.mode, CELL_FS_O_RDONLY, file.real_path, lv2_file_type::sdata);
-		}))
+					return stx::make_shared<lv2_file>(file, std::move(stream), file.mode, CELL_FS_O_RDONLY, file.real_path, lv2_file_type::sdata);
+				}))
 		{
 			arg->out_code = CELL_OK;
 			arg->out_fd = id;
@@ -2151,8 +2143,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		if (false)
 		{
 			// TODO: /dev_hdd1, /dev_usb000, /dev_flash
-			//arg->out_code = CELL_OK;
-			//arg->out_id = 0x1b5;
+			// arg->out_code = CELL_OK;
+			// arg->out_id = 0x1b5;
 		}
 
 		arg->out_code = CELL_ENOTSUP;
@@ -2182,7 +2174,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	case 0xc0000008: // cellFsSetDefaultContainer, cellFsSetIoBuffer, cellFsSetIoBufferFromDefaultContainer
 	{
 		// Allocates memory from a container/default container to a specific fd or default IO processing
-		const auto arg          = vm::static_ptr_cast<lv2_file_c0000008>(_arg);
+		const auto arg = vm::static_ptr_cast<lv2_file_c0000008>(_arg);
 		auto& default_container = g_fxo->get<default_sys_fs_container>();
 
 		std::lock_guard def_container_lock(default_container.mutex);
@@ -2190,8 +2182,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		if (fd == 0xFFFFFFFF)
 		{
 			// No check on container is done when setting default container
-			default_container.id   = arg->size ? ::narrow<u32>(arg->container_id) : 0u;
-			default_container.cap  = arg->size;
+			default_container.id = arg->size ? ::narrow<u32>(arg->container_id) : 0u;
+			default_container.cap = arg->size;
 			default_container.used = 0;
 
 			arg->out_code = CELL_OK;
@@ -2213,7 +2205,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			}
 		}
 
-		file->ct_id   = 0;
+		file->ct_id = 0;
 		file->ct_used = 0;
 
 		// Aligns on lower bound
@@ -2256,7 +2248,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			default_container.used += actual_size;
 		}
 
-		file->ct_id   = new_container_id;
+		file->ct_id = new_container_id;
 		file->ct_used = actual_size;
 
 		arg->out_code = CELL_OK;
@@ -2552,7 +2544,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			break;
 		}
 
-		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+		std::string_view vpath{arg->name.get_ptr(), arg->name_size};
 		vpath = vpath.substr(0, vpath.find_first_of('\0'));
 
 		sys_fs.notice("sys_fs_fcntl(0xe0000025): %s", vpath);
@@ -2566,15 +2558,15 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return result.error;
 		}
 
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&]() -> shared_ptr<lv2_file>
-		{
-			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
-			{
-				return null_ptr;
-			}
+		if (const u32 id = idm::import <lv2_fs_object, lv2_file>([&]() -> shared_ptr<lv2_file>
+				{
+					if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
+					{
+						return null_ptr;
+					}
 
-			return stx::make_shared<lv2_file>(result.ppath, std::move(result.file), 0,  0, std::move(result.real_path), lv2_file_type::sdata);
-		}))
+					return stx::make_shared<lv2_file>(result.ppath, std::move(result.file), 0, 0, std::move(result.real_path), lv2_file_type::sdata);
+				}))
 		{
 			arg->out_code = CELL_OK;
 			arg->fd = id;
@@ -3002,7 +2994,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 	{
 		available = (1u << 31) - mp->sector_size; // 2GB (TODO: Should be the total size)
 	}
-	else //if (mp == &g_mp_sys_dev_hdd0)
+	else // if (mp == &g_mp_sys_dev_hdd0)
 	{
 		available = (40ull * 1024 * 1024 * 1024 - mp->sector_size); // Read explanation in cellHddGameCheck
 	}

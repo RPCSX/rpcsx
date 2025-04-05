@@ -16,4 +16,4 @@ struct Region : RegionWrapper<RegionImpl> {
   using RegionWrapper<RegionImpl>::RegionWrapper;
   using RegionWrapper<RegionImpl>::operator=;
 };
-} // namespace ir
+} // namespace shader::ir

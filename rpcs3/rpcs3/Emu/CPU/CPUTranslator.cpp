@@ -22,69 +22,68 @@ llvm::Value* peek_through_bitcasts(llvm::Value* arg)
 }
 
 cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
-    : m_context(g_llvm_ctx)
-	, m_module(_module)
-	, m_is_be(is_be)
+	: m_context(g_llvm_ctx), m_module(_module), m_is_be(is_be)
 {
 	register_intrinsic("x86_pshufb", [&](llvm::CallInst* ci) -> llvm::Value*
-	{
-		const auto data0 = ci->getOperand(0);
-		const auto index = ci->getOperand(1);
-		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
-
-		if (m_use_ssse3)
 		{
+			const auto data0 = ci->getOperand(0);
+			const auto index = ci->getOperand(1);
+			const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+
+			if (m_use_ssse3)
+			{
 #if defined(ARCH_X64)
-			return m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
+				return m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
 #elif defined(ARCH_ARM64)
-			// Modified from sse2neon
-			// movi    v2.16b, #143
-			// and     v1.16b, v1.16b, v2.16b
-			// tbl     v0.16b, { v0.16b }, v1.16b
-			auto mask = llvm::ConstantInt::get(get_type<u8[16]>(), 0x8F);
-			auto and_mask = llvm::ConstantInt::get(get_type<bool[16]>(), true);
-			auto vec_len = llvm::ConstantInt::get(get_type<u32>(), 16);
-			auto index_masked = m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::vp_and), {index, mask, and_mask, vec_len});
-			return m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::aarch64_neon_tbl1), {data0, index_masked});
+				// Modified from sse2neon
+			    // movi    v2.16b, #143
+			    // and     v1.16b, v1.16b, v2.16b
+			    // tbl     v0.16b, { v0.16b }, v1.16b
+				auto mask = llvm::ConstantInt::get(get_type<u8[16]>(), 0x8F);
+				auto and_mask = llvm::ConstantInt::get(get_type<bool[16]>(), true);
+				auto vec_len = llvm::ConstantInt::get(get_type<u32>(), 16);
+				auto index_masked = m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::vp_and), {index, mask, and_mask, vec_len});
+				return m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::aarch64_neon_tbl1), {data0, index_masked});
 #else
 #error "Unimplemented"
 #endif
-		}
-		else
-		{
-			// Emulate PSHUFB (TODO)
-			const auto mask = m_ir->CreateAnd(index, 0xf);
-			const auto loop = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
-			const auto prev = ci->getParent();
-			const auto next = prev->splitBasicBlock(ci->getNextNode());
+			}
+			else
+			{
+				// Emulate PSHUFB (TODO)
+				const auto mask = m_ir->CreateAnd(index, 0xf);
+				const auto loop = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
+				const auto prev = ci->getParent();
+				const auto next = prev->splitBasicBlock(ci->getNextNode());
 
-			llvm::cast<llvm::BranchInst>(m_ir->GetInsertBlock()->getTerminator())->setOperand(0, loop);
+				llvm::cast<llvm::BranchInst>(m_ir->GetInsertBlock()->getTerminator())->setOperand(0, loop);
 
-			llvm::Value* result;
-			//m_ir->CreateBr(loop);
-			m_ir->SetInsertPoint(loop);
-			const auto i = m_ir->CreatePHI(get_type<u32>(), 2);
-			const auto v = m_ir->CreatePHI(get_type<u8[16]>(), 2);
-			i->addIncoming(m_ir->getInt32(0), prev);
-			i->addIncoming(m_ir->CreateAdd(i, m_ir->getInt32(1)), loop);
-			v->addIncoming(zeros, prev);
-			result = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
-			v->addIncoming(result, loop);
-			m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
-			m_ir->SetInsertPoint(next->getFirstNonPHI());
-			result = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result);
+				llvm::Value* result;
+				// m_ir->CreateBr(loop);
+				m_ir->SetInsertPoint(loop);
+				const auto i = m_ir->CreatePHI(get_type<u32>(), 2);
+				const auto v = m_ir->CreatePHI(get_type<u8[16]>(), 2);
+				i->addIncoming(m_ir->getInt32(0), prev);
+				i->addIncoming(m_ir->CreateAdd(i, m_ir->getInt32(1)), loop);
+				v->addIncoming(zeros, prev);
+				result = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
+				v->addIncoming(result, loop);
+				m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
+				m_ir->SetInsertPoint(next->getFirstNonPHI());
+				result = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result);
 
-			return result;
-		}
-	});
+				return result;
+			}
+		});
 
 	register_intrinsic("any_select_by_bit4", [&](llvm::CallInst* ci) -> llvm::Value*
-	{
-		const auto s = bitcast<s8[16]>(m_ir->CreateShl(bitcast<u64[2]>(ci->getOperand(0)), 3));;
-		const auto a = bitcast<u8[16]>(ci->getOperand(1));
-		const auto b = bitcast<u8[16]>(ci->getOperand(2));
-		return m_ir->CreateSelect(m_ir->CreateICmpSLT(s, llvm::ConstantAggregateZero::get(get_type<s8[16]>())), b, a);
-	});
+		{
+			const auto s = bitcast<s8[16]>(m_ir->CreateShl(bitcast<u64[2]>(ci->getOperand(0)), 3));
+			;
+			const auto a = bitcast<u8[16]>(ci->getOperand(1));
+			const auto b = bitcast<u8[16]>(ci->getOperand(2));
+			return m_ir->CreateSelect(m_ir->CreateICmpSLT(s, llvm::ConstantAggregateZero::get(get_type<s8[16]>())), b, a);
+		});
 }
 
 void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine)

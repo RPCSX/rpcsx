@@ -31,6 +31,7 @@ public:
 
 Q_SIGNALS:
 	void BreakpointRequested(u32 loc, bool only_add = false);
+
 public:
 	debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler);
 	void UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm);
@@ -38,6 +39,7 @@ public:
 public Q_SLOTS:
 	void ShowAddress(u32 addr, bool select_addr = true, bool direct = false);
 	void RefreshView();
+
 protected:
 	void keyPressEvent(QKeyEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* event) override;
@@ -47,10 +49,11 @@ protected:
 	void hideEvent(QHideEvent* event) override;
 	void scroll(s32 steps);
 	void create_rsx_command_detail(u32 pc);
+
 private:
 	/**
-	* It really upsetted me I had to copy this code to make debugger_list/frame not circularly dependent.
-	*/
+	 * It really upsetted me I had to copy this code to make debugger_list/frame not circularly dependent.
+	 */
 	u32 GetStartAddress(u32 address);
 	bool IsSpu() const;
 

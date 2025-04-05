@@ -16,49 +16,49 @@ template <>
 void fmt_class_string<CellCameraError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellCameraError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_CAMERA_ERROR_ALREADY_INIT);
-		STR_CASE(CELL_CAMERA_ERROR_NOT_INIT);
-		STR_CASE(CELL_CAMERA_ERROR_PARAM);
-		STR_CASE(CELL_CAMERA_ERROR_ALREADY_OPEN);
-		STR_CASE(CELL_CAMERA_ERROR_NOT_OPEN);
-		STR_CASE(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
-		STR_CASE(CELL_CAMERA_ERROR_DEVICE_DEACTIVATED);
-		STR_CASE(CELL_CAMERA_ERROR_NOT_STARTED);
-		STR_CASE(CELL_CAMERA_ERROR_FORMAT_UNKNOWN);
-		STR_CASE(CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN);
-		STR_CASE(CELL_CAMERA_ERROR_BAD_FRAMERATE);
-		STR_CASE(CELL_CAMERA_ERROR_TIMEOUT);
-		STR_CASE(CELL_CAMERA_ERROR_BUSY);
-		STR_CASE(CELL_CAMERA_ERROR_FATAL);
-		STR_CASE(CELL_CAMERA_ERROR_MUTEX);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_CAMERA_ERROR_ALREADY_INIT);
+				STR_CASE(CELL_CAMERA_ERROR_NOT_INIT);
+				STR_CASE(CELL_CAMERA_ERROR_PARAM);
+				STR_CASE(CELL_CAMERA_ERROR_ALREADY_OPEN);
+				STR_CASE(CELL_CAMERA_ERROR_NOT_OPEN);
+				STR_CASE(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
+				STR_CASE(CELL_CAMERA_ERROR_DEVICE_DEACTIVATED);
+				STR_CASE(CELL_CAMERA_ERROR_NOT_STARTED);
+				STR_CASE(CELL_CAMERA_ERROR_FORMAT_UNKNOWN);
+				STR_CASE(CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN);
+				STR_CASE(CELL_CAMERA_ERROR_BAD_FRAMERATE);
+				STR_CASE(CELL_CAMERA_ERROR_TIMEOUT);
+				STR_CASE(CELL_CAMERA_ERROR_BUSY);
+				STR_CASE(CELL_CAMERA_ERROR_FATAL);
+				STR_CASE(CELL_CAMERA_ERROR_MUTEX);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<CellCameraFormat>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellCameraFormat value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_CAMERA_FORMAT_UNKNOWN);
-		STR_CASE(CELL_CAMERA_JPG);
-		STR_CASE(CELL_CAMERA_RAW8);
-		STR_CASE(CELL_CAMERA_YUV422);
-		STR_CASE(CELL_CAMERA_RAW10);
-		STR_CASE(CELL_CAMERA_RGBA);
-		STR_CASE(CELL_CAMERA_YUV420);
-		STR_CASE(CELL_CAMERA_V_Y1_U_Y0);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_CAMERA_FORMAT_UNKNOWN);
+				STR_CASE(CELL_CAMERA_JPG);
+				STR_CASE(CELL_CAMERA_RAW8);
+				STR_CASE(CELL_CAMERA_YUV422);
+				STR_CASE(CELL_CAMERA_RAW10);
+				STR_CASE(CELL_CAMERA_RGBA);
+				STR_CASE(CELL_CAMERA_YUV420);
+				STR_CASE(CELL_CAMERA_V_Y1_U_Y0);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Temporarily
@@ -229,11 +229,11 @@ static error_code check_camera_info(const VariantOfCellCameraInfo& info)
 			{
 			case CELL_CAMERA_VGA:
 			case CELL_CAMERA_WGA:
-				if (!check_fps({ 25, 30 }))
+				if (!check_fps({25, 30}))
 					return CELL_CAMERA_ERROR_FORMAT_UNKNOWN;
 				break;
 			case CELL_CAMERA_QVGA:
-				if (!check_fps({ 25, 30, 50, 60 }))
+				if (!check_fps({25, 30, 50, 60}))
 					return CELL_CAMERA_ERROR_FORMAT_UNKNOWN;
 				break;
 			case CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT:
@@ -264,11 +264,11 @@ static error_code check_camera_info(const VariantOfCellCameraInfo& info)
 			{
 			case CELL_CAMERA_VGA:
 			case CELL_CAMERA_WGA:
-				if (!check_fps({ 25, 30, 50, 60 }))
+				if (!check_fps({25, 30, 50, 60}))
 					return CELL_CAMERA_ERROR_FORMAT_UNKNOWN;
 				break;
 			case CELL_CAMERA_QVGA:
-				if (!check_fps({ 25, 30, 50, 60, 100, 120 }))
+				if (!check_fps({25, 30, 50, 60, 100, 120}))
 					return CELL_CAMERA_ERROR_FORMAT_UNKNOWN;
 				break;
 			case CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT:
@@ -286,11 +286,11 @@ static error_code check_camera_info(const VariantOfCellCameraInfo& info)
 			{
 			case CELL_CAMERA_VGA:
 			case CELL_CAMERA_WGA:
-				if (!check_fps({ 25, 30 }))
+				if (!check_fps({25, 30}))
 					return CELL_CAMERA_ERROR_FORMAT_UNKNOWN;
 				break;
 			case CELL_CAMERA_QVGA:
-				if (!check_fps({ 25, 30, 50, 60 }))
+				if (!check_fps({25, 30, 50, 60}))
 					return CELL_CAMERA_ERROR_FORMAT_UNKNOWN;
 				break;
 			case CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT:
@@ -329,12 +329,12 @@ std::pair<u32, u32> get_video_resolution(const CellCameraInfoEx& info)
 {
 	switch (info.resolution)
 	{
-	case CELL_CAMERA_VGA: return{ 640, 480 };
-	case CELL_CAMERA_QVGA: return { 320, 240 };
-	case CELL_CAMERA_WGA: return{ 640, 360 };
-	case CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT: return{ info.width, info.height };
+	case CELL_CAMERA_VGA: return {640, 480};
+	case CELL_CAMERA_QVGA: return {320, 240};
+	case CELL_CAMERA_WGA: return {640, 360};
+	case CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT: return {info.width, info.height};
 	case CELL_CAMERA_RESOLUTION_UNKNOWN:
-	default: return{ 0, 0 };
+	default: return {0, 0};
 	}
 }
 
@@ -366,7 +366,6 @@ u32 get_buffer_size_by_format(s32 format, s32 width, s32 height)
 
 	return ::narrow<u32>(static_cast<u64>(std::ceil(width * height * bytes_per_pixel)));
 }
-
 
 u32 get_video_buffer_size(const CellCameraInfoEx& info)
 {
@@ -405,7 +404,7 @@ error_code check_init_and_open(s32 dev_num)
 error_code check_resolution(s32 dev_num)
 {
 	// TODO: Some sort of connection check maybe?
-	//if (error == CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN)
+	// if (error == CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN)
 	//{
 	//	return CELL_CAMERA_ERROR_TIMEOUT;
 	//}
@@ -429,7 +428,6 @@ error_code check_resolution_ex(s32 dev_num)
 	}
 	return CELL_OK;
 }
-
 
 error_code cellCameraInit()
 {
@@ -455,46 +453,46 @@ error_code cellCameraInit()
 	{
 	case fake_camera_type::eyetoy:
 	{
-		g_camera.attr[CELL_CAMERA_SATURATION] = { 164 };
-		g_camera.attr[CELL_CAMERA_BRIGHTNESS] = { 96 };
-		g_camera.attr[CELL_CAMERA_AEC] = { 1 };
-		g_camera.attr[CELL_CAMERA_AGC] = { 1 };
-		g_camera.attr[CELL_CAMERA_AWB] = { 1 };
-		g_camera.attr[CELL_CAMERA_ABC] = { 0 };
-		g_camera.attr[CELL_CAMERA_LED] = { 1 };
-		g_camera.attr[CELL_CAMERA_QS] = { 0 };
-		g_camera.attr[CELL_CAMERA_NONZEROCOEFFS] = { 32, 32 };
-		g_camera.attr[CELL_CAMERA_YUVFLAG] = { 0 };
-		g_camera.attr[CELL_CAMERA_BACKLIGHTCOMP] = { 0 };
-		g_camera.attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
-		g_camera.attr[CELL_CAMERA_422FLAG] = { 1 };
-		g_camera.attr[CELL_CAMERA_USBLOAD] = { 4 };
+		g_camera.attr[CELL_CAMERA_SATURATION] = {164};
+		g_camera.attr[CELL_CAMERA_BRIGHTNESS] = {96};
+		g_camera.attr[CELL_CAMERA_AEC] = {1};
+		g_camera.attr[CELL_CAMERA_AGC] = {1};
+		g_camera.attr[CELL_CAMERA_AWB] = {1};
+		g_camera.attr[CELL_CAMERA_ABC] = {0};
+		g_camera.attr[CELL_CAMERA_LED] = {1};
+		g_camera.attr[CELL_CAMERA_QS] = {0};
+		g_camera.attr[CELL_CAMERA_NONZEROCOEFFS] = {32, 32};
+		g_camera.attr[CELL_CAMERA_YUVFLAG] = {0};
+		g_camera.attr[CELL_CAMERA_BACKLIGHTCOMP] = {0};
+		g_camera.attr[CELL_CAMERA_MIRRORFLAG] = {1};
+		g_camera.attr[CELL_CAMERA_422FLAG] = {1};
+		g_camera.attr[CELL_CAMERA_USBLOAD] = {4};
 		break;
 	}
 	case fake_camera_type::eyetoy2:
 	{
-		g_camera.attr[CELL_CAMERA_SATURATION] = { 64 };
-		g_camera.attr[CELL_CAMERA_BRIGHTNESS] = { 8 };
-		g_camera.attr[CELL_CAMERA_AEC] = { 1 };
-		g_camera.attr[CELL_CAMERA_AGC] = { 1 };
-		g_camera.attr[CELL_CAMERA_AWB] = { 1 };
-		g_camera.attr[CELL_CAMERA_LED] = { 1 };
-		g_camera.attr[CELL_CAMERA_BACKLIGHTCOMP] = { 0 };
-		g_camera.attr[CELL_CAMERA_MIRRORFLAG] = { 1 };
-		g_camera.attr[CELL_CAMERA_GAMMA] = { 1 };
-		g_camera.attr[CELL_CAMERA_AGCLIMIT] = { 4 };
-		g_camera.attr[CELL_CAMERA_DENOISE] = { 0 };
-		g_camera.attr[CELL_CAMERA_FRAMERATEADJUST] = { 0 };
-		g_camera.attr[CELL_CAMERA_PIXELOUTLIERFILTER] = { 1 };
-		g_camera.attr[CELL_CAMERA_AGCLOW] = { 48 };
-		g_camera.attr[CELL_CAMERA_AGCHIGH] = { 64 };
+		g_camera.attr[CELL_CAMERA_SATURATION] = {64};
+		g_camera.attr[CELL_CAMERA_BRIGHTNESS] = {8};
+		g_camera.attr[CELL_CAMERA_AEC] = {1};
+		g_camera.attr[CELL_CAMERA_AGC] = {1};
+		g_camera.attr[CELL_CAMERA_AWB] = {1};
+		g_camera.attr[CELL_CAMERA_LED] = {1};
+		g_camera.attr[CELL_CAMERA_BACKLIGHTCOMP] = {0};
+		g_camera.attr[CELL_CAMERA_MIRRORFLAG] = {1};
+		g_camera.attr[CELL_CAMERA_GAMMA] = {1};
+		g_camera.attr[CELL_CAMERA_AGCLIMIT] = {4};
+		g_camera.attr[CELL_CAMERA_DENOISE] = {0};
+		g_camera.attr[CELL_CAMERA_FRAMERATEADJUST] = {0};
+		g_camera.attr[CELL_CAMERA_PIXELOUTLIERFILTER] = {1};
+		g_camera.attr[CELL_CAMERA_AGCLOW] = {48};
+		g_camera.attr[CELL_CAMERA_AGCHIGH] = {64};
 		break;
 	}
 	case fake_camera_type::uvc1_1:
 	{
-		g_camera.attr[CELL_CAMERA_DEVICEID] = { 0x5ca, 0x18d0 }; // KBCR-S01MU
-		g_camera.attr[CELL_CAMERA_FORMATCAP] = { CELL_CAMERA_JPG | CELL_CAMERA_YUV422 };
-		g_camera.attr[CELL_CAMERA_NUMFRAME] = { 1 }; // Amount of supported resolutions
+		g_camera.attr[CELL_CAMERA_DEVICEID] = {0x5ca, 0x18d0}; // KBCR-S01MU
+		g_camera.attr[CELL_CAMERA_FORMATCAP] = {CELL_CAMERA_JPG | CELL_CAMERA_YUV422};
+		g_camera.attr[CELL_CAMERA_NUMFRAME] = {1}; // Amount of supported resolutions
 		break;
 	}
 	default:
@@ -780,9 +778,9 @@ error_code cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 	switch (g_cfg.io.camera_type.get())
 	{
 	case fake_camera_type::unknown: *type = CELL_CAMERA_TYPE_UNKNOWN; break;
-	case fake_camera_type::eyetoy:  *type = CELL_CAMERA_EYETOY; break;
+	case fake_camera_type::eyetoy: *type = CELL_CAMERA_EYETOY; break;
 	case fake_camera_type::eyetoy2: *type = CELL_CAMERA_EYETOY2; break;
-	case fake_camera_type::uvc1_1:  *type = CELL_CAMERA_USBVIDEOCLASS; break;
+	case fake_camera_type::uvc1_1: *type = CELL_CAMERA_USBVIDEOCLASS; break;
 	}
 
 	return CELL_OK;
@@ -1584,55 +1582,55 @@ error_code cellCameraRemoveNotifyEventQueue2(u64 key)
 }
 
 DECLARE(ppu_module_manager::cellCamera)("cellCamera", []()
-{
-	REG_FUNC(cellCamera, cellCameraInit);
-	REG_FUNC(cellCamera, cellCameraEnd);
-	REG_FUNC(cellCamera, cellCameraOpen);
-	REG_FUNC(cellCamera, cellCameraOpenAsync);
-	REG_FUNC(cellCamera, cellCameraOpenEx);
-	REG_FUNC(cellCamera, cellCameraOpenPost);
-	REG_FUNC(cellCamera, cellCameraClose);
-	REG_FUNC(cellCamera, cellCameraCloseAsync);
-	REG_FUNC(cellCamera, cellCameraClosePost);
+	{
+		REG_FUNC(cellCamera, cellCameraInit);
+		REG_FUNC(cellCamera, cellCameraEnd);
+		REG_FUNC(cellCamera, cellCameraOpen);
+		REG_FUNC(cellCamera, cellCameraOpenAsync);
+		REG_FUNC(cellCamera, cellCameraOpenEx);
+		REG_FUNC(cellCamera, cellCameraOpenPost);
+		REG_FUNC(cellCamera, cellCameraClose);
+		REG_FUNC(cellCamera, cellCameraCloseAsync);
+		REG_FUNC(cellCamera, cellCameraClosePost);
 
-	REG_FUNC(cellCamera, cellCameraGetDeviceGUID);
-	REG_FUNC(cellCamera, cellCameraGetType);
-	REG_FUNC(cellCamera, cellCameraIsAvailable);
-	REG_FUNC(cellCamera, cellCameraIsAttached);
-	REG_FUNC(cellCamera, cellCameraIsOpen);
-	REG_FUNC(cellCamera, cellCameraIsStarted);
-	REG_FUNC(cellCamera, cellCameraGetAttribute);
-	REG_FUNC(cellCamera, cellCameraSetAttribute);
-	REG_FUNC(cellCamera, cellCameraResetAttribute);
-	REG_FUNC(cellCamera, cellCameraGetBufferSize);
-	REG_FUNC(cellCamera, cellCameraGetBufferInfo);
-	REG_FUNC(cellCamera, cellCameraGetBufferInfoEx);
+		REG_FUNC(cellCamera, cellCameraGetDeviceGUID);
+		REG_FUNC(cellCamera, cellCameraGetType);
+		REG_FUNC(cellCamera, cellCameraIsAvailable);
+		REG_FUNC(cellCamera, cellCameraIsAttached);
+		REG_FUNC(cellCamera, cellCameraIsOpen);
+		REG_FUNC(cellCamera, cellCameraIsStarted);
+		REG_FUNC(cellCamera, cellCameraGetAttribute);
+		REG_FUNC(cellCamera, cellCameraSetAttribute);
+		REG_FUNC(cellCamera, cellCameraResetAttribute);
+		REG_FUNC(cellCamera, cellCameraGetBufferSize);
+		REG_FUNC(cellCamera, cellCameraGetBufferInfo);
+		REG_FUNC(cellCamera, cellCameraGetBufferInfoEx);
 
-	REG_FUNC(cellCamera, cellCameraPrepExtensionUnit);
-	REG_FUNC(cellCamera, cellCameraCtrlExtensionUnit);
-	REG_FUNC(cellCamera, cellCameraGetExtensionUnit);
-	REG_FUNC(cellCamera, cellCameraSetExtensionUnit);
-	REG_FUNC(cellCamera, cellCameraSetContainer);
+		REG_FUNC(cellCamera, cellCameraPrepExtensionUnit);
+		REG_FUNC(cellCamera, cellCameraCtrlExtensionUnit);
+		REG_FUNC(cellCamera, cellCameraGetExtensionUnit);
+		REG_FUNC(cellCamera, cellCameraSetExtensionUnit);
+		REG_FUNC(cellCamera, cellCameraSetContainer);
 
-	REG_FUNC(cellCamera, cellCameraReset);
-	REG_FUNC(cellCamera, cellCameraResetAsync);
-	REG_FUNC(cellCamera, cellCameraResetPost);
-	REG_FUNC(cellCamera, cellCameraStart);
-	REG_FUNC(cellCamera, cellCameraStartAsync);
-	REG_FUNC(cellCamera, cellCameraStartPost);
-	REG_FUNC(cellCamera, cellCameraRead);
-	REG_FUNC(cellCamera, cellCameraRead2);
-	REG_FUNC(cellCamera, cellCameraReadEx);
-	REG_FUNC(cellCamera, cellCameraReadComplete);
-	REG_FUNC(cellCamera, cellCameraStop);
-	REG_FUNC(cellCamera, cellCameraStopAsync);
-	REG_FUNC(cellCamera, cellCameraStopPost);
+		REG_FUNC(cellCamera, cellCameraReset);
+		REG_FUNC(cellCamera, cellCameraResetAsync);
+		REG_FUNC(cellCamera, cellCameraResetPost);
+		REG_FUNC(cellCamera, cellCameraStart);
+		REG_FUNC(cellCamera, cellCameraStartAsync);
+		REG_FUNC(cellCamera, cellCameraStartPost);
+		REG_FUNC(cellCamera, cellCameraRead);
+		REG_FUNC(cellCamera, cellCameraRead2);
+		REG_FUNC(cellCamera, cellCameraReadEx);
+		REG_FUNC(cellCamera, cellCameraReadComplete);
+		REG_FUNC(cellCamera, cellCameraStop);
+		REG_FUNC(cellCamera, cellCameraStopAsync);
+		REG_FUNC(cellCamera, cellCameraStopPost);
 
-	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue);
-	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue);
-	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue2);
-	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue2);
-});
+		REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue);
+		REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue);
+		REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue2);
+		REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue2);
+	});
 
 // camera_thread members
 
@@ -1754,14 +1752,14 @@ void camera_context::operator()()
 bool camera_context::open_camera()
 {
 	Emu.BlockingCallFromMainThread([this]()
-	{
-		handler.reset();
-		handler = Emu.GetCallbacks().get_camera_handler();
-		if (handler)
 		{
-			handler->open_camera();
-		}
-	});
+			handler.reset();
+			handler = Emu.GetCallbacks().get_camera_handler();
+			if (handler)
+			{
+				handler->open_camera();
+			}
+		});
 
 	return !handler || on_handler_state(handler->get_state());
 }
@@ -1776,9 +1774,9 @@ bool camera_context::start_camera()
 		handler->set_format(info.format, info.bytesize);
 
 		Emu.BlockingCallFromMainThread([this]()
-		{
-			handler->start_camera();
-		});
+			{
+				handler->start_camera();
+			});
 
 		return on_handler_state(handler->get_state());
 	}
@@ -1801,9 +1799,9 @@ void camera_context::stop_camera()
 	if (handler)
 	{
 		Emu.BlockingCallFromMainThread([this]()
-		{
-			handler->stop_camera();
-		});
+			{
+				handler->stop_camera();
+			});
 	}
 }
 
@@ -1812,9 +1810,9 @@ void camera_context::close_camera()
 	if (handler)
 	{
 		Emu.BlockingCallFromMainThread([this]()
-		{
-			handler->close_camera();
-		});
+			{
+				handler->close_camera();
+			});
 	}
 }
 
@@ -1907,7 +1905,7 @@ void camera_context::add_queue(u64 key, u64 source, u64 flag)
 	{
 		std::lock_guard lock_data_map(mutex_notify_data_map);
 
-		notify_data_map[key] = { source, flag };
+		notify_data_map[key] = {source, flag};
 	}
 
 	is_attached_dirty = true;
@@ -1946,18 +1944,18 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 			{
 				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to start camera...", static_cast<int>(state));
 				Emu.BlockingCallFromMainThread([&]()
-				{
-					handler->open_camera();
-					handler->start_camera();
-				});
+					{
+						handler->open_camera();
+						handler->start_camera();
+					});
 			}
 			else if (is_open)
 			{
 				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to open camera...", static_cast<int>(state));
 				Emu.BlockingCallFromMainThread([&]()
-				{
-					handler->open_camera();
-				});
+					{
+						handler->open_camera();
+					});
 			}
 		}
 		return false;
@@ -1968,9 +1966,9 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 		{
 			cellCamera.warning("Camera handler not running (state=%d). Trying to start camera...", static_cast<int>(state));
 			Emu.BlockingCallFromMainThread([&]()
-			{
-				handler->start_camera();
-			});
+				{
+					handler->start_camera();
+				});
 		}
 		break;
 	}

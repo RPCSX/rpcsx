@@ -109,4 +109,4 @@ namespace rpcs3
 
 		return title_string;
 	}
-}
+} // namespace rpcs3

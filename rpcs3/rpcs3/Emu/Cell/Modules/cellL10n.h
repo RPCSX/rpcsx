@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 // L10nResult
 enum
 {
@@ -15,13 +13,13 @@ enum
 enum
 {
 	L10N_STR_UNKNOWN = (1 << 0),
-	L10N_STR_ASCII   = (1 << 1),
-	L10N_STR_JIS     = (1 << 2),
-	L10N_STR_EUCJP   = (1 << 3),
-	L10N_STR_SJIS    = (1 << 4),
-	L10N_STR_UTF8    = (1 << 5),
+	L10N_STR_ASCII = (1 << 1),
+	L10N_STR_JIS = (1 << 2),
+	L10N_STR_EUCJP = (1 << 3),
+	L10N_STR_SJIS = (1 << 4),
+	L10N_STR_UTF8 = (1 << 5),
 	L10N_STR_ILLEGAL = (1 << 16),
-	L10N_STR_ERROR   = (1 << 17),
+	L10N_STR_ERROR = (1 << 17),
 };
 
 // CodePages
@@ -71,7 +69,7 @@ enum
 	L10N_GB18030,
 	L10N_RIS_506,
 	L10N_MUSIC_SHIFT_JIS = L10N_RIS_506,
-	//FW 3.10 and below
+	// FW 3.10 and below
 	L10N_CODEPAGE_852,
 	L10N_CODEPAGE_1250,
 	L10N_CODEPAGE_737,
@@ -93,7 +91,7 @@ enum
 {
 	UTF16_SURROGATES_MASK1 = 0xf800,
 	UTF16_SURROGATES_MASK2 = 0xfc00,
-	UTF16_SURROGATES       = 0xd800,
-	UTF16_HIGH_SURROGATES  = 0xd800,
-	UTF16_LOW_SURROGATES   = 0xdc00,
+	UTF16_SURROGATES = 0xd800,
+	UTF16_HIGH_SURROGATES = 0xd800,
+	UTF16_LOW_SURROGATES = 0xdc00,
 };

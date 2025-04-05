@@ -35,20 +35,20 @@ error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, v
 
 	vm::var<u32> out_id;
 	vm::var<sys_mutex_attribute_t> attrs;
-	attrs->protocol  = protocol == SYS_SYNC_FIFO ? SYS_SYNC_FIFO : SYS_SYNC_PRIORITY;
+	attrs->protocol = protocol == SYS_SYNC_FIFO ? SYS_SYNC_FIFO : SYS_SYNC_PRIORITY;
 	attrs->recursive = attr->recursive;
-	attrs->pshared   = SYS_SYNC_NOT_PROCESS_SHARED;
-	attrs->adaptive  = SYS_SYNC_NOT_ADAPTIVE;
-	attrs->ipc_key   = 0;
-	attrs->flags     = 0;
-	attrs->name_u64  = attr->name_u64;
+	attrs->pshared = SYS_SYNC_NOT_PROCESS_SHARED;
+	attrs->adaptive = SYS_SYNC_NOT_ADAPTIVE;
+	attrs->ipc_key = 0;
+	attrs->flags = 0;
+	attrs->name_u64 = attr->name_u64;
 
 	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(ppu, out_id, attrs) : _sys_lwmutex_create(ppu, out_id, protocol, lwmutex, 0x80000001, std::bit_cast<be_t<u64>>(attr->name_u64)))
 	{
 		return res;
 	}
 
-	lwmutex->lock_var.store({ lwmutex_free, 0 });
+	lwmutex->lock_var.store({lwmutex_free, 0});
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
 	lwmutex->sleep_queue = *out_id;
@@ -369,7 +369,7 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// ensure that waiter is zero
-	if (lwmutex->lock_var.compare_and_swap_test({ tid, 0 }, { lwmutex_free, 0 }))
+	if (lwmutex->lock_var.compare_and_swap_test({tid, 0}, {lwmutex_free, 0}))
 	{
 		// unlocking succeeded
 		return CELL_OK;
@@ -409,11 +409,11 @@ void sysPrxForUser_sys_lwmutex_init(ppu_static_module* _this)
 	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
 
 	_this->add_init_func([](ppu_static_module*)
-	{
-		REINIT_FUNC(sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		REINIT_FUNC(sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	});
+		{
+			REINIT_FUNC(sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+			REINIT_FUNC(sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		});
 }

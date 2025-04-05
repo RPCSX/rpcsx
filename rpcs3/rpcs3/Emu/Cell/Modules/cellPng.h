@@ -13,7 +13,7 @@ enum CellPngUnknownLocation : s32
 {
 	CELL_PNG_BEFORE_PLTE = 1,
 	CELL_PNG_BEFORE_IDAT = 2,
-	CELL_PNG_AFTER_IDAT  = 8,
+	CELL_PNG_AFTER_IDAT = 8,
 };
 
 struct CellPngPLTEentry

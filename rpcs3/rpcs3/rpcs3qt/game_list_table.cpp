@@ -42,20 +42,22 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	setMouseTracking(true);
 
 	connect(this, &game_list_table::size_on_disk_ready, this, [this](const game_info& game)
-	{
-		if (!game || !game->item) return;
-		if (QTableWidgetItem* size_item = item(static_cast<movie_item*>(game->item)->row(), static_cast<int>(gui::game_list_columns::dir_size)))
 		{
-			const u64& game_size = game->info.size_on_disk;
-			size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
-			size_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(game_size));
-		}
-	});
+			if (!game || !game->item)
+				return;
+			if (QTableWidgetItem* size_item = item(static_cast<movie_item*>(game->item)->row(), static_cast<int>(gui::game_list_columns::dir_size)))
+			{
+				const u64& game_size = game->info.size_on_disk;
+				size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
+				size_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(game_size));
+			}
+		});
 
 	connect(this, &game_list::IconReady, this, [this](const movie_item_base* item)
-	{
-		if (item) item->image_change_callback();
-	});
+		{
+			if (item)
+				item->image_change_callback();
+		});
 }
 
 void game_list_table::restore_layout(const QByteArray& state)
@@ -243,52 +245,52 @@ void game_list_table::populate(
 		game->item = icon_item;
 
 		icon_item->set_image_change_callback([this, icon_item, game](const QVideoFrame& frame)
-		{
-			if (!icon_item || !game)
 			{
-				return;
-			}
-
-			if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
-			{
-				icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
-			}
-			else
-			{
-				std::lock_guard lock(icon_item->pixmap_mutex);
-
-				icon_item->setData(Qt::DecorationRole, game->pxmap);
-
-				if (!game->has_hover_gif && !game->has_hover_pam)
+				if (!icon_item || !game)
 				{
-					game->pxmap = {};
+					return;
 				}
 
-				icon_item->stop_movie();
-			}
-		});
-
-		icon_item->set_size_calc_func([this, game, cancel = icon_item->size_on_disk_loading_aborted(), dev_flash]()
-		{
-			if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
-			{
-				if (game->info.path.starts_with(dev_flash))
+				if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
 				{
-					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
-					game->info.size_on_disk = 0;
+					icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
 				}
 				else
 				{
-					game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
-				}
+					std::lock_guard lock(icon_item->pixmap_mutex);
 
-				if (!cancel || !cancel->load())
-				{
-					Q_EMIT size_on_disk_ready(game);
-					return;
+					icon_item->setData(Qt::DecorationRole, game->pxmap);
+
+					if (!game->has_hover_gif && !game->has_hover_pam)
+					{
+						game->pxmap = {};
+					}
+
+					icon_item->stop_movie();
 				}
-			}
-		});
+			});
+
+		icon_item->set_size_calc_func([this, game, cancel = icon_item->size_on_disk_loading_aborted(), dev_flash]()
+			{
+				if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
+				{
+					if (game->info.path.starts_with(dev_flash))
+					{
+						// Do not report size of apps inside /dev_flash (it does not make sense to do so)
+						game->info.size_on_disk = 0;
+					}
+					else
+					{
+						game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+					}
+
+					if (!cancel || !cancel->load())
+					{
+						Q_EMIT size_on_disk_ready(game);
+						return;
+					}
+				}
+			});
 
 		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
@@ -362,21 +364,21 @@ void game_list_table::populate(
 
 		const u64 game_size = game->info.size_on_disk;
 
-		setItem(row, static_cast<int>(gui::game_list_columns::icon),       icon_item);
-		setItem(row, static_cast<int>(gui::game_list_columns::name),       title_item);
-		setItem(row, static_cast<int>(gui::game_list_columns::serial),     serial_item);
-		setItem(row, static_cast<int>(gui::game_list_columns::firmware),   new custom_table_widget_item(game->info.fw));
-		setItem(row, static_cast<int>(gui::game_list_columns::version),    new custom_table_widget_item(app_version));
-		setItem(row, static_cast<int>(gui::game_list_columns::category),   new custom_table_widget_item(game->localized_category));
-		setItem(row, static_cast<int>(gui::game_list_columns::path),       new custom_table_widget_item(game->info.path));
-		setItem(row, static_cast<int>(gui::game_list_columns::move),       new custom_table_widget_item((supports_move ? tr("Supported") : tr("Not Supported")).toStdString(), Qt::UserRole, !supports_move));
+		setItem(row, static_cast<int>(gui::game_list_columns::icon), icon_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::name), title_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::serial), serial_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::firmware), new custom_table_widget_item(game->info.fw));
+		setItem(row, static_cast<int>(gui::game_list_columns::version), new custom_table_widget_item(app_version));
+		setItem(row, static_cast<int>(gui::game_list_columns::category), new custom_table_widget_item(game->localized_category));
+		setItem(row, static_cast<int>(gui::game_list_columns::path), new custom_table_widget_item(game->info.path));
+		setItem(row, static_cast<int>(gui::game_list_columns::move), new custom_table_widget_item((supports_move ? tr("Supported") : tr("Not Supported")).toStdString(), Qt::UserRole, !supports_move));
 		setItem(row, static_cast<int>(gui::game_list_columns::resolution), new custom_table_widget_item(Localized::GetStringFromU32(game->info.resolution, localized.resolution.mode, true)));
-		setItem(row, static_cast<int>(gui::game_list_columns::sound),      new custom_table_widget_item(Localized::GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
-		setItem(row, static_cast<int>(gui::game_list_columns::parental),   new custom_table_widget_item(Localized::GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
-		setItem(row, static_cast<int>(gui::game_list_columns::last_play),  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
-		setItem(row, static_cast<int>(gui::game_list_columns::playtime),   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
-		setItem(row, static_cast<int>(gui::game_list_columns::compat),     compat_item);
-		setItem(row, static_cast<int>(gui::game_list_columns::dir_size),   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
+		setItem(row, static_cast<int>(gui::game_list_columns::sound), new custom_table_widget_item(Localized::GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
+		setItem(row, static_cast<int>(gui::game_list_columns::parental), new custom_table_widget_item(Localized::GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
+		setItem(row, static_cast<int>(gui::game_list_columns::last_play), new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
+		setItem(row, static_cast<int>(gui::game_list_columns::playtime), new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
+		setItem(row, static_cast<int>(gui::game_list_columns::compat), compat_item);
+		setItem(row, static_cast<int>(gui::game_list_columns::dir_size), new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
 
 		if (selected_item_id == game->info.path + game->info.icon_path)
 		{

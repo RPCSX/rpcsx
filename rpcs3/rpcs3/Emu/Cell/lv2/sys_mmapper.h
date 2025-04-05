@@ -18,11 +18,11 @@ struct lv2_memory : lv2_obj
 {
 	static const u32 id_base = 0x08000000;
 
-	const u32 size; // Memory size
+	const u32 size;  // Memory size
 	const u32 align; // Alignment required
 	const u64 flags;
-	const u64 key; // IPC key
-	const bool pshared; // Process shared flag
+	const u64 key;                  // IPC key
+	const bool pshared;             // Process shared flag
 	lv2_memory_container* const ct; // Associated memory container
 	const std::shared_ptr<utils::shm> shm;
 
@@ -39,7 +39,7 @@ struct lv2_memory : lv2_obj
 
 enum : u64
 {
-	SYS_MEMORY_PAGE_FAULT_EVENT_KEY	       = 0xfffe000000000000ULL,
+	SYS_MEMORY_PAGE_FAULT_EVENT_KEY = 0xfffe000000000000ULL,
 };
 
 enum : u64
@@ -50,19 +50,19 @@ enum : u64
 enum : u64
 {
 	SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED = 0x2ULL,
-	SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY  = 0x1ULL,
-	SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD  = 0x0ULL,
-	SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD  = 0x1ULL,
-	SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU     = 0x2ULL,
+	SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY = 0x1ULL,
+	SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD = 0x0ULL,
+	SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD = 0x1ULL,
+	SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU = 0x2ULL,
 };
 
 struct page_fault_notification_entry
 {
 	ENABLE_BITWISE_SERIALIZATION;
 
-	u32 start_addr; // Starting address of region to monitor.
+	u32 start_addr;     // Starting address of region to monitor.
 	u32 event_queue_id; // Queue to be notified.
-	u32 port_id; // Port used to notify the queue.
+	u32 port_id;        // Port used to notify the queue.
 };
 
 // Used to hold list of queues to be notified on page fault event.

@@ -35,7 +35,7 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 
-template<typename T>
+template <typename T>
 struct span_less
 {
 	static int compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
@@ -256,11 +256,11 @@ DECLARE(spu_runtime::tr_all) = []
 			UNUSED(args);
 
 			// Inputs:
-			// x19 = m_thread a.k.a arg[0]
-			// x20 = ls_base
-			// x21 - x22 = args[2 - 3]
-			//ensure(::offset32(&spu_thread::pc) <= 32760);
-			//ensure(::offset32(&spu_thread::block_hash) <= 32760);
+		    // x19 = m_thread a.k.a arg[0]
+		    // x20 = ls_base
+		    // x21 - x22 = args[2 - 3]
+		    // ensure(::offset32(&spu_thread::pc) <= 32760);
+		    // ensure(::offset32(&spu_thread::block_hash) <= 32760);
 
 			// Load PC
 			c.ldr(a64::w1, arm::Mem(a64::x19, ::offset32(&spu_thread::pc))); // REG_Base + offset(spu_thread::pc)
@@ -291,244 +291,244 @@ DECLARE(spu_runtime::tr_all) = []
 }();
 
 DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
-{
-	// Gateway for SPU dispatcher, converts from native to GHC calling convention, also saves RSP value for spu_escape
-	using namespace asmjit;
+	{
+		// Gateway for SPU dispatcher, converts from native to GHC calling convention, also saves RSP value for spu_escape
+		using namespace asmjit;
 
 #if defined(ARCH_X64)
 #ifdef _WIN32
-	c.push(x86::r15);
-	c.push(x86::r14);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rsi);
-	c.push(x86::rdi);
-	c.push(x86::rbp);
-	c.push(x86::rbx);
-	c.sub(x86::rsp, 0xa8);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x90), x86::xmm15);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x80), x86::xmm14);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x70), x86::xmm13);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x60), x86::xmm12);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x50), x86::xmm11);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x40), x86::xmm10);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x30), x86::xmm9);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x20), x86::xmm8);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x10), x86::xmm7);
-	c.movaps(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.push(x86::r15);
+		c.push(x86::r14);
+		c.push(x86::r13);
+		c.push(x86::r12);
+		c.push(x86::rsi);
+		c.push(x86::rdi);
+		c.push(x86::rbp);
+		c.push(x86::rbx);
+		c.sub(x86::rsp, 0xa8);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x90), x86::xmm15);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x80), x86::xmm14);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x70), x86::xmm13);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x60), x86::xmm12);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x50), x86::xmm11);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x40), x86::xmm10);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x30), x86::xmm9);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x20), x86::xmm8);
+		c.movaps(x86::oword_ptr(x86::rsp, 0x10), x86::xmm7);
+		c.movaps(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
 #else
-	c.push(x86::rbp);
-	c.push(x86::r15);
-	c.push(x86::r14);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rbx);
-	c.push(x86::rax);
+		c.push(x86::rbp);
+		c.push(x86::r15);
+		c.push(x86::r14);
+		c.push(x86::r13);
+		c.push(x86::r12);
+		c.push(x86::rbx);
+		c.push(x86::rax);
 #endif
 
-	// Save native stack pointer for longjmp emulation
-	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
+		// Save native stack pointer for longjmp emulation
+		c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
-	// Move 4 args (despite spu_function_t def)
-	c.mov(x86::r13, args[0]);
-	c.mov(x86::rbp, args[1]);
-	c.mov(x86::r12, args[2]);
-	c.mov(x86::rbx, args[3]);
+		// Move 4 args (despite spu_function_t def)
+		c.mov(x86::r13, args[0]);
+		c.mov(x86::rbp, args[1]);
+		c.mov(x86::r12, args[2]);
+		c.mov(x86::rbx, args[3]);
 
-	if (utils::has_avx())
-	{
-		c.vzeroupper();
-	}
+		if (utils::has_avx())
+		{
+			c.vzeroupper();
+		}
 
-	c.call(spu_runtime::tr_all);
+		c.call(spu_runtime::tr_all);
 
-	if (utils::has_avx())
-	{
-		c.vzeroupper();
-	}
+		if (utils::has_avx())
+		{
+			c.vzeroupper();
+		}
 
 #ifdef _WIN32
-	c.movaps(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
-	c.movaps(x86::xmm7, x86::oword_ptr(x86::rsp, 0x10));
-	c.movaps(x86::xmm8, x86::oword_ptr(x86::rsp, 0x20));
-	c.movaps(x86::xmm9, x86::oword_ptr(x86::rsp, 0x30));
-	c.movaps(x86::xmm10, x86::oword_ptr(x86::rsp, 0x40));
-	c.movaps(x86::xmm11, x86::oword_ptr(x86::rsp, 0x50));
-	c.movaps(x86::xmm12, x86::oword_ptr(x86::rsp, 0x60));
-	c.movaps(x86::xmm13, x86::oword_ptr(x86::rsp, 0x70));
-	c.movaps(x86::xmm14, x86::oword_ptr(x86::rsp, 0x80));
-	c.movaps(x86::xmm15, x86::oword_ptr(x86::rsp, 0x90));
-	c.add(x86::rsp, 0xa8);
-	c.pop(x86::rbx);
-	c.pop(x86::rbp);
-	c.pop(x86::rdi);
-	c.pop(x86::rsi);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
-	c.pop(x86::r14);
-	c.pop(x86::r15);
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::rsp, 0x10));
+		c.movaps(x86::xmm8, x86::oword_ptr(x86::rsp, 0x20));
+		c.movaps(x86::xmm9, x86::oword_ptr(x86::rsp, 0x30));
+		c.movaps(x86::xmm10, x86::oword_ptr(x86::rsp, 0x40));
+		c.movaps(x86::xmm11, x86::oword_ptr(x86::rsp, 0x50));
+		c.movaps(x86::xmm12, x86::oword_ptr(x86::rsp, 0x60));
+		c.movaps(x86::xmm13, x86::oword_ptr(x86::rsp, 0x70));
+		c.movaps(x86::xmm14, x86::oword_ptr(x86::rsp, 0x80));
+		c.movaps(x86::xmm15, x86::oword_ptr(x86::rsp, 0x90));
+		c.add(x86::rsp, 0xa8);
+		c.pop(x86::rbx);
+		c.pop(x86::rbp);
+		c.pop(x86::rdi);
+		c.pop(x86::rsi);
+		c.pop(x86::r12);
+		c.pop(x86::r13);
+		c.pop(x86::r14);
+		c.pop(x86::r15);
 #else
-	c.add(x86::rsp, +8);
-	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
-	c.pop(x86::r14);
-	c.pop(x86::r15);
-	c.pop(x86::rbp);
+		c.add(x86::rsp, +8);
+		c.pop(x86::rbx);
+		c.pop(x86::r12);
+		c.pop(x86::r13);
+		c.pop(x86::r14);
+		c.pop(x86::r15);
+		c.pop(x86::rbp);
 #endif
 
-	c.ret();
+		c.ret();
 #elif defined(ARCH_ARM64)
 
-	// Save non-volatile regs. We do this within the thread context instead of normal stack
-	const u32 hv_regs_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
-	// NOTE: A64 gp-gp-imm add only takes immediates of upto 4095. Larger numbers can work, but need to be multiples of 2 for lowering to replace the instruction correctly
-	// Unfortunately asmjit fails silently on these patterns which can generate incorrect code
-	c.mov(a64::x15, args[0]);
-	c.mov(a64::x14, Imm(hv_regs_base));
-	c.add(a64::x14, a64::x14, a64::x15); // Reg context offset
+		// Save non-volatile regs. We do this within the thread context instead of normal stack
+		const u32 hv_regs_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		// NOTE: A64 gp-gp-imm add only takes immediates of upto 4095. Larger numbers can work, but need to be multiples of 2 for lowering to replace the instruction correctly
+	    // Unfortunately asmjit fails silently on these patterns which can generate incorrect code
+		c.mov(a64::x15, args[0]);
+		c.mov(a64::x14, Imm(hv_regs_base));
+		c.add(a64::x14, a64::x14, a64::x15); // Reg context offset
 
-	// Return address of escape should jump to the restore block
-	auto epilogue_addr = c.newLabel();
-	c.adr(a64::x15, epilogue_addr);
-	c.mov(a64::x16, a64::sp);
+		// Return address of escape should jump to the restore block
+		auto epilogue_addr = c.newLabel();
+		c.adr(a64::x15, epilogue_addr);
+		c.mov(a64::x16, a64::sp);
 
-	c.stp(a64::x15, a64::x16, arm::Mem(a64::x14));
-	c.stp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
-	c.stp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
-	c.stp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
-	c.stp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
-	c.stp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
-	c.stp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
-	c.str(a64::x30, arm::Mem(a64::x14, 112));
+		c.stp(a64::x15, a64::x16, arm::Mem(a64::x14));
+		c.stp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
+		c.stp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
+		c.stp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
+		c.stp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
+		c.stp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
+		c.stp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
+		c.str(a64::x30, arm::Mem(a64::x14, 112));
 
-	// Move 4 args (despite spu_function_t def)
-	c.mov(a64::x19, args[0]);
-	c.mov(a64::x20, args[1]);
-	c.mov(a64::x21, args[2]);
-	c.mov(a64::x22, args[3]);
+		// Move 4 args (despite spu_function_t def)
+		c.mov(a64::x19, args[0]);
+		c.mov(a64::x20, args[1]);
+		c.mov(a64::x21, args[2]);
+		c.mov(a64::x22, args[3]);
 
-	// Inject stack frame for scratchpad. Alternatively use per-function frames but that adds some overhead
-	c.sub(a64::sp, a64::sp, Imm(8192));
+		// Inject stack frame for scratchpad. Alternatively use per-function frames but that adds some overhead
+		c.sub(a64::sp, a64::sp, Imm(8192));
 
-	c.mov(a64::x0, Imm(reinterpret_cast<u64>(spu_runtime::tr_all)));
-	c.blr(a64::x0);
+		c.mov(a64::x0, Imm(reinterpret_cast<u64>(spu_runtime::tr_all)));
+		c.blr(a64::x0);
 
-	// This is the return point for the far ret. Never jump back into host code without coming through this exit
-	c.bind(epilogue_addr);
+		// This is the return point for the far ret. Never jump back into host code without coming through this exit
+		c.bind(epilogue_addr);
 
-	// Cleanup scratchpad (not needed, we'll reload sp shortly)
-	// c.add(a64::sp, a64::sp, Imm(8192));
+		// Cleanup scratchpad (not needed, we'll reload sp shortly)
+	    // c.add(a64::sp, a64::sp, Imm(8192));
 
-	// Restore thread context
-	c.mov(a64::x14, Imm(hv_regs_base));
-	c.add(a64::x14, a64::x14, a64::x19);
+		// Restore thread context
+		c.mov(a64::x14, Imm(hv_regs_base));
+		c.add(a64::x14, a64::x14, a64::x19);
 
-	c.ldr(a64::x16, arm::Mem(a64::x14, 8));
-	c.ldp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
-	c.ldp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
-	c.ldp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
-	c.ldp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
-	c.ldp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
-	c.ldp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
-	c.ldr(a64::x30, arm::Mem(a64::x14, 112));
+		c.ldr(a64::x16, arm::Mem(a64::x14, 8));
+		c.ldp(a64::x18, a64::x19, arm::Mem(a64::x14, 16));
+		c.ldp(a64::x20, a64::x21, arm::Mem(a64::x14, 32));
+		c.ldp(a64::x22, a64::x23, arm::Mem(a64::x14, 48));
+		c.ldp(a64::x24, a64::x25, arm::Mem(a64::x14, 64));
+		c.ldp(a64::x26, a64::x27, arm::Mem(a64::x14, 80));
+		c.ldp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
+		c.ldr(a64::x30, arm::Mem(a64::x14, 112));
 
-	// Return
-	c.mov(a64::sp, a64::x16);
-	c.ret(a64::x30);
+		// Return
+		c.mov(a64::sp, a64::x16);
+		c.ret(a64::x30);
 #else
 #error "Unimplemented"
 #endif
-});
+	});
 
-DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>("spu_escape", [](native_asm& c, auto& args)
-{
-	using namespace asmjit;
+DECLARE(spu_runtime::g_escape) = build_function_asm<void (*)(spu_thread*)>("spu_escape", [](native_asm& c, auto& args)
+	{
+		using namespace asmjit;
 
 #if defined(ARCH_X64)
-	// Restore native stack pointer (longjmp emulation)
-	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
+		// Restore native stack pointer (longjmp emulation)
+		c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
 
-	// Return to the return location
-	c.sub(x86::rsp, 8);
-	c.ret();
+		// Return to the return location
+		c.sub(x86::rsp, 8);
+		c.ret();
 #elif defined(ARCH_ARM64)
-	// Far ret, jumps to gateway epilogue
-	const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
-	c.mov(a64::x19, args[0]);
-	c.mov(a64::x15, Imm(reg_base));
-	c.add(a64::x15, a64::x15, args[0]);
-	c.ldr(a64::x30, arm::Mem(a64::x15));
-	c.ret(a64::x30);
+		// Far ret, jumps to gateway epilogue
+		const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		c.mov(a64::x19, args[0]);
+		c.mov(a64::x15, Imm(reg_base));
+		c.add(a64::x15, a64::x15, args[0]);
+		c.ldr(a64::x30, arm::Mem(a64::x15));
+		c.ret(a64::x30);
 #else
 #error "Unimplemented"
 #endif
-});
+	});
 
-DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, spu_function_t, u8*)>("spu_tail_escape", [](native_asm& c, auto& args)
-{
-	using namespace asmjit;
+DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void (*)(spu_thread*, spu_function_t, u8*)>("spu_tail_escape", [](native_asm& c, auto& args)
+	{
+		using namespace asmjit;
 
 #if defined(ARCH_X64)
-	// Restore native stack pointer (longjmp emulation)
-	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
+		// Restore native stack pointer (longjmp emulation)
+		c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
 
-	// Adjust stack for initial call instruction in the gateway
-	c.sub(x86::rsp, 16);
+		// Adjust stack for initial call instruction in the gateway
+		c.sub(x86::rsp, 16);
 
-	// Tail call, GHC CC (second arg)
-	c.mov(x86::r13, args[0]);
-	c.mov(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::ls)));
-	c.mov(x86::r12, args[2]);
-	c.xor_(x86::ebx, x86::ebx);
-	c.mov(x86::qword_ptr(x86::rsp), args[1]);
-	c.ret();
+		// Tail call, GHC CC (second arg)
+		c.mov(x86::r13, args[0]);
+		c.mov(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::ls)));
+		c.mov(x86::r12, args[2]);
+		c.xor_(x86::ebx, x86::ebx);
+		c.mov(x86::qword_ptr(x86::rsp), args[1]);
+		c.ret();
 #elif defined(ARCH_ARM64)
-	// HV pointer
-	const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		// HV pointer
+		const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
 
-	// Tail call, GHC CC
-	c.mov(a64::x19, args[0]); // REG_Base
-	c.mov(a64::x15, Imm(::offset32(&spu_thread::ls))); // SPU::ls offset cannot be correctly encoded for ldr as it is too large
-	c.ldr(a64::x20, arm::Mem(a64::x19, a64::x15)); // REG_Sp
-	c.mov(a64::x21, args[2]);  // REG_Hp
-	c.mov(a64::x22, a64::xzr); // REG_R1
+		// Tail call, GHC CC
+		c.mov(a64::x19, args[0]);                          // REG_Base
+		c.mov(a64::x15, Imm(::offset32(&spu_thread::ls))); // SPU::ls offset cannot be correctly encoded for ldr as it is too large
+		c.ldr(a64::x20, arm::Mem(a64::x19, a64::x15));     // REG_Sp
+		c.mov(a64::x21, args[2]);                          // REG_Hp
+		c.mov(a64::x22, a64::xzr);                         // REG_R1
 
-	// Reset sp to patch leaks. Calls to tail escape may leave their stack "dirty" due to optimizations.
-	c.mov(a64::x14, Imm(reg_base + 8));
-	c.ldr(a64::x15, arm::Mem(a64::x19, a64::x14));
-	c.mov(a64::sp, a64::x15);
+		// Reset sp to patch leaks. Calls to tail escape may leave their stack "dirty" due to optimizations.
+		c.mov(a64::x14, Imm(reg_base + 8));
+		c.ldr(a64::x15, arm::Mem(a64::x19, a64::x14));
+		c.mov(a64::sp, a64::x15);
 
-	// Push context. This gateway can be returned to normally through a ret chain.
-	// FIXME: Push the current PC and "this" as part of the pseudo-frame and return here directly.
-	c.sub(a64::sp, a64::sp, Imm(16));
-	c.str(args[0], arm::Mem(a64::sp));
+		// Push context. This gateway can be returned to normally through a ret chain.
+	    // FIXME: Push the current PC and "this" as part of the pseudo-frame and return here directly.
+		c.sub(a64::sp, a64::sp, Imm(16));
+		c.str(args[0], arm::Mem(a64::sp));
 
-	// Allocate scratchpad. Not needed if using per-function frames, or if we just don't care about returning to C++ (jump to gw exit instead)
-	c.sub(a64::sp, a64::sp, Imm(8192));
+		// Allocate scratchpad. Not needed if using per-function frames, or if we just don't care about returning to C++ (jump to gw exit instead)
+		c.sub(a64::sp, a64::sp, Imm(8192));
 
-	// Make the far jump
-	c.mov(a64::x15, args[1]);
-	c.blr(a64::x15);
+		// Make the far jump
+		c.mov(a64::x15, args[1]);
+		c.blr(a64::x15);
 
-	// Clear scratch allocation
-	c.add(a64::sp, a64::sp, Imm(8192));
+		// Clear scratch allocation
+		c.add(a64::sp, a64::sp, Imm(8192));
 
-	// Restore context. Escape point expects the current thread pointer at x19
-	c.ldr(a64::x19, arm::Mem(a64::sp));
-	c.add(a64::sp, a64::sp, Imm(16));
+		// Restore context. Escape point expects the current thread pointer at x19
+		c.ldr(a64::x19, arm::Mem(a64::sp));
+		c.add(a64::sp, a64::sp, Imm(16));
 
-	// <Optional> We could technically just emit a return here, but we may not want to for now until support is more mature.
-	// Should we attempt a normal return after this point, we'd be going back to C++ code which we really don't want.
-	// We can't guarantee stack sanity for the C++ code and it's cookies since we're basically treating stack as a scratch playground since we entered the main gateway.
-	// Instead, just fall back to hypervisor here. It also makes debugging easier.
-	c.mov(a64::x15, Imm(reg_base));
-	c.ldr(a64::x30, arm::Mem(a64::x19, a64::x15));
-	c.ret(a64::x30);
+		// <Optional> We could technically just emit a return here, but we may not want to for now until support is more mature.
+	    // Should we attempt a normal return after this point, we'd be going back to C++ code which we really don't want.
+	    // We can't guarantee stack sanity for the C++ code and it's cookies since we're basically treating stack as a scratch playground since we entered the main gateway.
+	    // Instead, just fall back to hypervisor here. It also makes debugging easier.
+		c.mov(a64::x15, Imm(reg_base));
+		c.ldr(a64::x30, arm::Mem(a64::x19, a64::x15));
+		c.ret(a64::x30);
 #else
 #error "Unimplemented"
 #endif
-});
+	});
 
 DECLARE(spu_runtime::g_interpreter_table) = {};
 
@@ -574,7 +574,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 
 	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
 
-	obj.funcs = spu_thread::discover_functions(vaddr, { reinterpret_cast<const u8*>(ls_data_vaddr), size }, vaddr != 0, umax);
+	obj.funcs = spu_thread::discover_functions(vaddr, {reinterpret_cast<const u8*>(ls_data_vaddr), size}, vaddr != 0, umax);
 
 	if (obj.funcs.empty())
 	{
@@ -706,12 +706,10 @@ void spu_cache::add(const spu_program& func)
 	// Add CRC (forced non-zero)
 	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data.data()), size * 4), 1) << 16;
 
-	const fs::iovec_clone gather[3]
-	{
+	const fs::iovec_clone gather[3]{
 		{&size, sizeof(size)},
 		{&addr, sizeof(addr)},
-		{func.data.data(), func.data.size() * 4}
-	};
+		{func.data.data(), func.data.size() * 4}};
 
 	// Append data
 	m_file.write_gather(gather, 3);
@@ -832,313 +830,312 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
-	{
+		{
 #ifdef __APPLE__
-		pthread_jit_write_protect_np(false);
+			pthread_jit_write_protect_np(false);
 #endif
-		// Set low priority
-		thread_ctrl::scoped_priority low_prio(-1);
+			// Set low priority
+			thread_ctrl::scoped_priority low_prio(-1);
 
-		// Initialize compiler instances for parallel compilation
-		std::unique_ptr<spu_recompiler_base> compiler;
+			// Initialize compiler instances for parallel compilation
+			std::unique_ptr<spu_recompiler_base> compiler;
 
-		if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-		{
-			compiler = spu_recompiler_base::make_asmjit_recompiler();
-		}
-		else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-		{
-			compiler = spu_recompiler_base::make_llvm_recompiler();
-		}
-
-		compiler->init();
-
-		// Counter for error reporting
-		u32 logged_error = 0;
-
-		// How much every thread compiled
-		uint result = 0;
-
-		// Fake LS
-		std::vector<be_t<u32>> ls(0x10000);
-
-		usz func_i = fnext++;
-
-		// Ensure some actions are performed on a single thread
-		const bool is_first_thread = func_i == 0;
-
-		// Build functions
-		for (; func_i < func_list.size(); func_i = fnext++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
-		{
-			const spu_program& func = std::as_const(func_list)[func_i];
-
-			if (Emu.IsStopped() || fail_flag)
+			if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 			{
-				continue;
+				compiler = spu_recompiler_base::make_asmjit_recompiler();
+			}
+			else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+			{
+				compiler = spu_recompiler_base::make_llvm_recompiler();
 			}
 
-			// Get data start
-			const u32 start = func.lower_bound;
-			const u32 size0 = ::size32(func.data);
+			compiler->init();
 
-			be_t<u64> hash_start;
+			// Counter for error reporting
+			u32 logged_error = 0;
+
+			// How much every thread compiled
+			uint result = 0;
+
+			// Fake LS
+			std::vector<be_t<u32>> ls(0x10000);
+
+			usz func_i = fnext++;
+
+			// Ensure some actions are performed on a single thread
+			const bool is_first_thread = func_i == 0;
+
+			// Build functions
+			for (; func_i < func_list.size(); func_i = fnext++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 			{
-				sha1_context ctx;
-				u8 output[20];
+				const spu_program& func = std::as_const(func_list)[func_i];
 
-				sha1_starts(&ctx);
-				sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
-				sha1_finish(&ctx, output);
-				std::memcpy(&hash_start, output, sizeof(hash_start));
-			}
-
-			// Check hash against allowed bounds
-			const bool inverse_bounds = g_cfg.core.spu_llvm_lower_bound > g_cfg.core.spu_llvm_upper_bound;
-
-			if ((!inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound || hash_start > g_cfg.core.spu_llvm_upper_bound)) ||
-				(inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound && hash_start > g_cfg.core.spu_llvm_upper_bound)))
-			{
-				spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
-				result++;
-				continue;
-			}
-
-			// Initialize LS with function data only
-			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
-			{
-				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
-			}
-
-			// Call analyser
-			spu_program func2 = compiler->analyse(ls.data(), func.entry_point);
-
-			if (func2 != func)
-			{
-				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
-
-				if (logged_error < 2)
+				if (Emu.IsStopped() || fail_flag)
 				{
-					std::string log;
-					compiler->dump(func, log);
-					spu_log.notice("[0x%05x] Function: %s", func.entry_point, log);
-					logged_error++;
-				}
-			}
-			else if (!compiler->compile(std::move(func2)))
-			{
-				// Likely, out of JIT memory. Signal to prevent further building.
-				fail_flag |= 1;
-				continue;
-			}
-
-			// Clear fake LS
-			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
-
-			result++;
-
-			if (is_first_thread && !showing_progress)
-			{
-				if (!g_progr_text && !g_progr_ptotal && !g_progr_ftotal)
-				{
-					showing_progress = true;
-					g_progr_pdone += pending_progress.exchange(0);
-					g_progr_ptotal += total_funcs;
-					progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
-				}
-			}
-			else if (showing_progress && pending_progress)
-			{
-				// Cover missing progress due to a race
-				g_progr_pdone += pending_progress.exchange(0);
-			}
-		}
-
-		u32 last_sec_idx = umax;
-
-		for (func_i = data_indexer++;; func_i = data_indexer++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
-		{
-			usz passed_count = 0;
-			u32 func_addr = 0;
-			u32 next_func = 0;
-			u32 sec_addr = umax;
-			u32 sec_idx = 0;
-			std::span<const u32> inst_data;
-
-			// Try to get the data this index points to
-			for (auto& sec : data_list)
-			{
-				if (func_i < passed_count + sec.funcs.size())
-				{
-					const usz func_idx = func_i - passed_count;
-					sec_addr = sec.vaddr;
-					func_addr = ::at32(sec.funcs, func_idx);
-					inst_data = { sec.inst_data.data(), sec.inst_data.size() };
-					next_func = sec.funcs.size() >= func_idx ? ::narrow<u32>(sec_addr + inst_data.size() * 4) : sec.funcs[func_idx];
-					break;
+					continue;
 				}
 
-				passed_count += sec.funcs.size();
-				sec_idx++;
-			}
+				// Get data start
+				const u32 start = func.lower_bound;
+				const u32 size0 = ::size32(func.data);
 
-			if (sec_addr == umax)
-			{
-				// End of compilation for thread
-				break;
-			}
-
-			if (Emu.IsStopped() || fail_flag)
-			{
-				continue;
-			}
-
-			if (last_sec_idx != sec_idx)
-			{
-				if (last_sec_idx != umax)
+				be_t<u64> hash_start;
 				{
-					// Clear fake LS of previous section
-					auto& sec = data_list[last_sec_idx];
-					std::memset(ls.data() + sec.vaddr / 4, 0, sec.inst_data.size() * 4);
+					sha1_context ctx;
+					u8 output[20];
+
+					sha1_starts(&ctx);
+					sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+					sha1_finish(&ctx, output);
+					std::memcpy(&hash_start, output, sizeof(hash_start));
 				}
 
-				// Initialize LS with the entire section data
-				for (u32 i = 0, pos = sec_addr; i < inst_data.size(); i++, pos += 4)
+				// Check hash against allowed bounds
+				const bool inverse_bounds = g_cfg.core.spu_llvm_lower_bound > g_cfg.core.spu_llvm_upper_bound;
+
+				if ((!inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound || hash_start > g_cfg.core.spu_llvm_upper_bound)) ||
+					(inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound && hash_start > g_cfg.core.spu_llvm_upper_bound)))
 				{
-					ls[pos / 4] =  std::bit_cast<be_t<u32>>(inst_data[i]);
+					spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
+					result++;
+					continue;
 				}
 
-				last_sec_idx = sec_idx;
-			}
+				// Initialize LS with function data only
+				for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
+				{
+					ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
+				}
 
-			u32 block_addr = func_addr;
+				// Call analyser
+				spu_program func2 = compiler->analyse(ls.data(), func.entry_point);
 
-			std::map<u32, std::vector<u32>> targets;
+				if (func2 != func)
+				{
+					spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
 
-			// Call analyser
-			spu_program func2 = compiler->analyse(ls.data(), block_addr, &targets);
-
-			while (!func2.data.empty())
-			{
-				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
-				const u32 prog_size = ::size32(func2.data);
-
-				if (!compiler->compile(std::move(func2)))
+					if (logged_error < 2)
+					{
+						std::string log;
+						compiler->dump(func, log);
+						spu_log.notice("[0x%05x] Function: %s", func.entry_point, log);
+						logged_error++;
+					}
+				}
+				else if (!compiler->compile(std::move(func2)))
 				{
 					// Likely, out of JIT memory. Signal to prevent further building.
 					fail_flag |= 1;
-					break;
+					continue;
 				}
+
+				// Clear fake LS
+				std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 
 				result++;
 
-				const u32 start_new = block_addr + prog_size * 4;
-
-				if (start_new >= next_func || (start_new == next_func - 4 && ls[start_new / 4] == 0x200000u))
+				if (is_first_thread && !showing_progress)
 				{
-					// Completed
+					if (!g_progr_text && !g_progr_ptotal && !g_progr_ftotal)
+					{
+						showing_progress = true;
+						g_progr_pdone += pending_progress.exchange(0);
+						g_progr_ptotal += total_funcs;
+						progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
+					}
+				}
+				else if (showing_progress && pending_progress)
+				{
+					// Cover missing progress due to a race
+					g_progr_pdone += pending_progress.exchange(0);
+				}
+			}
+
+			u32 last_sec_idx = umax;
+
+			for (func_i = data_indexer++;; func_i = data_indexer++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
+			{
+				usz passed_count = 0;
+				u32 func_addr = 0;
+				u32 next_func = 0;
+				u32 sec_addr = umax;
+				u32 sec_idx = 0;
+				std::span<const u32> inst_data;
+
+				// Try to get the data this index points to
+				for (auto& sec : data_list)
+				{
+					if (func_i < passed_count + sec.funcs.size())
+					{
+						const usz func_idx = func_i - passed_count;
+						sec_addr = sec.vaddr;
+						func_addr = ::at32(sec.funcs, func_idx);
+						inst_data = {sec.inst_data.data(), sec.inst_data.size()};
+						next_func = sec.funcs.size() >= func_idx ? ::narrow<u32>(sec_addr + inst_data.size() * 4) : sec.funcs[func_idx];
+						break;
+					}
+
+					passed_count += sec.funcs.size();
+					sec_idx++;
+				}
+
+				if (sec_addr == umax)
+				{
+					// End of compilation for thread
 					break;
 				}
 
-				if (auto type = g_spu_itype.decode(last_inst);
-					type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL || type == spu_itype::SYNC)
+				if (Emu.IsStopped() || fail_flag)
 				{
-					if (ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+					continue;
+				}
+
+				if (last_sec_idx != sec_idx)
+				{
+					if (last_sec_idx != umax)
 					{
-						spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
-						func2 = compiler->analyse(ls.data(), start_new, &targets);
-						block_addr = start_new;
-						continue;
-					}
-				}
-
-				if (targets.empty())
-				{
-					break;
-				}
-
-				const auto upper = targets.upper_bound(func_addr);
-
-				if (upper == targets.begin())
-				{
-					break;
-				}
-
-				u32 new_entry = umax;
-
-				// Find the lowest target in the space in-between
-				for (auto it = std::prev(upper); it != targets.end() && it->first < start_new && new_entry > start_new; it++)
-				{
-					for (u32 target : it->second)
-					{
-						if (target >= start_new && target < next_func)
-						{
-							if (target < new_entry)
-							{
-								new_entry = target;
-
-								if (new_entry == start_new)
-								{
-									// Cannot go lower
-									break;
-								}
-							}
-						}
-					}
-				}
-
-				if (new_entry != umax && !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0, true))
-				{
-					new_entry = umax;
-				}
-
-				if (new_entry == umax)
-				{
-					new_entry = start_new;
-
-					while (new_entry < next_func && (ls[start_new / 4] < 0x3fffc || !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0, true)))
-					{
-						new_entry += 4;
+						// Clear fake LS of previous section
+						auto& sec = data_list[last_sec_idx];
+						std::memset(ls.data() + sec.vaddr / 4, 0, sec.inst_data.size() * 4);
 					}
 
-					if (new_entry >= next_func || (new_entry == next_func - 4 && ls[new_entry / 4] == 0x200000u))
+					// Initialize LS with the entire section data
+					for (u32 i = 0, pos = sec_addr; i < inst_data.size(); i++, pos += 4)
+					{
+						ls[pos / 4] = std::bit_cast<be_t<u32>>(inst_data[i]);
+					}
+
+					last_sec_idx = sec_idx;
+				}
+
+				u32 block_addr = func_addr;
+
+				std::map<u32, std::vector<u32>> targets;
+
+				// Call analyser
+				spu_program func2 = compiler->analyse(ls.data(), block_addr, &targets);
+
+				while (!func2.data.empty())
+				{
+					const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
+					const u32 prog_size = ::size32(func2.data);
+
+					if (!compiler->compile(std::move(func2)))
+					{
+						// Likely, out of JIT memory. Signal to prevent further building.
+						fail_flag |= 1;
+						break;
+					}
+
+					result++;
+
+					const u32 start_new = block_addr + prog_size * 4;
+
+					if (start_new >= next_func || (start_new == next_func - 4 && ls[start_new / 4] == 0x200000u))
 					{
 						// Completed
 						break;
 					}
+
+					if (auto type = g_spu_itype.decode(last_inst);
+						type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL || type == spu_itype::SYNC)
+					{
+						if (ls[start_new / 4] && g_spu_itype.decode(ls[start_new / 4]) != spu_itype::UNK)
+						{
+							spu_log.notice("Precompiling fallthrough to 0x%05x", start_new);
+							func2 = compiler->analyse(ls.data(), start_new, &targets);
+							block_addr = start_new;
+							continue;
+						}
+					}
+
+					if (targets.empty())
+					{
+						break;
+					}
+
+					const auto upper = targets.upper_bound(func_addr);
+
+					if (upper == targets.begin())
+					{
+						break;
+					}
+
+					u32 new_entry = umax;
+
+					// Find the lowest target in the space in-between
+					for (auto it = std::prev(upper); it != targets.end() && it->first < start_new && new_entry > start_new; it++)
+					{
+						for (u32 target : it->second)
+						{
+							if (target >= start_new && target < next_func)
+							{
+								if (target < new_entry)
+								{
+									new_entry = target;
+
+									if (new_entry == start_new)
+									{
+										// Cannot go lower
+										break;
+									}
+								}
+							}
+						}
+					}
+
+					if (new_entry != umax && !spu_thread::is_exec_code(new_entry, {reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE}, 0, true))
+					{
+						new_entry = umax;
+					}
+
+					if (new_entry == umax)
+					{
+						new_entry = start_new;
+
+						while (new_entry < next_func && (ls[start_new / 4] < 0x3fffc || !spu_thread::is_exec_code(new_entry, {reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE}, 0, true)))
+						{
+							new_entry += 4;
+						}
+
+						if (new_entry >= next_func || (new_entry == next_func - 4 && ls[new_entry / 4] == 0x200000u))
+						{
+							// Completed
+							break;
+						}
+					}
+
+					spu_log.notice("Precompiling filler space at 0x%05x (next=0x%05x)", new_entry, next_func);
+					func2 = compiler->analyse(ls.data(), new_entry, &targets);
+					block_addr = new_entry;
 				}
 
-
-				spu_log.notice("Precompiling filler space at 0x%05x (next=0x%05x)", new_entry, next_func);
-				func2 = compiler->analyse(ls.data(), new_entry, &targets);
-				block_addr = new_entry;
-			}
-
-			if (is_first_thread && !showing_progress)
-			{
-				if (!g_progr_text && !g_progr_ptotal && !g_progr_ftotal)
+				if (is_first_thread && !showing_progress)
 				{
-					showing_progress = true;
-					g_progr_pdone += pending_progress.exchange(0);
-					g_progr_ptotal += total_funcs;
+					if (!g_progr_text && !g_progr_ptotal && !g_progr_ftotal)
+					{
+						showing_progress = true;
+						g_progr_pdone += pending_progress.exchange(0);
+						g_progr_ptotal += total_funcs;
 
-					progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
+						progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
+					}
+				}
+				else if (showing_progress && pending_progress)
+				{
+					// Cover missing progress due to a race
+					g_progr_pdone += pending_progress.exchange(0);
 				}
 			}
-			else if (showing_progress && pending_progress)
+
+			if (showing_progress && pending_progress)
 			{
 				// Cover missing progress due to a race
 				g_progr_pdone += pending_progress.exchange(0);
 			}
-		}
 
-		if (showing_progress && pending_progress)
-		{
-			// Cover missing progress due to a race
-			g_progr_pdone += pending_progress.exchange(0);
-		}
-
-		return result;
-	});
+			return result;
+		});
 
 	u32 built_total = 0;
 
@@ -1346,17 +1343,18 @@ spu_item* spu_runtime::add_empty(spu_program&& data)
 	// Store previous item if already added
 	spu_item* prev = nullptr;
 
-	//Try to add item that doesn't exist yet
+	// Try to add item that doesn't exist yet
 	const auto ret = m_stuff[data.data[0] >> 12].push_if([&](spu_item& _new, spu_item& _old)
-	{
-		if (_new.data == _old.data)
 		{
-			prev = &_old;
-			return false;
-		}
+			if (_new.data == _old.data)
+			{
+				prev = &_old;
+				return false;
+			}
 
-		return true;
-	}, std::move(data));
+			return true;
+		},
+		std::move(data));
 
 	if (ret)
 	{
@@ -1548,12 +1546,12 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		workload.clear();
 		workload.reserve(size0);
 		workload.emplace_back();
-		workload.back().size  = size0;
+		workload.back().size = size0;
 		workload.back().level = 0;
-		workload.back().from  = -1;
+		workload.back().from = -1;
 		workload.back().rel32 = nullptr;
-		workload.back().beg   = beg;
-		workload.back().end   = _end;
+		workload.back().beg = beg;
+		workload.back().end = _end;
 
 		// LS address starting from PC is already loaded into rcx (see spu_runtime::tr_all)
 
@@ -1589,15 +1587,15 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 					// Resort subrange starting from the new level
 					std::stable_sort(w.beg, w.end, [&](const auto& a, const auto& b)
-					{
-						std::span<const u32> lhs = a.first;
-						std::span<const u32> rhs = b.first;
+						{
+							std::span<const u32> lhs = a.first;
+							std::span<const u32> rhs = b.first;
 
-						lhs = lhs.subspan(w.level);
-						rhs = rhs.subspan(w.level);
+							lhs = lhs.subspan(w.level);
+							rhs = rhs.subspan(w.level);
 
-						return s_span_less<const u32>(lhs, rhs);
-					});
+							return s_span_less<const u32>(lhs, rhs);
+						});
 
 					continue;
 				}
@@ -1799,10 +1797,10 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 #error "Unimplemented"
 #endif
 				auto& to = workload.emplace_back(w);
-				to.end   = it;
-				to.size  = size1;
+				to.end = it;
+				to.size = size1;
 				to.rel32 = raw;
-				to.from  = w.level;
+				to.from = w.level;
 			}
 
 			// Second subrange target
@@ -1852,10 +1850,10 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 #error "Unimplemented"
 #endif
 						auto& to = workload.emplace_back(w);
-						to.beg   = it2;
-						to.size  = size2;
+						to.beg = it2;
+						to.size = size2;
 						to.rel32 = raw;
-						to.from  = w.level;
+						to.from = w.level;
 					}
 
 					const u32 size3 = w.size - size1 - size2;
@@ -1881,11 +1879,11 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 #error "Unimplemented"
 #endif
 						auto& to = workload.emplace_back(w);
-						to.beg   = it;
-						to.end   = it2;
-						to.size  = size3;
+						to.beg = it;
+						to.end = it2;
+						to.size = size3;
 						to.rel32 = raw;
-						to.from  = w.level;
+						to.from = w.level;
 					}
 				}
 				else
@@ -1898,10 +1896,10 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 #error "Unimplemented"
 #endif
 					auto& to = workload.emplace_back(w);
-					to.beg   = it;
-					to.size  = w.size - size1;
+					to.beg = it;
+					to.size = w.size - size1;
 					to.rel32 = raw;
-					to.from  = w.level;
+					to.from = w.level;
 				}
 			}
 		}
@@ -1945,8 +1943,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				return result;
 			}
 		}
-	}
-	while (!insert_to.compare_exchange(_old, result));
+	} while (!insert_to.compare_exchange(_old, result));
 
 	return result;
 }
@@ -2346,16 +2343,18 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	}
 
 	calls.erase(std::remove_if(calls.begin(), calls.end(), [&](u32 caller)
-	{
-		// Check the validity of both the callee code and the following caller code
-		return !is_exec_code(caller, ls, base_addr, true) || !is_exec_code(caller + 4, ls, base_addr, true);
-	}), calls.end());
+					{
+						// Check the validity of both the callee code and the following caller code
+						return !is_exec_code(caller, ls, base_addr, true) || !is_exec_code(caller + 4, ls, base_addr, true);
+					}),
+		calls.end());
 
 	branches.erase(std::remove_if(branches.begin(), branches.end(), [&](u32 caller)
-	{
-		// Check the validity of the callee code
-		return !is_exec_code(caller, ls, base_addr, true);
-	}), branches.end());
+					   {
+						   // Check the validity of the callee code
+						   return !is_exec_code(caller, ls, base_addr, true);
+					   }),
+		branches.end());
 
 	std::vector<u32> addrs;
 
@@ -2512,7 +2511,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 					break;
 				}
 
-				//is_tail = op_rt == 3u || op_rt == 4u;
+				// is_tail = op_rt == 3u || op_rt == 4u;
 			}
 
 			if (!is_tail)
@@ -2545,7 +2544,7 @@ bool reg_state_t::is_const() const
 
 bool reg_state_t::compare_tags(const reg_state_t& rhs) const
 {
-	// Compare by tag, address of instruction origin 
+	// Compare by tag, address of instruction origin
 	return tag == rhs.tag && origin == rhs.origin && is_instruction == rhs.is_instruction;
 }
 
@@ -2754,7 +2753,6 @@ u32 reg_state_t::get_known_zeroes() const
 	return known_zeroes;
 }
 
-
 u32 reg_state_t::get_known_ones() const
 {
 	if (flag & vf::is_const)
@@ -2843,7 +2841,7 @@ struct block_reg_info
 
 	static std::unique_ptr<block_reg_info> create(u32 pc) noexcept
 	{
-		auto ptr = new block_reg_info{ pc, reg_state_t::make_unknown<s_reg_max>(pc) };
+		auto ptr = new block_reg_info{pc, reg_state_t::make_unknown<s_reg_max>(pc)};
 
 		for (reg_state_t& f : ptr->local_state)
 		{
@@ -2861,7 +2859,7 @@ struct block_reg_info
 	// In a manner in which no duplicate paths are formed
 	static void create_node(u32 pc_rhs, u32 parent_pc, std::map<u32, std::unique_ptr<block_reg_info>>& map)
 	{
-		//ensure(parent_node != pc_rhs);
+		// ensure(parent_node != pc_rhs);
 		ensure(map[parent_pc]);
 
 		if (!map[pc_rhs])
@@ -3073,7 +3071,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				const u32 target = spu_branch_target(av);
 
-				spu_log.warning("[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
+				spu_log.warning("[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" :
+																															  "");
 
 				if (type == spu_itype::BI && target == pos + 4 && op.d)
 				{
@@ -3221,16 +3220,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 				else if (start + 12 * 4 < limit &&
-					ls[start / 4 + 0] == 0x1ce00408u &&
-					ls[start / 4 + 1] == 0x24000389u &&
-					ls[start / 4 + 2] == 0x24004809u &&
-					ls[start / 4 + 3] == 0x24008809u &&
-					ls[start / 4 + 4] == 0x2400c809u &&
-					ls[start / 4 + 5] == 0x24010809u &&
-					ls[start / 4 + 6] == 0x24014809u &&
-					ls[start / 4 + 7] == 0x24018809u &&
-					ls[start / 4 + 8] == 0x1c200807u &&
-					ls[start / 4 + 9] == 0x2401c809u)
+						 ls[start / 4 + 0] == 0x1ce00408u &&
+						 ls[start / 4 + 1] == 0x24000389u &&
+						 ls[start / 4 + 2] == 0x24004809u &&
+						 ls[start / 4 + 3] == 0x24008809u &&
+						 ls[start / 4 + 4] == 0x2400c809u &&
+						 ls[start / 4 + 5] == 0x24010809u &&
+						 ls[start / 4 + 6] == 0x24014809u &&
+						 ls[start / 4 + 7] == 0x24018809u &&
+						 ls[start / 4 + 8] == 0x1c200807u &&
+						 ls[start / 4 + 9] == 0x2401c809u)
 				{
 					spu_log.warning("[0x%x] Pattern 1 detected (hbr=0x%x:0x%x)", pos, hbr_loc, hbr_tg);
 
@@ -3436,21 +3435,21 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		case spu_itype::HBR:
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
-			hbr_tg  = vflags[op.ra] & vf::is_const && !op.c ? values[op.ra] & 0x3fffc : -1;
+			hbr_tg = vflags[op.ra] & vf::is_const && !op.c ? values[op.ra] & 0x3fffc : -1;
 			break;
 		}
 
 		case spu_itype::HBRA:
 		{
 			hbr_loc = spu_branch_target(pos, op.r0h << 7 | op.rt);
-			hbr_tg  = spu_branch_target(0x0, op.i16);
+			hbr_tg = spu_branch_target(0x0, op.i16);
 			break;
 		}
 
 		case spu_itype::HBRR:
 		{
 			hbr_loc = spu_branch_target(pos, op.r0h << 7 | op.rt);
-			hbr_tg  = spu_branch_target(pos, op.i16);
+			hbr_tg = spu_branch_target(pos, op.i16);
 			break;
 		}
 
@@ -3701,7 +3700,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			if (result.data[i] == 0)
 			{
-				const u32 pos  = lsa + i * 4;
+				const u32 pos = lsa + i * 4;
 				const u32 data = ls[pos / 4];
 
 				// Allow only NOP or LNOP instructions in holes
@@ -3760,9 +3759,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		// Erase impossible predecessors
 		const auto new_end = std::remove_if(it->second.begin(), it->second.end(), [&](u32 addr)
-		{
-			return addr < lsa || addr >= limit;
-		});
+			{
+				return addr < lsa || addr >= limit;
+			});
 
 		it->second.erase(new_end, it->second.end());
 
@@ -3820,12 +3819,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 			}
 
-			nnop  = 0;
+			nnop = 0;
 			vsize = i + 1;
 		}
 		else
 		{
-			const u32 pos  = lsa + i * 4;
+			const u32 pos = lsa + i * 4;
 			const u32 data = ls[pos / 4];
 
 			if (data == 0x200000 || (data & 0xffffff80) == 0x40200000)
@@ -3863,8 +3862,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				reg_save = op.rt;
 			}
 
-			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(ia / 4)}
-				, {op.rb, m_use_rb.test(ia / 4)}, {op.rc, m_use_rc.test(ia / 4)}})
+			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(ia / 4)}, {op.rb, m_use_rb.test(ia / 4)}, {op.rc, m_use_rc.test(ia / 4)}})
 			{
 				if (_use.second)
 				{
@@ -4840,25 +4838,25 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	struct atomic16_t
 	{
-		bool active = false; // GETLLAR happened
-		u32 lsa_pc = SPU_LS_SIZE; // PC of first LSA write
-		u32 lsa_last_pc = SPU_LS_SIZE; // PC of first LSA write
-		u32 get_pc = SPU_LS_SIZE; // PC of GETLLAR
-		u32 put_pc = SPU_LS_SIZE; // PC of PUTLLC
-		reg_state_t ls{}; // state of LS load/store address register
+		bool active = false;                              // GETLLAR happened
+		u32 lsa_pc = SPU_LS_SIZE;                         // PC of first LSA write
+		u32 lsa_last_pc = SPU_LS_SIZE;                    // PC of first LSA write
+		u32 get_pc = SPU_LS_SIZE;                         // PC of GETLLAR
+		u32 put_pc = SPU_LS_SIZE;                         // PC of PUTLLC
+		reg_state_t ls{};                                 // state of LS load/store address register
 		reg_state_t ls_offs = reg_state_t::from_value(0); // Added value to ls
-		reg_state_t lsa{}; // state of LSA register on GETLLAR
-		reg_state_t ls_reg[8]{}; // stores/loads using register bundles with offset
-		reg_state_t ls_abs[8]{}; // stores/loads using absolute address
-		u32 reg = s_reg_max; // Source of address register of LS load/store
-		u32 reg2 = s_reg_max; // Source 2 of address register of LS load/store (STQX/LQX)
-		//u32 ls_offs[8]{}; // LS offset from register (0 if const)
-		bool ls_pc_rel = false; // For STQR/LQR
-		bool ls_access = false; // LS accessed
-		bool ls_write = false; // LS written
+		reg_state_t lsa{};                                // state of LSA register on GETLLAR
+		reg_state_t ls_reg[8]{};                          // stores/loads using register bundles with offset
+		reg_state_t ls_abs[8]{};                          // stores/loads using absolute address
+		u32 reg = s_reg_max;                              // Source of address register of LS load/store
+		u32 reg2 = s_reg_max;                             // Source 2 of address register of LS load/store (STQX/LQX)
+		// u32 ls_offs[8]{}; // LS offset from register (0 if const)
+		bool ls_pc_rel = false;  // For STQR/LQR
+		bool ls_access = false;  // LS accessed
+		bool ls_write = false;   // LS written
 		bool ls_invalid = false; // From this point and on, any store will cancel the optimization
 		bool select_16_or_0_at_runtime = false;
-		bool put_active = false; // PUTLLC happened
+		bool put_active = false;   // PUTLLC happened
 		bool get_rdatomic = false; // True if MFC_RdAtomicStat was read after GETLLAR
 		u32 mem_count = 0;
 
@@ -4894,16 +4892,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	struct rchcnt_loop_t
 	{
-		bool active = false; // RDCH/RCHCNT happened
-		bool failed = false; // needc this flag to distinguish start of the pattern vs failed pattern (they begin and end of the same address)
+		bool active = false;      // RDCH/RCHCNT happened
+		bool failed = false;      // needc this flag to distinguish start of the pattern vs failed pattern (they begin and end of the same address)
 		bool conditioned = false; // needc this flag to distinguish start of the pattern vs failed pattern (they begin and end of the same address)
 		u32 channel = 128;
-		u32 read_pc = SPU_LS_SIZE; // PC of RDCH or RCHCNT (that encloses the loop)
-		reg_state_t ch_state{+vf::is_null}; // Channel stat, example: RCNCNT ch_state, MFC_Cmd
+		u32 read_pc = SPU_LS_SIZE;            // PC of RDCH or RCHCNT (that encloses the loop)
+		reg_state_t ch_state{+vf::is_null};   // Channel stat, example: RCNCNT ch_state, MFC_Cmd
 		reg_state_t ch_product{+vf::is_null}; // Optional comparison state for channl state, example: CEQI ch_product, ch_state, 1
-		bool product_test_negate = false; // Compare the opposite way, such as: CEQI ch_product, ch_state, 0 which turns 0 t -1 and 1 to 0
+		bool product_test_negate = false;     // Compare the opposite way, such as: CEQI ch_product, ch_state, 0 which turns 0 t -1 and 1 to 0
 		std::vector<u32> origins;
-		u32 branch_pc = SPU_LS_SIZE; // Where the loop branch is located
+		u32 branch_pc = SPU_LS_SIZE;     // Where the loop branch is located
 		u32 branch_target = SPU_LS_SIZE; // The target of the loop branch
 
 		// Return old state for error reporting
@@ -4938,18 +4936,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		rchcnt_loop_t rchcnt_loop{};
 
 		block_reg_state_iterator(u32 _pc, usz _parent_iterator_index = umax, usz _parent_target_index = 0) noexcept
-			: pc(_pc)
-			, parent_iterator_index(_parent_iterator_index)
-			, parent_target_index(_parent_target_index)
+			: pc(_pc), parent_iterator_index(_parent_iterator_index), parent_target_index(_parent_target_index)
 		{
 		}
 	};
 
 	std::vector<block_reg_state_iterator> reg_state_it;
 
-	std::map<u32, atomic16_t> atomic16_all; // RdAtomicStat location -> atomic loop optimization state
+	std::map<u32, atomic16_t> atomic16_all;       // RdAtomicStat location -> atomic loop optimization state
 	std::map<u32, rchcnt_loop_t> rchcnt_loop_all; // RDCH/RCHCNT location -> channel read loop optimization state
-	std::map<u32, bool> getllar_starts; // True for failed loops
+	std::map<u32, bool> getllar_starts;           // True for failed loops
 	std::map<u32, bool> run_on_block;
 	std::map<u32, bool> logged_block;
 
@@ -4996,9 +4992,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	enum spu_addr_mask_t : u32
 	{
 		SPU_LS_MASK_128 = (SPU_LS_SIZE - 1) & -128,
-		SPU_LS_MASK_16  = (SPU_LS_SIZE - 1) & -16,
-		SPU_LS_MASK_4   = (SPU_LS_SIZE - 1) & -4,
-		SPU_LS_MASK_1   = (SPU_LS_SIZE - 1),
+		SPU_LS_MASK_16 = (SPU_LS_SIZE - 1) & -16,
+		SPU_LS_MASK_4 = (SPU_LS_SIZE - 1) & -4,
+		SPU_LS_MASK_1 = (SPU_LS_SIZE - 1),
 	};
 
 	u32 iterator_id_alloc = 0;
@@ -5033,7 +5029,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (auto& [pc, _] : infos)
 				{
-					if (!_) continue;
+					if (!_)
+						continue;
 					fmt::append(out, " [0x%x]", pc);
 				}
 
@@ -5498,7 +5495,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					else
 					{
 						// Should not be reachable at the moment
-						//ensure(false);
+						// ensure(false);
 						spu_log.error("Failed to clean block analyis steps at block_id %d", reg_state_it[it].iterator_id);
 					}
 				}
@@ -5552,7 +5549,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (!infos.empty())
 					{
-						reg_state_it.emplace_back(::at32(infos, entry_point)->pc).iterator_id = iterator_id_alloc++;;
+						reg_state_it.emplace_back(::at32(infos, entry_point)->pc).iterator_id = iterator_id_alloc++;
+						;
 					}
 				}
 			}
@@ -5718,8 +5716,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			std::string consts;
 
-			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(pos / 4)}
-				, {op.rb, m_use_rb.test(pos / 4)}, {op.rc, m_use_rc.test(pos / 4)}})
+			for (auto _use : std::initializer_list<std::pair<u32, bool>>{{op.ra, m_use_ra.test(pos / 4)}, {op.rb, m_use_rb.test(pos / 4)}, {op.rc, m_use_rc.test(pos / 4)}})
 			{
 				if (!_use.second)
 				{
@@ -6066,7 +6063,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 									else if (atomic16->ls_offs.compare_with_mask_indifference(atomic16->lsa, SPU_LS_MASK_128) && atomic16->ls.is_less_than(128 - (atomic16->ls_offs.value & 127)))
 									{
 										// Relative memory access with offset less than 128 bytes
-										// Common around SPU utilities which have less strict restrictions about memory alignment 
+										// Common around SPU utilities which have less strict restrictions about memory alignment
 										ok = true;
 									}
 								}
@@ -6132,7 +6129,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			case SPU_PM_Start_Ev:
 			case SPU_PM_Stop_Ev:
 			case MFC_WrTagMask:
-			//case MFC_WrTagUpdate: // Technically correct to ignore but risky
+				// case MFC_WrTagUpdate: // Technically correct to ignore but risky
 				break;
 			default:
 			{
@@ -6281,43 +6278,43 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			case SPU_RdSigNotify1:
 			case SPU_RdSigNotify2:
 			case SPU_RdInMbox:
-			//case SPU_RdEventStat:
-			{
-				if (is_read)
+				// case SPU_RdEventStat:
 				{
-					break_putllc16(28, atomic16->discard());
-				}
-				else
-				{
-					break_putllc16(29, atomic16->discard());
-				}
-
-				if (!is_pattern_match || is_read)
-				{
-					//
-				}
-				else if (!rchcnt_loop->active && it == rchcnt_loop_all.end())
-				{
-					rchcnt_loop->read_pc = pos;
-					rchcnt_loop->channel = op.ra;
-					rchcnt_loop->active = true;
-					unconst(op.rt, pos);
-					rchcnt_loop->ch_state = vregs[op.rt];
-					invalidate = false;
-				}
-				else if (rchcnt_loop->active)
-				{
-					// Success
-					rchcnt_loop->active = false;
-
-					if (it == rchcnt_loop_all.end())
+					if (is_read)
 					{
-						rchcnt_loop_all.emplace(pos, *rchcnt_loop);
+						break_putllc16(28, atomic16->discard());
 					}
-				}
+					else
+					{
+						break_putllc16(29, atomic16->discard());
+					}
 
-				break;
-			}
+					if (!is_pattern_match || is_read)
+					{
+						//
+					}
+					else if (!rchcnt_loop->active && it == rchcnt_loop_all.end())
+					{
+						rchcnt_loop->read_pc = pos;
+						rchcnt_loop->channel = op.ra;
+						rchcnt_loop->active = true;
+						unconst(op.rt, pos);
+						rchcnt_loop->ch_state = vregs[op.rt];
+						invalidate = false;
+					}
+					else if (rchcnt_loop->active)
+					{
+						// Success
+						rchcnt_loop->active = false;
+
+						if (it == rchcnt_loop_all.end())
+						{
+							rchcnt_loop_all.emplace(pos, *rchcnt_loop);
+						}
+					}
+
+					break;
+				}
 			default:
 			{
 				break;
@@ -6340,29 +6337,29 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				atomic16->mem_count++;
 
-				// Do not clear lower 16 bytes addressing because the program can move on 4-byte basis 
+				// Do not clear lower 16 bytes addressing because the program can move on 4-byte basis
 				const u32 offs = spu_branch_target(pos - result.lower_bound, op.si16);
 
 				if (atomic16->lsa.is_const() && [&]()
-				{
-					bool hack = false;
-
-					if (offs % 16 == 0 && (pos - result.lower_bound + op.si16 * 4) == offs)
 					{
-						const u32 reservation_bound = (atomic16->lsa.value | 127);
-						const u32 min_offs = offs;
+						bool hack = false;
 
-						// Hack: assume there is no overflow in relative instruction offset
-						// Thus, use instruction position + offset as a lower bound for reservation access
-						if (min_offs > reservation_bound)
+						if (offs % 16 == 0 && (pos - result.lower_bound + op.si16 * 4) == offs)
 						{
-							spu_log.success("STQR/LQR Atomic Loop Hack: abs_pos=0x%x, abs=0x%x, i16*4=0x%x, ls_bound=0x%x", offs, pos + op.si16 * 4, op.si16 * 4, reservation_bound);
-							hack = true;
-						}
-					}
+							const u32 reservation_bound = (atomic16->lsa.value | 127);
+							const u32 min_offs = offs;
 
-					return hack;
-				}())
+							// Hack: assume there is no overflow in relative instruction offset
+						    // Thus, use instruction position + offset as a lower bound for reservation access
+							if (min_offs > reservation_bound)
+							{
+								spu_log.success("STQR/LQR Atomic Loop Hack: abs_pos=0x%x, abs=0x%x, i16*4=0x%x, ls_bound=0x%x", offs, pos + op.si16 * 4, op.si16 * 4, reservation_bound);
+								hack = true;
+							}
+						}
+
+						return hack;
+					}())
 				{
 					// Ignore memory access in this case
 				}
@@ -6478,8 +6475,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if ((_lsa.unequal_with_mask_indifference(state, SPU_LS_MASK_128) && offs == 0) ||
 						(_lsa.compare_with_mask_indifference(state, SPU_LS_MASK_1) && abs_diff >= 128u) ||
-						(_lsa.compare_with_mask_indifference(state, SPU_LS_MASK_128) && abs_diff >= 256u)
-						)
+						(_lsa.compare_with_mask_indifference(state, SPU_LS_MASK_128) && abs_diff >= 256u))
 					{
 						// We already know it's an unrelated load/store
 						// The reason for SPU_LS_SIZE - 128 check is that in case LSA is not aligned, it detects the possible wraparound
@@ -6650,8 +6646,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				if ((_lsa.unequal_with_mask_indifference(ra, SPU_LS_MASK_128) && offs == 0) ||
 					(_lsa.compare_with_mask_indifference(ra, SPU_LS_MASK_1) && abs_diff >= 128u) ||
-					(_lsa.compare_with_mask_indifference(ra, SPU_LS_MASK_128) && abs_diff >= 256u)
-					)
+					(_lsa.compare_with_mask_indifference(ra, SPU_LS_MASK_128) && abs_diff >= 256u))
 				{
 					// We already know it's an unrelated load/store
 					// The reason for SPU_LS_SIZE - 128 check is that in case LSA is not aligned, it detects the possible wraparound
@@ -6716,21 +6711,21 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
 			const auto [af, av, at, ao, az, apc, ainst] = get_reg(op.ra);
-			hbr_tg  = af & vf::is_const && !op.c ? av & 0x3fffc : -1;
+			hbr_tg = af & vf::is_const && !op.c ? av & 0x3fffc : -1;
 			break;
 		}
 
 		case spu_itype::HBRA:
 		{
 			hbr_loc = spu_branch_target(pos, op.r0h << 7 | op.rt);
-			hbr_tg  = spu_branch_target(0x0, op.i16);
+			hbr_tg = spu_branch_target(0x0, op.i16);
 			break;
 		}
 
 		case spu_itype::HBRR:
 		{
 			hbr_loc = spu_branch_target(pos, op.r0h << 7 | op.rt);
-			hbr_tg  = spu_branch_target(pos, op.i16);
+			hbr_tg = spu_branch_target(pos, op.i16);
 			break;
 		}
 
@@ -6925,9 +6920,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const u32 mask = (op.i16 >> 12);
 
 			const u32 value = (mask & 1 ? 0xff : 0) |
-				(mask & 2 ? 0xff00 : 0) |
-				(mask & 4 ? 0xff0000 : 0) |
-				(mask & 8 ? 0xff000000u : 0);
+			                  (mask & 2 ? 0xff00 : 0) |
+			                  (mask & 4 ? 0xff0000 : 0) |
+			                  (mask & 8 ? 0xff000000u : 0);
 
 			set_const_value(op.rt, value);
 			break;
@@ -7206,8 +7201,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		add_pattern(false, inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
 
-		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s) (putllc0=%d, putllc16+0=%d, all=%d)"
-			, pattern.mem_count, pattern.put_pc, value.type == v_relative, value.off18, value.type == v_const, value.type == v_reg2, value.reg, value.runtime16_select, entry_point, func_hash, +stats.nowrite, ++stats.single, +stats.all);
+		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.mem_count, pattern.put_pc, value.type == v_relative, value.off18, value.type == v_const, value.type == v_reg2, value.reg, value.runtime16_select, entry_point, func_hash, +stats.nowrite, ++stats.single, +stats.all);
 	}
 
 	for (const auto& [read_pc, pattern] : rchcnt_loop_all)
@@ -7342,26 +7336,26 @@ struct spu_llvm_worker
 		bool set_relax_flag = false;
 
 		for (auto slice = registered.pop_all();; [&]
-		{
-			if (slice)
 			{
-				slice.pop_front();
-			}
+				if (slice)
+				{
+					slice.pop_front();
+				}
 
-			if (slice || thread_ctrl::state() == thread_state::aborting)
-			{
-				return;
-			}
+				if (slice || thread_ctrl::state() == thread_state::aborting)
+				{
+					return;
+				}
 
-			if (set_relax_flag)
-			{
-				spu_thread::g_spu_work_count--;
-				set_relax_flag = false;
-			}
+				if (set_relax_flag)
+				{
+					spu_thread::g_spu_work_count--;
+					set_relax_flag = false;
+				}
 
-			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
-			slice = registered.pop_all();
-		}())
+				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+				slice = registered.pop_all();
+			}())
 		{
 			auto* prog = slice.get();
 
@@ -7492,41 +7486,41 @@ struct spu_llvm
 		stx::init_mutex prof_mutex;
 
 		named_thread profiler("SPU LLVM Profiler"sv, [&]()
-		{
-			while (thread_ctrl::state() != thread_state::aborting)
 			{
+				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					// Lock if enabled
-					const auto lock = prof_mutex.access();
-
-					if (!lock)
 					{
-						// Wait when the profiler is disabled
-						prof_mutex.wait_for_initialized();
-						continue;
+						// Lock if enabled
+						const auto lock = prof_mutex.access();
+
+						if (!lock)
+						{
+							// Wait when the profiler is disabled
+							prof_mutex.wait_for_initialized();
+							continue;
+						}
+
+						// Collect profiling samples
+						idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
+							{
+								const u64 name = atomic_storage<u64>::load(spu.block_hash);
+
+								if (auto state = +spu.state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
+								{
+									const auto found = std::as_const(samples).find(name);
+
+									if (found != std::as_const(samples).end())
+									{
+										const_cast<atomic_t<u64>&>(found->second)++;
+									}
+								}
+							});
 					}
 
-					// Collect profiling samples
-					idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
-					{
-						const u64 name = atomic_storage<u64>::load(spu.block_hash);
-
-						if (auto state = +spu.state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
-						{
-							const auto found = std::as_const(samples).find(name);
-
-							if (found != std::as_const(samples).end())
-							{
-								const_cast<atomic_t<u64>&>(found->second)++;
-							}
-						}
-					});
+					// Sleep for a short period if enabled
+					thread_ctrl::wait_for(20, false);
 				}
-
-				// Sleep for a short period if enabled
-				thread_ctrl::wait_for(20, false);
-			}
-		});
+			});
 
 		u32 worker_count = 1;
 
@@ -7555,7 +7549,7 @@ struct spu_llvm
 				enqueued.emplace(pair);
 
 				// Interrupt and kick profiler thread
-				const auto lock = prof_mutex.init_always([&]{});
+				const auto lock = prof_mutex.init_always([&] {});
 
 				// Register new blocks to collect samples
 				samples.emplace(pair.first, 0);
@@ -7586,7 +7580,7 @@ struct spu_llvm
 
 			// Find the most used enqueued item
 			u64 sample_max = 0;
-			auto found_it  = enqueued.begin();
+			auto found_it = enqueued.begin();
 
 			for (auto it = enqueued.begin(), end = enqueued.end(); it != end; ++it)
 			{
@@ -7646,7 +7640,10 @@ struct spu_llvm
 			worker_index++;
 		}
 
-		static_cast<void>(prof_mutex.init_always([&]{ samples.clear(); }));
+		static_cast<void>(prof_mutex.init_always([&]
+			{
+				samples.clear();
+			}));
 
 		m_workers.reset();
 
@@ -8142,7 +8139,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					// Check if the node is resolved
 					if (!node->has_true_state)
 					{
-						// Assume this block cannot be resolved at the moment 
+						// Assume this block cannot be resolved at the moment
 						is_all_resolved = false;
 						break;
 					}

@@ -105,8 +105,8 @@ s32 lv2_socket_p2p::listen([[maybe_unused]] s32 backlog)
 s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 {
 	const auto* psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&addr);
-	u16 p2p_port           = psa_in_p2p->sin_port;
-	u16 p2p_vport          = psa_in_p2p->sin_vport;
+	u16 p2p_port = psa_in_p2p->sin_port;
+	u16 p2p_vport = psa_in_p2p->sin_vport;
 
 	sys_net.notice("[P2P] Trying to bind %s:%d:%d", np::ip_to_string(std::bit_cast<u32>(psa_in_p2p->sin_addr)), p2p_port, p2p_vport);
 
@@ -141,7 +141,7 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 					p2p_vport++;
 				}
 			}
-			
+
 			if (pport.bound_p2p_vports.contains(p2p_vport))
 			{
 				// Check that all other sockets are SO_REUSEADDR or SO_REUSEPORT
@@ -163,8 +163,8 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 
 	{
 		std::lock_guard lock(mutex);
-		port       = p2p_port;
-		vport      = p2p_vport;
+		port = p2p_port;
+		vport = p2p_vport;
 		native_socket = real_socket;
 		bound_addr = psa_in_p2p->sin_addr;
 	}
@@ -185,11 +185,11 @@ std::pair<s32, sys_net_sockaddr> lv2_socket_p2p::getsockname()
 	sys_net_sockaddr sn_addr{};
 	sys_net_sockaddr_in_p2p* paddr = reinterpret_cast<sys_net_sockaddr_in_p2p*>(&sn_addr);
 
-	paddr->sin_len    = sizeof(sys_net_sockaddr_in);
+	paddr->sin_len = sizeof(sys_net_sockaddr_in);
 	paddr->sin_family = SYS_NET_AF_INET;
-	paddr->sin_port   = port;
-	paddr->sin_vport  = vport;
-	paddr->sin_addr   = bound_addr;
+	paddr->sin_port = port;
+	paddr->sin_vport = vport;
+	paddr->sin_addr = bound_addr;
 
 	return {CELL_OK, sn_addr};
 }
@@ -253,7 +253,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 	std::vector<u8> res_buf(len);
 
 	const auto& p2p_data = data.front();
-	s32 native_result    = std::min(len, static_cast<u32>(p2p_data.second.size()));
+	s32 native_result = std::min(len, static_cast<u32>(p2p_data.second.size()));
 	memcpy(res_buf.data(), p2p_data.second.data(), native_result);
 
 	sys_net_sockaddr sn_addr;
@@ -274,9 +274,9 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	}
 
 	ensure(opt_sn_addr);
-	ensure(socket);                              // ensures it has been bound
+	ensure(socket);                                                        // ensures it has been bound
 	ensure(buf.size() <= static_cast<usz>(65535 - VPORT_P2P_HEADER_SIZE)); // catch games using full payload for future fragmentation implementation if necessary
-	const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(&*opt_sn_addr)->sin_port;
+	const u16 p2p_port = reinterpret_cast<const sys_net_sockaddr_in*>(&*opt_sn_addr)->sin_port;
 	const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&*opt_sn_addr)->sin_vport;
 
 	auto native_addr = sys_net_addr_to_native_addr(*opt_sn_addr);
@@ -389,7 +389,7 @@ std::tuple<bool, bool, bool> lv2_socket_p2p::select(bs_t<lv2_socket::poll_t> sel
 {
 	std::lock_guard lock(mutex);
 
-	bool read_set  = false;
+	bool read_set = false;
 	bool write_set = false;
 
 	// Check if it's a bound P2P socket

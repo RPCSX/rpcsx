@@ -14,4 +14,4 @@ template <typename ImplT> struct NodeWrapper : PrintableWrapper<ImplT> {
 
   auto getLocation() const { return this->impl->getLocation(); }
 };
-} // namespace ir
+} // namespace shader::ir

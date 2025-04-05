@@ -7,8 +7,8 @@ namespace gcm
 {
 	enum
 	{
-		CELL_GCM_TYPE_B   = 1,
-		CELL_GCM_TYPE_C   = 2,
+		CELL_GCM_TYPE_B = 1,
+		CELL_GCM_TYPE_C = 2,
 		CELL_GCM_TYPE_RSX = 3,
 
 		CELL_GCM_MRT_MAXCOUNT = 4,
@@ -47,34 +47,34 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_ZCULL_ALIGN_OFFSET             = 4096,
-		CELL_GCM_ZCULL_ALIGN_WIDTH              = 64,
-		CELL_GCM_ZCULL_ALIGN_HEIGHT             = 64,
-		CELL_GCM_ZCULL_ALIGN_CULLSTART          = 4096,
+		CELL_GCM_ZCULL_ALIGN_OFFSET = 4096,
+		CELL_GCM_ZCULL_ALIGN_WIDTH = 64,
+		CELL_GCM_ZCULL_ALIGN_HEIGHT = 64,
+		CELL_GCM_ZCULL_ALIGN_CULLSTART = 4096,
 		CELL_GCM_ZCULL_COMPRESSION_TAG_BASE_MAX = 0x7FF,
-		CELL_GCM_ZCULL_RAM_SIZE_MAX             = 0x00300000,
+		CELL_GCM_ZCULL_RAM_SIZE_MAX = 0x00300000,
 
-		CELL_GCM_TILE_ALIGN_OFFSET       = 0x00010000,
-		CELL_GCM_TILE_ALIGN_SIZE         = 0x00010000,
+		CELL_GCM_TILE_ALIGN_OFFSET = 0x00010000,
+		CELL_GCM_TILE_ALIGN_SIZE = 0x00010000,
 		CELL_GCM_TILE_LOCAL_ALIGN_HEIGHT = 32,
-		CELL_GCM_TILE_MAIN_ALIGN_HEIGHT  = 64,
+		CELL_GCM_TILE_MAIN_ALIGN_HEIGHT = 64,
 		CELL_GCM_TILE_ALIGN_BUFFER_START_BOUNDARY = 8,
 
 		CELL_GCM_FRAGMENT_UCODE_LOCAL_ALIGN_OFFSET = 64,
-		CELL_GCM_FRAGMENT_UCODE_MAIN_ALIGN_OFFSET  = 128,
+		CELL_GCM_FRAGMENT_UCODE_MAIN_ALIGN_OFFSET = 128,
 
-		CELL_GCM_SURFACE_LINEAR_ALIGN_OFFSET  = 64,
+		CELL_GCM_SURFACE_LINEAR_ALIGN_OFFSET = 64,
 		CELL_GCM_SURFACE_SWIZZLE_ALIGN_OFFSET = 128,
 
-		CELL_GCM_TEXTURE_SWIZZLE_ALIGN_OFFSET               = 128,
-		CELL_GCM_TEXTURE_CUBEMAP_ALIGN_OFFSET               = 128,
+		CELL_GCM_TEXTURE_SWIZZLE_ALIGN_OFFSET = 128,
+		CELL_GCM_TEXTURE_CUBEMAP_ALIGN_OFFSET = 128,
 		CELL_GCM_TEXTURE_SWIZZLED_CUBEMAP_FACE_ALIGN_OFFSET = 128,
 
-		CELL_GCM_VERTEX_TEXTURE_CACHE_LINE_SIZE   = 32,
+		CELL_GCM_VERTEX_TEXTURE_CACHE_LINE_SIZE = 32,
 		CELL_GCM_L2_TEXTURE_CACHE_LOCAL_LINE_SIZE = 64,
-		CELL_GCM_L2_TEXTURE_CACHE_MAIN_LINE_SIZE  = 128,
+		CELL_GCM_L2_TEXTURE_CACHE_MAIN_LINE_SIZE = 128,
 
-		CELL_GCM_IDX_FRAGMENT_UCODE_INSTRUCTION_PREFETCH_COUNT  = 16,
+		CELL_GCM_IDX_FRAGMENT_UCODE_INSTRUCTION_PREFETCH_COUNT = 16,
 
 		CELL_GCM_DRAW_INDEX_ARRAY_INDEX_RANGE_MAX = 0x000FFFFF,
 
@@ -96,7 +96,7 @@ namespace gcm
 	enum CellGcmDefaultFifoMode
 	{
 		CELL_GCM_DEFAULT_FIFO_MODE_TRADITIONAL = 0,
-		CELL_GCM_DEFAULT_FIFO_MODE_OPTIMIZE    = 1,
+		CELL_GCM_DEFAULT_FIFO_MODE_OPTIMIZE = 1,
 		CELL_GCM_DEFAULT_FIFO_MODE_CONDITIONAL = 2,
 	};
 
@@ -120,7 +120,7 @@ namespace gcm
 		CELL_GCM_PRIMITIVE_LINE_LOOP = 3,
 		CELL_GCM_PRIMITIVE_LINE_STRIP = 4,
 		CELL_GCM_PRIMITIVE_TRIANGLES = 5,
-		CELL_GCM_PRIMITIVE_TRIANGLE_STRIP= 6,
+		CELL_GCM_PRIMITIVE_TRIANGLE_STRIP = 6,
 		CELL_GCM_PRIMITIVE_TRIANGLE_FAN = 7,
 		CELL_GCM_PRIMITIVE_QUADS = 8,
 		CELL_GCM_PRIMITIVE_QUAD_STRIP = 9,
@@ -232,7 +232,7 @@ namespace gcm
 		CELL_GCM_TEXTURE_REMAP_REMAP = 2,
 
 		CELL_GCM_TEXTURE_BORDER_TEXTURE = 0,
-		CELL_GCM_TEXTURE_BORDER_COLOR   = 1,
+		CELL_GCM_TEXTURE_BORDER_COLOR = 1,
 
 		CELL_GCM_TEXTURE_ZFUNC_NEVER = 0,
 		CELL_GCM_TEXTURE_ZFUNC_LESS = 1,
@@ -425,7 +425,7 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_POINT_SPRITE_RMODE_ZERO   = 0,
+		CELL_GCM_POINT_SPRITE_RMODE_ZERO = 0,
 		CELL_GCM_POINT_SPRITE_RMODE_FROM_R = 1,
 		CELL_GCM_POINT_SPRITE_RMODE_FROM_S = 2,
 
@@ -443,7 +443,7 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT = 0xe, ///< shader program exports the depth of the shaded fragment
+		CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT = 0xe,     ///< shader program exports the depth of the shaded fragment
 		CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS = 0x40, ///< shader program exports 32 bits registers values (instead of 16 bits ones)
 
 		// Other known flags
@@ -455,7 +455,7 @@ namespace gcm
 
 		// Custom
 		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x10000, // Rasterizing triangles and not lines or points
-		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS     = 0x20000, // Support instance ID offsets when loading constants
+		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS = 0x20000,     // Support instance ID offsets when loading constants
 	};
 
 	// GCM Reports
@@ -475,7 +475,7 @@ namespace gcm
 		CELL_GCM_LOCATION_MAIN = 1,
 
 		CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER = 0xFEED0000, // Local memory
-		CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER = 0xFEED0001, // Main memory
+		CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER = 0xFEED0001,  // Main memory
 		CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL = 0x66626660,
 		CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN = 0xBAD68000,
 		CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 = 0x6660420F,
@@ -795,15 +795,14 @@ namespace gcm
 		NV3089_IMAGE_IN_OFFSET = 0x0000C408 >> 2,
 		NV3089_IMAGE_IN = 0x0000C40C >> 2,
 
-		//lv1 hypervisor commands
+		// lv1 hypervisor commands
 		GCM_SET_DRIVER_OBJECT = 0x0000E000 >> 2,
-		GCM_FLIP_HEAD = 0X0000E920 >> 2,          //0xE920:0xE924: Flip head 0 or 1
-		GCM_DRIVER_QUEUE = 0X0000E940 >> 2,       //0XE940:0xE95C: First two indices prepare display buffers, rest unknown
-		GCM_SET_USER_COMMAND = 0x0000EB00 >> 2,   //0xEB00:0xEB04: User interrupt
+		GCM_FLIP_HEAD = 0X0000E920 >> 2,        // 0xE920:0xE924: Flip head 0 or 1
+		GCM_DRIVER_QUEUE = 0X0000E940 >> 2,     // 0XE940:0xE95C: First two indices prepare display buffers, rest unknown
+		GCM_SET_USER_COMMAND = 0x0000EB00 >> 2, // 0xEB00:0xEB04: User interrupt
 
 		GCM_FLIP_COMMAND = 0x0000FEAC >> 2
 	};
-
 
 	enum Method : u32
 	{
@@ -858,9 +857,9 @@ namespace gcm
 	// ISO
 	enum
 	{
-		CELL_GCM_TEXTURE_ISO_LOW    = 0,
-		CELL_GCM_TEXTURE_ISO_HIGH   = 1,
-		CELL_GCM_TEXTURE_ANISO_LOW  = 0,
+		CELL_GCM_TEXTURE_ISO_LOW = 0,
+		CELL_GCM_TEXTURE_ISO_HIGH = 1,
+		CELL_GCM_TEXTURE_ANISO_LOW = 0,
 		CELL_GCM_TEXTURE_ANISO_HIGH = 1,
 	};
 
@@ -998,8 +997,8 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_TRANSFER_CONVERSION_DITHER            = 0,
-		CELL_GCM_TRANSFER_CONVERSION_TRUNCATE          = 1,
+		CELL_GCM_TRANSFER_CONVERSION_DITHER = 0,
+		CELL_GCM_TRANSFER_CONVERSION_TRUNCATE = 1,
 		CELL_GCM_TRANSFER_CONVERSION_SUBTRACT_TRUNCATE = 2,
 	};
 
@@ -1037,7 +1036,7 @@ namespace gcm
 	enum
 	{
 		CELL_GCM_SHIFT_SET_SHADER_CONTROL_CONTROL_TXP = 15,
-		CELL_GCM_MASK_SET_SHADER_CONTROL_CONTROL_TXP  = 0x00008000,
+		CELL_GCM_MASK_SET_SHADER_CONTROL_CONTROL_TXP = 0x00008000,
 
 		CELL_GCM_IOMAP_FLAG_STRICT_ORDERING = 1 << 1,
 	};
@@ -1076,7 +1075,7 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_DISPLAY_FIELD_TOP    = 1,
+		CELL_GCM_DISPLAY_FIELD_TOP = 1,
 		CELL_GCM_DISPLAY_FIELD_BOTTOM = 0,
 	};
 
@@ -1113,21 +1112,21 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_VERTEX_S1    = 1,
-		CELL_GCM_VERTEX_F     = 2,
-		CELL_GCM_VERTEX_SF    = 3,
-		CELL_GCM_VERTEX_UB    = 4,
-		CELL_GCM_VERTEX_S32K  = 5,
-		CELL_GCM_VERTEX_CMP   = 6,
+		CELL_GCM_VERTEX_S1 = 1,
+		CELL_GCM_VERTEX_F = 2,
+		CELL_GCM_VERTEX_SF = 3,
+		CELL_GCM_VERTEX_UB = 4,
+		CELL_GCM_VERTEX_S32K = 5,
+		CELL_GCM_VERTEX_CMP = 6,
 		CELL_GCM_VERTEX_UB256 = 7,
 
-		CELL_GCM_VERTEX_S16_NR       = 1,
-		CELL_GCM_VERTEX_F32          = 2,
-		CELL_GCM_VERTEX_F16          = 3,
-		CELL_GCM_VERTEX_U8_NR        = 4,
-		CELL_GCM_VERTEX_S16_UN       = 5,
+		CELL_GCM_VERTEX_S16_NR = 1,
+		CELL_GCM_VERTEX_F32 = 2,
+		CELL_GCM_VERTEX_F16 = 3,
+		CELL_GCM_VERTEX_U8_NR = 4,
+		CELL_GCM_VERTEX_S16_UN = 5,
 		CELL_GCM_VERTEX_S11_11_10_NR = 6,
-		CELL_GCM_VERTEX_U8_UN        = 7,
+		CELL_GCM_VERTEX_U8_UN = 7,
 	};
 
 	enum
@@ -1149,7 +1148,7 @@ namespace gcm
 		RSX_VERTEX_BASE_TYPE_CMP32,
 		RSX_VERTEX_BASE_TYPE_UINT8,
 	};
-}
+} // namespace gcm
 
 // Public export
 // TODO: Don't leak namespaces
@@ -1165,7 +1164,7 @@ namespace rsx
 			return static_cast<T>(value);
 		}
 
-		return exception_utils::soft_exception_t{ rsx::exception_utils::invalid_enum };
+		return exception_utils::soft_exception_t{rsx::exception_utils::invalid_enum};
 	}
 
 	template <typename T>
@@ -1179,7 +1178,7 @@ namespace rsx
 			}
 		}
 
-		return exception_utils::soft_exception_t{ rsx::exception_utils::invalid_enum };
+		return exception_utils::soft_exception_t{rsx::exception_utils::invalid_enum};
 	}
 
 	template <typename T>
@@ -1193,28 +1192,27 @@ namespace rsx
 			}
 		}
 
-		return exception_utils::soft_exception_t{ rsx::exception_utils::invalid_enum };
+		return exception_utils::soft_exception_t{rsx::exception_utils::invalid_enum};
 	}
 
 	enum class vertex_base_type : u8
 	{
 		s1 = RSX_VERTEX_BASE_TYPE_SNORM16,    ///< signed normalized 16-bit int
-		f  = RSX_VERTEX_BASE_TYPE_FLOAT,      ///< float
+		f = RSX_VERTEX_BASE_TYPE_FLOAT,       ///< float
 		sf = RSX_VERTEX_BASE_TYPE_HALF_FLOAT, ///< half float
 		ub = RSX_VERTEX_BASE_TYPE_UNORM8,     ///< unsigned byte interpreted as 0.f and 1.f
 		s32k = RSX_VERTEX_BASE_TYPE_SINT16,   ///< signed 16bits int
-		cmp  = RSX_VERTEX_BASE_TYPE_CMP32,    ///< compressed aka X11G11Z10 and always 1. W.
+		cmp = RSX_VERTEX_BASE_TYPE_CMP32,     ///< compressed aka X11G11Z10 and always 1. W.
 		ub256 = RSX_VERTEX_BASE_TYPE_UINT8,   ///< unsigned byte interpreted as between 0 and 255.
 	};
 
 	static inline auto to_vertex_base_type(u32 in)
 	{
-		return in
-			? gcm_enum_cast<
-				vertex_base_type,
-				RSX_VERTEX_BASE_TYPE_SNORM16,
-				RSX_VERTEX_BASE_TYPE_UINT8>(in)
-			: expected(vertex_base_type::ub256);
+		return in ? gcm_enum_cast<
+						vertex_base_type,
+						RSX_VERTEX_BASE_TYPE_SNORM16,
+						RSX_VERTEX_BASE_TYPE_UINT8>(in) :
+		            expected(vertex_base_type::ub256);
 	}
 
 	enum class index_array_type : u8
@@ -1226,10 +1224,10 @@ namespace rsx
 	enum class primitive_type : u8
 	{
 		points = CELL_GCM_PRIMITIVE_POINTS,
-		lines  = CELL_GCM_PRIMITIVE_LINES,
+		lines = CELL_GCM_PRIMITIVE_LINES,
 		line_loop = CELL_GCM_PRIMITIVE_LINE_LOOP, // line strip with last end being joined with first end.
 		line_strip = CELL_GCM_PRIMITIVE_LINE_STRIP,
-		triangles  = CELL_GCM_PRIMITIVE_TRIANGLES,
+		triangles = CELL_GCM_PRIMITIVE_TRIANGLES,
 		triangle_strip = CELL_GCM_PRIMITIVE_TRIANGLE_STRIP,
 		triangle_fan = CELL_GCM_PRIMITIVE_TRIANGLE_FAN, // like strip except that every triangle share the first vertex and one instead of 2 from previous triangle.
 		quads = CELL_GCM_PRIMITIVE_QUADS,
@@ -1257,14 +1255,12 @@ namespace rsx
 
 	static inline auto to_surface_target(u32 in)
 	{
-		return gcm_enum_cast<surface_target>(in, {
-			CELL_GCM_SURFACE_TARGET_0,
-			CELL_GCM_SURFACE_TARGET_MRT1,
-			CELL_GCM_SURFACE_TARGET_NONE,
-			CELL_GCM_SURFACE_TARGET_1,
-			CELL_GCM_SURFACE_TARGET_MRT2,
-			CELL_GCM_SURFACE_TARGET_MRT3
-		});
+		return gcm_enum_cast<surface_target>(in, {CELL_GCM_SURFACE_TARGET_0,
+													 CELL_GCM_SURFACE_TARGET_MRT1,
+													 CELL_GCM_SURFACE_TARGET_NONE,
+													 CELL_GCM_SURFACE_TARGET_1,
+													 CELL_GCM_SURFACE_TARGET_MRT2,
+													 CELL_GCM_SURFACE_TARGET_MRT3});
 	}
 
 	enum class surface_depth_format : u8
@@ -1275,10 +1271,10 @@ namespace rsx
 
 	enum class surface_depth_format2 : u8
 	{
-		z16_uint = CELL_GCM_SURFACE_Z16,      // unsigned 16 bits depth
-		z24s8_uint = CELL_GCM_SURFACE_Z24S8,  // unsigned 24 bits depth + 8 bits stencil
-		z16_float,   // floating point 16 bits depth
-		z24s8_float, // floating point 24 bits depth + 8 bits stencil
+		z16_uint = CELL_GCM_SURFACE_Z16,     // unsigned 16 bits depth
+		z24s8_uint = CELL_GCM_SURFACE_Z24S8, // unsigned 24 bits depth + 8 bits stencil
+		z16_float,                           // floating point 16 bits depth
+		z24s8_float,                         // floating point 24 bits depth + 8 bits stencil
 	};
 
 	static inline auto to_surface_depth_format(u32 in)
@@ -1289,7 +1285,7 @@ namespace rsx
 			CELL_GCM_SURFACE_Z24S8>(in);
 	}
 
-	constexpr bool operator ==(surface_depth_format2 rhs, surface_depth_format lhs)
+	constexpr bool operator==(surface_depth_format2 rhs, surface_depth_format lhs)
 	{
 		switch (lhs)
 		{
@@ -1328,10 +1324,8 @@ namespace rsx
 	static inline auto to_surface_antialiasing(u32 in)
 	{
 		return gcm_enum_cast<surface_antialiasing>(in,
-		{
-			{ CELL_GCM_SURFACE_CENTER_1, CELL_GCM_SURFACE_CENTER_1 },
-			{ CELL_GCM_SURFACE_DIAGONAL_CENTERED_2, CELL_GCM_SURFACE_SQUARE_ROTATED_4 }
-		});
+			{{CELL_GCM_SURFACE_CENTER_1, CELL_GCM_SURFACE_CENTER_1},
+				{CELL_GCM_SURFACE_DIAGONAL_CENTERED_2, CELL_GCM_SURFACE_SQUARE_ROTATED_4}});
 	}
 
 	enum class surface_color_format : u8
@@ -1432,8 +1426,8 @@ namespace rsx
 	}
 
 	/**
-	* Use an extra cubemap format
-	*/
+	 * Use an extra cubemap format
+	 */
 	enum class texture_dimension_extended : u8
 	{
 		texture_dimension_1d = 0,
@@ -1496,12 +1490,12 @@ namespace rsx
 
 	enum class texture_minify_filter : u8
 	{
-		nearest = CELL_GCM_TEXTURE_NEAREST, ///< no filtering, mipmap base level
-		linear  = CELL_GCM_TEXTURE_LINEAR, ///< linear filtering, mipmap base level
+		nearest = CELL_GCM_TEXTURE_NEAREST,                 ///< no filtering, mipmap base level
+		linear = CELL_GCM_TEXTURE_LINEAR,                   ///< linear filtering, mipmap base level
 		nearest_nearest = CELL_GCM_TEXTURE_NEAREST_NEAREST, ///< no filtering, closest mipmap level
-		linear_nearest = CELL_GCM_TEXTURE_LINEAR_NEAREST, ///< linear filtering, closest mipmap level
-		nearest_linear = CELL_GCM_TEXTURE_NEAREST_LINEAR, ///< no filtering, linear mix between closest mipmap levels
-		linear_linear  = CELL_GCM_TEXTURE_LINEAR_LINEAR, ///< linear filtering, linear mix between closest mipmap levels
+		linear_nearest = CELL_GCM_TEXTURE_LINEAR_NEAREST,   ///< linear filtering, closest mipmap level
+		nearest_linear = CELL_GCM_TEXTURE_NEAREST_LINEAR,   ///< no filtering, linear mix between closest mipmap levels
+		linear_linear = CELL_GCM_TEXTURE_LINEAR_LINEAR,     ///< linear filtering, linear mix between closest mipmap levels
 		convolution_min = CELL_GCM_TEXTURE_CONVOLUTION_MIN, ///< Unknown mode but looks close to linear_linear
 	};
 
@@ -1515,14 +1509,14 @@ namespace rsx
 
 	enum class texture_magnify_filter : u8
 	{
-		nearest = CELL_GCM_TEXTURE_NEAREST, ///< no filtering
-		linear = CELL_GCM_TEXTURE_LINEAR, ///< linear filtering
+		nearest = CELL_GCM_TEXTURE_NEAREST,                 ///< no filtering
+		linear = CELL_GCM_TEXTURE_LINEAR,                   ///< linear filtering
 		convolution_mag = CELL_GCM_TEXTURE_CONVOLUTION_MAG, ///< Unknown mode but looks close to linear
 	};
 
 	static inline auto to_texture_magnify_filter(u32 in)
 	{
-		return gcm_enum_cast<texture_magnify_filter>(in, { CELL_GCM_TEXTURE_LINEAR, CELL_GCM_TEXTURE_NEAREST, CELL_GCM_TEXTURE_CONVOLUTION_MAG });
+		return gcm_enum_cast<texture_magnify_filter>(in, {CELL_GCM_TEXTURE_LINEAR, CELL_GCM_TEXTURE_NEAREST, CELL_GCM_TEXTURE_CONVOLUTION_MAG});
 	}
 
 	enum class stencil_op : u16
@@ -1540,11 +1534,9 @@ namespace rsx
 	static inline auto to_stencil_op(u32 in)
 	{
 		return gcm_enum_cast<stencil_op>(in,
-		{
-			CELL_GCM_KEEP, CELL_GCM_ZERO, CELL_GCM_REPLACE,
-			CELL_GCM_INCR, CELL_GCM_DECR, CELL_GCM_INVERT,
-			CELL_GCM_INCR_WRAP, CELL_GCM_DECR_WRAP
-		});
+			{CELL_GCM_KEEP, CELL_GCM_ZERO, CELL_GCM_REPLACE,
+				CELL_GCM_INCR, CELL_GCM_DECR, CELL_GCM_INVERT,
+				CELL_GCM_INCR_WRAP, CELL_GCM_DECR_WRAP});
 	}
 
 	enum class blend_equation : u16
@@ -1562,10 +1554,8 @@ namespace rsx
 	static inline auto to_blend_equation(u32 in)
 	{
 		return gcm_enum_cast<blend_equation>(in,
-		{
-			{ CELL_GCM_FUNC_ADD, CELL_GCM_FUNC_REVERSE_SUBTRACT },
-			{ CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED, CELL_GCM_FUNC_REVERSE_ADD_SIGNED }
-		});
+			{{CELL_GCM_FUNC_ADD, CELL_GCM_FUNC_REVERSE_SUBTRACT},
+				{CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED, CELL_GCM_FUNC_REVERSE_ADD_SIGNED}});
 	}
 
 	enum class blend_factor : u16
@@ -1590,10 +1580,8 @@ namespace rsx
 	static inline auto to_blend_factor(u32 in)
 	{
 		return gcm_enum_cast<blend_factor>(in,
-		{
-			{ CELL_GCM_SRC_COLOR, CELL_GCM_ONE_MINUS_CONSTANT_ALPHA },
-			{ CELL_GCM_ZERO, CELL_GCM_ONE }
-		});
+			{{CELL_GCM_SRC_COLOR, CELL_GCM_ONE_MINUS_CONSTANT_ALPHA},
+				{CELL_GCM_ZERO, CELL_GCM_ONE}});
 	}
 
 	enum class logic_op : u16
@@ -1626,7 +1614,7 @@ namespace rsx
 
 	enum class front_face : u16
 	{
-		cw = CELL_GCM_CW, /// clockwise
+		cw = CELL_GCM_CW,   /// clockwise
 		ccw = CELL_GCM_CCW, /// counter clockwise
 	};
 
@@ -1648,11 +1636,9 @@ namespace rsx
 	static inline auto to_cull_face(u32 in)
 	{
 		return gcm_enum_cast<cull_face>(in,
-		{
-			CELL_GCM_FRONT,
-			CELL_GCM_BACK,
-			CELL_GCM_FRONT_AND_BACK
-		});
+			{CELL_GCM_FRONT,
+				CELL_GCM_BACK,
+				CELL_GCM_FRONT_AND_BACK});
 	}
 
 	enum class user_clip_plane_op : u8
@@ -1782,11 +1768,9 @@ namespace rsx
 		static inline auto to_transfer_destination_format(u32 in)
 		{
 			return gcm_enum_cast<transfer_destination_format>(in,
-			{
-				CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8,
-				CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5,
-				CELL_GCM_TRANSFER_SURFACE_FORMAT_Y32
-			});
+				{CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8,
+					CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5,
+					CELL_GCM_TRANSFER_SURFACE_FORMAT_Y32});
 		}
 
 		enum class context_surface : u32
@@ -1798,10 +1782,8 @@ namespace rsx
 		static inline auto to_context_surface(u32 in)
 		{
 			return gcm_enum_cast<context_surface>(in,
-			{
-				CELL_GCM_CONTEXT_SURFACE2D,
-				CELL_GCM_CONTEXT_SWIZZLE2D
-			});
+				{CELL_GCM_CONTEXT_SURFACE2D,
+					CELL_GCM_CONTEXT_SWIZZLE2D});
 		}
 
 		enum class context_dma : u32
@@ -1814,11 +1796,9 @@ namespace rsx
 		static inline auto to_context_dma(u32 in)
 		{
 			return gcm_enum_cast<context_dma>(in,
-			{
-				CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
-				CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN,
-				CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER
-			});
+				{CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
+					CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN,
+					CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER});
 		}
-	}
-}
+	} // namespace blit_engine
+} // namespace rsx

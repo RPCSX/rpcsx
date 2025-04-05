@@ -12,21 +12,21 @@
 enum CellOskDialogError : u32
 {
 	CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE = 0x8002b501,
-	CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR     = 0x8002b502,
-	CELL_OSKDIALOG_ERROR_UNKNOWN            = 0x8002b503,
-	CELL_OSKDIALOG_ERROR_PARAM              = 0x8002b504,
+	CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR = 0x8002b502,
+	CELL_OSKDIALOG_ERROR_UNKNOWN = 0x8002b503,
+	CELL_OSKDIALOG_ERROR_PARAM = 0x8002b504,
 };
 
 // OSK status for the callback
 enum
 {
-	CELL_SYSUTIL_OSKDIALOG_LOADED               = 0x0502,
-	CELL_SYSUTIL_OSKDIALOG_FINISHED             = 0x0503,
-	CELL_SYSUTIL_OSKDIALOG_UNLOADED             = 0x0504,
-	CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED        = 0x0505,
-	CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED       = 0x0506,
+	CELL_SYSUTIL_OSKDIALOG_LOADED = 0x0502,
+	CELL_SYSUTIL_OSKDIALOG_FINISHED = 0x0503,
+	CELL_SYSUTIL_OSKDIALOG_UNLOADED = 0x0504,
+	CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED = 0x0505,
+	CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED = 0x0506,
 	CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED = 0x0507,
-	CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED      = 0x0508,
+	CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED = 0x0508,
 };
 
 enum CellOskDialogInputFieldResult
@@ -111,59 +111,59 @@ enum
 
 enum
 {
-	CELL_OSKDIALOG_PANELMODE_DEFAULT             = 0x00000000,
-	CELL_OSKDIALOG_PANELMODE_GERMAN              = 0x00000001,
-	CELL_OSKDIALOG_PANELMODE_ENGLISH             = 0x00000002,
-	CELL_OSKDIALOG_PANELMODE_SPANISH             = 0x00000004,
-	CELL_OSKDIALOG_PANELMODE_FRENCH              = 0x00000008,
-	CELL_OSKDIALOG_PANELMODE_ITALIAN             = 0x00000010,
-	CELL_OSKDIALOG_PANELMODE_DUTCH               = 0x00000020,
-	CELL_OSKDIALOG_PANELMODE_PORTUGUESE          = 0x00000040,
-	CELL_OSKDIALOG_PANELMODE_RUSSIAN             = 0x00000080,
-	CELL_OSKDIALOG_PANELMODE_JAPANESE            = 0x00000100,
+	CELL_OSKDIALOG_PANELMODE_DEFAULT = 0x00000000,
+	CELL_OSKDIALOG_PANELMODE_GERMAN = 0x00000001,
+	CELL_OSKDIALOG_PANELMODE_ENGLISH = 0x00000002,
+	CELL_OSKDIALOG_PANELMODE_SPANISH = 0x00000004,
+	CELL_OSKDIALOG_PANELMODE_FRENCH = 0x00000008,
+	CELL_OSKDIALOG_PANELMODE_ITALIAN = 0x00000010,
+	CELL_OSKDIALOG_PANELMODE_DUTCH = 0x00000020,
+	CELL_OSKDIALOG_PANELMODE_PORTUGUESE = 0x00000040,
+	CELL_OSKDIALOG_PANELMODE_RUSSIAN = 0x00000080,
+	CELL_OSKDIALOG_PANELMODE_JAPANESE = 0x00000100,
 	CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE = 0x00000200,
-	CELL_OSKDIALOG_PANELMODE_POLISH              = 0x00000400,
-	CELL_OSKDIALOG_PANELMODE_KOREAN              = 0x00001000,
-	CELL_OSKDIALOG_PANELMODE_TURKEY              = 0x00002000,
+	CELL_OSKDIALOG_PANELMODE_POLISH = 0x00000400,
+	CELL_OSKDIALOG_PANELMODE_KOREAN = 0x00001000,
+	CELL_OSKDIALOG_PANELMODE_TURKEY = 0x00002000,
 	CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE = 0x00004000,
-	CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE  = 0x00008000,
-	CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL   = 0x00010000,
-	CELL_OSKDIALOG_PANELMODE_DANISH              = 0x00020000,
-	CELL_OSKDIALOG_PANELMODE_SWEDISH             = 0x00040000,
-	CELL_OSKDIALOG_PANELMODE_NORWEGIAN           = 0x00080000,
-	CELL_OSKDIALOG_PANELMODE_FINNISH             = 0x00100000,
-	CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA   = 0x00200000,
-	CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA   = 0x00400000,
+	CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE = 0x00008000,
+	CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL = 0x00010000,
+	CELL_OSKDIALOG_PANELMODE_DANISH = 0x00020000,
+	CELL_OSKDIALOG_PANELMODE_SWEDISH = 0x00040000,
+	CELL_OSKDIALOG_PANELMODE_NORWEGIAN = 0x00080000,
+	CELL_OSKDIALOG_PANELMODE_FINNISH = 0x00100000,
+	CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA = 0x00200000,
+	CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA = 0x00400000,
 	CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH = 0x00800000,
-	CELL_OSKDIALOG_PANELMODE_ALPHABET            = 0x01000000,
-	CELL_OSKDIALOG_PANELMODE_LATIN               = 0x02000000,
-	CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH  = 0x04000000,
-	CELL_OSKDIALOG_PANELMODE_NUMERAL             = 0x08000000,
-	CELL_OSKDIALOG_PANELMODE_URL                 = 0x10000000,
-	CELL_OSKDIALOG_PANELMODE_PASSWORD            = 0x20000000
+	CELL_OSKDIALOG_PANELMODE_ALPHABET = 0x01000000,
+	CELL_OSKDIALOG_PANELMODE_LATIN = 0x02000000,
+	CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH = 0x04000000,
+	CELL_OSKDIALOG_PANELMODE_NUMERAL = 0x08000000,
+	CELL_OSKDIALOG_PANELMODE_URL = 0x10000000,
+	CELL_OSKDIALOG_PANELMODE_PASSWORD = 0x20000000
 };
 
 enum
 {
-	CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT   = 0x00000200,
+	CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT = 0x00000200,
 	CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER = 0x00000400,
-	CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT  = 0x00000800,
-	CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP    = 0x00001000,
+	CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT = 0x00000800,
+	CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP = 0x00001000,
 	CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER = 0x00002000,
 	CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM = 0x00004000
 };
 
 enum
 {
-	CELL_OSKDIALOG_NO_SPACE          = 0x00000001,
-	CELL_OSKDIALOG_NO_RETURN         = 0x00000002,
-	CELL_OSKDIALOG_NO_INPUT_ANALOG   = 0x00000008,
+	CELL_OSKDIALOG_NO_SPACE = 0x00000001,
+	CELL_OSKDIALOG_NO_RETURN = 0x00000002,
+	CELL_OSKDIALOG_NO_INPUT_ANALOG = 0x00000008,
 	CELL_OSKDIALOG_NO_STARTUP_EFFECT = 0x00001000,
 };
 
 enum
 {
-	CELL_OSKDIALOG_10KEY_PANEL   = 0x00000001,
+	CELL_OSKDIALOG_10KEY_PANEL = 0x00000001,
 	CELL_OSKDIALOG_FULLKEY_PANEL = 0x00000002
 };
 
@@ -174,8 +174,8 @@ enum
 
 enum
 {
-	CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY  = 0x00000001,
-	CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY     = 0x00000002,
+	CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY = 0x00000001,
+	CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY = 0x00000002,
 	CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER = 0x00000004
 };
 
@@ -289,9 +289,9 @@ public:
 		u32 support_language = 0;
 		u32 first_view_panel = 0;
 		osk_window_layout layout{};
-		osk_window_layout input_layout{}; // Only used with separate windows
-		osk_window_layout panel_layout{}; // Only used with separate windows
-		u32 input_field_window_width = 0; // Only used with separate windows
+		osk_window_layout input_layout{};               // Only used with separate windows
+		osk_window_layout panel_layout{};               // Only used with separate windows
+		u32 input_field_window_width = 0;               // Only used with separate windows
 		f32 input_field_background_transparency = 1.0f; // Only used with separate windows
 		f32 initial_scale = 1.0f;
 		color base_color{};
@@ -315,15 +315,15 @@ public:
 	std::function<void(s32 status)> on_osk_close;
 	std::function<void(CellOskDialogKeyMessage key_message)> on_osk_key_input_entered;
 
-	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
-	atomic_t<CellOskDialogContinuousMode> continuous_mode{ CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
-	atomic_t<CellOskDialogInputDevice> input_device{ CELL_OSKDIALOG_INPUT_DEVICE_PAD }; // The current input device.
-	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's input.
-	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's input.
-	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's input.
-	atomic_t<bool> ignore_device_events{ false };  // Determines if the OSK ignores device events.
+	atomic_t<OskDialogState> state{OskDialogState::Unloaded};
+	atomic_t<CellOskDialogContinuousMode> continuous_mode{CELL_OSKDIALOG_CONTINUOUS_MODE_NONE};
+	atomic_t<CellOskDialogInputDevice> input_device{CELL_OSKDIALOG_INPUT_DEVICE_PAD}; // The current input device.
+	atomic_t<bool> pad_input_enabled{true};                                           // Determines if the OSK consumes the device's input.
+	atomic_t<bool> mouse_input_enabled{true};                                         // Determines if the OSK consumes the device's input.
+	atomic_t<bool> keyboard_input_enabled{true};                                      // Determines if the OSK consumes the device's input.
+	atomic_t<bool> ignore_device_events{false};                                       // Determines if the OSK ignores device events.
 
-	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
+	atomic_t<CellOskDialogInputFieldResult> osk_input_result{CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK};
 	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> osk_text{};
 };
 
@@ -344,14 +344,14 @@ struct osk_info
 	osk_window_layout input_panel_layout_info{};
 	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
 	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM; // TODO: use
-	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD; // OSK at first only receives input from the initial device
+	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;               // OSK at first only receives input from the initial device
 
 	atomic_t<bool> clipboard_enabled = false; // For copy and paste
 	atomic_t<bool> half_byte_kana_enabled = false;
 	atomic_t<u32> supported_languages = 0; // Used to enable non-default languages in the OSK
 
 	atomic_t<bool> dimmer_enabled = true;
-	atomic_t<OskDialogBase::color> base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
+	atomic_t<OskDialogBase::color> base_color = OskDialogBase::color{0.2f, 0.2f, 0.2f, 1.0f};
 
 	atomic_t<bool> pointer_enabled = false;
 	atomic_t<f32> pointer_x = 0.0f;

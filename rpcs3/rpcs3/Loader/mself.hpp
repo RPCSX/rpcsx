@@ -22,10 +22,10 @@ struct mself_record
 
 struct mself_header
 {
-	nse_t<u32> magic; // "MSF\x00"
-	be_t<u32> ver; // 1
-	be_t<u64> size; // File size
-	be_t<u32> count; // Number of records
+	nse_t<u32> magic;      // "MSF\x00"
+	be_t<u32> ver;         // 1
+	be_t<u64> size;        // File size
+	be_t<u32> count;       // Number of records
 	be_t<u32> header_size; // ???
 	u8 reserved[0x28];
 

@@ -54,9 +54,15 @@ public:
 	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
 
-	video_renderer renderer() const { return m_renderer; };
+	video_renderer renderer() const
+	{
+		return m_renderer;
+	};
 
-	void ignore_stop_events() { m_ignore_stop_events = true; }
+	void ignore_stop_events()
+	{
+		m_ignore_stop_events = true;
+	}
 
 	draw_context_t make_context() override;
 	void set_current(draw_context_t context) override;
@@ -72,8 +78,8 @@ public:
 	void progress_set_limit(int limit);
 
 	/*
-		Returns true if the mouse is locked inside the game window.
-		Also conveniently updates the cursor visibility, because using it from a mouse handler indicates mouse emulation.
+	    Returns true if the mouse is locked inside the game window.
+	    Also conveniently updates the cursor visibility, because using it from a mouse handler indicates mouse emulation.
 	*/
 	bool get_mouse_lock_state();
 
@@ -84,8 +90,8 @@ public:
 protected:
 	video_renderer m_renderer;
 
-	void paintEvent(QPaintEvent *event) override;
-	void showEvent(QShowEvent *event) override;
+	void paintEvent(QPaintEvent* event) override;
+	void showEvent(QShowEvent* event) override;
 
 	void close() override;
 	void reset() override;

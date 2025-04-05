@@ -7,62 +7,62 @@
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
-	//color format
+	// color format
 	switch (color_format)
 	{
 	case rsx::surface_color_format::r5g6b5:
-		return{ ::gl::texture::type::ushort_5_6_5, ::gl::texture::format::rgb, ::gl::texture::internal_format::rgb565, true };
+		return {::gl::texture::type::ushort_5_6_5, ::gl::texture::format::rgb, ::gl::texture::internal_format::rgb565, true};
 
 	case rsx::surface_color_format::a8r8g8b8:
-		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true };
+		return {::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true};
 
-	//These formats discard their alpha component, forced to 0 or 1
-	//All XBGR formats will have remapping before they can be read back in shaders as DRGB8
-	//Prefix o = 1, z = 0
+	// These formats discard their alpha component, forced to 0 or 1
+	// All XBGR formats will have remapping before they can be read back in shaders as DRGB8
+	// Prefix o = 1, z = 0
 	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
-		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+		return {::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+			{::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b}};
 
 	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
-		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+		return {::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+			{::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b}};
 
 	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
-		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true,
-		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+		return {::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true,
+			{::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b}};
 
 	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba8, true,
-		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+		return {::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba8, true,
+			{::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b}};
 
 	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba8, true,
-		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+		return {::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba8, true,
+			{::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b}};
 
 	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
-		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true,
-		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
+		return {::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true,
+			{::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b}};
 
 	case rsx::surface_color_format::w16z16y16x16:
-		return{ ::gl::texture::type::f16, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba16f, true};
+		return {::gl::texture::type::f16, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba16f, true};
 
 	case rsx::surface_color_format::w32z32y32x32:
-		return{ ::gl::texture::type::f32, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba32f, true};
+		return {::gl::texture::type::f32, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba32f, true};
 
 	case rsx::surface_color_format::b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::r, ::gl::texture::internal_format::r8, false,
-		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
+		return {::gl::texture::type::ubyte, ::gl::texture::format::r, ::gl::texture::internal_format::r8, false,
+			{::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r}};
 
 	case rsx::surface_color_format::g8b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, false,
-		{ ::gl::texture::channel::g, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::r } };
+		return {::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, false,
+			{::gl::texture::channel::g, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::r}};
 
 	case rsx::surface_color_format::x32:
-		return{ ::gl::texture::type::f32, ::gl::texture::format::r, ::gl::texture::internal_format::r32f, true,
-		{ ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
+		return {::gl::texture::type::f32, ::gl::texture::format::r, ::gl::texture::internal_format::r32f, true,
+			{::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r}};
 
 	case rsx::surface_color_format::a8b8g8r8:
-		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba8, true };
+		return {::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::rgba, ::gl::texture::internal_format::rgba8, true};
 
 	default:
 		fmt::throw_exception("Unsupported surface color format 0x%x", static_cast<u32>(color_format));
@@ -74,17 +74,17 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 	switch (depth_format)
 	{
 	case rsx::surface_depth_format2::z16_uint:
-		return{ ::gl::texture::type::ushort, ::gl::texture::format::depth, ::gl::texture::internal_format::depth16 };
+		return {::gl::texture::type::ushort, ::gl::texture::format::depth, ::gl::texture::internal_format::depth16};
 	case rsx::surface_depth_format2::z16_float:
-		return{ ::gl::texture::type::f32, ::gl::texture::format::depth, ::gl::texture::internal_format::depth32f };
+		return {::gl::texture::type::f32, ::gl::texture::format::depth, ::gl::texture::internal_format::depth32f};
 
 	case rsx::surface_depth_format2::z24s8_uint:
 		if (g_cfg.video.force_high_precision_z_buffer && ::gl::get_driver_caps().ARB_depth_buffer_float_supported)
-			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+			return {::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8};
 		else
-			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
+			return {::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8};
 	case rsx::surface_depth_format2::z24s8_float:
-		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+		return {::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8};
 
 	default:
 		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
@@ -135,7 +135,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		return;
 	}
 
-	gl::command_context cmd{ gl_state };
+	gl::command_context cmd{gl_state};
 	m_rtts.prepare_render_target(cmd,
 		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
 		m_framebuffer_layout.width, m_framebuffer_layout.height,
@@ -218,7 +218,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		static_cast<gl::framebuffer_holder*>(m_draw_fbo)->release();
 	}
 
-	for (auto &fbo : m_framebuffer_cache)
+	for (auto& fbo : m_framebuffer_cache)
 	{
 		if (fbo.matches(color_targets, depth_stencil_target))
 		{
@@ -226,7 +226,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 			m_draw_fbo = &fbo;
 			m_draw_fbo->bind();
-			m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
+			m_draw_fbo->set_extents({m_framebuffer_layout.width, m_framebuffer_layout.height});
 
 			m_graphics_state.set(rsx::rtt_config_valid);
 			break;
@@ -241,7 +241,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_draw_fbo = &m_framebuffer_cache.back();
 		m_draw_fbo->create();
 		m_draw_fbo->bind();
-		m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
+		m_draw_fbo->set_extents({m_framebuffer_layout.width, m_framebuffer_layout.height});
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -279,17 +279,17 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		break;
 
 	case rsx::surface_target::surfaces_a_b:
-		m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1] });
+		m_draw_fbo->draw_buffers({m_draw_fbo->color[0], m_draw_fbo->color[1]});
 		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b_c:
-		m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2] });
+		m_draw_fbo->draw_buffers({m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2]});
 		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
 		break;
 
 	case rsx::surface_target::surfaces_a_b_c_d:
-		m_draw_fbo->draw_buffers({ m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2], m_draw_fbo->color[3] });
+		m_draw_fbo->draw_buffers({m_draw_fbo->color[0], m_draw_fbo->color[1], m_draw_fbo->color[2], m_draw_fbo->color[3]});
 		m_draw_fbo->read_buffer(m_draw_fbo->color[0]);
 		break;
 	}
@@ -327,7 +327,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
 		{
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
-				!!g_cfg.video.write_color_buffers;
+			                                          !!g_cfg.video.write_color_buffers;
 
 			if (lock &&
 #ifdef TEXTURE_CACHE_DEBUG
@@ -338,7 +338,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 #else
 				!surface->is_locked()
 #endif
-				)
+			)
 			{
 				lock = false;
 			}
@@ -376,7 +376,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 	const auto color_format = rsx::internals::surface_color_format_to_gl(m_framebuffer_layout.color_format);
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
+		if (!m_surface_info[i].address || !m_surface_info[i].pitch)
+			continue;
 
 		const auto surface_range = m_surface_info[i].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
@@ -442,22 +443,22 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 	subres.pitch_in_block = rsx_pitch / get_bpp();
 	subres.depth = 1;
-	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
+	subres.data = {vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y)};
 
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 	{
-		gl::upload_texture(cmd, this, get_gcm_format(), is_swizzled, { subres });
+		gl::upload_texture(cmd, this, get_gcm_format(), is_swizzled, {subres});
 	}
 	else
 	{
 		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
 		auto dst = samples() > 1 ? get_resolve_target_safe(cmd) : this;
-		gl::upload_texture(cmd, tmp.get(), get_gcm_format(), is_swizzled, { subres });
+		gl::upload_texture(cmd, tmp.get(), get_gcm_format(), is_swizzled, {subres});
 
 		gl::g_hw_blitter->scale_image(cmd, tmp.get(), dst,
-			{ 0, 0, subres.width_in_block, subres.height_in_block },
-			{ 0, 0, static_cast<int>(width()), static_cast<int>(height()) },
+			{0, 0, subres.width_in_block, subres.height_in_block},
+			{0, 0, static_cast<int>(width()), static_cast<int>(height())},
 			!is_depth_surface(),
 			{});
 
@@ -473,8 +474,8 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access access)
 {
 	const bool memory_load = is_depth_surface() ?
-		!!g_cfg.video.read_depth_buffer :
-		!!g_cfg.video.read_color_buffers;
+	                             !!g_cfg.video.read_depth_buffer :
+	                             !!g_cfg.video.read_color_buffers;
 
 	if (!memory_load)
 	{
@@ -573,7 +574,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 
 	for (auto i = first; i < old_contents.size(); ++i)
 	{
-		auto &section = old_contents[i];
+		auto& section = old_contents[i];
 		auto src_texture = gl::as_rtt(section.source);
 		const auto src_bpp = src_texture->get_bpp();
 		rsx::typeless_xfer typeless_info{};
@@ -684,8 +685,7 @@ gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_conte
 			resolve_w, resolve_h,
 			1, 1, 1,
 			static_cast<GLenum>(get_internal_format()),
-			format_class()
-		));
+			format_class()));
 	}
 
 	return static_cast<gl::viewable_image*>(resolve_surface.get());

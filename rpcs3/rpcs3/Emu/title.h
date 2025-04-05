@@ -15,4 +15,4 @@ namespace rpcs3
 	};
 
 	std::string get_formatted_title(const title_format_data& title_data);
-}
+} // namespace rpcs3

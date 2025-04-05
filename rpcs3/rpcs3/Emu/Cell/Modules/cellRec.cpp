@@ -20,34 +20,34 @@ LOG_CHANNEL(cellRec);
 
 extern atomic_t<recording_mode> g_recording_mode;
 
-template<>
+template <>
 void fmt_class_string<CellRecError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_REC_ERROR_OUT_OF_MEMORY);
-			STR_CASE(CELL_REC_ERROR_FATAL);
-			STR_CASE(CELL_REC_ERROR_INVALID_VALUE);
-			STR_CASE(CELL_REC_ERROR_FILE_OPEN);
-			STR_CASE(CELL_REC_ERROR_FILE_WRITE);
-			STR_CASE(CELL_REC_ERROR_INVALID_STATE);
-			STR_CASE(CELL_REC_ERROR_FILE_NO_DATA);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_REC_ERROR_OUT_OF_MEMORY);
+				STR_CASE(CELL_REC_ERROR_FATAL);
+				STR_CASE(CELL_REC_ERROR_INVALID_VALUE);
+				STR_CASE(CELL_REC_ERROR_FILE_OPEN);
+				STR_CASE(CELL_REC_ERROR_FILE_WRITE);
+				STR_CASE(CELL_REC_ERROR_INVALID_STATE);
+				STR_CASE(CELL_REC_ERROR_FILE_NO_DATA);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Helper to distinguish video type
 enum : s32
 {
-	VIDEO_TYPE_MPEG4  = 0x0000,
+	VIDEO_TYPE_MPEG4 = 0x0000,
 	VIDEO_TYPE_AVC_MP = 0x1000,
 	VIDEO_TYPE_AVC_BL = 0x2000,
-	VIDEO_TYPE_MJPEG  = 0x3000,
-	VIDEO_TYPE_M4HD   = 0x4000,
+	VIDEO_TYPE_MJPEG = 0x3000,
+	VIDEO_TYPE_M4HD = 0x4000,
 };
 
 // Helper to distinguish video quality
@@ -65,7 +65,7 @@ enum : s32
 
 enum class rec_state : u32
 {
-	closed  = 0x2710,
+	closed = 0x2710,
 	stopped = 0x2711,
 	started = 0xBEEF, // I don't know the value of this
 };
@@ -114,7 +114,8 @@ struct rec_param
 			std::string scene_metadata_tags;
 			for (usz i = 0; i < tags.size(); i++)
 			{
-				if (i > 0) scene_metadata_tags += ", ";
+				if (i > 0)
+					scene_metadata_tags += ", ";
 				fmt::append(scene_metadata_tags, "'%s'", tags[i]);
 			}
 			return fmt::format("{ is_set=%d, type=%d, start_time=%d, end_time=%d, title='%s', tags=[ %s ] }", is_set, type, start_time, end_time, title, scene_metadata_tags);
@@ -126,13 +127,14 @@ struct rec_param
 		std::string priority;
 		for (usz i = 0; i < 8; i++)
 		{
-			if (i > 0) priority += ", ";
+			if (i > 0)
+				priority += ", ";
 			fmt::append(priority, "%d", spurs_param.priority[i]);
 		}
 		return fmt::format("ppu_thread_priority=%d, spu_thread_priority=%d, capture_priority=%d, use_system_spu=%d, fit_to_youtube=%d, "
-			"xmb_bgm=%d, mpeg4_fast_encode=%d, ring_sec=%d, video_input=%d, audio_input=%d, audio_input_mix_vol=%d, reduce_memsize=%d, "
-			"show_xmb=%d, filename='%s', metadata_filename='%s', spurs_param={ pSpurs=*0x%x, spu_usage_rate=%d, priority=[ %s ], "
-			"movie_metadata=%s, scene_metadata=%s",
+						   "xmb_bgm=%d, mpeg4_fast_encode=%d, ring_sec=%d, video_input=%d, audio_input=%d, audio_input_mix_vol=%d, reduce_memsize=%d, "
+						   "show_xmb=%d, filename='%s', metadata_filename='%s', spurs_param={ pSpurs=*0x%x, spu_usage_rate=%d, priority=[ %s ], "
+						   "movie_metadata=%s, scene_metadata=%s",
 			ppu_thread_priority, spu_thread_priority, capture_priority, use_system_spu, fit_to_youtube, xmb_bgm, mpeg4_fast_encode, ring_sec,
 			video_input, audio_input, audio_input_mix_vol, reduce_memsize, show_xmb, filename, metadata_filename, spurs_param.pSpurs, spurs_param.spu_usage_rate,
 			priority, movie_metadata.to_string(), scene_metadata.to_string());
@@ -140,14 +142,14 @@ struct rec_param
 
 	bool use_external_audio() const
 	{
-		return audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE             // != DISABLE means that cellRec will add samples on its own
-			&& audio_input_mix_vol > CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MIN; // We need to mix cellRec audio with internal audio
+		return audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE                // != DISABLE means that cellRec will add samples on its own
+		       && audio_input_mix_vol > CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MIN; // We need to mix cellRec audio with internal audio
 	}
 
 	bool use_internal_audio() const
 	{
-		return audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE             // DISABLE means that cellRec won't add samples on its own
-		    || audio_input_mix_vol < CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MAX; // We need to mix cellRec audio with internal audio
+		return audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE                // DISABLE means that cellRec won't add samples on its own
+		       || audio_input_mix_vol < CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MAX; // We need to mix cellRec audio with internal audio
 	}
 
 	bool use_internal_video() const
@@ -157,7 +159,7 @@ struct rec_param
 };
 
 static constexpr u32 rec_framerate = 30; // Always 30 fps
-static constexpr u32 rec_channels = 2; // Always 2 channels
+static constexpr u32 rec_channels = 2;   // Always 2 channels
 
 class rec_video_sink final : public utils::video_sink
 {
@@ -290,7 +292,7 @@ struct rec_info
 	// Audio parameters
 	u32 sample_rate = 48000;
 	u32 audio_bps = 64000;
-	s32 audio_codec_id = 86018; // AV_CODEC_ID_AAC
+	s32 audio_codec_id = 86018;                   // AV_CODEC_ID_AAC
 	static constexpr u32 channels = rec_channels; // Always 2 channels
 
 	// Recording duration
@@ -392,7 +394,7 @@ void rec_info::set_video_params(s32 video_format)
 		break;
 	case VIDEO_TYPE_AVC_BL:
 		video_codec_id = 27; // AV_CODEC_ID_H264
-		max_b_frames = 0; // Apparently baseline H264 does not support B-Frames
+		max_b_frames = 0;    // Apparently baseline H264 does not support B-Frames
 		break;
 	case VIDEO_TYPE_MJPEG:
 		video_codec_id = 7; // AV_CODEC_ID_MJPEG
@@ -406,7 +408,7 @@ void rec_info::set_video_params(s32 video_format)
 	const bool wide = g_cfg.video.aspect_ratio == video_aspect::_16_9;
 	bool hd = true;
 
-	switch(g_cfg.video.resolution)
+	switch (g_cfg.video.resolution)
 	{
 	case video_resolution::_1080p:
 	case video_resolution::_1080i:
@@ -511,7 +513,7 @@ void rec_info::set_audio_params(s32 audio_format)
 	case CELL_REC_PARAM_AUDIO_FMT_PCM_768K:
 	case CELL_REC_PARAM_AUDIO_FMT_PCM_1536K:
 		audio_codec_id = 65556; // AV_CODEC_ID_PCM_F32BE
-		//audio_codec_id = 65557; // AV_CODEC_ID_PCM_F32LE // TODO: maybe this one?
+		// audio_codec_id = 65557; // AV_CODEC_ID_PCM_F32LE // TODO: maybe this one?
 		break;
 	default:
 		audio_codec_id = 86018; // AV_CODEC_ID_AAC
@@ -608,209 +610,209 @@ void rec_info::start_video_provider()
 	}
 
 	video_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec video provider", [this]()
-	{
-		const bool use_internal_audio = param.use_internal_audio();
-		const bool use_external_audio = param.use_external_audio();
-		const bool use_external_video = !param.use_internal_video();
-		const bool use_ring_buffer = param.ring_sec > 0;
-		const usz frame_size = input_format.pitch * input_format.height;
-		audio_block buffer_external{}; // for cellRec input
-		audio_block buffer_internal{}; // for cellAudio input
-		s64 last_video_pts = -1;
-		s64 last_audio_pts = -1;
-
-		cellRec.notice("video_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_internal_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, encoder->use_internal_video, use_external_audio, encoder->use_internal_audio);
-
-		while (thread_ctrl::state() != thread_state::aborting && encoder)
 		{
-			if (encoder->has_error)
-			{
-				cellRec.error("Encoder error. Sending error status.");
+			const bool use_internal_audio = param.use_internal_audio();
+			const bool use_external_audio = param.use_external_audio();
+			const bool use_external_video = !param.use_internal_video();
+			const bool use_ring_buffer = param.ring_sec > 0;
+			const usz frame_size = input_format.pitch * input_format.height;
+			audio_block buffer_external{}; // for cellRec input
+			audio_block buffer_internal{}; // for cellAudio input
+			s64 last_video_pts = -1;
+			s64 last_audio_pts = -1;
 
-				sysutil_register_cb([this](ppu_thread& ppu) -> s32
+			cellRec.notice("video_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_internal_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, encoder->use_internal_video, use_external_audio, encoder->use_internal_audio);
+
+			while (thread_ctrl::state() != thread_state::aborting && encoder)
+			{
+				if (encoder->has_error)
 				{
-					if (cb)
+					cellRec.error("Encoder error. Sending error status.");
+
+					sysutil_register_cb([this](ppu_thread& ppu) -> s32
+						{
+							if (cb)
+							{
+								cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_WRITE, cbUserData);
+							}
+							return CELL_OK;
+						});
+
+					return;
+				}
+
+				if (paused)
+				{
+					thread_ctrl::wait_for(10000);
+					continue;
+				}
+
+				// We only care for new video frames or audio samples that can be properly encoded, so we check the timestamps and pts.
+				const usz timestamp_ms = (get_system_time() - recording_time_start - pause_time_total) / 1000;
+
+				/////////////////
+			    //    VIDEO    //
+			    /////////////////
+
+				// TODO: wait for flip before adding a frame
+				if (use_external_video)
+				{
+					// The video frames originate from cellRec instead of our render pipeline.
+					if (const s64 pts = encoder->get_pts(timestamp_ms); pts > last_video_pts)
 					{
-						cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_WRITE, cbUserData);
+						if (video_input_buffer)
+						{
+							if (use_ring_buffer)
+							{
+								// The video frames originate from cellRec and are stored in a ringbuffer.
+								utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
+								frame_data.pts = pts;
+								frame_data.width = input_format.width;
+								frame_data.height = input_format.height;
+								frame_data.av_pixel_format = input_format.av_pixel_format;
+								frame_data.data.resize(frame_size);
+								std::memcpy(frame_data.data.data(), video_input_buffer.get_ptr(), frame_data.data.size());
+								video_ring_frame_count++;
+							}
+							else
+							{
+								// The video frames originate from cellRec and are pushed to the encoder immediately.
+								std::vector<u8> frame(frame_size);
+								std::memcpy(frame.data(), video_input_buffer.get_ptr(), frame.size());
+								encoder->add_frame(frame, input_format.pitch, input_format.width, input_format.height, input_format.av_pixel_format, timestamp_ms);
+							}
+						}
+
+						last_video_pts = pts;
 					}
-					return CELL_OK;
-				});
-
-				return;
-			}
-
-			if (paused)
-			{
-				thread_ctrl::wait_for(10000);
-				continue;
-			}
-
-			// We only care for new video frames or audio samples that can be properly encoded, so we check the timestamps and pts.
-			const usz timestamp_ms = (get_system_time() - recording_time_start - pause_time_total) / 1000;
-
-			/////////////////
-			//    VIDEO    //
-			/////////////////
-
-			// TODO: wait for flip before adding a frame
-			if (use_external_video)
-			{
-				// The video frames originate from cellRec instead of our render pipeline.
-				if (const s64 pts = encoder->get_pts(timestamp_ms); pts > last_video_pts)
+				}
+				else if (sink)
 				{
-					if (video_input_buffer)
+					// The video frames originate from our render pipeline.
+					utils::video_sink::encoder_frame frame = sink->get_frame();
+
+					if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_video_pts && !frame.data.empty())
 					{
 						if (use_ring_buffer)
 						{
-							// The video frames originate from cellRec and are stored in a ringbuffer.
-							utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
-							frame_data.pts = pts;
-							frame_data.width = input_format.width;
-							frame_data.height = input_format.height;
-							frame_data.av_pixel_format = input_format.av_pixel_format;
-							frame_data.data.resize(frame_size);
-							std::memcpy(frame_data.data.data(), video_input_buffer.get_ptr(), frame_data.data.size());
+							// The video frames originate from our render pipeline and are stored in a ringbuffer.
+							frame.pts = pts;
+							video_ringbuffer[next_video_ring_pos()] = std::move(frame);
 							video_ring_frame_count++;
 						}
 						else
 						{
-							// The video frames originate from cellRec and are pushed to the encoder immediately.
-							std::vector<u8> frame(frame_size);
-							std::memcpy(frame.data(), video_input_buffer.get_ptr(), frame.size());
-							encoder->add_frame(frame, input_format.pitch, input_format.width, input_format.height, input_format.av_pixel_format, timestamp_ms);
+							// The video frames originate from our render pipeline and are directly encoded by the encoder.
+							encoder->add_frame(frame.data, frame.pitch, frame.width, frame.height, frame.av_pixel_format, frame.timestamp_ms);
 						}
-					}
 
-					last_video_pts = pts;
+						last_video_pts = pts;
+					}
 				}
-			}
-			else if (sink)
-			{
-				// The video frames originate from our render pipeline.
-				utils::video_sink::encoder_frame frame = sink->get_frame();
 
-				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_video_pts && !frame.data.empty())
+				/////////////////
+			    //    AUDIO    //
+			    /////////////////
+
+				const usz timestamp_us = get_system_time() - recording_time_start - pause_time_total;
+				bool got_new_samples = false;
+
+				if (use_external_audio)
 				{
-					if (use_ring_buffer)
+					if (const s64 pts = encoder->get_audio_pts(timestamp_us); pts > last_audio_pts)
 					{
-						// The video frames originate from our render pipeline and are stored in a ringbuffer.
-						frame.pts = pts;
-						video_ringbuffer[next_video_ring_pos()] = std::move(frame);
-						video_ring_frame_count++;
-					}
-					else
-					{
-						// The video frames originate from our render pipeline and are directly encoded by the encoder.
-						encoder->add_frame(frame.data, frame.pitch, frame.width, frame.height, frame.av_pixel_format, frame.timestamp_ms);
-					}
-
-					last_video_pts = pts;
-				}
-			}
-
-			/////////////////
-			//    AUDIO    //
-			/////////////////
-
-			const usz timestamp_us = get_system_time() - recording_time_start - pause_time_total;
-			bool got_new_samples = false;
-
-			if (use_external_audio)
-			{
-				if (const s64 pts = encoder->get_audio_pts(timestamp_us); pts > last_audio_pts)
-				{
-					if (audio_input_buffer)
-					{
-						// The audio samples originate from cellRec instead of our render pipeline.
-						// TODO: This needs to be synchronized with the game somehow if possible.
-						std::memcpy(buffer_external.block.data(), audio_input_buffer.get_ptr(), buffer_external.block.size());
-						buffer_external.pts = pts;
-						got_new_samples = true;
-					}
-
-					last_audio_pts = pts;
-				}
-			}
-
-			if (sink && use_internal_audio)
-			{
-				// The audio samples originate from cellAudio and are stored in a ringbuffer.
-				utils::video_sink::encoder_sample sample = sink->get_sample();
-
-				if (!sample.data.empty() && sample.channels >= channels && sample.sample_count >= CELL_REC_AUDIO_BLOCK_SAMPLES)
-				{
-					s64 pts = encoder->get_audio_pts(sample.timestamp_us);
-
-					// Each encoder_sample can have more than one block
-					for (u32 i = 0; i < sample.sample_count; i += CELL_REC_AUDIO_BLOCK_SAMPLES)
-					{
-						if (pts > last_audio_pts)
+						if (audio_input_buffer)
 						{
-							const f32* src = reinterpret_cast<const f32*>(&sample.data[i * sample.channels * sizeof(f32)]);
-
-							// Copy the new samples to the internal buffer if we need them for volume mixing below.
-							// Otherwise copy them directly to the external buffer which is used for output later.
-							audio_block& dst_buffer = got_new_samples ? buffer_internal : buffer_external;
-
-							if (sample.channels > channels)
-							{
-								// Downmix channels
-								AudioBackend::downmix(CELL_REC_AUDIO_BLOCK_SAMPLES * sample.channels, sample.channels, audio_channel_layout::stereo, src, reinterpret_cast<f32*>(dst_buffer.block.data()));
-							}
-							else
-							{
-								std::memcpy(dst_buffer.block.data(), src, audio_block::block_size);
-							}
-
-							// Mix external and internal audio with param.audio_input_mix_vol if we already got samples from cellRec.
-							if (got_new_samples)
-							{
-								const float volume = std::clamp(param.audio_input_mix_vol / 100.0f, 0.0f, 1.0f);
-								const f32* src = reinterpret_cast<const f32*>(buffer_internal.block.data());
-								f32* dst = reinterpret_cast<f32*>(buffer_external.block.data());
-
-								for (u32 sample = 0; sample < (CELL_REC_AUDIO_BLOCK_SAMPLES * channels); sample++)
-								{
-									*dst = std::clamp(*dst + (*src++ * volume), -1.0f, 1.0f);
-									++dst;
-								}
-							}
-
-							last_audio_pts = std::max(pts, last_audio_pts); // The cellAudio pts may be older than the pts from cellRec
-							buffer_external.pts = last_audio_pts;
+							// The audio samples originate from cellRec instead of our render pipeline.
+						    // TODO: This needs to be synchronized with the game somehow if possible.
+							std::memcpy(buffer_external.block.data(), audio_input_buffer.get_ptr(), buffer_external.block.size());
+							buffer_external.pts = pts;
 							got_new_samples = true;
 						}
 
-						// We only take the first sample for simplicity for now
-						break;
-
-						// Increase pts for each sample block
-						//pts++;
+						last_audio_pts = pts;
 					}
 				}
-			}
 
-			if (got_new_samples)
-			{
-				if (use_ring_buffer)
+				if (sink && use_internal_audio)
 				{
-					// Copy new sample to ringbuffer
-					audio_ringbuffer[next_audio_ring_pos()] = buffer_external;
-					audio_ring_block_count++;
+					// The audio samples originate from cellAudio and are stored in a ringbuffer.
+					utils::video_sink::encoder_sample sample = sink->get_sample();
+
+					if (!sample.data.empty() && sample.channels >= channels && sample.sample_count >= CELL_REC_AUDIO_BLOCK_SAMPLES)
+					{
+						s64 pts = encoder->get_audio_pts(sample.timestamp_us);
+
+						// Each encoder_sample can have more than one block
+						for (u32 i = 0; i < sample.sample_count; i += CELL_REC_AUDIO_BLOCK_SAMPLES)
+						{
+							if (pts > last_audio_pts)
+							{
+								const f32* src = reinterpret_cast<const f32*>(&sample.data[i * sample.channels * sizeof(f32)]);
+
+								// Copy the new samples to the internal buffer if we need them for volume mixing below.
+							    // Otherwise copy them directly to the external buffer which is used for output later.
+								audio_block& dst_buffer = got_new_samples ? buffer_internal : buffer_external;
+
+								if (sample.channels > channels)
+								{
+									// Downmix channels
+									AudioBackend::downmix(CELL_REC_AUDIO_BLOCK_SAMPLES * sample.channels, sample.channels, audio_channel_layout::stereo, src, reinterpret_cast<f32*>(dst_buffer.block.data()));
+								}
+								else
+								{
+									std::memcpy(dst_buffer.block.data(), src, audio_block::block_size);
+								}
+
+								// Mix external and internal audio with param.audio_input_mix_vol if we already got samples from cellRec.
+								if (got_new_samples)
+								{
+									const float volume = std::clamp(param.audio_input_mix_vol / 100.0f, 0.0f, 1.0f);
+									const f32* src = reinterpret_cast<const f32*>(buffer_internal.block.data());
+									f32* dst = reinterpret_cast<f32*>(buffer_external.block.data());
+
+									for (u32 sample = 0; sample < (CELL_REC_AUDIO_BLOCK_SAMPLES * channels); sample++)
+									{
+										*dst = std::clamp(*dst + (*src++ * volume), -1.0f, 1.0f);
+										++dst;
+									}
+								}
+
+								last_audio_pts = std::max(pts, last_audio_pts); // The cellAudio pts may be older than the pts from cellRec
+								buffer_external.pts = last_audio_pts;
+								got_new_samples = true;
+							}
+
+							// We only take the first sample for simplicity for now
+							break;
+
+							// Increase pts for each sample block
+						    // pts++;
+						}
+					}
 				}
-				else
+
+				if (got_new_samples)
 				{
-					// Push new sample to encoder
-					encoder->add_audio_samples(buffer_external.block.data(), CELL_REC_AUDIO_BLOCK_SAMPLES, channels, timestamp_us);
+					if (use_ring_buffer)
+					{
+						// Copy new sample to ringbuffer
+						audio_ringbuffer[next_audio_ring_pos()] = buffer_external;
+						audio_ring_block_count++;
+					}
+					else
+					{
+						// Push new sample to encoder
+						encoder->add_audio_samples(buffer_external.block.data(), CELL_REC_AUDIO_BLOCK_SAMPLES, channels, timestamp_us);
+					}
 				}
+
+				// Update recording time
+				recording_time_total = encoder->get_timestamp_ms(encoder->last_video_pts());
+
+				thread_ctrl::wait_for(1);
 			}
-
-			// Update recording time
-			recording_time_total = encoder->get_timestamp_ms(encoder->last_video_pts());
-
-			thread_ctrl::wait_for(1);
-		}
-	});
+		});
 }
 
 void rec_info::pause_video_provider()
@@ -937,7 +939,8 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 	for (s32 i = 0; i < pParam->numOfOpt; i++)
 	{
-		if (i > 0) options += ", ";
+		if (i > 0)
+			options += ", ";
 		fmt::append(options, "%d", pParam->pOpt[i].option);
 	}
 
@@ -1237,13 +1240,13 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 			return CELL_REC_ERROR_INVALID_VALUE;
 		}
 
-		//if (spurs_param)
+		// if (spurs_param)
 		//{
 		//	if (error_code error = cellSpurs_0xD9A9C592();
 		//	{
 		//		return error;
 		//	}
-		//}
+		// }
 	}
 
 	if (!cb)
@@ -1303,11 +1306,11 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	rec.encoder->set_output_format(rec.output_format);
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
-	{
-		rec.state = rec_state::stopped;
-		rec.cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, rec.cbUserData);
-		return CELL_OK;
-	});
+		{
+			rec.state = rec_state::stopped;
+			rec.cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, rec.cbUserData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -1324,87 +1327,87 @@ error_code cellRecClose(s32 isDiscard)
 	}
 
 	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
-	{
-		bool is_valid_range = true;
-
-		if (isDiscard)
 		{
-			// No need to flush the encoder
-			rec.stop_video_provider(false);
-			rec.encoder->stop(false);
+			bool is_valid_range = true;
 
-			if (rec.sink)
+			if (isDiscard)
 			{
-				rec.sink->stop(true);
-			}
+				// No need to flush the encoder
+				rec.stop_video_provider(false);
+				rec.encoder->stop(false);
 
-			if (fs::is_file(rec.param.filename))
-			{
-				cellRec.warning("cellRecClose: removing discarded recording '%s'", rec.param.filename);
-
-				if (!fs::remove_file(rec.param.filename))
+				if (rec.sink)
 				{
-					cellRec.error("cellRecClose: failed to remove recording '%s'", rec.param.filename);
+					rec.sink->stop(true);
+				}
+
+				if (fs::is_file(rec.param.filename))
+				{
+					cellRec.warning("cellRecClose: removing discarded recording '%s'", rec.param.filename);
+
+					if (!fs::remove_file(rec.param.filename))
+					{
+						cellRec.error("cellRecClose: failed to remove recording '%s'", rec.param.filename);
+					}
 				}
 			}
-		}
-		else
-		{
-			// Flush to make sure we encode all remaining frames
-			rec.stop_video_provider(true);
-			rec.encoder->stop(true);
-			rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
-
-			if (rec.sink)
+			else
 			{
-				rec.sink->stop(true);
+				// Flush to make sure we encode all remaining frames
+				rec.stop_video_provider(true);
+				rec.encoder->stop(true);
+				rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
+
+				if (rec.sink)
+				{
+					rec.sink->stop(true);
+				}
+
+				const s64 start_pts = rec.encoder->get_pts(rec.param.scene_metadata.start_time);
+				const s64 end_pts = rec.encoder->get_pts(rec.param.scene_metadata.end_time);
+				const s64 last_pts = rec.encoder->last_video_pts();
+
+				is_valid_range = start_pts >= 0 && end_pts <= last_pts;
 			}
 
-			const s64 start_pts = rec.encoder->get_pts(rec.param.scene_metadata.start_time);
-			const s64 end_pts = rec.encoder->get_pts(rec.param.scene_metadata.end_time);
-			const s64 last_pts = rec.encoder->last_video_pts();
+			vm::dealloc(rec.video_input_buffer.addr(), vm::main);
+			vm::dealloc(rec.audio_input_buffer.addr(), vm::main);
 
-			is_valid_range = start_pts >= 0 && end_pts <= last_pts;
-		}
-
-		vm::dealloc(rec.video_input_buffer.addr(), vm::main);
-		vm::dealloc(rec.audio_input_buffer.addr(), vm::main);
-
-		// Release the video sink if it was used
-		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
-		{
-			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
-
-			if (old_mode == recording_mode::rpcs3)
+			// Release the video sink if it was used
+			if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 			{
-				cellRec.error("cellRecClose: Unexpected recording mode %s found while stopping video capture.", old_mode);
+				const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
+
+				if (old_mode == recording_mode::rpcs3)
+				{
+					cellRec.error("cellRecClose: Unexpected recording mode %s found while stopping video capture.", old_mode);
+				}
+
+				utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+				if (!video_provider.set_video_sink(nullptr, recording_mode::cell))
+				{
+					cellRec.error("cellRecClose failed to release video sink");
+				}
 			}
 
-			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+			rec.param = {};
+			rec.encoder.reset();
+			rec.sink.reset();
+			rec.audio_ringbuffer.clear();
+			rec.video_ringbuffer.clear();
+			rec.state = rec_state::closed;
 
-			if (!video_provider.set_video_sink(nullptr, recording_mode::cell))
+			if (is_valid_range)
 			{
-				cellRec.error("cellRecClose failed to release video sink");
+				rec.cb(ppu, CELL_REC_STATUS_CLOSE, CELL_OK, rec.cbUserData);
 			}
-		}
-
-		rec.param = {};
-		rec.encoder.reset();
-		rec.sink.reset();
-		rec.audio_ringbuffer.clear();
-		rec.video_ringbuffer.clear();
-		rec.state = rec_state::closed;
-
-		if (is_valid_range)
-		{
-			rec.cb(ppu, CELL_REC_STATUS_CLOSE, CELL_OK, rec.cbUserData);
-		}
-		else
-		{
-			rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_NO_DATA, rec.cbUserData);
-		}
-		return CELL_OK;
-	});
+			else
+			{
+				rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_NO_DATA, rec.cbUserData);
+			}
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -1421,24 +1424,24 @@ error_code cellRecStop()
 	}
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
-	{
-		// cellRecStop actually just pauses the recording
-		rec.pause_video_provider();
-
-		if (rec.sink)
 		{
-			rec.sink->pause(true);
-		}
+			// cellRecStop actually just pauses the recording
+			rec.pause_video_provider();
 
-		ensure(!!rec.encoder);
-		rec.encoder->pause(true);
+			if (rec.sink)
+			{
+				rec.sink->pause(true);
+			}
 
-		rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
-		rec.state = rec_state::stopped;
+			ensure(!!rec.encoder);
+			rec.encoder->pause(true);
 
-		rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
-		return CELL_OK;
-	});
+			rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
+			rec.state = rec_state::stopped;
+
+			rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -1455,54 +1458,54 @@ error_code cellRecStart()
 	}
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
-	{
-		// Start/resume the recording
-		ensure(!!rec.encoder);
-
-		if (rec.param.ring_sec == 0)
 		{
-			rec.encoder->encode();
-		}
+			// Start/resume the recording
+			ensure(!!rec.encoder);
 
-		// Setup a video sink if it is needed
-		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
-		{
-			utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
-
-			if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))
+			if (rec.param.ring_sec == 0)
 			{
-				cellRec.error("Failed to set video sink");
-				rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
-				return CELL_OK;
+				rec.encoder->encode();
 			}
 
-			// Force rsx recording
-			g_recording_mode = recording_mode::cell;
-		}
-		else
-		{
-			// Force stop rsx recording
-			g_recording_mode = recording_mode::stopped;
-		}
+			// Setup a video sink if it is needed
+			if (rec.param.use_internal_video() || rec.param.use_internal_audio())
+			{
+				utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
-		rec.start_video_provider();
+				if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))
+				{
+					cellRec.error("Failed to set video sink");
+					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
+					return CELL_OK;
+				}
 
-		if (rec.sink)
-		{
-			rec.sink->resume();
-		}
+				// Force rsx recording
+				g_recording_mode = recording_mode::cell;
+			}
+			else
+			{
+				// Force stop rsx recording
+				g_recording_mode = recording_mode::stopped;
+			}
 
-		if (rec.encoder->has_error)
-		{
-			rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_OPEN, rec.cbUserData);
-		}
-		else
-		{
-			rec.state = rec_state::started;
-			rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
-		}
-		return CELL_OK;
-	});
+			rec.start_video_provider();
+
+			if (rec.sink)
+			{
+				rec.sink->resume();
+			}
+
+			if (rec.encoder->has_error)
+			{
+				rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_OPEN, rec.cbUserData);
+			}
+			else
+			{
+				rec.state = rec_state::started;
+				rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
+			}
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -1726,7 +1729,7 @@ void cellRecGetInfo(s32 info, vm::ptr<u64> pValue)
 		if (rec.param.spurs_param.pSpurs)
 		{
 			// TODO
-			//cellSpurs_0xE279681F();
+			// cellSpurs_0xE279681F();
 		}
 		*pValue = 0xffffffff;
 		break;
@@ -1788,7 +1791,7 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 		}
 
 		rec.param.movie_metadata = {};
-		rec.param.movie_metadata.game_title  = std::string{movie_metadata->gameTitle.get_ptr()};
+		rec.param.movie_metadata.game_title = std::string{movie_metadata->gameTitle.get_ptr()};
 		rec.param.movie_metadata.movie_title = std::string{movie_metadata->movieTitle.get_ptr()};
 
 		if (movie_metadata->description)
@@ -1858,14 +1861,13 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::cellRec)("cellRec", []()
-{
-	REG_FUNC(cellRec, cellRecOpen);
-	REG_FUNC(cellRec, cellRecClose);
-	REG_FUNC(cellRec, cellRecGetInfo);
-	REG_FUNC(cellRec, cellRecStop);
-	REG_FUNC(cellRec, cellRecStart);
-	REG_FUNC(cellRec, cellRecQueryMemSize);
-	REG_FUNC(cellRec, cellRecSetInfo);
-});
+	{
+		REG_FUNC(cellRec, cellRecOpen);
+		REG_FUNC(cellRec, cellRecClose);
+		REG_FUNC(cellRec, cellRecGetInfo);
+		REG_FUNC(cellRec, cellRecStop);
+		REG_FUNC(cellRec, cellRecStart);
+		REG_FUNC(cellRec, cellRecQueryMemSize);
+		REG_FUNC(cellRec, cellRecSetInfo);
+	});

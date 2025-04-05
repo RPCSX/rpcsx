@@ -7,34 +7,33 @@
 #include "cellCrossController.h"
 #include "cellMsgDialog.h"
 
-
 LOG_CHANNEL(cellCrossController);
 
 template <>
 void fmt_class_string<CellCrossControllerError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellCrossControllerError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_CANCEL);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_NETWORK);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_OUT_OF_MEMORY);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_FATAL);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_PKG_FILENAME);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_SIG_FILENAME);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_ICON_FILENAME);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_VALUE);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_PKG_FILE_OPEN);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_SIG_FILE_OPEN);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_ICON_FILE_OPEN);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_STATE);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_PKG_FILE);
-		STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INTERNAL);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_CANCEL);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_NETWORK);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_OUT_OF_MEMORY);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_FATAL);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_PKG_FILENAME);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_SIG_FILENAME);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_ICON_FILENAME);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_VALUE);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_PKG_FILE_OPEN);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_SIG_FILE_OPEN);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_ICON_FILE_OPEN);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_STATE);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INVALID_PKG_FILE);
+				STR_CASE(CELL_CROSS_CONTROLLER_ERROR_INTERNAL);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 void finish_callback(ppu_thread& ppu, s32 button_type, vm::ptr<void> userdata); // Forward declaration
@@ -53,10 +52,10 @@ struct cross_controller
 		close_msg_dialog();
 
 		sysutil_register_cb([this, status](ppu_thread& ppu) -> s32
-		{
-			callback(ppu, CELL_CROSS_CONTROLLER_STATUS_FINALIZED, status, vm::null, userdata);
-			return CELL_OK;
-		});
+			{
+				callback(ppu, CELL_CROSS_CONTROLLER_STATUS_FINALIZED, status, vm::null, userdata);
+				return CELL_OK;
+			});
 	}
 
 	void run_thread(vm::cptr<CellCrossControllerPackageInfo> pPkgInfo)
@@ -75,34 +74,34 @@ struct cross_controller
 		error_code res = open_msg_dialog(false, CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF, vm::make_str(msg), msg_dialog_source::_cellCrossController, msg_dialog_callback, userdata);
 
 		sysutil_register_cb([this, res](ppu_thread& ppu) -> s32
-		{
-			callback(ppu, CELL_CROSS_CONTROLLER_STATUS_INITIALIZED, res == CELL_OK ? +CELL_OK : +CELL_CROSS_CONTROLLER_ERROR_INTERNAL, vm::null, userdata);
-			return CELL_OK;
-		});
+			{
+				callback(ppu, CELL_CROSS_CONTROLLER_STATUS_INITIALIZED, res == CELL_OK ? +CELL_OK : +CELL_CROSS_CONTROLLER_ERROR_INTERNAL, vm::null, userdata);
+				return CELL_OK;
+			});
 
 		status = CELL_CROSS_CONTROLLER_STATUS_INITIALIZED;
 
 		connection_thread = std::make_unique<named_thread<std::function<void()>>>(fmt::format("Cross-Controller Thread"), [this]()
-		{
-			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				if (Emu.IsPaused())
+				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					thread_ctrl::wait_for(10'000);
-					continue;
+					if (Emu.IsPaused())
+					{
+						thread_ctrl::wait_for(10'000);
+						continue;
+					}
+
+					// TODO: establish connection to PS Vita
+					if (false)
+					{
+						on_connection_established(CELL_OK);
+					}
+
+					thread_ctrl::wait_for(1000);
 				}
 
-				// TODO: establish connection to PS Vita
-				if (false)
-				{
-					on_connection_established(CELL_OK);
-				}
-
-				thread_ctrl::wait_for(1000);
-			}
-
-			status = CELL_CROSS_CONTROLLER_STATUS_FINALIZED;
-		});
+				status = CELL_CROSS_CONTROLLER_STATUS_FINALIZED;
+			});
 	}
 
 	void stop_thread()
@@ -172,9 +171,9 @@ error_code cellCrossControllerInitialize(vm::cptr<CellCrossControllerParam> pPar
 	}
 
 	if (!pPkgInfo->pAppVer || !memchr(pPkgInfo->pAppVer.get_ptr(), '\0', CELL_CROSS_CONTROLLER_PKG_APP_VER_LEN + 1) ||
-	    !pPkgInfo->pTitleId || !memchr(pPkgInfo->pTitleId.get_ptr(), '\0', CELL_CROSS_CONTROLLER_PKG_TITLE_ID_LEN + 1) ||
-	    !pPkgInfo->pTitle || !memchr(pPkgInfo->pTitle.get_ptr(), '\0', CELL_CROSS_CONTROLLER_PKG_TITLE_LEN + 1) ||
-	    !cb)
+		!pPkgInfo->pTitleId || !memchr(pPkgInfo->pTitleId.get_ptr(), '\0', CELL_CROSS_CONTROLLER_PKG_TITLE_ID_LEN + 1) ||
+		!pPkgInfo->pTitle || !memchr(pPkgInfo->pTitle.get_ptr(), '\0', CELL_CROSS_CONTROLLER_PKG_TITLE_LEN + 1) ||
+		!cb)
 	{
 		return CELL_CROSS_CONTROLLER_ERROR_INVALID_VALUE;
 	}
@@ -186,11 +185,10 @@ error_code cellCrossControllerInitialize(vm::cptr<CellCrossControllerParam> pPar
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::cellCrossController)("cellCrossController", []()
-{
-	REG_FUNC(cellCrossController, cellCrossControllerInitialize);
+	{
+		REG_FUNC(cellCrossController, cellCrossControllerInitialize);
 
-	// Helper Function
-	REG_HIDDEN_FUNC(finish_callback);
-});
+		// Helper Function
+		REG_HIDDEN_FUNC(finish_callback);
+	});

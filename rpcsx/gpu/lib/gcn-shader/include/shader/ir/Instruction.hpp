@@ -54,7 +54,9 @@ template <typename ImplT> struct InstructionWrapper : NodeWrapper<ImplT> {
   template <typename T = Node> auto children() const {
     return this->impl->template children<T>();
   }
-  decltype(auto) getOperand(std::size_t i) const { return this->impl->getOperand(i); }
+  decltype(auto) getOperand(std::size_t i) const {
+    return this->impl->getOperand(i);
+  }
   decltype(auto) getOperands() const { return this->impl->getOperands(); }
   std::size_t getOperandCount() const { return getOperands().size(); }
 
@@ -69,4 +71,4 @@ struct Instruction : InstructionWrapper<InstructionImpl> {
   using InstructionWrapper<InstructionImpl>::InstructionWrapper;
   using InstructionWrapper<InstructionImpl>::operator=;
 };
-} // namespace ir
+} // namespace shader::ir

@@ -1,13 +1,13 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
-#include "orbis/utils/Logs.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/utils/Logs.hpp"
 
 struct GbaseFile : orbis::File {};
 
 static orbis::ErrorCode gbase_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                    void *argp, orbis::Thread *thread) {
 
   if (request == 0xc0304510) {
     ORBIS_LOG_WARNING("gbase ioctl", request);
@@ -23,9 +23,9 @@ static orbis::ErrorCode gbase_ioctl(orbis::File *file, std::uint64_t request,
 
     static_assert(sizeof(Args) == 48);
     *reinterpret_cast<Args *>(argp) = {
-      .currentClock = 1,
+        .currentClock = 1,
     };
-    return{};
+    return {};
   }
   ORBIS_LOG_FATAL("Unhandled gbase ioctl", request);
   thread->where();

@@ -9,7 +9,7 @@ namespace rpcs3
 	{
 		class curl_handle;
 	}
-}
+} // namespace rpcs3
 
 class progress_dialog;
 

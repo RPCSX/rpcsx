@@ -29,33 +29,33 @@ vfs_dialog_usb_input::vfs_dialog_usb_input(const QString& name, const cfg::devic
 	buttons->button(QDialogButtonBox::Apply)->setDefault(true);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons, info](QAbstractButton* button)
-	{
-		if (button == buttons->button(QDialogButtonBox::Apply))
 		{
-			m_gui_settings->SetValue(m_gui_save, m_path_widget->get_dir_list());
+			if (button == buttons->button(QDialogButtonBox::Apply))
+			{
+				m_gui_settings->SetValue(m_gui_save, m_path_widget->get_dir_list());
 
-			info->path   = m_path_widget->get_selected_path();
-			info->vid    = m_vid_edit->text().toStdString();
-			info->pid    = m_pid_edit->text().toStdString();
-			info->serial = m_serial_edit->text().toStdString();
+				info->path = m_path_widget->get_selected_path();
+				info->vid = m_vid_edit->text().toStdString();
+				info->pid = m_pid_edit->text().toStdString();
+				info->serial = m_serial_edit->text().toStdString();
 
-			accept();
-		}
-		else if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
-		{
-			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all entries and file system directories?")) != QMessageBox::Yes)
-				return;
+				accept();
+			}
+			else if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
+			{
+				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all entries and file system directories?")) != QMessageBox::Yes)
+					return;
 
-			m_path_widget->reset();
-			m_vid_edit->setText("");
-			m_pid_edit->setText("");
-			m_serial_edit->setText("");
-		}
-		else if (button == buttons->button(QDialogButtonBox::Cancel))
-		{
-			reject();
-		}
-	});
+				m_path_widget->reset();
+				m_vid_edit->setText("");
+				m_pid_edit->setText("");
+				m_serial_edit->setText("");
+			}
+			else if (button == buttons->button(QDialogButtonBox::Cancel))
+			{
+				reject();
+			}
+		});
 
 	m_vid_edit = new QLineEdit;
 	m_vid_edit->setMaxLength(4);

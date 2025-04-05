@@ -87,7 +87,7 @@ error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 {
 	sys_process.error("sys_process_get_number_of_object(object=0x%x, nump=*0x%x)", object, nump);
 
-	switch(object)
+	switch (object)
 	{
 	case SYS_MEM_OBJECT: *nump = idm_get_count<lv2_obj, lv2_memory>(); break;
 	case SYS_MUTEX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_mutex>(); break;
@@ -97,10 +97,16 @@ error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_INTR_SERVICE_HANDLE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_int_serv>(); break;
 	case SYS_EVENT_QUEUE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_event_queue>(); break;
 	case SYS_EVENT_PORT_OBJECT: *nump = idm_get_count<lv2_obj, lv2_event_port>(); break;
-	case SYS_TRACE_OBJECT: sys_process.error("sys_process_get_number_of_object: object = SYS_TRACE_OBJECT"); *nump = 0; break;
+	case SYS_TRACE_OBJECT:
+		sys_process.error("sys_process_get_number_of_object: object = SYS_TRACE_OBJECT");
+		*nump = 0;
+		break;
 	case SYS_SPUIMAGE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_spu_image>(); break;
 	case SYS_PRX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_prx>(); break;
-	case SYS_SPUPORT_OBJECT: sys_process.error("sys_process_get_number_of_object: object = SYS_SPUPORT_OBJECT"); *nump = 0; break;
+	case SYS_SPUPORT_OBJECT:
+		sys_process.error("sys_process_get_number_of_object: object = SYS_SPUPORT_OBJECT");
+		*nump = 0;
+		break;
 	case SYS_OVERLAY_OBJECT: *nump = idm_get_count<lv2_obj, lv2_overlay>(); break;
 	case SYS_LWMUTEX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_lwmutex>(); break;
 	case SYS_TIMER_OBJECT: *nump = idm_get_count<lv2_obj, lv2_timer>(); break;
@@ -124,9 +130,9 @@ template <typename T, typename Get>
 void idm_get_set(std::set<u32>& out)
 {
 	idm::select<T, Get>([&](u32 id, Get&)
-	{
-		out.emplace(id);
-	});
+		{
+			out.emplace(id);
+		});
 }
 
 static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
@@ -330,7 +336,7 @@ error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u
 error_code sys_process_get_status(u64 unk)
 {
 	sys_process.todo("sys_process_get_status(unk=0x%llx)", unk);
-	//vm::write32(CPU.gpr[4], GetPPUThreadStatus(CPU));
+	// vm::write32(CPU.gpr[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }
 
@@ -349,11 +355,11 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
 
 	Emu.CallFromMainThread([]()
-	{
-		sys_process.success("Process finished");
-		signal_system_cache_can_stay();
-		Emu.Kill();
-	});
+		{
+			sys_process.success("Process finished");
+			signal_system_cache_can_stay();
+			Emu.Kill();
+		});
 
 	// Wait for GUI thread
 	while (auto state = +ppu.state)
@@ -416,93 +422,93 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 	const bool is_real_reboot = (ppu.gpr[11] == 379);
 
 	Emu.CallFromMainThread([is_real_reboot, argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
-	{
-		sys_process.success("Process finished -> %s", argv[0]);
-
-		std::string disc;
-
-		if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
-			disc = vfs::get("/dev_bdvd/");
-		if (disc.empty() && !Emu.GetTitleID().empty())
-			disc = vfs::get(Emu.GetDir());
-
-		std::string path = vfs::get(argv[0]);
-		std::string hdd1 = vfs::get("/dev_hdd1/");
-
-		const u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
-
-		using namespace id_manager;
-
-		shared_ptr<utils::serial> idm_capture = make_shared<utils::serial>();
-
-		if (!is_real_reboot)
 		{
-			reader_lock rlock{id_manager::g_mutex};
-			g_fxo->get<id_map<lv2_memory_container>>().save(*idm_capture);
-			stx::serial_breathe_and_tag(*idm_capture, "id_map<lv2_memory_container>", false);
-		}
+			sys_process.success("Process finished -> %s", argv[0]);
 
-		idm_capture->set_reading_state();
+			std::string disc;
 
-		auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, idm_capture](u32 sdk_suggested_mem) mutable
-		{
-			if (is_real_reboot)
+			if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
+				disc = vfs::get("/dev_bdvd/");
+			if (disc.empty() && !Emu.GetTitleID().empty())
+				disc = vfs::get(Emu.GetDir());
+
+			std::string path = vfs::get(argv[0]);
+			std::string hdd1 = vfs::get("/dev_hdd1/");
+
+			const u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
+
+			using namespace id_manager;
+
+			shared_ptr<utils::serial> idm_capture = make_shared<utils::serial>();
+
+			if (!is_real_reboot)
 			{
-				// Do not save containers on actual reboot
-				ensure(g_fxo->init<id_map<lv2_memory_container>>());
-			}
-			else
-			{
-				// Save LV2 memory containers
-				ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
-			}
-
-			// Empty the containers, accumulate their total size
-			u32 total_size = 0;
-			idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ctr)
-			{
-				ctr.used = 0;
-				total_size += ctr.size;
-			});
-
-			// The default memory container capacity can only decrease after exitspawn
-			// 1. If newer SDK version suggests higher memory capacity - it is ignored
-			// 2. If newer SDK version suggests lower memory capacity - it is lowered
-			// And if 2. happens while user memory containers exist, the left space can be spent on user memory containers
-			ensure(g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size));
-		};
-
-		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
-			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), klic]() mutable
-		{
-			Emu.argv = std::move(argv);
-			Emu.envp = std::move(envp);
-			Emu.data = std::move(data);
-			Emu.disc = std::move(disc);
-			Emu.hdd1 = std::move(hdd1);
-			Emu.init_mem_containers = std::move(func);
-
-			if (klic)
-			{
-				Emu.klic.emplace_back(klic);
+				reader_lock rlock{id_manager::g_mutex};
+				g_fxo->get<id_map<lv2_memory_container>>().save(*idm_capture);
+				stx::serial_breathe_and_tag(*idm_capture, "id_map<lv2_memory_container>", false);
 			}
 
-			Emu.SetForceBoot(true);
+			idm_capture->set_reading_state();
 
-			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
-
-			if (res != game_boot_result::no_errors)
+			auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, idm_capture](u32 sdk_suggested_mem) mutable
 			{
-				sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
-			}
-		};
+				if (is_real_reboot)
+				{
+					// Do not save containers on actual reboot
+					ensure(g_fxo->init<id_map<lv2_memory_container>>());
+				}
+				else
+				{
+					// Save LV2 memory containers
+					ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
+				}
 
-		signal_system_cache_can_stay();
+				// Empty the containers, accumulate their total size
+				u32 total_size = 0;
+				idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ctr)
+					{
+						ctr.used = 0;
+						total_size += ctr.size;
+					});
 
-		// Make sure we keep the game window opened
-		Emu.SetContinuousMode(true);
-		Emu.Kill(false);
-	});
+				// The default memory container capacity can only decrease after exitspawn
+			    // 1. If newer SDK version suggests higher memory capacity - it is ignored
+			    // 2. If newer SDK version suggests lower memory capacity - it is lowered
+			    // And if 2. happens while user memory containers exist, the left space can be spent on user memory containers
+				ensure(g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size));
+			};
+
+			Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
+										  disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), klic]() mutable
+			{
+				Emu.argv = std::move(argv);
+				Emu.envp = std::move(envp);
+				Emu.data = std::move(data);
+				Emu.disc = std::move(disc);
+				Emu.hdd1 = std::move(hdd1);
+				Emu.init_mem_containers = std::move(func);
+
+				if (klic)
+				{
+					Emu.klic.emplace_back(klic);
+				}
+
+				Emu.SetForceBoot(true);
+
+				auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
+
+				if (res != game_boot_result::no_errors)
+				{
+					sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
+				}
+			};
+
+			signal_system_cache_can_stay();
+
+			// Make sure we keep the game window opened
+			Emu.SetContinuousMode(true);
+			Emu.Kill(false);
+		});
 
 	// Wait for GUI thread
 	while (auto state = +ppu.state)
@@ -527,8 +533,7 @@ void sys_process_exit3(ppu_thread& ppu, s32 status)
 
 error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
 {
-	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x"
-		, pid, primary_prio, flags, stack, stack_size, mem_id, param_sfo, dbg_data);
+	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x", pid, primary_prio, flags, stack, stack_size, mem_id, param_sfo, dbg_data);
 
 	return CELL_OK;
 }

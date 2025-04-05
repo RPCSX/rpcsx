@@ -7,7 +7,11 @@
 
 #define RSX(ctx) ctx->rsxthr
 #define REGS(ctx) (&rsx::method_registers)
-#define RSX_CAPTURE_EVENT(name) if (RSX(ctx)->capture_current_frame) { RSX(ctx)->capture_frame(name); }
+#define RSX_CAPTURE_EVENT(name)          \
+	if (RSX(ctx)->capture_current_frame) \
+	{                                    \
+		RSX(ctx)->capture_frame(name);   \
+	}
 
 namespace rsx
 {
@@ -66,7 +70,7 @@ namespace rsx
 			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
 			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
 
-			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
+			const u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 			const u32 load = REGS(ctx)->transform_constant_load();
 
@@ -97,8 +101,7 @@ namespace rsx
 					rsx::transform_constant_update_barrier,
 					RSX(ctx)->fifo_ctrl->get_pos(),
 					rcount,
-					reg - NV4097_SET_TRANSFORM_CONSTANT
-				);
+					reg - NV4097_SET_TRANSFORM_CONSTANT);
 
 				RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
 				return;
@@ -143,7 +146,7 @@ namespace rsx
 			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
 			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
 
-			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
+			const u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 			const u32 load_pos = REGS(ctx)->transform_program_load();
 
@@ -275,7 +278,7 @@ namespace rsx
 				return;
 			}
 
-			if (REGS(ctx)->decode<NV4097_SET_COLOR_MASK>(arg).is_invalid()) [[ unlikely ]]
+			if (REGS(ctx)->decode<NV4097_SET_COLOR_MASK>(arg).is_invalid()) [[unlikely]]
 			{
 				// Rollback
 				REGS(ctx)->decode(reg, REGS(ctx)->latch);
@@ -292,7 +295,7 @@ namespace rsx
 				return;
 			}
 
-			if (to_stencil_op(arg)) [[ likely ]]
+			if (to_stencil_op(arg)) [[likely]]
 			{
 				set_surface_options_dirty_bit(ctx, reg, arg);
 				return;
@@ -482,14 +485,17 @@ namespace rsx
 			switch (reg)
 			{
 			case NV4097_SET_CULL_FACE:
-				valid = !!to_cull_face(arg); break;
+				valid = !!to_cull_face(arg);
+				break;
 			case NV4097_SET_FRONT_FACE:
-				valid = !!to_front_face(arg); break;
+				valid = !!to_front_face(arg);
+				break;
 			default:
-				valid = false; break;
+				valid = false;
+				break;
 			}
 
-			if (valid) [[ likely ]]
+			if (valid) [[likely]]
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_config_dirty;
 			}
@@ -507,7 +513,7 @@ namespace rsx
 			}
 
 			if (to_blend_equation(arg & 0xFFFF) &&
-				to_blend_equation((arg >> 16) & 0xFFFF)) [[ likely ]]
+				to_blend_equation((arg >> 16) & 0xFFFF)) [[likely]]
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_config_dirty;
 				return;
@@ -525,7 +531,7 @@ namespace rsx
 			}
 
 			if (to_blend_factor(arg & 0xFFFF) &&
-				to_blend_factor((arg >> 16) & 0xFFFF)) [[ likely ]]
+				to_blend_factor((arg >> 16) & 0xFFFF)) [[likely]]
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_config_dirty;
 				return;
@@ -567,10 +573,10 @@ namespace rsx
 				rsx_log.error("NV4097_GET_REPORT: Bad type %d", type);
 
 				vm::_ref<atomic_t<CellGcmReportData>>(address_ptr).atomic_op([&](CellGcmReportData& data)
-				{
-					data.timer = RSX(ctx)->timestamp();
-					data.padding = 0;
-				});
+					{
+						data.timer = RSX(ctx)->timestamp();
+						data.padding = 0;
+					});
 				break;
 			}
 		}
@@ -652,10 +658,8 @@ namespace rsx
 			ensure(addr != umax);
 
 			vm::_ref<atomic_t<RsxNotify>>(addr).store(
-			{
-				RSX(ctx)->timestamp(),
-				0
-			});
+				{RSX(ctx)->timestamp(),
+					0});
 		}
 
 		void texture_read_semaphore_release(context* ctx, u32 /*reg*/, u32 arg)
@@ -681,7 +685,7 @@ namespace rsx
 				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
 
-			if (g_cfg.video.strict_rendering_mode) [[ unlikely ]]
+			if (g_cfg.video.strict_rendering_mode) [[unlikely]]
 			{
 				util::write_gcm_label<true, true>(ctx, addr, arg);
 			}
@@ -719,5 +723,5 @@ namespace rsx
 		{
 			RSX(ctx)->sync();
 		}
-	}
-}
+	} // namespace nv4097
+} // namespace rsx

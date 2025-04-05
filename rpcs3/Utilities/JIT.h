@@ -432,7 +432,7 @@ namespace asmjit
 		c.bind(next);
 	}
 #endif
-}
+} // namespace asmjit
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename Asm = native_asm, typename F>
@@ -501,7 +501,7 @@ namespace llvm
 	class ExecutionEngine;
 	class Module;
 	class StringRef;
-}
+} // namespace llvm
 
 enum class thread_state : u32;
 
@@ -569,6 +569,6 @@ public:
 	bool add_sub_disk_space(ssz space);
 };
 
-const char *fallback_cpu_detection();
+const char* fallback_cpu_detection();
 
 #endif // LLVM_AVAILABLE

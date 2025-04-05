@@ -83,13 +83,13 @@ constexpr bool is_memorizable_section(sec_type type, bs_t<sh_flag> flags)
 	}
 }
 
-template<typename T>
+template <typename T>
 using elf_be = be_t<T>;
 
-template<typename T>
+template <typename T>
 using elf_le = le_t<T>;
 
-template<template<typename T> class en_t, typename sz_t>
+template <template <typename T> class en_t, typename sz_t>
 struct elf_ehdr
 {
 	nse_t<u32> e_magic;
@@ -114,13 +114,13 @@ struct elf_ehdr
 	en_t<u16> e_shstrndx;
 };
 
-template<template<typename T> class en_t, typename sz_t>
+template <template <typename T> class en_t, typename sz_t>
 struct elf_phdr
 {
 	static_assert(!sizeof(sz_t), "Invalid elf size type (must be u32 or u64)");
 };
 
-template<template<typename T> class en_t>
+template <template <typename T> class en_t>
 struct elf_phdr<en_t, u64>
 {
 	en_t<u32> p_type;
@@ -133,7 +133,7 @@ struct elf_phdr<en_t, u64>
 	en_t<u64> p_align;
 };
 
-template<template<typename T> class en_t>
+template <template <typename T> class en_t>
 struct elf_phdr<en_t, u32>
 {
 	en_t<u32> p_type;
@@ -146,7 +146,7 @@ struct elf_phdr<en_t, u32>
 	en_t<u32> p_align;
 };
 
-template<template<typename T> class en_t, typename sz_t>
+template <template <typename T> class en_t, typename sz_t>
 struct elf_prog final : elf_phdr<en_t, sz_t>
 {
 	std::vector<uchar> bin{};
@@ -169,7 +169,7 @@ struct elf_prog final : elf_phdr<en_t, sz_t>
 	}
 };
 
-template<template<typename T> class en_t, typename sz_t>
+template <template <typename T> class en_t, typename sz_t>
 struct elf_shdr
 {
 	en_t<u32> sh_name;
@@ -189,7 +189,7 @@ struct elf_shdr
 	}
 };
 
-template<template<typename T> class en_t, typename sz_t>
+template <template <typename T> class en_t, typename sz_t>
 struct elf_shdata final : elf_shdr<en_t, sz_t>
 {
 	std::vector<uchar> bin{};
@@ -243,7 +243,7 @@ enum class elf_error
 // ELF object with specified parameters.
 // en_t: endianness (elf_le or elf_be)
 // sz_t: size (u32 for ELF32, u64 for ELF64)
-template<template<typename T> class en_t, typename sz_t, elf_machine Machine, elf_os OS, elf_type Type>
+template <template <typename T> class en_t, typename sz_t, elf_machine Machine, elf_os OS, elf_type Type>
 class elf_object
 {
 	elf_error m_error = elf_error::stream; // Set initial error to "file not found" error
@@ -543,8 +543,8 @@ public:
 };
 
 using ppu_exec_object = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::none, elf_type::exec>;
-using ppu_prx_object  = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::prx>;
-using ppu_rel_object  = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::rel>;
+using ppu_prx_object = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::prx>;
+using ppu_rel_object = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::rel>;
 using spu_exec_object = elf_object<elf_be, u32, elf_machine::spu, elf_os::none, elf_type::exec>;
-using spu_rel_object  = elf_object<elf_be, u32, elf_machine::spu, elf_os::none, elf_type::rel>;
+using spu_rel_object = elf_object<elf_be, u32, elf_machine::spu, elf_os::none, elf_type::rel>;
 using arm_exec_object = elf_object<elf_le, u32, elf_machine::arm, elf_os::none, elf_type::none>;

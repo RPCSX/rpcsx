@@ -49,8 +49,8 @@ namespace rsx
 		template <typename T>
 		color4_base<T> remap(const color4_base<T>& components)
 		{
-			const std::array<T, 4> values = { components.a, components.r, components.g, components.b };
-			const auto shuffled = remap(values, T{ 0 }, T{ 1 });
+			const std::array<T, 4> values = {components.a, components.r, components.g, components.b};
+			const auto shuffled = remap(values, T{0}, T{1});
 			return color4_base<T>(shuffled[1], shuffled[2], shuffled[3], shuffled[0]);
 		}
 
@@ -65,37 +65,35 @@ namespace rsx
 	};
 
 	static const texture_channel_remap_t default_remap_vector =
-	{
-		.encoded = RSX_TEXTURE_REMAP_IDENTITY,
-		.control_map = { CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP },
-		.channel_map = { CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B }
-	};
+		{
+			.encoded = RSX_TEXTURE_REMAP_IDENTITY,
+			.control_map = {CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP},
+			.channel_map = {CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B}};
 
 	static inline texture_channel_remap_t decode_remap_encoding(u32 remap_ctl)
 	{
 		// Remapping tables; format is A-R-G-B
 		// Remap input table. Contains channel index to read color from
 		texture_channel_remap_t result =
-		{
-			.encoded = remap_ctl
-		};
+			{
+				.encoded = remap_ctl};
 
 		result.channel_map =
-		{
-			static_cast<u8>(remap_ctl & 0x3),
-			static_cast<u8>((remap_ctl >> 2) & 0x3),
-			static_cast<u8>((remap_ctl >> 4) & 0x3),
-			static_cast<u8>((remap_ctl >> 6) & 0x3),
-		};
+			{
+				static_cast<u8>(remap_ctl & 0x3),
+				static_cast<u8>((remap_ctl >> 2) & 0x3),
+				static_cast<u8>((remap_ctl >> 4) & 0x3),
+				static_cast<u8>((remap_ctl >> 6) & 0x3),
+			};
 
 		// Remap control table. Controls whether the remap value is used, or force either 0 or 1
 		result.control_map =
-		{
-			static_cast<u8>((remap_ctl >> 8) & 0x3),
-			static_cast<u8>((remap_ctl >> 10) & 0x3),
-			static_cast<u8>((remap_ctl >> 12) & 0x3),
-			static_cast<u8>((remap_ctl >> 14) & 0x3),
-		};
+			{
+				static_cast<u8>((remap_ctl >> 8) & 0x3),
+				static_cast<u8>((remap_ctl >> 10) & 0x3),
+				static_cast<u8>((remap_ctl >> 12) & 0x3),
+				static_cast<u8>((remap_ctl >> 14) & 0x3),
+			};
 
 		return result;
 	}
@@ -104,13 +102,15 @@ namespace rsx
 	static inline u32 get_g8b8_r8g8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & RSX_GCM_CLEAR_GREEN_BIT) result |= RSX_GCM_CLEAR_GREEN_BIT;
-		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
+		if (mask & RSX_GCM_CLEAR_GREEN_BIT)
+			result |= RSX_GCM_CLEAR_GREEN_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT)
+			result |= RSX_GCM_CLEAR_RED_BIT;
 
 		return result;
 	}
 
-	static inline void get_g8b8_r8g8_colormask(bool& red, bool/*green*/, bool& blue, bool& alpha)
+	static inline void get_g8b8_r8g8_colormask(bool& red, bool /*green*/, bool& blue, bool& alpha)
 	{
 		red = blue;
 		blue = false;
@@ -125,10 +125,14 @@ namespace rsx
 	static inline u32 get_abgr8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & RSX_GCM_CLEAR_RED_BIT) result |= RSX_GCM_CLEAR_BLUE_BIT;
-		if (mask & RSX_GCM_CLEAR_GREEN_BIT) result |= RSX_GCM_CLEAR_GREEN_BIT;
-		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
-		if (mask & RSX_GCM_CLEAR_ALPHA_BIT) result |= RSX_GCM_CLEAR_ALPHA_BIT;
+		if (mask & RSX_GCM_CLEAR_RED_BIT)
+			result |= RSX_GCM_CLEAR_BLUE_BIT;
+		if (mask & RSX_GCM_CLEAR_GREEN_BIT)
+			result |= RSX_GCM_CLEAR_GREEN_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT)
+			result |= RSX_GCM_CLEAR_RED_BIT;
+		if (mask & RSX_GCM_CLEAR_ALPHA_BIT)
+			result |= RSX_GCM_CLEAR_ALPHA_BIT;
 		return result;
 	}
 
@@ -143,7 +147,7 @@ namespace rsx
 	}
 
 	template <typename T, typename U>
-		requires std::is_integral_v<T>&& std::is_integral_v<U>
+		requires std::is_integral_v<T> && std::is_integral_v<U>
 	u8 renormalize_color8(T input, U base)
 	{
 		// Base will be some POT-1 value
@@ -177,7 +181,8 @@ namespace rsx
 	static inline u32 get_b8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT)
+			result |= RSX_GCM_CLEAR_RED_BIT;
 		return result;
 	}
 
@@ -216,10 +221,10 @@ namespace rsx
 
 	static inline const std::array<bool, 4> get_write_output_mask(rsx::surface_color_format format)
 	{
-		constexpr std::array<bool, 4> rgba = { true, true, true, true };
-		constexpr std::array<bool, 4> rgb = { true, true, true, false };
-		constexpr std::array<bool, 4> rg = { true, true, false, false };
-		constexpr std::array<bool, 4> r = { true, false, false, false };
+		constexpr std::array<bool, 4> rgba = {true, true, true, true};
+		constexpr std::array<bool, 4> rgb = {true, true, true, false};
+		constexpr std::array<bool, 4> rg = {true, true, false, false};
+		constexpr std::array<bool, 4> r = {true, false, false, false};
 
 		switch (format)
 		{
@@ -245,4 +250,4 @@ namespace rsx
 			fmt::throw_exception("Unknown surface format 0x%x", static_cast<int>(format));
 		}
 	}
-}
+} // namespace rsx

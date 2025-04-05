@@ -1246,4 +1246,4 @@ inline const char *getInstructionName(unsigned id) {
   }
   return nullptr;
 }
-}
+} // namespace shader::ir::vop3

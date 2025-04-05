@@ -13,23 +13,23 @@ enum
 {
 	// is_supported
 	CELL_MOUSE_INFO_TABLET_NOT_SUPPORTED = 0,
-	CELL_MOUSE_INFO_TABLET_SUPPORTED     = 1,
+	CELL_MOUSE_INFO_TABLET_SUPPORTED = 1,
 
 	// mode
-	CELL_MOUSE_INFO_TABLET_MOUSE_MODE    = 1,
-	CELL_MOUSE_INFO_TABLET_TABLET_MODE   = 2,
+	CELL_MOUSE_INFO_TABLET_MOUSE_MODE = 1,
+	CELL_MOUSE_INFO_TABLET_TABLET_MODE = 2,
 };
 
 enum MousePortStatus
 {
 	CELL_MOUSE_STATUS_DISCONNECTED = 0x00000000,
-	CELL_MOUSE_STATUS_CONNECTED    = 0x00000001,
+	CELL_MOUSE_STATUS_CONNECTED = 0x00000001,
 };
 
 enum MouseDataUpdate
 {
 	CELL_MOUSE_DATA_UPDATE = 1,
-	CELL_MOUSE_DATA_NON    = 0,
+	CELL_MOUSE_DATA_NON = 0,
 };
 
 enum MouseButtonCodes
@@ -53,14 +53,14 @@ static inline MouseButtonCodes get_mouse_button_code(int i)
 {
 	switch (i)
 	{
-	case 0:	return CELL_MOUSE_BUTTON_1;
-	case 1:	return CELL_MOUSE_BUTTON_2;
-	case 2:	return CELL_MOUSE_BUTTON_3;
-	case 3:	return CELL_MOUSE_BUTTON_4;
-	case 4:	return CELL_MOUSE_BUTTON_5;
-	case 5:	return CELL_MOUSE_BUTTON_6;
-	case 6:	return CELL_MOUSE_BUTTON_7;
-	case 7:	return CELL_MOUSE_BUTTON_8;
+	case 0: return CELL_MOUSE_BUTTON_1;
+	case 1: return CELL_MOUSE_BUTTON_2;
+	case 2: return CELL_MOUSE_BUTTON_3;
+	case 3: return CELL_MOUSE_BUTTON_4;
+	case 4: return CELL_MOUSE_BUTTON_5;
+	case 5: return CELL_MOUSE_BUTTON_6;
+	case 6: return CELL_MOUSE_BUTTON_7;
+	case 7: return CELL_MOUSE_BUTTON_8;
 	default: fmt::throw_exception("get_mouse_button_code: Invalid index %d", i);
 	}
 }
@@ -74,7 +74,7 @@ struct MouseInfo
 	u32 max_connect = 0;
 	u32 now_connect = 0;
 	u32 info = 0;
-	u32 mode[MAX_MICE]{}; // TODO: tablet support
+	u32 mode[MAX_MICE]{};                // TODO: tablet support
 	u32 tablet_is_supported[MAX_MICE]{}; // TODO: tablet support
 	u16 vendor_id[MAX_MICE]{};
 	u16 product_id[MAX_MICE]{};
@@ -137,7 +137,7 @@ public:
 
 	SAVESTATE_INIT_POS(18);
 
-	MouseHandlerBase(){};
+	MouseHandlerBase() {};
 	MouseHandlerBase(const MouseHandlerBase&) = delete;
 	MouseHandlerBase(utils::serial* ar);
 	MouseHandlerBase(utils::serial& ar) : MouseHandlerBase(&ar) {}
@@ -149,11 +149,26 @@ public:
 
 	void SetIntercepted(bool intercepted);
 
-	MouseInfo& GetInfo() { return m_info; }
-	std::vector<Mouse>& GetMice() { return m_mice; }
-	MouseDataList& GetDataList(const u32 mouse) { return m_mice[mouse].m_datalist; }
-	MouseTabletDataList& GetTabletDataList(const u32 mouse) { return m_mice[mouse].m_tablet_datalist; }
-	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
+	MouseInfo& GetInfo()
+	{
+		return m_info;
+	}
+	std::vector<Mouse>& GetMice()
+	{
+		return m_mice;
+	}
+	MouseDataList& GetDataList(const u32 mouse)
+	{
+		return m_mice[mouse].m_datalist;
+	}
+	MouseTabletDataList& GetTabletDataList(const u32 mouse)
+	{
+		return m_mice[mouse].m_tablet_datalist;
+	}
+	MouseRawData& GetRawData(const u32 mouse)
+	{
+		return m_mice[mouse].m_rawdata;
+	}
 
 	stx::init_mutex init;
 

@@ -37,11 +37,10 @@ namespace utils
 	{
 		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
 	}
-}
+} // namespace utils
 
 rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
-	: QDialog(parent)
-	, m_gui_settings(std::move(gui_settings))
+	: QDialog(parent), m_gui_settings(std::move(gui_settings))
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
@@ -56,10 +55,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 
 	// Controls: Breaks
 	QPushButton* b_break_frame = new QPushButton(tr("Frame"));
-	QPushButton* b_break_text  = new QPushButton(tr("Texture"));
-	QPushButton* b_break_draw  = new QPushButton(tr("Draw"));
-	QPushButton* b_break_prim  = new QPushButton(tr("Primitive"));
-	QPushButton* b_break_inst  = new QPushButton(tr("Command"));
+	QPushButton* b_break_text = new QPushButton(tr("Texture"));
+	QPushButton* b_break_draw = new QPushButton(tr("Draw"));
+	QPushButton* b_break_prim = new QPushButton(tr("Primitive"));
+	QPushButton* b_break_inst = new QPushButton(tr("Command"));
 	b_break_frame->setAutoDefault(false);
 	b_break_text->setAutoDefault(false);
 	b_break_draw->setAutoDefault(false);
@@ -109,7 +108,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
-	m_list_captured_frame      = add_rsx_tab(tr("Captured Frame"), 1);
+	m_list_captured_frame = add_rsx_tab(tr("Captured Frame"), 1);
 	m_list_captured_draw_calls = add_rsx_tab(tr("Captured Draw Calls"), 1);
 
 	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr("Column"));
@@ -138,19 +137,17 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_list_index_buffer->setFont(mono);
 
 	// Panels for displaying the buffers
-	m_buffer_colorA  = new Buffer(false, 0, tr("Color Buffer A"), this);
-	m_buffer_colorB  = new Buffer(false, 1, tr("Color Buffer B"), this);
-	m_buffer_colorC  = new Buffer(false, 2, tr("Color Buffer C"), this);
-	m_buffer_colorD  = new Buffer(false, 3, tr("Color Buffer D"), this);
-	m_buffer_depth   = new Buffer(false, 4, tr("Depth Buffer"), this);
+	m_buffer_colorA = new Buffer(false, 0, tr("Color Buffer A"), this);
+	m_buffer_colorB = new Buffer(false, 1, tr("Color Buffer B"), this);
+	m_buffer_colorC = new Buffer(false, 2, tr("Color Buffer C"), this);
+	m_buffer_colorD = new Buffer(false, 3, tr("Color Buffer D"), this);
+	m_buffer_depth = new Buffer(false, 4, tr("Depth Buffer"), this);
 	m_buffer_stencil = new Buffer(false, 4, tr("Stencil Buffer"), this);
-	m_buffer_tex     = new Buffer(true, 4, tr("Texture"), this);
+	m_buffer_tex = new Buffer(true, 4, tr("Texture"), this);
 
 	for (Buffer* buf :
-	{
-		m_buffer_colorA, m_buffer_colorB, m_buffer_colorC, m_buffer_colorD
-		, m_buffer_depth, m_buffer_stencil, m_buffer_tex
-	})
+		{
+			m_buffer_colorA, m_buffer_colorB, m_buffer_colorC, m_buffer_colorD, m_buffer_depth, m_buffer_stencil, m_buffer_tex})
 	{
 		buf->setContextMenuPolicy(Qt::CustomContextMenu);
 
@@ -222,24 +219,24 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);
 
 	connect(tex_idx_line, &QLineEdit::textChanged, [this](const QString& text)
-	{
-		bool ok = false;
-		const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
-		if (ok)
 		{
-			m_cur_texture = addr;
-		}
-	});
+			bool ok = false;
+			const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+			if (ok)
+			{
+				m_cur_texture = addr;
+			}
+		});
 
 	connect(tex_fmt_override_line, &QLineEdit::textChanged, [this](const QString& text)
-	{
-		bool ok = false;
-		const u32 fmt = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
-		if (ok)
 		{
-			m_texture_format_override = fmt;
-		}
-	});
+			bool ok = false;
+			const u32 fmt = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+			if (ok)
+			{
+				m_texture_format_override = fmt;
+			}
+		});
 
 	// Restore header states
 	QVariantMap states = m_gui_settings->GetValue(gui::rsx_states).toMap();
@@ -253,7 +250,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	restoreGeometry(m_gui_settings->GetValue(gui::rsx_geometry).toByteArray());
 
 	// Check for updates every ~100 ms
-	QTimer *timer = new QTimer(this);
+	QTimer* timer = new QTimer(this);
 	connect(timer, &QTimer::timeout, this, &rsx_debugger::UpdateInformation);
 	timer->start(100);
 }
@@ -305,9 +302,7 @@ bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 }
 
 Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
-	: QGroupBox(name, parent)
-	, m_id(id)
-	, m_isTex(isTex)
+	: QGroupBox(name, parent), m_id(id), m_isTex(isTex)
 {
 	m_image_size = isTex ? Texture_Size : Panel_Size;
 
@@ -344,12 +339,12 @@ void Buffer::showImage(QImage&& image)
 
 void Buffer::ShowWindowed()
 {
-	//const auto render = rsx::get_current_renderer();
+	// const auto render = rsx::get_current_renderer();
 	if (m_image.isNull())
 		return;
 
 	// TODO: Is there any better way to choose the color buffers
-	//if (0 <= m_id && m_id < 4)
+	// if (0 <= m_id && m_id < 4)
 	//{
 	//	const auto buffers = render->display_buffers;
 	//	u32 addr = rsx::constants::local_mem_base + buffers[m_id].offset;
@@ -360,7 +355,7 @@ void Buffer::ShowWindowed()
 
 	gui::utils::show_windowed_image(m_image.copy(), QString("%1 #%2").arg(title()).arg(m_window_counter++));
 
-	//if (m_isTex)
+	// if (m_isTex)
 	//{
 	//	u8 location = render->textures[m_cur_texture].location();
 	//	if (location <= 1 && vm::check_addr(rsx::get_address(render->textures[m_cur_texture].offset(), location))
@@ -369,7 +364,7 @@ void Buffer::ShowWindowed()
 	//			rsx::get_address(render->textures[m_cur_texture].offset(), location), 1,
 	//			render->textures[m_cur_texture].width(),
 	//			render->textures[m_cur_texture].height(), false);
-	//}
+	// }
 }
 
 void Buffer::ShowContextMenu(const QPoint& pos)
@@ -381,24 +376,24 @@ void Buffer::ShowContextMenu(const QPoint& pos)
 
 	QAction action(tr("Save Image At"), this);
 	connect(&action, &QAction::triggered, this, [&]()
-	{
-		if (m_image.isNull())
-			return;
-
-		const QString path = QFileDialog::getSaveFileName(this, tr("Save Image"), "", "Image (*.png)");
-
-		if (path.isEmpty())
-			return;
-
-		if (m_image.save(path, "PNG", 100))
 		{
-			rsx_debugger.success("Saved image to '%s'", path);
-		}
-		else
-		{
-			rsx_debugger.error("Failure to save image to '%s'", path);
-		}
-	});
+			if (m_image.isNull())
+				return;
+
+			const QString path = QFileDialog::getSaveFileName(this, tr("Save Image"), "", "Image (*.png)");
+
+			if (path.isEmpty())
+				return;
+
+			if (m_image.save(path, "PNG", 100))
+			{
+				rsx_debugger.success("Saved image to '%s'", path);
+			}
+			else
+			{
+				rsx_debugger.error("Failure to save image to '%s'", path);
+			}
+		});
 
 	context_menu.addAction(&action);
 	context_menu.exec(mapToGlobal(pos));
@@ -426,7 +421,7 @@ namespace
 		case rsx::surface_color_format::b8:
 		{
 			const u8 value = read_from_ptr<u8>(orig_buffer, idx);
-			return{ value, value, value };
+			return {value, value, value};
 		}
 		case rsx::surface_color_format::x32:
 		{
@@ -434,21 +429,21 @@ namespace
 			const u32 swapped_val = stored_val;
 			const f32 float_val = std::bit_cast<f32>(swapped_val);
 			const u8 val = float_val * 255.f;
-			return{ val, val, val };
+			return {val, val, val};
 		}
 		case rsx::surface_color_format::a8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
 			const auto ptr = reinterpret_cast<const u8*>(orig_buffer.data());
-			return{ ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4] };
+			return {ptr[1 + idx * 4], ptr[2 + idx * 4], ptr[3 + idx * 4]};
 		}
 		case rsx::surface_color_format::a8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		{
 			const auto ptr = reinterpret_cast<const u8*>(orig_buffer.data());
-			return{ ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4] };
+			return {ptr[3 + idx * 4], ptr[2 + idx * 4], ptr[1 + idx * 4]};
 		}
 		case rsx::surface_color_format::w16z16y16x16:
 		{
@@ -463,7 +458,7 @@ namespace
 			const u8 val0 = f0 * 255.f;
 			const u8 val1 = f1 * 255.f;
 			const u8 val2 = f2 * 255.f;
-			return{ val0, val1, val2 };
+			return {val0, val1, val2};
 		}
 		case rsx::surface_color_format::g8b8:
 		case rsx::surface_color_format::r5g6b5:
@@ -490,14 +485,14 @@ namespace
 		for (u32 i = 0; i < width * height; i++)
 		{
 			// depending on original buffer, the colors may need to be reversed
-			const auto &colors = get_value(orig_buffer, format, i);
+			const auto& colors = get_value(orig_buffer, format, i);
 			buffer[0 + i * 4] = colors[0];
 			buffer[1 + i * 4] = colors[1];
 			buffer[2 + i * 4] = colors[2];
 			buffer[3 + i * 4] = 255;
 		}
 	}
-}
+} // namespace
 
 void rsx_debugger::OnClickDrawCalls()
 {
@@ -506,12 +501,12 @@ void rsx_debugger::OnClickDrawCalls()
 	const auto& draw_call = frame_debug.draw_calls[draw_id];
 
 	Buffer* buffers[] =
-	{
-		m_buffer_colorA,
-		m_buffer_colorB,
-		m_buffer_colorC,
-		m_buffer_colorD,
-	};
+		{
+			m_buffer_colorA,
+			m_buffer_colorB,
+			m_buffer_colorC,
+			m_buffer_colorD,
+		};
 
 	const u32 width = draw_call.state.surface_clip_width();
 	const u32 height = draw_call.state.surface_clip_height();
@@ -598,7 +593,7 @@ void rsx_debugger::OnClickDrawCalls()
 	m_text_shader_program->setText(qstr(frame_debug.draw_calls[draw_id].programs.second));
 
 	m_list_index_buffer->clear();
-	//m_list_index_buffer->insertColumn(0, "Index", 0, 700);
+	// m_list_index_buffer->insertColumn(0, "Index", 0, 700);
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u16)
 	{
 		auto index_buffer = ref_ptr<u16[]>(frame_debug.draw_calls[draw_id].index);
@@ -670,9 +665,9 @@ void rsx_debugger::GetBuffers() const
 		Buffer* panel{};
 		switch (buffer_it)
 		{
-		case 0:  panel = m_buffer_colorA; break;
-		case 1:  panel = m_buffer_colorB; break;
-		case 2:  panel = m_buffer_colorC; break;
+		case 0: panel = m_buffer_colorA; break;
+		case 1: panel = m_buffer_colorB; break;
+		case 2: panel = m_buffer_colorC; break;
 		default: panel = m_buffer_colorD; break;
 		}
 
@@ -690,20 +685,20 @@ void rsx_debugger::GetBuffers() const
 
 		switch (fmt)
 		{
-		//case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		//case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		// case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		// case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::r5g6b5:
 		{
 			format = QImage::Format_RGB16;
 			bpp = 2;
 			break;
 		}
-		//case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
-		//case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+		// case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+		// case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::a8r8g8b8:
 		{
 			// For now ignore alpha channel because it has a tendency of being 0
-			//format = QImage::Format_ARGB32;
+			// format = QImage::Format_ARGB32;
 			break;
 		}
 		case rsx::surface_color_format::b8:
@@ -720,11 +715,11 @@ void rsx_debugger::GetBuffers() const
 			bswap = false;
 			break;
 		}
-		//case rsx::surface_color_format::w16z16y16x16,
-		//case rsx::surface_color_format::w32z32y32x32,
-		//case rsx::surface_color_format::x32,
-		//case rsx::surface_color_format::x8b8g8r8_z8b8g8r8,
-		//case rsx::surface_color_format::x8b8g8r8_o8b8g8r8,
+		// case rsx::surface_color_format::w16z16y16x16,
+		// case rsx::surface_color_format::w32z32y32x32,
+		// case rsx::surface_color_format::x32,
+		// case rsx::surface_color_format::x8b8g8r8_z8b8g8r8,
+		// case rsx::surface_color_format::x8b8g8r8_o8b8g8r8,
 		case rsx::surface_color_format::a8b8g8r8:
 		{
 			format = QImage::Format_RGBA8888;
@@ -747,12 +742,12 @@ void rsx_debugger::GetBuffers() const
 
 		// Touch RSX memory to potentially flush GPU memory (must occur in named_thread)
 		[[maybe_unused]] auto buffer_touch_1 = named_thread("RSX Buffer Touch"sv, [&]()
-		{
-			for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
 			{
-				static_cast<void>(vm::_ref<atomic_t<u8>>(page_start).load());
-			}
-		});
+				for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
+				{
+					static_cast<void>(vm::_ref<atomic_t<u8>>(page_start).load());
+				}
+			});
 
 		bswap ^= std::endian::native == std::endian::big;
 
@@ -844,7 +839,7 @@ void rsx_debugger::GetBuffers() const
 	{
 		const u32 rsx_buffer_addr = render->get_zeta_surface_address();
 
-		const u32 width  = rsx::method_registers.surface_clip_width();
+		const u32 width = rsx::method_registers.surface_clip_width();
 		const u32 height = rsx::method_registers.surface_clip_height();
 		const u32 pitch = rsx::method_registers.surface_z_pitch();
 
@@ -896,7 +891,7 @@ void rsx_debugger::GetBuffers() const
 		Buffer* panel{};
 		switch (buffer_it)
 		{
-		case 0:  panel = m_buffer_depth; break;
+		case 0: panel = m_buffer_depth; break;
 		default: panel = m_buffer_stencil; break;
 		}
 
@@ -908,12 +903,12 @@ void rsx_debugger::GetBuffers() const
 
 		// Touch RSX memory to potentially flush GPU memory (must occur in named_thread)
 		[[maybe_unused]] auto buffer_touch_2 = named_thread("RSX Buffer Touch"sv, [&]()
-		{
-			for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
 			{
-				static_cast<void>(vm::_ref<atomic_t<u8>>(page_start).load());
-			}
-		});
+				for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
+				{
+					static_cast<void>(vm::_ref<atomic_t<u8>>(page_start).load());
+				}
+			});
 
 		const auto rsx_buffer = vm::get_super_ptr<const u8>(rsx_buffer_addr);
 		panel->cache.resize(std::max<usz>(panel->cache.size(), width * height * 4));
@@ -1063,13 +1058,13 @@ void rsx_debugger::GetBuffers() const
 	}
 
 	[[maybe_unused]] auto buffer_touch_3 = named_thread("RSX Buffer Touch"sv, [&]()
-	{
-		// Must touch every page
-		for (u32 i = texture_addr & -4096; i < texture_addr + src_mem_size; i += 4096)
 		{
-			static_cast<void>(vm::_ref<atomic_t<u8>>(i).load());
-		}
-	});
+			// Must touch every page
+			for (u32 i = texture_addr & -4096; i < texture_addr + src_mem_size; i += 4096)
+			{
+				static_cast<void>(vm::_ref<atomic_t<u8>>(i).load());
+			}
+		});
 
 	const auto rsx_buffer = vm::get_super_ptr<const u8>(texture_addr);
 	m_buffer_tex->cache.resize(std::max<usz>(m_buffer_tex->cache.size(), width * height * 16 + pitch));

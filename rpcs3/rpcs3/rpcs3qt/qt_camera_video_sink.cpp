@@ -8,7 +8,7 @@
 
 LOG_CHANNEL(camera_log, "Camera");
 
-qt_camera_video_sink::qt_camera_video_sink(bool front_facing, QObject *parent)
+qt_camera_video_sink::qt_camera_video_sink(bool front_facing, QObject* parent)
 	: QVideoSink(parent), m_front_facing(front_facing)
 {
 	connect(this, &QVideoSink::videoFrameChanged, this, &qt_camera_video_sink::present);
@@ -172,7 +172,7 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 			synchronizer.waitForFinished();
 			break;
 		}
-		//case CELL_CAMERA_YUV422:
+		// case CELL_CAMERA_YUV422:
 		case CELL_CAMERA_Y0_U_Y1_V:
 		case CELL_CAMERA_V_Y1_U_Y0:
 		{
@@ -183,9 +183,9 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 				const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
 
 				const int y0_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 0 : 3;
-				const int u_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 1 : 2;
+				const int u_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 1 : 2;
 				const int y1_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 2 : 1;
-				const int v_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
+				const int v_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
 
 				for (u32 y = y_begin; y < height && y < y_end; y++)
 				{
@@ -201,16 +201,16 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 						const float g2 = src[5];
 						const float b2 = src[6];
 
-						const int y0 =  (0.257f * r1) + (0.504f * g1) + (0.098f * b1) +  16.0f;
-						const int u  = -(0.148f * r1) - (0.291f * g1) + (0.439f * b1) + 128.0f;
-						const int v  =  (0.439f * r1) - (0.368f * g1) - (0.071f * b1) + 128.0f;
-						const int y1 =  (0.257f * r2) + (0.504f * g2) + (0.098f * b2) +  16.0f;
+						const int y0 = (0.257f * r1) + (0.504f * g1) + (0.098f * b1) + 16.0f;
+						const int u = -(0.148f * r1) - (0.291f * g1) + (0.439f * b1) + 128.0f;
+						const int v = (0.439f * r1) - (0.368f * g1) - (0.071f * b1) + 128.0f;
+						const int y1 = (0.257f * r2) + (0.504f * g2) + (0.098f * b2) + 16.0f;
 
 						const int yuv_index = x * yuv_bytes_per_pixel;
 						yuv_row_ptr[yuv_index + y0_offset] = static_cast<u8>(std::clamp(y0, 0, 255));
-						yuv_row_ptr[yuv_index + u_offset]  = static_cast<u8>(std::clamp( u, 0, 255));
+						yuv_row_ptr[yuv_index + u_offset] = static_cast<u8>(std::clamp(u, 0, 255));
 						yuv_row_ptr[yuv_index + y1_offset] = static_cast<u8>(std::clamp(y1, 0, 255));
-						yuv_row_ptr[yuv_index + v_offset]  = static_cast<u8>(std::clamp( v, 0, 255));
+						yuv_row_ptr[yuv_index + v_offset] = static_cast<u8>(std::clamp(v, 0, 255));
 					}
 				}
 			};

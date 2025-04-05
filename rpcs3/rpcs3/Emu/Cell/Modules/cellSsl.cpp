@@ -13,32 +13,32 @@
 
 LOG_CHANNEL(cellSsl);
 
-template<>
+template <>
 void fmt_class_string<CellSslError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SSL_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_SSL_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_SSL_ERROR_INITIALIZATION_FAILED);
-			STR_CASE(CELL_SSL_ERROR_NO_BUFFER);
-			STR_CASE(CELL_SSL_ERROR_INVALID_CERTIFICATE);
-			STR_CASE(CELL_SSL_ERROR_UNRETRIEVABLE);
-			STR_CASE(CELL_SSL_ERROR_INVALID_FORMAT);
-			STR_CASE(CELL_SSL_ERROR_NOT_FOUND);
-			STR_CASE(CELL_SSL_ERROR_INVALID_TIME);
-			STR_CASE(CELL_SSL_ERROR_INAVLID_NEGATIVE_TIME);
-			STR_CASE(CELL_SSL_ERROR_INCORRECT_TIME);
-			STR_CASE(CELL_SSL_ERROR_UNDEFINED_TIME_TYPE);
-			STR_CASE(CELL_SSL_ERROR_NO_MEMORY);
-			STR_CASE(CELL_SSL_ERROR_NO_STRING);
-			STR_CASE(CELL_SSL_ERROR_UNKNOWN_LOAD_CERT);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SSL_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_SSL_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_SSL_ERROR_INITIALIZATION_FAILED);
+				STR_CASE(CELL_SSL_ERROR_NO_BUFFER);
+				STR_CASE(CELL_SSL_ERROR_INVALID_CERTIFICATE);
+				STR_CASE(CELL_SSL_ERROR_UNRETRIEVABLE);
+				STR_CASE(CELL_SSL_ERROR_INVALID_FORMAT);
+				STR_CASE(CELL_SSL_ERROR_NOT_FOUND);
+				STR_CASE(CELL_SSL_ERROR_INVALID_TIME);
+				STR_CASE(CELL_SSL_ERROR_INAVLID_NEGATIVE_TIME);
+				STR_CASE(CELL_SSL_ERROR_INCORRECT_TIME);
+				STR_CASE(CELL_SSL_ERROR_UNDEFINED_TIME_TYPE);
+				STR_CASE(CELL_SSL_ERROR_NO_MEMORY);
+				STR_CASE(CELL_SSL_ERROR_NO_STRING);
+				STR_CASE(CELL_SSL_ERROR_UNKNOWN_LOAD_CERT);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellSslInit(vm::ptr<void> pool, u32 poolSize)
@@ -114,10 +114,10 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 		*required = 0;
 		for (uint i = 1; i <= flagBits.size(); i++)
 		{
-			if (!flagBits[i-1])
+			if (!flagBits[i - 1])
 				continue;
 			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
-			*required += ::size32(getCert(certPath, i, flagBits[BaltimoreCert-1]));
+			*required += ::size32(getCert(certPath, i, flagBits[BaltimoreCert - 1]));
 		}
 	}
 	else
@@ -125,10 +125,10 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 		std::string final;
 		for (uint i = 1; i <= flagBits.size(); i++)
 		{
-			if (!flagBits[i-1])
+			if (!flagBits[i - 1])
 				continue;
 			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
-			final.append(getCert(certPath, i, flagBits[BaltimoreCert-1]));
+			final.append(getCert(certPath, i, flagBits[BaltimoreCert - 1]));
 		}
 
 		memset(buffer.get_ptr(), '\0', size - 1);
@@ -590,7 +590,7 @@ error_code SSL_clear()
 	return CELL_OK;
 }
 
-error_code	SSL_do_handshake()
+error_code SSL_do_handshake()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
@@ -819,123 +819,123 @@ error_code TLSv1_client_method()
 }
 
 DECLARE(ppu_module_manager::cellSsl)("cellSsl", []()
-{
-	REG_FUNC(cellSsl, cellSslInit);
-	REG_FUNC(cellSsl, cellSslEnd);
-	REG_FUNC(cellSsl, cellSslGetMemoryInfo);
+	{
+		REG_FUNC(cellSsl, cellSslInit);
+		REG_FUNC(cellSsl, cellSslEnd);
+		REG_FUNC(cellSsl, cellSslGetMemoryInfo);
 
-	REG_FUNC(cellSsl, cellSslCertificateLoader);
+		REG_FUNC(cellSsl, cellSslCertificateLoader);
 
-	REG_FUNC(cellSsl, cellSslCertGetSerialNumber);
-	REG_FUNC(cellSsl, cellSslCertGetPublicKey);
-	REG_FUNC(cellSsl, cellSslCertGetRsaPublicKeyModulus);
-	REG_FUNC(cellSsl, cellSslCertGetRsaPublicKeyExponent);
-	REG_FUNC(cellSsl, cellSslCertGetNotBefore);
-	REG_FUNC(cellSsl, cellSslCertGetNotAfter);
-	REG_FUNC(cellSsl, cellSslCertGetSubjectName);
-	REG_FUNC(cellSsl, cellSslCertGetIssuerName);
-	REG_FUNC(cellSsl, cellSslCertGetNameEntryCount);
-	REG_FUNC(cellSsl, cellSslCertGetNameEntryInfo);
-	REG_FUNC(cellSsl, cellSslCertGetMd5Fingerprint);
+		REG_FUNC(cellSsl, cellSslCertGetSerialNumber);
+		REG_FUNC(cellSsl, cellSslCertGetPublicKey);
+		REG_FUNC(cellSsl, cellSslCertGetRsaPublicKeyModulus);
+		REG_FUNC(cellSsl, cellSslCertGetRsaPublicKeyExponent);
+		REG_FUNC(cellSsl, cellSslCertGetNotBefore);
+		REG_FUNC(cellSsl, cellSslCertGetNotAfter);
+		REG_FUNC(cellSsl, cellSslCertGetSubjectName);
+		REG_FUNC(cellSsl, cellSslCertGetIssuerName);
+		REG_FUNC(cellSsl, cellSslCertGetNameEntryCount);
+		REG_FUNC(cellSsl, cellSslCertGetNameEntryInfo);
+		REG_FUNC(cellSsl, cellSslCertGetMd5Fingerprint);
 
-	REG_FUNC(cellSsl, _cellSslConvertCipherId);
-	REG_FUNC(cellSsl, _cellSslConvertSslVersion);
-	REG_FUNC(cellSsl, _cellSslIsInitd);
-	REG_FUNC(cellSsl, _cellSslPemReadPrivateKey);
-	REG_FUNC(cellSsl, _cellSslPemReadX509);
+		REG_FUNC(cellSsl, _cellSslConvertCipherId);
+		REG_FUNC(cellSsl, _cellSslConvertSslVersion);
+		REG_FUNC(cellSsl, _cellSslIsInitd);
+		REG_FUNC(cellSsl, _cellSslPemReadPrivateKey);
+		REG_FUNC(cellSsl, _cellSslPemReadX509);
 
-	REG_FUNC(cellSsl, BER_read_item);
+		REG_FUNC(cellSsl, BER_read_item);
 
-	REG_FUNC(cellSsl, BIO_ctrl);
-	REG_FUNC(cellSsl, BIO_dump);
-	REG_FUNC(cellSsl, BIO_free);
-	REG_FUNC(cellSsl, BIO_get_cb_arg);
-	REG_FUNC(cellSsl, BIO_get_retry_reason);
-	REG_FUNC(cellSsl, BIO_new_mem);
-	REG_FUNC(cellSsl, BIO_new_socket);
-	REG_FUNC(cellSsl, BIO_printf);
-	REG_FUNC(cellSsl, BIO_ptr_ctrl);
-	REG_FUNC(cellSsl, BIO_set_cb_arg);
+		REG_FUNC(cellSsl, BIO_ctrl);
+		REG_FUNC(cellSsl, BIO_dump);
+		REG_FUNC(cellSsl, BIO_free);
+		REG_FUNC(cellSsl, BIO_get_cb_arg);
+		REG_FUNC(cellSsl, BIO_get_retry_reason);
+		REG_FUNC(cellSsl, BIO_new_mem);
+		REG_FUNC(cellSsl, BIO_new_socket);
+		REG_FUNC(cellSsl, BIO_printf);
+		REG_FUNC(cellSsl, BIO_ptr_ctrl);
+		REG_FUNC(cellSsl, BIO_set_cb_arg);
 
-	REG_FUNC(cellSsl, ERR_clear_error);
-	REG_FUNC(cellSsl, ERR_get_error);
-	REG_FUNC(cellSsl, ERR_error_string);
-	REG_FUNC(cellSsl, ERR_func_error_string);
-	REG_FUNC(cellSsl, ERR_peek_error);
+		REG_FUNC(cellSsl, ERR_clear_error);
+		REG_FUNC(cellSsl, ERR_get_error);
+		REG_FUNC(cellSsl, ERR_error_string);
+		REG_FUNC(cellSsl, ERR_func_error_string);
+		REG_FUNC(cellSsl, ERR_peek_error);
 
-	REG_FUNC(cellSsl, EVP_PKEY_free);
+		REG_FUNC(cellSsl, EVP_PKEY_free);
 
-	REG_FUNC(cellSsl, R_time);
-	REG_FUNC(cellSsl, R_time_cmp);
-	REG_FUNC(cellSsl, R_time_export);
-	REG_FUNC(cellSsl, R_time_free);
-	REG_FUNC(cellSsl, R_time_import);
-	REG_FUNC(cellSsl, R_time_new);
+		REG_FUNC(cellSsl, R_time);
+		REG_FUNC(cellSsl, R_time_cmp);
+		REG_FUNC(cellSsl, R_time_export);
+		REG_FUNC(cellSsl, R_time_free);
+		REG_FUNC(cellSsl, R_time_import);
+		REG_FUNC(cellSsl, R_time_new);
 
-	REG_FUNC(cellSsl, SSL_CIPHER_description);
-	REG_FUNC(cellSsl, SSL_CIPHER_get_bits);
-	REG_FUNC(cellSsl, SSL_CIPHER_get_id);
-	REG_FUNC(cellSsl, SSL_CIPHER_get_name);
-	REG_FUNC(cellSsl, SSL_CIPHER_get_version);
+		REG_FUNC(cellSsl, SSL_CIPHER_description);
+		REG_FUNC(cellSsl, SSL_CIPHER_get_bits);
+		REG_FUNC(cellSsl, SSL_CIPHER_get_id);
+		REG_FUNC(cellSsl, SSL_CIPHER_get_name);
+		REG_FUNC(cellSsl, SSL_CIPHER_get_version);
 
-	REG_FUNC(cellSsl, SSL_CTX_ctrl);
-	REG_FUNC(cellSsl, SSL_CTX_free);
-	REG_FUNC(cellSsl, SSL_CTX_new);
-	REG_FUNC(cellSsl, SSL_CTX_set_app_verify_cb);
-	REG_FUNC(cellSsl, SSL_CTX_set_info_cb);
-	REG_FUNC(cellSsl, SSL_CTX_set_options);
-	REG_FUNC(cellSsl, SSL_CTX_set_verify_mode);
-	REG_FUNC(cellSsl, SSL_CTX_use_certificate);
-	REG_FUNC(cellSsl, SSL_CTX_use_PrivateKey);
+		REG_FUNC(cellSsl, SSL_CTX_ctrl);
+		REG_FUNC(cellSsl, SSL_CTX_free);
+		REG_FUNC(cellSsl, SSL_CTX_new);
+		REG_FUNC(cellSsl, SSL_CTX_set_app_verify_cb);
+		REG_FUNC(cellSsl, SSL_CTX_set_info_cb);
+		REG_FUNC(cellSsl, SSL_CTX_set_options);
+		REG_FUNC(cellSsl, SSL_CTX_set_verify_mode);
+		REG_FUNC(cellSsl, SSL_CTX_use_certificate);
+		REG_FUNC(cellSsl, SSL_CTX_use_PrivateKey);
 
-	REG_FUNC(cellSsl, SSL_SESSION_free);
+		REG_FUNC(cellSsl, SSL_SESSION_free);
 
-	REG_FUNC(cellSsl, SSL_alert_desc_string_long);
-	REG_FUNC(cellSsl, SSL_alert_type_string_long);
-	REG_FUNC(cellSsl, SSL_clear);
-	REG_FUNC(cellSsl, SSL_do_handshake);
-	REG_FUNC(cellSsl, SSL_free);
-	REG_FUNC(cellSsl, SSL_get_current_cipher);
-	REG_FUNC(cellSsl, SSL_get_error);
-	REG_FUNC(cellSsl, SSL_get_rbio);
-	REG_FUNC(cellSsl, SSL_get_version);
-	REG_FUNC(cellSsl, SSL_new);
-	REG_FUNC(cellSsl, SSL_peek);
-	REG_FUNC(cellSsl, SSL_read);
-	REG_FUNC(cellSsl, SSL_set_bio);
-	REG_FUNC(cellSsl, SSL_set_connect_state);
-	REG_FUNC(cellSsl, SSL_set_session);
-	REG_FUNC(cellSsl, SSL_set_ssl_method);
-	REG_FUNC(cellSsl, SSL_shutdown);
-	REG_FUNC(cellSsl, SSL_state);
-	REG_FUNC(cellSsl, SSL_state_string_long);
-	REG_FUNC(cellSsl, SSL_version);
-	REG_FUNC(cellSsl, SSL_want);
-	REG_FUNC(cellSsl, SSL_write);
+		REG_FUNC(cellSsl, SSL_alert_desc_string_long);
+		REG_FUNC(cellSsl, SSL_alert_type_string_long);
+		REG_FUNC(cellSsl, SSL_clear);
+		REG_FUNC(cellSsl, SSL_do_handshake);
+		REG_FUNC(cellSsl, SSL_free);
+		REG_FUNC(cellSsl, SSL_get_current_cipher);
+		REG_FUNC(cellSsl, SSL_get_error);
+		REG_FUNC(cellSsl, SSL_get_rbio);
+		REG_FUNC(cellSsl, SSL_get_version);
+		REG_FUNC(cellSsl, SSL_new);
+		REG_FUNC(cellSsl, SSL_peek);
+		REG_FUNC(cellSsl, SSL_read);
+		REG_FUNC(cellSsl, SSL_set_bio);
+		REG_FUNC(cellSsl, SSL_set_connect_state);
+		REG_FUNC(cellSsl, SSL_set_session);
+		REG_FUNC(cellSsl, SSL_set_ssl_method);
+		REG_FUNC(cellSsl, SSL_shutdown);
+		REG_FUNC(cellSsl, SSL_state);
+		REG_FUNC(cellSsl, SSL_state_string_long);
+		REG_FUNC(cellSsl, SSL_version);
+		REG_FUNC(cellSsl, SSL_want);
+		REG_FUNC(cellSsl, SSL_write);
 
-	REG_FUNC(cellSsl, SSLCERT_free);
-	REG_FUNC(cellSsl, SSLCERT_from_binary);
+		REG_FUNC(cellSsl, SSLCERT_free);
+		REG_FUNC(cellSsl, SSLCERT_from_binary);
 
-	REG_FUNC(cellSsl, SSLCERT_check_private_key);
-	REG_FUNC(cellSsl, SSLCERT_get_basic_constraints_int);
-	REG_FUNC(cellSsl, SSLCERT_get_extension);
-	REG_FUNC(cellSsl, SSLCERT_get_issuer_name);
-	REG_FUNC(cellSsl, SSLCERT_get_notAfter);
-	REG_FUNC(cellSsl, SSLCERT_get_notBefore);
-	REG_FUNC(cellSsl, SSLCERT_get_pubkey);
-	REG_FUNC(cellSsl, SSLCERT_get_subject_name);
+		REG_FUNC(cellSsl, SSLCERT_check_private_key);
+		REG_FUNC(cellSsl, SSLCERT_get_basic_constraints_int);
+		REG_FUNC(cellSsl, SSLCERT_get_extension);
+		REG_FUNC(cellSsl, SSLCERT_get_issuer_name);
+		REG_FUNC(cellSsl, SSLCERT_get_notAfter);
+		REG_FUNC(cellSsl, SSLCERT_get_notBefore);
+		REG_FUNC(cellSsl, SSLCERT_get_pubkey);
+		REG_FUNC(cellSsl, SSLCERT_get_subject_name);
 
-	REG_FUNC(cellSsl, SSLCERT_NAME_cmp);
-	REG_FUNC(cellSsl, SSLCERT_NAME_ENTRY_get_info);
-	REG_FUNC(cellSsl, SSLCERT_NAME_get_entry);
-	REG_FUNC(cellSsl, SSLCERT_NAME_get_entry_count);
-	REG_FUNC(cellSsl, SSLCERT_NAME_oneline);
+		REG_FUNC(cellSsl, SSLCERT_NAME_cmp);
+		REG_FUNC(cellSsl, SSLCERT_NAME_ENTRY_get_info);
+		REG_FUNC(cellSsl, SSLCERT_NAME_get_entry);
+		REG_FUNC(cellSsl, SSLCERT_NAME_get_entry_count);
+		REG_FUNC(cellSsl, SSLCERT_NAME_oneline);
 
-	REG_FUNC(cellSsl, SSLCERT_OID_to_string);
+		REG_FUNC(cellSsl, SSLCERT_OID_to_string);
 
-	REG_FUNC(cellSsl, SSLCERT_verify);
+		REG_FUNC(cellSsl, SSLCERT_verify);
 
-	REG_FUNC(cellSsl, SSLv3_client_method);
+		REG_FUNC(cellSsl, SSLv3_client_method);
 
-	REG_FUNC(cellSsl, TLSv1_client_method);
-});
+		REG_FUNC(cellSsl, TLSv1_client_method);
+	});

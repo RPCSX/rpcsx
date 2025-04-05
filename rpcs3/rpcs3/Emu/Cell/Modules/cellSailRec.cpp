@@ -352,72 +352,72 @@ error_code cellSailComposerNotifySessionError()
 }
 
 DECLARE(ppu_module_manager::cellSailRec)("cellSailRec", []()
-{
-	static ppu_static_module cellMp4("cellMp4");
-	static ppu_static_module cellApostSrcMini("cellApostSrcMini");
+	{
+		static ppu_static_module cellMp4("cellMp4");
+		static ppu_static_module cellApostSrcMini("cellApostSrcMini");
 
-	REG_FUNC(cellSailRec, cellSailProfileSetEsAudioParameter);
-	REG_FUNC(cellSailRec, cellSailProfileSetEsVideoParameter);
-	REG_FUNC(cellSailRec, cellSailProfileSetStreamParameter);
+		REG_FUNC(cellSailRec, cellSailProfileSetEsAudioParameter);
+		REG_FUNC(cellSailRec, cellSailProfileSetEsVideoParameter);
+		REG_FUNC(cellSailRec, cellSailProfileSetStreamParameter);
 
-	REG_FUNC(cellSailRec, cellSailVideoConverterCanProcess);
-	REG_FUNC(cellSailRec, cellSailVideoConverterProcess);
-	REG_FUNC(cellSailRec, cellSailVideoConverterCanGetResult);
-	REG_FUNC(cellSailRec, cellSailVideoConverterGetResult);
+		REG_FUNC(cellSailRec, cellSailVideoConverterCanProcess);
+		REG_FUNC(cellSailRec, cellSailVideoConverterProcess);
+		REG_FUNC(cellSailRec, cellSailVideoConverterCanGetResult);
+		REG_FUNC(cellSailRec, cellSailVideoConverterGetResult);
 
-	REG_FUNC(cellSailRec, cellSailFeederAudioInitialize);
-	REG_FUNC(cellSailRec, cellSailFeederAudioFinalize);
-	REG_FUNC(cellSailRec, cellSailFeederAudioNotifyCallCompleted);
-	REG_FUNC(cellSailRec, cellSailFeederAudioNotifyFrameOut);
-	REG_FUNC(cellSailRec, cellSailFeederAudioNotifySessionEnd);
-	REG_FUNC(cellSailRec, cellSailFeederAudioNotifySessionError);
+		REG_FUNC(cellSailRec, cellSailFeederAudioInitialize);
+		REG_FUNC(cellSailRec, cellSailFeederAudioFinalize);
+		REG_FUNC(cellSailRec, cellSailFeederAudioNotifyCallCompleted);
+		REG_FUNC(cellSailRec, cellSailFeederAudioNotifyFrameOut);
+		REG_FUNC(cellSailRec, cellSailFeederAudioNotifySessionEnd);
+		REG_FUNC(cellSailRec, cellSailFeederAudioNotifySessionError);
 
-	REG_FUNC(cellSailRec, cellSailFeederVideoInitialize);
-	REG_FUNC(cellSailRec, cellSailFeederVideoFinalize);
-	REG_FUNC(cellSailRec, cellSailFeederVideoNotifyCallCompleted);
-	REG_FUNC(cellSailRec, cellSailFeederVideoNotifyFrameOut);
-	REG_FUNC(cellSailRec, cellSailFeederVideoNotifySessionEnd);
-	REG_FUNC(cellSailRec, cellSailFeederVideoNotifySessionError);
+		REG_FUNC(cellSailRec, cellSailFeederVideoInitialize);
+		REG_FUNC(cellSailRec, cellSailFeederVideoFinalize);
+		REG_FUNC(cellSailRec, cellSailFeederVideoNotifyCallCompleted);
+		REG_FUNC(cellSailRec, cellSailFeederVideoNotifyFrameOut);
+		REG_FUNC(cellSailRec, cellSailFeederVideoNotifySessionEnd);
+		REG_FUNC(cellSailRec, cellSailFeederVideoNotifySessionError);
 
-	REG_FUNC(cellSailRec, cellSailRecorderInitialize);
-	REG_FUNC(cellSailRec, cellSailRecorderFinalize);
-	REG_FUNC(cellSailRec, cellSailRecorderSetFeederAudio);
-	REG_FUNC(cellSailRec, cellSailRecorderSetFeederVideo);
-	REG_FUNC(cellSailRec, cellSailRecorderSetParameter);
-	REG_FUNC(cellSailRec, cellSailRecorderGetParameter);
-	REG_FUNC(cellSailRec, cellSailRecorderSubscribeEvent);
-	REG_FUNC(cellSailRec, cellSailRecorderUnsubscribeEvent);
-	REG_FUNC(cellSailRec, cellSailRecorderReplaceEventHandler);
-	REG_FUNC(cellSailRec, cellSailRecorderBoot);
-	REG_FUNC(cellSailRec, cellSailRecorderCreateProfile);
-	REG_FUNC(cellSailRec, cellSailRecorderDestroyProfile);
-	REG_FUNC(cellSailRec, cellSailRecorderCreateVideoConverter);
-	REG_FUNC(cellSailRec, cellSailRecorderDestroyVideoConverter);
-	REG_FUNC(cellSailRec, cellSailRecorderOpenStream);
-	REG_FUNC(cellSailRec, cellSailRecorderCloseStream);
-	REG_FUNC(cellSailRec, cellSailRecorderStart);
-	REG_FUNC(cellSailRec, cellSailRecorderStop);
-	REG_FUNC(cellSailRec, cellSailRecorderCancel);
-	REG_FUNC(cellSailRec, cellSailRecorderRegisterComposer);
-	REG_FUNC(cellSailRec, cellSailRecorderUnregisterComposer);
+		REG_FUNC(cellSailRec, cellSailRecorderInitialize);
+		REG_FUNC(cellSailRec, cellSailRecorderFinalize);
+		REG_FUNC(cellSailRec, cellSailRecorderSetFeederAudio);
+		REG_FUNC(cellSailRec, cellSailRecorderSetFeederVideo);
+		REG_FUNC(cellSailRec, cellSailRecorderSetParameter);
+		REG_FUNC(cellSailRec, cellSailRecorderGetParameter);
+		REG_FUNC(cellSailRec, cellSailRecorderSubscribeEvent);
+		REG_FUNC(cellSailRec, cellSailRecorderUnsubscribeEvent);
+		REG_FUNC(cellSailRec, cellSailRecorderReplaceEventHandler);
+		REG_FUNC(cellSailRec, cellSailRecorderBoot);
+		REG_FUNC(cellSailRec, cellSailRecorderCreateProfile);
+		REG_FUNC(cellSailRec, cellSailRecorderDestroyProfile);
+		REG_FUNC(cellSailRec, cellSailRecorderCreateVideoConverter);
+		REG_FUNC(cellSailRec, cellSailRecorderDestroyVideoConverter);
+		REG_FUNC(cellSailRec, cellSailRecorderOpenStream);
+		REG_FUNC(cellSailRec, cellSailRecorderCloseStream);
+		REG_FUNC(cellSailRec, cellSailRecorderStart);
+		REG_FUNC(cellSailRec, cellSailRecorderStop);
+		REG_FUNC(cellSailRec, cellSailRecorderCancel);
+		REG_FUNC(cellSailRec, cellSailRecorderRegisterComposer);
+		REG_FUNC(cellSailRec, cellSailRecorderUnregisterComposer);
 
-	REG_FUNC(cellSailRec, cellSailRecorderDumpImage);
+		REG_FUNC(cellSailRec, cellSailRecorderDumpImage);
 
-	REG_FUNC(cellSailRec, cellSailComposerInitialize);
-	REG_FUNC(cellSailRec, cellSailComposerFinalize);
-	REG_FUNC(cellSailRec, cellSailComposerGetStreamParameter);
-	REG_FUNC(cellSailRec, cellSailComposerGetEsAudioParameter);
-	REG_FUNC(cellSailRec, cellSailComposerGetEsUserParameter);
-	REG_FUNC(cellSailRec, cellSailComposerGetEsVideoParameter);
-	REG_FUNC(cellSailRec, cellSailComposerGetEsAudioAu);
-	REG_FUNC(cellSailRec, cellSailComposerGetEsUserAu);
-	REG_FUNC(cellSailRec, cellSailComposerGetEsVideoAu);
-	REG_FUNC(cellSailRec, cellSailComposerTryGetEsAudioAu);
-	REG_FUNC(cellSailRec, cellSailComposerTryGetEsUserAu);
-	REG_FUNC(cellSailRec, cellSailComposerTryGetEsVideoAu);
-	REG_FUNC(cellSailRec, cellSailComposerReleaseEsAudioAu);
-	REG_FUNC(cellSailRec, cellSailComposerReleaseEsUserAu);
-	REG_FUNC(cellSailRec, cellSailComposerReleaseEsVideoAu);
-	REG_FUNC(cellSailRec, cellSailComposerNotifyCallCompleted);
-	REG_FUNC(cellSailRec, cellSailComposerNotifySessionError);
-});
+		REG_FUNC(cellSailRec, cellSailComposerInitialize);
+		REG_FUNC(cellSailRec, cellSailComposerFinalize);
+		REG_FUNC(cellSailRec, cellSailComposerGetStreamParameter);
+		REG_FUNC(cellSailRec, cellSailComposerGetEsAudioParameter);
+		REG_FUNC(cellSailRec, cellSailComposerGetEsUserParameter);
+		REG_FUNC(cellSailRec, cellSailComposerGetEsVideoParameter);
+		REG_FUNC(cellSailRec, cellSailComposerGetEsAudioAu);
+		REG_FUNC(cellSailRec, cellSailComposerGetEsUserAu);
+		REG_FUNC(cellSailRec, cellSailComposerGetEsVideoAu);
+		REG_FUNC(cellSailRec, cellSailComposerTryGetEsAudioAu);
+		REG_FUNC(cellSailRec, cellSailComposerTryGetEsUserAu);
+		REG_FUNC(cellSailRec, cellSailComposerTryGetEsVideoAu);
+		REG_FUNC(cellSailRec, cellSailComposerReleaseEsAudioAu);
+		REG_FUNC(cellSailRec, cellSailComposerReleaseEsUserAu);
+		REG_FUNC(cellSailRec, cellSailComposerReleaseEsVideoAu);
+		REG_FUNC(cellSailRec, cellSailComposerNotifyCallCompleted);
+		REG_FUNC(cellSailRec, cellSailComposerNotifySessionError);
+	});

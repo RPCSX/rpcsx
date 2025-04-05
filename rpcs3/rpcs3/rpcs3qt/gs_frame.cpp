@@ -34,11 +34,11 @@
 #ifdef _WIN32
 #include <windows.h>
 #elif defined(__APPLE__)
-//nothing
+// nothing
 #else
 #ifdef HAVE_WAYLAND
 #include <QGuiApplication>
-#include <qpa/qplatformnativeinterface.h>
+#include <QtGui/6.8.3/QtGui/qpa/qplatformnativeinterface.h>
 #endif
 #ifdef HAVE_X11
 #include <X11/Xlib.h>
@@ -62,11 +62,7 @@ namespace pad
 }
 
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
-	: QWindow()
-	, m_initial_geometry(geometry)
-	, m_gui_settings(std::move(gui_settings))
-	, m_start_games_fullscreen(force_fullscreen)
-	, m_renderer(g_cfg.video.renderer)
+	: QWindow(), m_initial_geometry(geometry), m_gui_settings(std::move(gui_settings)), m_start_games_fullscreen(force_fullscreen), m_renderer(g_cfg.video.renderer)
 {
 	m_window_title = Emu.GetFormattedTitle(0);
 
@@ -123,16 +119,16 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
-	{
-		handle_cursor(visibility, true, false, true);
-	});
+		{
+			handle_cursor(visibility, true, false, true);
+		});
 
 	// Change cursor when this window gets or loses focus.
 	connect(this, &QWindow::activeChanged, this, [this]()
-	{
-		g_game_window_focused = isActive();
-		handle_cursor(visibility(), false, true, true);
-	});
+		{
+			g_game_window_focused = isActive();
+			handle_cursor(visibility(), false, true, true);
+		});
 
 	// Configure the mouse hide on idle timer
 	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::mouse_hide_timeout);
@@ -168,7 +164,7 @@ void gs_frame::load_gui_settings()
 	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
 	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
-	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
+	m_lock_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
 	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
@@ -195,12 +191,12 @@ void gs_frame::update_shortcuts()
 	}
 }
 
-void gs_frame::paintEvent(QPaintEvent *event)
+void gs_frame::paintEvent(QPaintEvent* event)
 {
 	Q_UNUSED(event)
 }
 
-void gs_frame::showEvent(QShowEvent *event)
+void gs_frame::showEvent(QShowEvent* event)
 {
 	// We have to calculate new window positions, since the frame is only known once the window was created.
 	// We will try to find the originally requested dimensions if possible by moving the frame.
@@ -210,8 +206,8 @@ void gs_frame::showEvent(QShowEvent *event)
 	//        All of these values, including the screen geometry, can also be negative numbers.
 
 	const QRect available_geometry = screen()->availableGeometry(); // The available screen geometry
-	const QRect inner_geometry = geometry();      // The current inner geometry
-	const QRect outer_geometry = frameGeometry(); // The current outer geometry
+	const QRect inner_geometry = geometry();                        // The current inner geometry
+	const QRect outer_geometry = frameGeometry();                   // The current outer geometry
 
 	// Calculate the left and top frame borders (this will include window handles)
 	const int left_border = inner_geometry.left() - outer_geometry.left();
@@ -219,15 +215,15 @@ void gs_frame::showEvent(QShowEvent *event)
 
 	// Calculate the initially expected frame origin
 	const QPoint expected_pos(m_initial_geometry.left() - left_border,
-	                          m_initial_geometry.top() - top_border);
+		m_initial_geometry.top() - top_border);
 
 	// Make sure that the expected position is inside the screen (check left and top borders)
 	QPoint pos(std::max(expected_pos.x(), available_geometry.left()),
-	           std::max(expected_pos.y(), available_geometry.top()));
+		std::max(expected_pos.y(), available_geometry.top()));
 
 	// Find the maximum position that still ensures that the frame is completely visible inside the screen (check right and bottom borders)
 	QPoint max_pos(available_geometry.left() + available_geometry.width() - frameGeometry().width(),
-	               available_geometry.top() + available_geometry.height() - frameGeometry().height());
+		available_geometry.top() + available_geometry.height() - frameGeometry().height());
 
 	// Make sure that the "maximum" position is inside the screen (check left and top borders)
 	max_pos.setX(std::max(max_pos.x(), available_geometry.left()));
@@ -384,24 +380,24 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 void gs_frame::toggle_fullscreen()
 {
 	Emu.CallFromMainThread([this]()
-	{
-		if (visibility() == FullScreen)
 		{
-			// Change to the last recorded visibility. Sanitize it just in case.
-			if (m_last_visibility != Visibility::Maximized && m_last_visibility != Visibility::Windowed)
+			if (visibility() == FullScreen)
 			{
-				m_last_visibility = Visibility::Windowed;
+				// Change to the last recorded visibility. Sanitize it just in case.
+				if (m_last_visibility != Visibility::Maximized && m_last_visibility != Visibility::Windowed)
+				{
+					m_last_visibility = Visibility::Windowed;
+				}
+				setVisibility(m_last_visibility);
 			}
-			setVisibility(m_last_visibility);
-		}
-		else
-		{
-			// Backup visibility for exiting fullscreen mode later. Don't do this in the visibilityChanged slot,
-			// since entering fullscreen from maximized will first change the visibility to windowed.
-			m_last_visibility = visibility();
-			setVisibility(FullScreen);
-		}
-	});
+			else
+			{
+				// Backup visibility for exiting fullscreen mode later. Don't do this in the visibilityChanged slot,
+			    // since entering fullscreen from maximized will first change the visibility to windowed.
+				m_last_visibility = visibility();
+				setVisibility(FullScreen);
+			}
+		});
 }
 
 void gs_frame::toggle_recording()
@@ -608,24 +604,27 @@ void gs_frame::close()
 	}
 
 	Emu.CallFromMainThread([this]()
-	{
-		// Hide window if necessary
-		hide_on_close();
-
-		if (!Emu.IsStopped())
 		{
-			// Notify progress dialog cancellation
-			g_system_progress_canceled = true;
+			// Hide window if necessary
+			hide_on_close();
 
-			// Blocking shutdown request. Obsolete, but I'm keeping it here as last resort.
-			Emu.after_kill_callback = [this](){ deleteLater(); };
-			Emu.GracefulShutdown(true);
-		}
-		else
-		{
-			deleteLater();
-		}
-	});
+			if (!Emu.IsStopped())
+			{
+				// Notify progress dialog cancellation
+				g_system_progress_canceled = true;
+
+				// Blocking shutdown request. Obsolete, but I'm keeping it here as last resort.
+				Emu.after_kill_callback = [this]()
+				{
+					deleteLater();
+				};
+				Emu.GracefulShutdown(true);
+			}
+			else
+			{
+				deleteLater();
+			}
+		});
 }
 
 void gs_frame::reset()
@@ -639,28 +638,31 @@ bool gs_frame::shown()
 
 void gs_frame::hide()
 {
-	Emu.CallFromMainThread([this]() { QWindow::hide(); });
+	Emu.CallFromMainThread([this]()
+		{
+			QWindow::hide();
+		});
 }
 
 void gs_frame::show()
 {
 	Emu.CallFromMainThread([this]()
-	{
-		QWindow::show();
+		{
+			QWindow::show();
 
-		if (g_cfg.misc.start_fullscreen || m_start_games_fullscreen)
-		{
-			setVisibility(FullScreen);
-		}
-		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<Visibility>())
-		{
-			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
-			if (const Visibility visibility = var.value<Visibility>(); visibility != Visibility::Hidden)
+			if (g_cfg.misc.start_fullscreen || m_start_games_fullscreen)
 			{
-				setVisibility(visibility);
+				setVisibility(FullScreen);
 			}
-		}
-	});
+			else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<Visibility>())
+			{
+				// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
+				if (const Visibility visibility = var.value<Visibility>(); visibility != Visibility::Hidden)
+				{
+					setVisibility(visibility);
+				}
+			}
+		});
 }
 
 display_handle_t gs_frame::handle() const
@@ -668,13 +670,13 @@ display_handle_t gs_frame::handle() const
 #ifdef _WIN32
 	return reinterpret_cast<HWND>(this->winId());
 #elif defined(__APPLE__)
-	return reinterpret_cast<void*>(this->winId()); //NSView
+	return reinterpret_cast<void*>(this->winId()); // NSView
 #else
 #ifdef HAVE_WAYLAND
-	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
-	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
+	QPlatformNativeInterface* native = QGuiApplication::platformNativeInterface();
+	struct wl_display* wl_dpy = static_cast<struct wl_display*>(
 		native->nativeResourceForWindow("display", NULL));
-	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
+	struct wl_surface* wl_surf = static_cast<struct wl_surface*>(
 		native->nativeResourceForWindow("surface", const_cast<QWindow*>(static_cast<const QWindow*>(this))));
 	if (wl_dpy != nullptr && wl_surf != nullptr)
 	{
@@ -687,7 +689,7 @@ display_handle_t gs_frame::handle() const
 		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
 	}
 #else
-		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
+	fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
 #endif
 #endif
 }
@@ -736,14 +738,14 @@ f64 gs_frame::client_display_rate()
 	f64 rate = 20.; // Minimum is 20
 
 	Emu.BlockingCallFromMainThread([this, &rate]()
-	{
-		const QList<QScreen*> screens = QGuiApplication::screens();
-
-		for (int i = 0; i < screens.count(); i++)
 		{
-			rate = std::fmax(rate, ::at32(screens, i)->refreshRate());
-		}
-	});
+			const QList<QScreen*> screens = QGuiApplication::screens();
+
+			for (int i = 0; i < screens.count(); i++)
+			{
+				rate = std::fmax(rate, ::at32(screens, i)->refreshRate());
+			}
+		});
 
 	return rate;
 }
@@ -771,9 +773,9 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 			m_window_title = new_title;
 
 			Emu.CallFromMainThread([this, title = std::move(new_title)]()
-			{
-				setTitle(QString::fromStdString(title));
-			});
+				{
+					setTitle(QString::fromStdString(title));
+				});
 		}
 
 		m_frames = 0;
@@ -783,9 +785,9 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 	if (g_user_asked_for_recording.exchange(false))
 	{
 		Emu.CallFromMainThread([this]()
-		{
-			toggle_recording();
-		});
+			{
+				toggle_recording();
+			});
 	}
 }
 
@@ -840,7 +842,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 
 			std::vector<u8> sshot_data_alpha(sshot_data.size());
 			const u32* sshot_ptr = reinterpret_cast<const u32*>(sshot_data.data());
-			u32* alpha_ptr       = reinterpret_cast<u32*>(sshot_data_alpha.data());
+			u32* alpha_ptr = reinterpret_cast<u32*>(sshot_data_alpha.data());
 
 			if (is_bgra) [[likely]]
 			{
@@ -867,7 +869,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 			struct scoped_png_ptrs
 			{
 				png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-				png_infop info_ptr    = png_create_info_struct(write_ptr);
+				png_infop info_ptr = png_create_info_struct(write_ptr);
 
 				~scoped_png_ptrs()
 				{
@@ -879,46 +881,46 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 			png_text text[6] = {};
 			int num_text = 0;
 
-			const QDateTime date_time       = QDateTime::currentDateTime();
+			const QDateTime date_time = QDateTime::currentDateTime();
 			const std::string creation_time = date_time.toString("yyyy:MM:dd hh:mm:ss").toStdString();
-			const std::string photo_title   = manager.get_photo_title();
-			const std::string game_title    = manager.get_game_title();
-			const std::string game_comment  = manager.get_game_comment();
-			const std::string& title_id     = Emu.GetTitleID();
+			const std::string photo_title = manager.get_photo_title();
+			const std::string game_title = manager.get_game_title();
+			const std::string game_comment = manager.get_game_comment();
+			const std::string& title_id = Emu.GetTitleID();
 
 			// Write tEXt chunk
 			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key         = const_cast<char*>("Creation Time");
-			text[num_text].text        = const_cast<char*>(creation_time.c_str());
+			text[num_text].key = const_cast<char*>("Creation Time");
+			text[num_text].text = const_cast<char*>(creation_time.c_str());
 			++num_text;
 			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key         = const_cast<char*>("Source");
-			text[num_text].text        = const_cast<char*>("RPCS3"); // Originally PlayStation(R)3
+			text[num_text].key = const_cast<char*>("Source");
+			text[num_text].text = const_cast<char*>("RPCS3"); // Originally PlayStation(R)3
 			++num_text;
 			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
-			text[num_text].key         = const_cast<char*>("Title ID");
-			text[num_text].text        = const_cast<char*>(title_id.c_str());
+			text[num_text].key = const_cast<char*>("Title ID");
+			text[num_text].text = const_cast<char*>(title_id.c_str());
 			++num_text;
 
 			// Write tTXt chunk (they probably meant zTXt)
 			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
-			text[num_text].key         = const_cast<char*>("Title");
-			text[num_text].text        = const_cast<char*>(photo_title.c_str());
+			text[num_text].key = const_cast<char*>("Title");
+			text[num_text].text = const_cast<char*>(photo_title.c_str());
 			++num_text;
 			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
-			text[num_text].key         = const_cast<char*>("Game Title");
-			text[num_text].text        = const_cast<char*>(game_title.c_str());
+			text[num_text].key = const_cast<char*>("Game Title");
+			text[num_text].text = const_cast<char*>(game_title.c_str());
 			++num_text;
 			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
-			text[num_text].key         = const_cast<char*>("Comment");
-			text[num_text].text        = const_cast<char*>(game_comment.c_str());
+			text[num_text].key = const_cast<char*>("Comment");
+			text[num_text].text = const_cast<char*>(game_comment.c_str());
 
 			// Create image from data
 			QImage img(sshot_data_alpha.data(), sshot_width, sshot_height, sshot_width * 4, QImage::Format_RGBA8888);
 
 			// Scale image if necessary
 			const auto& avconf = g_fxo->get<rsx::avconf>();
-			auto new_size = avconf.aspect_convert_dimensions(size2u{ u32(img.width()), u32(img.height()) });
+			auto new_size = avconf.aspect_convert_dimensions(size2u{u32(img.width()), u32(img.height())});
 
 			if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 			{
@@ -943,7 +945,8 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					{
 						std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
 						p->insert(p->end(), data, data + length);
-					}, nullptr);
+					},
+					nullptr);
 				png_write_png(ptrs.write_ptr, ptrs.info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
 			};
 
@@ -968,10 +971,10 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 
 					// Games choose the overlay file and the offset based on the current video resolution.
-					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
+				    // We need to scale the overlay if our resolution scaling causes the image to have a different size.
 
 					// Scale the resolution first (as seen before with the image)
-					new_size = avconf.aspect_convert_dimensions(size2u{ avconf.resolution_x, avconf.resolution_y });
+					new_size = avconf.aspect_convert_dimensions(size2u{avconf.resolution_x, avconf.resolution_y});
 
 					if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 					{
@@ -990,9 +993,9 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 
 					if (manager.overlay_offset_x < static_cast<s64>(img.width()) &&
-					    manager.overlay_offset_y < static_cast<s64>(img.height()) &&
-					    manager.overlay_offset_x + overlay_img.width() > 0 &&
-					    manager.overlay_offset_y + overlay_img.height() > 0)
+						manager.overlay_offset_y < static_cast<s64>(img.height()) &&
+						manager.overlay_offset_x + overlay_img.width() > 0 &&
+						manager.overlay_offset_y + overlay_img.height() > 0)
 					{
 						QImage screenshot_img(rows[0], img.width(), img.height(), QImage::Format_RGBA8888);
 						QPainter painter(&screenshot_img);
@@ -1006,7 +1009,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 				}
 
 				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
-				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
+				const std::string cell_sshot_dir = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
 
@@ -1032,16 +1035,16 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 
 			// Play a sound
 			Emu.CallFromMainThread([]()
-			{
-				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					Emu.GetCallbacks().play_sound(sound_path);
-				}
-				else
-				{
-					QApplication::beep();
-				}
-			});
+					if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
+					{
+						Emu.GetCallbacks().play_sound(sound_path);
+					}
+					else
+					{
+						QApplication::beep();
+					}
+				});
 
 			ensure(filename.starts_with(fs::get_config_dir()));
 			const std::string shortpath = filename.substr(fs::get_config_dir().size() - 1); // -1 for /

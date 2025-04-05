@@ -34,7 +34,8 @@ static orbis::ErrorCode blockpool_ioctl(orbis::File *file,
     auto dmem = orbis::g_context.dmemDevice.rawStaticCast<DmemDevice>();
     std::lock_guard lock(dmem->mtx);
     std::uint64_t start = args->searchStart;
-    ORBIS_RET_ON_ERROR(dmem->allocate(&start, args->searchEnd, args->len, 1, args->flags));
+    ORBIS_RET_ON_ERROR(
+        dmem->allocate(&start, args->searchEnd, args->len, 1, args->flags));
 
     blockPool->pool.map(start, start + args->len);
     return {};
@@ -64,12 +65,13 @@ static orbis::ErrorCode blockpool_mmap(orbis::File *file, void **address,
   }
 
   auto dmem = orbis::g_context.dmemDevice.rawStaticCast<DmemDevice>();
-  auto mapped = reinterpret_cast<std::byte *>(vm::map(*address, size, prot, flags, vm::kMapInternalReserveOnly, blockPool));
+  auto mapped = reinterpret_cast<std::byte *>(vm::map(
+      *address, size, prot, flags, vm::kMapInternalReserveOnly, blockPool));
 
   if (mapped == MAP_FAILED) {
     return orbis::ErrorCode::NOMEM;
   }
-  
+
   auto result = mapped;
 
   flags |= vm::kMapFlagFixed;
@@ -78,8 +80,10 @@ static orbis::ErrorCode blockpool_mmap(orbis::File *file, void **address,
     auto entry = *blockPool->pool.begin();
     auto blockSize = std::min(entry.endAddress - entry.beginAddress, size);
     void *mapAddress = mapped;
-    ORBIS_LOG_FATAL("blockpool mmap", mapAddress, blockSize, entry.beginAddress, blockSize);
-    ORBIS_RET_ON_ERROR(dmem->mmap(&mapAddress, blockSize, prot, flags, entry.beginAddress));
+    ORBIS_LOG_FATAL("blockpool mmap", mapAddress, blockSize, entry.beginAddress,
+                    blockSize);
+    ORBIS_RET_ON_ERROR(
+        dmem->mmap(&mapAddress, blockSize, prot, flags, entry.beginAddress));
 
     mapped += blockSize;
     size -= blockSize;

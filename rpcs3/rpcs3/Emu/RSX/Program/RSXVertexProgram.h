@@ -72,33 +72,33 @@ union D0
 
 	struct
 	{
-		u32 addr_swz             : 2;
-		u32 mask_w               : 2;
-		u32 mask_z               : 2;
-		u32 mask_y               : 2;
-		u32 mask_x               : 2;
-		u32 cond                 : 3;
-		u32 cond_test_enable     : 1;
+		u32 addr_swz : 2;
+		u32 mask_w : 2;
+		u32 mask_z : 2;
+		u32 mask_y : 2;
+		u32 mask_x : 2;
+		u32 cond : 3;
+		u32 cond_test_enable : 1;
 		u32 cond_update_enable_0 : 1;
-		u32 dst_tmp              : 6;
-		u32 src0_abs             : 1;
-		u32 src1_abs             : 1;
-		u32 src2_abs             : 1;
-		u32 addr_reg_sel_1       : 1;
-		u32 cond_reg_sel_1       : 1;
-		u32 staturate            : 1;
-		u32 index_input          : 1;
-		u32                      : 1;
+		u32 dst_tmp : 6;
+		u32 src0_abs : 1;
+		u32 src1_abs : 1;
+		u32 src2_abs : 1;
+		u32 addr_reg_sel_1 : 1;
+		u32 cond_reg_sel_1 : 1;
+		u32 staturate : 1;
+		u32 index_input : 1;
+		u32 : 1;
 		u32 cond_update_enable_1 : 1;
-		u32 vec_result           : 1;
-		u32                      : 1;
+		u32 vec_result : 1;
+		u32 : 1;
 	};
 
 	struct
 	{
-		u32         : 23;
+		u32 : 23;
 		u32 iaddrh2 : 1;
-		u32         : 8;
+		u32 : 8;
 	};
 };
 
@@ -108,9 +108,9 @@ union D1
 
 	struct
 	{
-		u32 src0h      : 8;
-		u32 input_src  : 4;
-		u32 const_src  : 10;
+		u32 src0h : 8;
+		u32 input_src : 4;
+		u32 const_src : 10;
 		u32 vec_opcode : 5;
 		u32 sca_opcode : 5;
 	};
@@ -122,20 +122,20 @@ union D2
 
 	struct
 	{
-		u32 src2h  : 6;
-		u32 src1   : 17;
-		u32 src0l  : 9;
+		u32 src2h : 6;
+		u32 src1 : 17;
+		u32 src0l : 9;
 	};
 	struct
 	{
 		u32 iaddrh : 6;
-		u32        : 26;
+		u32 : 26;
 	};
 	struct
 	{
-		u32         : 8;
-		u32 tex_num : 2;	// Actual field may be 4 bits wide, but we only have 4 TIUs
-		u32         : 22;
+		u32 : 8;
+		u32 tex_num : 2; // Actual field may be 4 bits wide, but we only have 4 TIUs
+		u32 : 22;
 	};
 };
 
@@ -145,10 +145,10 @@ union D3
 
 	struct
 	{
-		u32 end             : 1;
-		u32 index_const     : 1;
-		u32 dst             : 5;
-		u32 sca_dst_tmp     : 6;
+		u32 end : 1;
+		u32 index_const : 1;
+		u32 dst : 5;
+		u32 sca_dst_tmp : 6;
 		u32 vec_writemask_w : 1;
 		u32 vec_writemask_z : 1;
 		u32 vec_writemask_y : 1;
@@ -157,15 +157,15 @@ union D3
 		u32 sca_writemask_z : 1;
 		u32 sca_writemask_y : 1;
 		u32 sca_writemask_x : 1;
-		u32 src2l           : 11;
+		u32 src2l : 11;
 	};
 
 	struct
 	{
-		u32                 : 23;
-		u32 branch_index	: 5;	//Index into transform_program_branch_bits [x]
-		u32 brb_cond_true	: 1;	//If set, branch is taken if (b[x]) else if (!b[x])
-		u32 iaddrl          : 3;
+		u32 : 23;
+		u32 branch_index : 5;  // Index into transform_program_branch_bits [x]
+		u32 brb_cond_true : 1; // If set, branch is taken if (b[x]) else if (!b[x])
+		u32 iaddrl : 3;
 	};
 };
 
@@ -183,7 +183,7 @@ union SRC
 
 		struct
 		{
-			u32 src1  : 17;
+			u32 src1 : 17;
 		};
 
 		struct
@@ -196,28 +196,26 @@ union SRC
 	struct
 	{
 		u32 reg_type : 2;
-		u32 tmp_src  : 6;
-		u32 swz_w    : 2;
-		u32 swz_z    : 2;
-		u32 swz_y    : 2;
-		u32 swz_x    : 2;
-		u32 neg      : 1;
+		u32 tmp_src : 6;
+		u32 swz_w : 2;
+		u32 swz_z : 2;
+		u32 swz_y : 2;
+		u32 swz_x : 2;
+		u32 neg : 1;
 	};
 };
 
 static const std::string rsx_vp_sca_op_names[] =
-{
-	"NOP", "MOV", "RCP", "RCC", "RSQ", "EXP", "LOG",
-	"LIT", "BRA", "BRI", "CAL", "CLI", "RET", "LG2",
-	"EX2", "SIN", "COS", "BRB", "CLB", "PSH", "POP"
-};
+	{
+		"NOP", "MOV", "RCP", "RCC", "RSQ", "EXP", "LOG",
+		"LIT", "BRA", "BRI", "CAL", "CLI", "RET", "LG2",
+		"EX2", "SIN", "COS", "BRB", "CLB", "PSH", "POP"};
 
 static const std::string rsx_vp_vec_op_names[] =
-{
-	"NOP", "MOV", "MUL", "ADD", "MAD", "DP3", "DPH", "DP4",
-	"DST", "MIN", "MAX", "SLT", "SGE", "ARL", "FRC", "FLR",
-	"SEQ", "SFL", "SGT", "SLE", "SNE", "STR", "SSG", "NULL", "NULL", "TXL"
-};
+	{
+		"NOP", "MOV", "MUL", "ADD", "MAD", "DP3", "DPH", "DP4",
+		"DST", "MIN", "MAX", "SLT", "SGE", "ARL", "FRC", "FLR",
+		"SEQ", "SFL", "SGT", "SLE", "SNE", "STR", "SSG", "NULL", "NULL", "TXL"};
 
 struct RSXVertexProgram
 {

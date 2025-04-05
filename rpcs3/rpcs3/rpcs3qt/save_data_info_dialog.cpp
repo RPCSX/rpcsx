@@ -6,15 +6,14 @@
 #include "Emu/System.h"
 
 save_data_info_dialog::save_data_info_dialog(SaveDataEntry save, QWidget* parent)
-	: QDialog(parent)
-	, m_entry(std::move(save))
+	: QDialog(parent), m_entry(std::move(save))
 {
 	setWindowTitle(tr("Save Data Information"));
 
 	// Table
 	m_list = new QTableWidget(this);
 
-	//m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
+	// m_list->setItemDelegate(new table_item_delegate(this)); // to get rid of item selection rectangles include "table_item_delegate.h"
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows); // enable to only select whole rows instead of items
 	m_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_list->setColumnCount(2);
@@ -26,7 +25,7 @@ save_data_info_dialog::save_data_info_dialog(SaveDataEntry save, QWidget* parent
 
 	// Button Layout
 	QHBoxLayout* hbox_actions = new QHBoxLayout();
-	hbox_actions->addStretch();	//Add a stretch to make Close on the Right-Down corner of this dialog.
+	hbox_actions->addStretch(); // Add a stretch to make Close on the Right-Down corner of this dialog.
 	hbox_actions->addWidget(close_button);
 
 	// Main Layout
@@ -41,24 +40,22 @@ save_data_info_dialog::save_data_info_dialog(SaveDataEntry save, QWidget* parent
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	const QSize table_size
-	(
+	const QSize table_size(
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
-		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2
-	);
+		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
 
 	// no minimum size needed because we always have same table size and row count
 	resize(sizeHint() - m_list->sizeHint() + table_size);
 }
 
-//This is intended to write the information of save data to QTableView.
+// This is intended to write the information of save data to QTableView.
 void save_data_info_dialog::UpdateData()
 {
 	m_list->clearContents();
 	const int num_entries = 4; // set this to number of members in struct
 	m_list->setRowCount(num_entries);
 
-	//Maybe there should be more details of save data.
+	// Maybe there should be more details of save data.
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
 	m_list->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(Emu.GetUsr())));
 

@@ -62,131 +62,139 @@ namespace vm
 			return get_ref();
 		}
 
-		T& operator =(const _ref_base& right)
+		T& operator=(const _ref_base& right)
 		{
 			return get_ref() = right.get_ref();
 		}
 
-		T& operator =(const std::common_type_t<T>& right) const
+		T& operator=(const std::common_type_t<T>& right) const
 		{
 			return get_ref() = right;
 		}
 
-		decltype(auto) operator ++(int) const
+		decltype(auto) operator++(int) const
 		{
 			return get_ref()++;
 		}
 
-		decltype(auto) operator ++() const
+		decltype(auto) operator++() const
 		{
 			return ++get_ref();
 		}
 
-		decltype(auto) operator --(int) const
+		decltype(auto) operator--(int) const
 		{
 			return get_ref()--;
 		}
 
-		decltype(auto) operator --() const
+		decltype(auto) operator--() const
 		{
 			return --get_ref();
 		}
 
-		template<typename T2>
-		decltype(auto) operator +=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator+=(const T2& right)
 		{
 			return get_ref() += right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator -=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator-=(const T2& right)
 		{
 			return get_ref() -= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator *=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator*=(const T2& right)
 		{
 			return get_ref() *= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator /=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator/=(const T2& right)
 		{
 			return get_ref() /= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator %=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator%=(const T2& right)
 		{
 			return get_ref() %= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator &=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator&=(const T2& right)
 		{
 			return get_ref() &= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator |=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator|=(const T2& right)
 		{
 			return get_ref() |= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator ^=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator^=(const T2& right)
 		{
 			return get_ref() ^= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator <<=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator<<=(const T2& right)
 		{
 			return get_ref() <<= right;
 		}
 
-		template<typename T2>
-		decltype(auto) operator >>=(const T2& right)
+		template <typename T2>
+		decltype(auto) operator>>=(const T2& right)
 		{
 			return get_ref() >>= right;
 		}
 	};
 
 	// Native endianness reference to LE data
-	template<typename T, typename AT = u32> using refl = _ref_base<to_le_t<T>, AT>;
+	template <typename T, typename AT = u32>
+	using refl = _ref_base<to_le_t<T>, AT>;
 
 	// Native endianness reference to BE data
-	template<typename T, typename AT = u32> using refb = _ref_base<to_be_t<T>, AT>;
+	template <typename T, typename AT = u32>
+	using refb = _ref_base<to_be_t<T>, AT>;
 
 	// BE reference to LE data
-	template<typename T, typename AT = u32> using brefl = _ref_base<to_le_t<T>, to_be_t<AT>>;
+	template <typename T, typename AT = u32>
+	using brefl = _ref_base<to_le_t<T>, to_be_t<AT>>;
 
 	// BE reference to BE data
-	template<typename T, typename AT = u32> using brefb = _ref_base<to_be_t<T>, to_be_t<AT>>;
+	template <typename T, typename AT = u32>
+	using brefb = _ref_base<to_be_t<T>, to_be_t<AT>>;
 
 	// LE reference to LE data
-	template<typename T, typename AT = u32> using lrefl = _ref_base<to_le_t<T>, to_le_t<AT>>;
+	template <typename T, typename AT = u32>
+	using lrefl = _ref_base<to_le_t<T>, to_le_t<AT>>;
 
 	// LE reference to BE data
-	template<typename T, typename AT = u32> using lrefb = _ref_base<to_be_t<T>, to_le_t<AT>>;
+	template <typename T, typename AT = u32>
+	using lrefb = _ref_base<to_be_t<T>, to_le_t<AT>>;
 
 	inline namespace ps3_
 	{
 		// default reference for PS3 HLE functions (Native endianness reference to BE data)
-		template<typename T, typename AT = u32> using ref = refb<T, AT>;
+		template <typename T, typename AT = u32>
+		using ref = refb<T, AT>;
 
 		// default reference for PS3 HLE structures (BE reference to BE data)
-		template<typename T, typename AT = u32> using bref = brefb<T, AT>;
-	}
-}
+		template <typename T, typename AT = u32>
+		using bref = brefb<T, AT>;
+	} // namespace ps3_
+} // namespace vm
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
 
 // Change AT endianness to BE/LE
-template<typename T, typename AT, bool Se>
+template <typename T, typename AT, bool Se>
 struct to_se<vm::_ref_base<T, AT>, Se>
 {
 	using type = vm::_ref_base<T, typename to_se<AT, Se>::type>;

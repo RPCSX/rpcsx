@@ -25,7 +25,7 @@ namespace vk
 			dim_limit = (info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
 			break;
 		case VK_IMAGE_TYPE_3D:
-			longest_dim = std::max({ info.extent.width, info.extent.height, info.extent.depth });
+			longest_dim = std::max({info.extent.width, info.extent.height, info.extent.depth});
 			dim_limit = gpu_limits.maxImageDimension3D;
 			break;
 		default:
@@ -61,7 +61,7 @@ namespace vk
 		info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		info.imageType = image_type;
 		info.format = format;
-		info.extent = { width, height, depth };
+		info.extent = {width, height, depth};
 		info.mipLevels = mipmaps;
 		info.arrayLayers = layers;
 		info.samples = samples;
@@ -73,8 +73,7 @@ namespace vk
 
 		std::array<u32, 2> concurrency_queue_families = {
 			dev.get_graphics_queue_family(),
-			dev.get_transfer_queue_family()
-		};
+			dev.get_transfer_queue_family()};
 
 		if (image_flags & VK_IMAGE_CREATE_SHAREABLE_RPCS3)
 		{
@@ -230,7 +229,7 @@ namespace vk
 
 		if (info.sharingMode == VK_SHARING_MODE_EXCLUSIVE || current_layout != new_layout)
 		{
-			VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+			VkImageSubresourceRange range = {aspect(), 0, mipmaps(), 0, layers()};
 			const u32 src_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? current_queue_family : VK_QUEUE_FAMILY_IGNORED;
 			const u32 dst_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? cmd.get_queue_family() : VK_QUEUE_FAMILY_IGNORED;
 			change_image_layout(cmd, value, current_layout, new_layout, range, src_queue_family, dst_queue_family, 0u, ~0u);
@@ -247,7 +246,7 @@ namespace vk
 
 		if (info.sharingMode == VK_SHARING_MODE_EXCLUSIVE || current_layout != new_layout)
 		{
-			VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+			VkImageSubresourceRange range = {aspect(), 0, mipmaps(), 0, layers()};
 			const u32 src_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? current_queue_family : VK_QUEUE_FAMILY_IGNORED;
 			const u32 dst_queue_family2 = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? dst_queue_family : VK_QUEUE_FAMILY_IGNORED;
 			change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, src_queue_family, dst_queue_family2, ~0u, 0u);
@@ -310,8 +309,7 @@ namespace vk
 	}
 
 	image_view::image_view(VkDevice dev, VkImageViewCreateInfo create_info)
-		: info(create_info)
-		, m_device(dev)
+		: info(create_info), m_device(dev)
 	{
 		create_impl();
 	}
@@ -364,7 +362,7 @@ namespace vk
 
 	u32 image_view::encoded_component_map() const
 	{
-#if	(VK_DISABLE_COMPONENT_SWIZZLE)
+#if (VK_DISABLE_COMPONENT_SWIZZLE)
 		u32 result = static_cast<u32>(info.components.a) - 1;
 		result |= (static_cast<u32>(info.components.r) - 1) << 3;
 		result |= (static_cast<u32>(info.components.g) - 1) << 6;
@@ -386,7 +384,7 @@ namespace vk
 #if (VK_DISABLE_COMPONENT_SWIZZLE)
 		// Force identity
 		const auto mapping = info.components;
-		info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+		info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
 #endif
 
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreateImageView)(m_device, &info, nullptr, &value));
@@ -437,21 +435,19 @@ namespace vk
 		switch (remap_encoding)
 		{
 		case VK_REMAP_IDENTITY:
-			real_mapping = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+			real_mapping = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
 			break;
 		case RSX_TEXTURE_REMAP_IDENTITY:
 			real_mapping = native_component_map;
 			break;
 		default:
-			real_mapping = vk::apply_swizzle_remap
-			(
-				{ native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
-				remap
-			);
+			real_mapping = vk::apply_swizzle_remap(
+				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b},
+				remap);
 			break;
 		}
 
-		const VkImageSubresourceRange range = { aspect() & mask, 0, info.mipLevels, 0, info.arrayLayers };
+		const VkImageSubresourceRange range = {aspect() & mask, 0, info.mipLevels, 0, info.arrayLayers};
 		ensure(range.aspectMask);
 
 		auto view = std::make_unique<vk::image_view>(*g_render_device, this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
@@ -478,4 +474,4 @@ namespace vk
 			views.clear();
 		}
 	}
-}
+} // namespace vk

@@ -18,25 +18,19 @@ template <>
 void fmt_class_string<lv2_mem_container_id>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
 		{
-		case SYS_MEMORY_CONTAINER_ID_INVALID: return "Global";
-		}
+			switch (value)
+			{
+			case SYS_MEMORY_CONTAINER_ID_INVALID: return "Global";
+			}
 
-		// Resort to hex formatting for other values
-		return unknown;
-	});
+			// Resort to hex formatting for other values
+			return unknown;
+		});
 }
 
 lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct)
-	: size(size)
-	, align(align)
-	, flags(flags)
-	, key(key)
-	, pshared(pshared)
-	, ct(ct)
-	, shm(std::make_shared<utils::shm>(size, 1 /* shareable flag */))
+	: size(size), align(align), flags(flags), key(key), pshared(pshared), ct(ct), shm(std::make_shared<utils::shm>(size, 1 /* shareable flag */))
 {
 #ifndef _WIN32
 	// Optimization that's useless on Windows :puke:
@@ -45,24 +39,18 @@ lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv
 }
 
 lv2_memory::lv2_memory(utils::serial& ar)
-	: size(ar)
-	, align(ar)
-	, flags(ar)
-	, key(ar)
-	, pshared(ar)
-	, ct(lv2_memory_container::search(ar.pop<u32>()))
-	, shm([&](u32 addr)
-	{
-		if (addr)
-		{
-			return ensure(vm::get(vm::any, addr)->peek(addr).second);
-		}
+	: size(ar), align(ar), flags(ar), key(ar), pshared(ar), ct(lv2_memory_container::search(ar.pop<u32>())), shm([&](u32 addr)
+																												 {
+																													 if (addr)
+																													 {
+																														 return ensure(vm::get(vm::any, addr)->peek(addr).second);
+																													 }
 
-		const auto _shm = std::make_shared<utils::shm>(size, 1);
-		ar(std::span(_shm->map_self(), size));
-		return _shm;
-	}(ar.pop<u32>()))
-	, counter(ar)
+																													 const auto _shm = std::make_shared<utils::shm>(size, 1);
+																													 ar(std::span(_shm->map_self(), size));
+																													 return _shm;
+																												 }(ar.pop<u32>())),
+	  counter(ar)
 {
 #ifndef _WIN32
 	// Optimization that's useless on Windows :puke:
@@ -127,15 +115,16 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 	}
 
 	if (auto error = lv2_obj::create<lv2_memory>(_pshared, ipc_key, exclusive ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE, [&]()
-	{
-		return make_shared<lv2_memory>(
-			static_cast<u32>(size),
-			align,
-			flags,
-			ipc_key,
-			pshared,
-			ct);
-	}, false))
+			{
+				return make_shared<lv2_memory>(
+					static_cast<u32>(size),
+					align,
+					flags,
+					ipc_key,
+					pshared,
+					ct);
+			},
+			false))
 	{
 		return error;
 	}
@@ -588,22 +577,22 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 
 	// Conditionally remove memory ID
 	const auto mem = idm::withdraw<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
-	{
-		if (mem.counter)
 		{
-			return CELL_EBUSY;
-		}
+			if (mem.counter)
+			{
+				return CELL_EBUSY;
+			}
 
-		lv2_obj::on_id_destroy(mem, mem.key, +mem.pshared);
+			lv2_obj::on_id_destroy(mem, mem.key, +mem.pshared);
 
-		if (!mem.exists)
-		{
-			// Return "physical memory" to the memory container
-			mem.ct->free(mem.size);
-		}
+			if (!mem.exists)
+			{
+				// Return "physical memory" to the memory container
+				mem.ct->free(mem.size);
+			}
 
-		return {};
-	});
+			return {};
+		});
 
 	if (!mem)
 	{
@@ -632,22 +621,22 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 	}
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
-	{
-		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
-
-		if (mem.align < page_alignment)
 		{
-			return CELL_EINVAL;
-		}
+			const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
 
-		if (addr % page_alignment)
-		{
-			return CELL_EALIGN;
-		}
+			if (mem.align < page_alignment)
+			{
+				return CELL_EINVAL;
+			}
 
-		mem.counter++;
-		return {};
-	});
+			if (addr % page_alignment)
+			{
+				return CELL_EALIGN;
+			}
+
+			mem.counter++;
+			return {};
+		});
 
 	if (!mem)
 	{
@@ -689,17 +678,17 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 	}
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
-	{
-		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
-
-		if (mem.align < page_alignment)
 		{
-			return CELL_EALIGN;
-		}
+			const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
 
-		mem.counter++;
-		return {};
-	});
+			if (mem.align < page_alignment)
+			{
+				return CELL_EALIGN;
+			}
+
+			mem.counter++;
+			return {};
+		});
 
 	if (!mem)
 	{
@@ -754,14 +743,14 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 	}
 
 	const auto mem = idm::select<lv2_obj, lv2_memory>([&](u32 id, lv2_memory& mem) -> u32
-	{
-		if (mem.shm.get() == shm.second.get())
 		{
-			return id;
-		}
+			if (mem.shm.get() == shm.second.get())
+			{
+				return id;
+			}
 
-		return 0;
-	});
+			return 0;
+		});
 
 	if (!mem)
 	{
@@ -829,7 +818,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 		}
 	}
 
-	page_fault_notification_entry entry{ start_addr, event_queue_id, port_id->value() };
+	page_fault_notification_entry entry{start_addr, event_queue_id, port_id->value()};
 	pf_entries.entries.emplace_back(entry);
 
 	return CELL_OK;

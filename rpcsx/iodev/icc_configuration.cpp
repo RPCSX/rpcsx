@@ -5,8 +5,10 @@
 
 struct IccConfigurationFile : orbis::File {};
 
-static orbis::ErrorCode icc_configuration_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+static orbis::ErrorCode icc_configuration_ioctl(orbis::File *file,
+                                                std::uint64_t request,
+                                                void *argp,
+                                                orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled icc_configuration ioctl", request);
   return {};
@@ -29,4 +31,6 @@ struct IccConfigurationDevice : IoDevice {
   }
 };
 
-IoDevice *createIccConfigurationCharacterDevice() { return orbis::knew<IccConfigurationDevice>(); }
+IoDevice *createIccConfigurationCharacterDevice() {
+  return orbis::knew<IccConfigurationDevice>();
+}

@@ -12,38 +12,38 @@ enum : u32
 // Return Codes
 enum CellPngDecError
 {
-	CELL_PNGDEC_ERROR_HEADER        = 0x80611201,
+	CELL_PNGDEC_ERROR_HEADER = 0x80611201,
 	CELL_PNGDEC_ERROR_STREAM_FORMAT = 0x80611202,
-	CELL_PNGDEC_ERROR_ARG           = 0x80611203,
-	CELL_PNGDEC_ERROR_SEQ           = 0x80611204,
-	CELL_PNGDEC_ERROR_BUSY          = 0x80611205,
-	CELL_PNGDEC_ERROR_FATAL         = 0x80611206,
-	CELL_PNGDEC_ERROR_OPEN_FILE     = 0x80611207,
+	CELL_PNGDEC_ERROR_ARG = 0x80611203,
+	CELL_PNGDEC_ERROR_SEQ = 0x80611204,
+	CELL_PNGDEC_ERROR_BUSY = 0x80611205,
+	CELL_PNGDEC_ERROR_FATAL = 0x80611206,
+	CELL_PNGDEC_ERROR_OPEN_FILE = 0x80611207,
 	CELL_PNGDEC_ERROR_SPU_UNSUPPORT = 0x80611208,
-	CELL_PNGDEC_ERROR_SPU_ERROR     = 0x80611209,
-	CELL_PNGDEC_ERROR_CB_PARAM      = 0x8061120a,
+	CELL_PNGDEC_ERROR_SPU_ERROR = 0x80611209,
+	CELL_PNGDEC_ERROR_CB_PARAM = 0x8061120a,
 };
 
 // Consts
 enum CellPngDecColorSpace : s32
 {
-	CELL_PNGDEC_GRAYSCALE       = 1,
-	CELL_PNGDEC_RGB             = 2,
-	CELL_PNGDEC_PALETTE         = 4,
+	CELL_PNGDEC_GRAYSCALE = 1,
+	CELL_PNGDEC_RGB = 2,
+	CELL_PNGDEC_PALETTE = 4,
 	CELL_PNGDEC_GRAYSCALE_ALPHA = 9,
-	CELL_PNGDEC_RGBA            = 10,
-	CELL_PNGDEC_ARGB            = 20,
+	CELL_PNGDEC_RGBA = 10,
+	CELL_PNGDEC_ARGB = 20,
 };
 
 enum CellPngDecSpuThreadEna : s32
 {
 	CELL_PNGDEC_SPU_THREAD_DISABLE = 0,
-	CELL_PNGDEC_SPU_THREAD_ENABLE  = 1,
+	CELL_PNGDEC_SPU_THREAD_ENABLE = 1,
 };
 
 enum CellPngDecStreamSrcSel : s32
 {
-	CELL_PNGDEC_FILE   = 0,
+	CELL_PNGDEC_FILE = 0,
 	CELL_PNGDEC_BUFFER = 1,
 };
 
@@ -68,19 +68,19 @@ enum CellPngDecPackFlag : s32
 enum CellPngDecAlphaSelect : s32
 {
 	CELL_PNGDEC_STREAM_ALPHA = 0,
-	CELL_PNGDEC_FIX_ALPHA    = 1,
+	CELL_PNGDEC_FIX_ALPHA = 1,
 };
 
 enum CellPngDecCommand : s32
 {
 	CELL_PNGDEC_CONTINUE = 0,
-	CELL_PNGDEC_STOP     = 1,
+	CELL_PNGDEC_STOP = 1,
 };
 
 enum CellPngDecDecodeStatus : s32
 {
 	CELL_PNGDEC_DEC_STATUS_FINISH = 0,
-	CELL_PNGDEC_DEC_STATUS_STOP   = 1,
+	CELL_PNGDEC_DEC_STATUS_STOP = 1,
 };
 
 enum CellPngDecBufferMode : s32
@@ -90,13 +90,13 @@ enum CellPngDecBufferMode : s32
 
 enum CellPngDecSpuMode : s32
 {
-	CELL_PNGDEC_RECEIVE_EVENT    = 0,
+	CELL_PNGDEC_RECEIVE_EVENT = 0,
 	CELL_PNGDEC_TRYRECEIVE_EVENT = 1,
 };
 
 // Callbacks for memory management
 using CellPngDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
-using CellPngDecCbControlFree   = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
+using CellPngDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
 
 // Structs
 struct CellPngDecThreadInParam
@@ -157,10 +157,10 @@ struct CellPngDecInfo
 struct CellPngDecInParam
 {
 	vm::bptr<volatile s32> commandPtr; // CellPngDecCommand
-	be_t<s32> outputMode; // CellPngDecOutputMode
-	be_t<s32> outputColorSpace; // CellPngDecColorSpace
+	be_t<s32> outputMode;              // CellPngDecOutputMode
+	be_t<s32> outputColorSpace;        // CellPngDecColorSpace
 	be_t<u32> outputBitDepth;
-	be_t<s32> outputPackFlag; // CellPngDecPackFlag
+	be_t<s32> outputPackFlag;    // CellPngDecPackFlag
 	be_t<s32> outputAlphaSelect; // CellPngDecAlphaSelect
 	be_t<u32> outputColorAlpha;
 };
@@ -172,7 +172,7 @@ struct CellPngDecOutParam
 	be_t<u32> outputHeight;
 	be_t<u32> outputComponents;
 	be_t<u32> outputBitDepth;
-	be_t<s32> outputMode; // CellPngDecOutputMode
+	be_t<s32> outputMode;       // CellPngDecOutputMode
 	be_t<s32> outputColorSpace; // CellPngDecOutputMode
 	be_t<u32> useMemorySpace;
 };
@@ -247,7 +247,7 @@ struct CellPngDecExtOutParam
 
 // Callbacks for decoding partial streams
 using CellPngDecCbControlStream = s32(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
-using CellPngDecCbControlDisp   = s32(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
+using CellPngDecCbControlDisp = s32(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
 
 struct CellPngDecCbCtrlStrm
 {
@@ -318,10 +318,10 @@ static s32 getPngDecColourType(u8 type)
 {
 	switch (type)
 	{
-	case PNG_COLOR_TYPE_RGB:        return CELL_PNGDEC_RGB;
-	case PNG_COLOR_TYPE_RGBA:       return CELL_PNGDEC_RGBA; // We can't diffrentiate between ARGB and RGBA. Doesn't seem to be exactly important.
-	case PNG_COLOR_TYPE_PALETTE:    return CELL_PNGDEC_PALETTE;
-	case PNG_COLOR_TYPE_GRAY:       return CELL_PNGDEC_GRAYSCALE;
+	case PNG_COLOR_TYPE_RGB: return CELL_PNGDEC_RGB;
+	case PNG_COLOR_TYPE_RGBA: return CELL_PNGDEC_RGBA; // We can't diffrentiate between ARGB and RGBA. Doesn't seem to be exactly important.
+	case PNG_COLOR_TYPE_PALETTE: return CELL_PNGDEC_PALETTE;
+	case PNG_COLOR_TYPE_GRAY: return CELL_PNGDEC_GRAYSCALE;
 	case PNG_COLOR_TYPE_GRAY_ALPHA: return CELL_PNGDEC_GRAYSCALE_ALPHA;
 	default: fmt::throw_exception("Unknown colour type: %d", type);
 	}

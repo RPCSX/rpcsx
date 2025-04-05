@@ -33,7 +33,7 @@ namespace rsx
 			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
 			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
 
-			u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
+			u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 			if (!count)
 			{
@@ -89,11 +89,11 @@ namespace rsx
 				rsx::reservation_lock<true> rsx_lock(dst_address, data_length);
 
 				if (RSX(ctx)->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
-					{
-						// Move last 32 bits
-						reinterpret_cast<u32*>(dst)[0] = reinterpret_cast<const u32*>(src)[count - 1];
-						RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, 4);
-					}
+				{
+					// Move last 32 bits
+					reinterpret_cast<u32*>(dst)[0] = reinterpret_cast<const u32*>(src)[count - 1];
+					RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, 4);
+				}
 				else
 				{
 					if (dst_dma & CELL_GCM_LOCATION_MAIN)
@@ -129,33 +129,33 @@ namespace rsx
 				rsx::reservation_lock<true> rsx_lock(dst_address, data_length);
 
 				auto convert = [](u32 input) -> u16
-					{
-						// Input is considered to be ARGB8
-						u32 r = (input >> 16) & 0xFF;
-						u32 g = (input >> 8) & 0xFF;
-						u32 b = input & 0xFF;
+				{
+					// Input is considered to be ARGB8
+					u32 r = (input >> 16) & 0xFF;
+					u32 g = (input >> 8) & 0xFF;
+					u32 b = input & 0xFF;
 
-						r = (r * 32) / 255;
-						g = (g * 64) / 255;
-						b = (b * 32) / 255;
-						return static_cast<u16>((r << 11) | (g << 5) | b);
-					};
+					r = (r * 32) / 255;
+					g = (g * 64) / 255;
+					b = (b * 32) / 255;
+					return static_cast<u16>((r << 11) | (g << 5) | b);
+				};
 
 				if (RSX(ctx)->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
-					{
-						// Move last 16 bits
-						dst[0] = convert(src[count - 1]);
-						RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, 2);
-						break;
-					}
-
-					for (u32 i = 0; i < count; i++)
-					{
-						dst[i] = convert(src[i]);
-					}
-
-					RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, count * 2);
+				{
+					// Move last 16 bits
+					dst[0] = convert(src[count - 1]);
+					RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, 2);
 					break;
+				}
+
+				for (u32 i = 0; i < count; i++)
+				{
+					dst[i] = convert(src[i]);
+				}
+
+				RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, count * 2);
+				break;
 			}
 			default:
 			{
@@ -163,5 +163,5 @@ namespace rsx
 			}
 			}
 		}
-	}
-}
+	} // namespace nv308a
+} // namespace rsx

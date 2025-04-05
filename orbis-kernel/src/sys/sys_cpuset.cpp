@@ -148,7 +148,8 @@ orbis::SysResult orbis::sys_cpuset_setaffinity(Thread *thread, cpulevel_t level,
       auto threadHandle = whichThread->getNativeHandle();
       auto hostCpuSet = toHostCpuSet(whichThread->affinity);
       ORBIS_LOG_ERROR(__FUNCTION__, threadHandle, thread->tid, id);
-      if (pthread_setaffinity_np(threadHandle, sizeof(hostCpuSet), &hostCpuSet)) {
+      if (pthread_setaffinity_np(threadHandle, sizeof(hostCpuSet),
+                                 &hostCpuSet)) {
         ORBIS_LOG_ERROR(__FUNCTION__,
                         "failed to set affinity mask for host thread",
                         whichThread->hostTid, whichThread->affinity.bits);

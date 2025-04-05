@@ -147,42 +147,42 @@ namespace gl
 		case texture::internal_format::compressed_rgba_s3tc_dxt1:
 		case texture::internal_format::compressed_rgba_s3tc_dxt3:
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
-			return { GL_RGBA, GL_UNSIGNED_BYTE, 1, false };
+			return {GL_RGBA, GL_UNSIGNED_BYTE, 1, false};
 		case texture::internal_format::r8:
-			return { GL_RED, GL_UNSIGNED_BYTE, 1, false };
+			return {GL_RED, GL_UNSIGNED_BYTE, 1, false};
 		case texture::internal_format::r16:
-			return { GL_RED, GL_UNSIGNED_SHORT, 2, true };
+			return {GL_RED, GL_UNSIGNED_SHORT, 2, true};
 		case texture::internal_format::r32f:
-			return { GL_RED, GL_FLOAT, 4, true };
+			return {GL_RED, GL_FLOAT, 4, true};
 		case texture::internal_format::rg8:
-			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
+			return {GL_RG, GL_UNSIGNED_SHORT, 2, true};
 		case texture::internal_format::rg16:
-			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
+			return {GL_RG, GL_UNSIGNED_SHORT, 2, true};
 		case texture::internal_format::rg16f:
-			return { GL_RG, GL_HALF_FLOAT, 2, true };
+			return {GL_RG, GL_HALF_FLOAT, 2, true};
 		case texture::internal_format::rgb565:
-			return { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true };
+			return {GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true};
 		case texture::internal_format::rgb5a1:
-			return { GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true };
+			return {GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true};
 		case texture::internal_format::bgr5a1:
-			return { GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV, 2, true };
+			return {GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV, 2, true};
 		case texture::internal_format::rgba4:
-			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
+			return {GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false};
 		case texture::internal_format::rgba8:
-			return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
+			return {GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true};
 		case texture::internal_format::bgra8:
-			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
+			return {GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true};
 		case texture::internal_format::rgba16f:
-			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
+			return {GL_RGBA, GL_HALF_FLOAT, 2, true};
 		case texture::internal_format::rgba32f:
-			return { GL_RGBA, GL_FLOAT, 4, true };
+			return {GL_RGBA, GL_FLOAT, 4, true};
 		case texture::internal_format::depth16:
-			return { GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true };
+			return {GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true};
 		case texture::internal_format::depth32f:
-			return { GL_DEPTH_COMPONENT, GL_FLOAT, 2, true };
+			return {GL_DEPTH_COMPONENT, GL_FLOAT, 2, true};
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
-			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
+			return {GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true};
 		default:
 			fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 		}
@@ -215,43 +215,43 @@ namespace gl
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-			return{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
+			return {GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE};
 
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-			return{ GL_RED, GL_RED, GL_RED, GL_RED };
+			return {GL_RED, GL_RED, GL_RED, GL_RED};
 
 		case CELL_GCM_TEXTURE_B8:
-			return{ GL_ONE, GL_RED, GL_RED, GL_RED };
+			return {GL_ONE, GL_RED, GL_RED, GL_RED};
 
 		case CELL_GCM_TEXTURE_X16:
-			return{ GL_RED, GL_ONE, GL_RED, GL_ONE };
+			return {GL_RED, GL_ONE, GL_RED, GL_ONE};
 
 		case CELL_GCM_TEXTURE_X32_FLOAT:
-			return{ GL_RED, GL_RED, GL_RED, GL_RED };
+			return {GL_RED, GL_RED, GL_RED, GL_RED};
 
 		case CELL_GCM_TEXTURE_G8B8:
-			return{ GL_GREEN, GL_RED, GL_GREEN, GL_RED };
+			return {GL_GREEN, GL_RED, GL_GREEN, GL_RED};
 
 		case CELL_GCM_TEXTURE_Y16_X16:
-			return{ GL_GREEN, GL_RED, GL_GREEN, GL_RED };
+			return {GL_GREEN, GL_RED, GL_GREEN, GL_RED};
 
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-			return{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
+			return {GL_RED, GL_GREEN, GL_RED, GL_GREEN};
 
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-			return{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
+			return {GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE};
 
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 		case CELL_GCM_TEXTURE_D8R8G8B8:
-			return{ GL_ONE, GL_RED, GL_GREEN, GL_BLUE };
+			return {GL_ONE, GL_RED, GL_GREEN, GL_BLUE};
 
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-			return{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
+			return {GL_RED, GL_GREEN, GL_RED, GL_GREEN};
 		}
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
@@ -277,14 +277,15 @@ namespace gl
 	}
 
 	void* copy_image_to_buffer(gl::command_context& cmd, const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
-		u32 dst_offset, const int src_level, const coord3u& src_region,  image_memory_requirements* mem_info)
+		u32 dst_offset, const int src_level, const coord3u& src_region, image_memory_requirements* mem_info)
 	{
 		auto initialize_scratch_mem = [&]() -> bool // skip_transform
 		{
 			const u64 max_mem = (mem_info->memory_required) ? mem_info->memory_required : mem_info->image_size_in_bytes;
 			if (!(*dst) || max_mem > static_cast<u64>(dst->size()))
 			{
-				if (*dst) dst->remove();
+				if (*dst)
+					dst->remove();
 				dst->create(buffer::target::ssbo, max_mem, nullptr, buffer::memory_type::local, 0);
 			}
 
@@ -298,14 +299,14 @@ namespace gl
 				case gl::texture::internal_format::depth24_stencil8:
 					gl::get_compute_task<gl::cs_d24x8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
-						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
+						{{src_region.x, src_region.y}, {src_region.width, src_region.height}},
 						pack_info);
 					return true;
 				case gl::texture::internal_format::rgba8:
 				case gl::texture::internal_format::bgra8:
 					gl::get_compute_task<gl::cs_rgba8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
-						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
+						{{src_region.x, src_region.y}, {src_region.width, src_region.height}},
 						pack_info);
 					return true;
 				default:
@@ -337,7 +338,7 @@ namespace gl
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
 			ensure(!initialize_scratch_mem());
 
-			if (pack_info.swap_bytes) [[ likely ]]
+			if (pack_info.swap_bytes) [[likely]]
 			{
 				get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, dst_offset,
 					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
@@ -418,7 +419,7 @@ namespace gl
 			std::unique_ptr<gl::texture> scratch;
 			std::unique_ptr<gl::texture_view> scratch_view;
 
-			coordu image_region = { {dst_region.x, dst_region.y}, {dst_region.width, dst_region.height} };
+			coordu image_region = {{dst_region.x, dst_region.y}, {dst_region.width, dst_region.height}};
 
 			switch (dst->get_target())
 			{
@@ -436,7 +437,7 @@ namespace gl
 			}
 			case texture::target::textureCUBE:
 			{
-				const subresource_range range = { image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, dst_region.z , 1 };
+				const subresource_range range = {image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, dst_region.z, 1};
 				scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
 				break;
 			}
@@ -454,9 +455,9 @@ namespace gl
 			{
 				ensure(dst->layers() == 1);
 
-				if (dst->levels() > 1) [[ likely ]]
+				if (dst->levels() > 1) [[likely]]
 				{
-					const subresource_range range = { image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, 0 , 1 };
+					const subresource_range range = {image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, 0, 1};
 					scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
 				}
 				else
@@ -469,9 +470,8 @@ namespace gl
 			}
 
 			// If possible, decode using a compute transform to potentially have asynchronous scheduling
-			bool use_compute_transform = (
-				dst->aspect() == gl::image_aspect::color &&  // Cannot use image_load_store with depth images
-				caps.subvendor_ATI == false);                // The old AMD/ATI driver does not support image writeonly without format specifier
+			bool use_compute_transform = (dst->aspect() == gl::image_aspect::color && // Cannot use image_load_store with depth images
+										  caps.subvendor_ATI == false);               // The old AMD/ATI driver does not support image writeonly without format specifier
 
 			if (use_compute_transform)
 			{
@@ -504,8 +504,8 @@ namespace gl
 			{
 			case texture::target::texture1D:
 			{
-				const position3u transfer_offset = { dst_region.position.x, 0, 0 };
-				g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, transfer_offset, transfer_offset, { dst_region.width, 1, 1 });
+				const position3u transfer_offset = {dst_region.position.x, 0, 0};
+				g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, transfer_offset, transfer_offset, {dst_region.width, 1, 1});
 				break;
 			}
 			case texture::target::texture3D:
@@ -513,9 +513,9 @@ namespace gl
 				// Memcpy
 				for (u32 layer = dst_region.z, i = 0; i < dst_region.depth; ++i, ++layer)
 				{
-					const position3u src_offset = { dst_region.position.x, dst_region.position.y + (i * dst_region.height), 0 };
-					const position3u dst_offset = { dst_region.position.x, dst_region.position.y, layer };
-					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, { dst_region.width, dst_region.height, 1 });
+					const position3u src_offset = {dst_region.position.x, dst_region.position.y + (i * dst_region.height), 0};
+					const position3u dst_offset = {dst_region.position.x, dst_region.position.y, layer};
+					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, {dst_region.width, dst_region.height, 1});
 				}
 				break;
 			}
@@ -569,7 +569,7 @@ namespace gl
 	}
 
 	gl::viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
-			rsx::texture_dimension_extended type)
+		rsx::texture_dimension_extended type)
 	{
 		const GLenum target = get_target(type);
 		const GLenum internal_format = get_sized_internal_format(gcm_format);
@@ -579,19 +579,17 @@ namespace gl
 	}
 
 	void fill_texture(gl::command_context& cmd, texture* dst, int format,
-			const std::vector<rsx::subresource_layout> &input_layouts,
-			bool is_swizzled, GLenum gl_format, GLenum gl_type, rsx::simple_array<std::byte>& staging_buffer)
+		const std::vector<rsx::subresource_layout>& input_layouts,
+		bool is_swizzled, GLenum gl_format, GLenum gl_type, rsx::simple_array<std::byte>& staging_buffer)
 	{
 		const auto driver_caps = gl::get_driver_caps();
-		rsx::texture_uploader_capabilities caps
-		{
+		rsx::texture_uploader_capabilities caps{
 			.supports_byteswap = true,
 			.supports_vtc_decoding = false,
 			.supports_hw_deswizzle = driver_caps.ARB_compute_shader_supported,
 			.supports_zero_copy = false,
 			.supports_dxt = driver_caps.EXT_texture_compression_s3tc_supported,
-			.alignment = 4
-		};
+			.alignment = 4};
 
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
@@ -698,12 +696,12 @@ namespace gl
 					// FIXME: Double-check this logic; it seems like we should always use texels both here and for row_pitch.
 					image_linear_size = row_pitch * layout.height_in_texel * layout.depth;
 
-					compute_scratch_mem = { nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256) };
+					compute_scratch_mem = {nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256)};
 					compute_scratch_mem.first = reinterpret_cast<void*>(static_cast<uintptr_t>(compute_scratch_mem.second));
 
 					g_upload_transfer_buffer.reserve_storage_on_heap(static_cast<u32>(image_linear_size));
 					upload_scratch_mem = g_upload_transfer_buffer.alloc_from_heap(static_cast<u32>(image_linear_size), 256);
-					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.first), image_linear_size };
+					dst_buffer = {reinterpret_cast<std::byte*>(upload_scratch_mem.first), image_linear_size};
 				}
 
 				rsx::io_buffer io_buf = dst_buffer;
@@ -755,7 +753,7 @@ namespace gl
 						{
 							mem_layout.swap_bytes = false;
 
-							if (op.element_size == 4) [[ likely ]]
+							if (op.element_size == 4) [[likely]]
 							{
 								do_deswizzle_transformation<u32, true>(cmd, block_size,
 									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
@@ -770,7 +768,7 @@ namespace gl
 						}
 						else
 						{
-							if (op.element_size == 4) [[ likely ]]
+							if (op.element_size == 4) [[likely]]
 							{
 								do_deswizzle_transformation<u32, false>(cmd, block_size,
 									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
@@ -818,7 +816,7 @@ namespace gl
 		// Calculate staging buffer size
 		rsx::simple_array<std::byte> data_upload_buf;
 
-		rsx::texture_uploader_capabilities caps { .supports_dxt = gl::get_driver_caps().EXT_texture_compression_s3tc_supported };
+		rsx::texture_uploader_capabilities caps{.supports_dxt = gl::get_driver_caps().EXT_texture_compression_s3tc_supported};
 		if (rsx::is_compressed_host_format(caps, gcm_format))
 		{
 			const auto& desc = subresources_layout[0];
@@ -883,33 +881,33 @@ namespace gl
 		{
 			// 8-bit
 		case GL_R8:
-			return { false, 1 };
+			return {false, 1};
 		case GL_RGBA8:
 		case GL_BGRA8:
-			return { true, 4 };
+			return {true, 4};
 			// 16-bit
 		case GL_RG8:
 		case GL_RG16:
 		case GL_RG16F:
 		case GL_R16:
 		case GL_RGB565:
-			return { true, 2 };
+			return {true, 2};
 			// 32-bit
 		case GL_R32F:
 		case GL_RGBA32F:
-			return { true, 4 };
+			return {true, 4};
 			// DXT
 		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
 		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
 		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-			return { false, 1 };
+			return {false, 1};
 			// Depth
 		case GL_DEPTH_COMPONENT16:
 		case GL_DEPTH_COMPONENT32F:
-			return { true, 2 };
+			return {true, 2};
 		case GL_DEPTH24_STENCIL8:
 		case GL_DEPTH32F_STENCIL8:
-			return { true, 4 };
+			return {true, 4};
 		default:
 			break;
 		}
@@ -962,12 +960,12 @@ namespace gl
 		return formats_are_bitcast_compatible(static_cast<GLenum>(texture1->get_internal_format()), static_cast<GLenum>(texture2->get_internal_format()));
 	}
 
-	void copy_typeless(gl::command_context& cmd, texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
+	void copy_typeless(gl::command_context& cmd, texture* dst, const texture* src, const coord3u& dst_region, const coord3u& src_region)
 	{
 		const auto src_bpp = src->pitch() / src->width();
 		const auto dst_bpp = dst->pitch() / dst->width();
-		image_memory_requirements src_mem = { src_region.width * src_region.height, src_region.width * src_bpp * src_region.height, 0ull };
-		image_memory_requirements dst_mem = { dst_region.width * dst_region.height, dst_region.width * dst_bpp * dst_region.height, 0ull };
+		image_memory_requirements src_mem = {src_region.width * src_region.height, src_region.width * src_bpp * src_region.height, 0ull};
+		image_memory_requirements dst_mem = {dst_region.width * dst_region.height, dst_region.width * dst_bpp * dst_region.height, 0ull};
 
 		const auto& caps = gl::get_driver_caps();
 		auto pack_info = get_format_type(src);
@@ -990,9 +988,9 @@ namespace gl
 			if ((src->aspect() | dst->aspect()) == gl::image_aspect::color)
 			{
 				skip_transform = (pack_info.format == unpack_info.format &&
-					pack_info.type == unpack_info.type &&
-					pack_info.swap_bytes == unpack_info.swap_bytes &&
-					pack_info.size == unpack_info.size);
+								  pack_info.type == unpack_info.type &&
+								  pack_info.swap_bytes == unpack_info.swap_bytes &&
+								  pack_info.size == unpack_info.size);
 			}
 
 			if (skip_transform) [[likely]]
@@ -1006,7 +1004,7 @@ namespace gl
 			const u64 min_storage_requirement = src_mem.image_size_in_bytes + dst_mem.image_size_in_bytes;
 			const u64 min_required_buffer_size = utils::align(min_storage_requirement, 256);
 
-			if (g_typeless_transfer_buffer.size() >= min_required_buffer_size) [[ likely ]]
+			if (g_typeless_transfer_buffer.size() >= min_required_buffer_size) [[likely]]
 			{
 				scratch_offset = g_typeless_transfer_buffer.alloc(static_cast<u32>(min_storage_requirement), 256);
 			}
@@ -1109,8 +1107,8 @@ namespace gl
 
 	void copy_typeless(gl::command_context& cmd, texture* dst, const texture* src)
 	{
-		const coord3u src_area = { {}, src->size3D() };
-		const coord3u dst_area = { {}, dst->size3D() };
+		const coord3u src_area = {{}, src->size3D()};
+		const coord3u dst_area = {{}, dst->size3D()};
 		copy_typeless(cmd, dst, src, dst_area, src_area);
 	}
 
@@ -1143,4 +1141,4 @@ namespace gl
 
 		glClear(clear_mask);
 	}
-}
+} // namespace gl

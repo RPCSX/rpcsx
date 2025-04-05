@@ -35,7 +35,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 	}
 
 	usz chars_to_read = 0; // number of chars that will be read from the input string
-	std::string tty_read;     // string for storage of read chars
+	std::string tty_read;  // string for storage of read chars
 
 	if (len > 0)
 	{
@@ -123,19 +123,18 @@ error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char
 
 	std::string_view sample = std::string_view(msg).substr(0, 1024);
 
-	const bool warning = find_word(sample, "failed"sv) || find_word(sample, "abort"sv) || find_word(sample, "crash"sv)
-		|| find_word(sample, "error"sv) || find_word(sample, "unexpected"sv) || find_word(sample, "0x8001"sv);
+	const bool warning = find_word(sample, "failed"sv) || find_word(sample, "abort"sv) || find_word(sample, "crash"sv) || find_word(sample, "error"sv) || find_word(sample, "unexpected"sv) || find_word(sample, "0x8001"sv);
 
 	sample = {}; // Remove reference to string
 
 	if (msg.size() >= 2u && [&]()
-	{
-		static thread_local u64 last_write = 0;
+		{
+			static thread_local u64 last_write = 0;
 
-		// Dump thread about every period which TTY was not being touched for about half a second
-		const u64 current = get_system_time();
-		return current - std::exchange(last_write, current) >= (warning ? 500'000 : 3'000'000);
-	}())
+			// Dump thread about every period which TTY was not being touched for about half a second
+			const u64 current = get_system_time();
+			return current - std::exchange(last_write, current) >= (warning ? 500'000 : 3'000'000);
+		}())
 	{
 		ppu_log.notice("\n%s", dump_useful_thread_info());
 	}

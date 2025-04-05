@@ -37,5 +37,5 @@ namespace rsx
 
 			error_code show(const std::string& title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close);
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

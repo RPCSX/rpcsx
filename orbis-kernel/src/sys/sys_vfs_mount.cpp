@@ -1,7 +1,7 @@
 #include "sys/sysproto.hpp"
+#include "thread/Process.hpp"
 #include "thread/ProcessOps.hpp"
 #include "thread/Thread.hpp"
-#include "thread/Process.hpp"
 
 orbis::SysResult orbis::sys_mount(Thread *thread, ptr<char> type,
                                   ptr<char> path, sint flags, caddr_t data) {

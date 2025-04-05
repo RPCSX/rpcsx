@@ -32,8 +32,8 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 }
 
 /**
-* It's unfortunate I need a method like this to sync these.  Should ponder a cleaner way to do this.
-*/
+ * It's unfortunate I need a method like this to sync these.  Should ponder a cleaner way to do this.
+ */
 void breakpoint_list::UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm)
 {
 	m_disasm = std::move(disasm);
@@ -147,7 +147,10 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 
 		if (list[pos_at / 8].fetch_xor(pos_bit) & pos_bit)
 		{
-			if (std::none_of(list.begin(), list.end(), [](auto& val){ return val.load(); }))
+			if (std::none_of(list.begin(), list.end(), [](auto& val)
+					{
+						return val.load();
+					}))
 			{
 				spu->has_active_local_bps = false;
 			}
@@ -157,16 +160,16 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 			if (!spu->has_active_local_bps.exchange(true))
 			{
 				spu->state.atomic_op([](bs_t<cpu_flag>& flags)
-				{
-					if (flags & cpu_flag::pending)
 					{
-						flags += cpu_flag::pending_recheck;
-					}
-					else
-					{
-						flags += cpu_flag::pending;
-					}
-				});
+						if (flags & cpu_flag::pending)
+						{
+							flags += cpu_flag::pending_recheck;
+						}
+						else
+						{
+							flags += cpu_flag::pending;
+						}
+					});
 			}
 		}
 
@@ -219,11 +222,11 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint& pos)
 	{
 		QAction* rename_action = m_context_menu->addAction(tr("&Rename"));
 		connect(rename_action, &QAction::triggered, this, [this]()
-		{
-			QListWidgetItem* current_item = selectedItems().first();
-			current_item->setFlags(current_item->flags() | Qt::ItemIsEditable);
-			editItem(current_item);
-		});
+			{
+				QListWidgetItem* current_item = selectedItems().first();
+				current_item->setFlags(current_item->flags() | Qt::ItemIsEditable);
+				editItem(current_item);
+			});
 		m_context_menu->addSeparator();
 	}
 
@@ -269,7 +272,8 @@ void breakpoint_list::OnBreakpointListDelete()
 
 void breakpoint_list::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (!ev) return;
+	if (!ev)
+		return;
 
 	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
 	// So we have to ignore this event when another button is pressed.

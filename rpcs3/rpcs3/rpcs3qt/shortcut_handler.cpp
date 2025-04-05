@@ -29,17 +29,17 @@ shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_i
 		m_shortcuts[shortcut_key] = key_info;
 
 		connect(shortcut, &QShortcut::activated, this, [this, key = shortcut_key]()
-		{
-			handle_shortcut(key, m_shortcuts[key].key_sequence);
-		});
+			{
+				handle_shortcut(key, m_shortcuts[key].key_sequence);
+			});
 		connect(shortcut, &QShortcut::activatedAmbiguously, this, [this, key = shortcut_key]()
-		{
-			// TODO: do not allow same shortcuts and remove this connect
-			// activatedAmbiguously will trigger if you have the same key sequence for several shortcuts
-			const QKeySequence& key_sequence = m_shortcuts[key].key_sequence;
-			shortcut_log.error("%s: Shortcut activated ambiguously: %s (%s)", m_handler_id, key, key_sequence.toString());
-			handle_shortcut(key, key_sequence);
-		});
+			{
+				// TODO: do not allow same shortcuts and remove this connect
+			    // activatedAmbiguously will trigger if you have the same key sequence for several shortcuts
+				const QKeySequence& key_sequence = m_shortcuts[key].key_sequence;
+				shortcut_log.error("%s: Shortcut activated ambiguously: %s (%s)", m_handler_id, key, key_sequence.toString());
+				handle_shortcut(key, key_sequence);
+			});
 	}
 }
 

@@ -25,7 +25,7 @@ constexpr s32 VPORT_P2P_HEADER_SIZE = sizeof(u16) + sizeof(u16) + sizeof(u16);
 
 enum VPORT_P2P_FLAGS
 {
-	P2P_FLAG_P2P  = 1,
+	P2P_FLAG_P2P = 1,
 	P2P_FLAG_P2PS = 1 << 1,
 };
 
@@ -46,7 +46,7 @@ struct nt_p2p_port
 {
 	// Real socket where P2P packets are received/sent
 	socket_type p2p_socket = 0;
-	u16 port               = 0;
+	u16 port = 0;
 
 	bool is_ipv6 = false;
 

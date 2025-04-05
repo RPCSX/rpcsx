@@ -32,9 +32,9 @@ struct DmemDevice : public IoDevice {
                             std::uint32_t memoryType);
 
   orbis::ErrorCode queryMaxFreeChunkSize(std::uint64_t *start,
-                                     std::uint64_t searchEnd,
-                                     std::uint64_t alignment,
-                                     std::uint64_t *size);
+                                         std::uint64_t searchEnd,
+                                         std::uint64_t alignment,
+                                         std::uint64_t *size);
 
   orbis::ErrorCode release(std::uint64_t start, std::uint64_t size);
 

@@ -26,9 +26,9 @@ namespace vk
 
 		public:
 			query_pool_ref(query_pool_manager* pool_man, std::unique_ptr<query_pool>& pool)
-				: m_object(std::move(pool))
-				, m_pool_man(pool_man)
-			{}
+				: m_object(std::move(pool)), m_pool_man(pool_man)
+			{
+			}
 
 			~query_pool_ref();
 		};
@@ -61,15 +61,15 @@ namespace vk
 		void end_query(vk::command_buffer& cmd, u32 index);
 
 		bool check_query_status(u32 index);
-		u32  get_query_result(u32 index);
+		u32 get_query_result(u32 index);
 		void get_query_result_indirect(vk::command_buffer& cmd, u32 index, u32 count, VkBuffer dst, VkDeviceSize dst_offset);
 
 		u32 allocate_query(vk::command_buffer& cmd);
-		void free_query(vk::command_buffer&/*cmd*/, u32 index);
+		void free_query(vk::command_buffer& /*cmd*/, u32 index);
 
 		void on_query_pool_released(std::unique_ptr<vk::query_pool>& pool);
 
-		template<template<class> class _List>
+		template <template <class> class _List>
 		void free_queries(vk::command_buffer& cmd, _List<u32>& list)
 		{
 			for (const auto index : list)
@@ -78,4 +78,4 @@ namespace vk
 			}
 		}
 	};
-};
+}; // namespace vk

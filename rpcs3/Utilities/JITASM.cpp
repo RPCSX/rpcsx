@@ -80,7 +80,7 @@ void jit_announce(uptr func, usz size, std::string_view name)
 		{
 			u64 addr; // RPCS3 process address
 			u32 size; // Function size
-			u32 off; // Function offset
+			u32 off;  // Function offset
 		};
 
 		// Write index entry at the beginning of file, and data + NTS name at fixed offset
@@ -157,30 +157,30 @@ static u8* add_jit_memory(usz size, usz align)
 
 	// Simple allocation by incrementing pointer to the next free data
 	const u64 pos = Ctr.atomic_op([&](u64& ctr) -> u64
-	{
-		const u64 _pos = utils::align(ctr & 0xffff'ffff, align);
-		const u64 _new = utils::align(_pos + size, align);
-
-		if (_new > 0x40000000) [[unlikely]]
 		{
-			// Sorry, we failed, and further attempts should fail too.
-			ctr |= 0x40000000;
-			return -1;
-		}
+			const u64 _pos = utils::align(ctr & 0xffff'ffff, align);
+			const u64 _new = utils::align(_pos + size, align);
 
-		// Last allocation is stored in highest bits
-		olda = ctr >> 32;
-		newa = olda;
+			if (_new > 0x40000000) [[unlikely]]
+			{
+				// Sorry, we failed, and further attempts should fail too.
+				ctr |= 0x40000000;
+				return -1;
+			}
 
-		// Check the necessity to commit more memory
-		if (_new > olda) [[unlikely]]
-		{
-			newa = utils::align(_new, 0x200000);
-		}
+			// Last allocation is stored in highest bits
+			olda = ctr >> 32;
+			newa = olda;
 
-		ctr += _new - (ctr & 0xffff'ffff);
-		return _pos;
-	});
+			// Check the necessity to commit more memory
+			if (_new > olda) [[unlikely]]
+			{
+				newa = utils::align(_new, 0x200000);
+			}
+
+			ctr += _new - (ctr & 0xffff'ffff);
+			return _pos;
+		});
 
 	if (pos == umax) [[unlikely]]
 	{
@@ -196,12 +196,12 @@ static u8* add_jit_memory(usz size, usz align)
 #endif
 		// Acknowledge committed memory
 		Ctr.atomic_op([&](u64& ctr)
-		{
-			if ((ctr >> 32) < newa)
 			{
-				ctr += (newa - (ctr >> 32)) << 32;
-			}
-		});
+				if ((ctr >> 32) < newa)
+				{
+					ctr += (newa - (ctr >> 32)) << 32;
+				}
+			});
 	}
 
 	ensure(pointer + pos >= get_jit_memory() + Off);
@@ -364,17 +364,17 @@ jit_runtime_base& asmjit::get_global_runtime()
 		uchar* _alloc(usz size, usz align) noexcept override
 		{
 			return m_pos.atomic_op([&](uchar*& pos) -> uchar*
-			{
-				const auto r = reinterpret_cast<uchar*>(utils::align(uptr(pos), align));
-
-				if (r >= pos && r + size > pos && r + size <= m_max)
 				{
-					pos = r + size;
-					return r;
-				}
+					const auto r = reinterpret_cast<uchar*>(utils::align(uptr(pos), align));
 
-				return nullptr;
-			});
+					if (r >= pos && r + size > pos && r + size <= m_max)
+					{
+						pos = r + size;
+						return r;
+					}
+
+					return nullptr;
+				});
 		}
 
 	private:
@@ -389,8 +389,7 @@ jit_runtime_base& asmjit::get_global_runtime()
 }
 
 asmjit::inline_runtime::inline_runtime(uchar* data, usz size)
-	: m_data(data)
-	, m_size(size)
+	: m_data(data), m_size(size)
 {
 }
 

@@ -12,11 +12,11 @@ namespace rsx
 			w = width;
 			h = height;
 
-			m_scroll_indicator_top    = std::make_unique<image_view>(width, 5);
+			m_scroll_indicator_top = std::make_unique<image_view>(width, 5);
 			m_scroll_indicator_bottom = std::make_unique<image_view>(width, 5);
-			m_accept_btn              = std::make_unique<image_button>(120, 20);
-			m_cancel_btn              = std::make_unique<image_button>(120, 20);
-			m_highlight_box           = std::make_unique<overlay_element>(width, 0);
+			m_accept_btn = std::make_unique<image_button>(120, 20);
+			m_cancel_btn = std::make_unique<image_button>(120, 20);
+			m_highlight_box = std::make_unique<overlay_element>(width, 0);
 
 			m_scroll_indicator_top->set_size(width, 40);
 			m_scroll_indicator_bottom->set_size(width, 40);
@@ -63,11 +63,11 @@ namespace rsx
 			m_cancel_btn->set_font("Arial", 16);
 
 			auto_resize = false;
-			back_color  = {0.15f, 0.15f, 0.15f, 0.8f};
+			back_color = {0.15f, 0.15f, 0.15f, 0.8f};
 
-			m_highlight_box->back_color             = {.5f, .5f, .8f, 0.2f};
-			m_highlight_box->pulse_effect_enabled   = true;
-			m_scroll_indicator_top->fore_color.a    = 0.f;
+			m_highlight_box->back_color = {.5f, .5f, .8f, 0.2f};
+			m_highlight_box->pulse_effect_enabled = true;
+			m_scroll_indicator_top->fore_color.a = 0.f;
 			m_scroll_indicator_bottom->fore_color.a = 0.f;
 		}
 
@@ -175,10 +175,10 @@ namespace rsx
 			// Add separator
 			if (m_use_separators)
 			{
-				auto separator        = std::make_unique<overlay_element>();
+				auto separator = std::make_unique<overlay_element>();
 				separator->back_color = fore_color;
-				separator->w          = w;
-				separator->h          = 2;
+				separator->w = w;
+				separator->h = 2;
 				add_element(separator);
 			}
 

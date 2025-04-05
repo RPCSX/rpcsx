@@ -5,7 +5,7 @@
 
 namespace rsx
 {
-	template<typename T, typename U>
+	template <typename T, typename U>
 	using unordered_map = std::unordered_map<T, U>;
 }
 #else
@@ -13,7 +13,7 @@ namespace rsx
 
 namespace rsx
 {
-	template<typename T, typename U>
+	template <typename T, typename U>
 	using unordered_map = ::robin_hood::unordered_map<T, U>;
 }
 #endif

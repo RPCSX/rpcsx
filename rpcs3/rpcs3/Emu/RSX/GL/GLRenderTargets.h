@@ -41,8 +41,8 @@ namespace rsx
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
 		depth_format surface_depth_format_to_gl(rsx::surface_depth_format2 depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
-	}
-}
+	} // namespace internals
+} // namespace rsx
 
 namespace gl
 {
@@ -63,7 +63,8 @@ namespace gl
 	public:
 		render_target(GLuint width, GLuint height, GLubyte samples, GLenum sized_format, rsx::format_class format_class)
 			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, samples, sized_format, format_class)
-		{}
+		{
+		}
 
 		// Internal pitch is the actual row length in bytes of the openGL texture
 		void set_native_pitch(u32 pitch)
@@ -97,14 +98,20 @@ namespace gl
 
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
-			//Use forward scaling to account for rounding and clamping errors
+			// Use forward scaling to account for rounding and clamping errors
 			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(_width, _height);
 			return (scaled_w == width()) && (scaled_h == height());
 		}
 
 		void memory_barrier(gl::command_context& cmd, rsx::surface_access access);
-		void read_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::shader_read); }
-		void write_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::shader_write); }
+		void read_barrier(gl::command_context& cmd)
+		{
+			memory_barrier(cmd, rsx::surface_access::shader_read);
+		}
+		void write_barrier(gl::command_context& cmd)
+		{
+			memory_barrier(cmd, rsx::surface_access::shader_write);
+		}
 	};
 
 	struct framebuffer_holder : public gl::fbo, public rsx::ref_counted
@@ -121,7 +128,7 @@ namespace gl
 	{
 		return ensure(dynamic_cast<const gl::render_target*>(t));
 	}
-}
+} // namespace gl
 
 struct gl_render_target_traits
 {
@@ -133,13 +140,11 @@ struct gl_render_target_traits
 	using download_buffer_object = std::vector<u8>;
 	using barrier_descriptor_t = rsx::deferred_clipped_region<gl::render_target*>;
 
-	static
-	std::unique_ptr<gl::render_target> create_new_surface(
+	static std::unique_ptr<gl::render_target> create_new_surface(
 		u32 address,
 		rsx::surface_color_format surface_color_format,
 		usz width, usz height, usz pitch,
-		rsx::surface_antialiasing antialias
-	)
+		rsx::surface_antialiasing antialias)
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
@@ -165,7 +170,7 @@ struct gl_render_target_traits
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
 		result->set_format(surface_color_format);
 
-		std::array<GLenum, 4> native_layout = { static_cast<GLenum>(format.swizzle.a), static_cast<GLenum>(format.swizzle.r), static_cast<GLenum>(format.swizzle.g), static_cast<GLenum>(format.swizzle.b) };
+		std::array<GLenum, 4> native_layout = {static_cast<GLenum>(format.swizzle.a), static_cast<GLenum>(format.swizzle.r), static_cast<GLenum>(format.swizzle.g), static_cast<GLenum>(format.swizzle.b)};
 		result->set_native_component_layout(native_layout);
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
@@ -176,13 +181,11 @@ struct gl_render_target_traits
 		return result;
 	}
 
-	static
-	std::unique_ptr<gl::render_target> create_new_surface(
-			u32 address,
-			rsx::surface_depth_format2 surface_depth_format,
-			usz width, usz height, usz pitch,
-			rsx::surface_antialiasing antialias
-		)
+	static std::unique_ptr<gl::render_target> create_new_surface(
+		u32 address,
+		rsx::surface_depth_format2 surface_depth_format,
+		usz width, usz height, usz pitch,
+		rsx::surface_antialiasing antialias)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
@@ -208,7 +211,7 @@ struct gl_render_target_traits
 		result->set_format(surface_depth_format);
 		result->set_native_pitch(static_cast<u32>(width) * get_format_block_size_in_bytes(surface_depth_format) * result->samples_x);
 
-		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
+		std::array<GLenum, 4> native_layout = {GL_RED, GL_RED, GL_RED, GL_RED};
 		result->set_native_component_layout(native_layout);
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
@@ -219,8 +222,7 @@ struct gl_render_target_traits
 		return result;
 	}
 
-	static
-	void clone_surface(
+	static void clone_surface(
 		gl::command_context& cmd,
 		std::unique_ptr<gl::render_target>& sink, gl::render_target* ref,
 		u32 address, barrier_descriptor_t& prev)
@@ -265,8 +267,7 @@ struct gl_render_target_traits
 		sink->set_old_contents_region(prev, false);
 	}
 
-	static
-	std::unique_ptr<gl::render_target> convert_pitch(
+	static std::unique_ptr<gl::render_target> convert_pitch(
 		gl::command_context& /*cmd*/,
 		std::unique_ptr<gl::render_target>& src,
 		usz /*out_pitch*/)
@@ -276,8 +277,7 @@ struct gl_render_target_traits
 		return {};
 	}
 
-	static
-	bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 sample_count)
+	static bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 sample_count)
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
 				surface->get_spp() == sample_count &&
@@ -285,25 +285,22 @@ struct gl_render_target_traits
 				surface->get_surface_height<rsx::surface_metrics::pixels>() == height);
 	}
 
-	static
-	void prepare_surface_for_drawing(gl::command_context& cmd, gl::render_target* surface)
+	static void prepare_surface_for_drawing(gl::command_context& cmd, gl::render_target* surface)
 	{
 		surface->memory_barrier(cmd, rsx::surface_access::gpu_reference);
 		surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 	}
 
-	static
-	void prepare_surface_for_sampling(gl::command_context&, gl::render_target*)
-	{}
+	static void prepare_surface_for_sampling(gl::command_context&, gl::render_target*)
+	{
+	}
 
-	static
-	bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target> &surface, usz pitch)
+	static bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target>& surface, usz pitch)
 	{
 		return surface->get_rsx_pitch() == pitch;
 	}
 
-	static
-	void int_invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, usz pitch)
+	static void int_invalidate_surface_contents(gl::command_context&, gl::render_target* surface, u32 address, usz pitch)
 	{
 		surface->set_rsx_pitch(static_cast<u32>(pitch));
 		surface->queue_tag(address);
@@ -313,8 +310,7 @@ struct gl_render_target_traits
 		surface->raster_type = rsx::surface_raster_type::linear;
 	}
 
-	static
-	void invalidate_surface_contents(
+	static void invalidate_surface_contents(
 		gl::command_context& cmd,
 		gl::render_target* surface,
 		rsx::surface_color_format format,
@@ -322,15 +318,14 @@ struct gl_render_target_traits
 		usz pitch)
 	{
 		auto fmt = rsx::internals::surface_color_format_to_gl(format);
-		std::array<GLenum, 4> native_layout = { static_cast<GLenum>(fmt.swizzle.a), static_cast<GLenum>(fmt.swizzle.r), static_cast<GLenum>(fmt.swizzle.g), static_cast<GLenum>(fmt.swizzle.b) };
+		std::array<GLenum, 4> native_layout = {static_cast<GLenum>(fmt.swizzle.a), static_cast<GLenum>(fmt.swizzle.r), static_cast<GLenum>(fmt.swizzle.g), static_cast<GLenum>(fmt.swizzle.b)};
 		surface->set_native_component_layout(native_layout);
 		surface->set_format(format);
 
 		int_invalidate_surface_contents(cmd, surface, address, pitch);
 	}
 
-	static
-	void invalidate_surface_contents(
+	static void invalidate_surface_contents(
 		gl::command_context& cmd,
 		gl::render_target* surface,
 		rsx::surface_depth_format2 format,
@@ -341,8 +336,7 @@ struct gl_render_target_traits
 		int_invalidate_surface_contents(cmd, surface, address, pitch);
 	}
 
-	static
-	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>& surface)
+	static void notify_surface_invalidated(const std::unique_ptr<gl::render_target>& surface)
 	{
 		if (!surface->old_contents.empty())
 		{
@@ -353,20 +347,18 @@ struct gl_render_target_traits
 		surface->release();
 	}
 
-	static
-	void notify_surface_persist(const std::unique_ptr<gl::render_target>& /*surface*/)
-	{}
+	static void notify_surface_persist(const std::unique_ptr<gl::render_target>& /*surface*/)
+	{
+	}
 
-	static
-	void notify_surface_reused(const std::unique_ptr<gl::render_target>& surface)
+	static void notify_surface_reused(const std::unique_ptr<gl::render_target>& surface)
 	{
 		surface->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 		surface->add_ref();
 	}
 
-	static
-	bool int_surface_matches_properties(
-		const std::unique_ptr<gl::render_target> &surface,
+	static bool int_surface_matches_properties(
+		const std::unique_ptr<gl::render_target>& surface,
 		gl::texture::internal_format format,
 		usz width, usz height,
 		rsx::surface_antialiasing antialias,
@@ -376,25 +368,23 @@ struct gl_render_target_traits
 			return false;
 
 		return surface->get_internal_format() == format &&
-			surface->get_spp() == get_format_sample_count(antialias) &&
-			surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height));
+		       surface->get_spp() == get_format_sample_count(antialias) &&
+		       surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height));
 	}
 
-	static
-	bool surface_matches_properties(
-		const std::unique_ptr<gl::render_target> &surface,
+	static bool surface_matches_properties(
+		const std::unique_ptr<gl::render_target>& surface,
 		rsx::surface_color_format format,
 		usz width, usz height,
 		rsx::surface_antialiasing antialias,
-		bool check_refs=false)
+		bool check_refs = false)
 	{
 		const auto internal_fmt = rsx::internals::surface_color_format_to_gl(format).internal_format;
 		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, check_refs);
 	}
 
-	static
-	bool surface_matches_properties(
-		const std::unique_ptr<gl::render_target> &surface,
+	static bool surface_matches_properties(
+		const std::unique_ptr<gl::render_target>& surface,
 		rsx::surface_depth_format2 format,
 		usz width, usz height,
 		rsx::surface_antialiasing antialias,
@@ -404,20 +394,17 @@ struct gl_render_target_traits
 		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, check_refs);
 	}
 
-	static
-	void spill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
+	static void spill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
 	{
 		// TODO
 	}
 
-	static
-	void unspill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
+	static void unspill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
 	{
 		// TODO
 	}
 
-	static
-	void write_render_target_to_memory(
+	static void write_render_target_to_memory(
 		gl::command_context&,
 		gl::buffer*,
 		gl::render_target*,
@@ -427,16 +414,14 @@ struct gl_render_target_traits
 	}
 
 	template <int BlockSize>
-	static
-	gl::buffer* merge_bo_list(gl::command_context&, const std::vector<gl::buffer*>& /*list*/)
+	static gl::buffer* merge_bo_list(gl::command_context&, const std::vector<gl::buffer*>& /*list*/)
 	{
 		// TODO
 		return nullptr;
 	}
 
 	template <typename T>
-	static
-	T* get(const std::unique_ptr<T> &in)
+	static T* get(const std::unique_ptr<T>& in)
 	{
 		return in.get();
 	}
@@ -455,16 +440,16 @@ struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 		run_cleanup_internal(cmd, rsx::problem_severity::moderate, 256, [](gl::command_context&) {});
 
 		std::vector<GLuint> removed;
-		invalidated_resources.remove_if([&](auto &rtt)
-		{
-			if (rtt->unused_check_count() >= 2)
+		invalidated_resources.remove_if([&](auto& rtt)
 			{
-				removed.push_back(rtt->id());
-				return true;
-			}
+				if (rtt->unused_check_count() >= 2)
+				{
+					removed.push_back(rtt->id());
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		return removed;
 	}

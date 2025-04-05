@@ -12,30 +12,27 @@
 LOG_CHANNEL(sys_interrupt);
 
 lv2_int_tag::lv2_int_tag() noexcept
-	: lv2_obj(1)
-	, id(idm::last_id())
+	: lv2_obj(1), id(idm::last_id())
 {
 }
 
 lv2_int_tag::lv2_int_tag(utils::serial& ar) noexcept
-	: lv2_obj(1)
-	, id(idm::last_id())
-	, handler([&]()
-	{
-		const u32 id = ar;
+	: lv2_obj(1), id(idm::last_id()), handler([&]()
+										  {
+											  const u32 id = ar;
 
-		auto ptr = idm::get_unlocked<lv2_obj, lv2_int_serv>(id);
+											  auto ptr = idm::get_unlocked<lv2_obj, lv2_int_serv>(id);
 
-		if (!ptr && id)
-		{
-			Emu.PostponeInitCode([id, &handler = this->handler]()
-			{
-				handler = ensure(idm::get_unlocked<lv2_obj, lv2_int_serv>(id));
-			});
-		}
+											  if (!ptr && id)
+											  {
+												  Emu.PostponeInitCode([id, &handler = this->handler]()
+													  {
+														  handler = ensure(idm::get_unlocked<lv2_obj, lv2_int_serv>(id));
+													  });
+											  }
 
-		return ptr;
-	}())
+											  return ptr;
+										  }())
 {
 }
 
@@ -45,20 +42,12 @@ void lv2_int_tag::save(utils::serial& ar)
 }
 
 lv2_int_serv::lv2_int_serv(shared_ptr<named_thread<ppu_thread>> thread, u64 arg1, u64 arg2) noexcept
-	: lv2_obj(1)
-	, id(idm::last_id())
-	, thread(thread)
-	, arg1(arg1)
-	, arg2(arg2)
+	: lv2_obj(1), id(idm::last_id()), thread(thread), arg1(arg1), arg2(arg2)
 {
 }
 
 lv2_int_serv::lv2_int_serv(utils::serial& ar) noexcept
-	: lv2_obj(1)
-	, id(idm::last_id())
-	, thread(idm::get_unlocked<named_thread<ppu_thread>>(ar))
-	, arg1(ar)
-	, arg2(ar)
+	: lv2_obj(1), id(idm::last_id()), thread(idm::get_unlocked<named_thread<ppu_thread>>(ar)), arg1(ar), arg2(ar)
 {
 }
 
@@ -71,26 +60,20 @@ void ppu_interrupt_thread_entry(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct pp
 
 void lv2_int_serv::exec() const
 {
-	thread->cmd_list
-	({
-		{ ppu_cmd::reset_stack, 0 },
-		{ ppu_cmd::set_args, 2 }, arg1, arg2,
-		{ ppu_cmd::entry_call, 0 },
-		{ ppu_cmd::sleep, 0 },
-		{ ppu_cmd::ptr_call, 0 },
-		std::bit_cast<u64>(&ppu_interrupt_thread_entry)
-	});
+	thread->cmd_list({{ppu_cmd::reset_stack, 0},
+		{ppu_cmd::set_args, 2}, arg1, arg2,
+		{ppu_cmd::entry_call, 0},
+		{ppu_cmd::sleep, 0},
+		{ppu_cmd::ptr_call, 0},
+		std::bit_cast<u64>(&ppu_interrupt_thread_entry)});
 }
 
 void ppu_thread_exit(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
 
 void lv2_int_serv::join() const
 {
-	thread->cmd_list
-	({
-		{ ppu_cmd::ptr_call, 0 },
-		std::bit_cast<u64>(&ppu_thread_exit)
-	});
+	thread->cmd_list({{ppu_cmd::ptr_call, 0},
+		std::bit_cast<u64>(&ppu_thread_exit)});
 
 	thread->cmd_notify.store(1);
 	thread->cmd_notify.notify_one();
@@ -106,15 +89,15 @@ error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
 	sys_interrupt.warning("sys_interrupt_tag_destroy(intrtag=0x%x)", intrtag);
 
 	const auto tag = idm::withdraw<lv2_obj, lv2_int_tag>(intrtag, [](lv2_int_tag& tag) -> CellError
-	{
-		if (lv2_obj::check(tag.handler))
 		{
-			return CELL_EBUSY;
-		}
+			if (lv2_obj::check(tag.handler))
+			{
+				return CELL_EBUSY;
+			}
 
-		tag.exists.release(0);
-		return {};
-	});
+			tag.exists.release(0);
+			return {};
+		});
 
 	if (!tag)
 	{
@@ -137,56 +120,53 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 
 	CellError error = CELL_EAGAIN;
 
-	const u32 id = idm::import<lv2_obj, lv2_int_serv>([&]()
-	{
-		shared_ptr<lv2_int_serv> result;
-
-		// Get interrupt tag
-		const auto tag = idm::check_unlocked<lv2_obj, lv2_int_tag>(intrtag);
-
-		if (!tag)
+	const u32 id = idm::import <lv2_obj, lv2_int_serv>([&]()
 		{
-			error = CELL_ESRCH;
+			shared_ptr<lv2_int_serv> result;
+
+			// Get interrupt tag
+			const auto tag = idm::check_unlocked<lv2_obj, lv2_int_tag>(intrtag);
+
+			if (!tag)
+			{
+				error = CELL_ESRCH;
+				return result;
+			}
+
+			// Get interrupt thread
+			const auto it = idm::get_unlocked<named_thread<ppu_thread>>(intrthread);
+
+			if (!it)
+			{
+				error = CELL_ESRCH;
+				return result;
+			}
+
+			// If interrupt thread is running, it's already established on another interrupt tag
+			if (cpu_flag::stop - it->state)
+			{
+				error = CELL_EAGAIN;
+				return result;
+			}
+
+			// It's unclear if multiple handlers can be established on single interrupt tag
+			if (lv2_obj::check(tag->handler))
+			{
+				error = CELL_ESTAT;
+				return result;
+			}
+
+			result = make_shared<lv2_int_serv>(it, arg1, arg2);
+			tag->handler = result;
+
+			it->cmd_list({{ppu_cmd::ptr_call, 0},
+				std::bit_cast<u64>(&ppu_interrupt_thread_entry)});
+
+			it->state -= cpu_flag::stop;
+			it->state.notify_one();
+
 			return result;
-		}
-
-		// Get interrupt thread
-		const auto it = idm::get_unlocked<named_thread<ppu_thread>>(intrthread);
-
-		if (!it)
-		{
-			error = CELL_ESRCH;
-			return result;
-		}
-
-		// If interrupt thread is running, it's already established on another interrupt tag
-		if (cpu_flag::stop - it->state)
-		{
-			error = CELL_EAGAIN;
-			return result;
-		}
-
-		// It's unclear if multiple handlers can be established on single interrupt tag
-		if (lv2_obj::check(tag->handler))
-		{
-			error = CELL_ESTAT;
-			return result;
-		}
-
-		result = make_shared<lv2_int_serv>(it, arg1, arg2);
-		tag->handler = result;
-
-		it->cmd_list
-		({
-			{ ppu_cmd::ptr_call, 0 },
-			std::bit_cast<u64>(&ppu_interrupt_thread_entry)
 		});
-
-		it->state -= cpu_flag::stop;
-		it->state.notify_one();
-
-		return result;
-	});
 
 	if (id)
 	{
@@ -205,9 +185,9 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 	sys_interrupt.warning("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
 	const auto handler = idm::withdraw<lv2_obj, lv2_int_serv>(ih, [](lv2_obj& obj)
-	{
-		obj.exists.release(0);
-	});
+		{
+			obj.exists.release(0);
+		});
 
 	if (!handler)
 	{
@@ -255,34 +235,34 @@ void ppu_interrupt_thread_entry(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struc
 
 		// Loop endlessly trying to invoke an interrupt if required
 		idm::select<named_thread<spu_thread>>([&](u32, spu_thread& spu)
-		{
-			if (spu.get_type() != spu_type::threaded)
 			{
-				auto& ctrl = spu.int_ctrl[2];
-
-				if (lv2_obj::check(ctrl.tag))
+				if (spu.get_type() != spu_type::threaded)
 				{
-					auto& handler = ctrl.tag->handler;
+					auto& ctrl = spu.int_ctrl[2];
 
-					if (lv2_obj::check(handler))
+					if (lv2_obj::check(ctrl.tag))
 					{
-						if (handler->thread.get() == &ppu)
-						{
-							if (spu.ch_out_intr_mbox.get_count() && ctrl.mask & SPU_INT2_STAT_MAILBOX_INT)
-							{
-								ctrl.stat |= SPU_INT2_STAT_MAILBOX_INT;
-							}
+						auto& handler = ctrl.tag->handler;
 
-							if (ctrl.mask & ctrl.stat)
+						if (lv2_obj::check(handler))
+						{
+							if (handler->thread.get() == &ppu)
 							{
-								ensure(!serv);
-								serv = handler;
+								if (spu.ch_out_intr_mbox.get_count() && ctrl.mask & SPU_INT2_STAT_MAILBOX_INT)
+								{
+									ctrl.stat |= SPU_INT2_STAT_MAILBOX_INT;
+								}
+
+								if (ctrl.mask & ctrl.stat)
+								{
+									ensure(!serv);
+									serv = handler;
+								}
 							}
 						}
 					}
 				}
-			}
-		});
+			});
 
 		if (serv)
 		{

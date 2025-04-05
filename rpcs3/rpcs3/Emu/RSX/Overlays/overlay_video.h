@@ -11,7 +11,10 @@ namespace rsx
 		{
 			using image_info_base::image_info_base;
 			virtual ~video_info() {}
-			const u8* get_data() const override { return data.empty() ? nullptr : data.data(); }
+			const u8* get_data() const override
+			{
+				return data.empty() ? nullptr : data.data();
+			}
 
 			std::vector<u8> data;
 		};
@@ -39,5 +42,5 @@ namespace rsx
 			u8 m_thumbnail_id = image_resource_id::none;
 			bool m_video_active = false; // This is the expected state. The actual state is found in the video source.
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

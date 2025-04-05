@@ -12,14 +12,14 @@ namespace compat
 	/** Represents the "title" json object */
 	struct pkg_title
 	{
-		std::string type; // TITLE or TITLE_08 etc. (system languages)
+		std::string type;  // TITLE or TITLE_08 etc. (system languages)
 		std::string title; // The Last of Arse
 	};
 
 	/** Represents the "changelog" json object */
 	struct pkg_changelog
 	{
-		std::string type; // paramhip or paramhip_08 etc. (system languages)
+		std::string type;    // paramhip or paramhip_08 etc. (system languages)
 		std::string content; // "This system software update improves system performance."
 	};
 
@@ -36,12 +36,18 @@ namespace compat
 
 		std::string get_changelog(const std::string& type) const
 		{
-			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [type](const pkg_changelog& cl) { return cl.type == type; });
+			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [type](const pkg_changelog& cl)
+					{
+						return cl.type == type;
+					});
 				it != changelogs.cend())
 			{
 				return it->content;
 			}
-			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [](const pkg_changelog& cl) { return cl.type == "paramhip"; });
+			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [](const pkg_changelog& cl)
+					{
+						return cl.type == "paramhip";
+					});
 				it != changelogs.cend())
 			{
 				return it->content;
@@ -51,12 +57,18 @@ namespace compat
 
 		std::string get_title(const std::string& type) const
 		{
-			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [type](const pkg_title& t) { return t.type == type; });
+			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [type](const pkg_title& t)
+					{
+						return t.type == type;
+					});
 				it != titles.cend())
 			{
 				return it->title;
 			}
-			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [](const pkg_title& t) { return t.type == "TITLE"; });
+			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [](const pkg_title& t)
+					{
+						return t.type == "TITLE";
+					});
 				it != titles.end())
 			{
 				return it->title;
@@ -101,17 +113,17 @@ namespace compat
 	{
 		bool is_valid = true;
 
-		QString path;        // File path
-		QString title_id;    // TEST12345
-		QString title;       // Localized
-		QString changelog;   // Localized, may be empty
-		QString version;     // May be empty
-		QString category;    // HG, DG, GD etc.
-		QString local_cat;   // Localized category
+		QString path;      // File path
+		QString title_id;  // TEST12345
+		QString title;     // Localized
+		QString changelog; // Localized, may be empty
+		QString version;   // May be empty
+		QString category;  // HG, DG, GD etc.
+		QString local_cat; // Localized category
 
 		package_type type = package_type::other; // The type of package (Update, DLC or other)
 	};
-}
+} // namespace compat
 
 class game_compatibility : public QObject
 {
@@ -119,16 +131,15 @@ class game_compatibility : public QObject
 
 private:
 	const std::map<QString, compat::status> Status_Data =
-	{
-		{ "Playable", { 0, "", "#1ebc61", tr("Playable"),         tr("Games that can be properly played from start to finish") } },
-		{ "Ingame",   { 1, "", "#f9b32f", tr("Ingame"),           tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
-		{ "Intro",    { 2, "", "#e08a1e", tr("Intro"),            tr("Games that display image but don't make it past the menus") } },
-		{ "Loadable", { 3, "", "#e74c3c", tr("Loadable"),         tr("Games that display a black screen with a framerate on the window's title") } },
-		{ "Nothing",  { 4, "", "#455556", tr("Nothing"),          tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
-		{ "NoResult", { 5, "", "",        tr("No results found"), tr("There is no entry for this game or application in the compatibility database yet.") } },
-		{ "NoData",   { 6, "", "",        tr("Database missing"), tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
-		{ "Download", { 7, "", "",        tr("Retrieving..."),    tr("Downloading the compatibility database. Please wait...") } }
-	};
+		{
+			{"Playable", {0, "", "#1ebc61", tr("Playable"), tr("Games that can be properly played from start to finish")}},
+			{"Ingame", {1, "", "#f9b32f", tr("Ingame"), tr("Games that either can't be finished, have serious glitches or have insufficient performance")}},
+			{"Intro", {2, "", "#e08a1e", tr("Intro"), tr("Games that display image but don't make it past the menus")}},
+			{"Loadable", {3, "", "#e74c3c", tr("Loadable"), tr("Games that display a black screen with a framerate on the window's title")}},
+			{"Nothing", {4, "", "#455556", tr("Nothing"), tr("Games that don't initialize properly, not loading at all and/or crashing the emulator")}},
+			{"NoResult", {5, "", "", tr("No results found"), tr("There is no entry for this game or application in the compatibility database yet.")}},
+			{"NoData", {6, "", "", tr("Database missing"), tr("Right click here and download the current database.\nMake sure you are connected to the internet.")}},
+			{"Download", {7, "", "", tr("Retrieving..."), tr("Downloading the compatibility database. Please wait...")}}};
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QString m_filepath;
 	downloader* m_downloader = nullptr;

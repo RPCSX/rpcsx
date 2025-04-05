@@ -25,7 +25,7 @@ namespace fs
 {
 	class file;
 	struct dir_entry;
-}
+} // namespace fs
 
 namespace utils
 {
@@ -38,7 +38,7 @@ class tar_object
 	utils::serial* m_ar;
 	const usz m_ar_tar_start;
 
-	usz largest_offset = 0; // We store the largest offset so we can continue to scan from there.
+	usz largest_offset = 0;                                   // We store the largest offset so we can continue to scan from there.
 	std::map<std::string, std::pair<u64, TARHeader>> m_map{}; // Maps path to offset of file data and its header
 
 	TARHeader read_header(u64 offset) const;

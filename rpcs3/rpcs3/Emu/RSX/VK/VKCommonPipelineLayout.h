@@ -11,4 +11,4 @@ namespace vk
 
 	// Returns the standard binding layout without texture slots. Those have special handling depending on the consumer.
 	rsx::simple_array<VkDescriptorSetLayoutBinding> get_common_binding_table();
-}
+} // namespace vk

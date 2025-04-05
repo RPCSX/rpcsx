@@ -109,7 +109,7 @@ namespace vk
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, tex->mipmaps(), 0, tex->layers() };
+		VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, tex->mipmaps(), 0, tex->layers()};
 		VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
 		// Prep for shader access
@@ -174,7 +174,7 @@ namespace vk
 			is_new = true;
 		}
 
-		return { scratch_buffer.get(), is_new };
+		return {scratch_buffer.get(), is_new};
 	}
 
 	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size, bool zero_memory)
@@ -208,4 +208,4 @@ namespace vk
 			g_null_sampler = nullptr;
 		}
 	}
-}
+} // namespace vk

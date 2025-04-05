@@ -63,17 +63,16 @@ error_code cellMediatorSign()
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::libmedi)("libmedi", []()
-{
-	REG_FUNC(libmedi, cellMediatorCloseContext);
-	REG_FUNC(libmedi, cellMediatorCreateContext);
-	REG_FUNC(libmedi, cellMediatorFlushCache);
-	REG_FUNC(libmedi, cellMediatorGetProviderUrl);
-	REG_FUNC(libmedi, cellMediatorGetSignatureLength);
-	REG_FUNC(libmedi, cellMediatorGetStatus);
-	REG_FUNC(libmedi, cellMediatorGetUserInfo);
-	REG_FUNC(libmedi, cellMediatorPostReports);
-	REG_FUNC(libmedi, cellMediatorReliablePostReports);
-	REG_FUNC(libmedi, cellMediatorSign);
-});
+	{
+		REG_FUNC(libmedi, cellMediatorCloseContext);
+		REG_FUNC(libmedi, cellMediatorCreateContext);
+		REG_FUNC(libmedi, cellMediatorFlushCache);
+		REG_FUNC(libmedi, cellMediatorGetProviderUrl);
+		REG_FUNC(libmedi, cellMediatorGetSignatureLength);
+		REG_FUNC(libmedi, cellMediatorGetStatus);
+		REG_FUNC(libmedi, cellMediatorGetUserInfo);
+		REG_FUNC(libmedi, cellMediatorPostReports);
+		REG_FUNC(libmedi, cellMediatorReliablePostReports);
+		REG_FUNC(libmedi, cellMediatorSign);
+	});

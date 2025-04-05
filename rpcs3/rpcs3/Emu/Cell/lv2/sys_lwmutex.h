@@ -18,8 +18,8 @@ struct sys_lwmutex_attribute_t
 
 enum : u32
 {
-	lwmutex_free     = 0xffffffffu,
-	lwmutex_dead     = 0xfffffffeu,
+	lwmutex_free = 0xffffffffu,
+	lwmutex_dead = 0xfffffffeu,
 	lwmutex_reserved = 0xfffffffdu,
 };
 
@@ -39,8 +39,7 @@ struct sys_lwmutex_t
 		{
 			atomic_be_t<u32> owner;
 			atomic_be_t<u32> waiter;
-		}
-		vars;
+		} vars;
 
 		atomic_be_t<u64> all_info;
 	};
@@ -72,9 +71,7 @@ struct lv2_lwmutex final : lv2_obj
 	atomic_t<control_data_t> lv2_control{};
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name) noexcept
-		: protocol{static_cast<u8>(protocol)}
-		, control(control)
-		, name(std::bit_cast<be_t<u64>>(name))
+		: protocol{static_cast<u8>(protocol)}, control(control), name(std::bit_cast<be_t<u64>>(name))
 	{
 	}
 
@@ -90,23 +87,24 @@ struct lv2_lwmutex final : lv2_obj
 	s32 try_own(T* cpu, bool wait_only = false)
 	{
 		const s32 signal = lv2_control.fetch_op([&](control_data_t& data)
-		{
-			if (!data.signaled)
-			{
-				cpu->prio.atomic_op([tag = ++g_priority_order_tag](std::common_type_t<decltype(T::prio)>& prio)
-				{
-					prio.order = tag;
-				});
+										  {
+											  if (!data.signaled)
+											  {
+												  cpu->prio.atomic_op([tag = ++g_priority_order_tag](std::common_type_t<decltype(T::prio)>& prio)
+													  {
+														  prio.order = tag;
+													  });
 
-				cpu->next_cpu = data.sq;
-				data.sq = cpu;
-			}
-			else
-			{
-				ensure(!wait_only);
-				data.signaled = 0;
-			}
-		}).signaled;
+												  cpu->next_cpu = data.sq;
+												  data.sq = cpu;
+											  }
+											  else
+											  {
+												  ensure(!wait_only);
+												  data.signaled = 0;
+											  }
+										  })
+		                       .signaled;
 
 		if (signal)
 		{
@@ -115,18 +113,19 @@ struct lv2_lwmutex final : lv2_obj
 		else
 		{
 			const bool notify = lwcond_waiters.fetch_op([](s32& val)
-			{
-				if (val + 0u <= 1u << 31)
-				{
-					// Value was either positive or INT32_MIN
-					return false;
-				}
+												  {
+													  if (val + 0u <= 1u << 31)
+													  {
+														  // Value was either positive or INT32_MIN
+														  return false;
+													  }
 
-				// lwmutex was set to be destroyed, but there are lwcond waiters
-				// Turn off the "lwcond_waiters notification" bit as we are adding an lwmutex waiter
-				val &= 0x7fff'ffff;
-				return true;
-			}).second;
+													  // lwmutex was set to be destroyed, but there are lwcond waiters
+				                                      // Turn off the "lwcond_waiters notification" bit as we are adding an lwmutex waiter
+													  val &= 0x7fff'ffff;
+													  return true;
+												  })
+			                        .second;
 
 			if (notify)
 			{
@@ -162,26 +161,26 @@ struct lv2_lwmutex final : lv2_obj
 		T* res = nullptr;
 
 		lv2_control.fetch_op([&](control_data_t& data)
-		{
-			res = nullptr;
-
-			if (auto sq = static_cast<T*>(data.sq))
 			{
-				res = schedule<T>(data.sq, protocol, false);
+				res = nullptr;
 
-				if (sq == data.sq)
+				if (auto sq = static_cast<T*>(data.sq))
 				{
-					return false;
-				}
+					res = schedule<T>(data.sq, protocol, false);
 
-				return true;
-			}
-			else
-			{
-				data.signaled |= (unlock2 ? s32{smin} : 1);
-				return true;
-			}
-		});
+					if (sq == data.sq)
+					{
+						return false;
+					}
+
+					return true;
+				}
+				else
+				{
+					data.signaled |= (unlock2 ? s32{smin} : 1);
+					return true;
+				}
+			});
 
 		if (res && cpu_flag::again - res->state)
 		{

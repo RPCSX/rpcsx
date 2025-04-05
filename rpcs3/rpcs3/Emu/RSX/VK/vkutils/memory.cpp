@@ -4,12 +4,12 @@
 namespace
 {
 	// Copied from rsx_utils.h. Move to a more convenient location
-	template<typename T, typename U>
+	template <typename T, typename U>
 	static inline T align2(T value, U alignment)
 	{
 		return ((value + alignment - 1) / alignment) * alignment;
 	}
-}
+} // namespace
 
 namespace vk
 {
@@ -49,7 +49,7 @@ namespace vk
 		return !type_ids.empty();
 	}
 
-	bool memory_type_info::operator == (const memory_type_info& other) const
+	bool memory_type_info::operator==(const memory_type_info& other) const
 	{
 		if (type_ids.size() != other.type_ids.size())
 		{
@@ -91,7 +91,7 @@ namespace vk
 			u32 type;
 			if (dev.get_compatible_memory_type(type_mask, access_flags, &type))
 			{
-				result = { type, 0ull };
+				result = {type, 0ull};
 			}
 		}
 
@@ -120,13 +120,13 @@ namespace vk
 			const auto type_id = type_ids[i];
 			ensure(heap_size > 0);
 
-			const u64 used_mem = vmm_get_application_memory_usage({ type_id, 0ull });
+			const u64 used_mem = vmm_get_application_memory_usage({type_id, 0ull});
 			const u64 free_mem = (used_mem >= heap_size) ? 0ull : (heap_size - used_mem);
 
 			to_reorder |= (free_mem > last_free);
 			last_free = free_mem;
 
-			free_memory_map.push_back({ i, free_mem });
+			free_memory_map.push_back({i, free_mem});
 		}
 
 		if (!to_reorder) [[likely]]
@@ -155,7 +155,8 @@ namespace vk
 
 	mem_allocator_base::mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice)
 		: m_device(dev), m_allocation_flags(0)
-	{}
+	{
+	}
 
 	mem_allocator_vma::mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev)
 		: mem_allocator_base(dev, pdev)
@@ -175,9 +176,7 @@ namespace vk
 			VK_GET_SYMBOL(vkGetPhysicalDeviceMemoryProperties)(pdev, &memory_properties);
 			for (u32 i = 0; i < memory_properties.memoryHeapCount; ++i)
 			{
-				const u64 max_sz = (memory_properties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-					? vram_allocation_limit
-					: VK_WHOLE_SIZE;
+				const u64 max_sz = (memory_properties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ? vram_allocation_limit : VK_WHOLE_SIZE;
 
 				heap_limits.push_back(max_sz);
 			}
@@ -215,11 +214,11 @@ namespace vk
 				error_code = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
 				if (error_code == VK_SUCCESS)
 				{
-					return { VK_SUCCESS, memory_type_index };
+					return {VK_SUCCESS, memory_type_index};
 				}
 			}
 
-			return { error_code, ~0u };
+			return {error_code, ~0u};
 		};
 
 		// On successful allocation, simply tag the transaction and carry on.
@@ -343,11 +342,11 @@ namespace vk
 				error_code = VK_GET_SYMBOL(vkAllocateMemory)(m_device, &info, nullptr, &memory);
 				if (error_code == VK_SUCCESS)
 				{
-					return { error_code, memory_type_index };
+					return {error_code, memory_type_index};
 				}
 			}
 
-			return { error_code, ~0u };
+			return {error_code, ~0u};
 		};
 
 		{
@@ -424,7 +423,7 @@ namespace vk
 		: m_device(dev), m_size(block_sz)
 	{
 		m_mem_allocator = get_current_mem_allocator();
-		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type, pool, !nullable);
+		m_mem_handle = m_mem_allocator->alloc(block_sz, alignment, memory_type, pool, !nullable);
 	}
 
 	memory_block::~memory_block()
@@ -435,8 +434,7 @@ namespace vk
 		}
 	}
 
-	memory_block_host::memory_block_host(VkDevice dev, void* host_pointer, u64 size, const memory_type_info& memory_type) :
-		m_device(dev), m_mem_handle(VK_NULL_HANDLE), m_host_pointer(host_pointer)
+	memory_block_host::memory_block_host(VkDevice dev, void* host_pointer, u64 size, const memory_type_info& memory_type) : m_device(dev), m_mem_handle(VK_NULL_HANDLE), m_host_pointer(host_pointer)
 	{
 		VkMemoryAllocateInfo alloc_info{};
 		VkImportMemoryHostPointerInfoEXT import_info{};
@@ -502,4 +500,4 @@ namespace vk
 	{
 		m_mem_allocator->unmap(m_mem_handle);
 	}
-}
+} // namespace vk

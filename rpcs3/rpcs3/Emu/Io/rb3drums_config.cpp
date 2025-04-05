@@ -6,8 +6,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 cfg_rb3drums g_cfg_rb3drums;
 
 cfg_rb3drums::cfg_rb3drums()
-	: cfg::node()
-	, path(fs::get_config_dir(true) + "rb3drums.yml")
+	: cfg::node(), path(fs::get_config_dir(true) + "rb3drums.yml")
 {
 }
 

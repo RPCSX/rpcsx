@@ -19,53 +19,53 @@ class gdb_thread
 	u64 continue_ops_thread_id = ANY_THREAD;
 	u64 general_ops_thread_id = ANY_THREAD;
 
-	//initialize server socket and start listening
+	// initialize server socket and start listening
 	void start_server();
-	//read at most cnt bytes to buf, returns number of bytes actually read
+	// read at most cnt bytes to buf, returns number of bytes actually read
 	int read(void* buf, int cnt) const;
-	//reads one character
+	// reads one character
 	char read_char();
-	//reads pairs of hex characters and returns their integer value
+	// reads pairs of hex characters and returns their integer value
 	u8 read_hexbyte();
 
 	// Tries to read command, returns false on error
 	bool try_read_cmd(gdb_cmd& out_cmd);
 
-	//reads commands until receiveing one with valid checksum
-	//in case of other exception (i.e. wrong first char of command)
-	//it will log exception text and return false
-	//in that case best for caller would be to stop reading, because
-	//chance of getting correct command is low
+	// reads commands until receiveing one with valid checksum
+	// in case of other exception (i.e. wrong first char of command)
+	// it will log exception text and return false
+	// in that case best for caller would be to stop reading, because
+	// chance of getting correct command is low
 	bool read_cmd(gdb_cmd& out_cmd);
-	//send cnt bytes from buf to client
+	// send cnt bytes from buf to client
 	void send(const char* buf, int cnt) const;
-	//send character to client
+	// send character to client
 	void send_char(char c);
-	//acknowledge packet, either as accepted or declined
+	// acknowledge packet, either as accepted or declined
 	void ack(bool accepted);
-	//sends command body cmd to client
+	// sends command body cmd to client
 	void send_cmd(const std::string& cmd);
-	//sends command to client until receives positive acknowledgement
-	//returns false in case some error happened, and command wasn't sent
+	// sends command to client until receives positive acknowledgement
+	// returns false in case some error happened, and command wasn't sent
 	bool send_cmd_ack(const std::string& cmd);
-	//appends encoded char c to string str, and returns checksum. encoded byte can occupy 2 bytes
+	// appends encoded char c to string str, and returns checksum. encoded byte can occupy 2 bytes
 	static u8 append_encoded_char(char c, std::string& str);
-	//convert u8 to 2 byte hexademical representation
+	// convert u8 to 2 byte hexademical representation
 	static std::string to_hexbyte(u8 i);
-	//choose thread, support ALL_THREADS and ANY_THREAD values, returns true if some thread was selected
+	// choose thread, support ALL_THREADS and ANY_THREAD values, returns true if some thread was selected
 	bool select_thread(u64 id);
-	//returns register value as hex string by register id (in gdb), in case of wrong id returns empty string
+	// returns register value as hex string by register id (in gdb), in case of wrong id returns empty string
 	static std::string get_reg(ppu_thread* thread, u32 rid);
-	//sets register value to hex string by register id (in gdb), in case of wrong id returns false
+	// sets register value to hex string by register id (in gdb), in case of wrong id returns false
 	static bool set_reg(ppu_thread* thread, u32 rid, const std::string& value);
-	//returns size of register with id rid in bytes, zero if invalid rid is provided
+	// returns size of register with id rid in bytes, zero if invalid rid is provided
 	static u32 get_reg_size(ppu_thread* thread, u32 rid);
-	//send reason of stop, returns false if sending response failed
+	// send reason of stop, returns false if sending response failed
 	bool send_reason();
 
 	void wait_with_interrupts();
 
-	//commands
+	// commands
 	bool cmd_extended_mode(gdb_cmd& cmd);
 	bool cmd_reason(gdb_cmd& cmd);
 	bool cmd_supported(gdb_cmd& cmd);

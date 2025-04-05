@@ -17,11 +17,8 @@ extern bool ppu_patch(u32 addr, u32 value);
 
 extern std::string format_spu_func_info(u32 addr, cpu_thread* spu);
 
-instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
-	: QDialog(parent)
-	, m_pc(_pc)
-	, m_disasm(_disasm->copy_type_erased())
-	, m_get_cpu(std::move(func))
+instruction_editor_dialog::instruction_editor_dialog(QWidget* parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
+	: QDialog(parent), m_pc(_pc), m_disasm(_disasm->copy_type_erased()), m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -99,50 +96,50 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 	// Events
 	connect(button_ok, &QAbstractButton::clicked, [this]()
-	{
-		const auto cpu = m_get_cpu();
-
-		if (!cpu)
 		{
-			close();
-			return;
-		}
+			const auto cpu = m_get_cpu();
 
-		bool ok;
-		const ulong opcode = m_instr->text().toULong(&ok, 16);
-		if (!ok || opcode > u32{umax})
-		{
-			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
-			return;
-		}
-
-		const be_t<u32> swapped{static_cast<u32>(opcode)};
-
-		if (cpu->get_class() == thread_class::ppu)
-		{
-			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
+			if (!cpu)
 			{
-				QMessageBox::critical(this, tr("Error"), tr("Failed to patch PPU instruction."));
+				close();
 				return;
 			}
-		}
-		else if (m_apply_for_spu_group && m_apply_for_spu_group->isChecked())
-		{
-			for (auto& spu : static_cast<spu_thread&>(*cpu).group->threads)
+
+			bool ok;
+			const ulong opcode = m_instr->text().toULong(&ok, 16);
+			if (!ok || opcode > u32{umax})
 			{
-				if (spu)
+				QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
+				return;
+			}
+
+			const be_t<u32> swapped{static_cast<u32>(opcode)};
+
+			if (cpu->get_class() == thread_class::ppu)
+			{
+				if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 				{
-					std::memcpy(spu->ls + m_pc, &swapped, 4);
+					QMessageBox::critical(this, tr("Error"), tr("Failed to patch PPU instruction."));
+					return;
 				}
 			}
-		}
-		else
-		{
-			std::memcpy(m_cpu_offset + m_pc, &swapped, 4);
-		}
+			else if (m_apply_for_spu_group && m_apply_for_spu_group->isChecked())
+			{
+				for (auto& spu : static_cast<spu_thread&>(*cpu).group->threads)
+				{
+					if (spu)
+					{
+						std::memcpy(spu->ls + m_pc, &swapped, 4);
+					}
+				}
+			}
+			else
+			{
+				std::memcpy(m_cpu_offset + m_pc, &swapped, 4);
+			}
 
-		accept();
-	});
+			accept();
+		});
 	connect(button_cancel, &QAbstractButton::clicked, this, &instruction_editor_dialog::reject);
 	connect(m_instr, &QLineEdit::textChanged, this, &instruction_editor_dialog::updatePreview);
 

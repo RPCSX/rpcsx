@@ -18,8 +18,7 @@ namespace vk
 
 	public:
 		framebuffer(VkDevice dev, VkRenderPass pass, u32 width, u32 height, std::vector<std::unique_ptr<vk::image_view>>&& atts)
-			: attachments(std::move(atts))
-			, m_device(dev)
+			: attachments(std::move(atts)), m_device(dev)
 		{
 			std::vector<VkImageView> image_view_array(attachments.size());
 			usz i = 0;
@@ -99,4 +98,4 @@ namespace vk
 	private:
 		VkDevice m_device;
 	};
-}
+} // namespace vk

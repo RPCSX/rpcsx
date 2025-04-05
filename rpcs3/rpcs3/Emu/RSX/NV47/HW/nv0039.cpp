@@ -57,18 +57,18 @@ namespace rsx
 
 			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
-			u8 *dst = vm::_ptr<u8>(write_address);
-			const u8 *src = vm::_ptr<u8>(read_address);
+			u8* dst = vm::_ptr<u8>(write_address);
+			const u8* src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
 				const u32 src_max = src_offset + read_length;
 				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
-				 (dst_offset >= src_offset && dst_offset < src_max);
+				       (dst_offset >= src_offset && dst_offset < src_max);
 			}();
 
-			if (in_format > 1 || out_format > 1) [[ unlikely ]]
+			if (in_format > 1 || out_format > 1) [[unlikely]]
 			{
 				// The formats are just input channel strides. You can use this to do cool tricks like gathering channels
 				// Very rare, only seen in use by Destiny
@@ -89,7 +89,7 @@ namespace rsx
 					src += in_pitch;
 				}
 			}
-			else if (is_overlapping) [[ unlikely ]]
+			else if (is_overlapping) [[unlikely]]
 			{
 				if (is_block_transfer)
 				{
@@ -134,7 +134,7 @@ namespace rsx
 				}
 			}
 
-			//res->release(0);
+			// res->release(0);
 		}
-	}
-}
+	} // namespace nv0039
+} // namespace rsx

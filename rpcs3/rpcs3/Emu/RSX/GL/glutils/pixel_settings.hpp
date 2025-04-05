@@ -154,4 +154,4 @@ namespace gl
 			return m_row_length;
 		}
 	};
-}
+} // namespace gl

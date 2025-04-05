@@ -21,12 +21,12 @@ std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string& Op0, const std::string& Op1)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
-void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertHeader(std::stringstream& OS)
 {
 	int gl_version = 430;
 	std::vector<std::string> required_extensions;
@@ -74,30 +74,27 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	glsl::insert_subheader_block(OS);
 }
 
-void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertInputs(std::stringstream& OS)
 {
 	glsl::insert_fragment_shader_inputs_block(
 		OS,
 		glsl::extension_flavour::NV,
 		m_prog,
 		m_parr.params[PF_PARAM_IN],
-		{
-			.two_sided_color = !!(properties.in_register_mask & in_diff_color),
-			.two_sided_specular = !!(properties.in_register_mask & in_spec_color)
-		},
-		gl::get_varying_register_location
-	);
+		{.two_sided_color = !!(properties.in_register_mask & in_diff_color),
+			.two_sided_specular = !!(properties.in_register_mask & in_spec_color)},
+		gl::get_varying_register_location);
 }
 
-void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertOutputs(std::stringstream& OS)
 {
 	const std::pair<std::string, std::string> table[] =
-	{
-		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
-	};
+		{
+			{"ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0"},
+			{"ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4"},
+			{"ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6"},
+			{"ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8"},
+		};
 
 	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
@@ -108,7 +105,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	}
 }
 
-void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertConstants(std::stringstream& OS)
 {
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -204,7 +201,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "};\n\n";
 }
 
-void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
+void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream& OS)
 {
 	m_shader_props.domain = glsl::glsl_fragment_program;
 	m_shader_props.require_lit_emulation = properties.has_lit_op;
@@ -232,16 +229,16 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
 
-void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertMainStart(std::stringstream& OS)
 {
 	std::set<std::string> output_registers;
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{
-		output_registers = { "r0", "r2", "r3", "r4" };
+		output_registers = {"r0", "r2", "r3", "r4"};
 	}
 	else
 	{
-		output_registers = { "h0", "h4", "h6", "h8" };
+		output_registers = {"h0", "h4", "h6", "h8"};
 	}
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
@@ -252,9 +249,9 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	std::string registers;
 	std::string reg_type;
 	const auto half4 = getHalfTypeName(4);
-	for (auto &reg_name : output_registers)
+	for (auto& reg_name : output_registers)
 	{
-		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support) ? "vec4" : half4;
 		if (reg_type == type) [[likely]]
 		{
 			registers += ", " + reg_name + " = " + type + "(0.)";
@@ -315,7 +312,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 }
 
-void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
+void GLFragmentDecompilerThread::insertMainEnd(std::stringstream& OS)
 {
 	OS << "}\n\n";
 
@@ -324,7 +321,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	::glsl::insert_rop_init(OS);
 
-	OS << "\n" << "	fs_main();\n\n";
+	OS << "\n"
+	   << "	fs_main();\n\n";
 
 	glsl::insert_rop(OS, m_shader_props);
 
@@ -332,13 +330,13 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
-			//Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
-			//https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+			// Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
+			// https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else
 		{
-			//Input not declared. Leave commented to assist in debugging the shader
+			// Input not declared. Leave commented to assist in debugging the shader
 			OS << "	//gl_FragDepth = r1.z;\n";
 		}
 	}

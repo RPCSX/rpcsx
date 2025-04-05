@@ -52,9 +52,8 @@ extern bool is_using_interpreter(thread_class t_class);
 
 extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
 
-debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
-	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
-	, m_gui_settings(std::move(gui_settings))
+debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
+	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent), m_gui_settings(std::move(gui_settings))
 {
 	setContentsMargins(0, 0, 0, 0);
 
@@ -158,10 +157,16 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	setWidget(body);
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
-	connect(m_go_to_pc, &QAbstractButton::clicked, this, [this]() { ShowPC(true); });
+	connect(m_go_to_pc, &QAbstractButton::clicked, this, [this]()
+		{
+			ShowPC(true);
+		});
 
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
-	connect(m_btn_step_over, &QAbstractButton::clicked, [this]() { DoStep(true); });
+	connect(m_btn_step_over, &QAbstractButton::clicked, [this]()
+		{
+			DoStep(true);
+		});
 
 	connect(m_btn_add_bp, &QAbstractButton::clicked, this, [this]
 		{
@@ -172,11 +177,15 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	connect(m_btn_run, &QAbstractButton::clicked, this, &debugger_frame::RunBtnPress);
 
 	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&]
-	{
-		m_choice_units->clearFocus();
-	});
+		{
+			m_choice_units->clearFocus();
+		});
 
-	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
+	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&]()
+		{
+			m_is_spu_disasm_mode = false;
+			OnSelectUnit();
+		});
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
 	connect(m_debugger_list, &debugger_list::BreakpointRequested, m_breakpoint_list, &breakpoint_list::HandleBreakpointRequest);
@@ -269,9 +278,12 @@ void debugger_frame::open_breakpoints_settings()
 	check_box->setCheckable(true);
 	check_box->setChecked(g_debugger_pause_all_threads_on_bp.load());
 	check_box->setToolTip(tr("When set: a breakpoint hit will pause the emulation instead of the current thread."
-		"\nApplies on all breakpoints in all threads regardless if set before or after changing this setting."));
+							 "\nApplies on all breakpoints in all threads regardless if set before or after changing this setting."));
 
-	connect(check_box, &QCheckBox::clicked, dlg, [](bool checked) { g_debugger_pause_all_threads_on_bp = checked; });
+	connect(check_box, &QCheckBox::clicked, dlg, [](bool checked)
+		{
+			g_debugger_pause_all_threads_on_bp = checked;
+		});
 
 	QPushButton* button_ok = new QPushButton(tr("OK"), dlg);
 	connect(button_ok, &QAbstractButton::clicked, dlg, &QDialog::accept);
@@ -443,17 +455,17 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				u32 max = 0;
 
 				connect(&dlg, &input_dialog::text_changed, [&](const QString& changed)
-				{
-					bool ok = false;
-					const u32 dummy = changed.toUInt(&ok, 10);
-					ok = ok && dummy && dummy <= limit;
-					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, ok);
-
-					if (ok)
 					{
-						max = dummy;
-					}
-				});
+						bool ok = false;
+						const u32 dummy = changed.toUInt(&ok, 10);
+						ok = ok && dummy && dummy <= limit;
+						dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, ok);
+
+						if (ok)
+						{
+							max = dummy;
+						}
+					});
 
 				if (dlg.exec() != QDialog::Accepted)
 				{
@@ -463,7 +475,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				return max;
 			};
 
-			auto copy_overlapping_list = [&] <typename T> (u64& index, u64 max, const std::vector<T>& in, std::vector<T>& out, bool& emptied)
+			auto copy_overlapping_list = [&]<typename T>(u64& index, u64 max, const std::vector<T>& in, std::vector<T>& out, bool& emptied)
 			{
 				max = std::min<u64>(max, in.size());
 
@@ -495,10 +507,10 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				bool emptied = false;
 
 				cpu_thread::suspend_all(nullptr, {}, [&]
-				{
-					const auto spu = static_cast<spu_thread*>(cpu);
-					copy_overlapping_list(spu->mfc_dump_idx, max, spu->mfc_history, copy, emptied);
-				});
+					{
+						const auto spu = static_cast<spu_thread*>(cpu);
+						copy_overlapping_list(spu->mfc_dump_idx, max, spu->mfc_history, copy, emptied);
+					});
 
 				std::string ret;
 
@@ -524,8 +536,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 					for (usz i = 0; i < utils::aligned_div(std::min<u32>(dump.cmd.size, 128), 4); i += 4)
 					{
-						fmt::append(ret, "\n[0x%02x] %08x %08x %08x %08x", i * sizeof(be_t<u32>)
-							, load(i + 0), load(i + 1), load(i + 2), load(i + 3));
+						fmt::append(ret, "\n[0x%02x] %08x %08x %08x %08x", i * sizeof(be_t<u32>), load(i + 0), load(i + 1), load(i + 2), load(i + 3));
 					}
 				}
 
@@ -552,12 +563,12 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				std::array<bool, 2> emptied{};
 
 				cpu_thread::suspend_all(nullptr, {}, [&]
-				{
-					auto& list = static_cast<ppu_thread*>(cpu)->call_history;
-					auto& sys_list = static_cast<ppu_thread*>(cpu)->syscall_history;
-					copy_overlapping_list(list.index, max, list.data, copy, emptied[0]);
-					copy_overlapping_list(sys_list.index, max, sys_list.data, sys_copy, emptied[1]);
-				});
+					{
+						auto& list = static_cast<ppu_thread*>(cpu)->call_history;
+						auto& sys_list = static_cast<ppu_thread*>(cpu)->syscall_history;
+						copy_overlapping_list(list.index, max, list.data, copy, emptied[0]);
+						copy_overlapping_list(sys_list.index, max, sys_list.data, sys_copy, emptied[1]);
+					});
 
 				std::string ret;
 
@@ -608,7 +619,10 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				if (!m_inst_editor)
 				{
 					m_inst_editor = new instruction_editor_dialog(this, selected, m_disasm.get(), make_check_cpu(cpu));
-					connect(m_inst_editor, &QDialog::finished, this, [this]() { m_inst_editor = nullptr; });
+					connect(m_inst_editor, &QDialog::finished, this, [this]()
+						{
+							m_inst_editor = nullptr;
+						});
 					m_inst_editor->show();
 				}
 			}
@@ -625,18 +639,18 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			if (cpu->get_class() == thread_class::ppu)
 			{
 				static_cast<ppu_thread*>(cpu)->debugger_mode.atomic_op([](ppu_debugger_mode& mode)
-				{
-					mode = static_cast<ppu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(ppu_debugger_mode::max_mode));
-				});
+					{
+						mode = static_cast<ppu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(ppu_debugger_mode::max_mode));
+					});
 
 				return;
 			}
 			if (cpu->get_class() == thread_class::spu)
 			{
 				static_cast<spu_thread*>(cpu)->debugger_mode.atomic_op([](spu_debugger_mode& mode)
-				{
-					mode = static_cast<spu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(spu_debugger_mode::max_mode));
-				});
+					{
+						mode = static_cast<spu_debugger_mode>((static_cast<u32>(mode) + 1) % static_cast<u32>(spu_debugger_mode::max_mode));
+					});
 
 				return;
 			}
@@ -661,7 +675,10 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				if (!m_reg_editor)
 				{
 					m_reg_editor = new register_editor_dialog(this, m_disasm.get(), make_check_cpu(cpu));
-					connect(m_reg_editor, &QDialog::finished, this, [this]() { m_reg_editor = nullptr; });
+					connect(m_reg_editor, &QDialog::finished, this, [this]()
+						{
+							m_reg_editor = nullptr;
+						});
 					m_reg_editor->show();
 				}
 			}
@@ -830,7 +847,10 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 
 	if (Emu.IsStopped())
 	{
-		return []() { return null_cpu; };
+		return []()
+		{
+			return null_cpu;
+		};
 	}
 
 	const auto type = cpu ? cpu->get_class() : thread_class::general;
@@ -867,12 +887,18 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 	{
 		if (g_fxo->try_get<rsx::thread>() != cpu)
 		{
-			return []() { return null_cpu; };
+			return []()
+			{
+				return null_cpu;
+			};
 		}
 	}
 	else if (!shared || shared.get() != cpu)
 	{
-		return []() { return null_cpu; };
+		return []()
+		{
+			return null_cpu;
+		};
 	}
 
 	return [cpu, type, shared = std::move(shared), emulation_id = Emu.GetEmulationIdentifier()]() mutable -> cpu_thread*
@@ -950,13 +976,14 @@ void debugger_frame::UpdateUI()
 	{
 		const auto cia = cpu->get_pc();
 		const auto size_context = cpu->get_class() == thread_class::ppu ? sizeof(ppu_thread) :
-			cpu->get_class() == thread_class::spu ? sizeof(spu_thread) : sizeof(cpu_thread);
+		                          cpu->get_class() == thread_class::spu ? sizeof(spu_thread) :
+		                                                                  sizeof(cpu_thread);
 
-		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), static_cast<void *>(cpu), size_context))
+		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), static_cast<void*>(cpu), size_context))
 		{
 			// Copy thread data
 			m_last_query_state.resize(size_context);
-			std::memcpy(m_last_query_state.data(), static_cast<void *>(cpu), size_context);
+			std::memcpy(m_last_query_state.data(), static_cast<void*>(cpu), size_context);
 
 			m_last_pc = cia;
 			DoUpdate();
@@ -1010,7 +1037,10 @@ void debugger_frame::UpdateUnitList()
 	if (!lock.try_lock())
 	{
 		m_thread_list_pending_update = true;
-		QTimer::singleShot(5, [this]() { UpdateUnitList(); });
+		QTimer::singleShot(5, [this]()
+			{
+				UpdateUnitList();
+			});
 		return;
 	}
 
@@ -1075,7 +1105,7 @@ void debugger_frame::UpdateUnitList()
 
 		if (reselected_index != umax)
 		{
-			// Include no-thread at index 0 
+			// Include no-thread at index 0
 			m_choice_units->setCurrentIndex(::narrow<s32>(reselected_index + 1));
 		}
 	}
@@ -1083,9 +1113,12 @@ void debugger_frame::UpdateUnitList()
 	// Close dialogs which are tied to the specific thread selected
 	if (reselected_index == umax)
 	{
-		if (m_reg_editor) m_reg_editor->close();
-		if (m_inst_editor) m_inst_editor->close();
-		if (m_goto_dialog) m_goto_dialog->close();
+		if (m_reg_editor)
+			m_reg_editor->close();
+		if (m_inst_editor)
+			m_inst_editor->close();
+		if (m_goto_dialog)
+			m_goto_dialog->close();
 	}
 
 	if (emu_state == system_state::stopped)
@@ -1264,78 +1297,78 @@ void debugger_frame::OnSelectSPUDisassembler()
 	m_spu_disasm_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
 	connect(m_spu_disasm_dialog, &QDialog::finished, this, [this, source_eal, start_pc](int result)
-	{
-		m_spu_disasm_dialog = nullptr;
-
-		if (result != QDialog::Accepted)
 		{
-			return;
-		}
-		const u64 spu_base = EvaluateExpression(start_pc->text());
+			m_spu_disasm_dialog = nullptr;
 
-		if (spu_base > SPU_LS_SIZE - 4 || spu_base % 4)
-		{
-			return;
-		}
-
-		const u64 spu_addr = EvaluateExpression(source_eal->text());
-
-		if (spu_addr == umax || !spu_addr)
-		{
-			return;
-		}
-
-		// Try to load as much memory as possible until SPU local memory ends
-		// Because I don't think there is a need for a size argument
-		// The user probably does not know the exact size of the SPU code either
-		u32 spu_size = SPU_LS_SIZE - spu_base;
-
-		for (u32 passed = spu_base; passed < SPU_LS_SIZE; passed += 4096)
-		{
-			if (!vm::check_addr(spu_addr + passed))
+			if (result != QDialog::Accepted)
 			{
-				if (passed == spu_base)
+				return;
+			}
+			const u64 spu_base = EvaluateExpression(start_pc->text());
+
+			if (spu_base > SPU_LS_SIZE - 4 || spu_base % 4)
+			{
+				return;
+			}
+
+			const u64 spu_addr = EvaluateExpression(source_eal->text());
+
+			if (spu_addr == umax || !spu_addr)
+			{
+				return;
+			}
+
+			// Try to load as much memory as possible until SPU local memory ends
+		    // Because I don't think there is a need for a size argument
+		    // The user probably does not know the exact size of the SPU code either
+			u32 spu_size = SPU_LS_SIZE - spu_base;
+
+			for (u32 passed = spu_base; passed < SPU_LS_SIZE; passed += 4096)
+			{
+				if (!vm::check_addr(spu_addr + passed))
 				{
-					return;
+					if (passed == spu_base)
+					{
+						return;
+					}
+
+					spu_size = passed - spu_base - (spu_addr + passed) % 4096;
+					break;
 				}
 
-				spu_size = passed - spu_base - (spu_addr + passed) % 4096;
-				break;
+				if (4096 > ~(spu_addr + passed))
+				{
+					// For overflow
+					spu_size = std::min<u32>(SPU_LS_SIZE, 0 - spu_addr);
+					break;
+				}
 			}
 
-			if (4096 > ~(spu_addr + passed))
-			{
-				// For overflow
-				spu_size = std::min<u32>(SPU_LS_SIZE, 0 - spu_addr);
-				break;
-			}
-		}
+			m_disasm.reset();
+			m_cpu.reset();
+			m_rsx = nullptr;
 
-		m_disasm.reset();
-		m_cpu.reset();
-		m_rsx = nullptr;
+			m_spu_disasm_memory = std::make_shared<utils::shm>(SPU_LS_SIZE);
+			m_spu_disasm_memory->map_self();
+			m_is_spu_disasm_mode = true;
 
-		m_spu_disasm_memory = std::make_shared<utils::shm>(SPU_LS_SIZE);
-		m_spu_disasm_memory->map_self();
-		m_is_spu_disasm_mode = true;
+			std::memset(m_spu_disasm_memory->get(), 0, spu_base);
+			std::memcpy(m_spu_disasm_memory->get() + spu_base, vm::get_super_ptr(spu_addr), spu_size);
+			std::memset(m_spu_disasm_memory->get() + spu_base + spu_size, 0, SPU_LS_SIZE - (spu_base + spu_size));
 
-		std::memset(m_spu_disasm_memory->get(), 0, spu_base);
-		std::memcpy(m_spu_disasm_memory->get() + spu_base, vm::get_super_ptr(spu_addr), spu_size);
-		std::memset(m_spu_disasm_memory->get() + spu_base + spu_size, 0, SPU_LS_SIZE - (spu_base + spu_size));
+			m_spu_disasm_pc = spu_base;
+			m_spu_disasm_origin_eal = spu_addr;
 
-		m_spu_disasm_pc = spu_base;
-		m_spu_disasm_origin_eal = spu_addr;
+			m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, m_spu_disasm_memory->get());
 
-		m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, m_spu_disasm_memory->get());
+			EnableButtons(true);
 
-		EnableButtons(true);
-
-		m_debugger_list->UpdateCPUData(m_disasm);
-		m_breakpoint_list->UpdateCPUData(m_disasm);
-		ShowPC(true);
-		DoUpdate();
-		UpdateUI();
-	});
+			m_debugger_list->UpdateCPUData(m_disasm);
+			m_breakpoint_list->UpdateCPUData(m_disasm);
+			ShowPC(true);
+			DoUpdate();
+			UpdateUI();
+		});
 
 	m_spu_disasm_dialog->show();
 }
@@ -1446,16 +1479,16 @@ void debugger_frame::ShowGotoAddressDialog()
 	m_goto_dialog->setAttribute(Qt::WA_DeleteOnClose);
 
 	connect(m_goto_dialog, &QDialog::finished, this, [this, cpu, cpu_check, expression_input](int result)
-	{
-		// Check if the thread has not been destroyed and is still the focused since
-		// This also works if no thread is selected and has been selected before
-		if (result == QDialog::Accepted && cpu == get_cpu() && cpu == cpu_check())
 		{
-			PerformGoToRequest(expression_input->text());
-		}
+			// Check if the thread has not been destroyed and is still the focused since
+		    // This also works if no thread is selected and has been selected before
+			if (result == QDialog::Accepted && cpu == get_cpu() && cpu == cpu_check())
+			{
+				PerformGoToRequest(expression_input->text());
+			}
 
-		m_goto_dialog = nullptr;
-	});
+			m_goto_dialog = nullptr;
+		});
 
 	m_goto_dialog->show();
 }
@@ -1523,8 +1556,10 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 	const QString fixed_expression = QRegularExpression(QRegularExpression::anchoredPattern("a .*|^[A-Fa-f0-9]+$")).match(expression).hasMatch() ? "0x" + expression : expression;
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
 
-	if (ok) return res;
-	if (const auto thread = get_cpu(); thread && expression.isEmpty()) return thread->get_pc();
+	if (ok)
+		return res;
+	if (const auto thread = get_cpu(); thread && expression.isEmpty())
+		return thread->get_pc();
 	return umax;
 }
 
@@ -1618,18 +1653,18 @@ void debugger_frame::DoStep(bool step_over)
 			}
 
 			cpu->state.atomic_op([&](bs_t<cpu_flag>& state)
-			{
-				state -= s_pause_flags;
-
-				if (!should_step_over)
 				{
-					if (u32* ptr = cpu->get_pc2())
+					state -= s_pause_flags;
+
+					if (!should_step_over)
 					{
-						state += cpu_flag::dbg_step;
-						*ptr = cpu->get_pc();
+						if (u32* ptr = cpu->get_pc2())
+						{
+							state += cpu_flag::dbg_step;
+							*ptr = cpu->get_pc();
+						}
 					}
-				}
-			});
+				});
 
 			cpu->state.notify_one();
 		}
@@ -1657,16 +1692,16 @@ void debugger_frame::RunBtnPress()
 		// If paused, unpause.
 		// If not paused, add dbg_pause.
 		const auto old = cpu->state.fetch_op([](bs_t<cpu_flag>& state)
-		{
-			if (state & s_pause_flags)
 			{
-				state -= s_pause_flags;
-			}
-			else
-			{
-				state += cpu_flag::dbg_pause;
-			}
-		});
+				if (state & s_pause_flags)
+				{
+					state -= s_pause_flags;
+				}
+				else
+				{
+					state += cpu_flag::dbg_pause;
+				}
+			});
 
 		// Notify only if no pause flags are set after this change
 		if (old & s_pause_flags)
@@ -1691,7 +1726,8 @@ void debugger_frame::EnableButtons(bool enable)
 {
 	const auto cpu = get_cpu();
 
-	if (!cpu) enable = false;
+	if (!cpu)
+		enable = false;
 
 	const bool step = enable && is_using_interpreter(cpu->get_class());
 

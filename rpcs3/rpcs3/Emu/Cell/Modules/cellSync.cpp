@@ -6,36 +6,36 @@
 
 LOG_CHANNEL(cellSync);
 
-template<>
+template <>
 void fmt_class_string<CellSyncError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-		STR_CASE(CELL_SYNC_ERROR_AGAIN);
-		STR_CASE(CELL_SYNC_ERROR_INVAL);
-		STR_CASE(CELL_SYNC_ERROR_NOSYS);
-		STR_CASE(CELL_SYNC_ERROR_NOMEM);
-		STR_CASE(CELL_SYNC_ERROR_SRCH);
-		STR_CASE(CELL_SYNC_ERROR_NOENT);
-		STR_CASE(CELL_SYNC_ERROR_NOEXEC);
-		STR_CASE(CELL_SYNC_ERROR_DEADLK);
-		STR_CASE(CELL_SYNC_ERROR_PERM);
-		STR_CASE(CELL_SYNC_ERROR_BUSY);
-		STR_CASE(CELL_SYNC_ERROR_ABORT);
-		STR_CASE(CELL_SYNC_ERROR_FAULT);
-		STR_CASE(CELL_SYNC_ERROR_CHILD);
-		STR_CASE(CELL_SYNC_ERROR_STAT);
-		STR_CASE(CELL_SYNC_ERROR_ALIGN);
-		STR_CASE(CELL_SYNC_ERROR_NULL_POINTER);
-		STR_CASE(CELL_SYNC_ERROR_NOT_SUPPORTED_THREAD);
-		STR_CASE(CELL_SYNC_ERROR_NO_NOTIFIER);
-		STR_CASE(CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SYNC_ERROR_AGAIN);
+				STR_CASE(CELL_SYNC_ERROR_INVAL);
+				STR_CASE(CELL_SYNC_ERROR_NOSYS);
+				STR_CASE(CELL_SYNC_ERROR_NOMEM);
+				STR_CASE(CELL_SYNC_ERROR_SRCH);
+				STR_CASE(CELL_SYNC_ERROR_NOENT);
+				STR_CASE(CELL_SYNC_ERROR_NOEXEC);
+				STR_CASE(CELL_SYNC_ERROR_DEADLK);
+				STR_CASE(CELL_SYNC_ERROR_PERM);
+				STR_CASE(CELL_SYNC_ERROR_BUSY);
+				STR_CASE(CELL_SYNC_ERROR_ABORT);
+				STR_CASE(CELL_SYNC_ERROR_FAULT);
+				STR_CASE(CELL_SYNC_ERROR_CHILD);
+				STR_CASE(CELL_SYNC_ERROR_STAT);
+				STR_CASE(CELL_SYNC_ERROR_ALIGN);
+				STR_CASE(CELL_SYNC_ERROR_NULL_POINTER);
+				STR_CASE(CELL_SYNC_ERROR_NOT_SUPPORTED_THREAD);
+				STR_CASE(CELL_SYNC_ERROR_NO_NOTIFIER);
+				STR_CASE(CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
@@ -273,7 +273,7 @@ error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer,
 	}
 
 	// clear readers and writers, write buffer_size, buffer addr and sync
-	rwm->ctrl.store({ 0, 0 });
+	rwm->ctrl.store({0, 0});
 	rwm->size = buffer_size;
 	rwm->buffer = buffer;
 
@@ -385,7 +385,7 @@ error_code cellSyncRwmWrite(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::cptr<
 	std::memcpy(rwm->buffer.get_ptr(), buffer.get_ptr(), rwm->size);
 
 	// sync and clear `readers` and `writers`
-	rwm->ctrl.exchange({ 0, 0 });
+	rwm->ctrl.exchange({0, 0});
 
 	return CELL_OK;
 }
@@ -405,7 +405,7 @@ error_code cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 	}
 
 	// set `writers` to 1 if `readers` and `writers` are zero
-	if (!rwm->ctrl.compare_and_swap_test({ 0, 0 }, { 0, 1 }))
+	if (!rwm->ctrl.compare_and_swap_test({0, 0}, {0, 1}))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
@@ -414,7 +414,7 @@ error_code cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::cptr<void> buffer)
 	std::memcpy(rwm->buffer.get_ptr(), buffer.get_ptr(), rwm->size);
 
 	// sync and clear `readers` and `writers`
-	rwm->ctrl.exchange({ 0, 0 });
+	rwm->ctrl.exchange({0, 0});
 
 	return CELL_OK;
 }
@@ -473,9 +473,9 @@ error_code cellSyncQueuePush(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 	u32 position;
 
 	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
-	{
-		return CellSyncQueue::try_push_begin(ctrl, depth, &position);
-	}))
+		{
+			return CellSyncQueue::try_push_begin(ctrl, depth, &position);
+		}))
 	{
 		if (ppu.test_stopped())
 		{
@@ -510,9 +510,9 @@ error_code cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buf
 	u32 position;
 
 	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
-	{
-		return CellSyncQueue::try_push_begin(ctrl, depth, &position);
-	}))
+		{
+			return CellSyncQueue::try_push_begin(ctrl, depth, &position);
+		}))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
@@ -544,9 +544,9 @@ error_code cellSyncQueuePop(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::p
 	u32 position;
 
 	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
-	{
-		return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
-	}))
+		{
+			return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
+		}))
 	{
 		if (ppu.test_stopped())
 		{
@@ -581,9 +581,9 @@ error_code cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffe
 	u32 position;
 
 	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
-	{
-		return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
-	}))
+		{
+			return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
+		}))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
@@ -615,9 +615,9 @@ error_code cellSyncQueuePeek(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 	u32 position;
 
 	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
-	{
-		return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
-	}))
+		{
+			return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
+		}))
 	{
 		if (ppu.test_stopped())
 		{
@@ -652,9 +652,9 @@ error_code cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buff
 	u32 position;
 
 	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
-	{
-		return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
-	}))
+		{
+			return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
+		}))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
@@ -741,16 +741,16 @@ void syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer
 		queue->m_buffer.set(queue->m_buffer.addr() | 1);
 		queue->m_bs[0] = -1;
 		queue->m_bs[1] = -1;
-		//m_bs[2]
-		//m_bs[3]
+		// m_bs[2]
+		// m_bs[3]
 		queue->m_v1 = -1;
-		queue->push2.store({ 0xffff });
-		queue->pop2.store({ 0xffff });
+		queue->push2.store({0xffff});
+		queue->pop2.store({0xffff});
 	}
 	else
 	{
-		queue->pop1.store({ 0, 0, queue->pop1.load().m_h3, 0});
-		queue->push1.store({ 0, 0, queue->push1.load().m_h7, 0 });
+		queue->pop1.store({0, 0, queue->pop1.load().m_h3, 0});
+		queue->push1.store({0, 0, queue->push1.load().m_h7, 0});
 		queue->m_bs[0] = -1; // written as u32
 		queue->m_bs[1] = -1;
 		queue->m_bs[2] = -1;
@@ -843,7 +843,8 @@ error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<vo
 			old_value = 1;
 		}
 
-		if (queue->init.compare_and_swap_test(old, init)) break;
+		if (queue->init.compare_and_swap_test(old, init))
+			break;
 	}
 
 	if (old_value == 2)
@@ -1145,7 +1146,8 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 
 		if (!isBlocking || res + 0u != CELL_SYNC_ERROR_AGAIN)
 		{
-			if (res) return not_an_error(res);
+			if (res)
+				return not_an_error(res);
 
 			break;
 		}
@@ -1445,7 +1447,8 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 
 		if (!isBlocking || res + 0u != CELL_SYNC_ERROR_AGAIN)
 		{
-			if (res) return not_an_error(res);
+			if (res)
+				return not_an_error(res);
 
 			break;
 		}
@@ -1518,7 +1521,8 @@ error_code cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 		pop.m_h3 = push.m_h7;
 		pop.m_h4 = push.m_h8;
 
-		if (queue->pop1.compare_and_swap_test(old, pop)) break;
+		if (queue->pop1.compare_and_swap_test(old, pop))
+			break;
 	}
 
 	return CELL_OK;
@@ -1653,51 +1657,51 @@ error_code _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::p
 }
 
 DECLARE(ppu_module_manager::cellSync)("cellSync", []()
-{
-	REG_FUNC(cellSync, cellSyncMutexInitialize);
-	REG_FUNC(cellSync, cellSyncMutexLock);
-	REG_FUNC(cellSync, cellSyncMutexTryLock);
-	REG_FUNC(cellSync, cellSyncMutexUnlock);
+	{
+		REG_FUNC(cellSync, cellSyncMutexInitialize);
+		REG_FUNC(cellSync, cellSyncMutexLock);
+		REG_FUNC(cellSync, cellSyncMutexTryLock);
+		REG_FUNC(cellSync, cellSyncMutexUnlock);
 
-	REG_FUNC(cellSync, cellSyncBarrierInitialize);
-	REG_FUNC(cellSync, cellSyncBarrierNotify);
-	REG_FUNC(cellSync, cellSyncBarrierTryNotify);
-	REG_FUNC(cellSync, cellSyncBarrierWait);
-	REG_FUNC(cellSync, cellSyncBarrierTryWait);
+		REG_FUNC(cellSync, cellSyncBarrierInitialize);
+		REG_FUNC(cellSync, cellSyncBarrierNotify);
+		REG_FUNC(cellSync, cellSyncBarrierTryNotify);
+		REG_FUNC(cellSync, cellSyncBarrierWait);
+		REG_FUNC(cellSync, cellSyncBarrierTryWait);
 
-	REG_FUNC(cellSync, cellSyncRwmInitialize);
-	REG_FUNC(cellSync, cellSyncRwmRead);
-	REG_FUNC(cellSync, cellSyncRwmTryRead);
-	REG_FUNC(cellSync, cellSyncRwmWrite);
-	REG_FUNC(cellSync, cellSyncRwmTryWrite);
+		REG_FUNC(cellSync, cellSyncRwmInitialize);
+		REG_FUNC(cellSync, cellSyncRwmRead);
+		REG_FUNC(cellSync, cellSyncRwmTryRead);
+		REG_FUNC(cellSync, cellSyncRwmWrite);
+		REG_FUNC(cellSync, cellSyncRwmTryWrite);
 
-	REG_FUNC(cellSync, cellSyncQueueInitialize);
-	REG_FUNC(cellSync, cellSyncQueuePush);
-	REG_FUNC(cellSync, cellSyncQueueTryPush);
-	REG_FUNC(cellSync, cellSyncQueuePop);
-	REG_FUNC(cellSync, cellSyncQueueTryPop);
-	REG_FUNC(cellSync, cellSyncQueuePeek);
-	REG_FUNC(cellSync, cellSyncQueueTryPeek);
-	REG_FUNC(cellSync, cellSyncQueueSize);
-	REG_FUNC(cellSync, cellSyncQueueClear);
+		REG_FUNC(cellSync, cellSyncQueueInitialize);
+		REG_FUNC(cellSync, cellSyncQueuePush);
+		REG_FUNC(cellSync, cellSyncQueueTryPush);
+		REG_FUNC(cellSync, cellSyncQueuePop);
+		REG_FUNC(cellSync, cellSyncQueueTryPop);
+		REG_FUNC(cellSync, cellSyncQueuePeek);
+		REG_FUNC(cellSync, cellSyncQueueTryPeek);
+		REG_FUNC(cellSync, cellSyncQueueSize);
+		REG_FUNC(cellSync, cellSyncQueueClear);
 
-	REG_FUNC(cellSync, cellSyncLFQueueGetEntrySize);
-	REG_FUNC(cellSync, cellSyncLFQueueSize);
-	REG_FUNC(cellSync, cellSyncLFQueueClear);
-	REG_FUNC(cellSync, _cellSyncLFQueueCompletePushPointer2);
-	REG_FUNC(cellSync, _cellSyncLFQueueGetPopPointer2);
-	REG_FUNC(cellSync, _cellSyncLFQueueCompletePushPointer);
-	REG_FUNC(cellSync, _cellSyncLFQueueAttachLv2EventQueue);
-	REG_FUNC(cellSync, _cellSyncLFQueueGetPushPointer2);
-	REG_FUNC(cellSync, _cellSyncLFQueueGetPopPointer);
-	REG_FUNC(cellSync, _cellSyncLFQueueCompletePopPointer2);
-	REG_FUNC(cellSync, _cellSyncLFQueueDetachLv2EventQueue);
-	REG_FUNC(cellSync, cellSyncLFQueueInitialize);
-	REG_FUNC(cellSync, _cellSyncLFQueueGetSignalAddress);
-	REG_FUNC(cellSync, _cellSyncLFQueuePushBody);
-	REG_FUNC(cellSync, cellSyncLFQueueGetDirection);
-	REG_FUNC(cellSync, cellSyncLFQueueDepth);
-	REG_FUNC(cellSync, _cellSyncLFQueuePopBody);
-	REG_FUNC(cellSync, _cellSyncLFQueueGetPushPointer);
-	REG_FUNC(cellSync, _cellSyncLFQueueCompletePopPointer);
-});
+		REG_FUNC(cellSync, cellSyncLFQueueGetEntrySize);
+		REG_FUNC(cellSync, cellSyncLFQueueSize);
+		REG_FUNC(cellSync, cellSyncLFQueueClear);
+		REG_FUNC(cellSync, _cellSyncLFQueueCompletePushPointer2);
+		REG_FUNC(cellSync, _cellSyncLFQueueGetPopPointer2);
+		REG_FUNC(cellSync, _cellSyncLFQueueCompletePushPointer);
+		REG_FUNC(cellSync, _cellSyncLFQueueAttachLv2EventQueue);
+		REG_FUNC(cellSync, _cellSyncLFQueueGetPushPointer2);
+		REG_FUNC(cellSync, _cellSyncLFQueueGetPopPointer);
+		REG_FUNC(cellSync, _cellSyncLFQueueCompletePopPointer2);
+		REG_FUNC(cellSync, _cellSyncLFQueueDetachLv2EventQueue);
+		REG_FUNC(cellSync, cellSyncLFQueueInitialize);
+		REG_FUNC(cellSync, _cellSyncLFQueueGetSignalAddress);
+		REG_FUNC(cellSync, _cellSyncLFQueuePushBody);
+		REG_FUNC(cellSync, cellSyncLFQueueGetDirection);
+		REG_FUNC(cellSync, cellSyncLFQueueDepth);
+		REG_FUNC(cellSync, _cellSyncLFQueuePopBody);
+		REG_FUNC(cellSync, _cellSyncLFQueueGetPushPointer);
+		REG_FUNC(cellSync, _cellSyncLFQueueCompletePopPointer);
+	});

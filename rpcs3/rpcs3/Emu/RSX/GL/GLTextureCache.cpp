@@ -23,13 +23,17 @@ namespace gl
 		switch (target)
 		{
 		case GL_TEXTURE_1D:
-			target_encoding = 0; break;
+			target_encoding = 0;
+			break;
 		case GL_TEXTURE_2D:
-			target_encoding = 1; break;
+			target_encoding = 1;
+			break;
 		case GL_TEXTURE_3D:
-			target_encoding = 2; break;
+			target_encoding = 2;
+			break;
 		case GL_TEXTURE_CUBE_MAP:
-			target_encoding = 3; break;
+			target_encoding = 3;
+			break;
 		default:
 			fmt::throw_exception("Unsupported destination target 0x%x", target);
 		}
@@ -53,7 +57,7 @@ namespace gl
 		const auto valid_range = get_confirmed_range_delta();
 		const u32 valid_offset = valid_range.first;
 		const u32 valid_length = valid_range.second;
-		void *dst = get_ptr(get_section_base() + valid_offset);
+		void* dst = get_ptr(get_section_base() + valid_offset);
 
 		if (!gl::get_driver_caps().ARB_compute_shader_supported)
 		{
@@ -159,16 +163,14 @@ namespace gl
 		if (copy)
 		{
 			std::vector<copy_region_descriptor> region =
-			{{
-				.src = src,
-				.xform = rsx::surface_transform::coordinate_transform,
-				.src_x = x,
-				.src_y = y,
-				.src_w = width,
-				.src_h = height,
-				.dst_w = width,
-				.dst_h = height
-			}};
+				{{.src = src,
+					.xform = rsx::surface_transform::coordinate_transform,
+					.src_x = x,
+					.src_y = y,
+					.src_w = width,
+					.src_h = height,
+					.dst_w = width,
+					.dst_h = height}};
 
 			copy_transfer_regions_impl(cmd, dst, region);
 		}
@@ -188,7 +190,7 @@ namespace gl
 		const auto dst_bpp = dst_image->pitch() / dst_image->width();
 		const auto dst_aspect = dst_image->aspect();
 
-		for (const auto &slice : sources)
+		for (const auto& slice : sources)
 		{
 			if (!slice.src)
 			{
@@ -239,15 +241,15 @@ namespace gl
 				{
 					// Optimization, avoid typeless copy to tmp followed by data copy to dst
 					// Combine the two transfers into one
-					const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
-					const coord3u dst_region = { { slice.dst_x, slice.dst_y, slice.dst_z }, { slice.dst_w, slice.dst_h, 1 } };
+					const coord3u src_region = {{src_x, src_y, 0}, {src_w, src_h, 1}};
+					const coord3u dst_region = {{slice.dst_x, slice.dst_y, slice.dst_z}, {slice.dst_w, slice.dst_h, 1}};
 					gl::copy_typeless(cmd, dst_image, slice.src, dst_region, src_region);
 
 					continue;
 				}
 
-				const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
-				const coord3u dst_region = { { src_x2, src_y, 0 }, { src_w2, src_h, 1 } };
+				const coord3u src_region = {{src_x, src_y, 0}, {src_w, src_h, 1}};
+				const coord3u dst_region = {{src_x2, src_y, 0}, {src_w2, src_h, 1}};
 				gl::copy_typeless(cmd, src_image, slice.src, dst_region, src_region);
 
 				src_x = src_x2;
@@ -257,20 +259,20 @@ namespace gl
 			if (src_w == slice.dst_w && src_h == slice.dst_h)
 			{
 				gl::g_hw_blitter->copy_image(cmd, src_image, dst_image, 0, slice.level,
-					position3i{ src_x, src_y, 0 },
-					position3i{ slice.dst_x, slice.dst_y, slice.dst_z },
-					size3i{ src_w, src_h, 1 });
+					position3i{src_x, src_y, 0},
+					position3i{slice.dst_x, slice.dst_y, slice.dst_z},
+					size3i{src_w, src_h, 1});
 			}
 			else
 			{
 				auto _blitter = gl::g_hw_blitter;
-				const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
-				const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
+				const areai src_rect = {src_x, src_y, src_x + src_w, src_y + src_h};
+				const areai dst_rect = {slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h};
 
 				gl::texture* _dst = dst_image;
 				if (src_image->get_internal_format() != dst_image->get_internal_format() ||
 					slice.level != 0 ||
-					slice.dst_z != 0) [[ unlikely ]]
+					slice.dst_z != 0) [[unlikely]]
 				{
 					tmp = std::make_unique<texture>(
 						GL_TEXTURE_2D,
@@ -295,4 +297,4 @@ namespace gl
 			}
 		}
 	}
-}
+} // namespace gl

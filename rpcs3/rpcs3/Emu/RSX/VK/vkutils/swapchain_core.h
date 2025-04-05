@@ -91,7 +91,7 @@ namespace vk
 		}
 	};
 
-	template<typename T>
+	template <typename T>
 	class abstract_swapchain_impl : public swapchain_base
 	{
 	protected:
@@ -100,7 +100,8 @@ namespace vk
 	public:
 		abstract_swapchain_impl(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 			: swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
-		{}
+		{
+		}
 
 		~abstract_swapchain_impl() override = default;
 
@@ -204,7 +205,8 @@ namespace vk
 		}
 
 		void end_frame(command_buffer& /*cmd*/, u32 /*index*/) override
-		{}
+		{
+		}
 
 		VkResult present(VkSemaphore semaphore, u32 image) override;
 
@@ -223,4 +225,4 @@ namespace vk
 	{
 		bool supports_automatic_wm_reports = true;
 	};
-}
+} // namespace vk

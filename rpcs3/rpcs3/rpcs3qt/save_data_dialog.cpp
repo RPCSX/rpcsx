@@ -33,7 +33,8 @@ s32 save_data_dialog::ShowSaveDataList(const std::string& base_dir, std::vector<
 		if (result != rsx::overlays::user_interface::selection_code::error)
 		{
 			cellSaveData.notice("ShowSaveDataList: Native UI dialog returned with selection %d", result);
-			if (use_end) sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+			if (use_end)
+				sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 			return result;
 		}
 
@@ -43,7 +44,8 @@ s32 save_data_dialog::ShowSaveDataList(const std::string& base_dir, std::vector<
 	if (!Emu.HasGui())
 	{
 		cellSaveData.notice("ShowSaveDataList(): Aborting: Emulation has no GUI attached");
-		if (use_end) sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+		if (use_end)
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 		return -2;
 	}
 
@@ -54,15 +56,16 @@ s32 save_data_dialog::ShowSaveDataList(const std::string& base_dir, std::vector<
 	input::SetIntercepted(true);
 
 	Emu.BlockingCallFromMainThread([&]()
-	{
-		save_data_list_dialog sdid(save_entries, focused, op, listSet);
-		sdid.exec();
-		selection = sdid.GetSelection();
-	});
+		{
+			save_data_list_dialog sdid(save_entries, focused, op, listSet);
+			sdid.exec();
+			selection = sdid.GetSelection();
+		});
 
 	input::SetIntercepted(false);
 
-	if (use_end) sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+	if (use_end)
+		sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 
 	return selection.load();
 }

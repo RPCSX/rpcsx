@@ -11,16 +11,15 @@
 bool keyboard_pad_handler::Init()
 {
 	const steady_clock::time_point now = steady_clock::now();
-	m_last_mouse_move_left  = now;
+	m_last_mouse_move_left = now;
 	m_last_mouse_move_right = now;
-	m_last_mouse_move_up    = now;
-	m_last_mouse_move_down  = now;
+	m_last_mouse_move_up = now;
+	m_last_mouse_move_down = now;
 	return true;
 }
 
 keyboard_pad_handler::keyboard_pad_handler()
-	: QObject()
-	, PadHandlerBase(pad_handler::keyboard)
+	: QObject(), PadHandlerBase(pad_handler::keyboard)
 {
 	init_configs();
 
@@ -30,46 +29,47 @@ keyboard_pad_handler::keyboard_pad_handler()
 
 void keyboard_pad_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = GetKeyName(Qt::Key_A);
-	cfg->ls_down.def  = GetKeyName(Qt::Key_S);
+	cfg->ls_left.def = GetKeyName(Qt::Key_A);
+	cfg->ls_down.def = GetKeyName(Qt::Key_S);
 	cfg->ls_right.def = GetKeyName(Qt::Key_D);
-	cfg->ls_up.def    = GetKeyName(Qt::Key_W);
-	cfg->rs_left.def  = GetKeyName(Qt::Key_Delete);
-	cfg->rs_down.def  = GetKeyName(Qt::Key_End);
+	cfg->ls_up.def = GetKeyName(Qt::Key_W);
+	cfg->rs_left.def = GetKeyName(Qt::Key_Delete);
+	cfg->rs_down.def = GetKeyName(Qt::Key_End);
 	cfg->rs_right.def = GetKeyName(Qt::Key_PageDown);
-	cfg->rs_up.def    = GetKeyName(Qt::Key_Home);
-	cfg->start.def    = GetKeyName(Qt::Key_Return);
-	cfg->select.def   = GetKeyName(Qt::Key_Space);
-	cfg->ps.def       = GetKeyName(Qt::Key_Backspace);
-	cfg->square.def   = GetKeyName(Qt::Key_Z);
-	cfg->cross.def    = GetKeyName(Qt::Key_X);
-	cfg->circle.def   = GetKeyName(Qt::Key_C);
+	cfg->rs_up.def = GetKeyName(Qt::Key_Home);
+	cfg->start.def = GetKeyName(Qt::Key_Return);
+	cfg->select.def = GetKeyName(Qt::Key_Space);
+	cfg->ps.def = GetKeyName(Qt::Key_Backspace);
+	cfg->square.def = GetKeyName(Qt::Key_Z);
+	cfg->cross.def = GetKeyName(Qt::Key_X);
+	cfg->circle.def = GetKeyName(Qt::Key_C);
 	cfg->triangle.def = GetKeyName(Qt::Key_V);
-	cfg->left.def     = GetKeyName(Qt::Key_Left);
-	cfg->down.def     = GetKeyName(Qt::Key_Down);
-	cfg->right.def    = GetKeyName(Qt::Key_Right);
-	cfg->up.def       = GetKeyName(Qt::Key_Up);
-	cfg->r1.def       = GetKeyName(Qt::Key_E);
-	cfg->r2.def       = GetKeyName(Qt::Key_T);
-	cfg->r3.def       = GetKeyName(Qt::Key_G);
-	cfg->l1.def       = GetKeyName(Qt::Key_Q);
-	cfg->l2.def       = GetKeyName(Qt::Key_R);
-	cfg->l3.def       = GetKeyName(Qt::Key_F);
+	cfg->left.def = GetKeyName(Qt::Key_Left);
+	cfg->down.def = GetKeyName(Qt::Key_Down);
+	cfg->right.def = GetKeyName(Qt::Key_Right);
+	cfg->up.def = GetKeyName(Qt::Key_Up);
+	cfg->r1.def = GetKeyName(Qt::Key_E);
+	cfg->r2.def = GetKeyName(Qt::Key_T);
+	cfg->r3.def = GetKeyName(Qt::Key_G);
+	cfg->l1.def = GetKeyName(Qt::Key_Q);
+	cfg->l2.def = GetKeyName(Qt::Key_R);
+	cfg->l3.def = GetKeyName(Qt::Key_F);
 
 	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
 	cfg->analog_limiter_button.def = GetKeyName(Qt::NoButton);
 
 	cfg->lstick_anti_deadzone.def = 0;
 	cfg->rstick_anti_deadzone.def = 0;
-	cfg->lstickdeadzone.def       = 0;
-	cfg->rstickdeadzone.def       = 0;
-	cfg->ltriggerthreshold.def    = 0;
-	cfg->rtriggerthreshold.def    = 0;
-	cfg->lpadsquircling.def       = 8000;
-	cfg->rpadsquircling.def       = 8000;
+	cfg->lstickdeadzone.def = 0;
+	cfg->rstickdeadzone.def = 0;
+	cfg->ltriggerthreshold.def = 0;
+	cfg->rtriggerthreshold.def = 0;
+	cfg->lpadsquircling.def = 8000;
+	cfg->rpadsquircling.def = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -344,7 +344,7 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
-	if (!m_target || !m_target->isVisible()|| target == m_target)
+	if (!m_target || !m_target->isVisible() || target == m_target)
 	{
 		switch (ev->type())
 		{
@@ -849,20 +849,30 @@ std::set<u32> keyboard_pad_handler::GetKeyCodes(const cfg::string& cfg_string)
 
 u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 {
-	if (keyName.isEmpty()) return Qt::NoButton;
+	if (keyName.isEmpty())
+		return Qt::NoButton;
 	if (const int native_scan_code = native_scan_code_from_string(keyName.toStdString()); native_scan_code >= 0)
 		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
-	if (keyName == "Alt") return Qt::Key_Alt;
-	if (keyName == "AltGr") return Qt::Key_AltGr;
-	if (keyName == "Shift") return Qt::Key_Shift;
-	if (keyName == "Ctrl") return Qt::Key_Control;
-	if (keyName == "Meta") return Qt::Key_Meta;
+	if (keyName == "Alt")
+		return Qt::Key_Alt;
+	if (keyName == "AltGr")
+		return Qt::Key_AltGr;
+	if (keyName == "Shift")
+		return Qt::Key_Shift;
+	if (keyName == "Ctrl")
+		return Qt::Key_Control;
+	if (keyName == "Meta")
+		return Qt::Key_Meta;
 #ifdef __APPLE__
 	// QKeySequence doesn't work properly for the arrow keys on macOS
-	if (keyName == "Num←") return Qt::Key_Left;
-	if (keyName == "Num↑") return Qt::Key_Up;
-	if (keyName == "Num→") return Qt::Key_Right;
-	if (keyName == "Num↓") return Qt::Key_Down;
+	if (keyName == "Num←")
+		return Qt::Key_Left;
+	if (keyName == "Num↑")
+		return Qt::Key_Up;
+	if (keyName == "Num→")
+		return Qt::Key_Right;
+	if (keyName == "Num↓")
+		return Qt::Key_Down;
 #endif
 
 	const QKeySequence seq(keyName);
@@ -879,31 +889,55 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const std::string& key)
 {
 	// NOTE: Qt throws a Ctrl key at us when using Alt Gr first, so right Alt does not work at the moment
-	if (key == "Shift Left") return native_key::shift_l;
-	if (key == "Shift Right") return native_key::shift_r;
-	if (key == "Ctrl Left") return native_key::ctrl_l;
-	if (key == "Ctrl Right") return native_key::ctrl_r;
-	if (key == "Alt Left") return native_key::alt_l;
-	if (key == "Alt Right") return native_key::alt_r;
-	if (key == "Meta Left") return native_key::meta_l;
-	if (key == "Meta Right") return native_key::meta_r;
+	if (key == "Shift Left")
+		return native_key::shift_l;
+	if (key == "Shift Right")
+		return native_key::shift_r;
+	if (key == "Ctrl Left")
+		return native_key::ctrl_l;
+	if (key == "Ctrl Right")
+		return native_key::ctrl_r;
+	if (key == "Alt Left")
+		return native_key::alt_l;
+	if (key == "Alt Right")
+		return native_key::alt_r;
+	if (key == "Meta Left")
+		return native_key::meta_l;
+	if (key == "Meta Right")
+		return native_key::meta_r;
 #ifdef _WIN32
-	if (key == "Num+0" || key == "Num+Ins") return 82;
-	if (key == "Num+1" || key == "Num+End") return 79;
-	if (key == "Num+2" || key == "Num+Down") return 80;
-	if (key == "Num+3" || key == "Num+PgDown") return 81;
-	if (key == "Num+4" || key == "Num+Left") return 75;
-	if (key == "Num+5" || key == "Num+Clear") return 76;
-	if (key == "Num+6" || key == "Num+Right") return 77;
-	if (key == "Num+7" || key == "Num+Home") return 71;
-	if (key == "Num+8" || key == "Num+Up") return 72;
-	if (key == "Num+9" || key == "Num+PgUp") return 73;
-	if (key == "Num+," || key == "Num+Del") return 83;
-	if (key == "Num+/") return 309;
-	if (key == "Num+*") return 55;
-	if (key == "Num+-") return 74;
-	if (key == "Num++") return 78;
-	if (key == "Num+Enter") return 284;
+	if (key == "Num+0" || key == "Num+Ins")
+		return 82;
+	if (key == "Num+1" || key == "Num+End")
+		return 79;
+	if (key == "Num+2" || key == "Num+Down")
+		return 80;
+	if (key == "Num+3" || key == "Num+PgDown")
+		return 81;
+	if (key == "Num+4" || key == "Num+Left")
+		return 75;
+	if (key == "Num+5" || key == "Num+Clear")
+		return 76;
+	if (key == "Num+6" || key == "Num+Right")
+		return 77;
+	if (key == "Num+7" || key == "Num+Home")
+		return 71;
+	if (key == "Num+8" || key == "Num+Up")
+		return 72;
+	if (key == "Num+9" || key == "Num+PgUp")
+		return 73;
+	if (key == "Num+," || key == "Num+Del")
+		return 83;
+	if (key == "Num+/")
+		return 309;
+	if (key == "Num+*")
+		return 55;
+	if (key == "Num+-")
+		return 74;
+	if (key == "Num++")
+		return 78;
+	if (key == "Num+Enter")
+		return 284;
 #else
 	// TODO
 #endif
@@ -943,7 +977,7 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	case 78: return "Num++";
 	case 284: return "Num+Enter";
 #else
-	// TODO
+		// TODO
 #endif
 	default: return "";
 	}
@@ -972,7 +1006,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	m_multi_y = cfg->mouse_acceleration_y / 100.0;
 	m_l_stick_lerp_factor = cfg->l_stick_lerp_factor / 100.0f;
 	m_r_stick_lerp_factor = cfg->r_stick_lerp_factor / 100.0f;
-	m_analog_lerp_factor  = cfg->analog_lerp_factor / 100.0f;
+	m_analog_lerp_factor = cfg->analog_lerp_factor / 100.0f;
 	m_trigger_lerp_factor = cfg->trigger_lerp_factor / 100.0f;
 	m_l_stick_multiplier = cfg->lstickmultiplier;
 	m_r_stick_multiplier = cfg->rstickmultiplier;
@@ -983,7 +1017,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	const auto find_keys = [this](const cfg::string& name)
 	{
 		std::set<u32> keys = FindKeyCodes<u32, u32>(mouse_list, name, false);
-		for (const u32& key : GetKeyCodes(name)) keys.insert(key);
+		for (const u32& key : GetKeyCodes(name))
+			keys.insert(key);
 
 		if (!keys.empty())
 		{
@@ -1010,8 +1045,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	}
 
 	// Fixed assign change, default is both sensor and press off
-	pad->Init
-	(
+	pad->Init(
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
@@ -1019,8 +1053,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pclass_profile,
 		cfg->vendor_id,
 		cfg->product_id,
-		cfg->pressure_intensity
-	);
+		cfg->pressure_intensity);
 
 	if (b_has_pressure_intensity_button)
 	{
@@ -1034,23 +1067,23 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->right),    CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->ps),       CELL_PAD_CTRL_PS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->left), CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->down), CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->right), CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->up), CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->start), CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->r3), CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->l3), CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->select), CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->ps), CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->square), CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->cross), CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->circle), CELL_PAD_CTRL_CIRCLE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r2),       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r1), CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l1), CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r2), CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l2), CELL_PAD_CTRL_L2);
 
 	if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD)
 	{
@@ -1062,10 +1095,10 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
 	}
 
-	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_keys(cfg->ls_left), find_keys(cfg->ls_right));
-	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_keys(cfg->ls_up),   find_keys(cfg->ls_down));
+	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, find_keys(cfg->ls_left), find_keys(cfg->ls_right));
+	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, find_keys(cfg->ls_up), find_keys(cfg->ls_down));
 	pad->m_sticks[2] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_keys(cfg->rs_left), find_keys(cfg->rs_right));
-	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_keys(cfg->rs_up),   find_keys(cfg->rs_down));
+	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_keys(cfg->rs_up), find_keys(cfg->rs_down));
 
 	pad->m_sensors[0] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_X, 0, 0, 0, DEFAULT_MOTION_X);
 	pad->m_sensors[1] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Y, 0, 0, 0, DEFAULT_MOTION_Y);
@@ -1108,10 +1141,10 @@ void keyboard_pad_handler::process()
 	{
 		constexpr double mouse_interval = 30.0;
 
-		const double elapsed_left  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
+		const double elapsed_left = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
 		const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
-		const double elapsed_up    = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
-		const double elapsed_down  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+		const double elapsed_up = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
+		const double elapsed_down = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
 
 		// roughly 1-2 frames to process the next mouse move
 		if (elapsed_left > mouse_interval)

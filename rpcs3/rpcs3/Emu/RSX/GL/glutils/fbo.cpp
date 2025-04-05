@@ -216,7 +216,7 @@ namespace gl
 		GLint value;
 		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &value);
 
-		return{ static_cast<GLuint>(value) };
+		return {static_cast<GLuint>(value)};
 	}
 
 	fbo fbo::get_bound_read_buffer()
@@ -224,7 +224,7 @@ namespace gl
 		GLint value;
 		glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &value);
 
-		return{ static_cast<GLuint>(value) };
+		return {static_cast<GLuint>(value)};
 	}
 
 	fbo fbo::get_bound_buffer()
@@ -232,7 +232,7 @@ namespace gl
 		GLint value;
 		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &value);
 
-		return{ static_cast<GLuint>(value) };
+		return {static_cast<GLuint>(value)};
 	}
 
 	GLuint fbo::id() const
@@ -276,4 +276,4 @@ namespace gl
 				return std::find(resources.cbegin(), resources.cend(), e.second) != resources.cend();
 			});
 	}
-}
+} // namespace gl

@@ -21,7 +21,7 @@ struct CellGcmConfig
 
 struct CellGcmContextData;
 
-using CellGcmContextCallback = s32 (vm::ptr<CellGcmContextData>, u32);
+using CellGcmContextCallback = s32(vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {
@@ -112,15 +112,13 @@ struct GcmZcullInfo
 
 	CellGcmZcullInfo pack() const
 	{
-		CellGcmZcullInfo ret
-		{
-			.region = (1<<0) | (zFormat<<4) | (aaFormat<<8),
-			.size = ((width>>6)<<22) | ((height>>6)<<6),
-			.start = cullStart&(~0xFFF),
+		CellGcmZcullInfo ret{
+			.region = (1 << 0) | (zFormat << 4) | (aaFormat << 8),
+			.size = ((width >> 6) << 22) | ((height >> 6) << 6),
+			.start = cullStart & (~0xFFF),
 			.offset = offset,
-			.status0 = (zcullDir<<1) | (zcullFormat<<2) | ((sFunc&0xF)<<12) | (sRef<<16) | (sMask<<24),
-			.status1 = (0x2000<<0) | (0x20<<16)
-		};
+			.status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24),
+			.status1 = (0x2000 << 0) | (0x20 << 16)};
 
 		return ret;
 	}
@@ -141,13 +139,11 @@ struct GcmTileInfo
 
 	CellGcmTileInfo pack() const
 	{
-		CellGcmTileInfo ret
-		{
+		CellGcmTileInfo ret{
 			.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31),
 			.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31),
 			.pitch = (pitch / 0x100) << 8,
-			.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30)
-		};
+			.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30)};
 
 		return ret;
 	}

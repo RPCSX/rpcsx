@@ -92,7 +92,7 @@ namespace gl
 		}
 
 		const auto range = utils::address_range::start_length(start, length);
-		if (block->can_map(range)) [[ likely ]]
+		if (block->can_map(range)) [[likely]]
 		{
 			return *block;
 		}
@@ -108,8 +108,8 @@ namespace gl
 
 		// 2. Acquire all the extras
 		for (u32 id = owner->base_addr() + s_dma_block_size;
-			 id < search_end;
-			 id += s_dma_block_size)
+			id < search_end;
+			id += s_dma_block_size)
 		{
 			ensure((id % s_dma_block_size) == 0);
 			g_dma_pool[id]->set_parent(new_owner.get());
@@ -122,6 +122,6 @@ namespace gl
 	dma_mapping_handle map_dma(u32 guest_address, u32 length)
 	{
 		auto& block = get_block(guest_address, length);
-		return { guest_address - block.base_addr(), block.get() };
+		return {guest_address - block.base_addr(), block.get()};
 	}
-}
+} // namespace gl

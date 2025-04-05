@@ -65,8 +65,8 @@ class pad_settings_dialog : public QDialog
 		id_pad_rstick_up,
 
 		id_pressure_intensity, // Special button for pressure intensity
-		id_analog_limiter, // Special button for analog limiter
-		id_orientation_reset, // Special button for orientation reset
+		id_analog_limiter,     // Special button for analog limiter
+		id_orientation_reset,  // Special button for orientation reset
 
 		id_pad_end, // end
 
@@ -115,16 +115,16 @@ private:
 	QHash<QObject*, QString> m_descriptions;
 
 	// Capabilities
-	bool m_enable_buttons{ false };
-	bool m_enable_rumble{ false };
-	bool m_enable_deadzones{ false };
-	bool m_enable_led{ false };
-	bool m_enable_battery{ false };
-	bool m_enable_battery_led{ false };
-	bool m_enable_motion{ false };
-	bool m_enable_pressure_intensity_button{ true };
-	bool m_enable_analog_limiter_button{ true };
-	bool m_enable_orientation_reset_button{ true };
+	bool m_enable_buttons{false};
+	bool m_enable_rumble{false};
+	bool m_enable_deadzones{false};
+	bool m_enable_led{false};
+	bool m_enable_battery{false};
+	bool m_enable_battery_led{false};
+	bool m_enable_motion{false};
+	bool m_enable_pressure_intensity_button{true};
+	bool m_enable_analog_limiter_button{true};
+	bool m_enable_orientation_reset_button{true};
 
 	// Button Mapping
 	QButtonGroup* m_pad_buttons = nullptr;
@@ -180,7 +180,12 @@ private:
 
 	// Input thread. Its Callback handles the input
 	std::unique_ptr<named_thread<std::function<void()>>> m_input_thread;
-	enum class input_thread_state { paused, pausing, active };
+	enum class input_thread_state
+	{
+		paused,
+		pausing,
+		active
+	};
 	atomic_t<input_thread_state> m_input_thread_state{input_thread_state::paused};
 
 	void start_input_thread();
@@ -242,10 +247,10 @@ protected:
 	void showEvent(QShowEvent* event) override;
 
 	/** Handle keyboard handler input */
-	void keyPressEvent(QKeyEvent *keyEvent) override;
-	void mouseReleaseEvent(QMouseEvent *event) override;
-	void mouseMoveEvent(QMouseEvent *event) override;
-	void wheelEvent(QWheelEvent *event) override;
+	void keyPressEvent(QKeyEvent* keyEvent) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
 };

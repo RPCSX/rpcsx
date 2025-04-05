@@ -21,15 +21,33 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 		"It is written in C++ for Windows, Linux, FreeBSD and MacOS, funded with %0.\n"
 		"Our developers and contributors are always working hard to ensure this project is the best that it can be.\n"
 		"There are still plenty of implementations to make and optimizations to do.")
-		.arg(gui::utils::make_link(tr("Patreon"), "https://rpcs3.net/patreon"))));
+			.arg(gui::utils::make_link(tr("Patreon"), "https://rpcs3.net/patreon"))));
 
 	// Events
-	connect(ui->gitHub, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });
-	connect(ui->website, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://rpcs3.net")); });
-	connect(ui->forum, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://forums.rpcs3.net")); });
-	connect(ui->patreon, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon")); });
-	connect(ui->discord, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://discord.me/RPCS3")); });
-	connect(ui->wiki, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://wiki.rpcs3.net/index.php?title=Main_Page")); });
+	connect(ui->gitHub, &QPushButton::clicked, []
+		{
+			QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3"));
+		});
+	connect(ui->website, &QPushButton::clicked, []
+		{
+			QDesktopServices::openUrl(QUrl("https://rpcs3.net"));
+		});
+	connect(ui->forum, &QPushButton::clicked, []
+		{
+			QDesktopServices::openUrl(QUrl("https://forums.rpcs3.net"));
+		});
+	connect(ui->patreon, &QPushButton::clicked, []
+		{
+			QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
+		});
+	connect(ui->discord, &QPushButton::clicked, []
+		{
+			QDesktopServices::openUrl(QUrl("https://discord.me/RPCS3"));
+		});
+	connect(ui->wiki, &QPushButton::clicked, []
+		{
+			QDesktopServices::openUrl(QUrl("https://wiki.rpcs3.net/index.php?title=Main_Page"));
+		});
 	connect(ui->close, &QPushButton::clicked, this, &QWidget::close);
 }
 

@@ -65,7 +65,7 @@ namespace rpcs3
 
 	template <typename T, size_t N>
 		requires std::is_integral_v<T>
-	static inline usz hash_array(const T(&arr)[N])
+	static inline usz hash_array(const T (&arr)[N])
 	{
 		usz hash = fnv_seed;
 		for (size_t i = 0; i < N; ++i)
@@ -77,7 +77,7 @@ namespace rpcs3
 
 	template <typename T, size_t N>
 		requires std::is_class_v<T>
-	static inline usz hash_array(const T(&arr)[N])
+	static inline usz hash_array(const T (&arr)[N])
 	{
 		usz hash = fnv_seed;
 		for (size_t i = 0; i < N; ++i)
@@ -87,4 +87,4 @@ namespace rpcs3
 		}
 		return hash;
 	}
-}
+} // namespace rpcs3

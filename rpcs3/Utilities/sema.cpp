@@ -22,26 +22,26 @@ void semaphore_base::imp_wait()
 	{
 		// Try hard way
 		const u32 value = m_value.fetch_op([&](u32& value)
-		{
-			ensure(value != c_waiter_mask); // "semaphore_base: overflow"
-
-			if (value & c_value_mask)
 			{
-				// Obtain signal
-				value -= c_value;
+				ensure(value != c_waiter_mask); // "semaphore_base: overflow"
 
-				if (waits)
+				if (value & c_value_mask)
 				{
-					// Remove waiter
-					value -= c_waiter;
+					// Obtain signal
+					value -= c_value;
+
+					if (waits)
+					{
+						// Remove waiter
+						value -= c_waiter;
+					}
 				}
-			}
-			else if (!waits)
-			{
-				// Add waiter
-				value += c_waiter;
-			}
-		});
+				else if (!waits)
+				{
+					// Add waiter
+					value += c_waiter;
+				}
+			});
 
 		if (value & c_value_mask)
 		{
@@ -67,15 +67,15 @@ bool semaphore_base::try_post(u32 _max)
 {
 	// Conditional increment
 	const auto [value, ok] = m_value.fetch_op([&](u32& value)
-	{
-		if ((value & c_value_mask) <= _max)
 		{
-			value += c_value;
-			return true;
-		}
+			if ((value & c_value_mask) <= _max)
+			{
+				value += c_value;
+				return true;
+			}
 
-		return false;
-	});
+			return false;
+		});
 
 	if (!ok)
 	{

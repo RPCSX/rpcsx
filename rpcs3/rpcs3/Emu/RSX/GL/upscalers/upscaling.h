@@ -23,11 +23,11 @@ namespace gl
 		virtual ~upscaler() {}
 
 		virtual gl::texture* scale_output(
-			gl::command_context& cmd,               // State
-			gl::texture* src,                       // Source input
-			const areai& src_region,                // Scaling request information
-			const areai& dst_region,                // Ditto
-			gl::flags32_t mode                      // Mode
-		) = 0;
+			gl::command_context& cmd, // State
+			gl::texture* src,         // Source input
+			const areai& src_region,  // Scaling request information
+			const areai& dst_region,  // Ditto
+			gl::flags32_t mode        // Mode
+			) = 0;
 	};
-}
+} // namespace gl

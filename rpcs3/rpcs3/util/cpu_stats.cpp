@@ -21,35 +21,35 @@
 #endif
 
 #ifdef __APPLE__
-# include <mach/mach_init.h>
-# include <mach/task.h>
-# include <mach/vm_map.h>
+#include <mach/mach_init.h>
+#include <mach/task.h>
+#include <mach/vm_map.h>
 #endif
 
 #ifdef __linux__
-# include <dirent.h>
+#include <dirent.h>
 #endif
 
 #if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-# include <sys/sysctl.h>
-# include <unistd.h>
-# if defined(__DragonFly__) || defined(__FreeBSD__)
-#  include <sys/user.h>
-# endif
+#include <sys/sysctl.h>
+#include <unistd.h>
+#if defined(__DragonFly__) || defined(__FreeBSD__)
+#include <sys/user.h>
+#endif
 
-# if defined(__NetBSD__)
-#  undef KERN_PROC
-#  define KERN_PROC KERN_PROC2
-#  define kinfo_proc kinfo_proc2
-# endif
+#if defined(__NetBSD__)
+#undef KERN_PROC
+#define KERN_PROC KERN_PROC2
+#define kinfo_proc kinfo_proc2
+#endif
 
-# if defined(__DragonFly__)
-#  define KP_NLWP(kp) (kp.kp_nthreads)
-# elif defined(__FreeBSD__)
-#  define KP_NLWP(kp) (kp.ki_numthreads)
-# elif defined(__NetBSD__)
-#  define KP_NLWP(kp) (kp.p_nlwps)
-# endif
+#if defined(__DragonFly__)
+#define KP_NLWP(kp) (kp.kp_nthreads)
+#elif defined(__FreeBSD__)
+#define KP_NLWP(kp) (kp.ki_numthreads)
+#elif defined(__NetBSD__)
+#define KP_NLWP(kp) (kp.p_nlwps)
+#endif
 #endif
 
 LOG_CHANNEL(perf_log, "PERF");
@@ -78,8 +78,8 @@ namespace utils
 		struct tms timeSample;
 
 		m_last_cpu = times(&timeSample);
-		m_sys_cpu  = timeSample.tms_stime;
-		m_usr_cpu  = timeSample.tms_utime;
+		m_sys_cpu = timeSample.tms_stime;
+		m_usr_cpu = timeSample.tms_utime;
 #endif
 	}
 
@@ -321,8 +321,8 @@ namespace utils
 		}
 
 		m_last_cpu = now.QuadPart;
-		m_usr_cpu  = usr.QuadPart;
-		m_sys_cpu  = sys.QuadPart;
+		m_usr_cpu = usr.QuadPart;
+		m_sys_cpu = sys.QuadPart;
 
 		return std::clamp(percent, 0.0, 100.0);
 #else
@@ -343,8 +343,8 @@ namespace utils
 			percent *= 100;
 		}
 		m_last_cpu = now;
-		m_sys_cpu  = timeSample.tms_stime;
-		m_usr_cpu  = timeSample.tms_utime;
+		m_sys_cpu = timeSample.tms_stime;
+		m_usr_cpu = timeSample.tms_utime;
 
 		return std::clamp(percent, 0.0, 100.0);
 #endif
@@ -361,7 +361,7 @@ namespace utils
 
 		// initialize the process entry structure.
 		PROCESSENTRY32 entry = {0};
-		entry.dwSize         = sizeof(entry);
+		entry.dwSize = sizeof(entry);
 
 		// get the first process info.
 		BOOL ret = Process32First(snapshot, &entry);
@@ -380,7 +380,7 @@ namespace utils
 			return 0;
 		}
 		vm_deallocate(task, reinterpret_cast<vm_address_t>(thread_list),
-			      sizeof(thread_t) * thread_count);
+			sizeof(thread_t) * thread_count);
 		return static_cast<u32>(thread_count);
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
 		int mib[] = {
@@ -459,4 +459,4 @@ namespace utils
 		return 0;
 #endif
 	}
-}
+} // namespace utils

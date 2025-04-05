@@ -17,9 +17,7 @@ class cfg_pad_btn : public cfg::_enum<pad_button>
 {
 public:
 	cfg_pad_btn(cfg::node* owner, const std::string& name, T id, pad_button value, bool dynamic = false)
-		: cfg::_enum<pad_button>(owner, name, value, dynamic)
-		, m_btn_id(id)
-	{};
+		: cfg::_enum<pad_button>(owner, name, value, dynamic), m_btn_id(id) {};
 
 	T btn_id() const
 	{
@@ -152,7 +150,8 @@ protected:
 
 	void init_button(cfg_pad_btn<T>* pbtn)
 	{
-		if (!pbtn) return;
+		if (!pbtn)
+			return;
 		const u32 offset = pad_button_offset(pbtn->get());
 		const u32 keycode = pad_button_keycode(pbtn->get());
 		button_map[offset][keycode].insert(std::as_const(pbtn));
@@ -206,7 +205,8 @@ protected:
 			if (btn && func)
 			{
 				func(btn->btn_id(), btn->get(), value, pressed, abort);
-				if (abort) break;
+				if (abort)
+					break;
 			}
 		}
 
@@ -245,7 +245,7 @@ struct emulated_pads_config : cfg::node
 			player->clear_buttons();
 		}
 
-		if (fs::file cfg_file{ cfg_name, fs::read })
+		if (fs::file cfg_file{cfg_name, fs::read})
 		{
 			if (const std::string content = cfg_file.to_string(); !content.empty())
 			{

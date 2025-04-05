@@ -26,7 +26,7 @@ namespace patch_key
 	static const std::string min = "Min";
 	static const std::string max = "Max";
 	static const std::string allowed_values = "Allowed Values";
-}
+} // namespace patch_key
 
 inline static const std::string patch_engine_version = "1.2";
 
@@ -34,11 +34,11 @@ enum class patch_type
 {
 	invalid,
 	load,
-	alloc, // Allocate memory at address (zeroized executable memory)
-	code_alloc,// Allocate memory somewhere, saves branch to memory at specfied address (filled with PPU NOP and branch for returning)
-	jump, // Install special 32-bit jump instruction (PPU only atm)
-	jump_link, // jump + set link (PPU only atm)
-	jump_func, // jump to exported function (PPU only, forever)
+	alloc,      // Allocate memory at address (zeroized executable memory)
+	code_alloc, // Allocate memory somewhere, saves branch to memory at specfied address (filled with PPU NOP and branch for returning)
+	jump,       // Install special 32-bit jump instruction (PPU only atm)
+	jump_link,  // jump + set link (PPU only atm)
+	jump_func,  // jump to exported function (PPU only, forever)
 	byte,
 	le16,
 	le32,
@@ -52,9 +52,9 @@ enum class patch_type
 	bd64, // be64 with data hint (non-code)
 	bef32,
 	bef64,
-	bp_exec, // Execution Breakpoint 
-	utf8, // Text of string (not null-terminated automatically)
-	c_utf8, // Text of string (null-terminated automatically)
+	bp_exec,   // Execution Breakpoint
+	utf8,      // Text of string (not null-terminated automatically)
+	c_utf8,    // Text of string (null-terminated automatically)
 	move_file, // Move file
 	hide_file, // Hide file
 };
@@ -80,7 +80,7 @@ public:
 		patch_type type = patch_type::load;
 		u32 offset = 0;
 		std::string original_offset{}; // Used for specifying paths
-		std::string original_value{}; // Used for import consistency (avoid rounding etc.)
+		std::string original_value{};  // Used for import consistency (avoid rounding etc.)
 		union
 		{
 			u64 long_value;

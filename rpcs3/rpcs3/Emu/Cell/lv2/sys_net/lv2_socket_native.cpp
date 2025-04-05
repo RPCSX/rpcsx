@@ -74,7 +74,7 @@ s32 lv2_socket_native::create_socket()
 
 	int native_proto = protocol == SYS_NET_IPPROTO_TCP ? IPPROTO_TCP :
 	                   protocol == SYS_NET_IPPROTO_UDP ? IPPROTO_UDP :
-                                                         IPPROTO_IP;
+	                                                     IPPROTO_IP;
 
 	auto socket_res = ::socket(native_domain, native_type, native_proto);
 
@@ -90,8 +90,8 @@ s32 lv2_socket_native::create_socket()
 void lv2_socket_native::set_socket(socket_type native_socket, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 {
 	this->native_socket = native_socket;
-	this->family   = family;
-	this->type     = type;
+	this->family = family;
+	this->type = type;
 	this->protocol = protocol;
 
 	set_default_buffers();
@@ -158,8 +158,8 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 	}
 
 	::sockaddr_in native_addr{};
-	native_addr.sin_family      = AF_INET;
-	native_addr.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
+	native_addr.sin_family = AF_INET;
+	native_addr.sin_port = std::bit_cast<u16>(psa_in->sin_port);
 	native_addr.sin_addr.s_addr = saddr;
 	::socklen_t native_addr_len = sizeof(native_addr);
 
@@ -216,7 +216,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 
 	const auto* psa_in = reinterpret_cast<const sys_net_sockaddr_in*>(&addr);
 
-	::sockaddr_in native_addr   = sys_net_addr_to_native_addr(addr);
+	::sockaddr_in native_addr = sys_net_addr_to_native_addr(addr);
 	::socklen_t native_addr_len = sizeof(native_addr);
 
 	sys_net.notice("[Native] Attempting to connect on %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
@@ -369,7 +369,7 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 	u32 out_len = sizeof(out_val);
 
 	int native_level = -1;
-	int native_opt   = -1;
+	int native_opt = -1;
 
 	union
 	{
@@ -390,14 +390,14 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 		{
 			// Special
 			out_val._int = so_nbio;
-			out_len      = sizeof(s32);
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_SO_ERROR:
 		{
 			// Special
 			out_val._int = std::exchange(so_error, 0);
-			out_len      = sizeof(s32);
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_SO_KEEPALIVE:
@@ -434,13 +434,13 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 		case SYS_NET_SO_REUSEADDR:
 		{
 			out_val._int = so_reuseaddr;
-			out_len      = sizeof(s32);
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_SO_REUSEPORT:
 		{
 			out_val._int = so_reuseport;
-			out_len      = sizeof(s32);
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 #else
@@ -489,7 +489,7 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 		{
 			// Special (no effect)
 			out_val._int = so_tcp_maxseg;
-			out_len      = sizeof(s32);
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_TCP_NODELAY:
@@ -595,14 +595,14 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 		{
 			// TODO
 			out_val.timeo = {::narrow<s64>(native_val.timeo.tv_sec), ::narrow<s64>(native_val.timeo.tv_usec)};
-			out_len       = sizeof(sys_net_timeval);
+			out_len = sizeof(sys_net_timeval);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_SO_LINGER:
 		{
 			// TODO
 			out_val.linger = {::narrow<s32>(native_val.linger.l_onoff), ::narrow<s32>(native_val.linger.l_linger)};
-			out_len        = sizeof(sys_net_linger);
+			out_len = sizeof(sys_net_linger);
 			return {CELL_OK, out_val, out_len};
 		}
 		default: break;
@@ -611,7 +611,7 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 
 	// Fallback to int
 	out_val._int = native_val._int;
-	out_len      = sizeof(s32);
+	out_len = sizeof(s32);
 	return {CELL_OK, out_val, out_len};
 }
 
@@ -619,9 +619,9 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 {
 	std::lock_guard lock(mutex);
 
-	int native_int         = 0;
-	int native_level       = -1;
-	int native_opt         = -1;
+	int native_int = 0;
+	int native_level = -1;
+	int native_opt = -1;
 	const void* native_val = &native_int;
 	::socklen_t native_len = sizeof(int);
 	::linger native_linger;
@@ -680,16 +680,16 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 #ifdef _WIN32
 		case SYS_NET_SO_REUSEADDR:
 		{
-			native_opt   = SO_REUSEADDR;
+			native_opt = SO_REUSEADDR;
 			so_reuseaddr = native_int;
-			native_int   = so_reuseaddr || so_reuseport ? 1 : 0;
+			native_int = so_reuseaddr || so_reuseport ? 1 : 0;
 			break;
 		}
 		case SYS_NET_SO_REUSEPORT:
 		{
-			native_opt   = SO_REUSEADDR;
+			native_opt = SO_REUSEADDR;
 			so_reuseport = native_int;
-			native_int   = so_reuseaddr || so_reuseport ? 1 : 0;
+			native_int = so_reuseaddr || so_reuseport ? 1 : 0;
 			break;
 		}
 #else
@@ -733,10 +733,10 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 				return -SYS_NET_EINVAL;
 
 			// TODO
-			native_opt             = SO_LINGER;
-			native_val             = &native_linger;
-			native_len             = sizeof(native_linger);
-			native_linger.l_onoff  = reinterpret_cast<const sys_net_linger*>(optval.data())->l_onoff;
+			native_opt = SO_LINGER;
+			native_val = &native_linger;
+			native_len = sizeof(native_linger);
+			native_linger.l_onoff = reinterpret_cast<const sys_net_linger*>(optval.data())->l_onoff;
 			native_linger.l_linger = reinterpret_cast<const sys_net_linger*>(optval.data())->l_linger;
 			break;
 		}
@@ -825,9 +825,9 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 			if (optval.size() < sizeof(sys_net_ip_mreq))
 				return -SYS_NET_EINVAL;
 
-			native_opt                       = optname == SYS_NET_IP_ADD_MEMBERSHIP ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP;
-			native_val                       = &native_mreq;
-			native_len                       = sizeof(::ip_mreq);
+			native_opt = optname == SYS_NET_IP_ADD_MEMBERSHIP ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP;
+			native_val = &native_mreq;
+			native_len = sizeof(::ip_mreq);
 			native_mreq.imr_interface.s_addr = std::bit_cast<u32>(reinterpret_cast<const sys_net_ip_mreq*>(optval.data())->imr_interface);
 			native_mreq.imr_multiaddr.s_addr = std::bit_cast<u32>(reinterpret_cast<const sys_net_ip_mreq*>(optval.data())->imr_multiaddr);
 			break;
@@ -897,7 +897,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 	{
 		// As if just lost the connection
 		feign_tcp_conn_failure = false;
-		return {{-SYS_NET_ECONNRESET, {},{}}};
+		return {{-SYS_NET_ECONNRESET, {}, {}}};
 	}
 
 	int native_flags = 0;
@@ -908,14 +908,14 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	if (dnshook.is_dns(lv2_id) && dnshook.is_dns_queue(lv2_id))
 	{
-		auto& nph         = g_fxo->get<named_thread<np::np_handler>>();
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		const auto packet = dnshook.get_dns_packet(lv2_id);
 		ensure(packet.size() < len);
 		memcpy(res_buf.data(), packet.data(), packet.size());
-		native_addr.ss_family                                             = AF_INET;
-		(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_port        = std::bit_cast<u16, be_t<u16>>(53); // htons(53)
+		native_addr.ss_family = AF_INET;
+		(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_port = std::bit_cast<u16, be_t<u16>>(53); // htons(53)
 		(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_addr.s_addr = nph.get_dns_ip();
-		const auto sn_addr                                                = native_addr_to_sys_net_addr(native_addr);
+		const auto sn_addr = native_addr_to_sys_net_addr(native_addr);
 
 		return {{::narrow<s32>(packet.size()), res_buf, sn_addr}};
 	}
@@ -975,8 +975,8 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 		lock.lock();
 	}
 
-	int native_flags                       = 0;
-	int native_result                      = -1;
+	int native_flags = 0;
+	int native_result = -1;
 	std::optional<sockaddr_in> native_addr = std::nullopt;
 
 	if (opt_sn_addr)
@@ -1052,8 +1052,8 @@ std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& m
 		lock.lock();
 	}
 
-	int native_flags                       = 0;
-	int native_result                      = -1;
+	int native_flags = 0;
+	int native_result = -1;
 
 	sys_net_error result{};
 
@@ -1127,12 +1127,12 @@ s32 lv2_socket_native::shutdown(s32 how)
 	const int native_how =
 		how == SYS_NET_SHUT_RD ? SD_RECEIVE :
 		how == SYS_NET_SHUT_WR ? SD_SEND :
-                                 SD_BOTH;
+								 SD_BOTH;
 #else
 	const int native_how =
 		how == SYS_NET_SHUT_RD ? SHUT_RD :
 		how == SYS_NET_SHUT_WR ? SHUT_WR :
-                                 SHUT_RDWR;
+								 SHUT_RDWR;
 #endif
 
 	if (::shutdown(native_socket, native_how) == 0)

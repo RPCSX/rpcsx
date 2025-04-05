@@ -3,24 +3,22 @@
 
 #include "libsynth2.h"
 
-
-
 LOG_CHANNEL(libsynth2);
 
-template<>
+template <>
 void fmt_class_string<CellSoundSynth2Error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SOUND_SYNTH2_ERROR_FATAL);
-			STR_CASE(CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER);
-			STR_CASE(CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SOUND_SYNTH2_ERROR_FATAL);
+				STR_CASE(CELL_SOUND_SYNTH2_ERROR_INVALID_PARAMETER);
+				STR_CASE(CELL_SOUND_SYNTH2_ERROR_ALREADY_INITIALIZED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellSoundSynth2Config(s16 param, s32 value)
@@ -122,24 +120,23 @@ u16 cellSoundSynth2Pitch2Note(u16 center_note, u16 center_fine, u16 pitch)
 	return 0;
 }
 
-
 DECLARE(ppu_module_manager::libsynth2)("libsynth2", []()
-{
-	REG_FUNC(libsynth2, cellSoundSynth2Config);
-	REG_FUNC(libsynth2, cellSoundSynth2Init);
-	REG_FUNC(libsynth2, cellSoundSynth2Exit);
-	REG_FUNC(libsynth2, cellSoundSynth2SetParam);
-	REG_FUNC(libsynth2, cellSoundSynth2GetParam);
-	REG_FUNC(libsynth2, cellSoundSynth2SetSwitch);
-	REG_FUNC(libsynth2, cellSoundSynth2GetSwitch);
-	REG_FUNC(libsynth2, cellSoundSynth2SetAddr);
-	REG_FUNC(libsynth2, cellSoundSynth2GetAddr);
-	REG_FUNC(libsynth2, cellSoundSynth2SetEffectAttr);
-	REG_FUNC(libsynth2, cellSoundSynth2SetEffectMode);
-	REG_FUNC(libsynth2, cellSoundSynth2SetCoreAttr);
-	REG_FUNC(libsynth2, cellSoundSynth2Generate);
-	REG_FUNC(libsynth2, cellSoundSynth2VoiceTrans);
-	REG_FUNC(libsynth2, cellSoundSynth2VoiceTransStatus);
-	REG_FUNC(libsynth2, cellSoundSynth2Note2Pitch);
-	REG_FUNC(libsynth2, cellSoundSynth2Pitch2Note);
-});
+	{
+		REG_FUNC(libsynth2, cellSoundSynth2Config);
+		REG_FUNC(libsynth2, cellSoundSynth2Init);
+		REG_FUNC(libsynth2, cellSoundSynth2Exit);
+		REG_FUNC(libsynth2, cellSoundSynth2SetParam);
+		REG_FUNC(libsynth2, cellSoundSynth2GetParam);
+		REG_FUNC(libsynth2, cellSoundSynth2SetSwitch);
+		REG_FUNC(libsynth2, cellSoundSynth2GetSwitch);
+		REG_FUNC(libsynth2, cellSoundSynth2SetAddr);
+		REG_FUNC(libsynth2, cellSoundSynth2GetAddr);
+		REG_FUNC(libsynth2, cellSoundSynth2SetEffectAttr);
+		REG_FUNC(libsynth2, cellSoundSynth2SetEffectMode);
+		REG_FUNC(libsynth2, cellSoundSynth2SetCoreAttr);
+		REG_FUNC(libsynth2, cellSoundSynth2Generate);
+		REG_FUNC(libsynth2, cellSoundSynth2VoiceTrans);
+		REG_FUNC(libsynth2, cellSoundSynth2VoiceTransStatus);
+		REG_FUNC(libsynth2, cellSoundSynth2Note2Pitch);
+		REG_FUNC(libsynth2, cellSoundSynth2Pitch2Note);
+	});

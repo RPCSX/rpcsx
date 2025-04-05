@@ -81,8 +81,8 @@ cheat_engine::cheat_engine()
 					return;
 				}
 
-				cheat.game                = game_name;
-				cheat.offset              = offset;
+				cheat.game = game_name;
+				cheat.offset = offset;
 				cheats[game_name][offset] = std::move(cheat);
 			}
 		}
@@ -205,7 +205,7 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std
 	};
 
 	operand cur_op = operand_equal;
-	u32 index      = 0;
+	u32 index = 0;
 
 	while (index < red_script.size())
 	{
@@ -298,35 +298,35 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 		return {};
 
 	cpu_thread::suspend_all(nullptr, {}, [&]
-	{
-		if (!to_filter.empty())
 		{
-			for (const auto& off : to_filter)
+			if (!to_filter.empty())
 			{
-				if (vm::check_addr<sizeof(T)>(off))
+				for (const auto& off : to_filter)
 				{
-					if (*vm::get_super_ptr<T>(off) == value_swapped)
-						results.push_back(off);
-				}
-			}
-		}
-		else
-		{
-			// Looks through mapped memory
-			for (u32 page_start = 0x10000; page_start < 0xF0000000; page_start += 4096)
-			{
-				if (vm::check_addr(page_start))
-				{
-					// Assumes the values are aligned
-					for (u32 index = 0; index < 4096; index += sizeof(T))
+					if (vm::check_addr<sizeof(T)>(off))
 					{
-						if (*vm::get_super_ptr<T>(page_start + index) == value_swapped)
-							results.push_back(page_start + index);
+						if (*vm::get_super_ptr<T>(off) == value_swapped)
+							results.push_back(off);
 					}
 				}
 			}
-		}
-	});
+			else
+			{
+				// Looks through mapped memory
+				for (u32 page_start = 0x10000; page_start < 0xF0000000; page_start += 4096)
+				{
+					if (vm::check_addr(page_start))
+					{
+						// Assumes the values are aligned
+						for (u32 index = 0; index < 4096; index += sizeof(T))
+						{
+							if (*vm::get_super_ptr<T>(page_start + index) == value_swapped)
+								results.push_back(page_start + index);
+						}
+					}
+				}
+			}
+		});
 
 	return results;
 }
@@ -341,16 +341,16 @@ T cheat_engine::get_value(const u32 offset, bool& success)
 	}
 
 	return cpu_thread::suspend_all(nullptr, {}, [&]() -> T
-	{
-		if (!vm::check_addr<sizeof(T)>(offset))
 		{
-			success = false;
-			return 0;
-		}
+			if (!vm::check_addr<sizeof(T)>(offset))
+			{
+				success = false;
+				return 0;
+			}
 
-		success = true;
-		return *vm::get_super_ptr<T>(offset);
-	});
+			success = true;
+			return *vm::get_super_ptr<T>(offset);
+		});
 }
 
 template <typename T>
@@ -365,55 +365,55 @@ bool cheat_engine::set_value(const u32 offset, const T value)
 	}
 
 	return cpu_thread::suspend_all(nullptr, {}, [&]
-	{
-		if (!vm::check_addr<sizeof(T)>(offset))
 		{
-			return false;
-		}
-
-		*vm::get_super_ptr<T>(offset) = value;
-
-		const bool exec_code_at_start = vm::check_addr(offset, vm::page_executable);
-		const bool exec_code_at_end = [&]()
-		{
-			if constexpr (sizeof(T) == 1)
+			if (!vm::check_addr<sizeof(T)>(offset))
 			{
-				return exec_code_at_start;
-			}
-			else
-			{
-				return vm::check_addr(offset + sizeof(T) - 1, vm::page_executable);
-			}
-		}();
-
-		if (exec_code_at_end || exec_code_at_start)
-		{
-			extern void ppu_register_function_at(u32, u32, ppu_intrp_func_t);
-
-			u32 addr = offset, size = sizeof(T);
-
-			if (exec_code_at_end && exec_code_at_start)
-			{
-				size = utils::align<u32>(addr + size, 4) - (addr & -4);
-				addr &= -4;
-			}
-			else if (exec_code_at_end)
-			{
-				size -= utils::align<u32>(size - 4096 + (addr & 4095), 4);
-				addr = utils::align<u32>(addr, 4096);
-			}
-			else if (exec_code_at_start)
-			{
-				size = utils::align<u32>(4096 - (addr & 4095), 4);
-				addr &= -4;
+				return false;
 			}
 
-			// Reinitialize executable code
-			ppu_register_function_at(addr, size, nullptr);
-		}
+			*vm::get_super_ptr<T>(offset) = value;
 
-		return true;
-	});
+			const bool exec_code_at_start = vm::check_addr(offset, vm::page_executable);
+			const bool exec_code_at_end = [&]()
+			{
+				if constexpr (sizeof(T) == 1)
+				{
+					return exec_code_at_start;
+				}
+				else
+				{
+					return vm::check_addr(offset + sizeof(T) - 1, vm::page_executable);
+				}
+			}();
+
+			if (exec_code_at_end || exec_code_at_start)
+			{
+				extern void ppu_register_function_at(u32, u32, ppu_intrp_func_t);
+
+				u32 addr = offset, size = sizeof(T);
+
+				if (exec_code_at_end && exec_code_at_start)
+				{
+					size = utils::align<u32>(addr + size, 4) - (addr & -4);
+					addr &= -4;
+				}
+				else if (exec_code_at_end)
+				{
+					size -= utils::align<u32>(size - 4096 + (addr & 4095), 4);
+					addr = utils::align<u32>(addr, 4096);
+				}
+				else if (exec_code_at_start)
+				{
+					size = utils::align<u32>(4096 - (addr & 4095), 4);
+					addr &= -4;
+				}
+
+				// Reinitialize executable code
+				ppu_register_function_at(addr, size, nullptr);
+			}
+
+			return true;
+		});
 }
 
 bool cheat_engine::is_addr_safe(const u32 offset)
@@ -493,7 +493,7 @@ enum cheat_table_columns : int
 };
 
 cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
-    : QDialog(parent)
+	: QDialog(parent)
 {
 	setWindowTitle(tr("Cheat Manager"));
 	setObjectName("cheat_manager");
@@ -511,23 +511,23 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	QHBoxLayout* btn_layout = new QHBoxLayout();
 	QLabel* lbl_value_final = new QLabel(tr("Current Value:"));
-	edt_value_final         = new QLineEdit();
-	btn_apply               = new QPushButton(tr("Apply"), this);
+	edt_value_final = new QLineEdit();
+	btn_apply = new QPushButton(tr("Apply"), this);
 	btn_apply->setEnabled(false);
 	btn_layout->addWidget(lbl_value_final);
 	btn_layout->addWidget(edt_value_final);
 	btn_layout->addWidget(btn_apply);
 	main_layout->addLayout(btn_layout);
 
-	QGroupBox* grp_add_cheat              = new QGroupBox(tr("Cheat Search"));
-	QVBoxLayout* grp_add_cheat_layout     = new QVBoxLayout();
+	QGroupBox* grp_add_cheat = new QGroupBox(tr("Cheat Search"));
+	QVBoxLayout* grp_add_cheat_layout = new QVBoxLayout();
 	QHBoxLayout* grp_add_cheat_sub_layout = new QHBoxLayout();
-	QPushButton* btn_new_search           = new QPushButton(tr("New Search"));
+	QPushButton* btn_new_search = new QPushButton(tr("New Search"));
 	btn_new_search->setEnabled(false);
-	btn_filter_results                    = new QPushButton(tr("Filter Results"));
+	btn_filter_results = new QPushButton(tr("Filter Results"));
 	btn_filter_results->setEnabled(false);
 	edt_cheat_search_value = new QLineEdit();
-	cbx_cheat_search_type  = new QComboBox();
+	cbx_cheat_search_type = new QComboBox();
 
 	for (u64 i = 0; i < cheat_type_max; i++)
 	{
@@ -552,306 +552,309 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	// Edit/Manage UI
 	connect(tbl_cheats, &QTableWidget::itemClicked, [this](QTableWidgetItem* item)
-	{
-		if (!item)
-			return;
-
-		const int row = item->row();
-
-		if (row == -1)
-			return;
-
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-		if (!cheat)
 		{
-			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
-			return;
-		}
+			if (!item)
+				return;
 
-		u32 final_offset;
-		if (!cheat->red_script.empty())
-		{
-			final_offset = 0;
-			if (!cheat_engine::resolve_script(final_offset, cheat->offset, cheat->red_script))
+			const int row = item->row();
+
+			if (row == -1)
+				return;
+
+			cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+			if (!cheat)
 			{
-				btn_apply->setEnabled(false);
-				edt_value_final->setText(tr("Failed to resolve redirection script"));
+				log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
 				return;
 			}
-		}
-		else
-		{
-			final_offset = cheat->offset;
-		}
 
-		if (Emu.IsStopped())
-		{
-			btn_apply->setEnabled(false);
-			edt_value_final->setText(tr("This Application is not running"));
-			return;
-		}
-
-		bool success = false;
-		u64 result_value {};
-		f64 result_value_f {};
-
-		switch (cheat->type)
-		{
-		case cheat_type::unsigned_8_cheat: result_value = cheat_engine::get_value<u8>(final_offset, success); break;
-		case cheat_type::unsigned_16_cheat: result_value = cheat_engine::get_value<u16>(final_offset, success); break;
-		case cheat_type::unsigned_32_cheat: result_value = cheat_engine::get_value<u32>(final_offset, success); break;
-		case cheat_type::unsigned_64_cheat: result_value = cheat_engine::get_value<u64>(final_offset, success); break;
-		case cheat_type::signed_8_cheat: result_value = cheat_engine::get_value<s8>(final_offset, success); break;
-		case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
-		case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
-		case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
-		case cheat_type::float_32_cheat: result_value_f = cheat_engine::get_value<f32>(final_offset, success); break;
-		default: log_cheat.fatal("Unsupported cheat type"); return;
-		}
-
-		if (success)
-		{
-			if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
-				edt_value_final->setText(tr("%1").arg(static_cast<s64>(result_value)));
-			else if (cheat->type == cheat_type::float_32_cheat)
-				edt_value_final->setText(tr("%1").arg(result_value_f));
+			u32 final_offset;
+			if (!cheat->red_script.empty())
+			{
+				final_offset = 0;
+				if (!cheat_engine::resolve_script(final_offset, cheat->offset, cheat->red_script))
+				{
+					btn_apply->setEnabled(false);
+					edt_value_final->setText(tr("Failed to resolve redirection script"));
+					return;
+				}
+			}
 			else
-				edt_value_final->setText(tr("%1").arg(result_value));
-		}
-		else
-		{
-			edt_value_final->setText(tr("Failed to get the value from memory"));
-		}
-
-		btn_apply->setEnabled(success);
-	});
-
-	connect(tbl_cheats, &QTableWidget::cellChanged, [this](int row, int column)
-	{
-		QTableWidgetItem* item = tbl_cheats->item(row, column);
-		if (!item)
-		{
-			return;
-		}
-
-		if (column != cheat_table_columns::description && column != cheat_table_columns::script)
-		{
-			log_cheat.fatal("A column other than description and script was edited");
-			return;
-		}
-
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-		if (!cheat)
-		{
-			log_cheat.fatal("Failed to retrieve cheat edited from internal cheat_engine");
-			return;
-		}
-
-		switch (column)
-		{
-		case cheat_table_columns::description: cheat->description = item->text().toStdString(); break;
-		case cheat_table_columns::script: cheat->red_script = item->text().toStdString(); break;
-		default: break;
-		}
-
-		g_cheat.save();
-	});
-
-	connect(tbl_cheats, &QTableWidget::customContextMenuRequested, [this](const QPoint& loc)
-	{
-		const QPoint globalPos = tbl_cheats->mapToGlobal(loc);
-		QMenu* menu            = new QMenu();
-		QAction* delete_cheats = new QAction(tr("Delete"), menu);
-		QAction* import_cheats = new QAction(tr("Import Cheats"));
-		QAction* export_cheats = new QAction(tr("Export Cheats"));
-		QAction* reverse_cheat = new QAction(tr("Reverse-Lookup Cheat"));
-
-		connect(delete_cheats, &QAction::triggered, [this]()
-		{
-			const auto selected = tbl_cheats->selectedItems();
-
-			std::set<int> rows;
-
-			for (const auto& sel : selected)
 			{
-				const int row = sel->row();
-
-				if (rows.count(row))
-					continue;
-
-				g_cheat.erase(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-				rows.insert(row);
+				final_offset = cheat->offset;
 			}
 
-			update_cheat_list();
-		});
-
-		connect(import_cheats, &QAction::triggered, [this]()
-		{
-			QClipboard* clipboard = QGuiApplication::clipboard();
-			g_cheat.import_cheats_from_str(clipboard->text().toStdString());
-			update_cheat_list();
-		});
-
-		connect(export_cheats, &QAction::triggered, [this]()
-		{
-			const auto selected = tbl_cheats->selectedItems();
-
-			std::set<int> rows;
-			std::string export_string;
-
-			for (const auto& sel : selected)
-			{
-				const int row = sel->row();
-
-				if (rows.count(row))
-					continue;
-
-				cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-				if (cheat)
-					export_string += cheat->to_str() + "^^^";
-
-				rows.insert(row);
-			}
-
-			QClipboard* clipboard = QGuiApplication::clipboard();
-			clipboard->setText(QString::fromStdString(export_string));
-		});
-
-		connect(reverse_cheat, &QAction::triggered, [this]()
-		{
-			QTableWidgetItem* item = tbl_cheats->item(tbl_cheats->currentRow(), cheat_table_columns::offset);
-			if (item)
-			{
-				const u32 offset = item->data(Qt::UserRole).toUInt();
-				const u32 result = cheat_engine::reverse_lookup(offset, 32, 12);
-
-				log_cheat.fatal("Result is 0x%x", result);
-			}
-		});
-
-		menu->addAction(delete_cheats);
-		menu->addSeparator();
-		// menu->addAction(reverse_cheat);
-		// menu->addSeparator();
-		menu->addAction(import_cheats);
-		menu->addAction(export_cheats);
-		menu->exec(globalPos);
-	});
-
-	connect(btn_apply, &QPushButton::clicked, [this](bool /*checked*/)
-	{
-		const int row     = tbl_cheats->currentRow();
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
-
-		if (!cheat)
-		{
-			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
-			return;
-		}
-
-		std::pair<bool, bool> results;
-
-		u32 final_offset;
-		if (!cheat->red_script.empty())
-		{
-			final_offset = 0;
-			if (!g_cheat.resolve_script(final_offset, cheat->offset, cheat->red_script))
+			if (Emu.IsStopped())
 			{
 				btn_apply->setEnabled(false);
-				edt_value_final->setText(tr("Failed to resolve redirection script"));
+				edt_value_final->setText(tr("This Application is not running"));
+				return;
 			}
-		}
-		else
-		{
-			final_offset = cheat->offset;
-		}
 
-		// TODO: better way to do this?
-		switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
-		{
-		case cheat_type::unsigned_8_cheat: results = convert_and_set<u8>(final_offset); break;
-		case cheat_type::unsigned_16_cheat: results = convert_and_set<u16>(final_offset); break;
-		case cheat_type::unsigned_32_cheat: results = convert_and_set<u32>(final_offset); break;
-		case cheat_type::unsigned_64_cheat: results = convert_and_set<u64>(final_offset); break;
-		case cheat_type::signed_8_cheat: results = convert_and_set<s8>(final_offset); break;
-		case cheat_type::signed_16_cheat: results = convert_and_set<s16>(final_offset); break;
-		case cheat_type::signed_32_cheat: results = convert_and_set<s32>(final_offset); break;
-		case cheat_type::signed_64_cheat: results = convert_and_set<s64>(final_offset); break;
-		case cheat_type::float_32_cheat: results = convert_and_set<f32>(final_offset); break;
-		default: log_cheat.fatal("Unsupported cheat type"); return;
-		}
+			bool success = false;
+			u64 result_value{};
+			f64 result_value_f{};
 
-		if (!results.first)
-		{
-			QMessageBox::warning(this, tr("Error converting value"), tr("Couldn't convert the value you typed to the integer type of that cheat"), QMessageBox::Ok);
-			return;
-		}
+			switch (cheat->type)
+			{
+			case cheat_type::unsigned_8_cheat: result_value = cheat_engine::get_value<u8>(final_offset, success); break;
+			case cheat_type::unsigned_16_cheat: result_value = cheat_engine::get_value<u16>(final_offset, success); break;
+			case cheat_type::unsigned_32_cheat: result_value = cheat_engine::get_value<u32>(final_offset, success); break;
+			case cheat_type::unsigned_64_cheat: result_value = cheat_engine::get_value<u64>(final_offset, success); break;
+			case cheat_type::signed_8_cheat: result_value = cheat_engine::get_value<s8>(final_offset, success); break;
+			case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
+			case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
+			case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
+			case cheat_type::float_32_cheat: result_value_f = cheat_engine::get_value<f32>(final_offset, success); break;
+			default: log_cheat.fatal("Unsupported cheat type"); return;
+			}
 
-		if (!results.second)
+			if (success)
+			{
+				if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
+					edt_value_final->setText(tr("%1").arg(static_cast<s64>(result_value)));
+				else if (cheat->type == cheat_type::float_32_cheat)
+					edt_value_final->setText(tr("%1").arg(result_value_f));
+				else
+					edt_value_final->setText(tr("%1").arg(result_value));
+			}
+			else
+			{
+				edt_value_final->setText(tr("Failed to get the value from memory"));
+			}
+
+			btn_apply->setEnabled(success);
+		});
+
+	connect(tbl_cheats, &QTableWidget::cellChanged, [this](int row, int column)
 		{
-			QMessageBox::warning(this, tr("Error applying value"), tr("Couldn't patch memory"), QMessageBox::Ok);
-			return;
-		}
-	});
+			QTableWidgetItem* item = tbl_cheats->item(row, column);
+			if (!item)
+			{
+				return;
+			}
+
+			if (column != cheat_table_columns::description && column != cheat_table_columns::script)
+			{
+				log_cheat.fatal("A column other than description and script was edited");
+				return;
+			}
+
+			cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+			if (!cheat)
+			{
+				log_cheat.fatal("Failed to retrieve cheat edited from internal cheat_engine");
+				return;
+			}
+
+			switch (column)
+			{
+			case cheat_table_columns::description: cheat->description = item->text().toStdString(); break;
+			case cheat_table_columns::script: cheat->red_script = item->text().toStdString(); break;
+			default: break;
+			}
+
+			g_cheat.save();
+		});
+
+	connect(tbl_cheats, &QTableWidget::customContextMenuRequested, [this](const QPoint& loc)
+		{
+			const QPoint globalPos = tbl_cheats->mapToGlobal(loc);
+			QMenu* menu = new QMenu();
+			QAction* delete_cheats = new QAction(tr("Delete"), menu);
+			QAction* import_cheats = new QAction(tr("Import Cheats"));
+			QAction* export_cheats = new QAction(tr("Export Cheats"));
+			QAction* reverse_cheat = new QAction(tr("Reverse-Lookup Cheat"));
+
+			connect(delete_cheats, &QAction::triggered, [this]()
+				{
+					const auto selected = tbl_cheats->selectedItems();
+
+					std::set<int> rows;
+
+					for (const auto& sel : selected)
+					{
+						const int row = sel->row();
+
+						if (rows.count(row))
+							continue;
+
+						g_cheat.erase(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+						rows.insert(row);
+					}
+
+					update_cheat_list();
+				});
+
+			connect(import_cheats, &QAction::triggered, [this]()
+				{
+					QClipboard* clipboard = QGuiApplication::clipboard();
+					g_cheat.import_cheats_from_str(clipboard->text().toStdString());
+					update_cheat_list();
+				});
+
+			connect(export_cheats, &QAction::triggered, [this]()
+				{
+					const auto selected = tbl_cheats->selectedItems();
+
+					std::set<int> rows;
+					std::string export_string;
+
+					for (const auto& sel : selected)
+					{
+						const int row = sel->row();
+
+						if (rows.count(row))
+							continue;
+
+						cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+						if (cheat)
+							export_string += cheat->to_str() + "^^^";
+
+						rows.insert(row);
+					}
+
+					QClipboard* clipboard = QGuiApplication::clipboard();
+					clipboard->setText(QString::fromStdString(export_string));
+				});
+
+			connect(reverse_cheat, &QAction::triggered, [this]()
+				{
+					QTableWidgetItem* item = tbl_cheats->item(tbl_cheats->currentRow(), cheat_table_columns::offset);
+					if (item)
+					{
+						const u32 offset = item->data(Qt::UserRole).toUInt();
+						const u32 result = cheat_engine::reverse_lookup(offset, 32, 12);
+
+						log_cheat.fatal("Result is 0x%x", result);
+					}
+				});
+
+			menu->addAction(delete_cheats);
+			menu->addSeparator();
+			// menu->addAction(reverse_cheat);
+		    // menu->addSeparator();
+			menu->addAction(import_cheats);
+			menu->addAction(export_cheats);
+			menu->exec(globalPos);
+		});
+
+	connect(btn_apply, &QPushButton::clicked, [this](bool /*checked*/)
+		{
+			const int row = tbl_cheats->currentRow();
+			cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+
+			if (!cheat)
+			{
+				log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
+				return;
+			}
+
+			std::pair<bool, bool> results;
+
+			u32 final_offset;
+			if (!cheat->red_script.empty())
+			{
+				final_offset = 0;
+				if (!g_cheat.resolve_script(final_offset, cheat->offset, cheat->red_script))
+				{
+					btn_apply->setEnabled(false);
+					edt_value_final->setText(tr("Failed to resolve redirection script"));
+				}
+			}
+			else
+			{
+				final_offset = cheat->offset;
+			}
+
+			// TODO: better way to do this?
+			switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
+			{
+			case cheat_type::unsigned_8_cheat: results = convert_and_set<u8>(final_offset); break;
+			case cheat_type::unsigned_16_cheat: results = convert_and_set<u16>(final_offset); break;
+			case cheat_type::unsigned_32_cheat: results = convert_and_set<u32>(final_offset); break;
+			case cheat_type::unsigned_64_cheat: results = convert_and_set<u64>(final_offset); break;
+			case cheat_type::signed_8_cheat: results = convert_and_set<s8>(final_offset); break;
+			case cheat_type::signed_16_cheat: results = convert_and_set<s16>(final_offset); break;
+			case cheat_type::signed_32_cheat: results = convert_and_set<s32>(final_offset); break;
+			case cheat_type::signed_64_cheat: results = convert_and_set<s64>(final_offset); break;
+			case cheat_type::float_32_cheat: results = convert_and_set<f32>(final_offset); break;
+			default: log_cheat.fatal("Unsupported cheat type"); return;
+			}
+
+			if (!results.first)
+			{
+				QMessageBox::warning(this, tr("Error converting value"), tr("Couldn't convert the value you typed to the integer type of that cheat"), QMessageBox::Ok);
+				return;
+			}
+
+			if (!results.second)
+			{
+				QMessageBox::warning(this, tr("Error applying value"), tr("Couldn't patch memory"), QMessageBox::Ok);
+				return;
+			}
+		});
 
 	// Search UI
 	connect(btn_new_search, &QPushButton::clicked, [this](bool /*checked*/)
-	{
-		offsets_found.clear();
-		do_the_search();
-	});
-
-	connect(edt_cheat_search_value, &QLineEdit::textChanged, this, [btn_new_search, this](const QString& text)
-	{
-		if (btn_new_search)
 		{
-			btn_new_search->setEnabled(!text.isEmpty());
-		}
-		if (btn_filter_results)
-		{
-			btn_filter_results->setEnabled(!text.isEmpty() && !offsets_found.empty());
-		}
-	});
-
-	connect(btn_filter_results, &QPushButton::clicked, [this](bool /*checked*/) { do_the_search(); });
-
-	connect(lst_search, &QListWidget::customContextMenuRequested, [this](const QPoint& loc)
-	{
-		const QPoint globalPos = lst_search->mapToGlobal(loc);
-		const int current_row  = lst_search->currentRow();
-		QListWidgetItem* item  = lst_search->item(current_row);
-
-		// Skip if the item was a placeholder
-		if (!item || item->data(Qt::UserRole).toBool())
-			return;
-
-		QMenu* menu = new QMenu();
-
-		QAction* add_to_cheat_list = new QAction(tr("Add to cheat list"), menu);
-
-		const u32 offset       = offsets_found[current_row];
-		const cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
-
-		connect(add_to_cheat_list, &QAction::triggered, [name = Emu.GetTitle(), offset, type, this]()
-		{
-			if (g_cheat.exist(name, offset))
-			{
-				if (QMessageBox::question(this, tr("Cheat already exists"), tr("Do you want to overwrite the existing cheat?"), QMessageBox::Ok | QMessageBox::Cancel) != QMessageBox::Ok)
-					return;
-			}
-
-			std::string comment;
-			if (!cheat_engine::is_addr_safe(offset))
-				comment = "Unsafe";
-
-			g_cheat.add(name, comment, type, offset, "");
-			update_cheat_list();
+			offsets_found.clear();
+			do_the_search();
 		});
 
-		menu->addAction(add_to_cheat_list);
-		menu->exec(globalPos);
-	});
+	connect(edt_cheat_search_value, &QLineEdit::textChanged, this, [btn_new_search, this](const QString& text)
+		{
+			if (btn_new_search)
+			{
+				btn_new_search->setEnabled(!text.isEmpty());
+			}
+			if (btn_filter_results)
+			{
+				btn_filter_results->setEnabled(!text.isEmpty() && !offsets_found.empty());
+			}
+		});
+
+	connect(btn_filter_results, &QPushButton::clicked, [this](bool /*checked*/)
+		{
+			do_the_search();
+		});
+
+	connect(lst_search, &QListWidget::customContextMenuRequested, [this](const QPoint& loc)
+		{
+			const QPoint globalPos = lst_search->mapToGlobal(loc);
+			const int current_row = lst_search->currentRow();
+			QListWidgetItem* item = lst_search->item(current_row);
+
+			// Skip if the item was a placeholder
+			if (!item || item->data(Qt::UserRole).toBool())
+				return;
+
+			QMenu* menu = new QMenu();
+
+			QAction* add_to_cheat_list = new QAction(tr("Add to cheat list"), menu);
+
+			const u32 offset = offsets_found[current_row];
+			const cheat_type type = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
+
+			connect(add_to_cheat_list, &QAction::triggered, [name = Emu.GetTitle(), offset, type, this]()
+				{
+					if (g_cheat.exist(name, offset))
+					{
+						if (QMessageBox::question(this, tr("Cheat already exists"), tr("Do you want to overwrite the existing cheat?"), QMessageBox::Ok | QMessageBox::Cancel) != QMessageBox::Ok)
+							return;
+					}
+
+					std::string comment;
+					if (!cheat_engine::is_addr_safe(offset))
+						comment = "Unsafe";
+
+					g_cheat.add(name, comment, type, offset, "");
+					update_cheat_list();
+				});
+
+			menu->addAction(add_to_cheat_list);
+			menu->exec(globalPos);
+		});
 
 	update_cheat_list();
 }

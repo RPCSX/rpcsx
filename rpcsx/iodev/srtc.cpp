@@ -7,7 +7,7 @@
 struct SrtcFile : orbis::File {};
 
 static orbis::ErrorCode srtc_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                   void *argp, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("Unhandled srtc ioctl", request);
   thread->where();
   return {};

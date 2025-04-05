@@ -10,20 +10,20 @@ template <>
 void fmt_class_string<CellImeJpError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_IMEJP_ERROR_ERR);
-			STR_CASE(CELL_IMEJP_ERROR_CONTEXT);
-			STR_CASE(CELL_IMEJP_ERROR_ALREADY_OPEN);
-			STR_CASE(CELL_IMEJP_ERROR_DIC_OPEN);
-			STR_CASE(CELL_IMEJP_ERROR_PARAM);
-			STR_CASE(CELL_IMEJP_ERROR_IME_ALREADY_IN_USE);
-			STR_CASE(CELL_IMEJP_ERROR_OTHER);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_IMEJP_ERROR_ERR);
+				STR_CASE(CELL_IMEJP_ERROR_CONTEXT);
+				STR_CASE(CELL_IMEJP_ERROR_ALREADY_OPEN);
+				STR_CASE(CELL_IMEJP_ERROR_DIC_OPEN);
+				STR_CASE(CELL_IMEJP_ERROR_PARAM);
+				STR_CASE(CELL_IMEJP_ERROR_IME_ALREADY_IN_USE);
+				STR_CASE(CELL_IMEJP_ERROR_OTHER);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 using sys_memory_container_t = u32;
@@ -208,8 +208,7 @@ std::vector<ime_jp_manager::candidate> ime_jp_manager::get_candidate_list() cons
 	// TODO: we just fake this with one candidate for now
 	candidates.push_back(candidate{
 		.text = get_focus_string(),
-		.offset = 0
-	});
+		.offset = 0});
 
 	return candidates;
 }
@@ -221,7 +220,6 @@ std::u16string ime_jp_manager::get_focus_string() const
 
 	return input_string.substr(focus_begin, focus_length);
 }
-
 
 static error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpHandle> hImeJpHandle, vm::cptr<CellImeJpAddDic> addDicPath)
 {
@@ -1246,50 +1244,50 @@ static error_code cellImeJpConfirmPrediction(CellImeJpHandle hImeJpHandle, vm::p
 }
 
 DECLARE(ppu_module_manager::cellImeJp)("cellImeJpUtility", []()
-{
-	REG_FUNC(cellImeJpUtility, cellImeJpOpen);
-	REG_FUNC(cellImeJpUtility, cellImeJpOpen2);
-	REG_FUNC(cellImeJpUtility, cellImeJpOpen3);
-	REG_FUNC(cellImeJpUtility, cellImeJpOpenExt);
-	REG_FUNC(cellImeJpUtility, cellImeJpClose);
+	{
+		REG_FUNC(cellImeJpUtility, cellImeJpOpen);
+		REG_FUNC(cellImeJpUtility, cellImeJpOpen2);
+		REG_FUNC(cellImeJpUtility, cellImeJpOpen3);
+		REG_FUNC(cellImeJpUtility, cellImeJpOpenExt);
+		REG_FUNC(cellImeJpUtility, cellImeJpClose);
 
-	REG_FUNC(cellImeJpUtility, cellImeJpSetKanaInputMode);
-	REG_FUNC(cellImeJpUtility, cellImeJpSetInputCharType);
-	REG_FUNC(cellImeJpUtility, cellImeJpSetFixInputMode);
-	REG_FUNC(cellImeJpUtility, cellImeJpAllowExtensionCharacters);
-	REG_FUNC(cellImeJpUtility, cellImeJpReset);
+		REG_FUNC(cellImeJpUtility, cellImeJpSetKanaInputMode);
+		REG_FUNC(cellImeJpUtility, cellImeJpSetInputCharType);
+		REG_FUNC(cellImeJpUtility, cellImeJpSetFixInputMode);
+		REG_FUNC(cellImeJpUtility, cellImeJpAllowExtensionCharacters);
+		REG_FUNC(cellImeJpUtility, cellImeJpReset);
 
-	REG_FUNC(cellImeJpUtility, cellImeJpGetStatus);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetStatus);
 
-	REG_FUNC(cellImeJpUtility, cellImeJpEnterChar);
-	REG_FUNC(cellImeJpUtility, cellImeJpEnterCharExt);
-	REG_FUNC(cellImeJpUtility, cellImeJpEnterString);
-	REG_FUNC(cellImeJpUtility, cellImeJpEnterStringExt);
-	REG_FUNC(cellImeJpUtility, cellImeJpModeCaretRight);
-	REG_FUNC(cellImeJpUtility, cellImeJpModeCaretLeft);
-	REG_FUNC(cellImeJpUtility, cellImeJpBackspaceWord);
-	REG_FUNC(cellImeJpUtility, cellImeJpDeleteWord);
-	REG_FUNC(cellImeJpUtility, cellImeJpAllDeleteConvertString);
-	REG_FUNC(cellImeJpUtility, cellImeJpConvertForward);
-	REG_FUNC(cellImeJpUtility, cellImeJpConvertBackward);
-	REG_FUNC(cellImeJpUtility, cellImeJpCurrentPartConfirm);
-	REG_FUNC(cellImeJpUtility, cellImeJpAllConfirm);
-	REG_FUNC(cellImeJpUtility, cellImeJpConvertCancel);
-	REG_FUNC(cellImeJpUtility, cellImeJpAllConvertCancel);
-	REG_FUNC(cellImeJpUtility, cellImeJpExtendConvertArea);
-	REG_FUNC(cellImeJpUtility, cellImeJpShortenConvertArea);
-	REG_FUNC(cellImeJpUtility, cellImeJpTemporalConfirm);
-	REG_FUNC(cellImeJpUtility, cellImeJpPostConvert);
-	REG_FUNC(cellImeJpUtility, cellImeJpMoveFocusClause);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetFocusTop);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetFocusLength);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetConfirmYomiString);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetConfirmString);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetConvertYomiString);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetConvertString);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetCandidateListSize);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetCandidateList);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetCandidateSelect);
-	REG_FUNC(cellImeJpUtility, cellImeJpGetPredictList);
-	REG_FUNC(cellImeJpUtility, cellImeJpConfirmPrediction);
-});
+		REG_FUNC(cellImeJpUtility, cellImeJpEnterChar);
+		REG_FUNC(cellImeJpUtility, cellImeJpEnterCharExt);
+		REG_FUNC(cellImeJpUtility, cellImeJpEnterString);
+		REG_FUNC(cellImeJpUtility, cellImeJpEnterStringExt);
+		REG_FUNC(cellImeJpUtility, cellImeJpModeCaretRight);
+		REG_FUNC(cellImeJpUtility, cellImeJpModeCaretLeft);
+		REG_FUNC(cellImeJpUtility, cellImeJpBackspaceWord);
+		REG_FUNC(cellImeJpUtility, cellImeJpDeleteWord);
+		REG_FUNC(cellImeJpUtility, cellImeJpAllDeleteConvertString);
+		REG_FUNC(cellImeJpUtility, cellImeJpConvertForward);
+		REG_FUNC(cellImeJpUtility, cellImeJpConvertBackward);
+		REG_FUNC(cellImeJpUtility, cellImeJpCurrentPartConfirm);
+		REG_FUNC(cellImeJpUtility, cellImeJpAllConfirm);
+		REG_FUNC(cellImeJpUtility, cellImeJpConvertCancel);
+		REG_FUNC(cellImeJpUtility, cellImeJpAllConvertCancel);
+		REG_FUNC(cellImeJpUtility, cellImeJpExtendConvertArea);
+		REG_FUNC(cellImeJpUtility, cellImeJpShortenConvertArea);
+		REG_FUNC(cellImeJpUtility, cellImeJpTemporalConfirm);
+		REG_FUNC(cellImeJpUtility, cellImeJpPostConvert);
+		REG_FUNC(cellImeJpUtility, cellImeJpMoveFocusClause);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetFocusTop);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetFocusLength);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetConfirmYomiString);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetConfirmString);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetConvertYomiString);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetConvertString);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetCandidateListSize);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetCandidateList);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetCandidateSelect);
+		REG_FUNC(cellImeJpUtility, cellImeJpGetPredictList);
+		REG_FUNC(cellImeJpUtility, cellImeJpConfirmPrediction);
+	});

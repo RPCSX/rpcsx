@@ -44,17 +44,17 @@ namespace rsx
 		// Publicly visible enumerators
 		enum
 		{
-			shader_read    = (1 << 0),
-			shader_write   = (1 << 1),
-			transfer_read  = (1 << 2),
+			shader_read = (1 << 0),
+			shader_write = (1 << 1),
+			transfer_read = (1 << 2),
 			transfer_write = (1 << 3),
 
 			// Arbitrary r/w flags, use with caution.
-			memory_write   = (1 << 4),
-			memory_read    = (1 << 5),
+			memory_write = (1 << 4),
+			memory_read = (1 << 5),
 
 			// Not r/w but signifies a GPU reference to this object.
-			gpu_reference  = (1 << 6),
+			gpu_reference = (1 << 6),
 		};
 
 	private:
@@ -71,7 +71,8 @@ namespace rsx
 	public:
 		// Ctor
 		surface_access(u32 value) : value_(value)
-		{}
+		{
+		}
 
 		// Quick helpers
 		inline bool is_read() const
@@ -94,12 +95,12 @@ namespace rsx
 			return !(value_ & ~(all_transfer | all_reads));
 		}
 
-		bool operator == (const surface_access& other) const
+		bool operator==(const surface_access& other) const
 		{
 			return value_ == other.value_;
 		}
 
-		bool operator == (u32 other) const
+		bool operator==(u32 other) const
 		{
 			return value_ == other;
 		}
@@ -121,7 +122,7 @@ namespace rsx
 			RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK = (RSX_FORMAT_CLASS_DEPTH16_FLOAT | RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32),
 			RSX_FORMAT_CLASS_DONT_CARE = RSX_FORMAT_CLASS_UNDEFINED,
 		};
-	}
+	} // namespace format_class_
 
 	using namespace format_class_;
 
@@ -198,8 +199,8 @@ namespace rsx
 		u16 depth;
 		u16 level;
 		u16 layer;
-		u8  border;
-		u8  reserved;
+		u8 border;
+		u8 reserved;
 		u32 pitch_in_block;
 	};
 
@@ -232,21 +233,21 @@ namespace rsx
 	};
 
 	/**
-	* Get size to store texture in a linear fashion.
-	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
-	*/
+	 * Get size to store texture in a linear fashion.
+	 * Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
+	 */
 	usz get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, usz row_pitch_alignment, usz mipmap_alignment);
-	usz get_placed_texture_storage_size(const rsx::fragment_texture &texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
-	usz get_placed_texture_storage_size(const rsx::vertex_texture &texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
+	usz get_placed_texture_storage_size(const rsx::fragment_texture& texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
+	usz get_placed_texture_storage_size(const rsx::vertex_texture& texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
 
 	/**
 	 * get all rsx::subresource_layout for texture.
 	 * The subresources are ordered per layer then per mipmap level (as in rsx memory).
 	 */
-	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
-	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
+	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture& texture);
+	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture& texture);
 
-	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
+	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const subresource_layout& src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
 
 	u8 get_format_block_size_in_bytes(int format);
 	u8 get_format_block_size_in_texel(int format);
@@ -265,19 +266,19 @@ namespace rsx
 	u8 get_format_texel_rows_per_line(u32 format);
 
 	/**
-	* Get number of bytes occupied by texture in RSX mem
-	*/
-	usz get_texture_size(const rsx::fragment_texture &texture);
-	usz get_texture_size(const rsx::vertex_texture &texture);
+	 * Get number of bytes occupied by texture in RSX mem
+	 */
+	usz get_texture_size(const rsx::fragment_texture& texture);
+	usz get_texture_size(const rsx::vertex_texture& texture);
 
 	/**
-	* Get packed pitch
-	*/
+	 * Get packed pitch
+	 */
 	u32 get_format_packed_pitch(u32 format, u16 width, bool border = false, bool swizzled = false);
 
 	/**
-	* Reverse encoding
-	*/
+	 * Reverse encoding
+	 */
 	u32 get_remap_encoding(const texture_channel_remap_t& remap);
 
 	/**
@@ -297,4 +298,4 @@ namespace rsx
 	{
 		return is_border_clamped_texture(tex.wrap_s(), tex.wrap_t(), tex.wrap_r(), tex.dimension());
 	}
-}
+} // namespace rsx

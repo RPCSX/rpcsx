@@ -29,7 +29,6 @@ namespace gl
 		fbo blit_dst;
 
 	public:
-
 		void init()
 		{
 			blit_src.create();
@@ -57,4 +56,4 @@ namespace gl
 	};
 
 	extern blitter* g_hw_blitter;
-}
+} // namespace gl

@@ -30,11 +30,23 @@ namespace rsx
 			u64 memory_tag = 0;
 			u32 base_address = 0;
 
-			inline buffer_object_type get() { return Traits::get(bo); }
-			inline operator bool () const { return base_address != 0; }
+			inline buffer_object_type get()
+			{
+				return Traits::get(bo);
+			}
+			inline operator bool() const
+			{
+				return base_address != 0;
+			}
 
-			inline void release() { bo.release(); }
-			inline void acquire(buffer_object_type b) { bo = b; }
+			inline void release()
+			{
+				bo.release();
+			}
+			inline void acquire(buffer_object_type b)
+			{
+				bo = b;
+			}
 		};
 
 		using buffer_block_array = typename std::array<memory_buffer_entry_t, 0x100000000ull / BlockSize>;
@@ -104,7 +116,7 @@ namespace rsx
 		std::tuple<buffer_object_type, u32, u64> get(u32 address)
 		{
 			const auto& block = m_buffer_list[block_for(address)];
-			return { block.get(), block.base_address - address };
+			return {block.get(), block.base_address - address};
 		}
 
 		void touch(const utils::address_range& range)
@@ -116,4 +128,4 @@ namespace rsx
 			}
 		}
 	};
-}
+} // namespace rsx

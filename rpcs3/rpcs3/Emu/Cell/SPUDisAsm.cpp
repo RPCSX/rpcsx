@@ -24,7 +24,7 @@ u32 SPUDisAsm::disasm(u32 pc)
 	be_t<u32> op;
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
-	(this->*(s_spu_disasm.decode(m_op)))({ m_op });
+	(this->*(s_spu_disasm.decode(m_op)))({m_op});
 
 	format_by_mode();
 	return 4;
@@ -67,7 +67,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 	for (s32 i = static_cast<s32>(pc); i >= static_cast<s32>(m_start_pc); i -= 4)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
-		const spu_opcode_t op0{ opcode };
+		const spu_opcode_t op0{opcode};
 
 		const auto type = g_spu_itype.decode(opcode);
 
@@ -87,22 +87,23 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 			continue;
 		}
 
-		// Get constant register value
-		#define GET_CONST_REG(var, reg) \
-		{\
-			/* Search for the constant value of the register*/\
-			const auto [is_const, value] = try_get_const_value(reg, i - 4, TTL - 1);\
-		\
-			if (!is_const)\
-			{\
-				/* Cannot compute constant value if register is not constant*/\
-				return {};\
-			}\
-		\
-			var = value;\
-		} void() /*<- Require a semicolon*/
+// Get constant register value
+#define GET_CONST_REG(var, reg)                                                  \
+	{                                                                            \
+		/* Search for the constant value of the register*/                       \
+		const auto [is_const, value] = try_get_const_value(reg, i - 4, TTL - 1); \
+                                                                                 \
+		if (!is_const)                                                           \
+		{                                                                        \
+			/* Cannot compute constant value if register is not constant*/       \
+			return {};                                                           \
+		}                                                                        \
+                                                                                 \
+		var = value;                                                             \
+	}                                                                            \
+	void() /*<- Require a semicolon*/
 
-		//const auto flag = g_spu_iflag.decode(opcode);
+		// const auto flag = g_spu_iflag.decode(opcode);
 
 		if (u32 dst = type & spu_itype::_quadrop ? +op0.rt4 : +op0.rt; dst == reg && !(type & spu_itype::zregmod))
 		{
@@ -111,19 +112,19 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 			{
 			case spu_itype::IL:
 			{
-				return { true, v128::from32p(op0.si16) };
+				return {true, v128::from32p(op0.si16)};
 			}
 			case spu_itype::ILA:
 			{
-				return { true, v128::from32p(op0.i18) };
+				return {true, v128::from32p(op0.i18)};
 			}
 			case spu_itype::ILHU:
 			{
-				return { true, v128::from32p(op0.i16 << 16) };
+				return {true, v128::from32p(op0.i16 << 16)};
 			}
 			case spu_itype::ILH:
 			{
-				return { true, v128::from16p(op0.i16) };
+				return {true, v128::from16p(op0.i16)};
 			}
 			case spu_itype::CBD:
 			case spu_itype::CHD:
@@ -149,7 +150,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 
 					switch (size)
 					{
-					case 1: res._u8[index]  = 0x03; break;
+					case 1: res._u8[index] = 0x03; break;
 					case 2: res._u16[index] = 0x0203; break;
 					case 4: res._u32[index] = 0x00010203; break;
 					case 8: res._u64[index] = 0x0001020304050607ull; break;
@@ -170,7 +171,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 					res._u8[i] = (op0.i16 & (1 << i)) ? 0xFF : 0x00;
 				}
 
-				return { true, res };
+				return {true, res};
 			}
 			case spu_itype::IOHL:
 			{
@@ -180,7 +181,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 				// But don't limit to it
 				GET_CONST_REG(reg_val, op0.rt);
 
-				return { true, reg_val | v128::from32p(op0.i16) };
+				return {true, reg_val | v128::from32p(op0.i16)};
 			}
 			case spu_itype::SHLQBYI:
 			{
@@ -194,14 +195,14 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 				v128 reg_val{};
 				GET_CONST_REG(reg_val, op0.ra);
 
-				return { true, reg_val };
+				return {true, reg_val};
 			}
 			case spu_itype::ORI:
 			{
 				v128 reg_val{};
 				GET_CONST_REG(reg_val, op0.ra);
 
-				return { true, reg_val | v128::from32p(op0.si10) };
+				return {true, reg_val | v128::from32p(op0.si10)};
 			}
 			default: return {};
 			}

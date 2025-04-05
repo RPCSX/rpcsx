@@ -31,21 +31,25 @@ namespace rsx
 			u32 aux_param0{};
 			u32 aux_param1{};
 
-			transport_packet(void *_dst, void *_src, u32 len)
+			transport_packet(void* _dst, void* _src, u32 len)
 				: type(op::raw_copy), src(_src), dst(_dst), length(len)
-			{}
+			{
+			}
 
-			transport_packet(void *_dst, std::vector<u8>& _src, u32 len)
+			transport_packet(void* _dst, std::vector<u8>& _src, u32 len)
 				: type(op::vector_copy), opt_storage(std::move(_src)), dst(_dst), length(len)
-			{}
+			{
+			}
 
-			transport_packet(void *_dst, rsx::primitive_type prim, u32 len)
+			transport_packet(void* _dst, rsx::primitive_type prim, u32 len)
 				: type(op::index_emulate), dst(_dst), length(len), aux_param0(static_cast<u8>(prim))
-			{}
+			{
+			}
 
 			transport_packet(u32 command, void* args)
 				: type(op::callback), src(args), aux_param0(command)
-			{}
+			{
+			}
 
 			transport_packet(const transport_packet&) = delete;
 			transport_packet& operator=(const transport_packet&) = delete;
@@ -66,11 +70,11 @@ namespace rsx
 		void init();
 
 		// General tranport
-		void copy(void *dst, std::vector<u8>& src, u32 length) const;
-		void copy(void *dst, void *src, u32 length) const;
+		void copy(void* dst, std::vector<u8>& src, u32 length) const;
+		void copy(void* dst, void* src, u32 length) const;
 
 		// Vertex utilities
-		void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
+		void emulate_as_indexed(void* dst, rsx::primitive_type primitive, u32 count);
 
 		// Renderer callback
 		void backend_ctrl(u32 request_code, void* args);
@@ -85,4 +89,4 @@ namespace rsx
 		// Fault recovery
 		utils::address_range get_fault_range(bool writing) const;
 	};
-}
+} // namespace rsx

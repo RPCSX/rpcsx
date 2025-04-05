@@ -50,7 +50,7 @@ namespace gl
 	{
 		ensure(src->samples() > 1 && dst->samples() == 1);
 
-		if (src->aspect() == gl::image_aspect::color) [[ likely ]]
+		if (src->aspect() == gl::image_aspect::color) [[likely]]
 		{
 			auto& job = g_resolve_helpers[src->get_internal_format()];
 			if (!job)
@@ -110,7 +110,7 @@ namespace gl
 	{
 		ensure(dst->samples() > 1 && src->samples() == 1);
 
-		if (src->aspect() == gl::image_aspect::color) [[ likely ]]
+		if (src->aspect() == gl::image_aspect::color) [[likely]]
 		{
 			auto& job = g_unresolve_helpers[src->get_internal_format()];
 			if (!job)
@@ -186,20 +186,19 @@ namespace gl
 		}
 
 		static const char* resolve_kernel =
-			#include "Emu/RSX/Program/MSAA/ColorResolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/ColorResolvePass.glsl"
 			;
 
 		static const char* unresolve_kernel =
-			#include "Emu/RSX/Program/MSAA/ColorUnresolvePass.glsl"
+#include "Emu/RSX/Program/MSAA/ColorUnresolvePass.glsl"
 			;
 
 		const std::pair<std::string_view, std::string> syntax_replace[] =
-		{
-			{ "%WORKGROUP_SIZE_X", std::to_string(cs_wave_x) },
-			{ "%WORKGROUP_SIZE_Y", std::to_string(cs_wave_y) },
-			{ "%IMAGE_FORMAT", format_prefix },
-			{ "%BGRA_SWAP", "0" }
-		};
+			{
+				{"%WORKGROUP_SIZE_X", std::to_string(cs_wave_x)},
+				{"%WORKGROUP_SIZE_Y", std::to_string(cs_wave_y)},
+				{"%IMAGE_FORMAT", format_prefix},
+				{"%BGRA_SWAP", "0"}};
 
 		m_src = unresolve ? unresolve_kernel : resolve_kernel;
 		m_src = fmt::replace_all(m_src, syntax_replace);
@@ -285,7 +284,6 @@ namespace gl
 		enable_depth_writes = m_config.resolve_depth;
 		enable_stencil_writes = m_config.resolve_stencil;
 
-
 		create();
 
 		rsx_log.notice("Resolve shader:\n%s", fs_src);
@@ -362,14 +360,11 @@ namespace gl
 		m_vao.bind();
 
 		// Clear the target
-		gl::clear_cmd_info clear_info
-		{
+		gl::clear_cmd_info clear_info{
 			.aspect_mask = gl::image_aspect::stencil,
 			.clear_stencil = {
 				.mask = 0xFF,
-				.value = 0
-			}
-		};
+				.value = 0}};
 		gl::clear_attachments(cmd, clear_info);
 
 		// Override stencil settings. Always pass, reference is all one, compare mask doesn't matter.
@@ -388,4 +383,4 @@ namespace gl
 
 		glBindVertexArray(old_vao);
 	}
-}
+} // namespace gl

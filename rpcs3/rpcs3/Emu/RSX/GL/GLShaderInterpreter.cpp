@@ -22,9 +22,11 @@ namespace gl
 				rsx_log.fatal("Unexpected program domain %d", static_cast<int>(domain));
 				[[fallthrough]];
 			case ::glsl::program_domain::glsl_vertex_program:
-				pname = GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS; break;
+				pname = GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS;
+				break;
 			case ::glsl::program_domain::glsl_fragment_program:
-				pname = GL_MAX_TEXTURE_IMAGE_UNITS; break;
+				pname = GL_MAX_TEXTURE_IMAGE_UNITS;
+				break;
 			}
 
 			glGetIntegerv(pname, &max_image_units);
@@ -42,7 +44,7 @@ namespace gl
 			pool.pool_size = size;
 			pools.push_back(pool);
 		}
-	}
+	} // namespace interpreter
 
 	void shader_interpreter::create()
 	{
@@ -93,14 +95,22 @@ namespace gl
 			}
 		}
 
-		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
-		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
-		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
-		if (metadata.referenced_textures_mask) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
-		if (metadata.has_branch_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
-		if (metadata.has_pack_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
-		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING;
+		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
+		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
+		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
+		if (metadata.referenced_textures_mask)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
+		if (metadata.has_branch_instructions)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
+		if (metadata.has_pack_instructions)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
+		if (rsx::method_registers.polygon_stipple_enabled())
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
+		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
+			opt |= program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING;
 
 		if (auto it = m_program_cache.find(opt); it != m_program_cache.end()) [[likely]]
 		{
@@ -126,15 +136,13 @@ namespace gl
 		std::string shader_str;
 		ParamArray arr;
 
-		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
-			? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS
-			: 0;
+		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING) ? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS : 0;
 		GLVertexDecompilerThread comp(null_prog, shader_str, arr);
 
 		// Initialize compiler properties
 		comp.properties.has_indexed_constants = true;
 
-		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
+		ParamType uniforms = {PF_PARAM_UNIFORM, "vec4"};
 		uniforms.items.emplace_back("vc[468]", -1);
 
 		std::stringstream builder;
@@ -142,19 +150,20 @@ namespace gl
 
 		builder << "#define Z_NEGATIVE_ONE_TO_ONE\n\n";
 
-		comp.insertConstants(builder, { uniforms });
+		comp.insertConstants(builder, {uniforms});
 		comp.insertInputs(builder, {});
 
 		// Insert vp stream input
 		builder << "\n"
-			"layout(std140, binding = " << GL_INTERPRETER_VERTEX_BLOCK << ") readonly restrict buffer VertexInstructionBlock\n"
-			"{\n"
-			"	uint base_address;\n"
-			"	uint entry;\n"
-			"	uint output_mask;\n"
-			"	uint control;\n"
-			"	uvec4 vp_instructions[];\n"
-			"};\n\n";
+				   "layout(std140, binding = "
+				<< GL_INTERPRETER_VERTEX_BLOCK << ") readonly restrict buffer VertexInstructionBlock\n"
+												  "{\n"
+												  "	uint base_address;\n"
+												  "	uint entry;\n"
+												  "	uint output_mask;\n"
+												  "	uint control;\n"
+												  "	uvec4 vp_instructions[];\n"
+												  "};\n\n";
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
 		{
@@ -186,26 +195,26 @@ namespace gl
 			if (allocator.max_image_units >= 32)
 			{
 				// 16 + 4 + 4 + 4
-				allocator.allocate(4);   // 1D
-				allocator.allocate(16);  // 2D
-				allocator.allocate(4);   // CUBE
-				allocator.allocate(4);   // 3D
+				allocator.allocate(4);  // 1D
+				allocator.allocate(16); // 2D
+				allocator.allocate(4);  // CUBE
+				allocator.allocate(4);  // 3D
 			}
 			else if (allocator.max_image_units >= 24)
 			{
 				// 16 + 4 + 2 + 2
-				allocator.allocate(2);   // 1D
-				allocator.allocate(16);  // 2D
-				allocator.allocate(2);   // CUBE
-				allocator.allocate(4);   // 3D
+				allocator.allocate(2);  // 1D
+				allocator.allocate(16); // 2D
+				allocator.allocate(2);  // CUBE
+				allocator.allocate(4);  // 3D
 			}
 			else if (allocator.max_image_units >= 16)
 			{
 				// 10 + 2 + 2 + 2
-				allocator.allocate(2);   // 1D
-				allocator.allocate(10);  // 2D
-				allocator.allocate(2);   // CUBE
-				allocator.allocate(2);   // 3D
+				allocator.allocate(2);  // 1D
+				allocator.allocate(10); // 2D
+				allocator.allocate(2);  // CUBE
+				allocator.allocate(2);  // 3D
 			}
 			else
 			{
@@ -221,9 +230,8 @@ namespace gl
 		GLFragmentDecompilerThread comp(shader_str, arr, frag, len);
 
 		std::stringstream builder;
-		builder <<
-		"#version 450\n"
-		"#extension GL_ARB_bindless_texture : require\n\n";
+		builder << "#version 450\n"
+				   "#extension GL_ARB_bindless_texture : require\n\n";
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
@@ -292,34 +300,33 @@ namespace gl
 		{
 			builder << "#define WITH_TEXTURES\n\n";
 
-			const char* type_names[] = { "sampler1D", "sampler2D", "samplerCube", "sampler3D" };
+			const char* type_names[] = {"sampler1D", "sampler2D", "samplerCube", "sampler3D"};
 			for (int i = 0; i < 4; ++i)
 			{
 				builder << "uniform " << type_names[i] << " " << type_names[i] << "_array[" << allocator.pools[i].pool_size << "];\n";
 			}
 
 			builder << "\n"
-				"#define IS_TEXTURE_RESIDENT(index) (texture_handles[index] < 0xFF)\n"
-				"#define SAMPLER1D(index) sampler1D_array[texture_handles[index]]\n"
-				"#define SAMPLER2D(index) sampler2D_array[texture_handles[index]]\n"
-				"#define SAMPLER3D(index) sampler3D_array[texture_handles[index]]\n"
-				"#define SAMPLERCUBE(index) samplerCube_array[texture_handles[index]]\n\n";
+					   "#define IS_TEXTURE_RESIDENT(index) (texture_handles[index] < 0xFF)\n"
+					   "#define SAMPLER1D(index) sampler1D_array[texture_handles[index]]\n"
+					   "#define SAMPLER2D(index) sampler2D_array[texture_handles[index]]\n"
+					   "#define SAMPLER3D(index) sampler3D_array[texture_handles[index]]\n"
+					   "#define SAMPLERCUBE(index) samplerCube_array[texture_handles[index]]\n\n";
 		}
 		else if (compiler_options)
 		{
 			builder << "\n";
 		}
 
-		builder <<
-			"layout(std430, binding =" << GL_INTERPRETER_FRAGMENT_BLOCK << ") readonly restrict buffer FragmentInstructionBlock\n"
-			"{\n"
-			"	uint shader_control;\n"
-			"	uint texture_control;\n"
-			"	uint reserved1;\n"
-			"	uint reserved2;\n"
-			"	uint texture_handles[16];\n"
-			"	uvec4 fp_instructions[];\n"
-			"};\n\n";
+		builder << "layout(std430, binding =" << GL_INTERPRETER_FRAGMENT_BLOCK << ") readonly restrict buffer FragmentInstructionBlock\n"
+																				  "{\n"
+																				  "	uint shader_control;\n"
+																				  "	uint texture_control;\n"
+																				  "	uint reserved1;\n"
+																				  "	uint reserved2;\n"
+																				  "	uint texture_handles[16];\n"
+																				  "	uvec4 fp_instructions[];\n"
+																				  "};\n\n";
 
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
@@ -334,10 +341,7 @@ namespace gl
 		build_fs(compiler_options, *data);
 		build_vs(compiler_options, *data);
 
-		data->prog.create().
-			attach(data->vertex_shader).
-			attach(data->fragment_shader).
-			link();
+		data->prog.create().attach(data->vertex_shader).attach(data->fragment_shader).link();
 
 		data->prog.uniforms[0] = GL_STREAM_BUFFER_START + 0;
 		data->prog.uniforms[1] = GL_STREAM_BUFFER_START + 1;
@@ -347,7 +351,7 @@ namespace gl
 			// Initialize texture bindings
 			int assigned = 0;
 			auto& allocator = data->allocator;
-			const char* type_names[] = { "sampler1D_array", "sampler2D_array", "samplerCube_array", "sampler3D_array" };
+			const char* type_names[] = {"sampler1D_array", "sampler2D_array", "samplerCube_array", "sampler3D_array"};
 
 			for (int i = 0; i < 4; ++i)
 			{
@@ -422,7 +426,7 @@ namespace gl
 
 					if (!found)
 					{
-						replacement_map.push_back({ old, i });
+						replacement_map.push_back({old, i});
 					}
 				}
 			}
@@ -459,9 +463,13 @@ namespace gl
 			}
 		}
 
-		if (allocator.pools[0].flags) m_current_interpreter->prog.uniforms["sampler1D_array"] = allocator.pools[0].allocated;
-		if (allocator.pools[1].flags) m_current_interpreter->prog.uniforms["sampler2D_array"] = allocator.pools[1].allocated;
-		if (allocator.pools[2].flags) m_current_interpreter->prog.uniforms["samplerCube_array"] = allocator.pools[2].allocated;
-		if (allocator.pools[3].flags) m_current_interpreter->prog.uniforms["sampler3D_array"] = allocator.pools[3].allocated;
+		if (allocator.pools[0].flags)
+			m_current_interpreter->prog.uniforms["sampler1D_array"] = allocator.pools[0].allocated;
+		if (allocator.pools[1].flags)
+			m_current_interpreter->prog.uniforms["sampler2D_array"] = allocator.pools[1].allocated;
+		if (allocator.pools[2].flags)
+			m_current_interpreter->prog.uniforms["samplerCube_array"] = allocator.pools[2].allocated;
+		if (allocator.pools[3].flags)
+			m_current_interpreter->prog.uniforms["sampler3D_array"] = allocator.pools[3].allocated;
 	}
-}
+} // namespace gl

@@ -6,7 +6,7 @@
 
 namespace gl
 {
-	template<gl::filter Filter>
+	template <gl::filter Filter>
 	class static_upscale_pass : public upscaler
 	{
 	public:
@@ -20,12 +20,12 @@ namespace gl
 		}
 
 		gl::texture* scale_output(
-			gl::command_context& /*cmd*/,           // State
-			gl::texture*   src,                     // Source input
-			const areai& src_region,                // Scaling request information
-			const areai& dst_region,                // Ditto
-			gl::flags32_t mode                      // Mode
-		) override
+			gl::command_context& /*cmd*/, // State
+			gl::texture* src,             // Source input
+			const areai& src_region,      // Scaling request information
+			const areai& dst_region,      // Ditto
+			gl::flags32_t mode            // Mode
+			) override
 		{
 			if (mode & UPSCALE_AND_COMMIT)
 			{
@@ -45,4 +45,4 @@ namespace gl
 	private:
 		gl::fbo m_flip_fbo;
 	};
-}
+} // namespace gl

@@ -27,7 +27,7 @@ namespace gui
 		{
 		public:
 			circle_pixmap(const QColor& color, qreal pixel_ratio)
-			    : QPixmap(pixel_ratio * 16, pixel_ratio * 16)
+				: QPixmap(pixel_ratio * 16, pixel_ratio * 16)
 			{
 				fill(Qt::transparent);
 
@@ -41,7 +41,7 @@ namespace gui
 			}
 		};
 
-		template<typename T>
+		template <typename T>
 		static QSet<T> list_to_set(const QList<T>& list)
 		{
 			return QSet<T>(list.begin(), list.end());
@@ -189,5 +189,5 @@ namespace gui
 				watcher.waitForFinished();
 			}
 		}
-	} // utils
-} // gui
+	} // namespace utils
+} // namespace gui

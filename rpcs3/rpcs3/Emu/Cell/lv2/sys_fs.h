@@ -10,16 +10,16 @@
 // Open Flags
 enum : s32
 {
-	CELL_FS_O_RDONLY  = 000000,
-	CELL_FS_O_WRONLY  = 000001,
-	CELL_FS_O_RDWR    = 000002,
+	CELL_FS_O_RDONLY = 000000,
+	CELL_FS_O_WRONLY = 000001,
+	CELL_FS_O_RDWR = 000002,
 	CELL_FS_O_ACCMODE = 000003,
-	CELL_FS_O_CREAT   = 000100,
-	CELL_FS_O_EXCL    = 000200,
-	CELL_FS_O_TRUNC   = 001000,
-	CELL_FS_O_APPEND  = 002000,
-	CELL_FS_O_MSELF   = 010000,
-	CELL_FS_O_UNK     = 01000000, // Tests have shown this is independent of other flags.  Only known to be called in Rockband games.
+	CELL_FS_O_CREAT = 000100,
+	CELL_FS_O_EXCL = 000200,
+	CELL_FS_O_TRUNC = 001000,
+	CELL_FS_O_APPEND = 002000,
+	CELL_FS_O_MSELF = 010000,
+	CELL_FS_O_UNK = 01000000, // Tests have shown this is independent of other flags.  Only known to be called in Rockband games.
 };
 
 // Seek Mode
@@ -39,7 +39,7 @@ enum : s32
 
 enum : s32
 {
-	CELL_FS_S_IFMT  = 0170000,
+	CELL_FS_S_IFMT = 0170000,
 	CELL_FS_S_IFDIR = 0040000, // directory
 	CELL_FS_S_IFREG = 0100000, // regular
 	CELL_FS_S_IFLNK = 0120000, // symbolic link
@@ -61,16 +61,16 @@ enum : s32
 // CellFsDirent.d_type
 enum : u8
 {
-	CELL_FS_TYPE_UNKNOWN   = 0,
+	CELL_FS_TYPE_UNKNOWN = 0,
 	CELL_FS_TYPE_DIRECTORY = 1,
-	CELL_FS_TYPE_REGULAR   = 2,
-	CELL_FS_TYPE_SYMLINK   = 3,
+	CELL_FS_TYPE_REGULAR = 2,
+	CELL_FS_TYPE_SYMLINK = 3,
 };
 
 enum : u32
 {
 	CELL_FS_IO_BUFFER_PAGE_SIZE_64KB = 0x0002,
-	CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  = 0x0004,
+	CELL_FS_IO_BUFFER_PAGE_SIZE_1MB = 0x0004,
 };
 
 struct CellFsDirent
@@ -117,7 +117,6 @@ struct FsMselfHeader
 	be_t<u32> m_entry_num;
 	be_t<u32> m_entry_size;
 	u8 m_reserve[40];
-
 };
 
 struct FsMselfEntry
@@ -170,10 +169,7 @@ struct lv2_fs_mount_info
 	const bool read_only;
 
 	lv2_fs_mount_info(lv2_fs_mount_point* mp = nullptr, std::string_view device = {}, std::string_view file_system = {}, bool read_only = false)
-		: mp(mp ? mp : &g_mp_sys_no_device)
-		, device(device.empty() ? this->mp->device : device)
-		, file_system(file_system.empty() ? this->mp->file_system : file_system)
-		, read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only) // respect the original flags of the mount point as well
+		: mp(mp ? mp : &g_mp_sys_no_device), device(device.empty() ? this->mp->device : device), file_system(file_system.empty() ? this->mp->file_system : file_system), read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only) // respect the original flags of the mount point as well
 	{
 	}
 
@@ -298,22 +294,12 @@ struct lv2_file final : lv2_fs_object
 	} restore_data{};
 
 	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(filename)
-		, file(std::move(file))
-		, mode(mode)
-		, flags(flags)
-		, real_path(real_path)
-		, type(type)
+		: lv2_fs_object(filename), file(std::move(file)), mode(mode), flags(flags), real_path(real_path), type(type)
 	{
 	}
 
 	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(host.name.data())
-		, file(std::move(file))
-		, mode(mode)
-		, flags(flags)
-		, real_path(real_path)
-		, type(type)
+		: lv2_fs_object(host.name.data()), file(std::move(file)), mode(mode), flags(flags), real_path(real_path), type(type)
 	{
 	}
 
@@ -372,8 +358,7 @@ struct lv2_dir final : lv2_fs_object
 	atomic_t<u64> pos{0};
 
 	lv2_dir(std::string_view filename, std::vector<fs::dir_entry>&& entries)
-		: lv2_fs_object(filename)
-		, entries(std::move(entries))
+		: lv2_fs_object(filename), entries(std::move(entries))
 	{
 	}
 
@@ -409,7 +394,7 @@ namespace vtable
 		vm::bptrb<void(vm::ptrb<lv2_file_op>)> _dtor1;
 		vm::bptrb<void(vm::ptrb<lv2_file_op>)> _dtor2;
 	};
-}
+} // namespace vtable
 
 // sys_fs_fcntl: read with offset, write with offset
 struct lv2_file_op_rw : lv2_file_op
@@ -420,10 +405,10 @@ struct lv2_file_op_rw : lv2_file_op
 	be_t<u32> _x8; // ???
 	be_t<u32> _xc; // ???
 
-	be_t<u32> fd; // File descriptor (3..255)
+	be_t<u32> fd;        // File descriptor (3..255)
 	vm::bptrb<void> buf; // Buffer for data
-	be_t<u64> offset; // File offset
-	be_t<u64> size; // Access size
+	be_t<u64> offset;    // File offset
+	be_t<u64> size;      // Access size
 
 	be_t<s32> out_code; // Op result
 	be_t<u64> out_size; // Size processed
@@ -443,10 +428,10 @@ struct lv2_file_op_09 : lv2_file_op
 	be_t<u32> fd;
 	be_t<u64> offset;
 	be_t<u32> _vtabl2;
-	be_t<u32> arg1; // 0x180
-	be_t<u32> arg2; // 0x10
+	be_t<u32> arg1;     // 0x180
+	be_t<u32> arg2;     // 0x10
 	be_t<u32> arg_size; // 6th arg
-	be_t<u32> arg_ptr; // 5th arg
+	be_t<u32> arg_ptr;  // 5th arg
 
 	be_t<u32> _x34;
 	be_t<s32> out_code;
@@ -463,12 +448,12 @@ struct lv2_file_e0000025 : lv2_file_op
 	be_t<u32> name_size;
 	vm::bcptr<char> name;
 	be_t<u32> _x14;
-	be_t<u32> _x18;  // 0
-	be_t<u32> _x1c;  // 0
-	be_t<u32> _x20;  // 16
-	be_t<u32> _x24;  // unk, seems to be memory location
-	be_t<u32> out_code;  // out_code
-	be_t<u32> fd;  // 0xffffffff - likely fd out
+	be_t<u32> _x18;     // 0
+	be_t<u32> _x1c;     // 0
+	be_t<u32> _x20;     // 16
+	be_t<u32> _x24;     // unk, seems to be memory location
+	be_t<u32> out_code; // out_code
+	be_t<u32> fd;       // 0xffffffff - likely fd out
 };
 
 CHECK_SIZE(lv2_file_e0000025, 0x30);
@@ -521,9 +506,9 @@ struct lv2_file_c0000006 : lv2_file_op
 	be_t<u32> _x8;  // 0x18 - offset of out_code
 	be_t<u32> name_size;
 	vm::bcptr<char> name;
-	be_t<u32> _x14; // 0
+	be_t<u32> _x14;     // 0
 	be_t<u32> out_code; // 0x80010003
-	be_t<u32> out_id; // set to 0, may return 0x1b5
+	be_t<u32> out_id;   // set to 0, may return 0x1b5
 };
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);
@@ -531,7 +516,7 @@ CHECK_SIZE(lv2_file_c0000006, 0x20);
 // sys_fs_fcntl: cellFsArcadeHddSerialNumber
 struct lv2_file_c0000007 : lv2_file_op
 {
-	be_t<u32> out_code; // set to 0
+	be_t<u32> out_code;     // set to 0
 	vm::bcptr<char> device; // CELL_FS_IOS:ATA_HDD
 	be_t<u32> device_size;  // 0x14
 	vm::bptr<char> model;
@@ -549,10 +534,10 @@ struct lv2_file_c0000008 : lv2_file_op
 	u8 _x8[8];
 	be_t<u64> container_id;
 	be_t<u32> size;
-	be_t<u32> page_type;  // 0x4000 for cellFsSetDefaultContainer
-	                      // 0x4000 | page_type given by user, valid values seem to be:
-	                      // CELL_FS_IO_BUFFER_PAGE_SIZE_64KB 0x0002
-	                      // CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  0x0004
+	be_t<u32> page_type; // 0x4000 for cellFsSetDefaultContainer
+	                     // 0x4000 | page_type given by user, valid values seem to be:
+	                     // CELL_FS_IO_BUFFER_PAGE_SIZE_64KB 0x0002
+	                     // CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  0x0004
 	be_t<u32> out_code;
 	u8 _x24[4];
 };
@@ -607,9 +592,9 @@ CHECK_SIZE(lv2_file_c000001c, 0x60);
 struct lv2_file_e0000017 : lv2_file_op
 {
 	be_t<u32> size; // 0x28
-	be_t<u32> _x4; // 0x10, offset
-	be_t<u32> _x8; // 0x20, offset
-	be_t<u32> _xc; // -
+	be_t<u32> _x4;  // 0x10, offset
+	be_t<u32> _x8;  // 0x20, offset
+	be_t<u32> _xc;  // -
 	vm::bcptr<char> file_path;
 	be_t<u64> file_size;
 	be_t<u32> out_code;
@@ -631,8 +616,8 @@ CHECK_SIZE(CellFsMountInfo, 0x94);
 struct default_sys_fs_container
 {
 	shared_mutex mutex;
-	u32 id   = 0;
-	u32 cap  = 0;
+	u32 id = 0;
+	u32 cap = 0;
 	u32 used = 0;
 };
 

@@ -43,4 +43,4 @@ namespace rpcs3
 		} aarch64;
 	};
 #endif
-}
+} // namespace rpcs3

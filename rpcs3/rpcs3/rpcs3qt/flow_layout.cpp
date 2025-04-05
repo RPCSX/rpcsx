@@ -52,22 +52,13 @@
 #include "flow_layout.h"
 
 flow_layout::flow_layout(QWidget* parent, int margin, bool dynamic_spacing, int hSpacing, int vSpacing)
-	: QLayout(parent)
-	, m_dynamic_spacing(dynamic_spacing)
-	, m_h_space_initial(hSpacing)
-	, m_v_space_initial(vSpacing)
-	, m_h_space(hSpacing)
-	, m_v_space(vSpacing)
+	: QLayout(parent), m_dynamic_spacing(dynamic_spacing), m_h_space_initial(hSpacing), m_v_space_initial(vSpacing), m_h_space(hSpacing), m_v_space(vSpacing)
 {
 	setContentsMargins(margin, margin, margin, margin);
 }
 
 flow_layout::flow_layout(int margin, bool dynamic_spacing, int hSpacing, int vSpacing)
-	: m_dynamic_spacing(dynamic_spacing)
-	, m_h_space_initial(hSpacing)
-	, m_v_space_initial(vSpacing)
-	, m_h_space(hSpacing)
-	, m_v_space(vSpacing)
+	: m_dynamic_spacing(dynamic_spacing), m_h_space_initial(hSpacing), m_v_space_initial(vSpacing), m_h_space(hSpacing), m_v_space(vSpacing)
 {
 	setContentsMargins(margin, margin, margin, margin);
 }
@@ -94,7 +85,7 @@ void flow_layout::clear()
 
 void flow_layout::addItem(QLayoutItem* item)
 {
-	m_positions.append(position{ .row = -1, .col = -1 });
+	m_positions.append(position{.row = -1, .col = -1});
 	m_item_list.append(item);
 }
 

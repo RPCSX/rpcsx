@@ -30,10 +30,9 @@
 #define APIENTRY
 #endif
 
-
 namespace gl
 {
 	void enable_debugging();
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
-}
+} // namespace gl

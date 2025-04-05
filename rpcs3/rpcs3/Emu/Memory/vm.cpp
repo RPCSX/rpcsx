@@ -141,23 +141,24 @@ namespace vm
 				break;
 			}
 
-			if (++i == max) i = 0;
+			if (++i == max)
+				i = 0;
 		}
 	}
 
 	atomic_t<u64, 64>* alloc_range_lock()
 	{
 		const auto [bits, ok] = get_range_lock_bits(false).fetch_op([](u64& bits)
-		{
-			// MSB is reserved for locking with memory setting changes
-			if ((~(bits | (bits + 1))) << 1) [[likely]]
 			{
-				bits |= bits + 1;
-				return true;
-			}
+				// MSB is reserved for locking with memory setting changes
+				if ((~(bits | (bits + 1))) << 1) [[likely]]
+				{
+					bits |= bits + 1;
+					return true;
+				}
 
-			return false;
-		});
+				return false;
+			});
 
 		if (!ok) [[unlikely]]
 		{
@@ -186,34 +187,34 @@ namespace vm
 			const u64 is_share = g_shmem[begin >> 16].load();
 
 			const u64 busy = for_all_range_locks(get_range_lock_bits(true), [&](u64 addr_exec, u32 size_exec)
-			{
-				u64 addr = begin;
-
-				if ((size_exec & (range_full_mask >> 32)) == (range_locked >> 32)) [[likely]]
 				{
-					size_exec = 128;
+					u64 addr = begin;
 
-					if (is_share)
+					if ((size_exec & (range_full_mask >> 32)) == (range_locked >> 32)) [[likely]]
 					{
-						addr = static_cast<u16>(addr) | is_share;
+						size_exec = 128;
+
+						if (is_share)
+						{
+							addr = static_cast<u16>(addr) | is_share;
+						}
 					}
-				}
 
-				size_exec = (size_exec << range_bits) >> range_bits;
+					size_exec = (size_exec << range_bits) >> range_bits;
 
-				// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
-				if (u64 is_shared = g_shmem[addr_exec >> 16]) [[unlikely]]
-				{
-					addr_exec = static_cast<u16>(addr_exec) | is_shared;
-				}
+					// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
+					if (u64 is_shared = g_shmem[addr_exec >> 16]) [[unlikely]]
+					{
+						addr_exec = static_cast<u16>(addr_exec) | is_shared;
+					}
 
-				if (addr <= addr_exec + size_exec - 1 && addr_exec <= addr + size - 1) [[unlikely]]
-				{
-					return 1;
-				}
+					if (addr <= addr_exec + size_exec - 1 && addr_exec <= addr + size - 1) [[unlikely]]
+					{
+						return 1;
+					}
 
-				return 0;
-			});
+					return 0;
+				});
 
 			if (!busy) [[likely]]
 			{
@@ -349,14 +350,14 @@ namespace vm
 		while (to_clear)
 		{
 			to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
-			{
-				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
 				{
-					return 1;
-				}
+					if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
+					{
+						return 1;
+					}
 
-				return 0;
-			});
+					return 0;
+				});
 
 			if (!to_clear) [[likely]]
 			{
@@ -562,29 +563,29 @@ namespace vm
 			while (true)
 			{
 				to_clear = for_all_range_locks(to_clear & ~get_range_lock_bits(true), [&](u64 addr2, u32 size2)
-				{
-					// Split and check every 64K page separately
-					for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 					{
-						u64 addr3 = addr2;
-						u64 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
-
-						if (u64 is_shared = g_shmem[hi]) [[unlikely]]
+						// Split and check every 64K page separately
+						for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 						{
-							addr3 = static_cast<u16>(addr2) | is_shared;
+							u64 addr3 = addr2;
+							u64 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
+
+							if (u64 is_shared = g_shmem[hi]) [[unlikely]]
+							{
+								addr3 = static_cast<u16>(addr2) | is_shared;
+							}
+
+							if (point - (addr3 / 128) <= (addr3 + size3 - 1) / 128 - (addr3 / 128)) [[unlikely]]
+							{
+								return 1;
+							}
+
+							addr2 += size3;
+							size2 -= static_cast<u32>(size3);
 						}
 
-						if (point - (addr3 / 128) <= (addr3 + size3 - 1) / 128 - (addr3 / 128)) [[unlikely]]
-						{
-							return 1;
-						}
-
-						addr2 += size3;
-						size2 -= static_cast<u32>(size3);
-					}
-
-					return 0;
-				});
+						return 0;
+					});
 
 				if (!to_clear) [[likely]]
 				{
@@ -661,15 +662,15 @@ namespace vm
 		for (u64 i = 0;; i++)
 		{
 			auto [_oldd, _ok] = res.fetch_op([&](u64& r)
-			{
-				if (r & rsrv_unique_lock)
 				{
-					return false;
-				}
+					if (r & rsrv_unique_lock)
+					{
+						return false;
+					}
 
-				r += 1;
-				return true;
-			});
+					r += 1;
+					return true;
+				});
 
 			if (_ok) [[likely]]
 			{
@@ -697,18 +698,18 @@ namespace vm
 		auto* ptr = vm::get_super_ptr(addr & -128);
 
 		cpu_thread::suspend_all<+1>(get_current_cpu_thread(), {ptr, ptr + 64, &res}, [&]
-		{
-			if (func())
 			{
-				// Success, release the lock and progress
-				res += 127;
-			}
-			else
-			{
-				// Only release the lock on failure
-				res -= 1;
-			}
-		});
+				if (func())
+				{
+					// Success, release the lock and progress
+					res += 127;
+				}
+				else
+				{
+					// Only release the lock on failure
+					res -= 1;
+				}
+			});
 	}
 
 	[[noreturn]] void reservation_escape_internal()
@@ -882,8 +883,8 @@ namespace vm
 
 		const u8 flags_both = flags_set & flags_clear;
 
-		flags_test  |= page_allocated;
-		flags_set   &= ~flags_both;
+		flags_test |= page_allocated;
+		flags_set &= ~flags_both;
 		flags_clear &= ~flags_both;
 
 		if (!check_addr(addr, flags_test, size))
@@ -1202,28 +1203,28 @@ namespace vm
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
 		_page_map(page_addr, flags, page_size, shm.get(), this->flags, [](vm::block_t* _this, utils::shm* shm)
-		{
-			auto& map = (_this->m.*block_map)();
-
-			std::remove_reference_t<decltype(map)>::value_type* result = nullptr;
-
-			// Check eligibility
-			if (!_this || !(page_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
 			{
-				return result;
-			}
+				auto& map = (_this->m.*block_map)();
 
-			for (auto& pp : map)
-			{
-				if (pp.second.second.get() == shm)
+				std::remove_reference_t<decltype(map)>::value_type* result = nullptr;
+
+				// Check eligibility
+				if (!_this || !(page_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
 				{
-					// Found match
-					return &pp;
+					return result;
 				}
-			}
 
-			return result;
-		});
+				for (auto& pp : map)
+				{
+					if (pp.second.second.get() == shm)
+					{
+						// Found match
+						return &pp;
+					}
+				}
+
+				return result;
+			});
 
 		// Fill stack guards with STACKGRD
 		if (this->flags & stack_guarded)
@@ -1233,9 +1234,9 @@ namespace vm
 #if defined(_M_X64) && defined(_MSC_VER)
 				__stosq(reinterpret_cast<u64*>(ptr), data, count);
 #elif defined(ARCH_X64)
-				__asm__ ("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"
+				__asm__("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"
 					:
-					: "r" (ptr), "r" (data), "r" (count)
+					: "r"(ptr), "r"(data), "r"(count)
 					: "rdi", "rax", "rcx", "memory");
 #else
 				for (usz i = 0; i < count; i++)
@@ -1280,10 +1281,7 @@ namespace vm
 	}
 
 	block_t::block_t(u32 addr, u32 size, u64 flags)
-		: m_id(init_block_id())
-		, addr(addr)
-		, size(size)
-		, flags(process_block_flags(flags))
+		: m_id(init_block_id()), addr(addr), size(size), flags(process_block_flags(flags))
 	{
 		if (this->flags & preallocated)
 		{
@@ -1770,10 +1768,7 @@ namespace vm
 	}
 
 	block_t::block_t(utils::serial& ar, std::vector<std::shared_ptr<utils::shm>>& shared)
-		: m_id(init_block_id())
-		, addr(ar)
-		, size(ar)
-		, flags(ar)
+		: m_id(init_block_id()), addr(ar), size(ar), flags(ar)
 	{
 		if (flags & preallocated)
 		{
@@ -1971,7 +1966,8 @@ namespace vm
 
 		auto block = _find_map(size, align, flags);
 
-		if (block) g_locations.emplace_back(block);
+		if (block)
+			g_locations.emplace_back(block);
 
 		return block;
 	}
@@ -2197,31 +2193,31 @@ namespace vm
 		void init()
 		{
 			vm_log.notice("Guest memory bases address ranges:\n"
-			"vm::g_base_addr = %p - %p\n"
-			"vm::g_sudo_addr = %p - %p\n"
-			"vm::g_exec_addr = %p - %p\n"
-			"vm::g_hook_addr = %p - %p\n"
-			"vm::g_stat_addr = %p - %p\n"
-			"vm::g_reservations = %p - %p\n",
-			g_base_addr, g_base_addr + 0xffff'ffff,
-			g_sudo_addr, g_sudo_addr + 0xffff'ffff,
-			g_exec_addr, g_exec_addr + 0x200000000 - 1,
-			g_hook_addr, g_hook_addr + 0x800000000 - 1,
-			g_stat_addr, g_stat_addr + 0xffff'ffff,
-			g_reservations, g_reservations + sizeof(g_reservations) - 1);
+						  "vm::g_base_addr = %p - %p\n"
+						  "vm::g_sudo_addr = %p - %p\n"
+						  "vm::g_exec_addr = %p - %p\n"
+						  "vm::g_hook_addr = %p - %p\n"
+						  "vm::g_stat_addr = %p - %p\n"
+						  "vm::g_reservations = %p - %p\n",
+				g_base_addr, g_base_addr + 0xffff'ffff,
+				g_sudo_addr, g_sudo_addr + 0xffff'ffff,
+				g_exec_addr, g_exec_addr + 0x200000000 - 1,
+				g_hook_addr, g_hook_addr + 0x800000000 - 1,
+				g_stat_addr, g_stat_addr + 0xffff'ffff,
+				g_reservations, g_reservations + sizeof(g_reservations) - 1);
 
 			std::memset(&g_pages, 0, sizeof(g_pages));
 
 			g_locations =
-			{
-				std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
-				nullptr,		                                                                 // user 64k pages
-				nullptr,                                                                         // user 1m pages
-				nullptr,                                                                         // rsx context
-				std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
-				std::make_shared<block_t>(0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
-			};
+				{
+					std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated),                          // main
+					nullptr,                                                                                                  // user 64k pages
+					nullptr,                                                                                                  // user 1m pages
+					nullptr,                                                                                                  // rsx context
+					std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated),                          // video
+					std::make_shared<block_t>(0xD0000000, 0x10000000, page_size_4k | preallocated | stack_guarded | bf0_0x1), // stack
+					std::make_shared<block_t>(0xE0000000, 0x20000000, page_size_64k),                                         // SPU reserved
+				};
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
 			std::memset(g_shmem, 0, sizeof(g_shmem));
@@ -2233,7 +2229,7 @@ namespace vm
 #endif
 			ensure(s_hook.map(g_hook_addr, utils::protection::rw, true));
 		}
-	}
+	} // namespace ps3_
 
 	void close()
 	{
@@ -2242,7 +2238,8 @@ namespace vm
 
 			for (auto& block : g_locations)
 			{
-				if (block) _unmap_block(block);
+				if (block)
+					_unmap_block(block);
 			}
 
 			g_locations.clear();
@@ -2270,13 +2267,18 @@ namespace vm
 
 		for (auto& loc : g_locations)
 		{
-			if (loc) loc->get_shared_memory(shared);
+			if (loc)
+				loc->get_shared_memory(shared);
 		}
 
 		std::map<utils::shm*, usz> shared_map;
 
 #ifndef _MSC_VER
-		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b) { return a.first == b.first; }), shared.end());
+		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b)
+						 {
+							 return a.first == b.first;
+						 }),
+			shared.end());
 #else
 		// Workaround for bugged std::unique
 		for (auto it = shared.begin(); it != shared.end();)
@@ -2356,7 +2358,8 @@ namespace vm
 
 		for (auto& block : g_locations)
 		{
-			if (block) _unmap_block(block);
+			if (block)
+				_unmap_block(block);
 		}
 
 		g_locations.clear();
@@ -2433,7 +2436,7 @@ namespace vm
 		// Non-null terminated but terminated by size limit (so the string may continue)
 		return size == max_size;
 	}
-}
+} // namespace vm
 
 void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)
 {

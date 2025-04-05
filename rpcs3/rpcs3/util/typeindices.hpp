@@ -182,21 +182,25 @@ namespace stx
 		return typelist_v;
 	}
 
-	template <typename T> requires requires () { T::savestate_init_pos + 0.; }
+	template <typename T>
+		requires requires() { T::savestate_init_pos + 0.; }
 	constexpr double get_savestate_init_pos()
 	{
 		return T::savestate_init_pos;
 	}
-	template <typename T> requires (!(requires () { T::savestate_init_pos + 0.; }))
+	template <typename T>
+		requires(!(requires() { T::savestate_init_pos + 0.; }))
 	constexpr double get_savestate_init_pos()
 	{
 		return {};
 	}
 
-	template <typename Info> template <typename T>
+	template <typename Info>
+	template <typename T>
 	const type_info<Info> type_counter<Info>::type{Info::template make_typeinfo<T>(), sizeof(T), alignof(T), get_savestate_init_pos<T>()};
 
-	template <typename Info> template <typename T, typename As>
+	template <typename Info>
+	template <typename T, typename As>
 	const type_info<Info> type_counter<Info>::dyn_type{Info::template make_typeinfo<As>(), sizeof(As), alignof(As), get_savestate_init_pos<T>(), &type_counter<Info>::template type<T>};
 
 	template <typename Info>
@@ -219,7 +223,7 @@ namespace stx
 		if (cbase)
 		{
 			dl.next->next = this;
-			dl.next       = this;
+			dl.next = this;
 
 			// Update base max size/align for dynamic types
 			for (auto ptr = tl.first.next; ptr; ptr = ptr->next)
@@ -251,7 +255,7 @@ namespace stx
 
 		// Update linked list
 		tl.next->next = this;
-		tl.next       = this;
+		tl.next = this;
 	}
 
 	// Type index accessor
@@ -290,6 +294,6 @@ namespace stx
 
 		return type_counter<Info>::template dyn_type<T, As>;
 	}
-}
+} // namespace stx
 
 #undef ATTR_PURE

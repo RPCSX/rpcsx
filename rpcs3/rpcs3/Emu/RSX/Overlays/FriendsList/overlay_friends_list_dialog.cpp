@@ -72,10 +72,10 @@ namespace rsx
 				static_cast<image_view*>(image.get())->set_image_resource(resource_config::standard_image_resource::square);
 			}
 
-			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
+			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
 			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(username);
-			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(text);
+			std::unique_ptr<overlay_element> subtext = std::make_unique<label>(text);
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
@@ -89,7 +89,7 @@ namespace rsx
 
 			// Make back color transparent for text
 			header_text->back_color.a = 0.f;
-			subtext->back_color.a     = 0.f;
+			subtext->back_color.a = 0.f;
 
 			static_cast<vertical_layout*>(text_stack.get())->pack_padding = 5;
 			static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
@@ -110,8 +110,7 @@ namespace rsx
 		}
 
 		friends_list_dialog::friends_list_dialog()
-			: m_page_btn(120, 30)
-			, m_extra_btn(120, 30)
+			: m_page_btn(120, 30), m_extra_btn(120, 30)
 		{
 			m_allow_input_on_pause = true;
 
@@ -157,7 +156,8 @@ namespace rsx
 
 		void friends_list_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (fade_animation.active) return;
+			if (fade_animation.active)
+				return;
 
 			if (m_message_box && m_message_box->visible)
 			{
@@ -216,9 +216,9 @@ namespace rsx
 					if (!selected_username.empty() && m_message_box && !m_message_box->visible)
 					{
 						m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REMOVE_USER_MSG, selected_username.c_str()), [this, selected_username]()
-						{
-							m_rpcn->remove_friend(selected_username);
-						});
+							{
+								m_rpcn->remove_friend(selected_username);
+							});
 						refresh();
 					}
 					break;
@@ -257,24 +257,24 @@ namespace rsx
 							if (button_press == pad_button::triangle)
 							{
 								m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST_MSG, selected_username.c_str()), [this, selected_username]()
-								{
-									m_rpcn->remove_friend(selected_username);
-								});
+									{
+										m_rpcn->remove_friend(selected_username);
+									});
 							}
 							else
 							{
 								m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_ACCEPT_REQUEST_MSG, selected_username.c_str()), [this, selected_username]()
-								{
-									m_rpcn->add_friend(selected_username);
-								});
+									{
+										m_rpcn->add_friend(selected_username);
+									});
 							}
 						}
 						else
 						{
 							m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_CANCEL_REQUEST_MSG, selected_username.c_str()), [this, selected_username]()
-							{
-								m_rpcn->remove_friend(selected_username);
-							});
+								{
+									m_rpcn->remove_friend(selected_username);
+								});
 						}
 						refresh();
 					}
@@ -297,9 +297,9 @@ namespace rsx
 					if (!selected_username.empty() && m_message_box && !m_message_box->visible)
 					{
 						m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_UNBLOCK_USER_MSG, selected_username.c_str()), []()
-						{
-							// TODO
-						});
+							{
+								// TODO
+							});
 						refresh();
 					}
 					break;
@@ -431,10 +431,10 @@ namespace rsx
 		{
 			switch (ntype)
 			{
-			case rpcn::NotificationType::FriendNew: // Add a friend to the friendlist(either accepted a friend request or friend accepted it)
+			case rpcn::NotificationType::FriendNew:    // Add a friend to the friendlist(either accepted a friend request or friend accepted it)
 			case rpcn::NotificationType::FriendStatus: // Set status of friend to Offline or Online
-			case rpcn::NotificationType::FriendQuery: // Other user sent a friend request
-			case rpcn::NotificationType::FriendLost: // Remove friend from the friendlist(user removed friend or friend removed friend)
+			case rpcn::NotificationType::FriendQuery:  // Other user sent a friend request
+			case rpcn::NotificationType::FriendLost:   // Remove friend from the friendlist(user removed friend or friend removed friend)
 			case rpcn::NotificationType::FriendPresenceChanged:
 			{
 				m_list_dirty = true;
@@ -548,11 +548,11 @@ namespace rsx
 				{
 					if (data.online)
 					{
-						friends_online.push_back({ username, data });
+						friends_online.push_back({username, data});
 					}
 					else
 					{
-						friends_offline.push_back({ username, data });
+						friends_offline.push_back({username, data});
 					}
 				}
 
@@ -674,8 +674,11 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid, "Friends list dialog",
-				[notify]() { *notify = true; notify->notify_one(); }
-			);
+				[notify]()
+				{
+					*notify = true;
+					notify->notify_one();
+				});
 
 			while (!Emu.IsStopped() && !*notify)
 			{
@@ -692,4 +695,4 @@ namespace rsx
 			return !cfg.get_npid().empty() && !cfg.get_password().empty();
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

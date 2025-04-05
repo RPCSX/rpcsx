@@ -44,11 +44,11 @@ draw_context_t gl_gs_frame::make_context()
 
 		// Workaround for the Qt warning: "Attempting to create QWindow-based QOffscreenSurface outside the gui thread. Expect failures."
 		Emu.BlockingCallFromMainThread([&]()
-		{
-			surface = new QOffscreenSurface();
-			surface->setFormat(m_format);
-			surface->create();
-		});
+			{
+				surface = new QOffscreenSurface();
+				surface->setFormat(m_format);
+				surface->create();
+			});
 
 		// Share resources with the first created context
 		context->handle->setShareContext(m_primary_context->handle);
@@ -110,13 +110,13 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	gl_ctx->handle->doneCurrent();
 
 #ifdef _MSC_VER
-	//AMD driver crashes when executing wglDeleteContext
-	//Catch with SEH
+	// AMD driver crashes when executing wglDeleteContext
+	// Catch with SEH
 	__try
 	{
 		delete gl_ctx->handle;
 	}
-	__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+	__except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
 		rsx_log.fatal("Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
 	}
@@ -136,8 +136,9 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 {
 	gs_frame::flip(context);
 
-	//Do not swap buffers if frame skip is active
-	if (skip_frame) return;
+	// Do not swap buffers if frame skip is active
+	if (skip_frame)
+		return;
 
 	const auto gl_ctx = static_cast<GLContext*>(context);
 

@@ -28,7 +28,7 @@ namespace rsx
 	{
 		// We could stack and merge requests here, but that is more trouble than it is truly worth.
 		// A fresh call to memory_protect only takes a few nanoseconds of setup overhead, it is not worth the risk of hanging because of conflicts.
-		g_deferred_mprotect_queue.push_back({ start, length, prot });
+		g_deferred_mprotect_queue.push_back({start, length, prot});
 	}
 
 	void mm_protect(void* ptr, u64 length, utils::protection prot)
@@ -107,4 +107,4 @@ namespace rsx
 		auto& rsxdma = g_fxo->get<rsx::dma_manager>();
 		rsxdma.backend_ctrl(mm_backend_ctrl::cmd_mm_flush, nullptr);
 	}
-}
+} // namespace rsx

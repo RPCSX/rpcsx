@@ -106,7 +106,8 @@ namespace gl
 			invocations_x = optimal_length;
 			invocations_y = invocations_x;
 
-			if (num_invocations % invocations_x) invocations_y++;
+			if (num_invocations % invocations_x)
+				invocations_y++;
 		}
 
 		run(cmd, invocations_x, invocations_y);
@@ -130,23 +131,23 @@ namespace gl
 		// Initialize to allow detecting optimal settings
 		initialize();
 
-		kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
+		kernel_size = _kernel_size ? _kernel_size : optimal_kernel_size;
 
 		m_src =
-		#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
-		;
+#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
+			;
 
 		const std::pair<std::string_view, std::string> syntax_replace[] =
-		{
-			{ "%set, ", ""},
-			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%ws", std::to_string(optimal_group_size) },
-			{ "%ks", std::to_string(kernel_size) },
-			{ "%vars", variables },
-			{ "%f", function_name },
-			{ "%ub", uniforms },
-			{ "%md", method_declarations },
-		};
+			{
+				{"%set, ", ""},
+				{"%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0))},
+				{"%ws", std::to_string(optimal_group_size)},
+				{"%ks", std::to_string(kernel_size)},
+				{"%vars", variables},
+				{"%f", function_name},
+				{"%ub", uniforms},
+				{"%md", method_declarations},
+			};
 
 		m_src = fmt::replace_all(m_src, syntax_replace);
 		work_kernel = fmt::replace_all(work_kernel, syntax_replace);
@@ -159,11 +160,9 @@ namespace gl
 		{
 			work_kernel += loop_advance + "\n";
 
-			m_src += std::string
-			(
+			m_src += std::string(
 				"	//Unrolled loop\n"
-				"	{\n"
-			);
+				"	{\n");
 
 			// Assemble body with manual loop unroll to try loweing GPR usage
 			for (u32 n = 0; n < kernel_size; ++n)
@@ -204,7 +203,8 @@ namespace gl
 		{
 			// Technically robust buffer access should keep the driver from crashing in OOB situations
 			rsx_log.error("Inadequate buffer length submitted for a compute operation."
-				"Required=%d bytes, Available=%d bytes", num_bytes_to_process, data->size());
+						  "Required=%d bytes, Available=%d bytes",
+				num_bytes_to_process, data->size());
 		}
 
 		compute_task::run(cmd, num_invocations);
@@ -324,16 +324,15 @@ namespace gl
 		initialize();
 
 		const auto raw_data =
-		#include "../Program/GLSLSnippets/CopyD24x8ToBuffer.glsl"
-		;
+#include "../Program/GLSLSnippets/CopyD24x8ToBuffer.glsl"
+			;
 
 		const std::pair<std::string_view, std::string> repl_list[] =
-		{
-			{ "%set, ", "" },
-			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%ws", std::to_string(optimal_group_size) },
-			{ "%wks", std::to_string(optimal_kernel_size) }
-		};
+			{
+				{"%set, ", ""},
+				{"%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0))},
+				{"%ws", std::to_string(optimal_group_size)},
+				{"%wks", std::to_string(optimal_kernel_size)}};
 
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
@@ -374,16 +373,15 @@ namespace gl
 		initialize();
 
 		const auto raw_data =
-		#include "../Program/GLSLSnippets/CopyRGBA8ToBuffer.glsl"
-		;
+#include "../Program/GLSLSnippets/CopyRGBA8ToBuffer.glsl"
+			;
 
 		const std::pair<std::string_view, std::string> repl_list[] =
-		{
-			{ "%set, ", "" },
-			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%ws", std::to_string(optimal_group_size) },
-			{ "%wks", std::to_string(optimal_kernel_size) }
-		};
+			{
+				{"%set, ", ""},
+				{"%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0))},
+				{"%ws", std::to_string(optimal_group_size)},
+				{"%wks", std::to_string(optimal_kernel_size)}};
 
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
@@ -422,17 +420,16 @@ namespace gl
 		initialize();
 
 		const auto raw_data =
-		#include "../Program/GLSLSnippets/CopyBufferToColorImage.glsl"
-		;
+#include "../Program/GLSLSnippets/CopyBufferToColorImage.glsl"
+			;
 
 		const std::pair<std::string_view, std::string> repl_list[] =
-		{
-			{ "%set, ", "" },
-			{ "%image_slot", std::to_string(GL_COMPUTE_IMAGE_SLOT(0)) },
-			{ "%ssbo_slot", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%ws", std::to_string(optimal_group_size) },
-			{ "%wks", std::to_string(optimal_kernel_size) }
-		};
+			{
+				{"%set, ", ""},
+				{"%image_slot", std::to_string(GL_COMPUTE_IMAGE_SLOT(0))},
+				{"%ssbo_slot", std::to_string(GL_COMPUTE_BUFFER_SLOT(0))},
+				{"%ws", std::to_string(optimal_group_size)},
+				{"%wks", std::to_string(optimal_kernel_size)}};
 
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
@@ -460,4 +457,4 @@ namespace gl
 		gl::nil_texture_view view(dst);
 		run(cmd, src, &view, src_offset, dst_region, layout);
 	}
-}
+} // namespace gl

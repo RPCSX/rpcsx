@@ -137,8 +137,8 @@ struct tus_transaction_ctx : public generic_async_transaction_context
 {
 	tus_transaction_ctx(const shared_ptr<tus_ctx>& tus);
 
-	static const u32 id_base  = 0x8001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x8001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_TUS_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(51);
 
@@ -153,8 +153,8 @@ struct score_ctx
 {
 	score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
 
-	static const u32 id_base  = 0x2001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x2001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_SCORE_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(25);
 
@@ -171,8 +171,8 @@ struct score_transaction_ctx : public generic_async_transaction_context
 {
 	score_transaction_ctx(const shared_ptr<score_ctx>& score);
 
-	static const u32 id_base  = 0x1001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x1001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_SCORE_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(26);
 
@@ -187,8 +187,8 @@ struct match2_ctx
 {
 	match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option);
 
-	static const u32 id_base  = 1;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 1;
+	static const u32 id_step = 1;
 	static const u32 id_count = 255; // TODO: constant here?
 	SAVESTATE_INIT_POS(27);
 
@@ -217,8 +217,8 @@ struct lookup_title_ctx
 {
 	lookup_title_ctx(vm::cptr<SceNpCommunicationId> communicationId);
 
-	static const u32 id_base  = 0x3001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x3001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_LOOKUP_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(28);
 
@@ -232,8 +232,8 @@ struct lookup_transaction_ctx
 {
 	lookup_transaction_ctx(s32 lt_ctx);
 
-	static const u32 id_base  = 0x4001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x4001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_LOOKUP_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(29);
 
@@ -246,8 +246,8 @@ struct commerce2_ctx
 {
 	commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
 
-	static const u32 id_base  = 0x5001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x5001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_COMMERCE2_CTX_MAX;
 	SAVESTATE_INIT_POS(30);
 
@@ -264,8 +264,8 @@ struct signaling_ctx
 {
 	signaling_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
 
-	static const u32 id_base  = 0x6001;
-	static const u32 id_step  = 1;
+	static const u32 id_base = 0x6001;
+	static const u32 id_step = 1;
 	static const u32 id_count = SCE_NP_SIGNALING_CTX_MAX;
 	SAVESTATE_INIT_POS(31);
 

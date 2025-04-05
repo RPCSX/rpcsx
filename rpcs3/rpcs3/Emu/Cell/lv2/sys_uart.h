@@ -7,214 +7,214 @@
 
 enum : u32
 {
-	PS3AV_RX_BUF_SIZE                       = 0x800,
-	PS3AV_TX_BUF_SIZE                       = 0x800,
+	PS3AV_RX_BUF_SIZE = 0x800,
+	PS3AV_TX_BUF_SIZE = 0x800,
 
-	PS3AV_VERSION                           = 0x205,
+	PS3AV_VERSION = 0x205,
 
-	PS3AV_CID_AV_INIT                       = 0x00000001,
-	PS3AV_CID_AV_FIN                        = 0x00000002,
-	PS3AV_CID_AV_GET_HW_CONF                = 0x00000003,
-	PS3AV_CID_AV_GET_MONITOR_INFO           = 0x00000004,
-	PS3AV_CID_AV_GET_BKSV_LIST              = 0x00000005,
-	PS3AV_CID_AV_ENABLE_EVENT               = 0x00000006,
-	PS3AV_CID_AV_DISABLE_EVENT              = 0x00000007,
-	PS3AV_CID_AV_GET_PORT_STATE             = 0x00000009,
-	PS3AV_CID_AV_TV_MUTE                    = 0x0000000A,
-	PS3AV_CID_AV_NULL_CMD                   = 0x0000000B,
-	PS3AV_CID_AV_GET_AKSV                   = 0x0000000C,
-	PS3AV_CID_AV_UNK4                       = 0x0000000D,
-	PS3AV_CID_AV_UNK5                       = 0x0000000E,
+	PS3AV_CID_AV_INIT = 0x00000001,
+	PS3AV_CID_AV_FIN = 0x00000002,
+	PS3AV_CID_AV_GET_HW_CONF = 0x00000003,
+	PS3AV_CID_AV_GET_MONITOR_INFO = 0x00000004,
+	PS3AV_CID_AV_GET_BKSV_LIST = 0x00000005,
+	PS3AV_CID_AV_ENABLE_EVENT = 0x00000006,
+	PS3AV_CID_AV_DISABLE_EVENT = 0x00000007,
+	PS3AV_CID_AV_GET_PORT_STATE = 0x00000009,
+	PS3AV_CID_AV_TV_MUTE = 0x0000000A,
+	PS3AV_CID_AV_NULL_CMD = 0x0000000B,
+	PS3AV_CID_AV_GET_AKSV = 0x0000000C,
+	PS3AV_CID_AV_UNK4 = 0x0000000D,
+	PS3AV_CID_AV_UNK5 = 0x0000000E,
 
-	PS3AV_CID_AV_VIDEO_MUTE                 = 0x00010002,
-	PS3AV_CID_AV_VIDEO_DISABLE_SIG          = 0x00010003,
-	PS3AV_CID_AV_VIDEO_YTRAPCONTROL         = 0x00010004,
-	PS3AV_CID_AV_VIDEO_UNK5                 = 0x00010005,
-	PS3AV_CID_AV_VIDEO_UNK6                 = 0x00010006,
-	PS3AV_CID_AV_AUDIO_MUTE                 = 0x00020002,
-	PS3AV_CID_AV_ACP_CTRL                   = 0x00020003,
-	PS3AV_CID_AV_SET_ACP_PACKET             = 0x00020004,
-	PS3AV_CID_AV_ADD_SIGNAL_CTL             = 0x00030001,
-	PS3AV_CID_AV_SET_CC_CODE                = 0x00030002,
-	PS3AV_CID_AV_SET_CGMS_WSS               = 0x00030003,
-	PS3AV_CID_AV_SET_MACROVISION            = 0x00030004,
-	PS3AV_CID_AV_UNK7                       = 0x00030005,
-	PS3AV_CID_AV_UNK8                       = 0x00030006,
-	PS3AV_CID_AV_UNK9                       = 0x00030007,
-	PS3AV_CID_AV_HDMI_MODE                  = 0x00040001,
-	PS3AV_CID_AV_UNK15                      = 0x00050001,
+	PS3AV_CID_AV_VIDEO_MUTE = 0x00010002,
+	PS3AV_CID_AV_VIDEO_DISABLE_SIG = 0x00010003,
+	PS3AV_CID_AV_VIDEO_YTRAPCONTROL = 0x00010004,
+	PS3AV_CID_AV_VIDEO_UNK5 = 0x00010005,
+	PS3AV_CID_AV_VIDEO_UNK6 = 0x00010006,
+	PS3AV_CID_AV_AUDIO_MUTE = 0x00020002,
+	PS3AV_CID_AV_ACP_CTRL = 0x00020003,
+	PS3AV_CID_AV_SET_ACP_PACKET = 0x00020004,
+	PS3AV_CID_AV_ADD_SIGNAL_CTL = 0x00030001,
+	PS3AV_CID_AV_SET_CC_CODE = 0x00030002,
+	PS3AV_CID_AV_SET_CGMS_WSS = 0x00030003,
+	PS3AV_CID_AV_SET_MACROVISION = 0x00030004,
+	PS3AV_CID_AV_UNK7 = 0x00030005,
+	PS3AV_CID_AV_UNK8 = 0x00030006,
+	PS3AV_CID_AV_UNK9 = 0x00030007,
+	PS3AV_CID_AV_HDMI_MODE = 0x00040001,
+	PS3AV_CID_AV_UNK15 = 0x00050001,
 
-	PS3AV_CID_AV_CEC_MESSAGE                = 0x000A0001,
-	PS3AV_CID_AV_GET_CEC_CONFIG             = 0x000A0002,
-	PS3AV_CID_AV_UNK11                      = 0x000A0003,
-	PS3AV_CID_AV_UNK12                      = 0x000A0004,
-	PS3AV_CID_AV_UNK13                      = 0x000A0005,
-	PS3AV_CID_AV_UNK14                      = 0x000A0006,
+	PS3AV_CID_AV_CEC_MESSAGE = 0x000A0001,
+	PS3AV_CID_AV_GET_CEC_CONFIG = 0x000A0002,
+	PS3AV_CID_AV_UNK11 = 0x000A0003,
+	PS3AV_CID_AV_UNK12 = 0x000A0004,
+	PS3AV_CID_AV_UNK13 = 0x000A0005,
+	PS3AV_CID_AV_UNK14 = 0x000A0006,
 
-	PS3AV_CID_VIDEO_INIT                    = 0x01000001,
-	PS3AV_CID_VIDEO_MODE                    = 0x01000002,
-	PS3AV_CID_VIDEO_ROUTE                   = 0x01000003,
-	PS3AV_CID_VIDEO_FORMAT                  = 0x01000004,
-	PS3AV_CID_VIDEO_PITCH                   = 0x01000005,
-	PS3AV_CID_VIDEO_GET_HW_CONF             = 0x01000006,
-	PS3AV_CID_VIDEO_GET_REG                 = 0x01000008,
-	PS3AV_CID_VIDEO_UNK                     = 0x01000009,
-	PS3AV_CID_VIDEO_UNK1                    = 0x0100000A,
-	PS3AV_CID_VIDEO_UNK2                    = 0x0100000B,
-	PS3AV_CID_VIDEO_UNK3                    = 0x0100000C,
+	PS3AV_CID_VIDEO_INIT = 0x01000001,
+	PS3AV_CID_VIDEO_MODE = 0x01000002,
+	PS3AV_CID_VIDEO_ROUTE = 0x01000003,
+	PS3AV_CID_VIDEO_FORMAT = 0x01000004,
+	PS3AV_CID_VIDEO_PITCH = 0x01000005,
+	PS3AV_CID_VIDEO_GET_HW_CONF = 0x01000006,
+	PS3AV_CID_VIDEO_GET_REG = 0x01000008,
+	PS3AV_CID_VIDEO_UNK = 0x01000009,
+	PS3AV_CID_VIDEO_UNK1 = 0x0100000A,
+	PS3AV_CID_VIDEO_UNK2 = 0x0100000B,
+	PS3AV_CID_VIDEO_UNK3 = 0x0100000C,
 
-	PS3AV_CID_AUDIO_INIT                    = 0x02000001,
-	PS3AV_CID_AUDIO_MODE                    = 0x02000002,
-	PS3AV_CID_AUDIO_MUTE                    = 0x02000003,
-	PS3AV_CID_AUDIO_ACTIVE                  = 0x02000004,
-	PS3AV_CID_AUDIO_INACTIVE                = 0x02000005,
-	PS3AV_CID_AUDIO_SPDIF_BIT               = 0x02000006,
-	PS3AV_CID_AUDIO_CTRL                    = 0x02000007,
+	PS3AV_CID_AUDIO_INIT = 0x02000001,
+	PS3AV_CID_AUDIO_MODE = 0x02000002,
+	PS3AV_CID_AUDIO_MUTE = 0x02000003,
+	PS3AV_CID_AUDIO_ACTIVE = 0x02000004,
+	PS3AV_CID_AUDIO_INACTIVE = 0x02000005,
+	PS3AV_CID_AUDIO_SPDIF_BIT = 0x02000006,
+	PS3AV_CID_AUDIO_CTRL = 0x02000007,
 
-	PS3AV_CID_AVB_PARAM                     = 0x04000001,
+	PS3AV_CID_AVB_PARAM = 0x04000001,
 
-	PS3AV_CID_EVENT_UNPLUGGED               = 0x10000001,
-	PS3AV_CID_EVENT_PLUGGED                 = 0x10000002,
-	PS3AV_CID_EVENT_HDCP_DONE               = 0x10000003,
-	PS3AV_CID_EVENT_HDCP_FAIL               = 0x10000004,
-	PS3AV_CID_EVENT_HDCP_REAUTH             = 0x10000005,
-	PS3AV_CID_EVENT_HDCP_ERROR              = 0x10000006,
+	PS3AV_CID_EVENT_UNPLUGGED = 0x10000001,
+	PS3AV_CID_EVENT_PLUGGED = 0x10000002,
+	PS3AV_CID_EVENT_HDCP_DONE = 0x10000003,
+	PS3AV_CID_EVENT_HDCP_FAIL = 0x10000004,
+	PS3AV_CID_EVENT_HDCP_REAUTH = 0x10000005,
+	PS3AV_CID_EVENT_HDCP_ERROR = 0x10000006,
 
-	PS3AV_REPLY_BIT                         = 0x80000000,
+	PS3AV_REPLY_BIT = 0x80000000,
 
-	PS3AV_RESBIT_720x480P                   = 0x0003, /* 0x0001 | 0x0002 */
-	PS3AV_RESBIT_720x576P                   = 0x0003, /* 0x0001 | 0x0002 */
-	PS3AV_RESBIT_1280x720P                  = 0x0004,
-	PS3AV_RESBIT_1920x1080I                 = 0x0008,
-	PS3AV_RESBIT_1920x1080P                 = 0x4000,
+	PS3AV_RESBIT_720x480P = 0x0003, /* 0x0001 | 0x0002 */
+	PS3AV_RESBIT_720x576P = 0x0003, /* 0x0001 | 0x0002 */
+	PS3AV_RESBIT_1280x720P = 0x0004,
+	PS3AV_RESBIT_1920x1080I = 0x0008,
+	PS3AV_RESBIT_1920x1080P = 0x4000,
 
-	PS3AV_MONITOR_TYPE_NONE                 = 0,
-	PS3AV_MONITOR_TYPE_HDMI                 = 1,
-	PS3AV_MONITOR_TYPE_DVI                  = 2,
-	PS3AV_MONITOR_TYPE_AVMULTI              = 3,
+	PS3AV_MONITOR_TYPE_NONE = 0,
+	PS3AV_MONITOR_TYPE_HDMI = 1,
+	PS3AV_MONITOR_TYPE_DVI = 2,
+	PS3AV_MONITOR_TYPE_AVMULTI = 3,
 
-	PS3AV_COLORIMETRY_xvYCC_601             = 1,
-	PS3AV_COLORIMETRY_xvYCC_709             = 2,
-	PS3AV_COLORIMETRY_MD0                   = 1 << 4,
-	PS3AV_COLORIMETRY_MD1                   = 1 << 5,
-	PS3AV_COLORIMETRY_MD2                   = 1 << 6,
+	PS3AV_COLORIMETRY_xvYCC_601 = 1,
+	PS3AV_COLORIMETRY_xvYCC_709 = 2,
+	PS3AV_COLORIMETRY_MD0 = 1 << 4,
+	PS3AV_COLORIMETRY_MD1 = 1 << 5,
+	PS3AV_COLORIMETRY_MD2 = 1 << 6,
 
-	PS3AV_CS_SUPPORTED                      = 1,
+	PS3AV_CS_SUPPORTED = 1,
 	PS3AV_RGB_SELECTABLE_QAUNTIZATION_RANGE = 8,
-	PS3AV_12BIT_COLOR                       = 16,
+	PS3AV_12BIT_COLOR = 16,
 
-	PS3AV_MON_INFO_AUDIO_BLK_MAX            = 16,
+	PS3AV_MON_INFO_AUDIO_BLK_MAX = 16,
 
-	PS3AV_MON_INFO_AUDIO_TYPE_LPCM          = 1,
-	PS3AV_MON_INFO_AUDIO_TYPE_AC3           = 2,
-	PS3AV_MON_INFO_AUDIO_TYPE_AAC           = 6,
-	PS3AV_MON_INFO_AUDIO_TYPE_DTS           = 7,
-	PS3AV_MON_INFO_AUDIO_TYPE_DDP           = 10,
-	PS3AV_MON_INFO_AUDIO_TYPE_DTS_HD        = 11,
-	PS3AV_MON_INFO_AUDIO_TYPE_DOLBY_THD     = 12,
+	PS3AV_MON_INFO_AUDIO_TYPE_LPCM = 1,
+	PS3AV_MON_INFO_AUDIO_TYPE_AC3 = 2,
+	PS3AV_MON_INFO_AUDIO_TYPE_AAC = 6,
+	PS3AV_MON_INFO_AUDIO_TYPE_DTS = 7,
+	PS3AV_MON_INFO_AUDIO_TYPE_DDP = 10,
+	PS3AV_MON_INFO_AUDIO_TYPE_DTS_HD = 11,
+	PS3AV_MON_INFO_AUDIO_TYPE_DOLBY_THD = 12,
 
-	PS3AV_HDMI_BEHAVIOR_HDCP_OFF            = 0x01,
-	PS3AV_HDMI_BEHAVIOR_DVI                 = 0x40,
-	PS3AV_HDMI_BEHAVIOR_EDID_PASS           = 0x80,
-	PS3AV_HDMI_BEHAVIOR_NORMAL              = 0xFF,
+	PS3AV_HDMI_BEHAVIOR_HDCP_OFF = 0x01,
+	PS3AV_HDMI_BEHAVIOR_DVI = 0x40,
+	PS3AV_HDMI_BEHAVIOR_EDID_PASS = 0x80,
+	PS3AV_HDMI_BEHAVIOR_NORMAL = 0xFF,
 
-	PS3AV_EVENT_BIT_UNPLUGGED               = 0x01,
-	PS3AV_EVENT_BIT_PLUGGED                 = 0x02,
-	PS3AV_EVENT_BIT_HDCP_DONE               = 0x04,
-	PS3AV_EVENT_BIT_HDCP_FAIL               = 0x08,
-	PS3AV_EVENT_BIT_HDCP_REAUTH             = 0x10,
-	PS3AV_EVENT_BIT_HDCP_TOPOLOGY           = 0x20,
-	PS3AV_EVENT_BIT_UNK                     = 0x80000000,
+	PS3AV_EVENT_BIT_UNPLUGGED = 0x01,
+	PS3AV_EVENT_BIT_PLUGGED = 0x02,
+	PS3AV_EVENT_BIT_HDCP_DONE = 0x04,
+	PS3AV_EVENT_BIT_HDCP_FAIL = 0x08,
+	PS3AV_EVENT_BIT_HDCP_REAUTH = 0x10,
+	PS3AV_EVENT_BIT_HDCP_TOPOLOGY = 0x20,
+	PS3AV_EVENT_BIT_UNK = 0x80000000,
 
-	PS3AV_HEAD_A_HDMI                       = 0,
-	PS3AV_HEAD_B_ANALOG                     = 1,
+	PS3AV_HEAD_A_HDMI = 0,
+	PS3AV_HEAD_B_ANALOG = 1,
 
-	PS3AV_AUDIO_PORT_HDMI_0                 = 1 << 0,
-	PS3AV_AUDIO_PORT_HDMI_1                 = 1 << 1,
-	PS3AV_AUDIO_PORT_AVMULTI                = 1 << 10,
-	PS3AV_AUDIO_PORT_SPDIF_0                = 1 << 20,
-	PS3AV_AUDIO_PORT_SPDIF_1                = 1 << 21,
+	PS3AV_AUDIO_PORT_HDMI_0 = 1 << 0,
+	PS3AV_AUDIO_PORT_HDMI_1 = 1 << 1,
+	PS3AV_AUDIO_PORT_AVMULTI = 1 << 10,
+	PS3AV_AUDIO_PORT_SPDIF_0 = 1 << 20,
+	PS3AV_AUDIO_PORT_SPDIF_1 = 1 << 21,
 
-	PS3AV_STATUS_SUCCESS                    = 0x00,
-	PS3AV_STATUS_RECEIVE_VUART_ERROR        = 0x01,
-	PS3AV_STATUS_SYSCON_COMMUNICATE_FAIL    = 0x02,
-	PS3AV_STATUS_INVALID_COMMAND            = 0x03,
-	PS3AV_STATUS_INVALID_PORT               = 0x04,
-	PS3AV_STATUS_INVALID_VID                = 0x05,
-	PS3AV_STATUS_INVALID_COLOR_SPACE        = 0x06,
-	PS3AV_STATUS_INVALID_FS                 = 0x07,
-	PS3AV_STATUS_INVALID_AUDIO_CH           = 0x08,
-	PS3AV_STATUS_UNSUPPORTED_VERSION        = 0x09,
-	PS3AV_STATUS_INVALID_SAMPLE_SIZE        = 0x0A,
-	PS3AV_STATUS_FAILURE                    = 0x0B,
-	PS3AV_STATUS_UNSUPPORTED_COMMAND        = 0x0C,
-	PS3AV_STATUS_BUFFER_OVERFLOW            = 0x0D,
-	PS3AV_STATUS_INVALID_VIDEO_PARAM        = 0x0E,
-	PS3AV_STATUS_NO_SEL                     = 0x0F,
-	PS3AV_STATUS_INVALID_AV_PARAM           = 0x10,
-	PS3AV_STATUS_INVALID_AUDIO_PARAM        = 0x11,
-	PS3AV_STATUS_UNSUPPORTED_HDMI_MODE      = 0x12,
-	PS3AV_STATUS_NO_SYNC_HEAD               = 0x13,
-	PS3AV_STATUS_UNK_0x14                   = 0x14,
+	PS3AV_STATUS_SUCCESS = 0x00,
+	PS3AV_STATUS_RECEIVE_VUART_ERROR = 0x01,
+	PS3AV_STATUS_SYSCON_COMMUNICATE_FAIL = 0x02,
+	PS3AV_STATUS_INVALID_COMMAND = 0x03,
+	PS3AV_STATUS_INVALID_PORT = 0x04,
+	PS3AV_STATUS_INVALID_VID = 0x05,
+	PS3AV_STATUS_INVALID_COLOR_SPACE = 0x06,
+	PS3AV_STATUS_INVALID_FS = 0x07,
+	PS3AV_STATUS_INVALID_AUDIO_CH = 0x08,
+	PS3AV_STATUS_UNSUPPORTED_VERSION = 0x09,
+	PS3AV_STATUS_INVALID_SAMPLE_SIZE = 0x0A,
+	PS3AV_STATUS_FAILURE = 0x0B,
+	PS3AV_STATUS_UNSUPPORTED_COMMAND = 0x0C,
+	PS3AV_STATUS_BUFFER_OVERFLOW = 0x0D,
+	PS3AV_STATUS_INVALID_VIDEO_PARAM = 0x0E,
+	PS3AV_STATUS_NO_SEL = 0x0F,
+	PS3AV_STATUS_INVALID_AV_PARAM = 0x10,
+	PS3AV_STATUS_INVALID_AUDIO_PARAM = 0x11,
+	PS3AV_STATUS_UNSUPPORTED_HDMI_MODE = 0x12,
+	PS3AV_STATUS_NO_SYNC_HEAD = 0x13,
+	PS3AV_STATUS_UNK_0x14 = 0x14,
 };
 
-const u8 PS3AV_AKSV_VALUE[5] = { 0x00, 0x00, 0x0F, 0xFF, 0xFF };
-const u8 PS3AV_BKSV_VALUE[5] = { 0xFF, 0xFF, 0xF0, 0x00, 0x00 };
+const u8 PS3AV_AKSV_VALUE[5] = {0x00, 0x00, 0x0F, 0xFF, 0xFF};
+const u8 PS3AV_BKSV_VALUE[5] = {0xFF, 0xFF, 0xF0, 0x00, 0x00};
 
 enum PS3_AV_OP_MODE : u32
 {
 	// BIG operation modes could send more then 4096 bytes
 
 	NOT_BLOCKING_BIG_OP = 0,
-	BLOCKING_BIG_OP     = 1,
-	NOT_BLOCKING_OP     = 2,
+	BLOCKING_BIG_OP = 1,
+	NOT_BLOCKING_OP = 2,
 };
 
 enum class UartHdmiEvent : u8
 {
-	NONE       = 0,
-	UNPLUGGED  = 1,
-	PLUGGED    = 2,
-	HDCP_DONE  = 3,
+	NONE = 0,
+	UNPLUGGED = 1,
+	PLUGGED = 2,
+	HDCP_DONE = 3,
 };
 
 enum class UartAudioCtrlID : u32
 {
-	DAC_RESET       = 0,
+	DAC_RESET = 0,
 	DAC_DE_EMPHASIS = 1,
-	AVCLK           = 2,
+	AVCLK = 2,
 };
 
 enum class UartAudioAvport : u8
 {
-	HDMI_0    = 0x0,
-	HDMI_1    = 0x1,
+	HDMI_0 = 0x0,
+	HDMI_1 = 0x1,
 	AVMULTI_0 = 0x10,
 	AVMULTI_1 = 0x11,
-	SPDIF_0   = 0x20,
-	SPDIF_1   = 0x21,
+	SPDIF_0 = 0x20,
+	SPDIF_1 = 0x21,
 };
 
 enum class UartAudioSource : u32
 {
 	SERIAL = 0,
-	SPDIF  = 1,
+	SPDIF = 1,
 };
 
 enum class UartAudioFreq : u32
 {
-	_32K  = 1,
-	_44K  = 2,
-	_48K  = 3,
-	_88K  = 4,
-	_96K  = 5,
+	_32K = 1,
+	_44K = 2,
+	_48K = 3,
+	_88K = 4,
+	_96K = 5,
 	_176K = 6,
 	_192K = 7,
 };
 
 enum class UartAudioFormat : u32
 {
-	PCM       = 1,
+	PCM = 1,
 	BITSTREAM = 0xFF,
 };
 
@@ -228,7 +228,6 @@ enum class UartAudioSampleSize : u32
 class vuart_hdmi_event_handler
 {
 public:
-
 	vuart_hdmi_event_handler(u64 time_offset = 0);
 
 	void set_target_state(UartHdmiEvent start_state, UartHdmiEvent end_state);
@@ -238,7 +237,6 @@ public:
 	UartHdmiEvent get_occured_event();
 
 private:
-
 	static constexpr u64 EVENT_TIME_DURATION = 20000;
 	static constexpr u64 EVENT_TIME_THRESHOLD = 1000;
 
@@ -260,15 +258,14 @@ class vuart_av_thread;
 
 struct ps3av_cmd
 {
-	virtual u16 get_size(vuart_av_thread &vuart, const void *pkt_buf) = 0;
-	virtual void execute(vuart_av_thread &vuart, const void *pkt_buf) = 0;
+	virtual u16 get_size(vuart_av_thread& vuart, const void* pkt_buf) = 0;
+	virtual void execute(vuart_av_thread& vuart, const void* pkt_buf) = 0;
 	virtual ~ps3av_cmd() {};
 };
 
 class vuart_av_thread
 {
 public:
-
 	atomic_t<bool> initialized{};
 
 	shared_mutex rx_mutex{};
@@ -285,20 +282,20 @@ public:
 	u8 hdmi_behavior_mode = PS3AV_HDMI_BEHAVIOR_NORMAL;
 	u16 av_cmd_ver = 0;
 	u32 hdmi_events_bitmask = 0;
-	bool hdmi_res_set[2]{ false, false };
+	bool hdmi_res_set[2]{false, false};
 
 	void operator()();
 	void parse_tx_buffer(u32 buf_size);
-	vuart_av_thread &operator=(thread_state);
+	vuart_av_thread& operator=(thread_state);
 
-	u32 enque_tx_data(const void *data, u32 data_sz);
+	u32 enque_tx_data(const void* data, u32 data_sz);
 	u32 get_tx_bytes();
-	u32 read_rx_data(void *data, u32 data_sz);
+	u32 read_rx_data(void* data, u32 data_sz);
 
 	u32 get_reply_buf_free_size();
 
-	template<bool UseScBuffer = false>
-	void write_resp(u32 cid, u32 status, const void *data = nullptr, u16 data_size = 0);
+	template <bool UseScBuffer = false>
+	void write_resp(u32 cid, u32 status, const void* data = nullptr, u16 data_size = 0);
 
 	void add_hdmi_events(UartHdmiEvent first_event, UartHdmiEvent last_event, bool hdmi_0, bool hdmi_1);
 	void add_hdmi_events(UartHdmiEvent last_event, bool hdmi_0, bool hdmi_1);
@@ -308,7 +305,6 @@ public:
 	static constexpr auto thread_name = "VUART AV Thread"sv;
 
 private:
-
 	struct temp_buf
 	{
 		u32 crnt_size = 0;
@@ -324,17 +320,17 @@ private:
 	temp_buf temp_rx_buf{};
 	temp_buf temp_rx_sc_buf{};
 
-	vuart_hdmi_event_handler hdmi_event_handler[2]{ 0, 5000 };
-	bool hdcp_first_auth[2]{ true, true };
+	vuart_hdmi_event_handler hdmi_event_handler[2]{0, 5000};
+	bool hdcp_first_auth[2]{true, true};
 
-	u32 read_tx_data(void *data, u32 data_sz);
+	u32 read_tx_data(void* data, u32 data_sz);
 	std::shared_ptr<ps3av_cmd> get_cmd(u32 cid);
 	void commit_rx_buf(bool syscon_buf);
 
 	void add_unplug_event(bool hdmi_0, bool hdmi_1);
 	void add_plug_event(bool hdmi_0, bool hdmi_1);
 	void add_hdcp_done_event(bool hdmi_0, bool hdmi_1);
-	void commit_event_data(const void *data, u16 data_size);
+	void commit_event_data(const void* data, u16 data_size);
 	void dispatch_hdmi_event(UartHdmiEvent event, UartAudioAvport hdmi);
 };
 
@@ -757,7 +753,7 @@ static_assert(sizeof(ps3av_pkt_video_disable_sig) == 12);
 
 // SysCalls
 
-error_code sys_uart_initialize(ppu_thread &ppu);
-error_code sys_uart_receive(ppu_thread &ppu, vm::ptr<void> buffer, u64 size, u32 mode);
-error_code sys_uart_send(ppu_thread &ppu, vm::cptr<void> buffer, u64 size, u32 mode);
+error_code sys_uart_initialize(ppu_thread& ppu);
+error_code sys_uart_receive(ppu_thread& ppu, vm::ptr<void> buffer, u64 size, u32 mode);
+error_code sys_uart_send(ppu_thread& ppu, vm::cptr<void> buffer, u64 size, u32 mode);
 error_code sys_uart_get_params(vm::ptr<vuart_params> buffer);

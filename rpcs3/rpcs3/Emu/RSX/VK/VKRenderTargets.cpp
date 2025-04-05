@@ -15,7 +15,7 @@ namespace vk
 			auto obj = vk::disposable_t::make(buf);
 			vk::get_resource_manager()->dispose(obj);
 		}
-	}
+	} // namespace surface_cache_utils
 
 	void surface_cache::destroy()
 	{
@@ -175,58 +175,58 @@ namespace vk
 	void surface_cache::trim(vk::command_buffer& cmd, rsx::problem_severity memory_pressure)
 	{
 		run_cleanup_internal(cmd, rsx::problem_severity::moderate, 300, [](vk::command_buffer& cmd)
-		{
-			if (!cmd.is_recording())
 			{
-				cmd.begin();
-			}
-		});
+				if (!cmd.is_recording())
+				{
+					cmd.begin();
+				}
+			});
 
 		const u64 last_finished_frame = vk::get_last_completed_frame_id();
 		invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target>& rtt)
-		{
-			ensure(rtt->frame_tag != 0);
-
-			if (rtt->has_refs())
 			{
-				// Actively in use, likely for a reading pass.
-				// Call handle_memory_pressure before calling this method.
-				return false;
-			}
+				ensure(rtt->frame_tag != 0);
 
-			if (rtt->frame_tag >= last_finished_frame)
-			{
-				// RTT itself still in use by the frame.
-				return false;
-			}
+				if (rtt->has_refs())
+				{
+					// Actively in use, likely for a reading pass.
+				    // Call handle_memory_pressure before calling this method.
+					return false;
+				}
 
-			if (!rtt->old_contents.empty())
-			{
-				rtt->clear_rw_barrier();
-			}
+				if (rtt->frame_tag >= last_finished_frame)
+				{
+					// RTT itself still in use by the frame.
+					return false;
+				}
 
-			if (rtt->resolve_surface && memory_pressure >= rsx::problem_severity::moderate)
-			{
-				// We do not need to keep resolve targets around.
-				// TODO: We should surrender this to an image cache immediately for reuse.
-				vk::get_resource_manager()->dispose(rtt->resolve_surface);
-			}
+				if (!rtt->old_contents.empty())
+				{
+					rtt->clear_rw_barrier();
+				}
 
-			switch (memory_pressure)
-			{
-			case rsx::problem_severity::low:
-				return (rtt->unused_check_count() >= 2);
-			case rsx::problem_severity::moderate:
-				return (rtt->unused_check_count() >= 1);
-			case rsx::problem_severity::severe:
-			case rsx::problem_severity::fatal:
-				// We're almost dead anyway. Remove forcefully.
-				vk::get_resource_manager()->dispose(rtt);
-				return true;
-			default:
-				fmt::throw_exception("Unreachable");
-			}
-		});
+				if (rtt->resolve_surface && memory_pressure >= rsx::problem_severity::moderate)
+				{
+					// We do not need to keep resolve targets around.
+				    // TODO: We should surrender this to an image cache immediately for reuse.
+					vk::get_resource_manager()->dispose(rtt->resolve_surface);
+				}
+
+				switch (memory_pressure)
+				{
+				case rsx::problem_severity::low:
+					return (rtt->unused_check_count() >= 2);
+				case rsx::problem_severity::moderate:
+					return (rtt->unused_check_count() >= 1);
+				case rsx::problem_severity::severe:
+				case rsx::problem_severity::fatal:
+					// We're almost dead anyway. Remove forcefully.
+					vk::get_resource_manager()->dispose(rtt);
+					return true;
+				default:
+					fmt::throw_exception("Unreachable");
+				}
+			});
 	}
 
 	bool surface_cache::is_overallocated()
@@ -329,7 +329,7 @@ namespace vk
 	// Resolve the planar MSAA data into a linear block
 	void render_target::resolve(vk::command_buffer& cmd)
 	{
-		VkImageSubresourceRange range = { aspect(), 0, 1, 0, 1 };
+		VkImageSubresourceRange range = {aspect(), 0, 1, 0, 1};
 
 		// NOTE: This surface can only be in the ATTACHMENT_OPTIMAL layout
 		// The resolve surface can be in any type of access, but we have to assume it is likely in read-only mode like shader read-only
@@ -403,7 +403,7 @@ namespace vk
 	void render_target::unresolve(vk::command_buffer& cmd)
 	{
 		ensure(!(msaa_flags & rsx::surface_state_flags::require_resolve));
-		VkImageSubresourceRange range = { aspect(), 0, 1, 0, 1 };
+		VkImageSubresourceRange range = {aspect(), 0, 1, 0, 1};
 
 		if (!is_depth_surface()) [[likely]]
 		{
@@ -476,20 +476,20 @@ namespace vk
 	void render_target::clear_memory(vk::command_buffer& cmd, vk::image* surface)
 	{
 		const auto optimal_layout = (surface->current_layout == VK_IMAGE_LAYOUT_GENERAL) ?
-			VK_IMAGE_LAYOUT_GENERAL :
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		                                VK_IMAGE_LAYOUT_GENERAL :
+		                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 		surface->push_layout(cmd, optimal_layout);
 
-		VkImageSubresourceRange range{ surface->aspect(), 0, 1, 0, 1 };
+		VkImageSubresourceRange range{surface->aspect(), 0, 1, 0, 1};
 		if (surface->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			VkClearColorValue color = { {0.f, 0.f, 0.f, 1.f} };
+			VkClearColorValue color = {{0.f, 0.f, 0.f, 1.f}};
 			VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, surface->value, surface->current_layout, &color, 1, &range);
 		}
 		else
 		{
-			VkClearDepthStencilValue clear{ 1.f, 255 };
+			VkClearDepthStencilValue clear{1.f, 255};
 			VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, surface->value, surface->current_layout, &clear, 1, &range);
 		}
 
@@ -680,7 +680,7 @@ namespace vk
 		subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 		subres.pitch_in_block = rsx_pitch / get_bpp();
 		subres.depth = 1;
-		subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
+		subres.data = {vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y)};
 
 		const auto range = get_memory_range();
 		rsx::flags32_t upload_flags = upload_contents_inline;
@@ -695,9 +695,7 @@ namespace vk
 #if DEBUG_DMA_TILING
 			auto real_data = vm::get_super_ptr<u8>(range.start);
 			ext_data.resize(tiled_region.tile->size);
-			auto detile_func = get_bpp() == 4
-				? rsx::detile_texel_data32
-				: rsx::detile_texel_data16;
+			auto detile_func = get_bpp() == 4 ? rsx::detile_texel_data32 : rsx::detile_texel_data16;
 
 			detile_func(
 				ext_data.data(),
@@ -708,14 +706,13 @@ namespace vk
 				tiled_region.tile->bank,
 				tiled_region.tile->pitch,
 				subres.width_in_block,
-				subres.height_in_block
-			);
+				subres.height_in_block);
 			subres.data = std::span(ext_data);
 #else
 			const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, range, subres.width_in_block, subres.height_in_block, get_bpp());
 
 			// FIXME: !!EVIL!!
-			subres.data = { scratch_buf, linear_data_scratch_offset };
+			subres.data = {scratch_buf, linear_data_scratch_offset};
 			subres.pitch_in_block = subres.width_in_block;
 			upload_flags |= source_is_gpu_resident;
 			heap_align = subres.width_in_block * get_bpp();
@@ -725,7 +722,7 @@ namespace vk
 		if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 		{
 			push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			vk::upload_image(cmd, this, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, heap_align, upload_flags);
+			vk::upload_image(cmd, this, {subres}, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, heap_align, upload_flags);
 			pop_layout(cmd);
 		}
 		else
@@ -754,7 +751,7 @@ namespace vk
 			}
 
 			// Load Cell data into temp buffer
-			vk::upload_image(cmd, content, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, heap_align, upload_flags);
+			vk::upload_image(cmd, content, {subres}, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, heap_align, upload_flags);
 
 			// Write into final image
 			if (content != final_dst)
@@ -764,8 +761,8 @@ namespace vk
 				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				vk::copy_scaled_image(cmd, content, final_dst,
-					{ 0, 0, subres.width_in_block, subres.height_in_block },
-					{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
+					{0, 0, subres.width_in_block, subres.height_in_block},
+					{0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height())},
 					1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
 
 				content->pop_layout(cmd);
@@ -837,8 +834,7 @@ namespace vk
 	{
 		const auto is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
 		const auto supports_fbo_loops = cmd.get_command_pool().get_owner().get_framebuffer_loops_support();
-		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
-			: VK_IMAGE_LAYOUT_GENERAL;
+		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT : VK_IMAGE_LAYOUT_GENERAL;
 
 		if (m_cyclic_ref_tracker.can_skip() && current_layout == optimal_layout && is_framebuffer_read_only)
 		{
@@ -887,7 +883,7 @@ namespace vk
 		}
 
 		vk::insert_image_memory_barrier(cmd, value, current_layout, current_layout,
-			src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
+			src_stage, dst_stage, src_access, dst_access, {aspect(), 0, 1, 0, 1});
 
 		m_cyclic_ref_tracker.reset();
 	}
@@ -1005,7 +1001,7 @@ namespace vk
 		unsigned first = prepare_rw_barrier_for_transfer(this);
 		const bool accept_all = (last_use_tag && test());
 		bool optimize_copy = true;
-		u64  newest_tag = 0;
+		u64 newest_tag = 0;
 
 		for (auto i = first; i < old_contents.size(); ++i)
 		{
@@ -1085,7 +1081,7 @@ namespace vk
 				this->get_surface(rsx::surface_access::transfer_write),
 				src_area,
 				dst_area,
-				/*linear?*/false, typeless_info);
+				/*linear?*/ false, typeless_info);
 
 			optimize_copy = optimize_copy && !memory_load;
 			newest_tag = src_texture->last_use_tag;
@@ -1110,4 +1106,4 @@ namespace vk
 			unresolve(cmd);
 		}
 	}
-}
+} // namespace vk

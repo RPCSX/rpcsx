@@ -58,7 +58,8 @@ namespace rsx
 
 		void home_menu_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (fade_animation.active) return;
+			if (fade_animation.active)
+				return;
 
 			// Increase auto repeat interval for some buttons
 			switch (button_press)
@@ -106,9 +107,9 @@ namespace rsx
 					if (g_cfg.misc.pause_during_home_menu)
 					{
 						Emu.BlockingCallFromMainThread([]()
-						{
-							Emu.Resume();
-						});
+							{
+								Emu.Resume();
+							});
 					}
 				};
 				break;
@@ -154,15 +155,18 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid, "Home menu",
-				[notify]() { *notify = true; notify->notify_one(); }
-			);
+				[notify]()
+				{
+					*notify = true;
+					notify->notify_one();
+				});
 
 			if (g_cfg.misc.pause_during_home_menu)
 			{
 				Emu.BlockingCallFromMainThread([]()
-				{
-					Emu.Pause(false, false);
-				});
+					{
+						Emu.Pause(false, false);
+					});
 			}
 
 			while (!Emu.IsStopped() && !*notify)
@@ -173,4 +177,4 @@ namespace rsx
 			return CELL_OK;
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

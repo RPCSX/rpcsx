@@ -21,7 +21,8 @@ void qt_video_source::set_video_path(const std::string& video_path)
 
 void qt_video_source::set_active(bool active)
 {
-	if (m_active.exchange(active) == active) return;
+	if (m_active.exchange(active) == active)
+		return;
 
 	if (active)
 	{
@@ -74,10 +75,10 @@ void qt_video_source::init_movie()
 		}
 
 		QObject::connect(m_movie.get(), &QMovie::frameChanged, m_movie.get(), [this](int)
-		{
-			m_image_change_callback({});
-			m_has_new = true;
-		});
+			{
+				m_image_change_callback({});
+				m_has_new = true;
+			});
 		return;
 	}
 
@@ -103,10 +104,10 @@ void qt_video_source::init_movie()
 
 	m_video_sink.reset(new QVideoSink());
 	QObject::connect(m_video_sink.get(), &QVideoSink::videoFrameChanged, m_video_sink.get(), [this](const QVideoFrame& frame)
-	{
-		m_image_change_callback(frame);
-		m_has_new = true;
-	});
+		{
+			m_image_change_callback(frame);
+			m_has_new = true;
+		});
 
 	m_media_player.reset(new QMediaPlayer());
 	m_media_player->setVideoSink(m_video_sink.get());
@@ -204,53 +205,53 @@ void qt_video_source::get_image(std::vector<u8>& data, int& w, int& h, int& ch, 
 qt_video_source_wrapper::~qt_video_source_wrapper()
 {
 	Emu.BlockingCallFromMainThread([this]()
-	{
-		m_qt_video_source.reset();
-	});
+		{
+			m_qt_video_source.reset();
+		});
 }
 
 void qt_video_source_wrapper::set_video_path(const std::string& video_path)
 {
 	Emu.CallFromMainThread([this, path = video_path]()
-	{
-		m_qt_video_source = std::make_unique<qt_video_source>();
-		m_qt_video_source->m_image_change_callback = [this](const QVideoFrame& frame)
 		{
-			std::unique_lock lock(m_qt_video_source->m_image_mutex);
-
-			if (m_qt_video_source->m_movie)
+			m_qt_video_source = std::make_unique<qt_video_source>();
+			m_qt_video_source->m_image_change_callback = [this](const QVideoFrame& frame)
 			{
-				m_qt_video_source->m_image = m_qt_video_source->m_movie->currentImage();
-			}
-			else if (frame.isValid())
-			{
-				// Get image. This usually also converts the image to ARGB32.
-				m_qt_video_source->m_image = frame.toImage();
-			}
-			else
-			{
-				return;
-			}
+				std::unique_lock lock(m_qt_video_source->m_image_mutex);
 
-			if (m_qt_video_source->m_image.format() != QImage::Format_RGBA8888)
-			{
-				m_qt_video_source->m_image.convertTo(QImage::Format_RGBA8888);
-			}
+				if (m_qt_video_source->m_movie)
+				{
+					m_qt_video_source->m_image = m_qt_video_source->m_movie->currentImage();
+				}
+				else if (frame.isValid())
+				{
+					// Get image. This usually also converts the image to ARGB32.
+					m_qt_video_source->m_image = frame.toImage();
+				}
+				else
+				{
+					return;
+				}
 
-			lock.unlock();
+				if (m_qt_video_source->m_image.format() != QImage::Format_RGBA8888)
+				{
+					m_qt_video_source->m_image.convertTo(QImage::Format_RGBA8888);
+				}
 
-			notify_update();
-		};
-		m_qt_video_source->set_video_path(path);
-	});
+				lock.unlock();
+
+				notify_update();
+			};
+			m_qt_video_source->set_video_path(path);
+		});
 }
 
 void qt_video_source_wrapper::set_active(bool active)
 {
 	Emu.CallFromMainThread([this, active]()
-	{
-		m_qt_video_source->set_active(true);
-	});
+		{
+			m_qt_video_source->set_active(true);
+		});
 }
 
 bool qt_video_source_wrapper::get_active() const

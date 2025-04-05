@@ -31,21 +31,21 @@ namespace program_hash_util
 			u16 reserved;
 		};
 
-		static usz get_vertex_program_ucode_hash(const RSXVertexProgram &program);
+		static usz get_vertex_program_ucode_hash(const RSXVertexProgram& program);
 
 		static vertex_program_metadata analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog);
 	};
 
 	struct vertex_program_storage_hash
 	{
-		usz operator()(const RSXVertexProgram &program) const;
+		usz operator()(const RSXVertexProgram& program) const;
 	};
 
 	struct vertex_program_compare
 	{
 		static bool compare_properties(const RSXVertexProgram& binary1, const RSXVertexProgram& binary2);
 
-		bool operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const;
+		bool operator()(const RSXVertexProgram& binary1, const RSXVertexProgram& binary2) const;
 	};
 
 	struct fragment_program_utils
@@ -59,12 +59,12 @@ namespace program_hash_util
 
 			bool has_pack_instructions;
 			bool has_branch_instructions;
-			bool is_nop_shader;           // Does this affect Z-pass testing???
+			bool is_nop_shader; // Does this affect Z-pass testing???
 		};
 
 		/**
-		* returns true if the given source Operand is a constant
-		*/
+		 * returns true if the given source Operand is a constant
+		 */
 
 		static bool is_any_src_constant(v128 sourceOperand);
 
@@ -72,21 +72,21 @@ namespace program_hash_util
 
 		static fragment_program_metadata analyse_fragment_program(const void* ptr);
 
-		static usz get_fragment_program_ucode_hash(const RSXFragmentProgram &program);
+		static usz get_fragment_program_ucode_hash(const RSXFragmentProgram& program);
 	};
 
 	struct fragment_program_storage_hash
 	{
-		usz operator()(const RSXFragmentProgram &program) const;
+		usz operator()(const RSXFragmentProgram& program) const;
 	};
 
 	struct fragment_program_compare
 	{
 		static bool compare_properties(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2);
 
-		bool operator()(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2) const;
+		bool operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const;
 	};
-}
+} // namespace program_hash_util
 
 namespace rsx
 {
@@ -138,25 +138,24 @@ namespace rsx
 	};
 
 	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize = true);
-}
-
+} // namespace rsx
 
 /**
-* Cache for program help structure (blob, string...)
-* The class is responsible for creating the object so the state only has to call getGraphicPipelineState
-* Template argument is a struct which has the following type declaration :
-* - a typedef VertexProgramData to a type that encapsulate vertex program info. It should provide an Id member.
-* - a typedef FragmentProgramData to a types that encapsulate fragment program info. It should provide an Id member and a fragment constant offset vector.
-* - a typedef PipelineData encapsulating monolithic program.
-* - a typedef pipeline_properties to a type that encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
-* - a	typedef ExtraData type that will be passed to the buildProgram function.
-* It should also contains the following function member :
-* - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, usz ID);
-* - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, usz ID);
-* - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const pipeline_properties &pipeline_properties, const ExtraData& extraData);
-* - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, pipeline_properties& props);
-*/
-template<typename backend_traits>
+ * Cache for program help structure (blob, string...)
+ * The class is responsible for creating the object so the state only has to call getGraphicPipelineState
+ * Template argument is a struct which has the following type declaration :
+ * - a typedef VertexProgramData to a type that encapsulate vertex program info. It should provide an Id member.
+ * - a typedef FragmentProgramData to a types that encapsulate fragment program info. It should provide an Id member and a fragment constant offset vector.
+ * - a typedef PipelineData encapsulating monolithic program.
+ * - a typedef pipeline_properties to a type that encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
+ * - a	typedef ExtraData type that will be passed to the buildProgram function.
+ * It should also contains the following function member :
+ * - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, usz ID);
+ * - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, usz ID);
+ * - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const pipeline_properties &pipeline_properties, const ExtraData& extraData);
+ * - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, pipeline_properties& props);
+ */
+template <typename backend_traits>
 class program_state_cache
 {
 	using pipeline_storage_type = typename backend_traits::pipeline_storage_type;
@@ -165,7 +164,7 @@ class program_state_cache
 	using vertex_program_type = typename backend_traits::vertex_program_type;
 	using fragment_program_type = typename backend_traits::fragment_program_type;
 
-	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_storage_hash, program_hash_util::vertex_program_compare> ;
+	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_storage_hash, program_hash_util::vertex_program_compare>;
 	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_storage_hash, program_hash_util::fragment_program_compare>;
 
 	using pipeline_data_type = std::tuple<pipeline_type*, const vertex_program_type*, const fragment_program_type*>;
@@ -179,7 +178,7 @@ class program_state_cache
 
 	struct pipeline_key_hash
 	{
-		usz operator()(const pipeline_key &key) const
+		usz operator()(const pipeline_key& key) const
 		{
 			usz hashValue = 0;
 			hashValue ^= rpcs3::hash_base<unsigned>(key.vertex_program_id);
@@ -191,7 +190,7 @@ class program_state_cache
 
 	struct pipeline_key_compare
 	{
-		bool operator()(const pipeline_key &key1, const pipeline_key &key2) const
+		bool operator()(const pipeline_key& key1, const pipeline_key& key2) const
 		{
 			return (key1.vertex_program_id == key2.vertex_program_id) && (key1.fragment_program_id == key2.fragment_program_id) && (key1.properties == key2.properties);
 		}
@@ -298,7 +297,6 @@ protected:
 	}
 
 public:
-
 	struct program_buffer_patch_entry
 	{
 		union
@@ -344,9 +342,10 @@ public:
 public:
 	program_state_cache() = default;
 	~program_state_cache()
-	{}
+	{
+	}
 
-	template<typename... Args>
+	template <typename... Args>
 	pipeline_data_type get_graphics_pipeline(
 		rsx::program_cache_hint_t* cache_hint,
 		const RSXVertexProgram& vertex_shader,
@@ -354,8 +353,7 @@ public:
 		pipeline_properties& pipeline_properties,
 		bool compile_async,
 		bool allow_notification,
-		Args&& ...args
-	)
+		Args&&... args)
 	{
 		const auto& vp_search = search_vertex_program(cache_hint, vertex_shader);
 		const auto& fp_search = search_fragment_program(cache_hint, fragment_shader);
@@ -364,7 +362,7 @@ public:
 		const bool already_existing_vertex_program = std::get<1>(vp_search);
 		const vertex_program_type& vertex_program = std::get<0>(vp_search);
 		const fragment_program_type& fragment_program = std::get<0>(fp_search);
-		const pipeline_key key = { vertex_program.id, fragment_program.id, pipeline_properties };
+		const pipeline_key key = {vertex_program.id, fragment_program.id, pipeline_properties};
 
 		m_cache_miss_flag = true;
 
@@ -377,7 +375,7 @@ public:
 			if (const auto I = m_storage.find(key); I != m_storage.end())
 			{
 				m_cache_miss_flag = (I->second == __null_pipeline_handle);
-				return { I->second.get(), &vertex_program, &fragment_program };
+				return {I->second.get(), &vertex_program, &fragment_program};
 			}
 		}
 
@@ -388,7 +386,7 @@ public:
 			if (const auto I = m_storage.find(key); I != m_storage.end())
 			{
 				m_cache_miss_flag = (I->second == __null_pipeline_handle);
-				return { I->second.get(), &vertex_program, &fragment_program };
+				return {I->second.get(), &vertex_program, &fragment_program};
 			}
 
 			// Insert a placeholder if the key still doesn't exist to avoid re-linking of the same pipeline
@@ -397,12 +395,11 @@ public:
 
 		rsx_log.notice("Add program (vp id = %d, fp id = %d)", vertex_program.id, fragment_program.id);
 
-		std::function<pipeline_type* (pipeline_storage_type&)> callback;
+		std::function<pipeline_type*(pipeline_storage_type&)> callback;
 
 		if (allow_notification)
 		{
-			callback = [this, vertex_shader, fragment_shader_ = RSXFragmentProgram::clone(fragment_shader), key]
-			(pipeline_storage_type& pipeline) -> pipeline_type*
+			callback = [this, vertex_shader, fragment_shader_ = RSXFragmentProgram::clone(fragment_shader), key](pipeline_storage_type& pipeline) -> pipeline_type*
 			{
 				if (!pipeline)
 				{
@@ -435,14 +432,14 @@ public:
 		}
 
 		auto result = backend_traits::build_pipeline(
-			vertex_program,                 // VS, must already be decompiled and recompiled above
-			fragment_program,               // FS, must already be decompiled and recompiled above
-			pipeline_properties,             // Pipeline state
-			compile_async,                  // Allow asynchronous compilation
-			callback,                       // Insertion and notification callback
-			std::forward<Args>(args)...);   // Other arguments
+			vertex_program,               // VS, must already be decompiled and recompiled above
+			fragment_program,             // FS, must already be decompiled and recompiled above
+			pipeline_properties,          // Pipeline state
+			compile_async,                // Allow asynchronous compilation
+			callback,                     // Insertion and notification callback
+			std::forward<Args>(args)...); // Other arguments
 
-		return { result, &vertex_program, &fragment_program };
+		return {result, &vertex_program, &fragment_program};
 	}
 
 	void fill_fragment_constants_buffer(std::span<f32> dst_buffer, const fragment_program_type& fragment_program, const RSXFragmentProgram& rsx_prog, bool sanitize = false) const

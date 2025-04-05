@@ -10,26 +10,38 @@ namespace rsx
 
 	void MixedPrecisionRegister::tag_h0(bool x, bool y, bool z, bool w)
 	{
-		if (x) content_mask[0] = data_type_bits::f16;
-		if (y) content_mask[1] = data_type_bits::f16;
-		if (z) content_mask[2] = data_type_bits::f16;
-		if (w) content_mask[3] = data_type_bits::f16;
+		if (x)
+			content_mask[0] = data_type_bits::f16;
+		if (y)
+			content_mask[1] = data_type_bits::f16;
+		if (z)
+			content_mask[2] = data_type_bits::f16;
+		if (w)
+			content_mask[3] = data_type_bits::f16;
 	}
 
 	void MixedPrecisionRegister::tag_h1(bool x, bool y, bool z, bool w)
 	{
-		if (x) content_mask[4] = data_type_bits::f16;
-		if (y) content_mask[5] = data_type_bits::f16;
-		if (z) content_mask[6] = data_type_bits::f16;
-		if (w) content_mask[7] = data_type_bits::f16;
+		if (x)
+			content_mask[4] = data_type_bits::f16;
+		if (y)
+			content_mask[5] = data_type_bits::f16;
+		if (z)
+			content_mask[6] = data_type_bits::f16;
+		if (w)
+			content_mask[7] = data_type_bits::f16;
 	}
 
 	void MixedPrecisionRegister::tag_r(bool x, bool y, bool z, bool w)
 	{
-		if (x) content_mask[0] = content_mask[1] = data_type_bits::f32;
-		if (y) content_mask[2] = content_mask[3] = data_type_bits::f32;
-		if (z) content_mask[4] = content_mask[5] = data_type_bits::f32;
-		if (w) content_mask[6] = content_mask[7] = data_type_bits::f32;
+		if (x)
+			content_mask[0] = content_mask[1] = data_type_bits::f32;
+		if (y)
+			content_mask[2] = content_mask[3] = data_type_bits::f32;
+		if (z)
+			content_mask[4] = content_mask[5] = data_type_bits::f32;
+		if (w)
+			content_mask[6] = content_mask[7] = data_type_bits::f32;
 	}
 
 	void MixedPrecisionRegister::tag(u32 index, bool is_fp16, bool x, bool y, bool z, bool w)
@@ -64,8 +76,7 @@ namespace rsx
 		const std::string reg = "r" + std::to_string(file_index);
 		const std::string gather_half_regs[] = {
 			"gather(h" + std::to_string(half_index) + ")",
-			"gather(h" + std::to_string(half_index + 1) + ")"
-		};
+			"gather(h" + std::to_string(half_index + 1) + ")"};
 
 		std::string outputs[4];
 		for (int ch = 0; ch < 4; ++ch)
@@ -77,8 +88,10 @@ namespace rsx
 		}
 
 		// Grouping. Only replace relevant bits...
-		if (outputs[0] == outputs[1]) outputs[0] = "";
-		if (outputs[2] == outputs[3]) outputs[2] = "";
+		if (outputs[0] == outputs[1])
+			outputs[0] = "";
+		if (outputs[2] == outputs[3])
+			outputs[2] = "";
 
 		// Assemble
 		bool group = false;
@@ -138,8 +151,7 @@ namespace rsx
 		const std::string word1_bits = "floatBitsToUint(" + reg + "." + swz_mask[word_index * 2 + 1] + ")";
 		const std::string words[] = {
 			"unpackHalf2x16(" + word0_bits + ")",
-			"unpackHalf2x16(" + word1_bits + ")"
-		};
+			"unpackHalf2x16(" + word1_bits + ")"};
 
 		// Assemble
 		std::string outputs[4];
@@ -148,14 +160,14 @@ namespace rsx
 		const int word_offset = word_index * 4;
 		for (int ch = 0; ch < 4; ++ch)
 		{
-			outputs[ch] = content_mask[ch + word_offset] == data_type_bits::f32
-				? words[ch / 2]
-				: hreg;
+			outputs[ch] = content_mask[ch + word_offset] == data_type_bits::f32 ? words[ch / 2] : hreg;
 		}
 
 		// Grouping. Only replace relevant bits...
-		if (outputs[0] == outputs[1]) outputs[0] = "";
-		if (outputs[2] == outputs[3]) outputs[2] = "";
+		if (outputs[0] == outputs[1])
+			outputs[0] = "";
+		if (outputs[2] == outputs[3])
+			outputs[2] = "";
 
 		// Assemble
 		bool group = false;
@@ -193,4 +205,4 @@ namespace rsx
 
 		return "(" + result + ")";
 	}
-}
+} // namespace rsx

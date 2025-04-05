@@ -101,8 +101,8 @@ if(MSVC)
     add_compile_options(/MP)
 endif()
 
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
+if(CMAKE_SIZEOF_VOID_P AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms. ${CMAKE_SIZEOF_VOID_P}" )
 endif()
 
 find_program(CCACHE_FOUND ccache)

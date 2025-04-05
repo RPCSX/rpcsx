@@ -8,8 +8,8 @@ namespace rsx
 		home_menu_entry::home_menu_entry(const std::string& text)
 		{
 			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding    = std::make_unique<spacer>();
-			std::unique_ptr<overlay_element> title      = std::make_unique<label>(text);
+			std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
+			std::unique_ptr<overlay_element> title = std::make_unique<label>(text);
 
 			padding->set_size(1, 1);
 			title->set_size(overlay::virtual_width - 2 * menu_entry_margin, menu_entry_height);
@@ -61,5 +61,5 @@ namespace rsx
 
 			return compiled_resources;
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

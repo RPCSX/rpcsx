@@ -28,10 +28,10 @@ const auto get_device_name = [](int i) -> QString
 
 enum usb_column : int
 {
-	usb_name   = 0,
-	usb_path   = 1,
-	usb_vid    = 2,
-	usb_pid    = 3,
+	usb_name = 0,
+	usb_path = 1,
+	usb_vid = 2,
+	usb_pid = 3,
 	usb_serial = 4
 };
 
@@ -85,9 +85,9 @@ void vfs_dialog_usb_tab::set_settings() const
 	{
 		cfg::device_info info{};
 
-		info.path   = m_usb_table->item(i, usb_column::usb_path)->text().toStdString();
-		info.vid    = m_usb_table->item(i, usb_column::usb_vid)->text().toStdString();
-		info.pid    = m_usb_table->item(i, usb_column::usb_pid)->text().toStdString();
+		info.path = m_usb_table->item(i, usb_column::usb_path)->text().toStdString();
+		info.vid = m_usb_table->item(i, usb_column::usb_vid)->text().toStdString();
+		info.pid = m_usb_table->item(i, usb_column::usb_pid)->text().toStdString();
 		info.serial = m_usb_table->item(i, usb_column::usb_serial)->text().toStdString();
 
 		device_map.emplace(get_device_name(i).toStdString(), std::move(info));
@@ -121,9 +121,9 @@ void vfs_dialog_usb_tab::show_usb_input_dialog(int index)
 	const cfg::device_info default_info = get_device_info(device_name, m_cfg_node->get_default());
 	cfg::device_info info{};
 
-	info.path   = m_usb_table->item(index, usb_column::usb_path)->text().toStdString();
-	info.vid    = m_usb_table->item(index, usb_column::usb_vid)->text().toStdString();
-	info.pid    = m_usb_table->item(index, usb_column::usb_pid)->text().toStdString();
+	info.path = m_usb_table->item(index, usb_column::usb_path)->text().toStdString();
+	info.vid = m_usb_table->item(index, usb_column::usb_vid)->text().toStdString();
+	info.pid = m_usb_table->item(index, usb_column::usb_pid)->text().toStdString();
 	info.serial = m_usb_table->item(index, usb_column::usb_serial)->text().toStdString();
 
 	vfs_dialog_usb_input* input_dialog = new vfs_dialog_usb_input(device_name, default_info, &info, m_gui_settings, this);
@@ -150,9 +150,9 @@ void vfs_dialog_usb_tab::show_context_menu(const QPoint& pos)
 	QAction* edit = menu.addAction(tr("&Edit"));
 
 	connect(edit, &QAction::triggered, this, [this, row]()
-	{
-		show_usb_input_dialog(row);
-	});
+		{
+			show_usb_input_dialog(row);
+		});
 
 	menu.exec(m_usb_table->viewport()->mapToGlobal(pos));
 }
@@ -169,7 +169,8 @@ void vfs_dialog_usb_tab::double_clicked_slot(QTableWidgetItem* item)
 
 void vfs_dialog_usb_tab::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (!ev) return;
+	if (!ev)
+		return;
 
 	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
 	// So we have to ignore this event when another button is pressed.

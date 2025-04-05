@@ -33,7 +33,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnBreakpointListDoubleClicked();
-	void OnBreakpointListRightClicked(const QPoint &pos);
+	void OnBreakpointListRightClicked(const QPoint& pos);
 	void OnBreakpointListDelete();
 
 private:

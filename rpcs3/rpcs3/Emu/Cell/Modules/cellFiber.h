@@ -5,17 +5,17 @@
 // Return Codes
 enum CellFiberError : u32
 {
-	CELL_FIBER_ERROR_AGAIN        = 0x80760001, // Resource was temporarily unavailable
-	CELL_FIBER_ERROR_INVAL        = 0x80760002, // Value of the argument is invalid
-	CELL_FIBER_ERROR_NOMEM        = 0x80760004, // Insufficient memory
-	CELL_FIBER_ERROR_DEADLK       = 0x80760008, // Execution of the operation will cause a deadlock
-	CELL_FIBER_ERROR_PERM         = 0x80760009, // Executed operation is not permitted
-	CELL_FIBER_ERROR_BUSY         = 0x8076000A, // The operation target is busy
-	CELL_FIBER_ERROR_ABORT        = 0x8076000C, // The operation has been aborted
-	CELL_FIBER_ERROR_STAT         = 0x8076000F, // State of the operation target is invalid
-	CELL_FIBER_ERROR_ALIGN        = 0x80760010, // The alignment of the argument address is invalid
+	CELL_FIBER_ERROR_AGAIN = 0x80760001,        // Resource was temporarily unavailable
+	CELL_FIBER_ERROR_INVAL = 0x80760002,        // Value of the argument is invalid
+	CELL_FIBER_ERROR_NOMEM = 0x80760004,        // Insufficient memory
+	CELL_FIBER_ERROR_DEADLK = 0x80760008,       // Execution of the operation will cause a deadlock
+	CELL_FIBER_ERROR_PERM = 0x80760009,         // Executed operation is not permitted
+	CELL_FIBER_ERROR_BUSY = 0x8076000A,         // The operation target is busy
+	CELL_FIBER_ERROR_ABORT = 0x8076000C,        // The operation has been aborted
+	CELL_FIBER_ERROR_STAT = 0x8076000F,         // State of the operation target is invalid
+	CELL_FIBER_ERROR_ALIGN = 0x80760010,        // The alignment of the argument address is invalid
 	CELL_FIBER_ERROR_NULL_POINTER = 0x80760011, // Invalid NULL pointer is specified for the argument
-	CELL_FIBER_ERROR_NOSYSINIT    = 0x80760020, // cellFiberPpuInitialize() has not been called
+	CELL_FIBER_ERROR_NOSYSINIT = 0x80760020,    // cellFiberPpuInitialize() has not been called
 };
 
 //

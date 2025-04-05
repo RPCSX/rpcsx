@@ -15,7 +15,7 @@ error_code sys_hid_manager_open(ppu_thread& ppu, u64 device_type, u64 port_no, v
 {
 	sys_hid.todo("sys_hid_manager_open(device_type=0x%llx, port_no=0x%llx, handle=*0x%llx)", device_type, port_no, handle);
 
-	//device type == 1 = pad, 2 = kb, 3 = mouse
+	// device type == 1 = pad, 2 = kb, 3 = mouse
 	if (device_type > 3)
 	{
 		return CELL_EINVAL;
@@ -74,7 +74,7 @@ error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, 
 		info->vid = 0x054C;
 		info->pid = 0x0268;
 
-		u8 realhw[17] = { 0x01, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x03, 0x50, 0x00, 0x00, 0x1c, 0x1f };
+		u8 realhw[17] = {0x01, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x03, 0x50, 0x00, 0x00, 0x1c, 0x1f};
 		memcpy(info->unk, &realhw, 17);
 	}
 	else if (pkg_id == 5)
@@ -87,7 +87,7 @@ error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, 
 	else if (pkg_id == 0x68)
 	{
 		[[maybe_unused]] auto info = vm::static_ptr_cast<sys_hid_ioctl_68>(buf);
-		//info->unk2 = 0;
+		// info->unk2 = 0;
 	}
 
 	return CELL_OK;
@@ -158,14 +158,13 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 		return CELL_EFAULT;
 	}
 
-	(pkg_id == 2 || pkg_id == 0x81 ? sys_hid.trace : sys_hid.todo)
-		("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
+	(pkg_id == 2 || pkg_id == 0x81 ? sys_hid.trace : sys_hid.todo)("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
 
 	if (pkg_id == 2)
 	{
 		// cellPadGetData
 		// it returns just button array from 'CellPadData'
-		//auto data = vm::static_ptr_cast<u16[64]>(buf);
+		// auto data = vm::static_ptr_cast<u16[64]>(buf);
 		// todo: use handle and dont call cellpad here
 		vm::var<CellPadData> tmpData;
 		if ((cellPadGetData(0, +tmpData) == CELL_OK) && tmpData->len > 0)

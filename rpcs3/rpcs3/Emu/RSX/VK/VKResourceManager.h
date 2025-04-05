@@ -23,9 +23,9 @@ namespace vk
 		std::vector<disposable_t> m_disposables;
 		std::vector<std::unique_ptr<gpu_debug_marker>> m_debug_markers;
 
-		eid_scope_t(u64 _eid):
-			eid(_eid), m_device(g_render_device)
-		{}
+		eid_scope_t(u64 _eid) : eid(_eid), m_device(g_render_device)
+		{
+		}
 
 		~eid_scope_t()
 		{
@@ -71,7 +71,6 @@ namespace vk
 		}
 
 	public:
-
 		resource_manager() = default;
 		~resource_manager() = default;
 
@@ -145,7 +144,7 @@ namespace vk
 			get_current_eid_scope().m_debug_markers.emplace_back(std::move(object));
 		}
 
-		template<typename T>
+		template <typename T>
 		inline void dispose(std::unique_ptr<T>& object)
 		{
 			auto ptr = vk::disposable_t::make(object.release());
@@ -200,4 +199,4 @@ namespace vk
 	};
 
 	resource_manager* get_resource_manager();
-}
+} // namespace vk

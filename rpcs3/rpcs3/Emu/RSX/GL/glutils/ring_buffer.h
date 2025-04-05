@@ -9,7 +9,6 @@ namespace gl
 	class ring_buffer : public buffer
 	{
 	protected:
-
 		u32 m_data_loc = 0;
 		void* m_memory_mapping = nullptr;
 
@@ -18,7 +17,10 @@ namespace gl
 	public:
 		virtual ~ring_buffer() = default;
 
-		virtual void bind() { buffer::bind(); }
+		virtual void bind()
+		{
+			buffer::bind();
+		}
 
 		virtual void recreate(GLsizeiptr size, const void* data = nullptr);
 
@@ -44,7 +46,6 @@ namespace gl
 		u32 m_alignment_offset = 0;
 
 	public:
-
 		void recreate(GLsizeiptr size, const void* data = nullptr) override;
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr);
@@ -70,7 +71,6 @@ namespace gl
 		void* map_internal(u32 offset, u32 length);
 
 	public:
-
 		void bind() override;
 
 		void recreate(GLsizeiptr size, const void* data = nullptr) override;
@@ -98,7 +98,6 @@ namespace gl
 		void pop_barrier(u32 start, u32 length);
 
 	public:
-
 		scratch_ring_buffer() = default;
 		scratch_ring_buffer(const scratch_ring_buffer&) = delete;
 		~scratch_ring_buffer();
@@ -109,7 +108,13 @@ namespace gl
 		u32 alloc(u32 size, u32 alignment);
 		void push_barrier(u32 start, u32 length);
 
-		buffer& get() { return m_storage; }
-		u64 size() const { return m_storage.size(); }
+		buffer& get()
+		{
+			return m_storage;
+		}
+		u64 size() const
+		{
+			return m_storage.size();
+		}
 	};
-}
+} // namespace gl

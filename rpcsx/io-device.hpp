@@ -32,7 +32,8 @@ struct IoDevice : orbis::RcBase {
                                   orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
-  virtual orbis::ErrorCode createSymlink(const char *target, const char *linkPath,
+  virtual orbis::ErrorCode createSymlink(const char *target,
+                                         const char *linkPath,
                                          orbis::Thread *thread) {
     return orbis::ErrorCode::NOTSUP;
   }
@@ -53,7 +54,8 @@ struct HostFsDevice : IoDevice {
   orbis::kstring hostPath;
   orbis::kstring virtualPath;
 
-  HostFsDevice(orbis::kstring path, orbis::kstring virtualPath) : hostPath(std::move(path)), virtualPath(std::move(virtualPath)) {}
+  HostFsDevice(orbis::kstring path, orbis::kstring virtualPath)
+      : hostPath(std::move(path)), virtualPath(std::move(virtualPath)) {}
   orbis::ErrorCode open(orbis::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
@@ -70,9 +72,12 @@ struct HostFsDevice : IoDevice {
 
 orbis::ErrorCode convertErrorCode(const std::error_code &code);
 orbis::ErrorCode convertErrno();
-IoDevice *createHostIoDevice(orbis::kstring hostPath, orbis::kstring virtualPath);
-orbis::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom, int type, int prot);
+IoDevice *createHostIoDevice(orbis::kstring hostPath,
+                             orbis::kstring virtualPath);
+orbis::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom,
+                                   int type, int prot);
 orbis::ErrorCode createSocket(orbis::Ref<orbis::File> *file,
                               orbis::kstring name, int dom, int type, int prot);
-orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device, bool alignTruncate = false);
+orbis::File *createHostFile(int hostFd, orbis::Ref<IoDevice> device,
+                            bool alignTruncate = false);
 IoDevice *createFdWrapDevice(int fd);

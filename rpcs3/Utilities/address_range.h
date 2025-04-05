@@ -33,7 +33,6 @@ namespace utils
 		return (val & (get_page_size() - 1)) == 0;
 	}
 
-
 	/**
 	 * Address Range utility class
 	 */
@@ -41,7 +40,7 @@ namespace utils
 	{
 	public:
 		u32 start = umax; // First address in range
-		u32 end = 0; // Last address
+		u32 end = 0;      // Last address
 
 	private:
 		// Helper constexprs
@@ -105,7 +104,7 @@ namespace utils
 		}
 
 		// Overlapping checks
-		bool overlaps(const address_range &other) const
+		bool overlaps(const address_range& other) const
 		{
 			AUDIT(valid() && other.valid());
 			return range_overlaps(start, end, other.start, other.end);
@@ -117,16 +116,16 @@ namespace utils
 			return address_overlaps(addr, start, end);
 		}
 
-		bool inside(const address_range &other) const
+		bool inside(const address_range& other) const
 		{
 			AUDIT(valid() && other.valid());
 			return range_inside_range(start, end, other.start, other.end);
 		}
 
-		inline bool inside(const address_range_vector &vec) const;
-		inline bool overlaps(const address_range_vector &vec) const;
+		inline bool inside(const address_range_vector& vec) const;
+		inline bool overlaps(const address_range_vector& vec) const;
 
-		bool touches(const address_range &other) const
+		bool touches(const address_range& other) const
 		{
 			AUDIT(valid() && other.valid());
 			// returns true if there is overlap, or if sections are side-by-side
@@ -134,7 +133,7 @@ namespace utils
 		}
 
 		// Utilities
-		s32 signed_distance(const address_range &other) const
+		s32 signed_distance(const address_range& other) const
 		{
 			if (touches(other))
 			{
@@ -152,7 +151,7 @@ namespace utils
 			return -static_cast<s32>(start - other.end - 1);
 		}
 
-		u32 distance(const address_range &other) const
+		u32 distance(const address_range& other) const
 		{
 			if (touches(other))
 			{
@@ -170,15 +169,14 @@ namespace utils
 			return (start - other.end - 1);
 		}
 
-		address_range get_min_max(const address_range &other) const
+		address_range get_min_max(const address_range& other) const
 		{
 			return {
 				std::min(valid() ? start : umax, other.valid() ? other.start : umax),
-				std::max(valid() ? end : 0, other.valid() ? other.end : 0)
-			};
+				std::max(valid() ? end : 0, other.valid() ? other.end : 0)};
 		}
 
-		void set_min_max(const address_range &other)
+		void set_min_max(const address_range& other)
 		{
 			*this = get_min_max(other);
 		}
@@ -191,7 +189,7 @@ namespace utils
 		address_range to_page_range() const
 		{
 			AUDIT(valid());
-			return { page_start(start), page_end(end) };
+			return {page_start(start), page_end(end)};
 		}
 
 		void page_align()
@@ -202,17 +200,17 @@ namespace utils
 			AUDIT(is_page_range());
 		}
 
-		address_range get_intersect(const address_range &clamp) const
+		address_range get_intersect(const address_range& clamp) const
 		{
 			if (!valid() || !clamp.valid())
 			{
 				return {};
 			}
 
-			return { std::max(start, clamp.start), std::min(end, clamp.end) };
+			return {std::max(start, clamp.start), std::min(end, clamp.end)};
 		}
 
-		void intersect(const address_range &clamp)
+		void intersect(const address_range& clamp)
 		{
 			if (!clamp.valid())
 			{
@@ -238,7 +236,7 @@ namespace utils
 		}
 
 		// Comparison Operators
-		bool operator ==(const address_range& other) const
+		bool operator==(const address_range& other) const
 		{
 			return (start == other.start && end == other.end);
 		}
@@ -256,7 +254,6 @@ namespace utils
 	{
 		return address_range::start_end(page_start(addr), page_end(addr));
 	}
-
 
 	/**
 	 * Address Range Vector utility class
@@ -276,20 +273,50 @@ namespace utils
 
 	public:
 		// Wrapped functions
-		inline void reserve(usz nr) { data.reserve(nr); }
-		inline void clear() { data.clear(); }
-		inline size_type size() const { return data.size(); }
-		inline bool empty() const { return data.empty(); }
-		inline address_range& operator[](size_type n) { return data[n]; }
-		inline const address_range& operator[](size_type n) const { return data[n]; }
-		inline iterator begin() { return data.begin(); }
-		inline const_iterator begin() const { return data.begin(); }
-		inline iterator end() { return data.end(); }
-		inline const_iterator end() const { return data.end(); }
+		inline void reserve(usz nr)
+		{
+			data.reserve(nr);
+		}
+		inline void clear()
+		{
+			data.clear();
+		}
+		inline size_type size() const
+		{
+			return data.size();
+		}
+		inline bool empty() const
+		{
+			return data.empty();
+		}
+		inline address_range& operator[](size_type n)
+		{
+			return data[n];
+		}
+		inline const address_range& operator[](size_type n) const
+		{
+			return data[n];
+		}
+		inline iterator begin()
+		{
+			return data.begin();
+		}
+		inline const_iterator begin() const
+		{
+			return data.begin();
+		}
+		inline iterator end()
+		{
+			return data.end();
+		}
+		inline const_iterator end() const
+		{
+			return data.end();
+		}
 
 		// Search for ranges that touch new_range. If found, merge instead of adding new_range.
 		// When adding a new range, re-use invalid ranges whenever possible
-		void merge(const address_range &new_range)
+		void merge(const address_range& new_range)
 		{
 			// Note the case where we have
 			//   AAAA  BBBB
@@ -301,10 +328,10 @@ namespace utils
 				return;
 			}
 
-			address_range *found = nullptr;
-			address_range *invalid = nullptr;
+			address_range* found = nullptr;
+			address_range* invalid = nullptr;
 
-			for (auto &existing : data)
+			for (auto& existing : data)
 			{
 				if (!existing.valid())
 				{
@@ -347,16 +374,16 @@ namespace utils
 			AUDIT(check_consistency());
 		}
 
-		void merge(const address_range_vector &other)
+		void merge(const address_range_vector& other)
 		{
-			for (const address_range &new_range : other)
+			for (const address_range& new_range : other)
 			{
 				merge(new_range);
 			}
 		}
 
 		// Exclude a given range from data
-		void exclude(const address_range &exclusion)
+		void exclude(const address_range& exclusion)
 		{
 			// Note the case where we have
 			//    AAAAAAA
@@ -371,13 +398,13 @@ namespace utils
 				return;
 			}
 
-			address_range *invalid = nullptr; // try to re-use an invalid range instead of calling push_back
+			address_range* invalid = nullptr; // try to re-use an invalid range instead of calling push_back
 
 			// We use index access because we might have to push_back within the loop, which could invalidate the iterators
 			size_type _size = data.size();
 			for (size_type n = 0; n < _size; ++n)
 			{
-				address_range &existing = data[n];
+				address_range& existing = data[n];
 
 				if (!existing.valid())
 				{
@@ -393,7 +420,7 @@ namespace utils
 				}
 
 				const bool head_excluded = exclusion.overlaps(existing.start); // This section has its start inside excluded range
-				const bool tail_excluded = exclusion.overlaps(existing.end); // This section has its end inside excluded range
+				const bool tail_excluded = exclusion.overlaps(existing.end);   // This section has its end inside excluded range
 
 				if (head_excluded && tail_excluded)
 				{
@@ -438,9 +465,9 @@ namespace utils
 			AUDIT(!overlaps(exclusion));
 		}
 
-		void exclude(const address_range_vector &other)
+		void exclude(const address_range_vector& other)
 		{
-			for (const address_range &exclusion : other)
+			for (const address_range& exclusion : other)
 			{
 				exclude(exclusion);
 			}
@@ -454,7 +481,7 @@ namespace utils
 
 			for (usz i = 0; i < _size; ++i)
 			{
-				const auto &r1 = data[i];
+				const auto& r1 = data[i];
 				if (!r1.valid())
 				{
 					continue;
@@ -462,7 +489,7 @@ namespace utils
 
 				for (usz j = i + 1; j < _size; ++j)
 				{
-					const auto &r2 = data[j];
+					const auto& r2 = data[j];
 					if (!r2.valid())
 					{
 						continue;
@@ -478,25 +505,25 @@ namespace utils
 		}
 
 		// Test for overlap with a given range
-		bool overlaps(const address_range &range) const
+		bool overlaps(const address_range& range) const
 		{
 			return std::any_of(data.cbegin(), data.cend(), [&range](const address_range& cur)
-			{
-				return cur.valid() && cur.overlaps(range);
-			});
+				{
+					return cur.valid() && cur.overlaps(range);
+				});
 		}
 
 		// Test for overlap with a given address_range vector
-		bool overlaps(const address_range_vector &other) const
+		bool overlaps(const address_range_vector& other) const
 		{
-			for (const address_range &rng1 : data)
+			for (const address_range& rng1 : data)
 			{
 				if (!rng1.valid())
 				{
 					continue;
 				}
 
-				for (const address_range &rng2 : other.data)
+				for (const address_range& rng2 : other.data)
 				{
 					if (!rng2.valid())
 					{
@@ -513,38 +540,36 @@ namespace utils
 		}
 
 		// Test if a given range is fully contained inside this vector
-		bool contains(const address_range &range) const
+		bool contains(const address_range& range) const
 		{
 			return std::any_of(this->begin(), this->end(), [&range](const address_range& cur)
-			{
-				return cur.valid() && cur.inside(range);
-			});
+				{
+					return cur.valid() && cur.inside(range);
+				});
 		}
 
 		// Test if all ranges in this vector are full contained inside a specific range
-		bool inside(const address_range &range) const
+		bool inside(const address_range& range) const
 		{
 			return std::all_of(this->begin(), this->end(), [&range](const address_range& cur)
-			{
-				return !cur.valid() || cur.inside(range);
-			});
+				{
+					return !cur.valid() || cur.inside(range);
+				});
 		}
 	};
 
-
 	// These declarations must be done after address_range_vector has been defined
-	bool address_range::inside(const address_range_vector &vec) const
+	bool address_range::inside(const address_range_vector& vec) const
 	{
 		return vec.contains(*this);
 	}
 
-	bool address_range::overlaps(const address_range_vector &vec) const
+	bool address_range::overlaps(const address_range_vector& vec) const
 	{
 		return vec.overlaps(*this);
 	}
 
 } // namespace utils
-
 
 namespace std
 {
@@ -556,7 +581,7 @@ namespace std
 		usz operator()(const utils::address_range& k) const
 		{
 			// we can guarantee a unique hash since our type is 64 bits and usz as well
-			return (usz{ k.start } << 32) | usz{ k.end };
+			return (usz{k.start} << 32) | usz{k.end};
 		}
 	};
-}
+} // namespace std

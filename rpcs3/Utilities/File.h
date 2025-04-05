@@ -38,15 +38,15 @@ namespace fs
 		__bitset_enum_max
 	};
 
-	constexpr auto read    = +open_mode::read; // Enable reading
-	constexpr auto write   = +open_mode::write; // Enable writing
-	constexpr auto append  = +open_mode::append; // Always append to the end of the file
-	constexpr auto create  = +open_mode::create; // Create file if it doesn't exist
-	constexpr auto trunc   = +open_mode::trunc; // Clear opened file if it's not empty
-	constexpr auto excl    = +open_mode::excl; // Failure if the file already exists (used with `create`)
-	constexpr auto lock    = +open_mode::lock; // Prevent opening the file more than once
-	constexpr auto unread  = +open_mode::unread; // Aggressively prevent reading the opened file (do not use)
-	constexpr auto isfile  = +open_mode::isfile; // Ensure valid fs::file handle is not of directory
+	constexpr auto read = +open_mode::read;     // Enable reading
+	constexpr auto write = +open_mode::write;   // Enable writing
+	constexpr auto append = +open_mode::append; // Always append to the end of the file
+	constexpr auto create = +open_mode::create; // Create file if it doesn't exist
+	constexpr auto trunc = +open_mode::trunc;   // Clear opened file if it's not empty
+	constexpr auto excl = +open_mode::excl;     // Failure if the file already exists (used with `create`)
+	constexpr auto lock = +open_mode::lock;     // Prevent opening the file more than once
+	constexpr auto unread = +open_mode::unread; // Aggressively prevent reading the opened file (do not use)
+	constexpr auto isfile = +open_mode::isfile; // Ensure valid fs::file handle is not of directory
 
 	constexpr auto write_new = write + create + excl;
 	constexpr auto rewrite = write + create + trunc;
@@ -182,10 +182,12 @@ namespace fs
 	[[noreturn]] void xfail(std::source_location);
 	[[noreturn]] void xovfl();
 
-	constexpr struct pod_tag_t{} pod_tag;
+	constexpr struct pod_tag_t
+	{
+	} pod_tag;
 
 	// Get virtual device for specified path (nullptr for real path)
-	shared_ptr<device_base> get_virtual_device(const std::string& path, std::string_view *device_path);
+	shared_ptr<device_base> get_virtual_device(const std::string& path, std::string_view* device_path);
 
 	// Set virtual device with specified name (nullptr for deletion)
 	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
@@ -305,21 +307,24 @@ namespace fs
 		// Change file size (possibly appending zero bytes)
 		bool trunc(u64 length, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->trunc(length);
 		}
 
 		// Get file information
 		stat_t get_stat(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->get_stat();
 		}
 
 		// Sync file buffers
 		void sync(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->sync();
 		}
 
@@ -329,80 +334,95 @@ namespace fs
 		// Read the data from the file and return the amount of data written in buffer
 		u64 read(void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->read(buffer, count);
 		}
 
 		// Read the data from the file at specified offset in thread-safe manner
 		u64 read_at(u64 offset, void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->read_at(offset, buffer, count);
 		}
 
 		// Write the data to the file and return the amount of data actually written
 		u64 write(const void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->write(buffer, count);
 		}
 
 		u64 write_at(u64 offset, const void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->write_at(offset, buffer, count);
 		}
 
 		// Change current position, returns resulting position
 		u64 seek(s64 offset, seek_mode whence = seek_set, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->seek(offset, whence);
 		}
 
 		// Get file size
 		u64 size(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->size();
 		}
 
 		// Get current position
 		u64 pos(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->seek(0, seek_cur);
 		}
 
 		// Write std::basic_string unconditionally
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		const file& write(const std::basic_string<T>& str, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (write(str.data(), str.size() * sizeof(T), src_loc) != str.size() * sizeof(T)) xfail(src_loc);
+			if (write(str.data(), str.size() * sizeof(T), src_loc) != str.size() * sizeof(T))
+				xfail(src_loc);
 			return *this;
 		}
 
 		// Write POD unconditionally
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		const file& write(const T& data, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (write(std::addressof(data), sizeof(T), src_loc) != sizeof(T)) xfail(src_loc);
+			if (write(std::addressof(data), sizeof(T), src_loc) != sizeof(T))
+				xfail(src_loc);
 			return *this;
 		}
 
 		// Write POD std::vector unconditionally
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		const file& write(const std::vector<T>& vec, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (write(vec.data(), vec.size() * sizeof(T), src_loc) != vec.size() * sizeof(T)) xfail(src_loc);
+			if (write(vec.data(), vec.size() * sizeof(T), src_loc) != vec.size() * sizeof(T))
+				xfail(src_loc);
 			return *this;
 		}
 
 		// Read std::basic_string
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		bool read(std::basic_string<T>& str, usz _size = umax, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 
 			if (_size != umax)
 			{
@@ -419,7 +439,8 @@ namespace fs
 		}
 
 		// Read POD, sizeof(T) is used
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		bool read(T& data,
 			pod_tag_t = pod_tag, std::source_location src_loc = std::source_location::current()) const
 		{
@@ -427,10 +448,12 @@ namespace fs
 		}
 
 		// Read POD std::vector
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		bool read(std::vector<T>& vec, usz _size = umax, bool use_offs = false, usz offset = umax, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 
 			if (_size != umax)
 			{
@@ -452,11 +475,13 @@ namespace fs
 		}
 
 		// Read POD (experimental)
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		T read(pod_tag_t = pod_tag, std::source_location src_loc = std::source_location::current()) const
 		{
 			T result;
-			if (!read(result, pod_tag, src_loc)) xfail(src_loc);
+			if (!read(result, pod_tag, src_loc))
+				xfail(src_loc);
 			return result;
 		}
 
@@ -467,17 +492,20 @@ namespace fs
 			std::basic_string<T> result;
 			result.resize(size() / sizeof(T));
 			seek(0);
-			if (!read(result, result.size(), src_loc)) xfail(src_loc);
+			if (!read(result, result.size(), src_loc))
+				xfail(src_loc);
 			return result;
 		}
 
 		// Read full file to std::vector
-		template<typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		template <typename T>
+			requires(std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		std::vector<T> to_vector(std::source_location src_loc = std::source_location::current()) const
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			if (!read(result, result.size(), true, 0, src_loc)) xfail(src_loc);
+			if (!read(result, result.size(), true, 0, src_loc))
+				xfail(src_loc);
 			return result;
 		}
 
@@ -490,7 +518,8 @@ namespace fs
 		// Gathered write
 		u64 write_gather(const iovec_clone* buffers, u64 buf_count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull(src_loc);
+			if (!m_file)
+				xnull(src_loc);
 			return m_file->write_gather(buffers, buf_count);
 		}
 	};
@@ -536,14 +565,16 @@ namespace fs
 		// Get next directory entry
 		bool read(dir_entry& out, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_dir) xnull(src_loc);
+			if (!m_dir)
+				xnull(src_loc);
 			return m_dir->read(out);
 		}
 
 		// Reset to the beginning
 		void rewind(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_dir) xnull(src_loc);
+			if (!m_dir)
+				xnull(src_loc);
 			return m_dir->rewind();
 		}
 
@@ -586,7 +617,7 @@ namespace fs
 
 			iterator& operator=(iterator&&) = default;
 
-			dir_entry& operator *()
+			dir_entry& operator*()
 			{
 				return m_entry;
 			}
@@ -604,7 +635,7 @@ namespace fs
 				return old;
 			}
 
-			bool operator !=(const iterator& rhs) const
+			bool operator!=(const iterator& rhs) const
 			{
 				return m_parent != rhs.m_parent;
 			}
@@ -625,23 +656,26 @@ namespace fs
 	{
 		std::vector<fs::dir_entry> m_entries;
 		std::size_t m_offset = 0;
-	
+
 	public:
 		virtual_dir(std::vector<fs::dir_entry> entries)
 			: m_entries(std::move(entries)) {}
-		
-		bool read(fs::dir_entry &entry) override
+
+		bool read(fs::dir_entry& entry) override
 		{
 			if (m_offset < m_entries.size())
 			{
 				entry = m_entries[m_offset++];
 				return true;
 			}
-		
+
 			return false;
 		}
-		
-		void rewind() override { m_offset = 0; }
+
+		void rewind() override
+		{
+			m_offset = 0;
+		}
 	};
 
 	// Get executable path
@@ -730,9 +764,7 @@ namespace fs
 		u64 pos;
 
 		container_stream(T&& obj, const stat_t& init_stat = {})
-			: obj(std::forward<T>(obj))
-			, pos(0)
-			, m_stat(init_stat)
+			: obj(std::forward<T>(obj)), pos(0), m_stat(init_stat)
 		{
 		}
 
@@ -795,7 +827,7 @@ namespace fs
 
 			if (pos > old_size)
 			{
-			 	// Reserve memory
+				// Reserve memory
 				obj.reserve(pos + size);
 
 				// Fill gap if necessary (default-initialized)
@@ -812,7 +844,8 @@ namespace fs
 			obj.insert(obj.end(), src + overlap, src + size);
 			pos += size;
 
-			if (size) update_time(true);
+			if (size)
+				update_time(true);
 			return size;
 		}
 
@@ -821,7 +854,8 @@ namespace fs
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + pos :
-				whence == fs::seek_end ? offset + size() : -1;
+				whence == fs::seek_end ? offset + size() :
+										 -1;
 
 			if (new_pos < 0)
 			{
@@ -899,4 +933,4 @@ namespace fs
 	file make_gather(std::vector<file>);
 
 	stx::generator<dir_entry&> list_dir_recursively(const std::string& path);
-}
+} // namespace fs

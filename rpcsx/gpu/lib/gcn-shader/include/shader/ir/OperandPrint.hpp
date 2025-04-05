@@ -40,4 +40,4 @@ inline void Operand::print(std::ostream &os, NameStorage &ns) const {
   }
   os << "<invalid operand " << value.index() << ">";
 }
-} // namespace ir
+} // namespace shader::ir

@@ -70,7 +70,7 @@ std::string raw_mouse_config::get_button_name(s32 button_code)
 std::string raw_mouse_config::get_key_name(s32 scan_code)
 {
 #ifdef _WIN32
-	TCHAR name_buf[MAX_PATH] {};
+	TCHAR name_buf[MAX_PATH]{};
 	if (!GetKeyNameTextW(scan_code, name_buf, MAX_PATH))
 	{
 		cfg_log.error("raw_mouse_config: GetKeyNameText failed: %s", fmt::win_error{GetLastError(), nullptr});
@@ -101,7 +101,7 @@ bool raw_mice_config::load()
 
 	from_default();
 
-	if (fs::file cfg_file{ cfg_name, fs::read })
+	if (fs::file cfg_file{cfg_name, fs::read})
 	{
 		if (const std::string content = cfg_file.to_string(); !content.empty())
 		{

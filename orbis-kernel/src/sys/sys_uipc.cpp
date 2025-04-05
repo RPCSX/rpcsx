@@ -1,8 +1,8 @@
 #include "file.hpp"
 #include "sys/sysproto.hpp"
+#include "thread/Process.hpp"
 #include "thread/ProcessOps.hpp"
 #include "thread/Thread.hpp"
-#include "thread/Process.hpp"
 #include "uio.hpp"
 #include "utils/Logs.hpp"
 #include <sys/socket.h>
@@ -128,7 +128,8 @@ orbis::SysResult orbis::sys_recvfrom(Thread *thread, sint s, caddr_t buf,
   }
 
   if (auto recvfrom = file->ops->recvfrom) {
-    return SysResult::notAnError(recvfrom(file.get(), buf, len, flags, from, fromlenaddr, thread));
+    return SysResult::notAnError(
+        recvfrom(file.get(), buf, len, flags, from, fromlenaddr, thread));
   }
 
   return ErrorCode::NOTSUP;

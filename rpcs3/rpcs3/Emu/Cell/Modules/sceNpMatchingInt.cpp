@@ -82,19 +82,19 @@ error_code sceNpMatchingCreateRoomWithoutGUI(u32 ctx_id, vm::cptr<SceNpCommunica
 
 // This module has some conflicting function names with sceNp module, hence the REG_FNID
 DECLARE(ppu_module_manager::sceNpMatchingInt)("sceNpMatchingInt", []()
-{
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingCancelRequest);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomMemberList);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingJoinRoomWithoutGUI);
-	// REG_FUNC(sceNpMatchingInt, sceNpMatchingJoinRoomGUI);
-	REG_FNID(sceNpMatchingInt, "sceNpMatchingJoinRoomGUI", OLD_sceNpMatchingJoinRoomGUI);
-	// REG_FUNC(sceNpMatchingInt, sceNpMatchingSetRoomInfoNoLimit);
-	REG_FNID(sceNpMatchingInt, "sceNpMatchingSetRoomInfoNoLimit", OLD_sceNpMatchingSetRoomInfoNoLimit);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomListWithoutGUI);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomListGUI);
-	// REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomInfoNoLimit);
-	REG_FNID(sceNpMatchingInt, "sceNpMatchingGetRoomInfoNoLimit", OLD_sceNpMatchingGetRoomInfoNoLimit);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingCancelRequestGUI);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingSendRoomMessage);
-	REG_FUNC(sceNpMatchingInt, sceNpMatchingCreateRoomWithoutGUI);
-});
+	{
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingCancelRequest);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomMemberList);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingJoinRoomWithoutGUI);
+		// REG_FUNC(sceNpMatchingInt, sceNpMatchingJoinRoomGUI);
+		REG_FNID(sceNpMatchingInt, "sceNpMatchingJoinRoomGUI", OLD_sceNpMatchingJoinRoomGUI);
+		// REG_FUNC(sceNpMatchingInt, sceNpMatchingSetRoomInfoNoLimit);
+		REG_FNID(sceNpMatchingInt, "sceNpMatchingSetRoomInfoNoLimit", OLD_sceNpMatchingSetRoomInfoNoLimit);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomListWithoutGUI);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomListGUI);
+		// REG_FUNC(sceNpMatchingInt, sceNpMatchingGetRoomInfoNoLimit);
+		REG_FNID(sceNpMatchingInt, "sceNpMatchingGetRoomInfoNoLimit", OLD_sceNpMatchingGetRoomInfoNoLimit);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingCancelRequestGUI);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingSendRoomMessage);
+		REG_FUNC(sceNpMatchingInt, sceNpMatchingCreateRoomWithoutGUI);
+	});

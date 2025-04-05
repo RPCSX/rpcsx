@@ -8,30 +8,30 @@
 
 template <typename Derived, typename Base>
 concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
-	std::is_convertible_v<const volatile Derived*, const volatile Base*>;
+                      std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
 // Thread state flags
 enum class cpu_flag : u32
 {
-	stop, // Thread not running (HLE, initial state)
-	exit, // Irreversible exit
-	wait, // Indicates waiting state, set by the thread itself
-	temp, // Indicates that the thread cannot properly return after next check_state()
-	pause, // Thread suspended by suspend_all technique
-	suspend, // Thread suspended
-	ret, // Callback return requested
-	again, // Thread must complete the syscall after deserialization
-	signal, // Thread received a signal (HLE)
-	memory, // Thread must unlock memory mutex
-	pending, // Thread has postponed work
+	stop,            // Thread not running (HLE, initial state)
+	exit,            // Irreversible exit
+	wait,            // Indicates waiting state, set by the thread itself
+	temp,            // Indicates that the thread cannot properly return after next check_state()
+	pause,           // Thread suspended by suspend_all technique
+	suspend,         // Thread suspended
+	ret,             // Callback return requested
+	again,           // Thread must complete the syscall after deserialization
+	signal,          // Thread received a signal (HLE)
+	memory,          // Thread must unlock memory mutex
+	pending,         // Thread has postponed work
 	pending_recheck, // Thread needs to recheck if there is pending work before ::pending removal
-	notify, // Flag meant solely to allow atomic notification on state without changing other flags
-	yield, // Thread is being requested to yield its execution time if it's running
-	preempt, // Thread is being requested to preempt the execution of all CPU threads
+	notify,          // Flag meant solely to allow atomic notification on state without changing other flags
+	yield,           // Thread is being requested to yield its execution time if it's running
+	preempt,         // Thread is being requested to preempt the execution of all CPU threads
 
 	dbg_global_pause, // Emulation paused
-	dbg_pause, // Thread paused
-	dbg_step, // Thread forced to pause after one step (one instruction, etc)
+	dbg_pause,        // Thread paused
+	dbg_step,         // Thread forced to pause after one step (one instruction, etc)
 
 	__bitset_enum_max
 };
@@ -148,7 +148,7 @@ public:
 	}
 
 	u32 get_pc() const;
-	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
+	u32* get_pc2();             // Last PC before stepping for the debugger (may be null)
 	cpu_thread* get_next_cpu(); // Access next_cpu member if the is one
 
 	void notify();
@@ -185,7 +185,10 @@ public:
 	virtual void cpu_sleep() {}
 
 	// Callback for cpu_flag::pending
-	virtual void cpu_work() { state -= cpu_flag::pending + cpu_flag::pending_recheck; }
+	virtual void cpu_work()
+	{
+		state -= cpu_flag::pending + cpu_flag::pending_recheck;
+	}
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}
@@ -230,9 +233,9 @@ public:
 		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
 		{
 			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
-			{
-				std::invoke(*static_cast<F*>(func));
-			}};
+				{
+					std::invoke(*static_cast<F*>(func));
+				}};
 
 			work.push(_this);
 			return;
@@ -242,9 +245,9 @@ public:
 			std::invoke_result_t<F> result;
 
 			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, &result, [](void* func, void* res_buf)
-			{
-				*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
-			}};
+				{
+					*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
+				}};
 
 			work.push(_this);
 			return result;
@@ -259,9 +262,9 @@ public:
 		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::suspend_post only supports void as return type");
 
 		return suspend_work{prio, false, true, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
-		{
-			std::invoke(*static_cast<F*>(func));
-		}};
+			{
+				std::invoke(*static_cast<F*>(func));
+			}};
 	}
 
 	// Push the workload only if threads are being suspended by suspend_all()
@@ -274,9 +277,9 @@ public:
 
 		{
 			suspend_work work{prio, true, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
-			{
-				std::invoke(*static_cast<F*>(func));
-			}};
+				{
+					std::invoke(*static_cast<F*>(func));
+				}};
 
 			return work.push(_this);
 		}

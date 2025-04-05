@@ -8,35 +8,35 @@
 
 LOG_CHANNEL(sceNpSns);
 
-template<>
+template <>
 void fmt_class_string<sceNpSnsError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(SCE_NP_SNS_ERROR_UNKNOWN);
-			STR_CASE(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
-			STR_CASE(SCE_NP_SNS_ERROR_INVALID_ARGUMENT);
-			STR_CASE(SCE_NP_SNS_ERROR_OUT_OF_MEMORY);
-			STR_CASE(SCE_NP_SNS_ERROR_SHUTDOWN);
-			STR_CASE(SCE_NP_SNS_ERROR_BUSY);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_NOT_INITIALIZED);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_EXCEEDS_MAX);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_ABORTED);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_ALREADY_ABORTED);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_CONFIG_DISABLED);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_FBSERVER_ERROR_RESPONSE);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_THROTTLE_CLOSED);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_OPERATION_INTERVAL_VIOLATION);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_UNLOADED_THROTTLE);
-			STR_CASE(SCE_NP_SNS_FB_ERROR_ACCESS_NOT_ALLOWED);
-		}
+			switch (error)
+			{
+				STR_CASE(SCE_NP_SNS_ERROR_UNKNOWN);
+				STR_CASE(SCE_NP_SNS_ERROR_NOT_SIGN_IN);
+				STR_CASE(SCE_NP_SNS_ERROR_INVALID_ARGUMENT);
+				STR_CASE(SCE_NP_SNS_ERROR_OUT_OF_MEMORY);
+				STR_CASE(SCE_NP_SNS_ERROR_SHUTDOWN);
+				STR_CASE(SCE_NP_SNS_ERROR_BUSY);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_NOT_INITIALIZED);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_EXCEEDS_MAX);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_ABORTED);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_ALREADY_ABORTED);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_CONFIG_DISABLED);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_FBSERVER_ERROR_RESPONSE);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_THROTTLE_CLOSED);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_OPERATION_INTERVAL_VIOLATION);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_UNLOADED_THROTTLE);
+				STR_CASE(SCE_NP_SNS_FB_ERROR_ACCESS_NOT_ALLOWED);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code sceNpSnsFbInit(vm::cptr<SceNpSnsFbInitParams> params)
@@ -207,15 +207,15 @@ s32 sceNpSnsFbStreamPublish(u32 handle) // add more arguments
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
 
-	//if (canceled)
+	// if (canceled)
 	//{
 	//	return CELL_ECANCELED;
-	//}
+	// }
 
-	//if (aborted)
+	// if (aborted)
 	//{
 	//	return SCE_NP_SNS_FB_ERROR_ABORTED;
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -265,15 +265,15 @@ s32 sceNpSnsFbLoadThrottle(u32 handle)
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
 
-	//if (canceled)
+	// if (canceled)
 	//{
 	//	return CELL_ECANCELED;
-	//}
+	// }
 
-	//if (aborted)
+	// if (aborted)
 	//{
 	//	return SCE_NP_SNS_FB_ERROR_ABORTED;
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -316,18 +316,17 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::sceNpSns)("sceNpSns", []()
-{
-	REG_FUNC(sceNpSns, sceNpSnsFbInit);
-	REG_FUNC(sceNpSns, sceNpSnsFbTerm);
-	REG_FUNC(sceNpSns, sceNpSnsFbCreateHandle);
-	REG_FUNC(sceNpSns, sceNpSnsFbDestroyHandle);
-	REG_FUNC(sceNpSns, sceNpSnsFbAbortHandle);
-	REG_FUNC(sceNpSns, sceNpSnsFbGetAccessToken);
-	REG_FUNC(sceNpSns, sceNpSnsFbGetLongAccessToken);
-	REG_FUNC(sceNpSns, sceNpSnsFbStreamPublish);
-	REG_FUNC(sceNpSns, sceNpSnsFbCheckThrottle);
-	REG_FUNC(sceNpSns, sceNpSnsFbCheckConfig);
-	REG_FUNC(sceNpSns, sceNpSnsFbLoadThrottle);
-});
+	{
+		REG_FUNC(sceNpSns, sceNpSnsFbInit);
+		REG_FUNC(sceNpSns, sceNpSnsFbTerm);
+		REG_FUNC(sceNpSns, sceNpSnsFbCreateHandle);
+		REG_FUNC(sceNpSns, sceNpSnsFbDestroyHandle);
+		REG_FUNC(sceNpSns, sceNpSnsFbAbortHandle);
+		REG_FUNC(sceNpSns, sceNpSnsFbGetAccessToken);
+		REG_FUNC(sceNpSns, sceNpSnsFbGetLongAccessToken);
+		REG_FUNC(sceNpSns, sceNpSnsFbStreamPublish);
+		REG_FUNC(sceNpSns, sceNpSnsFbCheckThrottle);
+		REG_FUNC(sceNpSns, sceNpSnsFbCheckConfig);
+		REG_FUNC(sceNpSns, sceNpSnsFbLoadThrottle);
+	});

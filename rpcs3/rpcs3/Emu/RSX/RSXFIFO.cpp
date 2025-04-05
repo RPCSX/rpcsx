@@ -251,14 +251,14 @@ namespace rsx
 				const u32 available = (next_block - addr);
 				if (remaining <= available)
 				{
-					return { static_cast<const u32*>(vm::base(from)), length_in_words };
+					return {static_cast<const u32*>(vm::base(from)), length_in_words};
 				}
 
 				remaining -= available;
 				const u32 next_ptr = m_iotable->get_addr(next_block);
 				if (next_ptr != (ptr + available))
 				{
-					return { static_cast<const u32*>(vm::base(from)), (size - remaining) / sizeof(u32)};
+					return {static_cast<const u32*>(vm::base(from)), (size - remaining) / sizeof(u32)};
 				}
 
 				ptr = next_ptr;
@@ -276,7 +276,7 @@ namespace rsx
 				bool ok{};
 				u32 arg = 0;
 
-				if (g_cfg.core.rsx_fifo_accuracy) [[ unlikely ]]
+				if (g_cfg.core.rsx_fifo_accuracy) [[unlikely]]
 				{
 					std::tie(ok, arg) = fetch_u32(m_internal_get + 4);
 
@@ -366,7 +366,7 @@ namespace rsx
 				m_memwatch_cmp = 0;
 			}
 
-			if (!g_cfg.core.rsx_fifo_accuracy) [[ likely ]]
+			if (!g_cfg.core.rsx_fifo_accuracy) [[likely]]
 			{
 				const u32 put = read_put();
 
@@ -629,7 +629,7 @@ namespace rsx
 
 			if (flush_cmd != ~0u)
 			{
-				num_collapsed += draw_count? (draw_count - 1) : 0;
+				num_collapsed += draw_count ? (draw_count - 1) : 0;
 				draw_count = 0;
 				deferred_primitive = flush_cmd;
 
@@ -638,7 +638,7 @@ namespace rsx
 
 			return NOTHING;
 		}
-	}
+	} // namespace FIFO
 
 	void thread::run_FIFO()
 	{
@@ -690,14 +690,14 @@ namespace rsx
 
 			// Check for flow control
 			if (std::bitset<2> jump_type; jump_type
-				.set(0, (cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-				.set(1, (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-				.any())
+					.set(0, (cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+					.set(1, (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
+					.any())
 			{
 				const u32 offs = cmd & (jump_type.test(0) ? RSX_METHOD_OLD_JUMP_OFFSET_MASK : RSX_METHOD_NEW_JUMP_OFFSET_MASK);
 				if (offs == fifo_ctrl->get_pos())
 				{
-					//Jump to self. Often preceded by NOP
+					// Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO::state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
@@ -711,7 +711,7 @@ namespace rsx
 					last_known_code_start = offs;
 				}
 
-				//rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+				// rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
 				fifo_ctrl->set_get(offs, cmd);
 				return;
 			}
@@ -812,12 +812,9 @@ namespace rsx
 						break;
 					default:
 					{
-						static constexpr std::array<std::pair<u32, u32>, 3> ranges
-						{{
-							{NV308A_COLOR, 0x700},
+						static constexpr std::array<std::pair<u32, u32>, 3> ranges{{{NV308A_COLOR, 0x700},
 							{NV4097_SET_TRANSFORM_PROGRAM, 32},
-							{NV4097_SET_TRANSFORM_CONSTANT, 32}
-						}};
+							{NV4097_SET_TRANSFORM_CONSTANT, 32}}};
 
 						// Use legacy logic - enqueue leading command with count
 						// Then enqueue each command arg alone with a no-op command
@@ -849,7 +846,7 @@ namespace rsx
 
 			if (m_flattener.is_enabled()) [[unlikely]]
 			{
-				switch(m_flattener.test(command))
+				switch (m_flattener.test(command))
 				{
 				case FIFO::NOTHING:
 				{
@@ -902,9 +899,8 @@ namespace rsx
 				// Something changed, set signal flags if any specified
 				m_graphics_state |= state_signals[reg];
 			}
-		}
-		while (fifo_ctrl->read_unsafe(command));
+		} while (fifo_ctrl->read_unsafe(command));
 
 		fifo_ctrl->sync_get();
 	}
-}
+} // namespace rsx

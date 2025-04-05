@@ -27,8 +27,7 @@ namespace vk
 			memory_usage.clear();
 			pool_usage.clear();
 		}
-	}
-	g_vmm_stats;
+	} g_vmm_stats;
 
 	resource_manager g_resource_manager;
 	atomic_t<u64> g_event_ctr;
@@ -118,7 +117,7 @@ namespace vk
 	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size, vmm_allocation_pool pool)
 	{
 		auto key = reinterpret_cast<uptr>(handle);
-		const vmm_allocation_t info = { memory_size, memory_type, pool };
+		const vmm_allocation_t info = {memory_size, memory_type, pool};
 
 		if (const auto ins = g_vmm_stats.allocations.insert_or_assign(key, info);
 			!ins.second)
@@ -218,13 +217,13 @@ namespace vk
 			const auto mem_threshold_1 = static_cast<u64>(256 * res_scale * res_scale) * _1M;
 			const auto mem_threshold_2 = static_cast<u64>(64 * res_scale * res_scale) * _1M;
 
-			if (local_memory_usage < (mem_info.device_local_total_bytes / 2) ||                   // Less than 50% VRAM usage OR
-				(mem_info.device_local_total_bytes - local_memory_usage) > mem_threshold_1)       // Enough to hold all required resources left
+			if (local_memory_usage < (mem_info.device_local_total_bytes / 2) ||             // Less than 50% VRAM usage OR
+				(mem_info.device_local_total_bytes - local_memory_usage) > mem_threshold_1) // Enough to hold all required resources left
 			{
 				// Lower severity to avoid slowing performance too much
 				load_severity = rsx::problem_severity::low;
 			}
-			else if ((mem_info.device_local_total_bytes - local_memory_usage) > mem_threshold_2)  // Enough to hold basic resources like textures, buffers, etc
+			else if ((mem_info.device_local_total_bytes - local_memory_usage) > mem_threshold_2) // Enough to hold basic resources like textures, buffers, etc
 			{
 				// At least 512MB left, do not overreact
 				load_severity = rsx::problem_severity::moderate;
@@ -273,4 +272,4 @@ namespace vk
 		ensure(pool >= VMM_ALLOCATION_POOL_SAMPLER);
 		g_vmm_stats.pool_usage[pool]--;
 	}
-}
+} // namespace vk

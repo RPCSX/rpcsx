@@ -13,7 +13,7 @@ extern vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;
 
 static u32 get_string_array_size(vm::cpptr<char> list, u32& out_count)
 {
-	//out_count = 0;
+	// out_count = 0;
 	u32 result = 8;
 
 	for (u32 i = 0; list; i++)
@@ -114,12 +114,12 @@ static void exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv
 	}
 
 	vm::ptr<sys_exit2_param> arg = vm::cast(alloc_addr);
-	arg->x0        = 0x85;
+	arg->x0 = 0x85;
 	arg->this_size = 0x30;
 	arg->next_size = alloc_size - 0x30;
-	arg->prio      = prio;
-	arg->flags     = _flags;
-	arg->args      = vm::cast(alloc_addr + 0x30);
+	arg->prio = prio;
+	arg->flags = _flags;
+	arg->args = vm::cast(alloc_addr + 0x30);
 
 	if ((_flags >> 62) == 0 && *g_ppu_atexitspawn)
 	{
@@ -198,7 +198,6 @@ error_code sys_game_watchdog_stop()
 	sysPrxForUser.todo("sys_game_watchdog_stop()");
 	return CELL_OK;
 }
-
 
 void sysPrxForUser_sys_game_init()
 {

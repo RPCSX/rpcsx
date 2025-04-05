@@ -154,25 +154,25 @@ namespace np
 		case SCE_NP_TICKET_PARAM_ISSUER_ID:
 		{
 			const auto& node = nodes[0].data.data_nodes[1];
-			param->ui32      = node.data.data_u32;
+			param->ui32 = node.data.data_u32;
 			break;
 		}
 		case SCE_NP_TICKET_PARAM_ISSUED_DATE:
 		{
 			const auto& node = nodes[0].data.data_nodes[2];
-			param->ui64      = node.data.data_u64;
+			param->ui64 = node.data.data_u64;
 			break;
 		}
 		case SCE_NP_TICKET_PARAM_EXPIRE_DATE:
 		{
 			const auto& node = nodes[0].data.data_nodes[3];
-			param->ui64      = node.data.data_u64;
+			param->ui64 = node.data.data_u64;
 			break;
 		}
 		case SCE_NP_TICKET_PARAM_SUBJECT_ACCOUNT_ID:
 		{
 			const auto& node = nodes[0].data.data_nodes[4];
-			param->ui64      = node.data.data_u64;
+			param->ui64 = node.data.data_u64;
 			break;
 		}
 		case SCE_NP_TICKET_PARAM_SUBJECT_ONLINE_ID:
@@ -222,7 +222,7 @@ namespace np
 		case SCE_NP_TICKET_PARAM_SUBJECT_STATUS:
 		{
 			const auto& node = nodes[0].data.data_nodes[9];
-			param->ui32      = node.data.data_u32;
+			param->ui32 = node.data.data_u32;
 			break;
 		}
 		case SCE_NP_TICKET_PARAM_STATUS_DURATION:
@@ -427,7 +427,7 @@ namespace np
 
 		g_fxo->need<named_thread<signaling_handler>>();
 
-		is_connected  = (g_cfg.net.net_active == np_internet_status::enabled);
+		is_connected = (g_cfg.net.net_active == np_internet_status::enabled);
 		is_psn_active = (g_cfg.net.psn_status >= np_psn_status::psn_fake) && is_connected;
 
 		if (get_net_status() == CELL_NET_CTL_STATE_IPObtained)
@@ -436,7 +436,7 @@ namespace np
 			if (!discover_ether_address() || !discover_ip_address())
 			{
 				nph_log.error("Failed to discover ethernet or ip address!");
-				is_connected  = false;
+				is_connected = false;
 				is_psn_active = false;
 				return;
 			}
@@ -576,7 +576,7 @@ namespace np
 		addr.sin_family = AF_INET;
 		addr.sin_port = 53;
 		addr.sin_addr.s_addr = 0x08080808;
-		if (connect(sockfd, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) != 0)
+		if (connect(sockfd, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) != 0)
 		{
 			// If connect fails a route to the internet is not available
 			nph_log.error("connect to discover local ip failed: %d", get_native_error());
@@ -650,7 +650,7 @@ namespace np
 		if (ioctl(sock, SIOCGIFCONF, &ifc) == -1)
 			return false;
 
-		ifreq* it              = ifc.ifc_req;
+		ifreq* it = ifc.ifc_req;
 		const ifreq* const end = it + (ifc.ifc_len / sizeof(ifreq));
 
 		for (; it != end; ++it)
@@ -831,7 +831,7 @@ namespace np
 				return;
 			}
 
-			local_ip_addr  = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
+			local_ip_addr = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
 
 			break;
 		}
@@ -1003,7 +1003,7 @@ namespace np
 		if (cur_event.event != SCE_NP_BASIC_EVENT_OFFLINE)
 		{
 			const u32 size_avail = *size;
-			const u32 res_size   = std::min(static_cast<u32>(cur_event.data.size()), size_avail);
+			const u32 res_size = std::min(static_cast<u32>(cur_event.data.size()), size_avail);
 
 			memcpy(data.get_ptr(), cur_event.data.data(), res_size);
 			*size = res_size;
@@ -1098,7 +1098,7 @@ namespace np
 				for (auto& reply : replies)
 				{
 					const rpcn::CommandType command = static_cast<rpcn::CommandType>(reply.second.first);
-					const u32 req_id      = reply.first;
+					const u32 req_id = reply.first;
 					std::vector<u8>& data = reply.second.second;
 
 					// Every reply should at least contain a return value/error code
@@ -1293,7 +1293,7 @@ namespace np
 
 		ret.ctx_id = ctx_id;
 		ret.cb_arg = (optParam && optParam->cbFuncArg) ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
-		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
+		ret.cb = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
 		ret.event_type = event_type;
 
 		nph_log.trace("Callback used is 0x%x with req_id %d", ret.cb, req_id);
@@ -1366,7 +1366,10 @@ namespace np
 
 		while (players_history.size() > MAX_HISTORY_ENTRIES)
 		{
-			auto it = std::min_element(players_history.begin(), players_history.end(), [](const auto& a, const auto& b) { return a.second.timestamp < b.second.timestamp; } );
+			auto it = std::min_element(players_history.begin(), players_history.end(), [](const auto& a, const auto& b)
+				{
+					return a.second.timestamp < b.second.timestamp;
+				});
 			players_history.erase(it);
 		}
 
@@ -1391,7 +1394,10 @@ namespace np
 
 		while (players_history.size() > MAX_HISTORY_ENTRIES)
 		{
-			auto it = std::min_element(players_history.begin(), players_history.end(), [](const auto& a, const auto& b) { return a.second.timestamp < b.second.timestamp; } );
+			auto it = std::min_element(players_history.begin(), players_history.end(), [](const auto& a, const auto& b)
+				{
+					return a.second.timestamp < b.second.timestamp;
+				});
 			players_history.erase(it);
 		}
 
@@ -1596,7 +1602,7 @@ namespace np
 		}
 
 		std::lock_guard lock(mutex_rpcn);
-		
+
 		if (!rpcn)
 		{
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;

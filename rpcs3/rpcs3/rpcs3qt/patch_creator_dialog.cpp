@@ -27,12 +27,7 @@ enum patch_column : int
 };
 
 patch_creator_dialog::patch_creator_dialog(QWidget* parent)
-	: QDialog(parent)
-	, ui(new Ui::patch_creator_dialog)
-	, mMonoFont(QFontDatabase::systemFont(QFontDatabase::FixedFont))
-	, mValidColor(gui::utils::get_label_color("log_level_success", Qt::darkGreen, Qt::green))
-	, mInvalidColor(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red))
-	, m_offset_validator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?[a-fA-F0-9]{0,8}$"), this))
+	: QDialog(parent), ui(new Ui::patch_creator_dialog), mMonoFont(QFontDatabase::systemFont(QFontDatabase::FixedFont)), mValidColor(gui::utils::get_label_color("log_level_success", Qt::darkGreen, Qt::green)), mInvalidColor(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red)), m_offset_validator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?[a-fA-F0-9]{0,8}$"), this))
 {
 	ui->setupUi(this);
 	ui->patchEdit->setFont(mMonoFont);
@@ -67,12 +62,21 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	connect(ui->groupEdit, &QLineEdit::textChanged, this, &patch_creator_dialog::generate_yml);
 	connect(ui->versionMinorSpinBox, &QSpinBox::textChanged, this, &patch_creator_dialog::generate_yml);
 	connect(ui->versionMajorSpinBox, &QSpinBox::textChanged, this, &patch_creator_dialog::generate_yml);
-	connect(ui->instructionTable, &QTableWidget::itemChanged, this, [this](QTableWidgetItem*){ generate_yml(); });
+	connect(ui->instructionTable, &QTableWidget::itemChanged, this, [this](QTableWidgetItem*)
+		{
+			generate_yml();
+		});
 	connect(ui->instructionTable, &QTableWidget::customContextMenuRequested, this, &patch_creator_dialog::show_table_menu);
-	connect(ui->addPatchButton, &QAbstractButton::clicked, this, [this]() { add_instruction(ui->instructionTable->rowCount()); });
+	connect(ui->addPatchButton, &QAbstractButton::clicked, this, [this]()
+		{
+			add_instruction(ui->instructionTable->rowCount());
+		});
 
 	init_patch_type_bombo_box(ui->addPatchTypeComboBox, patch_type::be32, false);
-	connect(ui->addPatchTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index){ update_validator(index, ui->addPatchTypeComboBox, ui->addPatchOffsetEdit); });
+	connect(ui->addPatchTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+		{
+			update_validator(index, ui->addPatchTypeComboBox, ui->addPatchOffsetEdit);
+		});
 	update_validator(ui->addPatchTypeComboBox->currentIndex(), ui->addPatchTypeComboBox, ui->addPatchOffsetEdit);
 
 	generate_yml();
@@ -84,7 +88,8 @@ patch_creator_dialog::~patch_creator_dialog()
 
 void patch_creator_dialog::init_patch_type_bombo_box(QComboBox* combo_box, patch_type set_type, bool searchable)
 {
-	if (!combo_box) return;
+	if (!combo_box)
+		return;
 
 	combo_box->clear();
 
@@ -136,9 +141,9 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 	{
 		QAction* act_add_instruction = menu.addAction(tr("&Add Instruction"));
 		connect(act_add_instruction, &QAction::triggered, [this]()
-		{
-			add_instruction(ui->instructionTable->rowCount());
-		});
+			{
+				add_instruction(ui->instructionTable->rowCount());
+			});
 	}
 	else
 	{
@@ -146,15 +151,15 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 		{
 			QAction* act_add_instruction_above = menu.addAction(tr("&Add Instruction Above"));
 			connect(act_add_instruction_above, &QAction::triggered, [this, row = selection.first().row()]()
-			{
-				add_instruction(row);
-			});
+				{
+					add_instruction(row);
+				});
 
 			QAction* act_add_instruction_below = menu.addAction(tr("&Add Instruction Below"));
 			connect(act_add_instruction_below, &QAction::triggered, [this, row = selection.first().row()]()
-			{
-				add_instruction(row + 1);
-			});
+				{
+					add_instruction(row + 1);
+				});
 		}
 
 		const bool can_move_up = can_move_instructions(selection, move_direction::up);
@@ -166,9 +171,9 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 
 			QAction* act_move_instruction_up = menu.addAction(tr("&Move Instruction(s) Up"));
 			connect(act_move_instruction_up, &QAction::triggered, [this, &selection]()
-			{
-				move_instructions(selection.first().row(), selection.count(), 1, move_direction::up);
-			});
+				{
+					move_instructions(selection.first().row(), selection.count(), 1, move_direction::up);
+				});
 		}
 
 		if (can_move_down)
@@ -178,30 +183,30 @@ void patch_creator_dialog::show_table_menu(const QPoint& pos)
 
 			QAction* act_move_instruction_down = menu.addAction(tr("&Move Instruction(s) Down"));
 			connect(act_move_instruction_down, &QAction::triggered, [this, &selection]()
-			{
-				move_instructions(selection.first().row(), selection.count(), 1, move_direction::down);
-			});
+				{
+					move_instructions(selection.first().row(), selection.count(), 1, move_direction::down);
+				});
 		}
 
 		menu.addSeparator();
 
 		QAction* act_remove_instruction = menu.addAction(tr("&Remove Instruction(s)"));
 		connect(act_remove_instruction, &QAction::triggered, [this]()
-		{
-			remove_instructions();
-		});
+			{
+				remove_instructions();
+			});
 	}
 
 	menu.addSeparator();
 
 	QAction* act_clear_table = menu.addAction(tr("&Clear Table"));
 	connect(act_clear_table, &QAction::triggered, [this]()
-	{
-		patch_log.notice("Patch Creator: Clearing instruction table...");
-		ui->instructionTable->clearContents();
-		ui->instructionTable->setRowCount(0);
-		generate_yml();
-	});
+		{
+			patch_log.notice("Patch Creator: Clearing instruction table...");
+			ui->instructionTable->clearContents();
+			ui->instructionTable->setRowCount(0);
+			generate_yml();
+		});
 
 	menu.exec(ui->instructionTable->viewport()->mapToGlobal(pos));
 }
@@ -227,9 +232,9 @@ void patch_creator_dialog::update_validator(int index, QComboBox* combo_box, QLi
 
 void patch_creator_dialog::add_instruction(int row)
 {
-	const QString type    = ui->addPatchTypeComboBox->currentText();
-	const QString offset  = ui->addPatchOffsetEdit->text();
-	const QString value   = ui->addPatchValueEdit->text();
+	const QString type = ui->addPatchTypeComboBox->currentText();
+	const QString offset = ui->addPatchOffsetEdit->text();
+	const QString value = ui->addPatchValueEdit->text();
 	const QString comment = ui->addPatchCommentEdit->text();
 
 	const patch_type t = patch_engine::get_patch_type(type.toStdString());
@@ -424,7 +429,8 @@ void patch_creator_dialog::validate(const QString& patch)
 	}
 
 	// Create html and colorize offending lines
-	const QString font_start_tag = QStringLiteral("<font color = \"") % mInvalidColor.name() % QStringLiteral("\">");;
+	const QString font_start_tag = QStringLiteral("<font color = \"") % mInvalidColor.name() % QStringLiteral("\">");
+	;
 	static const QString font_end_tag = QStringLiteral("</font>");
 	static const QString line_break_tag = QStringLiteral("<br/>");
 
@@ -495,7 +501,7 @@ void patch_creator_dialog::generate_yml(const QString& /*text*/)
 					out << YAML::BeginMap;
 					out << ui->serialEdit->text().simplified().toStdString();
 					{
-						out << YAML::Flow << fmt::split(ui->gameVersionEdit->text().toStdString(), { ",", " " });
+						out << YAML::Flow << fmt::split(ui->gameVersionEdit->text().toStdString(), {",", " "});
 					}
 					out << YAML::EndMap;
 				}
@@ -510,14 +516,14 @@ void patch_creator_dialog::generate_yml(const QString& /*text*/)
 				out << YAML::BeginSeq;
 				for (int i = 0; i < ui->instructionTable->rowCount(); i++)
 				{
-					const QComboBox* type_item           = qobject_cast<QComboBox*>(ui->instructionTable->cellWidget(i, patch_column::type));
-					const QTableWidgetItem* offset_item  = ui->instructionTable->item(i, patch_column::offset);
-					const QTableWidgetItem* value_item   = ui->instructionTable->item(i, patch_column::value);
+					const QComboBox* type_item = qobject_cast<QComboBox*>(ui->instructionTable->cellWidget(i, patch_column::type));
+					const QTableWidgetItem* offset_item = ui->instructionTable->item(i, patch_column::offset);
+					const QTableWidgetItem* value_item = ui->instructionTable->item(i, patch_column::value);
 					const QTableWidgetItem* comment_item = ui->instructionTable->item(i, patch_column::comment);
 
-					const std::string type    = type_item ? type_item->currentText().toStdString() : "";
-					const std::string offset  = offset_item ? offset_item->text().toStdString() : "";
-					const std::string value   = value_item ? value_item->text().toStdString() : "";
+					const std::string type = type_item ? type_item->currentText().toStdString() : "";
+					const std::string offset = offset_item ? offset_item->text().toStdString() : "";
+					const std::string value = value_item ? value_item->text().toStdString() : "";
 					const std::string comment = comment_item ? comment_item->text().toStdString() : "";
 
 					if (patch_engine::get_patch_type(type) == patch_type::invalid)

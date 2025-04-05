@@ -83,7 +83,6 @@ struct UContext {
 
 static_assert(sizeof(UContext) == 0x500);
 
-
 enum Signal {
   kSigHup = 1,
   kSigInt = 2,

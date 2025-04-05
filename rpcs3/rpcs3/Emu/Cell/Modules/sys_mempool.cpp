@@ -81,7 +81,7 @@ error_code sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, v
 	attr->pshared = SYS_SYNC_NOT_PROCESS_SHARED;
 	attr->adaptive = SYS_SYNC_NOT_ADAPTIVE;
 	attr->ipc_key = 0; // No idea what this is
-	attr->flags = 0; //  Also no idea what this is.
+	attr->flags = 0;   //  Also no idea what this is.
 	strcpy_trunc(attr->name, "mp_m" + std::to_string(*mempool));
 
 	error_code ret = sys_mutex_create(ppu, mutexid, attr);
@@ -94,13 +94,13 @@ error_code sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, v
 	vm::var<u32> condid;
 	vm::var<sys_cond_attribute_t> condAttr;
 	condAttr->pshared = SYS_SYNC_NOT_PROCESS_SHARED;
-	condAttr->flags = 0; // No idea what this is
+	condAttr->flags = 0;   // No idea what this is
 	condAttr->ipc_key = 0; // Also no idea what this is
 	strcpy_trunc(condAttr->name, "mp_c" + std::to_string(*mempool));
 
 	ret = sys_cond_create(ppu, condid, *mutexid, condAttr);
 	if (ret != CELL_OK)
-	{  // TODO: Better exception handling.
+	{ // TODO: Better exception handling.
 		fmt::throw_exception("mempool %x failed to create condition variable", mempool);
 	}
 	memory_pool->condid = *condid;
@@ -175,7 +175,7 @@ vm::ptr<void> sys_mempool_allocate_block(ppu_thread& ppu, sys_mempool_t mempool)
 
 	auto memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 	if (!memory_pool)
-	{	// if the memory pool gets deleted-- is null, clearly it's impossible to allocate memory.
+	{ // if the memory pool gets deleted-- is null, clearly it's impossible to allocate memory.
 		return vm::null;
 	}
 	sys_mutex_lock(ppu, memory_pool->mutexid, 0);
@@ -184,8 +184,8 @@ vm::ptr<void> sys_mempool_allocate_block(ppu_thread& ppu, sys_mempool_t mempool)
 	{
 		sys_cond_wait(ppu, memory_pool->condid, 0);
 		memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
-		if (!memory_pool)  // in case spurious wake up was from delete, don't die by accessing a freed pool.
-		{ // No need to unlock as if the pool is freed, the lock was freed as well.
+		if (!memory_pool) // in case spurious wake up was from delete, don't die by accessing a freed pool.
+		{                 // No need to unlock as if the pool is freed, the lock was freed as well.
 			return vm::null;
 		}
 	}

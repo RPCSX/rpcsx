@@ -53,10 +53,10 @@ namespace rsx
 			// capture fragment shader mem
 			const auto [program_offset, program_location] = method_registers.shader_program_address();
 
-			const u32 addr          = get_address(program_offset, program_location);
+			const u32 addr = get_address(program_offset, program_location);
 			const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
 			const u32 program_start = program_info.program_start_offset;
-			const u32 ucode_size    = program_info.program_ucode_length;
+			const u32 ucode_size = program_info.program_ucode_length;
 
 			frame_capture_data::memory_block block;
 			block.offset = program_offset;
@@ -75,7 +75,7 @@ namespace rsx
 					continue;
 
 				const u32 texaddr = get_address(tex.offset(), tex.location());
-				auto layout       = get_subresources_layout(tex);
+				auto layout = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
 				usz texSize = 0;
@@ -101,7 +101,7 @@ namespace rsx
 					continue;
 
 				const u32 texaddr = get_address(tex.offset(), tex.location());
-				auto layout       = get_subresources_layout(tex);
+				auto layout = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
 				usz texSize = 0;
@@ -135,11 +135,11 @@ namespace rsx
 						continue;
 
 					// vert buffer
-					const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), info.offset() & 0x7fffffff);
+					const u32 base_address = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), info.offset() & 0x7fffffff);
 					const u32 memory_location = info.offset() >> 31;
 
-					const u32 addr       = get_address(base_address, memory_location);
-					const u32 vertSize   = get_vertex_type_size_on_host(info.type(), info.size());
+					const u32 addr = get_address(base_address, memory_location);
+					const u32 vertSize = get_vertex_type_size_on_host(info.type(), info.size());
 					const u32 vertStride = info.stride();
 
 					method_registers.current_draw_clause.begin();
@@ -156,8 +156,7 @@ namespace rsx
 						block_data.data.resize(bufferSize);
 						std::memcpy(block_data.data.data(), vm::base(addr + (range.first * vertStride)), bufferSize);
 						insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
-					}
-					while (method_registers.current_draw_clause.next());
+					} while (method_registers.current_draw_clause.next());
 				}
 			}
 			// save index buffer if used
@@ -165,18 +164,18 @@ namespace rsx
 			{
 				const u32 input_mask = method_registers.vertex_attrib_input_mask();
 
-				const u32 base_address    = method_registers.index_array_address();
+				const u32 base_address = method_registers.index_array_address();
 				const u32 memory_location = method_registers.index_array_location();
 
 				const auto index_type = method_registers.index_type();
-				const u32 type_size   = get_index_type_size(index_type);
-				const u32 base_addr   = get_address(base_address, memory_location) & (0 - type_size);
+				const u32 type_size = get_index_type_size(index_type);
+				const u32 base_addr = get_address(base_address, memory_location) & (0 - type_size);
 
 				// manually parse index buffer and copy vertex buffer
 				u32 min_index = 0xFFFFFFFF, max_index = 0;
 
 				const bool is_primitive_restart_enabled = method_registers.restart_index_enabled();
-				const u32 primitive_restart_index       = method_registers.restart_index();
+				const u32 primitive_restart_index = method_registers.restart_index();
 
 				method_registers.current_draw_clause.begin();
 				do
@@ -184,7 +183,7 @@ namespace rsx
 					const auto& range = method_registers.current_draw_clause.get_range();
 					const u32 idxFirst = range.first;
 					const u32 idxCount = range.count;
-					const u32 idxAddr  = base_addr + (idxFirst * type_size);
+					const u32 idxAddr = base_addr + (idxFirst * type_size);
 
 					const usz bufferSize = idxCount * type_size;
 
@@ -206,7 +205,7 @@ namespace rsx
 							u16 index = fifo[i];
 							if (is_primitive_restart_enabled && u32{index} == primitive_restart_index)
 								continue;
-							index     = static_cast<u16>(get_index_from_base(index, method_registers.vertex_data_base_index()));
+							index = static_cast<u16>(get_index_from_base(index, method_registers.vertex_data_base_index()));
 							min_index = std::min<u16>(index, static_cast<u16>(min_index));
 							max_index = std::max<u16>(index, static_cast<u16>(max_index));
 						}
@@ -220,15 +219,14 @@ namespace rsx
 							u32 index = fifo[i];
 							if (is_primitive_restart_enabled && index == primitive_restart_index)
 								continue;
-							index     = get_index_from_base(index, method_registers.vertex_data_base_index());
+							index = get_index_from_base(index, method_registers.vertex_data_base_index());
 							min_index = std::min(index, min_index);
 							max_index = std::max(index, max_index);
 						}
 						break;
 					}
 					}
-				}
-				while (method_registers.current_draw_clause.next());
+				} while (method_registers.current_draw_clause.next());
 
 				if (min_index <= max_index)
 				{
@@ -243,11 +241,11 @@ namespace rsx
 							continue;
 
 						// vert buffer
-						const u32 vertStride      = info.stride();
-						const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
+						const u32 vertStride = info.stride();
+						const u32 base_address = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
 						const u32 memory_location = info.offset() >> 31;
 
-						const u32 addr     = get_address(base_address, memory_location);
+						const u32 addr = get_address(base_address, memory_location);
 						const u32 vertSize = get_vertex_type_size_on_host(info.type(), info.size());
 						const u32 bufferSize = vertStride * (max_index - min_index + 1) + vertSize;
 
@@ -268,7 +266,7 @@ namespace rsx
 		// i realize these are a slight copy pasta of the rsx_method implementations but its kinda unavoidable currently
 		void capture_image_in(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
-			//const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
+			// const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
 			const u16 clip_w = std::min(method_registers.blit_engine_output_width(), method_registers.blit_engine_clip_width());
 			const u16 clip_h = std::min(method_registers.blit_engine_output_height(), method_registers.blit_engine_clip_height());
@@ -276,8 +274,8 @@ namespace rsx
 			const u16 in_w = method_registers.blit_engine_input_width();
 			const u16 in_h = method_registers.blit_engine_input_height();
 
-			//const blit_engine::transfer_origin in_origin                    = method_registers.blit_engine_input_origin();
-			//const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
+			// const blit_engine::transfer_origin in_origin                    = method_registers.blit_engine_input_origin();
+			// const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
 			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 in_x = std::floor(method_registers.blit_engine_in_x());
@@ -291,10 +289,10 @@ namespace rsx
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
-			const u32 src_dma    = method_registers.blit_engine_input_location();
+			const u32 src_dma = method_registers.blit_engine_input_location();
 
-			const u32 in_bpp              = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
-			const u32 in_offset           = u32(in_x * in_bpp + in_pitch * in_y);
+			const u32 in_bpp = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
+			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
 
 			frame_capture_data::memory_block block;
 			block.offset = src_offset + in_offset;
@@ -316,14 +314,14 @@ namespace rsx
 
 		void capture_buffer_notify(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
-			s32 in_pitch          = method_registers.nv0039_input_pitch();
+			s32 in_pitch = method_registers.nv0039_input_pitch();
 			const u32 line_length = method_registers.nv0039_line_length();
-			const u32 line_count  = method_registers.nv0039_line_count();
-			//const u8 in_format    = method_registers.nv0039_input_format();
+			const u32 line_count = method_registers.nv0039_line_count();
+			// const u8 in_format    = method_registers.nv0039_input_format();
 
 			u32 src_offset = method_registers.nv0039_input_offset();
-			u32 src_dma    = method_registers.nv0039_input_location();
-			u32 src_addr   = get_address(src_offset, src_dma);
+			u32 src_dma = method_registers.nv0039_input_location();
+			u32 src_addr = get_address(src_offset, src_dma);
 
 			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length, true);
 
@@ -355,11 +353,11 @@ namespace rsx
 			// should this only happen on flip?
 			for (u32 i = 0; i < rsx->display_buffers_count; ++i)
 			{
-				const auto& db            = rsx->display_buffers[i];
+				const auto& db = rsx->display_buffers[i];
 				dbstate.buffers[i].height = db.height;
-				dbstate.buffers[i].width  = db.width;
+				dbstate.buffers[i].width = db.width;
 				dbstate.buffers[i].offset = db.offset;
-				dbstate.buffers[i].pitch  = db.pitch;
+				dbstate.buffers[i].pitch = db.pitch;
 			}
 
 			const auto [db_it, db_inserted] = frame_capture.display_buffers_map.try_emplace(dbstate, 0);
@@ -403,7 +401,7 @@ namespace rsx
 			}
 
 			replay_command.display_buffer_state = dbnum;
-			replay_command.tile_state           = tsnum;
+			replay_command.tile_state = tsnum;
 		}
-	}
-}
+	} // namespace capture
+} // namespace rsx

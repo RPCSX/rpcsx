@@ -19,9 +19,8 @@
 
 namespace np
 {
-	constexpr usz MAX_SceNpMatchingAttr_list_SIZE = ((SCE_NP_MATCHING_ATTR_ID_MAX * 2) * sizeof(SceNpMatchingAttr))
-		+ (SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX * SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_BIG) +
-		+ ((SCE_NP_MATCHING_ATTR_ID_MAX - SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX) * SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_SMALL);
+	constexpr usz MAX_SceNpMatchingAttr_list_SIZE = ((SCE_NP_MATCHING_ATTR_ID_MAX * 2) * sizeof(SceNpMatchingAttr)) + (SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX * SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_BIG) +
+	                                                +((SCE_NP_MATCHING_ATTR_ID_MAX - SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX) * SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_SMALL);
 	constexpr usz MAX_MEMBERS_PER_ROOM = 64;
 	constexpr usz MAX_ROOMS_PER_GET_ROOM_LIST = 20;
 	constexpr usz MAX_SceNpMatchingRoomStatus_SIZE = sizeof(SceNpMatchingRoomStatus) + (MAX_MEMBERS_PER_ROOM * sizeof(SceNpMatchingRoomMember)) + sizeof(SceNpId);
@@ -124,15 +123,15 @@ namespace np
 		void init_NP(u32 poolsize, vm::ptr<void> poolptr);
 		void terminate_NP();
 
-		atomic_t<bool> is_netctl_init     = false;
-		atomic_t<bool> is_NP_init         = false;
-		atomic_t<bool> is_NP_Lookup_init  = false;
-		atomic_t<bool> is_NP_Score_init   = false;
-		atomic_t<bool> is_NP2_init        = false;
+		atomic_t<bool> is_netctl_init = false;
+		atomic_t<bool> is_NP_init = false;
+		atomic_t<bool> is_NP_Lookup_init = false;
+		atomic_t<bool> is_NP_Score_init = false;
+		atomic_t<bool> is_NP2_init = false;
 		atomic_t<bool> is_NP2_Match2_init = false;
-		atomic_t<bool> is_NP_Auth_init    = false;
-		atomic_t<bool> is_NP_TUS_init     = false; // TODO: savestate
-		atomic_t<bool> is_NP_Com2_init    = false; // TODO: savestate
+		atomic_t<bool> is_NP_Auth_init = false;
+		atomic_t<bool> is_NP_TUS_init = false;  // TODO: savestate
+		atomic_t<bool> is_NP_Com2_init = false; // TODO: savestate
 
 		// NP Handlers/Callbacks
 		// Seems to be global
@@ -217,7 +216,7 @@ namespace np
 		void tus_set_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser, bool async);
 		void tus_get_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async);
 		void tus_get_multiuser_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async);
-		void tus_get_friends_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray,s32 arrayNum, bool async);
+		void tus_get_friends_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool async);
 		void tus_add_and_get_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async);
 		void tus_try_and_set_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async);
 		void tus_delete_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async);
@@ -269,7 +268,7 @@ namespace np
 		// For custom menu
 		struct custom_menu_action
 		{
-			s32 id   = 0;
+			s32 id = 0;
 			u32 mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME;
 			std::string name;
 		};
@@ -378,10 +377,10 @@ namespace np
 				if (cb)
 				{
 					sysutil_register_cb([=, ctx_id = this->ctx_id, event_type = this->event_type, cb = this->cb, cb_arg = this->cb_arg](ppu_thread& cb_ppu) -> s32
-					{
-						cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
-						return 0;
-					});
+						{
+							cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
+							return 0;
+						});
 				}
 			}
 		};
@@ -410,7 +409,7 @@ namespace np
 			bool context_sensitive = false;
 		} basic_handler;
 
-		bool is_connected  = false;
+		bool is_connected = false;
 		bool is_psn_active = false;
 
 		ticket current_ticket;
@@ -447,7 +446,7 @@ namespace np
 		shared_mutex mutex_match2_req_results;
 		std::unordered_map<u32, event_data> match2_req_results;
 		atomic_t<u16> match2_low_reqid_cnt = 1;
-		atomic_t<u32> match2_event_cnt     = 1;
+		atomic_t<u32> match2_event_cnt = 1;
 		u32 get_req_id(u16 app_req)
 		{
 			return ((app_req << 16) | match2_low_reqid_cnt.fetch_add(1));

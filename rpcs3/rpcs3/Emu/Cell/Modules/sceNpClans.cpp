@@ -7,70 +7,70 @@
 
 LOG_CHANNEL(sceNpClans);
 
-template<>
+template <>
 void fmt_class_string<SceNpClansError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(SCE_NP_CLANS_ERROR_NOT_INITIALIZED);
-			STR_CASE(SCE_NP_CLANS_ERROR_NOT_SUPPORTED);
-			STR_CASE(SCE_NP_CLANS_ERROR_OUT_OF_MEMORY);
-			STR_CASE(SCE_NP_CLANS_ERROR_INVALID_ARGUMENT);
-			STR_CASE(SCE_NP_CLANS_ERROR_EXCEEDS_MAX);
-			STR_CASE(SCE_NP_CLANS_ERROR_BAD_RESPONSE);
-			STR_CASE(SCE_NP_CLANS_ERROR_BAD_DATA);
-			STR_CASE(SCE_NP_CLANS_ERROR_BAD_REQUEST);
-			STR_CASE(SCE_NP_CLANS_ERROR_INVALID_SIGNATURE);
-			STR_CASE(SCE_NP_CLANS_ERROR_INSUFFICIENT);
-			STR_CASE(SCE_NP_CLANS_ERROR_INTERNAL_BUFFER);
-			STR_CASE(SCE_NP_CLANS_ERROR_SERVER_MAINTENANCE);
-			STR_CASE(SCE_NP_CLANS_ERROR_SERVER_END_OF_SERVICE);
-			STR_CASE(SCE_NP_CLANS_ERROR_SERVER_BEFORE_START_OF_SERVICE);
-			STR_CASE(SCE_NP_CLANS_ERROR_ABORTED);
-			STR_CASE(SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BAD_REQUEST);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_TICKET);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_SIGNATURE);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_TICKET_EXPIRED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_NPID);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_FORBIDDEN);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INTERNAL_SERVER_ERROR);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BANNED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BLACKLISTED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_ENVIRONMENT);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN_SERVICE);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN_MEMBER);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BEFORE_HOURS);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLOSED_SERVICE);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_PERMISSION_DENIED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_LIMIT_REACHED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_LEADER_LIMIT_REACHED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_MEMBER_LIMIT_REACHED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_JOINED_LIMIT_REACHED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_MEMBER_STATUS_INVALID);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_DUPLICATED_CLAN_NAME);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_LEADER_CANNOT_LEAVE);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_ROLE_PRIORITY);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_ANNOUNCEMENT_LIMIT_REACHED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_CONFIG_MASTER_NOT_FOUND);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_DUPLICATED_CLAN_TAG);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_EXCEEDS_CREATE_CLAN_FREQUENCY);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_PASSPHRASE_INCORRECT);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CANNOT_RECORD_BLACKLIST_ENTRY);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN_ANNOUNCEMENT);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_VULGAR_WORDS_POSTED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BLACKLIST_LIMIT_REACHED);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_BLACKLIST_ENTRY);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_NP_MESSAGE_FORMAT);
-			STR_CASE(SCE_NP_CLANS_SERVER_ERROR_FAILED_TO_SEND_NP_MESSAGE);
-		}
+			switch (error)
+			{
+				STR_CASE(SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(SCE_NP_CLANS_ERROR_NOT_INITIALIZED);
+				STR_CASE(SCE_NP_CLANS_ERROR_NOT_SUPPORTED);
+				STR_CASE(SCE_NP_CLANS_ERROR_OUT_OF_MEMORY);
+				STR_CASE(SCE_NP_CLANS_ERROR_INVALID_ARGUMENT);
+				STR_CASE(SCE_NP_CLANS_ERROR_EXCEEDS_MAX);
+				STR_CASE(SCE_NP_CLANS_ERROR_BAD_RESPONSE);
+				STR_CASE(SCE_NP_CLANS_ERROR_BAD_DATA);
+				STR_CASE(SCE_NP_CLANS_ERROR_BAD_REQUEST);
+				STR_CASE(SCE_NP_CLANS_ERROR_INVALID_SIGNATURE);
+				STR_CASE(SCE_NP_CLANS_ERROR_INSUFFICIENT);
+				STR_CASE(SCE_NP_CLANS_ERROR_INTERNAL_BUFFER);
+				STR_CASE(SCE_NP_CLANS_ERROR_SERVER_MAINTENANCE);
+				STR_CASE(SCE_NP_CLANS_ERROR_SERVER_END_OF_SERVICE);
+				STR_CASE(SCE_NP_CLANS_ERROR_SERVER_BEFORE_START_OF_SERVICE);
+				STR_CASE(SCE_NP_CLANS_ERROR_ABORTED);
+				STR_CASE(SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BAD_REQUEST);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_TICKET);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_SIGNATURE);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_TICKET_EXPIRED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_NPID);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_FORBIDDEN);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INTERNAL_SERVER_ERROR);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BANNED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BLACKLISTED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_ENVIRONMENT);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN_SERVICE);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN_MEMBER);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BEFORE_HOURS);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLOSED_SERVICE);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_PERMISSION_DENIED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_LIMIT_REACHED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_LEADER_LIMIT_REACHED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_MEMBER_LIMIT_REACHED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_JOINED_LIMIT_REACHED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_MEMBER_STATUS_INVALID);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_DUPLICATED_CLAN_NAME);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_LEADER_CANNOT_LEAVE);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_ROLE_PRIORITY);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_ANNOUNCEMENT_LIMIT_REACHED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_CONFIG_MASTER_NOT_FOUND);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_DUPLICATED_CLAN_TAG);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_EXCEEDS_CREATE_CLAN_FREQUENCY);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CLAN_PASSPHRASE_INCORRECT);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_CANNOT_RECORD_BLACKLIST_ENTRY);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_CLAN_ANNOUNCEMENT);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_VULGAR_WORDS_POSTED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_BLACKLIST_LIMIT_REACHED);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_NO_SUCH_BLACKLIST_ENTRY);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_INVALID_NP_MESSAGE_FORMAT);
+				STR_CASE(SCE_NP_CLANS_SERVER_ERROR_FAILED_TO_SEND_NP_MESSAGE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code sceNpClansInit(vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
@@ -328,10 +328,10 @@ error_code sceNpClansUpdateClanInfo(vm::ptr<SceNpClansRequestHandle> handle, Sce
 		return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 	}
 
-	//if (info->something > X)
+	// if (info->something > X)
 	//{
 	//	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -393,10 +393,10 @@ error_code sceNpClansUpdateMemberInfo(vm::ptr<SceNpClansRequestHandle> handle, S
 		return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 	}
 
-	//if (info->something > X)
+	// if (info->something > X)
 	//{
 	//	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -765,7 +765,7 @@ error_code sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, SceN
 	return CELL_OK;
 }
 
-error_code sceNpClansRetrievePostedChallenges(vm::ptr<SceNpClansRequestHandle> handle, SceNpClanId clanId, SceNpClanId targetClan,  vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansMessageEntry> mList, vm::ptr<SceNpClansPagingResult> pageResult)
+error_code sceNpClansRetrievePostedChallenges(vm::ptr<SceNpClansRequestHandle> handle, SceNpClanId clanId, SceNpClanId targetClan, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansMessageEntry> mList, vm::ptr<SceNpClansPagingResult> pageResult)
 {
 	sceNpClans.todo("sceNpClansRetrievePostedChallenges(handle=*0x%x, clanId=%d, targetClan=%d, paging=*0x%x, mList=*0x%x, pageResult=*0x%x)", handle, clanId, targetClan, paging, mList, pageResult);
 
@@ -840,44 +840,44 @@ error_code sceNpClansRemoveChallenge(SceNpClansRequestHandle handle, SceNpClanId
 }
 
 DECLARE(ppu_module_manager::sceNpClans)("sceNpClans", []()
-{
-	REG_FUNC(sceNpClans, sceNpClansInit);
-	REG_FUNC(sceNpClans, sceNpClansTerm);
-	REG_FUNC(sceNpClans, sceNpClansCreateRequest);
-	REG_FUNC(sceNpClans, sceNpClansDestroyRequest);
-	REG_FUNC(sceNpClans, sceNpClansAbortRequest);
-	REG_FUNC(sceNpClans, sceNpClansCreateClan);
-	REG_FUNC(sceNpClans, sceNpClansDisbandClan);
-	REG_FUNC(sceNpClans, sceNpClansGetClanList);
-	REG_FUNC(sceNpClans, sceNpClansGetClanListByNpId);
-	REG_FUNC(sceNpClans, sceNpClansSearchByProfile);
-	REG_FUNC(sceNpClans, sceNpClansSearchByName);
-	REG_FUNC(sceNpClans, sceNpClansGetClanInfo);
-	REG_FUNC(sceNpClans, sceNpClansUpdateClanInfo);
-	REG_FUNC(sceNpClans, sceNpClansGetMemberList);
-	REG_FUNC(sceNpClans, sceNpClansGetMemberInfo);
-	REG_FUNC(sceNpClans, sceNpClansUpdateMemberInfo);
-	REG_FUNC(sceNpClans, sceNpClansChangeMemberRole);
-	REG_FUNC(sceNpClans, sceNpClansGetAutoAcceptStatus);
-	REG_FUNC(sceNpClans, sceNpClansUpdateAutoAcceptStatus);
-	REG_FUNC(sceNpClans, sceNpClansJoinClan);
-	REG_FUNC(sceNpClans, sceNpClansLeaveClan);
-	REG_FUNC(sceNpClans, sceNpClansKickMember);
-	REG_FUNC(sceNpClans, sceNpClansSendInvitation);
-	REG_FUNC(sceNpClans, sceNpClansCancelInvitation);
-	REG_FUNC(sceNpClans, sceNpClansSendInvitationResponse);
-	REG_FUNC(sceNpClans, sceNpClansSendMembershipRequest);
-	REG_FUNC(sceNpClans, sceNpClansCancelMembershipRequest);
-	REG_FUNC(sceNpClans, sceNpClansSendMembershipResponse);
-	REG_FUNC(sceNpClans, sceNpClansGetBlacklist);
-	REG_FUNC(sceNpClans, sceNpClansAddBlacklistEntry);
-	REG_FUNC(sceNpClans, sceNpClansRemoveBlacklistEntry);
-	REG_FUNC(sceNpClans, sceNpClansRetrieveAnnouncements);
-	REG_FUNC(sceNpClans, sceNpClansPostAnnouncement);
-	REG_FUNC(sceNpClans, sceNpClansRemoveAnnouncement);
-	REG_FUNC(sceNpClans, sceNpClansPostChallenge);
-	REG_FUNC(sceNpClans, sceNpClansRetrievePostedChallenges);
-	REG_FUNC(sceNpClans, sceNpClansRemovePostedChallenge);
-	REG_FUNC(sceNpClans, sceNpClansRetrieveChallenges);
-	REG_FUNC(sceNpClans, sceNpClansRemoveChallenge);
-});
+	{
+		REG_FUNC(sceNpClans, sceNpClansInit);
+		REG_FUNC(sceNpClans, sceNpClansTerm);
+		REG_FUNC(sceNpClans, sceNpClansCreateRequest);
+		REG_FUNC(sceNpClans, sceNpClansDestroyRequest);
+		REG_FUNC(sceNpClans, sceNpClansAbortRequest);
+		REG_FUNC(sceNpClans, sceNpClansCreateClan);
+		REG_FUNC(sceNpClans, sceNpClansDisbandClan);
+		REG_FUNC(sceNpClans, sceNpClansGetClanList);
+		REG_FUNC(sceNpClans, sceNpClansGetClanListByNpId);
+		REG_FUNC(sceNpClans, sceNpClansSearchByProfile);
+		REG_FUNC(sceNpClans, sceNpClansSearchByName);
+		REG_FUNC(sceNpClans, sceNpClansGetClanInfo);
+		REG_FUNC(sceNpClans, sceNpClansUpdateClanInfo);
+		REG_FUNC(sceNpClans, sceNpClansGetMemberList);
+		REG_FUNC(sceNpClans, sceNpClansGetMemberInfo);
+		REG_FUNC(sceNpClans, sceNpClansUpdateMemberInfo);
+		REG_FUNC(sceNpClans, sceNpClansChangeMemberRole);
+		REG_FUNC(sceNpClans, sceNpClansGetAutoAcceptStatus);
+		REG_FUNC(sceNpClans, sceNpClansUpdateAutoAcceptStatus);
+		REG_FUNC(sceNpClans, sceNpClansJoinClan);
+		REG_FUNC(sceNpClans, sceNpClansLeaveClan);
+		REG_FUNC(sceNpClans, sceNpClansKickMember);
+		REG_FUNC(sceNpClans, sceNpClansSendInvitation);
+		REG_FUNC(sceNpClans, sceNpClansCancelInvitation);
+		REG_FUNC(sceNpClans, sceNpClansSendInvitationResponse);
+		REG_FUNC(sceNpClans, sceNpClansSendMembershipRequest);
+		REG_FUNC(sceNpClans, sceNpClansCancelMembershipRequest);
+		REG_FUNC(sceNpClans, sceNpClansSendMembershipResponse);
+		REG_FUNC(sceNpClans, sceNpClansGetBlacklist);
+		REG_FUNC(sceNpClans, sceNpClansAddBlacklistEntry);
+		REG_FUNC(sceNpClans, sceNpClansRemoveBlacklistEntry);
+		REG_FUNC(sceNpClans, sceNpClansRetrieveAnnouncements);
+		REG_FUNC(sceNpClans, sceNpClansPostAnnouncement);
+		REG_FUNC(sceNpClans, sceNpClansRemoveAnnouncement);
+		REG_FUNC(sceNpClans, sceNpClansPostChallenge);
+		REG_FUNC(sceNpClans, sceNpClansRetrievePostedChallenges);
+		REG_FUNC(sceNpClans, sceNpClansRemovePostedChallenge);
+		REG_FUNC(sceNpClans, sceNpClansRetrieveChallenges);
+		REG_FUNC(sceNpClans, sceNpClansRemoveChallenge);
+	});

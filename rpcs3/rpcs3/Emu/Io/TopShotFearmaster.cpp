@@ -12,40 +12,40 @@ LOG_CHANNEL(topshotfearmaster_log);
 #define TSF_CALIB_LOG false
 // 0 < Calib_Top < Calib_Bottom < 0x2ff
 // 0 < Calib_Right < Calib_Left < 0x3ff
-constexpr u16 TSF_CALIB_TOP    = 20;
+constexpr u16 TSF_CALIB_TOP = 20;
 constexpr u16 TSF_CALIB_BOTTOM = 840;
-constexpr u16 TSF_CALIB_LEFT   = 900;
-constexpr u16 TSF_CALIB_RIGHT  = 120;
-constexpr u16 TSF_CALIB_DIST   = 95;
+constexpr u16 TSF_CALIB_LEFT = 900;
+constexpr u16 TSF_CALIB_RIGHT = 120;
+constexpr u16 TSF_CALIB_DIST = 95;
 
 template <>
 void fmt_class_string<topshotfearmaster_btn>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](topshotfearmaster_btn value)
-	{
-		switch (value)
 		{
-		case topshotfearmaster_btn::trigger: return "Trigger";
-		case topshotfearmaster_btn::heartrate: return "Heartrate";
-		case topshotfearmaster_btn::square: return "Square";
-		case topshotfearmaster_btn::cross: return "Cross";
-		case topshotfearmaster_btn::circle: return "Circle";
-		case topshotfearmaster_btn::triangle: return "Triangle";
-		case topshotfearmaster_btn::select: return "Select";
-		case topshotfearmaster_btn::start: return "Start";
-		case topshotfearmaster_btn::l3: return "L3";
-		case topshotfearmaster_btn::ps: return "PS";
-		case topshotfearmaster_btn::dpad_up: return "D-Pad Up";
-		case topshotfearmaster_btn::dpad_down: return "D-Pad Down";
-		case topshotfearmaster_btn::dpad_left: return "D-Pad Left";
-		case topshotfearmaster_btn::dpad_right: return "D-Pad Right";
-		case topshotfearmaster_btn::ls_x: return "Left Stick X-Axis";
-		case topshotfearmaster_btn::ls_y: return "Left Stick Y-Axis";
-		case topshotfearmaster_btn::count: return "Count";
-		}
+			switch (value)
+			{
+			case topshotfearmaster_btn::trigger: return "Trigger";
+			case topshotfearmaster_btn::heartrate: return "Heartrate";
+			case topshotfearmaster_btn::square: return "Square";
+			case topshotfearmaster_btn::cross: return "Cross";
+			case topshotfearmaster_btn::circle: return "Circle";
+			case topshotfearmaster_btn::triangle: return "Triangle";
+			case topshotfearmaster_btn::select: return "Select";
+			case topshotfearmaster_btn::start: return "Start";
+			case topshotfearmaster_btn::l3: return "L3";
+			case topshotfearmaster_btn::ps: return "PS";
+			case topshotfearmaster_btn::dpad_up: return "D-Pad Up";
+			case topshotfearmaster_btn::dpad_down: return "D-Pad Down";
+			case topshotfearmaster_btn::dpad_left: return "D-Pad Left";
+			case topshotfearmaster_btn::dpad_right: return "D-Pad Right";
+			case topshotfearmaster_btn::ls_x: return "Left Stick X-Axis";
+			case topshotfearmaster_btn::ls_y: return "Left Stick Y-Axis";
+			case topshotfearmaster_btn::count: return "Count";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 #pragma pack(push, 1)
@@ -56,14 +56,14 @@ struct TopShotFearmaster_data
 	uint8_t btn_circle : 1;
 	uint8_t btn_triangle : 1;
 	uint8_t : 1;
-	uint8_t btn_trigger: 1;
+	uint8_t btn_trigger : 1;
 	uint8_t : 2;
 
 	uint8_t btn_select : 1;
 	uint8_t btn_start : 1;
 	uint8_t btn_l3 : 1;
 	uint8_t btn_heartrate : 1;
-	uint8_t btn_ps: 1;
+	uint8_t btn_ps : 1;
 	uint8_t : 3;
 
 	uint8_t dpad;
@@ -116,60 +116,58 @@ enum
 };
 
 usb_device_topshotfearmaster::usb_device_topshotfearmaster(u32 controller_index, const std::array<u8, 7>& location)
-	: usb_device_emulated(location)
-	, m_controller_index(controller_index)
-	, m_mode(0)
+	: usb_device_emulated(location), m_controller_index(controller_index), m_mode(0)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
-		UsbDeviceDescriptor {
-			.bcdUSB             = 0x0100,
-			.bDeviceClass       = 0x00,
-			.bDeviceSubClass    = 0x00,
-			.bDeviceProtocol    = 0x00,
-			.bMaxPacketSize0    = 0x20,
-			.idVendor           = 0x12ba,
-			.idProduct          = 0x04a1,
-			.bcdDevice          = 0x0108,
-			.iManufacturer      = 0x01,
-			.iProduct           = 0x02,
-			.iSerialNumber      = 0x03,
+		UsbDeviceDescriptor{
+			.bcdUSB = 0x0100,
+			.bDeviceClass = 0x00,
+			.bDeviceSubClass = 0x00,
+			.bDeviceProtocol = 0x00,
+			.bMaxPacketSize0 = 0x20,
+			.idVendor = 0x12ba,
+			.idProduct = 0x04a1,
+			.bcdDevice = 0x0108,
+			.iManufacturer = 0x01,
+			.iProduct = 0x02,
+			.iSerialNumber = 0x03,
 			.bNumConfigurations = 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG,
-		UsbDeviceConfiguration {
-			.wTotalLength        = 0x0029,
-			.bNumInterfaces      = 0x01,
+		UsbDeviceConfiguration{
+			.wTotalLength = 0x0029,
+			.bNumInterfaces = 0x01,
 			.bConfigurationValue = 0x01,
-			.iConfiguration      = 0x00,
-			.bmAttributes        = 0x80,
-			.bMaxPower           = 0x32}));
+			.iConfiguration = 0x00,
+			.bmAttributes = 0x80,
+			.bMaxPower = 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE,
-		UsbDeviceInterface {
-			.bInterfaceNumber   = 0x00,
-			.bAlternateSetting  = 0x00,
-			.bNumEndpoints      = 0x02,
-			.bInterfaceClass    = 0x03,
+		UsbDeviceInterface{
+			.bInterfaceNumber = 0x00,
+			.bAlternateSetting = 0x00,
+			.bNumEndpoints = 0x02,
+			.bInterfaceClass = 0x03,
 			.bInterfaceSubClass = 0x00,
 			.bInterfaceProtocol = 0x00,
-			.iInterface         = 0x00}));
+			.iInterface = 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID,
-		UsbDeviceHID {
-			.bcdHID            = 0x0110,
-			.bCountryCode      = 0x00,
-			.bNumDescriptors   = 0x01,
-			.bDescriptorType   = 0x22,
+		UsbDeviceHID{
+			.bcdHID = 0x0110,
+			.bCountryCode = 0x00,
+			.bNumDescriptors = 0x01,
+			.bDescriptorType = 0x22,
 			.wDescriptorLength = 0x0089}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x81,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0040,
-			.bInterval        = 0x0a}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0040,
+			.bInterval = 0x0a}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
-		UsbDeviceEndpoint {
+		UsbDeviceEndpoint{
 			.bEndpointAddress = 0x02,
-			.bmAttributes     = 0x03,
-			.wMaxPacketSize   = 0x0040,
-			.bInterval        = 0x0a}));
+			.bmAttributes = 0x03,
+			.wMaxPacketSize = 0x0040,
+			.bInterval = 0x0a}));
 
 	add_string("Dangerous Hunts for Playstation (R) 3");
 	add_string("Dangerous Hunts for Playstation (R) 3");
@@ -181,10 +179,10 @@ usb_device_topshotfearmaster::~usb_device_topshotfearmaster()
 
 void usb_device_topshotfearmaster::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake            = true;
-	transfer->expected_count  = buf_size;
+	transfer->fake = true;
+	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time   = get_timestamp() + 100;
+	transfer->expected_time = get_timestamp() + 100;
 
 	switch (bmRequestType)
 	{
@@ -416,9 +414,9 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 
 		set_sensor_pos(&ts, led_lx, led_ly, led_rx, led_ry, detect_l, detect_r);
 
-		#if TSF_CALIB_LOG
-			topshotfearmaster_log.error("L: %d x %d, R: %d x %d", led_lx + TSF_CALIB_DIST, led_ly, led_rx - TSF_CALIB_DIST, led_ry);
-		#endif
+#if TSF_CALIB_LOG
+		topshotfearmaster_log.error("L: %d x %d, R: %d x %d", led_lx + TSF_CALIB_DIST, led_ly, led_rx - TSF_CALIB_DIST, led_ry);
+#endif
 	}
 
 	prepare_data(&ts, buf);

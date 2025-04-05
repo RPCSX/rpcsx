@@ -10,7 +10,7 @@ template <typename T> struct ValueWrapper : InstructionWrapper<T> {
   using InstructionWrapper<T>::operator=;
 
   decltype(auto) getUserList() const { return this->impl->getUserList(); }
-  auto & getUseList() const { return this->impl->uses; }
+  auto &getUseList() const { return this->impl->uses; }
   void replaceAllUsesWith(Value other) const;
 
   bool isUnused() const { return this->impl->uses.empty(); }

@@ -15,8 +15,8 @@ QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 	const quint64 minutes = (elapsed_seconds % 3600) / 60;
 	const quint64 seconds = (elapsed_seconds % 3600) % 60;
 
-	QString str_days    = tr("%Ln day(s)", "", days);
-	QString str_hours   = tr("%Ln hour(s)", "", hours);
+	QString str_days = tr("%Ln day(s)", "", days);
+	QString str_hours = tr("%Ln hour(s)", "", hours);
 	QString str_minutes = tr("%Ln minute(s)", "", minutes);
 	QString str_seconds = tr("%Ln second(s)", "", seconds);
 
@@ -79,30 +79,30 @@ std::string Localized::GetStringFromU32(const u32& key, const std::map<u32, QStr
 
 Localized::resolution::resolution()
 	: mode({
-		{ psf::resolution_flag::_480,      tr("480") },
-		{ psf::resolution_flag::_576,      tr("576") },
-		{ psf::resolution_flag::_720,      tr("720") },
-		{ psf::resolution_flag::_1080,     tr("1080") },
-		{ psf::resolution_flag::_480_16_9, tr("480 16:9") },
-		{ psf::resolution_flag::_576_16_9, tr("576 16:9") },
-	})
+		  {psf::resolution_flag::_480, tr("480")},
+		  {psf::resolution_flag::_576, tr("576")},
+		  {psf::resolution_flag::_720, tr("720")},
+		  {psf::resolution_flag::_1080, tr("1080")},
+		  {psf::resolution_flag::_480_16_9, tr("480 16:9")},
+		  {psf::resolution_flag::_576_16_9, tr("576 16:9")},
+	  })
 {
 }
 
 Localized::sound::sound()
 	: format({
-		{ psf::sound_format_flag::lpcm_2,   tr("LPCM 2.0") },
-		{ psf::sound_format_flag::lpcm_5_1, tr("LPCM 5.1") },
-		{ psf::sound_format_flag::lpcm_7_1, tr("LPCM 7.1") },
-		{ psf::sound_format_flag::ac3,      tr("Dolby Digital 5.1") },
-		{ psf::sound_format_flag::dts,      tr("DTS 5.1") },
-	})
+		  {psf::sound_format_flag::lpcm_2, tr("LPCM 2.0")},
+		  {psf::sound_format_flag::lpcm_5_1, tr("LPCM 5.1")},
+		  {psf::sound_format_flag::lpcm_7_1, tr("LPCM 7.1")},
+		  {psf::sound_format_flag::ac3, tr("Dolby Digital 5.1")},
+		  {psf::sound_format_flag::dts, tr("DTS 5.1")},
+	  })
 {
 }
 
 Localized::title_t::title_t()
 	: titles({
-		{ "vsh/module/vsh.self", tr("The PS3 Interface (XMB, or VSH)") },
-	})
+		  {"vsh/module/vsh.self", tr("The PS3 Interface (XMB, or VSH)")},
+	  })
 {
 }

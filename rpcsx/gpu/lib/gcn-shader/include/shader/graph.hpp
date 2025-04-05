@@ -105,7 +105,7 @@ public:
     if (immDom) {
       return immDom->block;
     }
-    return{};
+    return {};
   }
 
   bool isImmediateDominator(BasicBlockPtrT block, BasicBlockPtrT immDomBlock) {

@@ -37,7 +37,7 @@ namespace rsx
 
 	u32 push_buffer_vertex_info::get_vertex_id() const
 	{
-		ensure(attr == 0);    // Only ask ATTR0 for vertex ID
+		ensure(attr == 0); // Only ask ATTR0 for vertex ID
 
 		// Which is the current vertex ID to be written to?
 		// NOTE: Fully writing to ATTR0 closes the current block
@@ -98,4 +98,4 @@ namespace rsx
 
 		vertex_count = required_vertex_count;
 	}
-}
+} // namespace rsx

@@ -8,54 +8,54 @@ LOG_CHANNEL(cellVideoExport);
 
 enum CellVideoExportUtilError : u32
 {
-	CELL_VIDEO_EXPORT_UTIL_ERROR_BUSY         = 0x8002ca01,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_INTERNAL     = 0x8002ca02,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM        = 0x8002ca03,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_BUSY = 0x8002ca01,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_INTERNAL = 0x8002ca02,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM = 0x8002ca03,
 	CELL_VIDEO_EXPORT_UTIL_ERROR_ACCESS_ERROR = 0x8002ca04,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_DB_INTERNAL  = 0x8002ca05,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_DB_REGIST    = 0x8002ca06,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_SET_META     = 0x8002ca07,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_FLUSH_META   = 0x8002ca08,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE         = 0x8002ca09,
-	CELL_VIDEO_EXPORT_UTIL_ERROR_INITIALIZE   = 0x8002ca0a,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_DB_INTERNAL = 0x8002ca05,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_DB_REGIST = 0x8002ca06,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_SET_META = 0x8002ca07,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_FLUSH_META = 0x8002ca08,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE = 0x8002ca09,
+	CELL_VIDEO_EXPORT_UTIL_ERROR_INITIALIZE = 0x8002ca0a,
 };
 
 enum
 {
-	CELL_VIDEO_EXPORT_UTIL_RET_OK     = 0,
+	CELL_VIDEO_EXPORT_UTIL_RET_OK = 0,
 	CELL_VIDEO_EXPORT_UTIL_RET_CANCEL = 1,
 };
 
 enum
 {
-	CELL_VIDEO_EXPORT_UTIL_VERSION_CURRENT        = 0,
-	CELL_VIDEO_EXPORT_UTIL_HDD_PATH_MAX           = 1055,
+	CELL_VIDEO_EXPORT_UTIL_VERSION_CURRENT = 0,
+	CELL_VIDEO_EXPORT_UTIL_HDD_PATH_MAX = 1055,
 	CELL_VIDEO_EXPORT_UTIL_VIDEO_TITLE_MAX_LENGTH = 64,
-	CELL_VIDEO_EXPORT_UTIL_GAME_TITLE_MAX_LENGTH  = 64,
-	CELL_VIDEO_EXPORT_UTIL_GAME_COMMENT_MAX_SIZE  = 1024,
+	CELL_VIDEO_EXPORT_UTIL_GAME_TITLE_MAX_LENGTH = 64,
+	CELL_VIDEO_EXPORT_UTIL_GAME_COMMENT_MAX_SIZE = 1024,
 };
 
-template<>
+template <>
 void fmt_class_string<CellVideoExportUtilError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_BUSY);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_INTERNAL);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_ACCESS_ERROR);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_DB_INTERNAL);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_DB_REGIST);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_SET_META);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_FLUSH_META);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE);
-			STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_INITIALIZE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_BUSY);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_INTERNAL);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_ACCESS_ERROR);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_DB_INTERNAL);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_DB_REGIST);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_SET_META);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_FLUSH_META);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE);
+				STR_CASE(CELL_VIDEO_EXPORT_UTIL_ERROR_INITIALIZE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct CellVideoExportSetParam
@@ -69,12 +69,10 @@ struct CellVideoExportSetParam
 
 using CellVideoExportUtilFinishCallback = void(s32 result, vm::ptr<void> userdata);
 
-
 struct video_export
 {
 	atomic_t<s32> progress = 0; // 0x0-0xFFFF for 0-100%
 };
-
 
 bool check_movie_path(const std::string& file_path)
 {
@@ -86,10 +84,10 @@ bool check_movie_path(const std::string& file_path)
 	for (char c : file_path)
 	{
 		if (!((c >= 'a' && c <= 'z') ||
-			  (c >= 'A' && c <= 'Z') ||
-			  (c >= '0' && c <= '9') ||
-			   c == '-' || c == '_' ||
-			   c == '/' || c == '.'))
+				(c >= 'A' && c <= 'Z') ||
+				(c >= '0' && c <= '9') ||
+				c == '-' || c == '_' ||
+				c == '/' || c == '.'))
 		{
 			return false;
 		}
@@ -138,7 +136,6 @@ std::string get_available_movie_path(const std::string& filename)
 	return dst_path;
 }
 
-
 error_code cellVideoExportInitialize2(u32 version, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
 	cellVideoExport.notice("cellVideoExportInitialize2(version=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, funcFinish, userdata);
@@ -154,10 +151,10 @@ error_code cellVideoExportInitialize2(u32 version, vm::ptr<CellVideoExportUtilFi
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -186,10 +183,10 @@ error_code cellVideoExportInitialize(u32 version, u32 container, vm::ptr<CellVid
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -204,14 +201,14 @@ error_code cellVideoExportProgress(vm::ptr<CellVideoExportUtilFinishCallback> fu
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
-		// Only the copy or move of the movie and metadata files is considered for the progress.
-		const auto& vexp = g_fxo->get<video_export>();
+		{
+			// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
+		    // Only the copy or move of the movie and metadata files is considered for the progress.
+			const auto& vexp = g_fxo->get<video_export>();
 
-		funcFinish(ppu, vexp.progress, userdata);
-		return CELL_OK;
-	});
+			funcFinish(ppu, vexp.progress, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -233,7 +230,7 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 
 	if (!check_movie_path(file_path))
 	{
-		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
+		return {CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path};
 	}
 
 	std::string filename;
@@ -245,37 +242,37 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 
 	if (filename.empty())
 	{
-		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "filename empty" };
+		return {CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "filename empty"};
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		auto& vexp = g_fxo->get<video_export>();
-		vexp.progress = 0; // 0%
-
-		const std::string src_path = vfs::get(file_path);
-		const std::string dst_path = get_available_movie_path(filename);
-
-		cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
-
-		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 		{
-			// TODO: find out which error is used
-			cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
-			funcFinish(ppu, CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE, userdata);
+			auto& vexp = g_fxo->get<video_export>();
+			vexp.progress = 0; // 0%
+
+			const std::string src_path = vfs::get(file_path);
+			const std::string dst_path = get_available_movie_path(filename);
+
+			cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
+
+			if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
+			{
+				// TODO: find out which error is used
+				cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
+				funcFinish(ppu, CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE, userdata);
+				return CELL_OK;
+			}
+
+			// TODO: write metadata file sometime in the far future
+		    // const std::string metadata_file = dst_path + ".vmd";
+
+			// TODO: track progress during file copy
+
+			vexp.progress = 0xFFFF; // 100%
+
+			funcFinish(ppu, CELL_OK, userdata);
 			return CELL_OK;
-		}
-
-		// TODO: write metadata file sometime in the far future
-		// const std::string metadata_file = dst_path + ".vmd";
-
-		// TODO: track progress during file copy
-
-		vexp.progress = 0xFFFF; // 100%
-
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		});
 
 	return CELL_OK;
 }
@@ -297,7 +294,7 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 
 	if (!check_movie_path(file_path))
 	{
-		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
+		return {CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path};
 	}
 
 	std::string filename;
@@ -309,48 +306,48 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 
 	if (filename.empty())
 	{
-		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "filename empty" };
+		return {CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "filename empty"};
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		auto& vexp = g_fxo->get<video_export>();
-		vexp.progress = 0; // 0%
-
-		const std::string src_path = vfs::get(file_path);
-		const std::string dst_path = get_available_movie_path(filename);
-
-		cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
-
-		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 		{
-			// TODO: find out which error is used
-			cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
-			funcFinish(ppu, CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE, userdata);
-			return CELL_OK;
-		}
+			auto& vexp = g_fxo->get<video_export>();
+			vexp.progress = 0; // 0%
 
-		if (!file_path.starts_with("/dev_bdvd"sv))
-		{
-			cellVideoExport.notice("Removing file '%s'", src_path);
+			const std::string src_path = vfs::get(file_path);
+			const std::string dst_path = get_available_movie_path(filename);
 
-			if (!fs::remove_file(src_path))
+			cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
+
+			if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 			{
-				// TODO: find out if an error is used here
-				cellVideoExport.error("Failed to remove file '%s' (%s)", src_path, fs::g_tls_error);
+				// TODO: find out which error is used
+				cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
+				funcFinish(ppu, CELL_VIDEO_EXPORT_UTIL_ERROR_MOVE, userdata);
+				return CELL_OK;
 			}
-		}
 
-		// TODO: write metadata file sometime in the far future
-		// const std::string metadata_file = dst_path + ".vmd";
+			if (!file_path.starts_with("/dev_bdvd"sv))
+			{
+				cellVideoExport.notice("Removing file '%s'", src_path);
 
-		// TODO: track progress during file copy
+				if (!fs::remove_file(src_path))
+				{
+					// TODO: find out if an error is used here
+					cellVideoExport.error("Failed to remove file '%s' (%s)", src_path, fs::g_tls_error);
+				}
+			}
 
-		vexp.progress = 0xFFFF; // 100%
+			// TODO: write metadata file sometime in the far future
+		    // const std::string metadata_file = dst_path + ".vmd";
 
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+			// TODO: track progress during file copy
+
+			vexp.progress = 0xFFFF; // 100%
+
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -365,21 +362,20 @@ error_code cellVideoExportFinalize(vm::ptr<CellVideoExportUtilFinishCallback> fu
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
 
-
 DECLARE(ppu_module_manager::cellVideoExport)("cellVideoExportUtility", []()
-{
-	REG_FUNC(cellVideoExportUtility, cellVideoExportProgress);
-	REG_FUNC(cellVideoExportUtility, cellVideoExportInitialize2);
-	REG_FUNC(cellVideoExportUtility, cellVideoExportInitialize);
-	REG_FUNC(cellVideoExportUtility, cellVideoExportFromFileWithCopy);
-	REG_FUNC(cellVideoExportUtility, cellVideoExportFromFile);
-	REG_FUNC(cellVideoExportUtility, cellVideoExportFinalize);
-});
+	{
+		REG_FUNC(cellVideoExportUtility, cellVideoExportProgress);
+		REG_FUNC(cellVideoExportUtility, cellVideoExportInitialize2);
+		REG_FUNC(cellVideoExportUtility, cellVideoExportInitialize);
+		REG_FUNC(cellVideoExportUtility, cellVideoExportFromFileWithCopy);
+		REG_FUNC(cellVideoExportUtility, cellVideoExportFromFile);
+		REG_FUNC(cellVideoExportUtility, cellVideoExportFinalize);
+	});

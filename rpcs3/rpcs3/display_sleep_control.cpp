@@ -25,7 +25,7 @@ bool display_sleep_control_supported()
 #if defined(_WIN32) || defined(__APPLE__)
 	return true;
 #elif defined(HAVE_QTDBUS)
-	for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
+	for (const char* service : {"org.freedesktop.ScreenSaver", "org.mate.ScreenSaver"})
 	{
 		QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
 		if (interface.isValid())
@@ -65,7 +65,7 @@ void enable_display_sleep(bool enabled)
 #elif defined(HAVE_QTDBUS)
 	if (enabled && s_dbus_cookie != 0)
 	{
-		for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
+		for (const char* service : {"org.freedesktop.ScreenSaver", "org.mate.ScreenSaver"})
 		{
 			QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
 			if (interface.isValid())
@@ -78,7 +78,7 @@ void enable_display_sleep(bool enabled)
 	}
 	else if (!enabled)
 	{
-		for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
+		for (const char* service : {"org.freedesktop.ScreenSaver", "org.mate.ScreenSaver"})
 		{
 			QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
 			if (interface.isValid())

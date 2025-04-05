@@ -28,4 +28,4 @@ namespace rsx
 		// GRAPH_context* graph;
 		rsx_state* register_state;
 	};
-}
+} // namespace rsx

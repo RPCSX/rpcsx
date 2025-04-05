@@ -15,49 +15,48 @@ template <>
 void fmt_class_string<QVideoFrameFormat::PixelFormat>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](QVideoFrameFormat::PixelFormat value)
-	{
-		switch (value)
 		{
-		case QVideoFrameFormat::Format_ARGB8888: return "ARGB8888";
-		case QVideoFrameFormat::Format_ARGB8888_Premultiplied: return "ARGB8888_Premultiplied";
-		case QVideoFrameFormat::Format_XRGB8888: return "XRGB8888";
-		case QVideoFrameFormat::Format_BGRA8888: return "BGRA8888";
-		case QVideoFrameFormat::Format_BGRA8888_Premultiplied: return "BGRA8888_Premultiplied";
-		case QVideoFrameFormat::Format_BGRX8888: return "BGRX8888";
-		case QVideoFrameFormat::Format_ABGR8888: return "ABGR8888";
-		case QVideoFrameFormat::Format_XBGR8888: return "XBGR8888";
-		case QVideoFrameFormat::Format_RGBA8888: return "RGBA8888";
-		case QVideoFrameFormat::Format_RGBX8888: return "RGBX8888";
-		case QVideoFrameFormat::Format_AYUV: return "AYUV";
-		case QVideoFrameFormat::Format_AYUV_Premultiplied: return "AYUV_Premultiplied";
-		case QVideoFrameFormat::Format_YUV420P: return "YUV420P";
-		case QVideoFrameFormat::Format_YUV422P: return "YUV422P";
-		case QVideoFrameFormat::Format_YV12: return "YV12";
-		case QVideoFrameFormat::Format_UYVY: return "UYVY";
-		case QVideoFrameFormat::Format_YUYV: return "YUYV";
-		case QVideoFrameFormat::Format_NV12: return "NV12";
-		case QVideoFrameFormat::Format_NV21: return "NV21";
-		case QVideoFrameFormat::Format_IMC1: return "IMC1";
-		case QVideoFrameFormat::Format_IMC2: return "IMC2";
-		case QVideoFrameFormat::Format_IMC3: return "IMC3";
-		case QVideoFrameFormat::Format_IMC4: return "IMC4";
-		case QVideoFrameFormat::Format_Y8: return "Y8";
-		case QVideoFrameFormat::Format_Y16: return "Y16";
-		case QVideoFrameFormat::Format_P010: return "P010";
-		case QVideoFrameFormat::Format_P016: return "P016";
-		case QVideoFrameFormat::Format_SamplerExternalOES: return "SamplerExternalOES";
-		case QVideoFrameFormat::Format_Jpeg: return "Jpeg";
-		case QVideoFrameFormat::Format_SamplerRect: return "SamplerRect";
-		default: return unknown;
-		}
-	});
+			switch (value)
+			{
+			case QVideoFrameFormat::Format_ARGB8888: return "ARGB8888";
+			case QVideoFrameFormat::Format_ARGB8888_Premultiplied: return "ARGB8888_Premultiplied";
+			case QVideoFrameFormat::Format_XRGB8888: return "XRGB8888";
+			case QVideoFrameFormat::Format_BGRA8888: return "BGRA8888";
+			case QVideoFrameFormat::Format_BGRA8888_Premultiplied: return "BGRA8888_Premultiplied";
+			case QVideoFrameFormat::Format_BGRX8888: return "BGRX8888";
+			case QVideoFrameFormat::Format_ABGR8888: return "ABGR8888";
+			case QVideoFrameFormat::Format_XBGR8888: return "XBGR8888";
+			case QVideoFrameFormat::Format_RGBA8888: return "RGBA8888";
+			case QVideoFrameFormat::Format_RGBX8888: return "RGBX8888";
+			case QVideoFrameFormat::Format_AYUV: return "AYUV";
+			case QVideoFrameFormat::Format_AYUV_Premultiplied: return "AYUV_Premultiplied";
+			case QVideoFrameFormat::Format_YUV420P: return "YUV420P";
+			case QVideoFrameFormat::Format_YUV422P: return "YUV422P";
+			case QVideoFrameFormat::Format_YV12: return "YV12";
+			case QVideoFrameFormat::Format_UYVY: return "UYVY";
+			case QVideoFrameFormat::Format_YUYV: return "YUYV";
+			case QVideoFrameFormat::Format_NV12: return "NV12";
+			case QVideoFrameFormat::Format_NV21: return "NV21";
+			case QVideoFrameFormat::Format_IMC1: return "IMC1";
+			case QVideoFrameFormat::Format_IMC2: return "IMC2";
+			case QVideoFrameFormat::Format_IMC3: return "IMC3";
+			case QVideoFrameFormat::Format_IMC4: return "IMC4";
+			case QVideoFrameFormat::Format_Y8: return "Y8";
+			case QVideoFrameFormat::Format_Y16: return "Y16";
+			case QVideoFrameFormat::Format_P010: return "P010";
+			case QVideoFrameFormat::Format_P016: return "P016";
+			case QVideoFrameFormat::Format_SamplerExternalOES: return "SamplerExternalOES";
+			case QVideoFrameFormat::Format_Jpeg: return "Jpeg";
+			case QVideoFrameFormat::Format_SamplerRect: return "SamplerRect";
+			default: return unknown;
+			}
+		});
 }
 
 Q_DECLARE_METATYPE(QCameraDevice);
 
 camera_settings_dialog::camera_settings_dialog(QWidget* parent)
-	: QDialog(parent)
-	, ui(new Ui::camera_settings_dialog)
+	: QDialog(parent), ui(new Ui::camera_settings_dialog)
 {
 	ui->setupUi(this);
 
@@ -65,7 +64,8 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 
 	for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
 	{
-		if (camera_info.isNull()) continue;
+		if (camera_info.isNull())
+			continue;
 		ui->combo_camera->addItem(camera_info.description(), QVariant::fromValue(camera_info));
 		camera_log.notice("Found camera: '%s'", camera_info.description());
 	}
@@ -73,17 +73,17 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 	connect(ui->combo_camera, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &camera_settings_dialog::handle_camera_change);
 	connect(ui->combo_settings, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &camera_settings_dialog::handle_settings_change);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
-	{
-		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
-			save_config();
-			accept();
-		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
-		{
-			save_config();
-		}
-	});
+			if (button == ui->buttonBox->button(QDialogButtonBox::Save))
+			{
+				save_config();
+				accept();
+			}
+			else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
+			{
+				save_config();
+			}
+		});
 
 	if (ui->combo_camera->count() == 0)
 	{
@@ -136,29 +136,40 @@ void camera_settings_dialog::handle_camera_change(int index)
 
 	QList<QCameraFormat> settings = camera_info.videoFormats();
 	std::sort(settings.begin(), settings.end(), [](const QCameraFormat& l, const QCameraFormat& r) -> bool
-	{
-		if (l.resolution().width() > r.resolution().width()) return true;
-		if (l.resolution().width() < r.resolution().width()) return false;
-		if (l.resolution().height() > r.resolution().height()) return true;
-		if (l.resolution().height() < r.resolution().height()) return false;
-		if (l.minFrameRate() > r.minFrameRate()) return true;
-		if (l.minFrameRate() < r.minFrameRate()) return false;
-		if (l.maxFrameRate() > r.maxFrameRate()) return true;
-		if (l.maxFrameRate() < r.maxFrameRate()) return false;
-		if (l.pixelFormat() > r.pixelFormat()) return true;
-		if (l.pixelFormat() < r.pixelFormat()) return false;
-		return false;
-	});
+		{
+			if (l.resolution().width() > r.resolution().width())
+				return true;
+			if (l.resolution().width() < r.resolution().width())
+				return false;
+			if (l.resolution().height() > r.resolution().height())
+				return true;
+			if (l.resolution().height() < r.resolution().height())
+				return false;
+			if (l.minFrameRate() > r.minFrameRate())
+				return true;
+			if (l.minFrameRate() < r.minFrameRate())
+				return false;
+			if (l.maxFrameRate() > r.maxFrameRate())
+				return true;
+			if (l.maxFrameRate() < r.maxFrameRate())
+				return false;
+			if (l.pixelFormat() > r.pixelFormat())
+				return true;
+			if (l.pixelFormat() < r.pixelFormat())
+				return false;
+			return false;
+		});
 
 	for (const QCameraFormat& setting : settings)
 	{
-		if (setting.isNull()) continue;
+		if (setting.isNull())
+			continue;
 		const QString description = tr("%0x%1, %2-%3 FPS, Format=%4")
-			.arg(setting.resolution().width())
-			.arg(setting.resolution().height())
-			.arg(setting.minFrameRate())
-			.arg(setting.maxFrameRate())
-			.arg(QString::fromStdString(fmt::format("%s", setting.pixelFormat())));
+		                                .arg(setting.resolution().width())
+		                                .arg(setting.resolution().height())
+		                                .arg(setting.minFrameRate())
+		                                .arg(setting.maxFrameRate())
+		                                .arg(QString::fromStdString(fmt::format("%s", setting.pixelFormat())));
 		ui->combo_settings->addItem(description, QVariant::fromValue(setting));
 	}
 	ui->combo_settings->blockSignals(false);
@@ -227,9 +238,14 @@ void camera_settings_dialog::handle_settings_change(int index)
 		return;
 	}
 
-	if (!gui::utils::check_camera_permission(this,
-		[this, index](){ handle_settings_change(index); },
-		[this](){ QMessageBox::warning(this, tr("Camera permissions denied!"), tr("RPCS3 has no permissions to access cameras on this device.")); }))
+	if (!gui::utils::check_camera_permission(this, [this, index]()
+			{
+				handle_settings_change(index);
+			},
+			[this]()
+			{
+				QMessageBox::warning(this, tr("Camera permissions denied!"), tr("RPCS3 has no permissions to access cameras on this device."));
+			}))
 	{
 		return;
 	}

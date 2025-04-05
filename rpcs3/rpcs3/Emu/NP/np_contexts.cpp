@@ -8,8 +8,7 @@
 LOG_CHANNEL(sceNp2);
 
 generic_async_transaction_context::generic_async_transaction_context(const SceNpCommunicationId& communicationId, const SceNpCommunicationPassphrase& passphrase, u64 timeout)
-	: communicationId(communicationId), passphrase(passphrase), timeout(timeout)
-	, idm_id(idm::last_id())
+	: communicationId(communicationId), passphrase(passphrase), timeout(timeout), idm_id(idm::last_id())
 {
 }
 

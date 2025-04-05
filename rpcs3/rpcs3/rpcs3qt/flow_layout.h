@@ -68,10 +68,22 @@ public:
 	~flow_layout();
 
 	void clear();
-	const QList<QLayoutItem*>& item_list() const { return m_item_list; }
-	const QList<position>& positions() const { return m_positions; }
-	int rows() const { return m_rows; }
-	int cols() const { return m_cols; }
+	const QList<QLayoutItem*>& item_list() const
+	{
+		return m_item_list;
+	}
+	const QList<position>& positions() const
+	{
+		return m_positions;
+	}
+	int rows() const
+	{
+		return m_rows;
+	}
+	int cols() const
+	{
+		return m_cols;
+	}
 
 	void addItem(QLayoutItem* item) override;
 	Qt::Orientations expandingDirections() const override;

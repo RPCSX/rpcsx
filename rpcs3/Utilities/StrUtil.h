@@ -96,8 +96,7 @@ namespace fmt
 		return src;
 	}
 
-	static inline
-	std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
+	static inline std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
 	{
 		for (usz pos = 0; pos < src.length(); ++pos)
 		{
@@ -138,7 +137,7 @@ namespace fmt
 
 		std::string result;
 
-		auto it  = source.begin();
+		auto it = source.begin();
 		auto end = source.end();
 		for (--end; it != end; ++it)
 		{
@@ -164,7 +163,7 @@ namespace fmt
 			if (first)
 			{
 				result = fmt::merge(v, separator);
-				first  = false;
+				first = false;
 			}
 			else
 			{
@@ -211,4 +210,4 @@ namespace fmt
 			return hash_type{}(str);
 		}
 	};
-}
+} // namespace fmt

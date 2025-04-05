@@ -22,5 +22,5 @@ namespace rsx
 			std::function<void()> m_on_accept;
 			std::function<void()> m_on_cancel;
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

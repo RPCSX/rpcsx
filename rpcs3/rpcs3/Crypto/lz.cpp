@@ -6,7 +6,7 @@
 #include <vector>
 #include "lz.h"
 
-void decode_range(unsigned int *range, unsigned int *code, unsigned char **src)
+void decode_range(unsigned int* range, unsigned int* code, unsigned char** src)
 {
 	if (!((*range) >> 24))
 	{
@@ -15,20 +15,22 @@ void decode_range(unsigned int *range, unsigned int *code, unsigned char **src)
 	}
 }
 
-int decode_bit(unsigned int *range, unsigned int *code, int *index, unsigned char **src, unsigned char *c)
+int decode_bit(unsigned int* range, unsigned int* code, int* index, unsigned char** src, unsigned char* c)
 {
 	decode_range(range, code, src);
 
 	unsigned int val = ((*range) >> 8) * (*c);
 
 	*c -= ((*c) >> 3);
-	if (index) (*index) <<= 1;
+	if (index)
+		(*index) <<= 1;
 
 	if (*code < val)
 	{
 		*range = val;
 		*c += 31;
-		if (index) (*index)++;
+		if (index)
+			(*index)++;
 		return 1;
 	}
 	else
@@ -39,7 +41,7 @@ int decode_bit(unsigned int *range, unsigned int *code, int *index, unsigned cha
 	}
 }
 
-int decode_number(unsigned char *ptr, int index, int *bit_flag, unsigned int *range, unsigned int *code, unsigned char **src)
+int decode_number(unsigned char* ptr, int index, int* bit_flag, unsigned int* range, unsigned int* code, unsigned char** src)
 {
 	int i = 1;
 
@@ -79,7 +81,7 @@ int decode_number(unsigned char *ptr, int index, int *bit_flag, unsigned int *ra
 	return i;
 }
 
-int decode_word(unsigned char *ptr, int index, int *bit_flag, unsigned int *range, unsigned int *code, unsigned char **src)
+int decode_word(unsigned char* ptr, int index, int* bit_flag, unsigned int* range, unsigned int* code, unsigned char** src)
 {
 	int i = 1;
 	index /= 8;
@@ -120,7 +122,7 @@ int decode_word(unsigned char *ptr, int index, int *bit_flag, unsigned int *rang
 	return i;
 }
 
-int decompress(unsigned char *out, unsigned char *in, unsigned int size)
+int decompress(unsigned char* out, unsigned char* in, unsigned int size)
 {
 	int result;
 
@@ -133,8 +135,8 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 	const unsigned char *buf_start, *buf_end;
 	unsigned char prev = 0;
 
-	unsigned char *start = out;
-	const unsigned char *end = (out + size);
+	unsigned char* start = out;
+	const unsigned char* end = (out + size);
 	unsigned char head = in[0];
 
 	unsigned int range = 0xFFFFFFFF;
@@ -160,11 +162,13 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 		{
 			// Start reading at 0xB68.
 			tmp_sect1 = tmp + offset + 0xB68;
-			if (!decode_bit(&range, &code, 0, &in, tmp_sect1))  // Raw char.
+			if (!decode_bit(&range, &code, 0, &in, tmp_sect1)) // Raw char.
 			{
 				// Adjust offset and check for stream end.
-				if (offset > 0) offset--;
-				if (start == end) return static_cast<int>(start - out);
+				if (offset > 0)
+					offset--;
+				if (start == end)
+					return static_cast<int>(start - out);
 
 				// Locate first section.
 				int sect = ((((((static_cast<int>(start - out)) & 7) << 8) + prev) >> head) & 7) * 0xFF - 1;
@@ -180,7 +184,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				// Save index.
 				*start++ = index;
 			}
-			else  // Compressed char stream.
+			else // Compressed char stream.
 			{
 				int index = -1;
 
@@ -205,7 +209,8 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 
 					// Decode the data length (8 bit fields).
 					data_length = decode_number(tmp_sect1, index, &bit_flag, &range, &code, &in);
-					if (data_length == 0xFF) return static_cast<int>(start - out);  // End of stream.
+					if (data_length == 0xFF)
+						return static_cast<int>(start - out); // End of stream.
 				}
 				else
 				{
@@ -217,7 +222,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				if ((data_length <= 2))
 				{
 					tmp_sect2 += 0xF8;
-					b_size = 0x40;  // Block size is now 0x40.
+					b_size = 0x40; // Block size is now 0x40.
 				}
 
 				int diff = 0;
@@ -234,7 +239,8 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				if ((diff > 0) || (bit_flag != 0))
 				{
 					// Adjust diff if needed.
-					if (bit_flag == 0) diff -= 8;
+					if (bit_flag == 0)
+						diff -= 8;
 
 					// Locate section.
 					tmp_sect3 = tmp + 0x928 + diff;
@@ -272,7 +278,6 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 				{
 					*start++ = *buf_start++;
 				} while (start < buf_end);
-
 			}
 			prev = *(start - 1);
 		}

@@ -9,7 +9,7 @@ namespace gl
 {
 	version_info::version_info(const char* version_string, int major_scale)
 	{
-		auto tokens = fmt::split(version_string, { "." });
+		auto tokens = fmt::split(version_string, {"."});
 		if (tokens.size() < 2)
 		{
 			rsx_log.warning("Invalid version string: '%s'", version_string);
@@ -43,13 +43,15 @@ namespace gl
 			all_extensions.emplace(reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i)));
 		}
 
-#define CHECK_EXTENSION_SUPPORT(extension_short_name)\
-	do {\
-		if (all_extensions.contains("GL_"#extension_short_name)) {\
-			extension_short_name##_supported = true;\
-			rsx_log.success("[CAPS] Using GL_"#extension_short_name);\
-			continue;\
-		} \
+#define CHECK_EXTENSION_SUPPORT(extension_short_name)                  \
+	do                                                                 \
+	{                                                                  \
+		if (all_extensions.contains("GL_" #extension_short_name))      \
+		{                                                              \
+			extension_short_name##_supported = true;                   \
+			rsx_log.success("[CAPS] Using GL_" #extension_short_name); \
+			continue;                                                  \
+		}                                                              \
 	} while (0)
 
 		CHECK_EXTENSION_SUPPORT(ARB_shader_draw_parameters);
@@ -162,4 +164,4 @@ namespace gl
 
 		initialized = true;
 	}
-}
+} // namespace gl

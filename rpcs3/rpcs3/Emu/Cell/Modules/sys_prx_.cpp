@@ -100,7 +100,7 @@ error_code sys_prx_start_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void>
 
 	vm::var<sys_prx_start_stop_module_option_t> opt;
 	opt->size = opt.size();
-	opt->cmd  = 1;
+	opt->cmd = 1;
 	opt->entry2.set(-1);
 
 	const error_code res = _sys_prx_start_module(ppu, id, flags, opt);
@@ -133,7 +133,7 @@ error_code sys_prx_stop_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void> 
 
 	vm::var<sys_prx_start_stop_module_option_t> opt;
 	opt->size = opt.size();
-	opt->cmd  = 1;
+	opt->cmd = 1;
 	opt->entry2.set(-1);
 
 	const error_code res = _sys_prx_stop_module(ppu, id, flags, opt);
@@ -191,16 +191,16 @@ error_code sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_g
 
 	// Initialize params
 	vm::var<sys_prx_get_module_list_option_t> opt;
-	opt->size   = opt.size();
-	opt->max    = info->max;
-	opt->count  = 0;
+	opt->size = opt.size();
+	opt->max = info->max;
+	opt->count = 0;
 	opt->idlist = info->idlist;
-	opt->unk    = 0;
+	opt->unk = 0;
 
 	// Call the syscall
 	const s32 res = _sys_prx_get_module_list(ppu, 2, opt);
 
-	info->max   = opt->max;
+	info->max = opt->max;
 	info->count = opt->count;
 
 	return not_an_error(res);

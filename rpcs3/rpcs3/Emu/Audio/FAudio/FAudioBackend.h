@@ -17,7 +17,10 @@ public:
 	FAudioBackend(const FAudioBackend&) = delete;
 	FAudioBackend& operator=(const FAudioBackend&) = delete;
 
-	std::string_view GetName() const override { return "FAudio"sv; }
+	std::string_view GetName() const override
+	{
+		return "FAudio"sv;
+	}
 
 	bool Initialized() override;
 	bool Operational() override;
@@ -43,10 +46,10 @@ private:
 	atomic_t<bool> m_reset_req = false;
 
 	// FAudio voice callbacks
-	static void OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj, u32 BytesRequired);
+	static void OnVoiceProcessingPassStart_func(FAudioVoiceCallback* cb_obj, u32 BytesRequired);
 
 	// FAudio engine callbacks
-	static void OnCriticalError_func(FAudioEngineCallback *cb_obj, u32 Error);
+	static void OnCriticalError_func(FAudioEngineCallback* cb_obj, u32 Error);
 
 	void CloseUnlocked();
 };

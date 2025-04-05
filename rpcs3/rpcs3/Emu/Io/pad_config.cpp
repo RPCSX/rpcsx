@@ -78,7 +78,7 @@ bool cfg_input::load(const std::string& title_id, const std::string& config_file
 
 	from_default();
 
-	if (fs::file cfg_file{ cfg_name, fs::read })
+	if (fs::file cfg_file{cfg_name, fs::read})
 	{
 		input_log.notice("Loading input configuration: '%s'", cfg_name);
 
@@ -130,7 +130,7 @@ cfg_input_configurations::cfg_input_configurations()
 
 bool cfg_input_configurations::load()
 {
-	if (fs::file cfg_file{ path, fs::read })
+	if (fs::file cfg_file{path, fs::read})
 	{
 		return from_string(cfg_file.to_string());
 	}

@@ -34,7 +34,7 @@ namespace rsx
 			animation_color_interpolate fade_animation;
 
 			std::unique_ptr<trophy_data> m_trophy_data;
-			atomic_t<bool> m_list_dirty { true };
+			atomic_t<bool> m_list_dirty{true};
 			bool m_show_hidden_trophies = false;
 			bool m_show_hidden_trophies_last = false;
 
@@ -48,5 +48,5 @@ namespace rsx
 
 			void show(const std::string& trop_name);
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx

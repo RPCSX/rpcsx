@@ -7,10 +7,7 @@
 LOG_CHANNEL(cfg_log, "CFG");
 
 pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::shared_ptr<PadHandlerBase> handler, cfg_player* cfg)
-	: QDialog(parent)
-	, ui(new Ui::pad_motion_settings_dialog)
-	, m_handler(handler)
-	, m_cfg(cfg)
+	: QDialog(parent), ui(new Ui::pad_motion_settings_dialog), m_handler(handler), m_cfg(cfg)
 {
 	ui->setupUi(this);
 	setModal(true);
@@ -20,12 +17,12 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 
 	cfg_pad& pad = m_cfg->config;
 
-	m_preview_sliders = {{ ui->slider_x, ui->slider_y, ui->slider_z, ui->slider_g }};
-	m_preview_labels = {{ ui->label_x, ui->label_y, ui->label_z, ui->label_g }};
-	m_axis_names = {{ ui->combo_x, ui->combo_y, ui->combo_z, ui->combo_g }};
-	m_mirrors = {{ ui->mirror_x, ui->mirror_y, ui->mirror_z, ui->mirror_g }};
-	m_shifts = {{ ui->shift_x, ui->shift_y, ui->shift_z, ui->shift_g }};
-	m_config_entries = {{ &pad.motion_sensor_x, &pad.motion_sensor_y, &pad.motion_sensor_z, &pad.motion_sensor_g }};
+	m_preview_sliders = {{ui->slider_x, ui->slider_y, ui->slider_z, ui->slider_g}};
+	m_preview_labels = {{ui->label_x, ui->label_y, ui->label_z, ui->label_g}};
+	m_axis_names = {{ui->combo_x, ui->combo_y, ui->combo_z, ui->combo_g}};
+	m_mirrors = {{ui->mirror_x, ui->mirror_y, ui->mirror_z, ui->mirror_g}};
+	m_shifts = {{ui->shift_x, ui->shift_y, ui->shift_z, ui->shift_g}};
+	m_config_entries = {{&pad.motion_sensor_x, &pad.motion_sensor_y, &pad.motion_sensor_z, &pad.motion_sensor_g}};
 
 	for (usz i = 0; i < m_preview_sliders.size(); i++)
 	{
@@ -52,7 +49,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 			if (device.is_buddy_only)
 			{
 				const QString device_name = QString::fromStdString(device.name);
-				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, device_name, true });
+				const QVariant user_data = QVariant::fromValue(pad_device_info{device.name, device_name, true});
 
 				ui->cb_choose_device->addItem(device_name, user_data);
 			}
@@ -100,25 +97,25 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 			m_shifts[i]->setValue(config->shift.get());
 
 			connect(m_mirrors[i], &QCheckBox::checkStateChanged, this, [this, i](Qt::CheckState state)
-			{
-				std::lock_guard lock(m_config_mutex);
-				m_config_entries[i]->mirrored.set(state != Qt::Unchecked);
-			});
+				{
+					std::lock_guard lock(m_config_mutex);
+					m_config_entries[i]->mirrored.set(state != Qt::Unchecked);
+				});
 
 			connect(m_shifts[i], QOverload<int>::of(&QSpinBox::valueChanged), this, [this, i](int value)
-			{
-				std::lock_guard lock(m_config_mutex);
-				m_config_entries[i]->shift.set(value);
-			});
+				{
+					std::lock_guard lock(m_config_mutex);
+					m_config_entries[i]->shift.set(value);
+				});
 
 			connect(m_axis_names[i], QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, i](int index)
-			{
-				std::lock_guard lock(m_config_mutex);
-				if (!m_config_entries[i]->axis.from_string(m_axis_names[i]->itemText(index).toStdString()))
 				{
-					cfg_log.error("Failed to convert motion axis string: %s", m_axis_names[i]->itemData(index).toString());
-				}
-			});
+					std::lock_guard lock(m_config_mutex);
+					if (!m_config_entries[i]->axis.from_string(m_axis_names[i]->itemText(index).toStdString()))
+					{
+						cfg_log.error("Failed to convert motion axis string: %s", m_axis_names[i]->itemData(index).toString());
+					}
+				});
 		}
 	}
 	else
@@ -136,96 +133,95 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 
 	// Use timer to display button input
 	connect(&m_timer_input, &QTimer::timeout, this, [this]()
-	{
-		motion_callback_data data;
 		{
-			std::lock_guard lock(m_input_mutex);
-			data = m_motion_callback_data;
-			m_motion_callback_data.has_new_data = false;
-		}
-
-		if (data.has_new_data)
-		{
-			// Starting with 1 because the first entry is the Disabled entry.
-			for (int i = 1; i < ui->cb_choose_device->count(); i++)
+			motion_callback_data data;
 			{
-				const QVariant user_data = ui->cb_choose_device->itemData(i);
-				ensure(user_data.canConvert<pad_device_info>());
+				std::lock_guard lock(m_input_mutex);
+				data = m_motion_callback_data;
+				m_motion_callback_data.has_new_data = false;
+			}
 
-				if (const pad_device_info info = user_data.value<pad_device_info>(); info.name == data.pad_name)
+			if (data.has_new_data)
+			{
+				// Starting with 1 because the first entry is the Disabled entry.
+				for (int i = 1; i < ui->cb_choose_device->count(); i++)
 				{
-					switch_buddy_pad_info(i, info, data.success);
-					break;
+					const QVariant user_data = ui->cb_choose_device->itemData(i);
+					ensure(user_data.canConvert<pad_device_info>());
+
+					if (const pad_device_info info = user_data.value<pad_device_info>(); info.name == data.pad_name)
+					{
+						switch_buddy_pad_info(i, info, data.success);
+						break;
+					}
+				}
+
+				for (usz i = 0; i < data.preview_values.size(); i++)
+				{
+					m_preview_sliders[i]->setValue(data.preview_values[i]);
+					m_preview_labels[i]->setText(QString::number(data.preview_values[i]));
 				}
 			}
-
-			for (usz i = 0; i < data.preview_values.size(); i++)
-			{
-				m_preview_sliders[i]->setValue(data.preview_values[i]);
-				m_preview_labels[i]->setText(QString::number(data.preview_values[i]));
-			}
-		}
-	});
+		});
 	m_timer_input.start(10);
 
 	// Use thread to get button input
 	m_input_thread = std::make_unique<named_thread<std::function<void()>>>("UI Pad Motion Thread", [this]()
-	{
-		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			thread_ctrl::wait_for(1000);
-
-			if (m_input_thread_state != input_thread_state::active)
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				if (m_input_thread_state == input_thread_state::pausing)
+				thread_ctrl::wait_for(1000);
+
+				if (m_input_thread_state != input_thread_state::active)
 				{
-					m_input_thread_state = input_thread_state::paused;
+					if (m_input_thread_state == input_thread_state::pausing)
+					{
+						m_input_thread_state = input_thread_state::paused;
+					}
+
+					continue;
 				}
 
-				continue;
-			}
-
-			std::array<AnalogSensor, 4> sensors{};
-			{
-				std::lock_guard lock(m_config_mutex);
-				for (usz i = 0; i < sensors.size(); i++)
+				std::array<AnalogSensor, 4> sensors{};
 				{
-					AnalogSensor& sensor = sensors[i];
-					const cfg_sensor* config = m_config_entries[i];
-					const std::string cfgname = config->axis.to_string();
-					for (const auto& [code, name] : m_motion_axis_list)
+					std::lock_guard lock(m_config_mutex);
+					for (usz i = 0; i < sensors.size(); i++)
 					{
-						if (cfgname == name)
+						AnalogSensor& sensor = sensors[i];
+						const cfg_sensor* config = m_config_entries[i];
+						const std::string cfgname = config->axis.to_string();
+						for (const auto& [code, name] : m_motion_axis_list)
 						{
-							sensor.m_keyCode = code;
-							sensor.m_mirrored = config->mirrored.get();
-							sensor.m_shift = config->shift.get();
-							break;
+							if (cfgname == name)
+							{
+								sensor.m_keyCode = code;
+								sensor.m_mirrored = config->mirrored.get();
+								sensor.m_shift = config->shift.get();
+								break;
+							}
 						}
 					}
 				}
-			}
 
-			m_handler->get_motion_sensors(m_device_name,
-				[this](std::string pad_name, motion_preview_values preview_values)
-				{
-					std::lock_guard lock(m_input_mutex);
-					m_motion_callback_data.pad_name = std::move(pad_name);
-					m_motion_callback_data.preview_values = std::move(preview_values);
-					m_motion_callback_data.has_new_data = true;
-					m_motion_callback_data.success = true;
-				},
-				[this](std::string pad_name, motion_preview_values preview_values)
-				{
-					std::lock_guard lock(m_input_mutex);
-					m_motion_callback_data.pad_name = std::move(pad_name);
-					m_motion_callback_data.preview_values = std::move(preview_values);
-					m_motion_callback_data.has_new_data = true;
-					m_motion_callback_data.success = false;
-				},
-				m_motion_callback_data.preview_values, sensors);
-		}
-	});
+				m_handler->get_motion_sensors(m_device_name, [this](std::string pad_name, motion_preview_values preview_values)
+					{
+						std::lock_guard lock(m_input_mutex);
+						m_motion_callback_data.pad_name = std::move(pad_name);
+						m_motion_callback_data.preview_values = std::move(preview_values);
+						m_motion_callback_data.has_new_data = true;
+						m_motion_callback_data.success = true;
+					},
+					[this](std::string pad_name, motion_preview_values preview_values)
+					{
+						std::lock_guard lock(m_input_mutex);
+						m_motion_callback_data.pad_name = std::move(pad_name);
+						m_motion_callback_data.preview_values = std::move(preview_values);
+						m_motion_callback_data.has_new_data = true;
+						m_motion_callback_data.success = false;
+					},
+					m_motion_callback_data.preview_values, sensors);
+			}
+		});
 	start_input_thread();
 }
 

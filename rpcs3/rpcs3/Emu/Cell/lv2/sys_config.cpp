@@ -8,19 +8,18 @@
 
 LOG_CHANNEL(sys_config);
 
-
 // Enums
-template<>
+template <>
 void fmt_class_string<sys_config_service_id>::format(std::string& out, u64 id)
 {
 	const s64 s_id = static_cast<s64>(id);
 
 	switch (s_id)
 	{
-	case SYS_CONFIG_SERVICE_PADMANAGER   : out += "SYS_CONFIG_SERVICE_PADMANAGER"; return;
-	case SYS_CONFIG_SERVICE_PADMANAGER2  : out += "SYS_CONFIG_SERVICE_PADMANAGER2"; return;
-	case SYS_CONFIG_SERVICE_USER_LIBPAD  : out += "SYS_CONFIG_SERVICE_USER_LIBPAD"; return;
-	case SYS_CONFIG_SERVICE_USER_LIBKB   : out += "SYS_CONFIG_SERVICE_USER_LIBKB"; return;
+	case SYS_CONFIG_SERVICE_PADMANAGER: out += "SYS_CONFIG_SERVICE_PADMANAGER"; return;
+	case SYS_CONFIG_SERVICE_PADMANAGER2: out += "SYS_CONFIG_SERVICE_PADMANAGER2"; return;
+	case SYS_CONFIG_SERVICE_USER_LIBPAD: out += "SYS_CONFIG_SERVICE_USER_LIBPAD"; return;
+	case SYS_CONFIG_SERVICE_USER_LIBKB: out += "SYS_CONFIG_SERVICE_USER_LIBKB"; return;
 	case SYS_CONFIG_SERVICE_USER_LIBMOUSE: out += "SYS_CONFIG_SERVICE_USER_LIBMOUSE"; return;
 	}
 
@@ -34,19 +33,19 @@ void fmt_class_string<sys_config_service_id>::format(std::string& out, u64 id)
 	}
 }
 
-template<>
+template <>
 void fmt_class_string<sys_config_service_listener_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
 		{
-			STR_CASE(SYS_CONFIG_SERVICE_LISTENER_ONCE);
-			STR_CASE(SYS_CONFIG_SERVICE_LISTENER_REPEATING);
-		}
+			switch (value)
+			{
+				STR_CASE(SYS_CONFIG_SERVICE_LISTENER_ONCE);
+				STR_CASE(SYS_CONFIG_SERVICE_LISTENER_REPEATING);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Utilities
@@ -67,7 +66,6 @@ void dump_buffer(std::string& out, const std::vector<u8>& buffer)
 		fmt::append(out, "EMPTY");
 	}
 }
-
 
 // LV2 Config
 void lv2_config::initialize()
@@ -95,7 +93,7 @@ void lv2_config::initialize()
 	};
 
 	// user_id for the padmanager seems to signify the controller port number, and the buffer contains some sort of HID descriptor
-	lv2_config_service::create(SYS_CONFIG_SERVICE_PADMANAGER , 0, 1, 0, hid_info, 0x1a)->notify();
+	lv2_config_service::create(SYS_CONFIG_SERVICE_PADMANAGER, 0, 1, 0, hid_info, 0x1a)->notify();
 	lv2_config_service::create(SYS_CONFIG_SERVICE_PADMANAGER2, 0, 1, 0, hid_info, 0x1a)->notify();
 }
 
@@ -196,18 +194,18 @@ void lv2_config_service_listener::notify_all()
 
 	// Grab all events
 	idm::select<lv2_config_service>([&](u32 /*id*/, lv2_config_service& service)
-	{
-		if (check_service(service))
 		{
-			services.push_back(service.get_shared_ptr());
-		}
-	});
+			if (check_service(service))
+			{
+				services.push_back(service.get_shared_ptr());
+			}
+		});
 
 	// Sort services by timestamp
 	sort(services.begin(), services.end(), [](const shared_ptr<lv2_config_service>& s1, const shared_ptr<lv2_config_service>& s2)
-	{
-		return s1->timestamp < s2->timestamp;
-	});
+		{
+			return s1->timestamp < s2->timestamp;
+		});
 
 	// Notify listener (now with services in sorted order)
 	for (auto& service : services)
@@ -215,7 +213,6 @@ void lv2_config_service_listener::notify_all()
 		this->notify(service);
 	}
 }
-
 
 // LV2 Config Service
 void lv2_config_service::unregister()
@@ -237,10 +234,10 @@ void lv2_config_service::notify() const
 	const shared_ptr<lv2_config_service> sptr = get_shared_ptr();
 
 	idm::select<lv2_config_service_listener>([&](u32 /*id*/, lv2_config_service_listener& listener)
-	{
-		if (listener.check_service(*sptr))
-			listeners.push_back(listener.get_shared_ptr());
-	});
+		{
+			if (listener.check_service(*sptr))
+				listeners.push_back(listener.get_shared_ptr());
+		});
 
 	for (auto& listener : listeners)
 	{
@@ -261,9 +258,8 @@ bool lv2_config_service_event::notify() const
 	return _handle->notify(SYS_CONFIG_EVENT_SOURCE_SERVICE, (static_cast<u64>(service->is_registered()) << 32) | id, service->get_size());
 }
 
-
 // LV2 Config Service Event
-void lv2_config_service_event::write(sys_config_service_event_t *dst) const
+void lv2_config_service_event::write(sys_config_service_event_t* dst) const
 {
 	const auto registered = service->is_registered();
 
@@ -282,9 +278,6 @@ void lv2_config_service_event::write(sys_config_service_event_t *dst) const
 		memcpy(dst->data, service->data.data(), size);
 	}
 }
-
-
-
 
 /*
  * Syscalls
@@ -331,8 +324,6 @@ error_code sys_config_close(u32 config_hdl)
 	return CELL_OK;
 }
 
-
-
 error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sys_config_service_event_t> dst, u64 size)
 {
 	sys_config.trace("sys_config_get_service_event(config_hdl=0x%x, event_id=0x%llx, dst=*0x%llx, size=0x%llx)", config_hdl, event_id, dst, size);
@@ -362,8 +353,6 @@ error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sy
 
 	return CELL_OK;
 }
-
-
 
 error_code sys_config_add_service_listener(u32 config_hdl, sys_config_service_id service_id, u64 min_verbosity, vm::ptr<void> in, u64 size, sys_config_service_listener_type type, vm::ptr<u32> out_listener_hdl)
 {
@@ -411,8 +400,6 @@ error_code sys_config_remove_service_listener(u32 config_hdl, u32 listener_hdl)
 	return CELL_OK;
 }
 
-
-
 error_code sys_config_register_service(u32 config_hdl, sys_config_service_id service_id, u64 user_id, u64 verbosity, vm::ptr<u8> data_buf, u64 size, vm::ptr<u32> out_service_hdl)
 {
 	sys_config.trace("sys_config_register_service(config_hdl=0x%x, service_id=0x%llx, user_id=0x%llx, verbosity=0x%llx, data_but=*0x%llx, size=%lld, out_service_hdl=*0x%llx)", config_hdl, service_id, user_id, verbosity, data_buf, size, out_service_hdl);
@@ -456,8 +443,6 @@ error_code sys_config_unregister_service(u32 config_hdl, u32 service_hdl)
 	// Done!
 	return CELL_OK;
 }
-
-
 
 /*
  * IO Events - TODO

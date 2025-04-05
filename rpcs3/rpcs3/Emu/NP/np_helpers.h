@@ -21,4 +21,4 @@ namespace np
 
 	bool is_valid_npid(const SceNpId& npid);
 	bool is_same_npid(const SceNpId& npid_1, const SceNpId& npid_2);
-}
+} // namespace np

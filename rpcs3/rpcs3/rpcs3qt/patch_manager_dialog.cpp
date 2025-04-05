@@ -58,11 +58,9 @@ enum node_level : int
 Q_DECLARE_METATYPE(patch_engine::patch_config_value);
 
 patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, const std::vector<game_info>& games, const std::string& title_id, const std::string& version, QWidget* parent)
-	: QDialog(parent)
-	, m_gui_settings(std::move(gui_settings))
-	, m_expand_current_match(!title_id.empty() && !version.empty()) // Expand first search results
-	, m_search_version(QString::fromStdString(version))
-	, ui(new Ui::patch_manager_dialog)
+	: QDialog(parent), m_gui_settings(std::move(gui_settings)), m_expand_current_match(!title_id.empty() && !version.empty()) // Expand first search results
+	  ,
+	  m_search_version(QString::fromStdString(version)), ui(new Ui::patch_manager_dialog)
 {
 	ui->setupUi(this);
 	setModal(true);
@@ -102,58 +100,58 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
 	connect(ui->cb_owned_games_only, &QCheckBox::checkStateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
 	connect(ui->configurable_selector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-	{
-		if (index >= 0)
 		{
-			QList<QTreeWidgetItem*> list = ui->patch_tree->selectedItems();
-			QTreeWidgetItem* item = list.size() == 1 ? list.first() : nullptr;
-			handle_item_selected(item, item);
-		}
-	});
+			if (index >= 0)
+			{
+				QList<QTreeWidgetItem*> list = ui->patch_tree->selectedItems();
+				QTreeWidgetItem* item = list.size() == 1 ? list.first() : nullptr;
+				handle_item_selected(item, item);
+			}
+		});
 	connect(ui->configurable_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-	{
-		if (index >= 0)
 		{
-			handle_config_value_changed(ui->configurable_combo_box->itemData(index).toDouble());
-		}
-	});
+			if (index >= 0)
+			{
+				handle_config_value_changed(ui->configurable_combo_box->itemData(index).toDouble());
+			}
+		});
 	connect(ui->configurable_spin_box, QOverload<int>::of(&QSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
 	connect(ui->configurable_double_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
-	{
-		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
-			save_config();
-			accept();
-		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
-		{
-			save_config();
-		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::RestoreDefaults))
-		{
-			download_update(false, true);
-		}
-	});
-	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
-	{
-		QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
-		ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(true);
-	});
-	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
-	{
-		const bool result_json = handle_json(data);
-
-		if (!result_json)
-		{
-			if (!m_download_automatic)
+			if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 			{
-				QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+				save_config();
+				accept();
 			}
-		}
-		ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(true);
-	});
+			else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
+			{
+				save_config();
+			}
+			else if (button == ui->buttonBox->button(QDialogButtonBox::RestoreDefaults))
+			{
+				download_update(false, true);
+			}
+		});
+	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
+		{
+			QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+			ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(true);
+		});
+	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
+		{
+			const bool result_json = handle_json(data);
+
+			if (!result_json)
+			{
+				if (!m_download_automatic)
+				{
+					QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+				}
+			}
+			ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(true);
+		});
 
 	download_update(true, false);
 }
@@ -195,7 +193,7 @@ void patch_manager_dialog::refresh(bool restore_layout)
 		{
 			const int width_left = ui->splitter->width() * 0.7;
 			const int width_right = ui->splitter->width() - width_left;
-			ui->splitter->setSizes({ width_left, width_right });
+			ui->splitter->setSizes({width_left, width_right});
 		}
 	}
 }
@@ -207,7 +205,7 @@ void patch_manager_dialog::load_patches(bool show_error)
 	// NOTE: Make sure these paths are loaded in the same order as they are applied on boot
 
 	const std::string patches_path = patch_engine::get_patches_path();
-	const QStringList filters      = QStringList() << "*_patch.yml";
+	const QStringList filters = QStringList() << "*_patch.yml";
 
 	QStringList path_list;
 	path_list << "patch.yml";
@@ -230,11 +228,12 @@ void patch_manager_dialog::load_patches(bool show_error)
 	{
 		// Open a warning dialog after the patch manager was opened
 		QTimer::singleShot(100, [this, patches_path]()
-		{
-			QMessageBox::warning(this, tr("Incompatible patches detected"),
-				tr("Some of your patches are not compatible with the current version of RPCS3's Patch Manager.\n\nMake sure that all the patches located in \"%0\" contain the proper formatting that is required for the Patch Manager Version %1.")
-				.arg(QString::fromStdString(patches_path)).arg(QString::fromStdString(patch_engine_version)));
-		});
+			{
+				QMessageBox::warning(this, tr("Incompatible patches detected"),
+					tr("Some of your patches are not compatible with the current version of RPCS3's Patch Manager.\n\nMake sure that all the patches located in \"%0\" contain the proper formatting that is required for the Patch Manager Version %1.")
+						.arg(QString::fromStdString(patches_path))
+						.arg(QString::fromStdString(patch_engine_version)));
+			});
 	}
 }
 
@@ -331,10 +330,9 @@ void patch_manager_dialog::populate_tree()
 						QString visible_description = q_description;
 
 						const std::vector<std::pair<int, QVariant>> match_criteria =
-						{
-							std::pair<int, QVariant>(description_role, q_description),
-							std::pair<int, QVariant>(persistance_role, true)
-						};
+							{
+								std::pair<int, QVariant>(description_role, q_description),
+								std::pair<int, QVariant>(persistance_role, true)};
 
 						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
 						std::vector<QTreeWidgetItem*> matches;
@@ -348,7 +346,8 @@ void patch_manager_dialog::populate_tree()
 							}
 							const usz counter = matches.size() + 1;
 							visible_description += QStringLiteral(" (");
-							if (counter < 10) visible_description += '0';
+							if (counter < 10)
+								visible_description += '0';
 							visible_description += QString::number(counter) + ')';
 						}
 
@@ -388,9 +387,8 @@ void patch_manager_dialog::populate_tree()
 	}
 
 	const std::vector<std::pair<int, QVariant>> match_criteria =
-	{
-		std::pair<int, QVariant>(persistance_role, true)
-	};
+		{
+			std::pair<int, QVariant>(persistance_role, true)};
 
 	for (int i = ui->patch_tree->topLevelItemCount() - 1; i >= 0; i--)
 	{
@@ -447,7 +445,8 @@ void patch_manager_dialog::filter_patches(const QString& term)
 	std::function<int(QTreeWidgetItem*, bool)> show_matches;
 	show_matches = [this, &show_matches, search_text = term.toLower()](QTreeWidgetItem* item, bool parent_visible) -> int
 	{
-		if (!item) return 0;
+		if (!item)
+			return 0;
 
 		const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
 
@@ -840,7 +839,7 @@ void patch_manager_dialog::handle_config_value_changed(double value)
 	}
 }
 
-void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &pos)
+void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint& pos)
 {
 	QTreeWidgetItem* item = ui->patch_tree->itemAt(pos);
 
@@ -870,9 +869,9 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 				QAction* open_filepath = new QAction(tr("Show Patch File"));
 				menu->addAction(open_filepath);
 				connect(open_filepath, &QAction::triggered, this, [info](bool)
-				{
-					gui::utils::open_dir(info.source_path);
-				});
+					{
+						gui::utils::open_dir(info.source_path);
+					});
 
 				menu->addSeparator();
 
@@ -881,28 +880,28 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 					QAction* remove_patch = new QAction(tr("Remove Patch"));
 					menu->addAction(remove_patch);
 					connect(remove_patch, &QAction::triggered, this, [info, this](bool)
-					{
-						const auto answer = QMessageBox::question(this, tr("Remove Patch?"),
-							tr("Do you really want to remove the selected patch?\nThis action is immediate and irreversible!"));
+						{
+							const auto answer = QMessageBox::question(this, tr("Remove Patch?"),
+								tr("Do you really want to remove the selected patch?\nThis action is immediate and irreversible!"));
 
-						if (answer != QMessageBox::StandardButton::Yes)
-						{
-							return;
-						}
+							if (answer != QMessageBox::StandardButton::Yes)
+							{
+								return;
+							}
 
-						if (patch_engine::remove_patch(info))
-						{
-							patch_log.success("Successfully removed patch %s: %s from %s", info.hash, info.description, info.source_path);
-							refresh(); // Refresh before showing the dialog
-							QMessageBox::information(this, tr("Success"), tr("The patch was successfully removed!"));
-						}
-						else
-						{
-							patch_log.error("Could not remove patch %s: %s from %s", info.hash, info.description, info.source_path);
-							refresh(); // Refresh before showing the dialog
-							QMessageBox::critical(this, tr("Failure"), tr("The patch could not be removed!"));
-						}
-					});
+							if (patch_engine::remove_patch(info))
+							{
+								patch_log.success("Successfully removed patch %s: %s from %s", info.hash, info.description, info.source_path);
+								refresh(); // Refresh before showing the dialog
+								QMessageBox::information(this, tr("Success"), tr("The patch was successfully removed!"));
+							}
+							else
+							{
+								patch_log.error("Could not remove patch %s: %s from %s", info.hash, info.description, info.source_path);
+								refresh(); // Refresh before showing the dialog
+								QMessageBox::critical(this, tr("Failure"), tr("The patch could not be removed!"));
+							}
+						});
 
 					menu->addSeparator();
 				}
@@ -917,9 +916,9 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 			QAction* collapse = new QAction(tr("Collapse"));
 			menu->addAction(collapse);
 			connect(collapse, &QAction::triggered, this, [&item](bool)
-			{
-				item->setExpanded(false);
-			});
+				{
+					item->setExpanded(false);
+				});
 
 			if (level < (node_level::patch_level - 1))
 			{
@@ -928,22 +927,22 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 				QAction* expand_children = new QAction(tr("Expand Children"));
 				menu->addAction(expand_children);
 				connect(expand_children, &QAction::triggered, this, [&item](bool)
-				{
-					for (int i = 0; i < item->childCount(); i++)
 					{
-						item->child(i)->setExpanded(true);
-					}
-				});
+						for (int i = 0; i < item->childCount(); i++)
+						{
+							item->child(i)->setExpanded(true);
+						}
+					});
 
 				QAction* collapse_children = new QAction(tr("Collapse Children"));
 				menu->addAction(collapse_children);
 				connect(collapse_children, &QAction::triggered, this, [&item](bool)
-				{
-					for (int i = 0; i < item->childCount(); i++)
 					{
-						item->child(i)->setExpanded(false);
-					}
-				});
+						for (int i = 0; i < item->childCount(); i++)
+						{
+							item->child(i)->setExpanded(false);
+						}
+					});
 			}
 		}
 		else
@@ -951,9 +950,9 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 			QAction* expand = new QAction(tr("Expand"));
 			menu->addAction(expand);
 			connect(expand, &QAction::triggered, this, [&item](bool)
-			{
-				item->setExpanded(true);
-			});
+				{
+					item->setExpanded(true);
+				});
 		}
 
 		menu->addSeparator();
@@ -1013,7 +1012,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 	box.setDefaultButton(button_yes);
 	box.exec();
 
-	const bool do_import   = box.clickedButton() == button_yes;
+	const bool do_import = box.clickedButton() == button_yes;
 	const bool do_validate = do_import || box.clickedButton() == button_no;
 
 	if (!do_validate)
@@ -1049,13 +1048,11 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 
 					if (count == 0)
 					{
-						QMessageBox::warning(this, tr("Nothing to import"), tr("None of the found %0 patches were imported.%1")
-							.arg(total).arg(msg));
+						QMessageBox::warning(this, tr("Nothing to import"), tr("None of the found %0 patches were imported.%1").arg(total).arg(msg));
 					}
 					else
 					{
-						QMessageBox::information(this, tr("Import successful"), tr("Imported %0/%1 patches to:\n%2%3")
-							.arg(count).arg(total).arg(QString::fromStdString(imported_patch_yml_path)).arg(msg));
+						QMessageBox::information(this, tr("Import successful"), tr("Imported %0/%1 patches to:\n%2%3").arg(count).arg(total).arg(QString::fromStdString(imported_patch_yml_path)).arg(msg));
 					}
 				}
 				else
@@ -1137,7 +1134,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 	m_download_auto_accept = auto_accept;
 
 	const std::string path = patch_engine::get_patches_path() + "patch.yml";
-	std::string url        = "https://rpcs3.net/compatibility?patch&api=v1&v=" + patch_engine_version;
+	std::string url = "https://rpcs3.net/compatibility?patch&api=v1&v=" + patch_engine_version;
 
 	if (fs::is_file(path))
 	{
@@ -1159,7 +1156,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 bool patch_manager_dialog::handle_json(const QByteArray& data)
 {
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
-	const int return_code       = json_data["return_code"].toInt(-255);
+	const int return_code = json_data["return_code"].toInt(-255);
 
 	if (return_code < 0)
 	{

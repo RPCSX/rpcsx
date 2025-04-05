@@ -18,13 +18,22 @@ public:
 	virtual ~qt_video_source();
 
 	void set_video_path(const std::string& video_path) override;
-	const QString& video_path() const { return m_video_path; }
+	const QString& video_path() const
+	{
+		return m_video_path;
+	}
 
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
-	bool has_new() const override { return m_has_new; }
+	bool has_new() const override
+	{
+		return m_has_new;
+	}
 
 	void set_active(bool active) override;
-	bool get_active() const override { return m_active; }
+	bool get_active() const override
+	{
+		return m_active;
+	}
 
 	void start_movie();
 	void stop_movie();
@@ -67,7 +76,10 @@ public:
 	void set_video_path(const std::string& video_path) override;
 	void set_active(bool active) override;
 	bool get_active() const override;
-	bool has_new() const override { return m_qt_video_source && m_qt_video_source->has_new(); }
+	bool has_new() const override
+	{
+		return m_qt_video_source && m_qt_video_source->has_new();
+	}
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 
 private:

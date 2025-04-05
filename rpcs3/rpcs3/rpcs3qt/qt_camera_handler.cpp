@@ -26,10 +26,10 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 qt_camera_handler::~qt_camera_handler()
 {
 	Emu.BlockingCallFromMainThread([&]()
-	{
-		close_camera();
-		reset();
-	});
+		{
+			close_camera();
+			reset();
+		});
 }
 
 void qt_camera_handler::reset()
@@ -152,8 +152,10 @@ void qt_camera_handler::open_camera()
 
 	if (!m_camera)
 	{
-		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
-		else camera_log.error("No camera found");
+		if (m_camera_id.empty())
+			camera_log.notice("Camera disabled");
+		else
+			camera_log.error("No camera found");
 		set_state(camera_handler_state::closed);
 		return;
 	}
@@ -182,8 +184,10 @@ void qt_camera_handler::close_camera()
 
 	if (!m_camera)
 	{
-		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
-		else camera_log.error("No camera found");
+		if (m_camera_id.empty())
+			camera_log.notice("Camera disabled");
+		else
+			camera_log.error("No camera found");
 		set_state(camera_handler_state::closed);
 		return;
 	}
@@ -199,8 +203,10 @@ void qt_camera_handler::start_camera()
 
 	if (!m_camera)
 	{
-		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
-		else camera_log.error("No camera found");
+		if (m_camera_id.empty())
+			camera_log.notice("Camera disabled");
+		else
+			camera_log.error("No camera found");
 		set_state(camera_handler_state::closed);
 		return;
 	}
@@ -211,7 +217,11 @@ void qt_camera_handler::start_camera()
 		return;
 	}
 
-	if (!gui::utils::check_camera_permission(this, [this](){ start_camera(); }, nullptr))
+	if (!gui::utils::check_camera_permission(this, [this]()
+			{
+				start_camera();
+			},
+			nullptr))
 	{
 		return;
 	}
@@ -227,8 +237,10 @@ void qt_camera_handler::stop_camera()
 
 	if (!m_camera)
 	{
-		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
-		else camera_log.error("No camera found");
+		if (m_camera_id.empty())
+			camera_log.notice("Camera disabled");
+		else
+			camera_log.error("No camera found");
 		set_state(camera_handler_state::closed);
 		return;
 	}

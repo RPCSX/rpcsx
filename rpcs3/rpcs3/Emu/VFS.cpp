@@ -9,7 +9,7 @@
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 #include <thread>
@@ -976,27 +976,27 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	};
 
 	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
-	{
-		if (file.mp != mp)
 		{
-			return;
-		}
-
-		std::string escaped = Emu.GetCallbacks().resolve_path(file.real_path);
-
-		if (check_path(escaped))
-		{
-			if (!file.file)
+			if (file.mp != mp)
 			{
 				return;
 			}
 
-			file.restore_data.seek_pos = file.file.pos();
+			std::string escaped = Emu.GetCallbacks().resolve_path(file.real_path);
 
-			file.file.close(); // Actually close it!
-			escaped_real.emplace_back(ensure(idm::get_unlocked<lv2_fs_object, lv2_file>(id)), std::move(escaped));
-		}
-	});
+			if (check_path(escaped))
+			{
+				if (!file.file)
+				{
+					return;
+				}
+
+				file.restore_data.seek_pos = file.file.pos();
+
+				file.file.close(); // Actually close it!
+				escaped_real.emplace_back(ensure(idm::get_unlocked<lv2_fs_object, lv2_file>(id)), std::move(escaped));
+			}
+		});
 
 	bool res = false;
 

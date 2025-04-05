@@ -113,7 +113,7 @@ namespace vk
 
 		if (shadow)
 		{
-			dirty_ranges.push_back({ offset, offset, size });
+			dirty_ranges.push_back({offset, offset, size});
 			raise_status_interrupt(runtime_state::heap_dirty);
 		}
 
@@ -177,4 +177,4 @@ namespace vk
 
 		return &g_upload_heap;
 	}
-}
+} // namespace vk

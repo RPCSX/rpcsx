@@ -51,7 +51,6 @@ struct Version {
       result += std::to_string(tagVersion);
     }
 
-
     if (dirty) {
       result += '+';
     }

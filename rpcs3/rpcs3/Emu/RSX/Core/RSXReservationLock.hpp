@@ -5,7 +5,7 @@
 
 namespace rsx
 {
-	template<bool IsFullLock = false, uint Stride = 128>
+	template <bool IsFullLock = false, uint Stride = 128>
 	class reservation_lock
 	{
 		u32 addr = 0;
@@ -81,8 +81,8 @@ namespace rsx
 
 			// This check is not perfect but it covers the important cases fast (this check is only an optimization - forcing true disables it)
 			const bool should_update =
-				(this->addr / rsx_iomap_table::c_lock_stride) != (addr / rsx_iomap_table::c_lock_stride) ||  // Lock-addr and test-addr have different locks, update
-				(addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride;          // Test range spills beyond our base section
+				(this->addr / rsx_iomap_table::c_lock_stride) != (addr / rsx_iomap_table::c_lock_stride) || // Lock-addr and test-addr have different locks, update
+				(addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride;         // Test range spills beyond our base section
 
 			if (!should_update)
 			{
@@ -119,4 +119,4 @@ namespace rsx
 			unlock(true);
 		}
 	};
-}
+} // namespace rsx

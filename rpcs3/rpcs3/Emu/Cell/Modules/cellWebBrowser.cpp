@@ -250,10 +250,10 @@ error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system
 	browser.system_cb = system_cb;
 
 	sysutil_register_cb([=, &browser](ppu_thread& ppu) -> s32
-	{
-		system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_INITIALIZING_FINISHED, browser.userData);
-		return CELL_OK;
-	});
+		{
+			system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_INITIALIZING_FINISHED, browser.userData);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -283,10 +283,10 @@ void cellWebBrowserShutdown()
 	auto& browser = g_fxo->get<browser_info>();
 
 	sysutil_register_cb([=, &browser](ppu_thread& ppu) -> s32
-	{
-		browser.system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser.userData);
-		return CELL_OK;
-	});
+		{
+			browser.system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser.userData);
+			return CELL_OK;
+		});
 }
 
 error_code cellWebBrowserUpdatePointerDisplayPos2()
@@ -318,7 +318,6 @@ error_code cellWebComponentDestroy()
 	cellSysutil.todo("cellWebComponentDestroy()");
 	return CELL_OK;
 }
-
 
 void cellSysutil_WebBrowser_init()
 {

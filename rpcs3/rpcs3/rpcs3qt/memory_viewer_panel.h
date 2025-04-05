@@ -34,14 +34,14 @@ namespace rsx
 
 enum search_mode : unsigned
 {
-	no_mode          = 1,
-	clear_modes      = 2,
-	as_string        = 4,
-	as_hex           = 8,
-	as_f64           = 16,
-	as_f32           = 32,
-	as_inst          = 64,
-	as_regex_inst    = 128,
+	no_mode = 1,
+	clear_modes = 2,
+	as_string = 4,
+	as_hex = 8,
+	as_f64 = 16,
+	as_f32 = 32,
+	as_inst = 64,
+	as_regex_inst = 128,
 	as_fake_spu_inst = 256,
 	as_regex_fake_spu_inst = 512,
 	search_mode_last = 1024,
@@ -52,7 +52,10 @@ class memory_viewer_panel final : public QDialog
 	Q_OBJECT
 
 public:
-	memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread* { return {}; });
+	memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread*
+		{
+			return {};
+		});
 	~memory_viewer_panel();
 
 	enum class color_format : int
@@ -126,13 +129,18 @@ struct memory_viewer_handle
 	static constexpr u32 id_count = 2048;
 	SAVESTATE_INIT_POS(33); // Of course not really used
 
-	template <typename... Args> requires (std::is_constructible_v<memory_viewer_panel, Args&&...>)
+	template <typename... Args>
+		requires(std::is_constructible_v<memory_viewer_panel, Args && ...>)
 	memory_viewer_handle(Args&&... args)
 		: m_mvp(new memory_viewer_panel(std::forward<Args>(args)...))
 	{
 	}
 
-	~memory_viewer_handle() { m_mvp->close(); m_mvp->deleteLater(); }
+	~memory_viewer_handle()
+	{
+		m_mvp->close();
+		m_mvp->deleteLater();
+	}
 
 private:
 	const std::add_pointer_t<memory_viewer_panel> m_mvp;

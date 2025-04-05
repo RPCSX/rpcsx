@@ -24,18 +24,36 @@ namespace gl
 		void* map(const utils::address_range& range) const;
 
 		void set_parent(const dma_block* other);
-		const dma_block* head() const { return m_parent ? m_parent : this; }
+		const dma_block* head() const
+		{
+			return m_parent ? m_parent : this;
+		}
 		bool can_map(const utils::address_range& range) const;
 
-		u32 base_addr() const { return m_base_address; }
-		u32 length() const { return m_data ? static_cast<u32>(m_data->size()) : 0; }
-		bool empty() const { return length() == 0; }
-		buffer* get() const { return m_data.get(); }
-		utils::address_range range() const { return utils::address_range::start_length(m_base_address, length()); }
+		u32 base_addr() const
+		{
+			return m_base_address;
+		}
+		u32 length() const
+		{
+			return m_data ? static_cast<u32>(m_data->size()) : 0;
+		}
+		bool empty() const
+		{
+			return length() == 0;
+		}
+		buffer* get() const
+		{
+			return m_data.get();
+		}
+		utils::address_range range() const
+		{
+			return utils::address_range::start_length(m_base_address, length());
+		}
 
 	protected:
 		u32 m_base_address = 0;
 		const dma_block* m_parent = nullptr;
 		std::unique_ptr<gl::buffer> m_data;
 	};
-}
+} // namespace gl

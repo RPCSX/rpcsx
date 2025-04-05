@@ -50,16 +50,14 @@ namespace rsx
 			const auto& last = draw_command_ranges[current_range_index];
 			const auto address = last.first + last.count;
 
-			_do_barrier_insert({
-				.draw_id = current_range_index,
+			_do_barrier_insert({.draw_id = current_range_index,
 				.timestamp = 0,
 				.address = address,
 				.index = index,
 				.arg0 = arg0,
 				.arg1 = arg1,
 				.flags = 0,
-				.type = type
-			});
+				.type = type});
 		}
 		else
 		{
@@ -74,16 +72,14 @@ namespace rsx
 				current_range_index = draw_command_ranges.size() - 1;
 			}
 
-			_do_barrier_insert({
-				.draw_id = current_range_index,
+			_do_barrier_insert({.draw_id = current_range_index,
 				.timestamp = rsx::get_shared_tag(),
 				.address = ~0u,
 				.index = index,
 				.arg0 = arg0,
 				.arg1 = arg1,
 				.flags = 0,
-				.type = type
-			});
+				.type = type});
 
 			last_execution_barrier_index = current_range_index;
 		}
@@ -222,5 +218,4 @@ namespace rsx
 
 		return result;
 	}
-}
-
+} // namespace rsx

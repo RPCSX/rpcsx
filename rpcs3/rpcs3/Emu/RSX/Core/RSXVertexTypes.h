@@ -58,10 +58,10 @@ namespace rsx
 	{
 		bool interleaved = false;
 		bool single_vertex = false;
-		u32  base_offset = 0;
-		u32  real_offset_address = 0;
-		u8   memory_location = 0;
-		u8   attribute_stride = 0;
+		u32 base_offset = 0;
+		u32 real_offset_address = 0;
+		u8 memory_location = 0;
+		u8 attribute_stride = 0;
 		std::pair<u32, u32> vertex_range{};
 
 		rsx::simple_array<interleaved_attribute_t> locations;
@@ -83,10 +83,10 @@ namespace rsx
 		std::array<interleaved_range_info, 16> m_blocks_data{};
 
 	public:
-		rsx::simple_array<interleaved_range_info*> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks{};                // Volatile data blocks (immediate draw vertex data for example)
-		rsx::simple_array<u8> referenced_registers{};                     // Volatile register data
-		u16 attribute_mask = 0;                                           // ATTRn mask
+		rsx::simple_array<interleaved_range_info*> interleaved_blocks{}; // Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks{};               // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers{};                    // Volatile register data
+		u16 attribute_mask = 0;                                          // ATTRn mask
 
 		std::array<attribute_buffer_placement, 16> attribute_placement = fill_array(attribute_buffer_placement::none);
 
@@ -174,4 +174,4 @@ namespace rsx
 			return mem;
 		}
 	};
-}
+} // namespace rsx

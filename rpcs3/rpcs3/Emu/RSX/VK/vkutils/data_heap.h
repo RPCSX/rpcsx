@@ -46,4 +46,4 @@ namespace vk
 	};
 
 	extern data_heap* get_upload_heap();
-}
+} // namespace vk

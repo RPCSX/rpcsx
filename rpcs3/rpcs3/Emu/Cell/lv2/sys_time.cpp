@@ -18,7 +18,7 @@ static u64 systemtime_offset;
 
 #ifdef _WIN32
 
-#include <Windows.h>
+#include <windows.h>
 
 struct time_aux_info_t
 {
@@ -44,8 +44,8 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 	GetSystemTimeAsFileTime(&ftime); // get time in 100ns units since January 1, 1601 (UTC)
 
 	time_aux_info_t result;
-	result.perf_freq   = freq.QuadPart;
-	result.start_time  = start.QuadPart;
+	result.perf_freq = freq.QuadPart;
+	result.start_time = start.QuadPart;
 	result.start_ftime = (ftime.dwLowDateTime | static_cast<u64>(ftime.dwHighDateTime) << 32) - 116444736000000000;
 
 	return result;
@@ -58,7 +58,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 #define TIMER_ABSTIME -1
 // The opengroup spec isn't clear on the mapping from REALTIME to CALENDAR being appropriate or not.
 // http://pubs.opengroup.org/onlinepubs/009695299/basedefs/time.h.html
-#define CLOCK_REALTIME  1 // #define CALENDAR_CLOCK 1 from mach/clock_types.h
+#define CLOCK_REALTIME 1  // #define CALENDAR_CLOCK 1 from mach/clock_types.h
 #define CLOCK_MONOTONIC 0 // #define SYSTEM_CLOCK 0
 
 // the mach kernel uses struct mach_timespec, so struct timespec is loaded from <sys/_types/_timespec.h> for compatability
@@ -94,7 +94,7 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 		}
 
 		double diff = (mach_absolute_time() - mt_timestart) * mt_timebase;
-		tp->tv_sec  = diff * MT_NANO;
+		tp->tv_sec = diff * MT_NANO;
 		tp->tv_nsec = diff - (tp->tv_sec * MT_GIGA);
 	}
 	else // other clk_ids are mapped to the coresponding mach clock_service
@@ -106,7 +106,7 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 		retval = clock_get_time(cclock, &mts);
 		mach_port_deallocate(mach_task_self(), cclock);
 
-		tp->tv_sec  = mts.tv_sec;
+		tp->tv_sec = mts.tv_sec;
 		tp->tv_nsec = mts.tv_nsec;
 	}
 
@@ -183,7 +183,8 @@ u64 get_timebased_time()
 
 		const u64 result = (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
 #endif
-		if (result) return result - g_timebase_offs;
+		if (result)
+			return result - g_timebase_offs;
 	}
 }
 
@@ -244,7 +245,8 @@ u64 get_system_time()
 		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000ull + static_cast<u64>(ts.tv_nsec) / 1000u;
 #endif
 
-		if (result) return result;
+		if (result)
+			return result;
 	}
 }
 
@@ -378,7 +380,7 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	if (g_cfg.core.clocks_scale == 100)
 	{
 		// get the seconds from the system clock, and add the console time offset (which might be negative)
-		*sec  = ts.tv_sec + g_cfg.sys.console_time_offset;
+		*sec = ts.tv_sec + g_cfg.sys.console_time_offset;
 
 		if (!nsec)
 		{

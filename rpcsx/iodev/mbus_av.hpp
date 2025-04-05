@@ -5,7 +5,6 @@
 #include "orbis/utils/SharedCV.hpp"
 #include "orbis/utils/SharedMutex.hpp"
 
-
 struct MBusAVDevice : IoDevice {
   orbis::shared_mutex mtx;
   orbis::shared_cv cv;

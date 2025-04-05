@@ -11,12 +11,12 @@ namespace rsx
 		{
 			switch (color_target)
 			{
-			case surface_target::none: return{};
-			case surface_target::surface_a: return{ 0 };
-			case surface_target::surface_b: return{ 1 };
-			case surface_target::surfaces_a_b: return{ 0, 1 };
-			case surface_target::surfaces_a_b_c: return{ 0, 1, 2 };
-			case surface_target::surfaces_a_b_c_d: return{ 0, 1, 2, 3 };
+			case surface_target::none: return {};
+			case surface_target::surface_a: return {0};
+			case surface_target::surface_b: return {1};
+			case surface_target::surfaces_a_b: return {0, 1};
+			case surface_target::surfaces_a_b_c: return {0, 1, 2};
+			case surface_target::surfaces_a_b_c_d: return {0, 1, 2, 3};
 			}
 			fmt::throw_exception("Invalid color target %d", static_cast<int>(color_target));
 		}
@@ -78,5 +78,5 @@ namespace rsx
 			}
 			fmt::throw_exception("Unknown color surface format");
 		}
-	}
-}
+	} // namespace utility
+} // namespace rsx

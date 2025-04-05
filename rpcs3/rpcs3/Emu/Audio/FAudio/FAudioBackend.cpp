@@ -13,7 +13,7 @@ LOG_CHANNEL(FAudio_, "FAudio");
 FAudioBackend::FAudioBackend()
 	: AudioBackend()
 {
-	FAudio *instance;
+	FAudio* instance;
 
 	if (u32 res = FAudioCreate(&instance, 0, FAUDIO_DEFAULT_PROCESSOR))
 	{
@@ -54,7 +54,8 @@ void FAudioBackend::Play()
 		return;
 	}
 
-	if (m_playing) return;
+	if (m_playing)
+		return;
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = true;
@@ -68,7 +69,8 @@ void FAudioBackend::Pause()
 		return;
 	}
 
-	if (!m_playing) return;
+	if (!m_playing)
+		return;
 
 	{
 		std::lock_guard lock(m_cb_mutex);
@@ -231,9 +233,9 @@ f64 FAudioBackend::GetCallbackFrameLen()
 	return std::max<f64>(min_latency, _10ms);
 }
 
-void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj, u32 BytesRequired)
+void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback* cb_obj, u32 BytesRequired)
 {
-	FAudioBackend *faudio = static_cast<FAudioBackend *>(cb_obj);
+	FAudioBackend* faudio = static_cast<FAudioBackend*>(cb_obj);
 
 	std::unique_lock lock(faudio->m_cb_mutex, std::defer_lock);
 	if (BytesRequired && !faudio->m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && faudio->m_write_callback && faudio->m_playing)
@@ -262,11 +264,11 @@ void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj,
 	}
 }
 
-void FAudioBackend::OnCriticalError_func(FAudioEngineCallback *cb_obj, u32 Error)
+void FAudioBackend::OnCriticalError_func(FAudioEngineCallback* cb_obj, u32 Error)
 {
 	FAudio_.error("OnCriticalError() failed(0x%08x)", Error);
 
-	FAudioBackend *faudio = static_cast<FAudioBackend *>(cb_obj);
+	FAudioBackend* faudio = static_cast<FAudioBackend*>(cb_obj);
 
 	std::lock_guard lock(faudio->m_state_cb_mutex);
 

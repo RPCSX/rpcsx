@@ -23,7 +23,10 @@ void osk_dialog_frame::Create(const osk_params& params)
 {
 	state = OskDialogState::Open;
 
-	static const auto& lineEditWidth = []() {return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width(); };
+	static const auto& lineEditWidth = []()
+	{
+		return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width();
+	};
 
 	if (m_dialog)
 	{
@@ -71,11 +74,11 @@ void osk_dialog_frame::Create(const osk_params& params)
 		}
 
 		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit = params.charlimit, this](const QString& text)
-		{
-			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
-			SetOskText(text);
-			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
-		});
+			{
+				input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
+				SetOskText(text);
+				// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
+			});
 		connect(input, &QLineEdit::returnPressed, m_dialog, &QDialog::accept);
 
 		inputLayout->addWidget(input);
@@ -90,56 +93,56 @@ void osk_dialog_frame::Create(const osk_params& params)
 		m_text_old = input_text;
 
 		connect(input, &QTextEdit::textChanged, [=, this]()
-		{
-			QString text = input->toPlainText();
-
-			if (text == m_text_old)
 			{
-				return;
-			}
+				QString text = input->toPlainText();
 
-			QTextCursor cursor = input->textCursor();
-			const int cursor_pos_new = cursor.position();
-			const int cursor_pos_old = cursor_pos_new + m_text_old.length() - text.length();
+				if (text == m_text_old)
+				{
+					return;
+				}
 
-			// Reset to old state if character limit was reached
-			if (m_text_old.length() >= static_cast<int>(params.charlimit) && text.length() > static_cast<int>(params.charlimit))
-			{
+				QTextCursor cursor = input->textCursor();
+				const int cursor_pos_new = cursor.position();
+				const int cursor_pos_old = cursor_pos_new + m_text_old.length() - text.length();
+
+				// Reset to old state if character limit was reached
+				if (m_text_old.length() >= static_cast<int>(params.charlimit) && text.length() > static_cast<int>(params.charlimit))
+				{
+					input->blockSignals(true);
+					input->setPlainText(m_text_old);
+					cursor.setPosition(cursor_pos_old);
+					input->setTextCursor(cursor);
+					input->blockSignals(false);
+					return;
+				}
+
+				int cursor_pos = cursor.position();
+
+				// Clear text of spaces if necessary
+				if (params.prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
+				{
+					int trim_len = text.length();
+					text.remove(QRegularExpression("\\s+"));
+					trim_len -= text.length();
+					cursor_pos -= trim_len;
+				}
+
+				// Crop if more than one character was pasted and the character limit was exceeded
+				text.chop(text.length() - params.charlimit);
+
+				// Set new text and block signals to prevent infinite loop
 				input->blockSignals(true);
-				input->setPlainText(m_text_old);
-				cursor.setPosition(cursor_pos_old);
+				input->setPlainText(text);
+				cursor.setPosition(cursor_pos);
 				input->setTextCursor(cursor);
 				input->blockSignals(false);
-				return;
-			}
 
-			int cursor_pos = cursor.position();
+				m_text_old = text;
 
-			// Clear text of spaces if necessary
-			if (params.prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
-			{
-				int trim_len = text.length();
-				text.remove(QRegularExpression("\\s+"));
-				trim_len -= text.length();
-				cursor_pos -= trim_len;
-			}
-
-			// Crop if more than one character was pasted and the character limit was exceeded
-			text.chop(text.length() - params.charlimit);
-
-			// Set new text and block signals to prevent infinite loop
-			input->blockSignals(true);
-			input->setPlainText(text);
-			cursor.setPosition(cursor_pos);
-			input->setTextCursor(cursor);
-			input->blockSignals(false);
-
-			m_text_old = text;
-
-			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(params.charlimit));
-			SetOskText(text);
-			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
-		});
+				input_count_label->setText(QString("%1/%2").arg(text.length()).arg(params.charlimit));
+				SetOskText(text);
+				// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
+			});
 
 		inputLayout->addWidget(input);
 	}
@@ -157,20 +160,20 @@ void osk_dialog_frame::Create(const osk_params& params)
 	connect(button_box, &QDialogButtonBox::accepted, m_dialog, &QDialog::accept);
 
 	connect(m_dialog, &QDialog::finished, [this](int result)
-	{
-		switch (result)
 		{
-		case QDialog::Accepted:
-			on_osk_close(CELL_OSKDIALOG_CLOSE_CONFIRM);
-			break;
-		case QDialog::Rejected:
-			on_osk_close(CELL_OSKDIALOG_CLOSE_CANCEL);
-			break;
-		default:
-			on_osk_close(result);
-			break;
-		}
-	});
+			switch (result)
+			{
+			case QDialog::Accepted:
+				on_osk_close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+				break;
+			case QDialog::Rejected:
+				on_osk_close(CELL_OSKDIALOG_CLOSE_CANCEL);
+				break;
+			default:
+				on_osk_close(result);
+				break;
+			}
+		});
 
 	// Fix size
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);

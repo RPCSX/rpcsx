@@ -16,16 +16,16 @@ template <>
 void fmt_class_string<recording_mode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](recording_mode value)
-	{
-		switch (value)
 		{
-		case recording_mode::stopped: return "stopped";
-		case recording_mode::rpcs3: return "rpcs3";
-		case recording_mode::cell: return "cell";
-		}
+			switch (value)
+			{
+			case recording_mode::stopped: return "stopped";
+			case recording_mode::rpcs3: return "rpcs3";
+			case recording_mode::cell: return "cell";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 namespace utils
@@ -206,4 +206,4 @@ namespace utils
 			m_last_audio_pts_incoming = pts;
 		}
 	}
-}
+} // namespace utils

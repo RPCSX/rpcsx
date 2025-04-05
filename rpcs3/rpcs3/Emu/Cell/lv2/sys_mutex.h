@@ -8,7 +8,7 @@
 
 struct sys_mutex_attribute_t
 {
-	be_t<u32> protocol; // SYS_SYNC_FIFO, SYS_SYNC_PRIORITY or SYS_SYNC_PRIORITY_INHERIT
+	be_t<u32> protocol;  // SYS_SYNC_FIFO, SYS_SYNC_PRIORITY or SYS_SYNC_PRIORITY_INHERIT
 	be_t<u32> recursive; // SYS_SYNC_RECURSIVE or SYS_SYNC_NOT_RECURSIVE
 	be_t<u32> pshared;
 	be_t<u32> adaptive;
@@ -48,12 +48,8 @@ struct lv2_mutex final : lv2_obj
 
 	atomic_t<control_data_t> control{};
 
-	lv2_mutex(u32 protocol, u32 recursive,u32 adaptive, u64 key, u64 name) noexcept
-		: protocol{static_cast<u8>(protocol)}
-		, recursive(recursive)
-		, adaptive(adaptive)
-		, key(key)
-		, name(name)
+	lv2_mutex(u32 protocol, u32 recursive, u32 adaptive, u64 key, u64 name) noexcept
+		: protocol{static_cast<u8>(protocol)}, recursive(recursive), adaptive(adaptive), key(key), name(name)
 	{
 	}
 
@@ -102,24 +98,24 @@ struct lv2_mutex final : lv2_obj
 	bool try_own(T& cpu)
 	{
 		if (control.atomic_op([&](control_data_t& data)
-		{
-			if (data.owner)
-			{
-				cpu.prio.atomic_op([tag = ++g_priority_order_tag](std::common_type_t<decltype(T::prio)>& prio)
 				{
-					prio.order = tag;
-				});
+					if (data.owner)
+					{
+						cpu.prio.atomic_op([tag = ++g_priority_order_tag](std::common_type_t<decltype(T::prio)>& prio)
+							{
+								prio.order = tag;
+							});
 
-				cpu.next_cpu = data.sq;
-				data.sq = &cpu;
-				return false;
-			}
-			else
-			{
-				data.owner = cpu.id;
-				return true;
-			}
-		}))
+						cpu.next_cpu = data.sq;
+						data.sq = &cpu;
+						return false;
+					}
+					else
+					{
+						data.owner = cpu.id;
+						return true;
+					}
+				}))
 		{
 			cpu.next_cpu = nullptr;
 			return true;
@@ -164,28 +160,28 @@ struct lv2_mutex final : lv2_obj
 		T* res{};
 
 		control.fetch_op([&](control_data_t& data)
-		{
-			res = nullptr;
-
-			if (auto sq = static_cast<T*>(data.sq))
 			{
-				res = schedule<T>(data.sq, protocol, false);
+				res = nullptr;
 
-				if (sq == data.sq)
+				if (auto sq = static_cast<T*>(data.sq))
 				{
-					atomic_storage<u32>::release(control.raw().owner, res->id);
-					return false;
-				}
+					res = schedule<T>(data.sq, protocol, false);
 
-				data.owner = res->id;
-				return true;
-			}
-			else
-			{
-				data.owner = 0;
-				return true;
-			}
-		});
+					if (sq == data.sq)
+					{
+						atomic_storage<u32>::release(control.raw().owner, res->id);
+						return false;
+					}
+
+					data.owner = res->id;
+					return true;
+				}
+				else
+				{
+					data.owner = 0;
+					return true;
+				}
+			});
 
 		if (res && cpu_flag::again - res->state)
 		{
@@ -196,7 +192,6 @@ struct lv2_mutex final : lv2_obj
 		return res;
 	}
 };
-
 
 // Syscalls
 

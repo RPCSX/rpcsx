@@ -9,7 +9,7 @@
 #include "Utilities/StrUtil.h"
 
 #include "XAudio2Backend.h"
-#include <Windows.h>
+#include <windows.h>
 #include <system_error>
 
 #ifndef XAUDIO2_USE_DEFAULT_PROCESSOR
@@ -22,34 +22,34 @@ template <>
 void fmt_class_string<ERole>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
 		{
-		case eConsole: return "eConsole";
-		case eMultimedia: return "eMultimedia";
-		case eCommunications: return "eCommunications";
-		case ERole_enum_count: return unknown;
-		}
+			switch (value)
+			{
+			case eConsole: return "eConsole";
+			case eMultimedia: return "eMultimedia";
+			case eCommunications: return "eCommunications";
+			case ERole_enum_count: return unknown;
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<EDataFlow>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
 		{
-		case eRender: return "eRender";
-		case eCapture: return "eCapture";
-		case eAll: return "eAll";
-		case EDataFlow_enum_count: return unknown;
-		}
+			switch (value)
+			{
+			case eRender: return "eRender";
+			case eCapture: return "eCapture";
+			case eAll: return "eAll";
+			case EDataFlow_enum_count: return unknown;
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 XAudio2Backend::XAudio2Backend()
@@ -135,7 +135,8 @@ void XAudio2Backend::Play()
 		return;
 	}
 
-	if (m_playing) return;
+	if (m_playing)
+		return;
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = true;
@@ -184,7 +185,8 @@ void XAudio2Backend::Pause()
 		return;
 	}
 
-	if (!m_playing) return;
+	if (!m_playing)
+		return;
 
 	{
 		std::lock_guard lock(m_cb_mutex);

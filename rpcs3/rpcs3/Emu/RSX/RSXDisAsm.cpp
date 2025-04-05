@@ -27,7 +27,8 @@ u32 RSXDisAsm::disasm(u32 pc)
 			// Translation needed
 			pc = static_cast<const rsx::thread*>(m_cpu)->iomap_table.get_addr(pc);
 
-			if (pc == umax) return false;
+			if (pc == umax)
+				return false;
 		}
 
 		m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + pc);

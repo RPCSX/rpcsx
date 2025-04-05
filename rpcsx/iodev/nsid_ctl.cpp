@@ -1,16 +1,16 @@
+#include "../io-devices.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "vfs.hpp"
-#include "../io-devices.hpp"
 #include <chrono>
 #include <thread>
 
 struct NsidCtlFile : orbis::File {};
 
 static orbis::ErrorCode nsid_ctl_ioctl(orbis::File *file, std::uint64_t request,
-                                    void *argp, orbis::Thread *thread) {
+                                       void *argp, orbis::Thread *thread) {
 
   if (request == 0x20003102) {
     ORBIS_LOG_ERROR(__FUNCTION__, "create ssd0 device");
@@ -19,11 +19,10 @@ static orbis::ErrorCode nsid_ctl_ioctl(orbis::File *file, std::uint64_t request,
     ORBIS_LOG_FATAL("Unhandled nsid_ctl ioctl", request);
   }
 
-  
   return {};
 }
 static orbis::ErrorCode nsid_ctl_read(orbis::File *file, orbis::Uio *uio,
-                                   orbis::Thread *thread) {
+                                      orbis::Thread *thread) {
   ORBIS_LOG_TODO(__FUNCTION__);
 
   std::this_thread::sleep_for(std::chrono::days(1));
@@ -48,4 +47,6 @@ struct NsidCtlDevice : IoDevice {
   }
 };
 
-IoDevice *createNsidCtlCharacterDevice() { return orbis::knew<NsidCtlDevice>(); }
+IoDevice *createNsidCtlCharacterDevice() {
+  return orbis::knew<NsidCtlDevice>();
+}

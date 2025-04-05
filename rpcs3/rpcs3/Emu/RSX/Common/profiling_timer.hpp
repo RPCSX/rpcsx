@@ -32,4 +32,4 @@ namespace rsx
 			return static_cast<s64>(last - old);
 		}
 	};
-}
+} // namespace rsx

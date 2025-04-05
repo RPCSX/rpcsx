@@ -71,7 +71,8 @@ void perf_stat_base::print(const char* name) const noexcept
 	}
 }
 
-SAFE_BUFFERS(void) perf_stat_base::push(u64 data[66], u64 start_time, const char* name) noexcept
+SAFE_BUFFERS(void)
+perf_stat_base::push(u64 data[66], u64 start_time, const char* name) noexcept
 {
 	// Event end
 	const u64 end_time = (utils::lfence(), utils::get_tsc());

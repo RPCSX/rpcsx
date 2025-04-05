@@ -10,25 +10,25 @@
 
 LOG_CHANNEL(libmixer);
 
-template<>
+template <>
 void fmt_class_string<CellLibmixerError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_LIBMIXER_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_LIBMIXER_ERROR_INVALID_PARAMATER);
-			STR_CASE(CELL_LIBMIXER_ERROR_NO_MEMORY);
-			STR_CASE(CELL_LIBMIXER_ERROR_ALREADY_EXIST);
-			STR_CASE(CELL_LIBMIXER_ERROR_FULL);
-			STR_CASE(CELL_LIBMIXER_ERROR_NOT_EXIST);
-			STR_CASE(CELL_LIBMIXER_ERROR_TYPE_MISMATCH);
-			STR_CASE(CELL_LIBMIXER_ERROR_NOT_FOUND);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_LIBMIXER_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_LIBMIXER_ERROR_INVALID_PARAMATER);
+				STR_CASE(CELL_LIBMIXER_ERROR_NO_MEMORY);
+				STR_CASE(CELL_LIBMIXER_ERROR_ALREADY_EXIST);
+				STR_CASE(CELL_LIBMIXER_ERROR_FULL);
+				STR_CASE(CELL_LIBMIXER_ERROR_NOT_EXIST);
+				STR_CASE(CELL_LIBMIXER_ERROR_TYPE_MISMATCH);
+				STR_CASE(CELL_LIBMIXER_ERROR_NOT_FOUND);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 struct SurMixerConfig
@@ -51,10 +51,10 @@ struct SurMixerConfig
 
 struct SSPlayer
 {
-	bool m_created; // SSPlayerCreate/Remove
+	bool m_created;   // SSPlayerCreate/Remove
 	bool m_connected; // AANConnect/Disconnect
-	bool m_active; // SSPlayerPlay/Stop
-	u32 m_channels; // 1 or 2
+	bool m_active;    // SSPlayerPlay/Stop
+	u32 m_channels;   // 1 or 2
 	u32 m_addr;
 	u32 m_samples;
 	u32 m_loop_start;
@@ -82,19 +82,24 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 	switch (type)
 	{
 	case CELL_SURMIXER_CHSTRIP_TYPE1A:
-		if (port >= g_surmx.ch_strips_1) type = 0;
+		if (port >= g_surmx.ch_strips_1)
+			type = 0;
 		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE2A:
-		if (port >= g_surmx.ch_strips_2) type = 0;
+		if (port >= g_surmx.ch_strips_2)
+			type = 0;
 		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE6A:
-		if (port >= g_surmx.ch_strips_6) type = 0;
+		if (port >= g_surmx.ch_strips_6)
+			type = 0;
 		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE8A:
-		if (port >= g_surmx.ch_strips_8) type = 0;
+		if (port >= g_surmx.ch_strips_8)
+			type = 0;
 		break;
 	default:
-		type = 0; break;
+		type = 0;
+		break;
 	}
 
 	if (aan_handle != 0x11111111 || samples != 256 || !type || offset != 0)
@@ -364,7 +369,7 @@ struct surmixer_thread : ppu_thread
 
 			if (port.state == audio_port_state::started)
 			{
-				//u64 stamp0 = get_guest_system_time();
+				// u64 stamp0 = get_guest_system_time();
 
 				memset(g_surmx.mixdata, 0, sizeof(g_surmx.mixdata));
 				if (g_surmx.cb)
@@ -373,86 +378,88 @@ struct surmixer_thread : ppu_thread
 					lv2_obj::sleep(*this);
 				}
 
-				//u64 stamp1 = get_guest_system_time();
+				// u64 stamp1 = get_guest_system_time();
 
 				{
 					std::lock_guard lock(g_surmx.mutex);
 
-					for (auto& p : g_ssp) if (p.m_active && p.m_created)
-					{
-						auto v = vm::ptrl<s16>::make(p.m_addr); // 16-bit LE audio data
-						float left = 0.0f;
-						float right = 0.0f;
-						float speed = std::fabs(p.m_speed);
-						float fpos = 0.0f;
-						for (s32 i = 0; i < 256; i++) if (p.m_active)
+					for (auto& p : g_ssp)
+						if (p.m_active && p.m_created)
 						{
-							u32 pos = p.m_position;
-							s32 pos_inc = 0;
-							if (p.m_speed > 0.0f) // select direction
-							{
-								pos_inc = 1;
-							}
-							else if (p.m_speed < 0.0f)
-							{
-								pos_inc = -1;
-							}
-							s32 shift = i - static_cast<s32>(fpos); // change playback speed (simple and rough)
-							if (shift > 0)
-							{
-								// slow playback
-								pos_inc = 0; // duplicate one sample at this time
-								fpos += 1.0f;
-								fpos += speed;
-							}
-							else if (shift < 0)
-							{
-								// fast playback
-								i--; // mix two sample into one at this time
-								fpos -= 1.0f;
-							}
-							else
-							{
-								fpos += speed;
-							}
-							p.m_position += pos_inc;
-							if (p.m_channels == 1) // get mono data
-							{
-								left = right = v[pos] / 32768.f * p.m_level;
-							}
-							else if (p.m_channels == 2) // get stereo data
-							{
-								left = v[pos * 2 + 0] / 32768.f * p.m_level;
-								right = v[pos * 2 + 1] / 32768.f * p.m_level;
-							}
-							if (p.m_connected) // mix
-							{
-								// TODO: m_x, m_y, m_z ignored
-								g_surmx.mixdata[i * 8 + 0] += left;
-								g_surmx.mixdata[i * 8 + 1] += right;
-							}
-							if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
-								(p.m_position == umax && p.m_speed < 0.0f)) // loop or stop
-							{
-								if (p.m_loop_mode == CELL_SSPLAYER_LOOP_ON)
+							auto v = vm::ptrl<s16>::make(p.m_addr); // 16-bit LE audio data
+							float left = 0.0f;
+							float right = 0.0f;
+							float speed = std::fabs(p.m_speed);
+							float fpos = 0.0f;
+							for (s32 i = 0; i < 256; i++)
+								if (p.m_active)
 								{
-									p.m_position = p.m_loop_start;
+									u32 pos = p.m_position;
+									s32 pos_inc = 0;
+									if (p.m_speed > 0.0f) // select direction
+									{
+										pos_inc = 1;
+									}
+									else if (p.m_speed < 0.0f)
+									{
+										pos_inc = -1;
+									}
+									s32 shift = i - static_cast<s32>(fpos); // change playback speed (simple and rough)
+									if (shift > 0)
+									{
+										// slow playback
+										pos_inc = 0; // duplicate one sample at this time
+										fpos += 1.0f;
+										fpos += speed;
+									}
+									else if (shift < 0)
+									{
+										// fast playback
+										i--; // mix two sample into one at this time
+										fpos -= 1.0f;
+									}
+									else
+									{
+										fpos += speed;
+									}
+									p.m_position += pos_inc;
+									if (p.m_channels == 1) // get mono data
+									{
+										left = right = v[pos] / 32768.f * p.m_level;
+									}
+									else if (p.m_channels == 2) // get stereo data
+									{
+										left = v[pos * 2 + 0] / 32768.f * p.m_level;
+										right = v[pos * 2 + 1] / 32768.f * p.m_level;
+									}
+									if (p.m_connected) // mix
+									{
+										// TODO: m_x, m_y, m_z ignored
+										g_surmx.mixdata[i * 8 + 0] += left;
+										g_surmx.mixdata[i * 8 + 1] += right;
+									}
+									if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
+										(p.m_position == umax && p.m_speed < 0.0f)) // loop or stop
+									{
+										if (p.m_loop_mode == CELL_SSPLAYER_LOOP_ON)
+										{
+											p.m_position = p.m_loop_start;
+										}
+										else if (p.m_loop_mode == CELL_SSPLAYER_ONESHOT_CONT)
+										{
+											p.m_position -= pos_inc; // restore position
+										}
+										else // oneshot
+										{
+											p.m_active = false;
+											p.m_position = p.m_loop_start; // TODO: check value
+										}
+									}
 								}
-								else if (p.m_loop_mode == CELL_SSPLAYER_ONESHOT_CONT)
-								{
-									p.m_position -= pos_inc; // restore position
-								}
-								else // oneshot
-								{
-									p.m_active = false;
-									p.m_position = p.m_loop_start; // TODO: check value
-								}
-							}
 						}
-					}
 				}
 
-				//u64 stamp2 = get_guest_system_time();
+				// u64 stamp2 = get_guest_system_time();
 
 				auto buf = vm::_ptr<f32>(port.addr.addr() + (g_surmx.mixcount % port.num_blocks) * port.num_channels * AUDIO_BUFFER_SAMPLES * sizeof(float));
 
@@ -462,9 +469,9 @@ struct surmixer_thread : ppu_thread
 					*buf++ = mixdata;
 				}
 
-				//u64 stamp3 = get_guest_system_time();
+				// u64 stamp3 = get_guest_system_time();
 
-				//ConLog.Write("Libmixer perf: start=%lld (cb=%lld, ssp=%lld, finalize=%lld)", stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2);
+				// ConLog.Write("Libmixer perf: start=%lld (cb=%lld, ssp=%lld, finalize=%lld)", stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2);
 			}
 
 			g_surmx.mixcount++;
@@ -499,7 +506,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 	port->attr = 0;
 	port->size = port->num_channels * port->num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(float);
 	port->level = 1.0f;
-	port->level_set.store({ 1.0f, 0.0f });
+	port->level_set.store({1.0f, 0.0f});
 
 	libmixer.warning("*** audio port opened (port=%d)", g_surmx.audio_port);
 
@@ -510,7 +517,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	libmixer.warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
-	//auto thread = idm::make_ptr<named_thread<ppu_thread>>("Surmixer Thread");
+	// auto thread = idm::make_ptr<named_thread<ppu_thread>>("Surmixer Thread");
 
 	return CELL_OK;
 }
@@ -685,35 +692,35 @@ f32 cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 }
 
 DECLARE(ppu_module_manager::libmixer)("libmixer", []()
-{
-	REG_FUNC(libmixer, cellAANAddData);
-	REG_FUNC(libmixer, cellAANConnect);
-	REG_FUNC(libmixer, cellAANDisconnect);
+	{
+		REG_FUNC(libmixer, cellAANAddData);
+		REG_FUNC(libmixer, cellAANConnect);
+		REG_FUNC(libmixer, cellAANDisconnect);
 
-	REG_FUNC(libmixer, cellSurMixerCreate);
-	REG_FUNC(libmixer, cellSurMixerGetAANHandle);
-	REG_FUNC(libmixer, cellSurMixerChStripGetAANPortNo);
-	REG_FUNC(libmixer, cellSurMixerSetNotifyCallback);
-	REG_FUNC(libmixer, cellSurMixerRemoveNotifyCallback);
-	REG_FUNC(libmixer, cellSurMixerStart);
-	REG_FUNC(libmixer, cellSurMixerSetParameter);
-	REG_FUNC(libmixer, cellSurMixerFinalize);
-	REG_FUNC(libmixer, cellSurMixerSurBusAddData);
-	REG_FUNC(libmixer, cellSurMixerChStripSetParameter);
-	REG_FUNC(libmixer, cellSurMixerPause);
-	REG_FUNC(libmixer, cellSurMixerGetCurrentBlockTag);
-	REG_FUNC(libmixer, cellSurMixerGetTimestamp);
-	REG_FUNC(libmixer, cellSurMixerBeep);
+		REG_FUNC(libmixer, cellSurMixerCreate);
+		REG_FUNC(libmixer, cellSurMixerGetAANHandle);
+		REG_FUNC(libmixer, cellSurMixerChStripGetAANPortNo);
+		REG_FUNC(libmixer, cellSurMixerSetNotifyCallback);
+		REG_FUNC(libmixer, cellSurMixerRemoveNotifyCallback);
+		REG_FUNC(libmixer, cellSurMixerStart);
+		REG_FUNC(libmixer, cellSurMixerSetParameter);
+		REG_FUNC(libmixer, cellSurMixerFinalize);
+		REG_FUNC(libmixer, cellSurMixerSurBusAddData);
+		REG_FUNC(libmixer, cellSurMixerChStripSetParameter);
+		REG_FUNC(libmixer, cellSurMixerPause);
+		REG_FUNC(libmixer, cellSurMixerGetCurrentBlockTag);
+		REG_FUNC(libmixer, cellSurMixerGetTimestamp);
+		REG_FUNC(libmixer, cellSurMixerBeep);
 
-	REG_FUNC(libmixer, cellSSPlayerCreate);
-	REG_FUNC(libmixer, cellSSPlayerRemove);
-	REG_FUNC(libmixer, cellSSPlayerSetWave);
-	REG_FUNC(libmixer, cellSSPlayerPlay);
-	REG_FUNC(libmixer, cellSSPlayerStop);
-	REG_FUNC(libmixer, cellSSPlayerSetParam);
-	REG_FUNC(libmixer, cellSSPlayerGetState);
+		REG_FUNC(libmixer, cellSSPlayerCreate);
+		REG_FUNC(libmixer, cellSSPlayerRemove);
+		REG_FUNC(libmixer, cellSSPlayerSetWave);
+		REG_FUNC(libmixer, cellSSPlayerPlay);
+		REG_FUNC(libmixer, cellSSPlayerStop);
+		REG_FUNC(libmixer, cellSSPlayerSetParam);
+		REG_FUNC(libmixer, cellSSPlayerGetState);
 
-	REG_FUNC(libmixer, cellSurMixerUtilGetLevelFromDB);
-	REG_FUNC(libmixer, cellSurMixerUtilGetLevelFromDBIndex);
-	REG_FUNC(libmixer, cellSurMixerUtilNoteToRatio);
-});
+		REG_FUNC(libmixer, cellSurMixerUtilGetLevelFromDB);
+		REG_FUNC(libmixer, cellSurMixerUtilGetLevelFromDBIndex);
+		REG_FUNC(libmixer, cellSurMixerUtilNoteToRatio);
+	});

@@ -12,9 +12,9 @@
 
 namespace rsx
 {
-	using rsx_method_t = void(*)(struct context*, u32 reg, u32 arg);
+	using rsx_method_t = void (*)(struct context*, u32 reg, u32 arg);
 
-	//TODO
+	// TODO
 	union alignas(4) method_registers_t
 	{
 		u8 _u8[0x10000];
@@ -81,17 +81,17 @@ namespace rsx
 		std::array<u32, 0x10000 / 4> registers{};
 		u32 latch{};
 
-		template<u32 opcode>
+		template <u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
 
-		template<u32 opcode>
+		template <u32 opcode>
 		decoded_type<opcode> decode() const
 		{
 			u32 register_value = registers[opcode];
 			return decoded_type<opcode>(register_value);
 		}
 
-		template<u32 opcode>
+		template <u32 opcode>
 		decoded_type<opcode> decode(u32 register_value) const
 		{
 			return decoded_type<opcode>(register_value);
@@ -118,44 +118,41 @@ namespace rsx
 		std::array<fragment_texture, 16> fragment_textures;
 		std::array<vertex_texture, 4> vertex_textures;
 
-
 		std::array<u32, max_vertex_program_instructions * 4> transform_program{};
 		std::array<u32[4], 512> transform_constants{};
 
 		draw_clause current_draw_clause{};
 
 		/**
-		* RSX can sources vertex attributes from 2 places:
-		* 1. Immediate values passed by NV4097_SET_VERTEX_DATA*_M + ARRAY_ID write.
-		* For a given ARRAY_ID the last command of this type defines the actual type of the immediate value.
-		* If there is only a single value on an ARRAY_ID passed this way, all vertex in the draw call
-		* shares it.
-		* Immediate mode rendering uses this method as well to upload vertex data.
-		*
-		* 2. Vertex array values passed by offset/stride/size/format description.
-		* A given ARRAY_ID can have both an immediate value and a vertex array enabled at the same time
-		* (See After Burner Climax intro cutscene). In such case the vertex array has precedence over the
-		* immediate value. As soon as the vertex array is disabled (size set to 0) the immediate value
-		* must be used if the vertex attrib mask request it.
-		*
-		* Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
-		* request inputs is unknown.
-		*/
+		 * RSX can sources vertex attributes from 2 places:
+		 * 1. Immediate values passed by NV4097_SET_VERTEX_DATA*_M + ARRAY_ID write.
+		 * For a given ARRAY_ID the last command of this type defines the actual type of the immediate value.
+		 * If there is only a single value on an ARRAY_ID passed this way, all vertex in the draw call
+		 * shares it.
+		 * Immediate mode rendering uses this method as well to upload vertex data.
+		 *
+		 * 2. Vertex array values passed by offset/stride/size/format description.
+		 * A given ARRAY_ID can have both an immediate value and a vertex array enabled at the same time
+		 * (See After Burner Climax intro cutscene). In such case the vertex array has precedence over the
+		 * immediate value. As soon as the vertex array is disabled (size set to 0) the immediate value
+		 * must be used if the vertex attrib mask request it.
+		 *
+		 * Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
+		 * request inputs is unknown.
+		 */
 		std::array<register_vertex_data_info, 16> register_vertex_info{};
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
 	private:
-		template<typename T, usz... N, typename Args>
+		template <typename T, usz... N, typename Args>
 		static std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
 		{
-			return{ T(N, std::forward<Args>(arg))... };
+			return {T(N, std::forward<Args>(arg))...};
 		}
 
 	public:
 		rsx_state()
-			: fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>()))
-			, vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>()))
-			, vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
+			: fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())), vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())), vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
 		}
 
@@ -313,7 +310,6 @@ namespace rsx
 			if (!restart_index_enabled_raw())
 			{
 				return false;
-
 			}
 
 			if (index_type() == rsx::index_array_type::u16 &&
@@ -906,8 +902,8 @@ namespace rsx
 			}
 
 			return base_fmt == surface_depth_format::z16 ?
-				surface_depth_format2::z16_float :
-				surface_depth_format2::z24s8_float;
+			           surface_depth_format2::z16_float :
+			           surface_depth_format2::z24s8_float;
 		}
 
 		surface_raster_type surface_type() const
@@ -948,7 +944,7 @@ namespace rsx
 		std::pair<u32, u32> shader_program_address() const
 		{
 			const u32 shader_address = decode<NV4097_SET_SHADER_PROGRAM>().shader_program_address();
-			return { shader_address & ~3, (shader_address & 3) - 1 };
+			return {shader_address & ~3, (shader_address & 3) - 1};
 		}
 
 		u32 transform_program_start() const
@@ -1321,4 +1317,4 @@ namespace rsx
 	extern rsx_state method_registers;
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
 	extern std::array<u32, 0x10000 / 4> state_signals;
-}
+} // namespace rsx

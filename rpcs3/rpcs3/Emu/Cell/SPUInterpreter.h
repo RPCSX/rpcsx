@@ -4,7 +4,7 @@
 
 class spu_thread;
 
-using spu_intrp_func_t = bool(*)(spu_thread& spu, spu_opcode_t op);
+using spu_intrp_func_t = bool (*)(spu_thread& spu, spu_opcode_t op);
 
 template <typename IT>
 struct spu_interpreter_t;

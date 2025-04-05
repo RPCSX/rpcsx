@@ -15,10 +15,7 @@ struct lv2_io_buf
 	const u32 unk1;
 
 	lv2_io_buf(u32 block_count, u32 block_size, u32 blocks, u32 unk1)
-		: block_count(block_count)
-		, block_size(block_size)
-		, blocks(blocks)
-		, unk1(unk1)
+		: block_count(block_count), block_size(block_size), blocks(blocks), unk1(unk1)
 	{
 	}
 };

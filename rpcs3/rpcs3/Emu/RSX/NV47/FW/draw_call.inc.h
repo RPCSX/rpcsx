@@ -48,7 +48,7 @@ namespace rsx
 		u32 flags;
 		command_barrier_type type;
 
-		bool operator < (const barrier_t& other) const
+		bool operator<(const barrier_t& other) const
 		{
 			if (address != ~0u)
 			{
@@ -69,4 +69,4 @@ namespace rsx
 
 		ENABLE_BITWISE_SERIALIZATION;
 	};
-}
+} // namespace rsx

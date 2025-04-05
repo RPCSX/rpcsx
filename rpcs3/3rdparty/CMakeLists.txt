@@ -102,7 +102,7 @@ add_subdirectory(yaml-cpp)
 
 # OpenGL
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WITHOUT_OPENGL)
 	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 	add_library(3rdparty_opengl INTERFACE)
@@ -212,7 +212,7 @@ endif()
 add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WITHOUT_OPENAL)
 	add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
 else()
 	add_library(3rdparty_openal INTERFACE)
@@ -303,7 +303,7 @@ endif()
 
 # GLEW
 add_library(3rdparty_glew INTERFACE)
-if(NOT MSVC AND NOT ANDROID)
+if(NOT MSVC AND NOT ANDROID AND NOT WITHOUT_OPENGLEW)
 	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()

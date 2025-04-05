@@ -100,4 +100,4 @@ namespace utils
 	}
 
 	std::pair<bool, usz> string_to_number(std::string_view str);
-}
+} // namespace utils

@@ -33,7 +33,7 @@ namespace logs
 		// Cannot be moved because it relies on its location
 		message(const message&) = delete;
 
-		message& operator =(const message&) = delete;
+		message& operator=(const message&) = delete;
 
 		// Send log message to the given channel with severity
 		template <typename... Args>
@@ -110,9 +110,7 @@ namespace logs
 
 		// Initialize channel
 		consteval channel(const char* name) noexcept
-			: message{}
-			, name(name)
-			, enabled(level::notice)
+			: message{}, name(name), enabled(level::notice)
 		{
 		}
 
@@ -122,8 +120,8 @@ namespace logs
 			return *this;
 		}
 
-#define GEN_LOG_METHOD(_sev)\
-		const message _sev{};\
+#define GEN_LOG_METHOD(_sev) \
+	const message _sev{};
 
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
@@ -192,9 +190,13 @@ namespace logs
 
 	// Called in main()
 	void set_init(std::initializer_list<stored_message>);
-}
+} // namespace logs
 
-#define LOG_CHANNEL(ch, ...) inline constinit ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
-	namespace logs { inline ::logs::registerer reg_##ch{ch}; }
+#define LOG_CHANNEL(ch, ...)                                                            \
+	inline constinit ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
+	namespace logs                                                                      \
+	{                                                                                   \
+		inline ::logs::registerer reg_##ch{ch};                                         \
+	}
 
 LOG_CHANNEL(rsx_log, "RSX");

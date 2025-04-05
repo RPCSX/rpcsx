@@ -59,12 +59,12 @@ orbis::SysResult orbis::sys_rtprio_thread(Thread *thread, sint function,
         hostPolicy = SCHED_IDLE;
       }
 
-      if (pthread_setschedparam(targetThread->getNativeHandle(),
-                                hostPolicy, &hostParam)) {
-        ORBIS_LOG_ERROR(__FUNCTION__, "failed to set host priority",
-                        hostPriority, targetThread->prio.prio,
-                        targetThread->prio.type, errno,
-                        targetThread->getNativeHandle(), prioMin, prioMax, errno);
+      if (pthread_setschedparam(targetThread->getNativeHandle(), hostPolicy,
+                                &hostParam)) {
+        ORBIS_LOG_ERROR(
+            __FUNCTION__, "failed to set host priority", hostPriority,
+            targetThread->prio.prio, targetThread->prio.type, errno,
+            targetThread->getNativeHandle(), prioMin, prioMax, errno);
       }
     } else {
       ORBIS_LOG_ERROR(__FUNCTION__, "set host priority", hostPriority,

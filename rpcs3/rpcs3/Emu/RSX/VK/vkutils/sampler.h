@@ -17,7 +17,7 @@ namespace vk
 
 		border_color_t(VkBorderColor color);
 
-		bool operator == (const border_color_t& that) const
+		bool operator==(const border_color_t& that) const
 		{
 			if (this->value != that.value)
 			{
@@ -54,6 +54,7 @@ namespace vk
 
 		sampler(const sampler&) = delete;
 		sampler(sampler&&) = delete;
+
 	private:
 		VkDevice m_device;
 		border_color_t m_border_color;
@@ -78,7 +79,6 @@ namespace vk
 		std::unordered_map<u64, std::unique_ptr<cached_sampler_object_t>> m_custom_color_sampler_pool;
 
 	public:
-
 		sampler_pool_key_t compute_storage_key(
 			VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 			VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
@@ -93,4 +93,4 @@ namespace vk
 
 		std::vector<std::unique_ptr<cached_sampler_object_t>> collect(std::function<bool(const cached_sampler_object_t&)> predicate);
 	};
-}
+} // namespace vk

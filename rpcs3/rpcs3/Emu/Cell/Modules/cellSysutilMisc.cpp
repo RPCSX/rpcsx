@@ -15,6 +15,6 @@ s32 cellSysutilGetLicenseArea()
 }
 
 DECLARE(ppu_module_manager::cellSysutilMisc)("cellSysutilMisc", []()
-{
-	REG_FUNC(cellSysutilMisc, cellSysutilGetLicenseArea);
-});
+	{
+		REG_FUNC(cellSysutilMisc, cellSysutilGetLicenseArea);
+	});

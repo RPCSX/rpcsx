@@ -55,9 +55,9 @@ namespace rsx
 			bool m_force_repaint{};
 			bool m_is_initialised{};
 
-			const std::string title1_medium{ "CPU Utilization:" };
-			const std::string title1_high{ "Host Utilization (CPU):" };
-			const std::string title2{ "Guest Utilization (PS3):" };
+			const std::string title1_medium{"CPU Utilization:"};
+			const std::string title1_high{"Host Utilization (CPU):"};
+			const std::string title2{"Guest Utilization (PS3):"};
 
 			f32 m_fps{0};
 			f32 m_frametime{0};
@@ -108,5 +108,5 @@ namespace rsx
 		};
 
 		void reset_performance_overlay();
-	}
-}
+	} // namespace overlays
+} // namespace rsx

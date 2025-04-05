@@ -4,7 +4,7 @@
 #include <QDateTime>
 
 custom_table_widget_item::custom_table_widget_item(const std::string& text, int sort_role, const QVariant& sort_value)
-    : movie_item(QString::fromStdString(text).simplified()) // simplified() forces single line text
+	: movie_item(QString::fromStdString(text).simplified()) // simplified() forces single line text
 {
 	if (sort_role != Qt::DisplayRole)
 	{
@@ -13,7 +13,7 @@ custom_table_widget_item::custom_table_widget_item(const std::string& text, int 
 }
 
 custom_table_widget_item::custom_table_widget_item(const QString& text, int sort_role, const QVariant& sort_value)
-    : movie_item(text.simplified()) // simplified() forces single line text
+	: movie_item(text.simplified()) // simplified() forces single line text
 {
 	if (sort_role != Qt::DisplayRole)
 	{
@@ -28,8 +28,8 @@ bool custom_table_widget_item::operator<(const QTableWidgetItem& other) const
 		return QTableWidgetItem::operator<(other);
 	}
 
-	const QVariant data_l       = data(m_sort_role);
-	const QVariant data_r       = other.data(m_sort_role);
+	const QVariant data_l = data(m_sort_role);
+	const QVariant data_r = other.data(m_sort_role);
 	const int type_l = data_l.metaType().id();
 	const int type_r = data_r.metaType().id();
 

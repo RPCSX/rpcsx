@@ -31,30 +31,29 @@ template <>
 void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellAudioError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_AUDIO_ERROR_ALREADY_INIT);
-		STR_CASE(CELL_AUDIO_ERROR_AUDIOSYSTEM);
-		STR_CASE(CELL_AUDIO_ERROR_NOT_INIT);
-		STR_CASE(CELL_AUDIO_ERROR_PARAM);
-		STR_CASE(CELL_AUDIO_ERROR_PORT_FULL);
-		STR_CASE(CELL_AUDIO_ERROR_PORT_ALREADY_RUN);
-		STR_CASE(CELL_AUDIO_ERROR_PORT_NOT_OPEN);
-		STR_CASE(CELL_AUDIO_ERROR_PORT_NOT_RUN);
-		STR_CASE(CELL_AUDIO_ERROR_TRANS_EVENT);
-		STR_CASE(CELL_AUDIO_ERROR_PORT_OPEN);
-		STR_CASE(CELL_AUDIO_ERROR_SHAREDMEMORY);
-		STR_CASE(CELL_AUDIO_ERROR_MUTEX);
-		STR_CASE(CELL_AUDIO_ERROR_EVENT_QUEUE);
-		STR_CASE(CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND);
-		STR_CASE(CELL_AUDIO_ERROR_TAG_NOT_FOUND);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_AUDIO_ERROR_ALREADY_INIT);
+				STR_CASE(CELL_AUDIO_ERROR_AUDIOSYSTEM);
+				STR_CASE(CELL_AUDIO_ERROR_NOT_INIT);
+				STR_CASE(CELL_AUDIO_ERROR_PARAM);
+				STR_CASE(CELL_AUDIO_ERROR_PORT_FULL);
+				STR_CASE(CELL_AUDIO_ERROR_PORT_ALREADY_RUN);
+				STR_CASE(CELL_AUDIO_ERROR_PORT_NOT_OPEN);
+				STR_CASE(CELL_AUDIO_ERROR_PORT_NOT_RUN);
+				STR_CASE(CELL_AUDIO_ERROR_TRANS_EVENT);
+				STR_CASE(CELL_AUDIO_ERROR_PORT_OPEN);
+				STR_CASE(CELL_AUDIO_ERROR_SHAREDMEMORY);
+				STR_CASE(CELL_AUDIO_ERROR_MUTEX);
+				STR_CASE(CELL_AUDIO_ERROR_EVENT_QUEUE);
+				STR_CASE(CELL_AUDIO_ERROR_AUDIOSYSTEM_NOT_FOUND);
+				STR_CASE(CELL_AUDIO_ERROR_TAG_NOT_FOUND);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
-
 
 cell_audio_config::cell_audio_config()
 {
@@ -132,9 +131,7 @@ void cell_audio_config::reset(bool backend_changed)
 }
 
 audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
-	: backend(_cfg.backend)
-	, cfg(_cfg)
-	, buf_sz(AUDIO_BUFFER_SAMPLES * _cfg.audio_channels)
+	: backend(_cfg.backend), cfg(_cfg), buf_sz(AUDIO_BUFFER_SAMPLES * _cfg.audio_channels)
 {
 	// Initialize buffers
 	if (cfg.num_allocated_buffers > MAX_AUDIO_BUFFERS)
@@ -196,9 +193,10 @@ float* audio_ringbuffer::get_buffer(u32 num) const
 	return buffer[num].get();
 }
 
-u32 audio_ringbuffer::backend_write_callback(u32 size, void *buf)
+u32 audio_ringbuffer::backend_write_callback(u32 size, void* buf)
 {
-	if (!backend_active.observe()) backend_active = true;
+	if (!backend_active.observe())
+		backend_active = true;
 
 	return static_cast<u32>(cb_ringbuf.pop(buf, size, true));
 }
@@ -283,7 +281,8 @@ void audio_ringbuffer::enqueue_silence(u32 buf_count, bool force)
 
 void audio_ringbuffer::process_resampled_data()
 {
-	if (!cfg.time_stretching_enabled) return;
+	if (!cfg.time_stretching_enabled)
+		return;
 
 	const auto& [buffer, samples] = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.backend_ch_cnt)));
 	commit_data(buffer, samples);
@@ -443,7 +442,8 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 	for (audio_port& port : ports)
 	{
-		if (port.state != audio_port_state::started) continue;
+		if (port.state != audio_port_state::started)
+			continue;
 		active++;
 
 		auto port_buf = port.get_vm_ptr();
@@ -514,7 +514,8 @@ void cell_audio_thread::reset_ports(s32 offset)
 	// Memset buffer to 0 and tag
 	for (audio_port& port : ports)
 	{
-		if (port.state != audio_port_state::started) continue;
+		if (port.state != audio_port_state::started)
+			continue;
 
 		memset(port.get_vm_ptr(offset), 0, port.block_size() * sizeof(float));
 
@@ -536,7 +537,8 @@ void cell_audio_thread::advance(u64 timestamp)
 
 	for (audio_port& port : ports)
 	{
-		if (port.state != audio_port_state::started) continue;
+		if (port.state != audio_port_state::started)
+			continue;
 
 		port.global_counter = m_counter;
 		port.active_counter++;
@@ -610,8 +612,7 @@ namespace audio
 {
 	cell_audio_config::raw_config get_raw_config()
 	{
-		return
-		{
+		return {
 			.audio_device = g_cfg.audio.audio_device,
 			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
 			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
@@ -621,8 +622,7 @@ namespace audio
 			.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
 			.channel_layout = g_cfg.audio.channel_layout,
 			.renderer = g_cfg.audio.renderer,
-			.provider = g_cfg.audio.provider
-		};
+			.provider = g_cfg.audio.provider};
 	}
 
 	void configure_audio(bool force_reset)
@@ -654,7 +654,7 @@ namespace audio
 			}
 		}
 	}
-}
+} // namespace audio
 
 void cell_audio_thread::update_config(bool backend_changed)
 {
@@ -827,9 +827,9 @@ void cell_audio_thread::operator()()
 
 			const auto tag_info = count_port_buffer_tags();
 			const u32 active_ports = std::get<0>(tag_info);
-			const u32 in_progress  = std::get<1>(tag_info);
-			const u32 untouched    = std::get<2>(tag_info);
-			const u32 incomplete   = std::get<3>(tag_info);
+			const u32 in_progress = std::get<1>(tag_info);
+			const u32 untouched = std::get<2>(tag_info);
+			const u32 incomplete = std::get<3>(tag_info);
 
 			// Ratio between the rolling average of the audio period, and the desired audio period
 			const f32 average_playtime_ratio = m_average_playtime / cfg.audio_buffer_length;
@@ -903,15 +903,14 @@ void cell_audio_thread::operator()()
 			}
 
 			// Wait until buffers have been touched
-			//cellAudio.error("active=%u, in_progress=%u, untouched=%u, incomplete=%u", active_ports, in_progress, untouched, incomplete);
+			// cellAudio.error("active=%u, in_progress=%u, untouched=%u, incomplete=%u", active_ports, in_progress, untouched, incomplete);
 			if (untouched > untouched_expected)
 			{
 				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
 				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
 				if (
 					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
-					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip
-				   )
+					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip)
 				{
 					// There's no audio in the buffers, simply advance time and hope the game recovers
 					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
@@ -944,7 +943,7 @@ void cell_audio_thread::operator()()
 				continue;
 			}
 
-			//cellAudio.error("active=%u, untouched=%u, in_progress=%d, incomplete=%d, enqueued_buffers=%u", active_ports, untouched, in_progress, incomplete, enqueued_buffers);
+			// cellAudio.error("active=%u, untouched=%u, in_progress=%d, incomplete=%d, enqueued_buffers=%u", active_ports, untouched, in_progress, incomplete, enqueued_buffers);
 
 			// Store number of untouched buffers for future reference
 			untouched_expected = untouched;
@@ -1050,7 +1049,8 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 	// mixing
 	for (audio_port& port : ports)
 	{
-		if (port.state != audio_port_state::started) continue;
+		if (port.state != audio_port_state::started)
+			continue;
 
 		auto buf = port.get_vm_ptr(offset);
 
@@ -1071,7 +1071,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				if ((!dec && param.value - port.level <= 0.0f) || (dec && param.value - port.level >= 0.0f))
 				{
 					port.level = param.value;
-					port.level_set.compare_and_swap(param, { param.value, 0.0f });
+					port.level_set.compare_and_swap(param, {param.value, 0.0f});
 				}
 			}
 
@@ -1084,7 +1084,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 			{
 				step_volume(port);
 
-				const float left  = buf[in + 0] * m;
+				const float left = buf[in + 0] * m;
 				const float right = buf[in + 1] * m;
 
 				out_buffer[out + 0] += left;
@@ -1097,13 +1097,13 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 			{
 				step_volume(port);
 
-				const float left       = buf[in + 0] * m;
-				const float right      = buf[in + 1] * m;
-				const float center     = buf[in + 2] * m;
-				const float low_freq   = buf[in + 3] * m;
-				const float side_left  = buf[in + 4] * m;
+				const float left = buf[in + 0] * m;
+				const float right = buf[in + 1] * m;
+				const float center = buf[in + 2] * m;
+				const float low_freq = buf[in + 3] * m;
+				const float side_left = buf[in + 4] * m;
 				const float side_right = buf[in + 5] * m;
-				const float rear_left  = buf[in + 6] * m;
+				const float rear_left = buf[in + 6] * m;
 				const float rear_right = buf[in + 7] * m;
 
 				if constexpr (downmix == AudioChannelCnt::STEREO)
@@ -1173,11 +1173,12 @@ void cell_audio_thread::finish_port_volume_stepping()
 	// part of cellAudioSetPortLevel functionality
 	for (audio_port& port : ports)
 	{
-		if (port.state != audio_port_state::started) continue;
+		if (port.state != audio_port_state::started)
+			continue;
 
 		const audio_port::level_set_t param = port.level_set.load();
 		port.level = param.value;
-		port.level_set.compare_and_swap(param, { param.value, 0.0f });
+		port.level_set.compare_and_swap(param, {param.value, 0.0f});
 	}
 }
 
@@ -1200,9 +1201,9 @@ error_code cellAudioInit()
 	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
 	{
 		g_audio.ports[i].number = i;
-		g_audio.ports[i].addr   = g_audio_buffer + AUDIO_PORT_OFFSET * i;
-		g_audio.ports[i].index  = (g_audio_indices + i).ptr(&aligned_index_t::index);
-		g_audio.ports[i].state  = audio_port_state::closed;
+		g_audio.ports[i].addr = g_audio_buffer + AUDIO_PORT_OFFSET * i;
+		g_audio.ports[i].index = (g_audio_indices + i).ptr(&aligned_index_t::index);
+		g_audio.ports[i].state = audio_port_state::closed;
 	}
 
 	g_audio.init = 1;
@@ -1319,16 +1320,16 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	}
 
 	// TODO: is this necessary in any way? (Based on libaudio.prx)
-	//const u64 num_channels_non_0 = std::max<u64>(1, num_channels);
+	// const u64 num_channels_non_0 = std::max<u64>(1, num_channels);
 
-	port->num_channels   = ::narrow<u32>(num_channels);
-	port->num_blocks     = ::narrow<u32>(num_blocks);
-	port->attr           = attr;
-	port->size           = ::narrow<u32>(num_channels * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
-	port->cur_pos        = 0;
+	port->num_channels = ::narrow<u32>(num_channels);
+	port->num_blocks = ::narrow<u32>(num_blocks);
+	port->attr = attr;
+	port->size = ::narrow<u32>(num_channels * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
+	port->cur_pos = 0;
 	port->global_counter = g_audio.m_counter;
 	port->active_counter = 0;
-	port->timestamp      = get_guest_system_time(g_audio.m_last_period_end);
+	port->timestamp = get_guest_system_time(g_audio.m_last_period_end);
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
@@ -1339,7 +1340,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 		port->level = 1.0f;
 	}
 
-	port->level_set.store({ port->level, 0.0f });
+	port->level_set.store({port->level, 0.0f});
 
 	if (port->level <= -1.0f)
 	{
@@ -1389,7 +1390,7 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 	}
 
 	portConfig->nChannel = port.num_channels;
-	portConfig->nBlock   = port.num_blocks;
+	portConfig->nBlock = port.num_blocks;
 	portConfig->portSize = port.size;
 	portConfig->portAddr = port.addr.addr();
 	return CELL_OK;
@@ -1586,7 +1587,7 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 
 	if (level >= 0.0f)
 	{
-		port.level_set.exchange({ level, (port.level - level) / 624.0f });
+		port.level_set.exchange({level, (port.level - level) / 624.0f});
 	}
 	else
 	{
@@ -1600,7 +1601,7 @@ static error_code AudioCreateNotifyEventQueue(ppu_thread& ppu, vm::ptr<u32> id, 
 {
 	vm::var<sys_event_queue_attribute_t> attr;
 	attr->protocol = SYS_SYNC_FIFO;
-	attr->type     = queue_type;
+	attr->type = queue_type;
 	attr->name_u64 = 0;
 
 	for (u64 i = 0; i < MAX_AUDIO_EVENT_QUEUES; i++)
@@ -1671,22 +1672,23 @@ error_code AudioSetNotifyEventQueue(ppu_thread& ppu, u64 key, u32 iFlags)
 		for (usz count = 0; !lv2_event_queue::find(c_mxr000) && count < 100; count++)
 		{
 			if (has_sur_mixer_thread || idm::select<named_thread<ppu_thread>>([&](u32 id, named_thread<ppu_thread>& test_ppu)
-			{
-				// Confirm thread existence
-				if (id == ppu.id)
-				{
-					return false;
-				}
+											{
+												// Confirm thread existence
+												if (id == ppu.id)
+												{
+													return false;
+												}
 
-				const auto ptr = test_ppu.ppu_tname.load();
+												const auto ptr = test_ppu.ppu_tname.load();
 
-				if (!ptr)
-				{
-					return false;
-				}
+												if (!ptr)
+												{
+													return false;
+												}
 
-				return *ptr == "_cellsurMixerMain"sv;
-			}).ret)
+												return *ptr == "_cellsurMixerMain"sv;
+											})
+											.ret)
 			{
 				has_sur_mixer_thread = true;
 			}
@@ -1745,14 +1747,11 @@ error_code AudioSetNotifyEventQueue(ppu_thread& ppu, u64 key, u32 iFlags)
 	}
 
 	// Set unique source associated with the key
-	g_audio.keys.push_back
-	({
-		.start_period = g_audio.event_period,
+	g_audio.keys.push_back({.start_period = g_audio.event_period,
 		.flags = iFlags,
 		.source = ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio.key_count++ * lv2_event_port::id_step),
 		.ack_timestamp = 0,
-		.port = std::move(q)
-	});
+		.port = std::move(q)});
 
 	g_audio.key_count %= lv2_event_port::id_count;
 
@@ -1904,12 +1903,12 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 		{
 			dst[i * 8 + 0] += src[i * 2 + 0] * volume; // mix L ch
 			dst[i * 8 + 1] += src[i * 2 + 1] * volume; // mix R ch
-			//dst[i * 8 + 2] += 0.0f; // center
-			//dst[i * 8 + 3] += 0.0f; // LFE
-			//dst[i * 8 + 4] += 0.0f; // rear L
-			//dst[i * 8 + 5] += 0.0f; // rear R
-			//dst[i * 8 + 6] += 0.0f; // side L
-			//dst[i * 8 + 7] += 0.0f; // side R
+													   // dst[i * 8 + 2] += 0.0f; // center
+			// dst[i * 8 + 3] += 0.0f; // LFE
+			// dst[i * 8 + 4] += 0.0f; // rear L
+			// dst[i * 8 + 5] += 0.0f; // rear R
+			// dst[i * 8 + 6] += 0.0f; // side L
+			// dst[i * 8 + 7] += 0.0f; // side R
 		}
 	}
 	else
@@ -1957,8 +1956,8 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 			dst[i * 8 + 3] += src[i * 6 + 5] * volume; // mix LFE
 			dst[i * 8 + 4] += src[i * 6 + 3] * volume; // mix rear L
 			dst[i * 8 + 5] += src[i * 6 + 4] * volume; // mix rear R
-			//dst[i * 8 + 6] += 0.0f; // side L
-			//dst[i * 8 + 7] += 0.0f; // side R
+													   // dst[i * 8 + 6] += 0.0f; // side L
+			// dst[i * 8 + 7] += 0.0f; // side R
 		}
 	}
 	else
@@ -2062,32 +2061,32 @@ error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
 }
 
 DECLARE(ppu_module_manager::cellAudio)("cellAudio", []()
-{
-	// Private variables
-	REG_VAR(cellAudio, g_audio_buffer).flag(MFF_HIDDEN);
-	REG_VAR(cellAudio, g_audio_indices).flag(MFF_HIDDEN);
+	{
+		// Private variables
+		REG_VAR(cellAudio, g_audio_buffer).flag(MFF_HIDDEN);
+		REG_VAR(cellAudio, g_audio_indices).flag(MFF_HIDDEN);
 
-	REG_FUNC(cellAudio, cellAudioInit);
-	REG_FUNC(cellAudio, cellAudioPortClose);
-	REG_FUNC(cellAudio, cellAudioPortStop);
-	REG_FUNC(cellAudio, cellAudioGetPortConfig);
-	REG_FUNC(cellAudio, cellAudioPortStart);
-	REG_FUNC(cellAudio, cellAudioQuit);
-	REG_FUNC(cellAudio, cellAudioPortOpen);
-	REG_FUNC(cellAudio, cellAudioSetPortLevel);
-	REG_FUNC(cellAudio, cellAudioCreateNotifyEventQueue);
-	REG_FUNC(cellAudio, cellAudioCreateNotifyEventQueueEx);
-	REG_FUNC(cellAudio, cellAudioMiscSetAccessoryVolume);
-	REG_FUNC(cellAudio, cellAudioSetNotifyEventQueue);
-	REG_FUNC(cellAudio, cellAudioSetNotifyEventQueueEx);
-	REG_FUNC(cellAudio, cellAudioGetPortTimestamp);
-	REG_FUNC(cellAudio, cellAudioAdd2chData);
-	REG_FUNC(cellAudio, cellAudioAdd6chData);
-	REG_FUNC(cellAudio, cellAudioAddData);
-	REG_FUNC(cellAudio, cellAudioGetPortBlockTag);
-	REG_FUNC(cellAudio, cellAudioRemoveNotifyEventQueue);
-	REG_FUNC(cellAudio, cellAudioRemoveNotifyEventQueueEx);
-	REG_FUNC(cellAudio, cellAudioSendAck);
-	REG_FUNC(cellAudio, cellAudioSetPersonalDevice);
-	REG_FUNC(cellAudio, cellAudioUnsetPersonalDevice);
-});
+		REG_FUNC(cellAudio, cellAudioInit);
+		REG_FUNC(cellAudio, cellAudioPortClose);
+		REG_FUNC(cellAudio, cellAudioPortStop);
+		REG_FUNC(cellAudio, cellAudioGetPortConfig);
+		REG_FUNC(cellAudio, cellAudioPortStart);
+		REG_FUNC(cellAudio, cellAudioQuit);
+		REG_FUNC(cellAudio, cellAudioPortOpen);
+		REG_FUNC(cellAudio, cellAudioSetPortLevel);
+		REG_FUNC(cellAudio, cellAudioCreateNotifyEventQueue);
+		REG_FUNC(cellAudio, cellAudioCreateNotifyEventQueueEx);
+		REG_FUNC(cellAudio, cellAudioMiscSetAccessoryVolume);
+		REG_FUNC(cellAudio, cellAudioSetNotifyEventQueue);
+		REG_FUNC(cellAudio, cellAudioSetNotifyEventQueueEx);
+		REG_FUNC(cellAudio, cellAudioGetPortTimestamp);
+		REG_FUNC(cellAudio, cellAudioAdd2chData);
+		REG_FUNC(cellAudio, cellAudioAdd6chData);
+		REG_FUNC(cellAudio, cellAudioAddData);
+		REG_FUNC(cellAudio, cellAudioGetPortBlockTag);
+		REG_FUNC(cellAudio, cellAudioRemoveNotifyEventQueue);
+		REG_FUNC(cellAudio, cellAudioRemoveNotifyEventQueueEx);
+		REG_FUNC(cellAudio, cellAudioSendAck);
+		REG_FUNC(cellAudio, cellAudioSetPersonalDevice);
+		REG_FUNC(cellAudio, cellAudioUnsetPersonalDevice);
+	});

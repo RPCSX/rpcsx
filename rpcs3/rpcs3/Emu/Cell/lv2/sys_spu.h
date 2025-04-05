@@ -14,40 +14,40 @@ struct lv2_memory_container;
 
 enum : s32
 {
-	SYS_SPU_THREAD_GROUP_TYPE_NORMAL                = 0x00,
-	//SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL            = 0x01, doesn't exist
-	SYS_SPU_THREAD_GROUP_TYPE_SYSTEM                = 0x02,
+	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,
+	// SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL            = 0x01, doesn't exist
+	SYS_SPU_THREAD_GROUP_TYPE_SYSTEM = 0x02,
 	SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER = 0x04,
-	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT           = 0x08,
+	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT = 0x08,
 	SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT = 0x18,
 	SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM = 0x20,
 };
 
 enum
 {
-	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT       = 0x0001,
+	SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT = 0x0001,
 	SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT = 0x0002,
-	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED       = 0x0004
+	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED = 0x0004
 };
 
 enum
 {
-	SYS_SPU_THREAD_GROUP_EVENT_RUN           = 1,
-	SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION     = 2,
+	SYS_SPU_THREAD_GROUP_EVENT_RUN = 1,
+	SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION = 2,
 	SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE = 4,
 };
 
 enum : u64
 {
-	SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY           = 0xFFFFFFFF53505500ull,
-	SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY     = 0xFFFFFFFF53505503ull,
+	SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY = 0xFFFFFFFF53505500ull,
+	SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY = 0xFFFFFFFF53505503ull,
 	SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY = 0xFFFFFFFF53505504ull,
 };
 
 enum
 {
-	SYS_SPU_THREAD_GROUP_LOG_ON         = 0x0,
-	SYS_SPU_THREAD_GROUP_LOG_OFF        = 0x1,
+	SYS_SPU_THREAD_GROUP_LOG_ON = 0x0,
+	SYS_SPU_THREAD_GROUP_LOG_OFF = 0x1,
 	SYS_SPU_THREAD_GROUP_LOG_GET_STATUS = 0x2,
 };
 
@@ -74,11 +74,11 @@ enum : s32
 
 enum spu_stop_syscall : u32
 {
-	SYS_SPU_THREAD_STOP_YIELD                = 0x0100,
-	SYS_SPU_THREAD_STOP_GROUP_EXIT           = 0x0101,
-	SYS_SPU_THREAD_STOP_THREAD_EXIT          = 0x0102,
-	SYS_SPU_THREAD_STOP_RECEIVE_EVENT        = 0x0110,
-	SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT    = 0x0111,
+	SYS_SPU_THREAD_STOP_YIELD = 0x0100,
+	SYS_SPU_THREAD_STOP_GROUP_EXIT = 0x0101,
+	SYS_SPU_THREAD_STOP_THREAD_EXIT = 0x0102,
+	SYS_SPU_THREAD_STOP_RECEIVE_EVENT = 0x0110,
+	SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT = 0x0111,
 	SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE = 0x0120,
 };
 
@@ -92,8 +92,8 @@ struct sys_spu_thread_group_attribute
 
 enum : u32
 {
-	SYS_SPU_THREAD_OPTION_NONE               = 0,
-	SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE  = 1,
+	SYS_SPU_THREAD_OPTION_NONE = 0,
+	SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE = 1,
 	SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE = 2,
 };
 
@@ -117,7 +117,7 @@ struct sys_spu_segment
 	ENABLE_BITWISE_SERIALIZATION;
 
 	be_t<s32> type; // copy, fill, info
-	be_t<u32> ls; // local storage address
+	be_t<u32> ls;   // local storage address
 	be_t<u32> size;
 
 	union
@@ -131,13 +131,13 @@ CHECK_SIZE(sys_spu_segment, 0x18);
 
 enum : u32
 {
-	SYS_SPU_IMAGE_TYPE_USER   = 0,
+	SYS_SPU_IMAGE_TYPE_USER = 0,
 	SYS_SPU_IMAGE_TYPE_KERNEL = 1,
 };
 
 struct sys_spu_image
 {
-	be_t<u32> type; // user, kernel
+	be_t<u32> type;        // user, kernel
 	be_t<u32> entry_point; // Note: in kernel mode it's used to store id
 	vm::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
@@ -185,7 +185,7 @@ struct sys_spu_image
 
 					auto* seg = &segs[num_segs++];
 					seg->type = SYS_SPU_SEGMENT_TYPE_COPY;
-					seg->ls   = static_cast<u32>(phdr.p_vaddr);
+					seg->ls = static_cast<u32>(phdr.p_vaddr);
 					seg->size = static_cast<u32>(phdr.p_filesz);
 					seg->addr = static_cast<u32>(phdr.p_offset + src);
 				}
@@ -199,7 +199,7 @@ struct sys_spu_image
 
 					auto* seg = &segs[num_segs++];
 					seg->type = SYS_SPU_SEGMENT_TYPE_FILL;
-					seg->ls   = static_cast<u32>(phdr.p_vaddr + phdr.p_filesz);
+					seg->ls = static_cast<u32>(phdr.p_vaddr + phdr.p_filesz);
 					seg->size = static_cast<u32>(phdr.p_memsz - phdr.p_filesz);
 					seg->addr = 0;
 				}
@@ -233,7 +233,7 @@ struct sys_spu_image
 enum : u32
 {
 	SYS_SPU_IMAGE_PROTECT = 0,
-	SYS_SPU_IMAGE_DIRECT  = 1,
+	SYS_SPU_IMAGE_DIRECT = 1,
 };
 
 struct lv2_spu_image : lv2_obj
@@ -245,9 +245,7 @@ struct lv2_spu_image : lv2_obj
 	const s32 nsegs;
 
 	lv2_spu_image(u32 entry, vm::ptr<sys_spu_segment> segs, s32 nsegs)
-		: e_entry(entry)
-		, segs(segs)
-		, nsegs(nsegs)
+		: e_entry(entry), segs(segs), nsegs(nsegs)
 	{
 	}
 
@@ -276,49 +274,37 @@ struct lv2_spu_group
 	const u32 id;
 	const u32 max_num;
 	const u32 mem_size;
-	const s32 type; // SPU Thread Group Type
+	const s32 type;                 // SPU Thread Group Type
 	lv2_memory_container* const ct; // Memory Container
 	const bool has_scheduler_context;
 	u32 max_run;
 
 	shared_mutex mutex;
 
-	atomic_t<u32> init; // Initialization Counter
+	atomic_t<u32> init;                               // Initialization Counter
 	atomic_t<typename spu_thread::spu_prio_t> prio{}; // SPU Thread Group Priority
-	atomic_t<spu_group_status> run_state; // SPU Thread Group State
-	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
-	atomic_t<u32> join_state; // flags used to detect exit cause and signal
-	atomic_t<u32> running = 0; // Number of running threads
+	atomic_t<spu_group_status> run_state;             // SPU Thread Group State
+	atomic_t<s32> exit_status;                        // SPU Thread Group Exit Status
+	atomic_t<u32> join_state;                         // flags used to detect exit cause and signal
+	atomic_t<u32> running = 0;                        // Number of running threads
 	atomic_t<u32> spurs_running = 0;
 	atomic_t<u32> stop_count = 0;
-	atomic_t<u32> wait_term_count = 0; 
+	atomic_t<u32> wait_term_count = 0;
 	u32 waiter_spu_index = -1; // Index of SPU executing a waiting syscall
 	class ppu_thread* waiter = nullptr;
 	bool set_terminate = false;
 
-	std::array<shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
-	std::array<s8, 256> threads_map; // SPU Threads map based number
+	std::array<shared_ptr<named_thread<spu_thread>>, 8> threads;      // SPU Threads
+	std::array<s8, 256> threads_map;                                  // SPU Threads map based number
 	std::array<std::pair<u32, std::vector<sys_spu_segment>>, 8> imgs; // Entry points, SPU image segments
-	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
+	std::array<std::array<u64, 4>, 8> args;                           // SPU Thread Arguments
 
-	shared_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	shared_ptr<lv2_event_queue> ep_run;       // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
 	shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
 	shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	lv2_spu_group(std::string name, u32 num, s32 _prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size) noexcept
-		: name(std::move(name))
-		, id(idm::last_id())
-		, max_num(num)
-		, mem_size(mem_size)
-		, type(type)
-		, ct(ct)
-		, has_scheduler_context(uses_scheduler)
-		, max_run(num)
-		, init(0)
-		, run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
-		, exit_status(0)
-		, join_state(0)
-		, args({})
+		: name(std::move(name)), id(idm::last_id()), max_num(num), mem_size(mem_size), type(type), ct(ct), has_scheduler_context(uses_scheduler), max_run(num), init(0), run_state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED), exit_status(0), join_state(0), args({})
 	{
 		threads_map.fill(-1);
 		prio.raw().prio = _prio;

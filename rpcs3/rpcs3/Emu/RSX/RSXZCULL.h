@@ -19,7 +19,7 @@ namespace rsx
 	static inline std::string_view location_tostring(u32 location)
 	{
 		ensure(location < 2);
-		constexpr const char* location_names[2] = { "CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN" };
+		constexpr const char* location_names[2] = {"CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN"};
 		return location_names[location];
 	}
 
@@ -50,14 +50,14 @@ namespace rsx
 			occlusion_query_info* query;
 			queued_report_write* forwarder;
 
-			vm::addr_t sink;                      // Memory location of the report
-			std::vector<vm::addr_t> sink_alias;   // Aliased memory addresses
+			vm::addr_t sink;                    // Memory location of the report
+			std::vector<vm::addr_t> sink_alias; // Aliased memory addresses
 		};
 
 		struct query_search_result
 		{
 			bool found;
-			u32  raw_zpass_result;
+			u32 raw_zpass_result;
 			std::vector<occlusion_query_info*> queries;
 		};
 
@@ -88,19 +88,19 @@ namespace rsx
 
 		enum constants
 		{
-			max_zcull_delay_us    = 300,   // Delay before a report update operation is forced to retire
-			min_zcull_tick_us     = 100,   // Default tick duration. To avoid hardware spam, we schedule peeks in multiples of this.
-			occlusion_query_count = 2048,  // Number of occlusion query slots available. Real hardware actually has far fewer units before choking
-			max_safe_queue_depth  = 1792,  // Number of in-flight queries before we start forcefully flushing data from the GPU device.
-			max_stat_registers    = 8192   // Size of the statistics cache
+			max_zcull_delay_us = 300,     // Delay before a report update operation is forced to retire
+			min_zcull_tick_us = 100,      // Default tick duration. To avoid hardware spam, we schedule peeks in multiples of this.
+			occlusion_query_count = 2048, // Number of occlusion query slots available. Real hardware actually has far fewer units before choking
+			max_safe_queue_depth = 1792,  // Number of in-flight queries before we start forcefully flushing data from the GPU device.
+			max_stat_registers = 8192     // Size of the statistics cache
 		};
 
 		class ZCULL_control
 		{
 		private:
 			std::unordered_map<u32, MMIO_page_data_t> m_locked_pages[2];
-			atomic_t<bool> m_pages_accessed[2] = { false, false };
-			atomic_t<s32> m_critical_reports_in_flight = { 0 };
+			atomic_t<bool> m_pages_accessed[2] = {false, false};
+			atomic_t<s32> m_critical_reports_in_flight = {0};
 			shared_mutex m_pages_mutex;
 
 			void on_report_enqueued(vm::addr_t address);
@@ -108,12 +108,11 @@ namespace rsx
 			void disable_optimizations(class ::rsx::thread* ptimer, u32 location);
 
 		protected:
-
-			bool unit_enabled = false;           // The ZCULL unit is on
-			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
-			bool stats_enabled = false;          // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
-			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
-			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
+			bool unit_enabled = false;        // The ZCULL unit is on
+			bool write_enabled = false;       // A surface in the ZCULL-monitored tile region has been loaded for rasterization
+			bool stats_enabled = false;       // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
+			bool zpass_count_enabled = false; // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
+			bool host_queries_active = false; // The backend/host is gathering Z data for the ZCULL unit
 
 			std::array<occlusion_query_info, 2048> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
@@ -152,7 +151,6 @@ namespace rsx
 			void retire(class ::rsx::thread* ptimer, queued_report_write* writer, u32 result);
 
 		public:
-
 			ZCULL_control();
 			virtual ~ZCULL_control();
 
@@ -185,7 +183,10 @@ namespace rsx
 			void on_sync_hint(sync_hint_payload_t payload);
 
 			// Check for pending writes
-			bool has_pending() const { return !m_pending_writes.empty(); }
+			bool has_pending() const
+			{
+				return !m_pending_writes.empty();
+			}
 
 			// Search for query synchronized at address
 			query_search_result find_query(vm::addr_t sink_address, bool all);
@@ -197,13 +198,22 @@ namespace rsx
 			bool on_access_violation(u32 address);
 
 			// Optimization check
-			bool is_query_result_urgent(u32 address) const { return m_pages_accessed[rsx::classify_location(address)]; }
+			bool is_query_result_urgent(u32 address) const
+			{
+				return m_pages_accessed[rsx::classify_location(address)];
+			}
 
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
-			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
+			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/)
+			{
+				return true;
+			}
+			virtual void get_occlusion_query_result(occlusion_query_info* query)
+			{
+				query->result = -1;
+			}
 			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
 		};
 
@@ -243,5 +253,5 @@ namespace rsx
 			// Evaluates the condition by accessing memory directly
 			void eval_result(thread* pthr);
 		};
-	}
-}
+	} // namespace reports
+} // namespace rsx

@@ -5,14 +5,14 @@
 // Error Codes
 enum CellPamfError : u32
 {
-	CELL_PAMF_ERROR_STREAM_NOT_FOUND    = 0x80610501,
-	CELL_PAMF_ERROR_INVALID_PAMF        = 0x80610502,
-	CELL_PAMF_ERROR_INVALID_ARG         = 0x80610503,
-	CELL_PAMF_ERROR_UNKNOWN_TYPE        = 0x80610504,
+	CELL_PAMF_ERROR_STREAM_NOT_FOUND = 0x80610501,
+	CELL_PAMF_ERROR_INVALID_PAMF = 0x80610502,
+	CELL_PAMF_ERROR_INVALID_ARG = 0x80610503,
+	CELL_PAMF_ERROR_UNKNOWN_TYPE = 0x80610504,
 	CELL_PAMF_ERROR_UNSUPPORTED_VERSION = 0x80610505,
-	CELL_PAMF_ERROR_UNKNOWN_STREAM      = 0x80610506,
-	CELL_PAMF_ERROR_EP_NOT_FOUND        = 0x80610507,
-	CELL_PAMF_ERROR_NOT_AVAILABLE       = 0x80610508,
+	CELL_PAMF_ERROR_UNKNOWN_STREAM = 0x80610506,
+	CELL_PAMF_ERROR_EP_NOT_FOUND = 0x80610507,
+	CELL_PAMF_ERROR_NOT_AVAILABLE = 0x80610508,
 };
 
 // PamfReaderInitialize Attribute Flags
@@ -24,30 +24,30 @@ enum
 
 enum CellPamfStreamType
 {
-	CELL_PAMF_STREAM_TYPE_AVC             = 0,
-	CELL_PAMF_STREAM_TYPE_M2V             = 1,
-	CELL_PAMF_STREAM_TYPE_ATRAC3PLUS      = 2,
-	CELL_PAMF_STREAM_TYPE_PAMF_LPCM       = 3,
-	CELL_PAMF_STREAM_TYPE_AC3             = 4,
-	CELL_PAMF_STREAM_TYPE_USER_DATA       = 5,
-	CELL_PAMF_STREAM_TYPE_PSMF_AVC        = 6,
+	CELL_PAMF_STREAM_TYPE_AVC = 0,
+	CELL_PAMF_STREAM_TYPE_M2V = 1,
+	CELL_PAMF_STREAM_TYPE_ATRAC3PLUS = 2,
+	CELL_PAMF_STREAM_TYPE_PAMF_LPCM = 3,
+	CELL_PAMF_STREAM_TYPE_AC3 = 4,
+	CELL_PAMF_STREAM_TYPE_USER_DATA = 5,
+	CELL_PAMF_STREAM_TYPE_PSMF_AVC = 6,
 	CELL_PAMF_STREAM_TYPE_PSMF_ATRAC3PLUS = 7,
-	CELL_PAMF_STREAM_TYPE_PSMF_LPCM       = 8,
-	CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA  = 9,
-	CELL_PAMF_STREAM_TYPE_VIDEO           = 20,
-	CELL_PAMF_STREAM_TYPE_AUDIO           = 21,
-	CELL_PAMF_STREAM_TYPE_UNK             = 22,
+	CELL_PAMF_STREAM_TYPE_PSMF_LPCM = 8,
+	CELL_PAMF_STREAM_TYPE_PSMF_USER_DATA = 9,
+	CELL_PAMF_STREAM_TYPE_VIDEO = 20,
+	CELL_PAMF_STREAM_TYPE_AUDIO = 21,
+	CELL_PAMF_STREAM_TYPE_UNK = 22,
 };
 
 enum PamfStreamCodingType : u8
 {
-	PAMF_STREAM_CODING_TYPE_M2V        = 0x02,
-	PAMF_STREAM_CODING_TYPE_AVC        = 0x1b,
-	PAMF_STREAM_CODING_TYPE_PAMF_LPCM  = 0x80,
-	PAMF_STREAM_CODING_TYPE_AC3        = 0x81,
+	PAMF_STREAM_CODING_TYPE_M2V = 0x02,
+	PAMF_STREAM_CODING_TYPE_AVC = 0x1b,
+	PAMF_STREAM_CODING_TYPE_PAMF_LPCM = 0x80,
+	PAMF_STREAM_CODING_TYPE_AC3 = 0x81,
 	PAMF_STREAM_CODING_TYPE_ATRAC3PLUS = 0xdc,
-	PAMF_STREAM_CODING_TYPE_USER_DATA  = 0xdd,
-	PAMF_STREAM_CODING_TYPE_PSMF       = 0xff,
+	PAMF_STREAM_CODING_TYPE_USER_DATA = 0xdd,
+	PAMF_STREAM_CODING_TYPE_PSMF = 0xff,
 };
 
 enum
@@ -80,77 +80,77 @@ enum
 enum
 {
 	CELL_PAMF_AVC_FRC_24000DIV1001 = 0,
-	CELL_PAMF_AVC_FRC_24           = 1,
-	CELL_PAMF_AVC_FRC_25           = 2,
+	CELL_PAMF_AVC_FRC_24 = 1,
+	CELL_PAMF_AVC_FRC_25 = 2,
 	CELL_PAMF_AVC_FRC_30000DIV1001 = 3,
-	CELL_PAMF_AVC_FRC_30           = 4,
-	CELL_PAMF_AVC_FRC_50           = 5,
+	CELL_PAMF_AVC_FRC_30 = 4,
+	CELL_PAMF_AVC_FRC_50 = 5,
 	CELL_PAMF_AVC_FRC_60000DIV1001 = 6,
 };
 
 enum
 {
-	CELL_PAMF_M2V_MP_ML   = 1,
-	CELL_PAMF_M2V_MP_H14  = 2,
-	CELL_PAMF_M2V_MP_HL   = 3,
+	CELL_PAMF_M2V_MP_ML = 1,
+	CELL_PAMF_M2V_MP_H14 = 2,
+	CELL_PAMF_M2V_MP_HL = 3,
 	CELL_PAMF_M2V_UNKNOWN = 255,
 };
 
 enum
 {
 	CELL_PAMF_M2V_FRC_24000DIV1001 = 1,
-	CELL_PAMF_M2V_FRC_24           = 2,
-	CELL_PAMF_M2V_FRC_25           = 3,
+	CELL_PAMF_M2V_FRC_24 = 2,
+	CELL_PAMF_M2V_FRC_25 = 3,
 	CELL_PAMF_M2V_FRC_30000DIV1001 = 4,
-	CELL_PAMF_M2V_FRC_30           = 5,
-	CELL_PAMF_M2V_FRC_50           = 6,
+	CELL_PAMF_M2V_FRC_30 = 5,
+	CELL_PAMF_M2V_FRC_50 = 6,
 	CELL_PAMF_M2V_FRC_60000DIV1001 = 7,
 };
 
 enum
 {
-	CELL_PAMF_ASPECT_RATIO_1_1   = 1,
+	CELL_PAMF_ASPECT_RATIO_1_1 = 1,
 	CELL_PAMF_ASPECT_RATIO_12_11 = 2,
 	CELL_PAMF_ASPECT_RATIO_10_11 = 3,
 	CELL_PAMF_ASPECT_RATIO_16_11 = 4,
 	CELL_PAMF_ASPECT_RATIO_40_33 = 5,
-	CELL_PAMF_ASPECT_RATIO_4_3   = 14,
+	CELL_PAMF_ASPECT_RATIO_4_3 = 14,
 };
 
 enum
 {
-	CELL_PAMF_COLOUR_PRIMARIES_ITR_R_BT_709        = 1,
-	CELL_PAMF_COLOUR_PRIMARIES_UNSPECIFIED         = 2,
-	CELL_PAMF_COLOUR_PRIMARIES_ITU_R_BT_470_SYS_M  = 4,
+	CELL_PAMF_COLOUR_PRIMARIES_ITR_R_BT_709 = 1,
+	CELL_PAMF_COLOUR_PRIMARIES_UNSPECIFIED = 2,
+	CELL_PAMF_COLOUR_PRIMARIES_ITU_R_BT_470_SYS_M = 4,
 	CELL_PAMF_COLOUR_PRIMARIES_ITU_R_BT_470_SYS_BG = 5,
-	CELL_PAMF_COLOUR_PRIMARIES_SMPTE_170_M         = 6,
-	CELL_PAMF_COLOUR_PRIMARIES_SMPTE_240_M         = 7,
-	CELL_PAMF_COLOUR_PRIMARIES_GENERIC_FILM        = 8,
+	CELL_PAMF_COLOUR_PRIMARIES_SMPTE_170_M = 6,
+	CELL_PAMF_COLOUR_PRIMARIES_SMPTE_240_M = 7,
+	CELL_PAMF_COLOUR_PRIMARIES_GENERIC_FILM = 8,
 };
 
 enum
 {
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_ITU_R_BT_709        = 1,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_UNSPECIFIED         = 2,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_ITU_R_BT_470_SYS_M  = 4,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_ITU_R_BT_709 = 1,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_UNSPECIFIED = 2,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_ITU_R_BT_470_SYS_M = 4,
 	CELL_PAMF_TRANSFER_CHARACTERISTICS_ITU_R_BT_470_SYS_BG = 5,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_SMPTE_170_M         = 6,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_SMPTE_240_M         = 7,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_LINEAR              = 8,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_LOG_100_1           = 9,
-	CELL_PAMF_TRANSFER_CHARACTERISTICS_LOG_316_1           = 10,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_SMPTE_170_M = 6,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_SMPTE_240_M = 7,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_LINEAR = 8,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_LOG_100_1 = 9,
+	CELL_PAMF_TRANSFER_CHARACTERISTICS_LOG_316_1 = 10,
 };
 
 enum
 {
-	CELL_PAMF_MATRIX_GBR                 = 0,
-	CELL_PAMF_MATRIX_ITU_R_BT_709        = 1,
-	CELL_PAMF_MATRIX_UNSPECIFIED         = 2,
-	CELL_PAMF_MATRIX_FCC                 = 4,
+	CELL_PAMF_MATRIX_GBR = 0,
+	CELL_PAMF_MATRIX_ITU_R_BT_709 = 1,
+	CELL_PAMF_MATRIX_UNSPECIFIED = 2,
+	CELL_PAMF_MATRIX_FCC = 4,
 	CELL_PAMF_MATRIX_ITU_R_BT_470_SYS_BG = 5,
-	CELL_PAMF_MATRIX_SMPTE_170_M         = 6,
-	CELL_PAMF_MATRIX_SMPTE_240_M         = 7,
-	CELL_PAMF_MATRIX_YCGCO               = 8,
+	CELL_PAMF_MATRIX_SMPTE_170_M = 6,
+	CELL_PAMF_MATRIX_SMPTE_240_M = 7,
+	CELL_PAMF_MATRIX_YCGCO = 8,
 };
 
 // Timestamp information (time in increments of 90 kHz)
@@ -292,7 +292,7 @@ struct PamfStreamHeader
 	be_t<u16, 1> p_std_buffer; // 2 bits: unused ??? "00", 1 bit: P_STD_buffer_scale, 13 bits: P_STD_buffer_size
 
 	be_t<u32, 1> ep_offset; // offset of EP section in header
-	be_t<u32, 1> ep_num; // count of EPs
+	be_t<u32, 1> ep_num;    // count of EPs
 
 	union
 	{
@@ -321,8 +321,7 @@ struct PamfStreamHeader
 			u8 matrixCoefficients;
 			u8 x18; // contains entropyCodingModeFlag, deblockingFilterFlag, minNumSlicePerPictureIdc, nfwIdc
 			u8 maxMeanBitrate;
-		}
-		AVC;
+		} AVC;
 
 		// M2V specific information
 		struct
@@ -340,22 +339,20 @@ struct PamfStreamHeader
 			be_t<u16, 1> horizontalSizeValue;
 			be_t<u16, 1> verticalSizeValue;
 			be_t<u32, 1> x10; // not used
-			u8 x14; // contains videoFormat and videoFullRangeFlag
+			u8 x14;           // contains videoFormat and videoFullRangeFlag
 			u8 colourPrimaries;
 			u8 transferCharacteristics;
 			u8 matrixCoefficients;
-		}
-		M2V;
+		} M2V;
 
 		// Audio specific information
 		struct
 		{
 			be_t<u16, 1> unknown; // 0
-			u8 channels; // number of channels (1, 2, 6, 8)
-			u8 freq; // 1 (always 48000)
-			u8 bps; // LPCM only
-		}
-		audio;
+			u8 channels;          // number of channels (1, 2, 6, 8)
+			u8 freq;              // 1 (always 48000)
+			u8 bps;               // LPCM only
+		} audio;
 	};
 };
 
@@ -435,8 +432,8 @@ CHECK_SIZE_ALIGN(PamfHeader, 0x50 + sizeof(PamfSequenceInfo), 1);
 
 struct PamfEpHeader
 {
-	be_t<u16, 1> value0;    // 2 bits: indexN, 1 bit: unused, 13 bits: nThRefPictureOffset in units of 2048 bytes
-	be_t<u16, 1> pts_high;  // always 0, greatest valid pts is UINT32_MAX
+	be_t<u16, 1> value0;   // 2 bits: indexN, 1 bit: unused, 13 bits: nThRefPictureOffset in units of 2048 bytes
+	be_t<u16, 1> pts_high; // always 0, greatest valid pts is UINT32_MAX
 	be_t<u32, 1> pts_low;
 	be_t<u32, 1> rpnOffset; // in units of 2048 bytes
 };
@@ -453,7 +450,7 @@ struct PsmfStreamHeader
 	be_t<u16, 1> p_std_buffer; // 2 bits: unused ??? "00", 1 bit: P_STD_buffer_scale, 13 bits: P_STD_buffer_size
 
 	be_t<u32, 1> ep_offset; // offset of EP section in header
-	be_t<u32, 1> ep_num; // count of EPs
+	be_t<u32, 1> ep_num;    // count of EPs
 
 	union
 	{
@@ -462,8 +459,7 @@ struct PsmfStreamHeader
 		{
 			u8 horizontalSize; // in units of 16 pixels
 			u8 verticalSize;   // in units of 16 pixels
-		}
-		video;
+		} video;
 
 		// Audio specific information
 		struct
@@ -471,8 +467,7 @@ struct PsmfStreamHeader
 			be_t<u16, 1> unknown;    // 0
 			u8 channelConfiguration; // 1 = mono, 2 = stereo
 			u8 samplingFrequency;    // 2 = 44.1kHz
-		}
-		audio;
+		} audio;
 	};
 };
 
@@ -547,7 +542,7 @@ CHECK_SIZE_ALIGN(PsmfHeader, 0x50 + sizeof(PsmfSequenceInfo), 1);
 
 struct PsmfEpHeader
 {
-	be_t<u16, 1> value0;    // 2 bits: indexN, 2 bits: unused, 11 bits: nThRefPictureOffset in units of 1024 bytes, 1 bit: pts_high
+	be_t<u16, 1> value0; // 2 bits: indexN, 2 bits: unused, 11 bits: nThRefPictureOffset in units of 1024 bytes, 1 bit: pts_high
 	be_t<u32, 1> pts_low;
 	be_t<u32, 1> rpnOffset; // in units of 2048 bytes
 };
@@ -574,8 +569,7 @@ struct CellPamfReader
 			vm::bcptr<PamfGroupingPeriod> currentGroupingPeriod;
 			vm::bcptr<PamfGroup> currentGroup;
 			vm::bcptr<PamfStreamHeader> currentStream;
-		}
-		pamf;
+		} pamf;
 
 		struct
 		{
@@ -584,8 +578,7 @@ struct CellPamfReader
 			vm::bcptr<PsmfGroupingPeriod> currentGroupingPeriod;
 			vm::bcptr<PsmfGroup> currentGroup;
 			vm::bcptr<PsmfStreamHeader> currentStream;
-		}
-		psmf;
+		} psmf;
 	};
 
 	u32 reserved[18];
@@ -604,7 +597,7 @@ extern const std::function<bool()> SQUEUE_NEVER_EXIT;
 bool squeue_test_exit();
 
 // TODO: eliminate this boolshit
-template<typename T, u32 sq_size = 256>
+template <typename T, u32 sq_size = 256>
 class squeue_t
 {
 	struct squeue_sync_var_t
@@ -658,23 +651,23 @@ public:
 		u32 pos = 0;
 
 		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
+				   {
+					   ensure(sync.count <= sq_size);
+					   ensure(sync.position < sq_size);
 
-			if (sync.push_lock)
-			{
-				return SQSVR_LOCKED;
-			}
-			if (sync.count == sq_size)
-			{
-				return SQSVR_FAILED;
-			}
+					   if (sync.push_lock)
+					   {
+						   return SQSVR_LOCKED;
+					   }
+					   if (sync.count == sq_size)
+					   {
+						   return SQSVR_FAILED;
+					   }
 
-			sync.push_lock = 1;
-			pos = sync.position + sync.count;
-			return SQSVR_OK;
-		}))
+					   sync.push_lock = 1;
+					   pos = sync.position + sync.count;
+					   return SQSVR_OK;
+				   }))
 		{
 			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
@@ -688,13 +681,13 @@ public:
 		m_data[pos >= sq_size ? pos - sq_size : pos] = data;
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
-			ensure(!!sync.push_lock);
-			sync.push_lock = 0;
-			sync.count++;
-		});
+			{
+				ensure(sync.count <= sq_size);
+				ensure(sync.position < sq_size);
+				ensure(!!sync.push_lock);
+				sync.push_lock = 0;
+				sync.count++;
+			});
 
 		m_rcv.notify_one();
 		m_wcv.notify_one();
@@ -703,7 +696,10 @@ public:
 
 	bool push(const T& data, const volatile bool* do_exit)
 	{
-		return push(data, [do_exit]() { return do_exit && *do_exit; });
+		return push(data, [do_exit]()
+			{
+				return do_exit && *do_exit;
+			});
 	}
 
 	bool push(const T& data)
@@ -721,23 +717,23 @@ public:
 		u32 pos = 0;
 
 		while (u32 res = m_sync.atomic_op([&pos](squeue_sync_var_t& sync) -> u32
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
+				   {
+					   ensure(sync.count <= sq_size);
+					   ensure(sync.position < sq_size);
 
-			if (!sync.count)
-			{
-				return SQSVR_FAILED;
-			}
-			if (sync.pop_lock)
-			{
-				return SQSVR_LOCKED;
-			}
+					   if (!sync.count)
+					   {
+						   return SQSVR_FAILED;
+					   }
+					   if (sync.pop_lock)
+					   {
+						   return SQSVR_LOCKED;
+					   }
 
-			sync.pop_lock = 1;
-			pos = sync.position;
-			return SQSVR_OK;
-		}))
+					   sync.pop_lock = 1;
+					   pos = sync.position;
+					   return SQSVR_OK;
+				   }))
 		{
 			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
@@ -751,18 +747,18 @@ public:
 		data = m_data[pos];
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
-			ensure(!!sync.pop_lock);
-			sync.pop_lock = 0;
-			sync.position++;
-			sync.count--;
-			if (sync.position == sq_size)
 			{
-				sync.position = 0;
-			}
-		});
+				ensure(sync.count <= sq_size);
+				ensure(sync.position < sq_size);
+				ensure(!!sync.pop_lock);
+				sync.pop_lock = 0;
+				sync.position++;
+				sync.count--;
+				if (sync.position == sq_size)
+				{
+					sync.position = 0;
+				}
+			});
 
 		m_rcv.notify_one();
 		m_wcv.notify_one();
@@ -771,7 +767,10 @@ public:
 
 	bool pop(T& data, const volatile bool* do_exit)
 	{
-		return pop(data, [do_exit]() { return do_exit && *do_exit; });
+		return pop(data, [do_exit]()
+			{
+				return do_exit && *do_exit;
+			});
 	}
 
 	bool pop(T& data)
@@ -790,23 +789,23 @@ public:
 		u32 pos = 0;
 
 		while (u32 res = m_sync.atomic_op([&pos, start_pos](squeue_sync_var_t& sync) -> u32
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
+				   {
+					   ensure(sync.count <= sq_size);
+					   ensure(sync.position < sq_size);
 
-			if (sync.count <= start_pos)
-			{
-				return SQSVR_FAILED;
-			}
-			if (sync.pop_lock)
-			{
-				return SQSVR_LOCKED;
-			}
+					   if (sync.count <= start_pos)
+					   {
+						   return SQSVR_FAILED;
+					   }
+					   if (sync.pop_lock)
+					   {
+						   return SQSVR_LOCKED;
+					   }
 
-			sync.pop_lock = 1;
-			pos = sync.position + start_pos;
-			return SQSVR_OK;
-		}))
+					   sync.pop_lock = 1;
+					   pos = sync.position + start_pos;
+					   return SQSVR_OK;
+				   }))
 		{
 			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
@@ -820,12 +819,12 @@ public:
 		data = m_data[pos >= sq_size ? pos - sq_size : pos];
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
-			ensure(!!sync.pop_lock);
-			sync.pop_lock = 0;
-		});
+			{
+				ensure(sync.count <= sq_size);
+				ensure(sync.position < sq_size);
+				ensure(!!sync.pop_lock);
+				sync.pop_lock = 0;
+			});
 
 		m_rcv.notify_one();
 		return true;
@@ -833,7 +832,10 @@ public:
 
 	bool peek(T& data, u32 start_pos, const volatile bool* do_exit)
 	{
-		return peek(data, start_pos, [do_exit]() { return do_exit && *do_exit; });
+		return peek(data, start_pos, [do_exit]()
+			{
+				return do_exit && *do_exit;
+			});
 	}
 
 	bool peek(T& data, u32 start_pos = 0)
@@ -853,14 +855,12 @@ public:
 		const u32 m_count;
 
 		squeue_data_t(T* data, u32 pos, u32 count)
-			: m_data(data)
-			, m_pos(pos)
-			, m_count(count)
+			: m_data(data), m_pos(pos), m_count(count)
 		{
 		}
 
 	public:
-		T& operator [] (u32 index)
+		T& operator[](u32 index)
 		{
 			ensure(index < m_count);
 			index += m_pos;
@@ -869,26 +869,26 @@ public:
 		}
 	};
 
-	void process(void(*proc)(squeue_data_t data))
+	void process(void (*proc)(squeue_data_t data))
 	{
 		u32 pos, count;
 
 		while (m_sync.atomic_op([&pos, &count](squeue_sync_var_t& sync) -> u32
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
-
-			if (sync.pop_lock || sync.push_lock)
 			{
-				return SQSVR_LOCKED;
-			}
+				ensure(sync.count <= sq_size);
+				ensure(sync.position < sq_size);
 
-			pos = sync.position;
-			count = sync.count;
-			sync.pop_lock = 1;
-			sync.push_lock = 1;
-			return SQSVR_OK;
-		}))
+				if (sync.pop_lock || sync.push_lock)
+				{
+					return SQSVR_LOCKED;
+				}
+
+				pos = sync.position;
+				count = sync.count;
+				sync.pop_lock = 1;
+				sync.push_lock = 1;
+				return SQSVR_OK;
+			}))
 		{
 			std::unique_lock<std::mutex> rcv_lock(m_rcv_mutex);
 			m_rcv.wait_for(rcv_lock, std::chrono::milliseconds(1));
@@ -897,14 +897,14 @@ public:
 		proc(squeue_data_t(m_data, pos, count));
 
 		m_sync.atomic_op([](squeue_sync_var_t& sync)
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
-			ensure(!!sync.pop_lock);
-			ensure(!!sync.push_lock);
-			sync.pop_lock = 0;
-			sync.push_lock = 0;
-		});
+			{
+				ensure(sync.count <= sq_size);
+				ensure(sync.position < sq_size);
+				ensure(!!sync.pop_lock);
+				ensure(!!sync.push_lock);
+				sync.pop_lock = 0;
+				sync.push_lock = 0;
+			});
 
 		m_wcv.notify_one();
 		m_rcv.notify_one();
@@ -913,19 +913,19 @@ public:
 	void clear()
 	{
 		while (m_sync.atomic_op([](squeue_sync_var_t& sync) -> u32
-		{
-			ensure(sync.count <= sq_size);
-			ensure(sync.position < sq_size);
-
-			if (sync.pop_lock || sync.push_lock)
 			{
-				return SQSVR_LOCKED;
-			}
+				ensure(sync.count <= sq_size);
+				ensure(sync.position < sq_size);
 
-			sync.pop_lock = 1;
-			sync.push_lock = 1;
-			return SQSVR_OK;
-		}))
+				if (sync.pop_lock || sync.push_lock)
+				{
+					return SQSVR_LOCKED;
+				}
+
+				sync.pop_lock = 1;
+				sync.push_lock = 1;
+				return SQSVR_OK;
+			}))
 		{
 			std::unique_lock<std::mutex> rcv_lock(m_rcv_mutex);
 			m_rcv.wait_for(rcv_lock, std::chrono::milliseconds(1));

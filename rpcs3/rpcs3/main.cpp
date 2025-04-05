@@ -93,11 +93,11 @@ static bool s_is_error_launch = false;
 
 std::string g_input_config_override;
 
-extern thread_local std::string(*g_tls_log_prefix)();
+extern thread_local std::string (*g_tls_log_prefix)();
 extern thread_local std::string_view g_tls_serialize_name;
 
 #ifndef _WIN32
-extern char **environ;
+extern char** environ;
 #endif
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -109,7 +109,7 @@ std::set<std::string> get_one_drive_paths()
 	std::set<std::string> paths;
 
 	// NOTE: Disabled. The environment variables can lead to false positives.
-	//for (const char* key : { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
+	// for (const char* key : { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
 	//{
 	//	if (const char* env_path = std::getenv(key))
 	//	{
@@ -118,7 +118,7 @@ std::set<std::string> get_one_drive_paths()
 	//	}
 	//}
 
-	for (const wchar_t* key : { L"Software\\Microsoft\\OneDrive\\Accounts\\Personal" })
+	for (const wchar_t* key : {L"Software\\Microsoft\\OneDrive\\Accounts\\Personal"})
 	{
 		HKEY hkey = NULL;
 		LSTATUS status = RegOpenKeyW(HKEY_CURRENT_USER, key, &hkey);
@@ -136,8 +136,7 @@ std::set<std::string> get_one_drive_paths()
 			path_buffer.resize(path_buffer.size() + MAX_PATH);
 			DWORD buffer_size = static_cast<DWORD>(path_buffer.size() - 1);
 			status = RegQueryValueExW(hkey, L"UserFolder", NULL, &type, reinterpret_cast<LPBYTE>(path_buffer.data()), &buffer_size);
-		}
-		while (status == ERROR_MORE_DATA);
+		} while (status == ERROR_MORE_DATA);
 
 		const LSTATUS close_status = RegCloseKey(hkey);
 		if (close_status != ERROR_SUCCESS)
@@ -240,7 +239,10 @@ std::set<std::string> get_one_drive_paths()
 #if defined(__APPLE__)
 	if (!pthread_main_np())
 	{
-		dispatch_sync_f(dispatch_get_main_queue(), &text, [](void* text){ show_report(*static_cast<std::string_view*>(text)); });
+		dispatch_sync_f(dispatch_get_main_queue(), &text, [](void* text)
+			{
+				show_report(*static_cast<std::string_view*>(text));
+			});
 	}
 	else
 #endif
@@ -366,37 +368,37 @@ private:
 };
 
 // Arguments that force a headless application (need to be checked in create_application)
-constexpr auto arg_headless     = "headless";
-constexpr auto arg_decrypt      = "decrypt";
-constexpr auto arg_commit_db    = "get-commit-db";
+constexpr auto arg_headless = "headless";
+constexpr auto arg_decrypt = "decrypt";
+constexpr auto arg_commit_db = "get-commit-db";
 
 // Arguments that can be used with a gui application
-constexpr auto arg_no_gui       = "no-gui";
-constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
-constexpr auto arg_gs_screen    = "game-screen";
-constexpr auto arg_high_dpi     = "hidpi";
-constexpr auto arg_rounding     = "dpi-rounding";
-constexpr auto arg_styles       = "styles";
-constexpr auto arg_style        = "style";
-constexpr auto arg_stylesheet   = "stylesheet";
-constexpr auto arg_config       = "config";
+constexpr auto arg_no_gui = "no-gui";
+constexpr auto arg_fullscreen = "fullscreen"; // only useful with no-gui
+constexpr auto arg_gs_screen = "game-screen";
+constexpr auto arg_high_dpi = "hidpi";
+constexpr auto arg_rounding = "dpi-rounding";
+constexpr auto arg_styles = "styles";
+constexpr auto arg_style = "style";
+constexpr auto arg_stylesheet = "stylesheet";
+constexpr auto arg_config = "config";
 constexpr auto arg_input_config = "input-config"; // only useful with no-gui
-constexpr auto arg_q_debug      = "qDebug";
-constexpr auto arg_error        = "error";
-constexpr auto arg_updating     = "updating";
-constexpr auto arg_user_id      = "user-id";
-constexpr auto arg_installfw    = "installfw";
-constexpr auto arg_installpkg   = "installpkg";
-constexpr auto arg_savestate    = "savestate";
-constexpr auto arg_rsx_capture  = "rsx-capture";
-constexpr auto arg_timer        = "high-res-timer";
+constexpr auto arg_q_debug = "qDebug";
+constexpr auto arg_error = "error";
+constexpr auto arg_updating = "updating";
+constexpr auto arg_user_id = "user-id";
+constexpr auto arg_installfw = "installfw";
+constexpr auto arg_installpkg = "installpkg";
+constexpr auto arg_savestate = "savestate";
+constexpr auto arg_rsx_capture = "rsx-capture";
+constexpr auto arg_timer = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
-constexpr auto arg_codecs       = "codecs";
+constexpr auto arg_codecs = "codecs";
 
 #ifdef _WIN32
-constexpr auto arg_stdout       = "stdout";
-constexpr auto arg_stderr       = "stderr";
+constexpr auto arg_stdout = "stdout";
+constexpr auto arg_stderr = "stderr";
 #endif
 
 constexpr auto arg_emulation_barrier = "";
@@ -507,7 +509,7 @@ QCoreApplication* create_application(std::span<char* const> qt_argv)
 template <>
 void fmt_class_string<QString>::format(std::string& out, u64 arg)
 {
- 	out += get_object(arg).toStdString();
+	out += get_object(arg).toStdString();
 }
 
 void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QString& msg)
@@ -550,7 +552,7 @@ int main(int argc, char** argv)
 
 	s_argv0 = argv[0]; // Save for report_fatal_error
 
-	std::span<char* const> argv_span{ argv, argc + 0u };
+	std::span<char* const> argv_span{argv, argc + 0u};
 	std::span<char* const> emu_argv;
 	std::span<char* const> qt_argv;
 
@@ -605,11 +607,12 @@ int main(int argc, char** argv)
 
 			report_fatal_error(fmt::format("Cannot create '%s' or '%s' (access denied).\n"
 #ifdef _WIN32
-				"Note that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
+										   "Note that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
 #else
-				"Please, check RPCS3 permissions."
+										   "Please, check RPCS3 permissions."
 #endif
-				, log_name, lock_name));
+				,
+				log_name, lock_name));
 		}
 
 		report_fatal_error(fmt::format("Cannot create'%s' or '%s' (error=%s)", log_name, lock_name, fs::g_tls_error));
@@ -690,7 +693,8 @@ int main(int argc, char** argv)
 	std::string argument_str;
 	for (int i = 0; i < argc; i++)
 	{
-		if (i > 0) argument_str += " ";
+		if (i > 0)
+			argument_str += " ";
 		argument_str += '\'' + std::string(argv[i]) + '\'';
 	}
 
@@ -703,7 +707,8 @@ int main(int argc, char** argv)
 		std::string utf8_args;
 		for (int i = 0; i < n_args; i++)
 		{
-			if (i > 0) utf8_args += " ";
+			if (i > 0)
+				utf8_args += " ";
 			utf8_args += '\'' + wchar_to_utf8(arg_list[i]) + '\'';
 		}
 		LocalFree(arg_list);
@@ -734,7 +739,7 @@ int main(int argc, char** argv)
 	}
 #endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
-	setenv( "KDE_DEBUG", "1", 0 );
+	setenv("KDE_DEBUG", "1", 0);
 #endif
 
 #ifdef __APPLE__
@@ -775,7 +780,7 @@ int main(int argc, char** argv)
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 
-	const QCommandLineOption help_option    = parser.addHelpOption();
+	const QCommandLineOption help_option = parser.addHelpOption();
 	const QCommandLineOption version_option = parser.addVersionOption();
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
@@ -949,17 +954,20 @@ int main(int argc, char** argv)
 		hhdr = curl_slist_append(hhdr, "User-Agent: curl/7.37.0");
 
 		CURLcode err = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hhdr);
-		if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_HTTPHEADER) error: %s", curl_easy_strerror(err));
+		if (err != CURLE_OK)
+			fprintf(stderr, "curl_easy_setopt(CURLOPT_HTTPHEADER) error: %s", curl_easy_strerror(err));
 
 		err = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](const char* ptr, usz, usz size, void* json) -> usz
-		{
-			static_cast<QByteArray*>(json)->append(ptr, size);
-			return size;
-		});
-		if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) error: %s", curl_easy_strerror(err));
+			{
+				static_cast<QByteArray*>(json)->append(ptr, size);
+				return size;
+			});
+		if (err != CURLE_OK)
+			fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) error: %s", curl_easy_strerror(err));
 
 		err = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
-		if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
+		if (err != CURLE_OK)
+			fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
 
 		u32 page = 1;
 		constexpr u32 per_page = 100;
@@ -1096,7 +1104,8 @@ int main(int argc, char** argv)
 		utils::attach_console(utils::console_stream::std_out, true);
 
 		for (const auto& style : QStyleFactory::keys())
-			std::cout << "\n" << style.toStdString();
+			std::cout << "\n"
+					  << style.toStdString();
 
 		return 0;
 	}
@@ -1190,20 +1199,24 @@ int main(int argc, char** argv)
 				report_fatal_error(QObject::tr(
 					"RPCS3 should never be run from a temporary location!\n"
 					"Please install RPCS3 in a persistent location.\n"
-					"Current location:\n%0").arg(QString::fromStdString(emu_dir)).toStdString());
+					"Current location:\n%0")
+						.arg(QString::fromStdString(emu_dir))
+						.toStdString());
 				return 1;
 			}
 		}
 
 		// Check nonsensical archive locations
-		for (const std::string_view& expr : { "/Rar$"sv })
+		for (const std::string_view& expr : {"/Rar$"sv})
 		{
 			if (emu_dir.find(expr) != umax)
 			{
 				report_fatal_error(QObject::tr(
 					"RPCS3 should never be run from an archive!\n"
 					"Please install RPCS3 in a persistent location.\n"
-					"Current location:\n%0").arg(QString::fromStdString(emu_dir)).toStdString());
+					"Current location:\n%0")
+						.arg(QString::fromStdString(emu_dir))
+						.toStdString());
 				return 1;
 			}
 		}
@@ -1217,7 +1230,9 @@ int main(int argc, char** argv)
 				report_fatal_error(QObject::tr(
 					"RPCS3 should never be run from a OneDrive path!\n"
 					"Please move RPCS3 to a location not synced by OneDrive.\n"
-					"Current location:\n%0").arg(QString::fromStdString(emu_dir)).toStdString());
+					"Current location:\n%0")
+						.arg(QString::fromStdString(emu_dir))
+						.toStdString());
 				return 1;
 			}
 		}
@@ -1299,11 +1314,13 @@ int main(int argc, char** argv)
 			const std::string filename = path.substr(path.find_last_of(fs::delim) + 1);
 
 			const std::string hint = fmt::format("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
-				"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.", filename);
+												 "\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.",
+				filename);
 
 			if (repeat_count >= 2)
 			{
-				std::cout << "Failed to decrypt " << path << " with specfied KLIC, retrying.\n" << hint << std::endl;
+				std::cout << "Failed to decrypt " << path << " with specfied KLIC, retrying.\n"
+						  << hint << std::endl;
 			}
 
 			std::cout << "Enter KLIC of " << filename << "\nHexadecimal only, 32 characters:" << std::endl;
@@ -1377,19 +1394,19 @@ int main(int argc, char** argv)
 		}
 
 		Emu.CallFromMainThread([path = savestate_path]()
-		{
-			Emu.SetForceBoot(true);
-
-			if (const game_boot_result error = Emu.BootGame(path); error != game_boot_result::no_errors)
 			{
-				sys_log.error("Booting savestate '%s' failed: reason: %s", path, error);
+				Emu.SetForceBoot(true);
 
-				if (s_headless || s_no_gui)
+				if (const game_boot_result error = Emu.BootGame(path); error != game_boot_result::no_errors)
 				{
-					report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
+					sys_log.error("Booting savestate '%s' failed: reason: %s", path, error);
+
+					if (s_headless || s_no_gui)
+					{
+						report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
+					}
 				}
-			}
-		});
+			});
 	}
 	else if (parser.isSet(arg_rsx_capture))
 	{
@@ -1402,17 +1419,17 @@ int main(int argc, char** argv)
 		}
 
 		Emu.CallFromMainThread([path = rsx_capture_path]()
-		{
-			if (!Emu.BootRsxCapture(path))
 			{
-				sys_log.error("Booting rsx capture '%s' failed", path);
-
-				if (s_headless || s_no_gui)
+				if (!Emu.BootRsxCapture(path))
 				{
-					report_fatal_error(fmt::format("Booting rsx capture '%s' failed!", path));
+					sys_log.error("Booting rsx capture '%s' failed", path);
+
+					if (s_headless || s_no_gui)
+					{
+						report_fatal_error(fmt::format("Booting rsx capture '%s' failed!", path));
+					}
 				}
-			}
-		});
+			});
 	}
 	else if (const QStringList args = parser.positionalArguments(); (!args.isEmpty() || !emu_argv.empty()) && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
@@ -1447,8 +1464,9 @@ int main(int argc, char** argv)
 				rpcs3_argv.emplace_back(arg);
 
 				sys_log.error("Optional command line argument %d: %s"
-					"\nPlease pass emulation arguments after an empty \"--\" paramater."
-					"\nIn the future, the emulator would not support optional arguments without it.", i, arg);
+							  "\nPlease pass emulation arguments after an empty \"--\" paramater."
+							  "\nIn the future, the emulator would not support optional arguments without it.",
+					i, arg);
 			}
 		}
 
@@ -1501,22 +1519,22 @@ int main(int argc, char** argv)
 
 		// Postpone startup to main event loop
 		Emu.CallFromMainThread([path = spath.starts_with("%RPCS3_") ? spath : QFileInfo(::at32(args, 0)).absoluteFilePath().toStdString(), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
-		{
-			Emu.argv = std::move(rpcs3_argv);
-			Emu.SetForceBoot(true);
-
-			const cfg_mode config_mode = config_path.empty() ? cfg_mode::custom : cfg_mode::config_override;
-
-			if (const game_boot_result error = Emu.BootGame(path, "", false, config_mode, config_path); error != game_boot_result::no_errors)
 			{
-				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
+				Emu.argv = std::move(rpcs3_argv);
+				Emu.SetForceBoot(true);
 
-				if (s_headless || s_no_gui)
+				const cfg_mode config_mode = config_path.empty() ? cfg_mode::custom : cfg_mode::config_override;
+
+				if (const game_boot_result error = Emu.BootGame(path, "", false, config_mode, config_path); error != game_boot_result::no_errors)
 				{
-					report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
+					sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
+
+					if (s_headless || s_no_gui)
+					{
+						report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
+					}
 				}
-			}
-		});
+			});
 	}
 	else if (s_headless || s_no_gui)
 	{

@@ -25,7 +25,7 @@ static auto callGuest = [] {
   } static setContextStorage;
 
   return setContextStorage
-      .getCode<const char * (*)(std::uint64_t, std::uint64_t, std::uint64_t)>();
+      .getCode<const char *(*)(std::uint64_t, std::uint64_t, std::uint64_t)>();
 }();
 
 bool allowMonoDebug = false;
@@ -44,13 +44,16 @@ std::size_t rx::printAddressLocation(char *dest, std::size_t destLen,
     }
 
     const char *name = "";
-    if (monoPimpAddress && allowMonoDebug && (std::string_view(module->soName).contains(".dll.") || std::string_view(module->soName).contains(".exe."))) {
+    if (monoPimpAddress && allowMonoDebug &&
+        (std::string_view(module->soName).contains(".dll.") ||
+         std::string_view(module->soName).contains(".exe."))) {
       allowMonoDebug = false;
       auto ctx = reinterpret_cast<ucontext_t *>(thread->context);
       rx::thread::setupSignalStack();
       auto prevFs = _readfsbase_u64();
       _writefsbase_u64(thread->fsBase);
-      name = callGuest(address, monoPimpAddress, ctx->uc_mcontext.gregs[REG_RSP]);
+      name =
+          callGuest(address, monoPimpAddress, ctx->uc_mcontext.gregs[REG_RSP]);
       _writefsbase_u64(prevFs);
       allowMonoDebug = true;
     }

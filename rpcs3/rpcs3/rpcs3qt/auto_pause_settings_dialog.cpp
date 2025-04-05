@@ -13,33 +13,33 @@
 
 LOG_CHANNEL(autopause_log, "AutoPause");
 
-auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
+auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget* parent) : QDialog(parent)
 {
-	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
+	QLabel* description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
 
 	m_pause_list = new QTableWidget(this);
 	m_pause_list->setColumnCount(2);
 	m_pause_list->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
-	//m_pause_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	// m_pause_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	m_pause_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_pause_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_pause_list->setItemDelegate(new table_item_delegate(this));
 	m_pause_list->setShowGrid(false);
 
-	QPushButton *clearButton = new QPushButton(tr("Clear"), this);
-	QPushButton *reloadButton = new QPushButton(tr("Reload"), this);
-	QPushButton *saveButton = new QPushButton(tr("Save"), this);
-	QPushButton *cancelButton = new QPushButton(tr("Cancel"), this);
+	QPushButton* clearButton = new QPushButton(tr("Clear"), this);
+	QPushButton* reloadButton = new QPushButton(tr("Reload"), this);
+	QPushButton* saveButton = new QPushButton(tr("Save"), this);
+	QPushButton* cancelButton = new QPushButton(tr("Cancel"), this);
 	cancelButton->setDefault(true);
 
-	QHBoxLayout *buttonsLayout = new QHBoxLayout();
+	QHBoxLayout* buttonsLayout = new QHBoxLayout();
 	buttonsLayout->addWidget(clearButton);
 	buttonsLayout->addWidget(reloadButton);
 	buttonsLayout->addStretch();
 	buttonsLayout->addWidget(saveButton);
 	buttonsLayout->addWidget(cancelButton);
 
-	QVBoxLayout *mainLayout = new QVBoxLayout(this);
+	QVBoxLayout* mainLayout = new QVBoxLayout(this);
 	mainLayout->addWidget(description);
 	mainLayout->addWidget(m_pause_list);
 	mainLayout->addLayout(buttonsLayout);
@@ -51,13 +51,21 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 
 	// Events
 	connect(m_pause_list, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
-	connect(clearButton, &QAbstractButton::clicked, [this](){ m_entries.clear(); UpdateList(); });
-	connect(reloadButton, &QAbstractButton::clicked, [this](){ LoadEntries(); UpdateList(); });
+	connect(clearButton, &QAbstractButton::clicked, [this]()
+		{
+			m_entries.clear();
+			UpdateList();
+		});
+	connect(reloadButton, &QAbstractButton::clicked, [this]()
+		{
+			LoadEntries();
+			UpdateList();
+		});
 	connect(saveButton, &QAbstractButton::clicked, [this]()
-	{
-		SaveEntries();
-		autopause_log.success("File pause.bin was updated.");
-	});
+		{
+			SaveEntries();
+			autopause_log.success("File pause.bin was updated.");
+		});
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
 	Emu.GracefulShutdown(false);
@@ -86,7 +94,8 @@ void auto_pause_settings_dialog::LoadEntries()
 		{
 			list.read(&num, sizeof(u32));
 			fcur += sizeof(u32);
-			if (num == 0xFFFFFFFF) break;
+			if (num == 0xFFFFFFFF)
+				break;
 
 			m_entries.emplace_back(num);
 		}
@@ -99,12 +108,13 @@ void auto_pause_settings_dialog::LoadEntries()
 void auto_pause_settings_dialog::SaveEntries()
 {
 	fs::file list(fs::get_config_dir() + "pause.bin", fs::rewrite);
-	//System calls ID and Function calls ID are all u32 iirc.
+	// System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
 	list.seek(0);
 	for (usz i = 0; i < m_entries.size(); ++i)
 	{
-		if (num == 0xFFFFFFFF) continue;
+		if (num == 0xFFFFFFFF)
+			continue;
 		num = m_entries[i];
 		list.write(&num, sizeof(u32));
 	}
@@ -146,7 +156,7 @@ void auto_pause_settings_dialog::UpdateList()
 	}
 }
 
-void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
+void auto_pause_settings_dialog::ShowContextMenu(const QPoint& pos)
 {
 	const int row = m_pause_list->indexAt(pos).row();
 
@@ -166,22 +176,25 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 
 	auto OnEntryConfig = [this](int row, bool newEntry)
 	{
-		AutoPauseConfigDialog *config = new AutoPauseConfigDialog(this, this, newEntry, &m_entries[row]);
+		AutoPauseConfigDialog* config = new AutoPauseConfigDialog(this, this, newEntry, &m_entries[row]);
 		config->setModal(true);
 		config->exec();
 		UpdateList();
 	};
 
 	connect(add, &QAction::triggered, this, [=, this]()
-	{
-		m_entries.emplace_back(0xFFFFFFFF);
-		UpdateList();
-		const int idx = static_cast<int>(m_entries.size()) - 1;
-		m_pause_list->selectRow(idx);
-		OnEntryConfig(idx, true);
-	});
+		{
+			m_entries.emplace_back(0xFFFFFFFF);
+			UpdateList();
+			const int idx = static_cast<int>(m_entries.size()) - 1;
+			m_pause_list->selectRow(idx);
+			OnEntryConfig(idx, true);
+		});
 	connect(remove, &QAction::triggered, this, &auto_pause_settings_dialog::OnRemove);
-	connect(config, &QAction::triggered, this, [=, this]() {OnEntryConfig(row, false); });
+	connect(config, &QAction::triggered, this, [=, this]()
+		{
+			OnEntryConfig(row, false);
+		});
 
 	myMenu.exec(m_pause_list->viewport()->mapToGlobal(pos));
 }
@@ -197,7 +210,7 @@ void auto_pause_settings_dialog::OnRemove()
 	UpdateList();
 }
 
-void auto_pause_settings_dialog::keyPressEvent(QKeyEvent *event)
+void auto_pause_settings_dialog::keyPressEvent(QKeyEvent* event)
 {
 	if (event->isAutoRepeat())
 	{
@@ -210,7 +223,7 @@ void auto_pause_settings_dialog::keyPressEvent(QKeyEvent *event)
 	}
 }
 
-AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32 *entry)
+AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32* entry)
 	: QDialog(parent), m_presult(entry), m_newEntry(newEntry), m_apsd(apsd)
 {
 	m_entry = *m_presult;

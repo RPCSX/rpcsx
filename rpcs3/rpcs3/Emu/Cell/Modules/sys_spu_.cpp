@@ -32,19 +32,19 @@ struct spu_elf_ldr
 		{
 			vm::ptr<elf_ehdr<elf_be, u32>> ehdr = vm::cast(src.addr() + ehdr_off);
 			std::memcpy(out.get_ptr(), ehdr.get_ptr(), 0x10); // Not needed?
-			out->e_type      = ehdr->e_type;
-			out->e_machine   = ehdr->e_machine;
-			out->e_version   = ehdr->e_version;
-			out->e_entry     = ehdr->e_entry;
-			out->e_phoff     = ehdr->e_phoff;
-			out->e_shoff     = ehdr->e_shoff;
-			out->e_flags     = ehdr->e_flags;
-			out->e_ehsize    = ehdr->e_ehsize;
+			out->e_type = ehdr->e_type;
+			out->e_machine = ehdr->e_machine;
+			out->e_version = ehdr->e_version;
+			out->e_entry = ehdr->e_entry;
+			out->e_phoff = ehdr->e_phoff;
+			out->e_shoff = ehdr->e_shoff;
+			out->e_flags = ehdr->e_flags;
+			out->e_ehsize = ehdr->e_ehsize;
 			out->e_phentsize = ehdr->e_phentsize;
-			out->e_phnum     = ehdr->e_phnum;
+			out->e_phnum = ehdr->e_phnum;
 			out->e_shentsize = ehdr->e_shentsize;
-			out->e_shnum     = ehdr->e_shnum;
-			out->e_shstrndx  = ehdr->e_shstrndx;
+			out->e_shnum = ehdr->e_shnum;
+			out->e_shstrndx = ehdr->e_shstrndx;
 		}
 		else
 		{
@@ -69,14 +69,14 @@ struct spu_elf_ldr
 
 			for (; count; count--, phdr++, out++)
 			{
-				out->p_type   = phdr->p_type;
-				out->p_flags  = phdr->p_flags;
+				out->p_type = phdr->p_type;
+				out->p_flags = phdr->p_flags;
 				out->p_offset = phdr->p_offset;
-				out->p_vaddr  = phdr->p_vaddr;
-				out->p_paddr  = phdr->p_paddr;
+				out->p_vaddr = phdr->p_vaddr;
+				out->p_paddr = phdr->p_paddr;
 				out->p_filesz = phdr->p_filesz;
-				out->p_memsz  = phdr->p_memsz;
-				out->p_align  = phdr->p_align;
+				out->p_memsz = phdr->p_memsz;
+				out->p_align = phdr->p_align;
 			}
 		}
 		else
@@ -167,11 +167,11 @@ struct spu_elf_info
 			return CELL_ENOEXEC;
 		}
 
-		e_class       = ehdr->e_class;
-		ldr           = vm::get_addr(&_overlay);
-		ldr->_vtable  = vm::cast(u32{e_class}); // TODO
-		ldr->src      = vm::static_ptr_cast<u8>(src);
-		ldr->x8       = arg2;
+		e_class = ehdr->e_class;
+		ldr = vm::get_addr(&_overlay);
+		ldr->_vtable = vm::cast(u32{e_class}); // TODO
+		ldr->src = vm::static_ptr_cast<u8>(src);
+		ldr->x8 = arg2;
 		ldr->ehdr_off = ehdr_off;
 		ldr->phdr_off = phdr_off;
 
@@ -221,7 +221,7 @@ error_code sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<
 	}
 
 	*entry = static_cast<u32>(ehdr->e_entry);
-	*nseg  = num_segs;
+	*nseg = num_segs;
 	return CELL_OK;
 }
 
@@ -331,7 +331,7 @@ error_code sys_spu_image_import(ppu_thread& ppu, vm::ptr<sys_spu_image> img, u32
 			return CELL_ENOEXEC;
 		}
 
-		img->nsegs       = num_segs;
+		img->nsegs = num_segs;
 		img->entry_point = static_cast<u32>(ehdr->e_entry);
 
 		vm::ptr<sys_spu_segment> segs = vm::cast(vm::alloc(num_segs * sizeof(sys_spu_segment), vm::main));

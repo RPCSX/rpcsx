@@ -11,37 +11,36 @@ constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
 
 ds3_pad_handler::ds3_pad_handler()
-    : hid_pad_handler(pad_handler::ds3, {SONY_DS3_ID_0})
+	: hid_pad_handler(pad_handler::ds3, {SONY_DS3_ID_0})
 {
 	button_list =
-	{
-		{ DS3KeyCodes::None,     "" },
-		{ DS3KeyCodes::Triangle, "Triangle" },
-		{ DS3KeyCodes::Circle,   "Circle" },
-		{ DS3KeyCodes::Cross,    "Cross" },
-		{ DS3KeyCodes::Square,   "Square" },
-		{ DS3KeyCodes::Left,     "Left" },
-		{ DS3KeyCodes::Right,    "Right" },
-		{ DS3KeyCodes::Up,       "Up" },
-		{ DS3KeyCodes::Down,     "Down" },
-		{ DS3KeyCodes::R1,       "R1" },
-		{ DS3KeyCodes::R2,       "R2" },
-		{ DS3KeyCodes::R3,       "R3" },
-		{ DS3KeyCodes::Start,    "Start" },
-		{ DS3KeyCodes::Select,   "Select" },
-		{ DS3KeyCodes::PSButton, "PS Button" },
-		{ DS3KeyCodes::L1,       "L1" },
-		{ DS3KeyCodes::L2,       "L2" },
-		{ DS3KeyCodes::L3,       "L3" },
-		{ DS3KeyCodes::LSXNeg,   "LS X-" },
-		{ DS3KeyCodes::LSXPos,   "LS X+" },
-		{ DS3KeyCodes::LSYPos,   "LS Y+" },
-		{ DS3KeyCodes::LSYNeg,   "LS Y-" },
-		{ DS3KeyCodes::RSXNeg,   "RS X-" },
-		{ DS3KeyCodes::RSXPos,   "RS X+" },
-		{ DS3KeyCodes::RSYPos,   "RS Y+" },
-		{ DS3KeyCodes::RSYNeg,   "RS Y-" }
-	};
+		{
+			{DS3KeyCodes::None, ""},
+			{DS3KeyCodes::Triangle, "Triangle"},
+			{DS3KeyCodes::Circle, "Circle"},
+			{DS3KeyCodes::Cross, "Cross"},
+			{DS3KeyCodes::Square, "Square"},
+			{DS3KeyCodes::Left, "Left"},
+			{DS3KeyCodes::Right, "Right"},
+			{DS3KeyCodes::Up, "Up"},
+			{DS3KeyCodes::Down, "Down"},
+			{DS3KeyCodes::R1, "R1"},
+			{DS3KeyCodes::R2, "R2"},
+			{DS3KeyCodes::R3, "R3"},
+			{DS3KeyCodes::Start, "Start"},
+			{DS3KeyCodes::Select, "Select"},
+			{DS3KeyCodes::PSButton, "PS Button"},
+			{DS3KeyCodes::L1, "L1"},
+			{DS3KeyCodes::L2, "L2"},
+			{DS3KeyCodes::L3, "L3"},
+			{DS3KeyCodes::LSXNeg, "LS X-"},
+			{DS3KeyCodes::LSXPos, "LS X+"},
+			{DS3KeyCodes::LSYPos, "LS Y+"},
+			{DS3KeyCodes::LSYNeg, "LS Y-"},
+			{DS3KeyCodes::RSXNeg, "RS X-"},
+			{DS3KeyCodes::RSXPos, "RS X+"},
+			{DS3KeyCodes::RSYPos, "RS Y+"},
+			{DS3KeyCodes::RSYNeg, "RS Y-"}};
 
 	init_configs();
 
@@ -93,7 +92,7 @@ u32 ds3_pad_handler::get_battery_level(const std::string& padId)
 	return std::clamp<u32>(device->battery_level, 0, 100);
 }
 
-void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32/* r*/, s32/* g*/, s32 /* b*/, bool player_led, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool player_led, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	std::shared_ptr<ds3_device> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -121,7 +120,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 		return -2;
 
 	ds3_output_report output_report{};
-	output_report.rumble.small_motor_on    = ds3dev->small_motor;
+	output_report.rumble.small_motor_on = ds3dev->small_motor;
 	output_report.rumble.large_motor_force = ds3dev->large_motor;
 
 	if (ds3dev->config->led_battery_indicator)
@@ -157,8 +156,8 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 
 	if (ds3dev->config->led_low_battery_blink && ds3dev->battery_level < 25)
 	{
-		output_report.led[3].interval_duration    = 0x14; // 2 seconds
-		output_report.led[3].interval_portion_on  = ds3dev->led_delay_on;
+		output_report.led[3].interval_duration = 0x14; // 2 seconds
+		output_report.led[3].interval_portion_on = ds3dev->led_delay_on;
 		output_report.led[3].interval_portion_off = ds3dev->led_delay_off;
 	}
 
@@ -167,7 +166,8 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 
 void ds3_pad_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
 	cfg->ls_left.def = ::at32(button_list, DS3KeyCodes::LSXNeg);
@@ -203,12 +203,12 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = 0;
 	cfg->rstick_anti_deadzone.def = 0;
-	cfg->lstickdeadzone.def    = 40; // between 0 and 255
-	cfg->rstickdeadzone.def    = 40; // between 0 and 255
-	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
-	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->lpadsquircling.def    = 0;
-	cfg->rpadsquircling.def    = 0;
+	cfg->lstickdeadzone.def = 40;   // between 0 and 255
+	cfg->rstickdeadzone.def = 40;   // between 0 and 255
+	cfg->ltriggerthreshold.def = 0; // between 0 and 255
+	cfg->rtriggerthreshold.def = 0; // between 0 and 255
+	cfg->lpadsquircling.def = 0;
+	cfg->rpadsquircling.def = 0;
 
 	// Set default LED options
 	cfg->led_battery_indicator.def = false;
@@ -253,9 +253,9 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (res <= 0 || buf[0] != 0xF2)
 	{
 		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
-		buf    = {};
+		buf = {};
 		buf[0] = 0x0;
-		res    = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+		res = hid_get_feature_report(hidDevice, buf.data(), buf.size());
 		if (res <= 0 || buf[0] != 0x0)
 		{
 			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
@@ -265,7 +265,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	}
 
 	device->report_id = buf[0];
-#elif defined (__APPLE__)
+#elif defined(__APPLE__)
 	int res = hid_init_sixaxis_usb(hidDevice);
 	if (res < 0)
 	{
@@ -285,7 +285,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		return;
 	}
 
-	device->path      = path;
+	device->path = path;
 	device->hidDevice = hidDevice;
 
 	if (send_output_report(device) == -1)
@@ -338,12 +338,12 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 			{
 				// Charging (0xEE) or full (0xEF). Let's set the level to 100%.
 				ds3dev->battery_level = 100;
-				ds3dev->cable_state   = 1;
+				ds3dev->cable_state = 1;
 			}
 			else
 			{
 				ds3dev->battery_level = ::at32(battery_capacity, std::min<usz>(ds3dev->report.battery_status, battery_capacity.size() - 1));
-				ds3dev->cable_state   = 0;
+				ds3dev->cable_state = 0;
 			}
 
 			return DataStatus::NewData;
@@ -381,24 +381,24 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	key_buf[DS3KeyCodes::RSYPos] = Clamp0To255((127.5f - report.rsy) * 2.0f);
 
 	// Buttons or triggers with pressure sensitivity
-	key_buf[DS3KeyCodes::Up]       = (report.buttons[0] & 0x10) ? report.button_values[0] : 0;
-	key_buf[DS3KeyCodes::Right]    = (report.buttons[0] & 0x20) ? report.button_values[1] : 0;
-	key_buf[DS3KeyCodes::Down]     = (report.buttons[0] & 0x40) ? report.button_values[2] : 0;
-	key_buf[DS3KeyCodes::Left]     = (report.buttons[0] & 0x80) ? report.button_values[3] : 0;
-	key_buf[DS3KeyCodes::L2]       = (report.buttons[1] & 0x01) ? report.button_values[4] : 0;
-	key_buf[DS3KeyCodes::R2]       = (report.buttons[1] & 0x02) ? report.button_values[5] : 0;
-	key_buf[DS3KeyCodes::L1]       = (report.buttons[1] & 0x04) ? report.button_values[6] : 0;
-	key_buf[DS3KeyCodes::R1]       = (report.buttons[1] & 0x08) ? report.button_values[7] : 0;
+	key_buf[DS3KeyCodes::Up] = (report.buttons[0] & 0x10) ? report.button_values[0] : 0;
+	key_buf[DS3KeyCodes::Right] = (report.buttons[0] & 0x20) ? report.button_values[1] : 0;
+	key_buf[DS3KeyCodes::Down] = (report.buttons[0] & 0x40) ? report.button_values[2] : 0;
+	key_buf[DS3KeyCodes::Left] = (report.buttons[0] & 0x80) ? report.button_values[3] : 0;
+	key_buf[DS3KeyCodes::L2] = (report.buttons[1] & 0x01) ? report.button_values[4] : 0;
+	key_buf[DS3KeyCodes::R2] = (report.buttons[1] & 0x02) ? report.button_values[5] : 0;
+	key_buf[DS3KeyCodes::L1] = (report.buttons[1] & 0x04) ? report.button_values[6] : 0;
+	key_buf[DS3KeyCodes::R1] = (report.buttons[1] & 0x08) ? report.button_values[7] : 0;
 	key_buf[DS3KeyCodes::Triangle] = (report.buttons[1] & 0x10) ? report.button_values[8] : 0;
-	key_buf[DS3KeyCodes::Circle]   = (report.buttons[1] & 0x20) ? report.button_values[9] : 0;
-	key_buf[DS3KeyCodes::Cross]    = (report.buttons[1] & 0x40) ? report.button_values[10] : 0;
-	key_buf[DS3KeyCodes::Square]   = (report.buttons[1] & 0x80) ? report.button_values[11] : 0;
+	key_buf[DS3KeyCodes::Circle] = (report.buttons[1] & 0x20) ? report.button_values[9] : 0;
+	key_buf[DS3KeyCodes::Cross] = (report.buttons[1] & 0x40) ? report.button_values[10] : 0;
+	key_buf[DS3KeyCodes::Square] = (report.buttons[1] & 0x80) ? report.button_values[11] : 0;
 
 	// Buttons without pressure sensitivity
-	key_buf[DS3KeyCodes::Select]   = (report.buttons[0] & 0x01) ? 255 : 0;
-	key_buf[DS3KeyCodes::L3]       = (report.buttons[0] & 0x02) ? 255 : 0;
-	key_buf[DS3KeyCodes::R3]       = (report.buttons[0] & 0x04) ? 255 : 0;
-	key_buf[DS3KeyCodes::Start]    = (report.buttons[0] & 0x08) ? 255 : 0;
+	key_buf[DS3KeyCodes::Select] = (report.buttons[0] & 0x01) ? 255 : 0;
+	key_buf[DS3KeyCodes::L3] = (report.buttons[0] & 0x02) ? 255 : 0;
+	key_buf[DS3KeyCodes::R3] = (report.buttons[0] & 0x04) ? 255 : 0;
+	key_buf[DS3KeyCodes::Start] = (report.buttons[0] & 0x08) ? 255 : 0;
 	key_buf[DS3KeyCodes::PSButton] = (report.buttons[2] & 0x01) ? 255 : 0;
 
 	return key_buf;
@@ -412,8 +412,7 @@ pad_preview_values ds3_pad_handler::get_preview_values(const std::unordered_map<
 		::at32(data, LSXPos) - ::at32(data, LSXNeg),
 		::at32(data, LSYPos) - ::at32(data, LSYNeg),
 		::at32(data, RSXPos) - ::at32(data, RSXNeg),
-		::at32(data, RSYPos) - ::at32(data, RSYNeg)
-	};
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)};
 }
 
 void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
@@ -428,7 +427,7 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 	const ds3_input_report& report = dev->report;
 
 	pad->m_battery_level = dev->battery_level;
-	pad->m_cable_state   = dev->cable_state;
+	pad->m_cable_state = dev->cable_state;
 
 	// For unknown reasons the sixaxis values seem to be in little endian on linux
 
@@ -444,7 +443,7 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 	pad->m_sensors[3].m_value = report.gyro;
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
-	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
+	// auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
 	//{
 	//	value -= dword_0xC;
 	//	value *= dword_0x4;
@@ -458,10 +457,10 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 	//};
 
 	// dword_0x0 and dword_0xC are unknown
-	//pad->m_sensors[0].m_value = polish_value(pad->m_sensors[0].m_value, 226, -226, 512, 512, 0, 1023);
-	//pad->m_sensors[1].m_value = polish_value(pad->m_sensors[1].m_value, 226, 226, 512, 512, 0, 1023);
-	//pad->m_sensors[2].m_value = polish_value(pad->m_sensors[2].m_value, 113, 113, 512, 512, 0, 1023);
-	//pad->m_sensors[3].m_value = polish_value(pad->m_sensors[3].m_value, 1, 1, 512, 512, 0, 1023);
+	// pad->m_sensors[0].m_value = polish_value(pad->m_sensors[0].m_value, 226, -226, 512, 512, 0, 1023);
+	// pad->m_sensors[1].m_value = polish_value(pad->m_sensors[1].m_value, 226, 226, 512, 512, 0, 1023);
+	// pad->m_sensors[2].m_value = polish_value(pad->m_sensors[2].m_value, 113, 113, 512, 512, 0, 1023);
+	// pad->m_sensors[3].m_value = polish_value(pad->m_sensors[3].m_value, 1, 1, 512, 512, 0, 1023);
 
 	// Set raw orientation
 	set_raw_orientation(*pad);
@@ -556,7 +555,7 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
 	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrateMotors);
 
-	const bool wireless    = dev->cable_state == 0;
+	const bool wireless = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level < 25;
 	const bool is_blinking = dev->led_delay_on > 0 || dev->led_delay_off > 0;
 
@@ -566,14 +565,14 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		// we are now wired or have okay battery level -> stop blinking
 		if (is_blinking && !(wireless && low_battery))
 		{
-			dev->led_delay_on    = 0;
-			dev->led_delay_off   = 0;
+			dev->led_delay_on = 0;
+			dev->led_delay_off = 0;
 			dev->new_output_data = true;
 		}
 		// we are now wireless and low on battery -> blink
 		else if (!is_blinking && wireless && low_battery)
 		{
-			dev->led_delay_on  = 0x80;
+			dev->led_delay_on = 0x80;
 			dev->led_delay_off = 0xFF - dev->led_delay_on;
 			dev->new_output_data = true;
 		}

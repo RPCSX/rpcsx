@@ -9,12 +9,12 @@ struct CellSpurs;
 // Return Codes
 enum CellCelp8EncError : u32
 {
-	CELL_CELP8ENC_ERROR_FAILED      = 0x806140a1,
-	CELL_CELP8ENC_ERROR_SEQ         = 0x806140a2,
-	CELL_CELP8ENC_ERROR_ARG         = 0x806140a3,
+	CELL_CELP8ENC_ERROR_FAILED = 0x806140a1,
+	CELL_CELP8ENC_ERROR_SEQ = 0x806140a2,
+	CELL_CELP8ENC_ERROR_ARG = 0x806140a3,
 	CELL_CELP8ENC_ERROR_CORE_FAILED = 0x806140b1,
-	CELL_CELP8ENC_ERROR_CORE_SEQ    = 0x806140b2,
-	CELL_CELP8ENC_ERROR_CORE_ARG    = 0x806140b3,
+	CELL_CELP8ENC_ERROR_CORE_SEQ = 0x806140b2,
+	CELL_CELP8ENC_ERROR_CORE_ARG = 0x806140b3,
 };
 
 // Definitions
@@ -60,7 +60,7 @@ struct CellCelp8EncResource
 	vm::bptr<void> startAddr;
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> spuThreadPriority;
-	be_t<u32/*usz*/> ppuThreadStackSize;
+	be_t<u32 /*usz*/> ppuThreadStackSize;
 };
 
 struct CellCelp8EncParam

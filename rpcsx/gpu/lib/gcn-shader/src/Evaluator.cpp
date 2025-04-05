@@ -250,7 +250,7 @@ eval::Value eval::Evaluator::eval(ir::InstructionId instId,
   if (instId == ir::spv::OpCompositeExtract) {
     auto composite = eval(operands[1].getAsValue());
     if (composite.empty()) {
-      return{};
+      return {};
     }
 
     std::vector<Value> indexes;
@@ -260,7 +260,7 @@ eval::Value eval::Evaluator::eval(ir::InstructionId instId,
     }
 
     if (indexes.size() != 1) {
-      return{};
+      return {};
     }
 
     return composite.compositeExtract(indexes[0]);

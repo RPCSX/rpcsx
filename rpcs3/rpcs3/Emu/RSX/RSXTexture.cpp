@@ -454,4 +454,4 @@ namespace rsx
 	{
 		return registers[NV4097_SET_VERTEX_TEXTURE_CONTROL3 + (m_index * 8)] & 0xfffff;
 	}
-}
+} // namespace rsx

@@ -77,34 +77,34 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 #endif
 	}
 
-	m_parent     = parent;
+	m_parent = parent;
 	m_downloader = new downloader(parent);
 
 	connect(m_downloader, &downloader::signal_download_error, this, [this, automatic](const QString& /*error*/)
-	{
-		if (!automatic)
 		{
-			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-		}
-	});
-
-	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only, auto_accept](const QByteArray& data)
-	{
-		const bool result_json = handle_json(automatic, check_only, auto_accept, data);
-
-		if (!result_json)
-		{
-			// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
-			m_downloader->close_progress_dialog();
-
 			if (!automatic)
 			{
 				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 			}
-		}
+		});
 
-		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
-	});
+	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only, auto_accept](const QByteArray& data)
+		{
+			const bool result_json = handle_json(automatic, check_only, auto_accept, data);
+
+			if (!result_json)
+			{
+				// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
+				m_downloader->close_progress_dialog();
+
+				if (!automatic)
+				{
+					QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+				}
+			}
+
+			Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
+		});
 
 	const utils::OS_version os = utils::get_OS_version();
 
@@ -119,7 +119,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	update_log.notice("Download of update info finished. automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
 
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
-	const int return_code       = json_data["return_code"].toInt(-255);
+	const int return_code = json_data["return_code"].toInt(-255);
 
 	bool hash_found = true;
 
@@ -176,22 +176,21 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	// Check that every bit of info we need is there
 	const auto check_json = [](bool cond, std::string_view msg) -> bool
 	{
-		if (cond) return true;
+		if (cond)
+			return true;
 		update_log.error("%s", msg);
 		return false;
 	};
 	if (!(check_json(latest[os].isObject(), fmt::format("Node 'latest_build: %s' not found", os)) &&
-	      check_json(latest[os]["download"].isString(), fmt::format("Node 'latest_build: %s: download' not found or not a string", os)) &&
-	      check_json(latest[os]["size"].isDouble(), fmt::format("Node 'latest_build: %s: size' not found or not a double", os)) &&
-	      check_json(latest[os]["checksum"].isString(), fmt::format("Node 'latest_build: %s: checksum' not found or not a string", os)) &&
-	      check_json(latest["version"].isString(), "Node 'latest_build: version' not found or not a string") &&
-	      check_json(latest["datetime"].isString(), "Node 'latest_build: datetime' not found or not a string")
-	     ) ||
-	     (hash_found && !(
-	      check_json(current.isObject(), "JSON doesn't contain current_build section") &&
-	      check_json(current["version"].isString(), "Node 'current_build: datetime' not found or not a string") &&
-	      check_json(current["datetime"].isString(), "Node 'current_build: version' not found or not a string")
-	     )))
+			check_json(latest[os]["download"].isString(), fmt::format("Node 'latest_build: %s: download' not found or not a string", os)) &&
+			check_json(latest[os]["size"].isDouble(), fmt::format("Node 'latest_build: %s: size' not found or not a double", os)) &&
+			check_json(latest[os]["checksum"].isString(), fmt::format("Node 'latest_build: %s: checksum' not found or not a string", os)) &&
+			check_json(latest["version"].isString(), "Node 'latest_build: version' not found or not a string") &&
+			check_json(latest["datetime"].isString(), "Node 'latest_build: datetime' not found or not a string")) ||
+		(hash_found && !(
+						   check_json(current.isObject(), "JSON doesn't contain current_build section") &&
+						   check_json(current["version"].isString(), "Node 'current_build: datetime' not found or not a string") &&
+						   check_json(current["datetime"].isString(), "Node 'current_build: version' not found or not a string"))))
 	{
 		return false;
 	}
@@ -235,21 +234,21 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		{
 			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
 			m_update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
-				.arg(old_version)
-				.arg(cur_str)
-				.arg(new_version)
-				.arg(lts_str)
-				.arg(support_message);
+			                       .arg(old_version)
+			                       .arg(cur_str)
+			                       .arg(new_version)
+			                       .arg(lts_str)
+			                       .arg(support_message);
 		}
 		else
 		{
 			m_update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
-				.arg(old_version)
-				.arg(cur_str)
-				.arg(new_version)
-				.arg(lts_str)
-				.arg(localized.GetVerboseTimeByMs(diff_msec, true))
-				.arg(support_message);
+			                       .arg(old_version)
+			                       .arg(cur_str)
+			                       .arg(new_version)
+			                       .arg(lts_str)
+			                       .arg(localized.GetVerboseTimeByMs(diff_msec, true))
+			                       .arg(support_message);
 		}
 	}
 	else
@@ -257,13 +256,13 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
 
 		m_update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
-			.arg(new_version)
-			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true))
-			.arg(support_message);
+		                       .arg(new_version)
+		                       .arg(lts_str)
+		                       .arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true))
+		                       .arg(support_message);
 	}
 
-	m_request_url   = latest[os]["download"].toString().toStdString();
+	m_request_url = latest[os]["download"].toString().toStdString();
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
 	m_expected_size = latest[os]["size"].toInt();
 
@@ -420,24 +419,24 @@ void update_manager::update(bool auto_accept)
 	m_downloader->disconnect();
 
 	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
-	{
-		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-	});
+		{
+			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+		});
 
 	connect(m_downloader, &downloader::signal_download_finished, this, [this, auto_accept](const QByteArray& data)
-	{
-		const bool result_json = handle_rpcs3(data, auto_accept);
-
-		if (!result_json)
 		{
-			// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
-			m_downloader->close_progress_dialog();
+			const bool result_json = handle_rpcs3(data, auto_accept);
 
-			QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
-		}
+			if (!result_json)
+			{
+				// The progress dialog is configured to stay open, so we need to close it manually if the download succeeds.
+				m_downloader->close_progress_dialog();
 
-		Q_EMIT signal_update_available(false);
-	});
+				QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
+			}
+
+			Q_EMIT signal_update_available(false);
+		});
 
 	update_log.notice("Downloading update...");
 	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
@@ -501,7 +500,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	const usz kInputBufSize = static_cast<usz>(1u << 18u);
 	const ISzAlloc g_Alloc = {SzAlloc, SzFree};
 
-	ISzAlloc allocImp     = g_Alloc;
+	ISzAlloc allocImp = g_Alloc;
 	ISzAlloc allocTempImp = g_Alloc;
 
 	const auto WRes_to_string = [](WRes res)
@@ -540,7 +539,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 	else
 	{
-		lookStream.bufSize    = kInputBufSize;
+		lookStream.bufSize = kInputBufSize;
 		lookStream.realStream = &archiveStream.vt;
 	}
 
@@ -553,8 +552,10 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		ISzAlloc_Free(&allocImp, lookStream.buf);
 
 		const WRes res2 = File_Close(&archiveStream.file);
-		if (res2) update_log.warning("7z failed to close file (error=%s)", WRes_to_string(res2));
-		if (res) update_log.error("7z decoder error: %s", WRes_to_string(res));
+		if (res2)
+			update_log.warning("7z failed to close file (error=%s)", WRes_to_string(res2));
+		if (res)
+			update_log.error("7z decoder error: %s", WRes_to_string(res));
 	};
 
 	if (res != SZ_OK)
@@ -571,7 +572,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 
 	UInt32 blockIndex = 0xFFFFFFFF;
-	Byte* outBuffer   = nullptr;
+	Byte* outBuffer = nullptr;
 	usz outBufferSize = 0;
 
 #ifdef _WIN32
@@ -585,9 +586,9 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
 	{
-		usz offset           = 0;
+		usz offset = 0;
 		usz outSizeProcessed = 0;
-		const bool isDir     = SzArEx_IsDir(&db, i);
+		const bool isDir = SzArEx_IsDir(&db, i);
 		[[maybe_unused]] const DWORD attribs = SzBitWithVals_Check(&db.Attribs, i) ? db.Attribs.Vals[i] : 0;
 #ifdef _WIN32
 		// This is commented out for now as we shouldn't need it and symlinks
@@ -781,8 +782,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 #else
 	// execv is used for compatibility with checkrt
 	update_log.notice("Relaunching %s with execv", replace_path);
-	const char * const params[3] = { replace_path.c_str(), "--updating", nullptr };
-	const int ret = execv(replace_path.c_str(), const_cast<char * const *>(&params[0]));
+	const char* const params[3] = {replace_path.c_str(), "--updating", nullptr};
+	const int ret = execv(replace_path.c_str(), const_cast<char* const*>(&params[0]));
 #endif
 	if (ret == -1)
 	{

@@ -7,7 +7,6 @@
 class universal_pool
 {
 public:
-
 	universal_pool(u32 gc_interval = 10000) : gc_interval(gc_interval)
 	{
 	}
@@ -27,7 +26,7 @@ public:
 	}
 
 	template <typename F>
-	requires (std::invocable<F&> && std::is_same_v<std::invoke_result_t<F&>, std::shared_ptr<void>>)
+		requires(std::invocable<F&> && std::is_same_v<std::invoke_result_t<F&>, std::shared_ptr<void>>)
 	void add_op(F func)
 	{
 		std::lock_guard lock(mutex);
@@ -45,7 +44,6 @@ public:
 	}
 
 private:
-
 	void delete_unused()
 	{
 		const u32 gc_int = gc_interval.observe();
@@ -53,11 +51,12 @@ private:
 		if (u64 crnt_time = get_system_time(); gc_int == 0 || crnt_time > gc_last_time + gc_int)
 		{
 			gc_last_time = crnt_time;
-			storage.erase
-			(
-				std::remove_if(storage.begin(), storage.end(), [](auto& obj) { return obj.use_count() <= 1; }),
-				storage.end()
-			);
+			storage.erase(
+				std::remove_if(storage.begin(), storage.end(), [](auto& obj)
+					{
+						return obj.use_count() <= 1;
+					}),
+				storage.end());
 		}
 	}
 
@@ -67,11 +66,10 @@ private:
 	atomic_t<u32> gc_interval = 0;
 };
 
-template<typename T>
+template <typename T>
 class transactional_storage
 {
 public:
-
 	transactional_storage(std::shared_ptr<universal_pool> pool, std::shared_ptr<T> obj = std::make_shared<T>())
 	{
 		ensure(pool && obj);
@@ -98,7 +96,8 @@ public:
 
 	transactional_storage& operator=(transactional_storage&& other)
 	{
-		if (this == &other) return *this;
+		if (this == &other)
+			return *this;
 
 		pool = std::move(other.pool);
 
@@ -127,33 +126,32 @@ public:
 		}
 
 		pool->add_op([&]() -> std::shared_ptr<void>
-		{
 			{
-				std::lock_guard lock{current_mutex};
-				current = obj;
-			}
-			return std::move(obj);
-		});
+				{
+					std::lock_guard lock{current_mutex};
+					current = obj;
+				}
+				return std::move(obj);
+			});
 	}
 
 	template <typename F>
-	requires (std::invocable<F&> && std::is_same_v<std::invoke_result_t<F&>, std::shared_ptr<T>>)
+		requires(std::invocable<F&> && std::is_same_v<std::invoke_result_t<F&>, std::shared_ptr<T>>)
 	void add_op(F func)
 	{
 		pool->add_op([&]() -> std::shared_ptr<void>
-		{
-			std::shared_ptr<T> obj = std::invoke(func);
-			if (obj)
 			{
-				std::lock_guard lock{current_mutex};
-				current = obj;
-			}
-			return obj;
-		});
+				std::shared_ptr<T> obj = std::invoke(func);
+				if (obj)
+				{
+					std::lock_guard lock{current_mutex};
+					current = obj;
+				}
+				return obj;
+			});
 	}
 
 private:
-
 	shared_mutex current_mutex{};
 	std::shared_ptr<T> current{};
 	std::shared_ptr<universal_pool> pool{};

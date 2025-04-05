@@ -15,47 +15,47 @@ namespace
 
 	enum button_flags : u16
 	{
-		select   = 0x01,
-		start    = 0x08,
+		select = 0x01,
+		start = 0x08,
 		triangle = 0x10,
-		circle   = 0x20,
-		cross    = 0x40,
-		square   = 0x80,
-		ps       = 0x0001,
-		move     = 0x4008,
-		t        = 0x8010,
-		ext_dev  = 0x1000,
+		circle = 0x20,
+		cross = 0x40,
+		square = 0x80,
+		ps = 0x0001,
+		move = 0x4008,
+		t = 0x8010,
+		ext_dev = 0x1000,
 
 		// Sharpshooter
 		ss_firing_mode_1 = 0x01,
 		ss_firing_mode_2 = 0x02,
 		ss_firing_mode_3 = 0x04,
-		ss_trigger       = 0x40,
-		ss_reload        = 0x80,
+		ss_trigger = 0x40,
+		ss_reload = 0x80,
 
 		// Racing Wheel
-		rw_d_pad_up    = 0x10,
+		rw_d_pad_up = 0x10,
 		rw_d_pad_right = 0x20,
-		rw_d_pad_down  = 0x40,
-		rw_d_pad_left  = 0x80,
-		rw_l1          = 0x04,
-		rw_r1          = 0x08,
-		rw_paddle_l    = 0x01,
-		rw_paddle_r    = 0x02,
+		rw_d_pad_down = 0x40,
+		rw_d_pad_left = 0x80,
+		rw_l1 = 0x04,
+		rw_r1 = 0x08,
+		rw_paddle_l = 0x01,
+		rw_paddle_r = 0x02,
 	};
 
 	enum battery_status : u8
 	{
 		charge_empty = 0x00,
-		charge_1     = 0x01,
-		charge_2     = 0x02,
-		charge_3     = 0x03,
-		charge_4     = 0x04,
-		charge_full  = 0x05,
+		charge_1 = 0x01,
+		charge_2 = 0x02,
+		charge_3 = 0x03,
+		charge_4 = 0x04,
+		charge_full = 0x05,
 		usb_charging = 0xEE,
-		usb_charged  = 0xEF,
+		usb_charged = 0xEF,
 	};
-}
+} // namespace
 
 const ps_move_input_report_common& ps_move_device::input_report_common() const
 {
@@ -74,37 +74,37 @@ const ps_move_input_report_common& ps_move_device::input_report_common() const
 }
 
 ps_move_handler::ps_move_handler()
-    : hid_pad_handler<ps_move_device>(pad_handler::move, { MOVE_ID_ZCM1, MOVE_ID_ZCM2 })
+	: hid_pad_handler<ps_move_device>(pad_handler::move, {MOVE_ID_ZCM1, MOVE_ID_ZCM2})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
-	{
-		{ ps_move_key_codes::none,          "" },
-		{ ps_move_key_codes::cross,         "Cross" },
-		{ ps_move_key_codes::square,        "Square" },
-		{ ps_move_key_codes::circle,        "Circle" },
-		{ ps_move_key_codes::triangle,      "Triangle" },
-		{ ps_move_key_codes::start,         "Start" },
-		{ ps_move_key_codes::select,        "Select" },
-		{ ps_move_key_codes::ps,            "PS" },
-		{ ps_move_key_codes::move,          "Move" },
-		{ ps_move_key_codes::t,             "T" },
-		{ ps_move_key_codes::firing_mode_1, "Firing Mode 1" },
-		{ ps_move_key_codes::firing_mode_2, "Firing Mode 2" },
-		{ ps_move_key_codes::firing_mode_3, "Firing Mode 3" },
-		{ ps_move_key_codes::reload,        "Reload" },
-		{ ps_move_key_codes::dpad_up,       "D-Pad Up" },
-		{ ps_move_key_codes::dpad_down,     "D-Pad Down" },
-		{ ps_move_key_codes::dpad_left,     "D-Pad Left" },
-		{ ps_move_key_codes::dpad_right,    "D-Pad Right" },
-		{ ps_move_key_codes::L1,            "L1" },
-		{ ps_move_key_codes::R1,            "R1" },
-		{ ps_move_key_codes::L2,            "L2" },
-		{ ps_move_key_codes::R2,            "R2" },
-		{ ps_move_key_codes::throttle,      "Throttle" },
-		{ ps_move_key_codes::paddle_left,   "Paddle Left" },
-		{ ps_move_key_codes::paddle_right,  "Paddle Right" },
-	};
+		{
+			{ps_move_key_codes::none, ""},
+			{ps_move_key_codes::cross, "Cross"},
+			{ps_move_key_codes::square, "Square"},
+			{ps_move_key_codes::circle, "Circle"},
+			{ps_move_key_codes::triangle, "Triangle"},
+			{ps_move_key_codes::start, "Start"},
+			{ps_move_key_codes::select, "Select"},
+			{ps_move_key_codes::ps, "PS"},
+			{ps_move_key_codes::move, "Move"},
+			{ps_move_key_codes::t, "T"},
+			{ps_move_key_codes::firing_mode_1, "Firing Mode 1"},
+			{ps_move_key_codes::firing_mode_2, "Firing Mode 2"},
+			{ps_move_key_codes::firing_mode_3, "Firing Mode 3"},
+			{ps_move_key_codes::reload, "Reload"},
+			{ps_move_key_codes::dpad_up, "D-Pad Up"},
+			{ps_move_key_codes::dpad_down, "D-Pad Down"},
+			{ps_move_key_codes::dpad_left, "D-Pad Left"},
+			{ps_move_key_codes::dpad_right, "D-Pad Right"},
+			{ps_move_key_codes::L1, "L1"},
+			{ps_move_key_codes::R1, "R1"},
+			{ps_move_key_codes::L2, "L2"},
+			{ps_move_key_codes::R2, "R2"},
+			{ps_move_key_codes::throttle, "Throttle"},
+			{ps_move_key_codes::paddle_left, "Paddle Left"},
+			{ps_move_key_codes::paddle_right, "Paddle Right"},
+		};
 
 	init_configs();
 
@@ -130,7 +130,7 @@ ps_move_handler::ps_move_handler()
 	m_max_devices = 4; // CELL_GEM_MAX_NUM
 
 	m_trigger_threshold = trigger_max / 2;
-	m_thumb_threshold   = thumb_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 ps_move_handler::~ps_move_handler()
@@ -139,42 +139,43 @@ ps_move_handler::~ps_move_handler()
 
 void ps_move_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = ::at32(button_list, ps_move_key_codes::none);
-	cfg->ls_down.def  = ::at32(button_list, ps_move_key_codes::none);
+	cfg->ls_left.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->ls_down.def = ::at32(button_list, ps_move_key_codes::none);
 	cfg->ls_right.def = ::at32(button_list, ps_move_key_codes::none);
-	cfg->ls_up.def    = ::at32(button_list, ps_move_key_codes::none);
-	cfg->rs_left.def  = ::at32(button_list, ps_move_key_codes::none);
-	cfg->rs_down.def  = ::at32(button_list, ps_move_key_codes::none);
+	cfg->ls_up.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->rs_left.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->rs_down.def = ::at32(button_list, ps_move_key_codes::none);
 	cfg->rs_right.def = ::at32(button_list, ps_move_key_codes::none);
-	cfg->rs_up.def    = ::at32(button_list, ps_move_key_codes::none);
-	cfg->start.def    = ::at32(button_list, ps_move_key_codes::start);
-	cfg->select.def   = ::at32(button_list, ps_move_key_codes::select);
-	cfg->ps.def       = ::at32(button_list, ps_move_key_codes::ps);
-	cfg->square.def   = ::at32(button_list, ps_move_key_codes::square);
-	cfg->cross.def    = ::at32(button_list, ps_move_key_codes::cross);
-	cfg->circle.def   = ::at32(button_list, ps_move_key_codes::circle);
+	cfg->rs_up.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->start.def = ::at32(button_list, ps_move_key_codes::start);
+	cfg->select.def = ::at32(button_list, ps_move_key_codes::select);
+	cfg->ps.def = ::at32(button_list, ps_move_key_codes::ps);
+	cfg->square.def = ::at32(button_list, ps_move_key_codes::square);
+	cfg->cross.def = ::at32(button_list, ps_move_key_codes::cross);
+	cfg->circle.def = ::at32(button_list, ps_move_key_codes::circle);
 	cfg->triangle.def = ::at32(button_list, ps_move_key_codes::triangle);
-	cfg->left.def     = ::at32(button_list, ps_move_key_codes::none);
-	cfg->down.def     = ::at32(button_list, ps_move_key_codes::none);
-	cfg->right.def    = ::at32(button_list, ps_move_key_codes::none);
-	cfg->up.def       = ::at32(button_list, ps_move_key_codes::none);
-	cfg->r1.def       = ::at32(button_list, ps_move_key_codes::move);
-	cfg->r2.def       = ::at32(button_list, ps_move_key_codes::t);
-	cfg->r3.def       = ::at32(button_list, ps_move_key_codes::none);
-	cfg->l1.def       = ::at32(button_list, ps_move_key_codes::none);
-	cfg->l2.def       = ::at32(button_list, ps_move_key_codes::none);
-	cfg->l3.def       = ::at32(button_list, ps_move_key_codes::none);
+	cfg->left.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->down.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->right.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->up.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->r1.def = ::at32(button_list, ps_move_key_codes::move);
+	cfg->r2.def = ::at32(button_list, ps_move_key_codes::t);
+	cfg->r3.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->l1.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->l2.def = ::at32(button_list, ps_move_key_codes::none);
+	cfg->l3.def = ::at32(button_list, ps_move_key_codes::none);
 
 	cfg->orientation_reset_button.def = ::at32(button_list, ps_move_key_codes::none);
 
 	// Set default misc variables
-	cfg->lstickdeadzone.def    = 40; // between 0 and 255
-	cfg->rstickdeadzone.def    = 40; // between 0 and 255
-	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
-	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
+	cfg->lstickdeadzone.def = 40;   // between 0 and 255
+	cfg->rstickdeadzone.def = 40;   // between 0 and 255
+	cfg->ltriggerthreshold.def = 0; // between 0 and 255
+	cfg->rtriggerthreshold.def = 0; // between 0 and 255
 
 	// apply defaults
 	cfg->from_default();
@@ -196,7 +197,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 	static const std::string col01 = "&Col01#";
 	static const std::string number = "&0000#";
 
-	std::string col02_path { path };
+	std::string col02_path{path};
 	col02_path.replace(path.find(col01), col01.size(), "&Col02#");
 	col02_path.replace(path.find(number), number.size(), "&0001#");
 
@@ -314,11 +315,11 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	// Get calibration
 	device->calibration.is_valid = true;
 
-	ps_move_calibration_blob calibration {};
+	ps_move_calibration_blob calibration{};
 
 	for (int i = 0; i < 2; i++)
 	{
-		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal {};
+		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal{};
 		cal[0] = 0x10;
 		const int res = hid_get_feature_report(device->hidDevice, cal.data(), cal.size());
 		if (res < 0)
@@ -414,7 +415,7 @@ ps_move_handler::DataStatus ps_move_handler::get_data(ps_move_device* device)
 	// Get the new data
 	std::memcpy(report, buf.data(), report_size);
 
-	//move_log.error("%s", fmt::buf_to_hexstring(buf.data(), buf.size(), 64));
+	// move_log.error("%s", fmt::buf_to_hexstring(buf.data(), buf.size(), 64));
 
 	return DataStatus::NewData;
 }
@@ -562,10 +563,10 @@ void ps_move_handler::handle_external_device(const pad_ensemble& binding)
 		const auto& src = move_data.external_device_write;
 
 		std::array<u8, 49> ext_buf{};
-		ext_buf[0x00] = 0xE0; // Report ID
-		ext_buf[0x01] = 0x00; // Read flag
-		ext_buf[0x02] = 0xA0; // Target extension device's I²C slave address
-		ext_buf[0x03] = src[0];         // Control Byte
+		ext_buf[0x00] = 0xE0;                            // Report ID
+		ext_buf[0x01] = 0x00;                            // Read flag
+		ext_buf[0x02] = 0xA0;                            // Target extension device's I²C slave address
+		ext_buf[0x03] = src[0];                          // Control Byte
 		ext_buf[0x04] = static_cast<u8>(src.size() - 1); // Length
 
 		std::memcpy(&ext_buf[0x09], &src[1], src.size() - 1);
@@ -603,17 +604,17 @@ std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::share
 
 	const ps_move_input_report_common& input = dev->input_report_common();
 
-	key_buf[ps_move_key_codes::cross]    = (input.buttons_2 & button_flags::cross)    ? 255 : 0;
-	key_buf[ps_move_key_codes::square]   = (input.buttons_2 & button_flags::square)   ? 255 : 0;
-	key_buf[ps_move_key_codes::circle]   = (input.buttons_2 & button_flags::circle)   ? 255 : 0;
+	key_buf[ps_move_key_codes::cross] = (input.buttons_2 & button_flags::cross) ? 255 : 0;
+	key_buf[ps_move_key_codes::square] = (input.buttons_2 & button_flags::square) ? 255 : 0;
+	key_buf[ps_move_key_codes::circle] = (input.buttons_2 & button_flags::circle) ? 255 : 0;
 	key_buf[ps_move_key_codes::triangle] = (input.buttons_2 & button_flags::triangle) ? 255 : 0;
-	key_buf[ps_move_key_codes::start]    = (input.buttons_1 & button_flags::start)    ? 255 : 0;
-	key_buf[ps_move_key_codes::select]   = (input.buttons_1 & button_flags::select)   ? 255 : 0;
+	key_buf[ps_move_key_codes::start] = (input.buttons_1 & button_flags::start) ? 255 : 0;
+	key_buf[ps_move_key_codes::select] = (input.buttons_1 & button_flags::select) ? 255 : 0;
 
 	const u16 extra_buttons = input.sequence_number << 8 | input.buttons_3;
-	key_buf[ps_move_key_codes::ps]   = (extra_buttons & button_flags::ps)   ? 255 : 0;
+	key_buf[ps_move_key_codes::ps] = (extra_buttons & button_flags::ps) ? 255 : 0;
 	key_buf[ps_move_key_codes::move] = (extra_buttons & button_flags::move) ? 255 : 0;
-	key_buf[ps_move_key_codes::t]    = (extra_buttons & button_flags::t)    ? input.trigger_2 : 0;
+	key_buf[ps_move_key_codes::t] = (extra_buttons & button_flags::t) ? input.trigger_2 : 0;
 
 	dev->battery_level = input.battery_level;
 
@@ -632,20 +633,20 @@ std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::share
 				key_buf[ps_move_key_codes::firing_mode_1] = (ext_data[0] & button_flags::ss_firing_mode_1) ? 255 : 0;
 				key_buf[ps_move_key_codes::firing_mode_2] = (ext_data[0] & button_flags::ss_firing_mode_2) ? 255 : 0;
 				key_buf[ps_move_key_codes::firing_mode_3] = (ext_data[0] & button_flags::ss_firing_mode_3) ? 255 : 0;
-				key_buf[ps_move_key_codes::reload]        = (ext_data[0] & button_flags::ss_reload)        ? 255 : 0;
-				//key_buf[ps_move_key_codes::t]             = (ext_data[0] & button_flags::ss_trigger)       ? 255 : 0; // This is already reported as normal trigger
+				key_buf[ps_move_key_codes::reload] = (ext_data[0] & button_flags::ss_reload) ? 255 : 0;
+				// key_buf[ps_move_key_codes::t]             = (ext_data[0] & button_flags::ss_trigger)       ? 255 : 0; // This is already reported as normal trigger
 				break;
 			case RACING_WHEEL_DEVICE_ID:
-				key_buf[ps_move_key_codes::dpad_up]      = (input.buttons_1 & button_flags::rw_d_pad_up)    ? 255 : 0;
-				key_buf[ps_move_key_codes::dpad_right]   = (input.buttons_1 & button_flags::rw_d_pad_right) ? 255 : 0;
-				key_buf[ps_move_key_codes::dpad_down]    = (input.buttons_1 & button_flags::rw_d_pad_down)  ? 255 : 0;
-				key_buf[ps_move_key_codes::dpad_left]    = (input.buttons_1 & button_flags::rw_d_pad_left)  ? 255 : 0;
-				key_buf[ps_move_key_codes::L1]           = (input.buttons_2 & button_flags::rw_l1)          ? 255 : 0;
-				key_buf[ps_move_key_codes::R1]           = (input.buttons_2 & button_flags::rw_r1)          ? 255 : 0;
-				key_buf[ps_move_key_codes::throttle]     = ext_data[0];
-				key_buf[ps_move_key_codes::L2]           = ext_data[1];
-				key_buf[ps_move_key_codes::R2]           = ext_data[2];
-				key_buf[ps_move_key_codes::paddle_left]  = (ext_data[3] & button_flags::rw_paddle_l) ? 255 : 0;
+				key_buf[ps_move_key_codes::dpad_up] = (input.buttons_1 & button_flags::rw_d_pad_up) ? 255 : 0;
+				key_buf[ps_move_key_codes::dpad_right] = (input.buttons_1 & button_flags::rw_d_pad_right) ? 255 : 0;
+				key_buf[ps_move_key_codes::dpad_down] = (input.buttons_1 & button_flags::rw_d_pad_down) ? 255 : 0;
+				key_buf[ps_move_key_codes::dpad_left] = (input.buttons_1 & button_flags::rw_d_pad_left) ? 255 : 0;
+				key_buf[ps_move_key_codes::L1] = (input.buttons_2 & button_flags::rw_l1) ? 255 : 0;
+				key_buf[ps_move_key_codes::R1] = (input.buttons_2 & button_flags::rw_r1) ? 255 : 0;
+				key_buf[ps_move_key_codes::throttle] = ext_data[0];
+				key_buf[ps_move_key_codes::L2] = ext_data[1];
+				key_buf[ps_move_key_codes::R2] = ext_data[2];
+				key_buf[ps_move_key_codes::paddle_left] = (ext_data[3] & button_flags::rw_paddle_l) ? 255 : 0;
 				key_buf[ps_move_key_codes::paddle_right] = (ext_data[3] & button_flags::rw_paddle_r) ? 255 : 0;
 				break;
 			default:
@@ -727,7 +728,7 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 		{
 			const ps_move_input_report_ZCM1& input_zcm1 = dev->input_report_ZCM1;
 
-			#define TWELVE_BIT_SIGNED(x) (((x) & 0x800) ? (-(((~(x)) & 0xFFF) + 1)) : (x))
+#define TWELVE_BIT_SIGNED(x) (((x) & 0x800) ? (-(((~(x)) & 0xFFF) + 1)) : (x))
 			pad->move_data.magnetometer_x = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
 			pad->move_data.magnetometer_y = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
 			pad->move_data.magnetometer_z = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
@@ -752,8 +753,7 @@ pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<
 		0,
 		0,
 		0,
-		0
-	};
+		0};
 }
 
 int ps_move_handler::send_output_report(ps_move_device* device)

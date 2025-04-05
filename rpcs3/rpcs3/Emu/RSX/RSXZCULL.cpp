@@ -117,8 +117,10 @@ namespace rsx
 			{
 				// Data check
 				u32 expected_type = 0;
-				if (zpass_active) expected_type |= CELL_GCM_ZPASS_PIXEL_CNT;
-				if (zcull_stats_active) expected_type |= CELL_GCM_ZCULL_STATS;
+				if (zpass_active)
+					expected_type |= CELL_GCM_ZPASS_PIXEL_CNT;
+				if (zcull_stats_active)
+					expected_type |= CELL_GCM_ZCULL_STATS;
 
 				if (m_current_task->data_type != expected_type) [[unlikely]]
 				{
@@ -220,8 +222,10 @@ namespace rsx
 					m_current_task->timestamp = 0;
 
 					// Flags determine what kind of payload is carried by queries in the 'report'
-					if (zpass_count_enabled) m_current_task->data_type |= CELL_GCM_ZPASS_PIXEL_CNT;
-					if (stats_enabled) m_current_task->data_type |= CELL_GCM_ZCULL_STATS;
+					if (zpass_count_enabled)
+						m_current_task->data_type |= CELL_GCM_ZPASS_PIXEL_CNT;
+					if (stats_enabled)
+						m_current_task->data_type |= CELL_GCM_ZCULL_STATS;
 
 					return;
 				}
@@ -262,7 +266,7 @@ namespace rsx
 
 			if (!m_pending_writes.empty())
 			{
-				//Remove any dangling/unclaimed queries as the information is lost anyway
+				// Remove any dangling/unclaimed queries as the information is lost anyway
 				auto valid_size = m_pending_writes.size();
 				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
 				{
@@ -335,12 +339,12 @@ namespace rsx
 				if (value)
 				{
 					value = (g_cfg.video.precise_zpass_count) ?
-						scale_result(value) :
-						u16{ umax };
+					            scale_result(value) :
+					            u16{umax};
 				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
-				value = (value || !write_enabled || !stats_enabled) ? 0 : u16{ umax };
+				value = (value || !write_enabled || !stats_enabled) ? 0 : u16{umax};
 				break;
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS1:
@@ -424,7 +428,7 @@ namespace rsx
 					if (It->query->sync_tag > m_sync_tag)
 					{
 						// rsx_log.trace("[Performance warning] Query hint emit during sync command.");
-						ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = It->query });
+						ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, {.query = It->query});
 					}
 
 					break;
@@ -504,7 +508,7 @@ namespace rsx
 				index = (index + max_stat_registers - 1) % max_stat_registers;
 			}
 
-			//Decrement jobs counter
+			// Decrement jobs counter
 			ptimer->async_tasks_pending -= processed;
 		}
 
@@ -533,7 +537,7 @@ namespace rsx
 						{
 							if (It->query->num_draws && It->query->sync_tag > m_sync_tag)
 							{
-								ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = It->query });
+								ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, {.query = It->query});
 								ensure(It->query->sync_tag <= m_sync_tag);
 							}
 
@@ -558,7 +562,7 @@ namespace rsx
 						const auto elapsed = m_tsc - front.query->timestamp;
 						if (elapsed > max_zcull_delay_us)
 						{
-							ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = front.query });
+							ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, {.query = front.query});
 							ensure(front.query->sync_tag <= m_sync_tag);
 						}
 
@@ -706,7 +710,7 @@ namespace rsx
 				{
 					if (query->sync_tag > m_sync_tag) [[unlikely]]
 					{
-						ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = query });
+						ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, {.query = query});
 						ensure(m_sync_tag >= query->sync_tag);
 					}
 				}
@@ -751,7 +755,7 @@ namespace rsx
 						}
 
 						// Zcull stats were cleared between this query and the required stats, result can only be 0
-						return { true, 0, {} };
+						return {true, 0, {}};
 					}
 
 					if (It->query && It->query->num_draws)
@@ -809,7 +813,7 @@ namespace rsx
 			const auto location = rsx::classify_location(address);
 			std::scoped_lock lock(m_pages_mutex);
 
-			if (!m_pages_accessed[location]) [[ likely ]]
+			if (!m_pages_accessed[location]) [[likely]]
 			{
 				const auto page_address = utils::page_start(static_cast<u32>(address));
 				auto& page = m_locked_pages[location][page_address];
@@ -905,7 +909,7 @@ namespace rsx
 						if (fault_page.has_refs())
 						{
 							// R/W to active block
-							need_disable_optimizations = true;    // Defer actual operation
+							need_disable_optimizations = true; // Defer actual operation
 							m_pages_accessed[location] = true;
 						}
 						else
@@ -934,7 +938,6 @@ namespace rsx
 
 			return false;
 		}
-
 
 		// Conditional rendering helpers
 		void conditional_render_eval::reset()
@@ -1006,5 +1009,5 @@ namespace rsx
 			const bool failed = (result->value == 0u);
 			set_eval_result(pthr, failed);
 		}
-	}
-}
+	} // namespace reports
+} // namespace rsx

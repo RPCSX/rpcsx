@@ -23,13 +23,13 @@ constexpr be_t<u32> P2PS_U2S_SIG = (static_cast<u32>('U') << 24 | static_cast<u3
 struct p2ps_encapsulated_tcp
 {
 	be_t<u32> signature = P2PS_U2S_SIG; // Signature to verify it's P2P Stream data
-	be_t<u32> length    = 0;            // Length of data
-	be_t<u64> seq       = 0;            // This should be u32 but changed to u64 for simplicity
-	be_t<u64> ack       = 0;
-	be_t<u16> src_port  = 0; // fake source tcp port
-	be_t<u16> dst_port  = 0; // fake dest tcp port(should be == vport)
-	be_t<u16> checksum  = 0;
-	u8 flags            = 0;
+	be_t<u32> length = 0;               // Length of data
+	be_t<u64> seq = 0;                  // This should be u32 but changed to u64 for simplicity
+	be_t<u64> ack = 0;
+	be_t<u16> src_port = 0; // fake source tcp port
+	be_t<u16> dst_port = 0; // fake dest tcp port(should be == vport)
+	be_t<u16> checksum = 0;
+	u8 flags = 0;
 };
 
 enum p2ps_stream_status
@@ -106,7 +106,7 @@ private:
 	u16 op_port = 0, op_vport = 0;
 	u32 op_addr = 0;
 
-	u64 data_beg_seq   = 0;                       // Seq of first byte of received_data
+	u64 data_beg_seq = 0;                         // Seq of first byte of received_data
 	u64 data_available = 0;                       // Amount of continuous data available(calculated on ACK send)
 	std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
 

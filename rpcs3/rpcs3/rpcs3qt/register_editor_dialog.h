@@ -18,7 +18,7 @@ class register_editor_dialog : public QDialog
 	const std::function<cpu_thread*()> m_get_cpu;
 
 public:
-	register_editor_dialog(QWidget *parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
+	register_editor_dialog(QWidget* parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
 
 private:
 	void OnOkay();

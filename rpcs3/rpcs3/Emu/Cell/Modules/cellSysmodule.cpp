@@ -7,29 +7,29 @@ constexpr auto CELL_SYSMODULE_LOADED = CELL_OK;
 
 enum CellSysmoduleError : u32
 {
-	CELL_SYSMODULE_ERROR_DUPLICATED           = 0x80012001,
-	CELL_SYSMODULE_ERROR_UNKNOWN              = 0x80012002,
-	CELL_SYSMODULE_ERROR_UNLOADED             = 0x80012003,
+	CELL_SYSMODULE_ERROR_DUPLICATED = 0x80012001,
+	CELL_SYSMODULE_ERROR_UNKNOWN = 0x80012002,
+	CELL_SYSMODULE_ERROR_UNLOADED = 0x80012003,
 	CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER = 0x80012004,
-	CELL_SYSMODULE_ERROR_FATAL                = 0x800120ff,
+	CELL_SYSMODULE_ERROR_FATAL = 0x800120ff,
 };
 
-template<>
+template <>
 void fmt_class_string<CellSysmoduleError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SYSMODULE_ERROR_DUPLICATED);
-			STR_CASE(CELL_SYSMODULE_ERROR_UNKNOWN);
-			STR_CASE(CELL_SYSMODULE_ERROR_UNLOADED);
-			STR_CASE(CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER);
-			STR_CASE(CELL_SYSMODULE_ERROR_FATAL);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SYSMODULE_ERROR_DUPLICATED);
+				STR_CASE(CELL_SYSMODULE_ERROR_UNKNOWN);
+				STR_CASE(CELL_SYSMODULE_ERROR_UNLOADED);
+				STR_CASE(CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER);
+				STR_CASE(CELL_SYSMODULE_ERROR_FATAL);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 static const char* get_module_name(u16 id)
@@ -307,11 +307,11 @@ error_code cellSysmoduleLoadModule(u16 id)
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
-	//if (Module<>* m = Emu.GetModuleManager().GetModuleById(id))
+	// if (Module<>* m = Emu.GetModuleManager().GetModuleById(id))
 	//{
 	//	// CELL_SYSMODULE_ERROR_DUPLICATED shouldn't be returned
 	//	m->Load();
-	//}
+	// }
 
 	return CELL_OK;
 }
@@ -327,7 +327,7 @@ error_code cellSysmoduleUnloadModule(u16 id)
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
-	//if (Module<>* m = Emu.GetModuleManager().GetModuleById(id))
+	// if (Module<>* m = Emu.GetModuleManager().GetModuleById(id))
 	//{
 	//	if (!m->IsLoaded())
 	//	{
@@ -352,14 +352,14 @@ error_code cellSysmoduleIsLoaded(u16 id)
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
-	//if (Module<>* m = Emu.GetModuleManager().GetModuleById(id))
+	// if (Module<>* m = Emu.GetModuleManager().GetModuleById(id))
 	//{
 	//	if (!m->IsLoaded())
 	//	{
 	//		cellSysmodule.warning("cellSysmoduleIsLoaded(): module not loaded (id=0x%04x)", id);
 	//		return CELL_SYSMODULE_ERROR_UNLOADED;
 	//	}
-	//}
+	// }
 
 	return CELL_SYSMODULE_LOADED;
 }
@@ -407,18 +407,18 @@ error_code cellSysmoduleIsLoadedEx()
 }
 
 DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
-{
-	REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
-	REG_FUNC(cellSysmodule, cellSysmoduleFinalize);
-	REG_FUNC(cellSysmodule, cellSysmoduleSetMemcontainer);
-	REG_FUNC(cellSysmodule, cellSysmoduleLoadModule);
-	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModule);
-	REG_FUNC(cellSysmodule, cellSysmoduleIsLoaded);
-	REG_FUNC(cellSysmodule, cellSysmoduleGetImagesize);
-	REG_FUNC(cellSysmodule, cellSysmoduleFetchImage);
-	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleInternal);
-	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleInternal);
-	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleEx);
-	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleEx);
-	REG_FUNC(cellSysmodule, cellSysmoduleIsLoadedEx);
-});
+	{
+		REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
+		REG_FUNC(cellSysmodule, cellSysmoduleFinalize);
+		REG_FUNC(cellSysmodule, cellSysmoduleSetMemcontainer);
+		REG_FUNC(cellSysmodule, cellSysmoduleLoadModule);
+		REG_FUNC(cellSysmodule, cellSysmoduleUnloadModule);
+		REG_FUNC(cellSysmodule, cellSysmoduleIsLoaded);
+		REG_FUNC(cellSysmodule, cellSysmoduleGetImagesize);
+		REG_FUNC(cellSysmodule, cellSysmoduleFetchImage);
+		REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleInternal);
+		REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleInternal);
+		REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleEx);
+		REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleEx);
+		REG_FUNC(cellSysmodule, cellSysmoduleIsLoadedEx);
+	});

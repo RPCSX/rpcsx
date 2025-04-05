@@ -8,22 +8,22 @@
 
 LOG_CHANNEL(cellScreenshot);
 
-template<>
+template <>
 void fmt_class_string<CellScreenShotError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_SCREENSHOT_ERROR_INTERNAL);
-			STR_CASE(CELL_SCREENSHOT_ERROR_PARAM);
-			STR_CASE(CELL_SCREENSHOT_ERROR_DECODE);
-			STR_CASE(CELL_SCREENSHOT_ERROR_NOSPACE);
-			STR_CASE(CELL_SCREENSHOT_ERROR_UNSUPPORTED_COLOR_FORMAT);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_SCREENSHOT_ERROR_INTERNAL);
+				STR_CASE(CELL_SCREENSHOT_ERROR_PARAM);
+				STR_CASE(CELL_SCREENSHOT_ERROR_DECODE);
+				STR_CASE(CELL_SCREENSHOT_ERROR_NOSPACE);
+				STR_CASE(CELL_SCREENSHOT_ERROR_UNSUPPORTED_COLOR_FORMAT);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 std::string screenshot_info::get_overlay_path() const
@@ -65,7 +65,6 @@ std::string screenshot_info::get_screenshot_path(const std::string& date_path) c
 
 	return path + suffix;
 }
-
 
 error_code cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 {
@@ -159,14 +158,13 @@ error_code cellScreenShotDisable()
 		cellScreenshot.warning("cellScreenShotDisable(): Disabled");
 	}
 
-
 	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellScreenShot)("cellScreenShotUtility", []()
-{
-	REG_FUNC(cellScreenShotUtility, cellScreenShotSetParameter);
-	REG_FUNC(cellScreenShotUtility, cellScreenShotSetOverlayImage);
-	REG_FUNC(cellScreenShotUtility, cellScreenShotEnable);
-	REG_FUNC(cellScreenShotUtility, cellScreenShotDisable);
-});
+	{
+		REG_FUNC(cellScreenShotUtility, cellScreenShotSetParameter);
+		REG_FUNC(cellScreenShotUtility, cellScreenShotSetOverlayImage);
+		REG_FUNC(cellScreenShotUtility, cellScreenShotEnable);
+		REG_FUNC(cellScreenShotUtility, cellScreenShotDisable);
+	});

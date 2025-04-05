@@ -12,7 +12,7 @@ struct UrandomDevice : public IoDevice {
 struct UrandomFile : public orbis::File {};
 
 static orbis::ErrorCode urandom_read(orbis::File *file, orbis::Uio *uio,
-                                  orbis::Thread *) {
+                                     orbis::Thread *) {
   for (auto entry : std::span(uio->iov, uio->iovcnt)) {
     std::memset(entry.base, 0, entry.len);
     uio->offset += entry.len;
@@ -26,8 +26,9 @@ static const orbis::FileOps ops = {
 };
 
 orbis::ErrorCode UrandomDevice::open(orbis::Ref<orbis::File> *file,
-                                  const char *path, std::uint32_t flags,
-                                  std::uint32_t mode, orbis::Thread *thread) {
+                                     const char *path, std::uint32_t flags,
+                                     std::uint32_t mode,
+                                     orbis::Thread *thread) {
   auto newFile = orbis::knew<UrandomFile>();
   newFile->device = this;
   newFile->ops = &ops;
@@ -35,4 +36,6 @@ orbis::ErrorCode UrandomDevice::open(orbis::Ref<orbis::File> *file,
   return {};
 }
 
-IoDevice *createUrandomCharacterDevice() { return orbis::knew<UrandomDevice>(); }
+IoDevice *createUrandomCharacterDevice() {
+  return orbis::knew<UrandomDevice>();
+}

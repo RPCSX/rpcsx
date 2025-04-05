@@ -6,7 +6,7 @@
 #include "Emu/Audio/audio_device_enumerator.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <system_error>
 #endif
 
@@ -23,7 +23,7 @@ CubebBackend::CubebBackend()
 	}
 #endif
 
-	cubeb *ctx{};
+	cubeb* ctx{};
 	if (int err = cubeb_init(&ctx, "RPCS3", nullptr))
 	{
 		Cubeb.error("cubeb_init() failed: %i", err);
@@ -112,8 +112,10 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 
 	const bool use_default_device = dev_id.empty() || dev_id == audio_device_enumerator::DEFAULT_DEV_ID;
 
-	if (use_default_device) Cubeb.notice("Trying to open default device");
-	else Cubeb.notice("Trying to open device with dev_id='%s'", dev_id);
+	if (use_default_device)
+		Cubeb.notice("Trying to open default device");
+	else
+		Cubeb.notice("Trying to open device with dev_id='%s'", dev_id);
 
 	device_handle device = GetDevice(use_default_device ? "" : dev_id);
 
@@ -164,14 +166,14 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 	{
 		switch (m_layout)
 		{
-		case audio_channel_layout::automatic:        break;
-		case audio_channel_layout::mono:             return CUBEB_LAYOUT_MONO;
-		case audio_channel_layout::stereo:           return CUBEB_LAYOUT_STEREO;
-		case audio_channel_layout::stereo_lfe:       return CUBEB_LAYOUT_STEREO_LFE;
-		case audio_channel_layout::quadraphonic:     return CUBEB_LAYOUT_QUAD;
+		case audio_channel_layout::automatic: break;
+		case audio_channel_layout::mono: return CUBEB_LAYOUT_MONO;
+		case audio_channel_layout::stereo: return CUBEB_LAYOUT_STEREO;
+		case audio_channel_layout::stereo_lfe: return CUBEB_LAYOUT_STEREO_LFE;
+		case audio_channel_layout::quadraphonic: return CUBEB_LAYOUT_QUAD;
 		case audio_channel_layout::quadraphonic_lfe: return CUBEB_LAYOUT_QUAD_LFE;
-		case audio_channel_layout::surround_5_1:     return CUBEB_LAYOUT_3F2_LFE;
-		case audio_channel_layout::surround_7_1:     return CUBEB_LAYOUT_3F4_LFE;
+		case audio_channel_layout::surround_5_1: return CUBEB_LAYOUT_3F2_LFE;
+		case audio_channel_layout::surround_7_1: return CUBEB_LAYOUT_3F4_LFE;
 		}
 
 		fmt::throw_exception("Invalid audio layout %d", static_cast<u32>(m_layout));
@@ -240,7 +242,8 @@ void CubebBackend::Play()
 		return;
 	}
 
-	if (m_playing) return;
+	if (m_playing)
+		return;
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = true;
@@ -254,7 +257,8 @@ void CubebBackend::Pause()
 		return;
 	}
 
-	if (!m_playing) return;
+	if (!m_playing)
+		return;
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = false;
@@ -283,8 +287,10 @@ CubebBackend::device_handle CubebBackend::GetDevice(std::string_view dev_id)
 {
 	const bool default_dev = dev_id.empty();
 
-	if (default_dev) Cubeb.notice("Searching for default device");
-	else Cubeb.notice("Searching for device with dev_id='%s'", dev_id);
+	if (default_dev)
+		Cubeb.notice("Searching for default device");
+	else
+		Cubeb.notice("Searching for device with dev_id='%s'", dev_id);
 
 	cubeb_device_collection dev_collection{};
 	if (int err = cubeb_enumerate_devices(m_ctx, CUBEB_DEVICE_TYPE_OUTPUT, &dev_collection))
@@ -363,13 +369,12 @@ CubebBackend::device_handle CubebBackend::GetDefaultDeviceAlt(AudioFreq freq, Au
 	Cubeb.notice("Starting alternative search for default device with freq=%d, sample_size=%d and ch_cnt=%d", static_cast<u32>(freq), static_cast<u32>(sample_size), static_cast<u32>(ch_cnt));
 
 	cubeb_stream_params param =
-	{
-		.format   = sample_size == AudioSampleSize::S16 ? CUBEB_SAMPLE_S16NE : CUBEB_SAMPLE_FLOAT32NE,
-		.rate     = static_cast<u32>(freq),
-		.channels = static_cast<u32>(ch_cnt),
-		.layout   = CUBEB_LAYOUT_UNDEFINED,
-		.prefs    = CUBEB_STREAM_PREF_DISABLE_DEVICE_SWITCHING
-	};
+		{
+			.format = sample_size == AudioSampleSize::S16 ? CUBEB_SAMPLE_S16NE : CUBEB_SAMPLE_FLOAT32NE,
+			.rate = static_cast<u32>(freq),
+			.channels = static_cast<u32>(ch_cnt),
+			.layout = CUBEB_LAYOUT_UNDEFINED,
+			.prefs = CUBEB_STREAM_PREF_DISABLE_DEVICE_SWITCHING};
 
 	u32 min_latency{};
 	if (int err = cubeb_get_min_latency(m_ctx, &param, &min_latency))
@@ -379,7 +384,10 @@ CubebBackend::device_handle CubebBackend::GetDefaultDeviceAlt(AudioFreq freq, Au
 	}
 
 	cubeb_stream* tmp_stream{};
-	static auto dummy_data_cb = [](cubeb_stream*, void*, void const*, void*, long) -> long { return 0; };
+	static auto dummy_data_cb = [](cubeb_stream*, void*, void const*, void*, long) -> long
+	{
+		return 0;
+	};
 	static auto dummy_state_cb = [](cubeb_stream*, void*, cubeb_state) {};
 
 	if (int err = cubeb_stream_init(m_ctx, &tmp_stream, "Default device detector", nullptr, nullptr, nullptr, &param, min_latency, dummy_data_cb, dummy_state_cb, nullptr))

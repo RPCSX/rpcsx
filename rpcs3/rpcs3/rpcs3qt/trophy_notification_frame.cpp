@@ -41,9 +41,9 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	QString trophy_string;
 	switch (trophy.trophyGrade)
 	{
-	case SCE_NP_TROPHY_GRADE_BRONZE:   trophy_string = tr("You have earned the Bronze trophy.\n%1").arg(trophy.name);   break;
-	case SCE_NP_TROPHY_GRADE_SILVER:   trophy_string = tr("You have earned the Silver trophy.\n%1").arg(trophy.name);   break;
-	case SCE_NP_TROPHY_GRADE_GOLD:     trophy_string = tr("You have earned the Gold trophy.\n%1").arg(trophy.name);     break;
+	case SCE_NP_TROPHY_GRADE_BRONZE: trophy_string = tr("You have earned the Bronze trophy.\n%1").arg(trophy.name); break;
+	case SCE_NP_TROPHY_GRADE_SILVER: trophy_string = tr("You have earned the Silver trophy.\n%1").arg(trophy.name); break;
+	case SCE_NP_TROPHY_GRADE_GOLD: trophy_string = tr("You have earned the Gold trophy.\n%1").arg(trophy.name); break;
 	case SCE_NP_TROPHY_GRADE_PLATINUM: trophy_string = tr("You have earned the Platinum trophy.\n%1").arg(trophy.name); break;
 	default: break;
 	}
@@ -60,7 +60,7 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 
 	// I may consider moving this code later to be done at a better location.
 	QTimer::singleShot(TROPHY_TIMEOUT_MS, [this]()
-	{
-		deleteLater();
-	});
+		{
+			deleteLater();
+		});
 }

@@ -10,7 +10,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 template <>
 void fmt_class_string<cfg::node>::format(std::string& out, u64 arg)
 {
- 	out += get_object(arg).to_string();
+	out += get_object(arg).to_string();
 }
 
 namespace cfg
@@ -69,7 +69,7 @@ namespace cfg
 	// Incrementally load config entries from YAML::Node.
 	// The config value is preserved if the corresponding YAML node doesn't exist.
 	static void decode(const YAML::Node& data, class _base& rhs, bool dynamic = false);
-}
+} // namespace cfg
 
 std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 {
@@ -80,7 +80,8 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 {
 	if (value.empty())
 	{
-		if (out) cfg_log.error("cfg::try_to_int64(): called with an empty string");
+		if (out)
+			cfg_log.error("cfg::try_to_int64(): called with an empty string");
 		return false;
 	}
 
@@ -107,7 +108,8 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 
 	if (ret.ec != std::errc() || ret.ptr != end || (start[0] == '-' && sign < 0))
 	{
-		if (out) cfg_log.error("cfg::try_to_int64('%s'): invalid integer", value);
+		if (out)
+			cfg_log.error("cfg::try_to_int64('%s'): invalid integer", value);
 		return false;
 	}
 
@@ -115,11 +117,13 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (val=%d, min=%d, max=%d)", value, result, min, max);
+		if (out)
+			cfg_log.error("cfg::try_to_int64('%s'): out of bounds (val=%d, min=%d, max=%d)", value, result, min, max);
 		return false;
 	}
 
-	if (out) *out = result;
+	if (out)
+		*out = result;
 	return true;
 }
 
@@ -132,7 +136,8 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 {
 	if (value.empty())
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64(): called with an empty string");
+		if (out)
+			cfg_log.error("cfg::try_to_uint64(): called with an empty string");
 		return false;
 	}
 
@@ -152,17 +157,20 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 
 	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64('%s'): invalid integer", value);
+		if (out)
+			cfg_log.error("cfg::try_to_uint64('%s'): invalid integer", value);
 		return false;
 	}
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (val=%u, min=%u, max=%u)", value, result, min, max);
+		if (out)
+			cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (val=%u, min=%u, max=%u)", value, result, min, max);
 		return false;
 	}
 
-	if (out) *out = result;
+	if (out)
+		*out = result;
 	return true;
 }
 
@@ -175,7 +183,8 @@ bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
 {
 	if (value.empty())
 	{
-		if (out) cfg_log.error("cfg::try_to_float(): called with an empty string");
+		if (out)
+			cfg_log.error("cfg::try_to_float(): called with an empty string");
 		return false;
 	}
 
@@ -188,36 +197,42 @@ bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
 
 	if (end_check != str.data() + str.size())
 	{
-		if (out) cfg_log.error("cfg::try_to_float('%s'): invalid float", value);
+		if (out)
+			cfg_log.error("cfg::try_to_float('%s'): invalid float", value);
 		return false;
 	}
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (val=%f, min=%f, max=%f)", value, result, min, max);
+		if (out)
+			cfg_log.error("cfg::try_to_float('%s'): out of bounds (val=%f, min=%f, max=%f)", value, result, min, max);
 		return false;
 	}
 
-	if (out) *out = result;
+	if (out)
+		*out = result;
 	return true;
 }
 
 bool try_to_string(std::string* out, const f64& value)
 {
 #ifdef __APPLE__
-	if (out) *out = std::to_string(value);
+	if (out)
+		*out = std::to_string(value);
 	return true;
 #else
 	std::array<char, 32> str{};
 
 	if (auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), value, std::chars_format::fixed); ec == std::errc())
 	{
-		if (out) *out = std::string(str.data(), ptr);
+		if (out)
+			*out = std::string(str.data(), ptr);
 		return true;
 	}
 	else
 	{
-		if (out) cfg_log.error("cfg::try_to_string(): could not convert value '%f' to string. error='%s'", value, std::make_error_code(ec).message());
+		if (out)
+			cfg_log.error("cfg::try_to_string(): could not convert value '%f' to string. error='%s'", value, std::make_error_code(ec).message());
 		return false;
 	}
 #endif
@@ -235,7 +250,8 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 		if (var == value)
 		{
-			if (out) *out = i;
+			if (out)
+				*out = i;
 			return true;
 		}
 
@@ -271,17 +287,20 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): invalid enum or integer", value);
+		if (out)
+			cfg_log.error("cfg::try_to_enum_value('%s'): invalid enum or integer", value);
 		return false;
 	}
 
 	if (result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(val=%u, min=0, max=%u)", value, result, max);
+		if (out)
+			cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(val=%u, min=0, max=%u)", value, result, max);
 		return false;
 	}
 
-	if (out) *out = result;
+	if (out)
+		*out = result;
 	return true;
 }
 
@@ -354,7 +373,7 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 	}
 	case type::node_map:
 	{
-		//out << YAML::Block; // Does nothing, output is in Flow mode still (TODO)
+		// out << YAML::Block; // Does nothing, output is in Flow mode still (TODO)
 		out << YAML::BeginMap;
 		for (const auto& np : static_cast<const node_map_entry&>(rhs).get_map())
 		{
@@ -369,7 +388,8 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::BeginMap;
 		for (const auto& np : static_cast<const log_entry&>(rhs).get_map())
 		{
-			if (np.second == logs::level::notice) continue;
+			if (np.second == logs::level::notice)
+				continue;
 			out << YAML::Key << np.first;
 			out << YAML::Value << fmt::format("%s", np.second);
 		}
@@ -418,7 +438,8 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 
 		for (const auto& pair : data)
 		{
-			if (!pair.first.IsScalar()) continue;
+			if (!pair.first.IsScalar())
+				continue;
 
 			// Find the key among existing nodes
 			for (const auto& node : static_cast<node&>(rhs).get_nodes())
@@ -455,7 +476,8 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 
 		for (const auto& pair : data)
 		{
-			if (!pair.first.IsScalar() || !pair.second.IsScalar()) continue;
+			if (!pair.first.IsScalar() || !pair.second.IsScalar())
+				continue;
 
 			values.emplace(pair.first.Scalar(), pair.second.Scalar());
 		}
@@ -474,7 +496,8 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 
 		for (const auto& pair : data)
 		{
-			if (!pair.first.IsScalar() || !pair.second.IsScalar()) continue;
+			if (!pair.first.IsScalar() || !pair.second.IsScalar())
+				continue;
 
 			u64 value;
 			if (cfg::try_to_enum_value(&value, &fmt_class_string<logs::level>::format, pair.second.Scalar()))
@@ -497,13 +520,15 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 
 		for (const auto& pair : data)
 		{
-			if (!pair.first.IsScalar() || !pair.second.IsMap()) continue;
+			if (!pair.first.IsScalar() || !pair.second.IsMap())
+				continue;
 
 			device_info info{};
 
 			for (const auto& key_value : pair.second)
 			{
-				if (!key_value.first.IsScalar() || !key_value.second.IsScalar()) continue;
+				if (!key_value.first.IsScalar() || !key_value.second.IsScalar())
+					continue;
 
 				if (key_value.first.Scalar() == "Path")
 					info.path = key_value.second.Scalar();
@@ -546,7 +571,7 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-nlohmann::ordered_json cfg::node::to_json() const 
+nlohmann::ordered_json cfg::node::to_json() const
 {
 	auto result = nlohmann::ordered_json::object();
 
@@ -558,14 +583,14 @@ nlohmann::ordered_json cfg::node::to_json() const
 	return result;
 }
 
-bool cfg::node::from_json(const nlohmann::json &json, bool dynamic)
+bool cfg::node::from_json(const nlohmann::json& json, bool dynamic)
 {
 	if (!json.is_object())
 	{
 		return false;
 	}
 
-	auto find_node = [this](std::string_view name) -> _base *
+	auto find_node = [this](std::string_view name) -> _base*
 	{
 		for (const auto& node : get_nodes())
 		{
@@ -578,8 +603,7 @@ bool cfg::node::from_json(const nlohmann::json &json, bool dynamic)
 		return nullptr;
 	};
 
-
-	for (auto &[key, value] : json.get<nlohmann::json::object_t>())
+	for (auto& [key, value] : json.get<nlohmann::json::object_t>())
 	{
 		auto keyNode = find_node(key);
 

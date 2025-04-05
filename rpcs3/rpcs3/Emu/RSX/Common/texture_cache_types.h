@@ -7,9 +7,9 @@ namespace rsx
 	 */
 	enum invalidation_chain_policy
 	{
-		invalidation_chain_none,         // No chaining: Only sections that overlap the faulting page get invalidated.
-		invalidation_chain_full,         // Full chaining: Sections overlapping the faulting page get invalidated, as well as any sections overlapping invalidated sections.
-		invalidation_chain_nearby        // Invalidations chain if they are near to the fault (<X pages away)
+		invalidation_chain_none,  // No chaining: Only sections that overlap the faulting page get invalidated.
+		invalidation_chain_full,  // Full chaining: Sections overlapping the faulting page get invalidated, as well as any sections overlapping invalidated sections.
+		invalidation_chain_nearby // Invalidations chain if they are near to the fault (<X pages away)
 	};
 
 	enum invalidation_chain_direction
@@ -50,14 +50,14 @@ namespace rsx
 
 		enum flags : u32
 		{
-			cause_is_valid    = (1 << 0),
-			cause_is_read     = (1 << 1),
-			cause_is_write    = (1 << 2),
+			cause_is_valid = (1 << 0),
+			cause_is_read = (1 << 1),
+			cause_is_write = (1 << 2),
 			cause_is_deferred = (1 << 3),
-			cause_skips_fbos  = (1 << 4),
+			cause_skips_fbos = (1 << 4),
 			cause_skips_flush = (1 << 5),
 			cause_keeps_fault_range_protection = (1 << 6),
-			cause_uses_strict_data_bounds      = (1 << 7),
+			cause_uses_strict_data_bounds = (1 << 7),
 		};
 
 		using enum enum_type;
@@ -115,20 +115,24 @@ namespace rsx
 			return invalidation_cause(m_flag_bits | cause_is_deferred);
 		}
 
-		inline bool operator == (const invalidation_cause& other) const
+		inline bool operator==(const invalidation_cause& other) const
 		{
 			return m_flag_bits == other.m_flag_bits;
 		}
 
 		invalidation_cause() = default;
-		invalidation_cause(enum_type cause) { flag_bits_from_cause(cause); }
+		invalidation_cause(enum_type cause)
+		{
+			flag_bits_from_cause(cause);
+		}
 		invalidation_cause(u32 flag_bits)
 			: m_flag_bits(flag_bits | flags::cause_is_valid) // FIXME: Actual validation
-		{}
+		{
+		}
 
 	private:
 		u32 m_flag_bits = 0;
 
 		void flag_bits_from_cause(enum_type cause);
 	};
-}
+} // namespace rsx

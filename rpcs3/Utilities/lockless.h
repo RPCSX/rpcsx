@@ -30,7 +30,7 @@ public:
 		}
 	}
 
-	T& operator [](usz index)
+	T& operator[](usz index)
 	{
 		lf_array* _this = this;
 
@@ -49,7 +49,7 @@ public:
 
 			if (!next)
 			{
-				// Do not allow access beyond many element more at a time 
+				// Do not allow access beyond many element more at a time
 				ensure(!installed && index - i < N * 2);
 
 				installed = true;
@@ -73,7 +73,8 @@ public:
 		return *result;
 	}
 
-	template <typename F> requires (std::is_invocable_v<F, T&>)
+	template <typename F>
+		requires(std::is_invocable_v<F, T&>)
 	auto for_each(F&& func, bool is_finite = true)
 	{
 		lf_array* _this = this;
@@ -143,7 +144,7 @@ public:
 
 // Simple lock-free FIFO queue base. Based on lf_array<T, N> itself. Currently uses 32-bit counters.
 // There is no "push_end" or "pop_begin" provided, the queue element must signal its state on its own.
-template<typename T, usz N = std::max<usz>(256 / sizeof(T), 1)>
+template <typename T, usz N = std::max<usz>(256 / sizeof(T), 1)>
 class lf_fifo : public lf_array<T, N>
 {
 	// LSB 32-bit: push, MSB 32-bit: pop
@@ -176,17 +177,17 @@ public:
 	u32 pop_end(u32 count = 1)
 	{
 		return m_ctrl.atomic_op([&](u64& ctrl)
-		{
-			ctrl += u64{count} << 32;
-
-			if (ctrl >> 32 == static_cast<u32>(ctrl))
 			{
-				// Clean if possible
-				ctrl = 0;
-			}
+				ctrl += u64{count} << 32;
 
-			return static_cast<u32>(ctrl >> 32);
-		});
+				if (ctrl >> 32 == static_cast<u32>(ctrl))
+				{
+					// Clean if possible
+					ctrl = 0;
+				}
+
+				return static_cast<u32>(ctrl >> 32);
+			});
 	}
 };
 
@@ -214,8 +215,7 @@ class lf_queue_item final
 
 	template <typename... Args>
 	constexpr lf_queue_item(lf_queue_item* link, Args&&... args)
-	    : m_link(link)
-	    , m_data(std::forward<Args>(args)...)
+		: m_link(link), m_data(std::forward<Args>(args)...)
 	{
 	}
 
@@ -248,28 +248,28 @@ class lf_queue_iterator
 public:
 	constexpr lf_queue_iterator() = default;
 
-	bool operator ==(const lf_queue_iterator& rhs) const
+	bool operator==(const lf_queue_iterator& rhs) const
 	{
 		return m_ptr == rhs.m_ptr;
 	}
 
-	T& operator *() const
+	T& operator*() const
 	{
 		return m_ptr->m_data;
 	}
 
-	T* operator ->() const
+	T* operator->() const
 	{
 		return &m_ptr->m_data;
 	}
 
-	lf_queue_iterator& operator ++()
+	lf_queue_iterator& operator++()
 	{
 		m_ptr = m_ptr->m_link;
 		return *this;
 	}
 
-	lf_queue_iterator operator ++(int)
+	lf_queue_iterator operator++(int)
 	{
 		lf_queue_iterator result;
 		result.m_ptr = m_ptr;
@@ -298,9 +298,9 @@ public:
 		r.m_head = nullptr;
 	}
 
-	lf_queue_slice& operator =(const lf_queue_slice&) = delete;
+	lf_queue_slice& operator=(const lf_queue_slice&) = delete;
 
-	lf_queue_slice& operator =(lf_queue_slice&& r) noexcept
+	lf_queue_slice& operator=(lf_queue_slice&& r) noexcept
 	{
 		if (this != &r)
 		{
@@ -317,12 +317,12 @@ public:
 		delete m_head;
 	}
 
-	T& operator *() const
+	T& operator*() const
 	{
 		return m_head->m_data;
 	}
 
-	T* operator ->() const
+	T* operator->() const
 	{
 		return &m_head->m_data;
 	}
@@ -402,11 +402,10 @@ class lf_queue final
 
 				do
 				{
-					auto* pprev  = prev->m_link;
+					auto* pprev = prev->m_link;
 					prev->m_link = head;
-					head         = std::exchange(prev, pprev);
-				}
-				while (prev);
+					head = std::exchange(prev, pprev);
+				} while (prev);
 			}
 
 			return head;
@@ -573,8 +572,7 @@ public:
 
 			// Set to not check already checked items
 			_chk = _old;
-		}
-		while (!m_head.compare_exchange(_old, item));
+		} while (!m_head.compare_exchange(_old, item));
 
 		return &item->m_data;
 	}

@@ -9,19 +9,19 @@ template <>
 void fmt_class_string<CellCelpEncError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](CellCelpEncError value)
-	{
-		switch (value)
 		{
-		STR_CASE(CELL_CELPENC_ERROR_FAILED);
-		STR_CASE(CELL_CELPENC_ERROR_SEQ);
-		STR_CASE(CELL_CELPENC_ERROR_ARG);
-		STR_CASE(CELL_CELPENC_ERROR_CORE_FAILED);
-		STR_CASE(CELL_CELPENC_ERROR_CORE_SEQ);
-		STR_CASE(CELL_CELPENC_ERROR_CORE_ARG);
-		}
+			switch (value)
+			{
+				STR_CASE(CELL_CELPENC_ERROR_FAILED);
+				STR_CASE(CELL_CELPENC_ERROR_SEQ);
+				STR_CASE(CELL_CELPENC_ERROR_ARG);
+				STR_CASE(CELL_CELPENC_ERROR_CORE_FAILED);
+				STR_CASE(CELL_CELPENC_ERROR_CORE_SEQ);
+				STR_CASE(CELL_CELPENC_ERROR_CORE_ARG);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 error_code cellCelpEncQueryAttr(vm::ptr<CellCelpEncAttr> attr)
@@ -85,15 +85,15 @@ error_code cellCelpEncGetAu(vm::ptr<void> handle, vm::ptr<void> outBuffer, vm::p
 }
 
 DECLARE(ppu_module_manager::cellCelpEnc)("cellCelpEnc", []()
-{
-	REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
-	REG_FUNC(cellCelpEnc, cellCelpEncOpen);
-	REG_FUNC(cellCelpEnc, cellCelpEncOpenEx);
-	REG_FUNC(cellCelpEnc, cellCelpEncOpenExt);
-	REG_FUNC(cellCelpEnc, cellCelpEncClose);
-	REG_FUNC(cellCelpEnc, cellCelpEncStart);
-	REG_FUNC(cellCelpEnc, cellCelpEncEnd);
-	REG_FUNC(cellCelpEnc, cellCelpEncEncodeFrame);
-	REG_FUNC(cellCelpEnc, cellCelpEncWaitForOutput);
-	REG_FUNC(cellCelpEnc, cellCelpEncGetAu);
-});
+	{
+		REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
+		REG_FUNC(cellCelpEnc, cellCelpEncOpen);
+		REG_FUNC(cellCelpEnc, cellCelpEncOpenEx);
+		REG_FUNC(cellCelpEnc, cellCelpEncOpenExt);
+		REG_FUNC(cellCelpEnc, cellCelpEncClose);
+		REG_FUNC(cellCelpEnc, cellCelpEncStart);
+		REG_FUNC(cellCelpEnc, cellCelpEncEnd);
+		REG_FUNC(cellCelpEnc, cellCelpEncEncodeFrame);
+		REG_FUNC(cellCelpEnc, cellCelpEncWaitForOutput);
+		REG_FUNC(cellCelpEnc, cellCelpEncGetAu);
+	});

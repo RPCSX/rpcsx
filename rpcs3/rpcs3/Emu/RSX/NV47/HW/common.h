@@ -20,7 +20,7 @@ namespace rsx
 		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index);
 
 		void set_vertex_texture_dirty_bit(rsx::context* ctx, u32 index);
-	}
-}
- 
+	} // namespace util
+} // namespace rsx
+
 #include "context_accessors.undef.h"

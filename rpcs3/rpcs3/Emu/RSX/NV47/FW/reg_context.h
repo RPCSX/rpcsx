@@ -9,4 +9,4 @@ namespace rsx
 	{
 		u32 registers[1];
 	};
-}
+} // namespace rsx

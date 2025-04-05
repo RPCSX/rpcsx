@@ -12,11 +12,11 @@
 
 enum Roles
 {
-	FullPathRole    = Qt::UserRole + 0,
-	ChangelogRole   = Qt::UserRole + 1,
-	TitleRole       = Qt::UserRole + 2,
-	TitleIdRole     = Qt::UserRole + 3,
-	VersionRole     = Qt::UserRole + 4,
+	FullPathRole = Qt::UserRole + 0,
+	ChangelogRole = Qt::UserRole + 1,
+	TitleRole = Qt::UserRole + 2,
+	TitleIdRole = Qt::UserRole + 3,
+	VersionRole = Qt::UserRole + 4,
 };
 
 pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibility* compat, QWidget* parent)
@@ -112,41 +112,47 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	buttons->button(QDialogButtonBox::Ok)->setDefault(true);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons](QAbstractButton* button)
-	{
-		if (button == buttons->button(QDialogButtonBox::Ok))
 		{
-			accept();
-		}
-		else if (button == buttons->button(QDialogButtonBox::Cancel))
-		{
-			reject();
-		}
-	});
+			if (button == buttons->button(QDialogButtonBox::Ok))
+			{
+				accept();
+			}
+			else if (button == buttons->button(QDialogButtonBox::Cancel))
+			{
+				reject();
+			}
+		});
 
 	connect(m_dir_list, &QListWidget::itemChanged, this, [this, buttons](QListWidgetItem*)
-	{
-		bool any_checked = false;
-		for (int i = 0; i < m_dir_list->count(); i++)
 		{
-			if (m_dir_list->item(i)->checkState() == Qt::Checked)
+			bool any_checked = false;
+			for (int i = 0; i < m_dir_list->count(); i++)
 			{
-				any_checked = true;
-				break;
+				if (m_dir_list->item(i)->checkState() == Qt::Checked)
+				{
+					any_checked = true;
+					break;
+				}
 			}
-		}
 
-		buttons->button(QDialogButtonBox::Ok)->setEnabled(any_checked);
-	});
+			buttons->button(QDialogButtonBox::Ok)->setEnabled(any_checked);
+		});
 
 	QToolButton* move_up = new QToolButton;
 	move_up->setArrowType(Qt::UpArrow);
 	move_up->setToolTip(tr("Move selected item up"));
-	connect(move_up, &QToolButton::clicked, this, [this]() { MoveItem(-1); });
+	connect(move_up, &QToolButton::clicked, this, [this]()
+		{
+			MoveItem(-1);
+		});
 
 	QToolButton* move_down = new QToolButton;
 	move_down->setArrowType(Qt::DownArrow);
 	move_down->setToolTip(tr("Move selected item down"));
-	connect(move_down, &QToolButton::clicked, this, [this]() { MoveItem(1); });
+	connect(move_down, &QToolButton::clicked, this, [this]()
+		{
+			MoveItem(1);
+		});
 
 	QHBoxLayout* hbox = new QHBoxLayout;
 	hbox->addStretch();
@@ -190,11 +196,11 @@ std::vector<compat::package_info> pkg_install_dialog::GetPathsToInstall() const
 		if (item && item->checkState() == Qt::Checked)
 		{
 			compat::package_info info;
-			info.path      = item->data(Roles::FullPathRole).toString();
-			info.title     = item->data(Roles::TitleRole).toString();
-			info.title_id  = item->data(Roles::TitleIdRole).toString();
+			info.path = item->data(Roles::FullPathRole).toString();
+			info.title = item->data(Roles::TitleRole).toString();
+			info.title_id = item->data(Roles::TitleIdRole).toString();
 			info.changelog = item->data(Roles::ChangelogRole).toString();
-			info.version   = item->data(Roles::VersionRole).toString();
+			info.version = item->data(Roles::VersionRole).toString();
 			result.push_back(info);
 		}
 	}

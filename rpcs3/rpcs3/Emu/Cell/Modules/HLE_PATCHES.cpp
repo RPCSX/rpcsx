@@ -52,6 +52,6 @@ void WaitForSPUsToEmptySNRs(ppu_thread& ppu, u32 spu_id, u32 snr_mask)
 }
 
 DECLARE(ppu_module_manager::hle_patches)("RPCS3_HLE_LIBRARY", []()
-{
-	REG_FUNC(RPCS3_HLE_LIBRARY, WaitForSPUsToEmptySNRs);
-});
+	{
+		REG_FUNC(RPCS3_HLE_LIBRARY, WaitForSPUsToEmptySNRs);
+	});

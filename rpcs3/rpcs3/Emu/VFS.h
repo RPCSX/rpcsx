@@ -41,5 +41,5 @@ namespace vfs
 
 		// Delete folder contents using rename, done atomically if remove_root is true
 		bool remove_all(const std::string& path, const std::string& dev_root, const lv2_fs_mount_point* mp, bool remove_root = true, bool lock = true, bool force_atomic = false);
-	}
-}
+	} // namespace host
+} // namespace vfs

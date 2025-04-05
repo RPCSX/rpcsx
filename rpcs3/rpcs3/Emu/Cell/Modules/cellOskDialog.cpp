@@ -17,38 +17,38 @@
 
 LOG_CHANNEL(cellOskDialog);
 
-template<>
+template <>
 void fmt_class_string<CellOskDialogError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE);
-			STR_CASE(CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR);
-			STR_CASE(CELL_OSKDIALOG_ERROR_UNKNOWN);
-			STR_CASE(CELL_OSKDIALOG_ERROR_PARAM);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE);
+				STR_CASE(CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR);
+				STR_CASE(CELL_OSKDIALOG_ERROR_UNKNOWN);
+				STR_CASE(CELL_OSKDIALOG_ERROR_PARAM);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<CellOskDialogContinuousMode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto mode)
-	{
-		switch (mode)
 		{
-			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
-			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_REMAIN_OPEN);
-			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE);
-			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW);
-		}
+			switch (mode)
+			{
+				STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
+				STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_REMAIN_OPEN);
+				STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE);
+				STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 void osk_info::reset()
@@ -71,7 +71,7 @@ void osk_info::reset()
 	half_byte_kana_enabled = false;
 	supported_languages = 0;
 	dimmer_enabled = true;
-	base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
+	base_color = OskDialogBase::color{0.2f, 0.2f, 0.2f, 1.0f};
 	pointer_enabled = false;
 	pointer_x = 0.0f;
 	pointer_y = 0.0f;
@@ -182,13 +182,13 @@ extern bool close_osk_from_ps_button()
 		bool close_osk = false;
 
 		sysutil_register_cb([&](ppu_thread& cb_ppu) -> s32
-		{
-			cellOskDialog.notice("osk_force_finish_callback()");
-			close_osk = cb(cb_ppu);
-			cellOskDialog.notice("osk_force_finish_callback returned %d", close_osk);
-			done = true;
-			return 0;
-		});
+			{
+				cellOskDialog.notice("osk_force_finish_callback()");
+				close_osk = cb(cb_ppu);
+				cellOskDialog.notice("osk_force_finish_callback returned %d", close_osk);
+				done = true;
+				return 0;
+			});
 
 		// wait for check callback
 		while (!done && !Emu.IsStopped())
@@ -215,7 +215,6 @@ extern bool close_osk_from_ps_button()
 
 	return true;
 }
-
 
 error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
 {
@@ -305,24 +304,25 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				for (i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 				{
 					string_to_send[i] = osk->osk_text[i];
-					if (osk->osk_text[i] == 0) break;
+					if (osk->osk_text[i] == 0)
+						break;
 				}
 
 				sysutil_register_cb([&, length = i, string_to_send = std::move(string_to_send)](ppu_thread& cb_ppu) -> s32
-				{
-					vm::var<u16[], vm::page_allocator<>> string_var(CELL_OSKDIALOG_STRING_SIZE, string_to_send.data());
-
-					const u32 return_value = ccb(cb_ppu, string_var.begin(), static_cast<s32>(length));
-					cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
-
-					for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 					{
-						osk->osk_text[i] = string_var.begin()[i];
-					}
+						vm::var<u16[], vm::page_allocator<>> string_var(CELL_OSKDIALOG_STRING_SIZE, string_to_send.data());
 
-					done = true;
-					return 0;
-				});
+						const u32 return_value = ccb(cb_ppu, string_var.begin(), static_cast<s32>(length));
+						cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
+
+						for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+						{
+							osk->osk_text[i] = string_var.begin()[i];
+						}
+
+						done = true;
+						return 0;
+					});
 
 				// wait for check callback
 				while (!done && !Emu.IsStopped())
@@ -501,89 +501,90 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		std::array<u16, max_size> string_to_send{};
 
 		sysutil_register_cb([key_message, string_to_send, event_hook_callback](ppu_thread& cb_ppu) -> s32
-		{
-			// Prepare callback variables
-			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
-			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
-			vm::var<u16[], vm::page_allocator<>> pActionInfo(::narrow<u32>(string_to_send.size()), string_to_send.data());
-
-			// Create helpers for logging
-			std::u16string utf16_string(reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());
-			std::string utf8_string = utf16_to_ascii8(utf16_string);
-
-			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, utf8_string);
-
-			// Call the hook function. The game reads and writes pActionInfo. We need to react based on the returned action.
-			const bool return_value = event_hook_callback(cb_ppu, keyMessage, action, pActionInfo);
-			ensure(action);
-			ensure(pActionInfo);
-
-			// Parse returned text for logging
-			utf16_string.clear();
-			for (u32 i = 0; i < max_size; i++)
 			{
-				const u16 code = pActionInfo[i];
-				if (!code) break;
-				utf16_string.push_back(code);
-			}
-			utf8_string = utf16_to_ascii8(utf16_string);
+				// Prepare callback variables
+				vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
+				vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
+				vm::var<u16[], vm::page_allocator<>> pActionInfo(::narrow<u32>(string_to_send.size()), string_to_send.data());
 
-			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d, pActionInfo='%s'", return_value, *action, utf8_string);
+				// Create helpers for logging
+				std::u16string utf16_string(reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());
+				std::string utf8_string = utf16_to_ascii8(utf16_string);
 
-			// Check if the hook function was successful
-			if (return_value)
-			{
-				const auto osk = _get_osk_dialog(false);
-				if (!osk)
+				cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, utf8_string);
+
+				// Call the hook function. The game reads and writes pActionInfo. We need to react based on the returned action.
+				const bool return_value = event_hook_callback(cb_ppu, keyMessage, action, pActionInfo);
+				ensure(action);
+				ensure(pActionInfo);
+
+				// Parse returned text for logging
+				utf16_string.clear();
+				for (u32 i = 0; i < max_size; i++)
 				{
-					cellOskDialog.error("osk_hardware_keyboard_event_hook_callback: osk is null");
-					return 0;
+					const u16 code = pActionInfo[i];
+					if (!code)
+						break;
+					utf16_string.push_back(code);
+				}
+				utf8_string = utf16_to_ascii8(utf16_string);
+
+				cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d, pActionInfo='%s'", return_value, *action, utf8_string);
+
+				// Check if the hook function was successful
+				if (return_value)
+				{
+					const auto osk = _get_osk_dialog(false);
+					if (!osk)
+					{
+						cellOskDialog.error("osk_hardware_keyboard_event_hook_callback: osk is null");
+						return 0;
+					}
+
+					auto& info = g_fxo->get<osk_info>();
+					std::lock_guard lock(info.text_mtx);
+
+					switch (*action)
+					{
+					case CELL_OSKDIALOG_CHANGE_NO_EVENT:
+					case CELL_OSKDIALOG_CHANGE_EVENT_CANCEL:
+					{
+						// Do nothing
+						break;
+					}
+					case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
+					{
+						// TODO: Replace unconfirmed string.
+						cellOskDialog.todo("osk_hardware_keyboard_event_hook_callback: replace unconfirmed string with '%s'", utf8_string);
+						break;
+					}
+					case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
+					{
+						// TODO: Remove unconfirmed string
+						cellOskDialog.todo("osk_hardware_keyboard_event_hook_callback: remove unconfirmed string");
+
+						// Set confirmed string and reset unconfirmed string
+						cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: inserting string '%s'", utf8_string);
+						osk->Insert(utf16_string);
+						break;
+					}
+					case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
+					{
+						// Replace confirmed string and remove unconfirmed string.
+						cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: replacing all strings with '%s'", utf8_string);
+						osk->SetText(utf16_string);
+						break;
+					}
+					default:
+					{
+						cellOskDialog.error("osk_hardware_keyboard_event_hook_callback returned invalid action (%d)", *action);
+						break;
+					}
+					}
 				}
 
-				auto& info = g_fxo->get<osk_info>();
-				std::lock_guard lock(info.text_mtx);
-
-				switch (*action)
-				{
-				case CELL_OSKDIALOG_CHANGE_NO_EVENT:
-				case CELL_OSKDIALOG_CHANGE_EVENT_CANCEL:
-				{
-					// Do nothing
-					break;
-				}
-				case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
-				{
-					// TODO: Replace unconfirmed string.
-					cellOskDialog.todo("osk_hardware_keyboard_event_hook_callback: replace unconfirmed string with '%s'", utf8_string);
-					break;
-				}
-				case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
-				{
-					// TODO: Remove unconfirmed string
-					cellOskDialog.todo("osk_hardware_keyboard_event_hook_callback: remove unconfirmed string");
-
-					// Set confirmed string and reset unconfirmed string
-					cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: inserting string '%s'", utf8_string);
-					osk->Insert(utf16_string);
-					break;
-				}
-				case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
-				{
-					// Replace confirmed string and remove unconfirmed string.
-					cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: replacing all strings with '%s'", utf8_string);
-					osk->SetText(utf16_string);
-					break;
-				}
-				default:
-				{
-					cellOskDialog.error("osk_hardware_keyboard_event_hook_callback returned invalid action (%d)", *action);
-					break;
-				}
-				}
-			}
-
-			return 0;
-		});
+				return 0;
+			});
 	};
 
 	// Set device mask and event lock
@@ -602,28 +603,28 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	cellOskDialog.notice("cellOskDialogLoadAsync: creating OSK dialog ...");
 
 	Emu.BlockingCallFromMainThread([=, &info]()
-	{
-		osk->Create({
-			.title = get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE),
-			.message = message,
-			.init_text = osk->osk_text.data(),
-			.charlimit = maxLength,
-			.prohibit_flags = prohibitFlgs,
-			.panel_flag = allowOskPanelFlg,
-			.support_language = info.supported_languages,
-			.first_view_panel = firstViewPanel,
-			.layout = info.layout,
-			.input_layout = info.input_field_layout_info,
-			.panel_layout = info.input_panel_layout_info,
-			.input_field_window_width = info.input_field_window_width,
-			.input_field_background_transparency = info.input_field_background_transparency,
-			.initial_scale = info.initial_scale,
-			.base_color = info.base_color,
-			.dimmer_enabled = info.dimmer_enabled,
-			.use_separate_windows = info.use_separate_windows,
-			.intercept_input = false // We handle the interception manually based on the device mask
+		{
+			osk->Create({
+				.title = get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE),
+				.message = message,
+				.init_text = osk->osk_text.data(),
+				.charlimit = maxLength,
+				.prohibit_flags = prohibitFlgs,
+				.panel_flag = allowOskPanelFlg,
+				.support_language = info.supported_languages,
+				.first_view_panel = firstViewPanel,
+				.layout = info.layout,
+				.input_layout = info.input_field_layout_info,
+				.panel_layout = info.input_panel_layout_info,
+				.input_field_window_width = info.input_field_window_width,
+				.input_field_background_transparency = info.input_field_background_transparency,
+				.initial_scale = info.initial_scale,
+				.base_color = info.base_color,
+				.dimmer_enabled = info.dimmer_enabled,
+				.use_separate_windows = info.use_separate_windows,
+				.intercept_input = false // We handle the interception manually based on the device mask
+			});
 		});
-	});
 
 	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
 
@@ -799,17 +800,17 @@ error_code cellOskDialogAbort()
 	}
 
 	const error_code result = osk->state.atomic_op([](OskDialogState& state) -> error_code
-	{
-		// Check for open dialog. In this case the dialog is "Open" if it was not unloaded before.
-		if (state == OskDialogState::Unloaded)
 		{
-			return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
-		}
+			// Check for open dialog. In this case the dialog is "Open" if it was not unloaded before.
+			if (state == OskDialogState::Unloaded)
+			{
+				return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
+			}
 
-		state = OskDialogState::Abort;
+			state = OskDialogState::Abort;
 
-		return CELL_OK;
-	});
+			return CELL_OK;
+		});
 
 	if (result == CELL_OK)
 	{
@@ -867,7 +868,7 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 
 	auto& osk = g_fxo->get<osk_info>();
 	osk.use_separate_windows = true;
-	osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
+	osk.osk_continuous_mode = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
 	osk.device_mask = windowOption->deviceMask;
 	osk.input_field_window_width = windowOption->inputFieldWindowWidth;
 	osk.input_field_background_transparency = std::clamp<f32>(windowOption->inputFieldBackgroundTrans, 0.0f, 1.0f);
@@ -1101,7 +1102,7 @@ error_code cellOskDialogExtAddOptionDictionary(vm::cpptr<CellOskDialogImeDiction
 
 		std::array<char, CELL_IMEJP_DIC_PATH_MAXLENGTH + 1> path{};
 		std::memcpy(path.data(), dictionaryInfo[i]->dictionaryPath.get_ptr(), CELL_IMEJP_DIC_PATH_MAXLENGTH);
-		paths.push_back({ dictionaryInfo[i]->targetLanguage, path.data() });
+		paths.push_back({dictionaryInfo[i]->targetLanguage, path.data()});
 	}
 
 	std::vector<std::string> msgs;
@@ -1167,7 +1168,7 @@ error_code cellOskDialogExtSetBaseColor(f32 red, f32 green, f32 blue, f32 alpha)
 	}
 
 	auto& osk = g_fxo->get<osk_info>();
-	osk.base_color = OskDialogBase::color{ red, green, blue, alpha };
+	osk.base_color = OskDialogBase::color{red, green, blue, alpha};
 
 	return CELL_OK;
 }
@@ -1284,7 +1285,6 @@ error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForc
 	return CELL_OK;
 }
 
-
 void cellSysutil_OskDialog_init()
 {
 	REG_FUNC(cellSysutil, cellOskDialogLoadAsync);
@@ -1304,22 +1304,22 @@ void cellSysutil_OskDialog_init()
 }
 
 DECLARE(ppu_module_manager::cellOskDialog)("cellOskExtUtility", []()
-{
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtInputDeviceUnlock);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterKeyboardEventHookCallback);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterKeyboardEventHookCallbackEx);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtAddJapaneseOptionDictionary);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtEnableClipboard);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtSendFinishMessage);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtAddOptionDictionary);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtSetInitialScale);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtInputDeviceLock);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtSetBaseColor);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterConfirmWordFilterCallback);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtUpdateInputText);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtDisableHalfByteKana);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtSetPointerEnable);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtUpdatePointerDisplayPos);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtEnableHalfByteKana);
-	REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterForceFinishCallback);
-});
+	{
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtInputDeviceUnlock);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterKeyboardEventHookCallback);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterKeyboardEventHookCallbackEx);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtAddJapaneseOptionDictionary);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtEnableClipboard);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtSendFinishMessage);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtAddOptionDictionary);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtSetInitialScale);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtInputDeviceLock);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtSetBaseColor);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterConfirmWordFilterCallback);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtUpdateInputText);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtDisableHalfByteKana);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtSetPointerEnable);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtUpdatePointerDisplayPos);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtEnableHalfByteKana);
+		REG_FUNC(cellOskExtUtility, cellOskDialogExtRegisterForceFinishCallback);
+	});

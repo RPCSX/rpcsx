@@ -5,13 +5,13 @@
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
 
-//using enum rsx::format_class;
+// using enum rsx::format_class;
 using namespace ::rsx::format_class_;
 
 namespace gl
 {
-#define GL_BGRA8        0x80E1 // Enumerant of GL_BGRA8_EXT from the GL_EXT_texture_format_BGRA8888
-#define GL_BGR5_A1      0x99F0 // Unused enum 0x96xx is the last official GL enumerant
+#define GL_BGRA8 0x80E1   // Enumerant of GL_BGRA8_EXT from the GL_EXT_texture_format_BGRA8888
+#define GL_BGR5_A1 0x99F0 // Unused enum 0x96xx is the last official GL enumerant
 
 	class buffer;
 	class buffer_view;
@@ -132,7 +132,7 @@ namespace gl
 			compressed_rgba_s3tc_dxt3 = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
 			compressed_rgba_s3tc_dxt5 = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
 
-			//Sized internal formats, see opengl spec document on glTexImage2D, table 3
+			// Sized internal formats, see opengl spec document on glTexImage2D, table 3
 			rgba8 = GL_RGBA8,
 			bgra8 = GL_BGRA8,
 			rgb565 = GL_RGB565,
@@ -158,7 +158,7 @@ namespace gl
 			clamp_to_edge = GL_CLAMP_TO_EDGE,
 			clamp_to_border = GL_CLAMP_TO_BORDER,
 			mirror_clamp = GL_MIRROR_CLAMP_EXT,
-			//mirror_clamp_to_edge = GL_MIRROR_CLAMP_TO_EDGE,
+			// mirror_clamp_to_edge = GL_MIRROR_CLAMP_TO_EDGE,
 			mirror_clamp_to_border = GL_MIRROR_CLAMP_TO_BORDER_EXT
 		};
 
@@ -301,13 +301,13 @@ namespace gl
 
 		sizeu size2D() const
 		{
-			return{ m_width, m_height };
+			return {m_width, m_height};
 		}
 
 		size3u size3D() const
 		{
 			const auto depth = (m_target == target::textureCUBE) ? 6 : m_depth;
-			return{ m_width, m_height, depth };
+			return {m_width, m_height, depth};
 		}
 
 		texture::internal_format get_internal_format() const
@@ -332,13 +332,13 @@ namespace gl
 		// Convenience wrappers
 		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
 		{
-			const coord3u region = { {}, size3D() };
+			const coord3u region = {{}, size3D()};
 			copy_from(src, format, type, 0, region, pixel_settings);
 		}
 
 		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
-			const coord3u region = { {}, size3D() };
+			const coord3u region = {{}, size3D()};
 			copy_to(dst, format, type, 0, region, pixel_settings);
 		}
 	};
@@ -367,7 +367,7 @@ namespace gl
 			const GLenum* argb_swizzle = nullptr,
 			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			create(data, target, sized_format, { aspect_flags, 0, data->levels(), 0, data->layers() }, argb_swizzle);
+			create(data, target, sized_format, {aspect_flags, 0, data->levels(), 0, data->layers()}, argb_swizzle);
 		}
 
 		texture_view(texture* data, const GLenum* argb_swizzle = nullptr,
@@ -375,7 +375,7 @@ namespace gl
 		{
 			GLenum target = static_cast<GLenum>(data->get_target());
 			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
-			create(data, target, sized_format, { aspect_flags, 0, data->levels(), 0, data->layers() }, argb_swizzle);
+			create(data, target, sized_format, {aspect_flags, 0, data->levels(), 0, data->layers()}, argb_swizzle);
 		}
 
 		texture_view(texture* data, const subresource_range& range,
@@ -423,9 +423,9 @@ namespace gl
 		bool compare_swizzle(const GLenum* argb_swizzle) const
 		{
 			return (argb_swizzle[0] == component_swizzle[3] &&
-				argb_swizzle[1] == component_swizzle[0] &&
-				argb_swizzle[2] == component_swizzle[1] &&
-				argb_swizzle[3] == component_swizzle[2]);
+					argb_swizzle[1] == component_swizzle[0] &&
+					argb_swizzle[2] == component_swizzle[1] &&
+					argb_swizzle[3] == component_swizzle[2]);
 		}
 
 		texture* image() const
@@ -435,7 +435,7 @@ namespace gl
 
 		std::array<GLenum, 4> component_mapping() const
 		{
-			return{ component_swizzle[3], component_swizzle[0], component_swizzle[1], component_swizzle[2] };
+			return {component_swizzle[3], component_swizzle[0], component_swizzle[1], component_swizzle[2]};
 		}
 
 		u32 encoded_component_map() const
@@ -468,4 +468,4 @@ namespace gl
 
 	// Texture helpers
 	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const rsx::texture_channel_remap_t& decoded_remap);
-}
+} // namespace gl

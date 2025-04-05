@@ -7,7 +7,7 @@
 struct DevActFile : orbis::File {};
 
 static orbis::ErrorCode devact_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                     void *argp, orbis::Thread *thread) {
 
   if (request == 0x40105303) {
     // is expired
@@ -20,7 +20,7 @@ static orbis::ErrorCode devact_ioctl(orbis::File *file, std::uint64_t request,
     auto param = (Param *)argp;
     *param = {};
     param->unk0 = 1;
-    return{};
+    return {};
   }
 
   if (request == 0x40144401) {
@@ -36,7 +36,7 @@ static orbis::ErrorCode devact_ioctl(orbis::File *file, std::uint64_t request,
     auto param = (Param *)argp;
     *param = {};
     param->unk1 = 1;
-    return{};
+    return {};
   }
 
   ORBIS_LOG_FATAL("Unhandled devact ioctl", request);

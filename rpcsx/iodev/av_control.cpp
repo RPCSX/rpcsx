@@ -8,8 +8,9 @@
 
 struct AVControlFile : orbis::File {};
 
-static orbis::ErrorCode av_control_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+static orbis::ErrorCode av_control_ioctl(orbis::File *file,
+                                         std::uint64_t request, void *argp,
+                                         orbis::Thread *thread) {
 
   if (request == 0xc0109a0e) {
     struct Args {
@@ -46,4 +47,6 @@ struct AVControlDevice : IoDevice {
   }
 };
 
-IoDevice *createAVControlCharacterDevice() { return orbis::knew<AVControlDevice>(); }
+IoDevice *createAVControlCharacterDevice() {
+  return orbis::knew<AVControlDevice>();
+}

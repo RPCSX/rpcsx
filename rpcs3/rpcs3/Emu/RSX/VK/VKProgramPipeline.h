@@ -79,7 +79,7 @@ namespace vk
 
 			std::array<u32, 16> fs_texture_bindings;
 			std::array<u32, 16> fs_texture_mirror_bindings;
-			std::array<u32, 4>  vs_texture_bindings;
+			std::array<u32, 4> vs_texture_bindings;
 			bool linked;
 
 			void create_impl();
@@ -90,7 +90,7 @@ namespace vk
 			u64 attribute_location_mask;
 			u64 vertex_attributes_mask;
 
-			program(VkDevice dev, VkPipeline p, VkPipelineLayout layout, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
+			program(VkDevice dev, VkPipeline p, VkPipelineLayout layout, const std::vector<program_input>& vertex_input, const std::vector<program_input>& fragment_inputs);
 			program(VkDevice dev, VkPipeline p, VkPipelineLayout layout);
 			program(const program&) = delete;
 			program(program&& other) = delete;
@@ -99,13 +99,13 @@ namespace vk
 			program& load_uniforms(const std::vector<program_input>& inputs);
 			program& link();
 
-			bool has_uniform(program_input_type type, const std::string &uniform_name);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, vk::descriptor_set &set);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, vk::descriptor_set &set, bool is_stencil_mirror = false);
-			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, vk::descriptor_set &set);
-			void bind_uniform(const VkBufferView &buffer_view, u32 binding_point, vk::descriptor_set &set);
-			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, vk::descriptor_set &set);
-			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, vk::descriptor_set &set);
+			bool has_uniform(program_input_type type, const std::string& uniform_name);
+			void bind_uniform(const VkDescriptorImageInfo& image_descriptor, const std::string& uniform_name, VkDescriptorType type, vk::descriptor_set& set);
+			void bind_uniform(const VkDescriptorImageInfo& image_descriptor, int texture_unit, ::glsl::program_domain domain, vk::descriptor_set& set, bool is_stencil_mirror = false);
+			void bind_uniform(const VkDescriptorBufferInfo& buffer_descriptor, u32 binding_point, vk::descriptor_set& set);
+			void bind_uniform(const VkBufferView& buffer_view, u32 binding_point, vk::descriptor_set& set);
+			void bind_uniform(const VkBufferView& buffer_view, program_input_type type, const std::string& binding_name, vk::descriptor_set& set);
+			void bind_buffer(const VkDescriptorBufferInfo& buffer_descriptor, u32 binding_point, VkDescriptorType type, vk::descriptor_set& set);
 		};
-	}
-}
+	} // namespace glsl
+} // namespace vk

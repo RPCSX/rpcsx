@@ -12,11 +12,7 @@
 LOG_CHANNEL(sys_mutex);
 
 lv2_mutex::lv2_mutex(utils::serial& ar)
-	: protocol(ar)
-	, recursive(ar)
-	, adaptive(ar)
-	, key(ar)
-	, name(ar)
+	: protocol(ar), recursive(ar), adaptive(ar), key(ar), name(ar)
 {
 	ar(lock_count, control.raw().owner);
 
@@ -85,14 +81,14 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 	}
 
 	if (auto error = lv2_obj::create<lv2_mutex>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]()
-	{
-		return make_shared<lv2_mutex>(
-			_attr.protocol,
-			_attr.recursive,
-			_attr.adaptive,
-			ipc_key,
-			_attr.name_u64);
-	}))
+			{
+				return make_shared<lv2_mutex>(
+					_attr.protocol,
+					_attr.recursive,
+					_attr.adaptive,
+					ipc_key,
+					_attr.name_u64);
+			}))
 	{
 		return error;
 	}
@@ -109,22 +105,22 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 	sys_mutex.trace("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::withdraw<lv2_obj, lv2_mutex>(mutex_id, [](lv2_mutex& mutex) -> CellError
-	{
-		std::lock_guard lock(mutex.mutex);
-
-		if (atomic_storage<u32>::load(mutex.control.raw().owner))
 		{
-			return CELL_EBUSY;
-		}
+			std::lock_guard lock(mutex.mutex);
 
-		if (mutex.cond_count)
-		{
-			return CELL_EPERM;
-		}
+			if (atomic_storage<u32>::load(mutex.control.raw().owner))
+			{
+				return CELL_EBUSY;
+			}
 
-		lv2_obj::on_id_destroy(mutex, mutex.key);
-		return {};
-	});
+			if (mutex.cond_count)
+			{
+				return CELL_EPERM;
+			}
+
+			lv2_obj::on_id_destroy(mutex, mutex.key);
+			return {};
+		});
 
 	if (!mutex)
 	{
@@ -151,45 +147,45 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 	sys_mutex.trace("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
 	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_mutex& mutex)
-	{
-		CellError result = mutex.try_lock(ppu);
-
-		if (result == CELL_EBUSY && !atomic_storage<ppu_thread*>::load(mutex.control.raw().sq))
 		{
-			// Try busy waiting a bit if advantageous
-			for (u32 i = 0, end = lv2_obj::has_ppus_in_running_state() ? 3 : 10; id_manager::g_mutex.is_lockable() && i < end; i++)
-			{
-				busy_wait(300);
-				result = mutex.try_lock(ppu);
+			CellError result = mutex.try_lock(ppu);
 
-				if (!result || atomic_storage<ppu_thread*>::load(mutex.control.raw().sq))
+			if (result == CELL_EBUSY && !atomic_storage<ppu_thread*>::load(mutex.control.raw().sq))
+			{
+				// Try busy waiting a bit if advantageous
+				for (u32 i = 0, end = lv2_obj::has_ppus_in_running_state() ? 3 : 10; id_manager::g_mutex.is_lockable() && i < end; i++)
 				{
-					break;
+					busy_wait(300);
+					result = mutex.try_lock(ppu);
+
+					if (!result || atomic_storage<ppu_thread*>::load(mutex.control.raw().sq))
+					{
+						break;
+					}
 				}
 			}
-		}
 
-		if (result == CELL_EBUSY)
-		{
-			lv2_obj::prepare_for_sleep(ppu);
-
-			ppu.cancel_sleep = 1;
-
-			if (mutex.try_own(ppu) || !mutex.sleep(ppu, timeout))
+			if (result == CELL_EBUSY)
 			{
-				result = {};
+				lv2_obj::prepare_for_sleep(ppu);
+
+				ppu.cancel_sleep = 1;
+
+				if (mutex.try_own(ppu) || !mutex.sleep(ppu, timeout))
+				{
+					result = {};
+				}
+
+				if (ppu.cancel_sleep != 1)
+				{
+					notify.cleanup();
+				}
+
+				ppu.cancel_sleep = 0;
 			}
 
-			if (ppu.cancel_sleep != 1)
-			{
-				notify.cleanup();
-			}
-
-			ppu.cancel_sleep = 0;
-		}
-
-		return result;
-	});
+			return result;
+		});
 
 	if (!mutex)
 	{
@@ -239,7 +235,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		}
 
 		if (ppu.state & cpu_flag::signal)
- 		{
+		{
 			continue;
 		}
 
@@ -267,28 +263,28 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 				bool success = false;
 
 				mutex->control.fetch_op([&](lv2_mutex::control_data_t& data)
-				{
-					success = false;
-
-					ppu_thread* sq = static_cast<ppu_thread*>(data.sq);
-
-					const bool retval = &ppu == sq;
-
-					if (!mutex->unqueue<false>(sq, &ppu))
 					{
-						return false;
-					}
+						success = false;
 
-					success = true;
+						ppu_thread* sq = static_cast<ppu_thread*>(data.sq);
 
-					if (!retval)
-					{
-						return false;
-					}
+						const bool retval = &ppu == sq;
 
-					data.sq = sq;
-					return true;
-				});
+						if (!mutex->unqueue<false>(sq, &ppu))
+						{
+							return false;
+						}
+
+						success = true;
+
+						if (!retval)
+						{
+							return false;
+						}
+
+						data.sq = sq;
+						return true;
+					});
 
 				if (success)
 				{
@@ -315,9 +311,9 @@ error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)
 	sys_mutex.trace("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
-	{
-		return mutex.try_lock(ppu);
-	});
+		{
+			return mutex.try_lock(ppu);
+		});
 
 	if (!mutex)
 	{
@@ -344,30 +340,30 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 	sys_mutex.trace("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_mutex& mutex) -> CellError
-	{
-		auto result = mutex.try_unlock(ppu);
-
-		if (result == CELL_EBUSY)
 		{
-			std::lock_guard lock(mutex.mutex);
+			auto result = mutex.try_unlock(ppu);
 
-			if (auto cpu = mutex.reown<ppu_thread>())
+			if (result == CELL_EBUSY)
 			{
-				if (cpu->state & cpu_flag::again)
+				std::lock_guard lock(mutex.mutex);
+
+				if (auto cpu = mutex.reown<ppu_thread>())
 				{
-					ppu.state += cpu_flag::again;
-					return {};
+					if (cpu->state & cpu_flag::again)
+					{
+						ppu.state += cpu_flag::again;
+						return {};
+					}
+
+					mutex.awake(cpu);
 				}
 
-				mutex.awake(cpu);
+				result = {};
 			}
 
-			result = {};
-		}
-
-		notify.cleanup();
-		return result;
-	});
+			notify.cleanup();
+			return result;
+		});
 
 	if (!mutex)
 	{

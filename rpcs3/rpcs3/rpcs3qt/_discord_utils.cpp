@@ -33,5 +33,5 @@ namespace discord
 
 		Discord_UpdatePresence(&discordPresence);
 	}
-}
+} // namespace discord
 #endif

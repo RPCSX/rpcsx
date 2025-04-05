@@ -2,8 +2,8 @@
 #include "orbis/utils/Logs.hpp"
 #include "stat.hpp"
 #include "sys/sysproto.hpp"
-#include "thread/Thread.hpp"
 #include "thread/Process.hpp"
+#include "thread/Thread.hpp"
 
 orbis::SysResult orbis::sys_getdtablesize(Thread *thread) {
   return ErrorCode::NOSYS;

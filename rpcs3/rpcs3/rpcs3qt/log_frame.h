@@ -31,12 +31,14 @@ public Q_SLOTS:
 Q_SIGNALS:
 	void LogFrameClosed();
 	void PerformGoToOnDebugger(const QString& text_argument, bool is_address, bool test_only = false, std::shared_ptr<bool> signal_accepted = nullptr);
+
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 private Q_SLOTS:
 	void UpdateUI();
+
 private:
 	void SetLogLevel(logs::level lev) const;
 	void SetTTYLogging(bool val) const;

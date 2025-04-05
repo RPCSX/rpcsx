@@ -6,7 +6,7 @@
 struct S3DAFile : orbis::File {};
 
 static orbis::ErrorCode s3da_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                   void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled s3da ioctl", request);
   return {};

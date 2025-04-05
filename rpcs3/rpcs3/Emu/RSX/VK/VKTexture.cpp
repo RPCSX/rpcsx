@@ -138,8 +138,8 @@ namespace vk
 		{
 			ensure(region.imageSubresource.aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
 
-			const u32 out_w = region.bufferRowLength? region.bufferRowLength : region.imageExtent.width;
-			const u32 out_h = region.bufferImageHeight? region.bufferImageHeight : region.imageExtent.height;
+			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
+			const u32 out_h = region.bufferImageHeight ? region.bufferImageHeight : region.imageExtent.height;
 			const u32 packed_length = out_w * out_h * 4;
 			const u32 in_depth_size = packed_length;
 			const u32 in_stencil_size = out_w * out_h;
@@ -161,7 +161,7 @@ namespace vk
 			VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, dst->value, 2, sub_regions);
 
 			// 2. Interleave the separated data blocks with a compute job
-			vk::cs_interleave_task *job;
+			vk::cs_interleave_task* job;
 			if (!options.swap_bytes) [[likely]]
 			{
 				if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
@@ -271,8 +271,8 @@ namespace vk
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		{
-			const u32 out_w = region.bufferRowLength? region.bufferRowLength : region.imageExtent.width;
-			const u32 out_h = region.bufferImageHeight? region.bufferImageHeight : region.imageExtent.height;
+			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
+			const u32 out_h = region.bufferImageHeight ? region.bufferImageHeight : region.imageExtent.height;
 			const u32 packed_length = out_w * out_h * 4;
 			const u32 in_depth_size = packed_length;
 			const u32 in_stencil_size = out_w * out_h;
@@ -292,7 +292,7 @@ namespace vk
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
 			// 1. Scatter the interleaved data into separate depth and stencil blocks
-			vk::cs_interleave_task *job;
+			vk::cs_interleave_task* job;
 			if (dst->format() == VK_FORMAT_D24_UNORM_S8_UINT)
 			{
 				job = vk::get_compute_task<vk::cs_scatter_d24x8>();
@@ -363,13 +363,13 @@ namespace vk
 		}
 
 		VkBufferImageCopy src_copy{}, dst_copy{};
-		src_copy.imageExtent = { u32(src_rect.x2 - src_rect.x1), u32(src_rect.y2 - src_rect.y1), 1 };
-		src_copy.imageOffset = { src_rect.x1, src_rect.y1, 0 };
-		src_copy.imageSubresource = { src->aspect() & src_transfer_mask, 0, 0, 1 };
+		src_copy.imageExtent = {u32(src_rect.x2 - src_rect.x1), u32(src_rect.y2 - src_rect.y1), 1};
+		src_copy.imageOffset = {src_rect.x1, src_rect.y1, 0};
+		src_copy.imageSubresource = {src->aspect() & src_transfer_mask, 0, 0, 1};
 
-		dst_copy.imageExtent = { u32(dst_rect.x2 - dst_rect.x1), u32(dst_rect.y2 - dst_rect.y1), 1 };
-		dst_copy.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
-		dst_copy.imageSubresource = { dst->aspect() & dst_transfer_mask, 0, 0, 1 };
+		dst_copy.imageExtent = {u32(dst_rect.x2 - dst_rect.x1), u32(dst_rect.y2 - dst_rect.y1), 1};
+		dst_copy.imageOffset = {dst_rect.x1, dst_rect.y1, 0};
+		dst_copy.imageSubresource = {dst->aspect() & dst_transfer_mask, 0, 0, 1};
 
 		const auto src_texel_size = vk::get_format_texel_width(src->info.format);
 		const auto src_length = src_texel_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
@@ -407,7 +407,7 @@ namespace vk
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-					vk::cs_shuffle_base *shuffle_kernel = nullptr;
+					vk::cs_shuffle_base* shuffle_kernel = nullptr;
 					if (src_convert.first && dst_convert.first)
 					{
 						shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_32_16>();
@@ -453,12 +453,13 @@ namespace vk
 		}
 
 		src->pop_layout(cmd);
-		if (src != dst) dst->pop_layout(cmd);
+		if (src != dst)
+			dst->pop_layout(cmd);
 	}
 
 	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
-			VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
+		const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+		VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
 		// NOTE: src_aspect should match dst_aspect according to spec but some drivers seem to work just fine with the mismatch
 		if (const u32 aspect_bridge = (src->aspect() | dst->aspect());
@@ -484,8 +485,8 @@ namespace vk
 		rgn.extent.depth = 1;
 		rgn.extent.width = u32(src_rect.x2 - src_rect.x1);
 		rgn.extent.height = u32(src_rect.y2 - src_rect.y1);
-		rgn.dstOffset = { dst_rect.x1, dst_rect.y1, 0 };
-		rgn.srcOffset = { src_rect.x1, src_rect.y1, 0 };
+		rgn.dstOffset = {dst_rect.x1, dst_rect.y1, 0};
+		rgn.srcOffset = {src_rect.x1, src_rect.y1, 0};
 		rgn.srcSubresource = a_src;
 		rgn.dstSubresource = a_dst;
 
@@ -513,13 +514,14 @@ namespace vk
 		}
 
 		src->pop_layout(cmd);
-		if (src != dst) dst->pop_layout(cmd);
+		if (src != dst)
+			dst->pop_layout(cmd);
 	}
 
 	void copy_scaled_image(const vk::command_buffer& cmd,
-			vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
-			bool compatible_formats, VkFilter filter)
+		vk::image* src, vk::image* dst,
+		const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+		bool compatible_formats, VkFilter filter)
 	{
 		VkImageSubresourceLayers a_src = {}, a_dst = {};
 		a_src.aspectMask = src->aspect();
@@ -534,7 +536,7 @@ namespace vk
 			vk::end_renderpass(cmd);
 		}
 
-		//TODO: Use an array of offsets/dimensions for mipmapped blits (mipmap count > 1) since subimages will have different dimensions
+		// TODO: Use an array of offsets/dimensions for mipmapped blits (mipmap count > 1) since subimages will have different dimensions
 		if (src != dst)
 		{
 			src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -549,17 +551,17 @@ namespace vk
 			src_rect.width() == dst_rect.width() && src_rect.height() == dst_rect.height())
 		{
 			VkImageCopy copy_rgn;
-			copy_rgn.srcOffset = { src_rect.x1, src_rect.y1, 0 };
-			copy_rgn.dstOffset = { dst_rect.x1, dst_rect.y1, 0 };
-			copy_rgn.dstSubresource = { dst->aspect(), 0, 0, 1 };
-			copy_rgn.srcSubresource = { src->aspect(), 0, 0, 1 };
-			copy_rgn.extent = { static_cast<u32>(src_rect.width()), static_cast<u32>(src_rect.height()), 1 };
+			copy_rgn.srcOffset = {src_rect.x1, src_rect.y1, 0};
+			copy_rgn.dstOffset = {dst_rect.x1, dst_rect.y1, 0};
+			copy_rgn.dstSubresource = {dst->aspect(), 0, 0, 1};
+			copy_rgn.srcSubresource = {src->aspect(), 0, 0, 1};
+			copy_rgn.extent = {static_cast<u32>(src_rect.width()), static_cast<u32>(src_rect.height()), 1};
 
 			VK_GET_SYMBOL(vkCmdCopyImage)(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 		}
 		else if ((src->aspect() & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
 		{
-			//Most depth/stencil formats cannot be scaled using hw blit
+			// Most depth/stencil formats cannot be scaled using hw blit
 			if (src->format() != dst->format())
 			{
 				// Can happen because of depth float mismatch. Format width should be equal RSX-side
@@ -572,7 +574,7 @@ namespace vk
 				ensure(!dst_rect.is_flipped());
 
 				auto stretch_image_typeless_unsafe = [&cmd, filter](vk::image* src, vk::image* dst, vk::image* typeless,
-						const areai& src_rect, const areai& dst_rect, VkImageAspectFlags /*aspect*/, VkImageAspectFlags transfer_flags = 0xFF)
+														 const areai& src_rect, const areai& dst_rect, VkImageAspectFlags /*aspect*/, VkImageAspectFlags transfer_flags = 0xFF)
 				{
 					const auto src_w = src_rect.width();
 					const auto src_h = src_rect.height();
@@ -583,18 +585,18 @@ namespace vk
 					// However, this works okay for D24S8 (nvidia-only format)
 					// NOTE: Tranfers of single aspect D/S from Nvidia's D24S8 is very slow
 
-					//1. Copy unscaled to typeless surface
-					copy_image(cmd, src, typeless, src_rect, { 0, 0, src_w, src_h }, 1, transfer_flags, 0xFF);
+					// 1. Copy unscaled to typeless surface
+					copy_image(cmd, src, typeless, src_rect, {0, 0, src_w, src_h}, 1, transfer_flags, 0xFF);
 
-					//2. Blit typeless surface to self
-					copy_scaled_image(cmd, typeless, typeless, { 0, 0, src_w, src_h }, { 0, src_h, dst_w, (src_h + dst_h) }, 1, true, filter);
+					// 2. Blit typeless surface to self
+					copy_scaled_image(cmd, typeless, typeless, {0, 0, src_w, src_h}, {0, src_h, dst_w, (src_h + dst_h)}, 1, true, filter);
 
-					//3. Copy back the aspect bits
-					copy_image(cmd, typeless, dst, {0, src_h, dst_w, (src_h + dst_h) }, dst_rect, 1, 0xFF, transfer_flags);
+					// 3. Copy back the aspect bits
+					copy_image(cmd, typeless, dst, {0, src_h, dst_w, (src_h + dst_h)}, dst_rect, 1, 0xFF, transfer_flags);
 				};
 
 				auto stretch_image_typeless_safe = [&cmd, filter](vk::image* src, vk::image* dst, vk::image* typeless,
-					const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
+													   const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
 				{
 					const auto src_w = src_rect.width();
 					const auto src_h = src_rect.height();
@@ -603,45 +605,47 @@ namespace vk
 
 					auto scratch_buf = vk::get_scratch_buffer(cmd, std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4);
 
-					//1. Copy unscaled to typeless surface
+					// 1. Copy unscaled to typeless surface
 					VkBufferImageCopy info{};
-					info.imageOffset = { std::min(src_rect.x1, src_rect.x2), std::min(src_rect.y1, src_rect.y2), 0 };
-					info.imageExtent = { static_cast<u32>(src_w), static_cast<u32>(src_h), 1 };
-					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
+					info.imageOffset = {std::min(src_rect.x1, src_rect.x2), std::min(src_rect.y1, src_rect.y2), 0};
+					info.imageExtent = {static_cast<u32>(src_w), static_cast<u32>(src_h), 1};
+					info.imageSubresource = {aspect & transfer_flags, 0, 0, 1};
 
 					VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, scratch_buf->value, 1, &info);
 					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					info.imageOffset = {};
-					info.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+					info.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
 					VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, scratch_buf->value, typeless->value, VK_IMAGE_LAYOUT_GENERAL, 1, &info);
 
-					//2. Blit typeless surface to self and apply transform if necessary
-					areai src_rect2 = { 0, 0, src_w, src_h };
-					if (src_rect.x1 > src_rect.x2) src_rect2.flip_horizontal();
-					if (src_rect.y1 > src_rect.y2) src_rect2.flip_vertical();
+					// 2. Blit typeless surface to self and apply transform if necessary
+					areai src_rect2 = {0, 0, src_w, src_h};
+					if (src_rect.x1 > src_rect.x2)
+						src_rect2.flip_horizontal();
+					if (src_rect.y1 > src_rect.y2)
+						src_rect2.flip_vertical();
 
 					insert_image_memory_barrier(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+						{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
-					copy_scaled_image(cmd, typeless, typeless, src_rect2, { 0, src_h, dst_w, (src_h + dst_h) }, 1, true, filter);
+					copy_scaled_image(cmd, typeless, typeless, src_rect2, {0, src_h, dst_w, (src_h + dst_h)}, 1, true, filter);
 
 					insert_image_memory_barrier(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-						{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+						{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
 
-					//3. Copy back the aspect bits
-					info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1 };
-					info.imageOffset = { 0, src_h, 0 };
+					// 3. Copy back the aspect bits
+					info.imageExtent = {static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1};
+					info.imageOffset = {0, src_h, 0};
 
 					VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, scratch_buf->value, 1, &info);
 					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-					info.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
-					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
+					info.imageOffset = {dst_rect.x1, dst_rect.y1, 0};
+					info.imageSubresource = {aspect & transfer_flags, 0, 0, 1};
 					VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, scratch_buf->value, dst->value, dst->current_layout, 1, &info);
 				};
 
@@ -734,10 +738,10 @@ namespace vk
 		else
 		{
 			VkImageBlit rgn = {};
-			rgn.srcOffsets[0] = { src_rect.x1, src_rect.y1, 0 };
-			rgn.srcOffsets[1] = { src_rect.x2, src_rect.y2, 1 };
-			rgn.dstOffsets[0] = { dst_rect.x1, dst_rect.y1, 0 };
-			rgn.dstOffsets[1] = { dst_rect.x2, dst_rect.y2, 1 };
+			rgn.srcOffsets[0] = {src_rect.x1, src_rect.y1, 0};
+			rgn.srcOffsets[1] = {src_rect.x2, src_rect.y2, 1};
+			rgn.dstOffsets[0] = {dst_rect.x1, dst_rect.y1, 0};
+			rgn.dstOffsets[1] = {dst_rect.x2, dst_rect.y2, 1};
 			rgn.dstSubresource = a_dst;
 			rgn.srcSubresource = a_src;
 
@@ -751,7 +755,8 @@ namespace vk
 		}
 
 		src->pop_layout(cmd);
-		if (src != dst) dst->pop_layout(cmd);
+		if (src != dst)
+			dst->pop_layout(cmd);
 	}
 
 	template <typename WordType, bool SwapBytes>
@@ -837,7 +842,7 @@ namespace vk
 			packets.emplace_back(base, lods);
 		}
 
-		for (const auto &packet : packets)
+		for (const auto& packet : packets)
 		{
 			const auto& section = sections[packet.first];
 			const auto src_offset = section.bufferOffset;
@@ -866,14 +871,12 @@ namespace vk
 
 	static const vk::command_buffer& prepare_for_transfer(const vk::command_buffer& primary_cb, vk::image* dst_image, rsx::flags32_t& flags)
 	{
-		AsyncTaskScheduler* async_scheduler = (flags & image_upload_options::upload_contents_async)
-			? std::addressof(g_fxo->get<AsyncTaskScheduler>())
-			: nullptr;
+		AsyncTaskScheduler* async_scheduler = (flags & image_upload_options::upload_contents_async) ? std::addressof(g_fxo->get<AsyncTaskScheduler>()) : nullptr;
 
 		if (async_scheduler && (dst_image->aspect() & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)))
 		{
 			auto pdev = vk::get_current_renderer();
-			if (pdev->get_graphics_queue_family() != pdev->get_transfer_queue_family()) [[ likely ]]
+			if (pdev->get_graphics_queue_family() != pdev->get_transfer_queue_family()) [[likely]]
 			{
 				// According to spec, we cannot call vkCopyBufferToImage on a queue that does not support VK_QUEUE_GRAPHICS_BIT (VUID-vkCmdCopyBufferToImage-commandBuffer-07737)
 				// AMD doesn't care about this, but NVIDIA will crash if you try to cheat.
@@ -932,7 +935,7 @@ namespace vk
 	static const std::pair<u32, u32> calculate_upload_pitch(int format, u32 heap_align, vk::image* dst_image, const rsx::subresource_layout& layout, const rsx::texture_uploader_capabilities& caps)
 	{
 		u32 block_in_pixel = rsx::get_format_block_size_in_texel(format);
-		u8  block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
+		u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 
 		u32 row_pitch, upload_pitch_in_texel;
 
@@ -969,16 +972,16 @@ namespace vk
 			ensure(row_pitch == heap_align);
 		}
 
-		return { row_pitch, upload_pitch_in_texel };
+		return {row_pitch, upload_pitch_in_texel};
 	}
 
 	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 layer_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
+		VkImageAspectFlags flags, vk::data_heap& upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
 		auto pdev = vk::get_current_renderer();
-		rsx::texture_uploader_capabilities caps{ .supports_dxt = pdev->get_texture_compression_bc_support(), .alignment = heap_align };
+		rsx::texture_uploader_capabilities caps{.supports_dxt = pdev->get_texture_compression_bc_support(), .alignment = heap_align};
 		rsx::texture_memory_info opt{};
 		bool check_caps = true;
 
@@ -996,7 +999,7 @@ namespace vk
 
 		auto& cmd2 = prepare_for_transfer(cmd, dst_image, image_setup_flags);
 
-		for (const rsx::subresource_layout &layout : subresource_layout)
+		for (const rsx::subresource_layout& layout : subresource_layout)
 		{
 			const auto [row_pitch, upload_pitch_in_texel] = calculate_upload_pitch(format, heap_align, dst_image, layout, caps);
 			caps.alignment = row_pitch;
@@ -1025,7 +1028,7 @@ namespace vk
 				// Map with extra padding bytes in case of realignment
 				offset_in_upload_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 				void* mapped_buffer = upload_heap.map(offset_in_upload_buffer, image_linear_size + 8);
-				return { mapped_buffer, image_linear_size };
+				return {mapped_buffer, image_linear_size};
 			};
 
 			auto io_buf = rsx::io_buffer(buf_allocator);
@@ -1265,32 +1268,29 @@ namespace vk
 
 		// Schedule the job
 		const RSX_detiler_config config =
-		{
-			.tile_base_address = tiled_region.base_address,
-			.tile_base_offset = range.start - tiled_region.base_address,
-			.tile_rw_offset = range.start - tiled_region.base_address,   // TODO
-			.tile_size = tiled_region.tile->size,
-			.tile_pitch = tiled_region.tile->pitch,
-			.bank = tiled_region.tile->bank,
+			{
+				.tile_base_address = tiled_region.base_address,
+				.tile_base_offset = range.start - tiled_region.base_address,
+				.tile_rw_offset = range.start - tiled_region.base_address, // TODO
+				.tile_size = tiled_region.tile->size,
+				.tile_pitch = tiled_region.tile->pitch,
+				.bank = tiled_region.tile->bank,
 
-			.dst = scratch_buf,
-			.dst_offset = linear_data_scratch_offset,
-			.src = scratch_buf,
-			.src_offset = section_length * 2,
+				.dst = scratch_buf,
+				.dst_offset = linear_data_scratch_offset,
+				.src = scratch_buf,
+				.src_offset = section_length * 2,
 
-			.image_width = width,
-			.image_height = height,
-			.image_pitch = static_cast<u32>(width) * bpp,
-			.image_bpp = bpp
-		};
+				.image_width = width,
+				.image_height = height,
+				.image_pitch = static_cast<u32>(width) * bpp,
+				.image_bpp = bpp};
 
 		// Transfer
-		VkBufferCopy copy_rgn
-		{
+		VkBufferCopy copy_rgn{
 			.srcOffset = dma_mapping.first,
 			.dstOffset = tiled_data_scratch_offset,
-			.size = section_length
-		};
+			.size = section_length};
 		VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, dma_mapping.second->value, scratch_buf->value, 1, &copy_rgn);
 
 		// Barrier
@@ -1309,7 +1309,7 @@ namespace vk
 			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT);
 
 		// Return a descriptor pointing to the decrypted data
-		return { scratch_buf, linear_data_scratch_offset };
+		return {scratch_buf, linear_data_scratch_offset};
 	}
 
 	void blitter::scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, const rsx::typeless_xfer& xfer_info)
@@ -1330,8 +1330,10 @@ namespace vk
 			auto src_w = src_area.width();
 			auto dst_w = dst_area.width();
 
-			if (xfer_info.src_is_typeless) src_w = static_cast<int>(src_w * xfer_info.src_scaling_hint);
-			if (xfer_info.dst_is_typeless) dst_w = static_cast<int>(dst_w * xfer_info.dst_scaling_hint);
+			if (xfer_info.src_is_typeless)
+				src_w = static_cast<int>(src_w * xfer_info.src_scaling_hint);
+			if (xfer_info.dst_is_typeless)
+				dst_w = static_cast<int>(dst_w * xfer_info.dst_scaling_hint);
 
 			if (src_w == dst_w)
 			{
@@ -1352,8 +1354,8 @@ namespace vk
 		if (xfer_info.src_is_typeless)
 		{
 			const auto format = xfer_info.src_native_format_override ?
-				VkFormat(xfer_info.src_native_format_override) :
-				vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.src_gcm_format);
+			                        VkFormat(xfer_info.src_native_format_override) :
+			                        vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.src_gcm_format);
 
 			if (format != src->format())
 			{
@@ -1377,8 +1379,8 @@ namespace vk
 		if (xfer_info.dst_is_typeless)
 		{
 			const auto format = xfer_info.dst_native_format_override ?
-				VkFormat(xfer_info.dst_native_format_override) :
-				vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.dst_gcm_format);
+			                        VkFormat(xfer_info.dst_native_format_override) :
+			                        vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.dst_gcm_format);
 
 			if (format != dst->format())
 			{
@@ -1455,4 +1457,4 @@ namespace vk
 			vk::copy_image_typeless(cmd, real_dst, dst, dst_area, old_dst_area, 1);
 		}
 	}
-}
+} // namespace vk

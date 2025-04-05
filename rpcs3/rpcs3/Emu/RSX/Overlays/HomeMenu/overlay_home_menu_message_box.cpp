@@ -8,9 +8,7 @@ namespace rsx
 	namespace overlays
 	{
 		home_menu_message_box::home_menu_message_box(s16 x, s16 y, u16 width, u16 height)
-			: overlay_element()
-			, m_accept_btn(120, 30)
-			, m_cancel_btn(120, 30)
+			: overlay_element(), m_accept_btn(120, 30), m_cancel_btn(120, 30)
 		{
 			back_color = {0.15f, 0.15f, 0.15f, 0.95f};
 
@@ -99,5 +97,5 @@ namespace rsx
 			}
 			}
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -1,8 +1,8 @@
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
-#include "orbis/utils/Logs.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/utils/Logs.hpp"
 
 struct DipswFile : public orbis::File {};
 
@@ -47,7 +47,7 @@ static orbis::ErrorCode dipsw_ioctl(orbis::File *file, std::uint64_t request,
   if (request == 0xc0088803) {
     // TODO
     *reinterpret_cast<std::uint32_t *>(argp) = 0;
-    return{};
+    return {};
   }
 
   ORBIS_LOG_FATAL("Unhandled dipsw ioctl", request);

@@ -15,8 +15,8 @@ namespace stx
 		// Save default constructor and destructor
 		struct typeinfo
 		{
-			bool(*create)(uchar* ptr, auto_typemap&) noexcept = nullptr;
-			void(*destroy)(void* ptr) noexcept = nullptr;
+			bool (*create)(uchar* ptr, auto_typemap&) noexcept = nullptr;
+			void (*destroy)(void* ptr) noexcept = nullptr;
 
 			template <typename T>
 			static bool call_ctor(uchar* ptr, auto_typemap& _this) noexcept
@@ -75,9 +75,7 @@ namespace stx
 
 	public:
 		auto_typemap() noexcept
-			: m_order(new void*[stx::typelist<typeinfo>().count()])
-			, m_info(new const typeinfo*[stx::typelist<typeinfo>().count()])
-			, m_init(new bool[stx::typelist<typeinfo>().count()]{})
+			: m_order(new void*[stx::typelist<typeinfo>().count()]), m_info(new const typeinfo*[stx::typelist<typeinfo>().count()]), m_init(new bool[stx::typelist<typeinfo>().count()]{})
 		{
 			if constexpr (Size == 0)
 			{
@@ -248,6 +246,6 @@ namespace stx
 			[[unlikely]] return nullptr;
 		}
 	};
-}
+} // namespace stx
 
 using stx::auto_typemap;

@@ -84,12 +84,12 @@ struct ppu_reloc
 	u64 data;
 
 	// Operator for sorting
-	bool operator <(const ppu_reloc& rhs) const
+	bool operator<(const ppu_reloc& rhs) const
 	{
 		return addr < rhs.addr;
 	}
 
-	bool operator <(u32 rhs) const
+	bool operator<(u32 rhs) const
 	{
 		return addr < rhs;
 	}
@@ -127,25 +127,25 @@ struct ppu_module : public Type
 
 	ppu_module& operator=(ppu_module&&) noexcept = default;
 
-	uchar sha1[20]{}; // Hash
-	std::string name{}; // Filename
-	std::string path{}; // Filepath
-	s64 offset = 0; // Offset of file
-	mutable bs_t<ppu_attr> attr{}; // Shared module attributes
-	std::string cache{}; // Cache file path
-	std::vector<ppu_reloc> relocs{}; // Relocations
-	std::vector<ppu_segment> segs{}; // Segments
-	std::vector<ppu_segment> secs{}; // Segment sections
-	std::vector<ppu_function> funcs{}; // Function list
-	std::vector<u32> applied_patches; // Patch addresses
-	std::deque<std::shared_ptr<void>> allocations; // Segment memory allocations
-	std::map<u32, u32> addr_to_seg_index; // address->segment ordered translator map
-	ppu_module* parent = nullptr; // For compilation: refers to original structure (is whole, not partitioned) 
-	std::pair<u32, u32> local_bounds{0, u32{umax}}; // Module addresses range
-	std::shared_ptr<std::pair<u32, u32>> jit_bounds; // JIT instance modules addresses range
-	std::unordered_map<u32, void*> imports; // Imports information for release upon unload (TODO: OVL implementation!) 
+	uchar sha1[20]{};                                                                                     // Hash
+	std::string name{};                                                                                   // Filename
+	std::string path{};                                                                                   // Filepath
+	s64 offset = 0;                                                                                       // Offset of file
+	mutable bs_t<ppu_attr> attr{};                                                                        // Shared module attributes
+	std::string cache{};                                                                                  // Cache file path
+	std::vector<ppu_reloc> relocs{};                                                                      // Relocations
+	std::vector<ppu_segment> segs{};                                                                      // Segments
+	std::vector<ppu_segment> secs{};                                                                      // Segment sections
+	std::vector<ppu_function> funcs{};                                                                    // Function list
+	std::vector<u32> applied_patches;                                                                     // Patch addresses
+	std::deque<std::shared_ptr<void>> allocations;                                                        // Segment memory allocations
+	std::map<u32, u32> addr_to_seg_index;                                                                 // address->segment ordered translator map
+	ppu_module* parent = nullptr;                                                                         // For compilation: refers to original structure (is whole, not partitioned)
+	std::pair<u32, u32> local_bounds{0, u32{umax}};                                                       // Module addresses range
+	std::shared_ptr<std::pair<u32, u32>> jit_bounds;                                                      // JIT instance modules addresses range
+	std::unordered_map<u32, void*> imports;                                                               // Imports information for release upon unload (TODO: OVL implementation!)
 	std::map<u32, std::vector<std::pair<ppua_reg_mask_t, u64>>> stub_addr_to_constant_state_of_registers; // Tells possible constant states of registers of functions
-	bool is_relocatable = false; // Is code relocatable(?)
+	bool is_relocatable = false;                                                                          // Is code relocatable(?)
 
 	template <typename T>
 	auto as_span(T&& arg, bool bound_local, bool bound_jit) const
@@ -157,10 +157,13 @@ struct ppu_module : public Type
 		{
 			// Return span bound to specified bounds
 			const auto [min_addr, max_addr] = bound_jit ? *jit_bounds : local_bounds;
-			constexpr auto compare = [](const type& a, u32 addr) { return a.addr < addr; };
+			constexpr auto compare = [](const type& a, u32 addr)
+			{
+				return a.addr < addr;
+			};
 			const auto end = arg.data() + arg.size();
 			const auto start = std::lower_bound(arg.data(), end, min_addr, compare);
-			return std::span<type>{ start, std::lower_bound(start, end, max_addr, compare) };
+			return std::span<type>{start, std::lower_bound(start, end, max_addr, compare)};
 		}
 
 		return std::span<type>(arg.data(), arg.size());
@@ -230,7 +233,8 @@ struct ppu_module : public Type
 		return get_ptr<T>(addr, u32{size_element});
 	}
 
-	template <typename T, typename U> requires requires (const U& obj) { obj.get_ptr(); }
+	template <typename T, typename U>
+		requires requires(const U& obj) { obj.get_ptr(); }
 	to_be_t<T>* get_ptr(U&& addr) const
 	{
 		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
@@ -250,7 +254,8 @@ struct ppu_module : public Type
 		return *std::add_pointer_t<to_be_t<T>>{};
 	}
 
-	template <typename T, typename U> requires requires (const U& obj) { obj.get_ptr(); }
+	template <typename T, typename U>
+		requires requires(const U& obj) { obj.get_ptr(); }
 	to_be_t<T>& get_ref(U&& addr, u32 index = 0, std::source_location src_loc = std::source_location::current()) const
 	{
 		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
@@ -284,14 +289,12 @@ struct ppu_pattern
 	ppu_pattern() = default;
 
 	ppu_pattern(u32 op)
-		: opcode(op)
-		, mask(0xffffffff)
+		: opcode(op), mask(0xffffffff)
 	{
 	}
 
 	ppu_pattern(u32 op, u32 ign)
-		: opcode(op & ~ign)
-		, mask(~ign)
+		: opcode(op & ~ign), mask(~ign)
 	{
 	}
 };
@@ -302,9 +305,8 @@ struct ppu_pattern_array
 	usz count;
 
 	template <usz N>
-	constexpr ppu_pattern_array(const ppu_pattern(&array)[N])
-		: ptr(array)
-		, count(N)
+	constexpr ppu_pattern_array(const ppu_pattern (&array)[N])
+		: ptr(array), count(N)
 	{
 	}
 
@@ -325,9 +327,8 @@ struct ppu_pattern_matrix
 	usz count;
 
 	template <usz N>
-	constexpr ppu_pattern_matrix(const ppu_pattern_array(&array)[N])
-		: ptr(array)
-		, count(N)
+	constexpr ppu_pattern_matrix(const ppu_pattern_array (&array)[N])
+		: ptr(array), count(N)
 	{
 	}
 
@@ -345,11 +346,21 @@ struct ppu_pattern_matrix
 // PPU Instruction Type
 struct ppu_itype
 {
-	static constexpr struct branch_tag{} branch{}; // Branch Instructions
-	static constexpr struct trap_tag{} trap{}; // Trap Instructions
-	static constexpr struct store_tag{} store{}; // Memory store Instructions
-	static constexpr struct load_tag{} load{}; // Memory load Instructions (TODO: Fill it)
-	static constexpr struct memory_tag{} memory{}; // Memory Instructions
+	static constexpr struct branch_tag
+	{
+	} branch{}; // Branch Instructions
+	static constexpr struct trap_tag
+	{
+	} trap{}; // Trap Instructions
+	static constexpr struct store_tag
+	{
+	} store{}; // Memory store Instructions
+	static constexpr struct load_tag
+	{
+	} load{}; // Memory load Instructions (TODO: Fill it)
+	static constexpr struct memory_tag
+	{
+	} memory{}; // Memory Instructions
 
 	enum class type
 	{
@@ -879,22 +890,22 @@ struct ppu_itype
 	using enum type;
 
 	// Enable address-of operator for ppu_decoder<>
-	friend constexpr type operator &(type value)
+	friend constexpr type operator&(type value)
 	{
 		return value;
 	}
 
-	friend constexpr bool operator &(type value, branch_tag)
+	friend constexpr bool operator&(type value, branch_tag)
 	{
 		return value >= B && value <= BCCTR;
 	}
 
-	friend constexpr bool operator &(type value, trap_tag)
+	friend constexpr bool operator&(type value, trap_tag)
 	{
 		return value >= TD && value <= TWI;
 	}
 
-	friend constexpr bool operator &(type value, store_tag)
+	friend constexpr bool operator&(type value, store_tag)
 	{
 		return value >= STMW && value <= DSTST;
 	}

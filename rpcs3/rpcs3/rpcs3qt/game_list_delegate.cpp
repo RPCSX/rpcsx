@@ -6,7 +6,8 @@
 
 game_list_delegate::game_list_delegate(QObject* parent)
 	: table_item_delegate(parent, true)
-{}
+{
+}
 
 void game_list_delegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {

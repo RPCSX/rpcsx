@@ -6,25 +6,25 @@ LOG_CHANNEL(cellSysutil);
 // All error codes are unknown at this point in implementation
 enum cellSysutilAuthDialogError : u32
 {
-	CELL_AUTHDIALOG_UNKNOWN_201  = 0x8002D201,
+	CELL_AUTHDIALOG_UNKNOWN_201 = 0x8002D201,
 	CELL_AUTHDIALOG_ARG1_IS_ZERO = 0x8002D202,
-	CELL_AUTHDIALOG_UNKNOWN_203  = 0x8002D203,
+	CELL_AUTHDIALOG_UNKNOWN_203 = 0x8002D203,
 };
 
-template<>
+template <>
 void fmt_class_string<cellSysutilAuthDialogError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_AUTHDIALOG_UNKNOWN_201);
-			STR_CASE(CELL_AUTHDIALOG_ARG1_IS_ZERO);
-			STR_CASE(CELL_AUTHDIALOG_UNKNOWN_203);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_AUTHDIALOG_UNKNOWN_201);
+				STR_CASE(CELL_AUTHDIALOG_ARG1_IS_ZERO);
+				STR_CASE(CELL_AUTHDIALOG_UNKNOWN_203);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Decompilation suggests arg1 is s64 but the check is for == 0 instead of >= 0
@@ -59,8 +59,8 @@ error_code cellAuthDialogClose(/* arg1 */)
 }
 
 DECLARE(ppu_module_manager::cellAuthDialogUtility)("cellAuthDialogUtility", []()
-{
-	REG_FUNC(cellAuthDialogUtility, cellAuthDialogOpen);
-	REG_FUNC(cellAuthDialogUtility, cellAuthDialogAbort);
-	REG_FUNC(cellAuthDialogUtility, cellAuthDialogClose);
-});
+	{
+		REG_FUNC(cellAuthDialogUtility, cellAuthDialogOpen);
+		REG_FUNC(cellAuthDialogUtility, cellAuthDialogAbort);
+		REG_FUNC(cellAuthDialogUtility, cellAuthDialogClose);
+	});

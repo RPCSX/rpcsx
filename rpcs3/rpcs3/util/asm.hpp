@@ -47,7 +47,7 @@ namespace utils
 		for (auto stamp0 = get_tsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = get_tsc())
 		{
 #ifndef _MSC_VER
-			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
+			__asm__ goto("xbegin %l[retry];" ::: "memory" : retry);
 #else
 			status = _xbegin();
 
@@ -61,7 +61,7 @@ namespace utils
 			{
 				std::invoke(op);
 #ifndef _MSC_VER
-				__asm__ volatile ("xend;" ::: "memory");
+				__asm__ volatile("xend;" ::: "memory");
 #else
 				_xend();
 #endif
@@ -71,16 +71,16 @@ namespace utils
 			{
 				auto result = std::invoke(op);
 #ifndef _MSC_VER
-				__asm__ volatile ("xend;" ::: "memory");
+				__asm__ volatile("xend;" ::: "memory");
 #else
 				_xend();
 #endif
 				return std::make_pair(true, std::move(result));
 			}
 
-			retry:
+		retry:
 #ifndef _MSC_VER
-			__asm__ volatile ("movl %%eax, %0;" : "=r" (status) :: "memory");
+			__asm__ volatile("movl %%eax, %0;" : "=r"(status)::"memory");
 #endif
 			if (!status) [[unlikely]]
 			{
@@ -371,7 +371,8 @@ namespace utils
 	inline void busy_wait(usz cycles = 3000)
 	{
 		const u64 stop = get_tsc() + cycles;
-		do pause();
+		do
+			pause();
 		while (get_tsc() < stop);
 	}
 
@@ -444,13 +445,13 @@ namespace utils
 	inline void trigger_write_page_fault(void* ptr)
 	{
 #if defined(ARCH_X64) && !defined(_MSC_VER)
-		__asm__ volatile("lock orl $0, 0(%0)" :: "r" (ptr));
+		__asm__ volatile("lock orl $0, 0(%0)" ::"r"(ptr));
 #elif defined(ARCH_ARM64) && !defined(ANDROID)
 		u32 value = 0;
 		u32* u32_ptr = static_cast<u32*>(ptr);
 		__asm__ volatile("ldset %w0, %w0, %1" : "+r"(value), "=Q"(*u32_ptr) : "r"(value));
 #else
-		*static_cast<atomic_t<u32> *>(ptr) += 0;
+		*static_cast<atomic_t<u32>*>(ptr) += 0;
 #endif
 	}
 

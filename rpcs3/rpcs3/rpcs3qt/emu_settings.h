@@ -28,15 +28,15 @@ constexpr auto qstr = QString::fromStdString;
 class emu_settings : public QObject
 {
 	/** A settings class for Emulator specific settings.  This class is a refactored version of the wx version.  It is much nicer
-	*
-	*/
+	 *
+	 */
 	Q_OBJECT
 public:
 	std::set<emu_settings_type> m_broken_types; // list of broken settings
 
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
-	* Settings are only written when SaveSettings is called.
-	*/
+	 * Settings are only written when SaveSettings is called.
+	 */
 	emu_settings();
 
 	bool Init();
@@ -48,7 +48,7 @@ public:
 	void EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type);
 
 	/** Connects a date time edit box with the target settings type*/
-	void EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settings_type type, const QString& format, bool use_calendar, bool as_offset_from_now, int offset_update_time=0);
+	void EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settings_type type, const QString& format, bool use_calendar, bool as_offset_from_now, int offset_update_time = 0);
 
 	/** Connects a slider with the target settings type*/
 	void EnhanceSlider(QSlider* slider, emu_settings_type type);

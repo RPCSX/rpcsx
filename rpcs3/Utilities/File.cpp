@@ -25,7 +25,7 @@ std::string g_android_cache_dir;
 #include "Utilities/StrUtil.h"
 
 #include <cwchar>
-#include <Windows.h>
+#include <windows.h>
 
 static std::unique_ptr<wchar_t[]> to_wchar(std::string_view source)
 {
@@ -205,7 +205,7 @@ namespace fs
 		std::unordered_map<std::string, shared_ptr<device_base>> m_map{};
 
 	public:
-		shared_ptr<device_base> get_device(const std::string& path, std::string_view *device_path = nullptr);
+		shared_ptr<device_base> get_device(const std::string& path, std::string_view* device_path = nullptr);
 		shared_ptr<device_base> set_device(const std::string& name, shared_ptr<device_base>);
 	};
 
@@ -402,8 +402,7 @@ namespace fs
 
 	public:
 		windows_file(HANDLE handle)
-			: m_handle(handle)
-			, m_pos(0)
+			: m_handle(handle), m_pos(0)
 		{
 		}
 
@@ -577,7 +576,8 @@ namespace fs
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + m_pos :
-				whence == fs::seek_end ? offset + size() : -1;
+				whence == fs::seek_end ? offset + size() :
+										 -1;
 
 			if (new_pos < 0)
 			{
@@ -766,7 +766,8 @@ namespace fs
 
 			const int mode =
 				whence == seek_set ? SEEK_SET :
-				whence == seek_cur ? SEEK_CUR : SEEK_END;
+				whence == seek_cur ? SEEK_CUR :
+									 SEEK_END;
 
 			const auto result = ::lseek(m_fd, offset, mode);
 
@@ -833,9 +834,9 @@ namespace fs
 		}
 	};
 #endif
-}
+} // namespace fs
 
-shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path, std::string_view *device_path)
+shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path, std::string_view* device_path)
 {
 	auto prefix = path.substr(0, path.find_first_of("/\\", 1));
 
@@ -885,7 +886,7 @@ shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& na
 	return null_ptr;
 }
 
-shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path, std::string_view *device_path)
+shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path, std::string_view* device_path)
 {
 	// Every virtual device path must have specific name at the beginning
 	if ((path.starts_with("/vfsv0_") || path.starts_with("\\vfsv0_")) && path.size() >= 8 + 22 && path[29] == '_' && path.find_first_of("/\\", 1) > 29)
@@ -1019,7 +1020,10 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	struct close_t
 	{
 		HANDLE handle;
-		~close_t() { FindClose(handle); }
+		~close_t()
+		{
+			FindClose(handle);
+		}
 	};
 
 	for (close_t find_manage{handle}; attrs.cFileName != wpath_view.substr(wpath_view.find_last_of(wdelim) + 1);)
@@ -1426,7 +1430,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	if (::fcopyfile(input, output, 0, COPYFILE_ALL))
 #elif defined(__linux__) || defined(__sun)
 	// sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
-	struct ::stat fileinfo = { 0 };
+	struct ::stat fileinfo = {0};
 	bool result = ::fstat(input, &fileinfo) != -1;
 	if (result)
 	{
@@ -1466,7 +1470,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	}
 
 	std::ifstream in{from, std::ios::binary};
-	std::ofstream out{to,  std::ios::binary};
+	std::ofstream out{to, std::ios::binary};
 
 	if (!in.good() || !out.good())
 	{
@@ -1653,15 +1657,18 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 #ifdef _WIN32
 	DWORD access = 0;
-	if (mode & fs::read) access |= GENERIC_READ;
-	if (mode & fs::write) access |= DELETE | (mode & fs::append ? FILE_APPEND_DATA : GENERIC_WRITE);
+	if (mode & fs::read)
+		access |= GENERIC_READ;
+	if (mode & fs::write)
+		access |= DELETE | (mode & fs::append ? FILE_APPEND_DATA : GENERIC_WRITE);
 
 	DWORD disp = 0;
 	if (mode & fs::create)
 	{
 		disp =
-			mode & fs::excl ? CREATE_NEW :
-			mode & fs::trunc ? CREATE_ALWAYS : OPEN_ALWAYS;
+			mode & fs::excl  ? CREATE_NEW :
+			mode & fs::trunc ? CREATE_ALWAYS :
+							   OPEN_ALWAYS;
 	}
 	else
 	{
@@ -1697,14 +1704,21 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #else
 	int flags = O_CLOEXEC; // Ensures all files are closed on execl for auto updater
 
-	if (mode & fs::read && mode & fs::write) flags |= O_RDWR;
-	else if (mode & fs::read) flags |= O_RDONLY;
-	else if (mode & fs::write) flags |= O_WRONLY;
+	if (mode & fs::read && mode & fs::write)
+		flags |= O_RDWR;
+	else if (mode & fs::read)
+		flags |= O_RDONLY;
+	else if (mode & fs::write)
+		flags |= O_WRONLY;
 
-	if (mode & fs::append) flags |= O_APPEND;
-	if (mode & fs::create) flags |= O_CREAT;
-	if (mode & fs::trunc && !(mode & fs::lock)) flags |= O_TRUNC;
-	if (mode & fs::excl) flags |= O_EXCL;
+	if (mode & fs::append)
+		flags |= O_APPEND;
+	if (mode & fs::create)
+		flags |= O_CREAT;
+	if (mode & fs::trunc && !(mode & fs::lock))
+		flags |= O_TRUNC;
+	if (mode & fs::excl)
+		flags |= O_EXCL;
 
 	int perm = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
@@ -1753,8 +1767,6 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #endif
 }
 
-
-
 fs::file fs::file::from_native_handle(native_handle handle)
 {
 	fs::file result;
@@ -1779,8 +1791,7 @@ fs::file::file(const void* ptr, usz size)
 
 	public:
 		memory_stream(const void* ptr, u64 size)
-			: m_ptr(static_cast<const char*>(ptr))
-			, m_size(size)
+			: m_ptr(static_cast<const char*>(ptr)), m_size(size)
 		{
 		}
 
@@ -1834,7 +1845,8 @@ fs::file::file(const void* ptr, usz size)
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + m_pos :
-				whence == fs::seek_end ? offset + size() : -1;
+				whence == fs::seek_end ? offset + size() :
+										 -1;
 
 			if (new_pos < 0)
 			{
@@ -2006,7 +2018,7 @@ bool fs::dir::open(const std::string& path)
 
 			if (::fstatat(::dirfd(m_dd), found->d_name, &file_info, 0) != 0)
 			{
-				//failed metadata (broken symlink?), ignore and skip to next file
+				// failed metadata (broken symlink?), ignore and skip to next file
 				return read(info);
 			}
 
@@ -2455,11 +2467,11 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 						files[it->second].seek(pos - it->first, fs::seek_end);
 
 						const u64 count = std::min<u64>(it->first - pos, buf_max);
-						const u64 read  = files[it->second].read(buf_out, count);
+						const u64 read = files[it->second].read(buf_out, count);
 
 						buf_out += count;
 						buf_max -= count;
-						pos     += read;
+						pos += read;
 
 						if (read < count || buf_max == 0)
 						{
@@ -2489,11 +2501,11 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 					for (auto it = ends.upper_bound(pos); it != ends.end(); ++it)
 					{
 						const u64 count = std::min<u64>(it->first - pos, buf_max);
-						const u64 read  = files[it->second].read_at(files[it->second].size() + pos - it->first, buf_out, count);
+						const u64 read = files[it->second].read_at(files[it->second].size() + pos - it->first, buf_out, count);
 
 						buf_out += count;
 						buf_max -= count;
-						pos     += read;
+						pos += read;
 
 						if (read < count || buf_max == 0)
 						{
@@ -2518,7 +2530,8 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + pos :
-				whence == fs::seek_end ? offset + end : -1;
+				whence == fs::seek_end ? offset + end :
+										 -1;
 
 			if (new_pos < 0)
 			{
@@ -2581,8 +2594,7 @@ bool fs::pending_file::open(std::string_view path)
 		}
 
 		m_path.clear();
-	}
-	while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
+	} while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
 
 	return file.operator bool();
 }
@@ -2626,8 +2638,7 @@ bool fs::pending_file::commit(bool overwrite)
 
 	const auto ws1 = to_wchar(m_path);
 
-	const HANDLE file_handle = !overwrite ? INVALID_HANDLE_VALUE
-		: CreateFileW(ws1.get(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+	const HANDLE file_handle = !overwrite ? INVALID_HANDLE_VALUE : CreateFileW(ws1.get(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
 	while (file_handle != INVALID_HANDLE_VALUE)
 	{
@@ -2734,8 +2745,7 @@ bool fs::pending_file::commit(bool overwrite)
 
 					break;
 				}
-			}
-			while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
+			} while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
 
 			if (write_temp_path)
 			{
@@ -2787,23 +2797,23 @@ stx::generator<fs::dir_entry&> fs::list_dir_recursively(const std::string& path)
 	}
 }
 
-template<>
+template <>
 void fmt_class_string<fs::seek_mode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto arg)
-	{
-		switch (arg)
 		{
-		STR_CASE(fs::seek_mode::seek_set);
-		STR_CASE(fs::seek_mode::seek_cur);
-		STR_CASE(fs::seek_mode::seek_end);
-		}
+			switch (arg)
+			{
+				STR_CASE(fs::seek_mode::seek_set);
+				STR_CASE(fs::seek_mode::seek_cur);
+				STR_CASE(fs::seek_mode::seek_end);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 {
 	if (arg == static_cast<u64>(fs::error::unknown))
@@ -2818,29 +2828,29 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 	}
 
 	format_enum(out, arg, [](auto arg)
-	{
-		switch (arg)
 		{
-		case fs::error::ok: return "OK";
+			switch (arg)
+			{
+			case fs::error::ok: return "OK";
 
-		case fs::error::inval: return "Invalid arguments";
-		case fs::error::noent: return "Not found";
-		case fs::error::exist: return "Already exists";
-		case fs::error::acces: return "Access violation";
-		case fs::error::notempty: return "Not empty";
-		case fs::error::readonly: return "Read only";
-		case fs::error::isdir: return "Is a directory";
-		case fs::error::toolong: return "Path too long";
-		case fs::error::nospace: return "Not enough space on the device";
-		case fs::error::xdev: return "Device mismatch";
-		case fs::error::unknown: return "Unknown system error";
-		}
+			case fs::error::inval: return "Invalid arguments";
+			case fs::error::noent: return "Not found";
+			case fs::error::exist: return "Already exists";
+			case fs::error::acces: return "Access violation";
+			case fs::error::notempty: return "Not empty";
+			case fs::error::readonly: return "Read only";
+			case fs::error::isdir: return "Is a directory";
+			case fs::error::toolong: return "Path too long";
+			case fs::error::nospace: return "Not enough space on the device";
+			case fs::error::xdev: return "Device mismatch";
+			case fs::error::unknown: return "Unknown system error";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<fs::file_id>::format(std::string& out, u64 arg)
 {
 	const fs::file_id& id = get_object(arg);

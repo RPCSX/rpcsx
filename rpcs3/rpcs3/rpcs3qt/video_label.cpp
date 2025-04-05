@@ -20,12 +20,12 @@ void video_label::set_active(bool active)
 	if (active)
 	{
 		set_image_change_callback([this](const QVideoFrame& frame)
-		{
-			if (const QPixmap pixmap = get_movie_image(frame); get_active() && !pixmap.isNull())
 			{
-				setPixmap(pixmap);
-			}
-		});
+				if (const QPixmap pixmap = get_movie_image(frame); get_active() && !pixmap.isNull())
+				{
+					setPixmap(pixmap);
+				}
+			});
 		start_movie();
 	}
 	else

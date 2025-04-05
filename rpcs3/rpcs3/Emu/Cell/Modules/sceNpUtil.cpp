@@ -150,9 +150,9 @@ error_code sceNpUtilBandwidthTestAbort()
 }
 
 DECLARE(ppu_module_manager::sceNpUtil)("sceNpUtil", []()
-{
-	REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestInitStart);
-	REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestShutdown);
-	REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestGetStatus);
-	REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestAbort);
-});
+	{
+		REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestInitStart);
+		REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestShutdown);
+		REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestGetStatus);
+		REG_FUNC(sceNpUtil, sceNpUtilBandwidthTestAbort);
+	});

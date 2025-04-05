@@ -9,13 +9,13 @@
 class downloader;
 class gui_settings;
 
-class update_manager final :  public QObject
+class update_manager final : public QObject
 {
 	Q_OBJECT
 
 private:
 	downloader* m_downloader = nullptr;
-	QWidget* m_parent        = nullptr;
+	QWidget* m_parent = nullptr;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 

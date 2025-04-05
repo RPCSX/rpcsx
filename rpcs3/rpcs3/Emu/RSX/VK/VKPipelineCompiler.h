@@ -80,7 +80,7 @@ namespace vk
 			const std::vector<glsl::program_input>& fs_inputs = {});
 
 		std::unique_ptr<glsl::program> compile(
-			const vk::pipeline_props &create_info,
+			const vk::pipeline_props& create_info,
 			VkShaderModule module_handles[2],
 			VkPipelineLayout pipe_layout,
 			op_flags flags, callback_t callback = {},
@@ -154,14 +154,14 @@ namespace vk
 		std::unique_ptr<glsl::program> int_compile_compute_pipe(const VkComputePipelineCreateInfo& create_info, VkPipelineLayout pipe_layout);
 		std::unique_ptr<glsl::program> int_compile_graphics_pipe(const VkGraphicsPipelineCreateInfo& create_info, VkPipelineLayout pipe_layout,
 			const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs);
-		std::unique_ptr<glsl::program> int_compile_graphics_pipe(const vk::pipeline_props &create_info, VkShaderModule modules[2], VkPipelineLayout pipe_layout,
+		std::unique_ptr<glsl::program> int_compile_graphics_pipe(const vk::pipeline_props& create_info, VkShaderModule modules[2], VkPipelineLayout pipe_layout,
 			const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs);
 	};
 
 	void initialize_pipe_compiler(int num_worker_threads = -1);
 	void destroy_pipe_compiler();
 	pipe_compiler* get_pipe_compiler();
-}
+} // namespace vk
 
 namespace rpcs3
 {
@@ -186,4 +186,4 @@ namespace rpcs3
 		}
 		return hash_base(seed);
 	}
-}
+} // namespace rpcs3

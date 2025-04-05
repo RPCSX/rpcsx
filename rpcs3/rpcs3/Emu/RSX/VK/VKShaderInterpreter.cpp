@@ -25,32 +25,31 @@ namespace vk
 		ParamArray arr;
 		VKVertexProgram vk_prog;
 
-		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
-			? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS
-			: 0;
+		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING) ? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS : 0;
 		VKVertexDecompilerThread comp(null_prog, shader_str, arr, vk_prog);
 
 		// Initialize compiler properties
 		comp.properties.has_indexed_constants = true;
 
-		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
+		ParamType uniforms = {PF_PARAM_UNIFORM, "vec4"};
 		uniforms.items.emplace_back("vc[468]", -1);
 
 		std::stringstream builder;
 		comp.insertHeader(builder);
-		comp.insertConstants(builder, { uniforms });
+		comp.insertConstants(builder, {uniforms});
 		comp.insertInputs(builder, {});
 
 		// Insert vp stream input
 		builder << "\n"
-		"layout(std140, set=0, binding=" << m_vertex_instruction_start << ") readonly restrict buffer VertexInstructionBlock\n"
-		"{\n"
-		"	uint base_address;\n"
-		"	uint entry;\n"
-		"	uint output_mask;\n"
-		"	uint control;\n"
-		"	uvec4 vp_instructions[];\n"
-		"};\n\n";
+				   "layout(std140, set=0, binding="
+				<< m_vertex_instruction_start << ") readonly restrict buffer VertexInstructionBlock\n"
+												 "{\n"
+												 "	uint base_address;\n"
+												 "	uint entry;\n"
+												 "	uint output_mask;\n"
+												 "	uint control;\n"
+												 "	uvec4 vp_instructions[];\n"
+												 "};\n\n";
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
 		{
@@ -125,9 +124,8 @@ namespace vk
 
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 		std::stringstream builder;
-		builder <<
-		"#version 450\n"
-		"#extension GL_ARB_separate_shader_objects : enable\n\n";
+		builder << "#version 450\n"
+				   "#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
@@ -192,7 +190,7 @@ namespace vk
 			builder << "#define WITH_STIPPLING\n";
 		}
 
-		const char* type_names[] = { "sampler1D", "sampler2D", "sampler3D", "samplerCube" };
+		const char* type_names[] = {"sampler1D", "sampler2D", "sampler3D", "samplerCube"};
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
 		{
 			builder << "#define WITH_TEXTURES\n\n";
@@ -203,22 +201,21 @@ namespace vk
 			}
 
 			builder << "\n"
-				"#define IS_TEXTURE_RESIDENT(index) true\n"
-				"#define SAMPLER1D(index) sampler1D_array[index]\n"
-				"#define SAMPLER2D(index) sampler2D_array[index]\n"
-				"#define SAMPLER3D(index) sampler3D_array[index]\n"
-				"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+					   "#define IS_TEXTURE_RESIDENT(index) true\n"
+					   "#define SAMPLER1D(index) sampler1D_array[index]\n"
+					   "#define SAMPLER2D(index) sampler2D_array[index]\n"
+					   "#define SAMPLER3D(index) sampler3D_array[index]\n"
+					   "#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
 		}
 
-		builder <<
-		"layout(std430, binding=" << m_fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
-		"{\n"
-		"	uint shader_control;\n"
-		"	uint texture_control;\n"
-		"	uint reserved1;\n"
-		"	uint reserved2;\n"
-		"	uvec4 fp_instructions[];\n"
-		"};\n\n";
+		builder << "layout(std430, binding=" << m_fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
+																				"{\n"
+																				"	uint shader_control;\n"
+																				"	uint texture_control;\n"
+																				"	uint reserved1;\n"
+																				"	uint reserved2;\n"
+																				"	uvec4 fp_instructions[];\n"
+																				"};\n\n";
 
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
@@ -339,12 +336,11 @@ namespace vk
 		ensure(num_ubo > 0 && num_texel_buffers > 0 && num_combined_image_sampler > 0 && num_ssbo > 0);
 
 		m_descriptor_pool_sizes =
-		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , num_ubo },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , num_texel_buffers },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , num_combined_image_sampler },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, num_ssbo }
-		};
+			{
+				{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, num_ubo},
+				{VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, num_texel_buffers},
+				{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, num_combined_image_sampler},
+				{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, num_ssbo}};
 
 		std::array<VkPushConstantRange, 1> push_constants;
 		push_constants[0].offset = 0;
@@ -368,7 +364,7 @@ namespace vk
 
 		VkPipelineLayout result;
 		CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(dev, &layout_info, nullptr, &result));
-		return { set_layout, result };
+		return {set_layout, result};
 	}
 
 	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
@@ -389,7 +385,7 @@ namespace vk
 		m_program_cache.clear();
 		m_descriptor_pool.destroy();
 
-		for (auto &fs : m_shader_cache)
+		for (auto& fs : m_shader_cache)
 		{
 			fs.second.m_vs->destroy();
 			fs.second.m_fs->destroy();
@@ -436,16 +432,15 @@ namespace vk
 		shader_stages[1].pName = "main";
 
 		std::vector<VkDynamicState> dynamic_state_descriptors =
-		{
-			VK_DYNAMIC_STATE_VIEWPORT,
-			VK_DYNAMIC_STATE_SCISSOR,
-			VK_DYNAMIC_STATE_LINE_WIDTH,
-			VK_DYNAMIC_STATE_BLEND_CONSTANTS,
-			VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
-			VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
-			VK_DYNAMIC_STATE_STENCIL_REFERENCE,
-			VK_DYNAMIC_STATE_DEPTH_BIAS
-		};
+			{
+				VK_DYNAMIC_STATE_VIEWPORT,
+				VK_DYNAMIC_STATE_SCISSOR,
+				VK_DYNAMIC_STATE_LINE_WIDTH,
+				VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+				VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+				VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+				VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+				VK_DYNAMIC_STATE_DEPTH_BIAS};
 
 		if (vk::get_current_renderer()->get_depth_bounds_support())
 		{
@@ -457,7 +452,7 @@ namespace vk
 		dynamic_state_info.pDynamicStates = dynamic_state_descriptors.data();
 		dynamic_state_info.dynamicStateCount = ::size32(dynamic_state_descriptors);
 
-		VkPipelineVertexInputStateCreateInfo vi = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		VkPipelineVertexInputStateCreateInfo vi = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
 		VkPipelineViewportStateCreateInfo vp = {};
 		vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -502,7 +497,7 @@ namespace vk
 		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set& set)
 	{
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
@@ -555,14 +550,22 @@ namespace vk
 			}
 		}
 
-		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
-		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
-		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
-		if (metadata.referenced_textures_mask) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
-		if (metadata.has_branch_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
-		if (metadata.has_pack_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
-		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING;
+		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
+		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
+		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
+		if (metadata.referenced_textures_mask)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
+		if (metadata.has_branch_instructions)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
+		if (metadata.has_pack_instructions)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
+		if (rsx::method_registers.polygon_stipple_enabled())
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
+		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
+			key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING;
 
 		if (m_current_key == key) [[likely]]
 		{
@@ -599,4 +602,4 @@ namespace vk
 	{
 		return m_fragment_instruction_start;
 	}
-};
+}; // namespace vk

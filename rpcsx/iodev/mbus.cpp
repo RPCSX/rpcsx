@@ -1,21 +1,21 @@
+#include "mbus.hpp"
 #include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/file.hpp"
 #include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "mbus.hpp"
 
 struct MBusFile : orbis::File {};
 
 static orbis::ErrorCode mbus_ioctl(orbis::File *file, std::uint64_t request,
-                                  void *argp, orbis::Thread *thread) {
+                                   void *argp, orbis::Thread *thread) {
 
   ORBIS_LOG_FATAL("Unhandled mbus ioctl", request);
   return {};
 }
 
 static orbis::ErrorCode mbus_read(orbis::File *file, orbis::Uio *uio,
-                                     orbis::Thread *thread) {
+                                  orbis::Thread *thread) {
   auto mbus = file->device.staticCast<MBusDevice>();
   ORBIS_LOG_ERROR(__FUNCTION__);
 
@@ -52,9 +52,9 @@ void MBusDevice::emitEvent(const MBusEvent &event) {
   eventEmitter->emit(orbis::kEvFiltRead);
 }
 
-orbis::ErrorCode MBusDevice::open(orbis::Ref<orbis::File> *file, const char *path,
-                      std::uint32_t flags, std::uint32_t mode,
-                      orbis::Thread *thread) {
+orbis::ErrorCode MBusDevice::open(orbis::Ref<orbis::File> *file,
+                                  const char *path, std::uint32_t flags,
+                                  std::uint32_t mode, orbis::Thread *thread) {
   ORBIS_LOG_FATAL("mbus device open");
   auto newFile = orbis::knew<MBusFile>();
   newFile->ops = &fileOps;

@@ -8,7 +8,7 @@
 // Cannot include Xlib.h before Qt
 // and we don't need all of Xlib anyway
 using Display = struct _XDisplay;
-using Window  = unsigned long;
+using Window = unsigned long;
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
@@ -29,9 +29,9 @@ using display_handle_t = std::variant<
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	std::pair<wl_display*, wl_surface*>
 #elif defined(ANDROID)
-	struct ANativeWindow *
+	struct ANativeWindow*
 #endif
->;
+	>;
 #endif
 
 using draw_context_t = void*;

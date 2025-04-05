@@ -37,8 +37,8 @@ void basic_keyboard_handler::Init(keyboard_consumer& consumer, const u32 max_con
 
 	info.max_connect = max_connect;
 	info.now_connect = std::min(::size32(keyboards), max_connect);
-	info.info        = input::g_keyboards_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
-	info.status[0]   = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
+	info.info = input::g_keyboards_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
+	info.status[0] = CELL_KB_STATUS_CONNECTED;                                 // (TODO: Support for more keyboards)
 }
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
@@ -194,19 +194,19 @@ void basic_keyboard_handler::LoadSettings(Keyboard& keyboard)
 	buttons.emplace_back(Qt::Key_Shift, CELL_KB_MKEY_L_SHIFT);
 	buttons.emplace_back(Qt::Key_Alt, CELL_KB_MKEY_L_ALT);
 	buttons.emplace_back(Qt::Key_Meta, CELL_KB_MKEY_L_WIN);
-	//buttons.emplace_back(, CELL_KB_MKEY_R_CTRL);  // There is no way to know if it's left or right in Qt at the moment
-	//buttons.emplace_back(, CELL_KB_MKEY_R_SHIFT); // There is no way to know if it's left or right in Qt at the moment
-	//buttons.emplace_back(, CELL_KB_MKEY_R_ALT);   // There is no way to know if it's left or right in Qt at the moment
-	//buttons.emplace_back(, CELL_KB_MKEY_R_WIN);   // There is no way to know if it's left or right in Qt at the moment
+	// buttons.emplace_back(, CELL_KB_MKEY_R_CTRL);  // There is no way to know if it's left or right in Qt at the moment
+	// buttons.emplace_back(, CELL_KB_MKEY_R_SHIFT); // There is no way to know if it's left or right in Qt at the moment
+	// buttons.emplace_back(, CELL_KB_MKEY_R_ALT);   // There is no way to know if it's left or right in Qt at the moment
+	// buttons.emplace_back(, CELL_KB_MKEY_R_WIN);   // There is no way to know if it's left or right in Qt at the moment
 
 	buttons.emplace_back(Qt::Key_Super_L, CELL_KB_MKEY_L_WIN); // The super keys are supposed to be the windows keys, but they trigger the meta key instead. Let's assign the windows keys to both.
 	buttons.emplace_back(Qt::Key_Super_R, CELL_KB_MKEY_R_WIN); // The super keys are supposed to be the windows keys, but they trigger the meta key instead. Let's assign the windows keys to both.
 
 	// CELL_KB_RAWDAT
-	//buttons.emplace_back(, CELL_KEYC_NO_EVENT); // Redundant, listed for completeness
-	//buttons.emplace_back(, CELL_KEYC_E_ROLLOVER);
-	//buttons.emplace_back(, CELL_KEYC_E_POSTFAIL);
-	//buttons.emplace_back(, CELL_KEYC_E_UNDEF);
+	// buttons.emplace_back(, CELL_KEYC_NO_EVENT); // Redundant, listed for completeness
+	// buttons.emplace_back(, CELL_KEYC_E_ROLLOVER);
+	// buttons.emplace_back(, CELL_KEYC_E_POSTFAIL);
+	// buttons.emplace_back(, CELL_KEYC_E_UNDEF);
 	buttons.emplace_back(Qt::Key_Escape, CELL_KEYC_ESCAPE);
 	buttons.emplace_back(Qt::Key_Kanji, CELL_KEYC_106_KANJI);
 	buttons.emplace_back(Qt::Key_CapsLock, CELL_KEYC_CAPS_LOCK);
@@ -235,8 +235,8 @@ void basic_keyboard_handler::LoadSettings(Keyboard& keyboard)
 	buttons.emplace_back(Qt::Key_Left, CELL_KEYC_LEFT_ARROW);
 	buttons.emplace_back(Qt::Key_Down, CELL_KEYC_DOWN_ARROW);
 	buttons.emplace_back(Qt::Key_Up, CELL_KEYC_UP_ARROW);
-	//buttons.emplace_back(, CELL_KEYC_NUM_LOCK);
-	//buttons.emplace_back(, CELL_KEYC_APPLICATION); // This is probably the PS key on the PS3 keyboard
+	// buttons.emplace_back(, CELL_KEYC_NUM_LOCK);
+	// buttons.emplace_back(, CELL_KEYC_APPLICATION); // This is probably the PS key on the PS3 keyboard
 	buttons.emplace_back(Qt::Key_Kana_Shift, CELL_KEYC_KANA); // maybe Key_Kana_Lock
 	buttons.emplace_back(Qt::Key_Henkan, CELL_KEYC_HENKAN);
 	buttons.emplace_back(Qt::Key_Muhenkan, CELL_KEYC_MUHENKAN);
@@ -245,20 +245,20 @@ void basic_keyboard_handler::LoadSettings(Keyboard& keyboard)
 	buttons.emplace_back(Qt::Key_NumLock, CELL_KEYC_KPAD_NUMLOCK);
 	buttons.emplace_back(Qt::Key_division, CELL_KEYC_KPAD_SLASH);    // should ideally be slash but that's occupied obviously
 	buttons.emplace_back(Qt::Key_multiply, CELL_KEYC_KPAD_ASTERISK); // should ideally be asterisk but that's occupied obviously
-	//buttons.emplace_back(Qt::Key_Minus, CELL_KEYC_KPAD_MINUS);     // should ideally be minus but that's occupied obviously
+	// buttons.emplace_back(Qt::Key_Minus, CELL_KEYC_KPAD_MINUS);     // should ideally be minus but that's occupied obviously
 	buttons.emplace_back(Qt::Key_Plus, CELL_KEYC_KPAD_PLUS);
 	buttons.emplace_back(Qt::Key_Enter, CELL_KEYC_KPAD_ENTER);
-	//buttons.emplace_back(Qt::Key_1, CELL_KEYC_KPAD_1);
-	//buttons.emplace_back(Qt::Key_2, CELL_KEYC_KPAD_2);
-	//buttons.emplace_back(Qt::Key_3, CELL_KEYC_KPAD_3);
-	//buttons.emplace_back(Qt::Key_4, CELL_KEYC_KPAD_4);
-	//buttons.emplace_back(Qt::Key_5, CELL_KEYC_KPAD_5);
-	//buttons.emplace_back(Qt::Key_6, CELL_KEYC_KPAD_6);
-	//buttons.emplace_back(Qt::Key_7, CELL_KEYC_KPAD_7);
-	//buttons.emplace_back(Qt::Key_8, CELL_KEYC_KPAD_8);
-	//buttons.emplace_back(Qt::Key_9, CELL_KEYC_KPAD_9);
-	//buttons.emplace_back(Qt::Key_0, CELL_KEYC_KPAD_0);
-	//buttons.emplace_back(Qt::Key_Delete, CELL_KEYC_KPAD_PERIOD);
+	// buttons.emplace_back(Qt::Key_1, CELL_KEYC_KPAD_1);
+	// buttons.emplace_back(Qt::Key_2, CELL_KEYC_KPAD_2);
+	// buttons.emplace_back(Qt::Key_3, CELL_KEYC_KPAD_3);
+	// buttons.emplace_back(Qt::Key_4, CELL_KEYC_KPAD_4);
+	// buttons.emplace_back(Qt::Key_5, CELL_KEYC_KPAD_5);
+	// buttons.emplace_back(Qt::Key_6, CELL_KEYC_KPAD_6);
+	// buttons.emplace_back(Qt::Key_7, CELL_KEYC_KPAD_7);
+	// buttons.emplace_back(Qt::Key_8, CELL_KEYC_KPAD_8);
+	// buttons.emplace_back(Qt::Key_9, CELL_KEYC_KPAD_9);
+	// buttons.emplace_back(Qt::Key_0, CELL_KEYC_KPAD_0);
+	// buttons.emplace_back(Qt::Key_Delete, CELL_KEYC_KPAD_PERIOD);
 
 	// ASCII Printable characters
 	buttons.emplace_back(Qt::Key_A, CELL_KEYC_A);

@@ -109,9 +109,7 @@ namespace rsx
 				compiled_resources.add(m_icon->get_compiled());
 			}
 
-			auto& current_animation = m_fade_in_animation.active
-				? m_fade_in_animation
-				: m_fade_out_animation;
+			auto& current_animation = m_fade_in_animation.active ? m_fade_in_animation : m_fade_out_animation;
 
 			current_animation.apply(compiled_resources);
 			return compiled_resources;
@@ -292,17 +290,17 @@ namespace rsx
 			auto check_list = [&](std::deque<message_item>& list)
 			{
 				return std::any_of(list.begin(), list.end(), [&](message_item& item)
-				{
-					if (item.text_matches(msg))
 					{
-						if (allow_refresh)
+						if (item.text_matches(msg))
 						{
-							item.reset_expiration();
+							if (allow_refresh)
+							{
+								item.reset_expiration();
+							}
+							return true;
 						}
-						return true;
-					}
-					return false;
-				});
+						return false;
+					});
 			};
 
 			switch (location)

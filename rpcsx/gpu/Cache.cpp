@@ -788,9 +788,7 @@ struct CachedImageBuffer : Cache::Entry {
   unsigned height = 1;
   unsigned depth = 1;
 
-  bool expensive() {
-    return false;
-  }
+  bool expensive() { return false; }
 
   [[nodiscard]] bool isLinear() const {
     return tileMode.arrayMode() == kArrayModeLinearGeneral ||
@@ -2024,8 +2022,7 @@ Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
   }
 
   auto result = vk::ImageView(gnm::toVkImageViewType(key.type), image.handle,
-                              image.format,
-                              components,
+                              image.format, components,
                               {
                                   .aspectMask = toAspect(key.kind),
                                   .baseMipLevel = key.baseMipLevel,

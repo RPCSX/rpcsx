@@ -94,10 +94,11 @@ namespace asmjit
 
 	template <typename T, typename D = std::decay_t<T>>
 	constexpr arg_class arg_classify =
-		std::is_same_v<v128, D> ? arg_class::imm_lv + !std::is_reference_v<T> :
+		std::is_same_v<v128, D>        ? arg_class::imm_lv + !std::is_reference_v<T> :
 		std::is_base_of_v<mem_type, D> ? arg_class::mem_lv :
 		std::is_base_of_v<mem_lazy, D> ? arg_class::mem_lv + !std::is_reference_v<T> :
-		std::is_reference_v<T> ? arg_class::reg_lv : arg_class::reg_rv;
+		std::is_reference_v<T>         ? arg_class::reg_lv :
+										 arg_class::reg_rv;
 
 	struct vec_builder : native_asm
 	{
@@ -295,7 +296,8 @@ namespace asmjit
 		return g_vc->get_const(_c, esize);
 	}
 
-	template <typename T> requires(std::is_base_of_v<mem_lazy, std::decay_t<T>>)
+	template <typename T>
+		requires(std::is_base_of_v<mem_lazy, std::decay_t<T>>)
 	inline decltype(auto) arg_eval(T&& mem, u32)
 	{
 		return mem.eval(std::is_reference_v<T>);
@@ -474,64 +476,64 @@ namespace asmjit
 			ensure(!g_vc->emit(avx_op, src1, srca, arg_eval(std::forward<B>(b), 16), std::forward<Args>(args)...));
 			return vec_type{src1.id()};
 		}
-		else do
-		{
-			if constexpr (arg_classify<A> == arg_class::mem_rv)
+		else
+			do
 			{
-				if (a.isReg())
+				if constexpr (arg_classify<A> == arg_class::mem_rv)
 				{
-					src1 = vec_type(a.id());
-
-					if constexpr (arg_classify<B> == arg_class::reg_rv)
+					if (a.isReg())
 					{
-						e.x = b;
+						src1 = vec_type(a.id());
+
+						if constexpr (arg_classify<B> == arg_class::reg_rv)
+						{
+							e.x = b;
+						}
+						break;
 					}
-					break;
 				}
-			}
 
-			if constexpr (arg_classify<A> == arg_class::imm_rv)
-			{
-				if (auto found = g_vc->const_allocs.find(a); found != g_vc->const_allocs.end())
+				if constexpr (arg_classify<A> == arg_class::imm_rv)
 				{
-					src1 = found->second;
-					g_vc->const_allocs.erase(found);
-
-					if constexpr (arg_classify<B> == arg_class::reg_rv)
+					if (auto found = g_vc->const_allocs.find(a); found != g_vc->const_allocs.end())
 					{
-						e.x = b;
+						src1 = found->second;
+						g_vc->const_allocs.erase(found);
+
+						if constexpr (arg_classify<B> == arg_class::reg_rv)
+						{
+							e.x = b;
+						}
+						break;
 					}
-					break;
 				}
-			}
 
-			src1 = g_vc->vec_alloc();
+				src1 = g_vc->vec_alloc();
 
-			if constexpr (arg_classify<B> == arg_class::reg_rv)
-			{
-				e.x = b;
-			}
-
-			if constexpr (arg_classify<A> == arg_class::imm_rv)
-			{
-				if (!a._u)
+				if constexpr (arg_classify<B> == arg_class::reg_rv)
 				{
-					// All zeros
-					ensure(!g_vc->emit(x86::Inst::kIdPxor, src1, src1));
-					break;
+					e.x = b;
 				}
-				else if (!~a._u)
-				{
-					// All ones
-					ensure(!g_vc->emit(x86::Inst::kIdPcmpeqd, src1, src1));
-					break;
-				}
-			}
 
-			// Fallback to arg copy
-			ensure(!g_vc->emit(mov_op, src1, arg_eval(std::forward<A>(a), 16)));
-		}
-		while (0);
+				if constexpr (arg_classify<A> == arg_class::imm_rv)
+				{
+					if (!a._u)
+					{
+						// All zeros
+						ensure(!g_vc->emit(x86::Inst::kIdPxor, src1, src1));
+						break;
+					}
+					else if (!~a._u)
+					{
+						// All ones
+						ensure(!g_vc->emit(x86::Inst::kIdPcmpeqd, src1, src1));
+						break;
+					}
+				}
+
+				// Fallback to arg copy
+				ensure(!g_vc->emit(mov_op, src1, arg_eval(std::forward<A>(a), 16)));
+			} while (0);
 
 		if (utils::has_avx512() && evex_op && arg_use_evex<B>(b))
 		{
@@ -548,11 +550,20 @@ namespace asmjit
 
 		return vec_type{src1.id()};
 	}
-#define FOR_X64(f, ...) do { using enum asmjit::x86::Inst::Id; return asmjit::f(__VA_ARGS__); } while (0)
+#define FOR_X64(f, ...)                   \
+	do                                    \
+	{                                     \
+		using enum asmjit::x86::Inst::Id; \
+		return asmjit::f(__VA_ARGS__);    \
+	} while (0)
 #elif defined(ARCH_ARM64)
-#define FOR_X64(...) do { fmt::throw_exception("Unimplemented for this architecture!"); } while (0)
+#define FOR_X64(...)                                                  \
+	do                                                                \
+	{                                                                 \
+		fmt::throw_exception("Unimplemented for this architecture!"); \
+	} while (0)
 #endif
-}
+} // namespace asmjit
 
 inline v128 gv_select8(const v128& _cmp, const v128& _true, const v128& _false);
 inline v128 gv_signselect8(const v128& bits, const v128& _true, const v128& _false);
@@ -560,7 +571,8 @@ inline v128 gv_select16(const v128& _cmp, const v128& _true, const v128& _false)
 inline v128 gv_select32(const v128& _cmp, const v128& _true, const v128& _false);
 inline v128 gv_selectfs(const v128& _cmp, const v128& _true, const v128& _false);
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline asmjit::vec_type gv_gts32(A&&, B&&);
 
 inline void gv_set_zeroing_denormals()
@@ -575,7 +587,7 @@ inline void gv_set_zeroing_denormals()
 	u64 cr;
 	__asm__ volatile("mrs %0, FPCR" : "=r"(cr));
 	cr |= 0x1000000ull;
-	__asm__ volatile("msr FPCR, %0" :: "r"(cr));
+	__asm__ volatile("msr FPCR, %0" ::"r"(cr));
 #else
 #error "Not implemented"
 #endif
@@ -593,7 +605,7 @@ inline void gv_unset_zeroing_denormals()
 	u64 cr;
 	__asm__ volatile("mrs %0, FPCR" : "=r"(cr));
 	cr &= ~0x1000000ull;
-	__asm__ volatile("msr FPCR, %0" :: "r"(cr));
+	__asm__ volatile("msr FPCR, %0" ::"r"(cr));
 #else
 #error "Not implemented"
 #endif
@@ -741,7 +753,8 @@ inline v128 gv_and32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_and32(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovdqa, kIdPand, kIdVpand, kIdVpandd, std::forward<A>(a), std::forward<B>(b));
@@ -756,7 +769,8 @@ inline v128 gv_andfs(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_andfs(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovaps, kIdAndps, kIdVandps, kIdVandps, std::forward<A>(a), std::forward<B>(b));
@@ -771,7 +785,8 @@ inline v128 gv_andn32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_andn32(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovdqa, kIdPandn, kIdVpandn, kIdVpandnd, std::forward<A>(a), std::forward<B>(b));
@@ -786,7 +801,8 @@ inline v128 gv_andnfs(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_andnfs(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovaps, kIdAndnps, kIdVandnps, kIdVandnps, std::forward<A>(a), std::forward<B>(b));
@@ -801,7 +817,8 @@ inline v128 gv_or32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_or32(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovdqa, kIdPor, kIdVpor, kIdVpord, std::forward<A>(a), std::forward<B>(b));
@@ -816,7 +833,8 @@ inline v128 gv_orfs(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_orfs(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovaps, kIdOrps, kIdVorps, kIdVorps, std::forward<A>(a), std::forward<B>(b));
@@ -831,7 +849,8 @@ inline v128 gv_xor32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_xor32(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovdqa, kIdPxor, kIdVpxor, kIdVpxord, std::forward<A>(a), std::forward<B>(b));
@@ -846,7 +865,8 @@ inline v128 gv_xorfs(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_xorfs(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovaps, kIdXorps, kIdVxorps, kIdVxorps, std::forward<A>(a), std::forward<B>(b));
@@ -861,7 +881,8 @@ inline v128 gv_not32(const v128& a)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_not32(A&& a)
 {
 #if defined(ARCH_X64)
@@ -880,7 +901,8 @@ inline v128 gv_notfs(const v128& a)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_notfs(A&& a)
 {
 #if defined(ARCH_X64)
@@ -901,7 +923,8 @@ inline v128 gv_shl16(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shl16(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsllw, kIdVpsllw, std::forward<A>(a), count);
@@ -918,7 +941,8 @@ inline v128 gv_shl32(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shl32(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPslld, kIdVpslld, std::forward<A>(a), count);
@@ -935,7 +959,8 @@ inline v128 gv_shl64(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shl64(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsllq, kIdVpsllq, std::forward<A>(a), count);
@@ -952,7 +977,8 @@ inline v128 gv_shr16(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shr16(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsrlw, kIdVpsrlw, std::forward<A>(a), count);
@@ -969,7 +995,8 @@ inline v128 gv_shr32(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shr32(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsrld, kIdVpsrld, std::forward<A>(a), count);
@@ -986,7 +1013,8 @@ inline v128 gv_shr64(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shr64(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsrlq, kIdVpsrlq, std::forward<A>(a), count);
@@ -1003,7 +1031,8 @@ inline v128 gv_sar16(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_sar16(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsraw, kIdVpsraw, std::forward<A>(a), count);
@@ -1020,7 +1049,8 @@ inline v128 gv_sar32(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_sar32(A&& a, u32 count)
 {
 	FOR_X64(unary_op, kIdPsrad, kIdVpsrad, std::forward<A>(a), count);
@@ -1044,7 +1074,8 @@ inline v128 gv_sar64(const v128& a, u32 count)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_sar64(A&& a, u32 count)
 {
 	if (count >= 64)
@@ -1067,7 +1098,8 @@ inline v128 gv_add8(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_add8(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 1, kIdMovdqa, kIdPaddb, kIdVpaddb, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1082,7 +1114,8 @@ inline v128 gv_add16(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_add16(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 2, kIdMovdqa, kIdPaddw, kIdVpaddw, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1097,7 +1130,8 @@ inline v128 gv_add32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_add32(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovdqa, kIdPaddd, kIdVpaddd, kIdVpaddd, std::forward<A>(a), std::forward<B>(b));
@@ -1112,7 +1146,8 @@ inline v128 gv_add64(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_add64(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 8, kIdMovdqa, kIdPaddq, kIdVpaddq, kIdVpaddq, std::forward<A>(a), std::forward<B>(b));
@@ -1127,7 +1162,8 @@ inline v128 gv_adds_s8(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_adds_s8(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 1, kIdMovdqa, kIdPaddsb, kIdVpaddsb, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1142,7 +1178,8 @@ inline v128 gv_adds_s16(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_adds_s16(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 2, kIdMovdqa, kIdPaddsw, kIdVpaddsw, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1152,8 +1189,8 @@ inline v128 gv_adds_s32(const v128& a, const v128& b)
 {
 #if defined(ARCH_X64)
 	const v128 s = _mm_add_epi32(a, b);
-	const v128 m = (a ^ s) & (b ^ s); // overflow bit
-	const v128 x = _mm_srai_epi32(m, 31); // saturation mask
+	const v128 m = (a ^ s) & (b ^ s);                       // overflow bit
+	const v128 x = _mm_srai_epi32(m, 31);                   // saturation mask
 	const v128 y = _mm_srai_epi32(_mm_and_si128(s, m), 31); // positive saturation mask
 	return _mm_xor_si128(_mm_xor_si128(_mm_srli_epi32(x, 1), y), _mm_or_si128(s, x));
 #elif defined(ARCH_ARM64)
@@ -1161,7 +1198,8 @@ inline v128 gv_adds_s32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_adds_s32(A&& a, B&& b)
 {
 #if defined(ARCH_X64)
@@ -1183,7 +1221,8 @@ inline v128 gv_addus_u8(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_addus_u8(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 1, kIdMovdqa, kIdPaddusb, kIdVpaddusb, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1198,7 +1237,8 @@ inline v128 gv_addus_u16(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_addus_u16(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 2, kIdMovdqa, kIdPaddusw, kIdVpaddusw, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1216,7 +1256,8 @@ inline v128 gv_addus_u32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline asmjit::vec_type gv_addus_u32(A&& a, B&& b)
 {
 #if defined(ARCH_X64)
@@ -1257,7 +1298,8 @@ inline v128 gv_sub8(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline auto gv_sub8(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 1, kIdMovdqa, kIdPsubb, kIdVpsubb, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1476,7 +1518,8 @@ inline v128 gv_minu32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline asmjit::vec_type gv_minu32(A&& a, B&& b)
 {
 #if defined(ARCH_X64)
@@ -1719,7 +1762,8 @@ inline v128 gv_gts8(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline asmjit::vec_type gv_gts8(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 1, kIdMovdqa, kIdPcmpgtb, kIdVpcmpgtb, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1744,7 +1788,8 @@ inline v128 gv_gts32(const v128& a, const v128& b)
 #endif
 }
 
-template <typename A, typename B> requires (asmjit::any_operand_v<A, B>)
+template <typename A, typename B>
+	requires(asmjit::any_operand_v<A, B>)
 inline asmjit::vec_type gv_gts32(A&& a, B&& b)
 {
 	FOR_X64(binary_op, 4, kIdMovdqa, kIdPcmpgtd, kIdVpcmpgtd, kIdNone, std::forward<A>(a), std::forward<B>(b));
@@ -1883,7 +1928,7 @@ inline v128 gv_rmuladds_hds16(const v128& a, const v128& b, const v128& c)
 {
 #if defined(ARCH_ARM64)
 #if defined(ANDROID)
-    // This function used in optimized PPU interpreter only, we do not use interperters in android
+	// This function used in optimized PPU interpreter only, we do not use interperters in android
 	return a;
 #else
 	return vqrdmlahq_s16(c, a, b);
@@ -2058,9 +2103,9 @@ inline v128 gv_dotu8s8x4(const v128& a, const v128& b, const v128& c)
 #elif defined(__ARM_FEATURE_MATMUL_INT8)
 	return vusdotq_s32(c, a, b);
 #elif defined(ARCH_ARM64)
-    const auto l = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b))));
+	const auto l = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b))));
 	const auto h = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(a))), vmovl_s8(vget_high_s8(b))));
-    return vaddq_s32(c, vaddq_s32(vuzp1q_s32(l, h), vuzp2q_s32(l, h)));
+	return vaddq_s32(c, vaddq_s32(vuzp1q_s32(l, h), vuzp2q_s32(l, h)));
 #endif
 }
 
@@ -2078,9 +2123,9 @@ inline v128 gv_dotu8x4(const v128& a, const v128& b, const v128& c)
 #elif defined(__ARM_FEATURE_DOTPROD)
 	return vdotq_u32(c, a, b);
 #elif defined(ARCH_ARM64)
-    const auto l = vpaddlq_u16(vmulq_u16(vmovl_u8(vget_low_u8(a)), vmovl_u8(vget_low_u8(b))));
+	const auto l = vpaddlq_u16(vmulq_u16(vmovl_u8(vget_low_u8(a)), vmovl_u8(vget_low_u8(b))));
 	const auto h = vpaddlq_u16(vmulq_u16(vmovl_u8(vget_high_u8(a)), vmovl_u8(vget_high_u8(b))));
-    return vaddq_u32(c, vaddq_u32(vuzp1q_u32(l, h), vuzp2q_u32(l, h)));
+	return vaddq_u32(c, vaddq_u32(vuzp1q_u32(l, h), vuzp2q_u32(l, h)));
 #endif
 }
 
@@ -2138,9 +2183,9 @@ inline v128 gv_dots_u8s8x4(const v128& a, const v128& b, const v128& c)
 	const __m128i ml = _mm_madd_epi16(al, bl);
 	return gv_adds_s32(c, _mm_add_epi32(mh, ml));
 #elif defined(ARCH_ARM64)
-    const auto l = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b))));
+	const auto l = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b))));
 	const auto h = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(a))), vmovl_s8(vget_high_s8(b))));
-    return vqaddq_s32(c, vaddq_s32(vuzp1q_s32(l, h), vuzp2q_s32(l, h)));
+	return vqaddq_s32(c, vaddq_s32(vuzp1q_s32(l, h), vuzp2q_s32(l, h)));
 #endif
 }
 
@@ -2284,35 +2329,35 @@ namespace utils
 
 		return std::bit_cast<f32>(val);
 	}
-}
+} // namespace utils
 
 #if defined(ARCH_X64)
 template <uint Mode>
-const auto sse41_roundf = build_function_asm<__m128(*)(__m128)>("sse41_roundf", [](native_asm& c, native_args&)
-{
-	static_assert(Mode < 4);
-	using namespace asmjit;
-	if (utils::has_avx())
-		c.vroundps(x86::xmm0, x86::xmm0, 8 + Mode);
-	else if (utils::has_sse41())
-		c.roundps(x86::xmm0, x86::xmm0, 8 + Mode);
-	else
-		c.jmp(+[](__m128 a) -> __m128
-		{
-			v128 r = a;
-			for (u32 i = 0; i < 4; i++)
-				if constexpr (Mode == 0)
-					r._f[i] = utils::roundevenf32(r._f[i]);
-				else if constexpr (Mode == 1)
-					r._f[i] = ::floorf(r._f[i]);
-				else if constexpr (Mode == 2)
-					r._f[i] = ::ceilf(r._f[i]);
-				else if constexpr (Mode == 3)
-					r._f[i] = ::truncf(r._f[i]);
-			return r;
-		});
-	c.ret();
-});
+const auto sse41_roundf = build_function_asm<__m128 (*)(__m128)>("sse41_roundf", [](native_asm& c, native_args&)
+	{
+		static_assert(Mode < 4);
+		using namespace asmjit;
+		if (utils::has_avx())
+			c.vroundps(x86::xmm0, x86::xmm0, 8 + Mode);
+		else if (utils::has_sse41())
+			c.roundps(x86::xmm0, x86::xmm0, 8 + Mode);
+		else
+			c.jmp(+[](__m128 a) -> __m128
+				{
+					v128 r = a;
+					for (u32 i = 0; i < 4; i++)
+						if constexpr (Mode == 0)
+							r._f[i] = utils::roundevenf32(r._f[i]);
+						else if constexpr (Mode == 1)
+							r._f[i] = ::floorf(r._f[i]);
+						else if constexpr (Mode == 2)
+							r._f[i] = ::ceilf(r._f[i]);
+						else if constexpr (Mode == 3)
+							r._f[i] = ::truncf(r._f[i]);
+					return r;
+				});
+		c.ret();
+	});
 #endif
 
 inline v128 gv_roundfs_even(const v128& a)
@@ -2451,7 +2496,8 @@ FORCE_INLINE v128 gv_signselect8(const v128& bits, const v128& _true, const v128
 #endif
 }
 
-template <typename A, typename B, typename C> requires (asmjit::any_operand_v<A, B, C>)
+template <typename A, typename B, typename C>
+	requires(asmjit::any_operand_v<A, B, C>)
 inline asmjit::vec_type gv_signselect8(A&& bits, B&& _true, C&& _false)
 {
 	using namespace asmjit;
@@ -2620,7 +2666,8 @@ inline v128 gv_extend_lo_s8(const v128& vec)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_extend_lo_s8(A&& a)
 {
 #if defined(ARCH_X64)
@@ -2642,7 +2689,8 @@ inline v128 gv_extend_hi_s8(const v128& vec)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_extend_hi_s8(A&& a)
 {
 #if defined(ARCH_X64)
@@ -2671,7 +2719,8 @@ inline v128 gv_extend_lo_s16(const v128& vec)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_extend_lo_s16(A&& a)
 {
 #if defined(ARCH_X64)
@@ -2693,7 +2742,8 @@ inline v128 gv_extend_hi_s16(const v128& vec)
 #endif
 }
 
-template <typename A> requires (asmjit::any_operand_v<A>)
+template <typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_extend_hi_s16(A&& a)
 {
 #if defined(ARCH_X64)
@@ -3061,12 +3111,14 @@ inline auto gv_fshl8(A&& a, B&& b, C&& c)
 	auto r1 = gv_signselect8(s1, std::move(x1), std::forward<A>(a));
 	auto b1 = gv_signselect8(std::move(s1), gv_shl64(b, 1), std::forward<B>(b));
 	auto c2 = gv_bcst8(0x3);
-	auto x2 = gv_and32(gv_shr64(b1, 6), c2); x2 = gv_or32(std::move(x2), gv_andn32(std::move(c2), gv_shl64(r1, 2)));
+	auto x2 = gv_and32(gv_shr64(b1, 6), c2);
+	x2 = gv_or32(std::move(x2), gv_andn32(std::move(c2), gv_shl64(r1, 2)));
 	auto s2 = gv_shl64(c, 6);
 	auto r2 = gv_signselect8(s2, std::move(x2), std::move(r1));
 	auto b2 = gv_signselect8(std::move(s2), gv_shl64(b1, 2), std::move(b1));
 	auto c3 = gv_bcst8(0xf);
-	auto x3 = gv_and32(gv_shr64(std::move(b2), 4), c3); x3 = gv_or32(std::move(x3), gv_andn32(std::move(c3), gv_shl64(r2, 4)));
+	auto x3 = gv_and32(gv_shr64(std::move(b2), 4), c3);
+	x3 = gv_or32(std::move(x3), gv_andn32(std::move(c3), gv_shl64(r2, 4)));
 	return gv_signselect8(gv_shl64(std::move(c), 5), std::move(x3), std::move(r2));
 #endif
 }
@@ -3081,17 +3133,20 @@ inline auto gv_fshr8(A&& a, B&& b, C&& c)
 	return vorrq_u8(vshlq_u8(b, vnegq_s8(amt1)), vshlq_u8(a, amt2));
 #else
 	auto c1 = gv_bcst8(0x7f);
-	auto x1 = gv_and32(gv_shr64(b, 1), c1); x1 = gv_or32(std::move(x1), gv_andn32(std::move(c1), gv_shl64(a, 7)));
+	auto x1 = gv_and32(gv_shr64(b, 1), c1);
+	x1 = gv_or32(std::move(x1), gv_andn32(std::move(c1), gv_shl64(a, 7)));
 	auto s1 = gv_shl64(c, 7);
 	auto r1 = gv_signselect8(s1, std::move(x1), std::move(b));
 	auto a1 = gv_signselect8(std::move(s1), gv_shr64(a, 1), std::move(a));
 	auto c2 = gv_bcst8(0x3f);
-	auto x2 = gv_and32(gv_shr64(r1, 2), c2); x2 = gv_or32(std::move(x2), gv_andn32(std::move(c2), gv_shl64(a1, 6)));
+	auto x2 = gv_and32(gv_shr64(r1, 2), c2);
+	x2 = gv_or32(std::move(x2), gv_andn32(std::move(c2), gv_shl64(a1, 6)));
 	auto s2 = gv_shl64(c, 6);
 	auto r2 = gv_signselect8(s2, std::move(x2), std::move(r1));
 	auto a2 = gv_signselect8(std::move(s2), gv_shr64(a1, 2), std::move(a1));
 	auto c3 = gv_bcst8(0x0f);
-	auto x3 = gv_and32(gv_shr64(r2, 4), c3); x3 = gv_or32(std::move(x3), gv_andn32(std::move(c3), gv_shl64(std::move(a2), 4)));
+	auto x3 = gv_and32(gv_shr64(r2, 4), c3);
+	x3 = gv_or32(std::move(x3), gv_andn32(std::move(c3), gv_shl64(std::move(a2), 4)));
 	return gv_signselect8(gv_shl64(std::move(c), 5), std::move(x3), std::move(r2));
 #endif
 }
@@ -3112,7 +3167,8 @@ inline v128 gv_shuffle_left(const v128& a)
 #endif
 }
 
-template <u32 Count, typename A> requires (asmjit::any_operand_v<A>)
+template <u32 Count, typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shuffle_left(A&& a)
 {
 	FOR_X64(unary_op, kIdPslldq, kIdVpslldq, std::forward<A>(a), Count);
@@ -3134,7 +3190,8 @@ inline v128 gv_shuffle_right(const v128& a)
 #endif
 }
 
-template <u32 Count, typename A> requires (asmjit::any_operand_v<A>)
+template <u32 Count, typename A>
+	requires(asmjit::any_operand_v<A>)
 inline auto gv_shuffle_right(A&& a)
 {
 	FOR_X64(unary_op, kIdPsrldq, kIdVpsrldq, std::forward<A>(a), Count);
@@ -3166,7 +3223,11 @@ inline v128 gv_insert16(const v128& vec, u16 value)
 // else if ctrl < 0 then r = 0
 inline v128 gv_shuffle8(const v128& vec, const v128& ctrl)
 {
-	AUDIT(std::ranges::none_of(ctrl._chars, [](s8 i){ return i >= static_cast<s8>(sizeof(v128)); }), "All indices must be in the range [0, 15] or negative, since PSHUFB and TBL behave differently otherwise");
+	AUDIT(std::ranges::none_of(ctrl._chars, [](s8 i)
+			  {
+				  return i >= static_cast<s8>(sizeof(v128));
+			  }),
+		"All indices must be in the range [0, 15] or negative, since PSHUFB and TBL behave differently otherwise");
 #if defined(__SSSE3__)
 	return _mm_shuffle_epi8(vec, ctrl);
 #elif defined(ARCH_ARM64)
@@ -3191,7 +3252,7 @@ inline v128 gv_shuffle32(const v128& vec)
 	constexpr u8 idx2 = (Control >> 4 & 3) * sizeof(s32);
 	constexpr u8 idx3 = (Control >> 6 & 3) * sizeof(s32);
 
-	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
+	constexpr uint8x16_t idx_vec = {idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3};
 
 	return vqtbl1q_s8(vec, idx_vec);
 #endif
@@ -3209,7 +3270,7 @@ inline v128 gv_shuffle32(const v128& vec)
 	constexpr u8 idx2 = (Index2 & 3) * sizeof(s32);
 	constexpr u8 idx3 = (Index3 & 3) * sizeof(s32);
 
-	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
+	constexpr uint8x16_t idx_vec = {idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3};
 
 	return vqtbl1q_s8(vec, idx_vec);
 #endif
@@ -3228,9 +3289,9 @@ inline v128 gv_shufflefs(const v128& a, const v128& b)
 	constexpr u8 idx2 = (Control >> 4 & 3) * sizeof(s32) + sizeof(v128);
 	constexpr u8 idx3 = (Control >> 6 & 3) * sizeof(s32) + sizeof(v128);
 
-	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
+	constexpr uint8x16_t idx_vec = {idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3};
 
-	return vqtbl2q_s8({ a, b }, idx_vec);
+	return vqtbl2q_s8({a, b}, idx_vec);
 #endif
 }
 
@@ -3247,9 +3308,9 @@ inline v128 gv_shufflefs(const v128& a, const v128& b)
 	constexpr u8 idx2 = (Index2 & 3) * sizeof(s32) + sizeof(v128);
 	constexpr u8 idx3 = (Index3 & 3) * sizeof(s32) + sizeof(v128);
 
-	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
+	constexpr uint8x16_t idx_vec = {idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3};
 
-	return vqtbl2q_s8({ a, b }, idx_vec);
+	return vqtbl2q_s8({a, b}, idx_vec);
 #endif
 }
 

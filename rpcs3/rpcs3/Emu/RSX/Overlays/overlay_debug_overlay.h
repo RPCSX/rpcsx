@@ -21,5 +21,5 @@ namespace rsx
 
 		void reset_debug_overlay();
 		void set_debug_overlay_text(std::string&& text);
-	}
-}
+	} // namespace overlays
+} // namespace rsx

@@ -27,10 +27,10 @@ namespace rsx
 				static_cast<image_view*>(image.get())->set_image_resource(resource_config::standard_image_resource::square);
 			}
 
-			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
-			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
+			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
+			std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
 			std::unique_ptr<overlay_element> header_text = std::make_unique<label>(username);
-			std::unique_ptr<overlay_element> subtext     = std::make_unique<label>(user_id);
+			std::unique_ptr<overlay_element> subtext = std::make_unique<label>(user_id);
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
@@ -44,7 +44,7 @@ namespace rsx
 
 			// Make back color transparent for text
 			header_text->back_color.a = 0.f;
-			subtext->back_color.a     = 0.f;
+			subtext->back_color.a = 0.f;
 
 			static_cast<vertical_layout*>(text_stack.get())->pack_padding = 5;
 			static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
@@ -95,7 +95,8 @@ namespace rsx
 
 		void user_list_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (fade_animation.active) return;
+			if (fade_animation.active)
+				return;
 
 			bool close_dialog = false;
 
@@ -242,8 +243,11 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid, "User list dialog",
-				[notify]() { *notify = true; notify->notify_one(); }
-			);
+				[notify]()
+				{
+					*notify = true;
+					notify->notify_one();
+				});
 
 			while (!Emu.IsStopped() && !*notify)
 			{
@@ -253,4 +257,4 @@ namespace rsx
 			return CELL_OK;
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

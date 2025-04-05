@@ -14,12 +14,12 @@ vm::gvar<u32> g_ppu_exit_mutex; // sys_process_exit2 mutex
 vm::gvar<u32> g_ppu_once_mutex;
 vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 
-static u32 s_tls_addr = 0; // TLS image address
-static u32 s_tls_file = 0; // TLS image size
-static u32 s_tls_zero = 0; // TLS zeroed area size (TLS mem size - TLS image size)
-static u32 s_tls_size = 0; // Size of TLS area per thread
-static u32 s_tls_area = 0; // Start of TLS memory area
-static u32 s_tls_max = 0; // Max number of threads
+static u32 s_tls_addr = 0;                          // TLS image address
+static u32 s_tls_file = 0;                          // TLS image size
+static u32 s_tls_zero = 0;                          // TLS zeroed area size (TLS mem size - TLS image size)
+static u32 s_tls_size = 0;                          // Size of TLS area per thread
+static u32 s_tls_area = 0;                          // Start of TLS memory area
+static u32 s_tls_max = 0;                           // Max number of threads
 static std::unique_ptr<atomic_t<bool>[]> s_tls_map; // I'd like to make it std::vector but it won't work
 
 static u32 ppu_alloc_tls()
@@ -42,9 +42,9 @@ static u32 ppu_alloc_tls()
 		addr = vm::alloc(s_tls_size, vm::main);
 	}
 
-	std::memset(vm::base(addr), 0, 0x30); // Clear system area (TODO)
+	std::memset(vm::base(addr), 0, 0x30);                                 // Clear system area (TODO)
 	std::memcpy(vm::base(addr + 0x30), vm::base(s_tls_addr), s_tls_file); // Copy TLS image
-	std::memset(vm::base(addr + 0x30 + s_tls_file), 0, s_tls_zero); // Clear the rest
+	std::memset(vm::base(addr + 0x30 + s_tls_file), 0, s_tls_zero);       // Clear the rest
 	return addr;
 }
 
@@ -72,7 +72,8 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	sysPrxForUser.notice("sys_initialize_tls(thread_id=0x%llx, addr=*0x%x, size=0x%x, mem_size=0x%x)", main_thread_id, tls_seg_addr, tls_seg_size, tls_mem_size);
 
 	// Uninitialized TLS expected.
-	if (ppu.gpr[13] != 0) return;
+	if (ppu.gpr[13] != 0)
+		return;
 
 	// Initialize TLS memory
 	s_tls_addr = tls_seg_addr;
@@ -80,8 +81,8 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	s_tls_zero = tls_mem_size - tls_seg_size;
 	s_tls_size = tls_mem_size + 0x30; // 0x30 is system area size
 	s_tls_area = vm::alloc(0x40000, vm::main) + 0x30;
-	s_tls_max  = (0x40000 - 0x30) / s_tls_size;
-	s_tls_map  = std::make_unique<atomic_t<bool>[]>(s_tls_max);
+	s_tls_max = (0x40000 - 0x30) / s_tls_size;
+	s_tls_map = std::make_unique<atomic_t<bool>[]>(s_tls_max);
 
 	// Allocate TLS for main thread
 	ppu.gpr[13] = ppu_alloc_tls() + 0x7000 + 0x30;
@@ -95,28 +96,28 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	g_spu_printf_dtcb = vm::null;
 
 	vm::var<sys_lwmutex_attribute_t> lwa;
-	lwa->protocol   = SYS_SYNC_PRIORITY;
-	lwa->recursive  = SYS_SYNC_RECURSIVE;
-	lwa->name_u64   = "atexit!\0"_u64;
+	lwa->protocol = SYS_SYNC_PRIORITY;
+	lwa->recursive = SYS_SYNC_RECURSIVE;
+	lwa->name_u64 = "atexit!\0"_u64;
 	sys_lwmutex_create(ppu, g_ppu_atexit_lwm, lwa);
 
 	vm::var<sys_mutex_attribute_t> attr;
-	attr->protocol  = SYS_SYNC_PRIORITY;
+	attr->protocol = SYS_SYNC_PRIORITY;
 	attr->recursive = SYS_SYNC_NOT_RECURSIVE;
-	attr->pshared   = SYS_SYNC_NOT_PROCESS_SHARED;
-	attr->adaptive  = SYS_SYNC_NOT_ADAPTIVE;
-	attr->ipc_key   = 0;
-	attr->flags     = 0;
-	attr->name_u64  = "_lv2ppu\0"_u64;
+	attr->pshared = SYS_SYNC_NOT_PROCESS_SHARED;
+	attr->adaptive = SYS_SYNC_NOT_ADAPTIVE;
+	attr->ipc_key = 0;
+	attr->flags = 0;
+	attr->name_u64 = "_lv2ppu\0"_u64;
 	sys_mutex_create(ppu, g_ppu_once_mutex, attr);
 
 	attr->recursive = SYS_SYNC_RECURSIVE;
-	attr->name_u64  = "_lv2tls\0"_u64;
+	attr->name_u64 = "_lv2tls\0"_u64;
 	sys_mutex_create(ppu, g_ppu_exit_mutex, attr);
 
-	lwa->protocol   = SYS_SYNC_PRIORITY;
-	lwa->recursive  = SYS_SYNC_RECURSIVE;
-	lwa->name_u64   = "_lv2prx\0"_u64;
+	lwa->protocol = SYS_SYNC_PRIORITY;
+	lwa->recursive = SYS_SYNC_RECURSIVE;
+	lwa->name_u64 = "_lv2prx\0"_u64;
 	sys_lwmutex_create(ppu, g_ppu_prx_lwm, lwa);
 	// TODO: missing prx initialization
 }
@@ -137,7 +138,7 @@ error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 en
 	}
 
 	// Call the syscall
-	if (error_code res = _sys_ppu_thread_create(ppu, thread_id, vm::make_var(ppu_thread_param_t{ vm::cast(entry), tls_addr + 0x7030 }), arg, 0, prio, stacksize, flags, threadname))
+	if (error_code res = _sys_ppu_thread_create(ppu, thread_id, vm::make_var(ppu_thread_param_t{vm::cast(entry), tls_addr + 0x7030}), arg, 0, prio, stacksize, flags, threadname))
 	{
 		return res;
 	}

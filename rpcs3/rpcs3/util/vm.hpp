@@ -27,16 +27,16 @@ namespace utils
 	};
 
 	/**
-	* Reserve `size` bytes of virtual memory and returns it.
-	* The memory should be committed before usage.
-	*/
+	 * Reserve `size` bytes of virtual memory and returns it.
+	 * The memory should be committed before usage.
+	 */
 	void* memory_reserve(usz size, void* use_addr = nullptr, bool is_memory_mapping = false);
 
 	/**
-	* Commit `size` bytes of virtual memory starting at pointer.
-	* That is, bake reserved memory with physical memory.
-	* pointer should belong to a range of reserved memory.
-	*/
+	 * Commit `size` bytes of virtual memory starting at pointer.
+	 * That is, bake reserved memory with physical memory.
+	 * pointer should belong to a range of reserved memory.
+	 */
 	void memory_commit(void* pointer, usz size, protection prot = protection::rw);
 
 	// Decommit all memory committed via commit_page_memory.
@@ -123,4 +123,4 @@ namespace utils
 		// Another userdata
 		u64 info = 0;
 	};
-}
+} // namespace utils

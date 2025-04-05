@@ -28,8 +28,8 @@ error_code sys_crash_dump_set_user_log_area(u8 index, vm::ptr<sys_crash_dump_log
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::sys_crashdump) ("sys_crashdump", []()
-{
-	REG_FUNC(sys_crashdump, sys_crash_dump_get_user_log_area);
-	REG_FUNC(sys_crashdump, sys_crash_dump_set_user_log_area);
-});
+DECLARE(ppu_module_manager::sys_crashdump)("sys_crashdump", []()
+	{
+		REG_FUNC(sys_crashdump, sys_crash_dump_get_user_log_area);
+		REG_FUNC(sys_crashdump, sys_crash_dump_set_user_log_area);
+	});

@@ -111,10 +111,10 @@ namespace gl
 
 	GLenum front_face(rsx::front_face op)
 	{
-		//NOTE: RSX face winding is always based off of upper-left corner like vulkan, but GL is bottom left
-		//shader_window_origin register does not affect this
-		//verified with Outrun Online Arcade (window_origin::top) and DS2 (window_origin::bottom)
-		//correctness of face winding checked using stencil test (GOW collection shadows)
+		// NOTE: RSX face winding is always based off of upper-left corner like vulkan, but GL is bottom left
+		// shader_window_origin register does not affect this
+		// verified with Outrun Online Arcade (window_origin::top) and DS2 (window_origin::bottom)
+		// correctness of face winding checked using stencil test (GOW collection shadows)
 		switch (op)
 		{
 		case rsx::front_face::cw: return GL_CCW;
@@ -133,7 +133,7 @@ namespace gl
 		}
 		fmt::throw_exception("Unsupported cull face 0x%X", static_cast<u32>(op));
 	}
-}
+} // namespace gl
 
 void GLGSRender::update_draw_state()
 {
@@ -232,12 +232,11 @@ void GLGSRender::update_draw_state()
 		else
 		{
 			bool mrt_blend_enabled[] =
-			{
-				rsx::method_registers.blend_enabled(),
-				rsx::method_registers.blend_enabled_surface_1(),
-				rsx::method_registers.blend_enabled_surface_2(),
-				rsx::method_registers.blend_enabled_surface_3()
-			};
+				{
+					rsx::method_registers.blend_enabled(),
+					rsx::method_registers.blend_enabled_surface_1(),
+					rsx::method_registers.blend_enabled_surface_2(),
+					rsx::method_registers.blend_enabled_surface_3()};
 
 			if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 			{
@@ -262,7 +261,7 @@ void GLGSRender::update_draw_state()
 		// Antialias control
 		if (backend_config.supports_hw_msaa)
 		{
-			gl_state.enable(/*REGS(m_ctx)->msaa_enabled()*/GL_MULTISAMPLE);
+			gl_state.enable(/*REGS(m_ctx)->msaa_enabled()*/ GL_MULTISAMPLE);
 
 			gl_state.enable(GL_SAMPLE_MASK);
 			gl_state.sample_mask(REGS(m_ctx)->msaa_sample_mask());
@@ -335,17 +334,17 @@ void GLGSRender::update_draw_state()
 	// Clip planes
 	gl_state.clip_planes((current_vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
 
-	//TODO
-	//NV4097_SET_ANISO_SPREAD
-	//NV4097_SET_SPECULAR_ENABLE
-	//NV4097_SET_TWO_SIDE_LIGHT_EN
-	//NV4097_SET_FLAT_SHADE_OP
-	//NV4097_SET_EDGE_FLAG
-	//NV4097_SET_COLOR_KEY_COLOR
-	//NV4097_SET_SHADER_CONTROL
-	//NV4097_SET_ZMIN_MAX_CONTROL
-	//NV4097_SET_ANTI_ALIASING_CONTROL
-	//NV4097_SET_CLIP_ID_TEST_ENABLE
+	// TODO
+	// NV4097_SET_ANISO_SPREAD
+	// NV4097_SET_SPECULAR_ENABLE
+	// NV4097_SET_TWO_SIDE_LIGHT_EN
+	// NV4097_SET_FLAT_SHADE_OP
+	// NV4097_SET_EDGE_FLAG
+	// NV4097_SET_COLOR_KEY_COLOR
+	// NV4097_SET_SHADER_CONTROL
+	// NV4097_SET_ZMIN_MAX_CONTROL
+	// NV4097_SET_ANTI_ALIASING_CONTROL
+	// NV4097_SET_CLIP_ID_TEST_ENABLE
 
 	// For OGL Z range is updated every draw as it is separate from viewport config
 	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
@@ -356,7 +355,7 @@ void GLGSRender::update_draw_state()
 void GLGSRender::load_texture_env()
 {
 	// Load textures
-	gl::command_context cmd{ gl_state };
+	gl::command_context cmd{gl_state};
 	std::lock_guard lock(m_sampler_mutex);
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -443,7 +442,7 @@ void GLGSRender::load_texture_env()
 void GLGSRender::bind_texture_env()
 {
 	// Bind textures and resolve external copy operations
-	gl::command_context cmd{ gl_state };
+	gl::command_context cmd{gl_state};
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
@@ -522,8 +521,8 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 		else
 		{
-			//DMA push; not needed with MAP_COHERENT
-			//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
+			// DMA push; not needed with MAP_COHERENT
+			// glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 		}
 	};
 
@@ -571,11 +570,11 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (manually_flush_ring_buffers)
 	{
-		//Use approximations to reserve space. This path is mostly for debug purposes anyway
+		// Use approximations to reserve space. This path is mostly for debug purposes anyway
 		u32 approx_vertex_count = draw_call.get_elements_count();
 		u32 approx_working_buffer_size = approx_vertex_count * 256;
 
-		//Allocate 256K heap if we have no approximation at this time (inlined array)
+		// Allocate 256K heap if we have no approximation at this time (inlined array)
 		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
 		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
 	}
@@ -621,7 +620,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 			u32 first = 0;
 			u32 dst_index = 0;
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				firsts[dst_index] = first;
 				counts[dst_index] = range.count;
@@ -673,7 +672,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 		if (draw_call.is_trivial_instanced_draw)
 		{
-			glDrawElementsInstanced(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{ index_offset }), draw_call.pass_count());
+			glDrawElementsInstanced(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{index_offset}), draw_call.pass_count());
 		}
 		else if (draw_call.is_single_draw())
 		{
@@ -687,11 +686,11 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			uptr index_ptr = index_offset;
 			m_scratch_buffer.resize(draw_count * 16);
 
-			GLsizei *counts = reinterpret_cast<GLsizei*>(m_scratch_buffer.data());
+			GLsizei* counts = reinterpret_cast<GLsizei*>(m_scratch_buffer.data());
 			const GLvoid** offsets = utils::bless<const GLvoid*>(counts + draw_count);
 			int dst_index = 0;
 
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				const auto index_size = get_index_count(draw_call.primitive, range.count);
 				counts[dst_index] = index_size;
@@ -768,10 +767,11 @@ void GLGSRender::end()
 	m_gl_texture_cache.release_uncached_temporary_subresources();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
-	gl::command_context cmd{ gl_state };
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(cmd);
+	gl::command_context cmd{gl_state};
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+		ds->write_barrier(cmd);
 
-	for (auto &rtt : m_rtts.m_bound_render_targets)
+	for (auto& rtt : m_rtts.m_bound_render_targets)
 	{
 		if (auto surface = std::get<1>(rtt))
 		{
@@ -798,8 +798,7 @@ void GLGSRender::end()
 			// We already completed. End the draw.
 			draw_call.end();
 		}
-	}
-	while (draw_call.next());
+	} while (draw_call.next());
 
 	m_rtts.on_write(m_framebuffer_layout.color_write_enabled, m_framebuffer_layout.zeta_write_enabled);
 

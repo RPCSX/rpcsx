@@ -294,8 +294,8 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
 
         // ORBIS_LOG_ERROR("dce: flip2", flip->canary, flip->displayBufferIndex,
         //                 flip->flipMode, flip->unk1, flip->flipArg,
-        //                 flip->flipArg2, flip->eop_nz, flip->unk2, flip->eop_val,
-        //                 flip->unk3, flip->rout);
+        //                 flip->flipArg2, flip->eop_nz, flip->unk2,
+        //                 flip->eop_val, flip->unk3, flip->rout);
 
         if (flip->eop_nz == 0) {
           gpu.submitFlip(thread->tproc->pid, flip->displayBufferIndex,
@@ -575,13 +575,13 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
   if (request == 0x80308217) {
     ORBIS_LOG_ERROR(__FUNCTION__, request);
     thread->where();
-    return{};
+    return {};
   }
 
   if (request == 0x80208218) {
     ORBIS_LOG_ERROR(__FUNCTION__, request);
     thread->where();
-    return{};
+    return {};
   }
 
   if (request == 0x80088209) { // deallocate?

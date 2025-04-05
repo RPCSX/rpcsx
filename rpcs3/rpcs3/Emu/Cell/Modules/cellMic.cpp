@@ -20,58 +20,58 @@ template <>
 void fmt_class_string<CellMicInError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_MICIN_ERROR_ALREADY_INIT);
-			STR_CASE(CELL_MICIN_ERROR_DEVICE);
-			STR_CASE(CELL_MICIN_ERROR_NOT_INIT);
-			STR_CASE(CELL_MICIN_ERROR_PARAM);
-			STR_CASE(CELL_MICIN_ERROR_PORT_FULL);
-			STR_CASE(CELL_MICIN_ERROR_ALREADY_OPEN);
-			STR_CASE(CELL_MICIN_ERROR_NOT_OPEN);
-			STR_CASE(CELL_MICIN_ERROR_NOT_RUN);
-			STR_CASE(CELL_MICIN_ERROR_TRANS_EVENT);
-			STR_CASE(CELL_MICIN_ERROR_OPEN);
-			STR_CASE(CELL_MICIN_ERROR_SHAREDMEMORY);
-			STR_CASE(CELL_MICIN_ERROR_MUTEX);
-			STR_CASE(CELL_MICIN_ERROR_EVENT_QUEUE);
-			STR_CASE(CELL_MICIN_ERROR_DEVICE_NOT_FOUND);
-			STR_CASE(CELL_MICIN_ERROR_FATAL);
-			STR_CASE(CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_MICIN_ERROR_ALREADY_INIT);
+				STR_CASE(CELL_MICIN_ERROR_DEVICE);
+				STR_CASE(CELL_MICIN_ERROR_NOT_INIT);
+				STR_CASE(CELL_MICIN_ERROR_PARAM);
+				STR_CASE(CELL_MICIN_ERROR_PORT_FULL);
+				STR_CASE(CELL_MICIN_ERROR_ALREADY_OPEN);
+				STR_CASE(CELL_MICIN_ERROR_NOT_OPEN);
+				STR_CASE(CELL_MICIN_ERROR_NOT_RUN);
+				STR_CASE(CELL_MICIN_ERROR_TRANS_EVENT);
+				STR_CASE(CELL_MICIN_ERROR_OPEN);
+				STR_CASE(CELL_MICIN_ERROR_SHAREDMEMORY);
+				STR_CASE(CELL_MICIN_ERROR_MUTEX);
+				STR_CASE(CELL_MICIN_ERROR_EVENT_QUEUE);
+				STR_CASE(CELL_MICIN_ERROR_DEVICE_NOT_FOUND);
+				STR_CASE(CELL_MICIN_ERROR_FATAL);
+				STR_CASE(CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 template <>
 void fmt_class_string<CellMicInErrorDsp>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_MICIN_ERROR_DSP);
-			STR_CASE(CELL_MICIN_ERROR_DSP_ASSERT);
-			STR_CASE(CELL_MICIN_ERROR_DSP_PATH);
-			STR_CASE(CELL_MICIN_ERROR_DSP_FILE);
-			STR_CASE(CELL_MICIN_ERROR_DSP_PARAM);
-			STR_CASE(CELL_MICIN_ERROR_DSP_MEMALLOC);
-			STR_CASE(CELL_MICIN_ERROR_DSP_POINTER);
-			STR_CASE(CELL_MICIN_ERROR_DSP_FUNC);
-			STR_CASE(CELL_MICIN_ERROR_DSP_MEM);
-			STR_CASE(CELL_MICIN_ERROR_DSP_ALIGN16);
-			STR_CASE(CELL_MICIN_ERROR_DSP_ALIGN128);
-			STR_CASE(CELL_MICIN_ERROR_DSP_EAALIGN128);
-			STR_CASE(CELL_MICIN_ERROR_DSP_LIB_HANDLER);
-			STR_CASE(CELL_MICIN_ERROR_DSP_LIB_INPARAM);
-			STR_CASE(CELL_MICIN_ERROR_DSP_LIB_NOSPU);
-			STR_CASE(CELL_MICIN_ERROR_DSP_LIB_SAMPRATE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_MICIN_ERROR_DSP);
+				STR_CASE(CELL_MICIN_ERROR_DSP_ASSERT);
+				STR_CASE(CELL_MICIN_ERROR_DSP_PATH);
+				STR_CASE(CELL_MICIN_ERROR_DSP_FILE);
+				STR_CASE(CELL_MICIN_ERROR_DSP_PARAM);
+				STR_CASE(CELL_MICIN_ERROR_DSP_MEMALLOC);
+				STR_CASE(CELL_MICIN_ERROR_DSP_POINTER);
+				STR_CASE(CELL_MICIN_ERROR_DSP_FUNC);
+				STR_CASE(CELL_MICIN_ERROR_DSP_MEM);
+				STR_CASE(CELL_MICIN_ERROR_DSP_ALIGN16);
+				STR_CASE(CELL_MICIN_ERROR_DSP_ALIGN128);
+				STR_CASE(CELL_MICIN_ERROR_DSP_EAALIGN128);
+				STR_CASE(CELL_MICIN_ERROR_DSP_LIB_HANDLER);
+				STR_CASE(CELL_MICIN_ERROR_DSP_LIB_INPARAM);
+				STR_CASE(CELL_MICIN_ERROR_DSP_LIB_NOSPU);
+				STR_CASE(CELL_MICIN_ERROR_DSP_LIB_SAMPRATE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 namespace fmt
@@ -81,7 +81,7 @@ namespace fmt
 		ALCdevice* device{};
 		ALCenum error{};
 	};
-}
+} // namespace fmt
 
 template <>
 void fmt_class_string<fmt::alc_error>::format(std::string& out, u64 arg)
@@ -90,7 +90,7 @@ void fmt_class_string<fmt::alc_error>::format(std::string& out, u64 arg)
 #ifndef WITHOUT_OPENAL
 	fmt::append(out, "0x%x='%s'", obj.error, alcGetString(obj.device, obj.error));
 #else
-    fmt::append(out, "0x%x", obj.error);
+	fmt::append(out, "0x%x", obj.error);
 #endif
 }
 
@@ -110,7 +110,10 @@ void mic_context::operator()()
 
 		std::lock_guard lock(mutex);
 
-		if (std::none_of(mic_list.begin(), mic_list.end(), [](const microphone_device& dev) { return dev.is_registered(); }))
+		if (std::none_of(mic_list.begin(), mic_list.end(), [](const microphone_device& dev)
+				{
+					return dev.is_registered();
+				}))
 		{
 			timeout = umax;
 			continue;
@@ -314,16 +317,15 @@ microphone_device::microphone_device(microphone_handler type)
 void microphone_device::add_device(const std::string& name)
 {
 	devices.push_back(mic_device{
-		.name = name
-	});
+		.name = name});
 }
 
 error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32 raw_r, const u8 channels)
 {
-	signal_types     = type;
+	signal_types = type;
 	dsp_samplingrate = dsp_r;
 	raw_samplingrate = raw_r;
-	num_channels     = channels;
+	num_channels = channels;
 
 #ifndef WITHOUT_OPENAL
 	// Adjust number of channels depending on microphone type
@@ -431,12 +433,15 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	const auto fixup_samplingrate = [this](u32& rate) -> bool
 	{
 		// TODO: The used sample rate may vary for Sony's camera devices
-		const std::array<u32, 7> samplingrates = { rate, 48000u, 32000u, 24000u, 16000u, 12000u, 8000u };
+		const std::array<u32, 7> samplingrates = {rate, 48000u, 32000u, 24000u, 16000u, 12000u, 8000u};
 
 		const auto test_samplingrate = [&samplingrates](const u32& rate)
 		{
 			// TODO: actually check if device supports sampling rates
-			return std::any_of(samplingrates.cbegin() + 1, samplingrates.cend(), [&rate](const u32& r){ return r == rate; });
+			return std::any_of(samplingrates.cbegin() + 1, samplingrates.cend(), [&rate](const u32& r)
+				{
+					return r == rate;
+				});
 		};
 
 		for (u32 samplingrate : samplingrates)
@@ -724,7 +729,7 @@ void microphone_device::get_data(const u32 num_samples)
 			{
 				const u32 src_index = index / 2;
 
-				tmp_ptr[index]     = buf_0[src_index];
+				tmp_ptr[index] = buf_0[src_index];
 				tmp_ptr[index + 1] = buf_0[src_index + 1];
 				tmp_ptr[index + 2] = buf_1[src_index];
 				tmp_ptr[index + 3] = buf_1[src_index + 1];
@@ -736,7 +741,7 @@ void microphone_device::get_data(const u32 num_samples)
 			{
 				const u32 src_index = index / 2;
 
-				tmp_ptr[index]     = buf_0[src_index];
+				tmp_ptr[index] = buf_0[src_index];
 				tmp_ptr[index + 1] = buf_0[src_index + 1];
 				tmp_ptr[index + 2] = 0;
 				tmp_ptr[index + 3] = 0;
@@ -1157,7 +1162,7 @@ error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::
 	return CELL_OK;
 }
 
-error_code cellMicGetFormatEx(s32 dev_num, vm::ptr<CellMicInputFormatI> format, /*CellMicSignalType*/u32 type)
+error_code cellMicGetFormatEx(s32 dev_num, vm::ptr<CellMicInputFormatI> format, /*CellMicSignalType*/ u32 type)
 {
 	cellMic.trace("cellMicGetFormatEx(dev_num=%d, format=*0x%x, type=0x%x)", dev_num, format, type);
 
@@ -1178,11 +1183,11 @@ error_code cellMicGetFormatEx(s32 dev_num, vm::ptr<CellMicInputFormatI> format, 
 
 	// TODO: type
 
-	format->subframeSize  = device.get_bit_resolution() / 8; // Probably?
+	format->subframeSize = device.get_bit_resolution() / 8; // Probably?
 	format->bitResolution = device.get_bit_resolution();
-	format->sampleRate    = device.get_raw_samplingrate();
-	format->channelNum    = device.get_num_channels();
-	format->dataType      = device.get_datatype();
+	format->sampleRate = device.get_raw_samplingrate();
+	format->channelNum = device.get_num_channels();
+	format->dataType = device.get_datatype();
 
 	return CELL_OK;
 }
@@ -1289,7 +1294,7 @@ error_code cellMicRemoveNotifyEventQueue(u64 key)
 
 /// Reading Functions
 
-error_code cell_mic_read(s32 dev_num, vm::ptr<void> data, s32 max_bytes, /*CellMicSignalType*/u32 type)
+error_code cell_mic_read(s32 dev_num, vm::ptr<void> data, s32 max_bytes, /*CellMicSignalType*/ u32 type)
 {
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
@@ -1442,11 +1447,11 @@ error_code cellMicGetStatus(s32 dev_num, vm::ptr<CellMicStatus> status)
 		status->dsp_samprate = device.get_raw_samplingrate();
 		status->isStart = device.is_started();
 		status->isOpen = device.is_opened();
-		status->dsp_volume = 5; // TODO: 0 - 5 volume
+		status->dsp_volume = 5;   // TODO: 0 - 5 volume
 		status->local_voice = 10; // TODO: 0 - 10 confidence
 		status->remote_voice = 0; // TODO: 0 - 10 confidence
-		status->mic_energy = 60; // TODO: Db
-		status->spk_energy = 60; // TODO: Db
+		status->mic_energy = 60;  // TODO: Db
+		status->spk_energy = 60;  // TODO: Db
 	}
 
 	return CELL_OK;
@@ -1507,47 +1512,47 @@ error_code cellMicSysShareEnd()
 }
 
 DECLARE(ppu_module_manager::cellMic)("cellMic", []()
-{
-	REG_FUNC(cellMic, cellMicInit);
-	REG_FUNC(cellMic, cellMicEnd);
-	REG_FUNC(cellMic, cellMicOpen);
-	REG_FUNC(cellMic, cellMicClose);
-	REG_FUNC(cellMic, cellMicGetDeviceGUID);
-	REG_FUNC(cellMic, cellMicGetType);
-	REG_FUNC(cellMic, cellMicIsAttached);
-	REG_FUNC(cellMic, cellMicIsOpen);
-	REG_FUNC(cellMic, cellMicGetDeviceAttr);
-	REG_FUNC(cellMic, cellMicSetDeviceAttr);
-	REG_FUNC(cellMic, cellMicGetSignalAttr);
-	REG_FUNC(cellMic, cellMicSetSignalAttr);
-	REG_FUNC(cellMic, cellMicGetSignalState);
-	REG_FUNC(cellMic, cellMicStart);
-	REG_FUNC(cellMic, cellMicRead);
-	REG_FUNC(cellMic, cellMicStop);
-	REG_FUNC(cellMic, cellMicReset);
-	REG_FUNC(cellMic, cellMicSetNotifyEventQueue);
-	REG_FUNC(cellMic, cellMicSetNotifyEventQueue2);
-	REG_FUNC(cellMic, cellMicRemoveNotifyEventQueue);
-	REG_FUNC(cellMic, cellMicOpenEx);
-	REG_FUNC(cellMic, cellMicStartEx);
-	REG_FUNC(cellMic, cellMicGetFormatRaw);
-	REG_FUNC(cellMic, cellMicGetFormatAux);
-	REG_FUNC(cellMic, cellMicGetFormatDsp);
-	REG_FUNC(cellMic, cellMicOpenRaw);
-	REG_FUNC(cellMic, cellMicReadRaw);
-	REG_FUNC(cellMic, cellMicReadAux);
-	REG_FUNC(cellMic, cellMicReadDsp);
-	REG_FUNC(cellMic, cellMicGetStatus);
-	REG_FUNC(cellMic, cellMicStopEx); // this function shouldn't exist
-	REG_FUNC(cellMic, cellMicSysShareClose);
-	REG_FUNC(cellMic, cellMicGetFormat);
-	REG_FUNC(cellMic, cellMicSetMultiMicNotifyEventQueue);
-	REG_FUNC(cellMic, cellMicGetFormatEx);
-	REG_FUNC(cellMic, cellMicSysShareStop);
-	REG_FUNC(cellMic, cellMicSysShareOpen);
-	REG_FUNC(cellMic, cellMicCommand);
-	REG_FUNC(cellMic, cellMicSysShareStart);
-	REG_FUNC(cellMic, cellMicSysShareInit);
-	REG_FUNC(cellMic, cellMicSysShareEnd);
-	REG_FUNC(cellMic, cellMicGetDeviceIdentifier);
-});
+	{
+		REG_FUNC(cellMic, cellMicInit);
+		REG_FUNC(cellMic, cellMicEnd);
+		REG_FUNC(cellMic, cellMicOpen);
+		REG_FUNC(cellMic, cellMicClose);
+		REG_FUNC(cellMic, cellMicGetDeviceGUID);
+		REG_FUNC(cellMic, cellMicGetType);
+		REG_FUNC(cellMic, cellMicIsAttached);
+		REG_FUNC(cellMic, cellMicIsOpen);
+		REG_FUNC(cellMic, cellMicGetDeviceAttr);
+		REG_FUNC(cellMic, cellMicSetDeviceAttr);
+		REG_FUNC(cellMic, cellMicGetSignalAttr);
+		REG_FUNC(cellMic, cellMicSetSignalAttr);
+		REG_FUNC(cellMic, cellMicGetSignalState);
+		REG_FUNC(cellMic, cellMicStart);
+		REG_FUNC(cellMic, cellMicRead);
+		REG_FUNC(cellMic, cellMicStop);
+		REG_FUNC(cellMic, cellMicReset);
+		REG_FUNC(cellMic, cellMicSetNotifyEventQueue);
+		REG_FUNC(cellMic, cellMicSetNotifyEventQueue2);
+		REG_FUNC(cellMic, cellMicRemoveNotifyEventQueue);
+		REG_FUNC(cellMic, cellMicOpenEx);
+		REG_FUNC(cellMic, cellMicStartEx);
+		REG_FUNC(cellMic, cellMicGetFormatRaw);
+		REG_FUNC(cellMic, cellMicGetFormatAux);
+		REG_FUNC(cellMic, cellMicGetFormatDsp);
+		REG_FUNC(cellMic, cellMicOpenRaw);
+		REG_FUNC(cellMic, cellMicReadRaw);
+		REG_FUNC(cellMic, cellMicReadAux);
+		REG_FUNC(cellMic, cellMicReadDsp);
+		REG_FUNC(cellMic, cellMicGetStatus);
+		REG_FUNC(cellMic, cellMicStopEx); // this function shouldn't exist
+		REG_FUNC(cellMic, cellMicSysShareClose);
+		REG_FUNC(cellMic, cellMicGetFormat);
+		REG_FUNC(cellMic, cellMicSetMultiMicNotifyEventQueue);
+		REG_FUNC(cellMic, cellMicGetFormatEx);
+		REG_FUNC(cellMic, cellMicSysShareStop);
+		REG_FUNC(cellMic, cellMicSysShareOpen);
+		REG_FUNC(cellMic, cellMicCommand);
+		REG_FUNC(cellMic, cellMicSysShareStart);
+		REG_FUNC(cellMic, cellMicSysShareInit);
+		REG_FUNC(cellMic, cellMicSysShareEnd);
+		REG_FUNC(cellMic, cellMicGetDeviceIdentifier);
+	});

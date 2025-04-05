@@ -16,12 +16,12 @@ namespace YAML
 			}
 
 			rhs.description = node[0].Scalar();
-			u64 type64      = 0;
+			u64 type64 = 0;
 			if (!cfg::try_to_enum_value(&type64, &fmt_class_string<cheat_type>::format, node[1].Scalar()))
 				return false;
 			if (type64 >= cheat_type_max)
 				return false;
-			rhs.type       = cheat_type{::narrow<u8>(type64)};
+			rhs.type = cheat_type{::narrow<u8>(type64)};
 			rhs.red_script = node[2].Scalar();
 			return true;
 		}

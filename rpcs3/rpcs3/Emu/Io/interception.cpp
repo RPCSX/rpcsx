@@ -13,15 +13,15 @@ template <>
 void fmt_class_string<input::active_mouse_and_keyboard>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](input::active_mouse_and_keyboard value)
-	{
-		switch (value)
 		{
-		case input::active_mouse_and_keyboard::emulated: return "emulated";
-		case input::active_mouse_and_keyboard::pad: return "pad";
-		}
+			switch (value)
+			{
+			case input::active_mouse_and_keyboard::emulated: return "emulated";
+			case input::active_mouse_and_keyboard::pad: return "pad";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 namespace input
@@ -62,9 +62,7 @@ namespace input
 		if (!g_cfg.misc.show_mouse_and_keyboard_toggle_hint)
 			return;
 
-		const localized_string_id id = g_active_mouse_and_keyboard == active_mouse_and_keyboard::emulated
-			? localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED
-			: localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD;
+		const localized_string_id id = g_active_mouse_and_keyboard == active_mouse_and_keyboard::emulated ? localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED : localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD;
 		rsx::overlays::queue_message(get_localized_string(id), 3'000'000);
 	}
 
@@ -86,4 +84,4 @@ namespace input
 		input_log.notice("toggle_mouse_and_keyboard: device=%s", g_active_mouse_and_keyboard.load());
 		show_mouse_and_keyboard_overlay();
 	}
-}
+} // namespace input

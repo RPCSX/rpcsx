@@ -20,18 +20,14 @@ fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
 // File constructor
 tar_object::tar_object(const fs::file& file)
-	: m_file(std::addressof(file))
-	, m_ar(nullptr)
-	, m_ar_tar_start(umax)
+	: m_file(std::addressof(file)), m_ar(nullptr), m_ar_tar_start(umax)
 {
 	ensure(*m_file);
 }
 
 // Stream (pipe-like) constructor
 tar_object::tar_object(utils::serial& ar)
-	: m_file(nullptr)
-	, m_ar(std::addressof(ar))
-	, m_ar_tar_start(ar.pos)
+	: m_file(nullptr), m_ar(std::addressof(ar)), m_ar_tar_start(ar.pos)
 {
 }
 
@@ -130,7 +126,7 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 					*new_file_path = filename;
 				}
 
-				return { size, std::move(filename) };
+				return {size, std::move(filename)};
 			}
 
 			tar_log.error("tar_object::get_file() failed to convert header.size=%s, filesize=0x%x", size_sv, max_size);
@@ -140,7 +136,7 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 			tar_log.notice("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x, header_first16=0x%016x", offset, max_size, read_from_ptr<be_t<u128>>(reinterpret_cast<const u8*>(&header)));
 		}
 
-		return { size, {} };
+		return {size, {}};
 	};
 
 	if (auto it = m_map.find(path); it != m_map.end())
@@ -327,7 +323,6 @@ bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 				}
 
 				file.close();
-
 
 				file_data->seek_pos(m_ar_tar_start + largest_offset, true);
 

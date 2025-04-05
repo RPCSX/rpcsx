@@ -23,34 +23,35 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 
 void mm_joystick_handler::init_config(cfg_pad* cfg)
 {
-	if (!cfg) return;
+	if (!cfg)
+		return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = ::at32(axis_list, mmjoy_axis::joy_x_neg);
-	cfg->ls_down.def  = ::at32(axis_list, mmjoy_axis::joy_y_neg);
+	cfg->ls_left.def = ::at32(axis_list, mmjoy_axis::joy_x_neg);
+	cfg->ls_down.def = ::at32(axis_list, mmjoy_axis::joy_y_neg);
 	cfg->ls_right.def = ::at32(axis_list, mmjoy_axis::joy_x_pos);
-	cfg->ls_up.def    = ::at32(axis_list, mmjoy_axis::joy_y_pos);
-	cfg->rs_left.def  = ::at32(axis_list, mmjoy_axis::joy_z_neg);
-	cfg->rs_down.def  = ::at32(axis_list, mmjoy_axis::joy_r_neg);
+	cfg->ls_up.def = ::at32(axis_list, mmjoy_axis::joy_y_pos);
+	cfg->rs_left.def = ::at32(axis_list, mmjoy_axis::joy_z_neg);
+	cfg->rs_down.def = ::at32(axis_list, mmjoy_axis::joy_r_neg);
 	cfg->rs_right.def = ::at32(axis_list, mmjoy_axis::joy_z_pos);
-	cfg->rs_up.def    = ::at32(axis_list, mmjoy_axis::joy_r_pos);
-	cfg->start.def    = ::at32(button_list, JOY_BUTTON9);
-	cfg->select.def   = ::at32(button_list, JOY_BUTTON10);
-	cfg->ps.def       = ::at32(button_list, JOY_BUTTON17);
-	cfg->square.def   = ::at32(button_list, JOY_BUTTON4);
-	cfg->cross.def    = ::at32(button_list, JOY_BUTTON3);
-	cfg->circle.def   = ::at32(button_list, JOY_BUTTON2);
+	cfg->rs_up.def = ::at32(axis_list, mmjoy_axis::joy_r_pos);
+	cfg->start.def = ::at32(button_list, JOY_BUTTON9);
+	cfg->select.def = ::at32(button_list, JOY_BUTTON10);
+	cfg->ps.def = ::at32(button_list, JOY_BUTTON17);
+	cfg->square.def = ::at32(button_list, JOY_BUTTON4);
+	cfg->cross.def = ::at32(button_list, JOY_BUTTON3);
+	cfg->circle.def = ::at32(button_list, JOY_BUTTON2);
 	cfg->triangle.def = ::at32(button_list, JOY_BUTTON1);
-	cfg->left.def     = ::at32(pov_list, JOY_POVLEFT);
-	cfg->down.def     = ::at32(pov_list, JOY_POVBACKWARD);
-	cfg->right.def    = ::at32(pov_list, JOY_POVRIGHT);
-	cfg->up.def       = ::at32(pov_list, JOY_POVFORWARD);
-	cfg->r1.def       = ::at32(button_list, JOY_BUTTON8);
-	cfg->r2.def       = ::at32(button_list, JOY_BUTTON6);
-	cfg->r3.def       = ::at32(button_list, JOY_BUTTON12);
-	cfg->l1.def       = ::at32(button_list, JOY_BUTTON7);
-	cfg->l2.def       = ::at32(button_list, JOY_BUTTON5);
-	cfg->l3.def       = ::at32(button_list, JOY_BUTTON11);
+	cfg->left.def = ::at32(pov_list, JOY_POVLEFT);
+	cfg->down.def = ::at32(pov_list, JOY_POVBACKWARD);
+	cfg->right.def = ::at32(pov_list, JOY_POVRIGHT);
+	cfg->up.def = ::at32(pov_list, JOY_POVFORWARD);
+	cfg->r1.def = ::at32(button_list, JOY_BUTTON8);
+	cfg->r2.def = ::at32(button_list, JOY_BUTTON6);
+	cfg->r3.def = ::at32(button_list, JOY_BUTTON12);
+	cfg->l1.def = ::at32(button_list, JOY_BUTTON7);
+	cfg->l2.def = ::at32(button_list, JOY_BUTTON5);
+	cfg->l3.def = ::at32(button_list, JOY_BUTTON11);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
 	cfg->analog_limiter_button.def = ::at32(button_list, NO_BUTTON);
@@ -58,12 +59,12 @@ void mm_joystick_handler::init_config(cfg_pad* cfg)
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
 	cfg->rstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
-	cfg->lstickdeadzone.def    = 0; // between 0 and 255
-	cfg->rstickdeadzone.def    = 0; // between 0 and 255
-	cfg->ltriggerthreshold.def = 0; // between 0 and 255
-	cfg->rtriggerthreshold.def = 0; // between 0 and 255
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
+	cfg->lstickdeadzone.def = 0;                                        // between 0 and 255
+	cfg->rstickdeadzone.def = 0;                                        // between 0 and 255
+	cfg->ltriggerthreshold.def = 0;                                     // between 0 and 255
+	cfg->rtriggerthreshold.def = 0;                                     // between 0 and 255
+	cfg->lpadsquircling.def = 8000;
+	cfg->rpadsquircling.def = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -96,7 +97,8 @@ void mm_joystick_handler::enumerate_devices()
 	// Mark all known devices as unplugged
 	for (auto& [name, device] : m_devices)
 	{
-		if (!device) continue;
+		if (!device)
+			continue;
 		device->device_status = JOYERR_UNPLUGGED;
 	}
 
@@ -140,7 +142,8 @@ std::vector<pad_list_entry> mm_joystick_handler::list_devices()
 
 	for (const auto& [name, dev] : m_devices)
 	{
-		if (!dev) continue;
+		if (!dev)
+			continue;
 		devices.emplace_back(name, false);
 	}
 
@@ -158,9 +161,12 @@ std::set<T> mm_joystick_handler::find_keys(const std::vector<std::string>& names
 {
 	std::set<T> keys;
 
-	for (const T& k : FindKeyCodes<u64, T>(axis_list, names)) keys.insert(k);
-	for (const T& k : FindKeyCodes<u64, T>(pov_list, names)) keys.insert(k);
-	for (const T& k : FindKeyCodes<u64, T>(button_list, names)) keys.insert(k);
+	for (const T& k : FindKeyCodes<u64, T>(axis_list, names))
+		keys.insert(k);
+	for (const T& k : FindKeyCodes<u64, T>(pov_list, names))
+		keys.insert(k);
+	for (const T& k : FindKeyCodes<u64, T>(button_list, names))
+		keys.insert(k);
 
 	return keys;
 }
@@ -173,48 +179,48 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	if (!dev || !cfg)
 		return mapping;
 
-	dev->trigger_code_left  = find_keys<u64>(cfg->l2);
+	dev->trigger_code_left = find_keys<u64>(cfg->l2);
 	dev->trigger_code_right = find_keys<u64>(cfg->r2);
-	dev->axis_code_left[0]  = find_keys<u64>(cfg->ls_left);
-	dev->axis_code_left[1]  = find_keys<u64>(cfg->ls_right);
-	dev->axis_code_left[2]  = find_keys<u64>(cfg->ls_down);
-	dev->axis_code_left[3]  = find_keys<u64>(cfg->ls_up);
+	dev->axis_code_left[0] = find_keys<u64>(cfg->ls_left);
+	dev->axis_code_left[1] = find_keys<u64>(cfg->ls_right);
+	dev->axis_code_left[2] = find_keys<u64>(cfg->ls_down);
+	dev->axis_code_left[3] = find_keys<u64>(cfg->ls_up);
 	dev->axis_code_right[0] = find_keys<u64>(cfg->rs_left);
 	dev->axis_code_right[1] = find_keys<u64>(cfg->rs_right);
 	dev->axis_code_right[2] = find_keys<u64>(cfg->rs_down);
 	dev->axis_code_right[3] = find_keys<u64>(cfg->rs_up);
 
-	mapping[button::up]       = find_keys<u32>(cfg->up);
-	mapping[button::down]     = find_keys<u32>(cfg->down);
-	mapping[button::left]     = find_keys<u32>(cfg->left);
-	mapping[button::right]    = find_keys<u32>(cfg->right);
-	mapping[button::cross]    = find_keys<u32>(cfg->cross);
-	mapping[button::square]   = find_keys<u32>(cfg->square);
-	mapping[button::circle]   = find_keys<u32>(cfg->circle);
+	mapping[button::up] = find_keys<u32>(cfg->up);
+	mapping[button::down] = find_keys<u32>(cfg->down);
+	mapping[button::left] = find_keys<u32>(cfg->left);
+	mapping[button::right] = find_keys<u32>(cfg->right);
+	mapping[button::cross] = find_keys<u32>(cfg->cross);
+	mapping[button::square] = find_keys<u32>(cfg->square);
+	mapping[button::circle] = find_keys<u32>(cfg->circle);
 	mapping[button::triangle] = find_keys<u32>(cfg->triangle);
-	mapping[button::l1]       = find_keys<u32>(cfg->l1);
-	mapping[button::l2]       = narrow_set(dev->trigger_code_left);
-	mapping[button::l3]       = find_keys<u32>(cfg->l3);
-	mapping[button::r1]       = find_keys<u32>(cfg->r1);
-	mapping[button::r2]       = narrow_set(dev->trigger_code_right);
-	mapping[button::r3]       = find_keys<u32>(cfg->r3);
-	mapping[button::start]    = find_keys<u32>(cfg->start);
-	mapping[button::select]   = find_keys<u32>(cfg->select);
-	mapping[button::ps]       = find_keys<u32>(cfg->ps);
-	mapping[button::ls_left]  = narrow_set(dev->axis_code_left[0]);
+	mapping[button::l1] = find_keys<u32>(cfg->l1);
+	mapping[button::l2] = narrow_set(dev->trigger_code_left);
+	mapping[button::l3] = find_keys<u32>(cfg->l3);
+	mapping[button::r1] = find_keys<u32>(cfg->r1);
+	mapping[button::r2] = narrow_set(dev->trigger_code_right);
+	mapping[button::r3] = find_keys<u32>(cfg->r3);
+	mapping[button::start] = find_keys<u32>(cfg->start);
+	mapping[button::select] = find_keys<u32>(cfg->select);
+	mapping[button::ps] = find_keys<u32>(cfg->ps);
+	mapping[button::ls_left] = narrow_set(dev->axis_code_left[0]);
 	mapping[button::ls_right] = narrow_set(dev->axis_code_left[1]);
-	mapping[button::ls_down]  = narrow_set(dev->axis_code_left[2]);
-	mapping[button::ls_up]    = narrow_set(dev->axis_code_left[3]);
-	mapping[button::rs_left]  = narrow_set(dev->axis_code_right[0]);
+	mapping[button::ls_down] = narrow_set(dev->axis_code_left[2]);
+	mapping[button::ls_up] = narrow_set(dev->axis_code_left[3]);
+	mapping[button::rs_left] = narrow_set(dev->axis_code_right[0]);
 	mapping[button::rs_right] = narrow_set(dev->axis_code_right[1]);
-	mapping[button::rs_down]  = narrow_set(dev->axis_code_right[2]);
-	mapping[button::rs_up]    = narrow_set(dev->axis_code_right[3]);
+	mapping[button::rs_down] = narrow_set(dev->axis_code_right[2]);
+	mapping[button::rs_up] = narrow_set(dev->axis_code_right[3]);
 
-	mapping[button::skateboard_ir_nose]    = find_keys<u32>(cfg->ir_nose);
-	mapping[button::skateboard_ir_tail]    = find_keys<u32>(cfg->ir_tail);
-	mapping[button::skateboard_ir_left]    = find_keys<u32>(cfg->ir_left);
-	mapping[button::skateboard_ir_right]   = find_keys<u32>(cfg->ir_right);
-	mapping[button::skateboard_tilt_left]  = find_keys<u32>(cfg->tilt_left);
+	mapping[button::skateboard_ir_nose] = find_keys<u32>(cfg->ir_nose);
+	mapping[button::skateboard_ir_tail] = find_keys<u32>(cfg->ir_tail);
+	mapping[button::skateboard_ir_left] = find_keys<u32>(cfg->ir_left);
+	mapping[button::skateboard_ir_right] = find_keys<u32>(cfg->ir_right);
+	mapping[button::skateboard_tilt_left] = find_keys<u32>(cfg->tilt_left);
 	mapping[button::skateboard_tilt_right] = find_keys<u32>(cfg->tilt_right);
 
 	if (b_has_pressure_intensity_button)
@@ -325,7 +331,7 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 
 			if (diff > button_press_threshold && value > pressed_button.value)
 			{
-				pressed_button = { .value = value, .name = name };
+				pressed_button = {.value = value, .name = name};
 			}
 		};
 
@@ -417,10 +423,10 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 		{
 			if (js_info.dwPOV == JOY_POVCENTERED)
 			{
-				button_values.emplace(JOY_POVFORWARD,  0);
-				button_values.emplace(JOY_POVRIGHT,    0);
+				button_values.emplace(JOY_POVFORWARD, 0);
+				button_values.emplace(JOY_POVRIGHT, 0);
 				button_values.emplace(JOY_POVBACKWARD, 0);
-				button_values.emplace(JOY_POVLEFT,     0);
+				button_values.emplace(JOY_POVLEFT, 0);
 			}
 			else
 			{
@@ -593,13 +599,19 @@ bool mm_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>&
 bool mm_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode)
 {
 	const MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	return dev && std::any_of(dev->axis_code_left.cbegin(), dev->axis_code_left.cend(), [&keyCode](const std::set<u64>& s){ return s.contains(keyCode); });
+	return dev && std::any_of(dev->axis_code_left.cbegin(), dev->axis_code_left.cend(), [&keyCode](const std::set<u64>& s)
+					  {
+						  return s.contains(keyCode);
+					  });
 }
 
 bool mm_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode)
 {
 	const MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	return dev && std::any_of(dev->axis_code_right.cbegin(), dev->axis_code_right.cend(), [&keyCode](const std::set<u64>& s){ return s.contains(keyCode); });
+	return dev && std::any_of(dev->axis_code_right.cbegin(), dev->axis_code_right.cend(), [&keyCode](const std::set<u64>& s)
+					  {
+						  return s.contains(keyCode);
+					  });
 }
 
 PadHandlerBase::connection mm_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)
@@ -610,7 +622,7 @@ PadHandlerBase::connection mm_joystick_handler::update_connection(const std::sha
 
 	// Quickly check if the device is connected and fetch the button values
 	const auto old_status = dev->device_status;
-	dev->device_status    = joyGetPosEx(dev->device_id, &dev->device_info);
+	dev->device_status = joyGetPosEx(dev->device_id, &dev->device_info);
 
 	// The device is connected and was connected
 	if (dev->device_status == JOYERR_NOERROR && old_status == JOYERR_NOERROR)

@@ -3,7 +3,7 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <windows.h>
 #define DBGHELP_TRANSLATE_TCHAR
 #include <DbgHelp.h>
 #include <codecvt>
@@ -57,15 +57,15 @@ namespace utils
 		while (max_depth--)
 		{
 			if (!StackWalk64(
-				IMAGE_FILE_MACHINE_AMD64,
-				hProcess,
-				hThread,
-				&stack,
-				&context,
-				NULL,
-				SymFunctionTableAccess64,
-				SymGetModuleBase64,
-				NULL))
+					IMAGE_FILE_MACHINE_AMD64,
+					hProcess,
+					hThread,
+					&stack,
+					&context,
+					NULL,
+					SymFunctionTableAccess64,
+					SymGetModuleBase64,
+					NULL))
 			{
 				break;
 			}
@@ -150,4 +150,4 @@ namespace utils
 		return result;
 	}
 #endif
-}
+} // namespace utils

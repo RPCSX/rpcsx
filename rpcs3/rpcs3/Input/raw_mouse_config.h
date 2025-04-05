@@ -9,15 +9,14 @@
 #include <windows.h>
 #endif
 
-static const std::map<std::string_view, int> raw_mouse_button_map
-{
-	{ "", 0 },
+static const std::map<std::string_view, int> raw_mouse_button_map{
+	{"", 0},
 #ifdef _WIN32
-	{ "Button 1", RI_MOUSE_BUTTON_1_UP },
-	{ "Button 2", RI_MOUSE_BUTTON_2_UP },
-	{ "Button 3", RI_MOUSE_BUTTON_3_UP },
-	{ "Button 4", RI_MOUSE_BUTTON_4_UP },
-	{ "Button 5", RI_MOUSE_BUTTON_5_UP },
+	{"Button 1", RI_MOUSE_BUTTON_1_UP},
+	{"Button 2", RI_MOUSE_BUTTON_2_UP},
+	{"Button 3", RI_MOUSE_BUTTON_3_UP},
+	{"Button 4", RI_MOUSE_BUTTON_4_UP},
+	{"Button 5", RI_MOUSE_BUTTON_5_UP},
 #endif
 };
 
@@ -28,16 +27,16 @@ public:
 
 	cfg::string device{this, "Device", ""};
 
-	cfg::_float<10, 1000> mouse_acceleration{ this, "Mouse Acceleration", 100.0f, true };
+	cfg::_float<10, 1000> mouse_acceleration{this, "Mouse Acceleration", 100.0f, true};
 
-	cfg::string mouse_button_1{ this, "Button 1", "Button 1", true };
-	cfg::string mouse_button_2{ this, "Button 2", "Button 2", true };
-	cfg::string mouse_button_3{ this, "Button 3", "Button 3", true };
-	cfg::string mouse_button_4{ this, "Button 4", "Button 4", true };
-	cfg::string mouse_button_5{ this, "Button 5", "Button 5", true };
-	cfg::string mouse_button_6{ this, "Button 6", "", true };
-	cfg::string mouse_button_7{ this, "Button 7", "", true };
-	cfg::string mouse_button_8{ this, "Button 8", "", true };
+	cfg::string mouse_button_1{this, "Button 1", "Button 1", true};
+	cfg::string mouse_button_2{this, "Button 2", "Button 2", true};
+	cfg::string mouse_button_3{this, "Button 3", "Button 3", true};
+	cfg::string mouse_button_4{this, "Button 4", "Button 4", true};
+	cfg::string mouse_button_5{this, "Button 5", "Button 5", true};
+	cfg::string mouse_button_6{this, "Button 6", "", true};
+	cfg::string mouse_button_7{this, "Button 7", "", true};
+	cfg::string mouse_button_8{this, "Button 8", "", true};
 
 	cfg::string& get_button_by_index(int index);
 	cfg::string& get_button(int code);

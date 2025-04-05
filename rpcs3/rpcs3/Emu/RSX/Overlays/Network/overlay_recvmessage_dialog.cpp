@@ -106,7 +106,8 @@ namespace rsx
 
 		void recvmessage_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
 		{
-			if (fade_animation.active) return;
+			if (fade_animation.active)
+				return;
 
 			bool close_dialog = false;
 
@@ -210,7 +211,7 @@ namespace rsx
 				break; // Title already set in constructor
 			}
 
-			const bool preserve         = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
+			const bool preserve = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
 			const bool include_bootable = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE;
 
 			m_rpcn = rpcn::rpcn_client::get_instance(true);
@@ -257,8 +258,11 @@ namespace rsx
 			// Block until the user exits the dialog
 			overlayman.attach_thread_input(
 				uid, "Recvmessage dialog", nullptr,
-				[notify](s32) { *notify = true; notify->notify_one(); }
-			);
+				[notify](s32)
+				{
+					*notify = true;
+					notify->notify_one();
+				});
 
 			while (!Emu.IsStopped() && !*notify && !nps.abort_gui_flag)
 			{
@@ -290,8 +294,8 @@ namespace rsx
 
 					chosen_msg_id = ::at32(m_entry_ids, selected_index);
 				}
-				recv_result   = result_from_action;
-				result        = CELL_OK;
+				recv_result = result_from_action;
+				result = CELL_OK;
 
 				if (!preserve)
 				{
@@ -336,4 +340,4 @@ namespace rsx
 			}
 		}
 	} // namespace overlays
-} // namespace RSX
+} // namespace rsx

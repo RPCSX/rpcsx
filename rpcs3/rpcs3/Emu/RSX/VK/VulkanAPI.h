@@ -29,55 +29,59 @@ constexpr VkDriverId VK_DRIVER_ID_MESA_HONEYKRISP = static_cast<VkDriverId>(26);
 #endif
 
 #ifdef ANDROID
-namespace vk {
-template <std::size_t N>
-struct string_literal
+namespace vk
 {
-    char data[N];
-
-    consteval string_literal(const char (&str)[N])
-    {
-        for (std::size_t i = 0; i < N; ++i)
-        {
-            data[i] = str[i];
-        }
-    }
-};
-
-class symbol_cache
-{
-	std::vector<std::pair<std::string, void **>> registered_symbols;
-
-public:
-	void initialize();
-	void clear();
-
-	void register_symbol(const char* name, void **ptr);
-
-	static symbol_cache& cache_instance()
+	template <std::size_t N>
+	struct string_literal
 	{
-		static symbol_cache result;
-		return result;
-	}
-};
+		char data[N];
 
-template <auto V>
-class symbol_cache_id
-{
-    void *ptr = nullptr;
+		consteval string_literal(const char (&str)[N])
+		{
+			for (std::size_t i = 0; i < N; ++i)
+			{
+				data[i] = str[i];
+			}
+		}
+	};
 
-public:
-	symbol_cache_id()
+	class symbol_cache
 	{
-        symbol_cache::cache_instance().register_symbol(V.data, &ptr);
-	}
+		std::vector<std::pair<std::string, void**>> registered_symbols;
 
-	void* get() { return ptr; }
-};
+	public:
+		void initialize();
+		void clear();
 
-template <auto V>
-symbol_cache_id<V> cached_symbols;
-}
+		void register_symbol(const char* name, void** ptr);
+
+		static symbol_cache& cache_instance()
+		{
+			static symbol_cache result;
+			return result;
+		}
+	};
+
+	template <auto V>
+	class symbol_cache_id
+	{
+		void* ptr = nullptr;
+
+	public:
+		symbol_cache_id()
+		{
+			symbol_cache::cache_instance().register_symbol(V.data, &ptr);
+		}
+
+		void* get()
+		{
+			return ptr;
+		}
+	};
+
+	template <auto V>
+	symbol_cache_id<V> cached_symbols;
+} // namespace vk
 
 #define VK_GET_SYMBOL(x) reinterpret_cast<PFN_##x>(::vk::cached_symbols<::vk::string_literal{#x}>.get())
 #else

@@ -9,31 +9,31 @@ LOG_CHANNEL(cellPhotoDecode);
 // Return Codes
 enum CellPhotoDecodeError : u32
 {
-	CELL_PHOTO_DECODE_ERROR_BUSY         = 0x8002c901,
-	CELL_PHOTO_DECODE_ERROR_INTERNAL     = 0x8002c902,
-	CELL_PHOTO_DECODE_ERROR_PARAM        = 0x8002c903,
+	CELL_PHOTO_DECODE_ERROR_BUSY = 0x8002c901,
+	CELL_PHOTO_DECODE_ERROR_INTERNAL = 0x8002c902,
+	CELL_PHOTO_DECODE_ERROR_PARAM = 0x8002c903,
 	CELL_PHOTO_DECODE_ERROR_ACCESS_ERROR = 0x8002c904,
-	CELL_PHOTO_DECODE_ERROR_INITIALIZE   = 0x8002c905,
-	CELL_PHOTO_DECODE_ERROR_DECODE       = 0x8002c906,
+	CELL_PHOTO_DECODE_ERROR_INITIALIZE = 0x8002c905,
+	CELL_PHOTO_DECODE_ERROR_DECODE = 0x8002c906,
 };
 
-template<>
+template <>
 void fmt_class_string<CellPhotoDecodeError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_PHOTO_DECODE_ERROR_BUSY);
-			STR_CASE(CELL_PHOTO_DECODE_ERROR_INTERNAL);
-			STR_CASE(CELL_PHOTO_DECODE_ERROR_PARAM);
-			STR_CASE(CELL_PHOTO_DECODE_ERROR_ACCESS_ERROR);
-			STR_CASE(CELL_PHOTO_DECODE_ERROR_INITIALIZE);
-			STR_CASE(CELL_PHOTO_DECODE_ERROR_DECODE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_PHOTO_DECODE_ERROR_BUSY);
+				STR_CASE(CELL_PHOTO_DECODE_ERROR_INTERNAL);
+				STR_CASE(CELL_PHOTO_DECODE_ERROR_PARAM);
+				STR_CASE(CELL_PHOTO_DECODE_ERROR_ACCESS_ERROR);
+				STR_CASE(CELL_PHOTO_DECODE_ERROR_INITIALIZE);
+				STR_CASE(CELL_PHOTO_DECODE_ERROR_DECODE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 enum
@@ -80,10 +80,10 @@ error_code cellPhotoDecodeInitialize(u32 version, u32 container1, u32 container2
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -103,10 +103,10 @@ error_code cellPhotoDecodeInitialize2(u32 version, u32 container2, vm::ptr<CellP
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -121,10 +121,10 @@ error_code cellPhotoDecodeFinalize(vm::ptr<CellPhotoDecodeFinishCallback> funcFi
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
-	{
-		funcFinish(ppu, CELL_OK, userdata);
-		return CELL_OK;
-	});
+		{
+			funcFinish(ppu, CELL_OK, userdata);
+			return CELL_OK;
+		});
 
 	return CELL_OK;
 }
@@ -173,9 +173,9 @@ error_code cellPhotoDecodeFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 }
 
 DECLARE(ppu_module_manager::cellPhotoDecode)("cellPhotoDecodeUtil", []()
-{
-	REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeInitialize);
-	REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeInitialize2);
-	REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeFinalize);
-	REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeFromFile);
-});
+	{
+		REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeInitialize);
+		REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeInitialize2);
+		REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeFinalize);
+		REG_FUNC(cellPhotoDecodeUtil, cellPhotoDecodeFromFile);
+	});

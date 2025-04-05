@@ -28,11 +28,11 @@ namespace gl
 
 	gl::command_context get_command_context()
 	{
-		return { *s_current_state };
+		return {*s_current_state};
 	}
 
 	attrib_t vao::operator[](u32 index) const noexcept
 	{
 		return attrib_t(index);
 	}
-}
+} // namespace gl

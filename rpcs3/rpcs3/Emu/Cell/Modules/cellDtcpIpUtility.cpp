@@ -82,18 +82,18 @@ error_code cellDtcpIpSuspendActivationForDebug()
 }
 
 DECLARE(ppu_module_manager::cellDtcpIpUtility)("cellDtcpIpUtility", []()
-{
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpRead);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpFinalize);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpActivate);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpOpen);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpCheckActivation);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpInitialize);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpGetDecryptedData);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpStopSequence);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpSeek);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpStartSequence);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpSetEncryptedData);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpClose);
-	REG_FUNC(cellDtcpIpUtility, cellDtcpIpSuspendActivationForDebug);
-});
+	{
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpRead);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpFinalize);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpActivate);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpOpen);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpCheckActivation);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpInitialize);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpGetDecryptedData);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpStopSequence);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpSeek);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpStartSequence);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpSetEncryptedData);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpClose);
+		REG_FUNC(cellDtcpIpUtility, cellDtcpIpSuspendActivationForDebug);
+	});

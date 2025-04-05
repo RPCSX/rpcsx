@@ -28,7 +28,7 @@ public:
   Context() = default;
   Context(const Context &) = delete;
   Context(Context &&) = default;
-  Context& operator=(Context &&) = default;
+  Context &operator=(Context &&) = default;
 
   template <typename T, typename... ArgsT>
     requires requires {

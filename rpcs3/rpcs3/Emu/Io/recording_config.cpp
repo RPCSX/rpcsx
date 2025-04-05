@@ -6,8 +6,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 cfg_recording g_cfg_recording;
 
 cfg_recording::cfg_recording()
-	: cfg::node()
-	, path(fs::get_config_dir(true) + "recording.yml")
+	: cfg::node(), path(fs::get_config_dir(true) + "recording.yml")
 {
 }
 

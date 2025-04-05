@@ -76,7 +76,5 @@ namespace countries
 			country_code{"United Arab Emirates", "ae"},
 			country_code{"United Kingdom", "gb"},
 			country_code{"Uruguay", "uy"},
-			country_code{"Vietnam", "vn"}
-		};
+			country_code{"Vietnam", "vn"}};
 } // namespace countries
-

@@ -55,7 +55,13 @@ namespace vk
 		void destroy();
 
 		// Inline getters
-		inline bool is_recording() const { return m_current_cb != nullptr; }
-		inline bool is_host_mode() const { return m_use_host_scheduler; }
+		inline bool is_recording() const
+		{
+			return m_current_cb != nullptr;
+		}
+		inline bool is_host_mode() const
+		{
+			return m_use_host_scheduler;
+		}
 	};
-}
+} // namespace vk

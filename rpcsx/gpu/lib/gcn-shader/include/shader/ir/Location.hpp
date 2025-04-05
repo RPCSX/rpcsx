@@ -197,4 +197,4 @@ struct UnknownLocation : LocationWrapper<UnknownLocationImpl> {
   using LocationWrapper::LocationWrapper;
   using LocationWrapper::operator=;
 };
-} // namespace ir
+} // namespace shader::ir

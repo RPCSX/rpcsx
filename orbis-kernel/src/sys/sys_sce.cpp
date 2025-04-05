@@ -1165,8 +1165,7 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
   result.ehFrame = module->ehFrame;
   result.ehFrameHdrSize = module->ehFrameHdrSize;
   result.ehFrameSize = module->ehFrameSize;
-  std::memcpy(result.segments, module->segments,
-              sizeof(ModuleSegment) * 2);
+  std::memcpy(result.segments, module->segments, sizeof(ModuleSegment) * 2);
   result.segmentCount = 2;
   result.refCount = 1;
   ORBIS_LOG_WARNING(__FUNCTION__, result.id, result.name, result.tlsIndex,

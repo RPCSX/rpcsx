@@ -123,5 +123,5 @@ namespace gui
 
 			uuid_log.notice("Installation ID: %s", uuid);
 		}
-	}
-}
+	} // namespace utils
+} // namespace gui

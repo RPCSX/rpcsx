@@ -200,18 +200,16 @@ namespace gl
 	ui_overlay_renderer::ui_overlay_renderer()
 	{
 		vs_src =
-		#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
-		;
+#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
+			;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
-		;
+#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
+			;
 
 		vs_src = fmt::replace_all(vs_src,
-		{
-			{ "#version 450", "#version 420" },
-			{ "%preprocessor", "// %preprocessor" }
-		});
+			{{"#version 450", "#version 420"},
+				{"%preprocessor", "// %preprocessor"}});
 		fs_src = fmt::replace_all(fs_src, "%preprocessor", "// %preprocessor");
 
 		// Smooth filtering required for inputs
@@ -223,7 +221,7 @@ namespace gl
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		const GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
+		const GLenum remap[] = {GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN};
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
 
 		auto result = view.get();
@@ -308,7 +306,7 @@ namespace gl
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D_ARRAY, font_size.width, font_size.height, font_size.depth, 1, 1, GL_R8, RSX_FORMAT_CLASS_COLOR);
 		tex->copy_from(glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
 
-		GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
+		GLenum remap[] = {GL_RED, GL_RED, GL_RED, GL_RED};
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
 
 		auto result = view.get();
@@ -345,21 +343,21 @@ namespace gl
 
 		switch (type)
 		{
-			case rsx::overlays::primitive_type::quad_list:
-			case rsx::overlays::primitive_type::triangle_strip:
-				primitives = GL_TRIANGLE_STRIP;
-				break;
-			case rsx::overlays::primitive_type::line_list:
-				primitives = GL_LINES;
-				break;
-			case rsx::overlays::primitive_type::line_strip:
-				primitives = GL_LINE_STRIP;
-				break;
-			case rsx::overlays::primitive_type::triangle_fan:
-				primitives = GL_TRIANGLE_FAN;
-				break;
-			default:
-				fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
+		case rsx::overlays::primitive_type::quad_list:
+		case rsx::overlays::primitive_type::triangle_strip:
+			primitives = GL_TRIANGLE_STRIP;
+			break;
+		case rsx::overlays::primitive_type::line_list:
+			primitives = GL_LINES;
+			break;
+		case rsx::overlays::primitive_type::line_strip:
+			primitives = GL_LINE_STRIP;
+			break;
+		case rsx::overlays::primitive_type::triangle_fan:
+			primitives = GL_TRIANGLE_FAN;
+			break;
+		default:
+			fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 		}
 	}
 
@@ -447,15 +445,15 @@ namespace gl
 
 			rsx::overlays::vertex_options vert_opts;
 			program_handle.uniforms["vertex_config"] = vert_opts
-				.disable_vertex_snap(cmd.config.disable_vertex_snap)
-				.get();
+			                                               .disable_vertex_snap(cmd.config.disable_vertex_snap)
+			                                               .get();
 
 			rsx::overlays::fragment_options draw_opts;
 			program_handle.uniforms["fragment_config"] = draw_opts
-				.texture_mode(texture_mode)
-				.clip_fragments(cmd.config.clip_region)
-				.pulse_glow(cmd.config.pulse_glow)
-				.get();
+			                                                 .texture_mode(texture_mode)
+			                                                 .clip_fragments(cmd.config.clip_region)
+			                                                 .pulse_glow(cmd.config.pulse_glow)
+			                                                 .get();
 
 			program_handle.uniforms["timestamp"] = cmd.config.get_sinus_value();
 			program_handle.uniforms["albedo"] = cmd.config.color;
@@ -470,18 +468,18 @@ namespace gl
 	video_out_calibration_pass::video_out_calibration_pass()
 	{
 		vs_src =
-		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
-		;
+#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+			;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
-		;
+#include "../Program/GLSLSnippets/VideoOutCalibrationPass.glsl"
+			;
 
 		std::pair<std::string_view, std::string> repl_list[] =
-		{
-			{ "%sampler_binding", fmt::format("(%d - x)", GL_TEMP_IMAGE_SLOT(0)) },
-			{ "%set_decorator, ", "" },
-		};
+			{
+				{"%sampler_binding", fmt::format("(%d - x)", GL_TEMP_IMAGE_SLOT(0))},
+				{"%set_decorator, ", ""},
+			};
 		fs_src = fmt::replace_all(fs_src, repl_list);
 
 		m_input_filter = gl::filter::linear;
@@ -499,7 +497,7 @@ namespace gl
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
 		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
-		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
+		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE ? 1 : 2);
 
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
 		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, source[0]);
@@ -513,25 +511,24 @@ namespace gl
 	rp_ssbo_to_generic_texture::rp_ssbo_to_generic_texture()
 	{
 		vs_src =
-		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
-		;
+#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+			;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
-		;
+#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
+			;
 
 		const auto& caps = gl::get_driver_caps();
 		const bool stencil_export_supported = caps.ARB_shader_stencil_export_supported;
 		const bool legacy_format_support = caps.subvendor_ATI;
 
 		std::pair<std::string_view, std::string> repl_list[] =
-		{
-			{ "%set, ", "" },
-			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
-			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
-			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
-		};
+			{
+				{"%set, ", ""},
+				{"%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0))},
+				{"%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1))},
+				{"%stencil_export_supported", stencil_export_supported ? "1" : "0"},
+				{"%legacy_format_support", legacy_format_support ? "1" : "0"}};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
 
@@ -567,4 +564,4 @@ namespace gl
 		gl::nil_texture_view view(dst);
 		run(cmd, src, &view, src_offset, dst_region, layout);
 	}
-}
+} // namespace gl

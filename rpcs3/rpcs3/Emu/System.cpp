@@ -1023,7 +1023,8 @@ game_boot_result Emulator::BootGame(std::string path, const std::string& title_i
 			path = mount_path;
 			direct = false;
 
-			for (auto &item : fs::dir(mount_path)) {
+			for (auto& item : fs::dir(mount_path))
+			{
 				sys_log.notice("%s", item.name);
 			}
 		}
@@ -2069,12 +2070,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			const std::string lock_file_path = fmt::format("%s%s%s_v%s", hdd0_game, u8"＄locks/", m_title_id, psf::get_string(disc_psf_obj, "APP_VER"));
+			std::fprintf(stderr, "PKG Lock file %s\n", lock_file_path.c_str());
 
 			if (!ins_dir.empty() || !pkg_dir.empty() || !extra_dir.empty())
 			{
+				std::fprintf(stderr, "Some lock shit already exists\n");
 				// For backwards compatibility
 				if (!lock_file.open(hdd0_game + ".locks/" + m_title_id))
 				{
+					std::fprintf(stderr, "Going to create lock file\n");
 					// Check if already installed
 					lock_file.open(lock_file_path);
 				}
@@ -2084,13 +2088,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			if (!lock_file && !ins_dir.empty())
 			{
+				std::fprintf(stderr, "Found INSDIR: %s\n", ins_dir.c_str());
 				sys_log.notice("Found INSDIR: %s", ins_dir);
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
 					const std::string pkg_file = ins_dir + entry.name;
 
-					if (!entry.is_directory && entry.name.ends_with(".PKG"))
+					if (!entry.is_directory && getFileType(fs::file(pkg_file)) == FileType::Pkg)
 					{
 						pkgs.push_back(pkg_file);
 					}
@@ -2099,6 +2104,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			if (!lock_file && !pkg_dir.empty())
 			{
+				std::fprintf(stderr, "Found PKGDIR: %s\n", pkg_dir.c_str());
 				sys_log.notice("Found PKGDIR: %s", pkg_dir);
 
 				for (auto&& entry : fs::dir{pkg_dir})
@@ -2107,7 +2113,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					{
 						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
-						if (fs::is_file(pkg_file))
+						if (fs::is_file(pkg_file) && getFileType(fs::file(pkg_file)) == FileType::Pkg)
 						{
 							pkgs.push_back(pkg_file);
 						}
@@ -2117,6 +2123,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			if (!lock_file && !extra_dir.empty())
 			{
+				std::fprintf(stderr, "Found PS3_EXTRA: %s\n", extra_dir.c_str());
 				sys_log.notice("Found PS3_EXTRA: %s", extra_dir);
 
 				for (auto&& entry : fs::dir{extra_dir})
@@ -2125,7 +2132,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					{
 						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
-						if (fs::is_file(pkg_file))
+						if (fs::is_file(pkg_file) && getFileType(fs::file(pkg_file)) == FileType::Pkg)
 						{
 							pkgs.push_back(pkg_file);
 						}
@@ -2135,6 +2142,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			if (!pkgs.empty())
 			{
+				std::fprintf(stderr, "Going to install packages\n");
 				bool install_success = true;
 				BlockingCallFromMainThread([this, &pkgs, &install_success]()
 					{
@@ -2145,16 +2153,20 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					});
 				if (!install_success)
 				{
+					std::fprintf(stderr, "Installation failed\n");
 					sys_log.error("Failed to install packages");
 					return game_boot_result::install_failed;
 				}
+				std::fprintf(stderr, "Installation successful\n");
 			}
 
 			if (!lock_file)
 			{
+				std::fprintf(stderr, "Going to create lock file\n");
 				// Create lock file to prevent double installation
 				// Do it after installation to prevent false positives when RPCS3 closed in the middle of the operation
 				lock_file.open(lock_file_path, fs::read + fs::create + fs::excl);
+				std::fprintf(stderr, "Lock file was created\n");
 			}
 		}
 

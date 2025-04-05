@@ -146,4 +146,4 @@ namespace disc
 
 		return type;
 	}
-}
+} // namespace disc

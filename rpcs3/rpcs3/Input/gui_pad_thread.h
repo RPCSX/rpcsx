@@ -74,23 +74,22 @@ protected:
 	static constexpr u64 auto_repeat_ms_interval_default = 200;
 	pad_button m_last_auto_repeat_button = pad_button::pad_button_max_enum;
 	std::map<pad_button, u64> m_auto_repeat_buttons = {
-		{ pad_button::dpad_up, auto_repeat_ms_interval_default },
-		{ pad_button::dpad_down, auto_repeat_ms_interval_default },
-		{ pad_button::dpad_left, auto_repeat_ms_interval_default },
-		{ pad_button::dpad_right, auto_repeat_ms_interval_default },
-		{ pad_button::rs_up, 1 },   // used for wheel scrolling by default
-		{ pad_button::rs_down, 1 }, // used for wheel scrolling by default
-		{ pad_button::rs_left, 1 }, // used for wheel scrolling by default
-		{ pad_button::rs_right, 1 } // used for wheel scrolling by default
+		{pad_button::dpad_up, auto_repeat_ms_interval_default},
+		{pad_button::dpad_down, auto_repeat_ms_interval_default},
+		{pad_button::dpad_left, auto_repeat_ms_interval_default},
+		{pad_button::dpad_right, auto_repeat_ms_interval_default},
+		{pad_button::rs_up, 1},   // used for wheel scrolling by default
+		{pad_button::rs_down, 1}, // used for wheel scrolling by default
+		{pad_button::rs_left, 1}, // used for wheel scrolling by default
+		{pad_button::rs_right, 1} // used for wheel scrolling by default
 	};
 
 	// Mouse movement should just work without delays
 	std::map<pad_button, u64> m_mouse_move_buttons = {
-		{ pad_button::ls_up, 1 },
-		{ pad_button::ls_down, 1 },
-		{ pad_button::ls_left, 1 },
-		{ pad_button::ls_right, 1 }
-	};
+		{pad_button::ls_up, 1},
+		{pad_button::ls_down, 1},
+		{pad_button::ls_left, 1},
+		{pad_button::ls_right, 1}};
 	pad_button m_mouse_boost_button = pad_button::L2;
 	bool m_boost_mouse = false;
 	float m_mouse_delta_x = 0.0f;

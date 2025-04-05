@@ -10,8 +10,8 @@ namespace reports
 	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DS4_FEATURE_REPORT_USB_CALIBRATION_SIZE = 37;
 	constexpr u32 DS4_FEATURE_REPORT_BLUETOOTH_CALIBRATION_SIZE = 41;
-	//constexpr u32 DS4_FEATURE_REPORT_PAIRING_INFO_SIZE = 16;
-	//constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	// constexpr u32 DS4_FEATURE_REPORT_PAIRING_INFO_SIZE = 16;
+	// constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
 	constexpr u32 DS4_FEATURE_REPORT_FIRMWARE_INFO_SIZE = 49;
 	constexpr u32 DS4_INPUT_REPORT_USB_SIZE = 64;
 	constexpr u32 DS4_INPUT_REPORT_BLUETOOTH_SIZE = 78;
@@ -112,7 +112,7 @@ namespace reports
 		u8 crc32[4];
 	};
 	static_assert(sizeof(ds4_output_report_bt) == DS4_OUTPUT_REPORT_BLUETOOTH_SIZE);
-}
+} // namespace reports
 
 class DS4Device : public HidDevice
 {
@@ -141,10 +141,10 @@ class ds4_pad_handler final : public hid_pad_handler<DS4Device>
 		Up,
 		Down,
 		R1,
-		//R2But,
+		// R2But,
 		R3,
 		L1,
-		//L2But,
+		// L2But,
 		L3,
 		Share,
 		Options,

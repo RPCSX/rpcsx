@@ -15,17 +15,17 @@ shortcut_dialog::shortcut_dialog(const std::shared_ptr<gui_settings> gui_setting
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &shortcut_dialog::reject);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
-	{
-		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
-			save();
-			accept();
-		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
-		{
-			save();
-		}
-	});
+			if (button == ui->buttonBox->button(QDialogButtonBox::Save))
+			{
+				save();
+				accept();
+			}
+			else if (button == ui->buttonBox->button(QDialogButtonBox::Apply))
+			{
+				save();
+			}
+		});
 
 	shortcut_settings sc_settings{};
 
@@ -71,10 +71,10 @@ shortcut_dialog::shortcut_dialog(const std::shared_ptr<gui_settings> gui_setting
 	}
 
 	const int min_width = std::max(
-	{
-		ui->main_window_group_box->sizeHint().width(),
-		ui->game_window_group_box->sizeHint().width(),
-	});
+		{
+			ui->main_window_group_box->sizeHint().width(),
+			ui->game_window_group_box->sizeHint().width(),
+		});
 
 	ui->main_window_group_box->setMinimumWidth(min_width);
 	ui->game_window_group_box->setMinimumWidth(min_width);

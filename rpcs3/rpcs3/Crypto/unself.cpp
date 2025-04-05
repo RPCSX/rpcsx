@@ -188,14 +188,13 @@ void WriteShdr(const fs::file& f, Elf32_Shdr& shdr)
 	Write32(f, shdr.sh_entsize);
 }
 
-
 void program_identification_header::Load(const fs::file& f)
 {
 	program_authority_id = Read64(f);
-	program_vendor_id    = Read32(f);
-	program_type         = Read32(f);
-	program_sceversion   = Read64(f);
-	padding              = Read64(f);
+	program_vendor_id = Read32(f);
+	program_type = Read32(f);
+	program_sceversion = Read64(f);
+	padding = Read64(f);
 }
 
 void program_identification_header::Show() const
@@ -208,11 +207,11 @@ void program_identification_header::Show() const
 
 void segment_ext_header::Load(const fs::file& f)
 {
-	offset      = Read64(f);
-	size        = Read64(f);
+	offset = Read64(f);
+	size = Read64(f);
 	compression = Read32(f);
-	unknown     = Read32(f);
-	encryption  = Read64(f);
+	unknown = Read32(f);
+	encryption = Read64(f);
 }
 
 void segment_ext_header::Show() const
@@ -227,9 +226,9 @@ void segment_ext_header::Show() const
 void version_header::Load(const fs::file& f)
 {
 	subheader_type = Read32(f);
-	present        = Read32(f);
-	size           = Read32(f);
-	unknown4       = Read32(f);
+	present = Read32(f);
+	size = Read32(f);
+	unknown4 = Read32(f);
 }
 
 void version_header::Show() const
@@ -364,12 +363,12 @@ void MetadataHeader::Load(u8* in)
 {
 	// Endian swap.
 	signature_input_length = read_from_ptr<be_t<u64>>(in);
-	unknown1               = read_from_ptr<be_t<u32>>(in, 8);
-	section_count          = read_from_ptr<be_t<u32>>(in, 12);
-	key_count              = read_from_ptr<be_t<u32>>(in, 16);
-	opt_header_size        = read_from_ptr<be_t<u32>>(in, 20);
-	unknown2               = read_from_ptr<be_t<u32>>(in, 24);
-	unknown3               = read_from_ptr<be_t<u32>>(in, 28);
+	unknown1 = read_from_ptr<be_t<u32>>(in, 8);
+	section_count = read_from_ptr<be_t<u32>>(in, 12);
+	key_count = read_from_ptr<be_t<u32>>(in, 16);
+	opt_header_size = read_from_ptr<be_t<u32>>(in, 20);
+	unknown2 = read_from_ptr<be_t<u32>>(in, 24);
+	unknown3 = read_from_ptr<be_t<u32>>(in, 28);
 }
 
 void MetadataHeader::Show() const
@@ -387,15 +386,15 @@ void MetadataSectionHeader::Load(u8* in)
 {
 	// Endian swap.
 	data_offset = read_from_ptr<be_t<u64>>(in);
-	data_size   = read_from_ptr<be_t<u64>>(in, 8);
-	type        = read_from_ptr<be_t<u32>>(in, 16);
+	data_size = read_from_ptr<be_t<u64>>(in, 8);
+	type = read_from_ptr<be_t<u32>>(in, 16);
 	program_idx = read_from_ptr<be_t<u32>>(in, 20);
-	hashed      = read_from_ptr<be_t<u32>>(in, 24);
-	sha1_idx    = read_from_ptr<be_t<u32>>(in, 28);
-	encrypted   = read_from_ptr<be_t<u32>>(in, 32);
-	key_idx     = read_from_ptr<be_t<u32>>(in, 36);
-	iv_idx      = read_from_ptr<be_t<u32>>(in, 40);
-	compressed  = read_from_ptr<be_t<u32>>(in, 44);
+	hashed = read_from_ptr<be_t<u32>>(in, 24);
+	sha1_idx = read_from_ptr<be_t<u32>>(in, 28);
+	encrypted = read_from_ptr<be_t<u32>>(in, 32);
+	key_idx = read_from_ptr<be_t<u32>>(in, 36);
+	iv_idx = read_from_ptr<be_t<u32>>(in, 40);
+	compressed = read_from_ptr<be_t<u32>>(in, 44);
 }
 
 void MetadataSectionHeader::Show() const
@@ -421,13 +420,13 @@ void SectionHash::Load(const fs::file& f)
 
 void CapabilitiesInfo::Load(const fs::file& f)
 {
-	type     = Read32(f);
+	type = Read32(f);
 	capabilities_size = Read32(f);
-	next     = Read32(f);
+	next = Read32(f);
 	unknown1 = Read32(f);
 	unknown2 = Read64(f);
 	unknown3 = Read64(f);
-	flags    = Read64(f);
+	flags = Read64(f);
 	unknown4 = Read32(f);
 	unknown5 = Read32(f);
 }
@@ -601,8 +600,7 @@ void ext_hdr::Load(const fs::file& f)
 }
 
 SCEDecrypter::SCEDecrypter(const fs::file& s)
-	: sce_f(s)
-	, data_buf_length(0)
+	: sce_f(s), data_buf_length(0)
 {
 }
 
@@ -647,7 +645,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	if ((sce_hdr.se_flags & 0x8000) != 0x8000)
 	{
 		// Decrypt the metadata info.
-		aes_setkey_dec(&aes, metadata_key, 256);  // AES-256
+		aes_setkey_dec(&aes, metadata_key, 256); // AES-256
 		aes_crypt_cbc(&aes, AES_DECRYPT, sizeof(meta_info), metadata_iv, metadata_info.get(), metadata_info.get());
 	}
 
@@ -789,15 +787,15 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 		if (out_f.pos() != out_f.size())
 			fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", out_f.pos(), out_f.size());
 
-		if (is_valid) vec.push_back(std::move(out_f));
+		if (is_valid)
+			vec.push_back(std::move(out_f));
 	}
 
 	return vec;
 }
 
 SELFDecrypter::SELFDecrypter(const fs::file& s)
-	: self_f(s)
-	, key_v()
+	: self_f(s), key_v()
 {
 }
 
@@ -843,13 +841,13 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	if (isElf32)
 	{
 		phdr32_arr.clear();
-		if(elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
+		if (elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
 		{
 			self_log.error("ELF program header offset is null!");
 			return false;
 		}
 		self_f.seek(m_ext_hdr.phdr_offset);
-		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
+		for (u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
 			phdr32_arr.emplace_back();
 			phdr32_arr.back().Load(self_f);
@@ -878,7 +876,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	m_seg_ext_hdr.clear();
 	self_f.seek(m_ext_hdr.segment_ext_hdr_offset);
 
-	for(u32 i = 0; i < (isElf32 ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
+	for (u32 i = 0; i < (isElf32 ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
 		if (self_f.pos() >= self_f.size())
 		{
@@ -934,7 +932,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 		self_f.seek(m_ext_hdr.shdr_offset);
 
-		for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
+		for (u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 		{
 			shdr32_arr.emplace_back();
 			shdr32_arr.back().Load(self_f);
@@ -951,7 +949,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 		self_f.seek(m_ext_hdr.shdr_offset);
 
-		for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
+		for (u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 		{
 			shdr64_arr.emplace_back();
 			shdr64_arr.back().Load(self_f);
@@ -986,12 +984,12 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("ELF program headers");
 	self_log.notice("----------------------------------------------------");
-	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.size() : phdr64_arr.size()); i++)
+	for (unsigned int i = 0; i < ((isElf32) ? phdr32_arr.size() : phdr64_arr.size()); i++)
 		isElf32 ? phdr32_arr[i].Show() : phdr64_arr[i].Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("Section info");
 	self_log.notice("----------------------------------------------------");
-	for(unsigned int i = 0; i < m_seg_ext_hdr.size(); i++)
+	for (unsigned int i = 0; i < m_seg_ext_hdr.size(); i++)
 		m_seg_ext_hdr[i].Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("SCE version info");
@@ -1000,17 +998,17 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("Control info");
 	self_log.notice("----------------------------------------------------");
-	for(unsigned int i = 0; i < m_supplemental_hdr_arr.size(); i++)
+	for (unsigned int i = 0; i < m_supplemental_hdr_arr.size(); i++)
 		m_supplemental_hdr_arr[i].Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("ELF section headers");
 	self_log.notice("----------------------------------------------------");
-	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.size() : shdr64_arr.size()); i++)
+	for (unsigned int i = 0; i < ((isElf32) ? shdr32_arr.size() : shdr64_arr.size()); i++)
 		isElf32 ? shdr32_arr[i].Show() : shdr64_arr[i].Show();
 	self_log.notice("----------------------------------------------------");
 }
 
-bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
+bool SELFDecrypter::DecryptNPDRM(u8* metadata, u32 metadata_size)
 {
 	aes_context aes;
 	u8 npdrm_key[0x10];
@@ -1025,7 +1023,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 		return true;
 	}
 
-	if (npd->license == 1)  // Network license.
+	if (npd->license == 1) // Network license.
 	{
 		// Try to find a RAP file to get the key.
 		if (!GetKeyFromRap(npd->content_id, npdrm_key))
@@ -1034,7 +1032,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 			return false;
 		}
 	}
-	else if (npd->license == 2)  // Local license.
+	else if (npd->license == 2) // Local license.
 	{
 		// Try to find a RAP file to get the key.
 		if (!GetKeyFromRap(npd->content_id, npdrm_key))
@@ -1043,7 +1041,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 			return false;
 		}
 	}
-	else if (npd->license == 3)  // Free license.
+	else if (npd->license == 3) // Free license.
 	{
 		// Use klicensee if available. (may be set to NP_KLIC_FREE if none is set)
 		std::memcpy(npdrm_key, key_v.GetKlicenseeKey(), 0x10);
@@ -1118,7 +1116,7 @@ bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 			return false;
 
 		// Decrypt the metadata info.
-		aes_setkey_dec(&aes, metadata_key, 256);  // AES-256
+		aes_setkey_dec(&aes, metadata_key, 256); // AES-256
 		aes_crypt_cbc(&aes, AES_DECRYPT, sizeof(meta_info), metadata_iv, metadata_info.get(), metadata_info.get());
 	}
 
@@ -1191,7 +1189,7 @@ bool SELFDecrypter::DecryptData()
 		if (meta_shdr[i].encrypted == 3)
 		{
 			// Make sure the key and iv are not out of boundaries.
-			if((meta_shdr[i].key_idx <= meta_hdr.key_count - 1) && (meta_shdr[i].iv_idx <= meta_hdr.key_count))
+			if ((meta_shdr[i].key_idx <= meta_hdr.key_count - 1) && (meta_shdr[i].iv_idx <= meta_hdr.key_count))
 			{
 				// Get the key and iv from the previously stored key buffer.
 				memcpy(data_key, data_keys.get() + meta_shdr[i].key_idx * 0x10, 0x10);
@@ -1256,8 +1254,9 @@ bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
 	if (!rap_file)
 	{
 		self_log.fatal("Failed to locate the game license file: %s."
-				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/%s/exdata folder with a lowercase file extension."
-				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path, Emu.GetUsr());
+					   "\nEnsure the .rap license file is placed in the dev_hdd0/home/%s/exdata folder with a lowercase file extension."
+					   "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart",
+			rap_path, Emu.GetUsr());
 		return false;
 	}
 
@@ -1277,7 +1276,8 @@ bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
 
 static bool IsSelfElf32(const fs::file& f)
 {
-	if (!f) return false;
+	if (!f)
+		return false;
 
 	f.seek(0);
 
@@ -1454,7 +1454,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key, NPD_HEADER* n
 	return true;
 }
 
-bool get_npdrm_self_header(const fs::file& self, NPD_HEADER &npd_out)
+bool get_npdrm_self_header(const fs::file& self, NPD_HEADER& npd_out)
 {
 	if (!self)
 		return false;

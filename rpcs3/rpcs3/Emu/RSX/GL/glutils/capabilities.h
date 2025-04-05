@@ -55,4 +55,4 @@ namespace gl
 	};
 
 	const capabilities& get_driver_caps();
-}
+} // namespace gl

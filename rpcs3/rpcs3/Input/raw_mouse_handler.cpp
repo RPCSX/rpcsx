@@ -19,7 +19,7 @@ static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_ma
 	const s16 x = static_cast<s16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
 	const s16 y = static_cast<s16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
 
-	const color4f color = { 1.0f, 0.0f, 0.0f, 1.0f };
+	const color4f color = {1.0f, 0.0f, 0.0f, 1.0f};
 
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::last + index, x, y, color, 2'000'000, false);
 }
@@ -28,14 +28,14 @@ static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_ma
 #endif
 
 const std::unordered_map<int, raw_mouse::mouse_button> raw_mouse::btn_pairs =
-{
-	{ 0, {}},
+	{
+		{0, {}},
 #ifdef _WIN32
-	{ RI_MOUSE_BUTTON_1_UP, mouse_button{ RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP, 0, false }},
-	{ RI_MOUSE_BUTTON_2_UP, mouse_button{ RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP, 0, false }},
-	{ RI_MOUSE_BUTTON_3_UP, mouse_button{ RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP, 0, false }},
-	{ RI_MOUSE_BUTTON_4_UP, mouse_button{ RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP, 0, false }},
-	{ RI_MOUSE_BUTTON_5_UP, mouse_button{ RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP, 0, false }},
+		{RI_MOUSE_BUTTON_1_UP, mouse_button{RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP, 0, false}},
+		{RI_MOUSE_BUTTON_2_UP, mouse_button{RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP, 0, false}},
+		{RI_MOUSE_BUTTON_3_UP, mouse_button{RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP, 0, false}},
+		{RI_MOUSE_BUTTON_4_UP, mouse_button{RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP, 0, false}},
+		{RI_MOUSE_BUTTON_5_UP, mouse_button{RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP, 0, false}},
 #endif
 };
 
@@ -99,7 +99,7 @@ raw_mouse::mouse_button raw_mouse::get_mouse_button(const cfg::string& button)
 		s64 scan_code{};
 		if (try_to_int64(&scan_code, value.substr(raw_mouse_config::key_prefix.size()), s32{smin}, s32{smax}))
 		{
-			return mouse_button{ 0, 0, static_cast<s32>(scan_code), true };
+			return mouse_button{0, 0, static_cast<s32>(scan_code), true};
 		}
 	}
 
@@ -168,7 +168,8 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	// Get mouse buttons
 	for (const auto& [button, btn] : m_buttons)
 	{
-		if (btn.is_key) continue;
+		if (btn.is_key)
+			continue;
 
 		// Only update the value if either down or up flags are present
 		if ((state.usButtonFlags & btn.down))
@@ -205,10 +206,9 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 
 			if (width && height)
 			{
-				POINT pt {
+				POINT pt{
 					.x = long(state.lLastX / 65535.0f * width),
-					.y = long(state.lLastY / 65535.0f * height)
-				};
+					.y = long(state.lLastY / 65535.0f * height)};
 
 				if (ScreenToClient(m_window_handle, &pt))
 				{
@@ -268,7 +268,8 @@ void raw_mouse::update_values(s32 scan_code, bool pressed)
 	// Get mouse buttons
 	for (const auto& [button, btn] : m_buttons)
 	{
-		if (!btn.is_key || btn.scan_code != scan_code) return;
+		if (!btn.is_key || btn.scan_code != scan_code)
+			return;
 
 		m_handler->Button(m_index, button, pressed);
 	}
@@ -334,18 +335,18 @@ void raw_mouse_handler::Init(const u32 max_connect)
 	}
 
 	m_thread = std::make_unique<named_thread<std::function<void()>>>("Raw Mouse Thread", [this]()
-	{
-		input_log.notice("raw_mouse_handler: thread started");
-
-		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			update_devices();
+			input_log.notice("raw_mouse_handler: thread started");
 
-			thread_ctrl::wait_for(1'000'000);
-		}
+			while (thread_ctrl::state() != thread_state::aborting)
+			{
+				update_devices();
 
-		input_log.notice("raw_mouse_handler: thread stopped");
-	});
+				thread_ctrl::wait_for(1'000'000);
+			}
+
+			input_log.notice("raw_mouse_handler: thread stopped");
+		});
 }
 
 void raw_mouse_handler::update_devices()
@@ -377,7 +378,10 @@ void raw_mouse_handler::update_devices()
 				const std::string device_name = player->device.to_string();
 
 				// Check if the configured device for this player is connected
-				if (const auto it = std::find_if(enumerated.begin(), enumerated.end(), [&device_name](const auto& entry){ return entry.second.device_name() == device_name; });
+				if (const auto it = std::find_if(enumerated.begin(), enumerated.end(), [&device_name](const auto& entry)
+						{
+							return entry.second.device_name() == device_name;
+						});
 					it != enumerated.cend())
 				{
 					// Check if the device was already known
@@ -446,18 +450,16 @@ void raw_mouse_handler::register_raw_input_devices()
 	raw_mouse& mouse = m_raw_mice.begin()->second;
 
 	std::vector<RAWINPUTDEVICE> raw_input_devices;
-	raw_input_devices.push_back(RAWINPUTDEVICE {
+	raw_input_devices.push_back(RAWINPUTDEVICE{
 		.usUsagePage = HID_USAGE_PAGE_GENERIC,
 		.usUsage = HID_USAGE_GENERIC_MOUSE,
 		.dwFlags = 0,
-		.hwndTarget = mouse.window_handle()
-	});
-	raw_input_devices.push_back(RAWINPUTDEVICE {
+		.hwndTarget = mouse.window_handle()});
+	raw_input_devices.push_back(RAWINPUTDEVICE{
 		.usUsagePage = HID_USAGE_PAGE_GENERIC,
 		.usUsage = HID_USAGE_GENERIC_KEYBOARD,
 		.dwFlags = 0,
-		.hwndTarget = mouse.window_handle()
-	});
+		.hwndTarget = mouse.window_handle()});
 
 	{
 		std::lock_guard lock(g_registered_handlers_mutex);
@@ -492,18 +494,16 @@ void raw_mouse_handler::unregister_raw_input_devices() const
 	input_log.notice("raw_mouse_handler: Unregistering devices");
 
 	std::vector<RAWINPUTDEVICE> raw_input_devices;
-	raw_input_devices.push_back(RAWINPUTDEVICE {
+	raw_input_devices.push_back(RAWINPUTDEVICE{
 		.usUsagePage = HID_USAGE_PAGE_GENERIC,
 		.usUsage = HID_USAGE_GENERIC_MOUSE,
 		.dwFlags = RIDEV_REMOVE,
-		.hwndTarget = nullptr
-	});
-	raw_input_devices.push_back(RAWINPUTDEVICE {
+		.hwndTarget = nullptr});
+	raw_input_devices.push_back(RAWINPUTDEVICE{
 		.usUsagePage = HID_USAGE_PAGE_GENERIC,
 		.usUsage = HID_USAGE_GENERIC_KEYBOARD,
 		.dwFlags = 0,
-		.hwndTarget = nullptr
-	});
+		.hwndTarget = nullptr});
 
 	if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
 	{

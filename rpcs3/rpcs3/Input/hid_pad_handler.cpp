@@ -45,7 +45,7 @@ public:
 
 	static hid_instance& get_instance()
 	{
-		static hid_instance instance {};
+		static hid_instance instance{};
 		return instance;
 	}
 
@@ -94,9 +94,7 @@ void HidDevice::close()
 
 template <class Device>
 hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
-    : PadHandlerBase(type), m_ids(std::move(ids))
-{
-};
+	: PadHandlerBase(type), m_ids(std::move(ids)){};
 
 template <class Device>
 hid_pad_handler<Device>::~hid_pad_handler()
@@ -141,17 +139,17 @@ bool hid_pad_handler<Device>::Init()
 	m_is_init = true;
 
 	m_enumeration_thread = std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Enumerator", m_type), [this]()
-	{
-		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			if (pad::g_enabled && Emu.IsRunning())
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				enumerate_devices();
-			}
+				if (pad::g_enabled && Emu.IsRunning())
+				{
+					enumerate_devices();
+				}
 
-			thread_ctrl::wait_for(2'000'000);
-		}
-	});
+				thread_ctrl::wait_for(2'000'000);
+			}
+		});
 
 	return true;
 }
@@ -226,7 +224,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 	for (const auto& [vid, pid] : m_ids)
 	{
 		hid_device_info* dev_info = hid_enumerate(vid, pid);
-		hid_device_info* head     = dev_info;
+		hid_device_info* head = dev_info;
 		while (dev_info)
 		{
 			if (!dev_info->path)
@@ -311,11 +309,17 @@ void hid_pad_handler<Device>::update_devices()
 	for (const auto& path : m_new_enumerated_devices)
 	{
 		// Check if we have at least one virtual controller left
-		if (std::none_of(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; }))
+		if (std::none_of(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c)
+				{
+					return !c.second || !c.second->hidDevice;
+				}))
 			break;
 
 		// Check if we already have this controller
-		if (std::any_of(m_controllers.cbegin(), m_controllers.cend(), [&path](const auto& c) { return c.second && c.second->path == path; }))
+		if (std::any_of(m_controllers.cbegin(), m_controllers.cend(), [&path](const auto& c)
+				{
+					return c.second && c.second->path == path;
+				}))
 			continue;
 
 #ifdef _WIN32
@@ -359,7 +363,10 @@ void hid_pad_handler<Device>::update_devices()
 	}
 	else
 	{
-		const usz count = std::count_if(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return c.second && c.second->hidDevice; });
+		const usz count = std::count_if(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c)
+			{
+				return c.second && c.second->hidDevice;
+			});
 		if (count > 0)
 		{
 			hid_log.success("%s Controllers found: %d", m_type, count);

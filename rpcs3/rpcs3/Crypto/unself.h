@@ -14,19 +14,19 @@ LOG_CHANNEL(self_log, "SELF");
 // SCE-specific definitions for e_type:
 enum
 {
-	ET_SCE_EXEC         = 0xFE00, // SCE Executable - PRX2
-	ET_SCE_RELEXEC      = 0xFE04, // SCE Relocatable Executable - PRX2
-	ET_SCE_STUBLIB      = 0xFE0C, // SCE SDK Stubs
-	ET_SCE_DYNEXEC      = 0xFE10, // SCE EXEC_ASLR (PS4 Executable with ASLR)
-	ET_SCE_DYNAMIC      = 0xFE18, // ?
-	ET_SCE_IOPRELEXEC   = 0xFF80, // SCE IOP Relocatable Executable
-	ET_SCE_IOPRELEXEC2  = 0xFF81, // SCE IOP Relocatable Executable Version 2
-	ET_SCE_EERELEXEC    = 0xFF90, // SCE EE Relocatable Executable
-	ET_SCE_EERELEXEC2   = 0xFF91, // SCE EE Relocatable Executable Version 2
-	ET_SCE_PSPRELEXEC   = 0xFFA0, // SCE PSP Relocatable Executable
-	ET_SCE_PPURELEXEC   = 0xFFA4, // SCE PPU Relocatable Executable
-	ET_SCE_ARMRELEXEC   = 0xFFA5, // ?SCE ARM Relocatable Executable (PS Vita System Software earlier or equal 0.931.010)
-	ET_SCE_PSPOVERLAY   = 0xFFA8, // ?
+	ET_SCE_EXEC = 0xFE00,        // SCE Executable - PRX2
+	ET_SCE_RELEXEC = 0xFE04,     // SCE Relocatable Executable - PRX2
+	ET_SCE_STUBLIB = 0xFE0C,     // SCE SDK Stubs
+	ET_SCE_DYNEXEC = 0xFE10,     // SCE EXEC_ASLR (PS4 Executable with ASLR)
+	ET_SCE_DYNAMIC = 0xFE18,     // ?
+	ET_SCE_IOPRELEXEC = 0xFF80,  // SCE IOP Relocatable Executable
+	ET_SCE_IOPRELEXEC2 = 0xFF81, // SCE IOP Relocatable Executable Version 2
+	ET_SCE_EERELEXEC = 0xFF90,   // SCE EE Relocatable Executable
+	ET_SCE_EERELEXEC2 = 0xFF91,  // SCE EE Relocatable Executable Version 2
+	ET_SCE_PSPRELEXEC = 0xFFA0,  // SCE PSP Relocatable Executable
+	ET_SCE_PPURELEXEC = 0xFFA4,  // SCE PPU Relocatable Executable
+	ET_SCE_ARMRELEXEC = 0xFFA5,  // ?SCE ARM Relocatable Executable (PS Vita System Software earlier or equal 0.931.010)
+	ET_SCE_PSPOVERLAY = 0xFFA8,  // ?
 };
 
 enum
@@ -36,21 +36,21 @@ enum
 
 enum
 {
-	PT_SCE_RELA         = 0x60000000,
-	PT_SCE_LICINFO_1    = 0x60000001,
-	PT_SCE_LICINFO_2    = 0x60000002,
-	PT_SCE_DYNLIBDATA   = 0x61000000,
-	PT_SCE_PROCPARAM    = 0x61000001,
+	PT_SCE_RELA = 0x60000000,
+	PT_SCE_LICINFO_1 = 0x60000001,
+	PT_SCE_LICINFO_2 = 0x60000002,
+	PT_SCE_DYNLIBDATA = 0x61000000,
+	PT_SCE_PROCPARAM = 0x61000001,
 	PT_SCE_UNK_61000010 = 0x61000010,
-	PT_SCE_COMMENT      = 0x6FFFFF00,
-	PT_SCE_LIBVERSION   = 0x6FFFFF01,
+	PT_SCE_COMMENT = 0x6FFFFF00,
+	PT_SCE_LIBVERSION = 0x6FFFFF01,
 	PT_SCE_UNK_70000001 = 0x70000001,
-	PT_SCE_IOPMOD       = 0x70000080,
-	PT_SCE_EEMOD        = 0x70000090,
-	PT_SCE_PSPRELA      = 0x700000A0,
-	PT_SCE_PSPRELA2     = 0x700000A1,
-	PT_SCE_PPURELA      = 0x700000A4,
-	PT_SCE_SEGSYM       = 0x700000A8,
+	PT_SCE_IOPMOD = 0x70000080,
+	PT_SCE_EEMOD = 0x70000090,
+	PT_SCE_PSPRELA = 0x700000A0,
+	PT_SCE_PSPRELA2 = 0x700000A1,
+	PT_SCE_PPURELA = 0x700000A4,
+	PT_SCE_SEGSYM = 0x700000A8,
 };
 
 enum
@@ -65,10 +65,10 @@ enum
 
 enum
 {
-	SHT_SCE_RELA    = 0x60000000,
-	SHT_SCE_NID     = 0x61000001,
-	SHT_SCE_IOPMOD  = 0x70000080,
-	SHT_SCE_EEMOD   = 0x70000090,
+	SHT_SCE_RELA = 0x60000000,
+	SHT_SCE_NID = 0x61000001,
+	SHT_SCE_IOPMOD = 0x70000080,
+	SHT_SCE_EEMOD = 0x70000090,
 	SHT_SCE_PSPRELA = 0x700000A0,
 	SHT_SCE_PPURELA = 0x700000A4,
 };
@@ -132,8 +132,8 @@ struct supplemental_header
 		// type 2, 0x40 bytes
 		struct // 0x30 bytes of data
 		{
-			u8 constant[0x14]; // same for every PS3/PS Vita SELF, hardcoded in make_fself.exe: 627CB1808AB938E32C8C091708726A579E2586E4
-			u8 elf_digest[0x14]; // SHA-1. Hash F2C552BF716ED24759CBE8A0A9A6DB9965F3811C is blacklisted by appldr
+			u8 constant[0x14];           // same for every PS3/PS Vita SELF, hardcoded in make_fself.exe: 627CB1808AB938E32C8C091708726A579E2586E4
+			u8 elf_digest[0x14];         // SHA-1. Hash F2C552BF716ED24759CBE8A0A9A6DB9965F3811C is blacklisted by appldr
 			u64 required_system_version; // filled on Sony authentication server, contains decimal PS3_SYSTEM_VER value from PARAM.SFO
 		} PS3_elf_digest_header_40;
 
@@ -154,7 +154,6 @@ struct supplemental_header
 	void Load(const fs::file& f);
 	void Show() const;
 };
-
 
 struct MetadataInfo
 {
@@ -242,32 +241,41 @@ struct SelfSection
 
 struct Elf32_Ehdr
 {
-	//u8 e_ident[16];      // ELF identification
+	// u8 e_ident[16];      // ELF identification
 	u32 e_magic;
 	u8 e_class;
 	u8 e_data;
 	u8 e_curver;
 	u8 e_os_abi;
 	u64 e_abi_ver;
-	u16 e_type;          // object file type
-	u16 e_machine;       // machine type
-	u32 e_version;       // object file version
-	u32 e_entry;         // entry point address
-	u32 e_phoff;         // program header offset
-	u32 e_shoff;         // section header offset
-	u32 e_flags;         // processor-specific flags
-	u16 e_ehsize;        // ELF header size
-	u16 e_phentsize;     // size of program header entry
-	u16 e_phnum;         // number of program header entries
-	u16 e_shentsize;     // size of section header entry
-	u16 e_shnum;         // number of section header entries
-	u16 e_shstrndx;      // section name string table index
+	u16 e_type;      // object file type
+	u16 e_machine;   // machine type
+	u32 e_version;   // object file version
+	u32 e_entry;     // entry point address
+	u32 e_phoff;     // program header offset
+	u32 e_shoff;     // section header offset
+	u32 e_flags;     // processor-specific flags
+	u16 e_ehsize;    // ELF header size
+	u16 e_phentsize; // size of program header entry
+	u16 e_phnum;     // number of program header entries
+	u16 e_shentsize; // size of section header entry
+	u16 e_shnum;     // number of section header entries
+	u16 e_shstrndx;  // section name string table index
 
 	void Load(const fs::file& f);
 	static void Show() {}
-	bool IsLittleEndian() const { return e_data == 1; }
-	bool CheckMagic() const { return e_magic == 0x7F454C46; }
-	u32 GetEntry() const { return e_entry; }
+	bool IsLittleEndian() const
+	{
+		return e_data == 1;
+	}
+	bool CheckMagic() const
+	{
+		return e_magic == 0x7F454C46;
+	}
+	u32 GetEntry() const
+	{
+		return e_entry;
+	}
 };
 
 struct Elf32_Shdr
@@ -306,31 +314,37 @@ struct Elf32_Phdr
 
 struct Elf64_Ehdr
 {
-	//u8 e_ident[16];      // ELF identification
+	// u8 e_ident[16];      // ELF identification
 	u32 e_magic;
 	u8 e_class;
 	u8 e_data;
 	u8 e_curver;
 	u8 e_os_abi;
 	u64 e_abi_ver;
-	u16 e_type;          // object file type
-	u16 e_machine;       // machine type
-	u32 e_version;       // object file version
-	u64 e_entry;         // entry point address
-	u64 e_phoff;         // program header offset
-	u64 e_shoff;         // section header offset
-	u32 e_flags;         // processor-specific flags
-	u16 e_ehsize;        // ELF header size
-	u16 e_phentsize;     // size of program header entry
-	u16 e_phnum;         // number of program header entries
-	u16 e_shentsize;     // size of section header entry
-	u16 e_shnum;         // number of section header entries
-	u16 e_shstrndx;      // section name string table index
+	u16 e_type;      // object file type
+	u16 e_machine;   // machine type
+	u32 e_version;   // object file version
+	u64 e_entry;     // entry point address
+	u64 e_phoff;     // program header offset
+	u64 e_shoff;     // section header offset
+	u32 e_flags;     // processor-specific flags
+	u16 e_ehsize;    // ELF header size
+	u16 e_phentsize; // size of program header entry
+	u16 e_phnum;     // number of program header entries
+	u16 e_shentsize; // size of section header entry
+	u16 e_shnum;     // number of section header entries
+	u16 e_shstrndx;  // section name string table index
 
 	void Load(const fs::file& f);
 	static void Show() {}
-	bool CheckMagic() const { return e_magic == 0x7F454C46; }
-	u64 GetEntry() const { return e_entry; }
+	bool CheckMagic() const
+	{
+		return e_magic == 0x7F454C46;
+	}
+	u64 GetEntry() const
+	{
+		return e_entry;
+	}
 };
 
 struct Elf64_Shdr
@@ -347,7 +361,7 @@ struct Elf64_Shdr
 	u64 sh_entsize;   // size of entries, if section has table
 
 	void Load(const fs::file& f);
-	static void Show(){}
+	static void Show() {}
 };
 
 struct Elf64_Phdr
@@ -362,7 +376,7 @@ struct Elf64_Phdr
 	u64 p_align;  // Segment alignment
 
 	void Load(const fs::file& f);
-	static void Show(){}
+	static void Show() {}
 };
 
 struct SceHeader
@@ -376,8 +390,11 @@ struct SceHeader
 	u64 se_esize;
 
 	void Load(const fs::file& f);
-	static void Show(){}
-	bool CheckMagic() const { return se_magic == 0x53434500; }
+	static void Show() {}
+	bool CheckMagic() const
+	{
+		return se_magic == 0x53434500;
+	}
 };
 
 struct ext_hdr
@@ -394,7 +411,7 @@ struct ext_hdr
 	u64 padding;
 
 	void Load(const fs::file& f);
-	static void Show(){}
+	static void Show() {}
 };
 
 struct SelfAdditionalInfo
@@ -478,12 +495,12 @@ public:
 	void ShowHeaders(bool isElf32);
 	bool LoadMetadata(const u8* klic_key);
 	bool DecryptData();
-	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
+	bool DecryptNPDRM(u8* metadata, u32 metadata_size);
 	const NPD_HEADER* GetNPDHeader() const;
-	static bool GetKeyFromRap(const char *content_id, u8 *npdrm_key);
+	static bool GetKeyFromRap(const char* content_id, u8* npdrm_key);
 
 private:
-	template<typename EHdr, typename SHdr, typename PHdr>
+	template <typename EHdr, typename SHdr, typename PHdr>
 	void WriteElf(fs::file& e, EHdr ehdr, SHdr shdr, PHdr phdr)
 	{
 		// Set initial offset.

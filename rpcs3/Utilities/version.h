@@ -27,12 +27,7 @@ namespace utils
 
 	public:
 		constexpr version(uint hi, uint mid, uint lo, version_type type, uint type_index, const char* postfix)
-			: m_hi(hi)
-			, m_mid(mid)
-			, m_lo(lo)
-			, m_type(type)
-			, m_type_index(type_index)
-			, m_postfix(postfix)
+			: m_hi(hi), m_mid(mid), m_lo(lo), m_type(type), m_type_index(type_index), m_postfix(postfix)
 		{
 		}
 
@@ -72,4 +67,4 @@ namespace utils
 
 	// Generic version comparison (e.g. 0.0.5 vs 1.3)
 	int compare_versions(const std::string& v1, const std::string& v2, bool& ok);
-}
+} // namespace utils

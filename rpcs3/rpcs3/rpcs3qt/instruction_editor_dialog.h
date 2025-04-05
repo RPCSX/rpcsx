@@ -26,7 +26,7 @@ private:
 	const std::function<cpu_thread*()> m_get_cpu;
 
 public:
-	instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
+	instruction_editor_dialog(QWidget* parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
 
 	void updatePreview() const;
 };

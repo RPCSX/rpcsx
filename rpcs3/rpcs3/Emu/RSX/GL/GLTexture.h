@@ -8,7 +8,7 @@ namespace rsx
 {
 	class vertex_texture;
 	class fragment_texture;
-}
+} // namespace rsx
 
 namespace gl
 {
@@ -16,9 +16,9 @@ namespace gl
 	{
 		GLenum format;
 		GLenum type;
-		u8     size;
-		bool   swap_bytes;
-		u8     alignment;
+		u8 size;
+		bool swap_bytes;
+		u8 alignment;
 	};
 
 	struct image_memory_requirements
@@ -35,15 +35,13 @@ namespace gl
 		struct
 		{
 			f32 value;
-		}
-		clear_depth{};
+		} clear_depth{};
 
 		struct
 		{
 			u8 mask;
 			u8 value;
-		}
-		clear_stencil{};
+		} clear_stencil{};
 
 		struct
 		{
@@ -53,8 +51,7 @@ namespace gl
 			u8 g;
 			u8 b;
 			u8 a;
-		}
-		clear_color{};
+		} clear_color{};
 	};
 
 	GLenum get_target(rsx::texture_dimension_extended type);
@@ -85,4 +82,4 @@ namespace gl
 	}
 
 	void destroy_global_texture_resources();
-}
+} // namespace gl

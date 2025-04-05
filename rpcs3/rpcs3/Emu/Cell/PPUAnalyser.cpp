@@ -14,25 +14,25 @@ LOG_CHANNEL(ppu_validator);
 
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
 
-template<>
+template <>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](ppu_attr value)
-	{
-		switch (value)
 		{
-		case ppu_attr::known_size: return "known_size";
-		case ppu_attr::no_return: return "no_return";
-		case ppu_attr::no_size: return "no_size";
-		case ppu_attr::has_mfvscr: return "has_mfvscr";
-		case ppu_attr::__bitset_enum_max: break;
-		}
+			switch (value)
+			{
+			case ppu_attr::known_size: return "known_size";
+			case ppu_attr::no_return: return "no_return";
+			case ppu_attr::no_size: return "no_size";
+			case ppu_attr::has_mfvscr: return "has_mfvscr";
+			case ppu_attr::__bitset_enum_max: break;
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
-template<>
+template <>
 void fmt_class_string<bs_t<ppu_attr>>::format(std::string& out, u64 arg)
 {
 	format_bitset(out, arg, "[", ",", "]", &fmt_class_string<ppu_attr>::format);
@@ -162,177 +162,173 @@ namespace ppu_patterns
 {
 	using namespace ppu_instructions;
 
-	const ppu_pattern abort1[]
-	{
-		{ STDU(r1, r1, -0xc0) },
-		{ MFLR(r0) },
-		{ STD(r26, r1, 0x90) },
-		{ STD(r27, r1, 0x98) },
-		{ STD(r28, r1, 0xa0) },
-		{ STD(r29, r1, 0xa8) },
-		{ STD(r30, r1, 0xb0) },
-		{ STD(r31, r1, 0xb8) },
-		{ STD(r0, r1, 0xd0) },
-		{ LI(r3, 4) },
-		{ LI(r4, 0) },
-		{ LI(r11, 0x3dc) },
-		{ SC(0) },
-		{ MR(r29, r1) },
-		{ CLRLDI(r29, r29, 32) },
-		{ LWZ(r4, r2, 0), 0xffff },
-		{ ADDI(r31, r1, 0x70) },
-		{ LI(r3, 1) },
-		{ LI(r5, 0x19) },
-		{ MR(r6, r31) },
-		{ LWZ(r28, r29, 4) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ ADDI(r26, r1, 0x78) },
-		{ LD(r3, r28, 0x10) },
-		{ MR(r4, r26) },
-		{ B(0, false, true), 0x3fffffc }, // .hex2str
-		{ LI(r5, 0x10) },
-		{ CLRLDI(r4, r3, 32) },
-		{ MR(r6, r31) },
-		{ LI(r3, 1) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LWZ(r27, r2, 0), 0xffff },
-		{ LI(r3, 1) },
-		{ LI(r5, 1) },
-		{ MR(r4, r27) },
-		{ MR(r6, r31) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LD(r28, r28, 0) },
-		{ CMPDI(cr7, r28, 0) },
-		{ BEQ(cr7, +0x6c) },
-		{ LWZ(r30, r2, 0), 0xffff },
-		{ LI(r3, 1) },
-		{ MR(r4, r30) },
-		{ LI(r5, 0x19) },
-		{ MR(r6, r31) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ CLRLDI(r29, r28, 32) },
-		{ CLRLDI(r4, r26, 32) },
-		{ LD(r3, r29, 0x10) },
-		{ 0, 0xffffffff }, // .hex2str
-		{ LI(r5, 0x10) },
-		{ CLRLDI(r4, r3, 32) },
-		{ MR(r6, r31) },
-		{ LI(r3, 1) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LI(r3, 1) },
-		{ MR(r4, r27) },
-		{ LI(r5, 1) },
-		{ MR(r6, r31) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LD(r28, r29, 0) },
-		{ CMPDI(cr7, r28, 0) },
-		{ BNE(cr7, -0x60) },
-		{ LWZ(r4, r2, 0), 0xffff },
-		{ MR(r6, r31) },
-		{ LI(r3, 1) },
-		{ LI(r5, 0x27) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LI(r3, 1) },
-		{ B(0, false, true), 0x3fffffc }, // .sys_process_exit
-		{ LD(r2, r1, 0x28) },
-		{ LI(r3, 1) },
-		{ B(0, false, true), 0x3fffffc }, // .exit
+	const ppu_pattern abort1[]{
+		{STDU(r1, r1, -0xc0)},
+		{MFLR(r0)},
+		{STD(r26, r1, 0x90)},
+		{STD(r27, r1, 0x98)},
+		{STD(r28, r1, 0xa0)},
+		{STD(r29, r1, 0xa8)},
+		{STD(r30, r1, 0xb0)},
+		{STD(r31, r1, 0xb8)},
+		{STD(r0, r1, 0xd0)},
+		{LI(r3, 4)},
+		{LI(r4, 0)},
+		{LI(r11, 0x3dc)},
+		{SC(0)},
+		{MR(r29, r1)},
+		{CLRLDI(r29, r29, 32)},
+		{LWZ(r4, r2, 0), 0xffff},
+		{ADDI(r31, r1, 0x70)},
+		{LI(r3, 1)},
+		{LI(r5, 0x19)},
+		{MR(r6, r31)},
+		{LWZ(r28, r29, 4)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{ADDI(r26, r1, 0x78)},
+		{LD(r3, r28, 0x10)},
+		{MR(r4, r26)},
+		{B(0, false, true), 0x3fffffc}, // .hex2str
+		{LI(r5, 0x10)},
+		{CLRLDI(r4, r3, 32)},
+		{MR(r6, r31)},
+		{LI(r3, 1)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LWZ(r27, r2, 0), 0xffff},
+		{LI(r3, 1)},
+		{LI(r5, 1)},
+		{MR(r4, r27)},
+		{MR(r6, r31)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LD(r28, r28, 0)},
+		{CMPDI(cr7, r28, 0)},
+		{BEQ(cr7, +0x6c)},
+		{LWZ(r30, r2, 0), 0xffff},
+		{LI(r3, 1)},
+		{MR(r4, r30)},
+		{LI(r5, 0x19)},
+		{MR(r6, r31)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{CLRLDI(r29, r28, 32)},
+		{CLRLDI(r4, r26, 32)},
+		{LD(r3, r29, 0x10)},
+		{0, 0xffffffff}, // .hex2str
+		{LI(r5, 0x10)},
+		{CLRLDI(r4, r3, 32)},
+		{MR(r6, r31)},
+		{LI(r3, 1)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LI(r3, 1)},
+		{MR(r4, r27)},
+		{LI(r5, 1)},
+		{MR(r6, r31)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LD(r28, r29, 0)},
+		{CMPDI(cr7, r28, 0)},
+		{BNE(cr7, -0x60)},
+		{LWZ(r4, r2, 0), 0xffff},
+		{MR(r6, r31)},
+		{LI(r3, 1)},
+		{LI(r5, 0x27)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LI(r3, 1)},
+		{B(0, false, true), 0x3fffffc}, // .sys_process_exit
+		{LD(r2, r1, 0x28)},
+		{LI(r3, 1)},
+		{B(0, false, true), 0x3fffffc}, // .exit
 	};
 
-	const ppu_pattern abort2[]
-	{
-		{ STDU(r1, r1, -0xc0) },
-		{ MFLR(r0) },
-		{ STD(r27, r1, 0x98) },
-		{ STD(r28, r1, 0xa0) },
-		{ STD(r29, r1, 0xa8) },
-		{ STD(r30, r1, 0xb0) },
-		{ STD(r31, r1, 0xb8) },
-		{ STD(r0, r1, 0xd0) },
-		{ MR(r9, r1) },
-		{ CLRLDI(r9, r9, 32) },
-		{ LWZ(r4, r2, 0), 0xffff },
-		{ ADDI(r31, r1, 0x70) },
-		{ LI(r3, 1) },
-		{ LI(r5, 0x19) },
-		{ MR(r6, r31) },
-		{ LWZ(r29, r9, 4) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ ADDI(r27, r1, 0x78) },
-		{ LD(r3, r29, 0x10) },
-		{ MR(r4, r27) },
-		{ B(0, false, true), 0x3fffffc }, // .hex2str
-		{ LI(r5, 0x10) },
-		{ CLRLDI(r4, r3, 32) },
-		{ MR(r6, r31) },
-		{ LI(r3, 1) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LWZ(r28, r2, 0), 0xffff },
-		{ LI(r3, 1) },
-		{ LI(r5, 1) },
-		{ MR(r4, r28) },
-		{ MR(r6, r31) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LD(r29, r29, 0) },
-		{ CMPDI(cr7, r29, 0) },
-		{ BEQ(cr7, +0x6c) },
-		{ LWZ(r30, r2, 0), 0xffff },
-		{ LI(r3, 1) },
-		{ MR(r4, r30) },
-		{ LI(r5, 0x19) },
-		{ MR(r6, r31) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ CLRLDI(r29, r29, 32) },
-		{ CLRLDI(r4, r27, 32) },
-		{ LD(r3, r29, 0x10) },
-		{ 0, 0xffffffff }, // .hex2str
-		{ LI(r5, 0x10) },
-		{ CLRLDI(r4, r3, 32) },
-		{ MR(r6, r31) },
-		{ LI(r3, 1) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LI(r3, 1) },
-		{ MR(r4, r28) },
-		{ LI(r5, 1) },
-		{ MR(r6, r31) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LD(r29, r29, 0) },
-		{ CMPDI(cr7, r29, 0) },
-		{ BNE(cr7, -0x60) },
-		{ LWZ(r4, r2, 0), 0xffff },
-		{ MR(r6, r31) },
-		{ LI(r3, 1) },
-		{ LI(r5, 0x27) },
-		{ LI(r11, 0x193) },
-		{ SC(0) },
-		{ LI(r3, 1) },
-		{ B(0, false, true), 0x3fffffc }, // .sys_process_exit
-		{ LD(r2, r1, 0x28) },
-		{ LI(r3, 1) },
-		{ B(0, false, true), 0x3fffffc }, // .exit
+	const ppu_pattern abort2[]{
+		{STDU(r1, r1, -0xc0)},
+		{MFLR(r0)},
+		{STD(r27, r1, 0x98)},
+		{STD(r28, r1, 0xa0)},
+		{STD(r29, r1, 0xa8)},
+		{STD(r30, r1, 0xb0)},
+		{STD(r31, r1, 0xb8)},
+		{STD(r0, r1, 0xd0)},
+		{MR(r9, r1)},
+		{CLRLDI(r9, r9, 32)},
+		{LWZ(r4, r2, 0), 0xffff},
+		{ADDI(r31, r1, 0x70)},
+		{LI(r3, 1)},
+		{LI(r5, 0x19)},
+		{MR(r6, r31)},
+		{LWZ(r29, r9, 4)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{ADDI(r27, r1, 0x78)},
+		{LD(r3, r29, 0x10)},
+		{MR(r4, r27)},
+		{B(0, false, true), 0x3fffffc}, // .hex2str
+		{LI(r5, 0x10)},
+		{CLRLDI(r4, r3, 32)},
+		{MR(r6, r31)},
+		{LI(r3, 1)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LWZ(r28, r2, 0), 0xffff},
+		{LI(r3, 1)},
+		{LI(r5, 1)},
+		{MR(r4, r28)},
+		{MR(r6, r31)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LD(r29, r29, 0)},
+		{CMPDI(cr7, r29, 0)},
+		{BEQ(cr7, +0x6c)},
+		{LWZ(r30, r2, 0), 0xffff},
+		{LI(r3, 1)},
+		{MR(r4, r30)},
+		{LI(r5, 0x19)},
+		{MR(r6, r31)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{CLRLDI(r29, r29, 32)},
+		{CLRLDI(r4, r27, 32)},
+		{LD(r3, r29, 0x10)},
+		{0, 0xffffffff}, // .hex2str
+		{LI(r5, 0x10)},
+		{CLRLDI(r4, r3, 32)},
+		{MR(r6, r31)},
+		{LI(r3, 1)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LI(r3, 1)},
+		{MR(r4, r28)},
+		{LI(r5, 1)},
+		{MR(r6, r31)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LD(r29, r29, 0)},
+		{CMPDI(cr7, r29, 0)},
+		{BNE(cr7, -0x60)},
+		{LWZ(r4, r2, 0), 0xffff},
+		{MR(r6, r31)},
+		{LI(r3, 1)},
+		{LI(r5, 0x27)},
+		{LI(r11, 0x193)},
+		{SC(0)},
+		{LI(r3, 1)},
+		{B(0, false, true), 0x3fffffc}, // .sys_process_exit
+		{LD(r2, r1, 0x28)},
+		{LI(r3, 1)},
+		{B(0, false, true), 0x3fffffc}, // .exit
 	};
 
-	const ppu_pattern_array abort[]
-	{
+	const ppu_pattern_array abort[]{
 		abort1,
 		abort2,
 	};
 
-	const ppu_pattern get_context[]
-	{
+	const ppu_pattern get_context[]{
 		ADDI(r3, r3, 0xf),
 		CLRRDI(r3, r3, 4),
 		STD(r1, r3, 0),
@@ -407,8 +403,7 @@ namespace ppu_patterns
 		BLR(),
 	};
 
-	const ppu_pattern set_context[]
-	{
+	const ppu_pattern set_context[]{
 		ADDI(r3, r3, 0xf),
 		CLRRDI(r3, r3, 4),
 		LD(r1, r3, 0),
@@ -461,7 +456,7 @@ namespace ppu_patterns
 		LFD(f30, r3, 0x138),
 		LFD(f31, r3, 0x140),
 		LD(r0, r3, 0x148),
-		0x7c0043A6, //mtspr vrsave, r0
+		0x7c0043A6, // mtspr vrsave, r0
 		ADDI(r5, r3, 0x150),
 		ADDI(r6, r3, 0x160),
 		ADDI(r7, r3, 0x170),
@@ -492,8 +487,7 @@ namespace ppu_patterns
 		BLR(),
 	};
 
-	const ppu_pattern x26c[]
-	{
+	const ppu_pattern x26c[]{
 		LI(r9, 0),
 		STD(r9, r6, 0),
 		MR(r1, r6),
@@ -508,8 +502,7 @@ namespace ppu_patterns
 		BCTRL(),
 	};
 
-	const ppu_pattern x2a0[]
-	{
+	const ppu_pattern x2a0[]{
 		MR(r8, r1),
 		0x7d212850, // subf r9, r1, r5
 		0x7c21496a, // stdux r1, r1, r9
@@ -529,14 +522,26 @@ namespace ppu_patterns
 		MR(r1, r9),
 		BLR(),
 	};
-}
+} // namespace ppu_patterns
 
-static constexpr struct const_tag{} is_const;
-static constexpr struct range_tag{} is_range;
-static constexpr struct min_value_tag{} minv;
-static constexpr struct max_value_tag{} maxv;
-static constexpr struct sign_bit_tag{} sign_bitv;
-static constexpr struct load_addr_tag{} load_addrv;
+static constexpr struct const_tag
+{
+} is_const;
+static constexpr struct range_tag
+{
+} is_range;
+static constexpr struct min_value_tag
+{
+} minv;
+static constexpr struct max_value_tag
+{
+} maxv;
+static constexpr struct sign_bit_tag
+{
+} sign_bitv;
+static constexpr struct load_addr_tag
+{
+} load_addrv;
 
 struct reg_state_t
 {
@@ -619,7 +624,7 @@ struct reg_state_t
 	}
 
 	// Clear bits using mask
-	// May fail if ge_than(+)value_range is modified by the operation 
+	// May fail if ge_than(+)value_range is modified by the operation
 	bool clear_mask(u64 bit_mask, u32& reg_tag_allocator)
 	{
 		if (bit_mask == umax)
@@ -817,7 +822,7 @@ struct reg_state_t
 	}
 };
 
-static constexpr reg_state_t s_reg_const_0{ 0, 1 };
+static constexpr reg_state_t s_reg_const_0{0, 1};
 
 template <>
 bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
@@ -849,7 +854,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 	struct ppu_function_ext : ppu_function
 	{
-		//u32 stack_frame = 0;
+		// u32 stack_frame = 0;
 		u32 single_target = 0;
 		u32 trampoline = 0;
 		bs_t<ppu_attr> attr{};
@@ -883,7 +888,10 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		}
 
 		// Check if the storage address exists within relocations
-		constexpr auto compare = [](const ppu_reloc& a, u32 addr) { return a.addr < addr; };
+		constexpr auto compare = [](const ppu_reloc& a, u32 addr)
+		{
+			return a.addr < addr;
+		};
 		auto it = std::lower_bound(this->relocs.begin(), this->relocs.end(), (addr & -8), compare);
 		auto end = std::lower_bound(it, this->relocs.end(), (addr & -8) + 8, compare);
 
@@ -1026,7 +1034,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		// Grope for OPD section (TODO: optimization, better constraints)
 		for (const auto& seg : segs)
 		{
-			if (seg.size < 8) continue;
+			if (seg.size < 8)
+				continue;
 
 			const vm::cptr<void> seg_end = vm::cast(seg.addr + seg.size - 8);
 			vm::cptr<u32> _ptr = vm::cast(seg.addr);
@@ -1060,7 +1069,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// For seg0, must be valid code
 	for (const auto& seg : segs)
 	{
-		if (seg.size < 4) continue;
+		if (seg.size < 4)
+			continue;
 
 		vm::cptr<u32> _ptr = vm::cast(seg.addr);
 		const vm::cptr<void> seg_end = vm::cast(seg.addr + seg.size - 4);
@@ -1077,11 +1087,12 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			for (const auto& _seg : segs)
 			{
-				if (!_seg.size) continue;
+				if (!_seg.size)
+					continue;
 
 				if (value >= start && value < end)
 				{
-					if (is_valid_code({ ptr, ptr + (end - value) }, !is_relocatable, _ptr.addr()))
+					if (is_valid_code({ptr, ptr + (end - value)}, !is_relocatable, _ptr.addr()))
 					{
 						continue;
 					}
@@ -1125,7 +1136,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			// Rough Table of Contents borders
 			const u32 toc_begin = _toc - 0x8000;
-			//const u32 toc_end = _toc + 0x7ffc;
+			// const u32 toc_end = _toc + 0x7ffc;
 
 			// TODO: improve TOC constraints
 			if (toc_begin % 4 || !get_ptr<u8>(toc_begin) || toc_begin >= 0x40000000 || (toc_begin >= start && toc_begin < end))
@@ -1141,7 +1152,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			}
 		}
 
-		if (sec_end) ppu_log.notice("Reading OPD section at 0x%x...", sec.addr);
+		if (sec_end)
+			ppu_log.notice("Reading OPD section at 0x%x...", sec.addr);
 
 		// Mine
 		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end; _ptr += 2)
@@ -1149,7 +1161,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			auto ptr = get_ptr<u32>(_ptr);
 
 			// Special case: see "Probe"
-			if (!ptr[0]) advance(_ptr, ptr, 4);
+			if (!ptr[0])
+				advance(_ptr, ptr, 4);
 
 			// Add function and TOC
 			const u32 addr = ptr[0];
@@ -1232,7 +1245,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			_ptr = vm::cast(_ptr.addr() + size);
 		}
 
-		if (sec_end && sec.size > 4) ppu_log.notice("Reading .eh_frame section at 0x%x...", sec.addr);
+		if (sec_end && sec.size > 4)
+			ppu_log.notice("Reading .eh_frame section at 0x%x...", sec.addr);
 
 		// Mine
 		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end; _ptr = vm::cast(_ptr.addr() + *get_ptr<u32>(_ptr) + 4))
@@ -1290,14 +1304,15 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// TODO: invalid offsets, zero offsets (removed functions?)
 				if (addr % 4 || size % 4 || size > (end - start) || addr < start || addr + size > end)
 				{
-					if (addr) ppu_log.error(".eh_frame: Invalid function 0x%x", addr);
+					if (addr)
+						ppu_log.error(".eh_frame: Invalid function 0x%x", addr);
 					continue;
 				}
 
-				//auto& func = add_func(addr, 0, 0);
-				//func.attr += ppu_attr::known_size;
-				//func.size = size;
-				//known_functions.emplace(func);
+				// auto& func = add_func(addr, 0, 0);
+				// func.attr += ppu_attr::known_size;
+				// func.size = size;
+				// known_functions.emplace(func);
 			}
 		}
 	}
@@ -1351,7 +1366,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 				if (target >= start && target < end && target != iaddr && target != iaddr + 4)
 				{
-					if (is_valid_code({ get_ptr<u32>(target), get_ptr<u32>(end - 4) }, !is_relocatable, target))
+					if (is_valid_code({get_ptr<u32>(target), get_ptr<u32>(end - 4)}, !is_relocatable, target))
 					{
 						ppu_log.trace("Enqueued PPU function 0x%x using a caller at 0x%x", target, iaddr);
 						add_func(target, 0, 0);
@@ -1592,13 +1607,13 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				auto p2 = get_ptr<u32>(_p2);
 
 				while (_p2 + 0x7 <= fend &&
-					p2[0] == STD(r2, r1, 0x28) &&
-					(p2[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
-					(p2[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
-					(p2[3] & 0xffff0000) == ADDIS(r2, r2, {}) &&
-					(p2[4] & 0xffff0000) == ADDI(r2, r2, {}) &&
-					p2[5] == MTCTR(r11) &&
-					p2[6] == BCTR())
+					   p2[0] == STD(r2, r1, 0x28) &&
+					   (p2[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
+					   (p2[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
+					   (p2[3] & 0xffff0000) == ADDIS(r2, r2, {}) &&
+					   (p2[4] & 0xffff0000) == ADDI(r2, r2, {}) &&
+					   p2[5] == MTCTR(r11) &&
+					   p2[6] == BCTR())
 				{
 					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x1C;
@@ -1640,11 +1655,11 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 						add_toc(toc);
 						add_func(func.addr, toc, 0);
 					}
-					//else if (new_func.toc - func.toc != toc_add)
+					// else if (new_func.toc - func.toc != toc_add)
 					//{
 					//	func.toc = -1;
 					//	new_func.toc = -1;
-					//}
+					// }
 
 					if (new_func.blocks.empty())
 					{
@@ -1687,11 +1702,11 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 						add_toc(toc);
 						add_func(func.addr, toc, 0);
 					}
-					//else if (new_func.toc - func.toc != toc_add)
+					// else if (new_func.toc - func.toc != toc_add)
 					//{
 					//	func.toc = -1;
 					//	new_func.toc = -1;
-					//}
+					// }
 
 					if (new_func.blocks.empty())
 					{
@@ -1730,14 +1745,14 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				auto p2 = get_ptr<u32>(_p2);
 
 				while (_p2 + 8 <= fend &&
-					(p2[0] & 0xffff0000) == LI(r12, 0) &&
-					(p2[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
-					(p2[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
-					p2[3] == STD(r2, r1, 0x28) &&
-					p2[4] == LWZ(r0, r12, 0) &&
-					p2[5] == LWZ(r2, r12, 4) &&
-					p2[6] == MTCTR(r0) &&
-					p2[7] == BCTR())
+					   (p2[0] & 0xffff0000) == LI(r12, 0) &&
+					   (p2[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
+					   (p2[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
+					   p2[3] == STD(r2, r1, 0x28) &&
+					   p2[4] == LWZ(r0, r12, 0) &&
+					   p2[5] == LWZ(r2, r12, 4) &&
+					   p2[6] == MTCTR(r0) &&
+					   p2[7] == BCTR())
 				{
 					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x20;
@@ -1758,7 +1773,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// Weird function (illegal instruction)
 				func.size = 0xc;
 				func.blocks.emplace(func.addr, func.size);
-				//func.attr += ppu_attr::no_return;
+				// func.attr += ppu_attr::no_return;
 				continue;
 			}
 
@@ -1805,7 +1820,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			{
 				auto& block = block_queue.emplace_back(block_local_info_t{addr});
 				block.parent_block_idx = parent_block;
-	
+
 				if (parent_block != umax)
 				{
 					// Inherit loaded registers mask (lazily)
@@ -1845,22 +1860,25 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			const u32 func_end2 = _next == fmap.end() ? func_end : std::min<u32>(_next->first, func_end);
 
 			// Set more block entries
-			std::for_each(addr_heap.lower_bound(func.addr), addr_heap.lower_bound(func_end2), [&](auto a) { add_block(a.first, umax); });
+			std::for_each(addr_heap.lower_bound(func.addr), addr_heap.lower_bound(func_end2), [&](auto a)
+				{
+					add_block(a.first, umax);
+				});
 		}
 
 		bool postpone_analysis = false;
 
 		// Block loop (block_queue may grow, may be aborted via clearing)
 		for (u32 j = 0; !postpone_analysis && j < block_queue.size(); [&]()
-		{
-			if (u32 size = block_queue[j].size)
 			{
-				// Update size
-				func.blocks[block_queue[j].addr] = size;
-			}
+				if (u32 size = block_queue[j].size)
+				{
+					// Update size
+					func.blocks[block_queue[j].addr] = size;
+				}
 
-			j++;
-		}())
+				j++;
+			}())
 		{
 			block_local_info_t* block = &block_queue[j];
 
@@ -1895,8 +1913,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 					// Try searching for register origin
 					if (block->mapped_registers_mask.mask & reg_mask)
-				 	{
-				 		for (u32 i = block->parent_block_idx; i != umax; i = block_queue[i].parent_block_idx)
+					{
+						for (u32 i = block->parent_block_idx; i != umax; i = block_queue[i].parent_block_idx)
 						{
 							if (~block_queue[i].moved_registers_mask.mask & reg_mask)
 							{
@@ -2033,7 +2051,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 									if (value(is_const))
 									{
-										it->second.emplace_back(ppua_reg_mask_t{ 1u << 3 }, value(minv) );
+										it->second.emplace_back(ppua_reg_mask_t{1u << 3}, value(minv));
 									}
 								}
 							}
@@ -2060,9 +2078,18 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 							{
 								switch (op.bi % 4)
 								{
-								case 0x0: gt = true; eq = true; break;
-								case 0x1: lt = true; eq = true; break;
-								case 0x2: gt = true; lt = true; break;
+								case 0x0:
+									gt = true;
+									eq = true;
+									break;
+								case 0x1:
+									lt = true;
+									eq = true;
+									break;
+								case 0x2:
+									gt = true;
+									lt = true;
+									break;
 								case 0x3: nso = true; break;
 								default: fmt::throw_exception("Unreachable");
 								}
@@ -2174,7 +2201,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 									return;
 								}
 
-								if (addr % 4 || addr < func.addr || addr >= func_end || !is_valid_code({ get_ptr<u32>(addr), code_end }, !is_relocatable, addr))
+								if (addr % 4 || addr < func.addr || addr >= func_end || !is_valid_code({get_ptr<u32>(addr), code_end}, !is_relocatable, addr))
 								{
 									return;
 								}
@@ -2243,7 +2270,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 									{
 										found_jt = true;
 
-										for (be_t<u32> addr : std::span<const be_t<u32>>{ jumpatble_ptr_begin , jumpatble_ptr })
+										for (be_t<u32> addr : std::span<const be_t<u32>>{jumpatble_ptr_begin, jumpatble_ptr})
 										{
 											if (addr == _ptr.addr())
 											{
@@ -2369,7 +2396,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					}
 					case 0x008: // MTLR
 					{
-						//store_block_reg(j, c_reg_lr, get_reg(op.rs));
+						// store_block_reg(j, c_reg_lr, get_reg(op.rs));
 						break;
 					}
 					case 0x009: // MTCTR
@@ -2416,17 +2443,13 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 						const bool is_negative = const_offs(sign_bitv) == 1u;
 
-						const bool is_offset_test_ok = is_negative
-							? (0 - const_offs(minv) <= off_ra(minv) && off_ra(minv) + const_offs(minv) < segs_end)
-							: (off_ra(minv) < segs_end && const_offs(minv) < segs_end - off_ra(minv));
+						const bool is_offset_test_ok = is_negative ? (0 - const_offs(minv) <= off_ra(minv) && off_ra(minv) + const_offs(minv) < segs_end) : (off_ra(minv) < segs_end && const_offs(minv) < segs_end - off_ra(minv));
 
 						if (off_ra(minv) < off_ra(maxv) && is_offset_test_ok)
 						{
 							rd.ge_than += off_ra(minv);
 
-							const bool is_range_end_test_ok = is_negative
-								? (off_ra(maxv) + const_offs(minv) <= segs_end)
-								: (off_ra(maxv) - 1 < segs_end - 1 && const_offs(minv) <= segs_end - off_ra(maxv));
+							const bool is_range_end_test_ok = is_negative ? (off_ra(maxv) + const_offs(minv) <= segs_end) : (off_ra(maxv) - 1 < segs_end - 1 && const_offs(minv) <= segs_end - off_ra(maxv));
 
 							if (is_range_end_test_ok)
 							{
@@ -2494,7 +2517,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				}
 				case ppu_itype::RLWINM:
 				{
-					//const u64 mask = ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
+					// const u64 mask = ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
 
 					if (!is_reg_mapped(op.rs) && !is_reg_mapped(op.ra))
 					{
@@ -2527,7 +2550,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				{
 					const u32 sh = op.sh64;
 					const u32 me = op.mbe64;
-					//const u64 mask = ~0ull << (63 - me);
+					// const u64 mask = ~0ull << (63 - me);
 
 					if (sh == 63 - me)
 					{
@@ -2722,7 +2745,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		if (func.addr + func.size > next)
 		{
 			ppu_log.trace("Function overlap: [0x%x] 0x%x -> 0x%x", func.addr, func.size, next - func.addr);
-			continue; //func.size = next - func.addr;
+			continue; // func.size = next - func.addr;
 
 			// Also invalidate blocks
 			for (auto& block : func.blocks)
@@ -2855,7 +2878,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				auto& block = fmap[addr];
 				block.addr = addr;
 				block.size = 4;
-				block.toc  = func.toc;
+				block.toc = func.toc;
 				block.attr = ppu_attr::no_size;
 			}
 
@@ -2881,7 +2904,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			block.addr = addr;
 			block.size = size;
-			block.toc  = func.toc;
+			block.toc = func.toc;
 			ppu_log.trace("Block __0x%x added (func=0x%x, size=0x%x, toc=0x%x)", block.addr, it->first, block.size, block.toc);
 
 			if (!entry && !sec_end)
@@ -2902,7 +2925,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	for (auto& rel : this->relocs)
 	{
 		// Disabled (TODO)
-		//if (!vm::check_addr<4>(rel.addr))
+		// if (!vm::check_addr<4>(rel.addr))
 		{
 			continue;
 		}
@@ -3256,7 +3279,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				auto& i = funcs.emplace_back();
 				i.addr = addr;
 				i.size = 4;
-				i.toc  = block.toc;
+				i.toc = block.toc;
 			}
 
 			per_instruction_bytes += block.size;

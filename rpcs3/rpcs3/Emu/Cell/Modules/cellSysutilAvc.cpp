@@ -6,33 +6,35 @@
 
 LOG_CHANNEL(cellSysutil);
 
-template<>
+template <>
 void fmt_class_string<CellAvcError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
-	{
-		switch (error)
 		{
-			STR_CASE(CELL_AVC_ERROR_UNKNOWN);
-			STR_CASE(CELL_AVC_ERROR_NOT_SUPPORTED);
-			STR_CASE(CELL_AVC_ERROR_NOT_INITIALIZED);
-			STR_CASE(CELL_AVC_ERROR_ALREADY_INITIALIZED);
-			STR_CASE(CELL_AVC_ERROR_INVALID_ARGUMENT);
-			STR_CASE(CELL_AVC_ERROR_OUT_OF_MEMORY);
-			STR_CASE(CELL_AVC_ERROR_BAD_ID);
-			STR_CASE(CELL_AVC_ERROR_INVALID_STATUS);
-			STR_CASE(CELL_AVC_ERROR_TIMEOUT);
-			STR_CASE(CELL_AVC_ERROR_NO_SESSION);
-			STR_CASE(CELL_AVC_ERROR_INCOMPATIBLE_PROTOCOL);
-			STR_CASE(CELL_AVC_ERROR_PEER_UNREACHABLE);
-		}
+			switch (error)
+			{
+				STR_CASE(CELL_AVC_ERROR_UNKNOWN);
+				STR_CASE(CELL_AVC_ERROR_NOT_SUPPORTED);
+				STR_CASE(CELL_AVC_ERROR_NOT_INITIALIZED);
+				STR_CASE(CELL_AVC_ERROR_ALREADY_INITIALIZED);
+				STR_CASE(CELL_AVC_ERROR_INVALID_ARGUMENT);
+				STR_CASE(CELL_AVC_ERROR_OUT_OF_MEMORY);
+				STR_CASE(CELL_AVC_ERROR_BAD_ID);
+				STR_CASE(CELL_AVC_ERROR_INVALID_STATUS);
+				STR_CASE(CELL_AVC_ERROR_TIMEOUT);
+				STR_CASE(CELL_AVC_ERROR_NO_SESSION);
+				STR_CASE(CELL_AVC_ERROR_INCOMPATIBLE_PROTOCOL);
+				STR_CASE(CELL_AVC_ERROR_PEER_UNREACHABLE);
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 // Callback handle tag type
-struct avc_cb_handle_t{};
+struct avc_cb_handle_t
+{
+};
 
 struct avc_settings
 {
@@ -246,7 +248,7 @@ error_code cellSysutilAvcLoadAsync(vm::ptr<CellSysutilAvcCallback> func, vm::ptr
 	cellSysutil.todo("cellSysutilAvcLoadAsync(func=*0x%x, userdata=*0x%x, container=0x%x, media=0x%x, videoQuality=0x%x, voiceQuality=0x%x, request_id=*0x%x)",
 		func, userdata, container, +media, +videoQuality, +voiceQuality, request_id);
 
-	//if (sys_memory_container_get_size(.., container) != CELL_OK)
+	// if (sys_memory_container_get_size(.., container) != CELL_OK)
 	//	return CELL_AVC_ERROR_INVALID_ARGUMENT;
 
 	switch (media)

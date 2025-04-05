@@ -13,8 +13,8 @@
 class movie_item;
 
 /*
-	class used in order to get deselection and hover change
-	if you know a simpler way, tell @Megamouse
+    class used in order to get deselection and hover change
+    if you know a simpler way, tell @Megamouse
 */
 class game_list : public QTableWidget, public game_list_base
 {

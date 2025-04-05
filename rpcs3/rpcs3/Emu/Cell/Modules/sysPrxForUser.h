@@ -36,8 +36,7 @@ struct sys_lwmutex_locker
 	vm::ptr<sys_lwmutex_t> mutex;
 
 	sys_lwmutex_locker(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> mutex)
-		: ppu(ppu)
-		, mutex(mutex)
+		: ppu(ppu), mutex(mutex)
 	{
 		ensure(sys_lwmutex_lock(ppu, mutex, 0) == CELL_OK);
 	}
@@ -47,7 +46,6 @@ struct sys_lwmutex_locker
 		ensure(sys_lwmutex_unlock(ppu, mutex) == CELL_OK);
 	}
 };
-
 
 struct sys_lwcond_t;
 struct sys_lwcond_attribute_t;

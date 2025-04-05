@@ -189,13 +189,13 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
     if (auto gpu = amdgpu::DeviceCtl{orbis::g_context.gpuDevice}) {
       for (unsigned i = 0; i < args->count / 2; ++i) {
         auto addressLo = static_cast<std::uint32_t>(args->submits[i].address);
-        auto addressHi = static_cast<std::uint32_t>(args->submits[i].address >> 32);
+        auto addressHi =
+            static_cast<std::uint32_t>(args->submits[i].address >> 32);
         auto size = static_cast<std::uint32_t>(args->submits[i].size);
 
         gpu.submitGfxCommand(gcFile->gfxPipe,
-                             orbis::g_currentThread->tproc->vmId, {
-          {0xc0023f00, addressLo, addressHi, size}
-        });
+                             orbis::g_currentThread->tproc->vmId,
+                             {{0xc0023f00, addressLo, addressHi, size}});
       }
 
       gpu.waitForIdle();

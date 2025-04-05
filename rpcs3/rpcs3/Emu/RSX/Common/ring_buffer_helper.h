@@ -15,9 +15,9 @@ class data_heap
 {
 protected:
 	/**
-	* Does alloc cross get position ?
-	*/
-	template<int Alignment>
+	 * Does alloc cross get position ?
+	 */
+	template <int Alignment>
 	bool can_alloc(usz size) const
 	{
 		usz alloc_size = utils::align(size, Alignment);
@@ -53,12 +53,13 @@ protected:
 	}
 
 	usz m_size;
-	usz m_put_pos; // Start of free space
-	usz m_min_guard_size; //If an allocation touches the guard region, reset the heap to avoid going over budget
+	usz m_put_pos;        // Start of free space
+	usz m_min_guard_size; // If an allocation touches the guard region, reset the heap to avoid going over budget
 	usz m_current_allocated_size;
 	usz m_largest_allocated_pool;
 
 	char* m_name;
+
 public:
 	data_heap() = default;
 	~data_heap() = default;
@@ -67,7 +68,7 @@ public:
 
 	usz m_get_pos; // End of free space
 
-	void init(usz heap_size, const char* buffer_name = "unnamed", usz min_guard_size=0x10000)
+	void init(usz heap_size, const char* buffer_name = "unnamed", usz min_guard_size = 0x10000)
 	{
 		m_name = const_cast<char*>(buffer_name);
 
@@ -75,13 +76,13 @@ public:
 		m_put_pos = 0;
 		m_get_pos = heap_size - 1;
 
-		//allocation stats
+		// allocation stats
 		m_min_guard_size = min_guard_size;
 		m_current_allocated_size = 0;
 		m_largest_allocated_pool = 0;
 	}
 
-	template<int Alignment>
+	template <int Alignment>
 	usz alloc(usz size)
 	{
 		const usz alloc_size = utils::align(size, Alignment);
@@ -90,7 +91,7 @@ public:
 		if (!can_alloc<Alignment>(size) && !grow(alloc_size))
 		{
 			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d",
-					m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
+				m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
 		}
 
 		const usz block_length = (aligned_put_pos - m_put_pos) + alloc_size;
@@ -110,8 +111,8 @@ public:
 	}
 
 	/**
-	* return current putpos - 1
-	*/
+	 * return current putpos - 1
+	 */
 	usz get_current_put_pos_minus_one() const
 	{
 		return (m_put_pos > 0) ? m_put_pos - 1 : m_size - 1;

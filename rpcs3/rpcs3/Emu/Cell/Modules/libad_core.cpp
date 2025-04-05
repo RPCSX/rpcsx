@@ -46,12 +46,12 @@ error_code sceAdConnectContext()
 }
 
 DECLARE(ppu_module_manager::libad_core)("libad_core", []()
-{
-	REG_FUNC(libad_core, sceAdOpenContext);
-	REG_FUNC(libad_core, sceAdFlushReports);
-	REG_FUNC(libad_core, sceAdGetAssetInfo);
-	REG_FUNC(libad_core, sceAdCloseContext);
-	REG_FUNC(libad_core, sceAdGetSpaceInfo);
-	REG_FUNC(libad_core, sceAdGetConnectionInfo);
-	REG_FUNC(libad_core, sceAdConnectContext);
-});
+	{
+		REG_FUNC(libad_core, sceAdOpenContext);
+		REG_FUNC(libad_core, sceAdFlushReports);
+		REG_FUNC(libad_core, sceAdGetAssetInfo);
+		REG_FUNC(libad_core, sceAdCloseContext);
+		REG_FUNC(libad_core, sceAdGetSpaceInfo);
+		REG_FUNC(libad_core, sceAdGetConnectionInfo);
+		REG_FUNC(libad_core, sceAdConnectContext);
+	});

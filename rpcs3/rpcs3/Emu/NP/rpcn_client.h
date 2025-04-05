@@ -177,13 +177,13 @@ public:
 protected:
 	std::vector<u8>& vec;
 	std::vector<std::vector<u8>> aligned_bufs;
-	usz i      = 0;
+	usz i = 0;
 	bool error = false;
 };
 
 namespace rpcn
 {
-	using friend_cb_func  = void (*)(void* param, NotificationType ntype, const std::string& username, bool status);
+	using friend_cb_func = void (*)(void* param, NotificationType ntype, const std::string& username, bool status);
 	using message_cb_func = void (*)(void* param, const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id);
 
 	struct friend_online_data
@@ -223,10 +223,10 @@ namespace rpcn
 		static inline std::weak_ptr<rpcn_client> instance;
 		static inline shared_mutex inst_mutex;
 
-		atomic_t<bool> connected    = false;
+		atomic_t<bool> connected = false;
 		atomic_t<bool> authentified = false;
-		atomic_t<bool> want_conn    = false;
-		atomic_t<bool> want_auth    = false;
+		atomic_t<bool> want_conn = false;
+		atomic_t<bool> want_auth = false;
 		std::binary_semaphore sem_connected, sem_authentified;
 		std::mutex mutex_connected, mutex_authentified;
 
@@ -285,7 +285,7 @@ namespace rpcn
 
 	public:
 		~rpcn_client();
-		rpcn_client(rpcn_client& other)    = delete;
+		rpcn_client(rpcn_client& other) = delete;
 		void operator=(const rpcn_client&) = delete;
 		static std::shared_ptr<rpcn_client> get_instance(bool check_config = false);
 		rpcn_state wait_for_connection();
@@ -354,7 +354,7 @@ namespace rpcn
 		bool get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo);
 		bool get_score_npid(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, const std::vector<std::pair<SceNpId, s32>>& npids, bool with_comment, bool with_gameinfo);
 		bool get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries);
-		bool record_score_data(u32 req_id, const SceNpCommunicationId& communication_id,  SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data);
+		bool record_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data);
 		bool get_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, const SceNpId& npid);
 		bool tus_set_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser);
 		bool tus_get_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
@@ -407,11 +407,11 @@ namespace rpcn
 
 	private:
 		WOLFSSL_CTX* wssl_ctx = nullptr;
-		WOLFSSL* read_wssl    = nullptr;
-		WOLFSSL* write_wssl   = nullptr;
+		WOLFSSL* read_wssl = nullptr;
+		WOLFSSL* write_wssl = nullptr;
 
 		atomic_t<bool> server_info_received = false;
-		u32 received_version                = 0;
+		u32 received_version = 0;
 
 		sockaddr_in addr_rpcn{};
 		sockaddr_in addr_rpcn_udp_ipv4{};
@@ -440,7 +440,7 @@ namespace rpcn
 
 			bool operator<(const message_cb_t& other) const
 			{
-				const void* void_cb_func       = reinterpret_cast<const void*>(cb_func);
+				const void* void_cb_func = reinterpret_cast<const void*>(cb_func);
 				const void* void_other_cb_func = reinterpret_cast<const void*>(other.cb_func);
 				return (void_cb_func < void_other_cb_func) || ((!(void_other_cb_func < void_cb_func)) && (cb_param < other.cb_param));
 			}
@@ -448,9 +448,9 @@ namespace rpcn
 		shared_mutex mutex_messages;
 		std::set<message_cb_t> message_cbs;
 		std::unordered_map<u64, shared_ptr<std::pair<std::string, message_data>>> messages; // msg id / (sender / message)
-		std::set<u64> active_messages;                                                           // msg id of messages that have not been discarded
-		std::vector<u64> new_messages;                                                           // list of msg_id used to inform np_handler of new messages
-		u64 message_counter = 3;                                                                 // id counter
+		std::set<u64> active_messages;                                                      // msg id of messages that have not been discarded
+		std::vector<u64> new_messages;                                                      // list of msg_id used to inform np_handler of new messages
+		u64 message_counter = 3;                                                            // id counter
 
 		std::string online_name{};
 		std::string avatar_url{};

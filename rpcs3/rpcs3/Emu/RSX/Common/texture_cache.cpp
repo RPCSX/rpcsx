@@ -47,7 +47,8 @@ namespace rsx
 
 	void buffered_section::protect(utils::protection new_prot, bool force)
 	{
-		if (new_prot == protection && !force) return;
+		if (new_prot == protection && !force)
+			return;
 
 		ensure(locked_range.is_page_range());
 		AUDIT(!confirmed_range.valid() || confirmed_range.inside(cpu_range));
@@ -215,4 +216,4 @@ namespace rsx
 
 		return (fast_hash_internal() == mem_hash);
 	}
-}
+} // namespace rsx

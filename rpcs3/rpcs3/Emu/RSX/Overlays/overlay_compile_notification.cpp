@@ -46,5 +46,5 @@ namespace rsx
 
 			return refs;
 		}
-	}
-}
+	} // namespace overlays
+} // namespace rsx

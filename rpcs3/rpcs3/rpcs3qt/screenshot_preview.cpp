@@ -10,8 +10,7 @@
 #include <QResizeEvent>
 
 screenshot_preview::screenshot_preview(const QString& filepath, QWidget* parent)
-	: QLabel(parent)
-	, m_filepath(filepath)
+	: QLabel(parent), m_filepath(filepath)
 {
 	QImageReader reader(filepath);
 	reader.setAutoTransform(true);
@@ -32,15 +31,28 @@ screenshot_preview::screenshot_preview(const QString& filepath, QWidget* parent)
 void screenshot_preview::show_context_menu(const QPoint& pos)
 {
 	QMenu* menu = new QMenu();
-	menu->addAction(tr("&Copy"), [this]() { QGuiApplication::clipboard()->setImage(m_image); });
+	menu->addAction(tr("&Copy"), [this]()
+		{
+			QGuiApplication::clipboard()->setImage(m_image);
+		});
 	menu->addSeparator();
-	menu->addAction(tr("&Open file location"), [this]() { gui::utils::open_dir(m_filepath); });
+	menu->addAction(tr("&Open file location"), [this]()
+		{
+			gui::utils::open_dir(m_filepath);
+		});
 	menu->addSeparator();
 
-	QAction* reset_act = menu->addAction(tr("To &Normal Size"), [this]() { scale(m_image.size()); });
+	QAction* reset_act = menu->addAction(tr("To &Normal Size"), [this]()
+		{
+			scale(m_image.size());
+		});
 	reset_act->setEnabled(pixmap(Qt::ReturnByValue).size() != m_image.size());
 
-	QAction* stretch_act = menu->addAction(tr("&Stretch to size"), [this]() { m_stretch = !m_stretch; scale(size()); });
+	QAction* stretch_act = menu->addAction(tr("&Stretch to size"), [this]()
+		{
+			m_stretch = !m_stretch;
+			scale(size());
+		});
 	stretch_act->setCheckable(true);
 	stretch_act->setChecked(m_stretch);
 

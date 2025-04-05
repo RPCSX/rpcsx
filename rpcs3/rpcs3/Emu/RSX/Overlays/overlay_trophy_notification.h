@@ -30,5 +30,5 @@ namespace rsx
 
 			s32 show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer);
 		};
-	}
-}
+	} // namespace overlays
+} // namespace rsx
