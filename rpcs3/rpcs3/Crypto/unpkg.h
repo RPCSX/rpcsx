@@ -93,7 +93,7 @@ struct PKGHeader
 	char title_id[48];      // Title ID
 	be_t<u64> qa_digest[2]; // This should be the hash of "files + attribs"
 	be_t<u128> klicensee;   // Nonce
-							// + some stuff
+	                        // + some stuff
 };
 
 // Extended header in PSP and PSVita packages

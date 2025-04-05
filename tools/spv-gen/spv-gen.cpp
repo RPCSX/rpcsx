@@ -468,7 +468,8 @@ inline void generateInstructions(std::set<std::string> &composites,
       }
       if (inst["opname"] == "OpTypeVoid") {
         instructionDecoderBody += "      if (voidType != nullptr) {\n";
-        instructionDecoderBody += "        voidType.replaceAllUsesWith(inst);\n";
+        instructionDecoderBody +=
+            "        voidType.replaceAllUsesWith(inst);\n";
         instructionDecoderBody += "        voidType.remove();\n";
         instructionDecoderBody += "      }\n";
         instructionDecoderBody += "      voidType = inst;\n";

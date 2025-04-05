@@ -174,7 +174,7 @@ private:
 		{0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal", nullptr, nullptr},
 
 		// Cameras
-	    // {0x1415, 0x0020, 0x2000, "Sony Playstation Eye", nullptr, nullptr}, // TODO: verifiy
+		// {0x1415, 0x0020, 0x2000, "Sony Playstation Eye", nullptr, nullptr}, // TODO: verifiy
 
 		// Music devices
 		{0x1415, 0x0000, 0x0000, "Singstar Microphone", nullptr, nullptr},

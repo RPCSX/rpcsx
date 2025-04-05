@@ -1903,7 +1903,8 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 		{
 			dst[i * 8 + 0] += src[i * 2 + 0] * volume; // mix L ch
 			dst[i * 8 + 1] += src[i * 2 + 1] * volume; // mix R ch
-													   // dst[i * 8 + 2] += 0.0f; // center
+
+			// dst[i * 8 + 2] += 0.0f; // center
 			// dst[i * 8 + 3] += 0.0f; // LFE
 			// dst[i * 8 + 4] += 0.0f; // rear L
 			// dst[i * 8 + 5] += 0.0f; // rear R
@@ -1956,7 +1957,8 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 			dst[i * 8 + 3] += src[i * 6 + 5] * volume; // mix LFE
 			dst[i * 8 + 4] += src[i * 6 + 3] * volume; // mix rear L
 			dst[i * 8 + 5] += src[i * 6 + 4] * volume; // mix rear R
-													   // dst[i * 8 + 6] += 0.0f; // side L
+
+			// dst[i * 8 + 6] += 0.0f; // side L
 			// dst[i * 8 + 7] += 0.0f; // side R
 		}
 	}

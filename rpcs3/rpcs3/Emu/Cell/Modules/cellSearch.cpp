@@ -245,7 +245,8 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 		info.codec = CELL_SEARCH_CODEC_AT3P;
 		break;
 	case 88078: // AV_CODEC_ID_ATRAC3AL
-				// case 88079: // AV_CODEC_ID_ATRAC3PAL TODO: supported ?
+
+		// case 88079: // AV_CODEC_ID_ATRAC3PAL TODO: supported ?
 		info.codec = CELL_SEARCH_CODEC_ATALL;
 		break;
 	// TODO: Find out if any of this works
@@ -332,7 +333,8 @@ void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi,
 		info.audioCodec = CELL_SEARCH_CODEC_AT3P;
 		break;
 	case 88078: // AV_CODEC_ID_ATRAC3AL
-				// case 88079: // AV_CODEC_ID_ATRAC3PAL TODO: supported ?
+
+		// case 88079: // AV_CODEC_ID_ATRAC3PAL TODO: supported ?
 		info.audioCodec = CELL_SEARCH_CODEC_ATALL;
 		break;
 	// TODO: Find out if any of this works

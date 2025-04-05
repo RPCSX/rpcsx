@@ -501,10 +501,10 @@ extern const spu_imm_table_t g_spu_imm;
 enum FPSCR_EX
 {
 	// Single-precision exceptions
-	FPSCR_SOVF = 1 << 2,  // Overflow
-	FPSCR_SUNF = 1 << 1,  // Underflow
-	FPSCR_SDIFF = 1 << 0, // Different (could be IEEE non-compliant)
-	                      // Double-precision exceptions
+	FPSCR_SOVF = 1 << 2,    // Overflow
+	FPSCR_SUNF = 1 << 1,    // Underflow
+	FPSCR_SDIFF = 1 << 0,   // Different (could be IEEE non-compliant)
+	                        // Double-precision exceptions
 	FPSCR_DOVF = 1 << 13,   // Overflow
 	FPSCR_DUNF = 1 << 12,   // Underflow
 	FPSCR_DINX = 1 << 11,   // Inexact

@@ -786,7 +786,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			cellSaveData.notice("savedata_op(): dirNamePrefix is '*'. Listing all entries starting with '%s'. operation=%d", Emu.GetTitleID(), operation);
 			prefix_list.front() = Emu.GetTitleID(); // TODO: Let's be cautious for now and only list savedata starting with this game's ID
-													// prefix_list.front().clear(); // List savedata of all the games of this user
+
+			// prefix_list.front().clear(); // List savedata of all the games of this user
 		}
 
 		// get the saves matching the supplied prefix
