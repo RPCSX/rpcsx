@@ -87,7 +87,11 @@ template <>
 void fmt_class_string<fmt::alc_error>::format(std::string& out, u64 arg)
 {
 	const fmt::alc_error& obj = get_object(arg);
+#ifndef WITHOUT_OPENAL
 	fmt::append(out, "0x%x='%s'", obj.error, alcGetString(obj.device, obj.error));
+#else
+    fmt::append(out, "0x%x", obj.error);
+#endif
 }
 
 void mic_context::operator()()

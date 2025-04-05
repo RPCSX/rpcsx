@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/Thread.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
 #include <thread>
