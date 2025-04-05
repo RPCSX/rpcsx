@@ -6,7 +6,7 @@
 #include "util/types.hpp"
 #include <bit>
 #include <optional>
-#include <filesystem>
+#include <string_view>
 
 namespace iso
 {
@@ -236,7 +236,7 @@ public:
 private:
 	bool initialize();
 
-	std::optional<iso::DirEntry> open_entry(const std::filesystem::path& path);
+	std::optional<iso::DirEntry> open_entry(std::string_view path);
 	std::pair<std::vector<iso::DirEntry>, std::vector<std::string>> read_dir(const iso::DirEntry& entry);
 	fs::file read_file(const iso::DirEntry& entry);
 };

@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <ctime>
-#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -198,17 +197,14 @@ std::unique_ptr<fs::dir_base> iso_dev::open_dir(const std::string& path)
 }
 
 std::optional<iso::DirEntry>
-iso_dev::open_entry(const std::filesystem::path& path)
+iso_dev::open_entry(std::string_view path)
 {
-	auto pathString = std::filesystem::weakly_canonical(path).string();
-
-	if (pathString == "/" || pathString == "\\" || pathString.empty())
+	if (path == "/" || path == "\\" || path.empty())
 	{
 		return m_root_dir;
 	}
 
 	auto item = m_root_dir;
-	auto pathView = std::string_view(pathString);
 
 	auto isStringEqNoCase = [](std::string_view lhs, std::string_view rhs)
 	{
@@ -228,12 +224,12 @@ iso_dev::open_entry(const std::filesystem::path& path)
 		return true;
 	};
 
-	while (!pathView.empty())
+	while (!path.empty())
 	{
-		auto sepPos = pathView.find_first_of("/\\");
+		auto sepPos = path.find_first_of("/\\");
 		if (sepPos == 0)
 		{
-			pathView.remove_prefix(1);
+			path.remove_prefix(1);
 			continue;
 		}
 
@@ -243,14 +239,14 @@ iso_dev::open_entry(const std::filesystem::path& path)
 			return {};
 		}
 
-		auto dirName = pathView.substr(0, sepPos);
+		auto dirName = path.substr(0, sepPos);
 		if (sepPos == std::string_view::npos)
 		{
-			pathView = {};
+			path = {};
 		}
 		else
 		{
-			pathView.remove_prefix(sepPos);
+			path.remove_prefix(sepPos);
 		}
 
 		auto items = read_dir(item);

@@ -837,7 +837,7 @@ namespace fs
 
 shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path, std::string_view *device_path)
 {
-	auto prefix = path.substr(0, path.find_first_of('/', 1));
+	auto prefix = path.substr(0, path.find_first_of("/\\", 1));
 
 	reader_lock lock(m_mutex);
 
@@ -888,7 +888,7 @@ shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& na
 shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path, std::string_view *device_path)
 {
 	// Every virtual device path must have specific name at the beginning
-	if (path.starts_with("/vfsv0_") && path.size() >= 8 + 22 && path[29] == '_' && path.find_first_of('/', 1) > 29)
+	if ((path.starts_with("/vfsv0_") || path.starts_with("\\vfsv0_")) && path.size() >= 8 + 22 && path[29] == '_' && path.find_first_of("/\\", 1) > 29)
 	{
 		return get_device_manager().get_device(path, device_path);
 	}
