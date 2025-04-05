@@ -570,8 +570,8 @@ void main_window::BootElf()
 	}
 
 	const QString path_last_elf = m_gui_settings->GetValue(gui::fd_boot_elf).toString();
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_last_elf, tr(
-		"(S)ELF files (*BOOT.BIN *.elf *.self);;"
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select File To Boot"), path_last_elf, tr(
+		"ISO/ELF files (*BOOT.BIN *.elf *.self *.iso *.ISO);;"
 		"ELF files (BOOT.BIN *.elf);;"
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
