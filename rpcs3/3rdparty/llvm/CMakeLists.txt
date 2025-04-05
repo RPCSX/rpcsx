@@ -1,6 +1,12 @@
+
 if(WITH_LLVM)
-	check_cxx_compiler_flag("-msse -msse2 -mcx16" COMPILER_X86)
-	check_cxx_compiler_flag("-march=armv8-a+lse" COMPILER_ARM)
+	set(USE_LLVM_VERSION 19.1.7)
+	if (NOT MSVC)
+		check_cxx_compiler_flag("-msse -msse2 -mcx16" COMPILER_X86)
+		check_cxx_compiler_flag("-march=armv8-a+lse" COMPILER_ARM)
+	else()
+		set(COMPILER_X86 on) # TODO
+	endif()
 
 	if(BUILD_LLVM)
 		message(STATUS "LLVM will be built from the submodule.")
@@ -34,6 +40,30 @@ if(WITH_LLVM)
 			set(LLVM_USE_INTEL_JITEVENTS ON)
 		endif()
 
+		set(LLVM_DOWNLOAD_BINARY "")
+
+		if ((WIN32 AND MSVC) OR (LINUX AND NOT ANDROID))
+			if (WIN32)
+				string(APPEND LLVM_DOWNLOAD_BINARY windows-)
+			else()
+				string(APPEND LLVM_DOWNLOAD_BINARY linux-)
+			endif()
+
+			if (COMPILER_X86)
+				string(APPEND LLVM_DOWNLOAD_BINARY x64-)
+			else()
+				string(APPEND LLVM_DOWNLOAD_BINARY aarch64-)
+			endif()
+
+			if (WIN32)
+				if (USE_MSVC_STATIC_CRT)
+					string(APPEND LLVM_DOWNLOAD_BINARY MT)
+				else()
+					string(APPEND LLVM_DOWNLOAD_BINARY MD)
+				endif()
+			endif()
+		endif()
+
 		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 			if(COMPILER_X86)
 				set(LLVM_USE_INTEL_JITEVENTS ON)
@@ -45,13 +75,56 @@ if(WITH_LLVM)
 			add_compile_definitions("$<$<COMPILE_LANGUAGE:CXX>:_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS>")
 		endif()
 
-		# LLVM needs to be built out-of-tree
-		add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/llvm/llvm ${CMAKE_CURRENT_BINARY_DIR}/llvm_build EXCLUDE_FROM_ALL)
-		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/llvm_build/lib/cmake/llvm/")
+		if (LLVM_DOWNLOAD_BINARY STREQUAL "")
+			# LLVM needs to be built out-of-tree
+			add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/llvm/llvm ${CMAKE_CURRENT_BINARY_DIR}/llvm_build EXCLUDE_FROM_ALL)
+			set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/llvm_build/lib/cmake/llvm/")
+		else()
+			set(LLVM_DOWNLOAD_LINK https://github.com/RPCSX/llvm-build/releases/download/${USE_LLVM_VERSION})
+
+			if (NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z" AND
+				NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.unpacked")
+				message(STATUS "Downloading LLVM")
+				file(DOWNLOAD ${LLVM_DOWNLOAD_LINK}/${LLVM_DOWNLOAD_BINARY}
+					"${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z.tmp" SHOW_PROGRESS
+					STATUS FILE_STATUS)
+				list(GET FILE_STATUS 0 STATUS_CODE)
+				if (NOT STATUS_CODE EQUAL 0)
+					file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z.tmp")
+					message(FATAL_ERROR "Failed to download LLVM")
+				endif()
+
+				file(RENAME
+					"${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z.tmp"
+					"${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z"
+				)
+			endif()
+
+			if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.unpacked")
+				file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}")
+				execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z"
+					WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}" RESULT_VARIABLE STATUS_CODE)
+
+				if (NOT STATUS_CODE EQUAL 0)
+					message(FATAL_ERROR "Failed to unpack LLVM")
+				endif()
+				file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.unpacked")
+				file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}.7z")
+			endif()
+
+			file(GLOB LLVM_ROOT_DIR_LIST LIST_DIRECTORIES true "${CMAKE_CURRENT_BINARY_DIR}/${USE_LLVM_VERSION}-${LLVM_DOWNLOAD_BINARY}/*")
+			list(GET LLVM_ROOT_DIR_LIST 0 LLVM_ROOT_DIR)
+			set(LLVM_DIR "${LLVM_ROOT_DIR}/lib/cmake/llvm")	
+
+			if (NOT EXISTS "${LLVM_DIR}")
+				message(FATAL_ERROR "Failed to locate LLVM: ${LLVM_ROOT_DIR}")
+			endif()
+		endif()
 
 		set(STATIC_LINK_LLVM ON CACHE BOOL "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." FORCE)
 
-		find_package(LLVM 19.1 CONFIG)
+		find_package(LLVM ${USE_LLVM_VERSION} CONFIG)
+
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()

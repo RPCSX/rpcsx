@@ -10,10 +10,6 @@ include(CheckFunctionExists)
 
 set(CMAKE_CXX_STANDARD 20)
 
-if (MSVC)
-    add_compile_options(/MT)
-endif()
-
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #on some Linux distros shm_unlink and similar functions are in librt only
