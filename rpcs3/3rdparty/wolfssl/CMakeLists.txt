@@ -23,4 +23,7 @@ else()
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
 	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP FP_MAX_BITS=8192 WOLFSSL_NO_OPTIONS_H)
+	if (WIN32)
+		target_include_directories(wolfssl PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/extra/win32>)
+	endif()
 endif()
