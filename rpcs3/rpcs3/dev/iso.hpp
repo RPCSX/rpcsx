@@ -14,8 +14,8 @@ namespace iso
 	template <typename T>
 	struct le_be_pair
 	{
-		le_t<T> le;
-		be_t<T> be;
+		le_t<T, 1> le;
+		be_t<T, 1> be;
 
 		T value() const
 		{
@@ -155,10 +155,10 @@ namespace iso
 		le_be_pair<u16> vol_seq_num;
 		le_be_pair<u16> block_size;
 		le_be_pair<u32> path_table_size;
-		le_t<u32> path_table_block_le;
-		le_t<u32> ext_path_table_block_le;
-		be_t<u32> path_table_block_be;
-		be_t<u32> ext_path_table_block_be;
+		le_t<u32, 1> path_table_block_le;
+		le_t<u32, 1> ext_path_table_block_le;
+		be_t<u32, 1> path_table_block_be;
+		be_t<u32, 1> ext_path_table_block_be;
 		DirEntry root;
 		u8 pad3;
 		uint8_t volume_set_id[128];
@@ -193,8 +193,8 @@ namespace iso
 	{
 		u8 name_length;
 		u8 ext_attr_length;
-		le_t<u32> location;
-		le_t<u16> parent_id;
+		le_t<u32, 1> location;
+		le_t<u16, 1> parent_id;
 	};
 
 	enum class StringEncoding
