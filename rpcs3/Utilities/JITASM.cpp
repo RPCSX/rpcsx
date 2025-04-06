@@ -226,7 +226,7 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code, usz align) noexcept
 		return nullptr;
 
 	auto p = ensure(this->_alloc(codeSize, align));
-	ensure(!code->relocateToBase(uptr(p)));
+	code->relocateToBase(uptr(p));
 
 	{
 		// We manage rw <-> rx transitions manually on Apple

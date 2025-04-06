@@ -1,11 +1,11 @@
 #include "trophy_notification_helper.h"
 #include "trophy_notification_frame.h"
 
-#include "../Emu/IdManager.h"
-#include "../Emu/System.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
-#include "../Emu/RSX/Overlays/overlay_manager.h"
-#include "../Emu/RSX/Overlays/overlay_trophy_notification.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/overlay_trophy_notification.h"
 
 #include "Utilities/File.h"
 

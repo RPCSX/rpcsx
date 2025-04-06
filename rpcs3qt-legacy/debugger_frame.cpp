@@ -34,7 +34,7 @@
 #include <algorithm>
 #include <functional>
 
-#include "rpcs3qt/debugger_add_bp_window.h"
+#include "debugger_add_bp_window.h"
 #include "util/asm.hpp"
 
 constexpr auto qstr = QString::fromStdString;

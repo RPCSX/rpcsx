@@ -27,6 +27,28 @@
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
+
+#include "Input/keyboard_pad_handler.h"
+#include "Emu/Io/Null/NullPadHandler.h"
+#include "Input/ds3_pad_handler.h"
+#include "Input/ds4_pad_handler.h"
+#include "Input/dualsense_pad_handler.h"
+#include "Input/skateboard_pad_handler.h"
+#include "Input/ps_move_handler.h"
+#include "Input/virtual_pad_handler.h"
+#ifdef _WIN32
+#include "Input/xinput_pad_handler.h"
+#include "Input/mm_joystick_handler.h"
+#endif
+
+#ifdef HAVE_SDL3
+#include "Input/sdl_pad_handler.h"
+#endif
+
+#ifdef HAVE_LIBEVDEV
+#include "Input/evdev_joystick_handler.h"
+#endif
+
 #include "qt_video_source.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -653,7 +675,8 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	callbacks.get_music_handler =
+		[]() -> std::shared_ptr<music_handler_base>
 	{
 		switch (g_cfg.audio.music.get())
 		{
@@ -667,6 +690,50 @@ void gui_application::InitializeCallbacks()
 		}
 		}
 		return nullptr;
+	};
+
+	callbacks.create_pad_handler = [](pad_handler type, void* thread, void* window) -> std::shared_ptr<PadHandlerBase>
+	{
+		switch (type)
+		{
+		case pad_handler::null:
+			break;
+		case pad_handler::keyboard:
+		{
+			auto result = std::make_shared<keyboard_pad_handler>();
+			result->moveToThread(static_cast<QThread*>(thread));
+			result->SetTargetWindow(static_cast<QWindow*>(window));
+			return result;
+		}
+		case pad_handler::ds3:
+			return std::make_shared<ds3_pad_handler>();
+		case pad_handler::ds4:
+			return std::make_shared<ds4_pad_handler>();
+		case pad_handler::dualsense:
+			return std::make_shared<dualsense_pad_handler>();
+		case pad_handler::skateboard:
+			return std::make_shared<skateboard_pad_handler>();
+		case pad_handler::move:
+			return std::make_shared<ps_move_handler>();
+#ifdef _WIN32
+		case pad_handler::xinput:
+			return std::make_shared<xinput_pad_handler>();
+		case pad_handler::mm:
+			return std::make_shared<mm_joystick_handler>();
+#endif
+#ifdef HAVE_SDL3
+		case pad_handler::sdl:
+			return std::make_shared<sdl_pad_handler>();
+#endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev:
+			return std::make_shared<evdev_joystick_handler>();
+#endif
+		case pad_handler::virtual_pad:
+			return std::make_shared<virtual_pad_handler>();
+		}
+
+		return std::make_shared<NullPadHandler>();
 	};
 
 	callbacks.close_gs_frame = [this]()

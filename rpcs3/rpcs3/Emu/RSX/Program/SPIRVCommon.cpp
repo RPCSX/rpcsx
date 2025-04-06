@@ -12,7 +12,9 @@
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif
 #endif
-#include "3rdparty/glslang/glslang/SPIRV/GlslangToSpv.h"
+#include "SPIRV/GlslangToSpv.h"
+#include "glslang/Include/ResourceLimits.h"
+#include "glslang/Public/ShaderLang.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else

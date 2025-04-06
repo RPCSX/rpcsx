@@ -35,10 +35,6 @@
 	path = rpcs3/3rdparty/llvm/llvm
 	url = ../../llvm/llvm-project.git
 	ignore = dirty
-[submodule "rpcs3/3rdparty/glslang"]
-	path = rpcs3/3rdparty/glslang/glslang
-	url = ../../KhronosGroup/glslang.git
-	ignore = dirty
 [submodule "rpcs3/3rdparty/zlib"]
 	path = rpcs3/3rdparty/zlib/zlib
 	url = ../../madler/zlib

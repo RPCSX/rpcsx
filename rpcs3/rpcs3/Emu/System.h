@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Emu/Io/pad_config_types.h"
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/shared_ptr.hpp"
@@ -89,6 +90,7 @@ struct EmuCallbacks
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
+	std::function<std::shared_ptr<class PadHandlerBase>(pad_handler type, void* thread, void* window)> create_pad_handler;
 	std::function<void(utils::serial*)> init_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class audio_device_enumerator>(u64)> get_audio_enumerator; // (audio_renderer)
@@ -107,7 +109,7 @@ struct EmuCallbacks
 	std::string (*resolve_path)(std::string_view) = [](std::string_view arg)
 	{
 		return std::string{arg};
-	}; // Resolve path using Qt
+	};
 	std::function<std::vector<std::string>()> get_font_dirs;
 	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
 	std::function<void(u32)> add_breakpoint;

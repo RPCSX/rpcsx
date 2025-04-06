@@ -20,11 +20,11 @@
 #include <QMetaEnum>
 #include <QStandardPaths>
 
-#include "rpcs3qt/gui_application.h"
-#include "rpcs3qt/fatal_error_dialog.h"
-#include "rpcs3qt/curl_handle.h"
-#include "rpcs3qt/main_window.h"
-#include "rpcs3qt/uuid.h"
+#include "gui_application.h"
+#include "fatal_error_dialog.h"
+#include "curl_handle.h"
+#include "main_window.h"
+#include "uuid.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"

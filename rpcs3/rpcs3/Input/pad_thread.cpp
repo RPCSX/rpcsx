@@ -15,9 +15,6 @@
 #ifdef HAVE_SDL3
 #include "sdl_pad_handler.h"
 #endif
-#ifndef ANDROID
-#include "keyboard_pad_handler.h"
-#endif
 #include "virtual_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/interception.h"
@@ -150,10 +147,6 @@ void pad_thread::Init()
 
 	input_log.trace("Using pad config:\n%s", g_cfg_input);
 
-#ifndef ANDROID
-	std::shared_ptr<keyboard_pad_handler> keyptr;
-#endif
-
 	// Always have a Null Pad Handler
 	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>();
 	m_handlers.emplace(pad_handler::null, nullpad);
@@ -171,21 +164,7 @@ void pad_thread::Init()
 		}
 		else
 		{
-			if (handler_type == pad_handler::keyboard)
-			{
-#ifndef ANDROID
-				keyptr = std::make_shared<keyboard_pad_handler>();
-				keyptr->moveToThread(static_cast<QThread*>(m_curthread));
-				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
-				cur_pad_handler = keyptr;
-#else
-				cur_pad_handler = nullpad;
-#endif
-			}
-			else
-			{
-				cur_pad_handler = GetHandler(handler_type);
-			}
+			cur_pad_handler = GetHandler(handler_type, m_curthread, m_curwindow);
 			m_handlers.emplace(handler_type, cur_pad_handler);
 		}
 		cur_pad_handler->Init();
@@ -647,54 +626,16 @@ void pad_thread::UnregisterLddPad(u32 handle)
 	num_ldd_pad--;
 }
 
-std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
+std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type, void* thread, void* window)
 {
-	switch (type)
-	{
-	case pad_handler::null:
-		return std::make_shared<NullPadHandler>();
-	case pad_handler::keyboard:
-#ifdef ANDROID
-		return std::make_shared<NullPadHandler>();
-#else
-		return std::make_shared<keyboard_pad_handler>();
-#endif
-	case pad_handler::ds3:
-		return std::make_shared<ds3_pad_handler>();
-	case pad_handler::ds4:
-		return std::make_shared<ds4_pad_handler>();
-	case pad_handler::dualsense:
-		return std::make_shared<dualsense_pad_handler>();
-	case pad_handler::skateboard:
-		return std::make_shared<skateboard_pad_handler>();
-	case pad_handler::move:
-		return std::make_shared<ps_move_handler>();
-#ifdef _WIN32
-	case pad_handler::xinput:
-		return std::make_shared<xinput_pad_handler>();
-	case pad_handler::mm:
-		return std::make_shared<mm_joystick_handler>();
-#endif
-#ifdef HAVE_SDL3
-	case pad_handler::sdl:
-		return std::make_shared<sdl_pad_handler>();
-#endif
-#ifdef HAVE_LIBEVDEV
-	case pad_handler::evdev:
-		return std::make_shared<evdev_joystick_handler>();
-#endif
-	case pad_handler::virtual_pad:
-		return std::make_shared<virtual_pad_handler>();
-	}
-
-	return nullptr;
+	return Emu.GetCallbacks().create_pad_handler(type, thread, window);
 }
 
 void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
 {
 	if (!handler)
 	{
-		handler = GetHandler(type);
+		handler = GetHandler(type, nullptr, nullptr);
 	}
 
 	ensure(!!handler);

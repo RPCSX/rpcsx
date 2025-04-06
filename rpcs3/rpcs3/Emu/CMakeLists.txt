@@ -667,7 +667,3 @@ endif()
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3_emu PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../stdafx.h")
 endif()
-
-if(WAYLAND_FOUND)
-    target_link_libraries(rpcs3_emu PRIVATE OpenGL::EGL)
-endif()

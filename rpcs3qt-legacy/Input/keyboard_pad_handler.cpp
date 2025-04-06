@@ -1,10 +1,10 @@
 #include "keyboard_pad_handler.h"
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/Io/interception.h"
 #include "Input/product_info.h"
-#include "rpcs3qt/gs_frame.h"
+#include "../gs_frame.h"
 
 #include <QApplication>
 

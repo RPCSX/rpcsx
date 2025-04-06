@@ -91,7 +91,6 @@ endif()
 add_subdirectory(hidapi)
 
 # glslang
-add_subdirectory(glslang EXCLUDE_FROM_ALL)
 add_library(3rdparty_glslang INTERFACE)
 target_link_libraries(3rdparty_glslang INTERFACE SPIRV)
 

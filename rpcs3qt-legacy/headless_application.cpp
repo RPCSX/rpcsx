@@ -8,6 +8,26 @@
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
+#include "Emu/Io/Null/NullPadHandler.h"
+#include "Input/ds3_pad_handler.h"
+#include "Input/ds4_pad_handler.h"
+#include "Input/dualsense_pad_handler.h"
+#include "Input/skateboard_pad_handler.h"
+#include "Input/ps_move_handler.h"
+#include "Input/virtual_pad_handler.h"
+#ifdef _WIN32
+#include "Input/xinput_pad_handler.h"
+#include "Input/mm_joystick_handler.h"
+#endif
+
+#ifdef HAVE_SDL3
+#include "Input/sdl_pad_handler.h"
+#endif
+
+#ifdef HAVE_LIBEVDEV
+#include "Input/evdev_joystick_handler.h"
+#endif
+
 #include "util/video_source.h"
 
 #include <clocale>
@@ -120,6 +140,45 @@ void headless_application::InitializeCallbacks()
 		}
 		}
 		return nullptr;
+	};
+
+	callbacks.create_pad_handler = [](pad_handler type, void* thread, void* window) -> std::shared_ptr<PadHandlerBase>
+	{
+		switch (type)
+		{
+		case pad_handler::null:
+		case pad_handler::keyboard:
+			break;
+
+		case pad_handler::ds3:
+			return std::make_shared<ds3_pad_handler>();
+		case pad_handler::ds4:
+			return std::make_shared<ds4_pad_handler>();
+		case pad_handler::dualsense:
+			return std::make_shared<dualsense_pad_handler>();
+		case pad_handler::skateboard:
+			return std::make_shared<skateboard_pad_handler>();
+		case pad_handler::move:
+			return std::make_shared<ps_move_handler>();
+#ifdef _WIN32
+		case pad_handler::xinput:
+			return std::make_shared<xinput_pad_handler>();
+		case pad_handler::mm:
+			return std::make_shared<mm_joystick_handler>();
+#endif
+#ifdef HAVE_SDL3
+		case pad_handler::sdl:
+			return std::make_shared<sdl_pad_handler>();
+#endif
+#ifdef HAVE_LIBEVDEV
+		case pad_handler::evdev:
+			return std::make_shared<evdev_joystick_handler>();
+#endif
+		case pad_handler::virtual_pad:
+			return std::make_shared<virtual_pad_handler>();
+		}
+
+		return std::make_shared<NullPadHandler>();
 	};
 
 	callbacks.close_gs_frame = []() {};

@@ -45,7 +45,7 @@ public:
 		return m_handlers;
 	}
 
-	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
+	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type, void* thread = nullptr, void* window = nullptr);
 	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
 	static auto constexpr thread_name = "Pad Thread"sv;

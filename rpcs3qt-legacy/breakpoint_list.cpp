@@ -4,7 +4,7 @@
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "rpcs3qt/debugger_add_bp_window.h"
+#include "debugger_add_bp_window.h"
 
 #include <QMenu>
 #include <QMessageBox>
