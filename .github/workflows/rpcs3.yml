@@ -36,7 +36,7 @@ jobs:
             docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.4"
             build_sh: "rpcs3/.ci/build-linux-aarch64.sh"
             compiler: clang
-    name: RPCS3 Linux ${{ matrix.os }} ${{ matrix.compiler }}
+    name: RPCS3 QT UI for Linux ${{ matrix.os }} ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
@@ -74,12 +74,12 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@main
         with:
-          name: RPCS3 for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
+          name: RPCS3 QT UI for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
           path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/*.AppImage
           compression-level: 0
 
   Windows_Build:
-    name: RPCS3 Windows
+    name: RPCS3 QT UI Windows
     runs-on: windows-2025
     env:
       COMPILER: msvc
@@ -139,11 +139,10 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@main
 
-      - name: Compile RPCS3
+      - name: Compile RPCS3 QT UI
         run: |
-          cd rpcs3
-          cmake --preset msvc -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DQt6_DIR="$QTDIR"
-          cmake --build --preset msvc-release
+          cmake -B build-msvc -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DWITH_RPCSX=off -DWITH_RPCS3=on -DWITH_RPCS3_QT_UI=on -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DCMAKE_INSTALL_PREFIX="${sourceDir}/out/install/${presetName}" -DUSE_NATIVE_INSTRUCTIONS=on -DUSE_PRECOMPILED_HEADERS=on -DUSE_FAUDIO=off -DUSE_SYSTEM_CURL=off -DUSE_SYSTEM_ZLIB=off -DUSE_SYSTEM_OPENAL=off -DUSE_SYSTEM_OPENCV=off -DBUILD_LLVM=on -DSTATIC_LINK_LLVM=on
+          cmake --build build-msvc --config Release
 
       - name: Pack up build artifacts
         run: |
@@ -153,7 +152,7 @@ jobs:
       - name: Upload artifacts (7z)
         uses: actions/upload-artifact@main
         with:
-          name: RPCS3 for Windows (MSVC)
+          name: RPCS3 QT UI for Windows (MSVC)
           path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
           compression-level: 0
           if-no-files-found: error

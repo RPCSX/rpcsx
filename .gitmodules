@@ -135,3 +135,6 @@
 [submodule "3rdparty/libadrenotools"]
 	path = rpcs3/3rdparty/libadrenotools
 	url = ../../bylaws/libadrenotools.git
+[submodule "3rdparty/Vulkan-Headers"]
+	path = 3rdparty/Vulkan-Headers
+	url = ../../KhronosGroup/Vulkan-Headers.git

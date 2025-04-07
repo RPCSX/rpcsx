@@ -1,8 +1,6 @@
 #!/bin/sh -ex
 
-if [ -z "$CIRRUS_CI" ]; then
-   cd rpcs3/rpcs3 || exit 1
-fi
+cd rpcs3/rpcs3 || exit 1
 
 git config --global --add safe.directory '*'
 
@@ -25,7 +23,7 @@ fi
 export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
 export CXXFLAGS="$CXXFLAGS -fuse-ld=${LINKER}"
 
-cmake ..                                               \
+cmake -B build                                         \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
@@ -40,13 +38,14 @@ cmake ..                                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
     -DSTATIC_LINK_LLVM=ON                              \
+    -DWITH_RPCSX=off                                   \
+    -DWITH_RPCS3=on                                    \
+    -DWITH_RPCS3_QT_UI=on                              \
     -G Ninja
 
-ninja; build_status=$?;
+cmake --build build; build_status=$?;
 
-cd ..
-
-shellcheck ../.ci/*.sh
+shellcheck .ci/*.sh
 
 # If it compiled succesfully let's deploy.
 # Azure and Cirrus publish PRs as artifacts only.
@@ -54,5 +53,5 @@ shellcheck ../.ci/*.sh
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
-    ../.ci/deploy-linux.sh "aarch64"
+    .ci/deploy-linux.sh "aarch64"
 fi

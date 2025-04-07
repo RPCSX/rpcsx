@@ -652,6 +652,8 @@ target_link_libraries(rpcs3_emu
         3rdparty::opengl 3rdparty::stblib
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl
+        Vulkan::Headers
+
     PRIVATE
         3rdparty::glslang
 )

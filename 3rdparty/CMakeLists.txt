@@ -5,8 +5,8 @@ if(NOT xbyak_FOUND)
 endif()
 
 add_subdirectory(SPIRV-Headers)
-
 add_subdirectory(SPIRV-Tools)
+add_subdirectory(Vulkan-Headers)
 
 option(SPIRV_CROSS_SHARED "" off)
 option(SPIRV_CROSS_STATIC "" on)

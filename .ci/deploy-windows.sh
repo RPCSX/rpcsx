@@ -15,7 +15,7 @@ mkdir ./rpcs3/bin/config
 mkdir ./rpcs3/bin/config/input_configs
 curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt' 1> ./rpcs3/bin/config/input_configs/gamecontrollerdb.txt
 curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 1> ./rpcs3/bin/GuiConfigs/compat_database.dat
-cp -rf ./rpcs3/build-msvc/bin/ ./rpcs3/bin/
+cp -rf ./build-msvc/bin/ ./rpcs3/bin/
 
 # Download SSL certificate (not needed with CURLSSLOPT_NATIVE_CA)
 #curl -fsSL 'https://curl.haxx.se/ca/cacert.pem' 1> ./bin/cacert.pem
