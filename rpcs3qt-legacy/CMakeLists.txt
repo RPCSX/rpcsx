@@ -265,13 +265,13 @@ if (NOT ANDROID)
         install(FILES rpcs3.metainfo.xml
             DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo)
         # Install other files
-        install(DIRECTORY rpcs3/bin/Icons
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/rpcs3/bin/Icons
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY rpcs3/bin/GuiConfigs
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/rpcs3/bin/GuiConfigs
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY rpcs3/bin/git
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/rpcs3/bin/git
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY rpcs3/bin/test
+        install(DIRECTORY ${CMAKE_SOURCE_DIR}/rpcs3/bin/test
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     endif()
 endif()

@@ -6,12 +6,13 @@
 #include "util/dyn_lib.hpp"
 #include "Utilities/lockless.h"
 #include <windows.h>
+#include <winioctl.h>
 #include <span>
 #else
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <errno.h>
+#include <cerrno>
 #include <unistd.h>
 #include <sys/types.h>
 #endif
@@ -32,7 +33,8 @@
 #define __NR_memfd_create 279
 #endif
 
-static int memfd_create_(const char* name, uint flags)
+static int
+memfd_create_(const char* name, uint flags)
 {
 	return syscall(__NR_memfd_create, name, flags);
 }

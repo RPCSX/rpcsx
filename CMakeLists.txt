@@ -6,6 +6,7 @@ option(WITH_RPCS3 "Enable RPCS3" OFF)
 option(WITH_RPCS3_QT_UI "Enable RPCS3 UI" OFF)
 option(WITHOUT_OPENGL "Disable OpenGL" OFF)
 option(WITHOUT_OPENGLEW "Disable OpenGLEW" OFF)
+option(WITHOUT_OPENAL "Disable OpenAL" OFF)
 
 # rpcs3 options
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
@@ -28,6 +29,26 @@ option(HAS_MEMORY_BREAKPOINTS "Add support for memory breakpoints to the interpr
 option(USE_LTO "Use LTO for building" ON)
 
 
+if (NOT WITH_RPCS3)
+    set(WITHOUT_OPENGL on)
+    set(WITHOUT_OPENGLEW on)
+    set(WITHOUT_OPENAL on)
+    set(WITH_LLVM off)
+    set(USE_FAUDIO off)
+    set(USE_LIBEVDEV off)
+    set(USE_DISCORD_RPC off)
+    set(USE_SYSTEM_ZLIB off)
+    set(USE_VULKAN off)
+    set(USE_PRECOMPILED_HEADERS off)
+    set(USE_SDL off)
+    set(USE_SYSTEM_SDL off)
+    set(USE_SYSTEM_FFMPEG off)
+    set(USE_SYSTEM_OPENAL off)
+    set(USE_SYSTEM_CURL off)
+    set(USE_SYSTEM_OPENCV off)
+    set(HAS_MEMORY_BREAKPOINTS off)
+endif()
+
 set(CMAKE_CXX_EXTENSIONS off)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
@@ -35,7 +56,74 @@ set(CMAKE_BUILD_RPATH_USE_ORIGIN on)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+        message(FATAL_ERROR "RPCS3 requires at least gcc-11.")
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+        message(FATAL_ERROR "RPCS3 requires at least clang-12.0.")
+    endif()
+endif()
+
+include(CheckCXXCompilerFlag)
+
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if(IS_MULTI_CONFIG)
+    set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available with single-config generator" FORCE)
+else()
+    if(NOT CMAKE_BUILD_TYPE)
+        message(STATUS "No build type selected, default to Release")
+        set(CMAKE_BUILD_TYPE "Release")
+    endif()
+endif()
+
+if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT MSVC)
+    add_compile_definitions(_DEBUG)
+endif()
+
+if(MSVC)
+    option(USE_MSVC_STATIC_CRT "Use static MSVC C runtime" OFF)
+
+    if(NOT IS_MULTI_CONFIG)
+        if(NOT(CMAKE_BUILD_TYPE MATCHES "Release" AND USE_MSVC_STATIC_CRT))
+            set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available in Release and static CRT build." FORCE)
+        endif()
+    endif()
+
+    if(USE_MSVC_STATIC_CRT)
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    else()
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+    endif()
+
+    add_compile_options(/MP)
+endif()
+
+find_program(CCACHE_FOUND ccache)
+if(CCACHE_FOUND)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+endif()
+
+if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    include_directories(/opt/homebrew/include)
+    link_directories(/opt/homebrew/lib)
+endif()
+
+if(MSVC)
+    add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
+    add_compile_definitions(WIN32_LEAN_AND_MEAN)
+endif()
+
+
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
+add_subdirectory(rx EXCLUDE_FROM_ALL)
+target_compile_definitions(rx PRIVATE
+    RX_TAG=0
+    RX_TAG_VERSION=0
+)
 
 if (WITH_RPCSX)
     find_package(nlohmann_json CONFIG)
@@ -88,13 +176,6 @@ if (WITH_RPCSX)
     add_subdirectory(orbis-kernel)
     add_subdirectory(rpcsx)
 endif()
-
-add_subdirectory(rx)
-
-target_compile_definitions(rx PRIVATE
-    RX_TAG=0
-    RX_TAG_VERSION=0
-)
 
 if (WITH_RPCS3)
     add_subdirectory(rpcs3)

@@ -1,14 +1,12 @@
 #!/bin/sh -ex
 
-cd rpcs3/rpcs3 || exit 1
+cd rpcs3/ || exit 1
 
 git config --global --add safe.directory '*'
 
 # Pull all the submodules except llvm and opencv
 # shellcheck disable=SC2046
 git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 }' .gitmodules)
-
-mkdir build && cd build || exit 1
 
 if [ "$COMPILER" = "gcc" ]; then
     # These are set in the dockerfile

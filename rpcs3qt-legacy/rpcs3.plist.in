@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>rpcs3</string>
+	<string>rpcs3qt-ui-legacy</string>
 	<key>CFBundleGetInfoString</key>
 	<string>Open-source Sony PlayStation 3 emulator</string>
 	<key>CFBundleIconFile</key>
