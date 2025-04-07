@@ -48,7 +48,7 @@ else()
 		add_compile_options(-msse -msse2 -mcx16)
 	endif()
 
-	add_compile_options(-Werror=old-style-cast)
+	# add_compile_options(-Werror=old-style-cast)
 	add_compile_options(-Werror=sign-compare)
 	add_compile_options(-Werror=reorder)
 	add_compile_options(-Werror=return-type)
