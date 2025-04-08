@@ -1,10 +1,11 @@
 #include "hexdump.hpp"
+#include "FileLock.hpp"
 #include <cstdio>
 #include <cstring>
 #include <print>
 #include <string>
 
-void rx::hexdump(std::span<std::byte> bytes) {
+void rx::hexdump(std::span<const std::byte> bytes) {
   unsigned sizeWidth = 1;
 
   {
@@ -16,7 +17,7 @@ void rx::hexdump(std::span<std::byte> bytes) {
     }
   }
 
-  flockfile(stderr);
+  rx::ScopedFileLock stderrLock(stderr);
   std::print(stderr, "{} ", std::string(sizeWidth, ' '));
   for (unsigned i = 0; i < 16; ++i) {
     std::print(stderr, " {:02x}", i);
@@ -82,5 +83,4 @@ void rx::hexdump(std::span<std::byte> bytes) {
     }
   }
   std::println(stderr, "");
-  funlockfile(stderr);
 }

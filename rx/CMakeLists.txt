@@ -9,6 +9,7 @@ add_library(${PROJECT_NAME} OBJECT
     src/hexdump.cpp
     src/mem.cpp
     src/Version.cpp
+    src/FileLock.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
