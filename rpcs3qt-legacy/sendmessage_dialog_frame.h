@@ -6,7 +6,7 @@
 #include "util/types.hpp"
 #include "custom_dialog.h"
 
-#include "Emu/Cell/Modules/sceNp.h"
+#include "rpcsx/fw/ps3/sceNp.h"
 
 class sendmessage_dialog_frame : public QObject, public SendMessageDialogBase
 {

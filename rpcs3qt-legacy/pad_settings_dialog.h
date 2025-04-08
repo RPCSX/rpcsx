@@ -11,7 +11,7 @@
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
-#include "Utilities/Thread.h"
+#include "util/Thread.h"
 #include "pad_device_info.h"
 
 class gui_settings;

@@ -21,7 +21,7 @@
 #endif
 
 #include "Emu/Audio/audio_utils.h"
-#include "Emu/Cell/Modules/cellSysutil.h"
+#include "rpcsx/fw/ps3/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"

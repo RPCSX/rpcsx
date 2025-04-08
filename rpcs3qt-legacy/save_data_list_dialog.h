@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Emu/Cell/Modules/cellSaveData.h"
+#include "rpcsx/fw/ps3/cellSaveData.h"
 #include "Emu/RSX/Overlays/overlays.h"
 
 #include <QTableWidget>

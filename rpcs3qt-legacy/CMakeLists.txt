@@ -159,7 +159,9 @@ target_link_libraries(rpcs3_ui
     PUBLIC
         3rdparty::qt6
         3rdparty::yaml-cpp
-        rpcs3)
+        rpcs3
+        rpcsx::fw::ps3::api
+)
 
 if(TARGET OpenGL::EGL)
     target_link_libraries(rpcs3_ui PUBLIC OpenGL::EGL)
@@ -206,7 +208,9 @@ if (NOT ANDROID)
         PRIVATE
             rpcs3_emu
             rpcs3_ui
-            3rdparty::qt6)
+            3rdparty::qt6
+            rpcsx::fw::ps3
+            rpcsx::fw::ps3::api)
 
     if(UNIX)
         set(CMAKE_THREAD_PREFER_PTHREAD TRUE)

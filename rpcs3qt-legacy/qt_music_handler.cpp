@@ -1,5 +1,5 @@
 #include "qt_music_handler.h"
-#include "Emu/Cell/Modules/cellMusic.h"
+#include "rpcsx/fw/ps3/cellMusic.h"
 #include "Emu/System.h"
 #include "util/logs.hpp"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/Thread.h"
+#include "util/Thread.h"
 #include "Input/pad_thread.h"
 
 #include <QDialog>

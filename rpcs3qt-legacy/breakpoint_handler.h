@@ -1,9 +1,9 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Utilities/bit_set.h"
+#include "util/bit_set.h"
 #include <map>
-#include "Utilities/mutex.h"
+#include "util/mutex.h"
 
 enum class breakpoint_types
 {

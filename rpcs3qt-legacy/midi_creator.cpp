@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "midi_creator.h"
 
-#include "Utilities/StrFmt.h"
-#include "Utilities/StrUtil.h"
+#include "util/StrFmt.h"
+#include "util/StrUtil.h"
 
 #include <rtmidi_c.h>
 

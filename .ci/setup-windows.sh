@@ -104,7 +104,7 @@ mv "$CCACHE_SH_DIR"/ccache-*/* "$CCACHE_SH_DIR"
 cp "$CCACHE_SH_DIR"/ccache.exe "$CCACHE_SH_DIR"/cl.exe
 
 # Gather explicit version number and number of commits
-COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3/rpcs3_version.cpp)
+COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
 COMM_COUNT=$(git rev-list --count HEAD)
 COMM_HASH=$(git rev-parse --short=8 HEAD)
 

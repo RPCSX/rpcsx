@@ -31,7 +31,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
-#include "Emu/Cell/Modules/cellSpurs.h"
+#include "rpcsx/fw/ps3/cellSpurs.h"
 
 #include "Emu/RSX/RSXThread.h"
 

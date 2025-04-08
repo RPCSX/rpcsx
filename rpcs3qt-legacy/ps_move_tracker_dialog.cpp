@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "ps_move_tracker_dialog.h"
 #include "ui_ps_move_tracker_dialog.h"
-#include "Emu/Cell/Modules/cellCamera.h"
+#include "rpcsx/fw/ps3/cellCamera.h"
 #include "qt_camera_handler.h"
 #include "Input/ps_move_handler.h"
 #include "Input/ps_move_config.h"

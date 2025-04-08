@@ -2,7 +2,7 @@
 #include "qt_utils.h"
 #include "gui_settings.h"
 
-#include "Utilities/lockless.h"
+#include "util/lockless.h"
 #include "util/asm.hpp"
 
 #include <QMenu>

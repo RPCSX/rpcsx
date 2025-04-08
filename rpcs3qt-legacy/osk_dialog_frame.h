@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Emu/Cell/Modules/cellOskDialog.h"
+#include "rpcsx/fw/ps3/cellOskDialog.h"
 
 #include <QObject>
 

@@ -3,8 +3,8 @@
 #include "game_list.h"
 #include "custom_dock_widget.h"
 #include "shortcut_utils.h"
-#include "Utilities/lockless.h"
-#include "Utilities/mutex.h"
+#include "util/lockless.h"
+#include "util/mutex.h"
 #include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
 

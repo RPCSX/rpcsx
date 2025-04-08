@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "microphone_creator.h"
 
-#include "Utilities/StrUtil.h"
+#include "util/StrUtil.h"
 
 #include "3rdparty/OpenAL/openal-soft/include/AL/al.h"
 #include "3rdparty/OpenAL/openal-soft/include/AL/alc.h"

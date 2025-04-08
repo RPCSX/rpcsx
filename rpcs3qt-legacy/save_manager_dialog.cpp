@@ -27,8 +27,8 @@
 #include <QScreen>
 #include <QScrollBar>
 
-#include "Utilities/File.h"
-#include "Utilities/mutex.h"
+#include "util/File.h"
+#include "util/mutex.h"
 
 LOG_CHANNEL(gui_log, "GUI");
 

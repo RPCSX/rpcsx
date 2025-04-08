@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "rpcsx/fw/ps3/sceNpTrophy.h"
 
 #include <QWindow>
 #include <vector>

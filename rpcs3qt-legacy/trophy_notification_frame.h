@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "rpcsx/fw/ps3/sceNpTrophy.h"
 
 #include <QWidget>
 

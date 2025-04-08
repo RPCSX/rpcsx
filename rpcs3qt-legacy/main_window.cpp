@@ -75,7 +75,7 @@
 #include "Loader/PSF.h"
 #include "Loader/mself.hpp"
 
-#include "Utilities/Thread.h"
+#include "util/Thread.h"
 #include "util/sysinfo.hpp"
 #include "util/serialization_ext.hpp"
 

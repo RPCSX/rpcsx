@@ -21,9 +21,9 @@
 #include "util/asm.hpp"
 #include "util/logs.hpp"
 #include "util/to_endian.hpp"
-#include "Utilities/File.h"
-#include "Utilities/StrUtil.h"
-#include "Utilities/bin_patch.h" // get_patches_path()
+#include "util/File.h"
+#include "util/StrUtil.h"
+#include "util/bin_patch.h" // get_patches_path()
 
 LOG_CHANNEL(log_cheat, "Cheat");
 

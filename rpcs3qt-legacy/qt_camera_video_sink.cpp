@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "qt_camera_video_sink.h"
 
-#include "Emu/Cell/Modules/cellCamera.h"
+#include "rpcsx/fw/ps3/cellCamera.h"
 #include "Emu/system_config.h"
 
 #include <QtConcurrent>

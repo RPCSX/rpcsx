@@ -3,7 +3,7 @@
 #include "ui_pad_motion_settings_dialog.h"
 #include "pad_device_info.h"
 #include "Emu/Io/PadHandler.h"
-#include "Utilities/Thread.h"
+#include "util/Thread.h"
 
 #include <QDialog>
 #include <QTimer>

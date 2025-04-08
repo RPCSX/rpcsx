@@ -5,7 +5,7 @@
 #include "shortcut_utils.h"
 #include "qt_utils.h"
 
-#include "Utilities/File.h"
+#include "util/File.h"
 
 #include <QPushButton>
 #include <QCheckBox>

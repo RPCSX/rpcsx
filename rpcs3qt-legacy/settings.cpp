@@ -1,6 +1,6 @@
 #include "settings.h"
 
-#include "Utilities/File.h"
+#include "util/File.h"
 
 settings::settings(QObject* parent) : QObject(parent),
 									  m_settings_dir(ComputeSettingsDir())

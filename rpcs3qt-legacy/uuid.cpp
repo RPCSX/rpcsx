@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "uuid.h"
-#include "Utilities/StrUtil.h"
+#include "util/StrUtil.h"
 
 #include <QUuid>
 #include <QRegularExpressionValidator>

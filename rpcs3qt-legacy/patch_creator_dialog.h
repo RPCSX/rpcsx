@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/bin_patch.h"
+#include "util/bin_patch.h"
 
 #include <QDialog>
 #include <QComboBox>

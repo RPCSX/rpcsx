@@ -3,7 +3,7 @@
 #include "game_list_grid_item.h"
 #include "gui_settings.h"
 #include "qt_utils.h"
-#include "Utilities/File.h"
+#include "util/File.h"
 
 #include <QApplication>
 #include <QStringBuilder>

@@ -2,9 +2,9 @@
 #include "system_cmd_dialog.h"
 
 #include "Emu/System.h"
-#include "Emu/Cell/Modules/cellSysutil.h"
-#include "Emu/Cell/Modules/cellNetCtl.h"
-#include "Emu/Cell/Modules/cellOskDialog.h"
+#include "rpcsx/fw/ps3/cellSysutil.h"
+#include "rpcsx/fw/ps3/cellNetCtl.h"
+#include "rpcsx/fw/ps3/cellOskDialog.h"
 
 #include <QPushButton>
 #include <QFontDatabase>

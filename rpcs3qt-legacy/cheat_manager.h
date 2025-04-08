@@ -13,7 +13,7 @@
 #include <vector>
 #include <map>
 
-#include "Utilities/cheat_info.h"
+#include "util/cheat_info.h"
 
 class cheat_engine
 {

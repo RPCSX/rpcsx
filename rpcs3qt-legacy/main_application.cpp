@@ -6,8 +6,8 @@
 #include "util/logs.hpp"
 #include "util/sysinfo.hpp"
 
-#include "Utilities/Thread.h"
-#include "Utilities/File.h"
+#include "util/Thread.h"
+#include "util/File.h"
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"

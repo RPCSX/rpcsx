@@ -1,6 +1,6 @@
 #include "debugger_add_bp_window.h"
-#include "Utilities/StrFmt.h"
-#include "Utilities/StrUtil.h"
+#include "util/StrFmt.h"
+#include "util/StrUtil.h"
 #include "breakpoint_handler.h"
 #include "util/types.hpp"
 

@@ -2,8 +2,8 @@
 #include "shortcut_utils.h"
 #include "qt_utils.h"
 #include "Emu/VFS.h"
-#include "Utilities/File.h"
-#include "Utilities/StrUtil.h"
+#include "util/File.h"
+#include "util/StrUtil.h"
 
 #ifdef _WIN32
 #include <windows.h>

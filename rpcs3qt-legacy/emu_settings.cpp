@@ -9,16 +9,16 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/Cell/Modules/cellSysutil.h"
+#include "rpcsx/fw/ps3/cellSysutil.h"
 #include "Emu/Io/Keyboard.h"
 
 #include "util/yaml.hpp"
-#include "Utilities/File.h"
-#include "Utilities/Config.h"
+#include "util/File.h"
+#include "util/Config.h"
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
+extern std::string g_cfg_defaults; //! Default settings grabbed from util/Config.h
 
 // Emit sorted YAML
 namespace

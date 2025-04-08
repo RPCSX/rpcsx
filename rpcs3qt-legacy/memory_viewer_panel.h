@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Utilities/Thread.h"
+#include "util/Thread.h"
 
 #include <QDialog>
 #include <QLineEdit>

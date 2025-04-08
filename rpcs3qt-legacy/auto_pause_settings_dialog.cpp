@@ -9,7 +9,7 @@
 #include <QPushButton>
 
 #include "util/logs.hpp"
-#include "Utilities/File.h"
+#include "util/File.h"
 
 LOG_CHANNEL(autopause_log, "AutoPause");
 

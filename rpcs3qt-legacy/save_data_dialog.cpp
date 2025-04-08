@@ -6,7 +6,7 @@
 #include "Emu/Io/interception.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_save_dialog.h"
-#include "Emu/Cell/Modules/cellSysutil.h"
+#include "rpcsx/fw/ps3/cellSysutil.h"
 
 #include "util/logs.hpp"
 

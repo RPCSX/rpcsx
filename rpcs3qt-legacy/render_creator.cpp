@@ -2,7 +2,7 @@
 
 #include <QMessageBox>
 
-#include "Utilities/Thread.h"
+#include "util/Thread.h"
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/vkutils/instance.h"

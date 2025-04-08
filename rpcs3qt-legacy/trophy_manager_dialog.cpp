@@ -10,13 +10,13 @@
 #include "persistent_settings.h"
 
 #include "util/logs.hpp"
-#include "Utilities/StrUtil.h"
-#include "Utilities/File.h"
+#include "util/StrUtil.h"
+#include "util/File.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/Cell/Modules/sceNpTrophy.h"
-#include "Emu/Cell/Modules/cellRtc.h"
+#include "rpcsx/fw/ps3/sceNpTrophy.h"
+#include "rpcsx/fw/ps3/cellRtc.h"
 
 #include <QApplication>
 #include <QClipboard>

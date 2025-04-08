@@ -3,7 +3,7 @@
 #include "util/logs.hpp"
 
 #ifdef _WIN32
-#include "Utilities/StrUtil.h"
+#include "util/StrUtil.h"
 #endif
 
 LOG_CHANNEL(network_log, "NET");

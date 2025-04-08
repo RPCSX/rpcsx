@@ -2,7 +2,7 @@
 
 #include "game_list.h"
 
-#include "Emu/Cell/Modules/cellSaveData.h"
+#include "rpcsx/fw/ps3/cellSaveData.h"
 
 #include <QDialog>
 #include <QLabel>

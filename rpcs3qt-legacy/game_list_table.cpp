@@ -9,7 +9,7 @@
 #include "qt_utils.h"
 
 #include "Emu/vfs_config.h"
-#include "Utilities/StrUtil.h"
+#include "util/StrUtil.h"
 
 #include <QHeaderView>
 #include <QScrollBar>

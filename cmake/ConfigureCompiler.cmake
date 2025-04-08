@@ -30,7 +30,7 @@ else()
 	endif()
 
 	add_compile_options(-Wall)
-	add_compile_options(-fno-exceptions)
+	# add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
 
 	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)

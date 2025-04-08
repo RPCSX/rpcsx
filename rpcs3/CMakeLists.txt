@@ -1,103 +1,3 @@
-cmake_minimum_required(VERSION 3.28)
-
-project(rpcs3 LANGUAGES C CXX)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
-        message(FATAL_ERROR "RPCS3 requires at least gcc-11.")
-    endif()
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
-        message(FATAL_ERROR "RPCS3 requires at least clang-12.0.")
-    endif()
-endif()
-
-include(CheckCXXCompilerFlag)
-
-get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-if(IS_MULTI_CONFIG)
-    # TODO(cjj19970505@live.cn)
-    # Currently DicordRPC is included as a binary compiled with /MT flag.
-    # We need all 4 binaries(/MT /MTd /MD /MDd) or including the source instead of binary.
-    set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only avaliable with single-config generator" FORCE)
-else()
-    if(NOT CMAKE_BUILD_TYPE)
-        message(STATUS "No build type selected, default to Release")
-        set(CMAKE_BUILD_TYPE "Release")
-    endif()
-endif()
-
-if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT MSVC)
-    add_compile_definitions(_DEBUG)
-endif()
-
-if(MSVC)
-    option(USE_MSVC_STATIC_CRT "Use static MSVC C runtime" OFF)
-
-    # TODO(cjj19970505@live.cn)
-    # DiscordRPC binary in 3rdparty is compiled /MT
-    # So theoretically we should enable DiscordRPC in Release and static CRT build
-    # since we might encounter some rumtime issues when more than one CRT version are presented.
-    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
-    # Add other DiscordRPC binaries(compiled with /MTd, /MD, /MDd) or compile it from source may address this issue.
-    if(NOT IS_MULTI_CONFIG)
-        if(NOT(CMAKE_BUILD_TYPE MATCHES "Release" AND USE_MSVC_STATIC_CRT))
-            set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available in Release and static CRT build." FORCE)
-        endif()
-    endif()
-
-    if(USE_MSVC_STATIC_CRT)
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    else()
-        # though doc ( https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_RUNTIME_LIBRARY.html )
-        # says if that property is not set then CMake uses the default value MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
-        # to select a MSVC runtime library.
-        # But yaml-cpp set /MT(d) if CMAKE_MSVC_RUNTIME_LIBRARY is undefined
-        # So we have to define it explicitly
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    endif()
-
-    # TODO(cjj19970505@live.cn)
-    # offical QT uses dynamic CRT.
-    # When building our lib with static CRT and debug build type
-    # and linking with Qt with dynamic CRT and debug build,
-    # error is encountered in runtime (which is expected).
-    # But building our lib with static CRT and release build type,
-    # and linking with Qt with dynamic CRT and release build seems to be working,
-    # which is the same config with VS solution.
-    # (though technically it might still have some hidden errors).
-    # So we allow static CRT in both relase and debug build, but prompt warning in debug build.
-    # For more info:
-    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
-    # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
-    if(USE_MSVC_STATIC_CRT)
-        if(IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE MATCHES "Debug")
-            message(AUTHOR_WARNING "Debug build currently can not work with static CRT.")
-        endif()
-    endif()
-    add_compile_options(/MP)
-endif()
-
-if(CMAKE_SIZEOF_VOID_P AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms. ${CMAKE_SIZEOF_VOID_P}" )
-endif()
-
-find_program(CCACHE_FOUND ccache)
-if(CCACHE_FOUND)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
-endif()
-
-if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
-    include_directories(/opt/homebrew/include)
-    link_directories(/opt/homebrew/lib)
-endif()
-
-if(MSVC)
-    add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
-endif()
-
 add_subdirectory(3rdparty)
 
 if (DISABLE_LTO)
@@ -123,6 +23,176 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${PROJECT_BINARY_DIR}/bin")
 
-add_subdirectory(rpcs3)
+# Define GNU standard installation directories
+include(GNUInstallDirs)
 
-set_directory_properties(PROPERTIES VS_STARTUP_PROJECT rpcs3)
+# Generate git-version.h at build time.
+include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
+
+# Check for a sufficient compiler and set build options
+include(ConfigureCompiler)
+include(CheckFunctionExists)
+
+set(CMAKE_CXX_STANDARD 20)
+
+set(ADDITIONAL_LIBS "")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    #on some Linux distros shm_unlink and similar functions are in librt only
+    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
+elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
+    #it seems like glibc includes the iconv functions we use but other libc
+    #implementations like the one on OSX don't seem implement them
+    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
+endif()
+
+# subdirectories
+add_subdirectory(Emu)
+
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
+    # Optionally enable X11 for window management
+    find_package(X11)
+    if(X11_FOUND)
+        target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_X11)
+    endif()
+    find_package(Wayland)
+    if(WAYLAND_FOUND)
+        target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_WAYLAND)
+    endif()
+endif()
+
+
+gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
+
+add_library(rpcs3 STATIC
+    rpcs3_version.cpp
+    module_verifier.cpp
+    stb_image.cpp
+
+    dev/iso.cpp
+
+    util/atomic.cpp
+    util/console.cpp
+    util/emu_utils.cpp
+    util/media_utils.cpp
+    util/video_provider.cpp
+    util/logs.cpp
+    util/yaml.cpp
+    util/vm_native.cpp
+    util/dyn_lib.cpp
+    util/sysinfo.cpp
+    util/cpu_stats.cpp
+    util/serialization_ext.cpp
+    util/bin_patch.cpp
+    util/cheat_info.cpp
+    util/cond.cpp
+    util/Config.cpp
+    util/date_time.cpp
+    util/File.cpp
+    util/JITASM.cpp
+    util/JITLLVM.cpp
+    util/LUrlParser.cpp
+    util/mutex.cpp
+    util/rXml.cpp
+    util/sema.cpp
+    util/simple_ringbuf.cpp
+    util/stack_trace.cpp
+    util/StrFmt.cpp
+    util/Thread.cpp
+    util/version.cpp
+
+    Crypto/aes.cpp
+    Crypto/aesni.cpp
+    Crypto/decrypt_binaries.cpp
+    Crypto/ec.cpp
+    Crypto/key_vault.cpp
+    Crypto/lz.cpp
+    Crypto/md5.cpp
+    Crypto/sha1.cpp
+    Crypto/sha256.cpp
+    Crypto/unedat.cpp
+    Crypto/unpkg.cpp
+    Crypto/unself.cpp
+    Crypto/unzip.cpp
+    Crypto/utils.cpp
+
+    Loader/disc.cpp
+    Loader/ELF.cpp
+    Loader/mself.cpp
+    Loader/PSF.cpp
+    Loader/PUP.cpp
+    Loader/TAR.cpp
+    Loader/TROPUSR.cpp
+    Loader/TRP.cpp
+
+    Input/ds3_pad_handler.cpp
+    Input/ds4_pad_handler.cpp
+    Input/dualsense_pad_handler.cpp
+    Input/evdev_joystick_handler.cpp
+    Input/evdev_gun_handler.cpp
+    Input/hid_pad_handler.cpp
+    Input/mm_joystick_handler.cpp
+    Input/pad_thread.cpp
+    Input/product_info.cpp
+    Input/ps_move_calibration.cpp
+    Input/ps_move_config.cpp
+    Input/ps_move_handler.cpp
+    Input/ps_move_tracker.cpp
+    Input/raw_mouse_config.cpp
+    Input/raw_mouse_handler.cpp
+    Input/sdl_pad_handler.cpp
+    Input/skateboard_pad_handler.cpp
+    Input/xinput_pad_handler.cpp
+    Input/virtual_pad_handler.cpp
+)
+
+target_include_directories(rpcs3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(APPLE)
+    target_sources(rpcs3 PRIVATE
+        util/darwin/sysinfo_darwin.mm
+    )
+endif()
+
+set_source_files_properties("util/JITLLVM.cpp" "util/JITASM.cpp" PROPERTIES
+    COMPILE_FLAGS "$<IF:$<CXX_COMPILER_ID:MSVC>,/GR-,-fno-rtti>"
+    SKIP_PRECOMPILE_HEADERS ON
+)
+
+set_source_files_properties("util/yaml.cpp" PROPERTIES
+    COMPILE_FLAGS "$<IF:$<CXX_COMPILER_ID:MSVC>,/EHsc,-fexceptions>"
+    SKIP_PRECOMPILE_HEADERS ON
+)
+
+target_link_libraries(rpcs3 PUBLIC
+    rpcs3_emu
+    3rdparty::zlib
+    3rdparty::pugixml
+    3rdparty::discordRPC
+    3rdparty::hidapi
+    3rdparty::libusb
+    3rdparty::libpng
+    3rdparty::7zip
+    3rdparty::wolfssl
+    3rdparty::libcurl
+    3rdparty::opencv
+    3rdparty::fusion
+    3rdparty::rtmidi
+    3rdparty::stblib
+    3rdparty::ffmpeg
+    3rdparty::yaml-cpp
+    3rdparty::zstd
+    ${ADDITIONAL_LIBS}
+)
+
+if(USE_PRECOMPILED_HEADERS)
+    target_precompile_headers(rpcs3 PUBLIC stdafx.h)
+endif()
+
+# Unix display manager
+if(X11_FOUND)
+    target_link_libraries(rpcs3 PRIVATE X11::X11)
+elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE AND NOT ANDROID)
+    # Wayland has been checked in 3rdparty/CMakeLists.txt already.
+    message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
+endif()

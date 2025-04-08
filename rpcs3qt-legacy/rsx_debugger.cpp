@@ -4,7 +4,7 @@
 #include "table_item_delegate.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/gcm_printing.h"
-#include "Utilities/File.h"
+#include "util/File.h"
 
 #include <QHBoxLayout>
 #include <QHeaderView>

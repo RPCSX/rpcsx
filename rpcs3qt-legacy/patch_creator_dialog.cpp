@@ -2,7 +2,7 @@
 #include "patch_creator_dialog.h"
 #include "table_item_delegate.h"
 #include "qt_utils.h"
-#include "Utilities/Config.h"
+#include "util/Config.h"
 
 #include <QCompleter>
 #include <QFontDatabase>

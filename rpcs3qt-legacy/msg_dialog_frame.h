@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "rpcsx/fw/ps3/cellMsgDialog.h"
 #include "progress_indicator.h"
 
 #include <QProgressBar>

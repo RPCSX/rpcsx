@@ -2,7 +2,7 @@
 
 #include "util/video_source.h"
 #include "util/atomic.hpp"
-#include "Utilities/mutex.h"
+#include "util/mutex.h"
 
 #include <QMovie>
 #include <QBuffer>

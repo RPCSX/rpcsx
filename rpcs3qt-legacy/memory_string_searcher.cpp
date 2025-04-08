@@ -5,8 +5,8 @@
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
-#include "Utilities/Thread.h"
-#include "Utilities/StrUtil.h"
+#include "util/Thread.h"
+#include "util/StrUtil.h"
 
 #include <QCheckBox>
 

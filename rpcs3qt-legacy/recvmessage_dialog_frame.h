@@ -6,7 +6,7 @@
 #include "util/types.hpp"
 #include "util/shared_ptr.hpp"
 #include "custom_dialog.h"
-#include "Emu/Cell/Modules/sceNp.h"
+#include "rpcsx/fw/ps3/sceNp.h"
 
 struct recvmessage_signal_struct
 {

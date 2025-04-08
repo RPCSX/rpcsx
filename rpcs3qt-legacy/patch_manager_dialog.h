@@ -6,7 +6,7 @@
 #include <QMimeData>
 
 #include "gui_game_info.h"
-#include "Utilities/bin_patch.h"
+#include "util/bin_patch.h"
 #include <unordered_map>
 
 namespace Ui

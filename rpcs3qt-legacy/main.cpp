@@ -27,8 +27,8 @@
 #include "uuid.h"
 
 #include "headless_application.h"
-#include "Utilities/sema.h"
-#include "Utilities/date_time.h"
+#include "util/sema.h"
+#include "util/date_time.h"
 #include "util/console.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
@@ -64,10 +64,10 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <dispatch/dispatch.h>
 #endif
 
-#include "Utilities/Config.h"
-#include "Utilities/Thread.h"
-#include "Utilities/File.h"
-#include "Utilities/StrUtil.h"
+#include "util/Config.h"
+#include "util/Thread.h"
+#include "util/File.h"
+#include "util/StrUtil.h"
 #include "util/media_utils.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
