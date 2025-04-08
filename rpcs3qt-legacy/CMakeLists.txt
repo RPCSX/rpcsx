@@ -153,7 +153,7 @@ set_target_properties(rpcs3_ui
 # define WIN32_LEAN_AND_MEAN resolve the problem
 # https://docs.microsoft.com/en-us/windows/win32/winsock/creating-a-basic-winsock-application
 # https://docs.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers#faster-builds-with-smaller-header-files
-target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
+target_compile_definitions(rpcs3_ui PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX)
 
 target_link_libraries(rpcs3_ui
     PUBLIC
@@ -170,7 +170,7 @@ if (NOT ANDROID)
     if(WIN32)
         add_executable(rpcs3qt-ui-legacy WIN32)
         target_sources(rpcs3qt-ui-legacy PRIVATE rpcs3.rc)
-        target_compile_definitions(rpcs3qt-ui-legacy PRIVATE UNICODE _UNICODE)
+        target_compile_definitions(rpcs3qt-ui-legacy PUBLIC WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
     elseif(APPLE)
         add_executable(rpcs3qt-ui-legacy MACOSX_BUNDLE)
         target_sources(rpcs3qt-ui-legacy PRIVATE rpcs3.icns update_helper.sh)

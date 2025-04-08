@@ -10,6 +10,8 @@
 
 #include "XAudio2Backend.h"
 #include <windows.h>
+#include <combaseapi.h>
+#include <mmeapi.h>
 #include <system_error>
 
 #ifndef XAUDIO2_USE_DEFAULT_PROCESSOR

@@ -9,6 +9,8 @@
 
 #include <wrl/client.h>
 #include <windows.h>
+#include <combaseapi.h>
+#include <mmeapi.h>
 #include <system_error>
 #include <mmdeviceapi.h>
 #include <Functiondiscoverykeys_devpkey.h>

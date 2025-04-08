@@ -4,6 +4,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <combaseapi.h>
+#include <mmeapi.h>
 #include <system_error>
 #endif
 

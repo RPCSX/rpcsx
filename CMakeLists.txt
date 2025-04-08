@@ -114,7 +114,6 @@ endif()
 
 if(MSVC)
     add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
-    add_compile_definitions(WIN32_LEAN_AND_MEAN)
 endif()
 
 

@@ -149,6 +149,9 @@ target_sources(rpcs3_emu PRIVATE
     Audio/Cubeb/cubeb_enumerator.cpp
 )
 
+target_compile_definitions(rpcs3_emu PUBLIC WIN32_LEAN_AND_MEAN)
+
+
 if(USE_FAUDIO)
     find_package(SDL3)
     if(SDL3_FOUND AND SDL3_VERSION VERSION_GREATER_EQUAL 3.2.0)
