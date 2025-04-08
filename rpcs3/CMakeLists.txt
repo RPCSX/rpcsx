@@ -39,7 +39,7 @@ set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #on some Linux distros shm_unlink and similar functions are in librt only
     set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
-elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
+elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG" AND NOT ANDROID)
     #it seems like glibc includes the iconv functions we use but other libc
     #implementations like the one on OSX don't seem implement them
     set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")

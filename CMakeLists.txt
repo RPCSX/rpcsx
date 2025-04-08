@@ -7,6 +7,7 @@ option(WITH_RPCS3_QT_UI "Enable RPCS3 UI" OFF)
 option(WITHOUT_OPENGL "Disable OpenGL" OFF)
 option(WITHOUT_OPENGLEW "Disable OpenGLEW" OFF)
 option(WITHOUT_OPENAL "Disable OpenAL" OFF)
+option(COMPILE_FFMPEG "Compile FFmpeg" ON)
 
 # rpcs3 options
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)

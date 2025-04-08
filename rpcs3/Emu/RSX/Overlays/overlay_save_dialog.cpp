@@ -8,10 +8,41 @@ namespace rsx
 {
 	namespace overlays
 	{
-		save_dialog::save_dialog_entry::save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path)
+		save_dialog::save_dialog_entry::save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, [[maybe_unused]] const std::string& video_path)
 		{
-			std::unique_ptr<overlay_element> image = resource_id != image_resource_id::raw_image ? std::make_unique<video_view>(video_path, resource_id) : !icon_buf.empty() ? std::make_unique<video_view>(video_path, icon_buf) :
-			                                                                                                                                                                   std::make_unique<video_view>(video_path, resource_config::standard_image_resource::save); // Fallback
+			std::unique_ptr<overlay_element> image;
+#ifndef ANDROID
+			if (resource_id != image_resource_id::raw_image)
+			{
+				image = std::make_unique<video_view>(video_path, resource_id);
+			}
+			else if (!icon_buf.empty())
+			{
+				image = std::make_unique<video_view>(video_path, icon_buf);
+			}
+			else
+			{
+				image = std::make_unique<video_view>(video_path, resource_config::standard_image_resource::save); // Fallback
+			}
+#else
+			image = std::make_unique<image_view>();
+
+			if (resource_id != image_resource_id::raw_image)
+			{
+				static_cast<image_view*>(image.get())->set_image_resource(resource_id);
+			}
+			else if (!icon_buf.empty())
+			{
+				image->set_padding(0, 0, 11, 11); // Half sized icon, 320x176->160x88
+				icon_data = std::make_unique<image_info>(icon_buf);
+				static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
+			}
+			else
+			{
+				static_cast<image_view*>(image.get())->set_image_resource(resource_config::standard_image_resource::save);
+			}
+#endif
+
 			image->set_size(160, 110);
 			image->set_padding(36, 36, 11, 11); // Square image, 88x88
 
@@ -71,10 +102,12 @@ namespace rsx
 
 		void save_dialog::save_dialog_entry::set_selected(bool selected)
 		{
+#ifndef ANDROID
 			if (m_image)
 			{
 				static_cast<video_view*>(m_image)->set_active(selected);
 			}
+#endif
 		}
 
 		save_dialog::save_dialog()
