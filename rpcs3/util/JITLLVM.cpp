@@ -640,7 +640,11 @@ bool jit_compiler::add_sub_disk_space(ssz space)
 }
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
-	: m_context(new llvm::LLVMContext), m_cpu(cpu(_cpu))
+	: m_context(new llvm::LLVMContext, [](llvm::LLVMContext* context)
+		  {
+			  delete context;
+		  }),
+	  m_cpu(cpu(_cpu))
 {
 	[[maybe_unused]] static const bool s_install_llvm_error_handler = []()
 	{
@@ -681,7 +685,9 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	}
 
 	{
-		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
+
+		m_engine = std::unique_ptr<llvm::ExecutionEngine, void (*)(llvm::ExecutionEngine*)>{
+			llvm::EngineBuilder(std::move(null_mod))
 				.setErrorStr(&result)
 				.setEngineKind(llvm::EngineKind::JIT)
 				.setMCJITMemoryManager(std::move(mem))
@@ -692,7 +698,12 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 #endif
 				.setRelocationModel(llvm::Reloc::Model::PIC_)
 				.setMCPU(m_cpu)
-				.create());
+				.create(),
+			[](llvm::ExecutionEngine* engine)
+			{
+				delete engine;
+			},
+		};
 	}
 
 	if (!_link.empty())

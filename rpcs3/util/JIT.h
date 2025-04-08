@@ -509,10 +509,10 @@ enum class thread_state : u32;
 class jit_compiler final
 {
 	// Local LLVM context
-	std::unique_ptr<llvm::LLVMContext> m_context{};
+	std::unique_ptr<llvm::LLVMContext, void (*)(llvm::LLVMContext*)> m_context{nullptr, [](llvm::LLVMContext*) {}};
 
 	// Execution instance
-	std::unique_ptr<llvm::ExecutionEngine> m_engine{};
+	std::unique_ptr<llvm::ExecutionEngine, void (*)(llvm::ExecutionEngine*)> m_engine{nullptr, [](llvm::ExecutionEngine*) {}};
 
 	// Arch
 	std::string m_cpu{};
