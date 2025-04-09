@@ -4,10 +4,13 @@
 
 #ifdef ANDROID
 #include <fstream>
-#include "libadrenotools/include/adrenotools/priv.h"
-#include <libadrenotools/include/adrenotools/driver.h>
 #include <dlfcn.h>
 #include <nlohmann/json.hpp>
+#endif
+
+#if defined(ANDROID) && defined(ARCH_ARM64)
+#include "libadrenotools/include/adrenotools/priv.h"
+#include <libadrenotools/include/adrenotools/driver.h>
 #endif
 
 namespace vk
@@ -80,7 +83,7 @@ namespace vk
 		VK_GET_SYMBOL(vkDestroyInstance)(m_instance, nullptr);
 		m_instance = VK_NULL_HANDLE;
 
-#ifdef ANDROID
+#if defined(ANDROID) && defined(ARCH_ARM64)
 		if (owns_loader && g_vk_loader != nullptr)
 		{
 			adrenotools_set_turbo(false);
@@ -116,7 +119,7 @@ namespace vk
 #endif
 	bool instance::create(const char* app_name, bool fast)
 	{
-#ifdef ANDROID
+#if defined(ANDROID) && defined(ARCH_ARM64)
 		if (g_vk_loader == nullptr)
 		{
 			auto custom_driver_path = g_cfg.video.vk.driver.path.to_string();

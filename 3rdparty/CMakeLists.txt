@@ -395,7 +395,7 @@ else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)
 endif()
 
-if (ANDROID)
+if (ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
 	add_subdirectory(libadrenotools)
 else()
 	add_library(adrenotools INTERFACE)
