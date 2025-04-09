@@ -124,7 +124,7 @@ inline std::size_t validateCgBinaryProgram(std::span<const std::byte> data)
 	CgBinaryProgram header;
 	std::memcpy(&header, data.data(), sizeof(header));
 
-	if (header.profile != 7004 && header.profile != 7003)
+	if (header.profile != 7004u && header.profile != 7003u)
 	{
 		return 0;
 	}
@@ -145,7 +145,7 @@ inline std::size_t validateCgBinaryProgram(std::span<const std::byte> data)
 		return 0;
 	}
 
-	if (header.profile == 7004)
+	if (header.profile == 7004u)
 	{
 		if (header.program + sizeof(CgBinaryFragmentProgram) > totalSize)
 		{
