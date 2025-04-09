@@ -121,6 +121,8 @@ jobs:
       CCACHE_INODECACHE: 'true'
       CCACHE_SLOPPINESS: 'time_macros'
       DEPS_CACHE_DIR: ./dependency_cache
+      RX_VERSION: 'Unknown'
+      RX_SHA: 'Unknown'
 
     steps:
       - name: Checkout repository

@@ -42,3 +42,94 @@ jobs:
         name: rpcsx-bin
         path: build/bin/*
         if-no-files-found: error
+
+  build-android:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            arch: armv8-a
+          - abi: arm64-v8a
+            arch: armv8.1-a
+          - abi: arm64-v8a
+            arch: armv8.2-a
+          - abi: arm64-v8a
+            arch: armv8.4-a
+          - abi: arm64-v8a
+            arch: armv8.5-a
+          - abi: arm64-v8a
+            arch: armv9-a
+          - abi: arm64-v8a
+            arch: armv9.1-a
+          - abi: x86_64
+            arch: x86-64
+
+    env:
+      NDK_VERSION: "29.0.13113456"
+      CMAKE_VERSION: "3.31.6"
+      RX_VERSION: 'Unknown'
+      RX_SHA: 'Unknown'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+        lfs: true
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: 17
+
+    - name: Install Ninja
+      run: |
+        sudo apt update
+        sudo apt install ninja-build
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install packages
+      run: yes | sdkmanager "cmake;${{ env.CMAKE_VERSION }}" "ndk;${{ env.NDK_VERSION }}"
+
+    - name: Configure
+      run: |
+        $ANDROID_SDK_ROOT/cmake/${{ env.CMAKE_VERSION }}/bin/cmake \
+        -B build -S android -DANDROID_ABI=${{ matrix.abi }} \
+        -DUSE_ARCH=${{ matrix.arch }} \
+        -DANDROID_PLATFORM=android-31 \
+        -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }} \
+        -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}/build/cmake/android.toolchain.cmake \
+        -DCMAKE_BUILD_TYPE=Release -G Ninja
+
+        RX_VERSION=`cat android/.rx.version | awk -F'-' '{print $1}'`
+        RX_SHA=`cat android/.rx.version | awk -F'-' '{print $5}'`
+        echo "RX_VERSION=$RX_VERSION" >> "${{ github.env }}"
+        echo "RX_SHA=$RX_SHA" >> "${{ github.env }}"
+
+    - name: Build
+      run: |
+        $ANDROID_SDK_ROOT/cmake/${{ env.CMAKE_VERSION }}/bin/cmake --build build
+        mv build/librpcsx-android.so librpcsx-android-${{ matrix.abi }}-${{ matrix.arch }}.so
+
+    - name: Deploy build
+      uses: softprops/action-gh-release@v2
+      if: |
+        github.event_name != 'pull_request' &&
+        github.ref == 'refs/heads/master' &&
+        github.repository == 'RPCSX/rpcsx'
+      with:
+        prerelease: false
+        make_latest: true
+        repository: RPCSX/rpcsx-build
+        token: ${{ secrets.BUILD_TOKEN }}
+        tag_name: v${{ env.RX_VERSION }}-${{ env.RX_SHA }}
+        files: librpcsx-android-${{ matrix.abi }}-${{ matrix.arch }}.so
+        body: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+
