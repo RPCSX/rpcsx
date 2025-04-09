@@ -120,9 +120,18 @@ endif()
 
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 add_subdirectory(rx EXCLUDE_FROM_ALL)
+
+if (NOT RX_TAG)
+    set(RX_TAG 0)
+endif()
+
+if (NOT RX_TAG_VERSION)
+    set(RX_TAG_VERSION 0)
+endif()
+
 target_compile_definitions(rx PRIVATE
-    RX_TAG=0
-    RX_TAG_VERSION=0
+    RX_TAG=${RX_TAG}
+    RX_TAG_VERSION=${RX_TAG_VERSION}
 )
 
 if (WITH_RPCSX)

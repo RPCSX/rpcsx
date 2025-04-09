@@ -100,7 +100,7 @@ namespace rsx
 			add_element(text_stack);
 		}
 
-		void save_dialog::save_dialog_entry::set_selected(bool selected)
+		void save_dialog::save_dialog_entry::set_selected([[maybe_unused]] bool selected)
 		{
 #ifndef ANDROID
 			if (m_image)
