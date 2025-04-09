@@ -1,4 +1,4 @@
-name: Build RPCS3
+name: Build RPCS3 Qt UI (Legacy)
 
 defaults:
   run:
@@ -36,7 +36,7 @@ jobs:
             docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.4"
             build_sh: "rpcs3/.ci/build-linux-aarch64.sh"
             compiler: clang
-    name: RPCS3 QT UI for Linux ${{ matrix.os }} ${{ matrix.compiler }}
+    name: RPCS3 Qt UI (Legacy) for Linux ${{ matrix.os }} ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
@@ -46,6 +46,8 @@ jobs:
       ARTDIR: "/root/artifacts"
       RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
       COMPILER: ${{ matrix.compiler }}
+      RX_VERSION: "Unknown"
+      RX_SHA: "Unknown"
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -71,15 +73,38 @@ jobs:
             ${{ matrix.docker_img }} \
             ${{ matrix.build_sh }}
 
+          RX_VERSION=`cat .rx.version | awk -F'-' '{print $1}'`
+          RX_SHA=`cat .rx.version | awk -F'-' '{print $5}'`
+
+          echo "RX_VERSION=$RX_VERSION" >> "${{ github.env }}"
+          echo "RX_SHA=$RX_SHA" >> "${{ github.env }}"
+          mv RPCS3-Qt-UI.AppImage RPCS3-Qt-UI-Linux-${{ runner.arch }}-${{ matrix.compiler }}.AppImage
+
       - name: Upload artifacts
         uses: actions/upload-artifact@main
         with:
-          name: RPCS3 QT UI for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
-          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/*.AppImage
+          name: RPCS3 Qt UI (Legacy) for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
+          path: RPCS3-Qt-UI-Linux-${{ runner.arch }}-${{ matrix.compiler }}.AppImage
           compression-level: 0
 
+      - name: Deploy build
+        uses: softprops/action-gh-release@v2
+        if: |
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/master' &&
+          github.repository == 'RPCSX/rpcsx'
+        with:
+          prerelease: false
+          make_latest: true
+          repository: RPCSX/rpcsx-build
+          token: ${{ secrets.BUILD_TOKEN }}
+          tag_name: v${{ env.RX_VERSION }}-${{ env.RX_SHA }}
+          files: RPCS3-Qt-UI-Linux-${{ runner.arch }}-${{ matrix.compiler }}.AppImage
+          body: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+
+
   Windows_Build:
-    name: RPCS3 QT UI Windows
+    name: RPCS3 Qt UI (Legacy) for Windows
     runs-on: windows-2025
     env:
       COMPILER: msvc
@@ -96,8 +121,8 @@ jobs:
       CCACHE_INODECACHE: 'true'
       CCACHE_SLOPPINESS: 'time_macros'
       DEPS_CACHE_DIR: ./dependency_cache
-    steps:
 
+    steps:
       - name: Checkout repository
         uses: actions/checkout@main
         with:
@@ -108,22 +133,22 @@ jobs:
           echo "QTDIR=C:\Qt\${{ env.QT_VER }}\${{ env.QT_VER_MSVC }}_64" >> ${{ github.env }}
           echo "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_VER }}" >> ${{ github.env }}
 
-      - name: Get Cache Keys
-        run: .ci/get_keys-windows.sh
+      # - name: Get Cache Keys
+      #   run: .ci/get_keys-windows.sh
 
-      - name: Setup Build Ccache
-        uses: actions/cache@main
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: "${{ runner.os }}-ccache-${{ env.COMPILER }}-${{github.run_id}}"
-          restore-keys: ${{ runner.os }}-ccache-${{ env.COMPILER }}-
+      # - name: Setup Build Ccache
+      #   uses: actions/cache@main
+      #   with:
+      #     path: ${{ env.CCACHE_DIR }}
+      #     key: "${{ runner.os }}-ccache-${{ env.COMPILER }}-${{github.run_id}}"
+      #     restore-keys: ${{ runner.os }}-ccache-${{ env.COMPILER }}-
 
-      - name: Setup Dependencies Cache
-        uses: actions/cache@main
-        with:
-          path: ${{ env.DEPS_CACHE_DIR }}
-          key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ env.CCACHE_SHA }}-${{ hashFiles('llvm.lock') }}-${{ hashFiles('glslang.lock') }}"
-          restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-
+      # - name: Setup Dependencies Cache
+      #   uses: actions/cache@main
+      #   with:
+      #     path: ${{ env.DEPS_CACHE_DIR }}
+      #     key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ env.CCACHE_SHA }}-${{ hashFiles('llvm.lock') }}-${{ hashFiles('glslang.lock') }}"
+      #     restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-
 
       - name: Download and unpack dependencies
         run: .ci/setup-windows.sh
@@ -136,23 +161,50 @@ jobs:
             echo "$key=$val" >> "${{ github.env }}"
           done < .ci/ci-vars.env
 
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@main
+      # - name: Add msbuild to PATH
+      #   uses: microsoft/setup-msbuild@main
 
-      - name: Compile RPCS3 QT UI
+      - name: Configure
         run: |
           cmake -B build-msvc -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DWITH_RPCSX=off -DWITH_RPCS3=on -DWITH_RPCS3_QT_UI=on -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DCMAKE_INSTALL_PREFIX="${sourceDir}/out/install/${presetName}" -DUSE_NATIVE_INSTRUCTIONS=on -DUSE_PRECOMPILED_HEADERS=on -DUSE_FAUDIO=off -DUSE_SYSTEM_CURL=off -DUSE_SYSTEM_ZLIB=off -DUSE_SYSTEM_OPENAL=off -DUSE_SYSTEM_OPENCV=off -DBUILD_LLVM=on -DSTATIC_LINK_LLVM=on
+
+      - name: Export Version
+        run: |
+          RX_VERSION=`cat .rx.version | awk -F'-' '{print $1}'`
+          RX_SHA=`cat .rx.version | awk -F'-' '{print $5}'`
+          echo "RX_VERSION=$RX_VERSION" >> "${{ github.env }}"
+          echo "RX_SHA=$RX_SHA" >> "${{ github.env }}"
+
+      - name: Build
+        run: |
           cmake --build build-msvc --config Release
+
 
       - name: Pack up build artifacts
         run: |
           mkdir -p "${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}"
           .ci/deploy-windows.sh
+          mv RPCS3-Qt-UI.7z RPCS3-Qt-UI-Windows-${{ runner.arch }}-${{ env.COMPILER }}.7z
 
       - name: Upload artifacts (7z)
         uses: actions/upload-artifact@main
         with:
-          name: RPCS3 QT UI for Windows (MSVC)
-          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          name: RPCS3 Qt UI (Legacy) for Windows (MSVC)
+          path: RPCS3-Qt-UI-Windows-${{ runner.arch }}-${{ env.COMPILER }}.7z
           compression-level: 0
           if-no-files-found: error
+
+      - name: Deploy build
+        uses: softprops/action-gh-release@v2
+        if: |
+          github.event_name != 'pull_request' &&
+          github.ref == 'refs/heads/master' &&
+          github.repository == 'RPCSX/rpcsx'
+        with:
+          prerelease: false
+          make_latest: true
+          repository: RPCSX/rpcsx-build
+          token: ${{ secrets.BUILD_TOKEN }}
+          tag_name: v${{ env.RX_VERSION }}-${{ env.RX_SHA }}
+          files: RPCS3-Qt-UI-Windows-${{ runner.arch }}-${{ env.COMPILER }}.7z
+          body: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}

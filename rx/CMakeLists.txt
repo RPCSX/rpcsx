@@ -54,4 +54,4 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 
-file(WRITE "${CMAKE_SOURCE_DIR}/.rx.version" "${GIT_DATE}-${RX_TAG}-${RX_TAG_VERSION}-${GIT_BRANCH}-0x${GIT_REV}-${GIT_DIRTY}")
+file(WRITE "${CMAKE_SOURCE_DIR}/.rx.version" "${GIT_DATE}-${RX_TAG}-${RX_TAG_VERSION}-${GIT_BRANCH}-${GIT_REV}-${GIT_DIRTY}")
