@@ -930,6 +930,35 @@ namespace fs
 		return false;
 	}
 
+	template <bool Flush = false, typename... Args>
+	bool write_pending_file(const std::string& path, const Args&... args)
+	{
+		// Always use write flag, remove read flag
+		if (fs::pending_file pending{path}; pending.file)
+		{
+			if constexpr (sizeof...(args) == 2u && (std::is_pointer_v<Args> || ...))
+			{
+				// Specialization for [const void*, usz] args
+				pending.file.write(args...);
+			}
+			else
+			{
+				// Write args sequentially
+				(pending.file.write(args), ...);
+			}
+
+			if constexpr (Flush)
+			{
+				pending.file.sync();
+			}
+
+			pending.commit();
+			return true;
+		}
+
+		return false;
+	}
+
 	file make_gather(std::vector<file>);
 
 	stx::generator<dir_entry&> list_dir_recursively(const std::string& path);
