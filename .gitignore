@@ -60,3 +60,4 @@ compile_commands.json
 build*/
 .cache/
 rpcs3/git-version.h
+.rx.version
