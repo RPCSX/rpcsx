@@ -6,21 +6,23 @@
 #include "Emu/RSX/Program/ProgramStateCache.h"
 #include "Emu/RSX/Program/ShaderParam.h"
 #include "util/File.h"
+#include <cstddef>
+#include <span>
 
 #ifndef WITHOUT_OPENGL
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
 #endif
 
-using CGprofile = u32;
-using CGbool = s32;
-using CGresource = u32;
-using CGenum = u32;
-using CGtype = u32;
-using CGbitfield = u32;
-using CGbitfield16 = u16;
-using CGint = s32;
-using CGuint = u32;
+using CGprofile = be_t<u32>;
+using CGbool = be_t<s32>;
+using CGresource = be_t<u32>;
+using CGenum = be_t<u32>;
+using CGtype = be_t<u32>;
+using CGbitfield = be_t<u32>;
+using CGbitfield16 = be_t<u16>;
+using CGint = be_t<s32>;
+using CGuint = be_t<u32>;
 
 using CgBinaryOffset = CGuint;
 using CgBinarySize = CgBinaryOffset;
@@ -28,12 +30,6 @@ using CgBinaryEmbeddedConstantOffset = CgBinaryOffset;
 using CgBinaryFloatOffset = CgBinaryOffset;
 using CgBinaryStringOffset = CgBinaryOffset;
 using CgBinaryParameterOffset = CgBinaryOffset;
-
-using CgBinaryParameter = struct CgBinaryParameter;
-using CgBinaryEmbeddedConstant = struct CgBinaryEmbeddedConstant;
-using CgBinaryVertexProgram = struct CgBinaryVertexProgram;
-using CgBinaryFragmentProgram = struct CgBinaryFragmentProgram;
-using CgBinaryProgram = struct CgBinaryProgram;
 
 // fragment programs have their constants embedded in the microcode
 struct CgBinaryEmbeddedConstant
@@ -70,12 +66,12 @@ struct CgBinaryVertexProgram
 	CGbitfield userClipMask;        // user clip plane enables (for SET_USER_CLIP_PLANE_CONTROL)
 };
 
-typedef enum
+enum CgBinaryPartialTexType
 {
 	CgBinaryPTTNone = 0,
 	CgBinaryPTT2x16 = 1,
 	CgBinaryPTT1x32 = 2
-} CgBinaryPartialTexType;
+};
 
 // attributes needed for pshaders
 struct CgBinaryFragmentProgram
@@ -118,6 +114,55 @@ struct CgBinaryProgram
 	u8 data[1];
 };
 
+inline std::size_t validateCgBinaryProgram(std::span<const std::byte> data)
+{
+	if (data.size() <= sizeof(CgBinaryProgram))
+	{
+		return 0;
+	}
+
+	CgBinaryProgram header;
+	std::memcpy(&header, data.data(), sizeof(header));
+
+	if (header.profile != 7004 && header.profile != 7003)
+	{
+		return 0;
+	}
+
+	auto totalSize = header.totalSize.value();
+	if (sizeof(header) >= totalSize)
+	{
+		return 0;
+	}
+
+	if (header.ucode + header.ucodeSize > totalSize)
+	{
+		return 0;
+	}
+
+	if (header.program >= totalSize)
+	{
+		return 0;
+	}
+
+	if (header.profile == 7004)
+	{
+		if (header.program + sizeof(CgBinaryFragmentProgram) > totalSize)
+		{
+			return 0;
+		}
+	}
+	else
+	{
+		if (header.program + sizeof(CgBinaryVertexProgram) > totalSize)
+		{
+			return 0;
+		}
+	}
+
+	return totalSize;
+}
+
 class CgBinaryDisasm
 {
 	OPDEST dst;
@@ -130,8 +175,6 @@ class CgBinaryDisasm
 	D2 d2;
 	D3 d3;
 	SRC src[3];
-
-	std::string m_path; // used for FP decompiler thread, delete this later
 
 	u8* m_buffer = nullptr;
 	usz m_buffer_size = 0;
@@ -197,7 +240,6 @@ public:
 	void SetDSTScaDisasm(const std::string& code);
 
 	CgBinaryDisasm(const std::string& path)
-		: m_path(path)
 	{
 		fs::file f(path);
 		if (!f)
@@ -269,71 +311,24 @@ public:
 	}
 
 	template <typename T>
-	T& GetCgRef(const u32 offset)
+	T readData(const u32 offset)
 	{
-		return reinterpret_cast<T&>(m_buffer[offset]);
-	}
-
-	void ConvertToLE(CgBinaryProgram& prog)
-	{
-		// BE payload, requires that data be swapped
-		const auto be_profile = prog.profile;
-
-		auto swap_be32 = [&](u32 start_offset, size_t size_bytes)
-		{
-			auto start = reinterpret_cast<u32*>(m_buffer + start_offset);
-			auto end = reinterpret_cast<u32*>(m_buffer + start_offset + size_bytes);
-
-			for (auto data = start; data < end; ++data)
-			{
-				*data = std::bit_cast<be_t<u32>>(*data);
-			}
-		};
-
-		// 1. Swap the header
-		swap_be32(0, sizeof(CgBinaryProgram));
-
-		// 2. Swap parameters
-		swap_be32(prog.parameterArray, sizeof(CgBinaryParameter) * prog.parameterCount);
-
-		// 3. Swap the ucode
-		swap_be32(prog.ucode, m_buffer_size - prog.ucode);
-
-		// 4. Swap the domain header
-		if (be_profile == 7004u)
-		{
-			// Need to swap each field individually
-			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
-			fprog.instructionCount = std::bit_cast<be_t<u32>>(fprog.instructionCount);
-			fprog.attributeInputMask = std::bit_cast<be_t<u32>>(fprog.attributeInputMask);
-			fprog.partialTexType = std::bit_cast<be_t<u32>>(fprog.partialTexType);
-			fprog.texCoordsInputMask = std::bit_cast<be_t<u16>>(fprog.texCoordsInputMask);
-			fprog.texCoords2D = std::bit_cast<be_t<u16>>(fprog.texCoords2D);
-			fprog.texCoordsCentroid = std::bit_cast<be_t<u16>>(fprog.texCoordsCentroid);
-		}
-		else
-		{
-			// Swap entire header block as all fields are u32
-			swap_be32(prog.program, sizeof(CgBinaryVertexProgram));
-		}
+		T result;
+		std::memcpy(&result, m_buffer + offset, sizeof(result));
+		return result;
 	}
 
 	void BuildShaderBody()
 	{
 		ParamArray param_array;
 
-		auto& prog = GetCgRef<CgBinaryProgram>(0);
+		auto prog = readData<CgBinaryProgram>(0);
 
-		if (const u32 be_profile = std::bit_cast<be_t<u32>>(prog.profile);
-			be_profile == 7003u || be_profile == 7004u)
-		{
-			ConvertToLE(prog);
-			ensure(be_profile == prog.profile);
-		}
+		ensure(prog.profile == 7003u || prog.profile == 7004u);
 
 		if (prog.profile == 7004u)
 		{
-			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
+			auto fprog = readData<CgBinaryFragmentProgram>(prog.program);
 			m_arb_shader += "\n";
 			fmt::append(m_arb_shader, "# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			fmt::append(m_arb_shader, "# profile sce_fp_rsx\n");
@@ -345,7 +340,7 @@ public:
 			CgBinaryParameterOffset offset = prog.parameterArray;
 			for (u32 i = 0; i < prog.parameterCount; i++)
 			{
-				auto& fparam = GetCgRef<CgBinaryParameter>(offset);
+				auto fparam = readData<CgBinaryParameter>(offset);
 
 				std::string param_type = GetCgParamType(fparam.type) + " ";
 				std::string param_name = GetCgParamName(fparam.name) + " ";
@@ -362,7 +357,6 @@ public:
 			m_offset = prog.ucode;
 			TaskFP();
 
-			u32 unused;
 			std::vector<u32> be_data;
 
 			// Swap bytes. FP decompiler expects input in BE
@@ -383,13 +377,14 @@ public:
 			for (u32 i = 0; i < 16; ++i)
 				prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
+			u32 unused;
 			GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, unused).Task();
 #endif
 		}
 
 		else
 		{
-			const auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
+			const auto vprog = readData<CgBinaryVertexProgram>(prog.program);
 			m_arb_shader += "\n";
 			fmt::append(m_arb_shader, "# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			fmt::append(m_arb_shader, "# profile sce_vp_rsx\n");
@@ -402,10 +397,10 @@ public:
 			CgBinaryParameterOffset offset = prog.parameterArray;
 			for (u32 i = 0; i < prog.parameterCount; i++)
 			{
-				auto& vparam = GetCgRef<CgBinaryParameter>(offset);
+				auto vparam = readData<CgBinaryParameter>(offset);
 
 				std::string param_type = GetCgParamType(vparam.type) + " ";
-				std::string param_name = GetCgParamName(vparam.name) + " ";
+				std::string param_name = GetCgParamName(vparam.name.get()) + " ";
 				std::string param_res = GetCgParamRes(vparam.res) + " ";
 				std::string param_semantic = GetCgParamSemantic(vparam.semantic) + " ";
 				std::string param_const = GetCgParamValue(vparam.embeddedConst, vparam.name);
@@ -419,13 +414,16 @@ public:
 			m_offset = prog.ucode;
 			ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
 
-			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
+			auto vdata = reinterpret_cast<be_t<u32>*>(&m_buffer[m_offset]);
 			m_data.resize(prog.ucodeSize / sizeof(u32));
-			std::memcpy(m_data.data(), vdata, prog.ucodeSize);
+			for (std::size_t i = 0; i < m_data.size(); ++i)
+			{
+				m_data[i] = vdata[i];
+			}
 			TaskVP();
 
 			RSXVertexProgram prog;
-			program_hash_util::vertex_program_utils::analyse_vertex_program(vdata, 0, prog);
+			program_hash_util::vertex_program_utils::analyse_vertex_program(m_data.data(), 0, prog);
 			for (u32 i = 0; i < 4; ++i)
 				prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
