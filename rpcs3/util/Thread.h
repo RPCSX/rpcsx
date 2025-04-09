@@ -771,10 +771,20 @@ public:
 		{
 			// Copy the context
 			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), static_cast<const Context&>(f));
+
+			if constexpr (requires { f(i); })
+			{
+				m_threads[i](i);
+			}
 		}
 
 		// Move the context (if movable)
 		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count), std::forward<Context>(f));
+
+		if constexpr (requires { f(m_count - 1); })
+		{
+			m_threads[m_count - 1](m_count - 1);
+		}
 	}
 
 	// Constructor with a function performed before adding more threads
