@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: ${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   BUILD_REPOSITORY_NAME: ${{ github.repository }}
