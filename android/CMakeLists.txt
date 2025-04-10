@@ -9,7 +9,7 @@ set(LLVM_VERSION 19.1)
 
 option(USE_ARCH "Specify arch to build" "")
 
-if (NOT USE_ARCH STREQUAL "")
+if (USE_ARCH)
     add_compile_options(-march=${USE_ARCH})
 endif()
 

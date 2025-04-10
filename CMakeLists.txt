@@ -187,6 +187,9 @@ if (WITH_RPCSX)
 endif()
 
 if (WITH_RPCS3)
+    include(ConfigureCompiler)
+    include(CheckFunctionExists)
+
     add_subdirectory(rpcs3)
     add_subdirectory(ps3fw)
 endif()
