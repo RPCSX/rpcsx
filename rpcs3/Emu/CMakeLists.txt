@@ -211,34 +211,15 @@ target_link_libraries(rpcs3_emu
 
 # Io
 target_sources(rpcs3_emu PRIVATE
-    Io/Buzz.cpp
     Io/camera_config.cpp
-    Io/Dimensions.cpp
-    Io/GameTablet.cpp
-    Io/GHLtar.cpp
-    Io/GunCon3.cpp
-    Io/Infinity.cpp
-    Io/interception.cpp
     Io/KeyboardHandler.cpp
-    Io/midi_config_types.cpp
     Io/mouse_config.cpp
     Io/MouseHandler.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/pad_types.cpp
     Io/PadHandler.cpp
-    Io/rb3drums_config.cpp
-    Io/RB3MidiDrums.cpp
-    Io/RB3MidiGuitar.cpp
-    Io/RB3MidiKeyboard.cpp
     Io/recording_config.cpp
-    Io/Skylander.cpp
-    Io/TopShotElite.cpp
-    Io/TopShotFearmaster.cpp
-    Io/Turntable.cpp
-    Io/usb_device.cpp
-    Io/usb_vfs.cpp
-    Io/usio.cpp
 )
 
 target_link_libraries(rpcs3_emu PRIVATE
@@ -442,7 +423,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::ffmpeg 3rdparty::sdl3
         3rdparty::opengl 3rdparty::stblib
         3rdparty::vulkan 3rdparty::glew
-        3rdparty::libusb 3rdparty::wolfssl
+        3rdparty::wolfssl
         Vulkan::Headers
         rpcsx::fw::ps3::api
 

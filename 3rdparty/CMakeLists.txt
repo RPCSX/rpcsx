@@ -134,41 +134,6 @@ else()
 endif()
 
 
-# libusb
-if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
-	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
-	cmake_dependent_option(USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
-			"LIBUSB_FOUND" OFF)
-else()
-	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
-	cmake_dependent_option(USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
-			"LIBUSB_FOUND" OFF)
-endif()
-if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
-	# Always use system libusb as reference implementation isn't supported
-	add_library(usb-1.0-shared INTERFACE)
-	target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
-elseif(MSVC)
-	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
-	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
-	add_subdirectory(libusb EXCLUDE_FROM_ALL)
-else()
-	if(USE_SYSTEM_LIBUSB)
-		# we have the system libusb and have selected to use it
-		add_library(usb-1.0-shared INTERFACE)
-		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
-	else()
-		# we don't have the system libusb, so we compile from submodule
-		unset(LIBUSB_LIBRARIES CACHE)
-		add_subdirectory(libusb EXCLUDE_FROM_ALL)
-
-		if (NOT TARGET usb-1.0 AND TARGET usb-1.0-static)
-			add_library(usb-1.0 ALIAS usb-1.0-static)
-		endif()
-	endif()
-endif()
-
-
 # hidapi
 add_subdirectory(hidapi)
 
@@ -387,13 +352,6 @@ add_subdirectory(opencv EXCLUDE_FROM_ALL)
 # FUSION
 add_subdirectory(fusion EXCLUDE_FROM_ALL)
 
-
-# add nice ALIAS targets for ease of use
-if(USE_SYSTEM_LIBUSB)
-	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
-else()
-	add_library(3rdparty::libusb ALIAS usb-1.0-static)
-endif()
 
 if (ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
 	add_subdirectory(libadrenotools)
