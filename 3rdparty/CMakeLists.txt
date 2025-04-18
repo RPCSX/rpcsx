@@ -136,7 +136,7 @@ endif()
 
 # hidapi
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
-	add_library(hidapi INTERFACE)
+	add_library(3rdparty_hidapi INTERFACE)
 else()
 	add_subdirectory(hidapi)
 endif()
@@ -180,7 +180,7 @@ add_subdirectory(stblib)
 
 # Cubeb
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
-	add_library(cubeb INTERFACE)
+	add_library(3rdparty_cubeb INTERFACE)
 else()
 	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
 endif()
