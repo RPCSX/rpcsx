@@ -135,7 +135,12 @@ endif()
 
 
 # hidapi
-add_subdirectory(hidapi)
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	add_library(hidapi INTERFACE)
+else()
+	add_subdirectory(hidapi)
+endif()
+
 
 # glslang
 add_library(3rdparty_glslang INTERFACE)
@@ -174,7 +179,11 @@ endif()
 add_subdirectory(stblib)
 
 # Cubeb
-add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	add_library(cubeb INTERFACE)
+else()
+	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+endif()
 
 # SoundTouch
 add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)

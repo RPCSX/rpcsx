@@ -1,3 +1,5 @@
+#ifdef HAVE_HIDAPI
+
 #include "stdafx.h"
 #include "ps_move_calibration.h"
 
@@ -241,3 +243,5 @@ void psmove_parse_calibration(const reports::ps_move_calibration_blob& calibrati
 	psmove_calibration_get_usb_accel_values(calibration, device);
 	psmove_calibration_get_usb_gyro_values(calibration, device);
 }
+
+#endif

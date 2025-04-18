@@ -438,7 +438,7 @@ namespace asmjit
 template <typename FT, typename Asm = native_asm, typename F>
 inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr, bool reduced_size = false)
 {
-#ifdef __APPLE__
+#if defined (__APPLE__) && defined(TARGET_OS_MAC)
 	pthread_jit_write_protect_np(false);
 #endif
 	using namespace asmjit;

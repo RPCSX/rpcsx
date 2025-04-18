@@ -1,4 +1,5 @@
 #pragma once
+#ifdef HAVE_HIDAPI
 
 #include "hid_pad_handler.h"
 
@@ -202,3 +203,5 @@ private:
 
 	void handle_external_device(const pad_ensemble& binding);
 };
+
+#endif
