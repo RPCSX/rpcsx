@@ -69,6 +69,7 @@
 
 #ifdef __APPLE__
 #include <libkern/OSCacheControl.h>
+#include <TargetConditionals.h>
 #endif
 
 extern atomic_t<u64> g_watchdog_hold_ctr;
@@ -2238,7 +2239,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::lle_call:
 		{
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(true);
 #endif
 			const vm::ptr<u32> opd(arg < 32 ? vm::cast(gpr[arg]) : vm::cast(arg));
@@ -2247,7 +2248,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::entry_call:
 		{
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(true);
 #endif
 			cmd_pop(), fast_call(entry_func.addr, entry_func.rtoc, true);
@@ -2260,7 +2261,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::opd_call:
 		{
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(true);
 #endif
 			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>();
@@ -2281,7 +2282,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::initialize:
 		{
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(false);
 #endif
 			cmd_pop();
@@ -2295,7 +2296,7 @@ void ppu_thread::cpu_task()
 
 			spu_cache::initialize();
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(true);
 #endif
 #ifdef ARCH_ARM64
@@ -2519,7 +2520,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
 	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(true);
 #endif
 #ifdef ARCH_ARM64
@@ -4302,7 +4303,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(software_thread_limit, cpu_thread_limit), [&]
 		{
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(false);
 #endif
 			// Set low priority
@@ -4466,7 +4467,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				return;
 			}
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(false);
 #endif
 			// Set low priority
@@ -5045,7 +5046,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		// Try to make the code fit in 16 bytes, may fail and fallback
 		if (*full_sample && abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true) + 3 * 4)) < (128u << 20))
 		{
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(false);
 #endif
 			u8* code = jit_runtime::alloc(12, 4, true);
@@ -5533,7 +5534,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				// Set low priority
 				thread_ctrl::scoped_priority low_prio(-1);
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 				pthread_jit_write_protect_np(false);
 #endif
 				for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
@@ -5672,7 +5673,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	}
 
 	// Jit can be null if the loop doesn't ever enter.
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(false);
 #endif
 	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
@@ -5699,7 +5700,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 	}
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	// Symbol resolver is in JIT mem, so we must enable execution
 	pthread_jit_write_protect_np(true);
 #endif
@@ -5715,7 +5716,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 	}
 
-#if defined(__APPLE__) && defined(TARGET_OS_MAC)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	// Symbol resolver is in JIT mem, so we must enable execution
 	pthread_jit_write_protect_np(false);
 #endif
