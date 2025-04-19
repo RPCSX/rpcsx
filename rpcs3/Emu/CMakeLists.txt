@@ -445,3 +445,7 @@ endif()
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3_emu PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../stdafx.h")
 endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_compile_options(rpcs3_emu PRIVATE -D_LIBCPP_DISABLE_AVAILABILITY)
+endif()

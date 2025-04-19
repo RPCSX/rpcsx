@@ -195,3 +195,7 @@ elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE AND NOT ANDROID)
     # Wayland has been checked in 3rdparty/CMakeLists.txt already.
     message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
 endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_compile_options(rpcs3 PRIVATE -D_LIBCPP_DISABLE_AVAILABILITY)
+endif()
