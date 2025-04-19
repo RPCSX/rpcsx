@@ -988,4 +988,4 @@ void ds4_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	}
 }
 
-#endif
+#endif // HAVE_HIDAPI

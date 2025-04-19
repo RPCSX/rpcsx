@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ASMJIT_AVAILABLE
+
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 
@@ -496,6 +498,7 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
 }
+#endif // ASMJIT_AVAILABLE
 
 #ifdef LLVM_AVAILABLE
 

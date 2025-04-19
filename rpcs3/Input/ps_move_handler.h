@@ -204,4 +204,4 @@ private:
 	void handle_external_device(const pad_ensemble& binding);
 };
 
-#endif
+#endif // HAVE_HIDAPI

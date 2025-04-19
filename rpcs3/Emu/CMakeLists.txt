@@ -196,7 +196,7 @@ target_sources(rpcs3_emu PRIVATE
     CPU/CPUTranslator.cpp
 )
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64" AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
     target_sources(rpcs3_emu PRIVATE
         CPU/Backends/AArch64/AArch64ASM.cpp
         CPU/Backends/AArch64/AArch64Common.cpp
@@ -205,9 +205,10 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
     )
 endif()
 
-target_link_libraries(rpcs3_emu
-    PUBLIC 3rdparty::llvm 3rdparty::asmjit)
-
+if(NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_link_libraries(rpcs3_emu
+		PUBLIC 3rdparty::llvm 3rdparty::asmjit 3rdparty::cubeb)
+endif()
 
 # Io
 target_sources(rpcs3_emu PRIVATE
@@ -336,7 +337,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/rsx_vertex_data.cpp
 )
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
     target_sources(rpcs3_emu PRIVATE
         RSX/GL/GLCommonDecompiler.cpp
         RSX/GL/GLCompute.cpp

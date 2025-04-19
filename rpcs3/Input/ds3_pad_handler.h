@@ -159,4 +159,4 @@ private:
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };
 
-#endif
+#endif // HAVE_HIDAPI

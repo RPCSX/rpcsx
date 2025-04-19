@@ -1,4 +1,4 @@
-#ifndef HAVE_CUBEB
+#ifdef HAVE_CUBEB
 
 #include "Emu/Audio/Cubeb/cubeb_enumerator.h"
 #include "util/logs.hpp"
@@ -115,4 +115,4 @@ std::vector<audio_device_enumerator::audio_device> cubeb_enumerator::get_output_
 	return device_list;
 }
 
-#endif
+#endif // HAVE_CUBEB

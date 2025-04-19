@@ -138,6 +138,7 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_library(3rdparty_hidapi INTERFACE)
 else()
+	target_compile_definitions(3rdparty_hidapi INTERFACE -DHAVE_HIDAPI)
 	add_subdirectory(hidapi)
 endif()
 
@@ -178,11 +179,15 @@ endif()
 # stblib
 add_subdirectory(stblib)
 
-# Cubeb
+# Cubeb, AsmJit
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_library(3rdparty_cubeb INTERFACE)
+	add_library(3rdparty_asmjit INTERFACE)
 else()
+	target_compile_definitions(3rdparty_cubeb INTERFACE -DHAVE_CUBEB)
+	target_compile_definitions(3rdparty_asmjit INTERFACE -DASMJIT_AVAILABLE)
 	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+	add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 endif()
 
 # SoundTouch
@@ -259,9 +264,6 @@ if(USE_VULKAN)
 		endif()
 	endif()
 endif()
-
-# AsmJit
-add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
 if (NOT ANDROID AND NOT WITHOUT_OPENAL)

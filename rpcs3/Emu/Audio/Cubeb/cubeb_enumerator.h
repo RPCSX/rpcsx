@@ -1,5 +1,5 @@
 #pragma once
-#ifndef HAVE_CUBEB
+#ifdef HAVE_CUBEB
 
 #if defined(TTARGET_OS_IPHONE) || defined(TARGET_OS_SIMULATOR)
 	#error "Cubeb cannot be built on iOS platform."
@@ -24,4 +24,4 @@ private:
 #endif
 };
 
-#endif
+#endif // HAVE_CUBEB

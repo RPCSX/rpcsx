@@ -261,4 +261,4 @@ private:
 	void apply_pad_data(const pad_ensemble& binding) override;
 };
 
-#endif
+#endif // HAVE_HIDAPI

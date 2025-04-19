@@ -881,4 +881,4 @@ u32 ps_move_handler::get_battery_level(const std::string& padId)
 	return std::clamp<u32>(device->battery_level * 20, 0, 100);
 }
 
-#endif
+#endif // HAVE_HIDAPI

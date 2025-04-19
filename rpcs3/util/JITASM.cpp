@@ -1,3 +1,5 @@
+#ifdef ASMJIT_AVAILABLE
+
 #include "util/types.hpp"
 #include "util/sysinfo.hpp"
 #include "JIT.h"
@@ -871,3 +873,5 @@ void asmjit::simd_builder::vec_extract_gpr(u32 esize, const x86::Gp& dst, const 
 }
 
 #endif /* X86 */
+
+#endif // ASMJIT_AVAILABLE
