@@ -182,12 +182,10 @@ add_subdirectory(stblib)
 # Cubeb, AsmJit
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_library(3rdparty_cubeb INTERFACE)
-	add_library(3rdparty_asmjit INTERFACE)
+	target_compile_options(3rdparty_asmjit PRIVATE -DASMJIT_NO_JIT)
 else()
 	target_compile_definitions(3rdparty_cubeb INTERFACE -DHAVE_CUBEB)
-	target_compile_definitions(3rdparty_asmjit INTERFACE -DASMJIT_AVAILABLE)
 	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
-	add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 endif()
 
 # SoundTouch
@@ -264,6 +262,9 @@ if(USE_VULKAN)
 		endif()
 	endif()
 endif()
+
+# AsmJit
+add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
 if (NOT ANDROID AND NOT WITHOUT_OPENAL)

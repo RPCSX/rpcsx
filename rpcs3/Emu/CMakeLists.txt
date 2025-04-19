@@ -204,9 +204,12 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64" AND NOT CMAKE_SYSTEM_NAM
     )
 endif()
 
+target_link_libraries(rpcs3_emu
+     PUBLIC 3rdparty::llvm 3rdparty::asmjit)
+
 if(NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
 	target_link_libraries(rpcs3_emu
-		PUBLIC 3rdparty::llvm 3rdparty::asmjit 3rdparty::cubeb)
+		PUBLIC 3rdparty::cubeb)
 endif()
 
 # Io
