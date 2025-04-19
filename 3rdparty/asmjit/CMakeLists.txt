@@ -19,5 +19,5 @@ set_property(TARGET asmjit PROPERTY FOLDER "3rdparty/")
 add_library(3rdparty::asmjit ALIAS asmjit)
 
 if(CMAKE_SYSTEM_NAME MATCHES "iOS")
-	target_compile_options(asjit PRIVATE -DASMJIT_NO_JIT)
+	target_compile_options(asmjit PRIVATE -DASMJIT_NO_JIT)
 endif()
