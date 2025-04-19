@@ -99,7 +99,6 @@ endif()
 target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::openal
-        3rdparty::cubeb
         3rdparty::soundtouch
         3rdparty::miniupnpc
         3rdparty::json
