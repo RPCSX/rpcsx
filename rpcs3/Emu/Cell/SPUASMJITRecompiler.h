@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef ASMJIT_AVAILABLE
-
 #include "util/JIT.h"
 #include "SPURecompiler.h"
 
@@ -300,5 +298,3 @@ public:
 	void FMA(spu_opcode_t op);
 	void FMS(spu_opcode_t op);
 };
-
-#endif // ASMJIT_AVAILABLE

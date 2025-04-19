@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef ASMJIT_AVAILABLE
-
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 
@@ -577,5 +575,3 @@ public:
 };
 
 const char* fallback_cpu_detection();
-
-#endif // LLVM_AVAILABLE

@@ -1,5 +1,3 @@
-#ifdef ASMJIT_AVAILABLE
-
 #include "util/types.hpp"
 #include "util/sysinfo.hpp"
 #include "util/Thread.h"
@@ -930,5 +928,3 @@ const char* fallback_cpu_detection()
 }
 
 #endif // LLVM_AVAILABLE
-
-#endif // ASMJIT_AVAILABLE

@@ -1,5 +1,3 @@
-#ifdef ASMJIT_AVAILABLE
-
 #include "stdafx.h"
 #include "SPUASMJITRecompiler.h"
 
@@ -4884,5 +4882,3 @@ void spu_recompiler::FMS(spu_opcode_t op)
 	c->subps(va, SPU_OFF_128(gpr, op.rc));
 	c->movaps(SPU_OFF_128(gpr, op.rt4), va);
 }
-
-#endif // ASMJIT_AVAILABLE
