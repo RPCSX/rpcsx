@@ -138,7 +138,6 @@ endif()
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_library(3rdparty_hidapi INTERFACE)
 else()
-	target_compile_definitions(3rdparty_hidapi INTERFACE -DHAVE_HIDAPI)
 	add_subdirectory(hidapi)
 endif()
 

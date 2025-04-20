@@ -1,10 +1,6 @@
 #pragma once
 #ifdef HAVE_CUBEB
 
-#if defined(TTARGET_OS_IPHONE) || defined(TARGET_OS_SIMULATOR)
-	#error "Cubeb cannot be built on iOS platform."
-#endif
-
 #include "Emu/Audio/audio_device_enumerator.h"
 
 #include "cubeb/cubeb.h"

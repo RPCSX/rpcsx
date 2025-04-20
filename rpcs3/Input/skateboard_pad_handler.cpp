@@ -403,4 +403,4 @@ void skateboard_pad_handler::SetPadData(const std::string& padId, u8 player_id, 
 	//}
 }
 
-#endif
+#endif // HAVE_HIDAPI
