@@ -434,6 +434,10 @@ target_link_libraries(rpcs3_emu
         3rdparty::glslang
 )
 
+if (NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::libusb)
+endif()
+
 if(APPLE)
     check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
     if (HAVE_CLOCK_GETTIME)

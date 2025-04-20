@@ -184,6 +184,10 @@ target_link_libraries(rpcs3 PUBLIC
     ${ADDITIONAL_LIBS}
 )
 
+if (NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_link_libraries(rpcs3 PUBLIC 3rdparty::libusb)
+endif()
+
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3 PUBLIC stdafx.h)
 endif()
