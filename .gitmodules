@@ -56,6 +56,10 @@
 	path = 3rdparty/libpng/libpng
 	url = ../../glennrp/libpng.git
 	ignore = dirty
+[submodule "rpcs3/3rdparty/libusb"]
+	path = 3rdparty/libusb/libusb
+	url = ../../libusb/libusb.git
+	ignore = dirty
 [submodule "rpcs3/3rdparty/FAudio"]
 	path = 3rdparty/FAudio
 	url = ../../FNA-XNA/FAudio.git
