@@ -496,7 +496,6 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
 }
-#endif // ASMJIT_AVAILABLE
 
 #ifdef LLVM_AVAILABLE
 
@@ -575,3 +574,5 @@ public:
 };
 
 const char* fallback_cpu_detection();
+
+#endif // LLVM_AVAILABLE
