@@ -1,5 +1,5 @@
 #pragma once
-#ifdef HAVE_HIDAPI
+#ifndef WITHOUT_HIDAPI
 
 #include "hid_pad_handler.h"
 
@@ -190,4 +190,4 @@ private:
 	void apply_pad_data(const pad_ensemble& binding) override;
 };
 
-#endif
+#endif // WITHOUT_HIDAPI

@@ -1,4 +1,4 @@
-#ifdef HAVE_CUBEB
+#ifndef WITHOUT_CUBEB
 
 #include "Emu/Audio/Cubeb/CubebBackend.h"
 
@@ -596,4 +596,4 @@ void CubebBackend::log_cb(const char* fmt, ...)
 	Cubeb.notice("Cubeb log: %s", buf);
 }
 
-#endif // HAVE_CUBEB
+#endif // WITHOUT_CUBEB

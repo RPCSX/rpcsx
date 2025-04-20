@@ -1,5 +1,5 @@
 #pragma once
-#ifdef HAVE_HIDAPI
+#ifndef WITHOUT_HIDAPI
 
 #include "hid_pad_handler.h"
 
@@ -159,4 +159,4 @@ private:
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };
 
-#endif // HAVE_HIDAPI
+#endif // WITHOUT_HIDAPI

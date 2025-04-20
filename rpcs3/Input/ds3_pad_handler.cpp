@@ -1,4 +1,4 @@
-#ifdef HAVE_HIDAPI
+#ifndef WITHOUT_HIDAPI
 
 #include "stdafx.h"
 #include "ds3_pad_handler.h"
@@ -619,4 +619,4 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	}
 }
 
-#endif // HAVE_HIDAPI
+#endif // WITHOUT_HIDAPI

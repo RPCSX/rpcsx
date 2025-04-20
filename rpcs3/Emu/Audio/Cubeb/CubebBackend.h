@@ -1,5 +1,5 @@
 #pragma once
-#ifdef HAVE_CUBEB
+#ifndef WITHOUT_CUBEB
 
 #include "util/atomic.hpp"
 #include "Emu/Audio/AudioBackend.h"
@@ -68,4 +68,4 @@ private:
 	device_handle GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, u32 ch_cnt);
 };
 
-#endif // HAVE_CUBEB
+#endif // WITHOUT_CUBEB

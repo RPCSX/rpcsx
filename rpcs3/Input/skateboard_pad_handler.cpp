@@ -1,4 +1,4 @@
-#ifdef HAVE_HIDAPI
+#ifndef WITHOUT_HIDAPI
 
 #include "stdafx.h"
 #include "skateboard_pad_handler.h"
@@ -403,4 +403,4 @@ void skateboard_pad_handler::SetPadData(const std::string& padId, u8 player_id, 
 	//}
 }
 
-#endif // HAVE_HIDAPI
+#endif // WITHOUT_HIDAPI

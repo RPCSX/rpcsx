@@ -1,4 +1,4 @@
-#ifdef HAVE_HIDAPI
+#ifndef WITHOUT_HIDAPI
 
 #include "stdafx.h"
 #include "dualsense_pad_handler.h"
@@ -1092,4 +1092,4 @@ u32 dualsense_pad_handler::get_battery_level(const std::string& padId)
 	return std::min<u32>(device->battery_level * 10 + 5, 100); // 10% per unit, starting with 0-9%. So 100% equals unit 10
 }
 
-#endif // HAVE_HIDAPI
+#endif // WITHOUT_HIDAPI

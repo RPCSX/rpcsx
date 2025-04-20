@@ -1,5 +1,5 @@
 #pragma once
-#ifdef HAVE_CUBEB
+#ifndef WITHOUT_CUBEB
 
 #include "Emu/Audio/audio_device_enumerator.h"
 
@@ -20,4 +20,4 @@ private:
 #endif
 };
 
-#endif // HAVE_CUBEB
+#endif // WITHOUT_CUBEB
