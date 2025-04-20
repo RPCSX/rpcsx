@@ -198,4 +198,6 @@ endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "iOS")
 	target_compile_options(rpcs3 PRIVATE -D_LIBCPP_DISABLE_AVAILABILITY)
+else()
+    target_compile_options(rpcs3 PRIVATE -DHAVE_CUBEB)
 endif()

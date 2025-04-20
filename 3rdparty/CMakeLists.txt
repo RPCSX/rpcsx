@@ -153,8 +153,7 @@ add_subdirectory(yaml-cpp)
 
 
 # OpenGL
-
-if (NOT ANDROID AND NOT WITHOUT_OPENGL)
+if (NOT ANDROID AND NOT WITHOUT_OPENGL AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
 	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 	add_library(3rdparty_opengl INTERFACE)
@@ -179,7 +178,7 @@ endif()
 # stblib
 add_subdirectory(stblib)
 
-# Cubeb, AsmJit
+# Cubeb
 if (CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_library(3rdparty_cubeb INTERFACE)
 else()
