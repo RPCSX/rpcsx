@@ -291,3 +291,11 @@ error_code sys_usbd_get_device_speed(ppu_thread& ppu)
 	sys_usbd.todo("sys_usbd_get_device_speed()");
 	return CELL_OK;
 }
+
+void connect_usb_controller(u8 index, input::product_type)
+{
+}
+
+void handle_hotplug_event(bool connected)
+{
+}
