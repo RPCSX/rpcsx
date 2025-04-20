@@ -90,6 +90,11 @@ jobs:
         sudo apt update
         sudo apt install ninja-build
 
+    - name: Install libusb
+      run: |
+        sudo apt-get update 
+        sudo apt-get install -y libusb-1.0-0-dev
+
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
