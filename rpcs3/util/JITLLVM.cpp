@@ -716,7 +716,9 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 	if (!_link.empty() || !(flags & 0x1))
 	{
+#ifdef ARCH_X64
 		m_engine->RegisterJITEventListener(llvm::JITEventListener::createIntelJITEventListener());
+#endif
 		m_engine->RegisterJITEventListener(new JITAnnouncer);
 	}
 
