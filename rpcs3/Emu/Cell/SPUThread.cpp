@@ -695,7 +695,7 @@ const auto spu_putllc_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtime, void
 
 		Label tx1 = build_transaction_enter(c, fall, [&]()
 			{
-				c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx) - ::offset32(&spu_thread::rdata)), 1);
+				c.add(x86::qword_ptr(args[2], OFFSET_OF(spu_thread, ftx) - OFFSET_OF(spu_thread, rdata)), 1);
 				build_get_tsc(c);
 				c.sub(x86::rax, stamp0);
 				c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
@@ -703,7 +703,7 @@ const auto spu_putllc_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtime, void
 			});
 
 		// Check pause flag
-		c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+		c.bt(x86::dword_ptr(args[2], OFFSET_OF(spu_thread, state) - OFFSET_OF(spu_thread, rdata)), static_cast<u32>(cpu_flag::pause));
 		c.jc(fall);
 		c.xbegin(tx1);
 
@@ -761,7 +761,7 @@ const auto spu_putllc_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtime, void
 
 		c.xend();
 		c.lock().add(x86::qword_ptr(x86::r11), 64);
-		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
+		c.add(x86::qword_ptr(args[2], OFFSET_OF(spu_thread, stx) - OFFSET_OF(spu_thread, rdata)), 1);
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
 		c.jmp(_ret);
@@ -790,7 +790,7 @@ const auto spu_putllc_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtime, void
 		}
 
 		c.xend();
-		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
+		c.add(x86::qword_ptr(args[2], OFFSET_OF(spu_thread, stx) - OFFSET_OF(spu_thread, rdata)), 1);
 		c.jmp(fail2);
 
 		c.bind(fall);
@@ -822,7 +822,7 @@ const auto spu_putllc_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtime, void
 		}
 
 		c.mov(x86::rax, -1);
-		c.mov(x86::qword_ptr(args[2], ::offset32(&spu_thread::last_ftime) - ::offset32(&spu_thread::rdata)), x86::rax);
+		c.mov(x86::qword_ptr(args[2], OFFSET_OF(spu_thread, last_ftime) - OFFSET_OF(spu_thread, rdata)), x86::rax);
 		c.xor_(x86::eax, x86::eax);
 		// c.jmp(_ret);
 
@@ -1031,7 +1031,7 @@ const auto spu_getllar_tx = build_function_asm<u64 (*)(u32 raddr, void* rdata, c
 		// Begin transaction
 		Label tx0 = build_transaction_enter(c, fall, [&]()
 			{
-				c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
+				c.add(x86::qword_ptr(args[2], OFFSET_OF(spu_thread, ftx)), 1);
 				build_get_tsc(c);
 				c.sub(x86::rax, stamp0);
 				c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit1)));
@@ -1039,7 +1039,7 @@ const auto spu_getllar_tx = build_function_asm<u64 (*)(u32 raddr, void* rdata, c
 			});
 
 		// Check pause flag
-		c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
+		c.bt(x86::dword_ptr(args[2], OFFSET_OF(spu_thread, state)), static_cast<u32>(cpu_flag::pause));
 		c.jc(fall);
 		c.mov(x86::rax, x86::qword_ptr(x86::r11));
 		c.and_(x86::rax, -128);
@@ -1068,7 +1068,7 @@ const auto spu_getllar_tx = build_function_asm<u64 (*)(u32 raddr, void* rdata, c
 		}
 
 		c.xend();
-		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
+		c.add(x86::qword_ptr(args[2], OFFSET_OF(spu_thread, stx)), 1);
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
 

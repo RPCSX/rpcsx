@@ -5,8 +5,6 @@
 
 #include <functional>
 
-union v128;
-
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
 {

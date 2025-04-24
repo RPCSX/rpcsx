@@ -121,6 +121,8 @@ endif()
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 add_subdirectory(rx EXCLUDE_FROM_ALL)
 
+include(3rdparty/llvm/CMakeLists.txt)
+
 if (NOT RX_TAG)
     set(RX_TAG 0)
 endif()
@@ -183,8 +185,9 @@ if (WITH_RPCSX)
     add_subdirectory(tools)
 
     add_subdirectory(orbis-kernel)
-    add_subdirectory(rpcsx)
 endif()
+
+add_subdirectory(rpcsx)
 
 if (WITH_RPCS3)
     include(ConfigureCompiler)

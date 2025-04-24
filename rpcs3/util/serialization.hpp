@@ -98,24 +98,6 @@ namespace utils
 			pos += padding;
 		}
 
-		// Add padding needed between two members
-		template <typename T, typename T2, typename T3>
-		void add_padding(T T2::* const first, T3 T2::* const second)
-		{
-			if (m_is_writing)
-				return;
-
-			const u32 offset1 = ::offset32(first) + sizeof(T);
-			const u32 offset2 = ::offset32(second);
-
-			AUDIT(::offset32(first) <= ::offset32(second));
-
-			if (offset2 > offset1)
-			{
-				pos += offset2 - offset1;
-			}
-		}
-
 		void set_expect_little_data(bool value)
 		{
 			m_expect_little_data = value;
@@ -437,7 +419,7 @@ namespace utils
 		}
 
 		template <typename T>
-			requires requires(T& obj, utils::serial& ar) { (obj.*(&T::operator()))(stx::exact_t<utils::serial&>(ar)); }
+			requires requires(T& obj, utils::serial& ar) { (obj.*(&T::operator()))(exact_t<utils::serial&>(ar)); }
 		bool serialize(T& obj)
 		{
 			obj(*this);
@@ -565,7 +547,7 @@ namespace utils
 
 		template <typename T>
 			requires(std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
-																				  std::is_constructible_v<std::remove_const_t<T>, stx::exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
+																				  std::is_constructible_v<std::remove_const_t<T>, exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
 		operator T() noexcept
 		{
 			AUDIT(!is_writing());
@@ -604,9 +586,9 @@ namespace utils
 					return type{std::move(first), this->operator second_t()};
 				}
 			}
-			else if constexpr (std::is_constructible_v<type, stx::exact_t<serial&>>)
+			else if constexpr (std::is_constructible_v<type, exact_t<serial&>>)
 			{
-				return not_tuple_t(stx::exact_t<serial&>(*this));
+				return not_tuple_t(exact_t<serial&>(*this));
 			}
 			else if constexpr (std::is_constructible_v<type>)
 			{

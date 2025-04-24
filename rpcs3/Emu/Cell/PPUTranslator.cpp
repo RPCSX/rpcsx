@@ -60,7 +60,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 			{
 				.debug_info = false,       // Set to "true" to insert debug frames on x27
 				.use_stack_frames = false, // We don't need this since the PPU GW allocates global scratch on the stack
-				.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
+				.hypervisor_context_offset = OFFSET_OF(ppu_thread, hv_ctx),
 				.exclusion_callback = {}, // Unused, we don't have special exclusion functions on PPU
 				.base_register_lookup = base_reg_lookup,
 				.faux_function_list = std::move(faux_functions_list)};
@@ -76,8 +76,8 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	reset_transforms();
 
 	// Thread context struct (TODO: safer member access)
-	const u32 off0 = offset32(&ppu_thread::state);
-	const u32 off1 = offset32(&ppu_thread::gpr);
+	const u32 off0 = OFFSET_OF(ppu_thread, state);
+	const u32 off1 = OFFSET_OF(ppu_thread, gpr);
 	std::vector<Type*> thread_struct;
 	thread_struct.emplace_back(ArrayType::get(GetType<char>(), off0));
 	thread_struct.emplace_back(GetType<u32>()); // state

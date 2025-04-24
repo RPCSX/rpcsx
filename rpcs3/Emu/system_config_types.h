@@ -3,7 +3,8 @@
 enum class ppu_decoder_type : unsigned
 {
 	_static,
-	llvm,
+	llvm_legacy,
+	interpreter,
 };
 
 enum class spu_decoder_type : unsigned

@@ -29,16 +29,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.4"
-            build_sh: "rpcs3/.ci/build-linux.sh"
+            build_sh: ".ci/build-linux.sh"
             compiler: clang
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.4"
-            build_sh: "rpcs3/.ci/build-linux.sh"
+            build_sh: ".ci/build-linux.sh"
             compiler: gcc
           - os: ubuntu-24.04-arm
-            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.4"
-            build_sh: "rpcs3/.ci/build-linux-aarch64.sh"
+            build_sh: ".ci/build-linux-aarch64.sh"
             compiler: clang
     name: RPCS3 Qt UI (Legacy) for Linux ${{ matrix.os }} ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
@@ -46,9 +43,8 @@ jobs:
       CCACHE_DIR: ${{ github.workspace }}/ccache
       CI_HAS_ARTIFACTS: true
       DEPLOY_APPIMAGE: true
-      APPDIR: "/rpcs3/build/appdir"
-      ARTDIR: "/root/artifacts"
-      RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
+      APPDIR: "./appdir"
+      ARTDIR: "./artifacts"
       COMPILER: ${{ matrix.compiler }}
       RX_VERSION: "Unknown"
       RX_SHA: "Unknown"
@@ -66,16 +62,26 @@ jobs:
           restore-keys: | 
             ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
 
-      - name: Docker setup and build
+      - name: Setup dependencies
         run: |
-          docker pull --quiet ${{ matrix.docker_img }}
-          docker run                      \
-            -v $PWD:/rpcs3              \
-            --env-file .ci/docker.env \
-            -v ${{ env.CCACHE_DIR }}:/root/.ccache  \
-            -v ${{ github.workspace }}/artifacts:/root/artifacts \
-            ${{ matrix.docker_img }} \
-            ${{ matrix.build_sh }}
+          echo "Types: deb" | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
+          echo "URIs: ${{ matrix.os == 'ubuntu-24.04-arm' && 'http://ports.ubuntu.com/ubuntu-ports' || 'http://azure.archive.ubuntu.com/ubuntu/' }}" | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
+          echo "Suites: plucky plucky-updates plucky-security" | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
+          echo "Components: main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
+          echo "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" | sudo tee -a /etc/apt/sources.list.d/ubuntu.sources
+
+          sudo apt update
+          sudo apt install -y cmake build-essential libunwind-dev \
+            libvulkan-dev vulkan-validationlayers \
+            libsox-dev ninja-build libasound2-dev libglfw3-dev nasm libudev-dev \
+            libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev \
+            libevdev-dev libjack-dev libsndio-dev libglvnd-dev \
+            qt6-base-dev qt6-svg-dev qt6-base-private-dev qt6-multimedia-dev \
+            clang lld gcc-14 g++-14 \
+
+      - name: Build
+        run: |
+          ${{ matrix.build_sh }}
 
           RX_VERSION=`cat .rx.version | awk -F'-' '{print $1}'`
           RX_SHA=`cat .rx.version | awk -F'-' '{print $5}'`

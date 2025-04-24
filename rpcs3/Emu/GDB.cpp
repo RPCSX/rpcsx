@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "GDB.h"
+#include "util/bit_set.h"
 #include "util/logs.hpp"
 #include "util/StrUtil.h"
 #include "Emu/Memory/vm.h"

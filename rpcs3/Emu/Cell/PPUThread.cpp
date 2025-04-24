@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rx/cpu/cell/ppu/Decoder.hpp"
 #include "util/JIT.h"
 #include "util/StrUtil.h"
 #include "util/serialization.hpp"
@@ -27,6 +28,9 @@
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
 #include "lv2/sys_spu.h"
+#include <cstddef>
+#include <rx/format.hpp>
+#include <format>
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
@@ -317,12 +321,12 @@ const auto ppu_gateway = build_function_asm<void (*)(ppu_thread*)>("ppu_gateway"
 #endif
 
 		// Save native stack pointer for longjmp emulation
-		c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
+		c.mov(x86::qword_ptr(args[0], OFFSET_OF(ppu_thread, hv_ctx.regs)), x86::rsp);
 
 		// Initialize args
 		c.mov(x86::r13, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
 		c.mov(x86::rbp, args[0]);
-		c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
+		c.mov(x86::edx, x86::dword_ptr(x86::rbp, OFFSET_OF(ppu_thread, cia))); // Load PC
 
 		c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::edx, 1, 0)); // Load call target
 		c.mov(x86::rdx, x86::rax);
@@ -333,9 +337,9 @@ const auto ppu_gateway = build_function_asm<void (*)(ppu_thread*)>("ppu_gateway"
 		c.mov(x86::r12d, x86::edx); // Load relocation base
 
 		c.mov(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
-		c.mov(x86::r14, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 0))); // Load some registers
-		c.mov(x86::rsi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 1)));
-		c.mov(x86::rdi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 2)));
+		c.mov(x86::r14, x86::qword_ptr(x86::rbp, OFFSET_OF(ppu_thread, gpr[0]))); // Load some registers
+		c.mov(x86::rsi, x86::qword_ptr(x86::rbp, OFFSET_OF(ppu_thread, gpr[1])));
+		c.mov(x86::rdi, x86::qword_ptr(x86::rbp, OFFSET_OF(ppu_thread, gpr[2])));
 
 		if (utils::has_avx())
 		{
@@ -403,7 +407,7 @@ const auto ppu_gateway = build_function_asm<void (*)(ppu_thread*)>("ppu_gateway"
 	    // pc, sp
 	    // x18, x19...x30
 	    // NOTE: Do not touch x19..x30 before saving the registers!
-		const u64 hv_register_array_offset = ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		const u64 hv_register_array_offset = OFFSET_OF(ppu_thread, hv_ctx.regs);
 		Label hv_ctx_pc = c.newLabel(); // Used to hold the far jump return address
 
 		// Sanity
@@ -434,7 +438,7 @@ const auto ppu_gateway = build_function_asm<void (*)(ppu_thread*)>("ppu_gateway"
 		const arm::GpX pc = a64::x15;
 		const arm::GpX cia_addr_reg = a64::x11;
 		// Load offset value
-		c.mov(cia_addr_reg, Imm(static_cast<u64>(::offset32(&ppu_thread::cia))));
+		c.mov(cia_addr_reg, Imm(static_cast<u64>(OFFSET_OF(ppu_thread, cia))));
 		// Load cia
 		c.ldr(pc.w(), arm::Mem(ppu_t_base, cia_addr_reg));
 
@@ -459,7 +463,7 @@ const auto ppu_gateway = build_function_asm<void (*)(ppu_thread*)>("ppu_gateway"
 		c.ldr(a64::x22, arm::Mem(a64::x22));
 
 		const arm::GpX gpr_addr_reg = a64::x9;
-		c.mov(gpr_addr_reg, Imm(static_cast<u64>(::offset32(&ppu_thread::gpr))));
+		c.mov(gpr_addr_reg, Imm(static_cast<u64>(OFFSET_OF(ppu_thread, gpr))));
 		c.add(gpr_addr_reg, gpr_addr_reg, ppu_t_base);
 		c.ldr(a64::x23, arm::Mem(gpr_addr_reg));
 		c.ldr(a64::x24, arm::Mem(gpr_addr_reg, 8));
@@ -514,7 +518,7 @@ const extern auto ppu_escape = build_function_asm<void (*)(ppu_thread*)>("ppu_es
 
 #if defined(ARCH_X64)
 		// Restore native stack pointer (longjmp emulation)
-		c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
+		c.mov(x86::rsp, x86::qword_ptr(args[0], OFFSET_OF(ppu_thread, hv_ctx.regs)));
 
 		// Return to the return location
 		c.sub(x86::rsp, 8);
@@ -523,7 +527,7 @@ const extern auto ppu_escape = build_function_asm<void (*)(ppu_thread*)>("ppu_es
 		// We really shouldn't be using this, but an implementation shoudln't hurt
 	    // Far jump return. Only clobbers x30.
 		const arm::GpX ppu_t_base = a64::x20;
-		const u64 hv_register_array_offset = ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		const u64 hv_register_array_offset = OFFSET_OF(ppu_thread, hv_ctx.regs);
 		c.mov(ppu_t_base, args[0]);
 		c.mov(a64::x30, Imm(hv_register_array_offset));
 		c.ldr(a64::x30, arm::Mem(ppu_t_base, a64::x30));
@@ -581,7 +585,7 @@ static inline ppu_intrp_func_t ppu_read(u32 addr)
 // Get interpreter cache value
 static ppu_intrp_func_t ppu_cache(u32 addr)
 {
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy)
 	{
 		fmt::throw_exception("Invalid PPU decoder");
 	}
@@ -882,7 +886,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 	while (size)
 	{
-		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy)
 		{
 			// Assume addr is the start of first segment of PRX
 			const uptr entry_value = reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc) | (seg_base << (32 + 3));
@@ -919,7 +923,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 		return;
 	}
 
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
 		return;
 	}
@@ -1097,14 +1101,14 @@ struct ppu_far_jumps_t
 
 #ifdef ARCH_X64
 					c.mov(args[0], x86::rbp);
-					c.mov(x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)), pc);
+					c.mov(x86::dword_ptr(args[0], OFFSET_OF(ppu_thread, cia)), pc);
 					c.jmp(ppu_far_jump);
 #else
 					Label jmp_address = c.newLabel();
 					Label imm_address = c.newLabel();
 
 					c.ldr(args[1].w(), arm::ptr(imm_address));
-					c.str(args[1].w(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
+					c.str(args[1].w(), arm::Mem(args[0], OFFSET_OF(ppu_thread, cia)));
 					c.ldr(args[1], arm::ptr(jmp_address));
 					c.br(args[1]);
 
@@ -1204,7 +1208,7 @@ bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc, st
 
 	std::lock_guard lock(jumps.mutex);
 	jumps.vals.insert_or_assign(entry, ppu_far_jumps_t::all_info_t{target, link, with_toc, std::move(module_name)});
-	ppu_register_function_at(entry, 4, g_cfg.core.ppu_decoder == ppu_decoder_type::_static ? &ppu_far_jump : ensure(g_fxo->get<ppu_far_jumps_t>().gen_jump<false>(entry)));
+	ppu_register_function_at(entry, 4, g_cfg.core.ppu_decoder != ppu_decoder_type::llvm_legacy ? &ppu_far_jump : ensure(g_fxo->get<ppu_far_jumps_t>().gen_jump<false>(entry)));
 
 	return true;
 }
@@ -1288,7 +1292,7 @@ static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_int
 // Set or remove breakpoint
 extern bool ppu_breakpoint(u32 addr, bool is_adding)
 {
-	if (addr % 4 || !vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (addr % 4 || !vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy)
 	{
 		return false;
 	}
@@ -1359,7 +1363,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 
 	const bool is_exec = vm::check_addr(addr, vm::page_executable);
 
-	if (is_exec && g_cfg.core.ppu_decoder == ppu_decoder_type::llvm && !Emu.IsReady())
+	if (is_exec && g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy && !Emu.IsReady())
 	{
 		// TODO: support recompilers
 		ppu_log.fatal("Patch failed at 0x%x: LLVM recompiler is used.", addr);
@@ -1648,7 +1652,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 	fmt::append(ret, "LR: 0x%llx\n", lr);
 	fmt::append(ret, "CTR: 0x%llx\n", ctr);
 	fmt::append(ret, "VRSAVE: 0x%08x\n", vrsave);
-	fmt::append(ret, "XER: [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
+	fmt::append(ret, "XER: [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer_ca, xer_ov, xer_so, xer_cnt);
 	fmt::append(ret, "VSCR: [SAT=%u | NJ=%u]\n", sat, nj);
 	fmt::append(ret, "FPSCR: [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
 
@@ -2441,9 +2445,10 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 	state.wait(old);
 }
 
+// static_assert(offsetof(ppu_thread, gpr[0]) == 24);
 void ppu_thread::exec_task()
 {
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy)
 	{
 		// HVContext push to allow recursion. This happens with guest callback invocations.
 		const auto old_hv_ctx = hv_ctx;
@@ -2464,8 +2469,27 @@ void ppu_thread::exec_task()
 		return;
 	}
 
-	const auto cache = vm::g_exec_addr;
 	const auto mem_ = vm::g_base_addr;
+
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::interpreter)
+	{
+		static PPUInterpreter interpreter;
+
+		while (true)
+		{
+			if (test_stopped()) [[unlikely]]
+			{
+				return;
+			}
+
+			std::uint32_t inst = *reinterpret_cast<be_t<std::uint32_t>*>(mem_ + std::uint64_t{cia});
+			interpreter.interpret(*this, inst);
+		}
+
+		return;
+	}
+
+	const auto cache = vm::g_exec_addr;
 
 	while (true)
 	{
@@ -2556,7 +2580,7 @@ void ppu_thread::serialize_common(utils::serial& ar)
 {
 	[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), ppu);
 
-	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio.raw().all);
+	// ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio.raw().all);
 
 	if (cia % 4 || (cia >> 28) >= 0xCu)
 	{
@@ -3309,7 +3333,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtim
 			});
 
 		// Check pause flag
-		c.bt(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
+		c.bt(x86::dword_ptr(args[2], OFFSET_OF(ppu_thread, state) - OFFSET_OF(ppu_thread, rdata)), static_cast<u32>(cpu_flag::pause));
 		c.jc(fall);
 		c.xbegin(tx1);
 
@@ -3410,7 +3434,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64 (*)(u32 raddr, u64 rtim
 		}
 
 		c.mov(x86::rax, -1);
-		c.mov(x86::qword_ptr(args[2], ::offset32(&ppu_thread::last_ftime) - ::offset32(&ppu_thread::rdata)), x86::rax);
+		c.mov(x86::qword_ptr(args[2], OFFSET_OF(ppu_thread, last_ftime) - OFFSET_OF(ppu_thread, rdata)), x86::rax);
 		c.xor_(x86::eax, x86::eax);
 		// c.jmp(_ret);
 
@@ -4016,7 +4040,7 @@ extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release
 		}
 	}
 
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm_legacy)
 	{
 		return;
 	}
@@ -4034,7 +4058,7 @@ extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_modules)
 {
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm_legacy)
 	{
 		return;
 	}
@@ -4744,7 +4768,7 @@ extern void ppu_initialize()
 
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size, concurent_memory_limit& memory_limit)
 {
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm_legacy)
 	{
 		if (check_only || vm::base(info.segs[0].addr) != info.segs[0].ptr)
 		{
@@ -5106,7 +5130,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 				c.add(x86::edx, seg0);
 				c.mov(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
-				c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
+				c.mov(x86::dword_ptr(x86::rbp, OFFSET_OF(ppu_thread, cia)), x86::edx);
 
 				c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
 				c.mov(x86::rdx, x86::rax);
@@ -5137,7 +5161,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				code_size_until_jump = buf_end - buf_start;
 
 				// Load offset value
-				c.mov(cia_addr_reg, static_cast<u64>(::offset32(&ppu_thread::cia)));
+				c.mov(cia_addr_reg, static_cast<u64>(OFFSET_OF(ppu_thread, cia)));
 
 				// Update CIA
 				c.str(pc.w(), arm::Mem(ppu_t_base, cia_addr_reg));

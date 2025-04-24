@@ -218,13 +218,15 @@ struct std::formatter<T> {
 
     std::string fieldName;
 
-    auto underlying = std::to_underlying(value);
+    // FIXME: requires C++23
+    // auto underlying = std::to_underlying(value);
+    auto underlying = static_cast<int>(value);
 
     if (underlying < 0) {
       fieldName = queryUnknownField(
           underlying, std::integral_constant<std::int64_t, 0>{},
           std::make_integer_sequence<std::int64_t, 128>{});
-    } else if (underlying >= rx::fieldCount<T>) {
+    } else if (static_cast<std::size_t>(underlying) >= rx::fieldCount<T>) {
       fieldName = queryUnknownField(
           underlying, std::integral_constant<std::int64_t, rx::fieldCount<T>>{},
           std::make_integer_sequence<std::int64_t, 128>{});

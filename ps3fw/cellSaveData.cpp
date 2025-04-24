@@ -1022,7 +1022,7 @@ savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 			listSet->focusPosition = CELL_SAVEDATA_FOCUSPOS_LISTHEAD;
 
 			std::memset(result.get_ptr(), 0,
-				::offset32(&CellSaveDataCBResult::userdata));
+				OFFSET_OF(CellSaveDataCBResult, userdata));
 
 			// List Callback
 			funcList(ppu, result, listGet, listSet);
@@ -1313,7 +1313,7 @@ savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 			}
 
 			std::memset(result.get_ptr(), 0,
-				::offset32(&CellSaveDataCBResult::userdata));
+				OFFSET_OF(CellSaveDataCBResult, userdata));
 
 			if (!funcDone)
 			{
@@ -1436,8 +1436,7 @@ savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 		{
 			lv2_sleep(ppu, 250);
 
-			std::memset(result.get_ptr(), 0,
-				::offset32(&CellSaveDataCBResult::userdata));
+			std::memset(result.get_ptr(), 0, OFFSET_OF(CellSaveDataCBResult, userdata));
 
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
@@ -1780,7 +1779,7 @@ savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 			!save_entry.isNew ? ::narrow<s32>((size_bytes / 1024) + statGet->sysSizeKB) : 0;
 
 		std::memset(result.get_ptr(), 0,
-			::offset32(&CellSaveDataCBResult::userdata));
+			OFFSET_OF(CellSaveDataCBResult, userdata));
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
@@ -2036,7 +2035,7 @@ savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 		std::memset(fileSet.get_ptr(), 0, fileSet.size());
 		std::memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 		std::memset(result.get_ptr(), 0,
-			::offset32(&CellSaveDataCBResult::userdata));
+			OFFSET_OF(CellSaveDataCBResult, userdata));
 
 		funcFile(ppu, result, fileGet, fileSet);
 		ppu.state += cpu_flag::wait;

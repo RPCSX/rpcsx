@@ -1,6 +1,11 @@
 #pragma once
 
 #include "PPUOpcodes.h"
+#include "rx/cpu/cell/ppu/Instruction.hpp"
+#include "rx/cpu/cell/ppu/Opcode.hpp"
+#include "rx/cpu/cell/ppu/PPUContext.hpp"
+#include "rx/refl.hpp"
+#include <array>
 
 class ppu_thread;
 
@@ -41,4 +46,13 @@ struct ppu_interpreter_rt : ppu_interpreter_rt_base
 
 private:
 	ppu_decoder<ppu_interpreter_t<ppu_intrp_func_t>, ppu_intrp_func_t> table;
+};
+
+struct PPUContext;
+
+struct PPUInterpreter
+{
+	std::array<void (*)(PPUContext& context, rx::cell::ppu::Instruction inst), rx::fieldCount<rx::cell::ppu::Opcode>> impl;
+	PPUInterpreter();
+	void interpret(PPUContext& context, std::uint32_t inst);
 };

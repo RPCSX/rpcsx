@@ -1240,7 +1240,7 @@ public:
 
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 {
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy)
 	{
 		code = ppu.gpr[11];
 	}

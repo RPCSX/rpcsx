@@ -574,20 +574,7 @@ public:
 		for (gem_controller& c : controllers)
 		{
 			ar(c.status, c.ext_status, c.ext_id, c.port, c.enabled_magnetometer, c.calibrated_magnetometer, c.enabled_filtering, c.enabled_tracking, c.enabled_LED, c.hue_set, c.rumble);
-
-			// We need to add padding because we used bitwise serialization in version 1
-			if (version < 2)
-			{
-				ar.add_padding(&gem_controller::rumble, &gem_controller::sphere_rgb);
-			}
-
 			ar(c.sphere_rgb, c.hue, c.distance_mm, c.radius, c.radius_valid, c.is_calibrating);
-
-			if (version < 2)
-			{
-				ar.add_padding(&gem_controller::is_calibrating, &gem_controller::calibration_start_us);
-			}
-
 			ar(c.calibration_start_us);
 
 			if (ar.is_writing() || version >= 2)

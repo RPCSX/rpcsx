@@ -1215,7 +1215,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 	if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) || (arg3 != 0))
 	{
 		// vm::reservation_acquire(ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr());
-		auto spurs = spu._ptr<CellSpurs>(0x80 - offset32(&CellSpurs::traceBuffer));
+		auto spurs = spu._ptr<CellSpurs>(0x80 - OFFSET_OF(CellSpurs, traceBuffer));
 
 		if (ctxt->traceMsgCount != 0xffu || spurs->traceBuffer.addr() == 0u)
 		{
@@ -1238,7 +1238,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 
 	if (notify)
 	{
-		auto spurs = spu._ptr<CellSpurs>(0x2D80 - offset32(&CellSpurs::wklState1));
+		auto spurs = spu._ptr<CellSpurs>(0x2D80 - OFFSET_OF(CellSpurs, wklState1));
 		sys_spu_thread_send_event(spu, spurs->spuPort, 2, 0);
 	}
 }
@@ -1427,12 +1427,12 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 	// vm::reservation_op(vm::cast(ctxt->taskset.addr()), 128, [&]()
 	{
 		auto taskset = ctxt->taskset;
-		v128 waiting = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::waiting));
-		v128 running = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::running));
-		v128 ready = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::ready));
-		v128 pready = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::pending_ready));
-		v128 enabled = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::enabled));
-		v128 signalled = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::signalled));
+		v128 waiting = vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, waiting));
+		v128 running = vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, running));
+		v128 ready = vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, ready));
+		v128 pready = vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, pending_ready));
+		v128 enabled = vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, enabled));
+		v128 signalled = vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, signalled));
 
 		// Verify taskset state is valid
 		if ((waiting & running) != v128{} || (ready & pready) != v128{} ||
@@ -1599,12 +1599,12 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			spursHalt(spu);
 		}
 
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::waiting)) = waiting;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::running)) = running;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::ready)) = ready;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::pending_ready)) = v128{};
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::enabled)) = enabled;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::signalled)) = signalled;
+		vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, waiting)) = waiting;
+		vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, running)) = running;
+		vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, ready)) = ready;
+		vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, pending_ready)) = v128{};
+		vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, enabled)) = enabled;
+		vm::_ref<v128>(ctxt->taskset.addr() + OFFSET_OF(CellSpursTaskset, signalled)) = signalled;
 
 		std::memcpy(spu._ptr<void>(0x2700), spu._ptr<void>(0x100), 128); // Copy data
 	} //);

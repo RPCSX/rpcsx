@@ -74,14 +74,21 @@
                <item>
                 <widget class="QRadioButton" name="ppu__static">
                  <property name="text">
-                  <string notr="true">Interpreter (static)</string>
+                  <string notr="true">Interpreter (Legacy)</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QRadioButton" name="ppu_llvm">
                  <property name="text">
-                  <string notr="true">LLVM Recompiler (fastest)</string>
+                  <string notr="true">LLVM Recompiler (Legacy)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="ppu_interpreter">
+                 <property name="text">
+                  <string notr="true">Interpreter</string>
                  </property>
                 </widget>
                </item>

@@ -26,7 +26,7 @@ template <typename T>
 concept IdmBaseCompatible = (std::is_final_v<T> ? IdmCompatible<T> : !!(requires() { u32{T::id_step}, u32{T::id_count}; }));
 
 template <typename T>
-concept IdmSavable = IdmBaseCompatible<T> && T::savestate_init_pos != 0 && (requires(T& t, utils::serial& ar) { t.save(stx::exact_t<utils::serial&>(ar)); });
+concept IdmSavable = IdmBaseCompatible<T> && T::savestate_init_pos != 0 && (requires(T& t, utils::serial& ar) { t.save(exact_t<utils::serial&>(ar)); });
 
 // If id_base is declared in base type, than storage type must declare id_type
 template <typename Base, typename Type>
@@ -113,13 +113,13 @@ namespace id_manager
 		static constexpr pointer_keeper (*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper {
 			stx::shared_ptr<T> ptr;
 
-			if constexpr (std::is_constructible_v<T, stx::exact_t<const stx::launch_retainer&>, stx::exact_t<utils::serial&>>)
+			if constexpr (std::is_constructible_v<T, exact_t<const stx::launch_retainer&>, exact_t<utils::serial&>>)
 			{
-				ptr = stx::make_shared<T>(stx::launch_retainer{}, stx::exact_t<utils::serial&>(ar));
+				ptr = stx::make_shared<T>(stx::launch_retainer{}, exact_t<utils::serial&>(ar));
 			}
 			else
 			{
-				ptr = stx::make_shared<T>(stx::exact_t<utils::serial&>(ar));
+				ptr = stx::make_shared<T>(exact_t<utils::serial&>(ar));
 			}
 
 			return [ptr](void* storage)
@@ -134,7 +134,7 @@ namespace id_manager
 	struct id_traits_load_func<T>
 	{
 		static constexpr pointer_keeper (*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper {
-			return T::load(stx::exact_t<utils::serial&>(ar));
+			return T::load(exact_t<utils::serial&>(ar));
 		};
 	};
 

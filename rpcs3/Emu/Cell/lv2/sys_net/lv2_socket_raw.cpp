@@ -27,7 +27,7 @@ lv2_socket_raw::lv2_socket_raw(lv2_socket_family family, lv2_socket_type type, l
 }
 
 lv2_socket_raw::lv2_socket_raw(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(stx::make_exact(ar), type)
+	: lv2_socket(make_exact(ar), type)
 {
 }
 

@@ -152,7 +152,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 		cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
 	}
 
-	return vm::cast(rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10);
+	return vm::cast(rsx::get_current_renderer()->label_addr + OFFSET_OF(RsxReports, report) + index * 0x10);
 }
 
 u64 cellGcmGetTimeStamp(u32 index)
@@ -164,7 +164,7 @@ u64 cellGcmGetTimeStamp(u32 index)
 		cellGcmSys.error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
 	}
 
-	const u32 address = rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
+	const u32 address = rsx::get_current_renderer()->label_addr + OFFSET_OF(RsxReports, report) + index * 0x10;
 	return *vm::get_super_ptr<u64>(address);
 }
 
@@ -193,7 +193,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report)); // TODO
+	return vm::ptr<CellGcmReportData>::make(rsx::get_current_renderer()->label_addr + OFFSET_OF(RsxReports, report)); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -223,7 +223,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
 	}
 
-	return rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
+	return rsx::get_current_renderer()->label_addr + OFFSET_OF(RsxReports, report) + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)

@@ -104,6 +104,9 @@ add_subdirectory(zlib EXCLUDE_FROM_ALL)
 # ZSTD
 add_subdirectory(zstd EXCLUDE_FROM_ALL)
 
+# workaround for LLVM
+add_library(zstd::libzstd_static ALIAS libzstd_static)
+
 # 7zip sdk
 add_subdirectory(7zip EXCLUDE_FROM_ALL)
 
@@ -341,10 +344,6 @@ if(NOT MSVC AND NOT ANDROID AND NOT WITHOUT_OPENGLEW)
 	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()
-
-
-# LLVM
-add_subdirectory(llvm EXCLUDE_FROM_ALL)
 
 # WOLFSSL
 add_subdirectory(wolfssl EXCLUDE_FROM_ALL)

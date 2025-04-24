@@ -1717,7 +1717,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		auto cmd = m_secondary_cb_list.next();
 		cmd->begin();
 		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, mapping.second->value, mapping.first, 4, &write_data);
-		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, &release_event_id);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, m_host_object_data->value, OFFSET_OF(vk::host_data_t, commands_complete_event), 8, &release_event_id);
 		cmd->end();
 
 		vk::queue_submit_t submit_info = {m_device->get_graphics_queue(), nullptr};
@@ -1739,7 +1739,7 @@ void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
 	// Queue a sync update on the CB doing the load
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 	const auto event_id = host_ctx->on_texture_load_acquire();
-	VK_GET_SYMBOL(vkCmdUpdateBuffer)(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
+	VK_GET_SYMBOL(vkCmdUpdateBuffer)(cmd, m_host_object_data->value, OFFSET_OF(vk::host_data_t, texture_load_complete_event), sizeof(u64), &event_id);
 }
 
 void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
@@ -2520,7 +2520,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	{
 		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*m_current_command_buffer,
 			m_host_object_data->value,
-			::offset32(&vk::host_data_t::commands_complete_event),
+			OFFSET_OF(vk::host_data_t, commands_complete_event),
 			sizeof(u64),
 			const_cast<u64*>(&m_host_dma_ctrl->host_ctx()->last_label_acquire_event));
 

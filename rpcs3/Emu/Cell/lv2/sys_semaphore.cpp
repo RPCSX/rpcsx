@@ -18,7 +18,7 @@ lv2_sema::lv2_sema(utils::serial& ar)
 
 std::function<void(void*)> lv2_sema::load(utils::serial& ar)
 {
-	return load_func(make_shared<lv2_sema>(stx::exact_t<utils::serial&>(ar)));
+	return load_func(make_shared<lv2_sema>(exact_t<utils::serial&>(ar)));
 }
 
 void lv2_sema::save(utils::serial& ar)

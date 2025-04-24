@@ -27,7 +27,7 @@ lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noe
 std::function<void(void*)> lv2_memory_container::load(utils::serial& ar)
 {
 	// Use idm::last_id() only for the instances at IDM
-	return [ptr = make_shared<lv2_memory_container>(stx::exact_t<utils::serial&>(ar), true)](void* storage)
+	return [ptr = make_shared<lv2_memory_container>(exact_t<utils::serial&>(ar), true)](void* storage)
 	{
 		*static_cast<atomic_ptr<lv2_memory_container>*>(storage) = ptr;
 	};

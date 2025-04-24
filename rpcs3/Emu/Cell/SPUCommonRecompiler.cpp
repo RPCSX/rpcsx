@@ -203,7 +203,7 @@ DECLARE(spu_runtime::tr_all) = []
 	*raw++ = 0x41;
 	*raw++ = 0x8b;
 	*raw++ = 0x45;
-	*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+	*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, pc));
 
 	// Get LS address starting from PC: lea rcx, [rbp + rax]
 	*raw++ = 0x48;
@@ -233,7 +233,7 @@ DECLARE(spu_runtime::tr_all) = []
 	*raw++ = 0x49;
 	*raw++ = 0xc7;
 	*raw++ = 0x45;
-	*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+	*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, block_hash));
 	*raw++ = 0x00;
 	*raw++ = 0x00;
 	*raw++ = 0x00;
@@ -259,11 +259,11 @@ DECLARE(spu_runtime::tr_all) = []
 		    // x19 = m_thread a.k.a arg[0]
 		    // x20 = ls_base
 		    // x21 - x22 = args[2 - 3]
-		    // ensure(::offset32(&spu_thread::pc) <= 32760);
-		    // ensure(::offset32(&spu_thread::block_hash) <= 32760);
+		    // ensure(OFFSET_OF(spu_thread, pc) <= 32760);
+		    // ensure(OFFSET_OF(spu_thread, block_hash) <= 32760);
 
 			// Load PC
-			c.ldr(a64::w1, arm::Mem(a64::x19, ::offset32(&spu_thread::pc))); // REG_Base + offset(spu_thread::pc)
+			c.ldr(a64::w1, arm::Mem(a64::x19, OFFSET_OF(spu_thread, pc))); // REG_Base + offset(spu_thread::pc)
 			// Compute LS address = REG_Sp + PC, store into x7 (use later)
 			c.add(a64::x7, a64::x20, a64::x1);
 			// Load 32b from LS address
@@ -274,7 +274,7 @@ DECLARE(spu_runtime::tr_all) = []
 			c.mov(a64::x4, Imm(reinterpret_cast<u64>(g_dispatcher)));
 			// Update block hash
 			c.mov(a64::x5, Imm(0));
-			c.str(a64::x5, arm::Mem(a64::x19, ::offset32(&spu_thread::block_hash))); // REG_Base + offset(spu_thread::block_hash)
+			c.str(a64::x5, arm::Mem(a64::x19, OFFSET_OF(spu_thread, block_hash))); // REG_Base + offset(spu_thread::block_hash)
 			// Jump to [g_dispatcher + idx * 8]
 			c.mov(a64::x6, Imm(8));
 			c.mul(a64::x6, a64::x3, a64::x6);
@@ -327,7 +327,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 #endif
 
 		// Save native stack pointer for longjmp emulation
-		c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
+		c.mov(x86::qword_ptr(args[0], OFFSET_OF(spu_thread, hv_ctx.regs)), x86::rsp);
 
 		// Move 4 args (despite spu_function_t def)
 		c.mov(x86::r13, args[0]);
@@ -381,7 +381,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 #elif defined(ARCH_ARM64)
 
 		// Save non-volatile regs. We do this within the thread context instead of normal stack
-		const u32 hv_regs_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		const u32 hv_regs_base = OFFSET_OF(spu_thread, hv_ctx.regs);
 		// NOTE: A64 gp-gp-imm add only takes immediates of upto 4095. Larger numbers can work, but need to be multiples of 2 for lowering to replace the instruction correctly
 	    // Unfortunately asmjit fails silently on these patterns which can generate incorrect code
 		c.mov(a64::x15, args[0]);
@@ -447,14 +447,14 @@ DECLARE(spu_runtime::g_escape) = build_function_asm<void (*)(spu_thread*)>("spu_
 
 #if defined(ARCH_X64)
 		// Restore native stack pointer (longjmp emulation)
-		c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
+		c.mov(x86::rsp, x86::qword_ptr(args[0], OFFSET_OF(spu_thread, hv_ctx.regs)));
 
 		// Return to the return location
 		c.sub(x86::rsp, 8);
 		c.ret();
 #elif defined(ARCH_ARM64)
 		// Far ret, jumps to gateway epilogue
-		const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		const u32 reg_base = OFFSET_OF(spu_thread, hv_ctx.regs);
 		c.mov(a64::x19, args[0]);
 		c.mov(a64::x15, Imm(reg_base));
 		c.add(a64::x15, a64::x15, args[0]);
@@ -471,28 +471,28 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void (*)(spu_thread*, s
 
 #if defined(ARCH_X64)
 		// Restore native stack pointer (longjmp emulation)
-		c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)));
+		c.mov(x86::rsp, x86::qword_ptr(args[0], OFFSET_OF(spu_thread, hv_ctx.regs)));
 
 		// Adjust stack for initial call instruction in the gateway
 		c.sub(x86::rsp, 16);
 
 		// Tail call, GHC CC (second arg)
 		c.mov(x86::r13, args[0]);
-		c.mov(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::ls)));
+		c.mov(x86::rbp, x86::qword_ptr(args[0], OFFSET_OF(spu_thread, ls)));
 		c.mov(x86::r12, args[2]);
 		c.xor_(x86::ebx, x86::ebx);
 		c.mov(x86::qword_ptr(x86::rsp), args[1]);
 		c.ret();
 #elif defined(ARCH_ARM64)
 		// HV pointer
-		const u32 reg_base = ::offset32(&spu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs);
+		const u32 reg_base = OFFSET_OF(spu_thread, hv_ctx.regs);
 
 		// Tail call, GHC CC
-		c.mov(a64::x19, args[0]);                          // REG_Base
-		c.mov(a64::x15, Imm(::offset32(&spu_thread::ls))); // SPU::ls offset cannot be correctly encoded for ldr as it is too large
-		c.ldr(a64::x20, arm::Mem(a64::x19, a64::x15));     // REG_Sp
-		c.mov(a64::x21, args[2]);                          // REG_Hp
-		c.mov(a64::x22, a64::xzr);                         // REG_R1
+		c.mov(a64::x19, args[0]);                        // REG_Base
+		c.mov(a64::x15, Imm(OFFSET_OF(spu_thread, ls))); // SPU::ls offset cannot be correctly encoded for ldr as it is too large
+		c.ldr(a64::x20, arm::Mem(a64::x19, a64::x15));   // REG_Sp
+		c.mov(a64::x21, args[2]);                        // REG_Hp
+		c.mov(a64::x22, a64::xzr);                       // REG_R1
 
 		// Reset sp to patch leaks. Calls to tail escape may leave their stack "dirty" due to optimizations.
 		c.mov(a64::x14, Imm(reg_base + 8));
@@ -7754,13 +7754,13 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x49;
 		*raw++ = 0x89;
 		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+		*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, block_hash));
 
 		// Load PC: mov eax, [r13 + spu_thread::pc]
 		*raw++ = 0x41;
 		*raw++ = 0x8b;
 		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+		*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, pc));
 
 		// Get LS address starting from PC: lea rcx, [rbp + rax]
 		*raw++ = 0x48;
@@ -7824,18 +7824,18 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x48;
 		*raw++ = 0x8d;
 		*raw++ = 0x7d;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::gpr));
+		*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, gpr));
 
 		// Save base pc: mov [rbp + spu_thread::base_pc], eax
 		*raw++ = 0x89;
 		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::base_pc));
+		*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, base_pc));
 
 		// inc block_counter
 		*raw++ = 0x48;
 		*raw++ = 0xff;
 		*raw++ = 0x85;
-		const u32 blc_off = ::offset32(&spu_thread::block_counter);
+		const u32 blc_off = OFFSET_OF(spu_thread, block_counter);
 		std::memcpy(raw, &blc_off, 4);
 		raw += 4;
 
@@ -7858,7 +7858,7 @@ struct spu_fast : public spu_recompiler_base
 				*raw++ = 0x44;
 				*raw++ = 0x89;
 				*raw++ = 0x65;
-				*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+				*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, pc));
 
 				// Epilogue: add rsp,0x28
 				*raw++ = 0x48;
@@ -7890,7 +7890,7 @@ struct spu_fast : public spu_recompiler_base
 					*raw++ = type == spu_itype::BRHZ || type == spu_itype::BRHNZ ? 0x66 : 0x90;
 					*raw++ = 0x83;
 					*raw++ = 0xbd;
-					const u32 off = ::offset32(&spu_thread::gpr, op.rt) + 12;
+					const u32 off = OFFSET_OF(spu_thread, gpr[op.rt]) + 12;
 					std::memcpy(raw, &off, 4);
 					raw += 4;
 					*raw++ = 0x00;
@@ -7957,7 +7957,7 @@ struct spu_fast : public spu_recompiler_base
 		// sub eax, [rbp + spu_thread::base_pc]
 		*raw++ = 0x2b;
 		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::base_pc));
+		*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, base_pc));
 
 		// cmp eax, (0 - size)
 		*raw++ = 0x3d;
@@ -7992,7 +7992,7 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x44;
 		*raw++ = 0x89;
 		*raw++ = 0x65;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+		*raw++ = ::narrow<s8>(OFFSET_OF(spu_thread, pc));
 
 		// Epilogue: add rsp,0x28 ; ret
 		*raw++ = 0x48;

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE on)
 
 set(FFMPEG_VERSION 5.1)
-set(LLVM_VERSION 19.1)
+set(LLVM_VERSION 20.1.2)
 
 option(USE_ARCH "Specify arch to build" "")
 
@@ -88,26 +88,6 @@ target_link_libraries(3rdparty_ffmpeg INTERFACE
 
 add_dependencies(3rdparty_ffmpeg ffmpeg-unpack)
 
-
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/llvm-${LLVM_VERSION}.tar.gz)
-    message(STATUS "Downloading llvm-${LLVM_VERSION}")
-    file(DOWNLOAD
-        https://github.com/RPCS3-Android/llvm-android/releases/download/${LLVM_VERSION}/llvm-${RPCS3_DOWNLOAD_ARCH}-Android.tar.gz
-        ${CMAKE_BINARY_DIR}/llvm-${LLVM_VERSION}.tar.gz
-        SHOW_PROGRESS
-    )
-endif()
-
-set(LLVM_DIR ${CMAKE_BINARY_DIR}/llvm-${LLVM_VERSION}.7-Android/lib/cmake/llvm)
-
-if (NOT EXISTS ${LLVM_DIR})
-    message(STATUS "Unpacking llvm-${LLVM_VERSION}")
-    execute_process(
-        COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_BINARY_DIR}/llvm-${LLVM_VERSION}.tar.gz
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    )
-endif()
-
 set(WITH_RPCSX off)
 set(WITH_RPCS3 on)
 set(USE_SYSTEM_LIBUSB off)
@@ -117,10 +97,10 @@ set(USE_SYSTEM_OPENCV off)
 set(USE_SYSTEM_FFMPEG off)
 set(USE_FAUDIO off)
 set(USE_SDL2 off)
-set(BUILD_LLVM off)
+set(BUILD_LLVM on)
 set(STATIC_LINK_LLVM on)
-set(DISABLE_LTO on)
-set(USE_LTO off)
+set(DISABLE_LTO off)
+set(USE_LTO on)
 set(USE_OPENSL off)
 set(ASMJIT_NO_SHM_OPEN on)
 set(USE_SYSTEM_ZLIB on)

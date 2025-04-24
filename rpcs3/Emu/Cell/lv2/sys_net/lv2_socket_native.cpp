@@ -20,7 +20,7 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 }
 
 lv2_socket_native::lv2_socket_native(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(stx::make_exact(ar), type)
+	: lv2_socket(make_exact(ar), type)
 {
 	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_net);
 

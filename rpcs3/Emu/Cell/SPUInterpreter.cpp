@@ -99,7 +99,7 @@ namespace asmjit
 			c.shl(x86::eax, I + 4);
 		}
 
-		const auto ptr = x86::oword_ptr(spu, x86::rax, 0, ::offset32(&spu_thread::gpr));
+		const auto ptr = x86::oword_ptr(spu, x86::rax, 0, OFFSET_OF(spu_thread, gpr));
 
 		if (utils::has_avx())
 		{

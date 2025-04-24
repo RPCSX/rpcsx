@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rx/cpu/cell/ppu/Decoder.hpp"
 #include "PPUInterpreter.h"
 
 #include "Emu/Memory/vm_reservation.h"
@@ -189,13 +190,11 @@ namespace asmjit
 		}
 
 		// Indexed offset to ppu.member
-		template <auto MPtr, u32 Size = sizeof((std::declval<ppu_thread&>().*MPtr)[0]), uint I, uint N>
-		x86::Mem ppu_mem(const bf_t<u32, I, N>&, bool last = false)
+		template <uint I, uint N>
+		x86::Mem ppu_mem(const bf_t<u32, I, N>&, std::size_t offset, std::size_t size, std::size_t elemSize, bool last = false)
 		{
 			// Required index shift for array indexing
-			constexpr u32 Shift = std::countr_zero(sizeof((std::declval<ppu_thread&>().*MPtr)[0]));
-
-			const u32 offset = ::offset32(MPtr);
+			u32 Shift = std::countr_zero(elemSize);
 
 			auto tmp_r32 = x86::eax;
 			auto reg_ppu = arg_ppu;
@@ -222,13 +221,13 @@ namespace asmjit
 			}
 
 			// Use max possible index shift
-			constexpr u32 X86Shift = Shift > 3 ? 3 : Shift;
-			constexpr u32 AddShift = Shift - X86Shift;
-			constexpr u32 AndMask = (1u << N) - 1;
+			u32 X86Shift = Shift > 3 ? 3 : Shift;
+			u32 AddShift = Shift - X86Shift;
+			u32 AndMask = (1u << N) - 1;
 
-			if constexpr (I >= AddShift)
+			if (I >= AddShift)
 			{
-				if constexpr (I != AddShift)
+				if (I != AddShift)
 					base::shr(tmp_r32, I - AddShift);
 				base::and_(tmp_r32, AndMask << AddShift);
 			}
@@ -238,25 +237,24 @@ namespace asmjit
 				base::shl(tmp_r32, I + AddShift);
 			}
 
-			return x86::ptr(reg_ppu, tmp_r32.r64(), X86Shift, static_cast<s32>(offset - ppu_base), Size);
+			return x86::ptr(reg_ppu, tmp_r32.r64(), X86Shift, static_cast<s32>(offset - ppu_base), size);
 		}
 
 		// Generic offset to ppu.member
-		template <auto MPtr, u32 Size = sizeof(std::declval<ppu_thread&>().*MPtr)>
-		x86::Mem ppu_mem()
+		x86::Mem ppu_mem(std::uint32_t offset, std::size_t size)
 		{
-			return x86::ptr(arg_ppu, static_cast<s32>(::offset32(MPtr)), Size);
+			return x86::ptr(arg_ppu, offset, size);
 		}
 
 		template <u32 Size = 16, uint I, uint N>
 		x86::Mem ppu_vr(const bf_t<u32, I, N>& bf, bool last = false)
 		{
-			return ppu_mem<&ppu_thread::vr, Size>(bf, last);
+			return ppu_mem(bf, OFFSET_OF(ppu_thread, vr), Size, sizeof(ppu_thread::vr[0]), last);
 		}
 
 		x86::Mem ppu_sat()
 		{
-			return ppu_mem<&ppu_thread::sat>();
+			return ppu_mem(OFFSET_OF(ppu_thread, sat), sizeof(ppu_thread::sat));
 		}
 
 		void ppu_ret(bool last = true)
@@ -265,7 +263,7 @@ namespace asmjit
 			base::mov(x86::rax, x86::qword_ptr(arg_next_fn));
 			base::add(arg_this_op, 4);
 			if (is_debugger_present())
-				base::mov(ppu_mem<&ppu_thread::cia>(), arg_this_op.r32());
+				base::mov(ppu_mem(OFFSET_OF(ppu_thread, cia), sizeof(ppu_thread::cia)), arg_this_op.r32());
 			base::mov(arg_op, x86::dword_ptr(arg_this_op));
 			base::bswap(arg_op);
 			base::add(arg_next_fn, 8);
@@ -377,7 +375,7 @@ inline void ppu_cr_set(ppu_thread& ppu, u32 field, bool le, bool gt, bool eq, bo
 template <typename T>
 inline void ppu_cr_set(ppu_thread& ppu, u32 field, const T& a, const T& b)
 {
-	ppu_cr_set(ppu, field, a<b, a> b, a == b, ppu.xer.so);
+	ppu_cr_set(ppu, field, (a < b), (a > b), a == b, ppu.xer_so);
 }
 
 // TODO
@@ -398,8 +396,8 @@ void ppu_set_cr(ppu_thread& ppu, u32 field, bool le, bool gt, bool eq, bool so)
 // Set XER.OV bit (overflow)
 inline void ppu_ov_set(ppu_thread& ppu, bool bit)
 {
-	ppu.xer.ov = bit;
-	ppu.xer.so |= bit;
+	ppu.xer_ov = bit;
+	ppu.xer_so |= bit;
 }
 
 // Write comparison results to FPCC field with optional CR field update
@@ -428,7 +426,7 @@ void ppu_set_fpcc(ppu_thread& ppu, f64 a, f64 b, u64 cr_field = 1)
 		fpcc[3] = cmp == std::partial_ordering::unordered;
 #endif
 
-		const u32 data = std::bit_cast<u32>(fpcc);
+		auto data = std::bit_cast<CrField>(fpcc);
 
 		// Write FPCC
 		ppu.fpscr.fields[4] = data;
@@ -440,7 +438,7 @@ void ppu_set_fpcc(ppu_thread& ppu, f64 a, f64 b, u64 cr_field = 1)
 
 			if (g_cfg.core.ppu_debug) [[unlikely]]
 			{
-				*reinterpret_cast<u32*>(vm::g_stat_addr + ppu.cia) |= data;
+				*reinterpret_cast<u32*>(vm::g_stat_addr + ppu.cia) |= std::bit_cast<u32>(data);
 			}
 		}
 	}
@@ -608,7 +606,7 @@ inline v128 ppu_select_vnan(v128 a, v128 b)
 	return gv_selectfs(gv_eqfs(a, a), b, a | gv_bcst32(0x7fc00000u));
 }
 
-inline v128 ppu_select_vnan(v128 a, v128 b, Vector128 auto... args)
+inline v128 ppu_select_vnan(v128 a, v128 b, rx::Vector128 auto... args)
 {
 	return ppu_select_vnan(a, ppu_select_vnan(b, args...));
 }
@@ -633,7 +631,7 @@ inline v128 ppu_fix_vnan(v128 r)
 }
 
 template <ppu_exec_bit... Flags>
-inline v128 ppu_set_vnan(v128 r, Vector128 auto... args)
+inline v128 ppu_set_vnan(v128 r, rx::Vector128 auto... args)
 {
 	if constexpr (((Flags == set_vnan) || ...) && sizeof...(args) > 0)
 	{
@@ -712,7 +710,7 @@ auto VADDFP()
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_addfs(a, b), a, b));
@@ -1359,7 +1357,7 @@ auto VMADDFP()
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& c_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		auto c = ppu_flush_denormal<false, Flags...>(m, std::move(c_));
@@ -1377,7 +1375,7 @@ auto VMAXFP()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& jm_mask)
 	{
-		d = ppu_flush_denormal<true, Flags...>(gv_bcst32(jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(gv_maxfs(a, b), a, b));
+		d = ppu_flush_denormal<true, Flags...>(gv_bcst32(jm_mask), ppu_set_vnan<Flags...>(gv_maxfs(a, b), a, b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
@@ -1524,7 +1522,7 @@ auto VMINFP()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& jm_mask)
 	{
-		d = ppu_flush_denormal<true, Flags...>(gv_bcst32(jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(gv_minfs(a, b), a, b));
+		d = ppu_flush_denormal<true, Flags...>(gv_bcst32(jm_mask), ppu_set_vnan<Flags...>(gv_minfs(a, b), a, b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
@@ -1931,7 +1929,7 @@ auto VNMSUBFP()
 	{
 		// An odd case with (FLT_MIN, FLT_MIN, FLT_MIN) produces FLT_MIN instead of 0
 		auto s = gv_bcstfs(-0.0f);
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		auto c = ppu_flush_denormal<false, Flags...>(m, std::move(c_));
@@ -2177,7 +2175,7 @@ auto VREFP()
 
 	static const auto exec = [](auto&& d, auto&& b_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_divfs(gv_bcstfs(1.0f), b), b));
 	};
@@ -2193,7 +2191,7 @@ auto VRFIM()
 
 	static const auto exec = [](auto&& d, auto&& b_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_roundfs_floor(b), b));
 	};
@@ -2209,7 +2207,7 @@ auto VRFIN()
 
 	static const auto exec = [](auto&& d, auto&& b, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_roundfs_even(b), b));
 	};
 
@@ -2224,7 +2222,7 @@ auto VRFIP()
 
 	static const auto exec = [](auto&& d, auto&& b_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_roundfs_ceil(b), b));
 	};
@@ -2240,7 +2238,7 @@ auto VRFIZ()
 
 	static const auto exec = [](auto&& d, auto&& b, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_roundfs_trunc(b), b));
 	};
 
@@ -2297,7 +2295,7 @@ auto VRSQRTEFP()
 
 	static const auto exec = [](auto&& d, auto&& b_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_divfs(gv_bcstfs(1.0f), gv_sqrtfs(b)), b));
 	};
@@ -2629,7 +2627,7 @@ auto VSUBFP()
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& jm_mask)
 	{
-		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto m = gv_bcst32(jm_mask);
 		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
 		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
 		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_subfs(a, b), a, b));
@@ -3113,7 +3111,7 @@ auto SUBFIC()
 		const s64 i = op.simm16;
 		const auto r = add64_flags(~a, i, 1);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 	};
 	RETURN_(ppu, op);
 }
@@ -3170,7 +3168,7 @@ auto ADDIC()
 		const s64 i = op.simm16;
 		const auto r = add64_flags(a, i);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if (op.main & 1) [[unlikely]]
 			ppu_cr_set<s64>(ppu, 0, r.result, 0);
 	};
@@ -3827,7 +3825,7 @@ auto SUBFC()
 		const u64 RB = ppu.gpr[op.rb];
 		const auto r = add64_flags(~RA, RB, 1);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -3863,7 +3861,7 @@ auto ADDC()
 		const u64 RB = ppu.gpr[op.rb];
 		const auto r = add64_flags(RA, RB);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (RA >> 63 == RB >> 63) && (RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4394,9 +4392,9 @@ auto SUBFE()
 	{
 		const u64 RA = ppu.gpr[op.ra];
 		const u64 RB = ppu.gpr[op.rb];
-		const auto r = add64_flags(~RA, RB, ppu.xer.ca);
+		const auto r = add64_flags(~RA, RB, ppu.xer_ca);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (~RA >> 63 == RB >> 63) && (~RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4415,9 +4413,9 @@ auto ADDE()
 	{
 		const u64 RA = ppu.gpr[op.ra];
 		const u64 RB = ppu.gpr[op.rb];
-		const auto r = add64_flags(RA, RB, ppu.xer.ca);
+		const auto r = add64_flags(RA, RB, ppu.xer_ca);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (RA >> 63 == RB >> 63) && (RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4434,23 +4432,23 @@ auto MTOCRF()
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
-		alignas(4) static const u8 s_table[16][4]{
-			{0, 0, 0, 0},
-			{0, 0, 0, 1},
-			{0, 0, 1, 0},
-			{0, 0, 1, 1},
-			{0, 1, 0, 0},
-			{0, 1, 0, 1},
-			{0, 1, 1, 0},
-			{0, 1, 1, 1},
-			{1, 0, 0, 0},
-			{1, 0, 0, 1},
-			{1, 0, 1, 0},
-			{1, 0, 1, 1},
-			{1, 1, 0, 0},
-			{1, 1, 0, 1},
-			{1, 1, 1, 0},
-			{1, 1, 1, 1},
+		alignas(4) static const CrField s_table[16]{
+			CrField::From(false, false, false, false),
+			CrField::From(false, false, false, true),
+			CrField::From(false, false, true, false),
+			CrField::From(false, false, true, true),
+			CrField::From(false, true, false, false),
+			CrField::From(false, true, false, true),
+			CrField::From(false, true, true, false),
+			CrField::From(false, true, true, true),
+			CrField::From(true, false, false, false),
+			CrField::From(true, false, false, true),
+			CrField::From(true, false, true, false),
+			CrField::From(true, false, true, true),
+			CrField::From(true, true, false, false),
+			CrField::From(true, true, false, true),
+			CrField::From(true, true, true, false),
+			CrField::From(true, true, true, true),
 		};
 
 		const u64 s = ppu.gpr[op.rs];
@@ -4461,7 +4459,7 @@ auto MTOCRF()
 
 			const u32 n = std::countl_zero<u32>(op.crm) & 7;
 			const u64 v = (s >> ((n * 4) ^ 0x1c)) & 0xf;
-			ppu.cr.fields[n] = *reinterpret_cast<const u32*>(s_table + v);
+			ppu.cr.fields[n] = s_table[v];
 		}
 		else
 		{
@@ -4472,7 +4470,7 @@ auto MTOCRF()
 				if (op.crm & (128 >> i))
 				{
 					const u64 v = (s >> ((i * 4) ^ 0x1c)) & 0xf;
-					ppu.cr.fields[i] = *reinterpret_cast<const u32*>(s_table + v);
+					ppu.cr.fields[i] = s_table[v];
 				}
 			}
 		}
@@ -4503,7 +4501,7 @@ auto STWCX()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		ppu_cr_set(ppu, 0, false, false, ppu_stwcx(ppu, vm::cast(addr), static_cast<u32>(ppu.gpr[op.rs])), ppu.xer.so);
+		ppu_cr_set(ppu, 0, false, false, ppu_stwcx(ppu, vm::cast(addr), static_cast<u32>(ppu.gpr[op.rs])), ppu.xer_so);
 	};
 	RETURN_(ppu, op);
 }
@@ -4591,9 +4589,9 @@ auto SUBFZE()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 RA = ppu.gpr[op.ra];
-		const auto r = add64_flags(~RA, 0, ppu.xer.ca);
+		const auto r = add64_flags(~RA, 0, ppu.xer_ca);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (~RA >> 63 == 0) && (~RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4611,9 +4609,9 @@ auto ADDZE()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 RA = ppu.gpr[op.ra];
-		const auto r = add64_flags(RA, 0, ppu.xer.ca);
+		const auto r = add64_flags(RA, 0, ppu.xer_ca);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (RA >> 63 == 0) && (RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4631,7 +4629,7 @@ auto STDCX()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		ppu_cr_set(ppu, 0, false, false, ppu_stdcx(ppu, vm::cast(addr), ppu.gpr[op.rs]), ppu.xer.so);
+		ppu_cr_set(ppu, 0, false, false, ppu_stdcx(ppu, vm::cast(addr), ppu.gpr[op.rs]), ppu.xer_so);
 	};
 	RETURN_(ppu, op);
 }
@@ -4695,9 +4693,9 @@ auto SUBFME()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const u64 RA = ppu.gpr[op.ra];
-		const auto r = add64_flags(~RA, ~0ull, ppu.xer.ca);
+		const auto r = add64_flags(~RA, ~0ull, ppu.xer_ca);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (~RA >> 63 == 1) && (~RA >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4715,9 +4713,9 @@ auto ADDME()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		const s64 RA = ppu.gpr[op.ra];
-		const auto r = add64_flags(RA, ~0ull, ppu.xer.ca);
+		const auto r = add64_flags(RA, ~0ull, ppu.xer_ca);
 		ppu.gpr[op.rd] = r.result;
-		ppu.xer.ca = r.carry;
+		ppu.xer_ca = r.carry;
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_ov_set(ppu, (u64(RA) >> 63 == 1) && (u64(RA) >> 63 != ppu.gpr[op.rd] >> 63));
 		if constexpr (((Flags == has_rc) || ...))
@@ -4881,7 +4879,7 @@ auto MFSPR()
 
 		switch (n)
 		{
-		case 0x001: ppu.gpr[op.rd] = u32{ppu.xer.so} << 31 | ppu.xer.ov << 30 | ppu.xer.ca << 29 | ppu.xer.cnt; break;
+		case 0x001: ppu.gpr[op.rd] = u32{ppu.xer_so} << 31 | ppu.xer_ov << 30 | ppu.xer_ca << 29 | ppu.xer_cnt; break;
 		case 0x008: ppu.gpr[op.rd] = ppu.lr; break;
 		case 0x009: ppu.gpr[op.rd] = ppu.ctr; break;
 		case 0x100: ppu.gpr[op.rd] = ppu.vrsave; break;
@@ -5131,10 +5129,10 @@ auto MTSPR()
 		case 0x001:
 		{
 			const u64 value = ppu.gpr[op.rs];
-			ppu.xer.so = (value & 0x80000000) != 0;
-			ppu.xer.ov = (value & 0x40000000) != 0;
-			ppu.xer.ca = (value & 0x20000000) != 0;
-			ppu.xer.cnt = value & 0x7f;
+			ppu.xer_so = (value & 0x80000000) != 0;
+			ppu.xer_ov = (value & 0x40000000) != 0;
+			ppu.xer_ca = (value & 0x20000000) != 0;
+			ppu.xer_cnt = value & 0x7f;
 			break;
 		}
 		case 0x008: ppu.lr = ppu.gpr[op.rs]; break;
@@ -5264,7 +5262,7 @@ auto LSWX()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		u32 count = ppu.xer.cnt & 0x7f;
+		u32 count = ppu.xer_cnt & 0x7f;
 		for (; count >= 4; count -= 4, addr += 4, op.rd = (op.rd + 1) & 31)
 		{
 			ppu.gpr[op.rd] = ppu_feed_data<u32, Flags...>(ppu, addr);
@@ -5497,7 +5495,7 @@ auto STSWX()
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
 	{
 		u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-		u32 count = ppu.xer.cnt & 0x7F;
+		u32 count = ppu.xer_cnt & 0x7F;
 		for (; count >= 4; count -= 4, addr += 4, op.rs = (op.rs + 1) & 31)
 		{
 			PPU_WRITE_32(vm::cast(addr), static_cast<u32>(ppu.gpr[op.rs]));
@@ -5675,12 +5673,12 @@ auto SRAW()
 		if (shift > 31)
 		{
 			ppu.gpr[op.ra] = 0 - (RS < 0);
-			ppu.xer.ca = (RS < 0);
+			ppu.xer_ca = (RS < 0);
 		}
 		else
 		{
 			ppu.gpr[op.ra] = RS >> shift;
-			ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != static_cast<u64>(RS));
+			ppu.xer_ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != static_cast<u64>(RS));
 		}
 
 		if constexpr (((Flags == has_rc) || ...))
@@ -5702,12 +5700,12 @@ auto SRAD()
 		if (shift > 63)
 		{
 			ppu.gpr[op.ra] = 0 - (RS < 0);
-			ppu.xer.ca = (RS < 0);
+			ppu.xer_ca = (RS < 0);
 		}
 		else
 		{
 			ppu.gpr[op.ra] = RS >> shift;
-			ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != static_cast<u64>(RS));
+			ppu.xer_ca = (RS < 0) && ((ppu.gpr[op.ra] << shift) != static_cast<u64>(RS));
 		}
 
 		if constexpr (((Flags == has_rc) || ...))
@@ -5742,7 +5740,7 @@ auto SRAWI()
 	{
 		s32 RS = static_cast<u32>(ppu.gpr[op.rs]);
 		ppu.gpr[op.ra] = RS >> op.sh32;
-		ppu.xer.ca = (RS < 0) && (static_cast<u32>(ppu.gpr[op.ra] << op.sh32) != static_cast<u32>(RS));
+		ppu.xer_ca = (RS < 0) && (static_cast<u32>(ppu.gpr[op.ra] << op.sh32) != static_cast<u32>(RS));
 
 		if constexpr (((Flags == has_rc) || ...))
 			ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
@@ -5761,7 +5759,7 @@ auto SRADI()
 		auto sh = op.sh64;
 		s64 RS = ppu.gpr[op.rs];
 		ppu.gpr[op.ra] = RS >> sh;
-		ppu.xer.ca = (RS < 0) && ((ppu.gpr[op.ra] << sh) != static_cast<u64>(RS));
+		ppu.xer_ca = (RS < 0) && ((ppu.gpr[op.ra] << sh) != static_cast<u64>(RS));
 
 		if constexpr (((Flags == has_rc) || ...))
 			ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
@@ -6562,9 +6560,9 @@ auto MTFSFI()
 		}
 		else
 		{
-			static constexpr std::array<u32, 16> all_values = []() -> std::array<u32, 16>
+			static constexpr auto all_values = []
 			{
-				std::array<u32, 16> values{};
+				std::array<CrField, 16> values{};
 
 				for (u32 i = 0; i < values.size(); i++)
 				{
@@ -6576,7 +6574,7 @@ auto MTFSFI()
 					value |= (im & 1) << (8 * 1);
 					im >>= 1;
 					value |= (im & 1) << (8 * 0);
-					values[i] = value;
+					values[i] = std::bit_cast<CrField>(value);
 				}
 
 				return values;
@@ -8084,4 +8082,1180 @@ ppu_intrp_func_t ppu_interpreter_rt::decode(u32 opv) const noexcept
 	}
 
 	return table.decode(opv);
+}
+
+using isel_type = void (*)(PPUContext&, rx::cell::ppu::Instruction);
+
+#define IMPORT_DECODER(x) extern "C" isel_type ISEL_PPU_##x##_DEC
+#define IMPORT_DECODER_ALIAS(x, name)           \
+	extern "C" isel_type ISEL_PPU_##name##_DEC; \
+	inline isel_type ISEL_PPU_##x##_DEC = ISEL_PPU_##name##_DEC;
+
+IMPORT_DECODER(MFVSCR);
+IMPORT_DECODER(MTVSCR);
+IMPORT_DECODER(VADDCUW);
+IMPORT_DECODER(VADDFP);
+IMPORT_DECODER(VADDSBS);
+IMPORT_DECODER(VADDSHS);
+IMPORT_DECODER(VADDSWS);
+IMPORT_DECODER(VADDUBM);
+IMPORT_DECODER(VADDUBS);
+IMPORT_DECODER(VADDUHM);
+IMPORT_DECODER(VADDUHS);
+IMPORT_DECODER(VADDUWM);
+IMPORT_DECODER(VADDUWS);
+IMPORT_DECODER(VAND);
+IMPORT_DECODER(VANDC);
+IMPORT_DECODER(VAVGSB);
+IMPORT_DECODER(VAVGSH);
+IMPORT_DECODER(VAVGSW);
+IMPORT_DECODER(VAVGUB);
+IMPORT_DECODER(VAVGUH);
+IMPORT_DECODER(VAVGUW);
+IMPORT_DECODER(VCFSX);
+IMPORT_DECODER(VCFUX);
+IMPORT_DECODER(VCMPBFP);
+IMPORT_DECODER_ALIAS(VCMPBFP_, VCMPBFP);
+IMPORT_DECODER(VCMPEQFP);
+IMPORT_DECODER_ALIAS(VCMPEQFP_, VCMPEQFP);
+IMPORT_DECODER(VCMPEQUB);
+IMPORT_DECODER_ALIAS(VCMPEQUB_, VCMPEQUB);
+IMPORT_DECODER(VCMPEQUH);
+IMPORT_DECODER_ALIAS(VCMPEQUH_, VCMPEQUH);
+IMPORT_DECODER(VCMPEQUW);
+IMPORT_DECODER_ALIAS(VCMPEQUW_, VCMPEQUW);
+IMPORT_DECODER(VCMPGEFP);
+IMPORT_DECODER_ALIAS(VCMPGEFP_, VCMPGEFP);
+IMPORT_DECODER(VCMPGTFP);
+IMPORT_DECODER_ALIAS(VCMPGTFP_, VCMPGTFP);
+IMPORT_DECODER(VCMPGTSB);
+IMPORT_DECODER_ALIAS(VCMPGTSB_, VCMPGTSB);
+IMPORT_DECODER(VCMPGTSH);
+IMPORT_DECODER_ALIAS(VCMPGTSH_, VCMPGTSH);
+IMPORT_DECODER(VCMPGTSW);
+IMPORT_DECODER_ALIAS(VCMPGTSW_, VCMPGTSW);
+IMPORT_DECODER(VCMPGTUB);
+IMPORT_DECODER_ALIAS(VCMPGTUB_, VCMPGTUB);
+IMPORT_DECODER(VCMPGTUH);
+IMPORT_DECODER_ALIAS(VCMPGTUH_, VCMPGTUH);
+IMPORT_DECODER(VCMPGTUW);
+IMPORT_DECODER_ALIAS(VCMPGTUW_, VCMPGTUW);
+IMPORT_DECODER(VCTSXS);
+IMPORT_DECODER(VCTUXS);
+IMPORT_DECODER(VEXPTEFP);
+IMPORT_DECODER(VLOGEFP);
+IMPORT_DECODER(VMADDFP);
+IMPORT_DECODER(VMAXFP);
+IMPORT_DECODER(VMAXSB);
+IMPORT_DECODER(VMAXSH);
+IMPORT_DECODER(VMAXSW);
+IMPORT_DECODER(VMAXUB);
+IMPORT_DECODER(VMAXUH);
+IMPORT_DECODER(VMAXUW);
+IMPORT_DECODER(VMHADDSHS);
+IMPORT_DECODER(VMHRADDSHS);
+IMPORT_DECODER(VMINFP);
+IMPORT_DECODER(VMINSB);
+IMPORT_DECODER(VMINSH);
+IMPORT_DECODER(VMINSW);
+IMPORT_DECODER(VMINUB);
+IMPORT_DECODER(VMINUH);
+IMPORT_DECODER(VMINUW);
+IMPORT_DECODER(VMLADDUHM);
+IMPORT_DECODER(VMRGHB);
+IMPORT_DECODER(VMRGHH);
+IMPORT_DECODER(VMRGHW);
+IMPORT_DECODER(VMRGLB);
+IMPORT_DECODER(VMRGLH);
+IMPORT_DECODER(VMRGLW);
+IMPORT_DECODER(VMSUMMBM);
+IMPORT_DECODER(VMSUMSHM);
+IMPORT_DECODER(VMSUMSHS);
+IMPORT_DECODER(VMSUMUBM);
+IMPORT_DECODER(VMSUMUHM);
+IMPORT_DECODER(VMSUMUHS);
+IMPORT_DECODER(VMULESB);
+IMPORT_DECODER(VMULESH);
+IMPORT_DECODER(VMULEUB);
+IMPORT_DECODER(VMULEUH);
+IMPORT_DECODER(VMULOSB);
+IMPORT_DECODER(VMULOSH);
+IMPORT_DECODER(VMULOUB);
+IMPORT_DECODER(VMULOUH);
+IMPORT_DECODER(VNMSUBFP);
+IMPORT_DECODER(VNOR);
+IMPORT_DECODER(VOR);
+IMPORT_DECODER(VPERM);
+IMPORT_DECODER(VPKPX);
+IMPORT_DECODER(VPKSHSS);
+IMPORT_DECODER(VPKSHUS);
+IMPORT_DECODER(VPKSWSS);
+IMPORT_DECODER(VPKSWUS);
+IMPORT_DECODER(VPKUHUM);
+IMPORT_DECODER(VPKUHUS);
+IMPORT_DECODER(VPKUWUM);
+IMPORT_DECODER(VPKUWUS);
+IMPORT_DECODER(VREFP);
+IMPORT_DECODER(VRFIM);
+IMPORT_DECODER(VRFIN);
+IMPORT_DECODER(VRFIP);
+IMPORT_DECODER(VRFIZ);
+IMPORT_DECODER(VRLB);
+IMPORT_DECODER(VRLH);
+IMPORT_DECODER(VRLW);
+IMPORT_DECODER(VRSQRTEFP);
+IMPORT_DECODER(VSEL);
+IMPORT_DECODER(VSL);
+IMPORT_DECODER(VSLB);
+IMPORT_DECODER(VSLDOI);
+IMPORT_DECODER(VSLH);
+IMPORT_DECODER(VSLO);
+IMPORT_DECODER(VSLW);
+IMPORT_DECODER(VSPLTB);
+IMPORT_DECODER(VSPLTH);
+IMPORT_DECODER(VSPLTISB);
+IMPORT_DECODER(VSPLTISH);
+IMPORT_DECODER(VSPLTISW);
+IMPORT_DECODER(VSPLTW);
+IMPORT_DECODER(VSR);
+IMPORT_DECODER(VSRAB);
+IMPORT_DECODER(VSRAH);
+IMPORT_DECODER(VSRAW);
+IMPORT_DECODER(VSRB);
+IMPORT_DECODER(VSRH);
+IMPORT_DECODER(VSRO);
+IMPORT_DECODER(VSRW);
+IMPORT_DECODER(VSUBCUW);
+IMPORT_DECODER(VSUBFP);
+IMPORT_DECODER(VSUBSBS);
+IMPORT_DECODER(VSUBSHS);
+IMPORT_DECODER(VSUBSWS);
+IMPORT_DECODER(VSUBUBM);
+IMPORT_DECODER(VSUBUBS);
+IMPORT_DECODER(VSUBUHM);
+IMPORT_DECODER(VSUBUHS);
+IMPORT_DECODER(VSUBUWM);
+IMPORT_DECODER(VSUBUWS);
+IMPORT_DECODER(VSUMSWS);
+IMPORT_DECODER(VSUM2SWS);
+IMPORT_DECODER(VSUM4SBS);
+IMPORT_DECODER(VSUM4SHS);
+IMPORT_DECODER(VSUM4UBS);
+IMPORT_DECODER(VUPKHPX);
+IMPORT_DECODER(VUPKHSB);
+IMPORT_DECODER(VUPKHSH);
+IMPORT_DECODER(VUPKLPX);
+IMPORT_DECODER(VUPKLSB);
+IMPORT_DECODER(VUPKLSH);
+IMPORT_DECODER(VXOR);
+IMPORT_DECODER(TDI);
+IMPORT_DECODER(TWI);
+IMPORT_DECODER(MULLI);
+IMPORT_DECODER(SUBFIC);
+IMPORT_DECODER(CMPLI);
+IMPORT_DECODER(CMPI);
+IMPORT_DECODER(ADDIC);
+IMPORT_DECODER(ADDI);
+IMPORT_DECODER(ADDIS);
+IMPORT_DECODER(BC);
+IMPORT_DECODER(SC);
+IMPORT_DECODER(B);
+IMPORT_DECODER(MCRF);
+IMPORT_DECODER(BCLR);
+IMPORT_DECODER(RFID);
+IMPORT_DECODER(CRNOR);
+IMPORT_DECODER(RFSCV);
+IMPORT_DECODER(CRANDC);
+IMPORT_DECODER(ISYNC);
+IMPORT_DECODER(CRXOR);
+IMPORT_DECODER(CRNAND);
+IMPORT_DECODER(CRAND);
+IMPORT_DECODER(HRFID);
+IMPORT_DECODER(CREQV);
+IMPORT_DECODER(URFID);
+IMPORT_DECODER(STOP);
+IMPORT_DECODER(CRORC);
+IMPORT_DECODER(CROR);
+IMPORT_DECODER(BCCTR);
+IMPORT_DECODER(RLWIMI);
+IMPORT_DECODER(RLWINM);
+IMPORT_DECODER(RLWNM);
+IMPORT_DECODER(ORI);
+IMPORT_DECODER(ORIS);
+IMPORT_DECODER(XORI);
+IMPORT_DECODER(XORIS);
+IMPORT_DECODER(ANDI);
+IMPORT_DECODER(ANDIS);
+IMPORT_DECODER(RLDICL);
+IMPORT_DECODER(RLDICR);
+IMPORT_DECODER(RLDIC);
+IMPORT_DECODER(RLDIMI);
+IMPORT_DECODER(RLDCL);
+IMPORT_DECODER(RLDCR);
+IMPORT_DECODER(CMP);
+IMPORT_DECODER(TW);
+IMPORT_DECODER(LVSL);
+IMPORT_DECODER(LVEBX);
+IMPORT_DECODER(SUBFC);
+IMPORT_DECODER(MULHDU);
+IMPORT_DECODER(ADDC);
+IMPORT_DECODER(MULHWU);
+IMPORT_DECODER(MFOCRF);
+IMPORT_DECODER(LWARX);
+IMPORT_DECODER(LDX);
+IMPORT_DECODER(LWZX);
+IMPORT_DECODER(SLW);
+IMPORT_DECODER(CNTLZW);
+IMPORT_DECODER(SLD);
+IMPORT_DECODER(AND);
+IMPORT_DECODER(CMPL);
+IMPORT_DECODER(LVSR);
+IMPORT_DECODER(LVEHX);
+IMPORT_DECODER(SUBF);
+IMPORT_DECODER(LDUX);
+IMPORT_DECODER(DCBST);
+IMPORT_DECODER(LWZUX);
+IMPORT_DECODER(CNTLZD);
+IMPORT_DECODER(ANDC);
+IMPORT_DECODER(TD);
+IMPORT_DECODER(LVEWX);
+IMPORT_DECODER(MULHD);
+IMPORT_DECODER(MULHW);
+IMPORT_DECODER(LDARX);
+IMPORT_DECODER(DCBF);
+IMPORT_DECODER(LBZX);
+IMPORT_DECODER(LVX);
+IMPORT_DECODER(NEG);
+IMPORT_DECODER(LBZUX);
+IMPORT_DECODER(NOR);
+IMPORT_DECODER(STVEBX);
+IMPORT_DECODER(SUBFE);
+IMPORT_DECODER(ADDE);
+IMPORT_DECODER(MTOCRF);
+IMPORT_DECODER(STDX);
+IMPORT_DECODER(STWCX);
+IMPORT_DECODER(STWX);
+IMPORT_DECODER(STVEHX);
+IMPORT_DECODER(STDUX);
+IMPORT_DECODER(STWUX);
+IMPORT_DECODER(STVEWX);
+IMPORT_DECODER(SUBFZE);
+IMPORT_DECODER(ADDZE);
+IMPORT_DECODER(STDCX);
+IMPORT_DECODER(STBX);
+IMPORT_DECODER(STVX);
+IMPORT_DECODER(MULLD);
+IMPORT_DECODER(SUBFME);
+IMPORT_DECODER(ADDME);
+IMPORT_DECODER(MULLW);
+IMPORT_DECODER(DCBTST);
+IMPORT_DECODER(STBUX);
+IMPORT_DECODER(ADD);
+IMPORT_DECODER(DCBT);
+IMPORT_DECODER(LHZX);
+IMPORT_DECODER(EQV);
+IMPORT_DECODER(ECIWX);
+IMPORT_DECODER(LHZUX);
+IMPORT_DECODER(XOR);
+IMPORT_DECODER(MFSPR);
+IMPORT_DECODER(LWAX);
+IMPORT_DECODER(DST);
+IMPORT_DECODER(LHAX);
+IMPORT_DECODER(LVXL);
+IMPORT_DECODER(MFTB);
+IMPORT_DECODER(LWAUX);
+IMPORT_DECODER(DSTST);
+IMPORT_DECODER(LHAUX);
+IMPORT_DECODER(STHX);
+IMPORT_DECODER(ORC);
+IMPORT_DECODER(ECOWX);
+IMPORT_DECODER(STHUX);
+IMPORT_DECODER(OR);
+IMPORT_DECODER(DIVDU);
+IMPORT_DECODER(DIVWU);
+IMPORT_DECODER(MTSPR);
+IMPORT_DECODER(DCBI);
+IMPORT_DECODER(NAND);
+IMPORT_DECODER(STVXL);
+IMPORT_DECODER(DIVD);
+IMPORT_DECODER(DIVW);
+IMPORT_DECODER(LVLX);
+IMPORT_DECODER(LDBRX);
+IMPORT_DECODER(LSWX);
+IMPORT_DECODER(LWBRX);
+IMPORT_DECODER(LFSX);
+IMPORT_DECODER(SRW);
+IMPORT_DECODER(SRD);
+IMPORT_DECODER(LVRX);
+IMPORT_DECODER(LSWI);
+IMPORT_DECODER(LFSUX);
+IMPORT_DECODER(SYNC);
+IMPORT_DECODER(LFDX);
+IMPORT_DECODER(LFDUX);
+IMPORT_DECODER(STVLX);
+IMPORT_DECODER(STDBRX);
+IMPORT_DECODER(STSWX);
+IMPORT_DECODER(STWBRX);
+IMPORT_DECODER(STFSX);
+IMPORT_DECODER(STVRX);
+IMPORT_DECODER(STFSUX);
+IMPORT_DECODER(STSWI);
+IMPORT_DECODER(STFDX);
+IMPORT_DECODER(STFDUX);
+IMPORT_DECODER(LVLXL);
+IMPORT_DECODER(LHBRX);
+IMPORT_DECODER(SRAW);
+IMPORT_DECODER(SRAD);
+IMPORT_DECODER(LVRXL);
+IMPORT_DECODER(DSS);
+IMPORT_DECODER(SRAWI);
+IMPORT_DECODER(SRADI);
+IMPORT_DECODER(EIEIO);
+IMPORT_DECODER(STVLXL);
+IMPORT_DECODER(STHBRX);
+IMPORT_DECODER(EXTSH);
+IMPORT_DECODER(STVRXL);
+IMPORT_DECODER(EXTSB);
+IMPORT_DECODER(STFIWX);
+IMPORT_DECODER(EXTSW);
+IMPORT_DECODER(ICBI);
+IMPORT_DECODER(DCBZ);
+IMPORT_DECODER(LWZ);
+IMPORT_DECODER(LWZU);
+IMPORT_DECODER(LBZ);
+IMPORT_DECODER(LBZU);
+IMPORT_DECODER(STW);
+IMPORT_DECODER(STWU);
+IMPORT_DECODER(STB);
+IMPORT_DECODER(STBU);
+IMPORT_DECODER(LHZ);
+IMPORT_DECODER(LHZU);
+IMPORT_DECODER(LHA);
+IMPORT_DECODER(LHAU);
+IMPORT_DECODER(STH);
+IMPORT_DECODER(STHU);
+IMPORT_DECODER(LMW);
+IMPORT_DECODER(STMW);
+IMPORT_DECODER(LFS);
+IMPORT_DECODER(LFSU);
+IMPORT_DECODER(LFD);
+IMPORT_DECODER(LFDU);
+IMPORT_DECODER(STFS);
+IMPORT_DECODER(STFSU);
+IMPORT_DECODER(STFD);
+IMPORT_DECODER(STFDU);
+IMPORT_DECODER(LD);
+IMPORT_DECODER(LDU);
+IMPORT_DECODER(LWA);
+IMPORT_DECODER(STD);
+IMPORT_DECODER(STDU);
+IMPORT_DECODER(FDIVS);
+IMPORT_DECODER(FSUBS);
+IMPORT_DECODER(FADDS);
+IMPORT_DECODER(FSQRTS);
+IMPORT_DECODER(FRES);
+IMPORT_DECODER(FMULS);
+IMPORT_DECODER(FMADDS);
+IMPORT_DECODER(FMSUBS);
+IMPORT_DECODER(FNMSUBS);
+IMPORT_DECODER(FNMADDS);
+IMPORT_DECODER(MTFSB1);
+IMPORT_DECODER(MCRFS);
+IMPORT_DECODER(MTFSB0);
+IMPORT_DECODER(MTFSFI);
+IMPORT_DECODER(MFFS);
+IMPORT_DECODER(MTFSF);
+IMPORT_DECODER(FCMPU);
+IMPORT_DECODER(FRSP);
+IMPORT_DECODER(FCTIW);
+IMPORT_DECODER(FCTIWZ);
+IMPORT_DECODER(FDIV);
+IMPORT_DECODER(FSUB);
+IMPORT_DECODER(FADD);
+IMPORT_DECODER(FSQRT);
+IMPORT_DECODER(FSEL);
+IMPORT_DECODER(FMUL);
+IMPORT_DECODER(FRSQRTE);
+IMPORT_DECODER(FMSUB);
+IMPORT_DECODER(FMADD);
+IMPORT_DECODER(FNMSUB);
+IMPORT_DECODER(FNMADD);
+IMPORT_DECODER(FCMPO);
+IMPORT_DECODER(FNEG);
+IMPORT_DECODER(FMR);
+IMPORT_DECODER(FNABS);
+IMPORT_DECODER(FABS);
+IMPORT_DECODER(FCTID);
+IMPORT_DECODER(FCTIDZ);
+IMPORT_DECODER(FCFID);
+IMPORT_DECODER(UNK);
+IMPORT_DECODER(SUBFCO);
+IMPORT_DECODER(ADDCO);
+IMPORT_DECODER(SUBFO);
+IMPORT_DECODER(NEGO);
+IMPORT_DECODER(SUBFEO);
+IMPORT_DECODER(ADDEO);
+IMPORT_DECODER(SUBFZEO);
+IMPORT_DECODER(ADDZEO);
+IMPORT_DECODER(SUBFMEO);
+IMPORT_DECODER(MULLDO);
+IMPORT_DECODER(ADDMEO);
+IMPORT_DECODER(MULLWO);
+IMPORT_DECODER(ADDO);
+IMPORT_DECODER(DIVDUO);
+IMPORT_DECODER(DIVWUO);
+IMPORT_DECODER(DIVDO);
+IMPORT_DECODER(DIVWO);
+IMPORT_DECODER_ALIAS(SUBFCO_, SUBFCO);
+IMPORT_DECODER_ALIAS(ADDCO_, ADDCO);
+IMPORT_DECODER_ALIAS(SUBFO_, SUBFO);
+IMPORT_DECODER_ALIAS(NEGO_, NEGO);
+IMPORT_DECODER_ALIAS(SUBFEO_, SUBFEO);
+IMPORT_DECODER_ALIAS(ADDEO_, ADDEO);
+IMPORT_DECODER_ALIAS(SUBFZEO_, SUBFZEO);
+IMPORT_DECODER_ALIAS(ADDZEO_, ADDZEO);
+IMPORT_DECODER_ALIAS(SUBFMEO_, SUBFMEO);
+IMPORT_DECODER_ALIAS(MULLDO_, MULLDO);
+IMPORT_DECODER_ALIAS(ADDMEO_, ADDMEO);
+IMPORT_DECODER_ALIAS(MULLWO_, MULLWO);
+IMPORT_DECODER_ALIAS(ADDO_, ADDO);
+IMPORT_DECODER_ALIAS(DIVDUO_, DIVDUO);
+IMPORT_DECODER_ALIAS(DIVWUO_, DIVWUO);
+IMPORT_DECODER_ALIAS(DIVDO_, DIVDO);
+IMPORT_DECODER_ALIAS(DIVWO_, DIVWO);
+IMPORT_DECODER_ALIAS(RLWIMI_, RLWIMI);
+IMPORT_DECODER_ALIAS(RLWINM_, RLWINM);
+IMPORT_DECODER_ALIAS(RLWNM_, RLWNM);
+IMPORT_DECODER_ALIAS(RLDICL_, RLDICL);
+IMPORT_DECODER_ALIAS(RLDICR_, RLDICR);
+IMPORT_DECODER_ALIAS(RLDIC_, RLDIC);
+IMPORT_DECODER_ALIAS(RLDIMI_, RLDIMI);
+IMPORT_DECODER_ALIAS(RLDCL_, RLDCL);
+IMPORT_DECODER_ALIAS(RLDCR_, RLDCR);
+IMPORT_DECODER_ALIAS(SUBFC_, SUBFC);
+IMPORT_DECODER_ALIAS(MULHDU_, MULHDU);
+IMPORT_DECODER_ALIAS(ADDC_, ADDC);
+IMPORT_DECODER_ALIAS(MULHWU_, MULHWU);
+IMPORT_DECODER_ALIAS(SLW_, SLW);
+IMPORT_DECODER_ALIAS(CNTLZW_, CNTLZW);
+IMPORT_DECODER_ALIAS(SLD_, SLD);
+IMPORT_DECODER_ALIAS(AND_, AND);
+IMPORT_DECODER_ALIAS(SUBF_, SUBF);
+IMPORT_DECODER_ALIAS(CNTLZD_, CNTLZD);
+IMPORT_DECODER_ALIAS(ANDC_, ANDC);
+IMPORT_DECODER_ALIAS(MULHD_, MULHD);
+IMPORT_DECODER_ALIAS(MULHW_, MULHW);
+IMPORT_DECODER_ALIAS(NEG_, NEG);
+IMPORT_DECODER_ALIAS(NOR_, NOR);
+IMPORT_DECODER_ALIAS(SUBFE_, SUBFE);
+IMPORT_DECODER_ALIAS(ADDE_, ADDE);
+IMPORT_DECODER_ALIAS(SUBFZE_, SUBFZE);
+IMPORT_DECODER_ALIAS(ADDZE_, ADDZE);
+IMPORT_DECODER_ALIAS(MULLD_, MULLD);
+IMPORT_DECODER_ALIAS(SUBFME_, SUBFME);
+IMPORT_DECODER_ALIAS(ADDME_, ADDME);
+IMPORT_DECODER_ALIAS(MULLW_, MULLW);
+IMPORT_DECODER_ALIAS(ADD_, ADD);
+IMPORT_DECODER_ALIAS(EQV_, EQV);
+IMPORT_DECODER_ALIAS(XOR_, XOR);
+IMPORT_DECODER_ALIAS(ORC_, ORC);
+IMPORT_DECODER_ALIAS(OR_, OR);
+IMPORT_DECODER_ALIAS(DIVDU_, DIVDU);
+IMPORT_DECODER_ALIAS(DIVWU_, DIVWU);
+IMPORT_DECODER_ALIAS(NAND_, NAND);
+IMPORT_DECODER_ALIAS(DIVD_, DIVD);
+IMPORT_DECODER_ALIAS(DIVW_, DIVW);
+IMPORT_DECODER_ALIAS(SRW_, SRW);
+IMPORT_DECODER_ALIAS(SRD_, SRD);
+IMPORT_DECODER_ALIAS(SRAW_, SRAW);
+IMPORT_DECODER_ALIAS(SRAD_, SRAD);
+IMPORT_DECODER_ALIAS(SRAWI_, SRAWI);
+IMPORT_DECODER_ALIAS(SRADI_, SRADI);
+IMPORT_DECODER_ALIAS(EXTSH_, EXTSH);
+IMPORT_DECODER_ALIAS(EXTSB_, EXTSB);
+IMPORT_DECODER_ALIAS(EXTSW_, EXTSW);
+IMPORT_DECODER_ALIAS(FDIVS_, FDIVS);
+IMPORT_DECODER_ALIAS(FSUBS_, FSUBS);
+IMPORT_DECODER_ALIAS(FADDS_, FADDS);
+IMPORT_DECODER_ALIAS(FSQRTS_, FSQRTS);
+IMPORT_DECODER_ALIAS(FRES_, FRES);
+IMPORT_DECODER_ALIAS(FMULS_, FMULS);
+IMPORT_DECODER_ALIAS(FMADDS_, FMADDS);
+IMPORT_DECODER_ALIAS(FMSUBS_, FMSUBS);
+IMPORT_DECODER_ALIAS(FNMSUBS_, FNMSUBS);
+IMPORT_DECODER_ALIAS(FNMADDS_, FNMADDS);
+IMPORT_DECODER_ALIAS(MTFSB1_, MTFSB1);
+IMPORT_DECODER_ALIAS(MTFSB0_, MTFSB0);
+IMPORT_DECODER_ALIAS(MTFSFI_, MTFSFI);
+IMPORT_DECODER_ALIAS(MFFS_, MFFS);
+IMPORT_DECODER_ALIAS(MTFSF_, MTFSF);
+IMPORT_DECODER_ALIAS(FRSP_, FRSP);
+IMPORT_DECODER_ALIAS(FCTIW_, FCTIW);
+IMPORT_DECODER_ALIAS(FCTIWZ_, FCTIWZ);
+IMPORT_DECODER_ALIAS(FDIV_, FDIV);
+IMPORT_DECODER_ALIAS(FSUB_, FSUB);
+IMPORT_DECODER_ALIAS(FADD_, FADD);
+IMPORT_DECODER_ALIAS(FSQRT_, FSQRT);
+IMPORT_DECODER_ALIAS(FSEL_, FSEL);
+IMPORT_DECODER_ALIAS(FMUL_, FMUL);
+IMPORT_DECODER_ALIAS(FRSQRTE_, FRSQRTE);
+IMPORT_DECODER_ALIAS(FMSUB_, FMSUB);
+IMPORT_DECODER_ALIAS(FMADD_, FMADD);
+IMPORT_DECODER_ALIAS(FNMSUB_, FNMSUB);
+IMPORT_DECODER_ALIAS(FNMADD_, FNMADD);
+IMPORT_DECODER_ALIAS(FNEG_, FNEG);
+IMPORT_DECODER_ALIAS(FMR_, FMR);
+IMPORT_DECODER_ALIAS(FNABS_, FNABS);
+IMPORT_DECODER_ALIAS(FABS_, FABS);
+IMPORT_DECODER_ALIAS(FCTID_, FCTID);
+IMPORT_DECODER_ALIAS(FCTIDZ_, FCTIDZ);
+IMPORT_DECODER_ALIAS(FCFID_, FCFID);
+#undef IMPORT_DECODER
+#undef IMPORT_DECODER_ALIAS
+
+PPUInterpreter::PPUInterpreter()
+{
+	for (auto& isel : impl)
+	{
+		isel = [](PPUContext&, rx::cell::ppu::Instruction)
+		{
+			fmt::throw_exception("PPU Invalid Instruction");
+		};
+	}
+#define DEFINE_DECODER(x) \
+	impl[static_cast<int>(rx::cell::ppu::Opcode::x)] = ISEL_PPU_##x##_DEC
+
+	DEFINE_DECODER(MFVSCR);
+	DEFINE_DECODER(MTVSCR);
+	DEFINE_DECODER(VADDCUW);
+	DEFINE_DECODER(VADDFP);
+	DEFINE_DECODER(VADDSBS);
+	DEFINE_DECODER(VADDSHS);
+	DEFINE_DECODER(VADDSWS);
+	DEFINE_DECODER(VADDUBM);
+	DEFINE_DECODER(VADDUBS);
+	DEFINE_DECODER(VADDUHM);
+	DEFINE_DECODER(VADDUHS);
+	DEFINE_DECODER(VADDUWM);
+	DEFINE_DECODER(VADDUWS);
+	DEFINE_DECODER(VAND);
+	DEFINE_DECODER(VANDC);
+	DEFINE_DECODER(VAVGSB);
+	DEFINE_DECODER(VAVGSH);
+	DEFINE_DECODER(VAVGSW);
+	DEFINE_DECODER(VAVGUB);
+	DEFINE_DECODER(VAVGUH);
+	DEFINE_DECODER(VAVGUW);
+	DEFINE_DECODER(VCFSX);
+	DEFINE_DECODER(VCFUX);
+	DEFINE_DECODER(VCMPBFP);
+	DEFINE_DECODER(VCMPBFP_);
+	DEFINE_DECODER(VCMPEQFP);
+	DEFINE_DECODER(VCMPEQFP_);
+	DEFINE_DECODER(VCMPEQUB);
+	DEFINE_DECODER(VCMPEQUB_);
+	DEFINE_DECODER(VCMPEQUH);
+	DEFINE_DECODER(VCMPEQUH_);
+	DEFINE_DECODER(VCMPEQUW);
+	DEFINE_DECODER(VCMPEQUW_);
+	DEFINE_DECODER(VCMPGEFP);
+	DEFINE_DECODER(VCMPGEFP_);
+	DEFINE_DECODER(VCMPGTFP);
+	DEFINE_DECODER(VCMPGTFP_);
+	DEFINE_DECODER(VCMPGTSB);
+	DEFINE_DECODER(VCMPGTSB_);
+	DEFINE_DECODER(VCMPGTSH);
+	DEFINE_DECODER(VCMPGTSH_);
+	DEFINE_DECODER(VCMPGTSW);
+	DEFINE_DECODER(VCMPGTSW_);
+	DEFINE_DECODER(VCMPGTUB);
+	DEFINE_DECODER(VCMPGTUB_);
+	DEFINE_DECODER(VCMPGTUH);
+	DEFINE_DECODER(VCMPGTUH_);
+	DEFINE_DECODER(VCMPGTUW);
+	DEFINE_DECODER(VCMPGTUW_);
+	DEFINE_DECODER(VCTSXS);
+	DEFINE_DECODER(VCTUXS);
+	DEFINE_DECODER(VEXPTEFP);
+	DEFINE_DECODER(VLOGEFP);
+	DEFINE_DECODER(VMADDFP);
+	DEFINE_DECODER(VMAXFP);
+	DEFINE_DECODER(VMAXSB);
+	DEFINE_DECODER(VMAXSH);
+	DEFINE_DECODER(VMAXSW);
+	DEFINE_DECODER(VMAXUB);
+	DEFINE_DECODER(VMAXUH);
+	DEFINE_DECODER(VMAXUW);
+	DEFINE_DECODER(VMHADDSHS);
+	DEFINE_DECODER(VMHRADDSHS);
+	DEFINE_DECODER(VMINFP);
+	DEFINE_DECODER(VMINSB);
+	DEFINE_DECODER(VMINSH);
+	DEFINE_DECODER(VMINSW);
+	DEFINE_DECODER(VMINUB);
+	DEFINE_DECODER(VMINUH);
+	DEFINE_DECODER(VMINUW);
+	DEFINE_DECODER(VMLADDUHM);
+	DEFINE_DECODER(VMRGHB);
+	DEFINE_DECODER(VMRGHH);
+	DEFINE_DECODER(VMRGHW);
+	DEFINE_DECODER(VMRGLB);
+	DEFINE_DECODER(VMRGLH);
+	DEFINE_DECODER(VMRGLW);
+	DEFINE_DECODER(VMSUMMBM);
+	DEFINE_DECODER(VMSUMSHM);
+	DEFINE_DECODER(VMSUMSHS);
+	DEFINE_DECODER(VMSUMUBM);
+	DEFINE_DECODER(VMSUMUHM);
+	DEFINE_DECODER(VMSUMUHS);
+	DEFINE_DECODER(VMULESB);
+	DEFINE_DECODER(VMULESH);
+	DEFINE_DECODER(VMULEUB);
+	DEFINE_DECODER(VMULEUH);
+	DEFINE_DECODER(VMULOSB);
+	DEFINE_DECODER(VMULOSH);
+	DEFINE_DECODER(VMULOUB);
+	DEFINE_DECODER(VMULOUH);
+	DEFINE_DECODER(VNMSUBFP);
+	DEFINE_DECODER(VNOR);
+	DEFINE_DECODER(VOR);
+	DEFINE_DECODER(VPERM);
+	DEFINE_DECODER(VPKPX);
+	DEFINE_DECODER(VPKSHSS);
+	DEFINE_DECODER(VPKSHUS);
+	DEFINE_DECODER(VPKSWSS);
+	DEFINE_DECODER(VPKSWUS);
+	DEFINE_DECODER(VPKUHUM);
+	DEFINE_DECODER(VPKUHUS);
+	DEFINE_DECODER(VPKUWUM);
+	DEFINE_DECODER(VPKUWUS);
+	DEFINE_DECODER(VREFP);
+	DEFINE_DECODER(VRFIM);
+	DEFINE_DECODER(VRFIN);
+	DEFINE_DECODER(VRFIP);
+	DEFINE_DECODER(VRFIZ);
+	DEFINE_DECODER(VRLB);
+	DEFINE_DECODER(VRLH);
+	DEFINE_DECODER(VRLW);
+	DEFINE_DECODER(VRSQRTEFP);
+	DEFINE_DECODER(VSEL);
+	DEFINE_DECODER(VSL);
+	DEFINE_DECODER(VSLB);
+	DEFINE_DECODER(VSLDOI);
+	DEFINE_DECODER(VSLH);
+	DEFINE_DECODER(VSLO);
+	DEFINE_DECODER(VSLW);
+	DEFINE_DECODER(VSPLTB);
+	DEFINE_DECODER(VSPLTH);
+	DEFINE_DECODER(VSPLTISB);
+	DEFINE_DECODER(VSPLTISH);
+	DEFINE_DECODER(VSPLTISW);
+	DEFINE_DECODER(VSPLTW);
+	DEFINE_DECODER(VSR);
+	DEFINE_DECODER(VSRAB);
+	DEFINE_DECODER(VSRAH);
+	DEFINE_DECODER(VSRAW);
+	DEFINE_DECODER(VSRB);
+	DEFINE_DECODER(VSRH);
+	DEFINE_DECODER(VSRO);
+	DEFINE_DECODER(VSRW);
+	DEFINE_DECODER(VSUBCUW);
+	DEFINE_DECODER(VSUBFP);
+	DEFINE_DECODER(VSUBSBS);
+	DEFINE_DECODER(VSUBSHS);
+	DEFINE_DECODER(VSUBSWS);
+	DEFINE_DECODER(VSUBUBM);
+	DEFINE_DECODER(VSUBUBS);
+	DEFINE_DECODER(VSUBUHM);
+	DEFINE_DECODER(VSUBUHS);
+	DEFINE_DECODER(VSUBUWM);
+	DEFINE_DECODER(VSUBUWS);
+	DEFINE_DECODER(VSUMSWS);
+	DEFINE_DECODER(VSUM2SWS);
+	DEFINE_DECODER(VSUM4SBS);
+	DEFINE_DECODER(VSUM4SHS);
+	DEFINE_DECODER(VSUM4UBS);
+	DEFINE_DECODER(VUPKHPX);
+	DEFINE_DECODER(VUPKHSB);
+	DEFINE_DECODER(VUPKHSH);
+	DEFINE_DECODER(VUPKLPX);
+	DEFINE_DECODER(VUPKLSB);
+	DEFINE_DECODER(VUPKLSH);
+	DEFINE_DECODER(VXOR);
+	DEFINE_DECODER(TDI);
+	DEFINE_DECODER(TWI);
+	DEFINE_DECODER(MULLI);
+	DEFINE_DECODER(SUBFIC);
+	DEFINE_DECODER(CMPLI);
+	DEFINE_DECODER(CMPI);
+	DEFINE_DECODER(ADDIC);
+	DEFINE_DECODER(ADDI);
+	DEFINE_DECODER(ADDIS);
+	DEFINE_DECODER(BC);
+	DEFINE_DECODER(SC);
+	DEFINE_DECODER(B);
+	DEFINE_DECODER(MCRF);
+	DEFINE_DECODER(BCLR);
+	DEFINE_DECODER(RFID);
+	DEFINE_DECODER(CRNOR);
+	DEFINE_DECODER(RFSCV);
+	DEFINE_DECODER(CRANDC);
+	DEFINE_DECODER(ISYNC);
+	DEFINE_DECODER(CRXOR);
+	DEFINE_DECODER(CRNAND);
+	DEFINE_DECODER(CRAND);
+	DEFINE_DECODER(HRFID);
+	DEFINE_DECODER(CREQV);
+	DEFINE_DECODER(URFID);
+	DEFINE_DECODER(STOP);
+	DEFINE_DECODER(CRORC);
+	DEFINE_DECODER(CROR);
+	DEFINE_DECODER(BCCTR);
+	DEFINE_DECODER(RLWIMI);
+	DEFINE_DECODER(RLWINM);
+	DEFINE_DECODER(RLWNM);
+	DEFINE_DECODER(ORI);
+	DEFINE_DECODER(ORIS);
+	DEFINE_DECODER(XORI);
+	DEFINE_DECODER(XORIS);
+	DEFINE_DECODER(ANDI);
+	DEFINE_DECODER(ANDIS);
+	DEFINE_DECODER(RLDICL);
+	DEFINE_DECODER(RLDICR);
+	DEFINE_DECODER(RLDIC);
+	DEFINE_DECODER(RLDIMI);
+	DEFINE_DECODER(RLDCL);
+	DEFINE_DECODER(RLDCR);
+	DEFINE_DECODER(CMP);
+	DEFINE_DECODER(TW);
+	DEFINE_DECODER(LVSL);
+	DEFINE_DECODER(LVEBX);
+	DEFINE_DECODER(SUBFC);
+	DEFINE_DECODER(MULHDU);
+	DEFINE_DECODER(ADDC);
+	DEFINE_DECODER(MULHWU);
+	DEFINE_DECODER(MFOCRF);
+	DEFINE_DECODER(LWARX);
+	DEFINE_DECODER(LDX);
+	DEFINE_DECODER(LWZX);
+	DEFINE_DECODER(SLW);
+	DEFINE_DECODER(CNTLZW);
+	DEFINE_DECODER(SLD);
+	DEFINE_DECODER(AND);
+	DEFINE_DECODER(CMPL);
+	DEFINE_DECODER(LVSR);
+	DEFINE_DECODER(LVEHX);
+	DEFINE_DECODER(SUBF);
+	DEFINE_DECODER(LDUX);
+	DEFINE_DECODER(DCBST);
+	DEFINE_DECODER(LWZUX);
+	DEFINE_DECODER(CNTLZD);
+	DEFINE_DECODER(ANDC);
+	DEFINE_DECODER(TD);
+	DEFINE_DECODER(LVEWX);
+	DEFINE_DECODER(MULHD);
+	DEFINE_DECODER(MULHW);
+	DEFINE_DECODER(LDARX);
+	DEFINE_DECODER(DCBF);
+	DEFINE_DECODER(LBZX);
+	DEFINE_DECODER(LVX);
+	DEFINE_DECODER(NEG);
+	DEFINE_DECODER(LBZUX);
+	DEFINE_DECODER(NOR);
+	DEFINE_DECODER(STVEBX);
+	DEFINE_DECODER(SUBFE);
+	DEFINE_DECODER(ADDE);
+	DEFINE_DECODER(MTOCRF);
+	DEFINE_DECODER(STDX);
+	DEFINE_DECODER(STWCX);
+	DEFINE_DECODER(STWX);
+	DEFINE_DECODER(STVEHX);
+	DEFINE_DECODER(STDUX);
+	DEFINE_DECODER(STWUX);
+	DEFINE_DECODER(STVEWX);
+	DEFINE_DECODER(SUBFZE);
+	DEFINE_DECODER(ADDZE);
+	DEFINE_DECODER(STDCX);
+	DEFINE_DECODER(STBX);
+	DEFINE_DECODER(STVX);
+	DEFINE_DECODER(MULLD);
+	DEFINE_DECODER(SUBFME);
+	DEFINE_DECODER(ADDME);
+	DEFINE_DECODER(MULLW);
+	DEFINE_DECODER(DCBTST);
+	DEFINE_DECODER(STBUX);
+	DEFINE_DECODER(ADD);
+	DEFINE_DECODER(DCBT);
+	DEFINE_DECODER(LHZX);
+	DEFINE_DECODER(EQV);
+	DEFINE_DECODER(ECIWX);
+	DEFINE_DECODER(LHZUX);
+	DEFINE_DECODER(XOR);
+	DEFINE_DECODER(MFSPR);
+	DEFINE_DECODER(LWAX);
+	DEFINE_DECODER(DST);
+	DEFINE_DECODER(LHAX);
+	DEFINE_DECODER(LVXL);
+	DEFINE_DECODER(MFTB);
+	DEFINE_DECODER(LWAUX);
+	DEFINE_DECODER(DSTST);
+	DEFINE_DECODER(LHAUX);
+	DEFINE_DECODER(STHX);
+	DEFINE_DECODER(ORC);
+	DEFINE_DECODER(ECOWX);
+	DEFINE_DECODER(STHUX);
+	DEFINE_DECODER(OR);
+	DEFINE_DECODER(DIVDU);
+	DEFINE_DECODER(DIVWU);
+	DEFINE_DECODER(MTSPR);
+	DEFINE_DECODER(DCBI);
+	DEFINE_DECODER(NAND);
+	DEFINE_DECODER(STVXL);
+	DEFINE_DECODER(DIVD);
+	DEFINE_DECODER(DIVW);
+	DEFINE_DECODER(LVLX);
+	DEFINE_DECODER(LDBRX);
+	DEFINE_DECODER(LSWX);
+	DEFINE_DECODER(LWBRX);
+	DEFINE_DECODER(LFSX);
+	DEFINE_DECODER(SRW);
+	DEFINE_DECODER(SRD);
+	DEFINE_DECODER(LVRX);
+	DEFINE_DECODER(LSWI);
+	DEFINE_DECODER(LFSUX);
+	DEFINE_DECODER(SYNC);
+	DEFINE_DECODER(LFDX);
+	DEFINE_DECODER(LFDUX);
+	DEFINE_DECODER(STVLX);
+	DEFINE_DECODER(STDBRX);
+	DEFINE_DECODER(STSWX);
+	DEFINE_DECODER(STWBRX);
+	DEFINE_DECODER(STFSX);
+	DEFINE_DECODER(STVRX);
+	DEFINE_DECODER(STFSUX);
+	DEFINE_DECODER(STSWI);
+	DEFINE_DECODER(STFDX);
+	DEFINE_DECODER(STFDUX);
+	DEFINE_DECODER(LVLXL);
+	DEFINE_DECODER(LHBRX);
+	DEFINE_DECODER(SRAW);
+	DEFINE_DECODER(SRAD);
+	DEFINE_DECODER(LVRXL);
+	DEFINE_DECODER(DSS);
+	DEFINE_DECODER(SRAWI);
+	DEFINE_DECODER(SRADI);
+	DEFINE_DECODER(EIEIO);
+	DEFINE_DECODER(STVLXL);
+	DEFINE_DECODER(STHBRX);
+	DEFINE_DECODER(EXTSH);
+	DEFINE_DECODER(STVRXL);
+	DEFINE_DECODER(EXTSB);
+	DEFINE_DECODER(STFIWX);
+	DEFINE_DECODER(EXTSW);
+	DEFINE_DECODER(ICBI);
+	DEFINE_DECODER(DCBZ);
+	DEFINE_DECODER(LWZ);
+	DEFINE_DECODER(LWZU);
+	DEFINE_DECODER(LBZ);
+	DEFINE_DECODER(LBZU);
+	DEFINE_DECODER(STW);
+	DEFINE_DECODER(STWU);
+	DEFINE_DECODER(STB);
+	DEFINE_DECODER(STBU);
+	DEFINE_DECODER(LHZ);
+	DEFINE_DECODER(LHZU);
+	DEFINE_DECODER(LHA);
+	DEFINE_DECODER(LHAU);
+	DEFINE_DECODER(STH);
+	DEFINE_DECODER(STHU);
+	DEFINE_DECODER(LMW);
+	DEFINE_DECODER(STMW);
+	DEFINE_DECODER(LFS);
+	DEFINE_DECODER(LFSU);
+	DEFINE_DECODER(LFD);
+	DEFINE_DECODER(LFDU);
+	DEFINE_DECODER(STFS);
+	DEFINE_DECODER(STFSU);
+	DEFINE_DECODER(STFD);
+	DEFINE_DECODER(STFDU);
+	DEFINE_DECODER(LD);
+	DEFINE_DECODER(LDU);
+	DEFINE_DECODER(LWA);
+	DEFINE_DECODER(STD);
+	DEFINE_DECODER(STDU);
+	DEFINE_DECODER(FDIVS);
+	DEFINE_DECODER(FSUBS);
+	DEFINE_DECODER(FADDS);
+	DEFINE_DECODER(FSQRTS);
+	DEFINE_DECODER(FRES);
+	DEFINE_DECODER(FMULS);
+	DEFINE_DECODER(FMADDS);
+	DEFINE_DECODER(FMSUBS);
+	DEFINE_DECODER(FNMSUBS);
+	DEFINE_DECODER(FNMADDS);
+	DEFINE_DECODER(MTFSB1);
+	DEFINE_DECODER(MCRFS);
+	DEFINE_DECODER(MTFSB0);
+	DEFINE_DECODER(MTFSFI);
+	DEFINE_DECODER(MFFS);
+	DEFINE_DECODER(MTFSF);
+	DEFINE_DECODER(FCMPU);
+	DEFINE_DECODER(FRSP);
+	DEFINE_DECODER(FCTIW);
+	DEFINE_DECODER(FCTIWZ);
+	DEFINE_DECODER(FDIV);
+	DEFINE_DECODER(FSUB);
+	DEFINE_DECODER(FADD);
+	DEFINE_DECODER(FSQRT);
+	DEFINE_DECODER(FSEL);
+	DEFINE_DECODER(FMUL);
+	DEFINE_DECODER(FRSQRTE);
+	DEFINE_DECODER(FMSUB);
+	DEFINE_DECODER(FMADD);
+	DEFINE_DECODER(FNMSUB);
+	DEFINE_DECODER(FNMADD);
+	DEFINE_DECODER(FCMPO);
+	DEFINE_DECODER(FNEG);
+	DEFINE_DECODER(FMR);
+	DEFINE_DECODER(FNABS);
+	DEFINE_DECODER(FABS);
+	DEFINE_DECODER(FCTID);
+	DEFINE_DECODER(FCTIDZ);
+	DEFINE_DECODER(FCFID);
+	DEFINE_DECODER(UNK);
+	DEFINE_DECODER(SUBFCO);
+	DEFINE_DECODER(ADDCO);
+	DEFINE_DECODER(SUBFO);
+	DEFINE_DECODER(NEGO);
+	DEFINE_DECODER(SUBFEO);
+	DEFINE_DECODER(ADDEO);
+	DEFINE_DECODER(SUBFZEO);
+	DEFINE_DECODER(ADDZEO);
+	DEFINE_DECODER(SUBFMEO);
+	DEFINE_DECODER(MULLDO);
+	DEFINE_DECODER(ADDMEO);
+	DEFINE_DECODER(MULLWO);
+	DEFINE_DECODER(ADDO);
+	DEFINE_DECODER(DIVDUO);
+	DEFINE_DECODER(DIVWUO);
+	DEFINE_DECODER(DIVDO);
+	DEFINE_DECODER(DIVWO);
+	DEFINE_DECODER(SUBFCO_);
+	DEFINE_DECODER(ADDCO_);
+	DEFINE_DECODER(SUBFO_);
+	DEFINE_DECODER(NEGO_);
+	DEFINE_DECODER(SUBFEO_);
+	DEFINE_DECODER(ADDEO_);
+	DEFINE_DECODER(SUBFZEO_);
+	DEFINE_DECODER(ADDZEO_);
+	DEFINE_DECODER(SUBFMEO_);
+	DEFINE_DECODER(MULLDO_);
+	DEFINE_DECODER(ADDMEO_);
+	DEFINE_DECODER(MULLWO_);
+	DEFINE_DECODER(ADDO_);
+	DEFINE_DECODER(DIVDUO_);
+	DEFINE_DECODER(DIVWUO_);
+	DEFINE_DECODER(DIVDO_);
+	DEFINE_DECODER(DIVWO_);
+	DEFINE_DECODER(RLWIMI_);
+	DEFINE_DECODER(RLWINM_);
+	DEFINE_DECODER(RLWNM_);
+	DEFINE_DECODER(RLDICL_);
+	DEFINE_DECODER(RLDICR_);
+	DEFINE_DECODER(RLDIC_);
+	DEFINE_DECODER(RLDIMI_);
+	DEFINE_DECODER(RLDCL_);
+	DEFINE_DECODER(RLDCR_);
+	DEFINE_DECODER(SUBFC_);
+	DEFINE_DECODER(MULHDU_);
+	DEFINE_DECODER(ADDC_);
+	DEFINE_DECODER(MULHWU_);
+	DEFINE_DECODER(SLW_);
+	DEFINE_DECODER(CNTLZW_);
+	DEFINE_DECODER(SLD_);
+	DEFINE_DECODER(AND_);
+	DEFINE_DECODER(SUBF_);
+	DEFINE_DECODER(CNTLZD_);
+	DEFINE_DECODER(ANDC_);
+	DEFINE_DECODER(MULHD_);
+	DEFINE_DECODER(MULHW_);
+	DEFINE_DECODER(NEG_);
+	DEFINE_DECODER(NOR_);
+	DEFINE_DECODER(SUBFE_);
+	DEFINE_DECODER(ADDE_);
+	DEFINE_DECODER(SUBFZE_);
+	DEFINE_DECODER(ADDZE_);
+	DEFINE_DECODER(MULLD_);
+	DEFINE_DECODER(SUBFME_);
+	DEFINE_DECODER(ADDME_);
+	DEFINE_DECODER(MULLW_);
+	DEFINE_DECODER(ADD_);
+	DEFINE_DECODER(EQV_);
+	DEFINE_DECODER(XOR_);
+	DEFINE_DECODER(ORC_);
+	DEFINE_DECODER(OR_);
+	DEFINE_DECODER(DIVDU_);
+	DEFINE_DECODER(DIVWU_);
+	DEFINE_DECODER(NAND_);
+	DEFINE_DECODER(DIVD_);
+	DEFINE_DECODER(DIVW_);
+	DEFINE_DECODER(SRW_);
+	DEFINE_DECODER(SRD_);
+	DEFINE_DECODER(SRAW_);
+	DEFINE_DECODER(SRAD_);
+	DEFINE_DECODER(SRAWI_);
+	DEFINE_DECODER(SRADI_);
+	DEFINE_DECODER(EXTSH_);
+	DEFINE_DECODER(EXTSB_);
+	DEFINE_DECODER(EXTSW_);
+	DEFINE_DECODER(FDIVS_);
+	DEFINE_DECODER(FSUBS_);
+	DEFINE_DECODER(FADDS_);
+	DEFINE_DECODER(FSQRTS_);
+	DEFINE_DECODER(FRES_);
+	DEFINE_DECODER(FMULS_);
+	DEFINE_DECODER(FMADDS_);
+	DEFINE_DECODER(FMSUBS_);
+	DEFINE_DECODER(FNMSUBS_);
+	DEFINE_DECODER(FNMADDS_);
+	DEFINE_DECODER(MTFSB1_);
+	DEFINE_DECODER(MTFSB0_);
+	DEFINE_DECODER(MTFSFI_);
+	DEFINE_DECODER(MFFS_);
+	DEFINE_DECODER(MTFSF_);
+	DEFINE_DECODER(FRSP_);
+	DEFINE_DECODER(FCTIW_);
+	DEFINE_DECODER(FCTIWZ_);
+	DEFINE_DECODER(FDIV_);
+	DEFINE_DECODER(FSUB_);
+	DEFINE_DECODER(FADD_);
+	DEFINE_DECODER(FSQRT_);
+	DEFINE_DECODER(FSEL_);
+	DEFINE_DECODER(FMUL_);
+	DEFINE_DECODER(FRSQRTE_);
+	DEFINE_DECODER(FMSUB_);
+	DEFINE_DECODER(FMADD_);
+	DEFINE_DECODER(FNMSUB_);
+	DEFINE_DECODER(FNMADD_);
+	DEFINE_DECODER(FNEG_);
+	DEFINE_DECODER(FMR_);
+	DEFINE_DECODER(FNABS_);
+	DEFINE_DECODER(FABS_);
+	DEFINE_DECODER(FCTID_);
+	DEFINE_DECODER(FCTIDZ_);
+	DEFINE_DECODER(FCFID_);
+#undef DEFINE_DECODER
+}
+
+static ppu_intrp_func ppu_ret = {[](ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
+	{
+		// Fix PC and return (step execution)
+		ppu.cia = vm::get_addr(this_op);
+		return;
+	}};
+
+void PPUInterpreter::interpret(PPUContext& context, std::uint32_t inst)
+{
+	auto op = rx::cell::ppu::getOpcode(inst);
+	auto instructionAddress = context.cia;
+
+	auto this_op = reinterpret_cast<be_t<u32>*>(vm::g_base_addr + instructionAddress);
+
+	const auto fn = *reinterpret_cast<ppu_intrp_func_t*>(vm::g_exec_addr + u64{instructionAddress} * 2);
+
+	if (fn)
+	{
+		fn(static_cast<ppu_thread&>(context), std::bit_cast<ppu_opcode_t>(inst), this_op, &ppu_ret);
+		return;
+	}
+
+	// if (op == rx::cell::ppu::Opcode::Invalid)
+	{
+		if (g_fxo->get<ppu_function_manager>().is_func(context.cia))
+		{
+			ppu_intrp_func_t hle_function = nullptr;
+			auto hle_addr = g_fxo->get<ppu_function_manager>().addr;
+			// HLE function index
+			const u32 index = (context.cia - hle_addr) / 8;
+
+			if (context.cia % 8 == 4 && index < ppu_function_manager::get().size())
+			{
+				// HLE function placement
+				hle_function = ppu_function_manager::get()[index];
+			}
+
+			if (hle_function)
+			{
+				hle_function(static_cast<ppu_thread&>(context), std::bit_cast<ppu_opcode_t>(inst), this_op, nullptr);
+				return;
+			}
+		}
+	}
+
+	// std::fprintf(stderr, "%08x: %s\n", instructionAddress, std::format("{}", op).c_str());
+	impl[static_cast<int>(op)](context, std::bit_cast<rx::cell::ppu::Instruction>(inst));
+
+	if (context.cia == instructionAddress &&
+		op != rx::cell::ppu::Opcode::B &&
+		op != rx::cell::ppu::Opcode::BC &&
+		op != rx::cell::ppu::Opcode::BCLR &&
+		op != rx::cell::ppu::Opcode::BCCTR)
+	{
+		context.cia += sizeof(std::uint32_t);
+	}
+}
+
+extern "C"
+{
+	[[noreturn]] void rpcsx_trap()
+	{
+		fmt::throw_exception("PPU Trap");
+	}
+	[[noreturn]] void rpcsx_invalid_instruction()
+	{
+		fmt::throw_exception("PPU Invalid Instruction");
+	}
+	[[noreturn]] void rpcsx_unimplemented_instruction()
+	{
+		fmt::throw_exception("PPU Unimplemented Instruction");
+	}
+
+	void rpcsx_vm_read(std::uint64_t vaddr, void* dest, std::size_t size)
+	{
+		std::memcpy(dest, vm::g_base_addr + vaddr, size);
+	}
+	void rpcsx_vm_write(std::uint64_t vaddr, const void* src, std::size_t size)
+	{
+		std::memcpy(vm::g_base_addr + vaddr, src, size);
+	}
+
+	std::uint64_t rpcsx_get_tb()
+	{
+		return get_timebased_time();
+	}
+}
+
+void ppu_execute_syscall(PPUContext& context, u64 code)
+{
+	return ppu_execute_syscall(static_cast<ppu_thread&>(context), code);
+}
+u32 ppu_lwarx(PPUContext& context, u32 addr)
+{
+	return ppu_lwarx(static_cast<ppu_thread&>(context), addr);
+}
+u64 ppu_ldarx(PPUContext& context, u32 addr)
+{
+	return ppu_ldarx(static_cast<ppu_thread&>(context), addr);
+}
+bool ppu_stwcx(PPUContext& context, u32 addr, u32 reg_value)
+{
+	return ppu_stwcx(static_cast<ppu_thread&>(context), addr, reg_value);
+}
+bool ppu_stdcx(PPUContext& context, u32 addr, u64 reg_value)
+{
+	return ppu_stdcx(static_cast<ppu_thread&>(context), addr, reg_value);
+}
+void ppu_trap(PPUContext& context, u64 addr)
+{
+	return ppu_trap(static_cast<ppu_thread&>(context), addr);
 }

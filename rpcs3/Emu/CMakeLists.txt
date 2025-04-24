@@ -445,6 +445,8 @@ target_link_libraries(rpcs3_emu
         3rdparty::libusb 3rdparty::wolfssl
         Vulkan::Headers
         rpcsx::fw::ps3::api
+        rpcsx::cpu::cell::ppu
+        rpcsx::cpu::cell::ppu::semantic
 
     PRIVATE
         3rdparty::glslang

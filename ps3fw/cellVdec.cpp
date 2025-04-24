@@ -1675,7 +1675,7 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle,
 	info->status = CELL_OK;
 	info->attr = attr;
 
-	const vm::addr_t picinfo_addr{info.addr() + ::offset32(&all_info_t::picInfo)};
+	const vm::addr_t picinfo_addr{info.addr() + OFFSET_OF(all_info_t, picInfo)};
 	info->picInfo_addr = picinfo_addr;
 
 	if (vdec->type == CELL_VDEC_CODEC_TYPE_AVC)

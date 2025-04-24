@@ -188,16 +188,19 @@ namespace utils
 	{
 		static const long r = []() -> long
 		{
+			long result;
 #ifdef _WIN32
 			SYSTEM_INFO info;
 			::GetSystemInfo(&info);
-			return info.dwPageSize;
+			result = info.dwPageSize;
 #else
-			return ::sysconf(_SC_PAGESIZE);
+			result = ::sysconf(_SC_PAGESIZE);
 #endif
+			ensure(result, FN(((x & (x - 1)) == 0 && x > 0 && x <= 0x10000)));
+			return result;
 		}();
 
-		return ensure(r, FN(((x & (x - 1)) == 0 && x > 0 && x <= 0x10000)));
+		return r;
 	}
 
 	// Convert memory protection (internal)

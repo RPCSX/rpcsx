@@ -318,7 +318,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 // Some settings are not allowed in certain PPU decoders
 static void fixup_settings(const psf::registry* _psf)
 {
-	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy)
 	{
 		if (g_cfg.core.ppu_use_nj_bit)
 		{

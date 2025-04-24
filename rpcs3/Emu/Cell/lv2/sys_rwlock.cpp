@@ -18,7 +18,7 @@ lv2_rwlock::lv2_rwlock(utils::serial& ar)
 
 std::function<void(void*)> lv2_rwlock::load(utils::serial& ar)
 {
-	return load_func(make_shared<lv2_rwlock>(stx::exact_t<utils::serial&>(ar)));
+	return load_func(make_shared<lv2_rwlock>(exact_t<utils::serial&>(ar)));
 }
 
 void lv2_rwlock::save(utils::serial& ar)

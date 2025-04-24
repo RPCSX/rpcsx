@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/File.h"
 #include "util/bit_set.h"
+#include "util/endian.hpp"
 
 #include <span>
 

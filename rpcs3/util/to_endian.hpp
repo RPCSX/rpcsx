@@ -3,7 +3,11 @@
 #include "util/types.hpp"
 #include "util/endian.hpp"
 
-union v128;
+namespace rx
+{
+	union v128;
+}
+using rx::v128;
 
 // Type converter: converts native endianness arithmetic/enum types to appropriate se_t<> type
 template <typename T, bool Se>

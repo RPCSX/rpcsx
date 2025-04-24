@@ -367,7 +367,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	QButtonGroup* ppu_bg = new QButtonGroup(this);
 	ppu_bg->addButton(ui->ppu__static, static_cast<int>(ppu_decoder_type::_static));
-	ppu_bg->addButton(ui->ppu_llvm, static_cast<int>(ppu_decoder_type::llvm));
+	ppu_bg->addButton(ui->ppu_llvm, static_cast<int>(ppu_decoder_type::llvm_legacy));
+	ppu_bg->addButton(ui->ppu_interpreter, static_cast<int>(ppu_decoder_type::interpreter));
 
 	connect(ppu_bg, &QButtonGroup::idToggled, [this](int id, bool checked)
 		{
@@ -376,12 +377,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 			switch (id)
 			{
+			case static_cast<int>(ppu_decoder_type::interpreter):
 			case static_cast<int>(ppu_decoder_type::_static):
 				ui->accuratePPUFPCC->setEnabled(true);
 				ui->accuratePPUNJ->setEnabled(true);
 				ui->accuratePPUVNAN->setEnabled(true);
 				break;
-			case static_cast<int>(ppu_decoder_type::llvm):
+			case static_cast<int>(ppu_decoder_type::llvm_legacy):
 				ui->accuratePPUFPCC->setEnabled(false);
 				ui->accuratePPUNJ->setEnabled(false);
 				ui->accuratePPUVNAN->setEnabled(false);

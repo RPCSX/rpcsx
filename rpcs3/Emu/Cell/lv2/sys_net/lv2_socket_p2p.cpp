@@ -17,7 +17,7 @@ lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, l
 }
 
 lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)
-	: lv2_socket(stx::make_exact(ar), type)
+	: lv2_socket(make_exact(ar), type)
 {
 	ar(port, vport, bound_addr);
 

@@ -1,4 +1,7 @@
 #include "mem.hpp"
+
+#ifdef __linux__
+
 #include <cstdio>
 #include <print>
 #include <sys/mman.h>
@@ -44,3 +47,4 @@ void rx::mem::printStats() {
   free(line);
   fclose(maps);
 }
+#endif

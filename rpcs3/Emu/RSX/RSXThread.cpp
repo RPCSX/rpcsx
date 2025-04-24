@@ -165,7 +165,7 @@ namespace rsx
 		{
 			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + ::offset32(&RsxReports::report) + offset;
+				return render->label_addr + OFFSET_OF(RsxReports, report) + offset;
 			}
 
 			msg = "Local RSX REPORT offset out of range!"sv;
@@ -733,8 +733,8 @@ namespace rsx
 		if (!ar.is_writing() && version < 3)
 		{
 			// Be compatible with previous bitwise serialization
-			ar(std::span<u8>(reinterpret_cast<u8*>(this), ::offset32(&avconf::scan_mode)));
-			ar.pos += utils::align<usz>(::offset32(&avconf::scan_mode), alignof(avconf)) - ::offset32(&avconf::scan_mode);
+			ar(std::span<u8>(reinterpret_cast<u8*>(this), OFFSET_OF(avconf, scan_mode)));
+			ar.pos += utils::align<usz>(OFFSET_OF(avconf, scan_mode), alignof(avconf)) - OFFSET_OF(avconf, scan_mode);
 			return;
 		}
 
@@ -1209,7 +1209,7 @@ namespace rsx
 				if (const u64 get_put = new_get_put.exchange(u64{umax});
 					get_put != umax)
 				{
-					vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
+					vm::_ref<atomic_be_t<u64>>(dma_address + OFFSET_OF(RsxDmaControl, put)).release(get_put);
 					fifo_ctrl->set_get(static_cast<u32>(get_put));
 					fifo_ctrl->abort();
 					fifo_ret_addr = RSX_CALL_STACK_EMPTY;

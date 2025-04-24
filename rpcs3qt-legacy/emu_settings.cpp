@@ -1244,8 +1244,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::PPUDecoder:
 		switch (static_cast<ppu_decoder_type>(index))
 		{
-		case ppu_decoder_type::_static: return tr("Interpreter (static)", "PPU decoder");
-		case ppu_decoder_type::llvm: return tr("Recompiler (LLVM)", "PPU decoder");
+		case ppu_decoder_type::_static: return tr("Interpreter (Legacy)", "PPU decoder");
+		case ppu_decoder_type::llvm_legacy: return tr("LLVM Recompiler (Legacy)", "PPU decoder");
+		case ppu_decoder_type::interpreter: return tr("Interpreter", "PPU decoder");
 		}
 		break;
 	case emu_settings_type::SPUDecoder:

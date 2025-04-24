@@ -21,7 +21,7 @@ struct cfg_root : cfg::node
 	public:
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
 
-		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::llvm};
+		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::llvm_legacy};
 		cfg::_int<1, 8> ppu_threads{this, "PPU Threads", 2}; // Amount of PPU threads running simultaneously (must be 2)
 		cfg::_bool ppu_debug{this, "PPU Debug"};
 		cfg::_bool ppu_call_history{this, "PPU Calling History"}; // Enable PPU calling history recording

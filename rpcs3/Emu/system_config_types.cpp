@@ -520,8 +520,9 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 		{
 			switch (type)
 			{
-			case ppu_decoder_type::_static: return "Interpreter (static)";
-			case ppu_decoder_type::llvm: return "Recompiler (LLVM)";
+			case ppu_decoder_type::_static: return "Interpreter (Legacy)";
+			case ppu_decoder_type::llvm_legacy: return "LLVM Recompiler (Legacy)";
+			case ppu_decoder_type::interpreter: return "Interpreter";
 			}
 
 			return unknown;

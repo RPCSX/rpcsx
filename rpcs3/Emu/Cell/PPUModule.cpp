@@ -333,7 +333,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 	};
 
 	// Initialize double-purpose fake OPD array for HLE functions
-	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder != ppu_decoder_type::_static);
+	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm_legacy);
 
 	u32& hle_funcs_addr = g_fxo->get<ppu_function_manager>().addr;
 

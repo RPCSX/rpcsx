@@ -1399,7 +1399,7 @@ bool GLGSRender::release_GCM_label(u32 address, u32 args)
 
 	// Now write to DMA and then to host context
 	m_enqueued_host_write_buffer->get().copy_to(mapping.second, host_read_offset, mapping.first, 4);
-	m_enqueued_host_write_buffer->get().copy_to(m_host_gpu_context_data.get(), host_read_offset + 8, ::offset32(&rsx::host_gpu_context_t::commands_complete_event), 8);
+	m_enqueued_host_write_buffer->get().copy_to(m_host_gpu_context_data.get(), host_read_offset + 8, OFFSET_OF(rsx::host_gpu_context_t, commands_complete_event), 8);
 	m_enqueued_host_write_buffer->push_barrier(host_read_offset, 16);
 
 	host_ctx->on_label_release();
@@ -1425,7 +1425,7 @@ void GLGSRender::on_guest_texture_read()
 	// Tag the read as being in progress
 	u64 event_id = m_host_dma_ctrl->host_ctx()->inc_counter();
 	m_host_dma_ctrl->host_ctx()->texture_load_request_event = event_id;
-	enqueue_host_context_write(::offset32(&rsx::host_gpu_context_t::texture_load_complete_event), 8, &event_id);
+	enqueue_host_context_write(OFFSET_OF(rsx::host_gpu_context_t, texture_load_complete_event), 8, &event_id);
 }
 
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
