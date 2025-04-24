@@ -1356,7 +1356,7 @@ s32 SBCSstoUTF8s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::pt
 				return SRCIllegal;
 			}
 
-			longval = *reinterpret_cast<u64*>(dst_tmp);
+			longval = *reinterpret_cast<u32*>(dst_tmp);
 			utf8_len = dst_len_tmp;
 		}
 
