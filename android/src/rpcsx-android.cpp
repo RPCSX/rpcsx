@@ -2625,4 +2625,19 @@ extern "C" std::string _rpcsx_getVersion() {
   return rx::getVersion().toString();
 }
 
+extern "C" void *_rpcsx_setCustomDriver(void *driverHandle) {
+  auto prevLoader = vk::instance::g_vk_loader;
+  if (prevLoader != nullptr) {
+    vk::symbol_cache::cache_instance().clear();
+  }
+
+  vk::instance::g_vk_loader = driverHandle;
+
+  if (driverHandle != nullptr) {
+    vk::symbol_cache::cache_instance().initialize();
+  }
+
+  return prevLoader;
+}
+
 #pragma GCC diagnostic pop

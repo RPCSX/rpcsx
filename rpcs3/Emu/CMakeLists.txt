@@ -103,7 +103,6 @@ target_link_libraries(rpcs3_emu
         3rdparty::soundtouch
         3rdparty::miniupnpc
         3rdparty::json
-        3rdparty::adrenotools
 )
 
 # Cell

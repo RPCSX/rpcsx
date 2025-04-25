@@ -128,9 +128,6 @@
 	path = 3rdparty/GPUOpen/VulkanMemoryAllocator
 	url = ../../Megamouse/VulkanMemoryAllocator.git
 	ignore = dirty
-[submodule "3rdparty/libadrenotools"]
-	path = 3rdparty/libadrenotools
-	url = ../../bylaws/libadrenotools.git
 [submodule "3rdparty/Vulkan-Headers"]
 	path = 3rdparty/Vulkan-Headers
 	url = ../../KhronosGroup/Vulkan-Headers.git

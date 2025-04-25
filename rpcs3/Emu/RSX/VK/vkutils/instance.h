@@ -41,7 +41,6 @@ namespace vk
 		VkDebugReportCallbackEXT m_debugger = nullptr;
 
 #ifdef ANDROID
-		static void* g_vk_loader;
 		bool owns_loader = false;
 #endif
 
@@ -49,6 +48,8 @@ namespace vk
 
 	public:
 #ifdef ANDROID
+		static void* g_vk_loader;
+
 		static void* get_vk_loader()
 		{
 			return g_vk_loader;

@@ -1,16 +1,10 @@
-#include "Emu/RSX/VK/VulkanAPI.h"
 #include "stdafx.h"
+#include "Emu/RSX/VK/VulkanAPI.h"
 #include "instance.h"
 
 #ifdef ANDROID
 #include <fstream>
 #include <dlfcn.h>
-#include <nlohmann/json.hpp>
-#endif
-
-#if defined(ANDROID) && defined(ARCH_ARM64)
-#include "libadrenotools/include/adrenotools/priv.h"
-#include <libadrenotools/include/adrenotools/driver.h>
 #endif
 
 namespace vk
@@ -84,9 +78,8 @@ namespace vk
 		m_instance = VK_NULL_HANDLE;
 
 #if defined(ANDROID) && defined(ARCH_ARM64)
-		if (owns_loader && g_vk_loader != nullptr)
+		if (g_vk_loader != nullptr && owns_loader)
 		{
-			adrenotools_set_turbo(false);
 			::dlclose(g_vk_loader);
 			g_vk_loader = nullptr;
 
@@ -122,56 +115,15 @@ namespace vk
 #if defined(ANDROID) && defined(ARCH_ARM64)
 		if (g_vk_loader == nullptr)
 		{
-			auto custom_driver_path = g_cfg.video.vk.driver.path.to_string();
-			if (!custom_driver_path.empty())
-			{
-				rsx_log.warning("Loading custom driver %s", custom_driver_path);
-
-				auto meta = nlohmann::json::parse(std::ifstream(custom_driver_path + "/meta.json"));
-
-				if (meta.contains("libraryName"))
-				{
-					auto library_name = meta["libraryName"].get<std::string>();
-					rsx_log.warning("Custom driver: library name %s", library_name);
-
-					auto hook_dir = g_cfg.video.vk.driver.hook_dir.to_string();
-					rsx_log.warning("Custom driver: hook dir %s", hook_dir);
-
-					::dlerror();
-					g_vk_loader = adrenotools_open_libvulkan(
-						RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM,
-						nullptr, (hook_dir + "/").c_str(),
-						(custom_driver_path + "/").c_str(), library_name.c_str(),
-						nullptr, nullptr);
-
-					if (g_vk_loader == nullptr)
-					{
-						rsx_log.error("Failed to load custom driver at '%s': %s", custom_driver_path, ::dlerror());
-					}
-					else
-					{
-						adrenotools_set_turbo(g_cfg.video.vk.driver.turbo_mode.get());
-						rsx_log.success("Custom driver at '%s' successfully loaded", custom_driver_path);
-					}
-				}
-				else
-				{
-					rsx_log.error("Custom driver load error: Invalid meta.json at %s", custom_driver_path);
-				}
-			}
+			g_vk_loader = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
 
 			if (g_vk_loader == nullptr)
 			{
-				g_vk_loader = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
-
-				if (g_vk_loader == nullptr)
-				{
-					g_vk_loader = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
-				}
+				g_vk_loader = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
 			}
 
-			symbol_cache::cache_instance().initialize();
 			owns_loader = true;
+			symbol_cache::cache_instance().initialize();
 		}
 #endif
 		// Initialize a vulkan instance
