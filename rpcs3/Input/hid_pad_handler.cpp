@@ -1,3 +1,5 @@
+#ifndef WITHOUT_HIDAPI
+
 #include "hid_pad_handler.h"
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
@@ -416,3 +418,5 @@ template class hid_pad_handler<DS4Device>;
 template class hid_pad_handler<DualSenseDevice>;
 template class hid_pad_handler<skateboard_device>;
 template class hid_pad_handler<ps_move_device>;
+
+#endif // WITHOUT_HIDAPI

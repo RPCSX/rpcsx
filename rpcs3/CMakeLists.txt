@@ -170,7 +170,6 @@ target_link_libraries(rpcs3 PUBLIC
     3rdparty::pugixml
     3rdparty::discordRPC
     3rdparty::hidapi
-    3rdparty::libusb
     3rdparty::libpng
     3rdparty::7zip
     3rdparty::wolfssl
@@ -185,6 +184,10 @@ target_link_libraries(rpcs3 PUBLIC
     ${ADDITIONAL_LIBS}
 )
 
+if (NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_link_libraries(rpcs3 PUBLIC 3rdparty::libusb)
+endif()
+
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3 PUBLIC stdafx.h)
 endif()
@@ -195,4 +198,8 @@ if(X11_FOUND)
 elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE AND NOT ANDROID)
     # Wayland has been checked in 3rdparty/CMakeLists.txt already.
     message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_compile_options(rpcs3 PRIVATE -D_LIBCPP_DISABLE_AVAILABILITY -DWITHOUT_CUBEB -DWITHOUT_HIDAPI)
 endif()

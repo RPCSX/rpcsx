@@ -138,7 +138,9 @@ endif()
 
 
 # libusb
-if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	message(STATUS "Skip libusb on iOS")
+elseif(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
 	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
 	cmake_dependent_option(USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
 			"LIBUSB_FOUND" OFF)
@@ -147,7 +149,9 @@ else()
 	cmake_dependent_option(USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
 			"LIBUSB_FOUND" OFF)
 endif()
-if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	message(STATUS "Skip libusb on iOS")
+elseif(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
 	# Always use system libusb as reference implementation isn't supported
 	add_library(usb-1.0-shared INTERFACE)
 	target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
@@ -171,9 +175,13 @@ else()
 	endif()
 endif()
 
-
 # hidapi
-add_subdirectory(hidapi)
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	add_library(3rdparty_hidapi INTERFACE)
+else()
+	add_subdirectory(hidapi)
+endif()
+
 
 # glslang
 add_library(3rdparty_glslang INTERFACE)
@@ -185,8 +193,7 @@ add_subdirectory(yaml-cpp)
 
 
 # OpenGL
-
-if (NOT ANDROID AND NOT WITHOUT_OPENGL)
+if (NOT ANDROID AND NOT WITHOUT_OPENGL AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
 	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 	add_library(3rdparty_opengl INTERFACE)
@@ -212,7 +219,11 @@ endif()
 add_subdirectory(stblib)
 
 # Cubeb
-add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	add_library(3rdparty_cubeb INTERFACE)
+else()
+	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+endif()
 
 # SoundTouch
 add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)
@@ -386,9 +397,10 @@ add_subdirectory(opencv EXCLUDE_FROM_ALL)
 # FUSION
 add_subdirectory(fusion EXCLUDE_FROM_ALL)
 
-
 # add nice ALIAS targets for ease of use
-if(USE_SYSTEM_LIBUSB)
+if (CMAKE_SYSTEM_NAME MATCHES "iOS")
+	message(STATUS "Skip libusb on iOS")
+elseif(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
 else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)

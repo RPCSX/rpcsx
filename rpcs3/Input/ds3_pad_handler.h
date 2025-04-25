@@ -1,4 +1,5 @@
 #pragma once
+#ifndef WITHOUT_HIDAPI
 
 #include "hid_pad_handler.h"
 
@@ -157,3 +158,5 @@ private:
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };
+
+#endif // WITHOUT_HIDAPI

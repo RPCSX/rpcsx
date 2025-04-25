@@ -1,3 +1,5 @@
+#ifndef WITHOUT_HIDAPI
+
 #include "stdafx.h"
 #include "ds3_pad_handler.h"
 #include "Emu/Io/pad_config.h"
@@ -616,3 +618,5 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		}
 	}
 }
+
+#endif // WITHOUT_HIDAPI

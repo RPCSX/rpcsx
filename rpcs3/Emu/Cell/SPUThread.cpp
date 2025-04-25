@@ -46,6 +46,10 @@
 #endif
 #endif
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 // LUTs for SPU instructions
 
 const u32 spu_frest_fraction_lut[32] =
@@ -1827,7 +1831,7 @@ extern thread_local std::string (*g_tls_log_prefix)();
 
 void spu_thread::cpu_task()
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(true);
 #endif
 	start_time = 0;

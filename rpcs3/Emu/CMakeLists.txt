@@ -99,7 +99,6 @@ endif()
 target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::openal
-        3rdparty::cubeb
         3rdparty::soundtouch
         3rdparty::miniupnpc
         3rdparty::json
@@ -195,7 +194,7 @@ target_sources(rpcs3_emu PRIVATE
     CPU/CPUTranslator.cpp
 )
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64" AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
     target_sources(rpcs3_emu PRIVATE
         CPU/Backends/AArch64/AArch64ASM.cpp
         CPU/Backends/AArch64/AArch64Common.cpp
@@ -205,39 +204,25 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
 endif()
 
 target_link_libraries(rpcs3_emu
-    PUBLIC 3rdparty::llvm 3rdparty::asmjit)
+     PUBLIC 3rdparty::llvm 3rdparty::asmjit)
 
+if(NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_link_libraries(rpcs3_emu
+		PUBLIC 3rdparty::cubeb)
+endif()
 
 # Io
 target_sources(rpcs3_emu PRIVATE
-    Io/Buzz.cpp
     Io/camera_config.cpp
-    Io/Dimensions.cpp
-    Io/GameTablet.cpp
-    Io/GHLtar.cpp
-    Io/GunCon3.cpp
-    Io/Infinity.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp
-    Io/midi_config_types.cpp
     Io/mouse_config.cpp
     Io/MouseHandler.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/pad_types.cpp
     Io/PadHandler.cpp
-    Io/rb3drums_config.cpp
-    Io/RB3MidiDrums.cpp
-    Io/RB3MidiGuitar.cpp
-    Io/RB3MidiKeyboard.cpp
     Io/recording_config.cpp
-    Io/Skylander.cpp
-    Io/TopShotElite.cpp
-    Io/TopShotFearmaster.cpp
-    Io/Turntable.cpp
-    Io/usb_device.cpp
-    Io/usb_vfs.cpp
-    Io/usio.cpp
 )
 
 target_link_libraries(rpcs3_emu PRIVATE
@@ -354,7 +339,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/rsx_vertex_data.cpp
 )
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
     target_sources(rpcs3_emu PRIVATE
         RSX/GL/GLCommonDecompiler.cpp
         RSX/GL/GLCompute.cpp
@@ -441,7 +426,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::ffmpeg 3rdparty::sdl3
         3rdparty::opengl 3rdparty::stblib
         3rdparty::vulkan 3rdparty::glew
-        3rdparty::libusb 3rdparty::wolfssl
+        3rdparty::wolfssl
         Vulkan::Headers
         rpcsx::fw::ps3::api
         rpcsx::cpu::cell::ppu
@@ -450,6 +435,10 @@ target_link_libraries(rpcs3_emu
     PRIVATE
         3rdparty::glslang
 )
+
+if (NOT CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::libusb)
+endif()
 
 if(APPLE)
     check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
@@ -461,4 +450,8 @@ endif()
 
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3_emu PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../stdafx.h")
+endif()
+
+if(CMAKE_SYSTEM_NAME MATCHES "iOS")
+	target_compile_options(rpcs3_emu PRIVATE -D_LIBCPP_DISABLE_AVAILABILITY -DWITHOUT_CUBEB -DWITHOUT_HIDAPI)
 endif()

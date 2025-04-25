@@ -1,3 +1,5 @@
+#ifndef WITHOUT_HIDAPI
+
 #include "stdafx.h"
 #include "skateboard_pad_handler.h"
 #include "Emu/Io/pad_config.h"
@@ -400,3 +402,5 @@ void skateboard_pad_handler::SetPadData(const std::string& padId, u8 player_id, 
 	//	skateboard_log.error("SetPadData: send_output_report failed! Reason: %s", hid_error(device->hidDevice));
 	//}
 }
+
+#endif // WITHOUT_HIDAPI

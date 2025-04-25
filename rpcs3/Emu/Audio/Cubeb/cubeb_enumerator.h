@@ -1,4 +1,5 @@
 #pragma once
+#ifndef WITHOUT_CUBEB
 
 #include "Emu/Audio/audio_device_enumerator.h"
 
@@ -18,3 +19,5 @@ private:
 	bool com_init_success = false;
 #endif
 };
+
+#endif // WITHOUT_CUBEB

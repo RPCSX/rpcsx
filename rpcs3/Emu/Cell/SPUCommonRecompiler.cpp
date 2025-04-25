@@ -29,6 +29,10 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -106,7 +110,7 @@ static void ghc_cpp_trampoline(u64 fn_target, native_asm& c, auto& args)
 
 DECLARE(spu_runtime::tr_dispatch) = []
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(false);
 #endif
 #if defined(ARCH_X64)
@@ -831,7 +835,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 		{
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(false);
 #endif
 			// Set low priority
@@ -2005,7 +2009,7 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 
 	return reinterpret_cast<spu_function_t>(raw);
 #elif defined(ARCH_ARM64)
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(false);
 #endif
 
@@ -2046,7 +2050,7 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 	*raw++ = static_cast<u8>(data >> 8);
 	*raw++ = static_cast<u8>(data & 0xff);
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(true);
 #endif
 
@@ -2110,11 +2114,11 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 		const u64 target = reinterpret_cast<u64>(spu_runtime::tr_all);
 		std::memcpy(bytes + 8, &target, 8);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 		pthread_jit_write_protect_np(false);
 #endif
 		atomic_storage<u128>::release(*reinterpret_cast<u128*>(rip), result);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 		pthread_jit_write_protect_np(true);
 #endif
 
@@ -2160,7 +2164,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 			spu_log.trace("Called from 0x%x", _info._u32[2] - 4);
 		}
 	}
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(true);
 #endif
 
@@ -2250,11 +2254,11 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 
 	const u64 target = reinterpret_cast<u64>(func);
 	std::memcpy(bytes + 8, &target, 8);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(false);
 #endif
 	atomic_storage<u128>::release(*reinterpret_cast<u128*>(rip), result);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(true);
 #endif
 

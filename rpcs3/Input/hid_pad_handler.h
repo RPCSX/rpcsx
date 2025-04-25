@@ -1,4 +1,5 @@
 #pragma once
+#ifndef WITHOUT_HIDAPI
 
 #include "Emu/Io/PadHandler.h"
 #include "util/CRC.h"
@@ -142,3 +143,5 @@ protected:
 private:
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 };
+
+#endif // WITHOUT_HIDAPI

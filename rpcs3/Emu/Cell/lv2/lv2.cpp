@@ -69,6 +69,10 @@
 #endif
 #endif
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 extern std::string ppu_get_syscall_name(u64 code);
 
 namespace rsx
@@ -1251,13 +1255,13 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 
 		if (const auto func = g_ppu_syscall_table[code].first)
 		{
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(false);
 #endif
 			func(ppu, {}, vm::_ptr<u32>(ppu.cia), nullptr);
 			ppu_log.trace("Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 			pthread_jit_write_protect_np(true);
 			// No need to flush cache lines after a syscall, since we didn't generate any code.
 #endif

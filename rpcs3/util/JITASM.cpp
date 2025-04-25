@@ -307,7 +307,7 @@ void jit_runtime::initialize()
 
 void jit_runtime::finalize() noexcept
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(false);
 #endif
 	// Reset JIT memory
@@ -325,7 +325,7 @@ void jit_runtime::finalize() noexcept
 	std::memcpy(alloc(s_code_init.size(), 1, true), s_code_init.data(), s_code_init.size());
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !defined(TARGET_OS_IPHONE) && !(defined(TARGET_OS_IPHONE) && defined(TARGET_OS_SIMULATOR))
 	pthread_jit_write_protect_np(true);
 #endif
 #ifdef ARCH_ARM64

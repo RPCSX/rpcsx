@@ -1,3 +1,5 @@
+#ifndef WITHOUT_HIDAPI
+
 #include "stdafx.h"
 #include "ps_move_handler.h"
 #include "ps_move_calibration.h"
@@ -878,3 +880,5 @@ u32 ps_move_handler::get_battery_level(const std::string& padId)
 	// 0 to 5
 	return std::clamp<u32>(device->battery_level * 20, 0, 100);
 }
+
+#endif // WITHOUT_HIDAPI
