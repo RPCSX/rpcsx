@@ -52,7 +52,9 @@ LOG_CHANNEL(jit_log, "JIT");
 
 const bool jit_initialize = []() -> bool
 {
+	llvm::InitializeAllTargetInfos();
 	llvm::InitializeAllTargets();
+	llvm::InitializeAllTargetMCs();
 	llvm::InitializeAllAsmPrinters();
 	llvm::InitializeAllAsmParsers();
 	LLVMLinkInMCJIT();
