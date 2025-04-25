@@ -55,6 +55,7 @@
 #include <Emu/Io/pad_config.h>
 #include <Emu/RSX/GSFrameBase.h>
 #include <Emu/System.h>
+#include <nlohmann/json.hpp>
 #include <rpcsx/fw/ps3/cellSaveData.h>
 #include <rpcsx/fw/ps3/sceNpTrophy.h>
 #include <rx/Version.hpp>
@@ -77,6 +78,9 @@
 #include <sys/resource.h>
 #include <thread>
 #include <vector>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
 
 struct AtExit {
   std::function<void()> cb;
@@ -611,7 +615,7 @@ public:
   jlong getProgressId() const { return progressId; }
 };
 
-static void sendFirmwareInstalled(JNIEnv *env, std::string version) {
+static void sendFirmwareInstalled(JNIEnv *env, const std::string &version) {
   auto fwRepositoryClass =
       ensure(env->FindClass("net/rpcsx/FirmwareRepository"));
   auto methodId = ensure(env->GetStaticMethodID(
@@ -620,7 +624,7 @@ static void sendFirmwareInstalled(JNIEnv *env, std::string version) {
   env->CallStaticVoidMethod(fwRepositoryClass, methodId, wrap(env, version));
 }
 
-static void sendFirmwareCompiled(JNIEnv *env, std::string version) {
+static void sendFirmwareCompiled(JNIEnv *env, const std::string &version) {
   auto fwRepositoryClass =
       ensure(env->FindClass("net/rpcsx/FirmwareRepository"));
   auto methodId = ensure(env->GetStaticMethodID(
@@ -722,7 +726,7 @@ static void collectGamePaths(std::vector<std::string> &paths,
     auto dir = std::move(workList.back());
     workList.pop_back();
 
-    for (auto entry : std::filesystem::directory_iterator(dir, ec)) {
+    for (auto &entry : std::filesystem::directory_iterator(dir, ec)) {
       if (entry.is_directory()) {
         if (entry.path().filename() != "C00") {
           workList.push_back(entry.path());
@@ -739,9 +743,9 @@ static void collectGamePaths(std::vector<std::string> &paths,
   }
 }
 
-static std::string locateEbootPath(const std::string &root) {
+static std::string locateEbootPath(std::string_view root) {
   if (std::filesystem::is_regular_file(root)) {
-    return root;
+    return std::string(root);
   }
 
   for (auto suffix : {
@@ -750,7 +754,8 @@ static std::string locateEbootPath(const std::string &root) {
            "/USRDIR/ISO.BIN.EDAT",
            "/PS3_GAME/USRDIR/EBOOT.BIN",
        }) {
-    std::string tryPath = root + suffix;
+    auto tryPath = std::string(root);
+    tryPath += suffix;
 
     if (std::filesystem::is_regular_file(tryPath)) {
       return tryPath;
@@ -760,16 +765,17 @@ static std::string locateEbootPath(const std::string &root) {
   return {};
 }
 
-static std::string locateParamSfoPath(const std::string &root) {
+static std::string locateParamSfoPath(std::string_view root) {
   if (std::filesystem::is_regular_file(root)) {
-    return root;
+    return std::string(root);
   }
 
   for (auto suffix : {
            "/PARAM.SFO",
            "/PS3_GAME/PARAM.SFO",
        }) {
-    std::string tryPath = root + suffix;
+    auto tryPath = std::string(root);
+    tryPath += suffix;
 
     if (std::filesystem::is_regular_file(tryPath)) {
       return tryPath;
@@ -874,7 +880,7 @@ fetchGameInfo(const psf::registry &psf,
 }
 
 static void collectGameInfo(JNIEnv *env, jlong progressId,
-                            std::vector<std::string> rootDirs) {
+                            const std::vector<std::string> &rootDirs) {
   std::vector<std::string> paths;
   for (auto &&rootDir : rootDirs) {
     collectGamePaths(paths, rootDir);
@@ -1005,7 +1011,7 @@ struct ProgressMessageDialog : MsgDialogBase {
 
   void Close(bool success) override {
     rpcsx_android.warning("ProgressMessageDialog::Close(%s)", success);
-    invokeSync([this, success](JNIEnv *env) {
+    invokeSync([this](JNIEnv *env) {
       Progress progress(env, progressId);
       progress.report(0, 0);
     });
@@ -1352,7 +1358,7 @@ private:
 
     if (fs::is_file(workload.path)) {
       if (!is_vsh) {
-        auto sfoPath = locateParamSfoPath(rootPath);
+        auto sfoPath = locateParamSfoPath(std::string(rootPath));
 
         if (!sfoPath.empty()) {
           const auto psf = psf::load_object(sfoPath);
@@ -1384,7 +1390,8 @@ private:
     std::vector<std::string> dir_queue;
     dir_queue.push_back(rootPath.string());
 
-    for (auto entry : std::filesystem::recursive_directory_iterator(rootPath)) {
+    for (auto &entry :
+         std::filesystem::recursive_directory_iterator(rootPath)) {
       if (entry.is_directory()) {
         dir_queue.push_back(entry.path().string());
       }
@@ -1550,14 +1557,14 @@ static void setupCallbacks() {
           [](auto...) { return std::make_unique<OverlayTrophyNotification>(); },
       .get_localized_string = [](localized_string_id id,
                                  const char *) -> std::string {
-        if (int(id) < std::size(g_strings)) {
+        if (std::size_t(id) < std::size(g_strings)) {
           return g_strings[int(id)].first;
         }
         return "";
       },
       .get_localized_u32string = [](localized_string_id id,
                                     const char *) -> std::u32string {
-        if (int(id) < std::size(g_strings)) {
+        if (std::size_t(id) < std::size(g_strings)) {
           return g_strings[int(id)].second;
         }
         return U"";
@@ -1664,9 +1671,9 @@ static bool initVirtualPad(const std::shared_ptr<Pad> &pad) {
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_overlayPadData(
-    JNIEnv *env, jobject, jint digital1, jint digital2, jint leftStickX,
-    jint leftStickY, jint rightStickX, jint rightStickY) {
+extern "C" bool _rpcsx_overlayPadData(int digital1, int digital2,
+                                      int leftStickX, int leftStickY,
+                                      int rightStickX, int rightStickY) {
 
   auto pad = [] {
     std::shared_ptr<Pad> result;
@@ -1703,9 +1710,9 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_overlayPadData(
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcsx_RPCSX_initialize(JNIEnv *env, jobject, jstring rootDir) {
-  auto rootDirStr = fix_dir_path(unwrap(env, rootDir));
+extern "C" bool _rpcsx_initialize(std::string_view rootDir,
+                                  std::string_view user) {
+  auto rootDirStr = fix_dir_path(std::string(rootDir));
 
   if (g_android_executable_dir != rootDirStr) {
     g_android_executable_dir = rootDirStr;
@@ -1800,6 +1807,7 @@ Java_net_rpcsx_RPCSX_initialize(JNIEnv *env, jobject, jstring rootDir) {
   virtual_pad_handler::set_on_connect_cb(initVirtualPad);
   setupCallbacks();
   Emu.SetHasGui(false);
+  Emu.SetUsr(std::string(user));
   Emu.Init();
 
   g_cfg_input.player1.handler.set(pad_handler::virtual_pad);
@@ -1812,40 +1820,33 @@ Java_net_rpcsx_RPCSX_initialize(JNIEnv *env, jobject, jstring rootDir) {
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcsx_RPCSX_processCompilationQueue(JNIEnv *env, jobject) {
+extern "C" bool _rpcsx_processCompilationQueue(JNIEnv *env) {
   g_compilationQueue.process(env);
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcsx_RPCSX_startMainThreadProcessor(JNIEnv *env, jobject) {
+extern "C" bool _rpcsx_startMainThreadProcessor(JNIEnv *env) {
   g_mainThreadProcessor.process(env);
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_collectGameInfo(
-    JNIEnv *env, jobject, jstring jrootDir, jlong progressId) {
+extern "C" bool _rpcsx_collectGameInfo(JNIEnv *env, std::string_view rootDir,
+                                       long progressId) {
 
   if (std::filesystem::is_regular_file(g_cfg_vfs.get_dev_flash() +
                                        "/vsh/module/vsh.self")) {
     sendVshBootable(env, progressId);
   }
 
-  collectGameInfo(env, progressId, {unwrap(env, jrootDir)});
+  collectGameInfo(env, progressId, {std::string(rootDir)});
   return true;
 }
 
-extern "C" JNIEXPORT void JNICALL Java_net_rpcsx_RPCSX_shutdown(JNIEnv *env,
-                                                                jobject) {
-  Emu.Kill();
-}
+extern "C" void _rpcsx_shutdown() { Emu.Kill(); }
 
-extern "C" JNIEXPORT jint JNICALL Java_net_rpcsx_RPCSX_boot(JNIEnv *env,
-                                                            jobject,
-                                                            jstring jpath) {
+extern "C" int _rpcsx_boot(std::string_view path_) {
   Emu.SetForceBoot(true);
-  auto path = unwrap(env, jpath);
+  std::string path = std::string(path_);
   while (path.ends_with('/')) {
     path.pop_back();
   }
@@ -1853,35 +1854,21 @@ extern "C" JNIEXPORT jint JNICALL Java_net_rpcsx_RPCSX_boot(JNIEnv *env,
   return static_cast<int>(Emu.BootGame(path, "", false, cfg_mode::global));
 }
 
-extern "C" JNIEXPORT jint JNICALL Java_net_rpcsx_RPCSX_getState(JNIEnv *env,
-                                                                jobject) {
+extern "C" int _rpcsx_getState() {
   return static_cast<int>(Emu.GetStatus(false));
 }
+extern "C" void _rpcsx_kill() { Emu.Kill(); }
+extern "C" void _rpcsx_resume() { Emu.Resume(); }
 
-extern "C" JNIEXPORT void JNICALL Java_net_rpcsx_RPCSX_kill(JNIEnv *env,
-                                                            jobject) {
-  Emu.Kill();
-}
-
-extern "C" JNIEXPORT void JNICALL Java_net_rpcsx_RPCSX_resume(JNIEnv *env,
-                                                              jobject) {
-  Emu.Resume();
-}
-
-extern "C" JNIEXPORT void JNICALL Java_net_rpcsx_RPCSX_openHomeMenu(JNIEnv *env,
-                                                                    jobject) {
+extern "C" void _rpcsx_openHomeMenu() {
   if (auto padThread = pad::get_pad_thread(true)) {
     padThread->open_home_menu();
   }
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_net_rpcsx_RPCSX_getTitleId(JNIEnv *env, jobject) {
-  return wrap(env, Emu.GetTitleID());
-}
+extern "C" std::string _rpcsx_getTitleId() { return Emu.GetTitleID(); }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_surfaceEvent(
-    JNIEnv *env, jobject, jobject surface, jint event) {
+extern "C" bool _rpcsx_surfaceEvent(JNIEnv *env, jobject surface, jint event) {
   rpcsx_android.warning("surface event %p, %d", surface, event);
 
   if (event == 2) {
@@ -1922,8 +1909,8 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_surfaceEvent(
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_usbDeviceEvent(
-    JNIEnv *env, jobject, jint fd, jint vendorId, jint productId, jint event) {
+extern "C" bool _rpcsx_usbDeviceEvent(int fd, int vendorId, int productId,
+                                      int event) {
   rpcsx_android.warning(
       "usb device event %d fd: %d, vendorId: %d, productId: %d", event, fd,
       vendorId, productId);
@@ -2167,7 +2154,7 @@ static bool installPkg(JNIEnv *env, fs::file &&file, jlong progressId) {
 
   while (true) {
     std::uint64_t totalProgress = 0;
-    for (std::size_t index = 0; auto &reader : readers) {
+    for (auto &reader : readers) {
       if (result.error != package_install_result::error_type::no_error) {
         progress.failure("Installation failed");
         for (package_reader &reader : readers) {
@@ -2209,7 +2196,7 @@ static bool installPkg(JNIEnv *env, fs::file &&file, jlong progressId) {
 }
 
 static bool installEdat(JNIEnv *env, fs::file &&file, jlong progressId,
-                        std::string rootPath = {}) {
+                        std::string_view rootPath = {}) {
   Progress progress(env, progressId);
 
   NPD_HEADER npdHeader;
@@ -2256,16 +2243,18 @@ static bool installEdat(JNIEnv *env, fs::file &&file, jlong progressId,
     return false;
   }
 
-  if (rootPath.empty()) {
-    rootPath = rpcs3::utils::get_hdd0_dir() + "game";
+  auto root = std::string(rootPath);
+
+  if (root.empty()) {
+    root = rpcs3::utils::get_hdd0_dir() + "game";
   }
 
-  collectGameInfo(env, progressId, {rootPath});
+  collectGameInfo(env, progressId, {std::move(root)});
   return true;
 }
 
 static bool installRap(JNIEnv *env, fs::file &&file, jlong progressId,
-                       const std::string &rootPath) {
+                       std::string_view rootPath) {
   Progress progress(env, progressId);
 
   auto ebootPath = locateEbootPath(rootPath);
@@ -2310,7 +2299,7 @@ static bool installRap(JNIEnv *env, fs::file &&file, jlong progressId,
     return false;
   }
 
-  collectGameInfo(env, -1, {rootPath});
+  collectGameInfo(env, -1, {std::string(rootPath)});
   g_compilationQueue.push(progress, std::move(ebootPath));
   return true;
 }
@@ -2364,7 +2353,7 @@ static bool installIso(JNIEnv *env, fs::file &&file, jlong progressId) {
       fs::dir dir;
       dir.reset(iso.open_dir(path));
 
-      for (auto entry : dir) {
+      for (auto &entry : dir) {
         if (entry.name == "." || entry.name == "..") {
           continue;
         }
@@ -2402,7 +2391,7 @@ static bool installIso(JNIEnv *env, fs::file &&file, jlong progressId) {
     fs::dir dir;
     dir.reset(iso.open_dir(root));
 
-    for (auto entry : dir) {
+    for (auto &entry : dir) {
       if (entry.name == "." || entry.name == "..") {
         continue;
       }
@@ -2444,18 +2433,16 @@ static bool installIso(JNIEnv *env, fs::file &&file, jlong progressId) {
   }
 
   collectGameInfo(env, -1, {destinationPath});
-  auto ebootPath = locateEbootPath(destinationPath);
+  auto ebootPath = locateEbootPath(destinationPath.string());
   g_compilationQueue.push(progress, std::move(ebootPath));
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_installFw(
-    JNIEnv *env, jobject, jint fd, jlong progressId) {
+extern "C" bool _rpcsx_installFw(JNIEnv *env, int fd, long progressId) {
   return installPup(env, fs::file::from_native_handle(fd), progressId);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcsx_RPCSX_isInstallableFile(JNIEnv *env, jobject, jint fd) {
+extern "C" bool _rpcsx_isInstallableFile(jint fd) {
   auto file = fs::file::from_native_handle(fd);
   AtExit atExit{[&] { file.release_handle(); }};
 
@@ -2465,8 +2452,7 @@ Java_net_rpcsx_RPCSX_isInstallableFile(JNIEnv *env, jobject, jint fd) {
          type != FileType::Rap; // FIXME: implement rap preinstallation
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_net_rpcsx_RPCSX_getDirInstallPath(JNIEnv *env, jobject, jint fd) {
+extern "C" jstring _rpcsx_getDirInstallPath(JNIEnv *env, jint fd) {
   auto file = fs::file::from_native_handle(fd);
   AtExit atExit{[&] { file.release_handle(); }};
 
@@ -2478,8 +2464,7 @@ Java_net_rpcsx_RPCSX_getDirInstallPath(JNIEnv *env, jobject, jint fd) {
   return nullptr;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcsx_RPCSX_install(JNIEnv *env, jobject, jint fd, jlong progressId) {
+extern "C" bool _rpcsx_install(JNIEnv *env, int fd, long progressId) {
   auto file = fs::file::from_native_handle(fd);
   AtExit atExit{[&] { file.release_handle(); }};
 
@@ -2513,8 +2498,8 @@ Java_net_rpcsx_RPCSX_install(JNIEnv *env, jobject, jint fd, jlong progressId) {
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_installKey(
-    JNIEnv *env, jobject, jint fd, jlong progressId, jstring gamePath) {
+extern "C" bool _rpcsx_installKey(JNIEnv *env, int fd, long progressId,
+                                  std::string_view gamePath) {
   auto file = fs::file::from_native_handle(fd);
   AtExit atExit{[&] { file.release_handle(); }};
 
@@ -2522,19 +2507,18 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_installKey(
   file.seek(0);
 
   if (type == FileType::Rap) {
-    return installRap(env, std::move(file), progressId, unwrap(env, gamePath));
+    return installRap(env, std::move(file), progressId, gamePath);
   }
 
   if (type == FileType::Edat) {
-    return installEdat(env, std::move(file), progressId, unwrap(env, gamePath));
+    return installEdat(env, std::move(file), progressId, gamePath);
   }
 
   Progress(env, progressId).failure("Unsupported key type");
   return false;
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_net_rpcsx_RPCSX_systemInfo(JNIEnv *env, jobject) {
+extern "C" std::string _rpcsx_systemInfo() {
   std::string result;
 
   fmt::append(result, "%s\n\nLLVM CPU: %s\n\n", utils::get_system_info(),
@@ -2555,7 +2539,7 @@ Java_net_rpcsx_RPCSX_systemInfo(JNIEnv *env, jobject) {
     }
   }
 
-  return wrap(env, result);
+  return result;
 }
 
 static cfg::_base *find_cfg_node(cfg::_base *root, std::string_view path) {
@@ -2593,38 +2577,43 @@ static cfg::_base *find_cfg_node(cfg::_base *root, std::string_view path) {
   return root;
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_net_rpcsx_RPCSX_settingsGet(JNIEnv *env, jobject, jstring jpath) {
-  auto root = find_cfg_node(&g_cfg, unwrap(env, jpath));
+extern "C" void _rpcsx_loginUser(std::string_view userId) {
+  Emu.SetUsr(std::string(userId));
+}
+
+extern "C" std::string _rpcsx_getUser() { return Emu.GetUsr(); }
+
+extern "C" std::string _rpcsx_settingsGet(std::string_view path) {
+  auto root = find_cfg_node(&g_cfg, path);
 
   if (root == nullptr) {
     return nullptr;
   }
 
-  return wrap(env, root->to_json().dump(4));
+  return root->to_json().dump(4);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_settingsSet(
-    JNIEnv *env, jobject, jstring jpath, jstring jvalue) {
+extern "C" bool _rpcsx_settingsSet(std::string_view path,
+                                   std::string_view valueString) {
   nlohmann::json value;
   try {
-    value = nlohmann::json::parse(unwrap(env, jvalue));
+    value = nlohmann::json::parse(valueString);
   } catch (...) {
     rpcsx_android.error("settingsSet: node %s passed with invalid json '%s'",
-                        unwrap(env, jpath), unwrap(env, jvalue));
+                        path, valueString);
     return false;
   }
 
-  auto root = find_cfg_node(&g_cfg, unwrap(env, jpath));
+  auto root = find_cfg_node(&g_cfg, path);
 
   if (root == nullptr) {
-    rpcsx_android.error("settingsSet: node %s not found", unwrap(env, jpath));
+    rpcsx_android.error("settingsSet: node %s not found", path);
     return false;
   }
 
   if (!root->from_json(value, !Emu.IsStopped())) {
-    rpcsx_android.error("settingsSet: node %s not accepts value '%s'",
-                        unwrap(env, jpath), value.dump());
+    rpcsx_android.error("settingsSet: node %s not accepts value '%s'", path,
+                        value.dump());
     return false;
   }
 
@@ -2632,13 +2621,8 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcsx_RPCSX_settingsSet(
   return true;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcsx_RPCSX_supportsCustomDriverLoading(JNIEnv *env,
-                                                 jobject instance) {
-  return access("/dev/kgsl-3d0", F_OK) == 0;
+extern "C" std::string _rpcsx_getVersion() {
+  return rx::getVersion().toString();
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_net_rpcsx_RPCSX_getVersion(JNIEnv *env, jobject) {
-  return wrap(env, rx::getVersion().toString());
-}
+#pragma GCC diagnostic pop
