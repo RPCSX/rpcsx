@@ -1,6 +1,8 @@
 // Rock Band 3 MIDI Pro Adapter Emulator (drums Mode)
 
 #include "stdafx.h"
+
+#ifndef WITHOUT_RTMIDI
 #include "RB3MidiDrums.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Io/rb3drums_config.h"
@@ -838,3 +840,5 @@ std::optional<rb3drums::KitState> usb_device_rb3_midi_drums::ComboTracker::take_
 	}
 	return {};
 }
+
+#endif

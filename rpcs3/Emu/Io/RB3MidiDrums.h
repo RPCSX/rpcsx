@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef WITHOUT_RTMIDI
+
 #include "Emu/Io/usb_device.h"
 
 #include <rtmidi_c.h>
@@ -155,3 +157,5 @@ private:
 	bool is_midi_cc(u8 id, u8 value);
 	void write_state(u8* buf, const rb3drums::KitState&);
 };
+
+#endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifndef WITHOUT_RTMIDI
+
 #include "Emu/Io/usb_device.h"
 
 #include <rtmidi_c.h>
@@ -47,3 +49,4 @@ public:
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 };
+#endif

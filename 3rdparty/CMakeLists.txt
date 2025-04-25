@@ -378,7 +378,12 @@ endif()
 add_subdirectory(miniupnp EXCLUDE_FROM_ALL)
 
 # RTMIDI
-add_subdirectory(rtmidi EXCLUDE_FROM_ALL)
+if(NOT ANDROID)
+	add_subdirectory(rtmidi EXCLUDE_FROM_ALL)
+else()
+	add_library(rtmidi INTERFACE)
+	target_compile_definitions(rtmidi INTERFACE WITHOUT_RTMIDI)
+endif()
 
 # OPENCV
 add_subdirectory(opencv EXCLUDE_FROM_ALL)

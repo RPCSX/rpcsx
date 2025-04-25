@@ -1,6 +1,9 @@
 // Rock Band 3 MIDI Pro Adapter Emulator (Guitar Mode)
 
 #include "stdafx.h"
+
+#ifndef WITHOUT_RTMIDI
+
 #include "RB3MidiGuitar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 
@@ -370,3 +373,5 @@ void usb_device_rb3_midi_guitar::write_state(u8* buf)
 
 	buf[2] = button_state.dpad;
 }
+
+#endif

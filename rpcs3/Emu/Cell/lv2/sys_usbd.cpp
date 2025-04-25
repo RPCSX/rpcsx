@@ -537,6 +537,7 @@ usb_handler_thread::usb_handler_thread()
 			usb_devices.push_back(std::make_shared<usb_device_vfs>(usb_info, get_new_location()));
 	}
 
+#ifndef WITHOUT_RTMIDI
 	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), {"@@@"});
 	for (usz index = 0; index < std::min(max_midi_devices, devices_list.size()); index++)
 	{
@@ -569,6 +570,7 @@ usb_handler_thread::usb_handler_thread()
 			break;
 		}
 	}
+#endif
 }
 
 usb_handler_thread::~usb_handler_thread()
