@@ -101,7 +101,7 @@ jobs:
         $ANDROID_SDK_ROOT/cmake/${{ env.CMAKE_VERSION }}/bin/cmake \
         -B build -S android -DANDROID_ABI=${{ matrix.abi }} \
         -DUSE_ARCH=${{ matrix.arch }} \
-        -DANDROID_PLATFORM=android-31 \
+        -DANDROID_PLATFORM=android-29 \
         -DANDROID_NDK=$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }} \
         -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/${{ env.NDK_VERSION }}/build/cmake/android.toolchain.cmake \
         -DCMAKE_BUILD_TYPE=Release -G Ninja
