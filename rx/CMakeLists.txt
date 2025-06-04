@@ -45,8 +45,8 @@ if (Git_FOUND)
 else()
     set(GIT_DATE 0)
     set(GIT_REV 0)
-    set(RX_GIT_DIRTY 1)
-    set(RX_GIT_BRANCH Unknown)
+    set(GIT_DIRTY 1)
+    set(GIT_BRANCH Unknown)
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
