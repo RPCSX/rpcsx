@@ -561,7 +561,7 @@ namespace vk
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = ensure(pgpu->features.independentBlend, "independentBlend is unsupported");
 		enabled_features.logicOp = VK_TRUE;
-		enabled_features.depthClamp = ensure(pgpu->features.depthClamp, "depthClamp is unsupported");
+		enabled_features.depthClamp = pgpu->features.depthClamp;
 		enabled_features.depthBounds = VK_TRUE;
 		enabled_features.wideLines = VK_TRUE;
 		enabled_features.largePoints = VK_TRUE;
