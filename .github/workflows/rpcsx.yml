@@ -48,18 +48,6 @@ jobs:
         include:
           - abi: arm64-v8a
             arch: armv8-a
-          - abi: arm64-v8a
-            arch: armv8.1-a
-          - abi: arm64-v8a
-            arch: armv8.2-a
-          - abi: arm64-v8a
-            arch: armv8.4-a
-          - abi: arm64-v8a
-            arch: armv8.5-a
-          - abi: arm64-v8a
-            arch: armv9-a
-          - abi: arm64-v8a
-            arch: armv9.1-a
           - abi: x86_64
             arch: x86-64
 
