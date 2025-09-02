@@ -31,7 +31,7 @@ jobs:
 
     - name: Build RPCSX
       run: |
-        cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14  -DCMAKE_CXX_FLAGS_INIT="-march=native"
+        cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14
         cmake --build build -j$(($(nproc) + 2))
 
     - name: Upload RPCSX
