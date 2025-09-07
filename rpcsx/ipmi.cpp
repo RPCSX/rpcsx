@@ -562,9 +562,9 @@ void ipmi::createGnmCompositorObjects(orbis::Process *) {
 void ipmi::createShellCoreObjects(orbis::Process *process) {
   auto fmtHex = [](auto value, bool upperCase = false) {
     if (upperCase) {
-      return std::format("{:X}", value);
+      return std::format("{:08X}", value);
     }
-    return std::format("{:x}", value);
+    return std::format("{:08x}", value);
   };
 
   createIpmiServer(process, "SceSystemLoggerService");
