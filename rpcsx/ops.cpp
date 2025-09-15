@@ -279,7 +279,7 @@ orbis::SysResult virtual_query(orbis::Thread *thread,
   }
 
   if (!vm::virtualQuery(addr, flags, (vm::VirtualQueryInfo *)info)) {
-    return ErrorCode::FAULT;
+    return ErrorCode::ACCES;
   }
   return {};
 }
