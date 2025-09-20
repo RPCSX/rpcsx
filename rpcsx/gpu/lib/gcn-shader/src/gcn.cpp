@@ -270,8 +270,22 @@ gcn::Context::getOrCreateLabel(ir::Location loc, ir::Region body,
       return {it->second.staticCast<ir::Value>(), false};
     }
 
-    auto injectedLabel =
-        Builder::createInsertBefore(*this, it->second).createSpvLabel(loc);
+    Builder builder;
+
+    {
+      auto labelIt = it;
+      while (labelIt != instructions.end() && labelIt->second == nullptr) {
+        ++labelIt;
+      }
+
+      if (labelIt != instructions.end()) {
+        builder = Builder::createInsertBefore(*this, labelIt->second);
+      } else {
+        builder = Builder::createAppend(*this, body);
+      }
+    }
+
+    auto injectedLabel = builder.createSpvLabel(loc);
     it->second = injectedLabel;
     return {injectedLabel, false};
   }
@@ -280,8 +294,21 @@ gcn::Context::getOrCreateLabel(ir::Location loc, ir::Region body,
   if (it == instructions.end()) {
     newLabel = Builder::createAppend(*this, body).createSpvLabel(loc);
   } else {
-    newLabel =
-        Builder::createInsertBefore(*this, it->second).createSpvLabel(loc);
+    Builder builder;
+
+    {
+      while (it != instructions.end() && it->second == nullptr) {
+        ++it;
+      }
+
+      if (it != instructions.end()) {
+        builder = Builder::createInsertBefore(*this, it->second);
+      } else {
+        builder = Builder::createAppend(*this, body);
+      }
+    }
+
+    newLabel = builder.createSpvLabel(loc);
   }
 
   instructions.emplace_hint(it, address, newLabel);
@@ -1896,7 +1923,6 @@ gcn::deserialize(gcn::Context &context, const gcn::Environment &environment,
     gcn::Builder::createInsertBefore(context, label)
         .createSpvBranch(label.getLocation(), label.staticCast<ir::Value>());
   }
-
 
   auto exitLabel = context.epilogue.getFirst().staticCast<ir::Value>();
   // create label with return instead of jump to epilogue for cfg
