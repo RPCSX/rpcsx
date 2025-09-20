@@ -113,7 +113,7 @@ std::optional<BinaryLayout> deserialize(ir::Context &context,
 ///
 /// \returns A vector of u32 values representing the SPIR-V binary.
 ///
-std::vector<std::uint32_t> serialize(ir::Region body);
+std::vector<std::uint32_t> serialize(ir::RegionLike body);
 
 inline std::vector<std::uint32_t> serialize(ir::Context &context,
                                             BinaryLayout &&layout) {

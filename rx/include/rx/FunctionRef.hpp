@@ -1,6 +1,7 @@
 #pragma once
 
 #include <compare>
+#include <type_traits>
 #include <utility>
 
 namespace rx {
@@ -12,7 +13,7 @@ template <typename RT, typename... ArgsT> class FunctionRef<RT(ArgsT...)> {
 public:
   constexpr FunctionRef() = default;
 
-  template <typename T>
+  template <typename T> requires (!std::is_same_v<std::remove_cvref_t<T>, FunctionRef>)
   constexpr FunctionRef(T &&object)
     requires requires(ArgsT... args) { RT(object(args...)); }
       : context(

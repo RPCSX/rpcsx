@@ -12,7 +12,7 @@ static std::string getTypeName(ir::Value type);
 static std::string getConstantName(ir::Value constant) {
   if (constant == ir::spv::OpConstant) {
     auto typeValue = constant.getOperand(0).getAsValue();
-    auto value = constant.getOperand(1);
+    auto &value = constant.getOperand(1);
 
     if (typeValue == ir::spv::OpTypeInt) {
       auto width = *typeValue.getOperand(0).getAsInt32();
@@ -310,6 +310,10 @@ ir::Node spv::Import::getOrCloneImpl(ir::Context &context, ir::Node node,
   return CloneMap::getOrCloneImpl(context, node, isOperand);
 }
 
+ir::Region spv::Context::createRegion(ir::Location loc) {
+  return create<ir::Region>(loc);
+}
+
 ir::Value spv::Context::createRegionWithLabel(ir::Location loc) {
   return Builder::createAppend(*this, create<ir::Region>(loc))
       .createSpvLabel(loc);
@@ -338,6 +342,10 @@ ir::Value spv::Context::getOrCreateConstant(ir::Value typeValue,
 
 ir::Value spv::Context::getNull(ir::Value typeValue) {
   return getOrCreateGlobal(ir::spv::OpConstantNull, {{typeValue}});
+}
+
+ir::Value spv::Context::getUndef(ir::Value typeValue) {
+  return getOrCreateGlobal(ir::spv::OpUndef, {{typeValue}});
 }
 
 ir::Value spv::Context::getType(ir::spv::Op baseType, int width,

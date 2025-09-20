@@ -14,6 +14,7 @@ enum Op {
   OpBarrier,
   OpJump,
   OpExit,
+  OpScope,
 
   OpCount,
 };
@@ -24,8 +25,9 @@ template <typename BaseT> struct BaseImpl : BaseT {
   using BaseT::BaseT;
   using BaseT::operator=;
 
-  void print(std::ostream &os, NameStorage &ns) const override {
-    BaseT::print(os, ns);
+  void print(std::ostream &os, NameStorage &ns,
+             const PrintOptions &opts) const override {
+    BaseT::print(os, ns, opts);
 
     if (link) {
       os << " : ";
@@ -220,7 +222,7 @@ struct ScopeWrapper : BaseWrapper<ImplT, ir::BlockWrapper> {
       std::set<Var> result;
       std::vector<Var> workList;
 
-      for (auto comp : var.getOperands()) {
+      for (auto &comp : var.getOperands()) {
         auto compVar = comp.getAsValue().staticCast<Var>();
         result.insert(compVar);
 
@@ -235,7 +237,7 @@ struct ScopeWrapper : BaseWrapper<ImplT, ir::BlockWrapper> {
         auto var = workList.back();
         workList.pop_back();
 
-        for (auto comp : var.getOperands()) {
+        for (auto &comp : var.getOperands()) {
           auto compVar = comp.getAsValue().staticCast<Var>();
           result.insert(compVar);
 
@@ -353,7 +355,8 @@ struct Builder : BuilderFacade<Builder<ImplT>, ImplT> {
   }
 
   Scope createScope(ir::Instruction labelInst) {
-    Scope result = this->template create<Scope>(labelInst.getLocation());
+    Scope result = this->template create<Scope>(labelInst.getLocation(),
+                                                ir::Kind::MemSSA, OpScope);
     result.impl->link = labelInst;
     return result;
   }
@@ -417,6 +420,8 @@ inline const char *getInstructionName(unsigned op) {
     return "jump";
   case OpExit:
     return "exit";
+  case OpScope:
+    return "scope";
   }
   return nullptr;
 }

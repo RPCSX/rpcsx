@@ -19,10 +19,12 @@ struct Block : BlockWrapper<BlockImpl> {
 };
 
 struct BlockImpl : ValueImpl, RegionLikeImpl {
-  BlockImpl(Location loc);
+  using ValueImpl::ValueImpl;
+
   Node clone(Context &context, CloneMap &map) const override;
 
-  void print(std::ostream &os, NameStorage &ns) const override {
+  void print(std::ostream &os, NameStorage &ns,
+             const PrintOptions &opts) const override {
     os << '%' << ns.getNameOf(const_cast<BlockImpl *>(this));
     os << " = ";
 
@@ -41,11 +43,13 @@ struct BlockImpl : ValueImpl, RegionLikeImpl {
     }
 
     os << "{\n";
+    auto childOpts = opts.nextLevel();
     for (auto child : children()) {
-      os << "  ";
-      child.print(os, ns);
+      childOpts.printIdent(os);
+      child.print(os, ns, childOpts);
       os << "\n";
     }
+    opts.printIdent(os);
     os << "}";
   }
 };

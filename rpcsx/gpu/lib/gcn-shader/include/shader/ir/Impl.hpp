@@ -4,8 +4,10 @@
 #include "Block.hpp"
 #include "Context.hpp"
 #include "InstructionImpl.hpp"
+#include "LoopConstruct.hpp"
 #include "NodeImpl.hpp"
 #include "RegionImpl.hpp"
+#include "SelectionConstruct.hpp"
 #include "ValueImpl.hpp"
 
 namespace shader::ir {
@@ -41,8 +43,8 @@ inline Operand InstructionImpl::eraseOperand(int index, int count) {
   if (index + count == operands.size()) {
     auto result = replaceOperand(index, nullptr);
 
-    for (int i = 1; i < count; ++i) {
-      replaceOperand(i + index, nullptr);
+    for (std::size_t i = index + 1; i < operands.size(); ++i) {
+      replaceOperand(i, nullptr);
     }
 
     operands.resize(operands.size() - count);
@@ -51,11 +53,7 @@ inline Operand InstructionImpl::eraseOperand(int index, int count) {
 
   auto result = replaceOperand(index, replaceOperand(index + 1, nullptr));
 
-  for (int i = 1; i < count; ++i) {
-    replaceOperand(index + i, nullptr);
-  }
-
-  for (int i = index + 1; i < operands.size() - count; ++i) {
+  for (std::size_t i = index + 1; i < operands.size() - count; ++i) {
     replaceOperand(i, replaceOperand(i + count, nullptr));
   }
 
@@ -146,6 +144,12 @@ inline void RegionLikeImpl::prependChild(Instruction node) {
   assert(node.getPrev() == nullptr);
   assert(node.getNext() == nullptr);
 
+#ifndef NDEBUG
+  if (auto thisInst = dynamic_cast<InstructionImpl *>(this)) {
+    assert(node != thisInst);
+  }
+#endif
+
   node.get()->parent = this;
   if (last == nullptr) {
     last = node;
@@ -161,6 +165,12 @@ inline void RegionLikeImpl::addChild(Instruction node) {
   assert(node.getPrev() == nullptr);
   assert(node.getNext() == nullptr);
 
+#ifndef NDEBUG
+  if (auto thisInst = dynamic_cast<InstructionImpl *>(this)) {
+    assert(node != thisInst);
+  }
+#endif
+  
   node.get()->parent = this;
   if (first == nullptr) {
     first = node;
@@ -171,13 +181,33 @@ inline void RegionLikeImpl::addChild(Instruction node) {
   last = node;
 }
 
-inline void RegionImpl::print(std::ostream &os, NameStorage &ns) const {
+inline void RegionLikeImpl::printRegion(std::ostream &os, NameStorage &ns,
+                                        const PrintOptions &opts) const {
+  if (auto node = dynamic_cast<const NodeImpl *>(this)) {
+    node->print(os, ns, opts);
+  } else {
+    os << "<detached region>";
+  }
+}
+
+inline auto RegionLikeImpl::getParent() const {
+  if (auto inst = dynamic_cast<const InstructionImpl *>(this)) {
+    return inst->parent;
+  }
+
+  return RegionLike();
+}
+
+inline void RegionImpl::print(std::ostream &os, NameStorage &ns,
+                              const PrintOptions &opts) const {
+  opts.printIdent(os);
   os << "{\n";
-  for (auto child : children()) {
-    os << "  ";
-    child.print(os, ns);
+  for (auto childIdent = opts.nextLevel(); auto child : children()) {
+    childIdent.printIdent(os);
+    child.print(os, ns, childIdent);
     os << "\n";
   }
+  opts.printIdent(os);
   os << "}";
 }
 
@@ -230,6 +260,24 @@ T cloneInstructionImpl(const U *object, Context &context, CloneMap &map,
 
   return result;
 }
+
+template <typename T, typename U, typename... ArgsT>
+  requires(std::is_same_v<typename T::underlying_type, U>)
+T cloneBlockImpl(const U *object, Context &context, CloneMap &map,
+                 ArgsT &&...args) {
+  auto result = context.create<T>(clone(object->getLocation(), context),
+                                  std::forward<ArgsT>(args)...);
+
+  for (auto &&operand : object->getOperands()) {
+    result.addOperand(operand.clone(context, map));
+  }
+
+  for (auto &&child : object->children()) {
+    result.addChild(ir::clone(child, context, map));
+  }
+
+  return result;
+}
 } // namespace detail
 
 inline Node InstructionImpl::clone(Context &context, CloneMap &map) const {
@@ -250,20 +298,24 @@ inline Node RegionImpl::clone(Context &context, CloneMap &map) const {
   return result;
 }
 
-inline BlockImpl::BlockImpl(Location loc)
-    : ValueImpl(loc, ir::Kind::Builtin, builtin::BLOCK) {}
-
 inline Node BlockImpl::clone(Context &context, CloneMap &map) const {
-  auto result = context.create<Block>(ir::clone(getLocation(), context));
-  for (auto &&operand : getOperands()) {
-    result.addOperand(operand.clone(context, map));
-  }
+  return detail::cloneBlockImpl<Block>(this, context, map, kind, op);
+}
 
-  for (auto &&child : children()) {
-    result.addChild(ir::clone(child, context, map));
-  }
+inline Node ContinueConstructImpl::clone(Context &context,
+                                         CloneMap &map) const {
+  return detail::cloneBlockImpl<ContinueConstruct>(this, context, map, kind,
+                                                   op);
+}
 
-  return result;
+inline Node LoopConstructImpl::clone(Context &context, CloneMap &map) const {
+  return detail::cloneBlockImpl<LoopConstruct>(this, context, map, kind, op);
+}
+
+inline Node SelectionConstructImpl::clone(Context &context,
+                                          CloneMap &map) const {
+  return detail::cloneBlockImpl<SelectionConstruct>(this, context, map, kind,
+                                                    op);
 }
 
 inline Operand Operand::clone(Context &context, CloneMap &map) const {
@@ -324,7 +376,8 @@ inline Node memssa::DefImpl::clone(Context &context, CloneMap &map) const {
 
 inline Node memssa::ScopeImpl::clone(Context &context, CloneMap &map) const {
   auto self = Scope(const_cast<ScopeImpl *>(this));
-  auto result = context.create<Scope>(ir::clone(self.getLocation(), context));
+  auto result =
+      context.create<Scope>(ir::clone(self.getLocation(), context), kind, op);
 
   for (auto &&operand : self.getOperands()) {
     result.addOperand(operand.clone(context, map));

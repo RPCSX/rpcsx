@@ -1,6 +1,8 @@
 #pragma once
 #include "../ir/Block.hpp"
 #include "../ir/Builder.hpp"
+#include "../ir/LoopConstruct.hpp"
+#include "../ir/SelectionConstruct.hpp"
 #include "../ir/Value.hpp"
 
 namespace shader::ir {
@@ -11,8 +13,9 @@ namespace shader::ir::builtin {
 enum Op {
   INVALID_INSTRUCTION,
   BLOCK,
-  IF_ELSE,
-  LOOP,
+  LOOP_CONSTRUCT,
+  CONTINUE_CONSTRUCT,
+  SELECTION_CONSTRUCT,
 };
 
 inline const char *getInstructionName(unsigned id) {
@@ -23,11 +26,14 @@ inline const char *getInstructionName(unsigned id) {
   case BLOCK:
     return "block";
 
-  case IF_ELSE:
-    return "ifElse";
+  case LOOP_CONSTRUCT:
+    return "loop_construct";
 
-  case LOOP:
-    return "loop";
+  case CONTINUE_CONSTRUCT:
+    return "continue_construct";
+
+  case SELECTION_CONSTRUCT:
+    return "selection_construct";
   }
   return nullptr;
 }
@@ -46,23 +52,30 @@ struct Builder : BuilderFacade<Builder<ImplT>, ImplT> {
                                               INVALID_INSTRUCTION);
   }
 
-  Instruction createIfElse(Location location, Value cond, Block ifTrue,
-                           Block ifFalse = {}) {
-    std::vector<Operand> operands = {{cond, ifTrue}};
-    if (ifFalse) {
-      operands.push_back(ifFalse);
-    }
-    return this->template create<Instruction>(location, Kind::Builtin, IF_ELSE,
-                                              operands);
+  SelectionConstruct createSelectionConstruct(Location location, ir::Block body,
+                                              ir::Block merge) {
+    return this->template create<SelectionConstruct>(
+        location, Kind::Builtin, SELECTION_CONSTRUCT,
+        std::span<const Operand>{{body, merge}});
   }
 
-  Instruction createLoop(Location location, Block body) {
-    return this->template create<Instruction>(location, Kind::Builtin, IF_ELSE,
-                                              {{body}});
+  ContinueConstruct createContinueConstruct(Location location, ir::Block body,
+                                            ir::Block merge) {
+    return this->template create<ContinueConstruct>(
+        location, Kind::Builtin, CONTINUE_CONSTRUCT,
+        std::span<const Operand>{{body, merge}});
+  }
+
+  LoopConstruct createLoopConstruct(Location location, ir::Block body,
+                                    ir::Block merge,
+                                    ContinueConstruct continueConstruct) {
+    return this->template create<LoopConstruct>(
+        location, Kind::Builtin, LOOP_CONSTRUCT,
+        std::span<const Operand>{{body, merge, continueConstruct}});
   }
 
   auto createBlock(Location location) {
-    return this->template create<Block>(location);
+    return this->template create<Block>(location, Kind::Builtin, BLOCK);
   }
 
   auto createRegion(Location location) {

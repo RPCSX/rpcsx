@@ -22,6 +22,46 @@ template <typename BuilderT, typename ImplT> struct BuilderFacade {
   }
 };
 
+class InsertionPoint {
+  RegionLike mInsertionStorage;
+  Instruction mInsertionPoint;
+
+public:
+  InsertionPoint() = default;
+
+  InsertionPoint(RegionLike storage, Instruction point)
+      : mInsertionStorage(storage), mInsertionPoint(point) {}
+
+  static InsertionPoint createInsertAfter(Instruction point) {
+    return {point.getParent(), point};
+  }
+
+  static InsertionPoint createInsertBefore(Instruction point) {
+    return {point.getParent(), point.getPrev()};
+  }
+
+  static InsertionPoint createAppend(RegionLike storage) {
+    return {storage, storage.getLast()};
+  }
+
+  static InsertionPoint createPrepend(RegionLike storage) {
+    return {storage, nullptr};
+  }
+
+  RegionLike getInsertionStorage() { return mInsertionStorage; }
+  Instruction getInsertionPoint() { return mInsertionPoint; }
+
+  void insert(ir::Instruction inst) {
+    getInsertionStorage().insertAfter(getInsertionPoint(), inst);
+    mInsertionPoint = inst;
+  }
+
+  void eraseAndInsert(ir::Instruction inst) {
+    inst.erase();
+    insert(inst);
+  }
+};
+
 template <template <typename> typename... InterfaceTs>
 class Builder : public InterfaceTs<Builder<InterfaceTs...>>... {
   Context *mContext{};
@@ -31,6 +71,13 @@ class Builder : public InterfaceTs<Builder<InterfaceTs...>>... {
 public:
   Builder() = default;
   Builder(Context &context) : mContext(&context) {}
+
+  static Builder create(Context &context, InsertionPoint point) {
+    auto result = Builder(context);
+    result.mInsertionStorage = point.getInsertionStorage();
+    result.mInsertionPoint = point.getInsertionPoint();
+    return result;
+  }
 
   static Builder createInsertAfter(Context &context, Instruction point) {
     auto result = Builder(context);
@@ -42,14 +89,14 @@ public:
   static Builder createInsertBefore(Context &context, Instruction point) {
     auto result = Builder(context);
     result.mInsertionStorage = point.getParent();
-    result.mInsertionPoint = point.getPrev().cast<Instruction>();
+    result.mInsertionPoint = point.getPrev();
     return result;
   }
 
   static Builder createAppend(Context &context, RegionLike storage) {
     auto result = Builder(context);
     result.mInsertionStorage = storage;
-    result.mInsertionPoint = storage.getLast().cast<Instruction>();
+    result.mInsertionPoint = storage.getLast();
     return result;
   }
 
@@ -65,6 +112,10 @@ public:
   Instruction getInsertionPoint() { return mInsertionPoint; }
   void setInsertionPoint(Instruction inst) { mInsertionPoint = inst; }
 
+  InsertionPoint saveInsertionPoint() {
+    return { mInsertionStorage, mInsertionPoint };
+  }
+
   template <typename T, typename... ArgsT>
     requires requires {
       typename T::underlying_type;
@@ -73,12 +124,21 @@ public:
     }
   T create(ArgsT &&...args) {
     auto result = getContext().template create<T>(std::forward<ArgsT>(args)...);
-    using InstanceType = typename T::underlying_type;
     getInsertionStorage().insertAfter(getInsertionPoint(), result);
     if constexpr (requires { mInsertionPoint = Instruction(result); }) {
       mInsertionPoint = Instruction(result);
     }
     return result;
+  }
+
+  void insert(ir::Instruction inst) {
+    getInsertionStorage().insertAfter(getInsertionPoint(), inst);
+    mInsertionPoint = inst;
+  }
+
+  void eraseAndInsert(ir::Instruction inst) {
+    inst.erase();
+    insert(inst);
   }
 };
 } // namespace shader::ir

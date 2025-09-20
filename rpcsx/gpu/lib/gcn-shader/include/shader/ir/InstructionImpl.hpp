@@ -47,12 +47,13 @@ struct InstructionImpl : NodeImpl {
 
   decltype(auto) getOperands() const { return std::span(operands); }
 
-  void print(std::ostream &os, NameStorage &ns) const override {
+  void print(std::ostream &os, NameStorage &ns,
+             const PrintOptions &) const override {
     os << getInstructionName(kind, op);
 
     if (!operands.empty()) {
       os << "(";
-      for (bool first = true; auto operand : operands) {
+      for (bool first = true; auto &operand : operands) {
         if (first) {
           first = false;
         } else {

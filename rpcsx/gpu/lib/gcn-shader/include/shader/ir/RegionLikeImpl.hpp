@@ -11,15 +11,20 @@ struct RegionLikeImpl {
   virtual ~RegionLikeImpl() = default;
 
   template <typename T = Instruction> auto children() const {
-    return PreincNodeIterable<T>{first, nullptr};
+    return Range<T>{first, nullptr};
   }
 
   template <typename T = Instruction> auto revChildren() const {
-    return RevPreincNodeIterable<T>{last, nullptr};
+    return RevRange<T>{last, nullptr};
   }
 
-  virtual void insertAfter(Instruction point, Instruction node);
-  virtual void prependChild(Instruction node);
-  virtual void addChild(Instruction node);
+  void insertAfter(Instruction point, Instruction node);
+  void prependChild(Instruction node);
+  void addChild(Instruction node);
+
+  void printRegion(std::ostream &os, NameStorage &ns,
+                           const PrintOptions &opts) const;
+
+  auto getParent() const;
 };
 } // namespace shader::ir

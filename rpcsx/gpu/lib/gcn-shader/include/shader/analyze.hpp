@@ -15,8 +15,6 @@
 #include <vector>
 
 namespace shader {
-struct DomTree;
-struct PostDomTree;
 class CFG {
 public:
   class Node {
@@ -42,7 +40,6 @@ public:
       mSuccessors.insert(to);
     }
 
-    bool hasPredecessor(Node *node) { return mPredecessors.contains(node); }
     bool hasSuccessor(Node *node) { return mSuccessors.contains(node); }
     auto &getPredecessors() { return mPredecessors; }
     auto &getSuccessors() { return mSuccessors; }
@@ -118,16 +115,6 @@ public:
   void print(std::ostream &os, ir::NameStorage &ns, bool subgraph = false,
              std::string_view nameSuffix = "");
   std::string genTest();
-
-  CFG buildView(CFG::Node *from, PostDomTree *domTree = nullptr,
-                const std::unordered_set<ir::Value> &stopLabels = {},
-                ir::Value continueLabel = nullptr);
-
-  CFG buildView(ir::Value from, PostDomTree *domTree = nullptr,
-                const std::unordered_set<ir::Value> &stopLabels = {},
-                ir::Value continueLabel = nullptr) {
-    return buildView(getNode(from), domTree, stopLabels, continueLabel);
-  }
 };
 
 class MemorySSA {
@@ -182,11 +169,27 @@ bool isWithoutSideEffects(ir::InstructionId id);
 bool isTerminator(ir::Instruction inst);
 bool isBranch(ir::Instruction inst);
 ir::Value unwrapPointer(ir::Value pointer);
+
+ir::Instruction getTerminator(ir::RegionLike region);
+std::vector<std::pair<ir::Block, int>> getAllSuccessors(ir::Block region);
+std::vector<std::pair<ir::Block, int>> getAllPredecessors(ir::Block region);
+
+std::unordered_set<ir::Block> getSuccessors(ir::Block region);
+std::unordered_set<ir::Block> getPredecessors(ir::Block region);
+std::size_t getSuccessorCount(ir::Block region);
+std::size_t getPredecessorCount(ir::Block region);
+bool hasSuccessor(ir::Block region, ir::Block successor);
+bool hasAtLeastSuccessors(ir::Block region, std::size_t count);
+ir::Block getUniqSuccessor(ir::Block region);
+
+graph::DomTree<ir::Block> buildDomTree(ir::Block block);
+graph::DomTree<ir::Block> buildPostDomTree(ir::Block block);
+graph::DomTree<ir::Block> buildDomTree(ir::RegionLike region);
+graph::DomTree<ir::Block> buildPostDomTree(ir::RegionLike region);
 graph::DomTree<ir::Value> buildDomTree(CFG &cfg, ir::Value root = nullptr);
 graph::DomTree<ir::Value> buildPostDomTree(CFG &cfg, ir::Value root);
 
-CFG buildCFG(ir::Instruction firstInstruction,
-             const std::unordered_set<ir::Value> &exitLabels = {},
+CFG buildCFG(ir::Instruction firstInstruction, ir::Value exitLabel = nullptr,
              ir::Value continueLabel = nullptr);
 MemorySSA buildMemorySSA(CFG &cfg, ModuleInfo *moduleInfo = nullptr);
 
@@ -199,23 +202,6 @@ bool dominates(ir::Instruction a, ir::Instruction b, bool isPostDom,
 
 ir::Value findNearestCommonDominator(ir::Instruction a, ir::Instruction b,
                                      graph::DomTree<ir::Value> &domTree);
-
-class BackEdgeStorage {
-  std::unordered_map<ir::Value, std::unordered_set<ir::Value>> backEdges;
-
-public:
-  BackEdgeStorage() = default;
-  BackEdgeStorage(CFG &cfg);
-
-  const std::unordered_set<ir::Value> *get(ir::Value value) {
-    if (auto it = backEdges.find(value); it != backEdges.end()) {
-      return &it->second;
-    }
-    return nullptr;
-  }
-
-  auto &all() { return backEdges; }
-};
 
 struct AnalysisStorage {
   template <typename... T>
@@ -245,9 +231,7 @@ struct AnalysisStorage {
   {
     void *result = getImpl(
         rx::TypeId::get<T>(), getDeleter<T>(),
-        [&] {
-          return std::make_unique<T>(std::forward<ArgsT>(args)...).release();
-        },
+        [&] { return new T(std::forward<ArgsT>(args)...); },
         [&](void *object) {
           *reinterpret_cast<T *>(object) = T(std::forward<ArgsT>(args)...);
         });
@@ -261,10 +245,7 @@ struct AnalysisStorage {
   {
     void *result = getImpl(
         rx::TypeId::get<T>(), getDeleter<T>(),
-        [&] {
-          return std::make_unique<T>(std::forward<BuilderFn>(builder)())
-              .release();
-        },
+        [&] { return new T(std::forward<BuilderFn>(builder)()); },
         [&](void *object) {
           *reinterpret_cast<T *>(object) = std::forward<BuilderFn>(builder)();
         });
@@ -304,20 +285,20 @@ private:
   std::map<rx::TypeId, Entry> mStorage;
 };
 
-struct PostDomTree : graph::DomTree<ir::Value> {
+struct PostDomTree : graph::DomTree<ir::Block> {
   PostDomTree() = default;
-  PostDomTree(graph::DomTree<ir::Value> &&other)
-      : graph::DomTree<ir::Value>::DomTree(std::move(other)) {}
-  PostDomTree(CFG &cfg, ir::Value root)
-      : PostDomTree(buildPostDomTree(cfg, root)) {}
+  PostDomTree(graph::DomTree<ir::Block> &&other)
+      : graph::DomTree<ir::Block>::DomTree(std::move(other)) {}
+  PostDomTree(ir::Block block) : PostDomTree(buildPostDomTree(block)) {}
+  PostDomTree(ir::RegionLike region) : DomTree(buildPostDomTree(region)) {}
 };
 
-struct DomTree : graph::DomTree<ir::Value> {
+struct DomTree : graph::DomTree<ir::Block> {
   DomTree() = default;
-  DomTree(graph::DomTree<ir::Value> &&other)
-      : graph::DomTree<ir::Value>::DomTree(std::move(other)) {}
-  DomTree(CFG &cfg, ir::Value root = nullptr)
-      : DomTree(buildDomTree(cfg, root)) {}
+  DomTree(graph::DomTree<ir::Block> &&other)
+      : graph::DomTree<ir::Block>::DomTree(std::move(other)) {}
+  DomTree(ir::Block block) : DomTree(buildDomTree(block)) {}
+  DomTree(ir::RegionLike region) : DomTree(buildDomTree(region)) {}
 };
 
 template <typename T, std::size_t> struct Tag : T {
@@ -337,107 +318,4 @@ template <typename T, std::size_t> struct Tag : T {
   }
 };
 
-struct Construct {
-  Construct *parent;
-  std::forward_list<Construct> children;
-  ir::Value header;
-  ir::Value merge;
-  ir::Value loopBody;
-  ir::Value loopContinue;
-  AnalysisStorage analysis;
-
-  static std::unique_ptr<Construct> createRoot(ir::RegionLike region,
-                                               ir::Value merge) {
-    auto result = std::make_unique<Construct>();
-    auto &cfg =
-        result->analysis.get<CFG>([&] { return buildCFG(region.getFirst()); });
-    result->header = cfg.getEntryLabel();
-    result->merge = merge;
-    return result;
-  }
-
-  Construct *createChild(ir::Value header, ir::Value merge) {
-    auto &result = children.emplace_front();
-    result.parent = this;
-    result.header = header;
-    result.merge = merge;
-    return &result;
-  }
-
-  Construct *createChild(ir::Value header, ir::Value merge,
-                         ir::Value loopContinue, ir::Value loopBody) {
-    auto &result = children.emplace_front();
-    result.parent = this;
-    result.header = header;
-    result.merge = merge;
-    result.loopContinue = loopContinue;
-    result.loopBody = loopBody;
-    return &result;
-  }
-
-  Construct createTemporaryChild(ir::Value header, ir::Value merge) {
-    Construct result;
-    result.parent = this;
-    result.header = header;
-    result.merge = merge;
-    return result;
-  }
-
-  CFG &getCfg() {
-    return analysis.get<CFG>([this] {
-      if (parent != nullptr) {
-        return parent->getCfg().buildView(header, &parent->getPostDomTree(),
-                                          {header, merge});
-      }
-
-      return buildCFG(header);
-    });
-  }
-
-  CFG &getCfgWithoutContinue() {
-    if (loopContinue == nullptr) {
-      return getCfg();
-    }
-
-    return analysis.get<Tag<CFG, kWithoutContinue>>([this] {
-      if (parent != nullptr) {
-        return parent->getCfg().buildView(header, &parent->getPostDomTree(),
-                                          {header, merge}, loopContinue);
-      }
-
-      return buildCFG(header, {}, loopContinue);
-    });
-  }
-
-  DomTree &getDomTree() { return analysis.get<DomTree>(getCfg(), header); }
-  PostDomTree &getPostDomTree() {
-    return analysis.get<PostDomTree>(getCfg(), merge);
-  }
-  BackEdgeStorage &getBackEdgeStorage() {
-    return analysis.get<BackEdgeStorage>(getCfg());
-  }
-  BackEdgeStorage &getBackEdgeWithoutContinueStorage() {
-    if (loopContinue == nullptr) {
-      return getBackEdgeStorage();
-    }
-    return analysis.get<Tag<BackEdgeStorage, kWithoutContinue>>(
-        getCfgWithoutContinue());
-  }
-  auto getBackEdges(ir::Value node) { return getBackEdgeStorage().get(node); }
-  auto getBackEdgesWithoutContinue(ir::Value node) {
-    return getBackEdgeWithoutContinueStorage().get(node);
-  }
-  auto getBackEdges() { return getBackEdges(header); }
-  void invalidate();
-  void invalidateAll();
-
-  bool isNull() const { return header == nullptr; }
-
-  void removeLastChild() { children.pop_front(); }
-
-private:
-  enum {
-    kWithoutContinue,
-  };
-};
 } // namespace shader

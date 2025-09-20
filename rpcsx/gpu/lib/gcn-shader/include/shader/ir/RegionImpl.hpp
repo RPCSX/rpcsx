@@ -9,7 +9,8 @@ namespace shader::ir {
 struct RegionImpl : NodeImpl, RegionLikeImpl {
   RegionImpl(Location loc) { setLocation(loc); }
 
-  void print(std::ostream &os, NameStorage &ns) const override;
+  void print(std::ostream &os, NameStorage &ns,
+             const PrintOptions &opts) const override;
   Node clone(Context &context, CloneMap &map) const override;
 };
 } // namespace shader::ir

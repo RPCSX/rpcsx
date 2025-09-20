@@ -28,9 +28,19 @@ struct RegionLikeWrapper : BaseWrapper<ImplT> {
   template <typename T = Instruction> auto revChildren() {
     return this->impl->template revChildren<T>();
   }
+
+  void print(std::ostream &os, NameStorage &ns,
+             const PrintOptions &opts = {}) const {
+    this->impl->printRegion(os, ns, opts);
+  }
+
+  auto getParent() const {
+    return this->impl->getParent();
+  }
 };
 
 struct RegionLikeImpl;
+
 struct RegionLike : RegionLikeWrapper<RegionLikeImpl, PointerWrapper> {
   using RegionLikeWrapper::RegionLikeWrapper;
   using RegionLikeWrapper::operator=;

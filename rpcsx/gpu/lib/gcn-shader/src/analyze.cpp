@@ -3,8 +3,8 @@
 #include "ir.hpp"
 #include "rx/die.hpp"
 #include "spv.hpp"
+#include <algorithm>
 #include <iostream>
-#include <print>
 
 using namespace shader;
 
@@ -174,6 +174,274 @@ ir::Value shader::unwrapPointer(ir::Value pointer) {
   }
 }
 
+ir::Instruction shader::getTerminator(ir::RegionLike region) {
+  if (auto block = region.cast<ir::Block>()) {
+    if (block == ir::builtin::LOOP_CONSTRUCT ||
+        block == ir::builtin::SELECTION_CONSTRUCT) {
+      return block;
+    }
+  }
+
+  auto terminator = region.getLast();
+  if (!terminator || !isTerminator(terminator)) {
+    return {};
+  }
+  return terminator;
+}
+
+static int getTotalSuccessorCount(ir::Instruction terminator) {
+  if (terminator == ir::spv::OpBranch) {
+    return 1;
+  }
+
+  if (terminator == ir::spv::OpBranchConditional) {
+    return 2;
+  }
+
+  if (terminator == ir::spv::OpSwitch) {
+    return terminator.getOperandCount() / 2;
+  }
+
+  if (terminator == ir::builtin::LOOP_CONSTRUCT ||
+      terminator == ir::builtin::SELECTION_CONSTRUCT) {
+    return 1;
+  }
+
+  return 0;
+}
+
+static void walkSuccessors(ir::Instruction terminator, auto &&cb) {
+  if (terminator == ir::spv::OpBranch) {
+    cb(terminator.getOperand(0).getAsValue(), 0);
+    return;
+  }
+
+  if (terminator == ir::spv::OpBranchConditional) {
+    cb(terminator.getOperand(1).getAsValue(), 1);
+    cb(terminator.getOperand(2).getAsValue(), 2);
+    return;
+  }
+
+  if (terminator == ir::spv::OpSwitch) {
+    for (std::size_t i = 1, end = terminator.getOperandCount(); i < end;
+         i += 2) {
+      cb(terminator.getOperand(i).getAsValue(), i);
+    }
+    return;
+  }
+
+  if (terminator == ir::builtin::LOOP_CONSTRUCT ||
+      terminator == ir::builtin::SELECTION_CONSTRUCT) {
+    cb(terminator.getOperand(0).getAsValue(), 0);
+  }
+}
+
+std::vector<std::pair<ir::Block, int>>
+shader::getAllSuccessors(ir::Block region) {
+  auto terminator = getTerminator(region);
+
+  if (!terminator) {
+    return {};
+  }
+
+  std::vector<std::pair<ir::Block, int>> result;
+  result.reserve(getTotalSuccessorCount(terminator));
+
+  walkSuccessors(terminator, [&](ir::Value successor, int operandIndex) {
+    if (auto block = successor.cast<ir::Block>()) {
+      result.emplace_back(block, operandIndex);
+    }
+  });
+
+  return result;
+}
+
+std::vector<std::pair<ir::Block, int>>
+shader::getAllPredecessors(ir::Block region) {
+  std::vector<std::pair<ir::Block, int>> result;
+  result.reserve(region.getUseList().size());
+
+  for (auto &use : region.getUseList()) {
+    if (isBranch(use.user)) {
+      if (auto block = use.user.getParent().cast<ir::Block>()) {
+        result.emplace_back(block, use.operandIndex);
+      }
+
+      continue;
+    }
+
+    if (use.operandIndex == 0 &&
+        (use.user == ir::builtin::LOOP_CONSTRUCT ||
+         use.user == ir::builtin::SELECTION_CONSTRUCT)) {
+      result.emplace_back(use.user.staticCast<ir::Block>(), use.operandIndex);
+      continue;
+    }
+  }
+
+  return result;
+}
+
+std::unordered_set<ir::Block> shader::getSuccessors(ir::Block block) {
+  auto terminator = getTerminator(block);
+
+  if (!terminator) {
+    return {};
+  }
+
+  std::unordered_set<ir::Block> result;
+
+  result.reserve(getTotalSuccessorCount(terminator));
+
+  walkSuccessors(terminator, [&](ir::Value successor, int) {
+    if (auto block = successor.cast<ir::Block>()) {
+      result.insert(block);
+    }
+  });
+
+  return result;
+}
+
+std::unordered_set<ir::Block> shader::getPredecessors(ir::Block block) {
+  std::unordered_set<ir::Block> result;
+  result.reserve(block.getUseList().size());
+
+  for (auto &use : block.getUseList()) {
+    if (use.operandIndex == 0 &&
+        (use.user == ir::builtin::LOOP_CONSTRUCT ||
+         use.user == ir::builtin::SELECTION_CONSTRUCT)) {
+      result.insert(use.user.staticCast<ir::Block>());
+      continue;
+    }
+
+    if (isBranch(use.user)) {
+      if (auto block = use.user.getParent().cast<ir::Block>()) {
+        result.insert(block);
+      }
+    }
+  }
+
+  return result;
+}
+
+std::size_t shader::getSuccessorCount(ir::Block region) {
+  return getSuccessors(region).size();
+}
+
+std::size_t shader::getPredecessorCount(ir::Block region) {
+  return getPredecessors(region).size();
+}
+
+bool shader::hasSuccessor(ir::Block region, ir::Block successor) {
+  auto terminator = getTerminator(region);
+
+  if (!terminator) {
+    return false;
+  }
+
+  bool result = false;
+
+  walkSuccessors(terminator, [&](ir::Value currentSuccessor, int) {
+    if (result) {
+      return;
+    }
+
+    if (currentSuccessor == successor) {
+      result = true;
+      return;
+    }
+  });
+
+  return result;
+}
+
+bool shader::hasAtLeastSuccessors(ir::Block region, std::size_t count) {
+  auto terminator = getTerminator(region);
+  if (!terminator) {
+    return false;
+  }
+
+  if (getTotalSuccessorCount(terminator) < count) {
+    return false;
+  }
+
+  std::vector<ir::Block> successors;
+  successors.reserve(count - 1);
+
+  bool result = false;
+  walkSuccessors(terminator, [&](ir::Value successor, int) {
+    if (result) {
+      return;
+    }
+
+    if (auto block = successor.cast<ir::Block>()) {
+      if (!std::ranges::contains(successors, block)) {
+        if (successors.size() + 1 >= count) {
+          result = true;
+          return;
+        }
+
+        successors.push_back(block);
+      }
+    }
+  });
+
+  return result;
+}
+
+ir::Block shader::getUniqSuccessor(ir::Block region) {
+  auto terminator = getTerminator(region);
+  if (!terminator) {
+    return {};
+  }
+
+  ir::Block result;
+  bool noUniqSuccessor = false;
+
+  walkSuccessors(terminator, [&](ir::Value successor, int) {
+    if (noUniqSuccessor) {
+      return;
+    }
+
+    if (auto block = successor.cast<ir::Block>()) {
+      if (!result) {
+        result = block;
+      } else if (result != block) {
+        noUniqSuccessor = true;
+      }
+    }
+  });
+
+  if (noUniqSuccessor) {
+    return {};
+  }
+
+  return result;
+}
+
+graph::DomTree<ir::Block> shader::buildDomTree(ir::Block block) {
+  return graph::buildDomTree(block, [&](ir::Block region, const auto &cb) {
+    for (auto succ : getSuccessors(region)) {
+      cb(succ);
+    }
+  });
+}
+
+graph::DomTree<ir::Block> shader::buildPostDomTree(ir::Block block) {
+  return graph::buildDomTree(block, [&](ir::Block region, const auto &cb) {
+    for (auto pred : getPredecessors(region)) {
+      cb(pred);
+    }
+  });
+}
+
+graph::DomTree<ir::Block> shader::buildDomTree(ir::RegionLike region) {
+  return buildDomTree(region.getFirst().staticCast<ir::Block>());
+}
+
+graph::DomTree<ir::Block> shader::buildPostDomTree(ir::RegionLike region) {
+  return buildPostDomTree(region.getLast().staticCast<ir::Block>());
+}
+
 graph::DomTree<ir::Value> shader::buildDomTree(CFG &cfg, ir::Value root) {
   if (root == nullptr) {
     root = cfg.getEntryLabel();
@@ -223,195 +491,38 @@ void CFG::print(std::ostream &os, ir::NameStorage &ns, bool subgraph,
 
 std::string CFG::genTest() {
   std::string result;
-  result += "ir::Value genCfg(spv::Context &context) {\n";
-  result += "  auto loc = context.getUnknownLocation();\n";
-  result += "  auto boolT = context.getTypeBool();\n";
-  result += "  auto trueV = context.getTrue();\n";
-  result += "  auto builder = Builder::createAppend(context, "
-            "context.layout.getOrCreateFunctions(context));\n";
-  result += "  auto debugs = Builder::createAppend(context, "
-            "context.layout.getOrCreateDebugs(context));\n";
-
+  result += "void cfgTest() {\n";
   ir::NameStorage ns;
 
   for (auto node : getPreorderNodes()) {
     auto name = ns.getNameOf(node->getLabel());
-    result += "  auto _" + name + " =  builder.createSpvLabel(loc);\n";
-    result += "  context.ns.setNameOf(_" + name + ", \"" + name + "\");\n";
-    result += "  debugs.createSpvName(loc, _" + name + ", \"" + name + "\");\n";
+    result += "  auto _" + name + " =  createLabel(\"" + name + "\");\n";
   }
 
   for (auto node : getPreorderNodes()) {
     auto name = ns.getNameOf(node->getLabel());
-    result +=
-        "  builder = Builder::createInsertAfter(context, _" + name + ");\n";
     if (node->getSuccessorCount() == 1) {
-      result += "  builder.createSpvBranch(loc, _" +
+      result += "  createBranch(_" +
                 ns.getNameOf((*node->getSuccessors().begin())->getLabel()) +
                 ");\n";
     } else if (node->getSuccessorCount() == 2) {
       auto firstIt = node->getSuccessors().begin();
       auto secondIt = std::next(firstIt);
-      result += "  builder.createSpvBranchConditional(loc, trueV, _" +
+      result += "  createConditionalBranch(_" +
                 ns.getNameOf((*firstIt)->getLabel()) + ", _" +
                 ns.getNameOf((*secondIt)->getLabel()) + ");\n";
 
     } else if (node->getSuccessorCount() == 0) {
-      result += "  builder.createSpvReturn(loc);\n";
-      result += "  auto returnBlock = _" + name + ";\n";
+      result += "  createReturn(_" + name + ");\n";
     }
   }
 
-  result += "  return returnBlock;\n";
   result += "}\n";
 
   return result;
 }
 
-static void walkSuccessors(ir::Instruction terminator, auto &&cb) {
-  if (terminator == ir::spv::OpBranch) {
-    cb(terminator.getOperand(0).getAsValue());
-    return;
-  }
-
-  if (terminator == ir::spv::OpBranchConditional) {
-    cb(terminator.getOperand(1).getAsValue());
-    cb(terminator.getOperand(2).getAsValue());
-    return;
-  }
-
-  if (terminator == ir::spv::OpSwitch) {
-    for (std::size_t i = 1, end = terminator.getOperandCount(); i < end;
-         i += 2) {
-      cb(terminator.getOperand(i).getAsValue());
-    }
-    return;
-  }
-}
-
-CFG CFG::buildView(CFG::Node *from, PostDomTree *domTree,
-                   const std::unordered_set<ir::Value> &stopLabels,
-                   ir::Value continueLabel) {
-  struct Item {
-    CFG::Node *node;
-    std::vector<CFG::Node *> successors;
-  };
-
-  std::vector<CFG::Node *> workList;
-  std::unordered_set<ir::Value> visited;
-
-  workList.push_back(from);
-  CFG result;
-  result.mEntryNode = result.getOrCreateNode(from->getLabel());
-  visited.insert(from->getLabel());
-
-  // for (auto pred : from->getPredecessors()) {
-  //   result.getOrCreateNode(pred->getLabel());
-  // }
-
-  auto createResultNode = [&](CFG::Node *node) {
-    auto newNode = result.getOrCreateNode(node->getLabel());
-    newNode->setTerminator(node->getTerminator());
-    return newNode;
-  };
-
-  while (!workList.empty()) {
-    auto item = workList.back();
-    workList.pop_back();
-
-    auto resultItem = createResultNode(item);
-    result.addPreorderNode(resultItem);
-
-    if (item != from) {
-      if (item->getLabel() == continueLabel) {
-        continue;
-      }
-      if (stopLabels.contains(item->getLabel())) {
-        if (domTree == nullptr) {
-          continue;
-        }
-
-        for (auto succ : item->getSuccessors()) {
-          if (!domTree->dominates(item->getLabel(), succ->getLabel())) {
-            continue;
-          }
-
-          auto resultSucc = createResultNode(succ);
-          resultItem->addEdge(resultSucc);
-
-          if (visited.insert(succ->getLabel()).second) {
-            workList.push_back(succ);
-          }
-        }
-
-        continue;
-      }
-    }
-
-    for (auto succ : item->getSuccessors()) {
-      auto resultSucc = createResultNode(succ);
-      resultItem->addEdge(resultSucc);
-
-      if (visited.insert(succ->getLabel()).second) {
-        workList.push_back(succ);
-      }
-    }
-  }
-
-  if (domTree != nullptr) {
-    return result;
-  }
-
-  for (auto exitLabel : stopLabels) {
-    if (exitLabel == nullptr) {
-      continue;
-    }
-
-    // collect internal branches from exitLabel. Need to collect all blocks
-    // first to be able discard edges to not exists in this CFG target blocks
-    if (auto from = result.getNode(exitLabel)) {
-      for (auto succ : getNode(exitLabel)->getSuccessors()) {
-        if (auto to = result.getNode(succ->getLabel())) {
-          from->addEdge(to);
-        }
-      }
-    }
-  }
-
-  return result;
-}
-
-void Construct::invalidateAll() {
-  Construct *root = this;
-  while (root->parent != nullptr) {
-    root = root->parent;
-  }
-
-  std::vector<Construct *> workList;
-  workList.push_back(root);
-
-  while (!workList.empty()) {
-    auto item = workList.back();
-    workList.pop_back();
-    item->analysis.invalidateAll();
-
-    for (auto &child : item->children) {
-      workList.push_back(&child);
-    }
-  }
-}
-
-void Construct::invalidate() {
-  invalidateAll();
-  // Construct *item = this;
-  // while (item != nullptr) {
-  //   item->analysis.invalidateAll();
-  //   item = item->parent;
-  // }
-}
-
-CFG shader::buildCFG(ir::Instruction firstInstruction,
-                     const std::unordered_set<ir::Value> &exitLabels,
+CFG shader::buildCFG(ir::Instruction firstInstruction, ir::Value exitLabel,
                      ir::Value continueLabel) {
   struct Item {
     CFG::Node *node;
@@ -426,14 +537,16 @@ CFG shader::buildCFG(ir::Instruction firstInstruction,
 
   std::unordered_set<CFG::Node *> visited;
 
-  bool force = true;
-
   auto addSuccessor = [&](Item &from, ir::Value toLabel) {
+    if (toLabel == continueLabel) {
+      return;
+    }
+
     auto to = result.getOrCreateNode(toLabel);
     from.node->addEdge(to);
 
-    if (!force && (exitLabels.contains(from.node->getLabel()) ||
-                   from.node->getLabel() == continueLabel)) {
+    if (from.node->getLabel() == exitLabel ||
+        from.node->getLabel() == continueLabel) {
       return;
     }
 
@@ -471,7 +584,6 @@ CFG shader::buildCFG(ir::Instruction firstInstruction,
         visited.insert(item.node);
       } else {
         item.iterator = nullptr;
-        force = false;
       }
 
       continue;
@@ -481,7 +593,8 @@ CFG shader::buildCFG(ir::Instruction firstInstruction,
       item.node->setTerminator(inst);
       item.iterator = nullptr;
 
-      walkSuccessors(inst, [&](ir::Value label) { addSuccessor(item, label); });
+      walkSuccessors(inst,
+                     [&](ir::Value label, int) { addSuccessor(item, label); });
       continue;
     }
 
@@ -489,22 +602,6 @@ CFG shader::buildCFG(ir::Instruction firstInstruction,
       item.node->setTerminator(inst);
       item.iterator = nullptr;
       continue;
-    }
-  }
-
-  for (auto exitLabel : exitLabels) {
-    if (exitLabel == nullptr) {
-      continue;
-    }
-
-    // collect internal branches from exitLabel. Need to collect all blocks
-    // first to be able discard edges to not exists in this CFG target blocks
-    if (auto from = result.getNode(exitLabel)) {
-      walkSuccessors(from->getTerminator(), [&](ir::Value toLabel) {
-        if (auto to = result.getNode(toLabel)) {
-          from->addEdge(to);
-        }
-      });
     }
   }
 
@@ -930,13 +1027,6 @@ MemorySSA MemorySSABuilder::build(CFG &cfg, auto &&handleInst) {
     }
   }
 
-  // auto domTree = graph::DomTreeBuilder<ir::memssa::Scope>{}.build(
-  //     entryScope, [&](ir::memssa::Scope scope, const auto &cb) {
-  //       for (auto succ : scope.getSuccessors()) {
-  //         cb(succ);
-  //       }
-  //     });
-
   for (auto scope : ir::range<ir::memssa::Scope>(entryScope)) {
     for (auto use : scope.children<ir::memssa::Use>()) {
       auto &user = memSSA.userDefs[use.getLinkedInst()];
@@ -1219,57 +1309,4 @@ shader::findNearestCommonDominator(ir::Instruction a, ir::Instruction b,
 
   return domTree.findNearestCommonDominator(a.staticCast<ir::Value>(),
                                             b.staticCast<ir::Value>());
-}
-
-BackEdgeStorage::BackEdgeStorage(CFG &cfg) {
-  struct Entry {
-    ir::Value bb;
-    CFG::Node::Iterator successorsIt;
-    CFG::Node::Iterator successorsEnd;
-  };
-
-  std::vector<Entry> workList;
-  std::unordered_set<ir::Value> inWorkList;
-  // std::unordered_set<ir::Value> viewed;
-  workList.reserve(cfg.getPostorderNodes().size());
-  inWorkList.reserve(cfg.getPostorderNodes().size());
-
-  auto addToWorkList = [&](CFG::Node *node) {
-    if (inWorkList.insert(node->getLabel()).second) {
-      workList.push_back({
-          .bb = node->getLabel(),
-          .successorsIt = node->getSuccessors().begin(),
-          .successorsEnd = node->getSuccessors().end(),
-      });
-      return true;
-    }
-
-    return false;
-  };
-
-  addToWorkList(cfg.getEntryNode());
-
-  while (!workList.empty()) {
-    auto &entry = workList.back();
-
-    if (entry.successorsIt == entry.successorsEnd) {
-      // viewed.insert(inWorkList.extract(entry.bb));
-      workList.pop_back();
-      continue;
-    }
-
-    auto label = entry.bb;
-    auto it = entry.successorsIt;
-    ++entry.successorsIt;
-
-    auto successor = *it;
-
-    // if (viewed.contains(successor->getLabel())) {
-    //   continue;
-    // }
-
-    if (!addToWorkList(successor)) {
-      backEdges[successor->getLabel()].insert(label);
-    }
-  }
 }

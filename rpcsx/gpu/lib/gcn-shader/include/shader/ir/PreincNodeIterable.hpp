@@ -1,9 +1,10 @@
 #pragma once
 
 #include "InstructionImpl.hpp" // IWYU pragma: keep
+#include <type_traits>
 
 namespace shader::ir {
-template <typename T> struct PreincNodeIterable {
+template <typename T = Instruction> struct Range {
   struct EndIterator {};
 
   struct Iterator {
@@ -52,8 +53,12 @@ template <typename T> struct PreincNodeIterable {
     }
   };
 
-  PreincNodeIterable(Instruction beginIt, Instruction endIt)
+  Range(Instruction beginIt, Instruction endIt)
       : mBeginIt(beginIt), mEndIt(endIt) {}
+
+  template <typename OtherT>
+    requires(!std::is_same_v<OtherT, Range>)
+  Range(OtherT other) : Range(other.mBeginIt, other.mEndIt) {}
 
   Iterator begin() const { return Iterator(mBeginIt, mEndIt); }
   EndIterator end() const { return EndIterator{}; }
@@ -61,9 +66,11 @@ template <typename T> struct PreincNodeIterable {
 private:
   Instruction mBeginIt;
   Instruction mEndIt;
+
+  template <typename> friend struct Range;
 };
 
-template <typename T> struct RevPreincNodeIterable {
+template <typename T = Instruction> struct RevRange {
   struct EndIterator {};
 
   struct Iterator {
@@ -112,8 +119,12 @@ template <typename T> struct RevPreincNodeIterable {
     }
   };
 
-  RevPreincNodeIterable(Instruction beginIt, Instruction endIt)
+  RevRange(Instruction beginIt, Instruction endIt)
       : mBeginIt(beginIt), mEndIt(endIt) {}
+
+  template <typename OtherT>
+    requires(!std::is_same_v<OtherT, RevRange>)
+  RevRange(OtherT other) : RevRange(other.mBeginIt, other.mEndIt) {}
 
   Iterator begin() const { return Iterator(mBeginIt, mEndIt); }
   EndIterator end() const { return EndIterator{}; }
@@ -121,16 +132,24 @@ template <typename T> struct RevPreincNodeIterable {
 private:
   Instruction mBeginIt;
   Instruction mEndIt;
+
+  template <typename> friend struct RevRange;
 };
 
 template <typename T = Instruction>
-inline PreincNodeIterable<T> range(Instruction begin,
-                                   Instruction end = nullptr) {
+inline Range<T> range(Instruction begin, Instruction end = nullptr) {
+  if (end) {
+    assert(begin.getParent() == end.getParent());
+  }
+
   return {begin, end};
 }
 template <typename T = Instruction>
-inline RevPreincNodeIterable<T> revRange(Instruction begin,
-                                         Instruction end = nullptr) {
+inline RevRange<T> revRange(Instruction begin, Instruction end = nullptr) {
+  if (end) {
+    assert(begin.getParent() == end.getParent());
+  }
+
   return {begin, end};
 }
 } // namespace shader::ir

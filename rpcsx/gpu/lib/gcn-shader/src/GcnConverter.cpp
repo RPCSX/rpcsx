@@ -374,7 +374,7 @@ struct ResourcesBuilder {
         } else if (auto value = inst.cast<ir::Value>()) {
           resourcePhi.addOperand(value);
         } else {
-          auto block = resources.context.create<ir::Block>(inst.getLocation());
+          auto block = resources.context.create<ir::Block>(inst.getLocation(), ir::Kind::Builtin, ir::builtin::BLOCK);
           inst.erase();
           block.addChild(inst);
           resourcePhi.addOperand(block);
@@ -396,7 +396,8 @@ struct ResourcesBuilder {
       return value;
     }
 
-    auto block = resources.context.create<ir::Block>(inst.getLocation());
+    auto block = resources.context.create<ir::Block>(
+        inst.getLocation(), ir::Kind::Builtin, ir::builtin::BLOCK);
     block.addChild(inst);
     return block;
   }

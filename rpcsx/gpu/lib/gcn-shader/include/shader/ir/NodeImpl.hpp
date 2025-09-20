@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PrintOptions.hpp"
 #include "Location.hpp"
 #include "Node.hpp"
 #include "Operand.hpp"
@@ -59,7 +60,7 @@ struct NodeImpl {
   void setLocation(Location newLocation) { location = newLocation; }
   Location getLocation() const { return location; }
 
-  virtual void print(std::ostream &os, NameStorage &ns) const = 0;
+  virtual void print(std::ostream &os, NameStorage &ns, const PrintOptions &opts) const = 0;
   virtual Node clone(Context &context, CloneMap &map) const = 0;
 };
 } // namespace shader::ir

@@ -7,7 +7,7 @@
 using namespace shader;
 
 static std::uint32_t generateSpv(std::vector<std::uint32_t> &result,
-                                 shader::ir::Region body) {
+                                 shader::ir::RegionLike body) {
   std::map<shader::ir::Value, std::uint32_t> valueToId;
   std::uint32_t bounds = 1;
 
@@ -63,7 +63,7 @@ static std::uint32_t generateSpv(std::vector<std::uint32_t> &result,
       addWord(getValueId(value));
     }
 
-    for (auto operand : operands) {
+    for (auto &operand : operands) {
       if (auto value = operand.getAsValue()) {
         addWord(getValueId(value));
         continue;
@@ -126,7 +126,7 @@ shader::spv::deserialize(ir::Context &context,
   return {};
 }
 
-std::vector<std::uint32_t> shader::spv::serialize(ir::Region body) {
+std::vector<std::uint32_t> shader::spv::serialize(ir::RegionLike body) {
   std::vector<std::uint32_t> result;
   result.resize(5);
   result[0] = 0x07230203;
@@ -170,6 +170,7 @@ std::string shader::spv::disassembly(std::span<const std::uint32_t> spv,
   std::string result;
   if (text != nullptr) {
     result = std::string(text->str, text->length);
+    spvTextDestroy(text);
   }
 
   spvDiagnosticDestroy(diagnostic);

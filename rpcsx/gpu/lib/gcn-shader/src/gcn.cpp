@@ -1902,7 +1902,6 @@ gcn::deserialize(gcn::Context &context, const gcn::Environment &environment,
 
   std::print("\n\n{}\n\n", buildCFG(context.entryPoint).genTest());
 
-  structurizeCfg(context, context.body,
-                 context.epilogue.getFirst().cast<ir::Value>());
+  structurizeCfg(context, context.body);
   return context.body;
 }

@@ -28,6 +28,7 @@ struct Context : ir::Context {
 
   Context();
 
+  ir::Region createRegion(ir::Location loc);
   ir::Value createRegionWithLabel(ir::Location loc);
 
   void setName(ir::spv::IdRef inst, std::string name);
@@ -35,6 +36,7 @@ struct Context : ir::Context {
 
   ir::Value getOrCreateConstant(ir::Value typeValue, const ir::Operand &value);
   ir::Value getNull(ir::Value typeValue);
+  ir::Value getUndef(ir::Value typeValue);
 
   ir::Value getType(ir::spv::Op baseType, int width, bool isSigned);
   ir::Value getType(const TypeInfo &info);
