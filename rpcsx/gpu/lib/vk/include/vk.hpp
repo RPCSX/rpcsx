@@ -130,8 +130,8 @@ struct Context {
   }
 
   bool hasDeviceExtension(std::string_view ext);
-  void createSwapchain();
-  void recreateSwapchain();
+  void createSwapchain(VkExtent2D extent);
+  void recreateSwapchain(VkExtent2D extent);
   void createDevice(VkSurfaceKHR surface, int gpuIndex,
                     std::vector<const char *> requiredExtensions,
                     std::vector<const char *> optionalExtensions);

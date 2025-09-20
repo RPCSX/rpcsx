@@ -309,7 +309,15 @@ Device::~Device() {
 }
 
 void Device::start() {
-  vk::context->createSwapchain();
+  {
+    int width;
+    int height;
+    glfwGetWindowSize(window, &width, &height);
+    vk::context->createSwapchain({
+        .width = static_cast<uint32_t>(width),
+        .height = static_cast<uint32_t>(height),
+    });
+  }
 
   for (std::size_t i = 0; i < std::size(dmemFd); ++i) {
     if (dmemFd[i] != -1) {
@@ -900,13 +908,23 @@ bool Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg,
 }
 
 void Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg) {
+  auto recreateSwapchain = [this] {
+    int width;
+    int height;
+    glfwGetWindowSize(window, &width, &height);
+    vk::context->recreateSwapchain({
+        .width = static_cast<uint32_t>(width),
+        .height = static_cast<uint32_t>(height),
+    });
+  };
+
   if (!isImageAcquired) {
     while (true) {
       auto acquireNextImageResult = vkAcquireNextImageKHR(
           vk::context->device, vk::context->swapchain, UINT64_MAX,
           vk::context->presentCompleteSemaphore, VK_NULL_HANDLE, &imageIndex);
       if (acquireNextImageResult == VK_ERROR_OUT_OF_DATE_KHR) {
-        vk::context->recreateSwapchain();
+        recreateSwapchain();
         continue;
       }
 
@@ -951,7 +969,7 @@ void Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg) {
 
   if (vkQueuePresentResult == VK_ERROR_OUT_OF_DATE_KHR ||
       vkQueuePresentResult == VK_SUBOPTIMAL_KHR) {
-    vk::context->recreateSwapchain();
+    recreateSwapchain();
   } else {
     VK_VERIFY(vkQueuePresentResult);
   }

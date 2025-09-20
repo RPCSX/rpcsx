@@ -167,7 +167,7 @@ bool vk::Context::hasDeviceExtension(std::string_view ext) {
          deviceExtensions.end();
 }
 
-void vk::Context::createSwapchain() {
+void vk::Context::createSwapchain(VkExtent2D extent) {
   uint32_t formatCount;
   VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface,
                                                  &formatCount, nullptr));
@@ -196,7 +196,7 @@ void vk::Context::createSwapchain() {
     }
   }
 
-  recreateSwapchain();
+  recreateSwapchain(extent);
 
   {
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
@@ -209,7 +209,7 @@ void vk::Context::createSwapchain() {
   }
 }
 
-void vk::Context::recreateSwapchain() {
+void vk::Context::recreateSwapchain(VkExtent2D extent) {
   VkSwapchainKHR oldSwapchain = swapchain;
 
   VkSurfaceCapabilitiesKHR surfCaps;
@@ -225,6 +225,8 @@ void vk::Context::recreateSwapchain() {
 
   if (surfCaps.currentExtent.width != (uint32_t)-1) {
     swapchainExtent = surfCaps.currentExtent;
+  } else {
+    swapchainExtent = extent;
   }
 
   VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
