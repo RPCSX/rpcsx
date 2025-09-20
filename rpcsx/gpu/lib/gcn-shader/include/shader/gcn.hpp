@@ -60,19 +60,6 @@ void collectSemanticModuleInfo(SemanticModuleInfo &moduleInfo,
                                const spv::BinaryLayout &layout);
 SemanticInfo collectSemanticInfo(const SemanticModuleInfo &moduleInfo);
 
-struct InstructionRegion : ir::RegionLikeImpl {
-  ir::RegionLike base;
-  ir::Instruction *firstInstruction;
-
-  void insertAfter(ir::Instruction point, ir::Instruction node) {
-    if (!*firstInstruction) {
-      *firstInstruction = node;
-    }
-
-    base.insertAfter(point, node);
-  }
-};
-
 struct Context : spv::Context {
   ir::Region body;
   rx::MemoryAreaTable<> memoryMap;
@@ -83,7 +70,7 @@ struct Context : spv::Context {
 
   std::pair<ir::Value, bool> getOrCreateLabel(ir::Location loc, ir::Region body,
                                               std::uint64_t address);
-  Builder createBuilder(InstructionRegion &region, ir::Region bodyRegion,
+  Builder createBuilder(ir::Region bodyRegion,
                         std::uint64_t address);
 
   ir::Value createCast(ir::Location loc, Builder &builder, ir::Value targetType,

@@ -288,18 +288,23 @@ gcn::Context::getOrCreateLabel(ir::Location loc, ir::Region body,
   return {newLabel, true};
 }
 
-gcn::Builder gcn::Context::createBuilder(gcn::InstructionRegion &region,
-                                         ir::Region bodyRegion,
+gcn::Builder gcn::Context::createBuilder(ir::Region bodyRegion,
                                          std::uint64_t address) {
   auto it = instructions.lower_bound(address);
 
   if (it != instructions.end() && it->first == address) {
     if (it->second == nullptr) {
-      region.base = bodyRegion;
-      region.firstInstruction = &it->second;
+      auto result = Builder::createAppend(*this, bodyRegion);
+      while (it != instructions.end() && it->second == nullptr) {
+        ++it;
+      }
 
-      auto result = Builder::createAppend(*this, &region);
-      result.setInsertionPoint(it->second.getPrev());
+      if (it == instructions.end()) {
+        result.setInsertionPoint(bodyRegion.getLast());
+      } else {
+        result.setInsertionPoint(it->second.getPrev());
+      }
+
       return result;
     }
 
@@ -312,17 +317,15 @@ gcn::Builder gcn::Context::createBuilder(gcn::InstructionRegion &region,
     return Builder::createInsertBefore(*this, it->second);
   }
 
-  auto newNodeIt = instructions.emplace_hint(it, address, ir::Instruction{});
-  region.base = bodyRegion;
-  region.firstInstruction = &newNodeIt->second;
+  instructions.emplace_hint(it, address, ir::Instruction{});
 
   if (it != instructions.end()) {
-    auto result = Builder::createAppend(*this, &region);
+    auto result = Builder::createAppend(*this, bodyRegion);
     result.setInsertionPoint(it->second.getPrev());
     return result;
   }
 
-  auto result = Builder::createAppend(*this, &region);
+  auto result = Builder::createAppend(*this, bodyRegion);
   result.setInsertionPoint(bodyRegion.getLast());
   return result;
 }
@@ -1075,9 +1078,8 @@ static ir::Value deserializeGcnRegion(
     converter.body =
         converter.create<ir::Region>(locBuilder.getLocation(address));
   }
-  auto bodyRegion = converter.body;
-  gcn::InstructionRegion instRegion;
 
+  auto bodyRegion = converter.body;
   auto regionEntry = converter
                          .getOrCreateLabel(locBuilder.getLocation(address),
                                            bodyRegion, address)
@@ -1124,10 +1126,10 @@ static ir::Value deserializeGcnRegion(
     currentOp = isaInst.op;
 
     if (isaInst == ir::sopp::ENDPGM) {
-      auto builder = converter.createBuilder(instRegion, bodyRegion, instStart);
+      auto builder = converter.createBuilder(bodyRegion, instStart);
 
-      builder.createSpvBranch(loc,
-                              converter.epilogue.getFirst().cast<ir::Value>());
+      builder.createSpvBranch(
+          loc, converter.epilogue.getFirst().staticCast<ir::Value>());
       continue;
     }
 
@@ -1151,7 +1153,7 @@ static ir::Value deserializeGcnRegion(
       continue;
     }
 
-    auto builder = converter.createBuilder(instRegion, bodyRegion, instStart);
+    auto builder = converter.createBuilder(bodyRegion, instStart);
     auto instrBegin = builder.getInsertionPoint();
 
     auto injectExecTest =
@@ -1175,8 +1177,6 @@ static ir::Value deserializeGcnRegion(
       auto exec = prependInstBuilder.createValue(
           loc, ir::amdgpu::EXEC_TEST,
           converter.getType(execTestSem->returnType));
-      prependInstBuilder.createSpvSelectionMerge(
-          loc, mergeBlock, ir::spv::SelectionControl::None);
       prependInstBuilder.createSpvBranchConditional(loc, exec, instBlock,
                                                     mergeBlock);
     };
@@ -1243,8 +1243,6 @@ static ir::Value deserializeGcnRegion(
 
         {
           builder = gcn::Builder::createInsertBefore(converter, moveBodyBlock);
-          builder.createSpvSelectionMerge(loc, mergeBlock,
-                                          ir::spv::SelectionControl::None);
           builder.createSpvBranchConditional(loc, dstInBounds, moveBodyBlock,
                                              mergeBlock);
         }
@@ -1314,8 +1312,6 @@ static ir::Value deserializeGcnRegion(
 
         {
           builder = gcn::Builder::createInsertBefore(converter, moveBodyBlock);
-          builder.createSpvSelectionMerge(loc, mergeBlock,
-                                          ir::spv::SelectionControl::None);
           builder.createSpvBranchConditional(loc, dstInBounds, moveBodyBlock,
                                              mergeBlock);
         }
@@ -1407,7 +1403,8 @@ static ir::Value deserializeGcnRegion(
         workList.push_back(target);
       }
 
-      builder.createSpvBranchConditional(loc, inst, ifTrueLabel, ifFalseLabel);
+      converter.createBuilder(bodyRegion, instStart)
+          .createSpvBranchConditional(loc, inst, ifTrueLabel, ifFalseLabel);
       continue;
     }
 
@@ -1900,8 +1897,35 @@ gcn::deserialize(gcn::Context &context, const gcn::Environment &environment,
         .createSpvBranch(label.getLocation(), label.staticCast<ir::Value>());
   }
 
+
+  auto exitLabel = context.epilogue.getFirst().staticCast<ir::Value>();
+  // create label with return instead of jump to epilogue for cfg
+  {
+    auto builder = Builder::createAppend(context, context.body);
+    auto newLabel = builder.createSpvLabel(exitLabel.getLocation());
+    builder.createSpvReturn(exitLabel.getLocation());
+    exitLabel.replaceAllUsesWith(newLabel);
+  }
+
   std::print("\n\n{}\n\n", buildCFG(context.entryPoint).genTest());
 
   structurizeCfg(context, context.body);
+
+  context.entryPoint = context.body.getFirst().staticCast<ir::Value>();
+
+  if (context.body.getLast() != ir::spv::OpReturn) {
+    dump(context.body);
+    rx::die("gcn: unexpected terminator type");
+  }
+  context.body.getLast().remove();
+  auto structuralExitLabel = context.body.getLast().staticCast<ir::Value>();
+  if (structuralExitLabel != ir::spv::OpLabel) {
+    dump(context.body);
+    rx::die("gcn: unexpected terminator label");
+  }
+
+  // restore branches to epilogue
+  structuralExitLabel.replaceAllUsesWith(exitLabel);
+  structuralExitLabel.remove();
   return context.body;
 }
