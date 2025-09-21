@@ -411,8 +411,7 @@ scoped_unblock::scoped_unblock() {
         return g_currentThread->unblock();
       }
 
-      g_currentThread->block();
-      return true;
+      return g_currentThread->block();
     };
   }
 }
