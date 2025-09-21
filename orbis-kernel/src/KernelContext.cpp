@@ -382,7 +382,9 @@ void Thread::setSigMask(SigSet newSigMask) {
 void Thread::where() { tproc->ops->where(this); }
 
 bool Thread::unblock() {
-  if (interruptedMtx.load(std::memory_order::relaxed) != 0) {
+  std::uint32_t prev = interruptedMtx.exchange(0, std::memory_order::relaxed);
+  if (prev != 0) {
+    interruptedMtx.notify_one();
     return false;
   }
 
