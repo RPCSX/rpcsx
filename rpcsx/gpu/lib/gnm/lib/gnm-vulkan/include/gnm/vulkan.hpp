@@ -42,13 +42,13 @@ inline VkImageViewType toVkImageViewType(gnm::TextureType type) {
   case gnm::TextureType::Cube:
     return VK_IMAGE_VIEW_TYPE_2D;
   case gnm::TextureType::Array1D:
-    return VK_IMAGE_VIEW_TYPE_1D;
+    return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
   case gnm::TextureType::Array2D:
-    return VK_IMAGE_VIEW_TYPE_2D;
+    return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
   case gnm::TextureType::Msaa2D:
     return VK_IMAGE_VIEW_TYPE_2D;
   case gnm::TextureType::MsaaArray2D:
-    return VK_IMAGE_VIEW_TYPE_2D;
+    return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
   }
 
   rx::die("toVkImageViewType: unexpected texture type %u",
