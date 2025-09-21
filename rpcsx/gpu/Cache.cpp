@@ -1912,6 +1912,10 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       }
 
       format = gnm::toVkFormat(key.dfmt, key.nfmt);
+
+      if (format == VK_FORMAT_B5G6R5_UNORM_PACK16) {
+        format = VK_FORMAT_R5G6B5_UNORM_PACK16;
+      }
     } else {
       if (key.kind == ImageKind::Depth) {
         if (key.dfmt == gnm::kDataFormat32 &&
@@ -1938,10 +1942,6 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
       }
 
       usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    }
-
-    if (format == VK_FORMAT_B5G6R5_UNORM_PACK16) {
-      format = VK_FORMAT_R5G6B5_UNORM_PACK16;
     }
 
     auto image = vk::Image::Allocate(vk::getDeviceLocalMemory(),
@@ -2007,7 +2007,6 @@ Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
   auto storeRange = rx::AddressRange::fromBeginSize(key.writeAddress,
                                                     surfaceInfo.totalTiledSize);
 
-  auto format = gnm::toVkFormat(key.dfmt, key.nfmt);
   auto image = getImage(ImageKey::createFrom(key), access);
 
   VkComponentMapping components{
@@ -2017,8 +2016,15 @@ Cache::ImageView Cache::Tag::getImageView(const ImageViewKey &key,
       .a = gnm::toVkComponentSwizzle(key.a),
   };
 
-  if (format != image.format) {
-    std::swap(components.r, components.b);
+  VkFormat format;
+  if (key.kind == ImageKind::Color) {
+    format = gnm::toVkFormat(key.dfmt, key.nfmt);
+    if (image.format == VK_FORMAT_R5G6B5_UNORM_PACK16 &&
+        format == VK_FORMAT_B5G6R5_UNORM_PACK16) {
+      std::swap(components.r, components.b);
+    }
+  } else {
+    format = image.format;
   }
 
   auto result = vk::ImageView(gnm::toVkImageViewType(key.type), image.handle,
