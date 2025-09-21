@@ -1120,6 +1120,35 @@ struct CachedImageView : Cache::Entry {
 };
 
 ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &tbuffer) {
+  std::uint32_t width = tbuffer.width + 1u;
+  std::uint32_t height = tbuffer.height + 1u;
+  std::uint32_t depth = tbuffer.depth + 1u;
+  std::uint32_t arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u;
+
+  switch (tbuffer.type) {
+  case gnm::TextureType::Dim1D:
+    height = 1;
+    [[fallthrough]];
+  case gnm::TextureType::Msaa2D:
+  case gnm::TextureType::Dim2D:
+    depth = 1;
+    [[fallthrough]];
+  case gnm::TextureType::Dim3D:
+    arrayLayerCount = 1;
+    break;
+
+  case gnm::TextureType::Array1D:
+    height = 1;
+    [[fallthrough]];
+  case gnm::TextureType::MsaaArray2D:
+  case gnm::TextureType::Array2D:
+    depth = 1;
+    break;
+
+  case gnm::TextureType::Cube:
+    break;
+  }
+
   return {
       .readAddress = tbuffer.address(),
       .writeAddress = tbuffer.address(),
@@ -1129,15 +1158,15 @@ ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &tbuffer) {
       .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
       .extent =
           {
-              .width = tbuffer.width + 1u,
-              .height = tbuffer.height + 1u,
-              .depth = tbuffer.depth + 1u,
+              .width = width,
+              .height = height,
+              .depth = depth,
           },
       .pitch = tbuffer.pitch + 1u,
       .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
       .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
       .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
-      .arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u,
+      .arrayLayerCount = arrayLayerCount,
       .kind = ImageKind::Color,
       .pow2pad = tbuffer.pow2pad != 0,
       .r = tbuffer.dst_sel_x,
@@ -1148,6 +1177,35 @@ ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &tbuffer) {
 }
 
 ImageKey ImageKey::createFrom(const gnm::TBuffer &tbuffer) {
+  std::uint32_t width = tbuffer.width + 1u;
+  std::uint32_t height = tbuffer.height + 1u;
+  std::uint32_t depth = tbuffer.depth + 1u;
+  std::uint32_t arrayLayerCount = tbuffer.last_array + 1u;
+
+  switch (tbuffer.type) {
+  case gnm::TextureType::Dim1D:
+    height = 1;
+    [[fallthrough]];
+  case gnm::TextureType::Msaa2D:
+  case gnm::TextureType::Dim2D:
+    depth = 1;
+    [[fallthrough]];
+  case gnm::TextureType::Dim3D:
+    arrayLayerCount = 1;
+    break;
+
+  case gnm::TextureType::Array1D:
+    height = 1;
+    [[fallthrough]];
+  case gnm::TextureType::MsaaArray2D:
+  case gnm::TextureType::Array2D:
+    depth = 1;
+    break;
+
+  case gnm::TextureType::Cube:
+    break;
+  }
+
   return {
       .readAddress = tbuffer.address(),
       .writeAddress = tbuffer.address(),
@@ -1157,15 +1215,15 @@ ImageKey ImageKey::createFrom(const gnm::TBuffer &tbuffer) {
       .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
       .extent =
           {
-              .width = tbuffer.width + 1u,
-              .height = tbuffer.height + 1u,
-              .depth = tbuffer.depth + 1u,
+              .width = width,
+              .height = height,
+              .depth = depth,
           },
       .pitch = tbuffer.pitch + 1u,
       .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
       .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
-      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
-      .arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u,
+      .baseArrayLayer = 0,
+      .arrayLayerCount = arrayLayerCount,
       .kind = ImageKind::Color,
       .pow2pad = tbuffer.pow2pad != 0,
   };
@@ -1183,8 +1241,8 @@ ImageKey ImageKey::createFrom(const ImageViewKey &imageView) {
       .pitch = imageView.pitch,
       .baseMipLevel = imageView.baseMipLevel,
       .mipCount = imageView.mipCount,
-      .baseArrayLayer = imageView.baseArrayLayer,
-      .arrayLayerCount = imageView.arrayLayerCount,
+      .baseArrayLayer = 0,
+      .arrayLayerCount = imageView.baseArrayLayer + imageView.arrayLayerCount,
       .kind = imageView.kind,
       .pow2pad = imageView.pow2pad,
   };
