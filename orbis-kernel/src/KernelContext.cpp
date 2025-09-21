@@ -325,14 +325,14 @@ void Thread::sendSignal(int signo) {
     }
   }
 
-  if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = signo})) {
-    perror("pthread_sigqueue");
-  }
-
-
   // TODO: suspend uses another delivery confirmation
   if (signo != -1) {
     interruptedMtx.store(1, std::memory_order::release);
+
+    if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = signo})) {
+      perror("pthread_sigqueue");
+    }
+
     while (interruptedMtx.wait(1, std::chrono::microseconds(1000)) !=
            std::errc{}) {
       if (interruptedMtx.load() == 0) {
@@ -342,6 +342,10 @@ void Thread::sendSignal(int signo) {
       if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = -2})) {
         perror("pthread_sigqueue");
       }
+    }
+  } else {
+    if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = signo})) {
+      perror("pthread_sigqueue");
     }
   }
 }

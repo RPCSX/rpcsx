@@ -8,6 +8,7 @@
 #include "ipmi.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
+#include "orbis/ucontext.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "rx/Config.hpp"
 #include "rx/mem.hpp"
@@ -16,6 +17,7 @@
 #include "vfs.hpp"
 #include "vm.hpp"
 #include "xbyak/xbyak.h"
+#include <optional>
 #include <orbis/utils/Rc.hpp>
 #include <print>
 #include <rx/Version.hpp>
@@ -169,6 +171,37 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
                           orbis::g_currentThread, 2);
     } else {
       rx::printStackTrace(reinterpret_cast<ucontext_t *>(ucontext), 2);
+    }
+
+    if (orbis::g_currentThread != nullptr) {
+      auto toGuestSigno = [](int sig) -> std::optional<orbis::Signal> {
+        switch (sig) {
+        case SIGSEGV:
+          return orbis::kSigSegv;
+
+        case SIGBUS:
+          return orbis::kSigBus;
+
+        case SIGFPE:
+          return orbis::kSigFpe;
+
+        default:
+          return std::nullopt;
+        }
+      };
+
+      if (auto guestSigno = toGuestSigno(sig)) {
+        auto context = reinterpret_cast<ucontext_t *>(ucontext);
+        bool inGuestCode =
+            context->uc_mcontext.gregs[REG_RIP] < orbis::kMaxAddress;
+
+        if (inGuestCode) {
+          if (rx::thread::invokeSignalHandler(orbis::g_currentThread,
+                                              *guestSigno, context)) {
+            return;
+          }
+        }
+      }
     }
   }
 

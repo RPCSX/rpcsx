@@ -129,42 +129,16 @@ handleSigUser(int sig, siginfo_t *info, void *ucontext) {
   } else if (guestSignal >= 0) {
     ORBIS_LOG_WARNING(__FUNCTION__, "handled signal", guestSignal, inGuestCode,
                       ::getpid(), thread->tid);
-    auto it = thread->tproc->sigActions.find(guestSignal);
 
-    if (it != thread->tproc->sigActions.end()) {
-      auto guestContext = reinterpret_cast<ucontext_t *>(
-          inGuestCode ? context : thread->context);
+    if (!rx::thread::invokeSignalHandler(thread, guestSignal,
+                                         inGuestCode ? context : nullptr)) {
+      // no handler, mark signal as delivered
+      std::uint32_t prevValue = 1;
+      if (thread->interruptedMtx.compare_exchange_strong(prevValue, 0)) {
+        thread->interruptedMtx.notify_one();
+      }
 
-      auto sigact = it->second;
-      thread->setSigMask(sigact.mask);
-      auto handlerPtr = reinterpret_cast<std::uintptr_t>(sigact.handler);
-
-      auto rsp = guestContext->uc_mcontext.gregs[REG_RSP];
-
-      ORBIS_LOG_WARNING(__FUNCTION__, "invoking signal handler", guestSignal,
-                        rsp, thread->stackStart, thread->stackEnd);
-
-      // FIXME: alt stack?
-      rsp -= 128; // redzone
-      rsp -= sizeof(orbis::SigFrame);
-
-      // FIXME handle flags
-      auto &sigFrame = *std::bit_cast<orbis::SigFrame *>(rsp);
-      sigFrame = {};
-
-      rx::thread::copyContext(thread, sigFrame.context, *guestContext);
-      sigFrame.info.signo = guestSignal;
-      sigFrame.handler = handlerPtr;
-
-      guestContext->uc_mcontext.gregs[REG_RDI] = guestSignal; // arg1, signo
-      guestContext->uc_mcontext.gregs[REG_RSI] =
-          std::bit_cast<std::uintptr_t>(&sigFrame.info); // arg2, siginfo
-      guestContext->uc_mcontext.gregs[REG_RDX] =
-          std::bit_cast<std::uintptr_t>(&sigFrame.context); // arg3, ucontext
-      guestContext->uc_mcontext.gregs[REG_RCX] = 0;         // arg4, si_addr
-      guestContext->uc_mcontext.gregs[REG_RIP] = handlerPtr;
-
-      guestContext->uc_mcontext.gregs[REG_RSP] = rx::alignDown(rsp, 16);
+      guestSignal = -1;
     }
   }
 
@@ -184,6 +158,50 @@ std::size_t rx::thread::getSigAltStackSize() {
   static auto sigStackSize = std::max<std::size_t>(
       SIGSTKSZ, ::rx::alignUp(64 * 1024 * 1024, rx::mem::pageSize));
   return sigStackSize;
+}
+
+bool rx::thread::invokeSignalHandler(orbis::Thread *thread, int guestSignal,
+                                     ucontext_t *context) {
+  auto it = thread->tproc->sigActions.find(guestSignal);
+
+  if (it == thread->tproc->sigActions.end()) {
+    return false;
+  }
+
+  auto guestContext =
+      reinterpret_cast<ucontext_t *>(context ? context : thread->context);
+
+  auto sigact = it->second;
+  thread->setSigMask(sigact.mask);
+  auto handlerPtr = reinterpret_cast<std::uintptr_t>(sigact.handler);
+
+  auto rsp = guestContext->uc_mcontext.gregs[REG_RSP];
+
+  ORBIS_LOG_WARNING(__FUNCTION__, "invoking signal handler", guestSignal, rsp,
+                    thread->stackStart, thread->stackEnd);
+
+  // FIXME: alt stack?
+  rsp -= 128; // redzone
+  rsp -= sizeof(orbis::SigFrame);
+
+  // FIXME handle flags
+  auto &sigFrame = *std::bit_cast<orbis::SigFrame *>(rsp);
+  sigFrame = {};
+
+  rx::thread::copyContext(thread, sigFrame.context, *guestContext);
+  sigFrame.info.signo = guestSignal;
+  sigFrame.handler = handlerPtr;
+
+  guestContext->uc_mcontext.gregs[REG_RDI] = guestSignal; // arg1, signo
+  guestContext->uc_mcontext.gregs[REG_RSI] =
+      std::bit_cast<std::uintptr_t>(&sigFrame.info); // arg2, siginfo
+  guestContext->uc_mcontext.gregs[REG_RDX] =
+      std::bit_cast<std::uintptr_t>(&sigFrame.context); // arg3, ucontext
+  guestContext->uc_mcontext.gregs[REG_RCX] = 0;         // arg4, si_addr
+  guestContext->uc_mcontext.gregs[REG_RIP] = handlerPtr;
+
+  guestContext->uc_mcontext.gregs[REG_RSP] = rx::alignDown(rsp, 16);
+  return true;
 }
 
 void rx::thread::copyContext(orbis::MContext &dst, const mcontext_t &src) {
