@@ -11,6 +11,7 @@
 #include <sys/mman.h>
 #include <thread>
 #include <unistd.h>
+#include <utility>
 
 static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
 static constexpr std::uintptr_t kHeapBaseAddress = 0x00000600'0000'0000;
@@ -318,8 +319,30 @@ void Thread::suspend() { sendSignal(-1); }
 void Thread::resume() { sendSignal(-2); }
 
 void Thread::sendSignal(int signo) {
+  if (signo >= 0) {
+    if (!sigMask.test(signo)) {
+      return;
+    }
+  }
+
   if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = signo})) {
     perror("pthread_sigqueue");
+  }
+
+
+  // TODO: suspend uses another delivery confirmation
+  if (signo != -1) {
+    interruptedMtx.store(1, std::memory_order::release);
+    while (interruptedMtx.wait(1, std::chrono::microseconds(1000)) !=
+           std::errc{}) {
+      if (interruptedMtx.load() == 0) {
+        return;
+      }
+
+      if (pthread_sigqueue(getNativeHandle(), SIGUSR1, {.sival_int = -2})) {
+        perror("pthread_sigqueue");
+      }
+    }
   }
 }
 
@@ -335,19 +358,55 @@ void Thread::notifyUnblockedSignal(int signo) {
   }
 }
 
+void Thread::setSigMask(SigSet newSigMask) {
+  newSigMask.clear(kSigKill);
+  newSigMask.clear(kSigStop);
+
+  auto oldSigMask = std::exchange(sigMask, newSigMask);
+
+  for (std::size_t word = 0; word < std::size(newSigMask.bits); ++word) {
+    auto unblockedBits = ~oldSigMask.bits[word] & newSigMask.bits[word];
+    std::uint32_t offset = word * 32 + 1;
+
+    for (std::uint32_t i = std::countr_zero(unblockedBits); i < 32;
+         i += std::countr_zero(unblockedBits >> (i + 1)) + 1) {
+      notifyUnblockedSignal(offset + i);
+    }
+  }
+}
+
 void Thread::where() { tproc->ops->where(this); }
 
-void Thread::unblock() { tproc->ops->unblock(this); }
-void Thread::block() { tproc->ops->block(this); }
+bool Thread::unblock() {
+  if (interruptedMtx.load(std::memory_order::relaxed) != 0) {
+    return false;
+  }
+
+  tproc->ops->unblock(this);
+
+  return true;
+}
+
+bool Thread::block() {
+  tproc->ops->block(this);
+
+  std::uint32_t prev = interruptedMtx.exchange(0, std::memory_order::relaxed);
+  if (prev != 0) {
+    interruptedMtx.notify_one();
+  }
+
+  return prev == 0;
+}
 
 scoped_unblock::scoped_unblock() {
   if (g_currentThread && g_currentThread->context) {
     g_scopedUnblock = [](bool unblock) {
       if (unblock) {
-        g_currentThread->unblock();
-      } else {
-        g_currentThread->block();
+        return g_currentThread->unblock();
       }
+
+      g_currentThread->block();
+      return true;
     };
   }
 }

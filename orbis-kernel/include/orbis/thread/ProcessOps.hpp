@@ -73,6 +73,7 @@ struct ProcessOps {
   SysResult (*thr_kill2)(Thread *thread, pid_t pid, slong id, sint sig);
   SysResult (*thr_suspend)(Thread *thread, ptr<const timespec> timeout);
   SysResult (*thr_wake)(Thread *thread, slong id);
+  SysResult (*sigreturn)(Thread *thread, ptr<UContext> context);
   SysResult (*thr_set_name)(Thread *thread, slong id, ptr<const char> name);
 
   SysResult (*unmount)(Thread *thread, ptr<char> path, sint flags);

@@ -23,7 +23,7 @@ static constexpr auto kRelaxSpinCount = 12;
 static constexpr auto kSpinCount = 16;
 
 inline namespace utils {
-inline thread_local void (*g_scopedUnblock)(bool) = nullptr;
+inline thread_local bool (*g_scopedUnblock)(bool) = nullptr;
 
 bool try_spin_wait(auto &&pred) {
   for (std::size_t i = 0; i < kSpinCount; ++i) {

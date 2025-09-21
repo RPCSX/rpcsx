@@ -63,10 +63,6 @@ uint UmtxChain::notify_all(const UmtxKey &key) {
 }
 } // namespace orbis
 
-static bool isSpuriousWakeup(orbis::ErrorCode errc) {
-  return errc == orbis::ErrorCode::AGAIN || errc == orbis::ErrorCode::INTR;
-}
-
 orbis::ErrorCode orbis::umtx_lock_umtx(Thread *thread, ptr<umtx> umtx, ulong id,
                                        std::uint64_t ut) {
   ORBIS_LOG_TODO(__FUNCTION__, thread->tid, umtx, id, ut);
@@ -97,8 +93,7 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
       while (true) {
         orbis::scoped_unblock unblock;
         result = orbis::toErrorCode(node->second.cv.wait(chain.mtx));
-        if ((result != ErrorCode{} && !isSpuriousWakeup(result)) ||
-            node->second.thr != thread)
+        if ((result != ErrorCode{}) || node->second.thr != thread)
           break;
       }
     } else {
@@ -117,7 +112,7 @@ orbis::ErrorCode orbis::umtx_wait(Thread *thread, ptr<void> addr, ulong id,
           result = ErrorCode::TIMEDOUT;
           break;
         }
-        if (result != ErrorCode{} && !isSpuriousWakeup(result)) {
+        if (result != ErrorCode{}) {
           break;
         }
       }
@@ -193,7 +188,7 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
     if (mode == umutex_lock_mode::try_)
       return ErrorCode::BUSY;
 
-    if (error != ErrorCode{} && !isSpuriousWakeup(error))
+    if (error != ErrorCode{})
       return error;
 
     auto node = chain.enqueue(key, thread);
@@ -202,8 +197,8 @@ static ErrorCode do_lock_normal(Thread *thread, ptr<umutex> m, uint flags,
         orbis::scoped_unblock unblock;
         error = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
       }
-      if (error == ErrorCode{} && !isSpuriousWakeup(error) &&
-          node->second.thr == thread && m->owner.load() != 0) {
+      if (error == ErrorCode{} && node->second.thr == thread &&
+          m->owner.load() != 0) {
         error = ErrorCode::TIMEDOUT;
       }
     }
@@ -358,12 +353,12 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
 
   ErrorCode result = umtx_unlock_umutex(thread, m);
   if (result == ErrorCode{}) {
+    orbis::scoped_unblock unblock;
     if (ut + 1 == 0) {
       while (true) {
-        orbis::scoped_unblock unblock;
         result = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
-        if ((result != ErrorCode{} && !isSpuriousWakeup(result)) ||
-            node->second.thr != thread) {
+
+        if (result != ErrorCode{} || node->second.thr != thread) {
           break;
         }
       }
@@ -371,7 +366,6 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
       auto start = std::chrono::steady_clock::now();
       std::uint64_t udiff = 0;
       while (true) {
-        orbis::scoped_unblock unblock;
         result =
             orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut - udiff));
         if (node->second.thr != thread) {
@@ -385,7 +379,7 @@ orbis::ErrorCode orbis::umtx_cv_wait(Thread *thread, ptr<ucond> cv,
           break;
         }
 
-        if (result != ErrorCode{} && !isSpuriousWakeup(result)) {
+        if (result != ErrorCode{}) {
           break;
         }
       }
@@ -470,8 +464,7 @@ orbis::ErrorCode orbis::umtx_rw_rdlock(Thread *thread, ptr<urwlock> rwlock,
         while (true) {
           orbis::scoped_unblock unblock;
           result = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
-          if ((result != ErrorCode{} && !isSpuriousWakeup(result)) ||
-              node->second.thr != thread) {
+          if (result != ErrorCode{} || node->second.thr != thread) {
             break;
           }
         }
@@ -492,7 +485,7 @@ orbis::ErrorCode orbis::umtx_rw_rdlock(Thread *thread, ptr<urwlock> rwlock,
             break;
           }
 
-          if (result != ErrorCode{} && !isSpuriousWakeup(result)) {
+          if (result != ErrorCode{}) {
             break;
           }
         }
@@ -574,8 +567,7 @@ orbis::ErrorCode orbis::umtx_rw_wrlock(Thread *thread, ptr<urwlock> rwlock,
         while (true) {
           orbis::scoped_unblock unblock;
           error = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
-          if ((error != ErrorCode{} && !isSpuriousWakeup(error)) ||
-              node->second.thr != thread) {
+          if ((error != ErrorCode{}) || node->second.thr != thread) {
             break;
           }
         }
@@ -595,7 +587,7 @@ orbis::ErrorCode orbis::umtx_rw_wrlock(Thread *thread, ptr<urwlock> rwlock,
             error = ErrorCode::TIMEDOUT;
             break;
           }
-          if (error != ErrorCode{} && !isSpuriousWakeup(error)) {
+          if (error != ErrorCode{}) {
             break;
           }
         }
@@ -757,8 +749,7 @@ orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<usem> sem,
       while (true) {
         orbis::scoped_unblock unblock;
         result = orbis::toErrorCode(node->second.cv.wait(chain.mtx, ut));
-        if ((result != ErrorCode{} && !isSpuriousWakeup(result)) ||
-            node->second.thr != thread)
+        if ((result != ErrorCode{}) || node->second.thr != thread)
           break;
       }
     } else {
@@ -777,7 +768,7 @@ orbis::ErrorCode orbis::umtx_sem_wait(Thread *thread, ptr<usem> sem,
           result = ErrorCode::TIMEDOUT;
           break;
         }
-        if (result != ErrorCode{} && !isSpuriousWakeup(result)) {
+        if (result != ErrorCode{}) {
           break;
         }
       }

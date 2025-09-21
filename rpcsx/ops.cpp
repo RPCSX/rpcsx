@@ -650,6 +650,11 @@ SysResult thr_wake(orbis::Thread *thread, orbis::slong id) {
   ORBIS_LOG_FATAL(__FUNCTION__, id);
   return ErrorCode::NOTSUP;
 }
+SysResult sigreturn(orbis::Thread *thread,
+                    orbis::ptr<orbis::UContext> context) {
+  rx::thread::setContext(thread, *context);
+  return{};
+}
 SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
                        orbis::ptr<const char> name) {
   ORBIS_LOG_WARNING(__FUNCTION__, name, id, thread->tid);
@@ -1023,6 +1028,7 @@ ProcessOps rx::procOpsTable = {
     .thr_kill2 = thr_kill2,
     .thr_suspend = thr_suspend,
     .thr_wake = thr_wake,
+    .sigreturn = sigreturn,
     .thr_set_name = thr_set_name,
     .unmount = unmount,
     .nmount = nmount,

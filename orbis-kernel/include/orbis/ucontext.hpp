@@ -162,4 +162,10 @@ struct SigInfo {
     } spare;
   } reason;
 };
+
+struct SigFrame {
+  uint64_t handler;
+  UContext context;
+  SigInfo info;
+};
 } // namespace orbis

@@ -19,18 +19,28 @@ std::errc shared_atomic32::wait_impl(std::uint32_t oldValue,
                  g_scopedUnblock != nullptr;
 
   if (unblock) {
-    g_scopedUnblock(true);
+    if (!g_scopedUnblock(true)) {
+      return std::errc::interrupted;
+    }
   }
 
   int result = syscall(SYS_futex, this, FUTEX_WAIT, oldValue,
                        useTimeout ? &timeout : nullptr);
 
+  auto errorCode = result < 0 ? static_cast<std::errc>(errno) : std::errc{};
+
   if (unblock) {
-    g_scopedUnblock(false);
+    if (!g_scopedUnblock(false)) {
+      if (result < 0) {
+        return std::errc::interrupted;
+      }
+
+      return {};
+    }
   }
 
   if (result < 0) {
-    return static_cast<std::errc>(errno);
+    return errorCode;
   }
 
   return {};

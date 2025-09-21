@@ -41,6 +41,8 @@ struct Thread {
   kvector<SigInfo> queuedSignals;
   shared_atomic32 suspendFlags{0};
 
+  utils::shared_atomic32 interruptedMtx{ 0 };
+
   std::int64_t hostTid = -1;
   lwpid_t tid = -1;
   unsigned unblocked = 0;
@@ -64,13 +66,14 @@ struct Thread {
   // Print backtrace
   void where();
 
-  void unblock();
-  void block();
+  bool unblock();
+  bool block();
 
   void suspend();
   void resume();
   void sendSignal(int signo);
   void notifyUnblockedSignal(int signo);
+  void setSigMask(SigSet newSigMask);
 
   // FIXME: implement thread destruction
   void incRef() {}

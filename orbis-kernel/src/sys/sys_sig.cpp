@@ -2,6 +2,7 @@
 #include "sys/sysproto.hpp"
 #include "thread/Process.hpp"
 #include "thread/Thread.hpp"
+#include "thread/ProcessOps.hpp"
 #include "ucontext.hpp"
 #include "utils/Logs.hpp"
 #include <csignal>
@@ -120,11 +121,11 @@ orbis::SysResult orbis::sys_kill(Thread *thread, sint pid, sint signum) {
     hostPid = process->hostPid;
   }
 
-  // TODO: wrap signal
-  // int result = ::kill(hostPid, signum);
-  // if (result < 0) {
-  //   return static_cast<ErrorCode>(errno);
-  // }
+  // FIXME: invoke subscriber thread
+  int result = ::sigqueue(hostPid, SIGUSR1, {.sival_int = signum});
+  if (result < 0) {
+    return static_cast<ErrorCode>(errno);
+  }
 
   return {};
 }
@@ -139,13 +140,11 @@ orbis::SysResult orbis::sys_sigqueue(Thread *thread, pid_t pid, sint signum,
 orbis::SysResult orbis::sys_sigreturn(Thread *thread, ptr<UContext> sigcntxp) {
   ORBIS_LOG_WARNING(__FUNCTION__, sigcntxp);
 
-  // auto sigRet = thread->sigReturns.front();
-  // thread->sigReturns.erase(thread->sigReturns.begin(),
-  // thread->sigReturns.begin() + 1); writeRegister(thread->context,
-  // RegisterId::rip, sigRet.rip); writeRegister(thread->context,
-  // RegisterId::rsp, sigRet.rsp); ORBIS_LOG_ERROR(__FUNCTION__, sigRet.rip,
-  // sigRet.rsp);
-  return {};
+  if (auto sigreturn = thread->tproc->ops->sigreturn) {
+    return sigreturn(thread, sigcntxp);
+  }
+
+  return ErrorCode::NOSYS;
 }
 
 orbis::SysResult orbis::nosys(Thread *thread) {

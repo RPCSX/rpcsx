@@ -572,6 +572,7 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
 
   std::lock_guard lock(sem->mtx);
   bool timedout = false;
+  ErrorCode result{};
   while (true) {
     if (sem->isDeleted)
       return ErrorCode::ACCES;
@@ -591,7 +592,12 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
     }
 
     orbis::scoped_unblock unblock;
-    sem->cond.wait(sem->mtx, ut);
+    auto waitResult = sem->cond.wait(sem->mtx, ut);
+
+    if (waitResult == std::errc::interrupted) {
+      result = ErrorCode::INTR;
+      break;
+    }
   }
 
   if (pTimeout) {
@@ -613,7 +619,7 @@ orbis::SysResult orbis::sys_osem_wait(Thread *thread, sint id, sint need,
   if (timedout) {
     return SysResult::notAnError(ErrorCode::TIMEDOUT);
   }
-  return {};
+  return result;
 }
 orbis::SysResult orbis::sys_osem_trywait(Thread *thread, sint id, sint need) {
   ORBIS_LOG_TRACE(__FUNCTION__, thread, id, need);

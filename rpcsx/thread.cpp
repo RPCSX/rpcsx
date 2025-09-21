@@ -4,6 +4,7 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "rx/debug.hpp"
 #include "rx/mem.hpp"
 #include <asm/prctl.h>
 #include <csignal>
@@ -125,6 +126,53 @@ handleSigUser(int sig, siginfo_t *info, void *ucontext) {
     }
 
     // ORBIS_LOG_ERROR("thread wake", thread->tid);
+  } else if (guestSignal >= 0) {
+    ORBIS_LOG_WARNING(__FUNCTION__, "handled signal", guestSignal, inGuestCode,
+                      ::getpid(), thread->tid);
+    auto it = thread->tproc->sigActions.find(guestSignal);
+
+    if (it != thread->tproc->sigActions.end()) {
+      auto guestContext = reinterpret_cast<ucontext_t *>(
+          inGuestCode ? context : thread->context);
+
+      auto sigact = it->second;
+      thread->setSigMask(sigact.mask);
+      auto handlerPtr = reinterpret_cast<std::uintptr_t>(sigact.handler);
+
+      auto rsp = guestContext->uc_mcontext.gregs[REG_RSP];
+
+      ORBIS_LOG_WARNING(__FUNCTION__, "invoking signal handler", guestSignal,
+                        rsp, thread->stackStart, thread->stackEnd);
+
+      // FIXME: alt stack?
+      rsp -= 128; // redzone
+      rsp -= sizeof(orbis::SigFrame);
+
+      // FIXME handle flags
+      auto &sigFrame = *std::bit_cast<orbis::SigFrame *>(rsp);
+      sigFrame = {};
+
+      rx::thread::copyContext(thread, sigFrame.context, *guestContext);
+      sigFrame.info.signo = guestSignal;
+      sigFrame.handler = handlerPtr;
+
+      guestContext->uc_mcontext.gregs[REG_RDI] = guestSignal; // arg1, signo
+      guestContext->uc_mcontext.gregs[REG_RSI] =
+          std::bit_cast<std::uintptr_t>(&sigFrame.info); // arg2, siginfo
+      guestContext->uc_mcontext.gregs[REG_RDX] =
+          std::bit_cast<std::uintptr_t>(&sigFrame.context); // arg3, ucontext
+      guestContext->uc_mcontext.gregs[REG_RCX] = 0;         // arg4, si_addr
+      guestContext->uc_mcontext.gregs[REG_RIP] = handlerPtr;
+
+      guestContext->uc_mcontext.gregs[REG_RSP] = rx::alignDown(rsp, 16);
+    }
+  }
+
+  if (inGuestCode && guestSignal != -1) {
+    std::uint32_t prevValue = 1;
+    if (thread->interruptedMtx.compare_exchange_strong(prevValue, 0)) {
+      thread->interruptedMtx.notify_one();
+    }
   }
 
   if (inGuestCode) {
@@ -187,9 +235,67 @@ void rx::thread::copyContext(orbis::Thread *thread, orbis::UContext &dst,
   dst = {};
   dst.stack.sp = thread->stackStart;
   dst.stack.size = (char *)thread->stackEnd - (char *)thread->stackStart;
-  dst.stack.align = 0x10000;
+  dst.stack.align = 16;
   dst.sigmask = thread->sigMask;
   copyContext(dst.mcontext, src.uc_mcontext);
+}
+
+void rx::thread::setContext(orbis::Thread *thread, const orbis::UContext &src) {
+  auto &context = *std::bit_cast<ucontext_t *>(thread->context);
+  thread->stackStart = src.stack.sp;
+  thread->stackEnd = (char *)thread->stackStart + src.stack.size;
+  thread->setSigMask(src.sigmask);
+
+  // dst.onstack = src.gregs[REG_ONSTACK];
+  context.uc_mcontext.gregs[REG_RDI] = src.mcontext.rdi;
+  context.uc_mcontext.gregs[REG_RSI] = src.mcontext.rsi;
+  context.uc_mcontext.gregs[REG_RDX] = src.mcontext.rdx;
+  context.uc_mcontext.gregs[REG_RCX] = src.mcontext.rcx;
+  context.uc_mcontext.gregs[REG_R8] = src.mcontext.r8;
+  context.uc_mcontext.gregs[REG_R9] = src.mcontext.r9;
+  context.uc_mcontext.gregs[REG_RAX] = src.mcontext.rax;
+  context.uc_mcontext.gregs[REG_RBX] = src.mcontext.rbx;
+  context.uc_mcontext.gregs[REG_RBP] = src.mcontext.rbp;
+  context.uc_mcontext.gregs[REG_R10] = src.mcontext.r10;
+  context.uc_mcontext.gregs[REG_R11] = src.mcontext.r11;
+  context.uc_mcontext.gregs[REG_R12] = src.mcontext.r12;
+  context.uc_mcontext.gregs[REG_R13] = src.mcontext.r13;
+  context.uc_mcontext.gregs[REG_R14] = src.mcontext.r14;
+  context.uc_mcontext.gregs[REG_R15] = src.mcontext.r15;
+
+  context.uc_mcontext.gregs[REG_TRAPNO] = src.mcontext.trapno;
+
+  // in perfect world:
+  // std::uint64_t csgsfs = 0;
+  // csgsfs |= src.mcontext.fs;
+  // csgsfs |= static_cast<std::uint64_t>(src.mcontext.gs) << 16;
+  // csgsfs |= static_cast<std::uint64_t>(src.mcontext.cs) << 32;
+  // context.uc_mcontext.gregs[REG_CSGSFS] = csgsfs;
+
+  context.uc_mcontext.gregs[REG_CSGSFS] &= ~0xff'ffull;
+  context.uc_mcontext.gregs[REG_CSGSFS] |= src.mcontext.fs;
+
+  // dst.addr = src.gregs[REG_ADDR];
+  // dst.flags = src.gregs[REG_FLAGS];
+  // dst.es = src.gregs[REG_ES];
+  // dst.ds = src.gregs[REG_DS];
+  context.uc_mcontext.gregs[REG_ERR] = src.mcontext.err;
+  context.uc_mcontext.gregs[REG_RIP] = src.mcontext.rip;
+  context.uc_mcontext.gregs[REG_EFL] = src.mcontext.rflags;
+  context.uc_mcontext.gregs[REG_RSP] = src.mcontext.rsp;
+  // dst.ss = src.gregs[REG_SS];
+  // dst.len = sizeof(orbis::MContext);
+  // dst.fpformat = src.gregs[REG_FPFORMAT];
+  // dst.ownedfp = src.gregs[REG_OWNEDFP];
+  // dst.lbrfrom = src.gregs[REG_LBRFROM];
+  // dst.lbrto = src.gregs[REG_LBRTO];
+  // dst.aux1 = src.gregs[REG_AUX1];
+  // dst.aux2 = src.gregs[REG_AUX2];
+  // dst.fpstate = src.gregs[REG_FPSTATE];
+  // dst.fsbase = src.gregs[REG_FSBASE];
+  // dst.gsbase = src.gregs[REG_GSBASE];
+  // dst.xfpustate = src.gregs[REG_XFPUSTATE];
+  // dst.xfpustate_len = src.gregs[REG_XFPUSTATE_LEN];
 }
 
 void rx::thread::initialize() {
@@ -271,6 +377,6 @@ void rx::thread::invoke(orbis::Thread *thread) {
   _writefsbase_u64(thread->fsBase);
   auto context = reinterpret_cast<ucontext_t *>(thread->context);
 
-  setContext(context->uc_mcontext);
+  ::setContext(context->uc_mcontext);
   _writefsbase_u64(hostFs);
 }
