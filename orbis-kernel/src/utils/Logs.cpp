@@ -489,10 +489,17 @@ void _orbis_log_print(LogLevel lvl, std::string_view msg,
   for (std::size_t i = 0; i < args_count; i++) {
     if (i)
       text += ", ";
-    names.remove_prefix(names.find_first_not_of(" \t\n\r"));
-    std::string_view name = names.substr(0, names.find_first_of(","));
-    names.remove_prefix(name.size() + 1);
+    names.remove_prefix(std::min(names.find_first_not_of(" \t\n\r"), names.length()));
+    std::string_view name = names.substr(0, names.find_first_of(','));
+    names.remove_prefix(std::min(name.size() + 1, names.size()));
     text += name;
+
+    if (!name.empty() &&
+        (name[0] == '"' || (name[0] >= '0' && name[0] <= '9'))) {
+      // skip literals
+      continue;
+    }
+
     text += "=";
     sup[i].log_string(text, args[i]);
   }
