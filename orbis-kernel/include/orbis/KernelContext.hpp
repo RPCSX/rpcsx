@@ -1,5 +1,6 @@
 #pragma once
 #include "AppInfo.hpp"
+#include "Budget.hpp"
 #include "KernelAllocator.hpp"
 #include "evf.hpp"
 #include "ipmi.hpp"
@@ -14,6 +15,7 @@
 #include <cstdint>
 #include <mutex>
 #include <pthread.h>
+#include <span>
 #include <utility>
 
 namespace orbis {
@@ -193,14 +195,16 @@ public:
   Ref<RcBase> shmDevice;
   Ref<RcBase> dmemDevice;
   Ref<RcBase> blockpoolDevice;
-  shared_mutex gpuDeviceMtx;
   Ref<RcBase> gpuDevice;
   Ref<RcBase> dceDevice;
+  shared_mutex gpuDeviceMtx;
   uint sdkVersion{};
   uint fwSdkVersion{};
   uint safeMode{};
   utils::RcIdMap<RcBase, sint, 4097, 1> ipmiMap;
   RcIdMap<RcAppInfo> appInfos;
+  RcIdMap<Budget, sint, 4097, 1> budgets;
+  Ref<Budget> processTypeBudgets[4];
 
   shared_mutex regMgrMtx;
   kmap<std::uint32_t, std::uint32_t> regMgrInt;
@@ -208,6 +212,19 @@ public:
 
   FwType fwType = FwType::Unknown;
   bool isDevKit = false;
+
+  Ref<Budget> createProcessTypeBudget(Budget::ProcessType processType,
+                              std::string_view name,
+                              std::span<const BudgetInfo> items) {
+    auto budget = orbis::knew<orbis::Budget>(name, processType, items);
+    processTypeBudgets[static_cast<int>(processType)] =
+        orbis::knew<orbis::Budget>(name, processType, items);
+    return budget;
+  }
+
+  Ref<Budget> getProcessTypeBudget(Budget::ProcessType processType) {
+    return processTypeBudgets[static_cast<int>(processType)];
+  }
 
 private:
   shared_mutex m_heap_mtx;
