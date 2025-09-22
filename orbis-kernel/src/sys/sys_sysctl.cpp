@@ -197,19 +197,25 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
         return ErrorCode::INVAL;
       }
 
-      *(uint64_t *)old = 5056ull * 1024 * 1024;
+      auto budget = g_context.budgets.get(thread->tproc->budgetId);
+      auto fmem = budget->get(BudgetResource::Fmem);
+      *(uint64_t *)old = fmem.total;
       return {};
     }
 
     if (name[0] == vm && name[1] == budgets && name[2] == mlock_avail) {
-      if (*oldlenp != 16 || new_ != nullptr || newlen != 0) {
+      if ((*oldlenp != 16 && *oldlenp != 8) || new_ != nullptr || newlen != 0) {
         return ErrorCode::INVAL;
       }
 
-      // TODO
+      auto budget = g_context.budgets.get(thread->tproc->budgetId);
+      auto fmem = budget->get(BudgetResource::Fmem);
+
       auto result = (uint64_t *)old;
-      result[0] = 0;
-      result[1] = 5056ull * 1024 * 1024;
+      result[0] = fmem.total - fmem.used;
+      if (*oldlenp == 16) {
+        result[1] = fmem.total;
+      }
       return {};
     }
   }

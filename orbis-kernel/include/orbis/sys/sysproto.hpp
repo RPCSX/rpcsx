@@ -1,4 +1,5 @@
 #include "orbis-config.hpp"
+#include <orbis/Budget.hpp>
 #include <orbis/error.hpp>
 #include <orbis/module/ModuleHandle.hpp>
 #include <orbis/thread/cpuset.hpp>
@@ -669,11 +670,14 @@ SysResult sys_opmc_disable(Thread *thread /* TODO */);
 SysResult sys_opmc_set_ctl(Thread *thread /* TODO */);
 SysResult sys_opmc_set_ctr(Thread *thread /* TODO */);
 SysResult sys_opmc_get_ctr(Thread *thread /* TODO */);
-SysResult sys_budget_create(Thread *thread /* TODO */);
-SysResult sys_budget_delete(Thread *thread /* TODO */);
-SysResult sys_budget_get(Thread *thread, sint id, ptr<void> a,
-                         ptr<uint32_t> count);
-SysResult sys_budget_set(Thread *thread, slong budget);
+SysResult sys_budget_create(Thread *thread, ptr<char> name,
+                            Budget::ProcessType processType,
+                            ptr<const BudgetInfo> resources, orbis::uint count,
+                            ptr<BudgetInfo> invalidResources);
+SysResult sys_budget_delete(Thread *thread, sint budget);
+SysResult sys_budget_get(Thread *thread, sint id, ptr<BudgetInfo> budgetInfo,
+                         ptr<sint> count);
+SysResult sys_budget_set(Thread *thread, sint budget);
 SysResult sys_virtual_query(Thread *thread, ptr<void> addr, uint64_t unk,
                             ptr<void> info, size_t infosz);
 SysResult sys_mdbg_call(Thread *thread /* TODO */);
@@ -726,7 +730,7 @@ SysResult sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
                                  ptr<struct Unk> unk,
                                  ptr<ModuleInfoEx> destModuleInfoEx);
 SysResult sys_budget_getid(Thread *thread);
-SysResult sys_budget_get_ptype(Thread *thread, sint budgetId);
+SysResult sys_budget_get_ptype(Thread *thread, sint pid);
 SysResult sys_get_paging_stats_of_all_threads(Thread *thread /* TODO */);
 SysResult sys_get_proc_type_info(Thread *thread, ptr<sint> destProcessInfo);
 SysResult sys_get_resident_count(Thread *thread, pid_t pid);
@@ -773,7 +777,7 @@ SysResult sys_extend_page_table_pool(Thread *thread);
 SysResult sys_extend_page_table_pool2(Thread *thread);
 SysResult sys_get_kernel_mem_statistics(Thread *thread /* TODO */);
 SysResult sys_get_sdk_compiled_version(Thread *thread, ptr<const char> path);
-SysResult sys_app_state_change(Thread *thread /* TODO */);
+SysResult sys_app_state_change(Thread *thread, sint state);
 SysResult sys_dynlib_get_obj_member(Thread *thread, SceKernelModule handle,
                                     uint64_t index, ptr<ptr<void>> addrp);
 SysResult sys_budget_get_ptype_of_budget(Thread *thread, sint budgetId);

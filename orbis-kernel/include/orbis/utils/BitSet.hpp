@@ -11,7 +11,31 @@ template <std::size_t Count> struct BitSet {
   static constexpr auto ChunkCount = (Count + BitsPerChunk - 1) / BitsPerChunk;
   chunk_type _bits[ChunkCount]{};
 
-  constexpr std::size_t countr_one() const {
+  struct iterator_end {};
+
+  struct iterator {
+    iterator() = default;
+
+    constexpr iterator &operator++() {
+      offset = bitSet->countr_zero(offset + 1);
+      return *this;
+    }
+    constexpr bool operator==(const iterator_end &) const {
+      return offset >= Count;
+    }
+    constexpr std::size_t operator*() const { return offset; }
+
+  private:
+    constexpr iterator(const BitSet *bitSet)
+        : bitSet(bitSet), offset(bitSet->countr_zero()) {}
+
+    const BitSet *bitSet = nullptr;
+    std::size_t offset = 0;
+
+    friend BitSet;
+  };
+
+  [[nodiscard]] constexpr std::size_t countr_one() const {
     std::size_t result = 0;
     for (auto bits : _bits) {
       auto count = std::countr_one(bits);
@@ -25,7 +49,18 @@ template <std::size_t Count> struct BitSet {
     return result;
   }
 
-  constexpr std::size_t countr_zero(std::size_t offset = 0) const {
+  [[nodiscard]] constexpr std::size_t popcount() const {
+    std::size_t result = 0;
+
+    for (auto bits : _bits) {
+      result += std::popcount(bits);
+    }
+
+    return result;
+  }
+
+  [[nodiscard]] constexpr std::size_t
+  countr_zero(std::size_t offset = 0) const {
     std::size_t result = 0;
 
     if (auto chunkOffset = offset % BitsPerChunk) {
@@ -47,21 +82,11 @@ template <std::size_t Count> struct BitSet {
         break;
       }
     }
-    /*
-    for (auto bits : _bits) {
-      auto count = std::countr_zero(bits);
-      result += count;
-
-      if (count != BitsPerChunk) {
-        break;
-      }
-    }
-    */
 
     return result + offset;
   }
 
-  bool empty() const {
+  [[nodiscard]] constexpr bool empty() const {
     for (auto bits : _bits) {
       if (bits != 0) {
         return false;
@@ -71,7 +96,7 @@ template <std::size_t Count> struct BitSet {
     return true;
   }
 
-  bool full() const {
+  [[nodiscard]] constexpr bool full() const {
     if constexpr (Count < BitsPerChunk) {
       return _bits[0] == (static_cast<std::uint64_t>(1) << Count) - 1;
     }
@@ -95,10 +120,13 @@ template <std::size_t Count> struct BitSet {
                                    << (index % BitsPerChunk);
   }
 
-  constexpr bool test(std::size_t index) const {
+  [[nodiscard]] constexpr bool test(std::size_t index) const {
     return (_bits[index / BitsPerChunk] &
             (static_cast<chunk_type>(1) << (index % BitsPerChunk))) != 0;
   }
+
+  [[nodiscard]] constexpr iterator begin() const { return iterator(this); }
+  [[nodiscard]] constexpr iterator_end end() const { return {}; }
 };
 } // namespace utils
 } // namespace orbis

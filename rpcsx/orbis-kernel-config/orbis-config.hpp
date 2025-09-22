@@ -100,7 +100,7 @@ template <typename T, typename U>
 template <typename T>
 [[nodiscard]] ErrorCode uread(T *result, ptr<const T> pointer,
                               std::size_t count) {
-  return ureadRaw(&result, pointer, sizeof(T) * count);
+  return ureadRaw(result, pointer, sizeof(T) * count);
 }
 
 template <typename T>

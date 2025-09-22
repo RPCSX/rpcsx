@@ -11,6 +11,7 @@
 #include "cpuset.hpp"
 #include "orbis/AppInfo.hpp"
 #include "orbis/AuthInfo.hpp"
+#include "orbis/Budget.hpp"
 #include "orbis/file.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/utils/IdMap.hpp"
@@ -74,7 +75,8 @@ struct Process final {
   kstring root = "/";
   cpuset affinity{(1 << 7) - 1};
   sint memoryContainer{1};
-  sint budgetId{1};
+  sint budgetId{};
+  Budget::ProcessType budgetProcessType{};
   bool isInSandbox = false;
   EventEmitter event;
   std::optional<sint> exitStatus;

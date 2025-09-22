@@ -1061,8 +1061,6 @@ int main(int argc, const char *argv[]) {
   auto initProcess = orbis::g_context.createProcess(asRoot ? 1 : 10);
   // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
-  vm::initialize(initProcess->pid);
-
   int status = 0;
 
   initProcess->onSysEnter = onSysEnter;
@@ -1072,6 +1070,96 @@ int main(int argc, const char *argv[]) {
   initProcess->appInfo = {{
       .unk4 = (isSystem ? orbis::slong(0x80000000'00000000) : 0),
   }};
+
+  orbis::BudgetInfo bigAppBudgetInfo[]{
+      {
+          .resourceId = orbis::BudgetResource::Dmem,
+          .flags = 0,
+          .item =
+              {
+                  .total = 0x1'8000'0000,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Vmem,
+          .flags = 0,
+          .item =
+              {
+                  .total = 2ul * 1024 * 1024 * 1024,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Fmem,
+          .flags = 0,
+          .item =
+              {
+                  // vmem - reserved space for stack
+                  .total = 2ul * 1024 * 1024 * 1024 - (64 * 1024 * 1024),
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::CpuSet,
+          .flags = 0,
+          .item =
+              {
+                  .total = 7,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::File,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Socket,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Equeue,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Pipe,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Device,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+  };
+
+  vm::initialize(initProcess->pid);
+
+  auto bigAppBudget = orbis::g_context.createProcessTypeBudget(
+      orbis::Budget::ProcessType::BigApp, "big app budget", bigAppBudgetInfo);
+
+  // FIXME: define following budgets
+  orbis::g_context.createProcessTypeBudget(orbis::Budget::ProcessType::MiniApp,
+                                           "mini-app budget", bigAppBudgetInfo);
+  orbis::g_context.createProcessTypeBudget(orbis::Budget::ProcessType::System,
+                                           "system budget", bigAppBudgetInfo);
+  orbis::g_context.createProcessTypeBudget(
+      orbis::Budget::ProcessType::NonGameMiniApp, "non-game mini-app budget",
+      bigAppBudgetInfo);
 
   if (isSystem) {
     orbis::g_context.safeMode = isSafeMode ? 1 : 0;
@@ -1099,7 +1187,7 @@ int main(int argc, const char *argv[]) {
                                  -1ul,
                                  -1ul,
                              }};
-    initProcess->budgetId = 0;
+    initProcess->budgetProcessType = orbis::Budget::ProcessType::System;
     initProcess->isInSandbox = false;
   } else {
     initProcess->authInfo = {
@@ -1119,7 +1207,9 @@ int main(int argc, const char *argv[]) {
                 0xF0000000FFFF4000,
             },
     };
-    initProcess->budgetId = 1;
+
+    initProcess->budgetProcessType = orbis::Budget::ProcessType::BigApp;
+    initProcess->budgetId = orbis::g_context.budgets.insert(bigAppBudget);
     initProcess->isInSandbox = true;
   }
 

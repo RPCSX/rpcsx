@@ -18,6 +18,7 @@
 #include <ranges>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <utility>
 
 struct orbis::AppMountInfo {
   AppInfoEx appInfo;
@@ -726,6 +727,8 @@ orbis::SysResult orbis::sys_suspend_process(Thread *thread, pid_t pid) {
   return {};
 }
 orbis::SysResult orbis::sys_resume_process(Thread *thread, pid_t pid) {
+  ORBIS_LOG_FATAL(__FUNCTION__, pid);
+  // FIXME: implement
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_opmc_enable(Thread *thread /* TODO */) {
@@ -743,42 +746,140 @@ orbis::SysResult orbis::sys_opmc_set_ctr(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_opmc_get_ctr(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_budget_create(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
-}
-orbis::SysResult orbis::sys_budget_delete(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
-}
-orbis::SysResult orbis::sys_budget_get(Thread *thread, sint id, ptr<void> a,
-                                       ptr<uint32_t> count) {
-  ORBIS_LOG_ERROR(__FUNCTION__, id, a, count);
+orbis::SysResult orbis::sys_budget_create(Thread *thread, ptr<char> name,
+                                          Budget::ProcessType processType,
+                                          ptr<const BudgetInfo> resources,
+                                          orbis::uint count,
+                                          ptr<BudgetInfo> invalidResources) {
+  ORBIS_LOG_WARNING(__FUNCTION__, name, (int)processType, resources, count,
+                    invalidResources);
 
-  struct budget {
-    uint32_t id;
-    uint32_t unk0;
-    uint64_t unk1;
-    uint64_t unk2;
-  };
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return {};
+  }
+  constexpr auto kMaxBudgets = std::to_underlying(BudgetResource::_count);
 
-  static_assert(sizeof(budget) == 0x18);
+  if (name == nullptr || count >= kMaxBudgets ||
+      processType > Budget::ProcessType::_last) {
+    return ErrorCode::INVAL;
+  }
 
-  if (g_context.fwType == FwType::Ps5 && id == 1) {
-    std::uint32_t _count;
-    ORBIS_RET_ON_ERROR(orbis::uread(_count, count));
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return ErrorCode::NOSYS;
+  }
 
-    if (_count == 0) {
-      ORBIS_RET_ON_ERROR(orbis::uwrite(count, 1u));
-      return {};
+  char _name[32]{};
+  ORBIS_RET_ON_ERROR(ureadString(_name, sizeof(_name), name));
+
+  BudgetInfo _resources[kMaxBudgets];
+  ORBIS_RET_ON_ERROR(uread(_resources, resources, count));
+
+  auto processTypeBudget = g_context.getProcessTypeBudget(processType);
+  int invalidResourceCount = 0;
+
+  for (auto &resource : std::span(_resources, count)) {
+    ORBIS_LOG_WARNING(__FUNCTION__, (int)resource.resourceId, resource.flags,
+                      resource.item.total, resource.item.used);
+
+    if (resource.resourceId >= BudgetResource::_count) {
+      resource.flags = 0x82000000;
+      invalidResourceCount++;
+      continue;
     }
 
-    ptr<budget>(a)->id = 4;
+    if (processTypeBudget->get(resource.resourceId).total <
+        resource.item.total) {
+      resource.flags = 0x81000000;
+      invalidResourceCount++;
+      continue;
+    }
 
-    ORBIS_RET_ON_ERROR(orbis::uwrite(count, 1u));
+    resource.item.used = 0;
   }
+
+  if (invalidResourceCount != 0) {
+    ORBIS_RET_ON_ERROR(uwrite(invalidResources, invalidResources, count));
+    return ErrorCode::PERM;
+  }
+
+  orbis::Ref budget =
+      orbis::knew<Budget>(_name, processType, std::span(_resources, count));
+  auto id = g_context.budgets.insert(budget);
+  thread->retval[0] = id;
   return {};
 }
-orbis::SysResult orbis::sys_budget_set(Thread *thread, slong budget) {
-  ORBIS_LOG_TODO(__FUNCTION__, budget);
+
+orbis::SysResult orbis::sys_budget_delete(Thread *thread, sint budget) {
+  ORBIS_LOG_WARNING(__FUNCTION__, budget);
+
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return ErrorCode::NOSYS;
+  }
+
+  thread->where();
+  return ErrorCode::NOSYS;
+}
+
+orbis::SysResult orbis::sys_budget_get(Thread *thread, sint id,
+                                       ptr<BudgetInfo> budgetInfo,
+                                       ptr<sint> count) {
+  ORBIS_LOG_WARNING(__FUNCTION__, id, budgetInfo, count);
+
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return ErrorCode::NOSYS;
+  }
+
+  sint _count;
+  ORBIS_RET_ON_ERROR(uread(_count, count));
+  if (_count < 1) {
+    return ErrorCode::INVAL;
+  }
+
+  Ref<Budget> budget;
+  bool isProcessTypeBudget = id < 0;
+  if (isProcessTypeBudget) {
+    id = -2 - id;
+
+    if (id < 0 || id > std::to_underlying(Budget::ProcessType::_last)) {
+      return ErrorCode::SRCH;
+    }
+
+    budget =
+        g_context.getProcessTypeBudget(static_cast<Budget::ProcessType>(id));
+  } else {
+    budget = g_context.budgets.get(id);
+
+    if (!budget) {
+      return ErrorCode::SRCH;
+    }
+  }
+
+  auto [items, resultCount] = budget->getList();
+
+  resultCount = std::min<int>(resultCount, _count);
+
+  if (isProcessTypeBudget) {
+    resultCount = std::min<int>(resultCount, 10);
+  }
+
+  ORBIS_RET_ON_ERROR(uwrite(budgetInfo, items.data(), items.size()));
+  ORBIS_RET_ON_ERROR(uwrite(count, resultCount));
+  return {};
+}
+orbis::SysResult orbis::sys_budget_set(Thread *thread, sint budgetId) {
+  ORBIS_LOG_WARNING(__FUNCTION__, budgetId);
+
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return ErrorCode::NOSYS;
+  }
+
+  auto budget = g_context.budgets.get(budgetId);
+  if (!budget) {
+    return ErrorCode::SRCH;
+  }
+
+  thread->tproc->budgetProcessType = budget->processType();
+  thread->tproc->budgetId = budgetId;
   return {};
 }
 orbis::SysResult orbis::sys_virtual_query(Thread *thread, ptr<void> addr,
@@ -1183,11 +1284,27 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
   return uwrite(destModuleInfoEx, result);
 }
 orbis::SysResult orbis::sys_budget_getid(Thread *thread) {
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return ErrorCode::NOSYS;
+  }
+
   thread->retval[0] = thread->tproc->budgetId;
   return {};
 }
-orbis::SysResult orbis::sys_budget_get_ptype(Thread *thread, sint budgetId) {
-  thread->retval[0] = budgetId;
+orbis::SysResult orbis::sys_budget_get_ptype(Thread *thread, sint pid) {
+  orbis::Process *process;
+
+  if (pid < 0 || pid == thread->tproc->pid) {
+    process = thread->tproc;
+  } else {
+    process = g_context.findProcessById(pid);
+
+    if (!process) {
+      return ErrorCode::SRCH;
+    }
+  }
+
+  thread->retval[0] = static_cast<int>(process->budgetProcessType);
   return {};
 }
 orbis::SysResult
@@ -1538,7 +1655,12 @@ orbis::SysResult orbis::sys_get_sdk_compiled_version(Thread *thread,
   thread->retval[0] = g_context.sdkVersion;
   return {};
 }
-orbis::SysResult orbis::sys_app_state_change(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_app_state_change(Thread *thread, sint state) {
+  ORBIS_LOG_TODO(__FUNCTION__, state);
+  if (thread->tproc->authInfo.isSyscoreProcess()) {
+    // TODO
+    return {};
+  }
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_dynlib_get_obj_member(Thread *thread,
@@ -1554,7 +1676,17 @@ orbis::SysResult orbis::sys_dynlib_get_obj_member(Thread *thread,
 orbis::SysResult orbis::sys_budget_get_ptype_of_budget(Thread *thread,
                                                        sint budgetId) {
   ORBIS_LOG_WARNING(__FUNCTION__, budgetId);
-  thread->retval[0] = budgetId;
+  if (!thread->tproc->authInfo.hasSystemCapability()) {
+    return ErrorCode::NOSYS;
+  }
+
+  orbis::Ref<Budget> budget = g_context.budgets.get(budgetId);
+
+  if (!budget) {
+    return ErrorCode::SRCH;
+  }
+
+  thread->retval[0] = static_cast<int>(budget->processType());
   return {};
 }
 orbis::SysResult
