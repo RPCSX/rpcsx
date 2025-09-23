@@ -197,16 +197,20 @@ struct std::formatter<T> {
             std::integral_constant<std::int64_t, Offset>,
             std::integer_sequence<std::int64_t, I...>) -> std::string {
       std::string_view result;
+      auto queryIndex = [&]<std::int64_t Index>(
+                            std::integral_constant<std::int64_t, Index>,
+                            std::int64_t value) {
+        if (value == Index) {
+          if constexpr (requires { rx::getNameOf<static_cast<T>(Index)>(); }) {
+            result = rx::getNameOf<static_cast<T>(Index)>();
+          }
+        }
+      };
+
       if (value < 0) {
-        ((-value == I + Offset
-              ? ((result = rx::getNameOf<static_cast<T>(-(I + Offset))>()), 0)
-              : 0),
-         ...);
+        (queryIndex(std::integral_constant<std::int64_t, -(I + Offset)>{}, value), ...);
       } else {
-        ((value == I + Offset
-              ? ((result = rx::getNameOf<static_cast<T>(I + Offset)>()), 0)
-              : 0),
-         ...);
+        (queryIndex(std::integral_constant<std::int64_t, I + Offset>{}, value), ...);
       }
 
       if (!result.empty()) {
