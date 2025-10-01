@@ -108,6 +108,14 @@ void cell_audio_config::reset(bool backend_changed)
 	maximum_block_period = (6 * audio_block_period) / 5;
 
 	desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 3 : 2;
+
+  if (desired_full_buffers > MAX_AUDIO_BUFFERS + EXTRA_AUDIO_BUFFERS)
+	{
+		cellAudio.error("%s: desired_full_buffers truncation: value = %d, frame size = %f, output channel count = %d, input channel count = %d, desired buffer duration = %d",
+			backend->GetName(), desired_full_buffers, cb_frame_len, ch_cnt, audio_channels, desired_buffer_duration);
+		desired_full_buffers = MAX_AUDIO_BUFFERS - EXTRA_AUDIO_BUFFERS;
+	}
+
 	num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS;
 
 	fully_untouched_timeout = static_cast<u64>(audio_block_period) * 2;
