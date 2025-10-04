@@ -1,5 +1,7 @@
 #pragma once
 
+#include <source_location>
+
 #ifndef __has_include
 #define __has_include(x) 0
 #endif
@@ -57,3 +59,21 @@ using fmt::vformat;
 using fmt::vformat_to;
 } // namespace rx
 #endif
+
+namespace rx {
+namespace detail {
+template <typename... Args>
+struct format_string_with_location_impl : format_string<Args...> {
+  std::source_location location;
+
+  template <typename T>
+  constexpr format_string_with_location_impl(
+      T message,
+      std::source_location location = std::source_location::current())
+      : format_string<Args...>(message), location(location) {}
+};
+} // namespace detail
+template <typename... Args>
+using format_string_with_location =
+    std::type_identity_t<detail::format_string_with_location_impl<Args...>>;
+} // namespace rx

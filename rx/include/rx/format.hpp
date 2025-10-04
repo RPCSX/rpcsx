@@ -130,22 +130,6 @@ template <auto &&Variable> void registerVariable() {
   auto &storage = detail::getVariableStorage();
   storage.infos[&Variable] = rx::getNameOf<Variable>();
 }
-
-namespace detail {
-template <typename... Args>
-struct format_string_with_location_impl : format_string<Args...> {
-  std::source_location location;
-
-  template <typename T>
-  constexpr format_string_with_location_impl(
-      T message,
-      std::source_location location = std::source_location::current())
-      : format_string<Args...>(message), location(location) {}
-};
-} // namespace detail
-template <typename... Args>
-using format_string_with_location =
-    std::type_identity_t<detail::format_string_with_location_impl<Args...>>;
 } // namespace rx
 
 template <typename T>

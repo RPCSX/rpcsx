@@ -1,10 +1,10 @@
 #pragma once
 #include "format-base.hpp"
+#include "rx/die.hpp"
 #include <cassert>
 #include <compare>
 #include <cstddef>
 #include <cstring>
-#include <stdexcept>
 #include <string_view>
 #include <type_traits>
 
@@ -111,16 +111,12 @@ public:
   }
 
   [[nodiscard]] char &at(std::size_t pos) {
-    if (pos >= m_size) {
-      throw std::out_of_range("StaticString::at: index out of range");
-    }
+    dieIf(pos >= m_size, "StaticString::at: index out of range");
     return m_data[pos];
   }
 
   [[nodiscard]] constexpr char &at(std::size_t pos) const {
-    if (pos >= m_size) {
-      throw std::out_of_range("StaticString::at: index out of range");
-    }
+    dieIf(pos >= m_size, "StaticString::at: index out of range");
     return m_data[pos];
   }
 
