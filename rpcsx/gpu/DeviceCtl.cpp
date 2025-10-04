@@ -39,9 +39,8 @@ void DeviceCtl::submitGfxCommand(int gfxPipe, int vmId,
   if ((op != gnm::IT_INDIRECT_BUFFER && op != gnm::IT_INDIRECT_BUFFER_CNST &&
        op != gnm::IT_CONTEXT_CONTROL) ||
       type != 3 || command.size() != len) {
-    rx::println(stderr, "unexpected gfx command for main ring: {}, {}, {}",
-                 gnm::Pm4Opcode(op), type, len);
-    rx::die("");
+    rx::die("unexpected gfx command for main ring: {}, {}, {}",
+            gnm::Pm4Opcode(op), type, len);
   }
 
   std::vector<std::uint32_t> patchedCommand{command.data(),
@@ -153,7 +152,7 @@ void DeviceCtl::registerBuffer(std::uint32_t pid, Buffer buffer) {
   auto &process = mDevice->processInfo[pid];
 
   if (buffer.attrId >= 10 || buffer.index >= 10) {
-    rx::die("out of buffers %u, %u", buffer.attrId, buffer.index);
+    rx::die("out of buffers {}, {}", buffer.attrId, buffer.index);
   }
 
   process.buffers[buffer.index] = buffer;
@@ -164,7 +163,7 @@ void DeviceCtl::registerBufferAttribute(std::uint32_t pid,
   // FIXME: submit command
   auto &process = mDevice->processInfo[pid];
   if (attr.attrId >= 10) {
-    rx::die("out of buffer attributes %u", attr.attrId);
+    rx::die("out of buffer attributes {}", attr.attrId);
   }
 
   process.bufferAttributes[attr.attrId] = attr;
@@ -178,7 +177,7 @@ void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
                                 orbis::uint64_t doorbell,
                                 orbis::uint64_t ringSize) {
   if (meId != 1 && meId != 2) {
-    rx::die("unexpected ME %d", meId);
+    rx::die("unexpected ME {}", meId);
   }
 
   if (meId == 2) {
@@ -186,7 +185,7 @@ void DeviceCtl::mapComputeQueue(int vmId, std::uint32_t meId,
   }
 
   if (queueId >= ComputePipe::kQueueCount) {
-    rx::die("unexpected queueId %d", queueId);
+    rx::die("unexpected queueId {}", queueId);
   }
 
   auto &pipe = mDevice->computePipes[pipeId];
@@ -215,11 +214,11 @@ void DeviceCtl::submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
                                    std::uint32_t queueId,
                                    std::uint64_t offset) {
   if (meId != 1 && meId != 2) {
-    rx::die("unexpected ME %d", meId);
+    rx::die("unexpected ME {}", meId);
   }
 
   if (queueId >= ComputePipe::kQueueCount) {
-    rx::die("unexpected queueId %d", queueId);
+    rx::die("unexpected queueId {}", queueId);
   }
 
   if (meId == 2) {

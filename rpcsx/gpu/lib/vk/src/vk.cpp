@@ -777,7 +777,7 @@ vk::Context::findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
     typeBits &= ~(1 << typeIndex);
   }
 
-  rx::die("Failed to find memory type with properties %x", properties);
+  rx::die("Failed to find memory type with properties {:x}", properties);
 }
 
 vk::MemoryResource &vk::getHostVisibleMemory() { return g_hostVisibleMemory; }
@@ -786,14 +786,14 @@ vk::MemoryResource &vk::getDeviceLocalMemory() { return g_deviceLocalMemory; }
 static auto importDeviceVkProc(VkDevice device, const char *name) {
   auto result = vkGetDeviceProcAddr(device, name);
   rx::dieIf(result == nullptr,
-            "vkGetDeviceProcAddr: failed to get address of '%s'", name);
+            "vkGetDeviceProcAddr: failed to get address of '{}'", name);
   return result;
 }
 
 static auto importInstanceVkProc(VkInstance instance, const char *name) {
   auto result = vkGetInstanceProcAddr(instance, name);
   rx::dieIf(result == nullptr,
-            "vkGetInstanceProcAddr: failed to get address of '%s'", name);
+            "vkGetInstanceProcAddr: failed to get address of '{}'", name);
   return result;
 }
 

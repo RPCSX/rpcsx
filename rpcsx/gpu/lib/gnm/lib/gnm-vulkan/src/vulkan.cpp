@@ -645,5 +645,5 @@ VkFormat gnm::toVkFormat(DataFormat dfmt, NumericFormat nfmt) {
     return it->second;
   }
 
-  rx::die("unimplemented surface format. %x.%x\n", (int)dfmt, (int)nfmt);
+  rx::die("unimplemented surface format. {}.{}", dfmt, nfmt);
 }

@@ -111,7 +111,7 @@ static bool isPrimRequiresConversion(gnm::PrimitiveType primType) {
     return true;
 
   default:
-    rx::die("unknown primitive type: %u", (unsigned)primType);
+    rx::die("unknown primitive type: {}", (unsigned)primType);
   }
 }
 
@@ -142,7 +142,7 @@ static ConverterFn *getPrimConverterFn(gnm::PrimitiveType primType,
     return quadStripPrimConverter;
 
   default:
-    rx::die("getPrimConverterFn: unexpected primType %u",
+    rx::die("getPrimConverterFn: unexpected primType {}",
             static_cast<unsigned>(primType));
   }
 }
@@ -465,7 +465,7 @@ Cache::ShaderResources::eval(ir::InstructionId instId,
       result = readPointer<std::array<std::uint32_t, 16>>(address);
       break;
     default:
-      rx::die("unexpected pointer load size %u", loadSize);
+      rx::die("unexpected pointer load size {}", loadSize);
     }
 
     return result;
@@ -522,7 +522,7 @@ static VkShaderStageFlagBits shaderStageToVk(gcn::Stage stage) {
     // case gcn::Stage::DsEs:
 
   default:
-    rx::die("unsupported shader stage %u", int(stage));
+    rx::die("unsupported shader stage {}", int(stage));
   }
 }
 
@@ -532,7 +532,7 @@ static void fillStageBindings(VkDescriptorSetLayoutBinding *bindings,
   auto createDescriptorBinding = [&](VkDescriptorType type, uint32_t count,
                                      int dim = 0) {
     auto binding = Cache::getDescriptorBinding(type, dim);
-    rx::dieIf(binding < 0, "unexpected descriptor type %#x\n", int(type));
+    rx::dieIf(binding < 0, "unexpected descriptor type {:#x}\n", int(type));
     bindings[binding] = VkDescriptorSetLayoutBinding{
         .binding = static_cast<std::uint32_t>(binding),
         .descriptorType = type,
@@ -1983,20 +1983,17 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
                    key.nfmt == gnm::kNumericFormatUNorm) {
           format = VK_FORMAT_D16_UNORM;
         } else {
-          rx::die("unexpected depth format %u, %u", static_cast<int>(key.dfmt),
-                  static_cast<int>(key.nfmt));
+          rx::die("unexpected depth format {}, {}", key.dfmt, key.nfmt);
         }
       } else if (key.kind == ImageKind::Stencil) {
         if (key.dfmt == gnm::kDataFormat8 &&
             key.nfmt == gnm::kNumericFormatUInt) {
           format = VK_FORMAT_S8_UINT;
         } else {
-          rx::die("unexpected stencil format %u, %u",
-                  static_cast<int>(key.dfmt), static_cast<int>(key.nfmt));
+          rx::die("unexpected stencil format {}, {}", key.dfmt, key.nfmt);
         }
       } else {
-        rx::die("image kind %u %u, %u", static_cast<int>(key.kind),
-                static_cast<int>(key.dfmt), static_cast<int>(key.nfmt));
+        rx::die("image kind {} {}, {}", key.kind, key.dfmt, key.nfmt);
       }
 
       usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -2425,8 +2422,8 @@ Cache::Shader Cache::GraphicsTag::getShader(
       break;
 
     default:
-      rx::die("unexpected resource slot in graphics shader %u, stage %u",
-              int(slot.type), int(stage));
+      rx::die("unexpected resource slot in graphics shader {}, stage {}",
+              slot.type, stage);
     }
 
     ++index;
@@ -2578,7 +2575,7 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
       break;
 
     default:
-      rx::die("unexpected resource slot in compute shader %u", int(slot.type));
+      rx::die("unexpected resource slot in compute shader {}", slot.type);
     }
 
     ++index;

@@ -146,8 +146,7 @@ static VkPrimitiveTopology toVkPrimitiveType(gnm::PrimitiveType type) {
     return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
   default:
-    rx::die("toVkPrimitiveType: unexpected primitive type %u",
-            static_cast<unsigned>(type));
+    rx::die("toVkPrimitiveType: unexpected primitive type {}", type);
   }
 }
 
@@ -162,7 +161,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
   if (pipe.context.cbColorControl.mode != gnm::CbMode::Normal &&
       pipe.context.cbColorControl.mode != gnm::CbMode::EliminateFastClear) {
     rx::println("unimplemented context.cbColorControl.mode = {}",
-                 static_cast<gnm::CbMode>(pipe.context.cbColorControl.mode));
+                static_cast<gnm::CbMode>(pipe.context.cbColorControl.mode));
     return;
   }
 

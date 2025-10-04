@@ -680,7 +680,7 @@ void Device::onCommandBuffer(std::uint32_t pid, int cmdHeader,
                               size / sizeof(std::uint32_t)),
         1);
   } else {
-    rx::die("unimplemented command buffer %x", cmdHeader);
+    rx::die("unimplemented command buffer {:x}", cmdHeader);
   }
 }
 
@@ -814,7 +814,7 @@ bool Device::flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg,
     break;
 
   default:
-    rx::die("unimplemented color buffer format %x", bufferAttr.pixelFormat);
+    rx::die("unimplemented color buffer format {:x}", bufferAttr.pixelFormat);
   }
 
   // std::printf("displaying buffer %lx\n", buffer.address);
@@ -1029,10 +1029,10 @@ void Device::mapMemory(std::uint32_t pid, std::uint64_t address,
     perror("::mmap");
 
     rx::mem::printStats();
-    rx::die("failed to map process %u memory, address %p-%p, type %x, offset "
-            "%lx, prot %x",
-            (int)pid, memory.getPointer(address),
-            memory.getPointer(address + size), memoryType, offset, prot);
+    rx::die("failed to map process {} memory, address {}-{}, type {:x}, offset "
+            "{:x}, prot {:x}",
+            pid, memory.getPointer(address), memory.getPointer(address + size),
+            memoryType, offset, prot);
   }
 
   // std::println(stderr, "map memory of process {}, address {}-{}, prot {:x}",

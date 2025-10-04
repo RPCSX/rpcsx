@@ -173,7 +173,7 @@ bool ComputePipe::processRing(Ring &ring) {
         continue;
       }
 
-      rx::die("unexpected pm4 packet type %u", type);
+      rx::die("unexpected pm4 packet type {}", type);
     }
 
     if (origRptr != ring.rptr && ring.rptrReportLocation != nullptr) {
@@ -188,13 +188,13 @@ bool ComputePipe::processRing(Ring &ring) {
 
 void ComputePipe::setIndirectRing(int queueId, int indirectLevel, Ring ring) {
   if (indirectLevel != 1) {
-    rx::die("unexpected compute indirect ring indirect level %d",
+    rx::die("unexpected compute indirect ring indirect level {}",
             ring.indirectLevel);
   }
 
   ring.indirectLevel = indirectLevel;
   rx::println(stderr, "mapQueue: {}, {}, {}", (void *)ring.base,
-               (void *)ring.wptr, ring.size);
+              (void *)ring.wptr, ring.size);
 
   queues[1 - ring.indirectLevel][queueId] = ring;
 }
@@ -202,7 +202,7 @@ void ComputePipe::setIndirectRing(int queueId, int indirectLevel, Ring ring) {
 void ComputePipe::mapQueue(int queueId, Ring ring,
                            std::unique_lock<orbis::shared_mutex> &lock) {
   if (ring.indirectLevel < 0 || ring.indirectLevel > 1) {
-    rx::die("unexpected compute ring indirect level %d", ring.indirectLevel);
+    rx::die("unexpected compute ring indirect level {}", ring.indirectLevel);
   }
 
   if (ring.indirectLevel == 0) {
@@ -257,7 +257,7 @@ bool ComputePipe::setShReg(Ring &ring) {
 
   rx::dieIf(
       (offset + len) * sizeof(std::uint32_t) > sizeof(Registers::ComputeConfig),
-      "out of compute regs, offset: %x, count %u, %s\n", offset, len,
+      "out of compute regs, offset: {:x}, count {}, {}\n", offset, len,
       gnm::mmio::registerName(Registers::ShaderConfig::kMmioOffset + offset));
 
   for (std::size_t i = 0; i < len; ++i) {
@@ -341,7 +341,7 @@ bool ComputePipe::releaseMem(Ring &ring) {
     break;
 
   default:
-    rx::die("unimplemented event release mem data %#x", dataSel);
+    rx::die("unimplemented event release mem data {:#x}", dataSel);
   }
 
   if (intSel) {
@@ -411,7 +411,7 @@ bool ComputePipe::writeData(Ring &ring) {
   }
 
   default:
-    rx::die("unimplemented write data, dst sel = %#x", dstSel);
+    rx::die("unimplemented write data, dst sel = {:#x}", dstSel);
   }
 
   if (wrOneAddress) {
@@ -519,7 +519,7 @@ bool ComputePipe::dmaData(Ring &ring) {
     break;
 
   default:
-    rx::die("IT_DMA_DATA: unexpected dstSel %u", dstSel);
+    rx::die("IT_DMA_DATA: unexpected dstSel {}", dstSel);
   }
 
   void *src = nullptr;
@@ -551,11 +551,11 @@ bool ComputePipe::dmaData(Ring &ring) {
     break;
 
   default:
-    rx::die("IT_DMA_DATA: unexpected srcSel %u", srcSel);
+    rx::die("IT_DMA_DATA: unexpected srcSel {}", srcSel);
   }
 
   rx::dieIf(size > srcSize && saic == 0,
-            "IT_DMA_DATA: out of source size srcSel %u, dstSel %u, size %u",
+            "IT_DMA_DATA: out of source size srcSel {}, dstSel {}, size {}",
             srcSel, dstSel, size);
 
   if (saic != 0) {
@@ -581,7 +581,7 @@ bool ComputePipe::dmaData(Ring &ring) {
 bool ComputePipe::unknownPacket(Ring &ring) {
   auto op = rx::getBits(ring.rptr[0], 15, 8);
 
-  rx::die("unimplemented compute pm4 packet: %s, indirect level %u\n",
+  rx::die("unimplemented compute pm4 packet: {}, indirect level {}\n",
           gnm::pm4OpcodeToString(op), ring.indirectLevel);
 
   return true;
@@ -597,8 +597,8 @@ std::uint32_t *ComputePipe::getMmRegister(Ring &ring, std::uint32_t dwAddress) {
     return ring.doorbell + (dwAddress - Registers::ComputeConfig::kMmioOffset);
   }
 
-  rx::die("unexpected memory mapped compute register address %x, %s", dwAddress,
-          gnm::mmio::registerName(dwAddress));
+  rx::die("unexpected memory mapped compute register address {:x}, {}",
+          dwAddress, gnm::mmio::registerName(dwAddress));
 }
 
 GraphicsPipe::GraphicsPipe(int index) : scheduler(createGfxScheduler(index)) {
@@ -723,7 +723,7 @@ void GraphicsPipe::setCeQueue(Ring ring) {
 }
 
 void GraphicsPipe::setDeQueue(Ring ring, int indirectLevel) {
-  rx::dieIf(indirectLevel > 2, "out of indirect gfx rings, %u", indirectLevel);
+  rx::dieIf(indirectLevel > 2, "out of indirect gfx rings, {}", indirectLevel);
   ring.indirectLevel = indirectLevel;
   deQueues[2 - indirectLevel] = ring;
 }
@@ -757,7 +757,7 @@ std::uint32_t *GraphicsPipe::getMmRegister(std::uint32_t dwAddress) {
            (dwAddress - Registers::Context::kMmioOffset);
   }
 
-  rx::die("unexpected memory mapped register address %x, %s", dwAddress,
+  rx::die("unexpected memory mapped register address {:x}, {}", dwAddress,
           gnm::mmio::registerName(dwAddress));
 }
 
@@ -864,9 +864,10 @@ void GraphicsPipe::processRing(Ring &ring) {
       continue;
     }
 
-    rx::die("unexpected pm4 packet type %u, ring %u, header %u, rptr %p, wptr "
-            "%p, base %p",
-            type, ring.indirectLevel, header, ring.rptr, ring.wptr, ring.base);
+    rx::die("unexpected pm4 packet type {}, ring {}, header {}, rptr {}, wptr "
+            "{}, base {}",
+            type, ring.indirectLevel, header, (void *)ring.rptr,
+            (void *)ring.wptr, ring.base);
   }
 }
 
@@ -910,7 +911,7 @@ bool GraphicsPipe::setBase(Ring &ring) {
   }
 
   default:
-    rx::die("pm4: unknown SET_BASE index %u", baseIndex);
+    rx::die("pm4: unknown SET_BASE index {}", baseIndex);
   }
 
   return true;
@@ -1184,7 +1185,7 @@ bool GraphicsPipe::writeData(Ring &ring) {
   }
 
   default:
-    rx::die("unimplemented write data, dst sel = %#x", dstSel);
+    rx::die("unimplemented write data, dst sel = {:#x}", dstSel);
   }
 
   if (wrOneAddress) {
@@ -1319,7 +1320,7 @@ bool GraphicsPipe::eventWrite(Ring &ring) {
     auto addressLo = ring.rptr[2] & ~7;
     auto addressHi = ring.rptr[3] & ((1 << 16) - 1);
     auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
-    rx::die("unimplemented event write, event index %#x, address %lx",
+    rx::die("unimplemented event write, event index {:#x}, address {:x}",
             eventIndex, address);
     return true;
   }
@@ -1369,7 +1370,7 @@ bool GraphicsPipe::eventWriteEop(Ring &ring) {
       break;
 
     default:
-      rx::die("unimplemented event write eop data %#x", dataSel);
+      rx::die("unimplemented event write eop data {:x}", dataSel);
     }
   }
 
@@ -1461,7 +1462,7 @@ bool GraphicsPipe::eventWriteEos(Ring &ring) {
     break;
 
   default:
-    rx::die("unexpected event write eos command: %#x", cmd);
+    rx::die("unexpected event write eos command: {:#x}", cmd);
   }
   return true;
 }
@@ -1539,7 +1540,7 @@ bool GraphicsPipe::dmaData(Ring &ring) {
     break;
 
   default:
-    rx::die("IT_DMA_DATA: unexpected dstSel %u", dstSel);
+    rx::die("IT_DMA_DATA: unexpected dstSel {}", dstSel);
   }
 
   void *src = nullptr;
@@ -1571,11 +1572,11 @@ bool GraphicsPipe::dmaData(Ring &ring) {
     break;
 
   default:
-    rx::die("IT_DMA_DATA: unexpected srcSel %u", srcSel);
+    rx::die("IT_DMA_DATA: unexpected srcSel {}", srcSel);
   }
 
   rx::dieIf(size > srcSize && saic == 0,
-            "IT_DMA_DATA: out of source size srcSel %u, dstSel %u, size %u",
+            "IT_DMA_DATA: out of source size srcSel {}, dstSel {}, size {}",
             srcSel, dstSel, size);
 
   if (saic != 0) {
@@ -1759,7 +1760,7 @@ bool GraphicsPipe::setShReg(Ring &ring) {
   auto data = ring.rptr + 2;
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(sh),
-            "out of SH regs, offset: %x, count %u, %s\n", offset, len,
+            "out of SH regs, offset: {:x}, count {}, {}\n", offset, len,
             gnm::mmio::registerName(decltype(sh)::kMmioOffset + offset));
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&sh) + offset,
@@ -1802,7 +1803,7 @@ bool GraphicsPipe::setUConfigReg(Ring &ring) {
   // }
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
-            "out of UConfig regs, offset: %u, count %u, %s\n", offset, len,
+            "out of UConfig regs, offset: {:x}, count {}, {}\n", offset, len,
             gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&uConfig) + offset,
@@ -1845,7 +1846,7 @@ bool GraphicsPipe::setContextReg(Ring &ring) {
   // }
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
-            "out of Context regs, offset: %u, count %u, %s\n", offset, len,
+            "out of Context regs, offset: {:x}, count {}, {}\n", offset, len,
             gnm::mmio::registerName(decltype(context)::kMmioOffset + offset));
 
   std::memcpy(reinterpret_cast<std::uint32_t *>(&context) + offset,
@@ -1930,7 +1931,7 @@ bool GraphicsPipe::dumpConstRam(Ring &ring) {
 bool GraphicsPipe::unknownPacket(Ring &ring) {
   auto op = rx::getBits(ring.rptr[0], 15, 8);
 
-  rx::die("unimplemented gfx pm4 packet: %s, queue %u\n",
+  rx::die("unimplemented gfx pm4 packet: {}, queue {}",
           gnm::pm4OpcodeToString(op), ring.indirectLevel);
 }
 
@@ -1966,7 +1967,7 @@ bool GraphicsPipe::loadContextRegIndex(Ring &ring) {
     // direct address
   } else {
     // offset
-    rx::die("%s: unimplemented index 1", __FUNCTION__);
+    rx::die("{}: unimplemented index 1", __FUNCTION__);
   }
 
   // std::println(
@@ -2028,7 +2029,7 @@ bool GraphicsPipe::loadShRegIndex(Ring &ring) {
     // direct address
   } else {
     // offset
-    rx::die("%s: unimplemented index 1", __FUNCTION__);
+    rx::die("{}: unimplemented index 1", __FUNCTION__);
   }
 
   if (dataFormat == 0) {
@@ -2086,7 +2087,7 @@ bool GraphicsPipe::loadUConfigRegIndex(Ring &ring) {
     // direct address
   } else {
     // offset
-    rx::die("%s: unimplemented index 1", __FUNCTION__);
+    rx::die("{}: unimplemented index 1", __FUNCTION__);
   }
 
   if (dataFormat == 0) {
@@ -2141,7 +2142,7 @@ bool GraphicsPipe::setUConfigRegIndex(Ring &ring) {
   auto data = ring.rptr + 2;
 
   rx::dieIf((offset + len) * sizeof(std::uint32_t) > sizeof(context),
-            "out of UConfig regs, offset: %u, count %u, %s\n", offset, len,
+            "out of UConfig regs, offset: {:x}, count {}, {}\n", offset, len,
             gnm::mmio::registerName(decltype(uConfig)::kMmioOffset + offset));
 
   // for (std::size_t i = 0; i < len; ++i) {
@@ -2205,11 +2206,12 @@ void CommandPipe::processRing(Ring &ring) {
       continue;
     }
 
-    rx::die("cmd pipe: unexpected pm4 packet type %u, ring %u, header %u, rptr "
-            "%p, wptr "
-            "%p, base %p, end %p",
-            type, ring.indirectLevel, header, ring.rptr, ring.wptr, ring.base,
-            ring.base + ring.size);
+    rx::die("cmd pipe: unexpected pm4 packet type {}, ring {}, header {}, rptr "
+            "{}, wptr "
+            "{}, base {}, end {}",
+            type, ring.indirectLevel, header, (void *)ring.rptr,
+            (void *)ring.wptr, (void *)ring.base,
+            (void *)(ring.base + ring.size));
   }
 }
 
@@ -2278,6 +2280,6 @@ void CommandPipe::flip(Ring &ring) {
 void CommandPipe::unknownPacket(Ring &ring) {
   auto op = rx::getBits(ring.rptr[0], 15, 8);
 
-  rx::die("unexpected command pm4 packet: %s, queue %u\n",
+  rx::die("unexpected command pm4 packet: {}, queue {}\n",
           gnm::pm4OpcodeToString(op), ring.indirectLevel);
 }

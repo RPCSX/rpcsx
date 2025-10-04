@@ -1,31 +1,18 @@
 #include "die.hpp"
 
-#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <rx/print.hpp>
 
-void rx::die(const char *message, ...) {
-  va_list args;
-  va_start(args, message);
-  std::vfprintf(stderr, message, args);
-  std::fprintf(stderr, "\n");
-  va_end(args);
+void rx::detail::dieImpl(std::string_view fmt, format_args args,
+                         std::source_location location) {
+  rx::print(stderr, "\n");
+  rx::print(stderr, "{}:{}:{}: ", location.file_name(), location.line(),
+            location.column());
+  rx::vprint_nonunicode(stderr, fmt, args);
+  rx::print(stderr, "\n");
 
   std::fflush(stdout);
   std::fflush(stderr);
   std::abort();
-}
-
-void rx::dieIf(bool condition, const char *message, ...) {
-  if (condition) {
-    va_list args;
-    va_start(args, message);
-    std::vfprintf(stderr, message, args);
-    std::fprintf(stderr, "\n");
-    va_end(args);
-
-    std::fflush(stdout);
-    std::fflush(stderr);
-    std::abort();
-  }
 }

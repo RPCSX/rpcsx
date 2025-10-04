@@ -27,7 +27,7 @@ inline VkImageType toVkImageType(gnm::TextureType type) {
     return VK_IMAGE_TYPE_2D;
   }
 
-  rx::die("toVkImageType: unexpected texture type %u",
+  rx::die("toVkImageType: unexpected texture type {}",
           static_cast<unsigned>(type));
 }
 
@@ -51,7 +51,7 @@ inline VkImageViewType toVkImageViewType(gnm::TextureType type) {
     return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
   }
 
-  rx::die("toVkImageViewType: unexpected texture type %u",
+  rx::die("toVkImageViewType: unexpected texture type {}",
           static_cast<unsigned>(type));
 }
 
@@ -71,11 +71,11 @@ inline VkComponentSwizzle toVkComponentSwizzle(Swizzle swizzle) {
     return VK_COMPONENT_SWIZZLE_A;
   }
 
-  rx::die("toVkComponentSwizzle: unexpected swizzle %u\n",
+  rx::die("toVkComponentSwizzle: unexpected swizzle {}",
           static_cast<unsigned>(swizzle));
 }
 
-static VkBlendFactor toVkBlendFactor(BlendMultiplier mul) {
+inline VkBlendFactor toVkBlendFactor(BlendMultiplier mul) {
   switch (mul) {
   case BlendMultiplier::Zero:
     return VK_BLEND_FACTOR_ZERO;
@@ -117,10 +117,10 @@ static VkBlendFactor toVkBlendFactor(BlendMultiplier mul) {
     return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
   }
 
-  rx::die("VkBlendFactor: unexpected value %u\n", static_cast<unsigned>(mul));
+  rx::die("VkBlendFactor: unexpected value {}", static_cast<unsigned>(mul));
 }
 
-static VkBlendOp toVkBlendOp(BlendFunc func) {
+inline VkBlendOp toVkBlendOp(BlendFunc func) {
   switch (func) {
   case BlendFunc::Add:
     return VK_BLEND_OP_ADD;
@@ -134,11 +134,11 @@ static VkBlendOp toVkBlendOp(BlendFunc func) {
     return VK_BLEND_OP_REVERSE_SUBTRACT;
   }
 
-  rx::die("blendFuncToVkBlendOp: unexpected value %u\n",
+  rx::die("blendFuncToVkBlendOp: unexpected value {}",
           static_cast<unsigned>(func));
 }
 
-static VkFrontFace toVkFrontFace(Face face) {
+inline VkFrontFace toVkFrontFace(Face face) {
   switch (face) {
   case Face::CW:
     return VK_FRONT_FACE_CLOCKWISE;
@@ -146,10 +146,10 @@ static VkFrontFace toVkFrontFace(Face face) {
     return VK_FRONT_FACE_COUNTER_CLOCKWISE;
   }
 
-  rx::die("toVkFrontFace: unexpected value %u\n", static_cast<unsigned>(face));
+  rx::die("toVkFrontFace: unexpected value {}", static_cast<unsigned>(face));
 }
 
-static VkIndexType toVkIndexType(IndexType indexType) {
+inline VkIndexType toVkIndexType(IndexType indexType) {
   switch (indexType) {
   case IndexType::Int16:
     return VK_INDEX_TYPE_UINT16;
@@ -157,15 +157,15 @@ static VkIndexType toVkIndexType(IndexType indexType) {
     return VK_INDEX_TYPE_UINT32;
   }
 
-  rx::die("toVkIndexType: unexpected value %u\n",
+  rx::die("toVkIndexType: unexpected value {}",
           static_cast<unsigned>(indexType));
 }
 
-static VkCompareOp toVkCompareOp(CompareFunc compareFn) {
+inline VkCompareOp toVkCompareOp(CompareFunc compareFn) {
   return static_cast<VkCompareOp>(compareFn);
 }
 
-static VkBorderColor toVkBorderColor(BorderColor color) {
+inline VkBorderColor toVkBorderColor(BorderColor color) {
   switch (color) {
   case gnm::BorderColor::OpaqueBlack:
     return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
@@ -180,11 +180,11 @@ static VkBorderColor toVkBorderColor(BorderColor color) {
     return VK_BORDER_COLOR_FLOAT_CUSTOM_EXT;
   }
 
-  rx::die("toVkBorderColor: unexpected value %u\n",
+  rx::die("toVkBorderColor: unexpected value {}\n",
           static_cast<unsigned>(color));
 }
 
-static VkSamplerAddressMode toVkSamplerAddressMode(ClampMode clampMode) {
+inline VkSamplerAddressMode toVkSamplerAddressMode(ClampMode clampMode) {
   switch (clampMode) {
   case ClampMode::Wrap:
     return VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -208,11 +208,11 @@ static VkSamplerAddressMode toVkSamplerAddressMode(ClampMode clampMode) {
         "toVkSamplerAddressMode: unimplemented ClampMode::MirrorOnceBorder");
   }
 
-  rx::die("toVkSamplerAddressMode: unexpected value %u\n",
+  rx::die("toVkSamplerAddressMode: unexpected value {}",
           static_cast<unsigned>(clampMode));
 }
 
-static VkFilter toVkFilter(Filter filter) {
+inline VkFilter toVkFilter(Filter filter) {
   switch (filter) {
   case Filter::Point:
     return VK_FILTER_NEAREST;
@@ -224,10 +224,10 @@ static VkFilter toVkFilter(Filter filter) {
     return VK_FILTER_LINEAR;
   }
 
-  rx::die("toVkFilter: unexpected value %u\n", static_cast<unsigned>(filter));
+  rx::die("toVkFilter: unexpected value {}", static_cast<unsigned>(filter));
 }
 
-static VkSamplerMipmapMode toVkSamplerMipmapMode(MipFilter filter) {
+inline VkSamplerMipmapMode toVkSamplerMipmapMode(MipFilter filter) {
   switch (filter) {
   case MipFilter::None:
     return VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -237,7 +237,7 @@ static VkSamplerMipmapMode toVkSamplerMipmapMode(MipFilter filter) {
     return VK_SAMPLER_MIPMAP_MODE_LINEAR;
   }
 
-  rx::die("toVkSamplerMipmapMode: unexpected value %u\n",
+  rx::die("toVkSamplerMipmapMode: unexpected value {}",
           static_cast<unsigned>(filter));
 }
 } // namespace gnm

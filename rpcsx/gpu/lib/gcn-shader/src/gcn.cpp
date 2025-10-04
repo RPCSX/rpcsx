@@ -560,7 +560,7 @@ ir::Value gcn::Context::readReg(ir::Location loc, Builder &builder,
       return builder.createSpvBitcast(loc, getTypeFloat16(), result);
     }
 
-    rx::die("unexpected value width %u", valWidth);
+    rx::die("unexpected value width {}", valWidth);
   }
 
   if ((valWidth % regWidth) != 0) {
