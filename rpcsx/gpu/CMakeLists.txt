@@ -1,5 +1,3 @@
-find_package(glfw3 3.3 REQUIRED)
-
 add_precompiled_vulkan_spirv(rpcsx-gpu-shaders
     shaders/fill_red.frag.glsl
     shaders/flip_std.frag.glsl
@@ -24,7 +22,7 @@ PUBLIC
     rpcsx-gpu-shaders
     rx
     gcn-shader
-    glfw
+    3rdparty::glfw
     amdgpu::tiler::cpu
     amdgpu::tiler::vulkan
     rdna-semantic-spirv

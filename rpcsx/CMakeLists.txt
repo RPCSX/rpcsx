@@ -4,7 +4,7 @@ add_library(orbis::kernel::config ALIAS standalone-config)
 
 add_subdirectory(cpu)
 
-if(LINUX AND WITH_RPCSX)
+if(LINUX AND WITH_PS4)
   find_package(libunwind REQUIRED)
   find_package(sox REQUIRED)
   find_package(ALSA REQUIRED)

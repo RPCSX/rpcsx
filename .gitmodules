@@ -131,3 +131,12 @@
 [submodule "3rdparty/Vulkan-Headers"]
 	path = 3rdparty/Vulkan-Headers
 	url = ../../KhronosGroup/Vulkan-Headers.git
+[submodule "3rdparty/fmtlib"]
+	path = 3rdparty/fmtlib
+	url = ../../fmtlib/fmt.git
+[submodule "3rdparty/Vulkan-Loader"]
+	path = 3rdparty/Vulkan-Loader
+	url = ../../KhronosGroup/Vulkan-Loader.git
+[submodule "3rdparty/glfw"]
+	path = 3rdparty/glfw
+	url = ../../glfw/glfw.git
