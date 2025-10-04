@@ -134,6 +134,9 @@ constexpr std::pair<ppu_intrp_func_t, std::string_view> null_func{null_func_,
                                                                   ""};
 constexpr std::pair<ppu_intrp_func_t, std::string_view> uns_func{uns_func_, ""};
 
+// for CI, remove when clang-format-21 available
+// clang-format off
+
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
@@ -1271,6 +1274,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024>
         uns_func,
         uns_func, // 1020-1023  UNS
     };
+// clang-format on
 
 #undef BIND_SYSC
 #undef NULL_FUNC

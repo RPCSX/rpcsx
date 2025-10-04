@@ -110,6 +110,7 @@ target_link_libraries(rpcs3_core PUBLIC
     3rdparty::zlib
     3rdparty::pugixml
     3rdparty::yaml-cpp
+    3rdparty::zstd
 )
 
 if(APPLE)
