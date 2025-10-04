@@ -653,7 +653,7 @@ SysResult thr_wake(orbis::Thread *thread, orbis::slong id) {
 SysResult sigreturn(orbis::Thread *thread,
                     orbis::ptr<orbis::UContext> context) {
   rx::thread::setContext(thread, *context);
-  return{};
+  return {};
 }
 SysResult thr_set_name(orbis::Thread *thread, orbis::slong id,
                        orbis::ptr<const char> name) {

@@ -70,8 +70,7 @@ struct Context : spv::Context {
 
   std::pair<ir::Value, bool> getOrCreateLabel(ir::Location loc, ir::Region body,
                                               std::uint64_t address);
-  Builder createBuilder(ir::Region bodyRegion,
-                        std::uint64_t address);
+  Builder createBuilder(ir::Region bodyRegion, std::uint64_t address);
 
   ir::Value createCast(ir::Location loc, Builder &builder, ir::Value targetType,
                        ir::Value value);

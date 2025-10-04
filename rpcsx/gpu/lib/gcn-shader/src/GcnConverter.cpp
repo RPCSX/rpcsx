@@ -374,7 +374,8 @@ struct ResourcesBuilder {
         } else if (auto value = inst.cast<ir::Value>()) {
           resourcePhi.addOperand(value);
         } else {
-          auto block = resources.context.create<ir::Block>(inst.getLocation(), ir::Kind::Builtin, ir::builtin::BLOCK);
+          auto block = resources.context.create<ir::Block>(
+              inst.getLocation(), ir::Kind::Builtin, ir::builtin::BLOCK);
           inst.erase();
           block.addChild(inst);
           resourcePhi.addOperand(block);
@@ -1112,7 +1113,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
   };
 
   rx::println(stderr, "exp target {}.{}", targetToString(target),
-               swizzleToString(swizzle));
+              swizzleToString(swizzle));
   std::abort();
 }
 

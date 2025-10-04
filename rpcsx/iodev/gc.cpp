@@ -406,7 +406,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   case 0x802450c9: {
     // used during Net initialization
     rx::println(stderr, "***WARNING*** Unknown gc ioctl_{:x}(0x{:x})", request,
-                 (unsigned long)*(std::uint32_t *)argp);
+                (unsigned long)*(std::uint32_t *)argp);
     break;
   }
 

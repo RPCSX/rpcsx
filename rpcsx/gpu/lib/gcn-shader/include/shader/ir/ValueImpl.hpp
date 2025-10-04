@@ -13,11 +13,11 @@ struct ValueImpl : InstructionImpl {
   using InstructionImpl::InstructionImpl;
 
   void addUse(Instruction user, int operandIndex) {
-    uses.insert({.user=user, .node=this, .operandIndex=operandIndex});
+    uses.insert({.user = user, .node = this, .operandIndex = operandIndex});
   }
 
   void removeUse(Instruction user, int operandIndex) {
-    uses.erase({.user=user, .node=this, .operandIndex=operandIndex});
+    uses.erase({.user = user, .node = this, .operandIndex = operandIndex});
   }
 
   std::set<Instruction> getUserList() const {

@@ -214,8 +214,8 @@ public:
   bool isDevKit = false;
 
   Ref<Budget> createProcessTypeBudget(Budget::ProcessType processType,
-                              std::string_view name,
-                              std::span<const BudgetInfo> items) {
+                                      std::string_view name,
+                                      std::span<const BudgetInfo> items) {
     auto budget = orbis::knew<orbis::Budget>(name, processType, items);
     processTypeBudgets[static_cast<int>(processType)] =
         orbis::knew<orbis::Budget>(name, processType, items);

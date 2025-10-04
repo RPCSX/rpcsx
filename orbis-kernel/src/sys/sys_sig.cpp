@@ -1,8 +1,8 @@
 #include "KernelContext.hpp"
 #include "sys/sysproto.hpp"
 #include "thread/Process.hpp"
-#include "thread/Thread.hpp"
 #include "thread/ProcessOps.hpp"
+#include "thread/Thread.hpp"
 #include "ucontext.hpp"
 #include "utils/Logs.hpp"
 #include <csignal>

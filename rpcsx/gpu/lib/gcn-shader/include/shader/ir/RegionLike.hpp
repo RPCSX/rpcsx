@@ -34,9 +34,7 @@ struct RegionLikeWrapper : BaseWrapper<ImplT> {
     this->impl->printRegion(os, ns, opts);
   }
 
-  auto getParent() const {
-    return this->impl->getParent();
-  }
+  auto getParent() const { return this->impl->getParent(); }
 };
 
 struct RegionLikeImpl;

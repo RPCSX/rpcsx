@@ -10,7 +10,8 @@ template <typename T> struct PrintableWrapper : PointerWrapper<T> {
   using PointerWrapper<T>::PointerWrapper;
   using PointerWrapper<T>::operator=;
 
-  void print(std::ostream &os, NameStorage &ns, const PrintOptions &opts = {}) const {
+  void print(std::ostream &os, NameStorage &ns,
+             const PrintOptions &opts = {}) const {
     if constexpr (requires { this->impl->print(os, ns, opts); }) {
       this->impl->print(os, ns, opts);
     } else if constexpr (requires { this->impl->print(os, ns); }) {

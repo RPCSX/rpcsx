@@ -113,7 +113,7 @@ public:
   void setInsertionPoint(Instruction inst) { mInsertionPoint = inst; }
 
   InsertionPoint saveInsertionPoint() {
-    return { mInsertionStorage, mInsertionPoint };
+    return {mInsertionStorage, mInsertionPoint};
   }
 
   template <typename T, typename... ArgsT>

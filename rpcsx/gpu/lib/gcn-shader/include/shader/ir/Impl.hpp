@@ -170,7 +170,7 @@ inline void RegionLikeImpl::addChild(Instruction node) {
     assert(node != thisInst);
   }
 #endif
-  
+
   node.get()->parent = this;
   if (first == nullptr) {
     first = node;
