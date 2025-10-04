@@ -279,7 +279,17 @@ if (NOT COMPILE_VULKAN_LOADER OR ANDROID OR APPLE)
 endif()
 
 if (COMPILE_VULKAN_LOADER)
-	set(BUILD_WSI_XCB_SUPPORT off)
+	find_package(xcb)
+	if (NOT xcb_FOUND)
+		message(WARNING "Compiling Vulkan-Loader without XCB support")
+		set(BUILD_WSI_XCB_SUPPORT off)
+	endif()
+
+	find_package(x11)
+	if (NOT x11_FOUND)
+		message(WARNING "Compiling Vulkan-Loader without X11 support")
+		set(BUILD_WSI_XLIB_SUPPORT off)
+	endif()
 
 	add_subdirectory(Vulkan-Loader)
 	target_link_libraries(3rdparty_vulkan INTERFACE Vulkan::Loader)
