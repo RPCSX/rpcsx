@@ -131,9 +131,9 @@ function(target_base_address target address)
 endfunction()
 
 
-option(WITH_RPCSX "Enable RPCSX" ON)
-option(WITH_RPCS3 "Enable RPCS3" OFF)
-option(WITH_RPCS3_QT_UI "Enable RPCS3 UI" OFF)
+option(WITH_PS3 "Enable PS3 emulation support" OFF)
+option(WITH_PS4 "Enable PS4 emulation support" ON)
+
 option(WITHOUT_OPENGL "Disable OpenGL" OFF)
 option(WITHOUT_OPENGLEW "Disable OpenGLEW" OFF)
 option(WITHOUT_OPENAL "Disable OpenAL" OFF)
@@ -159,8 +159,7 @@ option(USE_SYSTEM_OPENCV "Prefer system OpenCV instead of the builtin one" ON)
 option(HAS_MEMORY_BREAKPOINTS "Add support for memory breakpoints to the interpreter" OFF)
 option(USE_LTO "Use LTO for building" ON)
 
-
-if (NOT WITH_RPCS3)
+if (NOT WITH_PS3)
     set(WITHOUT_OPENGL on)
     set(WITHOUT_OPENGLEW on)
     set(WITHOUT_OPENAL on)
@@ -252,6 +251,8 @@ add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 add_subdirectory(rx EXCLUDE_FROM_ALL)
 
 include(3rdparty/llvm/CMakeLists.txt)
+include(ConfigureCompiler)
+include(CheckFunctionExists)
 
 if (NOT RX_TAG)
     set(RX_TAG 0)
@@ -266,7 +267,7 @@ target_compile_definitions(rx PRIVATE
     RX_TAG_VERSION=${RX_TAG_VERSION}
 )
 
-if (WITH_RPCSX)
+if (WITH_PS4)
     find_package(nlohmann_json CONFIG)
     add_subdirectory(tools)
     add_subdirectory(orbis-kernel)
@@ -274,14 +275,7 @@ endif()
 
 add_subdirectory(rpcsx)
 
-if (WITH_RPCS3)
-    include(ConfigureCompiler)
-    include(CheckFunctionExists)
-
+if (WITH_PS3)
     add_subdirectory(rpcs3)
     add_subdirectory(ps3fw)
-endif()
-
-if (NOT ANDROID AND WITH_RPCS3_QT_UI AND WITH_RPCS3)
-    add_subdirectory(rpcs3qt-legacy)
 endif()

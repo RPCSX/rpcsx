@@ -88,8 +88,8 @@ target_link_libraries(3rdparty_ffmpeg INTERFACE
 
 add_dependencies(3rdparty_ffmpeg ffmpeg-unpack)
 
-set(WITH_RPCSX off)
-set(WITH_RPCS3 on)
+set(WITH_PS4 off)
+set(WITH_PS3 on)
 set(USE_SYSTEM_LIBUSB off)
 set(USE_SYSTEM_CURL off)
 set(USE_DISCORD_RPC off)
@@ -112,8 +112,6 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/.. rpcsx EXCLUDE_FROM_ALL)
 add_library(${CMAKE_PROJECT_NAME} SHARED
     src/rpcsx-android.cpp
 )
-
-target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC rpcs3/rpcs3)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     rpcs3
