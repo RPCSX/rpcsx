@@ -279,6 +279,8 @@ if (NOT COMPILE_VULKAN_LOADER OR ANDROID OR APPLE)
 endif()
 
 if (COMPILE_VULKAN_LOADER)
+	set(BUILD_WSI_XCB_SUPPORT off)
+
 	add_subdirectory(Vulkan-Loader)
 	target_link_libraries(3rdparty_vulkan INTERFACE Vulkan::Loader)
 endif()
