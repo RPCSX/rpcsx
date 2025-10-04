@@ -23,7 +23,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y cmake build-essential libunwind-dev \
-          libsox-dev g++-14 ninja-build libasound2-dev nasm libudev-dev libxcb-dev libx11-dev
+          libsox-dev g++-14 ninja-build libasound2-dev nasm libudev-dev libxcb1-dev libx11-dev
         cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-14 -DCMAKE_INSTALL_PREFIX=/usr
         cmake --build build -j$(($(nproc) + 2))
         sudo cmake --build build
