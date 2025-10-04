@@ -11,10 +11,11 @@
 #include "shader/SemanticInfo.hpp"
 #include "shader/SpvConverter.hpp"
 #include "shader/gcn.hpp"
-#include <GLFW/glfw3.h>
 #include <array>
 #include <thread>
 #include <vulkan/vulkan_core.h>
+
+struct GLFWwindow;
 
 namespace amdgpu {
 

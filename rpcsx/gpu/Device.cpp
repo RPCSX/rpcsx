@@ -18,13 +18,15 @@
 #include "shader/spv.hpp"
 #include "shaders/rdna-semantic-spirv.hpp"
 #include "vk.hpp"
-#include <GLFW/glfw3.h>
 #include <chrono>
 #include <cstdio>
 #include <fcntl.h>
 #include <stop_token>
 #include <sys/mman.h>
 #include <thread>
+
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 using namespace amdgpu;
 
