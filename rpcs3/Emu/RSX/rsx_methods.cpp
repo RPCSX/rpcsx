@@ -2,7 +2,7 @@
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/lv2/sys_rsx.h"
+#include "cellos/sys_rsx.h"
 
 #include "Emu/System.h"
 #include "Emu/RSX/NV47/HW/nv47.h"

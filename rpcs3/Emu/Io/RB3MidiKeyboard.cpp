@@ -3,7 +3,7 @@
 
 #ifndef WITHOUT_RTMIDI
 #include "RB3MidiKeyboard.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 
 LOG_CHANNEL(rb3_midi_keyboard_log);
 

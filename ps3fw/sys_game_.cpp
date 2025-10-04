@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_mutex.h"
-#include "Emu/Cell/lv2/sys_process.h"
+#include "cellos/sys_mutex.h"
+#include "cellos/sys_process.h"
 #include "sysPrxForUser.h"
 
 LOG_CHANNEL(sysPrxForUser);

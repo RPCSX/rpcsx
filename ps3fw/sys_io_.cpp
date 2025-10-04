@@ -3,8 +3,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_event.h"
-#include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "cellos/sys_event.h"
+#include "cellos/sys_ppu_thread.h"
 #include "sysPrxForUser.h"
 
 LOG_CHANNEL(sys_io);

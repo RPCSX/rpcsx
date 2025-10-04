@@ -3,8 +3,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_fs.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "cellos/sys_fs.h"
+#include "cellos/sys_sync.h"
 #include "cellFs.h"
 
 #include <mutex>

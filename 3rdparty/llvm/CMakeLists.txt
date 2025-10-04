@@ -185,12 +185,13 @@ if(WITH_LLVM)
 			message(FATAL_ERROR "Can't find LLVM libraries from the CMAKE_PREFIX_PATH path or LLVM_DIR. \
 													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 		endif()
+
 		if (LLVM_VERSION VERSION_LESS 18)
 			message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 18 or above.")
 		endif()
 
 		if (NOT MLIR_FOUND)
-			message(FATAL_ERROR "Can't find MLIR libraries from the CMAKE_PREFIX_PATH path or MLIR_DIR")
+			message(FATAL_ERROR "Can't find MLIR libraries from the CMAKE_PREFIX_PATH path or MLIR_DIR: ${MLIR_DIR}")
 		endif()
 
 

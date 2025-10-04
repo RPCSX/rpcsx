@@ -5,7 +5,7 @@
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
-#include "Emu/Cell/lv2/sys_time.h"
+#include "cellos/sys_time.h"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Crypto/sha1.h"

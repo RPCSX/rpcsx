@@ -4,7 +4,7 @@
 
 #ifndef WITHOUT_RTMIDI
 #include "RB3MidiDrums.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 #include "Emu/Io/rb3drums_config.h"
 
 using namespace std::chrono_literals;

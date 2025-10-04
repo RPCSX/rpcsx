@@ -124,56 +124,6 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUCommonRecompiler.cpp
     Cell/SPULLVMRecompiler.cpp
     Cell/SPUThread.cpp
-    Cell/lv2/lv2.cpp
-    Cell/lv2/sys_bdemu.cpp
-    Cell/lv2/sys_btsetting.cpp
-    Cell/lv2/sys_cond.cpp
-    Cell/lv2/sys_console.cpp
-    Cell/lv2/sys_crypto_engine.cpp
-    Cell/lv2/sys_config.cpp
-    Cell/lv2/sys_dbg.cpp
-    Cell/lv2/sys_event.cpp
-    Cell/lv2/sys_event_flag.cpp
-    Cell/lv2/sys_fs.cpp
-    Cell/lv2/sys_game.cpp
-    Cell/lv2/sys_gamepad.cpp
-    Cell/lv2/sys_gpio.cpp
-    Cell/lv2/sys_hid.cpp
-    Cell/lv2/sys_interrupt.cpp
-    Cell/lv2/sys_io.cpp
-    Cell/lv2/sys_lwcond.cpp
-    Cell/lv2/sys_lwmutex.cpp
-    Cell/lv2/sys_memory.cpp
-    Cell/lv2/sys_mmapper.cpp
-    Cell/lv2/sys_mutex.cpp
-    Cell/lv2/sys_net.cpp
-    Cell/lv2/sys_net/lv2_socket.cpp
-    Cell/lv2/sys_net/lv2_socket_native.cpp
-    Cell/lv2/sys_net/lv2_socket_raw.cpp
-    Cell/lv2/sys_net/lv2_socket_p2p.cpp
-    Cell/lv2/sys_net/lv2_socket_p2ps.cpp
-    Cell/lv2/sys_net/network_context.cpp
-    Cell/lv2/sys_net/nt_p2p_port.cpp
-    Cell/lv2/sys_net/sys_net_helpers.cpp
-    Cell/lv2/sys_overlay.cpp
-    Cell/lv2/sys_ppu_thread.cpp
-    Cell/lv2/sys_process.cpp
-    Cell/lv2/sys_prx.cpp
-    Cell/lv2/sys_rsx.cpp
-    Cell/lv2/sys_rsxaudio.cpp
-    Cell/lv2/sys_rwlock.cpp
-    Cell/lv2/sys_semaphore.cpp
-    Cell/lv2/sys_spu.cpp
-    Cell/lv2/sys_sm.cpp
-    Cell/lv2/sys_ss.cpp
-    Cell/lv2/sys_storage.cpp
-    Cell/lv2/sys_time.cpp
-    Cell/lv2/sys_timer.cpp
-    Cell/lv2/sys_trace.cpp
-    Cell/lv2/sys_tty.cpp
-    Cell/lv2/sys_uart.cpp
-    Cell/lv2/sys_usbd.cpp
-    Cell/lv2/sys_vm.cpp
 )
 
 if(NOT MSVC)
@@ -205,7 +155,8 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
 endif()
 
 target_link_libraries(rpcs3_emu
-    PUBLIC 3rdparty::llvm 3rdparty::asmjit)
+    PUBLIC 3rdparty::llvm 3rdparty::asmjit cellos-kernel
+)
 
 
 # Io
@@ -446,6 +397,7 @@ target_link_libraries(rpcs3_emu
         rpcsx::fw::ps3::api
         rpcsx::cpu::cell::ppu
         rpcsx::cpu::cell::ppu::semantic
+        cellos-kernel
 
     PRIVATE
         3rdparty::glslang

@@ -6,7 +6,7 @@
 #include "Capture/rsx_capture.h"
 #include "Core/RSXReservationLock.hpp"
 #include "Emu/Memory/vm_reservation.h"
-#include "Emu/Cell/lv2/sys_rsx.h"
+#include "cellos/sys_rsx.h"
 #include "NV47/HW/context.h"
 
 #include "util/asm.hpp"

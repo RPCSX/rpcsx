@@ -6,7 +6,7 @@
 // STB_IMAGE_IMPLEMENTATION is already defined in stb_image.cpp
 #include <stb_image.h>
 
-#include "Emu/Cell/lv2/sys_fs.h"
+#include "cellos/sys_fs.h"
 #include "cellGifDec.h"
 
 LOG_CHANNEL(cellGifDec);

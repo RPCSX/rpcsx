@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
+#include "cellos/sys_net/sys_net_helpers.h"
 #include "Emu/NP/ip_address.h"
 #include <string>
 #include <mutex>

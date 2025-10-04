@@ -4,8 +4,8 @@
 
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_cond.h"
-#include "Emu/Cell/lv2/sys_mutex.h"
+#include "cellos/sys_cond.h"
+#include "cellos/sys_mutex.h"
 
 LOG_CHANNEL(sysPrxForUser);
 

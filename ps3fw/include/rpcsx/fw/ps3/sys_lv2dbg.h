@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Emu/Cell/lv2/sys_mutex.h"
-#include "Emu/Cell/lv2/sys_cond.h"
-#include "Emu/Cell/lv2/sys_rwlock.h"
-#include "Emu/Cell/lv2/sys_event.h"
-#include "Emu/Cell/lv2/sys_semaphore.h"
-#include "Emu/Cell/lv2/sys_lwmutex.h"
-#include "Emu/Cell/lv2/sys_lwcond.h"
-#include "Emu/Cell/lv2/sys_event_flag.h"
+#include "cellos/sys_mutex.h"
+#include "cellos/sys_cond.h"
+#include "cellos/sys_rwlock.h"
+#include "cellos/sys_event.h"
+#include "cellos/sys_semaphore.h"
+#include "cellos/sys_lwmutex.h"
+#include "cellos/sys_lwcond.h"
+#include "cellos/sys_event_flag.h"
 
 #include "Emu/Memory/vm_ptr.h"
 

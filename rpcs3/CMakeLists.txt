@@ -33,7 +33,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 include(ConfigureCompiler)
 include(CheckFunctionExists)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -64,13 +64,7 @@ endif()
 
 gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_library(rpcs3 STATIC
-    rpcs3_version.cpp
-    module_verifier.cpp
-    stb_image.cpp
-
-    dev/iso.cpp
-
+add_library(rpcs3_core STATIC
     util/atomic.cpp
     util/console.cpp
     util/emu_utils.cpp
@@ -100,6 +94,39 @@ add_library(rpcs3 STATIC
     util/StrFmt.cpp
     util/Thread.cpp
     util/version.cpp
+)
+
+target_include_directories(rpcs3_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(rpcs3_core PUBLIC rx)
+
+target_link_libraries(rpcs3_core PUBLIC
+    rpcsx::cpu::cell::ppu # FIXME: remove
+    rpcsx::fw::ps3::api # FIXME: remove
+    cellos-kernel # FIXME: remove
+    3rdparty::stblib
+    3rdparty::ffmpeg
+    3rdparty::asmjit
+    3rdparty::zlib
+    3rdparty::pugixml
+    3rdparty::yaml-cpp
+)
+
+if(APPLE)
+    target_sources(rpcs3_core PRIVATE
+        util/darwin/sysinfo_darwin.mm
+    )
+endif()
+
+if(USE_PRECOMPILED_HEADERS)
+    target_precompile_headers(rpcs3_core PUBLIC stdafx.h)
+endif()
+
+add_library(rpcs3 STATIC
+    rpcs3_version.cpp
+    module_verifier.cpp
+    stb_image.cpp
+
+    dev/iso.cpp
 
     Crypto/aes.cpp
     Crypto/aesni.cpp
@@ -146,14 +173,6 @@ add_library(rpcs3 STATIC
     Input/virtual_pad_handler.cpp
 )
 
-target_include_directories(rpcs3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-if(APPLE)
-    target_sources(rpcs3 PRIVATE
-        util/darwin/sysinfo_darwin.mm
-    )
-endif()
-
 set_source_files_properties("util/JITLLVM.cpp" "util/JITASM.cpp" PROPERTIES
     COMPILE_FLAGS "$<IF:$<CXX_COMPILER_ID:MSVC>,/GR-,-fno-rtti>"
     SKIP_PRECOMPILE_HEADERS ON
@@ -166,8 +185,7 @@ set_source_files_properties("util/yaml.cpp" PROPERTIES
 
 target_link_libraries(rpcs3 PUBLIC
     rpcs3_emu
-    3rdparty::zlib
-    3rdparty::pugixml
+    rpcs3_core
     3rdparty::discordRPC
     3rdparty::hidapi
     3rdparty::libusb
@@ -178,9 +196,6 @@ target_link_libraries(rpcs3 PUBLIC
     3rdparty::opencv
     3rdparty::fusion
     3rdparty::rtmidi
-    3rdparty::stblib
-    3rdparty::ffmpeg
-    3rdparty::yaml-cpp
     3rdparty::zstd
     ${ADDITIONAL_LIBS}
 )

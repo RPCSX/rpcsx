@@ -3,8 +3,8 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/timers.hpp"
-#include "Emu/Cell/lv2/sys_lwmutex.h"
-#include "Emu/Cell/lv2/sys_mutex.h"
+#include "cellos/sys_lwmutex.h"
+#include "cellos/sys_mutex.h"
 #include "sysPrxForUser.h"
 
 #include "util/asm.hpp"

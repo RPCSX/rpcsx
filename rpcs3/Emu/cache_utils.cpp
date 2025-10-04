@@ -5,7 +5,7 @@
 #include "system_utils.hpp"
 #include "system_config.h"
 #include "IdManager.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "cellos/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUThread.h"
 

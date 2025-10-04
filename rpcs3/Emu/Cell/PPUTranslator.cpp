@@ -2,7 +2,7 @@
 
 #include "Emu/system_config.h"
 #include "Emu/Cell/Common.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "cellos/sys_sync.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
 #include "SPUThread.h"

@@ -14,9 +14,9 @@
 #include "sceNp.h"
 #include "sysPrxForUser.h"
 
-#include "Emu/Cell/lv2/sys_fs.h"
-#include "Emu/Cell/lv2/sys_sync.h"
-#include "Emu/Cell/lv2/sys_time.h"
+#include "cellos/sys_fs.h"
+#include "cellos/sys_sync.h"
+#include "cellos/sys_time.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_handler.h"

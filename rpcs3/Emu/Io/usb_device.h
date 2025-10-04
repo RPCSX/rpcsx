@@ -15,7 +15,7 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 
 struct UsbTransfer;
 

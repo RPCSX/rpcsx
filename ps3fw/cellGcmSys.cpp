@@ -3,8 +3,8 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Memory/vm.h"
-#include "Emu/Cell/lv2/sys_ppu_thread.h"
-#include "Emu/Cell/lv2/sys_rsx.h"
+#include "cellos/sys_ppu_thread.h"
+#include "cellos/sys_rsx.h"
 #include "Emu/RSX/RSXThread.h"
 
 #include "cellGcmSys.h"

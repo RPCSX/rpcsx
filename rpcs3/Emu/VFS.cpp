@@ -3,7 +3,7 @@
 #include "System.h"
 #include "VFS.h"
 
-#include "Cell/lv2/sys_fs.h"
+#include "cellos/sys_fs.h"
 
 #include "util/mutex.h"
 #include "util/StrUtil.h"

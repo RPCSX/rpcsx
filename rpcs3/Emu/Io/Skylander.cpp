@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Skylander.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 
 LOG_CHANNEL(skylander_log, "skylander");
 

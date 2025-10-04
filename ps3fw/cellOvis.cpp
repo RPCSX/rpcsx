@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_spu.h"
+#include "cellos/sys_spu.h"
 
 LOG_CHANNEL(cellOvis);
 

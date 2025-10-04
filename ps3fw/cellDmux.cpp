@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "cellos/sys_sync.h"
 
 #include "cellPamf.h"
 #include "cellDmux.h"

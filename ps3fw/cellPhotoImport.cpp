@@ -1,5 +1,5 @@
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_fs.h"
+#include "cellos/sys_fs.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Overlays/overlay_media_list_dialog.h"
 #include "Emu/System.h"

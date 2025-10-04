@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 #include "Buzz.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 #include "Emu/Io/buzz_config.h"
 #include "Emu/system_config.h"
 #include "Input/pad_thread.h"

@@ -17,10 +17,10 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/timers.hpp"
 
-#include "Emu/Cell/lv2/sys_process.h"
-#include "Emu/Cell/lv2/sys_prx.h"
-#include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/Cell/lv2/sys_overlay.h"
+#include "cellos/sys_process.h"
+#include "cellos/sys_prx.h"
+#include "cellos/sys_memory.h"
+#include "cellos/sys_overlay.h"
 
 #include "rpcsx/fw/ps3/StaticHLE.h"
 

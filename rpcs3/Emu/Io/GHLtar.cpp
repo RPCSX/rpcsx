@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 #include "GHLtar.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/system_config.h"
 #include "Input/pad_thread.h"

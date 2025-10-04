@@ -4,9 +4,9 @@
 
 #include "util/v128.hpp"
 
-#include "Emu/Cell/lv2/sys_lwmutex.h"
-#include "Emu/Cell/lv2/sys_lwcond.h"
-#include "Emu/Cell/lv2/sys_spu.h"
+#include "cellos/sys_lwmutex.h"
+#include "cellos/sys_lwcond.h"
+#include "cellos/sys_spu.h"
 
 struct CellSpurs;
 struct CellSpursTaskset;

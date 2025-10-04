@@ -1,4 +1,4 @@
-#include "stdafx.h" // No BOM and only basic ASCII in this file, or a neko will die
+#include "stdafx.h"
 
 static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
 

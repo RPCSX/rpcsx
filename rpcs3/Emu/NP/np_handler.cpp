@@ -14,8 +14,8 @@
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/signaling_handler.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
-#include "Emu/Cell/lv2/sys_net/network_context.h"
-#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
+#include "cellos/sys_net/network_context.h"
+#include "cellos/sys_net/sys_net_helpers.h"
 
 #ifdef _WIN32
 #include <winsock2.h>

@@ -4,7 +4,7 @@
 #include "util/StrFmt.h"
 #include "stdafx.h"
 #include "Emu/Cell/PPUCallback.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "cellos/sys_sync.h"
 #include "Emu/system_config.h"
 #include "rpcsx/fw/ps3/cellSysutil.h"
 #include "Emu/Memory/vm_ptr.h"

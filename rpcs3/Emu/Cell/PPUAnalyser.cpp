@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "PPUAnalyser.h"
 
-#include "lv2/sys_sync.h"
+#include "cellos/sys_sync.h"
 
 #include "PPUOpcodes.h"
 #include "PPUThread.h"

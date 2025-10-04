@@ -6,7 +6,7 @@
 #include "sceNp.h"
 #include "cellSysutil.h"
 
-#include "Emu/Cell/lv2/sys_process.h"
+#include "cellos/sys_process.h"
 
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"

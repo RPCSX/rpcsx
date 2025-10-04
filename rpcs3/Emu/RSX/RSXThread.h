@@ -19,7 +19,7 @@
 #include "Capture/rsx_trace.h"
 #include "Capture/rsx_replay.h"
 
-#include "Emu/Cell/lv2/sys_rsx.h"
+#include "cellos/sys_rsx.h"
 #include "Emu/IdManager.h"
 
 #include "Core/RSXDisplay.h"

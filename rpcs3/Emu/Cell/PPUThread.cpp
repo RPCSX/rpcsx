@@ -23,11 +23,11 @@
 #include "PPUDisAsm.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
-#include "lv2/sys_sync.h"
-#include "lv2/sys_prx.h"
-#include "lv2/sys_overlay.h"
-#include "lv2/sys_process.h"
-#include "lv2/sys_spu.h"
+#include "cellos/sys_sync.h"
+#include "cellos/sys_prx.h"
+#include "cellos/sys_overlay.h"
+#include "cellos/sys_process.h"
+#include "cellos/sys_spu.h"
 #include <cstddef>
 #include <rx/format.hpp>
 

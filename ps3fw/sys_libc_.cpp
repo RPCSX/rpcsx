@@ -1,5 +1,5 @@
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_tty.h"
+#include "cellos/sys_tty.h"
 #include "stdafx.h"
 #include "util/cfmt.h"
 

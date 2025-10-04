@@ -3,7 +3,7 @@
 #include "stdafx.h"
 #include "util/Thread.h"
 
-#include "Emu/Cell/lv2/sys_spu.h"
+#include "cellos/sys_spu.h"
 
 #include <thread>
 

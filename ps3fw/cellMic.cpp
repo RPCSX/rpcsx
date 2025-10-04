@@ -4,7 +4,7 @@
 #include "util/StrUtil.h"
 
 #include "cellMic.h"
-#include <Emu/Cell/lv2/sys_event.h>
+#include <cellos/sys_event.h>
 #include <Emu/IdManager.h>
 
 #include <cmath>

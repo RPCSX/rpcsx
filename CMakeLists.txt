@@ -279,6 +279,7 @@ add_subdirectory(rpcsx)
 
 if (WITH_PS3)
     include(ConfigureCompiler)
+    add_subdirectory(kernel/cellos)
     add_subdirectory(rpcs3)
     add_subdirectory(ps3fw)
 endif()

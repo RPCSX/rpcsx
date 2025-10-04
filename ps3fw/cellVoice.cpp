@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_event.h"
-#include "Emu/Cell/lv2/sys_process.h"
+#include "cellos/sys_event.h"
+#include "cellos/sys_process.h"
 #include "cellVoice.h"
 
 LOG_CHANNEL(cellVoice);

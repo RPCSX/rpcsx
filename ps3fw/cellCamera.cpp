@@ -4,7 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_event.h"
+#include "cellos/sys_event.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
 

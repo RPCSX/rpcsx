@@ -2,7 +2,7 @@
 
 #include "stdafx.h"
 #include "Turntable.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
+#include "cellos/sys_usbd.h"
 #include "Emu/Io/turntable_config.h"
 #include "Input/pad_thread.h"
 #include "Emu/system_config.h"

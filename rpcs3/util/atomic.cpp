@@ -1025,7 +1025,7 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 
 	// Can skip unqueue process if true
 #if defined(USE_FUTEX) || defined(USE_STD)
-	constexpr bool fallback = true;
+	[[maybe_unused]] constexpr bool fallback = true;
 #else
 	bool fallback = false;
 #endif

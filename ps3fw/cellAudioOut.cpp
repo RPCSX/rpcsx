@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_rsxaudio.h"
+#include "cellos/sys_rsxaudio.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"

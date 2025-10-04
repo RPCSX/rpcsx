@@ -1,7 +1,7 @@
 #pragma once
 
 #include <util/types.hpp>
-#include "Emu/Cell/lv2/sys_rsx.h"
+#include "cellos/sys_rsx.h"
 #include "Emu/RSX/GCM.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "RSXIOMap.hpp"

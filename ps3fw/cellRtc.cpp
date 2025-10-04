@@ -3,9 +3,9 @@
 
 #include "cellRtc.h"
 
-#include "Emu/Cell/lv2/sys_time.h"
-#include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/Cell/lv2/sys_ss.h"
+#include "cellos/sys_time.h"
+#include "cellos/sys_memory.h"
+#include "cellos/sys_ss.h"
 
 LOG_CHANNEL(cellRtc);
 

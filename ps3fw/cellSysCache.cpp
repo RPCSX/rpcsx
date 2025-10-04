@@ -5,7 +5,7 @@
 #include "Emu/system_utils.hpp"
 #include "stdafx.h"
 
-#include "Emu/Cell/lv2/sys_fs.h"
+#include "cellos/sys_fs.h"
 #include "cellSysutil.h"
 #include "util/StrUtil.h"
 #include "util/init_mutex.hpp"

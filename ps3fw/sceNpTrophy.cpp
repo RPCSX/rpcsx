@@ -17,8 +17,8 @@
 
 #include "util/StrUtil.h"
 
-#include "Emu/Cell/lv2/sys_event.h"
-#include "Emu/Cell/lv2/sys_fs.h"
+#include "cellos/sys_event.h"
+#include "cellos/sys_fs.h"
 
 #include "util/asm.hpp"
 #include <algorithm>
