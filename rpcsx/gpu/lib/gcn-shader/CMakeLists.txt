@@ -1,9 +1,11 @@
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/dialect/)
 
+import_native_executable_target(spv-gen)
+
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/include/dialect/spv.hpp
-    COMMAND $<TARGET_FILE:spv-gen> ${CMAKE_CURRENT_BINARY_DIR}/include/dialect/spv.hpp
-    DEPENDS spv-gen
+    COMMAND ${spv-gen_BINARY_PATH} ${CMAKE_CURRENT_BINARY_DIR}/include/dialect/spv.hpp
+    DEPENDS spv-gen_NATIVE
     WORKING_DIRECTORY $<TARGET_PROPERTY:SPIRV-Headers,INTERFACE_INCLUDE_DIRECTORIES>/spirv/unified1
     COMMENT "Generating ${CMAKE_CURRENT_BINARY_DIR}/include/dialect/spv.hpp..."
 )

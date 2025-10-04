@@ -1,6 +1,136 @@
 cmake_minimum_required(VERSION 3.20)
 project(rpcsx)
 
+if(CMAKE_CROSSCOMPILING)
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows" AND NOT ${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows" AND ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+        message(STATUS "!!! Cross compilation for Windows !!!")
+        add_link_options(-fuse-ld=lld -static-libgcc -static-libstdc++)
+    else()
+        message(FATAL "Cross compilation for Windows is supported with Clang compiler only")
+    endif()
+endif()
+
+
+if (CMAKE_CROSSCOMPILING)
+    function(rpcsx_setup_crosscompiling)
+        add_custom_command(
+            OUTPUT "${RPCSX_NATIVE_ROOT_DIR}/CMakeCache.txt"
+            COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" 
+                -B ${RPCSX_NATIVE_ROOT_DIR}
+                -DCMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM}"
+                -DCMAKE_C_COMPILER_LAUNCHER="${CMAKE_C_COMPILER_LAUNCHER}"
+                -DCMAKE_CXX_COMPILER_LAUNCHER="${CMAKE_CXX_COMPILER_LAUNCHER}"
+                -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="${RPCSX_NATIVE_ROOT_DIR}/bin"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+            COMMENT "Configuring native project..."
+            USES_TERMINAL
+        )
+
+        unset(CMAKE_EXECUTABLE_SUFFIX)
+
+        include(Platform/${CMAKE_HOST_SYSTEM_NAME} OPTIONAL RESULT_VARIABLE platformIncluded)
+        if (platformIncluded)
+            set(RPCSX_HOST_EXECUTABLE_SUFFIX ${CMAKE_EXECUTABLE_SUFFIX} PARENT_SCOPE)
+        endif()
+    endfunction()
+
+    set(RPCSX_NATIVE_ROOT_DIR ${CMAKE_BINARY_DIR}/native)
+    rpcsx_setup_crosscompiling()
+    add_custom_target(RPCSX_CONFIGURE_NATIVE DEPENDS "${RPCSX_NATIVE_ROOT_DIR}/CMakeCache.txt")
+endif()
+
+function(import_native_executable_target target)
+    set(options)
+    set(one_value_keywords EXECUTABLE)
+    set(multi_value_keywords)
+
+    cmake_parse_arguments(
+        arg
+        "${options}"
+        "${one_value_keywords}"
+        "${multi_value_keywords}"
+        ${ARGN}
+    )
+
+    if (CMAKE_CROSSCOMPILING)
+        if (NOT DEFINED arg_EXECUTABLE)
+            set(arg_EXECUTABLE ${target})
+        endif()
+        set(binary_path "${RPCSX_NATIVE_ROOT_DIR}/bin/${arg_EXECUTABLE}${RPCSX_HOST_EXECUTABLE_SUFFIX}")
+        set(${target}_BINARY_PATH "${binary_path}" PARENT_SCOPE)
+
+        if (NOT TARGET ${target}_NATIVE)
+            if (CMAKE_GENERATOR MATCHES "Make")
+                set(build_command "$(MAKE)" "-C" "${RPCSX_NATIVE_ROOT_DIR}" "${target}")
+            else()
+                set(build_command ${CMAKE_COMMAND} --build ${bin_dir} --target ${target} --parallel)
+            endif()
+
+            add_custom_command(OUTPUT "${binary_path}"
+                COMMAND ${build_command}
+                DEPENDS RPCSX_CONFIGURE_NATIVE
+                WORKING_DIRECTORY "${RPCSX_NATIVE_ROOT_DIR}"
+                COMMENT "Building native ${target}..."
+                USES_TERMINAL
+            )
+
+            add_custom_target(${target}_NATIVE DEPENDS ${binary_path})
+        endif()
+    else()
+        set(${target}_BINARY_PATH "$<TARGET_FILE:${target}>" PARENT_SCOPE)
+
+        if (NOT TARGET ${target}_NATIVE)
+            add_custom_target(${target}_NATIVE)
+        endif()
+    endif()
+endfunction()
+
+function(add_precompiled_vulkan_spirv target)
+    import_native_executable_target(glslang-standalone EXECUTABLE glslang)
+
+    add_library(${target} INTERFACE)
+    set(SPIRV_GEN_ROOT_DIR "spirv-gen/include/")
+    set(SPIRV_GEN_DIR "${SPIRV_GEN_ROOT_DIR}/shaders")
+
+    cmake_path(ABSOLUTE_PATH SPIRV_GEN_ROOT_DIR BASE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} NORMALIZE OUTPUT_VARIABLE outputrootdir)
+    cmake_path(ABSOLUTE_PATH SPIRV_GEN_DIR BASE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} NORMALIZE OUTPUT_VARIABLE outputdir)
+    file(MAKE_DIRECTORY ${outputrootdir})
+    file(MAKE_DIRECTORY ${outputdir})
+    target_include_directories(${target} INTERFACE ${outputrootdir})
+
+    foreach(input IN LISTS ARGN)
+        cmake_path(GET input FILENAME inputname)
+        cmake_path(REPLACE_EXTENSION inputname LAST_ONLY .h OUTPUT_VARIABLE outputname)
+        cmake_path(APPEND outputdir ${outputname} OUTPUT_VARIABLE outputpath)
+        cmake_path(REMOVE_EXTENSION inputname LAST_ONLY OUTPUT_VARIABLE varname)
+
+        string(REPLACE "." "_" varname ${varname})
+        string(PREPEND varname "spirv_")
+
+        add_custom_command(
+            OUTPUT ${outputpath}
+            COMMAND ${glslang-standalone_BINARY_PATH} -V --target-env vulkan1.2 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
+            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}" glslang-standalone_NATIVE
+            COMMENT "Generating ${outputname}..."
+        )
+
+        set(subtarget ".${target}-subtarget-${outputname}")
+        add_custom_target(${subtarget} DEPENDS ${outputpath})
+        add_dependencies(${target} ${subtarget})
+    endforeach()
+endfunction()
+
+function(target_base_address target address)
+    set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE off)
+
+    if(CMAKE_CXX_COMPILER_LINKER_ID MATCHES "^(LLD|MOLD)$")
+        target_link_options(${target} PUBLIC "LINKER:--image-base=${address}")
+    else()
+        target_link_options(${target} PUBLIC "LINKER:-Ttext-segment,${address}")
+    endif()
+endfunction()
+
+
 option(WITH_RPCSX "Enable RPCSX" ON)
 option(WITH_RPCS3 "Enable RPCS3" OFF)
 option(WITH_RPCS3_QT_UI "Enable RPCS3 UI" OFF)
@@ -138,52 +268,7 @@ target_compile_definitions(rx PRIVATE
 
 if (WITH_RPCSX)
     find_package(nlohmann_json CONFIG)
-
-    function(add_precompiled_vulkan_spirv target)
-        add_library(${target} INTERFACE)
-        set(SPIRV_GEN_ROOT_DIR "spirv-gen/include/")
-        set(SPIRV_GEN_DIR "${SPIRV_GEN_ROOT_DIR}/shaders")
-
-        cmake_path(ABSOLUTE_PATH SPIRV_GEN_ROOT_DIR BASE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} NORMALIZE OUTPUT_VARIABLE outputrootdir)
-        cmake_path(ABSOLUTE_PATH SPIRV_GEN_DIR BASE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} NORMALIZE OUTPUT_VARIABLE outputdir)
-        file(MAKE_DIRECTORY ${outputrootdir})
-        file(MAKE_DIRECTORY ${outputdir})
-        target_include_directories(${target} INTERFACE ${outputrootdir})
-
-        foreach(input IN LISTS ARGN)
-            cmake_path(GET input FILENAME inputname)
-            cmake_path(REPLACE_EXTENSION inputname LAST_ONLY .h OUTPUT_VARIABLE outputname)
-            cmake_path(APPEND outputdir ${outputname} OUTPUT_VARIABLE outputpath)
-            cmake_path(REMOVE_EXTENSION inputname LAST_ONLY OUTPUT_VARIABLE varname)
-
-            string(REPLACE "." "_" varname ${varname})
-            string(PREPEND varname "spirv_")
-
-            add_custom_command(
-                OUTPUT ${outputpath}
-                COMMAND $<TARGET_FILE:glslang::glslang-standalone> -V --target-env vulkan1.2 --vn "${varname}" -o "${outputpath}" "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
-                DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${input}" glslang::glslang-standalone
-                COMMENT "Generating ${outputname}..."
-            )
-
-            set(subtarget ".${target}-subtarget-${outputname}")
-            add_custom_target(${subtarget} DEPENDS ${outputpath})
-            add_dependencies(${target} ${subtarget})
-        endforeach()
-    endfunction()
-
-    function(target_base_address target address)
-        set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE off)
-
-        if(CMAKE_CXX_COMPILER_LINKER_ID MATCHES "^(LLD|MOLD)$")
-            target_link_options(${target} PUBLIC "LINKER:--image-base=${address}")
-        else()
-            target_link_options(${target} PUBLIC "LINKER:-Ttext-segment,${address}")
-        endif()
-    endfunction()
-
     add_subdirectory(tools)
-
     add_subdirectory(orbis-kernel)
 endif()
 
