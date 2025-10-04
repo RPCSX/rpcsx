@@ -5,16 +5,16 @@
 #include "orbis/KernelContext.hpp"
 #include "orbis/osem.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "rx/format.hpp"
 #include "rx/hexdump.hpp"
 #include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include "rx/watchdog.hpp"
 #include "vfs.hpp"
 #include "vm.hpp"
 #include <cstdint>
 #include <fcntl.h>
 #include <filesystem>
-#include <format>
-#include <print>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -209,9 +209,9 @@ ipmi::IpmiServer::handle(orbis::IpmiSession *session,
 
     result = handler(*session, response.errorCode, outData, inData);
   } else {
-    std::println(stderr, "Unimplemented async method {}::{:x}(inBufCount={})",
-                 session->server->name, unsigned(message->methodId),
-                 unsigned(message->numInData));
+    rx::println(stderr, "Unimplemented async method {}::{:x}(inBufCount={})",
+                session->server->name, unsigned(message->methodId),
+                unsigned(message->numInData));
 
     for (auto in : inData) {
       std::println(stderr, "in {}", in.size());
@@ -562,9 +562,9 @@ void ipmi::createGnmCompositorObjects(orbis::Process *) {
 void ipmi::createShellCoreObjects(orbis::Process *process) {
   auto fmtHex = [](auto value, bool upperCase = false) {
     if (upperCase) {
-      return std::format("{:08X}", value);
+      return rx::format("{:08X}", value);
     }
-    return std::format("{:08x}", value);
+    return rx::format("{:08x}", value);
   };
 
   createIpmiServer(process, "SceSystemLoggerService");

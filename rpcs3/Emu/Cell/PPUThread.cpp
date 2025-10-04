@@ -30,7 +30,6 @@
 #include "lv2/sys_spu.h"
 #include <cstddef>
 #include <rx/format.hpp>
-#include <format>
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER

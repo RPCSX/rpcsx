@@ -5,6 +5,7 @@
 #include "rx/Config.hpp"
 #include "rx/hexdump.hpp"
 #include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include "shader/Evaluator.hpp"
 #include "shader/GcnConverter.hpp"
 #include "shader/dialect.hpp"
@@ -14,7 +15,6 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <print>
 #include <rx/AddressRange.hpp>
 #include <rx/MemoryTable.hpp>
 #include <rx/die.hpp>
@@ -1354,7 +1354,7 @@ Cache::Shader Cache::Tag::getShader(const ShaderKey &key,
       return {};
     }
 
-    std::print(stderr, "{}", shader::glsl::decompile(converted->spv));
+    rx::print(stderr, "{}", shader::glsl::decompile(converted->spv));
     // if (auto opt = shader::spv::optimize(converted->spv)) {
     //   converted->spv = std::move(*opt);
     //   std::fprintf(stderr, "opt: %s",

@@ -11,7 +11,9 @@
 #include "rx/Config.hpp"
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
+#include "rx/format.hpp"
 #include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include "rx/watchdog.hpp"
 #include "shader/spv.hpp"
 #include "shaders/rdna-semantic-spirv.hpp"
@@ -20,8 +22,6 @@
 #include <chrono>
 #include <cstdio>
 #include <fcntl.h>
-#include <format>
-#include <print>
 #include <stop_token>
 #include <sys/mman.h>
 #include <thread>
@@ -34,7 +34,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessageCallback(
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
     void *pUserData) {
   if (pCallbackData->pMessage) {
-    std::println("{}", pCallbackData->pMessage);
+    rx::println("{}", pCallbackData->pMessage);
   }
 
   if (messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
@@ -324,7 +324,7 @@ void Device::start() {
       continue;
     }
 
-    auto path = std::format("{}/dmem-{}", rx::getShmPath(), i);
+    auto path = rx::format("{}/dmem-{}", rx::getShmPath(), i);
     if (!std::filesystem::exists(path)) {
       std::println("Waiting for dmem {}", i);
 
@@ -382,7 +382,7 @@ void Device::start() {
     if (gpIndex > GLFW_JOYSTICK_LAST) {
       for (int i = 0; i <= GLFW_JOYSTICK_LAST; ++i) {
         if (glfwJoystickIsGamepad(i) == GLFW_TRUE) {
-          std::print("Gamepad \"{}\" activated", glfwGetGamepadName(i));
+          rx::print("Gamepad \"{}\" activated", glfwGetGamepadName(i));
           gpIndex = i;
           break;
         }
@@ -571,7 +571,7 @@ void Device::mapProcess(std::uint32_t pid, int vmId) {
 
   auto memory = amdgpu::RemoteMemory{vmId};
 
-  std::string pidVmName = std::format("{}/memory-{}", rx::getShmPath(), pid);
+  std::string pidVmName = rx::format("{}/memory-{}", rx::getShmPath(), pid);
   int memoryFd = ::open(pidVmName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
   process.vmFd = memoryFd;
 

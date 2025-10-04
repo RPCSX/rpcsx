@@ -6,10 +6,10 @@
 #include "analyze.hpp"
 #include "dialect.hpp"
 #include "ir.hpp"
+#include "rx/print.hpp"
 #include "spv.hpp"
 #include "transform.hpp"
 
-#include <print>
 #include <rx/die.hpp>
 
 #include <SPIRV/GlslangToSpv.h>
@@ -22,7 +22,6 @@
 #include <iostream>
 #include <map>
 #include <optional>
-#include <print>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -1933,7 +1932,7 @@ gcn::deserialize(gcn::Context &context, const gcn::Environment &environment,
     exitLabel.replaceAllUsesWith(newLabel);
   }
 
-  std::print("\n\n{}\n\n", buildCFG(context.entryPoint).genTest());
+  rx::print("\n\n{}\n\n", buildCFG(context.entryPoint).genTest());
 
   structurizeCfg(context, context.body);
 

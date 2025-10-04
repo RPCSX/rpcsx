@@ -1,9 +1,9 @@
 #include "mem.hpp"
+#include "print.hpp"
 
 #ifdef __linux__
 
 #include <cstdio>
-#include <print>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -41,7 +41,7 @@ void rx::mem::printStats() {
   char *line = nullptr;
   std::size_t size = 0;
   while (getline(&line, &size, maps) > 0) {
-    std::print("{}", line);
+    rx::print("{}", line);
   }
 
   free(line);

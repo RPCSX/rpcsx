@@ -2,6 +2,8 @@
 #include "gpu/DeviceCtl.hpp"
 #include "orbis/KernelContext.hpp"
 #include "rx/Config.hpp"
+#include "rx/format.hpp"
+#include "rx/print.hpp"
 #include <bit>
 #include <chrono>
 #include <csignal>
@@ -10,8 +12,6 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <filesystem>
-#include <format>
-#include <print>
 #include <string_view>
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -108,7 +108,7 @@ static void sendMessage(MessageId id, std::uint32_t data) {
 
 const char *rx::getShmPath() { return g_shmPath; }
 std::filesystem::path rx::getShmGuestPath(std::string_view path) {
-  return std::format("{}/guest/{}", getShmPath(), path);
+  return rx::format("{}/guest/{}", getShmPath(), path);
 }
 
 void rx::createGpuDevice() {
@@ -158,7 +158,7 @@ void rx::startWatchdog() {
     std::exit(-1);
   }
 
-  if (!std::filesystem::create_directory(std::format("{}/guest", g_shmPath))) {
+  if (!std::filesystem::create_directory(rx::format("{}/guest", g_shmPath))) {
     perror("failed to create guest shared memory directory");
     std::exit(-1);
   }
@@ -231,7 +231,7 @@ void rx::startWatchdog() {
     }
 
     if (g_runGpuRequested) {
-      std::println("watchdog: gpu start requested");
+      rx::println("watchdog: gpu start requested");
       g_runGpuRequested = false;
       runGPU();
     }

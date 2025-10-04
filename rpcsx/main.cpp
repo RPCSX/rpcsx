@@ -12,6 +12,7 @@
 #include "orbis/utils/Logs.hpp"
 #include "rx/Config.hpp"
 #include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include "rx/watchdog.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
@@ -19,7 +20,6 @@
 #include "xbyak/xbyak.h"
 #include <optional>
 #include <orbis/utils/Rc.hpp>
-#include <print>
 #include <rx/Version.hpp>
 #include <rx/align.hpp>
 #include <rx/hexdump.hpp>
@@ -46,7 +46,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <print>
 
 static int g_gpuPid;
 extern bool allowMonoDebug;
@@ -709,7 +708,7 @@ ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
       mainThread);
 
   if (libkernel == nullptr) {
-    std::println(stderr, "libkernel not found");
+    rx::println(stderr, "libkernel not found");
     std::abort();
   }
 

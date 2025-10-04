@@ -1,10 +1,10 @@
 #include "AudioOut.hpp"
+#include "rx/format.hpp"
 #include "rx/mem.hpp"
 #include "rx/watchdog.hpp"
 #include <atomic>
 #include <chrono>
 #include <fcntl.h>
-#include <format>
 #include <mutex>
 #include <orbis/evf.hpp>
 #include <orbis/utils/Logs.hpp>
@@ -41,10 +41,10 @@ void AudioOut::channelEntry(AudioOutChannelInfo info) {
 
   std::format_to(
       control_shm_name, "{}",
-      rx::getShmGuestPath(std::format("shm_{}_C", info.idControl)).string());
+      rx::getShmGuestPath(rx::format("shm_{}_C", info.idControl)).string());
   std::format_to(
       audio_shm_name, "{}",
-      rx::getShmGuestPath(std::format("shm_{}_{}_A", info.channel, info.port))
+      rx::getShmGuestPath(rx::format("shm_{}_{}_A", info.channel, info.port))
           .string());
 
   int controlFd = ::open(control_shm_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);

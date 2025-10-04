@@ -1,7 +1,7 @@
 #include "debug.hpp"
+#include "print.hpp"
 #include <fstream>
 #include <list>
-#include <print>
 #include <thread>
 #include <vector>
 
@@ -73,13 +73,13 @@ void rx::waitForDebugger() {
     return;
   }
 
-  std::println(stderr, "waiting for debugger, pid {}", ::getpid());
+  rx::println(stderr, "waiting for debugger, pid {}", ::getpid());
 
   while (!isDebuggerPresent()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
-  std::println(stderr, "debugger was attached");
+  rx::println(stderr, "debugger was attached");
   std::this_thread::sleep_for(std::chrono::seconds(3));
   breakpoint();
 }

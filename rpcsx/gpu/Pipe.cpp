@@ -5,11 +5,11 @@
 #include "gnm/mmio.hpp"
 #include "gnm/pm4.hpp"
 #include "orbis/KernelContext.hpp"
+#include "rx/print.hpp"
 #include "vk.hpp"
 #include <bit>
 #include <cstdio>
 #include <mutex>
-#include <print>
 #include <rx/bits.hpp>
 #include <rx/die.hpp>
 #include <rx/format.hpp>
@@ -193,7 +193,7 @@ void ComputePipe::setIndirectRing(int queueId, int indirectLevel, Ring ring) {
   }
 
   ring.indirectLevel = indirectLevel;
-  std::println(stderr, "mapQueue: {}, {}, {}", (void *)ring.base,
+  rx::println(stderr, "mapQueue: {}, {}, {}", (void *)ring.base,
                (void *)ring.wptr, ring.size);
 
   queues[1 - ring.indirectLevel][queueId] = ring;

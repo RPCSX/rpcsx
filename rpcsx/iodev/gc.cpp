@@ -10,10 +10,10 @@
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/SharedMutex.hpp"
 #include "rx/die.hpp"
+#include "rx/print.hpp"
 #include "vm.hpp"
 #include <cstdio>
 #include <mutex>
-#include <print>
 #include <sys/mman.h>
 
 struct ComputeQueue {
@@ -405,7 +405,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
   case 0x802450c9: {
     // used during Net initialization
-    std::println(stderr, "***WARNING*** Unknown gc ioctl_{:x}(0x{:x})", request,
+    rx::println(stderr, "***WARNING*** Unknown gc ioctl_{:x}(0x{:x})", request,
                  (unsigned long)*(std::uint32_t *)argp);
     break;
   }

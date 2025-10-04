@@ -9,6 +9,7 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "rx/die.hpp"
 #include "rx/mem.hpp"
 #include "rx/watchdog.hpp"
 #include "vm.hpp"
@@ -16,7 +17,6 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
-#include <print>
 #include <sys/mman.h>
 
 static constexpr auto kDceControlMemoryOffset = 0;
@@ -229,8 +229,7 @@ int DceDevice::allocateVmId() {
   int id = std::countr_zero(freeVmIds);
 
   if (id >= kVmIdCount) {
-    std::println(stderr, "out of vm slots");
-    std::abort();
+    rx::die("out of vm slots");
   }
 
   freeVmIds &= ~(1 << id);

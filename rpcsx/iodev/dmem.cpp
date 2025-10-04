@@ -8,11 +8,11 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "rx/align.hpp"
+#include "rx/format.hpp"
 #include "rx/watchdog.hpp"
 #include "vm.hpp"
 #include <fcntl.h>
 #include <filesystem>
-#include <format>
 #include <mutex>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -36,7 +36,7 @@ DmemDevice::~DmemDevice() {
     close(shmFd);
   }
 
-  std::filesystem::remove(std::format("{}/dmem-{}", rx::getShmPath(), index));
+  std::filesystem::remove(rx::format("{}/dmem-{}", rx::getShmPath(), index));
 }
 
 orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
@@ -400,7 +400,7 @@ IoDevice *createDmemCharacterDevice(int index) {
   newDevice->index = index;
   newDevice->dmemTotalSize = dmemSize;
 
-  auto path = std::format("{}/dmem-{}", rx::getShmPath(), index);
+  auto path = rx::format("{}/dmem-{}", rx::getShmPath(), index);
   auto shmFd = ::open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
 
   if (ftruncate(shmFd, dmemSize) < 0) {

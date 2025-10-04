@@ -2,7 +2,6 @@ project(rx)
 
 find_package(Git)
 
-
 add_library(${PROJECT_NAME} OBJECT
     src/debug.cpp
     src/die.cpp
@@ -19,6 +18,8 @@ PUBLIC
 PRIVATE
     include/${PROJECT_NAME}
 )
+
+target_link_libraries(${PROJECT_NAME} PUBLIC fmt::fmt)
 
 if (Git_FOUND)
     execute_process(COMMAND ${GIT_EXECUTABLE} log --date=format:%Y%m%d --pretty=format:'%cd' -n 1 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" OUTPUT_VARIABLE GIT_DATE)

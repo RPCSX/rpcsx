@@ -7,9 +7,9 @@
 #include "gcn.hpp"
 #include "ir.hpp"
 #include "rx/die.hpp"
+#include "rx/print.hpp"
 #include <iostream>
 #include <limits>
-#include <print>
 
 using namespace shader;
 
@@ -1111,7 +1111,7 @@ static void expToSpv(GcnConverter &converter, gcn::Stage stage,
     return result;
   };
 
-  std::println(stderr, "exp target {}.{}", targetToString(target),
+  rx::println(stderr, "exp target {}.{}", targetToString(target),
                swizzleToString(swizzle));
   std::abort();
 }
@@ -1184,9 +1184,9 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
 
     if (inst.getKind() != ir::Kind::Spv && inst.getKind() != ir::Kind::AmdGpu &&
         semanticModuleInfo.findSemanticOf(inst.getInstId()) == nullptr) {
-      std::println(std::cerr, "unimplemented semantic: ");
+      std::println(stderr, "unimplemented semantic: ");
       inst.print(std::cerr, context.ns);
-      std::println(std::cerr, "\n");
+      std::println(stderr, "\n");
 
       std::vector<ir::Instruction> workList;
       std::set<ir::Instruction> removed;
@@ -1201,9 +1201,9 @@ static void instructionsToSpv(GcnConverter &converter, gcn::Import &importer,
           continue;
         }
 
-        std::println(std::cerr, "removing ");
+        rx::println(stderr, "removing ");
         inst.print(std::cerr, context.ns);
-        std::println(std::cerr, "\n");
+        std::println(stderr, "\n");
 
         if (auto value = inst.cast<ir::Value>()) {
           for (auto &use : value.getUseList()) {

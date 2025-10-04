@@ -399,6 +399,7 @@ add_subdirectory(opencv EXCLUDE_FROM_ALL)
 # FUSION
 add_subdirectory(fusion EXCLUDE_FROM_ALL)
 
+add_subdirectory(fmtlib)
 
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)

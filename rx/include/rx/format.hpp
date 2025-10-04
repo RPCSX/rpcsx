@@ -1,8 +1,8 @@
 #pragma once
+#include "format-base.hpp"
 #include "refl.hpp"
 #include <array>
-#include <format>
-#include <optional>
+#include <source_location>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
@@ -14,8 +14,7 @@ struct StructFieldInfo {
   std::size_t size = 0;
   std::size_t align = 0;
   std::size_t offset = 0;
-  std::format_context::iterator (*format)(void *,
-                                          std::format_context &ctx) = nullptr;
+  format_context::iterator (*format)(void *, format_context &ctx) = nullptr;
   std::string_view name;
 };
 
@@ -25,11 +24,10 @@ struct StructFieldQuery {
   template <typename T> constexpr operator T() {
     info.size = sizeof(T);
     info.align = alignof(T);
-    if constexpr (std::is_default_constructible_v<std::formatter<T>>) {
-      info.format =
-          [](void *object,
-             std::format_context &ctx) -> std::format_context::iterator {
-        std::formatter<T> formatter;
+    if constexpr (std::is_default_constructible_v<formatter<T>>) {
+      info.format = [](void *object,
+                       format_context &ctx) -> format_context::iterator {
+        formatter<T> formatter;
         return formatter.format(*static_cast<T *>(object), ctx);
       };
     }
@@ -132,51 +130,66 @@ template <auto &&Variable> void registerVariable() {
   auto &storage = detail::getVariableStorage();
   storage.infos[&Variable] = rx::getNameOf<Variable>();
 }
+
+namespace detail {
+template <typename... Args>
+struct format_string_with_location_impl : format_string<Args...> {
+  std::source_location location;
+
+  template <typename T>
+  constexpr format_string_with_location_impl(
+      T message,
+      std::source_location location = std::source_location::current())
+      : format_string<Args...>(message), location(location) {}
+};
+} // namespace detail
+template <typename... Args>
+using format_string_with_location =
+    std::type_identity_t<detail::format_string_with_location_impl<Args...>>;
 } // namespace rx
 
 template <typename T>
   requires(std::is_standard_layout_v<T> && std::is_class_v<T> &&
            rx::fieldCount<T> > 0) &&
           (!requires(T value) { std::begin(value) != std::end(value); })
-struct std::formatter<T> {
-  constexpr std::format_parse_context::iterator
-  parse(std::format_parse_context &ctx) {
+struct rx::formatter<T> {
+  constexpr rx::format_parse_context::iterator
+  parse(rx::format_parse_context &ctx) {
     return ctx.begin();
   }
 
-  std::format_context::iterator format(T &s, std::format_context &ctx) const {
-    std::format_to(ctx.out(), "{}", rx::getNameOf<T>());
-    std::format_to(ctx.out(), "{{");
+  format_context::iterator format(T &s, rx::format_context &ctx) const {
+    format_to(ctx.out(), "{}", rx::getNameOf<T>());
+    format_to(ctx.out(), "{{");
 
     auto structInfo = rx::detail::getStructInfo<T>();
     auto bytes = reinterpret_cast<std::byte *>(&s);
     for (std::size_t i = 0; i < rx::fieldCount<T>; ++i) {
       if (i != 0) {
-        std::format_to(ctx.out(), ", ");
+        format_to(ctx.out(), ", ");
       }
 
       if (!structInfo[i].name.empty()) {
-        std::format_to(ctx.out(), ".{} = ", structInfo[i].name);
+        format_to(ctx.out(), ".{} = ", structInfo[i].name);
       }
 
       structInfo[i].format(bytes + structInfo[i].offset, ctx);
     }
 
-    std::format_to(ctx.out(), "}}");
+    format_to(ctx.out(), "}}");
     return ctx.out();
   }
 };
 
 template <typename T>
   requires(std::is_enum_v<T> && rx::fieldCount<T> > 0)
-struct std::formatter<T> {
-  constexpr std::format_parse_context::iterator
-  parse(std::format_parse_context &ctx) {
+struct rx::formatter<T> {
+  constexpr rx::format_parse_context::iterator
+  parse(rx::format_parse_context &ctx) {
     return ctx.begin();
   }
 
-  std::format_context::iterator format(T value,
-                                       std::format_context &ctx) const {
+  rx::format_context::iterator format(T value, format_context &ctx) const {
     auto getFieldName =
         []<std::size_t... I>(std::underlying_type_t<T> value,
                              std::index_sequence<I...>) -> std::string {
@@ -188,7 +201,7 @@ struct std::formatter<T> {
         return std::string(result);
       }
 
-      return std::format("{}", value);
+      return rx::format("{}", value);
     };
 
     auto queryUnknownField =
@@ -208,16 +221,19 @@ struct std::formatter<T> {
       };
 
       if (value < 0) {
-        (queryIndex(std::integral_constant<std::int64_t, -(I + Offset)>{}, value), ...);
+        (queryIndex(std::integral_constant<std::int64_t, -(I + Offset)>{},
+                    value),
+         ...);
       } else {
-        (queryIndex(std::integral_constant<std::int64_t, I + Offset>{}, value), ...);
+        (queryIndex(std::integral_constant<std::int64_t, I + Offset>{}, value),
+         ...);
       }
 
       if (!result.empty()) {
         return std::string(result);
       }
 
-      return std::format("{}", value);
+      return rx::format("{}", value);
     };
 
     std::string fieldName;
@@ -240,9 +256,9 @@ struct std::formatter<T> {
     }
 
     if (fieldName[0] >= '0' && fieldName[0] <= '9') {
-      std::format_to(ctx.out(), "({}){}", rx::getNameOf<T>(), fieldName);
+      rx::format_to(ctx.out(), "({}){}", rx::getNameOf<T>(), fieldName);
     } else {
-      std::format_to(ctx.out(), "{}::{}", rx::getNameOf<T>(), fieldName);
+      rx::format_to(ctx.out(), "{}::{}", rx::getNameOf<T>(), fieldName);
     }
 
     return ctx.out();
@@ -251,26 +267,26 @@ struct std::formatter<T> {
 
 template <typename T>
   requires requires(T value) { std::begin(value) != std::end(value); }
-struct std::formatter<T> {
-  constexpr std::format_parse_context::iterator
-  parse(std::format_parse_context &ctx) {
+struct rx::formatter<T> {
+  constexpr rx::format_parse_context::iterator
+  parse(rx::format_parse_context &ctx) {
     return ctx.begin();
   }
 
-  std::format_context::iterator format(T &s, std::format_context &ctx) const {
-    std::format_to(ctx.out(), "[");
+  rx::format_context::iterator format(T &s, rx::format_context &ctx) const {
+    rx::format_to(ctx.out(), "[");
 
     for (bool first = true; auto &elem : s) {
       if (first) {
         first = false;
       } else {
-        std::format_to(ctx.out(), ", ");
+        rx::format_to(ctx.out(), ", ");
       }
 
-      std::format_to(ctx.out(), "{}", elem);
+      rx::format_to(ctx.out(), "{}", elem);
     }
 
-    std::format_to(ctx.out(), "]");
+    rx::format_to(ctx.out(), "]");
     return ctx.out();
   }
 };
@@ -281,25 +297,25 @@ template <typename T>
            !std::is_same_v<std::remove_cv_t<T>, char8_t> &&
            !std::is_same_v<std::remove_cv_t<T>, char16_t> &&
            !std::is_same_v<std::remove_cv_t<T>, char32_t> &&
-           std::is_default_constructible_v<std::formatter<T>>)
-struct std::formatter<T *> {
-  constexpr std::format_parse_context::iterator
-  parse(std::format_parse_context &ctx) {
+           std::is_default_constructible_v<rx::formatter<T>>)
+struct rx::formatter<T *> {
+  constexpr rx::format_parse_context::iterator
+  parse(rx::format_parse_context &ctx) {
     return ctx.begin();
   }
 
-  std::format_context::iterator format(T *ptr, std::format_context &ctx) const {
+  rx::format_context::iterator format(T *ptr, rx::format_context &ctx) const {
     auto name = rx::detail::getVariableStorage().getVariableName(ptr);
     if (!name.empty()) {
-      std::format_to(ctx.out(), "*{} = ", name);
+      rx::format_to(ctx.out(), "*{} = ", name);
     } else {
-      std::format_to(ctx.out(), "*");
+      rx::format_to(ctx.out(), "*");
     }
 
     if (ptr == nullptr) {
-      std::format_to(ctx.out(), "nullptr");
+      rx::format_to(ctx.out(), "nullptr");
     } else {
-      std::format_to(ctx.out(), "{}:{}", static_cast<void *>(ptr), *ptr);
+      rx::format_to(ctx.out(), "{}:{}", static_cast<void *>(ptr), *ptr);
     }
     return ctx.out();
   }

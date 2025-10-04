@@ -8,15 +8,15 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/utils/Rc.hpp"
+#include "rx/format.hpp"
+#include "rx/print.hpp"
 #include "rx/watchdog.hpp"
 #include <bit>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <fcntl.h>
-#include <format>
 #include <mutex>
-#include <print>
 #include <rx/MemoryTable.hpp>
 #include <rx/align.hpp>
 #include <rx/mem.hpp>
@@ -674,7 +674,7 @@ static void reserve(std::uint64_t startAddress, std::uint64_t endAddress) {
 }
 
 void vm::fork(std::uint64_t pid) {
-  auto shmPath = std::format("{}/memory-{}", rx::getShmPath(), pid);
+  auto shmPath = rx::format("{}/memory-{}", rx::getShmPath(), pid);
   gMemoryShm =
       ::open(shmPath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
 
@@ -682,7 +682,7 @@ void vm::fork(std::uint64_t pid) {
   g_mtx.unlock(); // release mutex
 
   if (gMemoryShm == -1) {
-    std::println(stderr, "Memory: failed to open {}", shmPath);
+    rx::println(stderr, "Memory: failed to open {}", shmPath);
     std::abort();
   }
 
@@ -739,7 +739,7 @@ void vm::reset() {
 
 void vm::initialize(std::uint64_t pid) {
   std::println("Memory: initialization");
-  auto shmPath = std::format("{}/memory-{}", rx::getShmPath(), pid);
+  auto shmPath = rx::format("{}/memory-{}", rx::getShmPath(), pid);
 
   gMemoryShm =
       ::open(shmPath.c_str(), O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
@@ -1185,8 +1185,8 @@ bool vm::virtualQuery(const void *addr, std::int32_t flags,
       }
       memoryType = dmemIt->memoryType;
       blockFlags = kBlockFlagDirectMemory;
-      std::print(stderr, "virtual query {}", addr);
-      std::println(stderr, "memory type: {}", memoryType);
+      rx::print(stderr, "virtual query {}", addr);
+      rx::println(stderr, "memory type: {}", memoryType);
     }
     // TODO
   }

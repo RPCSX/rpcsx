@@ -1,11 +1,11 @@
 #include "Renderer.hpp"
 #include "Device.hpp"
 #include "gnm/gnm.hpp"
+#include "rx/print.hpp"
 
 #include <amdgpu/tiler.hpp>
 #include <gnm/constants.hpp>
 #include <gnm/vulkan.hpp>
-#include <print>
 #include <rx/format.hpp>
 #include <shader/Evaluator.hpp>
 #include <shader/dialect.hpp>
@@ -161,7 +161,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
 
   if (pipe.context.cbColorControl.mode != gnm::CbMode::Normal &&
       pipe.context.cbColorControl.mode != gnm::CbMode::EliminateFastClear) {
-    std::println("unimplemented context.cbColorControl.mode = {}",
+    rx::println("unimplemented context.cbColorControl.mode = {}",
                  static_cast<gnm::CbMode>(pipe.context.cbColorControl.mode));
     return;
   }

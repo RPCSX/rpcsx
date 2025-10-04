@@ -4,14 +4,13 @@
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "rx/debug.hpp"
 #include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include <asm/prctl.h>
 #include <csignal>
 #include <immintrin.h>
 #include <link.h>
 #include <linux/prctl.h>
-#include <print>
 #include <rx/align.hpp>
 #include <sys/prctl.h>
 #include <ucontext.h>
@@ -363,7 +362,7 @@ void *rx::thread::setupSignalStack(void *address) {
 void *rx::thread::setupSignalStack() {
   auto data = malloc(getSigAltStackSize());
   if (data == nullptr) {
-    std::println(stderr, "malloc produces null, {:x}", getSigAltStackSize());
+    rx::println(stderr, "malloc produces null, {:x}", getSigAltStackSize());
     std::exit(EXIT_FAILURE);
   }
   return setupSignalStack(data);

@@ -5,9 +5,8 @@
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
 #include "rx/format.hpp"
+#include "rx/print.hpp"
 #include "shader/dialect.hpp"
-#include <cstdio>
-#include <print>
 #include <vector>
 
 using namespace amdgpu;
@@ -40,7 +39,7 @@ void DeviceCtl::submitGfxCommand(int gfxPipe, int vmId,
   if ((op != gnm::IT_INDIRECT_BUFFER && op != gnm::IT_INDIRECT_BUFFER_CNST &&
        op != gnm::IT_CONTEXT_CONTROL) ||
       type != 3 || command.size() != len) {
-    std::println(stderr, "unexpected gfx command for main ring: {}, {}, {}",
+    rx::println(stderr, "unexpected gfx command for main ring: {}, {}, {}",
                  gnm::Pm4Opcode(op), type, len);
     rx::die("");
   }
