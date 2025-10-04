@@ -103,6 +103,7 @@ target_link_libraries(rpcs3_core PUBLIC
     rpcsx::cpu::cell::ppu # FIXME: remove
     rpcsx::fw::ps3::api # FIXME: remove
     cellos-kernel # FIXME: remove
+    nlohmann_json::nlohmann_json
     3rdparty::stblib
     3rdparty::ffmpeg
     3rdparty::asmjit
