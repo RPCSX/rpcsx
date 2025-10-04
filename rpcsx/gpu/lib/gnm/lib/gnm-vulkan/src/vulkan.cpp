@@ -1,5 +1,6 @@
 #include "vulkan.hpp"
 #include "rx/die.hpp"
+#include "rx/format.hpp"
 #include <unordered_map>
 
 using namespace gnm;
