@@ -3,6 +3,7 @@ using namespace rx;
 
 #ifdef __linux__
 #include <linux/futex.h>
+#include <sys/syscall.h>
 
 std::errc shared_atomic32::wait_impl(std::uint32_t oldValue,
                                      std::chrono::microseconds usec_timeout) {

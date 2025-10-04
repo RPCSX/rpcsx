@@ -155,9 +155,9 @@ static const orbis::FileOps ops = {
     .ioctl = hid_ioctl,
 };
 
-orbis::ErrorCode HidDevice::open(rx::Ref<orbis::File> *file,
-                                 const char *path, std::uint32_t flags,
-                                 std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode HidDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                 std::uint32_t flags, std::uint32_t mode,
+                                 orbis::Thread *thread) {
   auto newFile = orbis::knew<HidFile>();
   newFile->device = this;
   newFile->ops = &ops;

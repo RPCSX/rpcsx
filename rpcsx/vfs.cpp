@@ -159,8 +159,7 @@ orbis::SysResult vfs::mount(const std::filesystem::path &guestPath,
 }
 
 orbis::SysResult vfs::open(std::string_view path, int flags, int mode,
-                           rx::Ref<orbis::File> *file,
-                           orbis::Thread *thread) {
+                           rx::Ref<orbis::File> *file, orbis::Thread *thread) {
   auto [device, devPath] = get(path);
   if (device == nullptr) {
     return orbis::ErrorCode::NOENT;

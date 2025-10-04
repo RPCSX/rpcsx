@@ -42,9 +42,9 @@ static const orbis::FileOps fileOps = {
     .write = evlg_write,
 };
 
-orbis::ErrorCode EvlgDevice::open(rx::Ref<orbis::File> *file,
-                                  const char *path, std::uint32_t flags,
-                                  std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode EvlgDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                  std::uint32_t flags, std::uint32_t mode,
+                                  orbis::Thread *thread) {
   auto newFile = orbis::knew<EvlgFile>();
   newFile->ops = &fileOps;
   newFile->device = this;

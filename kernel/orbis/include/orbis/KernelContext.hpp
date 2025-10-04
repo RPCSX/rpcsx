@@ -6,11 +6,11 @@
 #include "ipmi.hpp"
 #include "orbis/note.hpp"
 #include "osem.hpp"
+#include "rx/IdMap.hpp"
+#include "rx/LinkedNode.hpp"
 #include "rx/SharedCV.hpp"
 #include "rx/SharedMutex.hpp"
 #include "thread/types.hpp"
-#include "rx/IdMap.hpp"
-#include "rx/LinkedNode.hpp"
 
 #include <cstdint>
 #include <mutex>
@@ -130,7 +130,8 @@ public:
     return {};
   }
 
-  std::pair<rx::Ref<IpmiServer>, ErrorCode> createIpmiServer(utils::kstring name) {
+  std::pair<rx::Ref<IpmiServer>, ErrorCode>
+  createIpmiServer(utils::kstring name) {
     std::lock_guard lock(m_sem_mtx);
     auto [it, inserted] = mIpmiServers.try_emplace(std::move(name), nullptr);
 
@@ -214,8 +215,8 @@ public:
   bool isDevKit = false;
 
   rx::Ref<Budget> createProcessTypeBudget(Budget::ProcessType processType,
-                                      std::string_view name,
-                                      std::span<const BudgetInfo> items) {
+                                          std::string_view name,
+                                          std::span<const BudgetInfo> items) {
     auto budget = orbis::knew<orbis::Budget>(name, processType, items);
     processTypeBudgets[static_cast<int>(processType)] =
         orbis::knew<orbis::Budget>(name, processType, items);

@@ -75,9 +75,9 @@ orbis::ErrorCode convertErrno();
 IoDevice *createHostIoDevice(orbis::kstring hostPath,
                              orbis::kstring virtualPath);
 rx::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom,
-                                   int type, int prot);
-orbis::ErrorCode createSocket(rx::Ref<orbis::File> *file,
-                              orbis::kstring name, int dom, int type, int prot);
+                                int type, int prot);
+orbis::ErrorCode createSocket(rx::Ref<orbis::File> *file, orbis::kstring name,
+                              int dom, int type, int prot);
 orbis::File *createHostFile(int hostFd, rx::Ref<IoDevice> device,
                             bool alignTruncate = false);
 IoDevice *createFdWrapDevice(int fd);

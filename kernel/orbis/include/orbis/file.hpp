@@ -3,9 +3,9 @@
 #include "KernelAllocator.hpp"
 #include "error/ErrorCode.hpp"
 #include "note.hpp"
+#include "rx/Rc.hpp"
 #include "rx/SharedMutex.hpp"
 #include "stat.hpp"
-#include "rx/Rc.hpp"
 #include <cstdint>
 
 namespace orbis {

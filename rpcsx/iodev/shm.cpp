@@ -17,9 +17,9 @@ struct ShmDevice : IoDevice {
                           orbis::Thread *thread) override;
 };
 
-orbis::ErrorCode ShmDevice::open(rx::Ref<orbis::File> *file,
-                                 const char *path, std::uint32_t flags,
-                                 std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode ShmDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                 std::uint32_t flags, std::uint32_t mode,
+                                 orbis::Thread *thread) {
   ORBIS_LOG_WARNING("shm_open", path, flags, mode);
   auto hostPath = rx::getShmGuestPath(path);
   auto realFlags = O_RDWR; // TODO

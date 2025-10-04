@@ -705,7 +705,7 @@ IoDevice *createHostIoDevice(orbis::kstring hostPath,
 }
 
 rx::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom,
-                                   int type, int prot) {
+                                int type, int prot) {
   auto s = orbis::knew<SocketFile>();
   s->name = std::move(name);
   s->dom = dom;
@@ -716,9 +716,8 @@ rx::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom,
   return s;
 }
 
-orbis::ErrorCode createSocket(rx::Ref<orbis::File> *file,
-                              orbis::kstring name, int dom, int type,
-                              int prot) {
+orbis::ErrorCode createSocket(rx::Ref<orbis::File> *file, orbis::kstring name,
+                              int dom, int type, int prot) {
   // ORBIS_LOG_ERROR(__FUNCTION__, name, dom, type, prot);
   // *file = orbis::createPipe();
   // return {};

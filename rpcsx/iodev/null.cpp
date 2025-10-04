@@ -22,9 +22,9 @@ static const orbis::FileOps ops = {
     .write = null_write,
 };
 
-orbis::ErrorCode NullDevice::open(rx::Ref<orbis::File> *file,
-                                  const char *path, std::uint32_t flags,
-                                  std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode NullDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                  std::uint32_t flags, std::uint32_t mode,
+                                  orbis::Thread *thread) {
   auto newFile = orbis::knew<NullFile>();
   newFile->device = this;
   newFile->ops = &ops;

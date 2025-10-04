@@ -385,9 +385,9 @@ orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
   return {};
 }
 
-orbis::ErrorCode DmemDevice::open(rx::Ref<orbis::File> *file,
-                                  const char *path, std::uint32_t flags,
-                                  std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode DmemDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                  std::uint32_t flags, std::uint32_t mode,
+                                  orbis::Thread *thread) {
   auto newFile = orbis::knew<DmemFile>();
   newFile->device = this;
   newFile->ops = &ops;

@@ -626,9 +626,9 @@ static void createGpu() {
   }
 }
 
-orbis::ErrorCode DceDevice::open(rx::Ref<orbis::File> *file,
-                                 const char *path, std::uint32_t flags,
-                                 std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode DceDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                 std::uint32_t flags, std::uint32_t mode,
+                                 orbis::Thread *thread) {
   auto newFile = orbis::knew<DceFile>();
   newFile->device = this;
   newFile->ops = &ops;

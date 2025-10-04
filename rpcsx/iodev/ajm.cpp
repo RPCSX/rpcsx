@@ -778,9 +778,9 @@ static const orbis::FileOps fileOps = {
     .ioctl = ajm_ioctl,
 };
 
-orbis::ErrorCode AjmDevice::open(rx::Ref<orbis::File> *file,
-                                 const char *path, std::uint32_t flags,
-                                 std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode AjmDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                 std::uint32_t flags, std::uint32_t mode,
+                                 orbis::Thread *thread) {
   auto newFile = orbis::knew<AjmFile>();
   newFile->ops = &fileOps;
   newFile->device = this;

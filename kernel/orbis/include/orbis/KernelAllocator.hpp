@@ -68,7 +68,8 @@ T *knew(Args &&...args) {
         utils::kalloc(sizeof(DynamicObject), alignof(DynamicObject)));
     return std::construct_at(loc, std::forward<Args>(args)...);
   } else {
-    static_assert(!std::is_polymorphic_v<T>, "Polymorphic type should be derived from rx::RcBase");
+    static_assert(!std::is_polymorphic_v<T>,
+                  "Polymorphic type should be derived from rx::RcBase");
 
     auto loc = static_cast<T *>(utils::kalloc(sizeof(T), alignof(T)));
     return std::construct_at(loc, std::forward<Args>(args)...);

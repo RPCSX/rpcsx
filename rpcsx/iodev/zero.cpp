@@ -25,9 +25,9 @@ static const orbis::FileOps ops = {
     .read = zero_read,
 };
 
-orbis::ErrorCode ZeroDevice::open(rx::Ref<orbis::File> *file,
-                                  const char *path, std::uint32_t flags,
-                                  std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode ZeroDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                  std::uint32_t flags, std::uint32_t mode,
+                                  orbis::Thread *thread) {
   auto newFile = orbis::knew<ZeroFile>();
   newFile->device = this;
   newFile->ops = &ops;

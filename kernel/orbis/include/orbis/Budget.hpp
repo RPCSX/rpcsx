@@ -1,9 +1,9 @@
 #pragma once
 
 #include "orbis-config.hpp"
-#include "rx/SharedMutex.hpp"
 #include "rx/BitSet.hpp"
 #include "rx/Rc.hpp"
+#include "rx/SharedMutex.hpp"
 #include <array>
 #include <cstring>
 #include <mutex>

@@ -192,9 +192,9 @@ static const orbis::FileOps fileOps = {
     .write = aout_write,
 };
 
-orbis::ErrorCode AoutDevice::open(rx::Ref<orbis::File> *file,
-                                  const char *path, std::uint32_t flags,
-                                  std::uint32_t mode, orbis::Thread *thread) {
+orbis::ErrorCode AoutDevice::open(rx::Ref<orbis::File> *file, const char *path,
+                                  std::uint32_t flags, std::uint32_t mode,
+                                  orbis::Thread *thread) {
   ORBIS_LOG_FATAL("aout device open", path, flags, mode);
   auto newFile = orbis::knew<AoutFile>();
   newFile->ops = &fileOps;
