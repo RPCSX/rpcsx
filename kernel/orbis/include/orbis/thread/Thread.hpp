@@ -41,7 +41,7 @@ struct Thread {
   kvector<SigInfo> queuedSignals;
   shared_atomic32 suspendFlags{0};
 
-  utils::shared_atomic32 interruptedMtx{ 0 };
+  utils::shared_atomic32 interruptedMtx{0};
 
   std::int64_t hostTid = -1;
   lwpid_t tid = -1;

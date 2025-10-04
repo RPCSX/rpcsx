@@ -23,7 +23,7 @@ struct RegionLikeImpl {
   void addChild(Instruction node);
 
   void printRegion(std::ostream &os, NameStorage &ns,
-                           const PrintOptions &opts) const;
+                   const PrintOptions &opts) const;
 
   auto getParent() const;
 };

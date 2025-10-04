@@ -3,8 +3,7 @@
 #include "Block.hpp"
 
 namespace shader::ir {
-template <typename ImplT>
-struct ConstructWrapper : BlockWrapper<ImplT> {
+template <typename ImplT> struct ConstructWrapper : BlockWrapper<ImplT> {
   using BlockWrapper<ImplT>::BlockWrapper;
   using BlockWrapper<ImplT>::operator=;
 
@@ -14,9 +13,7 @@ struct ConstructWrapper : BlockWrapper<ImplT> {
         .template staticCast<ir::Block>();
   }
 
-  void setHeader(ir::Block block) {
-    this->impl->replaceOperand(0, block);
-  }
+  void setHeader(ir::Block block) { this->impl->replaceOperand(0, block); }
 
   ir::Block getMerge() {
     return this->impl->getOperand(1)
@@ -24,9 +21,7 @@ struct ConstructWrapper : BlockWrapper<ImplT> {
         .template staticCast<ir::Block>();
   }
 
-  void setMerge(ir::Block block) {
-    this->impl->replaceOperand(1, block);
-  }
+  void setMerge(ir::Block block) { this->impl->replaceOperand(1, block); }
 };
 
 struct ConstructImpl;
