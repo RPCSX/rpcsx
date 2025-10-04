@@ -272,7 +272,7 @@ target_compile_definitions(rx PRIVATE
 if (WITH_PS4)
     find_package(nlohmann_json CONFIG)
     add_subdirectory(tools)
-    add_subdirectory(orbis-kernel)
+    add_subdirectory(kernel/orbis)
 endif()
 
 add_subdirectory(rpcsx)
