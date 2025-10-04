@@ -29,6 +29,10 @@ constexpr VkDriverId VK_DRIVER_ID_MESA_HONEYKRISP = static_cast<VkDriverId>(26);
 #endif
 
 #ifdef ANDROID
+#include <vector>
+#include <string>
+#include <utility>
+
 namespace vk
 {
 	template <std::size_t N>
@@ -47,7 +51,7 @@ namespace vk
 
 	class symbol_cache
 	{
-		std::vector<std::pair<std::string, void**>> registered_symbols;
+		std::vector<std::pair<typename T1, typename T2><std::string, void**>> registered_symbols;
 
 	public:
 		void initialize();
