@@ -322,7 +322,7 @@ public:
     auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     mMemory = DeviceMemory::CreateExternalHostMemory(data, size, properties);
-    table.map(0, size);
+    table.map(rx::AddressRange::fromBeginSize(0, size));
     // debugName = "direct";
   }
 
@@ -337,7 +337,7 @@ public:
         vkMapMemory(context->device, memory.getHandle(), 0, size, 0, &data));
 
     mMemory = std::move(memory);
-    table.map(0, size);
+    table.map(rx::AddressRange::fromBeginSize(0, size));
     mData = reinterpret_cast<char *>(data);
     // debugName = "host";
   }
@@ -347,7 +347,7 @@ public:
     auto properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     mMemory = DeviceMemory::Allocate(size, ~0, properties);
-    table.map(0, size);
+    table.map(rx::AddressRange::fromBeginSize(0, size));
     // debugName = "local";
   }
 
@@ -397,7 +397,7 @@ public:
 
   void deallocate(DeviceMemoryRef memory) {
     std::lock_guard lock(mMtx);
-    table.map(memory.offset, memory.offset + memory.size);
+    table.map(rx::AddressRange::fromBeginSize(memory.offset, memory.size));
   }
 
   void dump() {

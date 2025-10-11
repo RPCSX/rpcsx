@@ -144,8 +144,9 @@ static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
     ORBIS_LOG_WARNING("dmem releaseDirectMemory", device->index, args->address,
                       args->size);
 
-    device->allocations.map(args->address, args->address + args->size,
-                            {.memoryType = -1u});
+    device->allocations.map(
+        rx::AddressRange::fromBeginSize(args->address, args->size),
+        {.memoryType = -1u});
     return {};
   }
 
@@ -303,7 +304,7 @@ orbis::ErrorCode DmemDevice::allocate(std::uint64_t *start,
       }
     }
 
-    allocations.map(offset, offset + len,
+    allocations.map(rx::AddressRange::fromBeginSize(offset, len),
                     {
                         .memoryType = memoryType,
                     });
@@ -319,7 +320,7 @@ orbis::ErrorCode DmemDevice::allocate(std::uint64_t *start,
 }
 
 orbis::ErrorCode DmemDevice::release(std::uint64_t start, std::uint64_t size) {
-  allocations.unmap(start, start + size);
+  allocations.unmap(rx::AddressRange::fromBeginSize(start, size));
   return {};
 }
 

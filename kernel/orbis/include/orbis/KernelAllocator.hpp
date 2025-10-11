@@ -59,7 +59,9 @@ T *knew(Args &&...args) {
     struct DynamicObject final : T {
       using T::T;
 
-      void operator delete(void *pointer) { kfree(pointer, sizeof(T)); }
+      void operator delete(void *pointer) {
+        kfree(pointer, sizeof(DynamicObject));
+      }
     };
 
     auto loc = static_cast<DynamicObject *>(

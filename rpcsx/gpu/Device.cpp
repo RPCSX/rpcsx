@@ -641,7 +641,7 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
 
   auto vmSlot = vmSlotIt.get();
 
-  process.vmTable.map(address, address + size,
+  process.vmTable.map(rx::AddressRange::fromBeginSize(address, size),
                       VmMapSlot{
                           .memoryType = vmSlot.memoryType,
                           .prot = static_cast<int>(prot),
@@ -1004,7 +1004,7 @@ void Device::mapMemory(std::uint32_t pid, std::uint64_t address,
                        int prot, std::int64_t offset) {
   auto &process = processInfo[pid];
 
-  process.vmTable.map(address, address + size,
+  process.vmTable.map(rx::AddressRange::fromBeginSize(address, size),
                       VmMapSlot{
                           .memoryType = memoryType >= 0 ? dmemIndex : -1,
                           .prot = prot,

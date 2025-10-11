@@ -37,7 +37,7 @@ static orbis::ErrorCode blockpool_ioctl(orbis::File *file,
     ORBIS_RET_ON_ERROR(
         dmem->allocate(&start, args->searchEnd, args->len, 1, args->flags));
 
-    blockPool->pool.map(start, start + args->len);
+    blockPool->pool.map(rx::AddressRange::fromBeginSize(start, args->len));
     return {};
   }
   }

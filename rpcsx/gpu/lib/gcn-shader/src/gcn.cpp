@@ -1832,7 +1832,8 @@ gcn::deserialize(gcn::Context &context, const gcn::Environment &environment,
                  std::function<std::uint32_t(std::uint64_t)> readMemory) {
   readMemory = [&context,
                 readMemory = std::move(readMemory)](std::uint64_t address) {
-    context.memoryMap.map(address, address + sizeof(std::uint32_t));
+    context.memoryMap.map(
+        rx::AddressRange::fromBeginSize(address, sizeof(std::uint32_t)));
     return readMemory(address);
   };
 

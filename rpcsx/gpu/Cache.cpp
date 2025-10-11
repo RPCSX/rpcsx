@@ -167,8 +167,8 @@ void Cache::ShaderResources::loadResources(
       rx::die("failed to evaluate pointer");
     }
 
-    bufferMemoryTable.map(*pointerBase + *pointerOffset,
-                          *pointerBase + *pointerOffset + pointer.size,
+    bufferMemoryTable.map(rx::AddressRange::fromBeginSize(
+                              *pointerBase + *pointerOffset, pointer.size),
                           Access::Read);
     resourceSlotToAddress.emplace_back(slotOffset + pointer.resourceSlot,
                                        *pointerBase + *pointerOffset);
@@ -200,8 +200,9 @@ void Cache::ShaderResources::loadResources(
         it.beginAddress() == buffer.address() && it.size() == buffer.size()) {
       it.get() |= bufferRes.access;
     } else {
-      bufferMemoryTable.map(buffer.address(), buffer.address() + buffer.size(),
-                            bufferRes.access);
+      bufferMemoryTable.map(
+          rx::AddressRange::fromBeginSize(buffer.address(), buffer.size()),
+          bufferRes.access);
     }
     resourceSlotToAddress.emplace_back(slotOffset + bufferRes.resourceSlot,
                                        buffer.address());
@@ -262,7 +263,8 @@ void Cache::ShaderResources::loadResources(
       it.get().second |= imageBuffer.access;
     } else {
       imageMemoryTable.map(
-          tbuffer.address(), tbuffer.address() + info.totalTiledSize,
+          rx::AddressRange::fromBeginSize(tbuffer.address(),
+                                          info.totalTiledSize),
           {ImageBufferKey::createFrom(tbuffer), imageBuffer.access});
     }
     resourceSlotToAddress.emplace_back(slotOffset + imageBuffer.resourceSlot,
@@ -1489,8 +1491,7 @@ Cache::Buffer Cache::Tag::getBuffer(rx::AddressRange range, Access access) {
 
     mParent->flushBuffers(range);
 
-    it = table.map(range.beginAddress(), range.endAddress(), nullptr, false,
-                   true);
+    it = table.map(range, nullptr, false, true);
   }
 
   if (it.get() == nullptr) {
@@ -1837,8 +1838,7 @@ Cache::ImageBuffer Cache::Tag::getImageBuffer(const ImageBufferKey &key,
     flushed.clear();
   }
 
-  auto it =
-      table.map(range.beginAddress(), range.endAddress(), nullptr, false, true);
+  auto it = table.map(range, nullptr, false, true);
 
   if (it.get() == nullptr) {
     auto cached = std::make_shared<CachedImageBuffer>();
@@ -1945,8 +1945,7 @@ Cache::Image Cache::Tag::getImage(const ImageKey &key, Access access) {
     flushed.clear();
   }
 
-  auto it = table.map(storeRange.beginAddress(), storeRange.endAddress(),
-                      nullptr, false, true);
+  auto it = table.map(storeRange, nullptr, false, true);
 
   if (it.get() == nullptr) {
     VkImageUsageFlags usage =
@@ -2787,15 +2786,13 @@ void Cache::flush(Tag &tag, rx::AddressRange range) {
 void Cache::trackUpdate(EntryType type, rx::AddressRange range,
                         std::shared_ptr<Entry> entry, TagId tagId,
                         bool watchChanges) {
-  if (auto it = mSyncTable.map(range.beginAddress(), range.endAddress(), {},
-                               false, true);
-      it.get() < tagId) {
+  if (auto it = mSyncTable.map(range, {}, false, true); it.get() < tagId) {
     it.get() = tagId;
   }
 
   entry->tagId = tagId;
   auto &table = getTable(type);
-  table.map(range.beginAddress(), range.endAddress(), std::move(entry));
+  table.map(range, std::move(entry));
 
   if (watchChanges) {
     mDevice->watchWrites(mVmId, range.beginAddress(), range.size());
@@ -2803,9 +2800,7 @@ void Cache::trackUpdate(EntryType type, rx::AddressRange range,
 }
 
 void Cache::trackWrite(rx::AddressRange range, TagId tagId, bool lockMemory) {
-  if (auto it = mSyncTable.map(range.beginAddress(), range.endAddress(), {},
-                               false, true);
-      it.get() < tagId) {
+  if (auto it = mSyncTable.map(range, {}, false, true); it.get() < tagId) {
     it.get() = tagId;
   }
 

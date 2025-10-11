@@ -776,8 +776,8 @@ constexpr auto kMainDirectMemorySize =
     kPhysicalMemorySize - kFlexibleMemorySize;
 
 void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
-              std::int32_t flags, std::int32_t internalFlags, orbis::IoDevice *device,
-              std::uint64_t offset) {
+              std::int32_t flags, std::int32_t internalFlags,
+              orbis::IoDevice *device, std::uint64_t offset) {
   std::println(stderr, "vm::map(addr = {}, len = {}, prot = {}, flags = {})",
                addr, len, mapProtToString(prot), mapFlagsToString(flags));
 
@@ -966,7 +966,7 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     info.flags = flags;
     info.offset = offset;
 
-    gMapInfo.map(address, address + len, info);
+    gMapInfo.map(rx::AddressRange::fromBeginSize(address, len), info);
   }
 
   if (auto thr = orbis::g_currentThread) {
@@ -1034,7 +1034,7 @@ bool vm::unmap(void *addr, std::uint64_t size) {
     std::println(stderr, "ignoring unmapping {:x}-{:x}", address,
                  address + size);
   }
-  gMapInfo.unmap(address, address + size);
+  gMapInfo.unmap(rx::AddressRange::fromBeginSize(address, size));
   return rx::mem::unmap(addr, size);
 }
 
@@ -1218,5 +1218,5 @@ void vm::setName(std::uint64_t start, std::uint64_t size, const char *name) {
 
   std::strncpy(info.name, name, sizeof(info.name));
 
-  gMapInfo.map(start, size, info);
+  gMapInfo.map(rx::AddressRange::fromBeginSize(start, size), info);
 }

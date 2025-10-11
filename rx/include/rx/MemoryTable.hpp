@@ -66,7 +66,7 @@ public:
 
   void clear() { mAreas.clear(); }
 
-  AreaInfo queryArea(std::uint64_t address) const {
+  [[nodiscard]] AreaInfo queryArea(std::uint64_t address) const {
     auto it = mAreas.lower_bound(address);
     assert(it != mAreas.end());
     std::uint64_t endAddress = 0;
@@ -84,9 +84,10 @@ public:
     return {startAddress, endAddress};
   }
 
-  void map(std::uint64_t beginAddress, std::uint64_t endAddress) {
-    auto [beginIt, beginInserted] = mAreas.emplace(beginAddress, Kind::O);
-    auto [endIt, endInserted] = mAreas.emplace(endAddress, Kind::X);
+  void map(rx::AddressRange range) {
+    auto [beginIt, beginInserted] =
+        mAreas.emplace(range.beginAddress(), Kind::O);
+    auto [endIt, endInserted] = mAreas.emplace(range.endAddress(), Kind::X);
 
     if (!beginInserted) {
       if (beginIt->second == Kind::X) {
@@ -313,9 +314,8 @@ public:
 };
 
 template <typename T> class Payload<T *> {
-  static constexpr std::uintptr_t
-      kCloseOpenBit = alignof(T) > 1 ? 1
-                                     : (1ull << (sizeof(std::uintptr_t) * 8 - 1));
+  static constexpr std::uintptr_t kCloseOpenBit =
+      alignof(T) > 1 ? 1 : (1ull << (sizeof(std::uintptr_t) * 8 - 1));
   static constexpr std::uintptr_t kClose = 0;
   std::uintptr_t value = kClose;
 
@@ -368,9 +368,8 @@ public:
 };
 
 template <typename T> class Payload<Ref<T>> {
-  static constexpr std::uintptr_t
-      kCloseOpenBit = alignof(T) > 1 ? 1
-                                     : (1ull << (sizeof(std::uintptr_t) * 8 - 1));
+  static constexpr std::uintptr_t kCloseOpenBit =
+      alignof(T) > 1 ? 1 : (1ull << (sizeof(std::uintptr_t) * 8 - 1));
   static constexpr std::uintptr_t kClose = 0;
   std::uintptr_t value = kClose;
 
@@ -465,14 +464,14 @@ class MemoryTableWithPayload {
 
 public:
   class AreaInfo : public rx::AddressRange {
-    PayloadT &payload;
+    Payload<PayloadT> &payload;
 
   public:
-    AreaInfo(PayloadT &payload, rx::AddressRange range)
+    AreaInfo(Payload<PayloadT> &payload, rx::AddressRange range)
         : payload(payload), AddressRange(range) {}
 
-    PayloadT *operator->() { return &payload; }
-    PayloadT &get() { return payload; }
+    decltype(auto) operator->() { return &payload.get(); }
+    decltype(auto) get() { return payload.get(); }
   };
 
   class iterator {
@@ -484,7 +483,7 @@ public:
     iterator() = default;
     iterator(map_iterator it) : it(it) {}
 
-    AreaInfo operator*() const { return {it->second.get(), range()}; }
+    AreaInfo operator*() const { return {it->second, range()}; }
 
     rx::AddressRange range() const {
       return rx::AddressRange::fromBeginEnd(beginAddress(), endAddress());
@@ -494,8 +493,8 @@ public:
     std::uint64_t endAddress() const { return std::next(it)->first; }
     std::uint64_t size() const { return endAddress() - beginAddress(); }
 
-    PayloadT &get() const { return it->second.get(); }
-    PayloadT *operator->() const { return &it->second.get(); }
+    decltype(auto) get() const { return it->second.get(); }
+    decltype(auto) operator->() const { return &it->second.get(); }
     iterator &operator++() {
       ++it;
 
@@ -570,13 +569,13 @@ public:
     return endAddress < address ? mAreas.end() : it;
   }
 
-  iterator map(std::uint64_t beginAddress, std::uint64_t endAddress,
-               PayloadT payload, bool merge = true, bool noOverride = false) {
-    assert(beginAddress < endAddress);
+  iterator map(rx::AddressRange range, PayloadT payload, bool merge = true,
+               bool noOverride = false) {
+    assert(range.beginAddress() < range.endAddress());
     auto [beginIt, beginInserted] =
-        mAreas.emplace(beginAddress, payload_type::createOpen(payload));
+        mAreas.emplace(range.beginAddress(), payload_type::createOpen(payload));
     auto [endIt, endInserted] =
-        mAreas.emplace(endAddress, payload_type::createClose());
+        mAreas.emplace(range.endAddress(), payload_type::createClose());
 
     bool seenOpen = false;
     bool endCollision = false;
@@ -685,9 +684,9 @@ public:
     }
   }
 
-  void unmap(std::uint64_t beginAddress, std::uint64_t endAddress) {
+  void unmap(rx::AddressRange range) {
     // FIXME: can be optimized
-    unmap(map(beginAddress, endAddress, PayloadT{}, false));
+    unmap(map(range, PayloadT{}, false));
   }
 };
 } // namespace rx
