@@ -61,3 +61,6 @@ build*/
 .cache/
 rpcs3/git-version.h
 .rx.version
+
+log-*.txt
+tty.txt
