@@ -1328,8 +1328,9 @@ int main(int argc, const char *argv[]) {
       // version
       if (orbis::g_context->fwType != orbis::FwType::Ps5 &&
           orbis::g_context->fwSdkVersion >= 0x5050000) {
+        auto fakeIpmiProcess = orbis::createProcess();
         auto fakeIpmiThread =
-            orbis::createThread(initProcess, "SceSysAudioSystemIpc");
+            orbis::createThread(fakeIpmiProcess, "SceSysAudioSystemIpc");
         ipmi::audioIpmiClient =
             ipmi::createIpmiClient(fakeIpmiThread, "SceSysAudioSystemIpc");
         // HACK: here is a bug in audiod because we send this very early and
@@ -1342,7 +1343,7 @@ int main(int argc, const char *argv[]) {
           int32_t someSwitch = 0x14; // 0x14 for init, 0x19 for mute
           int32_t someFlag = 0;
         } data1;
-        data1.pid = fakeIpmiThread->tproc->pid;
+        data1.pid = fakeIpmiProcess->pid;
         struct Data2 {
           void *unk0 = 0;
           int32_t unk1 = 0x105;
