@@ -141,6 +141,11 @@ option(WITHOUT_OPENGL "Disable OpenGL" OFF)
 option(WITHOUT_OPENGLEW "Disable OpenGLEW" OFF)
 option(WITHOUT_OPENAL "Disable OpenAL" OFF)
 option(COMPILE_FFMPEG "Compile FFmpeg" ON)
+option(USE_FS_GS_SYSCALL "Use the arch_prctl syscall to interact with fsbase and gsbase instead of x86 instructions. Used for compatibility with some systems, but comes at a performance cost." OFF)
+
+if(USE_FS_GS_SYSCALL)
+    add_definitions(-DUSE_FS_GS_SYSCALL)
+endif()
 
 # rpcs3 options
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
