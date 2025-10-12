@@ -101,7 +101,7 @@ template <int Group> struct IoDeviceWithIoctl : IoDevice {
   void addIoctl(ErrorCode (*handler)(Thread *thread, InstanceT *device,
                                      T &arg)) {
     constexpr auto id = ioctl::id(Cmd);
-    assert(ioctlTable[id].handler == unhandledIoctl);
+    assert(ioctlTable[id].handler == nullptr);
 
     IoctlHandlerEntry &entry = ioctlTable[id];
 
@@ -132,7 +132,7 @@ template <int Group> struct IoDeviceWithIoctl : IoDevice {
 
   void addIoctl(ErrorCode (*handler)(Thread *thread, InstanceT *device)) {
     constexpr auto id = ioctl::id(Cmd);
-    assert(ioctlTable[id].handler == unhandledIoctl);
+    assert(ioctlTable[id].handler == nullptr);
 
     IoctlHandlerEntry &entry = ioctlTable[id];
 
@@ -156,7 +156,7 @@ template <int Group> struct IoDeviceWithIoctl : IoDevice {
   void addIoctl(std::pair<ErrorCode, T> (*handler)(Thread *thread,
                                                    InstanceT *device)) {
     constexpr auto id = ioctl::id(Cmd);
-    assert(ioctlTable[id].handler == unhandledIoctl);
+    assert(ioctlTable[id].handler == nullptr);
 
     IoctlHandlerEntry &entry = ioctlTable[id];
 
