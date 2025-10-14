@@ -1,0 +1,20 @@
+{
+   "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "Prepare debug",
+            "command": "cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_INIT=\"-march=native\" -DCMAKE_CXX_COMPILER=g++-14"
+        },
+        {
+            "type": "shell",
+            "label": "Prepare release",
+            "command": "cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS_INIT=\"-march=native\" -DCMAKE_CXX_COMPILER=g++-14"
+        },
+        {
+            "type": "shell",
+            "label": "Build",
+            "command": "cmake --build build -j$(nproc)"
+        }
+    ]
+}
