@@ -288,3 +288,4 @@ if (WITH_PS3)
     add_subdirectory(ps3fw)
 endif()
 
+add_subdirectory(test)
