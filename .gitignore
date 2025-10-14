@@ -35,6 +35,8 @@
 .vs/*
 .vscode/*
 !.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 *.ipch
 *.vspx
 *.psess
