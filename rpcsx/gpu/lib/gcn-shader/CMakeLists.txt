@@ -30,6 +30,12 @@ add_library(gcn-shader STATIC
     src/SpvConverter.cpp
     src/SpvTypeInfo.cpp
     src/transform.cpp
+    src/transform/replace.cpp
+    src/transform/route.cpp
+    src/transform/merge.cpp
+    src/transform/construct.cpp
+    src/transform/transformations.cpp
+    src/transform/wrap.cpp
 )
 
 target_include_directories(gcn-shader PUBLIC include PRIVATE include/shader)
