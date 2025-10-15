@@ -1,10 +1,13 @@
 
 #include "transform/route.hpp"
+#include "ir/Block.hpp"
 #include "transform/merge.hpp"
 #include "SpvConverter.hpp"
 #include "analyze.hpp"
 #include "dialect.hpp"
 #include <functional>
+#include <iostream>
+#include <sstream>
 #include <rx/die.hpp>
 #include <unordered_map>
 #include <unordered_set>
@@ -17,14 +20,76 @@ using Builder = ir::Builder<ir::builtin::Builder, ir::spv::Builder>;
 
 // Data structures for route block creation
 struct RouteBlockData {
-  std::unordered_map<ir::Block, std::unordered_set<unsigned>> fromSucc;
-  std::unordered_map<ir::Block, std::unordered_set<ir::Block>> toPreds;
-  std::unordered_map<ir::Block, std::unordered_set<ir::Block>> toAllPreds;
+  std::unordered_map<ir::Block, std::unordered_set<unsigned>> fromSuccessors;
+  std::unordered_map<ir::Block, std::unordered_set<ir::Block>> toPredecessors;
+  std::unordered_map<ir::Block, std::unordered_set<ir::Block>> toAllPredecessors;
   std::unordered_set<ir::Block> patchPredecessors;
 };
 
+// Helper function to get block name or generate one
+static std::string getBlockName(spv::Context& context, ir::Block block) {
+  auto label = block.getFirst();
+  auto name = context.ns.tryGetNameOf(label);
+  return name.empty() 
+    ? "unnamed_" + std::to_string((std::uint32_t)label.getInstId()) 
+    : std::string(name);
+}
+
+// Log detailed information about phi nodes and their predecessors
+static void logPhiPredecessorsMismatch(spv::Context& context, ir::Block to, ir::Instruction firstInst) {
+  // Get block label and name
+  auto blockName = getBlockName(context, to);
+  auto predsCount = getPredecessors(to).size();
+
+  for (auto phi = firstInst; phi && (phi == ir::spv::OpPhi); phi = phi.getNext()) {
+    std::cerr << "[DEBUG] Block '" << blockName << "' (ID: " << (std::uint32_t)to.getInstId() << ") has " << predsCount << " predecessors";
+    
+    // Get number of incoming blocks from phi node
+    auto incomingCount = phi.getOperandCount() / 2;
+
+    // Log mismatch if counts differ
+    if (incomingCount != predsCount) {
+      std::cerr << "\n  Phi ID: " << (std::uint32_t)phi.getInstId() << ", incoming blocks: " << incomingCount;
+      std::cerr << " *** MISMATCH! Expected: " << predsCount << " ***\n\n";
+
+      // Detailed phi node information
+      std::cerr << "  Phi: ";
+      phi.print(std::cerr, context.ns);
+      std::cerr << "\n";
+
+      // Print detailed incoming blocks
+      std::stringstream phiOperands;
+      auto opts = PrintOptions().nextLevel();
+      phiOperands << "  Value-Blocks: [\n";
+
+      for (std::size_t i = 1; i < phi.getOperandCount(); i += 2) {
+        auto value = phi.getOperand(i + 0).getAsValue();
+        auto block = phi.getOperand(i + 1).getAsValue().staticCast<ir::Block>();
+
+        phiOperands << "    ";
+        value.print(phiOperands, context.ns, opts.nextLevel());
+        phiOperands << "\n    ";
+        block.print(phiOperands, context.ns, opts.nextLevel());
+        phiOperands << ",\n\n";
+      }
+
+      auto str = phiOperands.str();
+      if (str.size() >= 3) {
+        str.pop_back();
+        str.pop_back();
+        str.pop_back();
+      }
+
+      std::cerr << str << "]\n";
+    }
+    else {
+      std::cerr << " and matching incoming blocks\n";
+    }
+  }
+}
+
 // Analyze edges and build routing data structures
-static RouteBlockData analyzeEdges(const std::vector<Edge> &edges) {
+static RouteBlockData analyzeEdges(spv::Context &context, const std::vector<Edge> &edges) {
   RouteBlockData data;
   std::unordered_set<ir::Block> routePredecessors;
 
@@ -33,12 +98,17 @@ static RouteBlockData analyzeEdges(const std::vector<Edge> &edges) {
       data.patchPredecessors.insert(edge.from());
     }
 
-    data.toPreds[edge.to()].emplace(edge.from());
-    data.fromSucc[edge.from()].emplace(edge.operandIndex());
+    data.toPredecessors[edge.to()].emplace(edge.from());
+    data.fromSuccessors[edge.from()].emplace(edge.operandIndex());
   }
 
-  for (auto &[to, preds] : data.toPreds) {
-    data.toAllPreds[to] = getPredecessors(to);
+  for (auto &[to, preds] : data.toPredecessors) {
+    data.toAllPredecessors[to] = getPredecessors(to);
+  }
+
+  // Debug logging for mismatches
+  for (auto& [to, _] : data.toPredecessors) {
+    logPhiPredecessorsMismatch(context, to, ir::Block(to).getFirst());
   }
 
   return data;
@@ -122,7 +192,7 @@ static void patchPredecessorBlock(
   
   auto predSuccessors = getAllSuccessors(patchBlock);
   auto terminator = getTerminator(patchBlock);
-  auto &routeSuccessors = data.fromSucc.at(patchBlock);
+  auto &routeSuccessors = data.fromSuccessors.at(patchBlock);
 
   int keepSuccessors = predSuccessors.size() - routeSuccessors.size();
 
@@ -367,7 +437,7 @@ static void processTargetBlocks(
       replaceTerminatorTarget(getTerminator(from), to, route);
     }
 
-    if (data.toAllPreds.at(to).size() == preds.size()) {
+    if (data.toAllPredecessors.at(to).size() == preds.size()) {
       // all predecessors will be replaced, move phi nodes
       moveAllPhiNodes(context, to, route, preds, edges);
       continue;
@@ -393,35 +463,35 @@ ir::Block shader::transform::createRouteBlock(spv::Context &context,
   rx::dieIf(edges.empty(), "createRouteBlock: unexpected edges count");
 
   // Step 1: Analyze edges and build data structures
-  auto data = analyzeEdges(edges);
+  auto data = analyzeEdges(context, edges);
 
   // Step 2: Handle simple case - single target block
-  if (data.toPreds.size() == 1) {
-    auto &[to, preds] = *data.toPreds.begin();
+  if (data.toPredecessors.size() == 1) {
+    auto &[to, preds] = *data.toPredecessors.begin();
     return createMergeBlock(context, insertPoint, preds, to);
   }
 
   // Step 3: Create route block and phi node
   auto [route, routePhi] = createRouteBlockWithPhi(context, insertPoint,
-                                                    loc, data.toPreds.size());
+                                                    loc, data.toPredecessors.size());
 
   // Step 4: Create appropriate terminator (branch/conditional/switch)
   auto successorToId = createRouteTerminator(context, route, routePhi,
-                                             loc, data.toPreds);
+                                             loc, data.toPredecessors);
 
   // Step 5: Create lambda for getting successor IDs
   auto getSuccessorId = [&](ir::Block successor) {
-    return getSuccessorIdValue(context, successor, data.toPreds, successorToId);
+    return getSuccessorIdValue(context, successor, data.toPredecessors, successorToId);
   };
 
   // Step 6: Patch predecessor blocks that have multiple routes
   for (auto patchBlock : data.patchPredecessors) {
     patchPredecessorBlock(context, patchBlock, route, routePhi, data,
-                         data.toPreds, getSuccessorId);
+                         data.toPredecessors, getSuccessorId);
   }
 
   // Step 7: Process target blocks and update phi nodes
-  processTargetBlocks(context, route, routePhi, data, data.toPreds, edges,
+  processTargetBlocks(context, route, routePhi, data, data.toPredecessors, edges,
                      getSuccessorId);
 
   return route;
