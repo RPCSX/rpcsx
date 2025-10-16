@@ -122,22 +122,20 @@ std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
                             rx::EnumBitSet<Protection> protection,
                             [[maybe_unused]] std::size_t alignment) {
 #ifdef _WIN32
-  DWORD prot = 0;
-  if (!protection) {
-    prot = PAGE_NOACCESS;
-  } else if (protection == Protection::R) {
-    prot = PAGE_READONLY;
-  } else if (protection & Protection::X) {
-    if (protection & Protection::W) {
-      prot = PAGE_EXECUTE_READWRITE;
-    } else if (protection & Protection::R) {
-      prot = PAGE_EXECUTE_READ;
-    } else {
-      prot = PAGE_EXECUTE;
-    }
-  } else {
-    prot = PAGE_READWRITE;
-  }
+  static const DWORD protTable[] = {
+      PAGE_NOACCESS,          // 0
+      PAGE_READONLY,          // R
+      PAGE_EXECUTE_READWRITE, // W
+      PAGE_EXECUTE_READWRITE, // RW
+      PAGE_EXECUTE,           // X
+      PAGE_EXECUTE_READWRITE, // XR
+      PAGE_EXECUTE_READWRITE, // XW
+      PAGE_EXECUTE_READWRITE, // XRW
+  };
+
+  auto prot =
+      protTable[(protection & (Protection::R | Protection::W | Protection::X))
+                    .toUnderlying()];
 
   releaseVirtualSpace(virtualRange, alignment);
 
