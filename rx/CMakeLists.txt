@@ -8,6 +8,7 @@ add_library(${PROJECT_NAME} OBJECT
     src/FileLock.cpp
     src/hexdump.cpp
     src/mem.cpp
+    src/Process.cpp
     src/SharedAtomic.cpp
     src/SharedCV.cpp
     src/SharedMutex.cpp
@@ -21,6 +22,10 @@ PUBLIC
 PRIVATE
     include/${PROJECT_NAME}
 )
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    target_link_libraries(${PROJECT_NAME} PUBLIC synchronization kernel32 onecore)
+endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt::fmt)
 

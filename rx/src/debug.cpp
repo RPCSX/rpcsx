@@ -1,4 +1,5 @@
 #include "debug.hpp"
+#include "Process.hpp"
 #include "print.hpp"
 #include <fstream>
 #include <list>
@@ -73,7 +74,7 @@ void rx::waitForDebugger() {
     return;
   }
 
-  rx::println(stderr, "waiting for debugger, pid {}", ::getpid());
+  rx::println(stderr, "waiting for debugger, pid {}", getCurrentProcessId());
 
   while (!isDebuggerPresent()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
