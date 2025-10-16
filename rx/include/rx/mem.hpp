@@ -1,14 +1,31 @@
 #pragma once
 
+#include "AddressRange.hpp"
+#include "EnumBitSet.hpp"
 #include <cstddef>
+#include <system_error>
+#include <utility>
 
 namespace rx::mem {
+enum class Protection {
+  R,
+  W,
+  X,
+
+  bitset_last = X
+};
+
+struct VirtualQueryEntry : rx::AddressRange {
+  rx::EnumBitSet<Protection> flags{};
+
+  VirtualQueryEntry() = default;
+  VirtualQueryEntry(rx::AddressRange range, rx::EnumBitSet<Protection> prot)
+      : AddressRange(range), flags(prot) {}
+};
+
 extern const std::size_t pageSize;
-void *map(void *address, std::size_t size, int prot, int flags, int fd = -1,
-          std::ptrdiff_t offset = 0);
-void *reserve(std::size_t size);
-bool reserve(void *address, std::size_t size);
-bool protect(void *address, std::size_t size, int prot);
-bool unmap(void *address, std::size_t size);
-void printStats();
+std::errc reserve(rx::AddressRange range);
+std::errc release(rx::AddressRange range, std::size_t alignment);
+std::errc protect(rx::AddressRange range, rx::EnumBitSet<Protection> prot);
+std::vector<VirtualQueryEntry> query(rx::AddressRange range);
 } // namespace rx::mem

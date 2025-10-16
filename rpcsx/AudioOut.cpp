@@ -60,8 +60,8 @@ void AudioOut::channelEntry(AudioOutChannelInfo info) {
   }
 
   auto controlPtr = reinterpret_cast<std::uint8_t *>(
-      rx::mem::map(nullptr, controlStat.st_size, PROT_READ | PROT_WRITE,
-                   MAP_SHARED, controlFd));
+      ::mmap(nullptr, controlStat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+             controlFd, 0));
   if (controlPtr == MAP_FAILED) {
     perror("mmap");
     std::abort();

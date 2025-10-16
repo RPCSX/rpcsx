@@ -1,4 +1,5 @@
 #include "Mappable.hpp"
+#include "mem.hpp"
 #include <system_error>
 
 #ifndef _WIN32
@@ -13,58 +14,9 @@
 #include <windows.h>
 #endif
 
-std::errc rx::reserveVirtualSpace(rx::AddressRange range) {
-  auto pointer = std::bit_cast<void *>(range.beginAddress());
-
-#ifdef _WIN32
-  auto reservation = VirtualAlloc2(nullptr, pointer, range.size(),
-                                   MEM_RESERVE | MEM_RESERVE_PLACEHOLDER,
-                                   PAGE_NOACCESS, nullptr, 0);
-
-  if (reservation == nullptr) {
-    return std::errc::invalid_argument;
-  }
-#else
-#ifdef MAP_FIXED_NOREPLACE
-  static constexpr auto kMapFixedNoReplace = MAP_FIXED_NOREPLACE;
-#else
-  static constexpr auto kMapFixedNoReplace = MAP_FIXED;
+#ifdef ANDROID
+#include "format-base.hpp"
 #endif
-
-  auto reservation = ::mmap(pointer, range.size(), PROT_NONE,
-                            MAP_ANON | kMapFixedNoReplace | MAP_PRIVATE, -1, 0);
-
-  if (reservation == MAP_FAILED) {
-    return std::errc{errno};
-  }
-#endif
-  return {};
-}
-
-std::errc rx::releaseVirtualSpace(rx::AddressRange range,
-                                  [[maybe_unused]] std::size_t alignment) {
-#ifdef _WIN32
-  // simple and stupid implementation
-  for (std::uintptr_t address = range.beginAddress();
-       address < range.endAddress(); address += alignment) {
-    auto pointer = std::bit_cast<void *>(address);
-    if (!UnmapViewOfFileEx(pointer, MEM_PRESERVE_PLACEHOLDER)) {
-      VirtualFree(pointer, alignment, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
-    }
-  }
-#else
-  auto pointer = std::bit_cast<void *>(range.beginAddress());
-
-  auto reservation = ::mmap(pointer, range.size(), PROT_NONE,
-                            MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
-
-  if (!reservation || reservation != pointer) {
-    return std::errc{errno};
-  }
-#endif
-
-  return {};
-}
 
 std::pair<rx::Mappable, std::errc>
 rx::Mappable::CreateMemory(std::size_t size) {
@@ -81,10 +33,20 @@ rx::Mappable::CreateMemory(std::size_t size) {
 
   result.m_handle = handle;
 #else
+#ifdef ANDROID
+  auto name = rx::format("/{}-{:x}", (void *)&result, size);
+  auto fd = ::shm_open(name.c_str(), O_CREAT | O_TRUNC, 0666);
+#else
   auto fd = ::memfd_create("", 0);
+#endif
+
   if (fd < 0) {
     return {{}, std::errc{errno}};
   }
+
+#ifdef ANDROID
+  ::shm_unlink(name.c_str());
+#endif
 
   result.m_handle = fd;
 
@@ -119,7 +81,7 @@ std::pair<rx::Mappable, std::errc> rx::Mappable::CreateSwap(std::size_t size) {
 }
 
 std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
-                            rx::EnumBitSet<Protection> protection,
+                            rx::EnumBitSet<mem::Protection> protection,
                             [[maybe_unused]] std::size_t alignment) {
 #ifdef _WIN32
   static const DWORD protTable[] = {
@@ -133,11 +95,11 @@ std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
       PAGE_EXECUTE_READWRITE, // XRW
   };
 
-  auto prot =
-      protTable[(protection & (Protection::R | Protection::W | Protection::X))
-                    .toUnderlying()];
+  auto prot = protTable[(protection & (mem::Protection::R | mem::Protection::W |
+                                       mem::Protection::X))
+                            .toUnderlying()];
 
-  releaseVirtualSpace(virtualRange, alignment);
+  mem::release(virtualRange, alignment);
 
   for (std::uintptr_t address = virtualRange.beginAddress();
        address < virtualRange.endAddress();
@@ -152,18 +114,16 @@ std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
       return std::errc::invalid_argument;
     }
   }
-
-  return {};
 #else
   int prot = 0;
 
-  if (protection & Protection::R) {
+  if (protection & mem::Protection::R) {
     prot |= PROT_READ;
   }
-  if (protection & Protection::W) {
+  if (protection & mem::Protection::W) {
     prot |= PROT_READ | PROT_WRITE;
   }
-  if (protection & Protection::X) {
+  if (protection & mem::Protection::X) {
     prot |= PROT_EXEC;
   }
 
@@ -175,9 +135,9 @@ std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
   if (result == MAP_FAILED) {
     return std::errc{errno};
   }
+#endif
 
   return {};
-#endif
 }
 
 void rx::Mappable::destroy() {

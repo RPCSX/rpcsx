@@ -66,11 +66,11 @@ static vk::Context createVkContext(Device *device) {
   bool enableValidation = rx::g_config.validateGpu;
 
   for (std::size_t process = 0; process < 6; ++process) {
-    if (!rx::mem::reserve(
-            reinterpret_cast<void *>(orbis::kMinAddress +
-                                     orbis::kMaxAddress * process),
-            orbis::kMaxAddress - orbis::kMinAddress)) {
-      rx::die("failed to reserve userspace memory");
+    if (auto errc = rx::mem::reserve(rx::AddressRange::fromBeginSize(
+            orbis::kMinAddress + orbis::kMaxAddress * process,
+            orbis::kMaxAddress - orbis::kMinAddress));
+        errc != std::errc{}) {
+      rx::die("failed to reserve userspace memory: {}", (int)errc);
     }
   }
 
@@ -623,7 +623,11 @@ void Device::unmapProcess(std::uint32_t pid) {
   startAddress += orbis::kMinAddress;
   size -= orbis::kMinAddress;
 
-  rx::mem::reserve(reinterpret_cast<void *>(startAddress), size);
+  if (auto errc = rx::mem::release(
+          rx::AddressRange::fromBeginSize(startAddress, size), 1 << 14);
+      errc != std::errc{}) {
+    rx::die("failed to release userspace memory: {}", (int)errc);
+  }
 
   ::close(process.vmFd);
   process.vmFd = -1;
@@ -651,7 +655,10 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
 
   if (process.vmId >= 0) {
     auto memory = amdgpu::RemoteMemory{process.vmId};
-    rx::mem::protect(memory.getPointer(address), size, prot >> 4);
+    rx::mem::protect(
+        rx::AddressRange::fromBeginSize(memory.getVirtualAddress(address),
+                                        size),
+        rx::EnumBitSet<rx::mem::Protection>::fromUnderlying(prot >> 4));
 
     // std::println(stderr, "protect process {} memory, address {}-{}, prot
     // {:x}",
@@ -1030,7 +1037,6 @@ void Device::mapMemory(std::uint32_t pid, std::uint64_t address,
   if (mmapResult == MAP_FAILED) {
     perror("::mmap");
 
-    rx::mem::printStats();
     rx::die("failed to map process {} memory, address {}-{}, type {:x}, offset "
             "{:x}, prot {:x}",
             pid, memory.getPointer(address), memory.getPointer(address + size),

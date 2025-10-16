@@ -668,8 +668,8 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
             }
 
             auto shmAddress = reinterpret_cast<std::uint8_t *>(
-                rx::mem::map(nullptr, controlStat.st_size,
-                             PROT_READ | PROT_WRITE, MAP_SHARED, shmFd));
+                ::mmap(nullptr, controlStat.st_size, PROT_READ | PROT_WRITE,
+                       MAP_SHARED, shmFd, 0));
             if (shmAddress == MAP_FAILED) {
               perror("mmap");
               std::abort();
@@ -689,7 +689,7 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
                   std::get<1>(orbis::g_context->dialogs.back());
               ORBIS_LOG_TODO("Unmap shm after unlinking", currentDialogAddr,
                              currentDialogSize);
-              rx::mem::unmap(currentDialogAddr, currentDialogSize);
+              ::munmap(currentDialogAddr, currentDialogSize);
               orbis::g_context->dialogs.pop_back();
             }
             return 0;

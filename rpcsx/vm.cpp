@@ -701,18 +701,19 @@ void vm::fork(std::uint64_t pid) {
     }
 
     if (prot & kMapProtCpuAll) {
-      auto mapping = rx::mem::map(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
-                                  gMemoryShm, address - kMinAddress);
+      auto mapping = ::mmap(nullptr, kPageSize, PROT_WRITE, MAP_SHARED,
+                            gMemoryShm, address - kMinAddress);
       assert(mapping != MAP_FAILED);
 
-      rx::mem::protect(reinterpret_cast<void *>(address), kPageSize, PROT_READ);
+      rx::mem::protect(rx::AddressRange::fromBeginSize(address, kPageSize),
+                       rx::mem::Protection::R);
       std::memcpy(mapping, reinterpret_cast<void *>(address), kPageSize);
-      rx::mem::unmap(mapping, kPageSize);
-      rx::mem::unmap(reinterpret_cast<void *>(address), kPageSize);
+      ::munmap(mapping, kPageSize);
+      ::munmap(reinterpret_cast<void *>(address), kPageSize);
 
-      mapping = rx::mem::map(reinterpret_cast<void *>(address), kPageSize,
-                             prot & kMapProtCpuAll, MAP_FIXED | MAP_SHARED,
-                             gMemoryShm, address - kMinAddress);
+      mapping = ::mmap(reinterpret_cast<void *>(address), kPageSize,
+                       prot & kMapProtCpuAll, MAP_FIXED | MAP_SHARED,
+                       gMemoryShm, address - kMinAddress);
       assert(mapping != MAP_FAILED);
     }
 
@@ -723,8 +724,7 @@ void vm::fork(std::uint64_t pid) {
 void vm::reset() {
   std::memset(gBlocks, 0, sizeof(gBlocks));
 
-  rx::mem::unmap(reinterpret_cast<void *>(kMinAddress),
-                 kMaxAddress - kMinAddress);
+  ::munmap(reinterpret_cast<void *>(kMinAddress), kMaxAddress - kMinAddress);
   if (::ftruncate64(gMemoryShm, 0) < 0) {
     std::abort();
   }
@@ -733,8 +733,8 @@ void vm::reset() {
   }
 
   reserve(0, kMinAddress);
-  rx::mem::reserve(reinterpret_cast<void *>(kMinAddress),
-                   kMaxAddress - kMinAddress);
+  rx::mem::reserve(
+      rx::AddressRange::fromBeginSize(kMinAddress, kMaxAddress - kMinAddress));
 }
 
 void vm::initialize(std::uint64_t pid) {
@@ -756,8 +756,7 @@ void vm::initialize(std::uint64_t pid) {
 
   reserve(0, kMinAddress); // unmapped area
 
-  rx::mem::reserve(reinterpret_cast<void *>(kMinAddress),
-                   kMaxAddress - kMinAddress);
+  rx::mem::reserve(rx::AddressRange::fromBeginEnd(kMinAddress, kMaxAddress));
 }
 
 void vm::deinitialize() {
@@ -981,9 +980,9 @@ void *vm::map(void *addr, std::uint64_t len, std::int32_t prot,
     return reinterpret_cast<void *>(address);
   }
 
-  auto result = rx::mem::map(reinterpret_cast<void *>(address), len,
-                             prot & kMapProtCpuAll, realFlags, gMemoryShm,
-                             address - kMinAddress);
+  auto result =
+      ::mmap(reinterpret_cast<void *>(address), len, prot & kMapProtCpuAll,
+             realFlags, gMemoryShm, address - kMinAddress);
 
   if (result != MAP_FAILED && isAnon) {
     bool needReprotect = (prot & PROT_WRITE) == 0;
@@ -1035,7 +1034,7 @@ bool vm::unmap(void *addr, std::uint64_t size) {
                  address + size);
   }
   gMapInfo.unmap(rx::AddressRange::fromBeginSize(address, size));
-  return rx::mem::unmap(addr, size);
+  return ::munmap(addr, size);
 }
 
 bool vm::protect(void *addr, std::uint64_t size, std::int32_t prot) {

@@ -56,10 +56,12 @@ struct ProcessInfo {
 struct RemoteMemory {
   int vmId;
 
+  std::uint64_t getVirtualAddress(std::uint64_t address) const {
+    return address ? static_cast<std::uint64_t>(vmId) << 40 | address : 0;
+  }
+
   template <typename T = void> T *getPointer(std::uint64_t address) const {
-    return address ? reinterpret_cast<T *>(
-                         static_cast<std::uint64_t>(vmId) << 40 | address)
-                   : nullptr;
+    return reinterpret_cast<T *>(getVirtualAddress(address));
   }
 };
 

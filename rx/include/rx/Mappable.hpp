@@ -2,21 +2,11 @@
 
 #include "AddressRange.hpp"
 #include "EnumBitSet.hpp"
+#include "mem.hpp"
 #include <system_error>
 #include <utility>
 
 namespace rx {
-enum class Protection {
-  R,
-  W,
-  X,
-
-  bitset_last = X
-};
-
-std::errc reserveVirtualSpace(rx::AddressRange range);
-std::errc releaseVirtualSpace(rx::AddressRange range, std::size_t alignment);
-
 class Mappable {
 #ifdef _WIN32
   using NativeHandle = void *;
@@ -46,7 +36,8 @@ public:
   static std::pair<Mappable, std::errc> CreateMemory(std::size_t size);
   static std::pair<Mappable, std::errc> CreateSwap(std::size_t size);
   std::errc map(rx::AddressRange virtualRange, std::size_t offset,
-                rx::EnumBitSet<Protection> protection, std::size_t alignment);
+                rx::EnumBitSet<mem::Protection> protection,
+                std::size_t alignment);
 
   [[nodiscard]] NativeHandle release() {
     return std::exchange(m_handle, kInvalidHandle);
