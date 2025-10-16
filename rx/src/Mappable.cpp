@@ -15,7 +15,12 @@
 #endif
 
 #ifdef ANDROID
-#include "format-base.hpp"
+#include <sys/syscall.h>
+
+static int memfd_create(const char *name, uint flags) {
+  // FIXME: requires modern android
+  return syscall(__NR_memfd_create, name, flags);
+}
 #endif
 
 std::pair<rx::Mappable, std::errc>
@@ -33,20 +38,11 @@ rx::Mappable::CreateMemory(std::size_t size) {
 
   result.m_handle = handle;
 #else
-#ifdef ANDROID
-  auto name = rx::format("/{}-{:x}", (void *)&result, size);
-  auto fd = ::shm_open(name.c_str(), O_CREAT | O_TRUNC, 0666);
-#else
   auto fd = ::memfd_create("", 0);
-#endif
 
   if (fd < 0) {
     return {{}, std::errc{errno}};
   }
-
-#ifdef ANDROID
-  ::shm_unlink(name.c_str());
-#endif
 
   result.m_handle = fd;
 

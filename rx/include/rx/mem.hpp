@@ -4,7 +4,7 @@
 #include "EnumBitSet.hpp"
 #include <cstddef>
 #include <system_error>
-#include <utility>
+#include <vector>
 
 namespace rx::mem {
 enum class Protection {
