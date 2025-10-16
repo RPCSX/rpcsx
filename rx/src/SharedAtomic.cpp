@@ -200,6 +200,8 @@ int shared_atomic32::notify_n(int count) const {
       WakeByAddressSingle(const_cast<shared_atomic32 *>(this));
     }
   }
+
+  return 1; // FIXME
 }
 #else
 #error Unimplemented atomic for this platform

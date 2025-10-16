@@ -1,7 +1,5 @@
 #include "SharedMutex.hpp"
 #include "asm.hpp"
-#include <syscall.h>
-#include <unistd.h>
 
 namespace rx {
 void shared_mutex::impl_lock_shared(unsigned val) {
