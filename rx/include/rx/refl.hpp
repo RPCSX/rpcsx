@@ -130,7 +130,7 @@ template <auto &&V> constexpr auto getNameOf() {
       "V = ";
 #endif
   constexpr auto name = detail::unwrapName(prefix, RX_PRETTY_FUNCTION, true);
-  static constexpr auto result = rx::StaticString<name.size() + 1>{name};
+  static constexpr auto result = rx::StaticString<name.size()>{name};
   return std::string_view{result};
 }
 
@@ -147,7 +147,7 @@ constexpr auto getNameOf() {
 #endif
 
   constexpr auto name = detail::unwrapName(prefix, RX_PRETTY_FUNCTION, true);
-  static constexpr auto result = rx::StaticString<name.size() + 1>{name};
+  static constexpr auto result = rx::StaticString<name.size()>{name};
   return std::string_view{result};
 }
 
@@ -159,7 +159,7 @@ template <typename T> constexpr auto getNameOf() {
       "T = ";
 #endif
   constexpr auto name = detail::unwrapName(prefix, RX_PRETTY_FUNCTION, false);
-  static constexpr auto result = rx::StaticString<name.size() + 1>{name};
+  static constexpr auto result = rx::StaticString<name.size()>{name};
   return std::string_view{result};
 }
 
