@@ -204,6 +204,10 @@ template <BitSetEnum T>
 [[deprecated("Use toBitSet(bit)")]] constexpr EnumBitSet<T> operator+(T bit) {
   return EnumBitSet<T>(bit);
 }
+template <BitSetEnum T>
+constexpr detail::InvertedEnumBitSet<T> operator~(T bit) {
+  return ~toBitSet(bit);
+}
 // Binary '+' operator: bitset union
 template <BitSetEnum T, typename U>
   requires(std::is_constructible_v<EnumBitSet<T>, U>)
