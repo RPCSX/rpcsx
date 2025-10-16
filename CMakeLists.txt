@@ -123,7 +123,7 @@ endfunction()
 function(target_base_address target address)
     set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE off)
 
-    if(CMAKE_CXX_COMPILER_LINKER_ID MATCHES "^(LLD|MOLD)$")
+    if(CMAKE_CXX_COMPILER_LINKER_ID MATCHES "^(LLD|MOLD)$" OR MINGW)
         target_link_options(${target} PUBLIC "LINKER:--image-base=${address}")
     else()
         target_link_options(${target} PUBLIC "LINKER:-Ttext-segment,${address}")
@@ -258,6 +258,7 @@ include(CheckFunctionExists)
 
 add_subdirectory(3rdparty EXCLUDE_FROM_ALL)
 add_subdirectory(rx EXCLUDE_FROM_ALL)
+add_subdirectory(test)
 
 include(3rdparty/llvm/CMakeLists.txt)
 
@@ -287,5 +288,3 @@ if (WITH_PS3)
     add_subdirectory(rpcs3)
     add_subdirectory(ps3fw)
 endif()
-
-add_subdirectory(test)
