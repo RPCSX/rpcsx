@@ -109,7 +109,7 @@ public:
     return {};
   }
 
-  std::tuple<kmap<kstring, rx::StaticString<128>> &, std::unique_lock<rx::shared_mutex>>
+  std::tuple<kmap<kstring, rx::StaticString<127>> &, std::unique_lock<rx::shared_mutex>>
   getKernelEnv() {
     std::unique_lock lock(m_kenv_mtx);
     return {m_kenv, std::move(lock)};
@@ -171,7 +171,7 @@ private:
   kmap<kstring, rx::Ref<IpmiServer>> mIpmiServers;
 
   rx::shared_mutex m_kenv_mtx;
-  kmap<kstring, rx::StaticString<128>> m_kenv; // max size: 127 + '\0'
+  kmap<kstring, rx::StaticString<127>> m_kenv;
 };
 
 extern GlobalObjectRef<KernelContext> g_context;

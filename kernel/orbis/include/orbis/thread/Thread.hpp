@@ -36,7 +36,7 @@ struct Thread final {
   ptr<void> stackEnd;
   uint64_t fsBase{};
   uint64_t gsBase{};
-  rx::StaticString<32> name;
+  rx::StaticString<31> name;
 
   cpuset affinity{~0u};
   SigSet sigMask = {0x7fff'ffff, ~0u, ~0u, ~0u};

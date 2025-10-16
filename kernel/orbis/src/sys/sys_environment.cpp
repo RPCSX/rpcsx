@@ -66,7 +66,7 @@ orbis::SysResult orbis::sys_kenv(Thread *thread, sint what,
     }
     auto &_value_buf = kenv[kstring(_name)];
     ORBIS_RET_ON_ERROR(
-        ureadString(_value_buf.data(), _value_buf.max_size() + 1, value));
+        ureadString(_value_buf.data(), _value_buf.max_size(), value));
     break;
   }
   case kenv_unset: {
