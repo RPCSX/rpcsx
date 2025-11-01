@@ -1,27 +1,31 @@
 #include "KernelAllocator.hpp"
 #include "KernelObject.hpp"
+#include "rx/Mappable.hpp"
 #include "rx/Serializer.hpp"
 #include "rx/SharedMutex.hpp"
+#include "rx/die.hpp"
+#include "rx/mem.hpp"
 #include "rx/print.hpp"
-#include <sys/mman.h>
 
 static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
 static constexpr std::uintptr_t kHeapBaseAddress = 0x00000600'0000'0000;
 static constexpr auto kHeapSize = 0x1'0000'0000;
 static constexpr int kDebugHeap = 0;
 
+static constexpr auto kHeapRange =
+    rx::AddressRange::fromBeginSize(kHeapBaseAddress, kHeapSize);
+
 namespace orbis {
 struct KernelMemoryResource {
   mutable rx::shared_mutex m_heap_mtx;
   rx::shared_mutex m_heap_map_mtx;
   void *m_heap_next = nullptr;
+  rx::Mappable m_heap;
 
   kmultimap<std::size_t, void *> m_free_heap;
   kmultimap<std::size_t, void *> m_used_node;
 
-  ~KernelMemoryResource() {
-    ::munmap(std::bit_cast<void *>(kHeapBaseAddress), kHeapSize);
-  }
+  ~KernelMemoryResource() { rx::mem::release(kHeapRange, rx::mem::pageSize); }
 
   void *kalloc(std::size_t size,
                std::size_t align = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
@@ -46,26 +50,31 @@ using GlobalStorage =
                                       kernel::detail::GlobalScope>;
 
 void initializeAllocator() {
-  auto ptr = (std::byte *)::mmap(std::bit_cast<void *>(kHeapBaseAddress),
-                                 kHeapSize, PROT_READ | PROT_WRITE,
-                                 MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+  {
+    auto errc = rx::mem::reserve(kHeapRange);
 
-  if (ptr == MAP_FAILED) {
-    perror("mmap failed");
-    FILE *maps = std::fopen("/proc/self/maps", "r");
-    char *line = nullptr;
-    std::size_t size = 0;
-    while (getline(&line, &size, maps) > 0) {
-      std::puts(line);
-    }
-
-    std::free(line);
-    std::fclose(maps);
-    std::abort();
+    rx::dieIf(errc != std::errc{},
+              "kernel heap reservation failed: {:x}-{:x}, errno {}",
+              kHeapBaseAddress, kHeapBaseAddress + kHeapSize,
+              static_cast<int>(errc));
   }
 
+  auto [heap, errc] = rx::Mappable::CreateMemory(kHeapSize);
+
+  rx::dieIf(errc != std::errc{}, "kernel heap allocation failed: errno {}",
+            static_cast<int>(errc));
+
+  errc =
+      heap.map(kHeapRange, 0, rx::mem::Protection::R | rx::mem::Protection::W,
+               rx::mem::pageSize);
+
+  rx::dieIf(errc != std::errc{}, "kernel heap map failed: errno {}",
+            static_cast<int>(errc));
+
+  auto ptr = reinterpret_cast<std::byte *>(kHeapRange.beginAddress());
   sMemoryResource = new (ptr) KernelMemoryResource();
   sMemoryResource->m_heap_next = ptr + sizeof(KernelMemoryResource);
+  sMemoryResource->m_heap = std::move(heap);
 
   rx::print(stderr, "global: size {}, alignment {}\n", GlobalStorage::GetSize(),
             GlobalStorage::GetAlignment());
@@ -84,8 +93,7 @@ void deinitializeAllocator() {
 void *KernelMemoryResource::kalloc(std::size_t size, std::size_t align) {
   size = (size + (__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1)) &
          ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
-  if (!size)
-    std::abort();
+  rx::dieIf(size == 0, "kalloc: zero size");
 
   if (m_heap_map_mtx.try_lock()) {
     std::lock_guard lock(m_heap_map_mtx, std::adopt_lock);
@@ -117,21 +125,19 @@ void *KernelMemoryResource::kalloc(std::size_t size, std::size_t align) {
   heap = (heap + (align - 1)) & ~(align - 1);
 
   if (kDebugHeap > 1) {
-    if (auto diff = (heap + size + sizeof(g_allocProtWord)) % 4096; diff != 0) {
-      heap += 4096 - diff;
+    if (auto diff =
+            (heap + size + sizeof(g_allocProtWord)) & (rx::mem::pageSize - 1);
+        diff != 0) {
+      heap += rx::mem::pageSize - diff;
       heap &= ~(align - 1);
     }
   }
 
-  if (heap + size > kHeapBaseAddress + kHeapSize) {
-    std::fprintf(stderr, "out of kernel memory");
-    std::abort();
-  }
+  rx::dieIf(heap + size > kHeapBaseAddress + kHeapSize,
+            "kalloc: out of kernel memory");
+
   // Check overflow
-  if (heap + size < heap) {
-    std::fprintf(stderr, "too big allocation");
-    std::abort();
-  }
+  rx::dieIf(heap + size < heap, "kalloc: too big allocation");
 
   // std::fprintf(stderr, "kalloc: allocate %lx-%lx, size = %lx, align=%lx\n",
   //              heap, heap + size, size, align);
@@ -151,18 +157,16 @@ void *KernelMemoryResource::kalloc(std::size_t size, std::size_t align) {
 
   if (kDebugHeap > 1) {
     heap = reinterpret_cast<std::uintptr_t>(m_heap_next);
-    align = std::min<std::size_t>(align, 4096);
+    align = std::min<std::size_t>(align, rx::mem::pageSize);
     heap = (heap + (align - 1)) & ~(align - 1);
-    size = 4096;
+    size = rx::mem::pageSize;
     // std::fprintf(stderr, "kalloc: protect %lx-%lx, size = %lx, align=%lx\n",
     //              heap, heap + size, size, align);
 
-    auto result = ::mmap(reinterpret_cast<void *>(heap), size, PROT_NONE,
-                         MAP_FIXED | MAP_ANONYMOUS | MAP_SHARED, -1, 0);
-    if (result == MAP_FAILED) {
-      std::fprintf(stderr, "failed to protect memory");
-      std::abort();
-    }
+    auto errc = rx::mem::protect(rx::AddressRange::fromBeginSize(heap, size),
+                                 rx::mem::Protection{});
+
+    rx::dieIf(errc != std::errc{}, "kalloc: failed to protect memory");
     m_heap_next = reinterpret_cast<void *>(heap + size);
   }
 
@@ -172,21 +176,19 @@ void *KernelMemoryResource::kalloc(std::size_t size, std::size_t align) {
 void KernelMemoryResource::kfree(void *ptr, std::size_t size) {
   size = (size + (__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1)) &
          ~(__STDCPP_DEFAULT_NEW_ALIGNMENT__ - 1);
-  if (!size)
-    std::abort();
 
-  if (std::bit_cast<std::uintptr_t>(ptr) < kHeapBaseAddress ||
-      std::bit_cast<std::uintptr_t>(ptr) + size >
-          kHeapBaseAddress + kHeapSize) {
-    std::fprintf(stderr, "kfree: invalid address");
-    std::abort();
-  }
+  rx::dieIf(size == 0, "kfree: zero size");
+
+  rx::dieIf(std::bit_cast<std::uintptr_t>(ptr) < kHeapBaseAddress ||
+                std::bit_cast<std::uintptr_t>(ptr) + size >
+                    kHeapBaseAddress + kHeapSize,
+            "kfree: invalid address");
 
   if (kDebugHeap > 0) {
     if (std::memcmp(std::bit_cast<std::byte *>(ptr) + size, &g_allocProtWord,
                     sizeof(g_allocProtWord)) != 0) {
-      std::fprintf(stderr, "kernel heap corruption\n");
-      std::abort();
+
+      rx::die("kfree: kernel heap corruption");
     }
 
     std::memset(ptr, 0xcc, size + sizeof(g_allocProtWord));
