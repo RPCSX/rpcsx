@@ -5,7 +5,6 @@
 #include "thread/Thread.hpp"
 #include "uio.hpp"
 #include "utils/Logs.hpp"
-#include <sys/socket.h>
 
 orbis::SysResult orbis::sys_socket(Thread *thread, sint domain, sint type,
                                    sint protocol) {
@@ -212,18 +211,18 @@ orbis::SysResult orbis::sys_sctp_peeloff(Thread *thread, sint sd,
 }
 orbis::SysResult
 orbis::sys_sctp_generic_sendmsg(Thread *thread, sint sd, caddr_t msg, sint mlen,
-                                caddr_t to, __socklen_t tolen,
+                                caddr_t to, SockLen tolen,
                                 ptr<struct sctp_sndrcvinfo> sinfo, sint flags) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_sctp_generic_sendmsg_iov(
     Thread *thread, sint sd, ptr<IoVec> iov, sint iovlen, caddr_t to,
-    __socklen_t tolen, ptr<struct sctp_sndrcvinfo> sinfo, sint flags) {
+    SockLen tolen, ptr<struct sctp_sndrcvinfo> sinfo, sint flags) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult
 orbis::sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<IoVec> iov,
-                                sint iovlen, caddr_t from, __socklen_t fromlen,
+                                sint iovlen, caddr_t from, SockLen fromlen,
                                 ptr<struct sctp_sndrcvinfo> sinfo, sint flags) {
   return ErrorCode::NOSYS;
 }

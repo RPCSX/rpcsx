@@ -7,7 +7,10 @@
 #include <chrono>
 #include <list>
 #include <span>
+
+#ifdef __linux
 #include <sys/select.h>
+#endif
 
 orbis::SysResult orbis::sys_kqueue(Thread *thread) {
   auto queue = knew<KQueue>();
@@ -38,17 +41,22 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
 }
 
 static bool isReadEventTriggered(int hostFd) {
+#ifdef __linux
   fd_set fds{};
   FD_SET(hostFd, &fds);
   timeval timeout{};
   if (::select(hostFd + 1, &fds, nullptr, nullptr, &timeout) < 0) {
     return false;
   }
-
   return FD_ISSET(hostFd, &fds);
+#else
+#warning "Not implemented"
+  return false;
+#endif
 }
 
 static bool isWriteEventTriggered(int hostFd) {
+#ifdef __linux
   fd_set fds{};
   FD_SET(hostFd, &fds);
   timeval timeout{};
@@ -57,6 +65,10 @@ static bool isWriteEventTriggered(int hostFd) {
   }
 
   return FD_ISSET(hostFd, &fds);
+#else
+#warning "Not implemented"
+  return false;
+#endif
 }
 
 namespace orbis {

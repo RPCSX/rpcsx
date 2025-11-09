@@ -1,3 +1,4 @@
+#include "rx/die.hpp"
 #include "sys/sysproto.hpp"
 #include "time.hpp"
 #include "utils/Logs.hpp"
@@ -141,26 +142,37 @@ orbis::SysResult orbis::sys_nanosleep(Thread *thread,
 orbis::SysResult orbis::sys_gettimeofday(Thread *thread, ptr<orbis::timeval> tp,
                                          ptr<orbis::timezone> tzp) {
   ORBIS_LOG_TRACE(__FUNCTION__, tp, tzp);
+
   struct ::timeval tv;
-  if (::gettimeofday(&tv, nullptr) != 0)
-    std::abort();
+  if (::gettimeofday(&tv, nullptr) != 0) {
+    rx::die("gettimeofday failed, {}", errno);
+  }
+
   if (tp) {
     orbis::timeval value;
     value.tv_sec = tv.tv_sec;
     value.tv_usec = tv.tv_usec;
-    if (auto e = uwrite(tp, value); e != ErrorCode{})
-      return e;
+    ORBIS_RET_ON_ERROR(uwrite(tp, value));
   }
+
   if (tzp) {
-    struct ::tm tp;
-    if (localtime_r(&tv.tv_sec, &tp) != &tp)
-      std::abort();
     orbis::timezone value;
+
+#ifdef __linux
+    struct ::tm tp;
+
+    if (localtime_r(&tv.tv_sec, &tp) != &tp) {
+      rx::die("localtime_r failed, {}", errno);
+    }
     value.tz_dsttime = 0; // TODO
     value.tz_mineast = tp.tm_gmtoff / 60;
-    if (auto e = uwrite(tzp, value); e != ErrorCode{})
-      return e;
+#else
+    value = {};
+#endif
+
+    ORBIS_RET_ON_ERROR(uwrite(tzp, value));
   }
+
   return {};
 }
 orbis::SysResult orbis::sys_settimeofday(Thread *thread, ptr<struct timeval> tp,

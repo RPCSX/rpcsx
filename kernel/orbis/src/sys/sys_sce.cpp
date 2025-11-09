@@ -16,8 +16,6 @@
 #include "utils/Logs.hpp"
 #include <fcntl.h>
 #include <ranges>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <utility>
 
 struct orbis::AppMountInfo {

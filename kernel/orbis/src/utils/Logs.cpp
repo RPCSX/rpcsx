@@ -117,17 +117,17 @@ void log_class_string<short>::format(std::string &out, const void *arg) {
 }
 
 template <>
-void log_class_string<ushort>::format(std::string &out, const void *arg) {
+void log_class_string<unsigned short>::format(std::string &out, const void *arg) {
   append_hex(out, get_object(arg));
 }
 
 template <>
 void log_class_string<int>::format(std::string &out, const void *arg) {
-  append_hex(out, static_cast<uint>(get_object(arg)));
+  append_hex(out, static_cast<unsigned int>(get_object(arg)));
 }
 
 template <>
-void log_class_string<uint>::format(std::string &out, const void *arg) {
+void log_class_string<unsigned int>::format(std::string &out, const void *arg) {
   append_hex(out, get_object(arg));
 }
 
@@ -137,7 +137,7 @@ void log_class_string<long>::format(std::string &out, const void *arg) {
 }
 
 template <>
-void log_class_string<ulong>::format(std::string &out, const void *arg) {
+void log_class_string<unsigned long>::format(std::string &out, const void *arg) {
   append_hex(out, get_object(arg));
 }
 

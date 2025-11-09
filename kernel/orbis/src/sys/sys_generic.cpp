@@ -322,10 +322,10 @@ orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com,
   std::lock_guard lock(file->mtx);
   return ioctl(file.get(), com, data, thread);
 }
-orbis::SysResult orbis::sys_pselect(Thread *thread, sint nd, ptr<fd_set> in,
-                                    ptr<fd_set> ou, ptr<fd_set> ex,
+orbis::SysResult orbis::sys_pselect(Thread *thread, sint nd, ptr<fd_set_t> in,
+                                    ptr<fd_set_t> ou, ptr<fd_set_t> ex,
                                     ptr<const timespec> ts,
-                                    ptr<const sigset_t> sm) {
+                                    ptr<const SigSet> sm) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_select(Thread *thread, sint nd,

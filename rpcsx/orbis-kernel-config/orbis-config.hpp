@@ -6,8 +6,11 @@
 #include <cstdio>
 #include <cstring>
 #include <immintrin.h>
-#include <sys/ucontext.h>
 #include <type_traits>
+
+#ifdef __linux
+#include <sys/ucontext.h>
+#endif
 
 namespace orbis {
 using int8_t = std::int8_t;
@@ -110,6 +113,7 @@ template <typename T>
 }
 
 inline uint64_t readRegister(void *context, RegisterId id) {
+#ifdef __linux
   auto c = &reinterpret_cast<ucontext_t *>(context)->uc_mcontext;
   switch (id) {
   case RegisterId::r15:
@@ -152,9 +156,13 @@ inline uint64_t readRegister(void *context, RegisterId id) {
   std::fprintf(stderr, "***ERROR*** Unhandled RegisterId %d\n",
                static_cast<int>(id));
   std::abort();
+#else
+    return 0;
+#endif
 }
 
 inline void writeRegister(void *context, RegisterId id, uint64_t value) {
+#ifdef __linux
   auto c = &reinterpret_cast<ucontext_t *>(context)->uc_mcontext;
   switch (id) {
   case RegisterId::r15:
@@ -212,6 +220,7 @@ inline void writeRegister(void *context, RegisterId id, uint64_t value) {
     c->gregs[REG_RIP] = value;
     return;
   }
+#endif
 }
 
 } // namespace orbis

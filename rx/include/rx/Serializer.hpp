@@ -113,27 +113,14 @@ namespace detail {
 template <typename ClassT> struct SerializableFieldTest {
   template <typename FieldT>
     requires(std::is_default_constructible_v<FieldT> &&
-             !std::is_same_v<FieldT, ClassT> && detail::IsSerializable<FieldT>)
+             !std::is_same_v<std::remove_cvref_t<FieldT>, ClassT> &&
+             detail::IsSerializable<FieldT>)
   constexpr operator FieldT();
 };
 
 struct SerializableAnyFieldTest {
   template <typename FieldT> constexpr operator FieldT();
 };
-
-template <typename T, std::size_t I> constexpr bool isSerializableField() {
-  auto impl = []<std::size_t... Before, std::size_t... After>(
-                  std::index_sequence<Before...>,
-                  std::index_sequence<After...>) {
-    return requires {
-      T{(Before, SerializableAnyFieldTest{})..., SerializableFieldTest<T>{},
-        (After, SerializableAnyFieldTest{})...};
-    };
-  };
-
-  return impl(std::make_index_sequence<I>{},
-              std::make_index_sequence<rx::fieldCount<T> - I - 1>{});
-}
 
 template <typename T> constexpr bool isSerializableFields() {
   auto impl = []<std::size_t... I>(std::index_sequence<I...>) {

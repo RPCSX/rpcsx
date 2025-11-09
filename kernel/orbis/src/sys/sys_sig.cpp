@@ -121,11 +121,15 @@ orbis::SysResult orbis::sys_kill(Thread *thread, sint pid, sint signum) {
     hostPid = process->hostPid;
   }
 
+#ifdef __linux
   // FIXME: invoke subscriber thread
   int result = ::sigqueue(hostPid, SIGUSR1, {.sival_int = signum});
   if (result < 0) {
     return static_cast<ErrorCode>(errno);
   }
+#else
+#warning "Not implemented"
+#endif
 
   return {};
 }

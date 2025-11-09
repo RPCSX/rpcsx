@@ -64,6 +64,7 @@ struct ExternalResource {
   std::errc create(std::size_t) { return {}; }
   void serialize(rx::Serializer &) const {}
   void deserialize(rx::Deserializer &) {}
+  void destroy() {}
 };
 
 template <typename T>
@@ -150,16 +151,22 @@ struct AllocableResource : Resource {
   iterator end() { return allocations.end(); }
 
   AllocationResult map(std::uint64_t addressHint, std::uint64_t size,
-                            AllocationT &allocationInfo,
-                            rx::EnumBitSet<AllocationFlags> flags,
-                            std::uint64_t alignment) {
+                       AllocationT &allocationInfo,
+                       rx::EnumBitSet<AllocationFlags> flags,
+                       std::uint64_t alignment) {
     if (flags & AllocationFlags::Stack) {
       addressHint = rx::alignDown(addressHint, alignment);
     } else {
       addressHint = rx::alignUp(addressHint, alignment);
     }
 
-    auto it = allocations.queryArea(addressHint);
+    iterator it;
+    if (flags & AllocationFlags::Fixed) {
+      it = allocations.queryArea(addressHint);
+    } else {
+      it = allocations.lowerBound(addressHint);
+    }
+
     if (it == allocations.end()) {
       return {end(), std::errc::invalid_argument, {}};
     }
@@ -179,7 +186,7 @@ struct AllocableResource : Resource {
 
       if (flags & AllocationFlags::NoOverwrite) {
         if (it->isAllocated() || !it.range().contains(fixedRange)) {
-          return {end(), std::errc::invalid_argument, {}};
+          return {end(), std::errc::file_exists, {}};
         }
       } else if ((flags & AllocationFlags::Dry) != AllocationFlags::Dry) {
         if constexpr (requires {
@@ -237,7 +244,17 @@ struct AllocableResource : Resource {
         }
       }
     } else {
-      auto hasEnoughSpace = [alignment, size](rx::AddressRange range) {
+      auto hasEnoughSpace = [=](rx::AddressRange range) {
+        if (range.contains(addressHint)) {
+          if (flags & AllocationFlags::Stack) {
+            range = rx::AddressRange::fromBeginEnd(
+                rx::alignDown(range.beginAddress(), alignment), addressHint);
+          } else {
+            range =
+                rx::AddressRange::fromBeginEnd(addressHint, range.endAddress());
+          }
+        }
+
         auto alignedAddress = rx::AddressRange::fromBeginEnd(
             rx::alignUp(range.beginAddress(), alignment), range.endAddress());
 
@@ -271,8 +288,29 @@ struct AllocableResource : Resource {
       }
 
       // now `it` points to region that meets requirements, create fixed range
-      fixedRange = rx::AddressRange::fromBeginEnd(
-          rx::alignUp(it->beginAddress(), alignment), it->endAddress());
+      if (it.range().contains(addressHint)) {
+        if (flags & AllocationFlags::Stack) {
+          fixedRange =
+              rx::AddressRange::fromBeginSize(rx::alignDown(addressHint - size, alignment), size);
+        } else {
+          fixedRange =
+              rx::AddressRange::fromBeginEnd(addressHint, it.endAddress());
+        }
+      } else {
+        fixedRange = rx::AddressRange::fromBeginEnd(
+            rx::alignUp(it.beginAddress(), alignment), it.endAddress());
+      }
+    }
+
+    if (fixedRange.size() > size) {
+      if ((flags & AllocationFlags::Stack) &&
+          !it.range().contains(addressHint)) {
+        fixedRange = rx::AddressRange::fromBeginSize(
+            rx::alignDown(fixedRange.endAddress() - size, alignment), size);
+      } else {
+        fixedRange =
+            rx::AddressRange::fromBeginSize(fixedRange.beginAddress(), size);
+      }
     }
 
     if (flags & AllocationFlags::Dry) {
@@ -294,9 +332,18 @@ struct AllocableResource : Resource {
 
     if (it != begin()) {
       // try to merge with previous node
-      iterator prevIt = std::prev(it);
-      if (prevIt->isAllocated() &&
-          prevIt->isRelated(it.get(), prevIt.range(), it.range())) {
+      iterator prevIt = it;
+      --prevIt;
+
+      bool isRelated = false;
+      if (prevIt->isAllocated()) {
+        isRelated = it->isAllocated() &&
+                    prevIt->isRelated(it.get(), prevIt.range(), it.range());
+      } else {
+        isRelated = !it->isAllocated();
+      }
+
+      if (isRelated) {
         // previous block is allocated and related to current block, do merge
         auto mergedRange = rx::AddressRange::fromBeginEnd(prevIt.beginAddress(),
                                                           it.endAddress());
@@ -305,9 +352,16 @@ struct AllocableResource : Resource {
       }
     }
 
-    if (iterator nextIt = std::next(it); nextIt != end()) {
-      if (nextIt->isAllocated() &&
-          it->isRelated(nextIt.get(), it.range(), nextIt.range())) {
+    if (iterator nextIt = it; ++nextIt != end()) {
+      bool isRelated = false;
+      if (nextIt->isAllocated()) {
+        isRelated = it->isAllocated() &&
+                    it->isRelated(nextIt.get(), it.range(), nextIt.range());
+      } else {
+        isRelated = !it->isAllocated();
+      }
+
+      if (isRelated) {
         // next block is allocated and related to current block, do merge
         auto mergedRange = rx::AddressRange::fromBeginEnd(it.beginAddress(),
                                                           nextIt.endAddress());

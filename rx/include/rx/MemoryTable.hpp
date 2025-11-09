@@ -505,6 +505,16 @@ public:
       return *this;
     }
 
+    iterator &operator--() {
+      --it;
+
+      if (it->second.isClose()) {
+        --it;
+      }
+
+      return *this;
+    }
+
     bool operator==(iterator other) const { return it == other.it; }
     bool operator!=(iterator other) const { return it != other.it; }
 

@@ -20,6 +20,12 @@ public:
   [[nodiscard]] int value() const { return mValue < 0 ? -mValue : mValue; }
   [[nodiscard]] bool isError() const { return mValue < 0; }
 
+  [[nodiscard]] ErrorCode errc() const {
+    return static_cast<ErrorCode>(value());
+  }
+
+  explicit operator bool() const { return mValue != 0; }
+
   [[nodiscard]] auto operator<=>(ErrorCode ec) const {
     return static_cast<ErrorCode>(value()) <=> ec;
   }

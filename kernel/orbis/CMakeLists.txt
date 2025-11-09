@@ -1,16 +1,19 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE on)
 
 add_library(obj.orbis-kernel OBJECT
-  src/module.cpp
-  src/pipe.cpp
-  src/sysvec.cpp
   src/event.cpp
   src/evf.cpp
+  src/fmem.cpp
   src/IoDevice.cpp
   src/ipmi.cpp
   src/KernelAllocator.cpp
   src/KernelContext.cpp
+  src/module.cpp
+  src/pipe.cpp
+  src/pmem.cpp
+  src/sysvec.cpp
   src/umtx.cpp
+  src/vmem.cpp
   src/sys/sys_acct.cpp
   src/sys/sys_audit.cpp
   src/sys/sys_capability.cpp

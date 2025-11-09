@@ -2,7 +2,10 @@
 #include "thread/Process.hpp"
 #include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
+
+#ifdef __linux
 #include <sched.h>
+#endif
 
 namespace orbis {
 struct rlimit {
@@ -37,7 +40,7 @@ orbis::SysResult orbis::sys_rtprio_thread(Thread *thread, sint function,
     return orbis::uwrite(rtp, targetThread->prio);
   } else if (function == 1) {
     ORBIS_RET_ON_ERROR(orbis::uread(targetThread->prio, rtp));
-
+#ifdef __linux
     int hostPolicy = SCHED_RR;
     auto prioMin = sched_get_priority_min(hostPolicy);
     auto prioMax = sched_get_priority_max(hostPolicy);
@@ -71,6 +74,7 @@ orbis::SysResult orbis::sys_rtprio_thread(Thread *thread, sint function,
                       targetThread->tid, targetThread->prio.prio,
                       targetThread->prio.type, prioMin, prioMax);
     }
+#endif
   }
   return {};
 }

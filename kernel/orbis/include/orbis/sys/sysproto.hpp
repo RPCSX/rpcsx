@@ -13,6 +13,8 @@ using cpusetid_t = sint;
 using cpuwhich_t = sint;
 using cpulevel_t = sint;
 using SceKernelModule = ModuleHandle;
+using SockLen = uint32_t;
+using id_t = uint32_t;
 
 struct Thread;
 struct AuthInfo;
@@ -501,17 +503,15 @@ SysResult sys_rtprio_thread(Thread *thread, sint function, lwpid_t lwpid,
                             ptr<struct rtprio> rtp);
 SysResult sys_sctp_peeloff(Thread *thread, sint sd, uint32_t name);
 SysResult sys_sctp_generic_sendmsg(Thread *thread, sint sd, caddr_t msg,
-                                   sint mlen, caddr_t to, __socklen_t tolen,
+                                   sint mlen, caddr_t to, SockLen tolen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
 SysResult sys_sctp_generic_sendmsg_iov(Thread *thread, sint sd, ptr<IoVec> iov,
-                                       sint iovlen, caddr_t to,
-                                       __socklen_t tolen,
+                                       sint iovlen, caddr_t to, SockLen tolen,
                                        ptr<struct sctp_sndrcvinfo> sinfo,
                                        sint flags);
 SysResult sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<IoVec> iov,
-                                   sint iovlen, caddr_t from,
-                                   __socklen_t fromlen,
+                                   sint iovlen, caddr_t from, SockLen fromlen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
 SysResult sys_pread(Thread *thread, sint fd, ptr<void> buf, size_t nbyte,
@@ -587,9 +587,9 @@ SysResult sys_cap_getmode(Thread *thread, ptr<uint> modep);
 SysResult sys_pdfork(Thread *thread, ptr<sint> fdp, sint flags);
 SysResult sys_pdkill(Thread *thread, sint fd, sint signum);
 SysResult sys_pdgetpid(Thread *thread, sint fd, ptr<pid_t> pidp);
-SysResult sys_pselect(Thread *thread, sint nd, ptr<fd_set> in, ptr<fd_set> ou,
-                      ptr<fd_set> ex, ptr<const timespec> ts,
-                      ptr<const sigset_t> sm);
+SysResult sys_pselect(Thread *thread, sint nd, ptr<fd_set_t> in,
+                      ptr<fd_set_t> ou, ptr<fd_set_t> ex,
+                      ptr<const timespec> ts, ptr<const SigSet> sm);
 SysResult sys_getloginclass(Thread *thread, ptr<char> namebuf, size_t namelen);
 SysResult sys_setloginclass(Thread *thread, ptr<char> namebuf);
 SysResult sys_rctl_get_racct(Thread *thread, ptr<const void> inbufp,

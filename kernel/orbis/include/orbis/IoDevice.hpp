@@ -2,7 +2,10 @@
 
 #include "error/ErrorCode.hpp"
 #include "orbis-config.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
 #include "rx/Rc.hpp"
+#include "rx/mem.hpp"
 #include <bit>
 #include <type_traits>
 
@@ -27,7 +30,7 @@ enum OpenFlags {
 
 struct File;
 struct Thread;
-
+struct Process;
 struct IoDevice : rx::RcBase {
   virtual ErrorCode open(rx::Ref<File> *file, const char *path,
                          std::uint32_t flags, std::uint32_t mode,
@@ -56,6 +59,12 @@ struct IoDevice : rx::RcBase {
 
   virtual ErrorCode ioctl(std::uint64_t request, orbis::ptr<void> argp,
                           Thread *thread);
+
+  virtual ErrorCode map(rx::AddressRange range, std::int64_t offset,
+                        rx::EnumBitSet<rx::mem::Protection> protection,
+                        Process *process) {
+    return ErrorCode::NOTSUP;
+  }
 };
 
 namespace ioctl {

@@ -5,7 +5,6 @@
 #include "utils/Logs.hpp"
 #include <chrono>
 #include <span>
-#include <sys/mman.h>
 
 orbis::ErrorCode orbis::ipmiCreateClient(Process *proc, void *clientImpl,
                                          const char *name,
