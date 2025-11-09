@@ -13,6 +13,7 @@ add_library(${PROJECT_NAME} OBJECT
     src/SharedAtomic.cpp
     src/SharedCV.cpp
     src/SharedMutex.cpp
+    src/StrUtil.cpp
     src/Version.cpp
 )
 
