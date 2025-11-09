@@ -1,11 +1,11 @@
 #pragma once
 
+#include "IoDevice.hpp"
 #include "KernelAllocator.hpp"
 #include "error/ErrorCode.hpp"
 #include "note.hpp"
 #include "rx/Rc.hpp"
 #include "rx/SharedMutex.hpp"
-#include "IoDevice.hpp"
 #include "stat.hpp"
 #include <cstdint>
 
@@ -14,6 +14,7 @@ struct File;
 struct KNote;
 struct Thread;
 struct Stat;
+struct StatFs;
 struct Uio;
 struct SocketAddress;
 struct msghdr;
@@ -34,6 +35,7 @@ struct FileOps {
   ErrorCode (*kqfilter)(File *file, KNote *kn, Thread *thread) = nullptr;
 
   ErrorCode (*stat)(File *file, Stat *sb, Thread *thread) = nullptr;
+  ErrorCode (*statfs)(File *file, StatFs *sb, Thread *thread) = nullptr;
 
   ErrorCode (*mkdir)(File *file, const char *path, std::int32_t mode) = nullptr;
 
