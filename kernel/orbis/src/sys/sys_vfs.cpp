@@ -13,22 +13,14 @@ orbis::SysResult orbis::sys_quotactl(Thread *thread, ptr<char> path, sint cmd,
   return ErrorCode::NOSYS;
 }
 
-namespace orbis {
-struct statfs {
-  char pad[0x118];
-  char f_fstypename[16];  /* filesystem type name */
-  char f_mntfromname[88]; /* mounted filesystem */
-  char f_mntonname[88];   /* directory	on which mounted */
-};
-} // namespace orbis
-
 orbis::SysResult orbis::sys_statfs(Thread *thread, ptr<char> path,
-                                   ptr<struct statfs> buf) {
+                                   ptr<StatFs> buf) {
   if (buf == 0) {
     thread->retval[0] = 1;
     return {};
   }
 
+  // FIXME: use statfs
   std::strncpy(buf->f_fstypename, "unionfs", sizeof(buf->f_fstypename));
   std::strncpy(buf->f_mntfromname, "/dev/super-hdd",
                sizeof(buf->f_mntfromname));
@@ -37,13 +29,13 @@ orbis::SysResult orbis::sys_statfs(Thread *thread, ptr<char> path,
   thread->retval[0] = 1;
   return {};
 }
-orbis::SysResult orbis::sys_fstatfs(Thread *thread, sint fd,
-                                    ptr<struct statfs> buf) {
+orbis::SysResult orbis::sys_fstatfs(Thread *thread, sint fd, ptr<StatFs> buf) {
   if (buf == 0) {
     thread->retval[0] = 1;
     return {};
   }
 
+  // FIXME: use statfs
   std::strncpy(buf->f_fstypename, "unionfs", sizeof(buf->f_fstypename));
   std::strncpy(buf->f_mntfromname, "/dev/super-hdd",
                sizeof(buf->f_mntfromname));
@@ -52,7 +44,7 @@ orbis::SysResult orbis::sys_fstatfs(Thread *thread, sint fd,
   thread->retval[0] = 1;
   return {};
 }
-orbis::SysResult orbis::sys_getfsstat(Thread *thread, ptr<struct statfs> buf,
+orbis::SysResult orbis::sys_getfsstat(Thread *thread, ptr<StatFs> buf,
                                       slong bufsize, sint flags) {
   return ErrorCode::NOSYS;
 }
@@ -70,7 +62,6 @@ orbis::SysResult orbis::sys_chroot(Thread *thread, ptr<char> path) {
   return {};
 }
 
-// volatile bool debuggerPresent = false;
 orbis::SysResult orbis::sys_open(Thread *thread, ptr<const char> path,
                                  sint flags, sint mode) {
   if (auto open = thread->tproc->ops->open) {
@@ -82,24 +73,12 @@ orbis::SysResult orbis::sys_open(Thread *thread, ptr<const char> path,
 
     auto fd = thread->tproc->fileDescriptors.insert(file);
     thread->retval[0] = fd;
-    // if (path ==
-    // std::string_view{"/app0/psm/Application/resource/Sce.Vsh.ShellUI.SystemMessage.rco"})
-    // {
-    ORBIS_LOG_SUCCESS(__FUNCTION__, thread->tid, path, flags, mode, fd);
-    if (path == std::string_view{"/app0/wave/wave1.fbxd"}) {
-      thread->where();
-    }
-
-    // while (debuggerPresent == false) {
-    //   std::this_thread::sleep_for(std::chrono::seconds(1));
-    // }
-    // // thread->where();
-    // }
     return {};
   }
 
   return ErrorCode::NOSYS;
 }
+
 orbis::SysResult orbis::sys_openat(Thread *thread, sint fd, ptr<char> path,
                                    sint flag, mode_t mode) {
   ORBIS_LOG_WARNING(__FUNCTION__, fd, path, flag, mode);
@@ -485,7 +464,7 @@ orbis::SysResult orbis::sys_fhstat(Thread *thread,
 }
 orbis::SysResult orbis::sys_fhstatfs(Thread *thread,
                                      ptr<const struct fhandle> u_fhp,
-                                     ptr<struct statfs> buf) {
+                                     ptr<StatFs> buf) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_posix_fallocate(Thread *thread, sint fd,

@@ -31,10 +31,20 @@ enum OpenFlags {
 struct File;
 struct Thread;
 struct Process;
+struct Stat;
+struct StatFs;
 struct IoDevice : rx::RcBase {
   virtual ErrorCode open(rx::Ref<File> *file, const char *path,
                          std::uint32_t flags, std::uint32_t mode,
                          Thread *thread) = 0;
+
+  virtual ErrorCode statfs(const char *path, StatFs *sb, Thread *thread) {
+    return ErrorCode::NOTSUP;
+  }
+
+  virtual ErrorCode stat(const char *path, Stat *sb, Thread *thread) {
+    return ErrorCode::NOTSUP;
+  }
 
   virtual ErrorCode unlink(const char *path, bool recursive, Thread *thread) {
     return ErrorCode::NOTSUP;

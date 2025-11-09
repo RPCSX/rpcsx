@@ -27,6 +27,7 @@ struct timesec;
 struct timezone;
 struct timeval;
 struct Stat;
+struct StatFs;
 struct stack_t;
 struct IoVec;
 struct BatchMapEntry;
@@ -393,12 +394,12 @@ SysResult sys_sendfile(Thread *thread, sint fd, sint s, off_t offset,
                        ptr<off_t> sbytes, sint flags);
 SysResult sys_mac_syscall(Thread *thread, ptr<const char> policy, sint call,
                           ptr<void> arg);
-SysResult sys_getfsstat(Thread *thread, ptr<struct statfs> buf, slong bufsize,
+SysResult sys_getfsstat(Thread *thread, ptr<StatFs> buf, slong bufsize,
                         sint flags);
-SysResult sys_statfs(Thread *thread, ptr<char> path, ptr<struct statfs> buf);
-SysResult sys_fstatfs(Thread *thread, sint fd, ptr<struct statfs> buf);
+SysResult sys_statfs(Thread *thread, ptr<char> path, ptr<StatFs> buf);
+SysResult sys_fstatfs(Thread *thread, sint fd, ptr<StatFs> buf);
 SysResult sys_fhstatfs(Thread *thread, ptr<const struct fhandle> u_fhp,
-                       ptr<struct statfs> buf);
+                       ptr<StatFs> buf);
 SysResult sys_ksem_close(Thread *thread, semid_t id);
 SysResult sys_ksem_post(Thread *thread, semid_t id);
 SysResult sys_ksem_wait(Thread *thread, semid_t id);

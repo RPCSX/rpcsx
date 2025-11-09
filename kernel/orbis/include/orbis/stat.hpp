@@ -24,6 +24,13 @@ struct Stat {
   timespec birthtim; // time of file creation
 };
 
+struct StatFs {
+  char pad[0x118];
+  char f_fstypename[16];  // filesystem type name
+  char f_mntfromname[88]; // mounted filesystem
+  char f_mntonname[88];   // directory on which mounted
+};
+
 struct Dirent {
   uint32_t fileno;
   uint16_t reclen;
