@@ -291,6 +291,6 @@ orbis::vmem::queryProtection(Process *process, std::uint64_t address) {
   orbis::vmem::MemoryProtection result{};
   result.startAddress = it.beginAddress();
   result.endAddress = it.endAddress();
-  result.prot = it->prot.toUnderlying();
+  result.prot = it->prot;
   return result;
 }
