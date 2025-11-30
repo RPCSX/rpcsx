@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Serializer.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -64,5 +65,15 @@ public:
   [[nodiscard]] constexpr std::size_t endAddress() const { return mEndAddress; }
 
   constexpr bool operator==(const AddressRange &) const = default;
+
+  void serialize(rx::Serializer &s) const {
+    s.serialize(mBeginAddress);
+    s.serialize(mEndAddress);
+  }
+
+  void deserialize(rx::Deserializer &d) {
+    mBeginAddress = d.deserialize<std::uint64_t>();
+    mEndAddress = d.deserialize<std::uint64_t>();
+  }
 };
 } // namespace rx
