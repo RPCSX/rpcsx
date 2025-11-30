@@ -607,8 +607,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
 
   amdgpu::mapMemory(process->pid, range, type, prot, pmemOffset);
 
-  vmemDump(process, rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
-                               range.endAddress()));
+  // vmemDump(process, rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
+  //                              range.endAddress()));
 
   return {range, {}};
 }
