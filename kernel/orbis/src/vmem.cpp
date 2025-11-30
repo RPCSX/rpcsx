@@ -444,13 +444,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   }
 
   if (blockFlags & BlockFlags::FlexibleMemory) {
-    if (!budget->acquire(BudgetResource::Fmem, size)) {
-      rx::println(stderr, "map: fmem budget: failed to allocate {:#x} bytes",
-                  size);
-      return {{}, ErrorCode::INVAL};
-    }
-
     if (prot) {
+      if (!budget->acquire(BudgetResource::Fmem, size)) {
+        rx::println(stderr, "map: fmem budget: failed to allocate {:#x} bytes",
+                    size);
+        return {{}, ErrorCode::INVAL};
+      }
+
       blockFlags |= BlockFlags::Commited;
     }
   }
@@ -458,13 +458,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   allocFlags = AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge);
 
   if (blockFlags & BlockFlags::DirectMemory) {
-    if (!budget->acquire(BudgetResource::Dmem, size)) {
-      rx::println(stderr, "map: dmem budget: failed to allocate {:#x} bytes",
-                  size);
-      return {{}, ErrorCode::INVAL};
-    }
-
     if (prot) {
+      if (!budget->acquire(BudgetResource::Dmem, size)) {
+        rx::println(stderr, "map: dmem budget: failed to allocate {:#x} bytes",
+                    size);
+        return {{}, ErrorCode::INVAL};
+      }
+
       blockFlags |= BlockFlags::Commited;
     }
   }
@@ -479,12 +479,14 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
 
   if (auto error = file->device->map(range, fileOffset, prot, file, process);
       error != ErrorCode{}) {
-    if (blockFlags & BlockFlags::FlexibleMemory) {
-      budget->release(BudgetResource::Fmem, size);
-    }
+    if (prot) {
+      if (blockFlags & BlockFlags::FlexibleMemory) {
+        budget->release(BudgetResource::Fmem, size);
+      }
 
-    if (blockFlags & BlockFlags::DirectMemory) {
-      budget->release(BudgetResource::Dmem, size);
+      if (blockFlags & BlockFlags::DirectMemory) {
+        budget->release(BudgetResource::Dmem, size);
+      }
     }
 
     if (blockFlags & BlockFlags::PooledMemory) {
@@ -539,14 +541,19 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
     Process *process, std::uint64_t addressHint, rx::AddressRange directRange,
     rx::EnumBitSet<Protection> prot, rx::EnumBitSet<AllocationFlags> allocFlags,
     std::string_view name, std::uint64_t alignment, MemoryType type) {
-  ScopedBudgetAcquire dmemResource(process->getBudget(), BudgetResource::Dmem,
-                                   directRange.size());
-  if (!dmemResource) {
-    rx::println(stderr,
-                "mapDirect: dmem budget: failed to allocate {:#x} bytes",
-                directRange.size());
+  ScopedBudgetAcquire dmemResource;
 
-    return {{}, ErrorCode::INVAL};
+  if (prot) {
+    dmemResource = ScopedBudgetAcquire(
+        process->getBudget(), BudgetResource::Dmem, directRange.size());
+
+    if (!dmemResource) {
+      rx::println(stderr,
+                  "mapDirect: dmem budget: failed to allocate {:#x} bytes",
+                  directRange.size());
+
+      return {{}, ErrorCode::INVAL};
+    }
   }
 
   VirtualMemoryAllocation allocationInfo;
@@ -635,13 +642,20 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
                      rx::EnumBitSet<AllocationFlags> allocFlags,
                      rx::EnumBitSet<BlockFlags> blockFlags,
                      std::string_view name, std::uint64_t alignment) {
-  ScopedBudgetAcquire fmemResource(process->getBudget(), BudgetResource::Fmem,
-                                   size);
-  if (!fmemResource) {
-    rx::println(stderr, "mapFlex: fmem budget: failed to allocate {:#x} bytes",
-                size);
+  ScopedBudgetAcquire fmemResource;
 
-    return {{}, ErrorCode::INVAL};
+  if (prot) {
+    fmemResource =
+        ScopedBudgetAcquire(process->getBudget(), BudgetResource::Fmem, size);
+
+    if (!fmemResource) {
+      rx::println(stderr,
+                  "mapFlex: fmem budget: failed to allocate {:#x} bytes", size);
+
+      return {{}, ErrorCode::INVAL};
+    }
+
+    blockFlags |= orbis::vmem::BlockFlags::Commited;
   }
 
   bool canOverwrite = (allocFlags & AllocationFlags::Fixed) &&
@@ -653,10 +667,6 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
   allocationInfo.prot = prot;
   allocationInfo.type = MemoryType::WbOnion;
   allocationInfo.setName(process, name);
-
-  if (prot) {
-    allocationInfo.flags |= orbis::vmem::BlockFlags::Commited;
-  }
 
   auto vmem = process->get(g_vmInstance);
   std::lock_guard lock(*vmem);
