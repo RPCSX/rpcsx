@@ -1097,7 +1097,7 @@ int main(int argc, const char *argv[]) {
           .flags = 0,
           .item =
               {
-                  .total = 0x1C000000,
+                  .total = 2ul * 1024 * 1024 * 1024,
               },
       },
       {
