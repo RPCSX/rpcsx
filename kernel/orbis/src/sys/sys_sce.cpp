@@ -452,6 +452,7 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
           static_cast<MemoryType>(_entry.type),
           rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection),
           flags, _entry.offset);
+      break;
     case 1:
       result = sys_munmap(thread, _entry.start, _entry.length);
       break;
@@ -913,7 +914,7 @@ orbis::SysResult orbis::sys_virtual_query(Thread *thread, uintptr_t addr,
 
   auto result = vmem::query(thread->tproc, addr, flags & 1);
 
-  if (!result || result->start >= 0x800000000) {
+  if (!result) {
     return ErrorCode::ACCES;
   }
 
@@ -1528,6 +1529,10 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
            vmem::Protection::GpuRead | vmem::Protection::GpuWrite;
   }
 
+  if (prot & vmem::Protection::CpuExec) {
+    return ErrorCode::INVAL;
+  }
+
   if (flags & vmem::MapFlags::Fixed) {
     allocFlags = AllocationFlags::Fixed;
   } else if (addr == 0) {
@@ -1538,8 +1543,7 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
     allocFlags |= AllocationFlags::NoOverwrite;
   }
 
-  auto name =
-      callerAddress ? rx::format("anon:{:012x}", callerAddress) : "<dmem unk>";
+  auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
 
   auto [range, errc] =
       vmem::mapDirect(thread->tproc, addr,

@@ -2,7 +2,6 @@
 #include "error.hpp"
 #include "rx/AddressRange.hpp"
 #include "rx/align.hpp"
-#include "rx/debug.hpp"
 #include "rx/format.hpp"
 #include "rx/print.hpp"
 #include "sys/sysproto.hpp"
@@ -27,7 +26,16 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
   std::uint64_t callerAddress = getCallerAddress(thread);
 
   auto shift = addr & (vmem::kPageSize - 1);
-  addr = rx::alignDown(addr, vmem::kPageSize);
+
+  if ((flags & vmem::MapFlags::Fixed) && shift != 0) {
+    return ErrorCode::INVAL;
+  }
+
+  if (len == 0) {
+    return ErrorCode::INVAL;
+  }
+
+  addr = rx::alignUp(addr, vmem::kPageSize);
   rx::EnumBitSet<AllocationFlags> allocFlags{};
   rx::EnumBitSet<vmem::BlockFlags> blockFlags{};
   rx::EnumBitSet<vmem::BlockFlagsEx> blockFlagsEx{};
@@ -93,16 +101,14 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
         (vmem::Protection::CpuRead | vmem::Protection::CpuWrite)) {
       return ErrorCode::INVAL;
     }
+  } else {
+    shift = 0;
   }
 
   auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
 
   if (flags & vmem::MapFlags::Anon) {
     if (fd != -1 || pos != 0) {
-      return ErrorCode::INVAL;
-    }
-
-    if (prot & (vmem::Protection::GpuRead | vmem::Protection::GpuWrite)) {
       return ErrorCode::INVAL;
     }
 
@@ -125,8 +131,6 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
   if (!file->device->blockFlags) {
     blockFlags |= vmem::BlockFlags::FlexibleMemory;
   }
-
-  prot &= ~vmem::Protection::CpuExec;
 
   auto [range, errc] =
       vmem::mapFile(thread->tproc, addr, len, allocFlags, prot, blockFlags,
@@ -153,6 +157,10 @@ orbis::SysResult orbis::sys_msync(Thread *thread, uintptr_t addr, size_t len,
   return {};
 }
 orbis::SysResult orbis::sys_munmap(Thread *thread, uintptr_t addr, size_t len) {
+  if (len == 0) {
+    return ErrorCode::INVAL;
+  }
+
   auto range = rx::AddressRange::fromBeginSize(addr, len);
 
   return vmem::unmap(thread->tproc, range);

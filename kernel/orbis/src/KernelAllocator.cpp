@@ -8,7 +8,7 @@
 #include "rx/print.hpp"
 
 static const std::uint64_t g_allocProtWord = 0xDEADBEAFBADCAFE1;
-static constexpr std::uintptr_t kHeapBaseAddress = 0x00000600'0000'0000;
+static constexpr std::uintptr_t kHeapBaseAddress = 0x7100'0000'0000;
 static constexpr auto kHeapSize = 0x1'0000'0000;
 static constexpr int kDebugHeap = 0;
 

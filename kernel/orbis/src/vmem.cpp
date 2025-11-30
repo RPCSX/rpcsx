@@ -290,7 +290,7 @@ void orbis::vmem::initialize(Process *process, bool force) {
   std::lock_guard lock(*vmem);
 
   // FIXME: for PS5 should be extended range
-  auto range = rx::AddressRange::fromBeginEnd(0x400000, 0x10000000000);
+  auto range = rx::AddressRange::fromBeginEnd(0x400000, 0x7000'0000'0000);
   vmem->create(range);
 
   std::size_t address = range.beginAddress();
@@ -373,8 +373,18 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   }
 
   if (blockFlags & (BlockFlags::DirectMemory | BlockFlags::PooledMemory)) {
+    if (prot & vmem::Protection::CpuExec) {
+      return {{}, ErrorCode::ACCES};
+    }
+
     if (alignment < dmem::kPageSize) {
       alignment = dmem::kPageSize;
+    }
+  }
+
+  if (allocFlags & AllocationFlags::Fixed) {
+    if (addressHint % alignment) {
+      return {{}, orbis::ErrorCode::INVAL};
     }
   }
 
@@ -399,6 +409,10 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     if (errc == std::errc::not_enough_memory) {
       // virtual memory shouldn't care about physical memory
       return {{}, ErrorCode::INVAL};
+    }
+
+    if (errc == std::errc::file_exists) {
+      return {{}, ErrorCode::NOMEM};
     }
 
     return {{}, toErrorCode(errc)};
@@ -503,8 +517,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     rx::dieIf(errc != std::errc{}, "failed to commit virtual memory {}", errc);
   }
 
-  // vmemDump(process, rx::format("mapped {:x}-{:x}", range.beginAddress(),
-  //                              range.endAddress()));
+  // vmemDump(process, rx::format("mapped {:x}-{:x} {}", range.beginAddress(),
+  //                              range.endAddress(), prot));
 
   return {range, {}};
 }
@@ -545,6 +559,10 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
         vmem->map(addressHint, directRange.size(), allocationInfo,
                   allocFlags | AllocationFlags::Dry, alignment);
     if (errc != std::errc{}) {
+      if (errc == std::errc::file_exists) {
+        return {{}, ErrorCode::NOMEM};
+      }
+
       return {{}, toErrorCode(errc)};
     }
 
@@ -589,9 +607,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
 
   amdgpu::mapMemory(process->pid, range, type, prot, pmemOffset);
 
-  // vmemDump(process,
-  //          rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
-  //                     range.endAddress()));
+  vmemDump(process, rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
+                               range.endAddress()));
 
   return {range, {}};
 }
@@ -615,6 +632,7 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
   allocationInfo.flags = orbis::vmem::BlockFlags::FlexibleMemory | blockFlags;
   allocationInfo.flagsEx = BlockFlagsEx::Allocated;
   allocationInfo.prot = prot;
+  allocationInfo.type = MemoryType::WbOnion;
   allocationInfo.setName(process, name);
 
   if (prot) {
@@ -631,6 +649,10 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
         vmem->map(addressHint, size, allocationInfo,
                   allocFlags | AllocationFlags::Dry, alignment);
     if (errc != std::errc{}) {
+      if (errc == std::errc::file_exists) {
+        return {{}, ErrorCode::NOMEM};
+      }
+
       return {{}, toErrorCode(errc)};
     }
 
@@ -1063,8 +1085,15 @@ orbis::vmem::query(Process *process, std::uint64_t address, bool lowerBound) {
 
   auto it = vmem->lowerBound(address);
 
+  constexpr auto restrictedArea =
+      rx::AddressRange::fromBeginSize(0x800000000, 0x100000000);
+
   if (lowerBound) {
-    while (it != vmem->end() && !it->isAllocated()) {
+    while (it != vmem->end()) {
+      if (it->isAllocated() && !restrictedArea.intersects(it.range())) {
+        break;
+      }
+
       ++it;
     }
 
@@ -1072,7 +1101,7 @@ orbis::vmem::query(Process *process, std::uint64_t address, bool lowerBound) {
       return {};
     }
   } else if (it == vmem->end() || !it.range().contains(address) ||
-             !it->isAllocated()) {
+             !it->isAllocated() || restrictedArea.intersects(it.range())) {
     return {};
   }
 
@@ -1085,9 +1114,7 @@ orbis::vmem::query(Process *process, std::uint64_t address, bool lowerBound) {
   }
 
   if (it->flags & BlockFlags::DirectMemory) {
-    // if (auto queryResult = dmem::query(0, it->deviceOffset)) {
     result.memoryType = it->type;
-    // }
   } else if (it->flags == (BlockFlags::PooledMemory | BlockFlags::Commited)) {
     result.memoryType = it->type;
   }

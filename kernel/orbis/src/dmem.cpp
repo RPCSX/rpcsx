@@ -204,7 +204,7 @@ orbis::dmem::allocate(unsigned dmemIndex, rx::AddressRange searchRange,
   auto allocResult = dmem->map(searchRange.beginAddress(), len, allocation,
                                AllocationFlags::Dry, alignment);
   if (allocResult.errc != std::errc{}) {
-    return {{}, toErrorCode(allocResult.errc)};
+    return {{}, ErrorCode::AGAIN};
   }
 
   auto result = allocResult.range.beginAddress();

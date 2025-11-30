@@ -68,11 +68,11 @@ static vk::Context createVkContext(Device *device) {
   bool enableValidation = rx::g_config.validateGpu;
 
   for (std::size_t process = 0; process < 6; ++process) {
-    if (auto errc = rx::mem::reserve(rx::AddressRange::fromBeginSize(
-            orbis::kMinAddress + orbis::kMaxAddress * process,
-            orbis::kMaxAddress - orbis::kMinAddress));
-        errc != std::errc{}) {
-      rx::die("failed to reserve userspace memory: {}", (int)errc);
+    auto range = rx::AddressRange::fromBeginSize(
+        0x40'0000 + 0x100'0000'0000 * process, 0x100'0000'0000 - 0x40'0000);
+    if (auto errc = rx::mem::reserve(range); errc != std::errc{}) {
+      rx::die("failed to reserve userspace memory: {} {:x}-{:x}", (int)errc,
+              range.beginAddress(), range.endAddress());
     }
   }
 
@@ -585,6 +585,10 @@ void Device::unmapProcess(std::uint32_t pid) {
 void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
                            std::uint64_t size,
                            rx::EnumBitSet<orbis::vmem::Protection> prot) {
+  if (address + size > 0x100'0000'0000) {
+    return;
+  }
+
   auto &process = processInfo[pid];
 
   auto vmSlotIt = process.vmTable.queryArea(address);
@@ -957,6 +961,10 @@ void Device::mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
                        orbis::MemoryType memoryType,
                        rx::EnumBitSet<orbis::vmem::Protection> prot,
                        std::uint64_t physicalOffset) {
+  if (virtualRange.endAddress() > 0x100'0000'0000) {
+    return;
+  }
+
   auto &process = processInfo[pid];
 
   process.vmTable.map(virtualRange,
