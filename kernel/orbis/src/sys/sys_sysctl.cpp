@@ -78,7 +78,7 @@ SysResult kern_sysctl(Thread *thread, ptr<sint> name, uint namelen,
 
   enum sysctl_vm_budgets_ {
     mlock_total = 1000,
-    mlock_avail = 1000,
+    mlock_avail,
   };
 
   struct ProcInfo {
