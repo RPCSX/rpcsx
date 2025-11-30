@@ -56,12 +56,22 @@ struct VirtualMemoryAllocation {
   isRelated(const VirtualMemoryAllocation &other, rx::AddressRange selfRange,
             [[maybe_unused]] rx::AddressRange rightRange) const {
     if (flags != other.flags || flagsEx != other.flagsEx ||
-        prot != other.prot || type != other.type || device != other.device ||
-        name != other.name) {
+        prot != other.prot || type != other.type || device != other.device) {
       return false;
     }
+
     if (!isAllocated()) {
       return true;
+    }
+
+    bool isAnon = std::string_view(name).starts_with("anon:");
+
+    if (isAnon) {
+      if (!std::string_view(other.name).starts_with("anon:")) {
+        return false;
+      }
+    } else if (name != other.name) {
+      return false;
     }
 
     if (device == nullptr || flags == orbis::vmem::BlockFlags::PooledMemory) {
@@ -449,8 +459,6 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     if (!budget->acquire(BudgetResource::Dmem, size)) {
       return {{}, ErrorCode::INVAL};
     }
-
-    allocFlags |= AllocationFlags::NoMerge;
 
     if (prot) {
       blockFlags |= BlockFlags::Commited;
