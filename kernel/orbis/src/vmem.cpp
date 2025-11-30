@@ -445,6 +445,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
 
   if (blockFlags & BlockFlags::FlexibleMemory) {
     if (!budget->acquire(BudgetResource::Fmem, size)) {
+      rx::println(stderr, "map: fmem budget: failed to allocate {:#x} bytes",
+                  size);
       return {{}, ErrorCode::INVAL};
     }
 
@@ -457,6 +459,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
 
   if (blockFlags & BlockFlags::DirectMemory) {
     if (!budget->acquire(BudgetResource::Dmem, size)) {
+      rx::println(stderr, "map: dmem budget: failed to allocate {:#x} bytes",
+                  size);
       return {{}, ErrorCode::INVAL};
     }
 
@@ -538,6 +542,10 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
   ScopedBudgetAcquire dmemResource(process->getBudget(), BudgetResource::Dmem,
                                    directRange.size());
   if (!dmemResource) {
+    rx::println(stderr,
+                "mapDirect: dmem budget: failed to allocate {:#x} bytes",
+                directRange.size());
+
     return {{}, ErrorCode::INVAL};
   }
 
@@ -630,6 +638,9 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
   ScopedBudgetAcquire fmemResource(process->getBudget(), BudgetResource::Fmem,
                                    size);
   if (!fmemResource) {
+    rx::println(stderr, "mapFlex: fmem budget: failed to allocate {:#x} bytes",
+                size);
+
     return {{}, ErrorCode::INVAL};
   }
 

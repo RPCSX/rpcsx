@@ -68,6 +68,7 @@ orbis::fmem::allocate(std::uint64_t size) {
       0, size, allocation, kernel::AllocationFlags::NoMerge, vmem::kPageSize);
 
   if (errc != std::errc{}) {
+    rx::println(stderr, "fmem: failed to allocate {:#x} bytes", size);
     return {{}, toErrorCode(errc)};
   }
 
