@@ -4,15 +4,20 @@
 #include "io-device.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/osem.hpp"
+#include "orbis/pmem.hpp"
 #include "orbis/thread/Process.hpp"
+#include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/align.hpp"
+#include "rx/die.hpp"
 #include "rx/format.hpp"
 #include "rx/hexdump.hpp"
-#include "rx/mem.hpp"
 #include "rx/print.hpp"
 #include "rx/watchdog.hpp"
 #include "vfs.hpp"
-#include "vm.hpp"
+#include <bit>
 #include <cstdint>
 #include <fcntl.h>
 #include <filesystem>
@@ -21,45 +26,65 @@
 
 ipmi::IpmiClient ipmi::audioIpmiClient;
 
+orbis::Process *g_workerProcess;
+
 template <typename T = std::byte> struct GuestAlloc {
   orbis::ptr<T> guestAddress;
+  std::size_t size;
 
-  GuestAlloc(std::size_t size) {
+  GuestAlloc(std::size_t size) : size(size) {
     if (size == 0) {
       guestAddress = nullptr;
     } else {
-      guestAddress = orbis::ptr<T>(
-          vm::map(nullptr, size, vm::kMapProtCpuRead | vm::kMapProtCpuWrite,
-                  vm::kMapFlagPrivate | vm::kMapFlagAnonymous));
+      size = rx::alignUp(size, orbis::vmem::kPageSize);
+
+      auto [range, vmemErrc] = orbis::vmem::mapFlex(
+          g_workerProcess ? g_workerProcess : orbis::g_currentThread->tproc,
+          size,
+          orbis::vmem::Protection::CpuRead | orbis::vmem::Protection::CpuWrite);
+
+      rx::dieIf(vmemErrc != orbis::ErrorCode{},
+                "impi: failed to map memory, error {}",
+                static_cast<int>(vmemErrc));
+
+      guestAddress = std::bit_cast<orbis::ptr<T>>(range.beginAddress());
     }
   }
 
   GuestAlloc() : GuestAlloc(sizeof(T)) {}
 
   GuestAlloc(const T &data) : GuestAlloc() {
-    if (orbis::uwrite(guestAddress, data) != orbis::ErrorCode{}) {
-      std::abort();
+    if (auto errc = orbis::uwrite(guestAddress, data);
+        errc != orbis::ErrorCode{}) {
+      rx::die("ipmi: failed to write data to allocated page {}, error {}",
+              (void *)guestAddress, errc);
     }
   }
 
   GuestAlloc(const void *data, std::size_t size) : GuestAlloc(size) {
-    if (orbis::uwriteRaw(guestAddress, data, size) != orbis::ErrorCode{}) {
-      std::abort();
+    if (auto errc = orbis::uwriteRaw(guestAddress, data, size);
+        errc != orbis::ErrorCode{}) {
+      rx::die("ipmi: failed to write data to allocated page {}, error {}, data "
+              "{}, size {}",
+              (void *)guestAddress, errc, data, size);
     }
   }
 
   GuestAlloc(const GuestAlloc &) = delete;
 
   GuestAlloc(GuestAlloc &&other) noexcept : guestAddress(other.guestAddress) {
-    other.guestAddress = 0;
+    other.guestAddress = nullptr;
   }
   GuestAlloc &operator=(GuestAlloc &&other) noexcept {
     std::swap(guestAddress, other.guestAddress);
   }
 
   ~GuestAlloc() {
-    if (guestAddress != 0) {
-      vm::unmap(guestAddress, sizeof(T));
+    if (guestAddress != nullptr) {
+      orbis::vmem::unmap(
+          g_workerProcess ? g_workerProcess : orbis::g_currentThread->tproc,
+          rx::AddressRange::fromBeginSize(
+              std::bit_cast<orbis::uintptr_t>(guestAddress), size));
     }
   }
 
@@ -115,6 +140,10 @@ orbis::sint ipmi::IpmiClient::sendSyncMessageRaw(
     buf.resize(size);
   }
   return serverResult;
+}
+
+void ipmi::setWorkerProcess(orbis::Process *process) {
+  g_workerProcess = process;
 }
 
 ipmi::IpmiClient ipmi::createIpmiClient(orbis::Thread *thread,

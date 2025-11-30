@@ -10,34 +10,13 @@ struct Thread;
 struct Module;
 struct timespec;
 struct File;
+namespace vmem {
 struct MemoryProtection;
+}
 struct IoVec;
 struct UContext;
 
 struct ProcessOps {
-  SysResult (*mmap)(Thread *thread, caddr_t addr, size_t len, sint prot,
-                    sint flags, sint fd, off_t pos);
-  SysResult (*dmem_mmap)(Thread *thread, caddr_t addr, size_t len,
-                         sint memoryType, sint prot, sint flags,
-                         off_t directMemoryStart);
-  SysResult (*munmap)(Thread *thread, ptr<void> addr, size_t len);
-  SysResult (*msync)(Thread *thread, ptr<void> addr, size_t len, sint flags);
-  SysResult (*mprotect)(Thread *thread, ptr<const void> addr, size_t len,
-                        sint prot);
-  SysResult (*minherit)(Thread *thread, ptr<void> addr, size_t len,
-                        sint inherit);
-  SysResult (*madvise)(Thread *thread, ptr<void> addr, size_t len, sint behav);
-  SysResult (*mincore)(Thread *thread, ptr<const void> addr, size_t len,
-                       ptr<char> vec);
-  SysResult (*mlock)(Thread *thread, ptr<const void> addr, size_t len);
-  SysResult (*mlockall)(Thread *thread, sint how);
-  SysResult (*munlockall)(Thread *thread);
-  SysResult (*munlock)(Thread *thread, ptr<const void> addr, size_t len);
-  SysResult (*virtual_query)(Thread *thread, ptr<const void> addr, sint flags,
-                             ptr<void> info, ulong infoSize);
-  SysResult (*query_memory_protection)(Thread *thread, ptr<void> address,
-                                       ptr<MemoryProtection> protection);
-
   SysResult (*open)(Thread *thread, ptr<const char> path, sint flags, sint mode,
                     rx::Ref<File> *file);
   SysResult (*shm_open)(Thread *thread, const char *path, sint flags, sint mode,
@@ -46,10 +25,6 @@ struct ProcessOps {
   SysResult (*mkdir)(Thread *thread, ptr<const char> path, sint mode);
   SysResult (*rmdir)(Thread *thread, ptr<const char> path);
   SysResult (*rename)(Thread *thread, ptr<const char> from, ptr<const char> to);
-  SysResult (*blockpool_open)(Thread *thread, rx::Ref<File> *file);
-  SysResult (*blockpool_map)(Thread *thread, caddr_t addr, size_t len,
-                             sint prot, sint flags);
-  SysResult (*blockpool_unmap)(Thread *thread, caddr_t addr, size_t len);
   SysResult (*socket)(Thread *thread, ptr<const char> name, sint domain,
                       sint type, sint protocol, rx::Ref<File> *file);
   SysResult (*socketpair)(Thread *thread, sint domain, sint type, sint protocol,

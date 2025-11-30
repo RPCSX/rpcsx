@@ -1,8 +1,16 @@
+#include "KernelContext.hpp"
 #include "error.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/align.hpp"
+#include "rx/debug.hpp"
+#include "rx/format.hpp"
+#include "rx/print.hpp"
 #include "sys/sysproto.hpp"
 #include "thread/Process.hpp"
 #include "thread/ProcessOps.hpp"
 #include "thread/Thread.hpp"
+#include "utils/Logs.hpp"
+#include "vmem.hpp"
 
 orbis::SysResult orbis::sys_sbrk(Thread *, sint) {
   return ErrorCode::OPNOTSUPP;
@@ -11,94 +19,179 @@ orbis::SysResult orbis::sys_sstk(Thread *, sint) {
   return ErrorCode::OPNOTSUPP;
 }
 
-orbis::SysResult orbis::sys_mmap(Thread *thread, caddr_t addr, size_t len,
-                                 sint prot, sint flags, sint fd, off_t pos) {
-  if (auto impl = thread->tproc->ops->mmap) {
-    return impl(thread, addr, len, prot, flags, fd, pos);
+orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
+                                 rx::EnumBitSet<vmem::Protection> prot,
+                                 rx::EnumBitSet<vmem::MapFlags> flags, sint fd,
+                                 off_t pos) {
+
+  std::uint64_t callerAddress = getCallerAddress(thread);
+
+  auto shift = addr & (vmem::kPageSize - 1);
+  addr = rx::alignDown(addr, vmem::kPageSize);
+  rx::EnumBitSet<AllocationFlags> allocFlags{};
+  rx::EnumBitSet<vmem::BlockFlags> blockFlags{};
+  rx::EnumBitSet<vmem::BlockFlagsEx> blockFlagsEx{};
+  std::uint64_t alignment = vmem::kPageSize;
+
+  {
+    auto unpacked = unpackMapFlags(flags, vmem::kPageSize);
+    alignment = unpacked.first;
+    flags = unpacked.second;
   }
 
-  return ErrorCode::NOSYS;
+  len = rx::alignUp(len, vmem::kPageSize);
+
+  if (flags & vmem::MapFlags::Stack) {
+    allocFlags |= AllocationFlags::Stack;
+  }
+
+  if (flags & vmem::MapFlags::Fixed) {
+    allocFlags |= AllocationFlags::Fixed;
+  }
+
+  if (flags & vmem::MapFlags::NoOverwrite) {
+    allocFlags |= AllocationFlags::NoOverwrite;
+  }
+
+  if (flags & vmem::MapFlags::NoCoalesce) {
+    allocFlags |= AllocationFlags::NoMerge;
+  }
+
+  if (flags & vmem::MapFlags::Shared) {
+    blockFlagsEx |= vmem::BlockFlagsEx::Shared;
+
+    if (flags & vmem::MapFlags::Private) {
+      return ErrorCode::INVAL;
+    }
+  }
+
+  if (flags & vmem::MapFlags::Private) {
+    blockFlagsEx |= vmem::BlockFlagsEx::Private;
+  }
+
+  if (addr == 0) {
+    addr = flags & vmem::MapFlags::System ? 0xfc0000000 : 0x200000000;
+  }
+
+  if (flags & vmem::MapFlags::Void) {
+    flags |= vmem::MapFlags::Anon;
+
+    if (fd != -1 || pos != 0) {
+      return ErrorCode::INVAL;
+    }
+  }
+
+  if (flags & vmem::MapFlags::Stack) {
+    flags |= vmem::MapFlags::Anon;
+    blockFlags |= vmem::BlockFlags::Stack;
+
+    if (fd != -1 || pos != 0) {
+      return ErrorCode::INVAL;
+    }
+
+    if ((prot & (vmem::Protection::CpuRead | vmem::Protection::CpuWrite)) !=
+        (vmem::Protection::CpuRead | vmem::Protection::CpuWrite)) {
+      return ErrorCode::INVAL;
+    }
+  }
+
+  auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
+
+  if (flags & vmem::MapFlags::Anon) {
+    if (fd != -1 || pos != 0) {
+      return ErrorCode::INVAL;
+    }
+
+    if (prot & (vmem::Protection::GpuRead | vmem::Protection::GpuWrite)) {
+      return ErrorCode::INVAL;
+    }
+
+    auto [range, errc] = vmem::mapFlex(thread->tproc, len, prot, addr,
+                                       allocFlags, blockFlags, name, alignment);
+
+    if (errc != orbis::ErrorCode{}) {
+      return errc;
+    }
+
+    thread->retval[0] = range.beginAddress() + shift;
+    return {};
+  }
+
+  auto file = thread->tproc->fileDescriptors.get(fd);
+  if (file == nullptr) {
+    return ErrorCode::BADF;
+  }
+
+  if (!file->device->blockFlags) {
+    blockFlags |= vmem::BlockFlags::FlexibleMemory;
+  }
+
+  prot &= ~vmem::Protection::CpuExec;
+
+  auto [range, errc] =
+      vmem::mapFile(thread->tproc, addr, len, allocFlags, prot, blockFlags,
+                    blockFlagsEx, file.get(), pos, name, alignment);
+
+  if (errc != ErrorCode{}) {
+    return errc;
+  }
+
+  thread->retval[0] = range.beginAddress() + shift;
+  return {};
 }
 
-orbis::SysResult orbis::sys_freebsd6_mmap(Thread *thread, caddr_t addr,
-                                          size_t len, sint prot, sint flags,
+orbis::SysResult orbis::sys_freebsd6_mmap(Thread *thread, uintptr_t addr,
+                                          size_t len,
+                                          rx::EnumBitSet<vmem::Protection> prot,
+                                          rx::EnumBitSet<vmem::MapFlags> flags,
                                           sint fd, sint, off_t pos) {
   return sys_mmap(thread, addr, len, prot, flags, fd, pos);
 }
-orbis::SysResult orbis::sys_msync(Thread *thread, ptr<void> addr, size_t len,
+orbis::SysResult orbis::sys_msync(Thread *thread, uintptr_t addr, size_t len,
                                   sint flags) {
-  if (auto impl = thread->tproc->ops->msync) {
-    return impl(thread, addr, len, flags);
-  }
-
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__, addr, len, flags);
+  return {};
 }
-orbis::SysResult orbis::sys_munmap(Thread *thread, ptr<void> addr, size_t len) {
-  if (auto impl = thread->tproc->ops->munmap) {
-    return impl(thread, addr, len);
-  }
+orbis::SysResult orbis::sys_munmap(Thread *thread, uintptr_t addr, size_t len) {
+  auto range = rx::AddressRange::fromBeginSize(addr, len);
 
-  return ErrorCode::NOSYS;
+  return vmem::unmap(thread->tproc, range);
 }
-orbis::SysResult orbis::sys_mprotect(Thread *thread, ptr<const void> addr,
-                                     size_t len, sint prot) {
-  if (auto impl = thread->tproc->ops->mprotect) {
-    return impl(thread, addr, len, prot);
-  }
-
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_mprotect(Thread *thread, uintptr_t addr, size_t len,
+                                     rx::EnumBitSet<vmem::Protection> prot) {
+  auto range = rx::AddressRange::fromBeginSize(addr, len);
+  return vmem::protect(thread->tproc, range, prot);
 }
-orbis::SysResult orbis::sys_minherit(Thread *thread, ptr<void> addr, size_t len,
+orbis::SysResult orbis::sys_minherit(Thread *thread, uintptr_t addr, size_t len,
                                      sint inherit) {
-  if (auto impl = thread->tproc->ops->minherit) {
-    return impl(thread, addr, len, inherit);
-  }
+  ORBIS_LOG_TODO(__FUNCTION__, addr, len, inherit);
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_madvise(Thread *thread, ptr<void> addr, size_t len,
+orbis::SysResult orbis::sys_madvise(Thread *thread, uintptr_t addr, size_t len,
                                     sint behav) {
-  if (auto impl = thread->tproc->ops->madvise) {
-    return impl(thread, addr, len, behav);
-  }
-
+  ORBIS_LOG_TODO(__FUNCTION__, addr, len, behav);
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_mincore(Thread *thread, ptr<const void> addr,
-                                    size_t len, ptr<char> vec) {
-  if (auto impl = thread->tproc->ops->mincore) {
-    return impl(thread, addr, len, vec);
-  }
-
+orbis::SysResult orbis::sys_mincore(Thread *thread, uintptr_t addr, size_t len,
+                                    ptr<char> vec) {
+  ORBIS_LOG_TODO(__FUNCTION__, addr, len, vec);
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_mlock(Thread *thread, ptr<const void> addr,
-                                  size_t len) {
-  if (auto impl = thread->tproc->ops->mlock) {
-    return impl(thread, addr, len);
-  }
-
-  return ErrorCode::NOSYS;
+orbis::SysResult orbis::sys_mlock(Thread *thread, uintptr_t addr, size_t len) {
+  ORBIS_LOG_TODO(__FUNCTION__, addr, len);
+  return {};
 }
 orbis::SysResult orbis::sys_mlockall(Thread *thread, sint how) {
-  if (auto impl = thread->tproc->ops->mlockall) {
-    return impl(thread, how);
-  }
-
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__, how);
+  return {};
 }
 orbis::SysResult orbis::sys_munlockall(Thread *thread) {
-  if (auto impl = thread->tproc->ops->munlockall) {
-    return impl(thread);
-  }
-
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__);
+  return {};
 }
-orbis::SysResult orbis::sys_munlock(Thread *thread, ptr<const void> addr,
+orbis::SysResult orbis::sys_munlock(Thread *thread, uintptr_t addr,
                                     size_t len) {
-  if (auto impl = thread->tproc->ops->munlock) {
-    return impl(thread, addr, len);
-  }
-
-  return ErrorCode::NOSYS;
+  ORBIS_LOG_TODO(__FUNCTION__, addr, len);
+  return {};
 }

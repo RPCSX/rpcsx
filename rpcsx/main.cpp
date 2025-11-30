@@ -8,16 +8,22 @@
 #include "ipmi.hpp"
 #include "linker.hpp"
 #include "ops.hpp"
+#include "orbis/dmem.hpp"
+#include "orbis/fmem.hpp"
+#include "orbis/pmem.hpp"
 #include "orbis/ucontext.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/vmem.hpp"
 #include "rx/Config.hpp"
+#include "rx/die.hpp"
+#include "rx/format.hpp"
 #include "rx/mem.hpp"
 #include "rx/print.hpp"
 #include "rx/watchdog.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
-#include "vm.hpp"
 #include "xbyak/xbyak.h"
+#include <bit>
 #include <optional>
 #include <rx/Rc.hpp>
 #include <rx/Version.hpp>
@@ -42,6 +48,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
+#include <thread>
 #include <ucontext.h>
 
 #include <atomic>
@@ -65,26 +72,19 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
       orbis::g_currentThread->tproc->vmId >= 0 && sig == SIGSEGV &&
       signalAddress >= orbis::kMinAddress &&
       signalAddress < orbis::kMaxAddress) {
-    auto vmid = orbis::g_currentThread->tproc->vmId;
+    auto process = orbis::g_currentThread->tproc;
+    auto vmid = process->vmId;
     auto ctx = reinterpret_cast<ucontext_t *>(ucontext);
     bool isWrite = (ctx->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
-    auto origVmProt = vm::getPageProtection(signalAddress);
-    int prot = 0;
+    auto origVmProt = orbis::vmem::queryProtection(process, signalAddress);
+
     auto page = signalAddress / rx::mem::pageSize;
-
-    if (origVmProt & vm::kMapProtCpuRead) {
-      prot |= PROT_READ;
-    }
-    if (origVmProt & vm::kMapProtCpuWrite) {
-      prot |= PROT_WRITE;
-    }
-    if (origVmProt & vm::kMapProtCpuExec) {
-      prot |= PROT_EXEC;
-    }
-
     auto gpuDevice = amdgpu::DeviceCtl{orbis::g_context->gpuDevice};
 
-    if (gpuDevice && (prot & (isWrite ? PROT_WRITE : PROT_READ)) != 0) {
+    if (gpuDevice && origVmProt &&
+        (origVmProt->prot & (isWrite ? orbis::vmem::Protection::CpuWrite
+                                     : orbis::vmem::Protection::CpuRead))) {
+      auto prot = toCpuProtection(origVmProt->prot);
       auto &gpuContext = gpuDevice.getContext();
       while (true) {
         auto flags =
@@ -115,7 +115,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
         }
 
         if (!isWrite) {
-          prot &= ~PROT_WRITE;
+          prot = prot & ~rx::mem::Protection::W;
           break;
         }
 
@@ -125,19 +125,20 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
         }
       }
 
-      if (::mprotect((void *)(page * rx::mem::pageSize), rx::mem::pageSize,
-                     prot)) {
-        std::perror("cache reprotection error");
-        std::abort();
-      }
+      auto range = rx::AddressRange::fromBeginSize(page * rx::mem::pageSize,
+                                                   rx::mem::pageSize);
 
+      auto errc = rx::mem::protect(range, prot);
+      rx::dieIf(errc != std::errc{},
+                "cache: virtual memory protection failed, address {}, error {}",
+                range.beginAddress(), static_cast<int>(errc));
       _writefsbase_u64(orbis::g_currentThread->fsBase);
       return;
     }
 
-    std::fprintf(stderr, "SIGSEGV, address %lx, access %s, prot %s\n",
+    std::fprintf(stderr, "SIGSEGV, address %lx, access %s, prot %u\n",
                  signalAddress, isWrite ? "write" : "read",
-                 vm::mapProtToString(origVmProt).c_str());
+                 origVmProt ? origVmProt->prot.toUnderlying() : -1);
   }
 
   if (orbis::g_currentThread != nullptr) {
@@ -290,14 +291,14 @@ struct StackWriter {
 };
 
 static bool g_traceSyscalls = false;
-static const char *getSyscallName(orbis::Thread *thread, int sysno) {
+static const orbis::sysent *getSyscallEnt(orbis::Thread *thread, int sysno) {
   auto sysvec = thread->tproc->sysent;
 
   if (sysno >= sysvec->size) {
     return nullptr;
   }
 
-  return orbis::getSysentName(sysvec->table[sysno].call);
+  return sysvec->table + sysno;
 }
 static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
                        int argsCount) {
@@ -307,11 +308,12 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
   flockfile(stderr);
   std::fprintf(stderr, "   [%u] ", thread->tid);
 
-  if (auto name = getSyscallName(thread, id)) {
-    std::fprintf(stderr, "%s(", name);
-  } else {
-    std::fprintf(stderr, "sys_%u(", id);
+  if (auto ent = getSyscallEnt(thread, id)) {
+    std::fprintf(stderr, "%s\n", ent->format(args).c_str());
+    return;
   }
+
+  std::fprintf(stderr, "sys_%u(", id);
 
   for (int i = 0; i < argsCount; ++i) {
     if (i != 0) {
@@ -332,24 +334,26 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   }
 
   flockfile(stderr);
-  std::fprintf(stderr, "%c: [%u] ", result.isError() ? 'E' : 'S', thread->tid);
+  rx::print(stderr, "{}: [{}] ", result.isError() ? 'E' : 'S', thread->tid);
 
-  if (auto name = getSyscallName(thread, id)) {
-    std::fprintf(stderr, "%s(", name);
+  if (auto ent = getSyscallEnt(thread, id)) {
+    rx::print(stderr, "{}", ent->format(args));
   } else {
-    std::fprintf(stderr, "sys_%u(", id);
-  }
+    rx::print(stderr, "sys_{}(", id);
 
-  for (int i = 0; i < argsCount; ++i) {
-    if (i != 0) {
-      std::fprintf(stderr, ", ");
+    for (int i = 0; i < argsCount; ++i) {
+      if (i != 0) {
+        rx::print(stderr, ", ");
+      }
+
+      rx::print(stderr, "{:#x}", args[i]);
     }
 
-    std::fprintf(stderr, "%#lx", args[i]);
+    rx::print(stderr, ")");
   }
 
-  std::fprintf(stderr, ") -> Status %d, Value %lx:%lx\n", result.value(),
-               thread->retval[0], thread->retval[1]);
+  rx::println(stderr, " -> {}, Value {:x}:{:x}", result.errc(),
+              thread->retval[0], thread->retval[1]);
 
   if (result.isError()) {
     thread->where();
@@ -357,11 +361,11 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   funlockfile(stderr);
 }
 
-static void guestInitDev() {
-  auto dmem1 = createDmemCharacterDevice(1);
-  orbis::g_context->dmemDevice = dmem1;
+static void guestInitDev(orbis::Thread *thread) {
+  auto dmem0 = createDmemCharacterDevice(0);
+  dmem0->open(&orbis::g_context->dmem, "", 0, 0, thread);
 
-  auto dce = createDceCharacterDevice();
+  auto dce = createDceCharacterDevice(thread->tproc);
   orbis::g_context->dceDevice = dce;
 
   auto ttyFd = ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
@@ -377,12 +381,12 @@ static void guestInitDev() {
   auto analogAudioDevice = nullAudioDevice;
   auto spdifAudioDevice = nullAudioDevice;
 
-  vfs::addDevice("dmem0", createDmemCharacterDevice(0));
   vfs::addDevice("npdrm", createNpdrmCharacterDevice());
   vfs::addDevice("icc_configuration", createIccConfigurationCharacterDevice());
   vfs::addDevice("console", consoleDev);
   vfs::addDevice("camera", createCameraCharacterDevice());
-  vfs::addDevice("dmem1", dmem1);
+  vfs::addDevice("dmem0", dmem0);
+  vfs::addDevice("dmem1", createDmemCharacterDevice(1));
   vfs::addDevice("dmem2", createDmemCharacterDevice(2));
   vfs::addDevice("stdout", consoleDev);
   vfs::addDevice("stderr", consoleDev);
@@ -518,7 +522,7 @@ static void guestInitDev() {
 
   auto shm = createShmDevice();
   orbis::g_context->shmDevice = shm;
-  orbis::g_context->blockpoolDevice = createBlockPoolDevice();
+  createBlockPoolDevice()->open(&orbis::g_context->blockpool, "", 0, 0, thread);
 }
 
 static void guestInitFd(orbis::Thread *mainThread) {
@@ -542,22 +546,29 @@ struct ExecEnv {
 int guestExec(orbis::Thread *mainThread, ExecEnv execEnv,
               rx::Ref<orbis::Module> executableModule,
               std::span<std::string> argv, std::span<std::string> envp) {
-  const auto stackEndAddress = 0x7'ffff'c000ull;
-  const auto stackSize = 0x40000 * 32;
-  auto stackStartAddress = stackEndAddress - stackSize;
-  mainThread->stackStart =
-      vm::map(reinterpret_cast<void *>(stackStartAddress), stackSize,
-              vm::kMapProtCpuWrite | vm::kMapProtCpuRead,
-              vm::kMapFlagAnonymous | vm::kMapFlagFixed | vm::kMapFlagPrivate |
-                  vm::kMapFlagStack);
+  const auto stackEndAddress = 0x7'eeff'c000ull;
+  const auto stackSize = 0x200000;
 
-  mainThread->stackEnd =
-      reinterpret_cast<std::byte *>(mainThread->stackStart) + stackSize;
+  auto stackStartAddress = stackEndAddress - stackSize;
+
+  auto [stackVmRange, vmErrc] = orbis::vmem::mapFlex(
+      mainThread->tproc, stackSize,
+      orbis::vmem::Protection::CpuRead | orbis::vmem::Protection::CpuWrite,
+      stackStartAddress,
+      orbis::AllocationFlags::Stack | orbis::AllocationFlags::Fixed,
+      orbis::vmem::BlockFlags::Stack, "main stack");
+
+  rx::dieIf(vmErrc != orbis::ErrorCode{},
+            "failed to map main thread stack, error {}",
+            static_cast<int>(vmErrc));
+
+  mainThread->stackStart = stackVmRange.beginAddress();
+  mainThread->stackEnd = stackVmRange.endAddress();
 
   std::vector<std::uint64_t> argvOffsets;
   std::vector<std::uint64_t> envpOffsets;
 
-  StackWriter stack{reinterpret_cast<std::uint64_t>(mainThread->stackEnd)};
+  StackWriter stack{mainThread->stackEnd};
 
   for (auto &elem : argv) {
     argvOffsets.push_back(stack.pushString(elem.data()));
@@ -680,26 +691,24 @@ ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
     return {.entryPoint = entryPoint, .interpBase = interpBase};
   }
 
-  auto libSceLibcInternal = rx::linker::loadModuleFile(
-      "/system/common/lib/libSceLibcInternal.sprx", mainThread);
-
-  if (libSceLibcInternal == nullptr) {
-    std::println(stderr, "libSceLibcInternal not found");
-    std::abort();
-  }
-
-  libSceLibcInternal->id =
-      mainThread->tproc->modulesMap.insert(libSceLibcInternal);
-
   auto libkernel = rx::linker::loadModuleFile(
       (isSystem ? "/system/common/lib/libkernel_sys.sprx"
                 : "/system/common/lib/libkernel.sprx"),
       mainThread);
 
-  if (libkernel == nullptr) {
-    rx::println(stderr, "libkernel not found");
-    std::abort();
-  }
+  rx::dieIf(libkernel == nullptr, "libkernel not found");
+  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
+
+  mainThread->tproc->libkernelRange = rx::AddressRange::fromBeginSize(
+      std::bit_cast<orbis::uintptr_t>(libkernel->base), libkernel->size);
+
+  auto libSceLibcInternal = rx::linker::loadModuleFile(
+      "/system/common/lib/libSceLibcInternal.sprx", mainThread);
+
+  rx::dieIf(libSceLibcInternal == nullptr, "libSceLibcInternal not found");
+
+  libSceLibcInternal->id =
+      mainThread->tproc->modulesMap.insert(libSceLibcInternal);
 
   if (orbis::g_context->fwType == orbis::FwType::Ps4) {
     for (auto sym : libkernel->symbols) {
@@ -707,7 +716,7 @@ ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
         auto address = (uint64_t)libkernel->base + sym.address;
         ::mprotect((void *)rx::alignDown(address, 0x1000),
                    rx::alignUp(sym.size + sym.address, 0x1000), PROT_WRITE);
-        std::println("patching sceKernelGetMainSocId");
+        rx::println("patching sceKernelGetMainSocId");
         struct GetMainSocId : Xbyak::CodeGenerator {
           GetMainSocId(std::uint64_t address, std::uint64_t size)
               : Xbyak::CodeGenerator(size, (void *)address) {
@@ -741,7 +750,6 @@ ExecEnv guestCreateExecEnv(orbis::Thread *mainThread,
     }
   }
 
-  libkernel->id = mainThread->tproc->modulesMap.insert(libkernel);
   interpBase = reinterpret_cast<std::uint64_t>(libkernel->base);
   entryPoint = libkernel->entryPoint;
 
@@ -757,18 +765,18 @@ int guestExec(orbis::Thread *mainThread,
 }
 
 static void usage(const char *argv0) {
-  std::println("{} [<options>...] <virtual path to elf> [args...]", argv0);
-  std::println("  options:");
-  std::println("  --version, -v - print version");
-  std::println("    -m, --mount <host path> <virtual path>");
-  std::println("    -o, --override <original module name> <virtual path to "
-               "overriden module>");
-  std::println("    --fw <path to firmware root>");
-  std::println(
+  rx::println("{} [<options>...] <virtual path to elf> [args...]", argv0);
+  rx::println("  options:");
+  rx::println("  --version, -v - print version");
+  rx::println("    -m, --mount <host path> <virtual path>");
+  rx::println("    -o, --override <original module name> <virtual path to "
+              "overriden module>");
+  rx::println("    --fw <path to firmware root>");
+  rx::println(
       "    --gpu <index> - specify physical gpu index to use, default is 0");
-  std::println("    --disable-cache - disable cache of gpu resources");
-  // std::println("    --presenter <window>");
-  std::println("    --trace");
+  rx::println("    --disable-cache - disable cache of gpu resources");
+  // rx::println("    --presenter <window>");
+  rx::println("    --trace");
 }
 
 static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
@@ -792,6 +800,7 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
   }
 
   auto process = orbis::createProcess(thread->tproc, childPid);
+  orbis::vmem::initialize(process, true); // override init process mappings
   auto logFd = ::open(("log-" + std::to_string(childPid) + ".txt").c_str(),
                       O_CREAT | O_TRUNC | O_WRONLY, 0666);
 
@@ -822,10 +831,9 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
               0xF0000000FFFF4000,
           },
   };
-  process->budgetId = 0;
+  process->budgetId = thread->tproc->budgetId;
   process->isInSandbox = false;
 
-  vm::fork(childPid);
   vfs::fork();
 
   *flag = true;
@@ -858,8 +866,6 @@ static orbis::SysResult launchDaemon(orbis::Thread *thread, std::string path,
       return result;
     }
   }
-
-  vm::reset();
 
   thread->tproc->nextTlsSlot = 1;
   auto executableModule = rx::linker::loadModuleFile(path, thread);
@@ -920,10 +926,10 @@ int main(int argc, const char *argv[]) {
         return 1;
       }
 
-      std::println("mounting '{}' to virtual '{}'", argv[argIndex + 1],
-                   argv[argIndex + 2]);
+      rx::println("mounting '{}' to virtual '{}'", argv[argIndex + 1],
+                  argv[argIndex + 2]);
       if (!std::filesystem::is_directory(argv[argIndex + 1])) {
-        std::println(stderr, "Directory '{}' not exists", argv[argIndex + 1]);
+        rx::println(stderr, "Directory '{}' not exists", argv[argIndex + 1]);
         return 1;
       }
 
@@ -939,7 +945,7 @@ int main(int argc, const char *argv[]) {
         return 1;
       }
 
-      std::println("mounting firmware '{}'", argv[argIndex + 1]);
+      rx::println("mounting firmware '{}'", argv[argIndex + 1]);
 
       vfs::mount("/", createHostIoDevice(argv[argIndex + 1], "/"));
 
@@ -1030,9 +1036,18 @@ int main(int argc, const char *argv[]) {
   orbis::constructAllGlobals();
   orbis::g_context->deviceEventEmitter = orbis::knew<orbis::EventEmitter>();
 
+  // FIXME: determine mode by reading elf file
+  orbis::pmem::initialize(10ull * 1024 * 1024 * 1024);
+  orbis::dmem::initialize();
+  orbis::fmem::initialize(2ull * 1024 * 1024 * 1024);
+
   rx::startWatchdog();
   rx::createGpuDevice();
   vfs::initialize();
+
+  while (orbis::g_context->gpuDevice == nullptr) {
+    std::this_thread::yield();
+  }
 
   std::vector<std::string> guestArgv(argv + argIndex, argv + argc);
   if (guestArgv.empty()) {
@@ -1046,6 +1061,8 @@ int main(int argc, const char *argv[]) {
   // vm::printHostStats();
   orbis::allocatePid();
   auto initProcess = orbis::createProcess(nullptr, asRoot ? 1 : 10);
+  orbis::vmem::initialize(initProcess);
+
   // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
   int status = 0;
@@ -1080,8 +1097,7 @@ int main(int argc, const char *argv[]) {
           .flags = 0,
           .item =
               {
-                  // vmem - reserved space for stack
-                  .total = 2ul * 1024 * 1024 * 1024 - (64 * 1024 * 1024),
+                  .total = 0x1C000000,
               },
       },
       {
@@ -1133,8 +1149,6 @@ int main(int argc, const char *argv[]) {
               },
       },
   };
-
-  vm::initialize(initProcess->pid);
 
   auto bigAppBudget = orbis::g_context->createProcessTypeBudget(
       orbis::Budget::ProcessType::BigApp, "big app budget", bigAppBudgetInfo);
@@ -1219,10 +1233,7 @@ int main(int argc, const char *argv[]) {
 
   auto executableModule = rx::linker::loadModuleFile(guestArgv[0], mainThread);
 
-  if (executableModule == nullptr) {
-    std::println(stderr, "Failed to open '{}'", guestArgv[0]);
-    std::abort();
-  }
+  rx::dieIf(executableModule == nullptr, "Failed to open '{}'", guestArgv[0]);
 
   executableModule->id = initProcess->modulesMap.insert(executableModule);
   initProcess->processParam = executableModule->processParam;
@@ -1249,7 +1260,7 @@ int main(int argc, const char *argv[]) {
     executableModule->dynType = orbis::DynType::Ps5;
   }
 
-  guestInitDev();
+  guestInitDev(mainThread);
   guestInitFd(mainThread);
 
   // data transfer mode
@@ -1294,6 +1305,9 @@ int main(int argc, const char *argv[]) {
   orbis::g_context->regMgrInt[0x9010000] = 0; // video out color effect
 
   if (!isSystem) {
+    // do IPMI allocations in init process
+    ipmi::setWorkerProcess(initProcess);
+
     ipmi::createMiniSysCoreObjects(initProcess);
     ipmi::createSysAvControlObjects(initProcess);
     ipmi::createSysCoreObjects(initProcess);
@@ -1380,7 +1394,6 @@ int main(int argc, const char *argv[]) {
   status = guestExec(mainThread, execEnv, std::move(executableModule),
                      guestArgv, {});
 
-  vm::deinitialize();
   rx::thread::deinitialize();
 
   return status;

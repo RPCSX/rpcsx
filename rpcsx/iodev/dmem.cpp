@@ -1,390 +1,353 @@
-#include "dmem.hpp"
+#include "orbis/dmem.hpp"
 #include "gpu/DeviceCtl.hpp"
-#include "io-device.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/KernelContext.hpp"
+#include "orbis/error.hpp"
 #include "orbis/file.hpp"
+#include "orbis/pmem.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "rx/align.hpp"
-#include "rx/format.hpp"
-#include "rx/watchdog.hpp"
-#include "vm.hpp"
-#include <fcntl.h>
-#include <filesystem>
-#include <mutex>
-#include <sys/mman.h>
-#include <unistd.h>
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
+
+enum {
+  DMEM_IOCTL_ALLOCATE = 0xc0288001,
+  DMEM_IOCTL_RELEASE = 0x80108002,
+  DMEM_IOCTL_SET_TYPE = 0x80188003,
+  DMEM_IOCTL_GET_TYPE = 0xc0208004,
+  DMEM_IOCTL_GET_TOTAL_SIZE = 0x4008800a,
+  DMEM_IOCTL_CLEAR = 0x2000800b,
+  DMEM_IOCTL_TRANSFER_BUDGET = 0xc018800d,
+  DMEM_IOCTL_CONTROL_RELEASE = 0xc018800e,
+  DMEM_IOCTL_SET_PID_AND_PROTECT = 0xc018800f,
+  DMEM_IOCTL_ALLOCATE_FOR_MINI_APP = 0xc0288010,
+  DMEM_IOCTL_ALLOCATE_MAIN = 0xc0288011,
+  DMEM_IOCTL_QUERY = 0x80288012,
+  DMEM_IOCTL_CHECKED_RELEASE = 0x80108015,
+  DMEM_IOCTL_GET_AVAIL_SIZE = 0xc0208016,
+  DMEM_IOCTL_RESERVE = 0xc010801a,
+};
+struct DmemDevice
+    : orbis::IoDeviceWithIoctl<orbis::ioctl::group(DMEM_IOCTL_ALLOCATE)> {
+  int index;
+  DmemDevice(int index);
+
+  orbis::ErrorCode open(rx::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+
+  orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
+                       rx::EnumBitSet<orbis::vmem::Protection> protection,
+                       orbis::File *file, orbis::Process *process) override;
+};
 
 struct DmemFile : public orbis::File {};
 
-struct AllocateDirectMemoryArgs {
-  std::uint64_t searchStart;
-  std::uint64_t searchEnd;
-  std::uint64_t len;
-  std::uint64_t alignment;
-  std::uint32_t memoryType;
+#pragma pack(push, 1)
+struct DmemIoctlAllocate {
+  orbis::uintptr_t searchStart;
+  orbis::uintptr_t searchEnd;
+  orbis::size_t len;
+  orbis::size_t alignment;
+  orbis::MemoryType memoryType;
+  orbis::uint32_t padding;
 };
 
-static constexpr auto dmemSize = 0x5000000000;
-// static const std::uint64_t nextOffset = 0;
-//  static const std::uint64_t memBeginAddress = 0xfe0000000;
+struct DmemIoctlRelease {
+  orbis::uintptr_t address;
+  orbis::size_t size;
+};
+struct DmemIoctlSetType {
+  orbis::uintptr_t start;
+  orbis::uintptr_t end;
+  orbis::MemoryType memoryType;
+  orbis::uint32_t padding;
+};
+struct DmemIoctlGetType {
+  orbis::uintptr_t start;
+  orbis::uintptr_t regionStart;
+  orbis::uintptr_t regionEnd;
+  orbis::MemoryType memoryType;
+  orbis::uint32_t padding;
+};
+struct DmemIoctlTransferBudget {
+  orbis::uint64_t unk0;
+  orbis::uint64_t unk1;
+  orbis::uint64_t unk2;
+};
+struct DmemIoctlControlRelease {
+  orbis::uint64_t unk0;
+  orbis::uint64_t unk1;
+  orbis::uint64_t unk2;
+};
+struct DmemIoctlSetPidAndProtect {
+  orbis::uintptr_t address;
+  orbis::size_t size;
+  orbis::pid_t pid; // 0 if all
+  rx::EnumBitSet<orbis::vmem::Protection> prot;
+};
 
-DmemDevice::~DmemDevice() {
-  if (shmFd > 0) {
-    close(shmFd);
+struct DirectMemoryQueryInfo {
+  orbis::uintptr_t start;
+  orbis::uintptr_t end;
+  orbis::MemoryType memoryType;
+  orbis::uint32_t padding;
+};
+struct DmemIoctlQuery {
+  orbis::uint32_t devIndex;
+  orbis::uint32_t flags;
+  orbis::uint32_t unk;
+  orbis::uint32_t _padding;
+  orbis::uint64_t offset;
+  orbis::ptr<DirectMemoryQueryInfo> info;
+  orbis::uint64_t infoSize;
+};
+struct DmemIoctlGetAvailSize {
+  orbis::uintptr_t searchStart;
+  orbis::uintptr_t searchEnd;
+  orbis::size_t alignment;
+  orbis::size_t size;
+};
+
+struct DmemIoctlReserve {
+  orbis::size_t size;
+  orbis::uint32_t flags;
+  orbis::uint32_t padding;
+};
+#pragma pack(pop)
+
+static orbis::ErrorCode dmem_ioctl_allocate(orbis::Thread *thread,
+                                            DmemDevice *device,
+                                            DmemIoctlAllocate &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.searchStart, args.searchEnd,
+                    args.alignment, args.len, (int)args.memoryType);
+  auto [offset, errc] = orbis::dmem::allocate(
+      device->index,
+      rx::AddressRange::fromBeginEnd(args.searchStart, args.searchEnd),
+      args.len, args.memoryType);
+
+  if (errc != orbis::ErrorCode{}) {
+    return errc;
   }
 
-  std::filesystem::remove(rx::format("{}/dmem-{}", rx::getShmPath(), index));
+  args.searchStart = offset;
+  return {};
 }
 
-orbis::ErrorCode DmemDevice::mmap(void **address, std::uint64_t len,
-                                  std::int32_t prot, std::int32_t flags,
-                                  std::int64_t directMemoryStart) {
-  if (prot == 0) {
-    // hack
-    // fixme: implement protect for pid
-    prot = vm::kMapProtCpuReadWrite | vm::kMapProtGpuAll;
+static orbis::ErrorCode dmem_ioctl_release(orbis::Thread *thread,
+                                           DmemDevice *device,
+                                           const DmemIoctlRelease &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.address, args.size);
+
+  return orbis::dmem::release(
+      device->index, rx::AddressRange::fromBeginSize(args.address, args.size));
+}
+
+static orbis::ErrorCode dmem_ioctl_set_type(orbis::Thread *thread,
+                                            DmemDevice *device,
+                                            const DmemIoctlSetType &args) {
+  // removed ioctl
+  return orbis::ErrorCode::INVAL;
+}
+
+static orbis::ErrorCode dmem_ioctl_get_type(orbis::Thread *thread,
+                                            DmemDevice *device,
+                                            DmemIoctlGetType &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.start);
+
+  auto result = orbis::dmem::query(device->index, args.start);
+
+  if (!result) {
+    return orbis::ErrorCode::NOENT;
   }
 
-  if (*address == nullptr) {
-    *address = std::bit_cast<void *>(0x80000000ull);
-    flags &= ~vm::kMapFlagFixed;
+  args.regionStart = result->range.beginAddress();
+  args.regionEnd = result->range.endAddress();
+  args.memoryType = result->memoryType;
+  return {};
+}
+
+static std::pair<orbis::ErrorCode, orbis::uint64_t>
+dmem_ioctl_get_total_size(orbis::Thread *thread, DmemDevice *device) {
+  auto result = orbis::dmem::getSize(device->index);
+  ORBIS_LOG_WARNING(__FUNCTION__, result);
+
+  auto limit = thread->tproc->getBudget()->get(orbis::BudgetResource::Dmem);
+  return {{}, orbis::uint64_t(std::min(result, limit.total))};
+}
+
+static orbis::ErrorCode dmem_ioctl_clear(orbis::Thread *thread,
+                                         DmemDevice *device) {
+  ORBIS_LOG_WARNING(__FUNCTION__);
+  auto result = orbis::dmem::clear(device->index);
+  if (result == orbis::ErrorCode{}) {
+    thread->tproc->getBudget()->release(orbis::BudgetResource::Dmem, -1);
+  }
+  return result;
+}
+
+static orbis::ErrorCode
+dmem_ioctl_transfer_budget(orbis::Thread *thread, DmemDevice *device,
+                           DmemIoctlTransferBudget &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.unk0, args.unk1, args.unk2);
+  return {};
+}
+
+static orbis::ErrorCode
+dmem_ioctl_control_release(orbis::Thread *thread, DmemDevice *device,
+                           DmemIoctlControlRelease &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.unk0, args.unk1, args.unk2);
+  return {};
+}
+
+static orbis::ErrorCode
+dmem_ioctl_set_pid_and_protect(orbis::Thread *thread, DmemDevice *device,
+                               DmemIoctlSetPidAndProtect &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.pid, args.address, args.size,
+                    args.prot.toUnderlying());
+  return {};
+}
+
+static orbis::ErrorCode
+dmem_ioctl_allocate_for_mini_app(orbis::Thread *thread, DmemDevice *device,
+                                 DmemIoctlAllocate &args) {
+  // FIXME: implement
+  return dmem_ioctl_allocate(thread, device, args);
+}
+
+static orbis::ErrorCode dmem_ioctl_allocate_main(orbis::Thread *thread,
+                                                 DmemDevice *device,
+                                                 DmemIoctlAllocate &args) {
+  // FIXME: implement
+  return dmem_ioctl_allocate(thread, device, args);
+}
+
+static orbis::ErrorCode dmem_ioctl_query(orbis::Thread *thread,
+                                         DmemDevice *device,
+                                         const DmemIoctlQuery &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, device->index, args.devIndex, args.unk,
+                    args.flags, args.offset, args.info, args.infoSize);
+
+  if (args.devIndex != device->index) {
+    ORBIS_LOG_WARNING(__FUNCTION__, "device mismatch", device->index,
+                      args.devIndex, args.unk, args.flags, args.offset,
+                      args.info, args.infoSize);
   }
 
-  int memoryType = 0;
-  if (auto allocationInfoIt = allocations.queryArea(directMemoryStart);
-      allocationInfoIt != allocations.end()) {
-    memoryType = allocationInfoIt->memoryType;
-  }
-
-  auto result = vm::map(*address, len, prot, flags, vm::kMapInternalReserveOnly,
-                        this, directMemoryStart);
-
-  ORBIS_LOG_WARNING("dmem mmap", index, directMemoryStart, len, prot, flags,
-                    result, *address);
-  if (result == (void *)-1) {
-    return orbis::ErrorCode::NOMEM; // TODO
-  }
-
-  if (::mmap(result, len, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, shmFd,
-             directMemoryStart) == (void *)-1) {
+  if (args.infoSize != sizeof(DirectMemoryQueryInfo) || args.devIndex >= 3) {
     return orbis::ErrorCode::INVAL;
   }
 
-  if (auto gpu = amdgpu::DeviceCtl{orbis::g_context->gpuDevice}) {
-    gpu.submitMapMemory(orbis::g_currentThread->tproc->pid,
-                        reinterpret_cast<std::uint64_t>(result), len,
-                        memoryType, index, prot, directMemoryStart);
+  rx::EnumBitSet<orbis::dmem::QueryFlags> queryFlags = {};
+
+  if (args.flags & 1) {
+    queryFlags |= orbis::dmem::QueryFlags::LowerBound;
   }
 
-  *address = result;
+  auto result = orbis::dmem::query(args.devIndex, args.offset, queryFlags);
 
+  if (!result) {
+    return orbis::ErrorCode::ACCES;
+  }
+
+  DirectMemoryQueryInfo info{
+      .start = result->range.beginAddress(),
+      .end = result->range.endAddress(),
+      .memoryType = result->memoryType,
+  };
+
+  ORBIS_LOG_WARNING(__FUNCTION__, device->index, args.devIndex, args.unk,
+                    args.flags, args.offset, args.info, args.infoSize,
+                    info.start, info.end, (int)info.memoryType);
+
+  return orbis::uwrite(args.info, info);
+}
+
+static orbis::ErrorCode
+dmem_ioctl_checked_release(orbis::Thread *thread, DmemDevice *device,
+                           const DmemIoctlRelease &args) {
+  return dmem_ioctl_release(thread, device, args);
+}
+
+static orbis::ErrorCode dmem_ioctl_get_avail_size(orbis::Thread *thread,
+                                                  DmemDevice *device,
+                                                  DmemIoctlGetAvailSize &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.searchStart, args.searchEnd,
+                    args.alignment, args.size);
+
+  auto [range, errc] = orbis::dmem::getAvailSize(
+      device->index,
+      rx::AddressRange::fromBeginEnd(args.searchStart, args.searchEnd),
+      args.alignment);
+
+  if (errc != orbis::ErrorCode{}) {
+    return errc;
+  }
+
+  ORBIS_LOG_WARNING(__FUNCTION__, args.searchStart, args.searchEnd,
+                    args.alignment, args.size, range.beginAddress(),
+                    range.size());
+
+  args.searchStart = range.beginAddress();
+  args.size = range.size();
   return {};
 }
 
-static orbis::ErrorCode dmem_ioctl(orbis::File *file, std::uint64_t request,
-                                   void *argp, orbis::Thread *thread) {
-  auto device = file->device.rawStaticCast<DmemDevice>();
+static orbis::ErrorCode dmem_ioctl_reserve(orbis::Thread *thread,
+                                           DmemDevice *device,
+                                           DmemIoctlReserve &args) {
+  ORBIS_LOG_WARNING(__FUNCTION__, args.size, (int)args.flags);
+  auto [offset, errc] = orbis::dmem::reserveSystem(device->index, args.size);
 
-  std::lock_guard lock(device->mtx);
-  switch (request) {
-  case 0x4008800a: // get size
-    ORBIS_LOG_WARNING("dmem getTotalSize", device->index, argp);
-    *(std::uint64_t *)argp = device->dmemTotalSize / 0x10;
-    return {};
-
-  case 0xc0208016: { // get available size
-    struct Args {
-      std::uint64_t searchStart;
-      std::uint64_t searchEnd;
-      std::uint64_t alignment;
-      std::uint64_t size;
-    };
-
-    auto args = reinterpret_cast<Args *>(argp);
-
-    return device->queryMaxFreeChunkSize(&args->searchStart, args->searchEnd,
-                                         args->alignment, &args->size);
+  if (errc == orbis::ErrorCode{}) {
+    args.size = offset | 0x4000000000;
   }
-
-  case 0xc0288010: // sceKernelAllocateDirectMemoryForMiniApp
-  case 0xc0288011:
-  case 0xc0288001: { // sceKernelAllocateDirectMemory
-    auto args = reinterpret_cast<AllocateDirectMemoryArgs *>(argp);
-
-    return device->allocate(&args->searchStart, args->searchEnd, args->len,
-                            args->alignment, args->memoryType);
-  }
-
-  case 0xc018800d: { // transfer budget
-    return {};
-  }
-
-  case 0xc018800f: { // protect memory for pid
-    struct Args {
-      std::uint64_t address;
-      std::uint64_t size;
-      std::uint32_t pid; // 0 if all
-      std::uint32_t prot;
-    };
-    return {};
-  }
-
-  case 0x80108015:   // sceKernelCheckedReleaseDirectMemory
-  case 0x80108002: { // sceKernelReleaseDirectMemory
-    struct Args {
-      std::uint64_t address;
-      std::uint64_t size;
-    };
-
-    auto args = reinterpret_cast<Args *>(argp);
-
-    ORBIS_LOG_WARNING("dmem releaseDirectMemory", device->index, args->address,
-                      args->size);
-
-    device->allocations.map(
-        rx::AddressRange::fromBeginSize(args->address, args->size),
-        {.memoryType = -1u});
-    return {};
-  }
-
-  case 0xc0208004: { // get direct memory type
-    struct Args {
-      std::uint64_t start;
-      std::uint64_t regionStart;
-      std::uint64_t regionEnd;
-      std::uint32_t memoryType;
-    };
-
-    auto args = reinterpret_cast<Args *>(argp);
-
-    auto it = device->allocations.lowerBound(args->start);
-
-    if (it == device->allocations.end() || it->memoryType == -1u) {
-      return orbis::ErrorCode::SRCH;
-    }
-
-    args->regionStart = it.beginAddress();
-    args->regionEnd = it.endAddress();
-    args->memoryType = it->memoryType;
-    return {};
-  }
-
-  case 0x80288012: { // direct memory query
-    struct DirectMemoryQueryInfo {
-      std::uint64_t start;
-      std::uint64_t end;
-      std::uint32_t memoryType;
-    };
-
-    struct Args {
-      std::uint32_t devIndex;
-      std::uint32_t flags;
-      std::uint32_t unk;
-      std::uint64_t offset;
-      orbis::ptr<DirectMemoryQueryInfo> info;
-      std::uint64_t infoSize;
-    };
-
-    auto args = reinterpret_cast<Args *>(argp);
-
-    ORBIS_LOG_WARNING("dmem directMemoryQuery", device->index, args->devIndex,
-                      args->unk, args->flags, args->offset, args->info,
-                      args->infoSize);
-
-    if (args->devIndex != device->index) {
-      // TODO
-      ORBIS_LOG_ERROR("dmem directMemoryQuery: device mismatch", device->index,
-                      args->devIndex, args->unk, args->flags, args->offset,
-                      args->info, args->infoSize);
-
-      return orbis::ErrorCode::INVAL;
-    }
-
-    if (args->infoSize != sizeof(DirectMemoryQueryInfo)) {
-      return orbis::ErrorCode::INVAL;
-    }
-
-    auto it = device->allocations.lowerBound(args->offset);
-
-    if (it == device->allocations.end()) {
-      return orbis::ErrorCode::ACCES;
-    }
-
-    auto queryInfo = *it;
-
-    if (it->memoryType == -1u) {
-      return orbis::ErrorCode::ACCES;
-    }
-
-    if ((args->flags & 1) == 0) {
-      if (it.endAddress() <= args->offset) {
-        return orbis::ErrorCode::ACCES;
-      }
-    } else {
-      if (it.beginAddress() > args->offset || it.endAddress() <= args->offset) {
-        return orbis::ErrorCode::ACCES;
-      }
-    }
-
-    DirectMemoryQueryInfo info{
-        .start = it.beginAddress(),
-        .end = it.endAddress(),
-        .memoryType = it->memoryType,
-    };
-
-    ORBIS_LOG_WARNING("dmem directMemoryQuery", device->index, args->devIndex,
-                      args->unk, args->flags, args->offset, args->info,
-                      args->infoSize, info.start, info.end, info.memoryType);
-    return orbis::uwrite(args->info, info);
-  }
-  }
-
-  ORBIS_LOG_FATAL("Unhandled dmem ioctl", device->index, request);
-  thread->where();
-  return {};
+  return errc;
 }
 
-static orbis::ErrorCode dmem_mmap(orbis::File *file, void **address,
-                                  std::uint64_t size, std::int32_t prot,
-                                  std::int32_t flags, std::int64_t offset,
-                                  orbis::Thread *thread) {
-  auto device = file->device.rawStaticCast<DmemDevice>();
-  return device->mmap(address, size, prot, flags, offset);
+DmemDevice::DmemDevice(int index) : index(index) {
+  blockFlags = orbis::vmem::BlockFlags::DirectMemory;
+
+  addIoctl<DMEM_IOCTL_ALLOCATE>(dmem_ioctl_allocate);
+  addIoctl<DMEM_IOCTL_RELEASE>(dmem_ioctl_release);
+  addIoctl<DMEM_IOCTL_SET_TYPE>(dmem_ioctl_set_type);
+  addIoctl<DMEM_IOCTL_GET_TYPE>(dmem_ioctl_get_type);
+  addIoctl<DMEM_IOCTL_GET_TOTAL_SIZE>(dmem_ioctl_get_total_size);
+  addIoctl<DMEM_IOCTL_CLEAR>(dmem_ioctl_clear);
+  addIoctl<DMEM_IOCTL_TRANSFER_BUDGET>(dmem_ioctl_transfer_budget);
+  addIoctl<DMEM_IOCTL_CONTROL_RELEASE>(dmem_ioctl_control_release);
+  addIoctl<DMEM_IOCTL_SET_PID_AND_PROTECT>(dmem_ioctl_set_pid_and_protect);
+  addIoctl<DMEM_IOCTL_ALLOCATE_FOR_MINI_APP>(dmem_ioctl_allocate_for_mini_app);
+  addIoctl<DMEM_IOCTL_ALLOCATE_MAIN>(dmem_ioctl_allocate_main);
+  addIoctl<DMEM_IOCTL_QUERY>(dmem_ioctl_query);
+  addIoctl<DMEM_IOCTL_CHECKED_RELEASE>(dmem_ioctl_checked_release);
+  addIoctl<DMEM_IOCTL_GET_AVAIL_SIZE>(dmem_ioctl_get_avail_size);
+  addIoctl<DMEM_IOCTL_RESERVE>(dmem_ioctl_reserve);
 }
 
-static const orbis::FileOps ops = {
-    .ioctl = dmem_ioctl,
-    .mmap = dmem_mmap,
-};
+orbis::ErrorCode
+DmemDevice::map(rx::AddressRange range, std::int64_t offset,
+                rx::EnumBitSet<orbis::vmem::Protection> protection,
+                orbis::File *, orbis::Process *process) {
+  auto result = orbis::dmem::map(index, range, offset, protection);
 
-orbis::ErrorCode DmemDevice::allocate(std::uint64_t *start,
-                                      std::uint64_t searchEnd,
-                                      std::uint64_t len,
-                                      std::uint64_t alignment,
-                                      std::uint32_t memoryType) {
-  std::size_t offset = *start;
-  if (alignment == 0) {
-    alignment = 1;
-  }
-  if (searchEnd == 0) {
-    searchEnd = dmemTotalSize;
-  }
+  if (result == orbis::ErrorCode{}) {
+    if (auto dmemType = orbis::dmem::query(0, offset)) {
+      auto [pmemOffset, errc] = orbis::dmem::getPmemOffset(0, offset);
+      rx::dieIf(errc != orbis::ErrorCode{}, "failed to query dmem type {}",
+                errc);
 
-  while (offset < searchEnd) {
-    offset += alignment - 1;
-    offset &= ~(alignment - 1);
-
-    if (offset + len > dmemTotalSize) {
-      ORBIS_LOG_ERROR("dmem: failed to allocate direct memory: out of memory",
-                      *start, searchEnd, len, alignment, memoryType, offset);
-      return orbis::ErrorCode::AGAIN;
+      amdgpu::mapMemory(process->pid, range, dmemType->memoryType, protection,
+                        pmemOffset);
     }
-
-    auto it = allocations.lowerBound(offset);
-
-    if (it != allocations.end()) {
-      if (it->memoryType == -1u) {
-        if (offset < it.beginAddress()) {
-          offset = it.beginAddress() + alignment - 1;
-          offset &= ~(alignment - 1);
-        }
-
-        if (offset + len >= it.endAddress()) {
-          offset = it.endAddress();
-          continue;
-        }
-      } else {
-        if (offset + len > it.beginAddress()) {
-          offset = it.endAddress();
-          continue;
-        }
-      }
-    }
-
-    allocations.map(rx::AddressRange::fromBeginSize(offset, len),
-                    {
-                        .memoryType = memoryType,
-                    });
-    ORBIS_LOG_WARNING("dmem: allocated direct memory", *start, searchEnd, len,
-                      alignment, memoryType, offset);
-    *start = offset;
-    return {};
   }
 
-  ORBIS_LOG_ERROR("dmem: failed to allocate direct memory", *start, searchEnd,
-                  len, alignment, memoryType, offset);
-  return orbis::ErrorCode::AGAIN;
+  return result;
 }
 
-orbis::ErrorCode DmemDevice::release(std::uint64_t start, std::uint64_t size) {
-  allocations.unmap(rx::AddressRange::fromBeginSize(start, size));
-  return {};
-}
-
-orbis::ErrorCode DmemDevice::queryMaxFreeChunkSize(std::uint64_t *start,
-                                                   std::uint64_t searchEnd,
-                                                   std::uint64_t alignment,
-                                                   std::uint64_t *size) {
-  std::size_t offset = *start;
-  std::size_t resultSize = 0;
-  std::size_t resultOffset = 0;
-
-  alignment = std::max(alignment, vm::kPageSize);
-  alignment = rx::alignUp(alignment, vm::kPageSize);
-
-  while (offset < searchEnd) {
-    offset += alignment - 1;
-    offset &= ~(alignment - 1);
-
-    if (offset >= dmemTotalSize) {
-      break;
-    }
-
-    auto it = allocations.lowerBound(offset);
-
-    if (it == allocations.end()) {
-      if (resultSize < dmemTotalSize - offset) {
-        resultSize = dmemTotalSize - offset;
-        resultOffset = offset;
-      }
-
-      break;
-    }
-
-    if (it->memoryType == -1u) {
-      if (offset < it.beginAddress()) {
-        offset = it.beginAddress() + alignment - 1;
-        offset &= ~(alignment - 1);
-      }
-
-      if (it.endAddress() > offset && resultSize < it.endAddress() - offset) {
-        resultSize = it.endAddress() - offset;
-        resultOffset = offset;
-      }
-    } else if (offset > it.beginAddress() &&
-               resultSize < offset - it.beginAddress()) {
-      resultSize = offset - it.beginAddress();
-      resultOffset = offset;
-    }
-
-    offset = it.endAddress();
-  }
-
-  resultSize /= 0x20;
-
-  *start = resultOffset;
-  *size = resultSize;
-
-  ORBIS_LOG_WARNING("dmem queryMaxFreeChunkSize", resultOffset, resultSize);
-
-  if (resultSize == 0) {
-    return orbis::ErrorCode::NOMEM;
-  }
-  return {};
-}
+static const orbis::FileOps ops = {};
 
 orbis::ErrorCode DmemDevice::open(rx::Ref<orbis::File> *file, const char *path,
                                   std::uint32_t flags, std::uint32_t mode,
@@ -397,18 +360,6 @@ orbis::ErrorCode DmemDevice::open(rx::Ref<orbis::File> *file, const char *path,
 }
 
 orbis::IoDevice *createDmemCharacterDevice(int index) {
-  auto *newDevice = orbis::knew<DmemDevice>();
-  newDevice->index = index;
-  newDevice->dmemTotalSize = dmemSize;
-
-  auto path = rx::format("{}/dmem-{}", rx::getShmPath(), index);
-  auto shmFd = ::open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-
-  if (ftruncate(shmFd, dmemSize) < 0) {
-    ::close(shmFd);
-    std::abort();
-  }
-
-  newDevice->shmFd = shmFd;
+  auto *newDevice = orbis::knew<DmemDevice>(index);
   return newDevice;
 }

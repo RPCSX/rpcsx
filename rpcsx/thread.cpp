@@ -276,7 +276,7 @@ void rx::thread::copyContext(orbis::Thread *thread, orbis::UContext &dst,
 void rx::thread::setContext(orbis::Thread *thread, const orbis::UContext &src) {
   auto &context = *std::bit_cast<ucontext_t *>(thread->context);
   thread->stackStart = src.stack.sp;
-  thread->stackEnd = (char *)thread->stackStart + src.stack.size;
+  thread->stackEnd = thread->stackStart + src.stack.size;
   thread->setSigMask(src.sigmask);
 
   // dst.onstack = src.gregs[REG_ONSTACK];

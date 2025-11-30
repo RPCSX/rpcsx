@@ -36,3 +36,35 @@ orbis::Thread *orbis::createThread(Process *process, std::string_view name) {
 
   return result;
 }
+
+uintptr_t orbis::getCallerAddress(Thread *thread) {
+  if (!thread->context) {
+    return 0;
+  }
+
+  auto rbp = readRegister(thread->context, RegisterId::rbp);
+  std::uint64_t result = 0;
+
+  while (rbp < 0x8000'0000'0000) {
+    auto framePtr = std::bit_cast<ptr<uint64_t>>(rbp);
+
+    std::uint64_t nextFrame;
+    std::uint64_t retAddress;
+    if (orbis::uread(retAddress, framePtr + 1) != orbis::ErrorCode{}) {
+      break;
+    }
+
+    if (orbis::uread(nextFrame, framePtr) != orbis::ErrorCode{}) {
+      break;
+    }
+
+    if (!thread->tproc->libkernelRange.contains(retAddress)) {
+      result = retAddress;
+      break;
+    }
+
+    rbp = nextFrame;
+  }
+
+  return result;
+}

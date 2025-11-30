@@ -68,7 +68,7 @@ struct AjmDevice
   AjmDevice();
 };
 
-AVSampleFormat ajmToAvFormat(AJMFormat ajmFormat) {
+static AVSampleFormat ajmToAvFormat(AJMFormat ajmFormat) {
   switch (ajmFormat) {
   case AJM_FORMAT_S16:
     return AV_SAMPLE_FMT_S16;
@@ -81,7 +81,7 @@ AVSampleFormat ajmToAvFormat(AJMFormat ajmFormat) {
   }
 }
 
-void reset(Instance *instance) {
+static void reset(Instance *instance) {
   instance->gapless.skipSamples = 0;
   instance->gapless.totalSamples = 0;
   instance->gapless.totalSkippedSamples = 0;
@@ -90,7 +90,7 @@ void reset(Instance *instance) {
   instance->aac.framesSkipped = 0;
 }
 
-void resetAt9(Instance *instance) {
+static void resetAt9(Instance *instance) {
   if (instance->at9.configData) {
     Atrac9ReleaseHandle(instance->at9.handle);
     instance->at9.estimatedSizeUsed = 0;
@@ -316,7 +316,8 @@ ajm_ioctl_start_batch_buffer(orbis::Thread *, AjmDevice *device,
   args.result = 0;
   args.batchId = device->batchId++;
   // ORBIS_LOG_ERROR(__FUNCTION__, args.result, args.unk0, args.pBatch,
-  //                 args.batchSize, args.priority, args.batchError, args.batchId);
+  //                 args.batchSize, args.priority, args.batchError,
+  //                 args.batchId);
   // thread->where();
 
   auto ptr = args.pBatch;

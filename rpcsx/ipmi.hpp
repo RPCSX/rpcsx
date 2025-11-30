@@ -258,6 +258,8 @@ struct IpmiServer {
 
 extern ipmi::IpmiClient audioIpmiClient;
 
+void setWorkerProcess(orbis::Process *process);
+
 IpmiClient createIpmiClient(orbis::Thread *thread, const char *name);
 IpmiServer &createIpmiServer(orbis::Process *process, const char *name);
 orbis::EventFlag *createEventFlag(std::string_view name, uint32_t attrs,

@@ -12,7 +12,7 @@ struct RcBase {
   virtual ~RcBase() = default;
 
   void incRef() {
-    if (references.fetch_add(1, std::memory_order::relaxed) > 4096) {
+    if (references.fetch_add(1, std::memory_order::relaxed) > 100 * 1024 * 1024) {
       assert(!"too many references");
     }
   }

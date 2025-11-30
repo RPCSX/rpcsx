@@ -177,3 +177,9 @@ orbis::Process *orbis::createProcess(Process *parentProcess, pid_t pid) {
   g_processList->list = result;
   return &result->object;
 }
+
+orbis::Budget *orbis::Process::getBudget() const {
+  auto result = g_context->budgets.get(budgetId);
+
+  return result != nullptr ? result.get() : nullptr;
+}

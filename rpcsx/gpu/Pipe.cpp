@@ -5,6 +5,9 @@
 #include "gnm/mmio.hpp"
 #include "gnm/pm4.hpp"
 #include "orbis/KernelContext.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
 #include "rx/print.hpp"
 #include "vk.hpp"
 #include <bit>
@@ -2221,9 +2224,10 @@ void CommandPipe::mapMemory(Ring &ring) {
   auto addressHi = ring.rptr[3];
   auto sizeLo = ring.rptr[4];
   auto sizeHi = ring.rptr[5];
-  auto memoryType = ring.rptr[6];
-  auto dmemIndex = ring.rptr[7];
-  auto prot = ring.rptr[8];
+  auto memoryType = orbis::MemoryType(ring.rptr[6]);
+  // auto dmemIndex = ring.rptr[7];
+  auto prot =
+      rx::EnumBitSet<orbis::vmem::Protection>::fromUnderlying(ring.rptr[8]);
   auto offsetLo = ring.rptr[9];
   auto offsetHi = ring.rptr[10];
 
@@ -2231,7 +2235,8 @@ void CommandPipe::mapMemory(Ring &ring) {
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
   auto offset = offsetLo | (static_cast<std::uint64_t>(offsetHi) << 32);
 
-  device->mapMemory(pid, address, size, memoryType, dmemIndex, prot, offset);
+  device->mapMemory(pid, rx::AddressRange::fromBeginSize(address, size),
+                    memoryType, prot, offset);
 }
 void CommandPipe::unmapMemory(Ring &ring) {
   auto pid = ring.rptr[1];
@@ -2250,7 +2255,8 @@ void CommandPipe::protectMemory(Ring &ring) {
   auto addressHi = ring.rptr[3];
   auto sizeLo = ring.rptr[4];
   auto sizeHi = ring.rptr[5];
-  auto prot = ring.rptr[6];
+  auto prot =
+      rx::EnumBitSet<orbis::vmem::Protection>::fromUnderlying(ring.rptr[6]);
   auto address = addressLo | (static_cast<std::uint64_t>(addressHi) << 32);
   auto size = sizeLo | (static_cast<std::uint64_t>(sizeHi) << 32);
 

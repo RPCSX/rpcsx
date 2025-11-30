@@ -47,7 +47,7 @@ struct MContext {
 };
 
 struct Stack {
-  ptr<void> sp;
+  uintptr_t sp;
   size_t size;
   sint flags;
   sint align;

@@ -122,8 +122,8 @@ public:
 
   rx::Ref<EventEmitter> deviceEventEmitter;
   rx::Ref<IoDevice> shmDevice;
-  rx::Ref<IoDevice> dmemDevice;
-  rx::Ref<IoDevice> blockpoolDevice;
+  rx::Ref<File> dmem;
+  rx::Ref<File> blockpool;
   rx::Ref<rx::RcBase> gpuDevice;
   rx::Ref<IoDevice> dceDevice;
   rx::shared_mutex gpuDeviceMtx;

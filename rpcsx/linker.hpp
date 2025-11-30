@@ -75,8 +75,6 @@ enum OrbisElfType_t {
 
 void override(std::string originalModuleName,
               std::filesystem::path replacedModulePath);
-rx::Ref<orbis::Module> loadModule(std::span<std::byte> image,
-                                  orbis::Process *process);
 rx::Ref<orbis::Module> loadModuleFile(std::string_view path,
                                       orbis::Thread *thread);
 } // namespace rx::linker

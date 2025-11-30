@@ -1,18 +1,22 @@
 #include "dce.hpp"
 #include "gpu/DeviceCtl.hpp"
-#include "io-device.hpp"
-#include "iodev/dmem.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/KernelContext.hpp"
+#include "orbis/dmem.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "orbis/file.hpp"
+#include "orbis/pmem.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
 #include "rx/die.hpp"
+#include "rx/format.hpp"
 #include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include "rx/watchdog.hpp"
-#include "vm.hpp"
 #include <cstdio>
 #include <cstring>
 #include <mutex>
@@ -144,7 +148,7 @@ struct ResolutionStatus {
 // refreshRate = 0x23, result.refreshHz = 0x42b3d1ec( 89.91) REFRESH_RATE_89_91HZ
 // clang-format on
 
-static void runBridge(int vmId) {
+static void runBridge(int vmId, orbis::Process *process) {
   std::thread{[=] {
     pthread_setname_np(pthread_self(), "Bridge");
 
@@ -186,29 +190,23 @@ static void runBridge(int vmId) {
             gpuCtx.cachePages[vmId][page].load(std::memory_order::relaxed);
 
         auto address = static_cast<std::uint64_t>(page) * rx::mem::pageSize;
-        auto origVmProt = vm::getPageProtection(address);
-        int prot = 0;
+        auto range =
+            rx::AddressRange::fromBeginSize(address, rx::mem::pageSize * count);
+        auto origVmProt = orbis::vmem::queryProtection(process, address);
+        if (origVmProt && origVmProt->prot) {
+          auto prot = orbis::vmem::toCpuProtection(origVmProt->prot);
 
-        if (origVmProt & vm::kMapProtCpuRead) {
-          prot |= PROT_READ;
-        }
-        if (origVmProt & vm::kMapProtCpuWrite) {
-          prot |= PROT_WRITE;
-        }
-        if (origVmProt & vm::kMapProtCpuExec) {
-          prot |= PROT_EXEC;
-        }
+          if (pageFlags & amdgpu::kPageReadWriteLock) {
+            prot = prot & ~(rx::mem::Protection::R | rx::mem::Protection::W);
+          } else if (pageFlags & amdgpu::kPageWriteWatch) {
+            prot = prot & ~(rx::mem::Protection::W);
+          }
 
-        if (pageFlags & amdgpu::kPageReadWriteLock) {
-          prot &= ~(PROT_READ | PROT_WRITE);
-        } else if (pageFlags & amdgpu::kPageWriteWatch) {
-          prot &= ~PROT_WRITE;
-        }
-
-        if (::mprotect(reinterpret_cast<void *>(address),
-                       rx::mem::pageSize * count, prot)) {
-          perror("protection failed");
-          std::abort();
+          if (auto errc = rx::mem::protect(range, prot); errc != std::errc{}) {
+            rx::die("gpu cache: failed to protect memory {:x}-{:x}, error {}",
+                    range.beginAddress(), range.endAddress(),
+                    static_cast<int>(errc));
+          }
         }
       }
 
@@ -236,43 +234,6 @@ int DceDevice::allocateVmId() {
 }
 
 void DceDevice::deallocateVmId(int vmId) { freeVmIds |= (1 << vmId); }
-
-static void initDceMemory(DceDevice *device) {
-  if (device->dmemOffset + 1) {
-    return;
-  }
-
-  std::lock_guard lock(device->mtx);
-  if (device->dmemOffset + 1) {
-    return;
-  }
-
-  auto dmem = orbis::g_context->dmemDevice.cast<DmemDevice>();
-  std::uint64_t start = 0;
-  if (dmem->allocate(&start, ~0ull, kDceControlMemorySize, 0x100000, 1) !=
-      orbis::ErrorCode{}) {
-    std::abort();
-  }
-
-  void *address = nullptr;
-  if (dmem->mmap(&address, kDceControlMemorySize, vm::kMapProtCpuWrite, 0,
-                 start) != orbis::ErrorCode{}) {
-    std::abort();
-  }
-
-  auto dceControl = reinterpret_cast<std::byte *>(address);
-  *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x130) = 0;
-  *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x138) = 1;
-  *reinterpret_cast<orbis::uint16_t *>(dceControl + 0x140) =
-      orbis::kEvFiltDisplay;
-  vm::unmap(address, kDceControlMemorySize);
-  device->dmemOffset = start;
-}
-
-static orbis::ErrorCode dce_mmap(orbis::File *file, void **address,
-                                 std::uint64_t size, std::int32_t prot,
-                                 std::int32_t flags, std::int64_t offset,
-                                 orbis::Thread *thread);
 
 static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                                   void *argp, orbis::Thread *thread) {
@@ -312,21 +273,30 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
       }
 
       if (args->id == 9) {
-        ORBIS_LOG_NOTICE("dce: FlipControl allocate", args->id, args->padding,
+        ORBIS_LOG_NOTICE("dce: FlipControl map", args->id, args->padding,
                          args->arg2, args->ptr, args->size, args->arg5,
                          args->arg6);
 
-        void *address;
-        ORBIS_RET_ON_ERROR(
-            dce_mmap(file, &address, vm::kPageSize,
-                     vm::kMapProtCpuReadWrite | vm::kMapProtGpuAll,
-                     vm::kMapFlagShared, 0, thread));
+        auto [range, errc] = orbis::vmem::mapDirect(
+            thread->tproc, 0,
+            rx::AddressRange::fromBeginSize(device->dmemRange.beginAddress(),
+                                            orbis::vmem::kPageSize),
+            orbis::vmem::Protection::CpuRead |
+                orbis::vmem::Protection::CpuWrite |
+                orbis::vmem::Protection::GpuRead |
+                orbis::vmem::Protection::GpuWrite,
+            {}, "DCE");
 
-        *(void **)args->ptr = address;
-        *(std::uint64_t *)args->arg5 = vm::kPageSize;
+        if (errc != orbis::ErrorCode{}) {
+          return errc;
+        }
+
+        *(std::uint64_t *)args->ptr = range.beginAddress();
+        *(std::uint64_t *)args->arg5 = range.size();
 
         return {};
       }
+
       if (args->id == 0x38) {
         auto attrs = (RegisterBufferAttributeArgs *)args->ptr;
 
@@ -527,11 +497,11 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
   if (request == 0xc0308207) { // SCE_SYS_DCE_IOCTL_REGISTER_BUFFER_ATTRIBUTE
     auto args = reinterpret_cast<RegisterBufferAttributeArgs *>(argp);
 
-    ORBIS_LOG_ERROR("dce: RegisterBufferAttributes", args->canary, args->attrid,
-                    args->submit, args->unk3, args->pixelFormat,
-                    args->tilingMode, args->pitch, args->width, args->height,
-                    args->unk4_zero, args->unk5_zero, args->options,
-                    args->reserved1, args->reserved2);
+    ORBIS_LOG_ERROR(
+        "dce: RegisterBufferAttributes", args->canary, (int)args->attrid,
+        (int)args->submit, args->unk3, args->pixelFormat, args->tilingMode,
+        args->pitch, args->width, args->height, (int)args->unk4_zero,
+        (int)args->unk5_zero, args->options, args->reserved1, args->reserved2);
 
     gpu.registerBufferAttribute(thread->tproc->pid,
                                 {
@@ -596,20 +566,30 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
   return {};
 }
 
-static orbis::ErrorCode dce_mmap(orbis::File *file, void **address,
-                                 std::uint64_t size, std::int32_t prot,
-                                 std::int32_t flags, std::int64_t offset,
-                                 orbis::Thread *thread) {
-  ORBIS_LOG_FATAL("dce mmap", address, size, offset);
-  auto dce = file->device.cast<DceDevice>();
-  initDceMemory(dce.get());
-  auto dmem = orbis::g_context->dmemDevice.cast<DmemDevice>();
-  return dmem->mmap(address, size, prot, flags, dce->dmemOffset + offset);
+orbis::ErrorCode
+DceDevice::map(rx::AddressRange range, std::int64_t offset,
+               rx::EnumBitSet<orbis::vmem::Protection> protection,
+               orbis::File *, orbis::Process *process) {
+  if (offset + range.size() > dmemRange.size()) {
+    return orbis::ErrorCode::INVAL;
+  }
+
+  rx::println(stderr, "map dce {:x}-{:x} {:04x} {}", range.beginAddress(),
+              range.endAddress(), offset, protection);
+
+  auto result =
+      orbis::dmem::map(0, range, dmemRange.beginAddress() + offset, protection);
+
+  if (result == orbis::ErrorCode{}) {
+    amdgpu::mapMemory(process->pid, range, orbis::MemoryType::WbGarlic,
+                      protection, dmemRange.beginAddress() + offset);
+  }
+
+  return result;
 }
 
 static const orbis::FileOps ops = {
     .ioctl = dce_ioctl,
-    .mmap = dce_mmap,
 };
 
 static void createGpu() {
@@ -625,6 +605,8 @@ static void createGpu() {
   while (orbis::g_context->gpuDevice == nullptr) {
   }
 }
+
+DceDevice::~DceDevice() { orbis::dmem::release(0, dmemRange); }
 
 orbis::ErrorCode DceDevice::open(rx::Ref<orbis::File> *file, const char *path,
                                  std::uint32_t flags, std::uint32_t mode,
@@ -649,8 +631,32 @@ void DceDevice::initializeProcess(orbis::Process *process) {
       process->vmId = vmId;
     }
 
-    runBridge(vmId);
+    runBridge(vmId, process);
   }
 }
 
-orbis::IoDevice *createDceCharacterDevice() { return orbis::knew<DceDevice>(); }
+orbis::IoDevice *createDceCharacterDevice(orbis::Process *process) {
+  auto result = orbis::knew<DceDevice>();
+  auto dmemSize = orbis::dmem::getSize(0);
+  auto [dmemOffset, errc] = orbis::dmem::allocate(
+      0,
+      rx::AddressRange::fromBeginEnd(dmemSize - orbis::dmem::kPageSize * 2,
+                                     dmemSize),
+      orbis::dmem::kPageSize, orbis::MemoryType::WbGarlic);
+
+  rx::dieIf(errc != orbis::ErrorCode{},
+            "failed to allocate DCE memory, error {}", errc);
+  result->dmemRange =
+      rx::AddressRange::fromBeginSize(dmemOffset, orbis::dmem::kPageSize);
+
+  auto [vmem, mapErrc] = orbis::vmem::mapDirect(
+      process, 0, result->dmemRange, orbis::vmem::Protection::CpuWrite, {});
+  auto dceControl = reinterpret_cast<std::byte *>(vmem.beginAddress());
+  *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x130) = 0;
+  *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x138) = 1;
+  *reinterpret_cast<orbis::uint16_t *>(dceControl + 0x140) =
+      orbis::kEvFiltDisplay;
+
+  orbis::vmem::unmap(process, vmem);
+  return result;
+}

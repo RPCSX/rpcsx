@@ -9,6 +9,7 @@
 #include <mutex>
 #include <span>
 #include <string_view>
+#include <utility>
 
 namespace orbis {
 enum class BudgetResource : uint32_t {
@@ -138,5 +139,45 @@ private:
   ProcessType mProcessType{};
   BudgetList mList;
   char mName[32]{};
+};
+
+class ScopedBudgetAcquire {
+  Budget *mBudget = nullptr;
+  std::uint64_t mSize = 0;
+  BudgetResource mResourceId = {};
+
+public:
+  ScopedBudgetAcquire() = default;
+
+  ScopedBudgetAcquire(const ScopedBudgetAcquire &) = delete;
+  ScopedBudgetAcquire &operator=(const ScopedBudgetAcquire &) = delete;
+  ScopedBudgetAcquire(Budget *budget, BudgetResource resourceId,
+                      std::uint64_t size)
+      : mBudget(budget), mSize(size), mResourceId(resourceId) {
+    if (!budget->acquire(resourceId, size)) {
+      mBudget = nullptr;
+    }
+  }
+
+  ScopedBudgetAcquire(ScopedBudgetAcquire &&other) noexcept {
+    *this = std::move(other);
+  }
+
+  ScopedBudgetAcquire &operator=(ScopedBudgetAcquire &&other) noexcept {
+    std::swap(mBudget, other.mBudget);
+    std::swap(mSize, other.mSize);
+    std::swap(mResourceId, other.mResourceId);
+    return *this;
+  }
+
+  ~ScopedBudgetAcquire() {
+    if (mBudget) {
+      mBudget->release(mResourceId, mSize);
+    }
+  }
+
+  explicit operator bool() const { return mBudget != nullptr; }
+
+  void commit() { mBudget = nullptr; }
 };
 } // namespace orbis

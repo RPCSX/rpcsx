@@ -2,6 +2,10 @@
 
 #include "DeviceContext.hpp"
 #include "orbis-config.hpp"
+#include "orbis/dmem.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
 #include "rx/Rc.hpp"
 #include <cstdint>
 #include <span>
@@ -58,4 +62,12 @@ public:
 
   explicit operator bool() const { return mDevice != nullptr; }
 };
+
+void mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
+               orbis::MemoryType memoryType,
+               rx::EnumBitSet<orbis::vmem::Protection> prot,
+               std::uint64_t offset);
+void unmapMemory(std::uint32_t pid, rx::AddressRange virtualRange);
+void protectMemory(std::uint32_t pid, rx::AddressRange virtualRange,
+                   rx::EnumBitSet<orbis::vmem::Protection> prot);
 } // namespace amdgpu

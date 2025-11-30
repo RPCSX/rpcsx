@@ -5,9 +5,10 @@
 
 namespace orbis {
 struct IoDevice;
+struct Process;
 }
 
-orbis::IoDevice *createDceCharacterDevice();
+orbis::IoDevice *createDceCharacterDevice(orbis::Process *process);
 orbis::IoDevice *createDipswCharacterDevice();
 orbis::IoDevice *createDmemCharacterDevice(int index);
 orbis::IoDevice *createGcCharacterDevice();

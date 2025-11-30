@@ -1,30 +1,32 @@
 #include "pmem.hpp"
 #include "IoDevice.hpp"
+#include "KernelAllocator.hpp"
 #include "KernelObject.hpp"
 #include "error.hpp"
 #include "error/ErrorCode.hpp"
+#include "file.hpp"
 #include "kernel/KernelObject.hpp"
 #include "kernel/MemoryResource.hpp"
 #include "rx/AddressRange.hpp"
+#include "rx/Rc.hpp"
+#include "rx/print.hpp"
 #include "vmem.hpp"
 #include <cassert>
 #include <rx/Mappable.hpp>
 
 struct PhysicalMemoryAllocation {
-  orbis::pmem::MemoryType type = orbis::pmem::MemoryType::Invalid;
+  bool allocated = false;
 
-  [[nodiscard]] bool isAllocated() const {
-    return type != orbis::pmem::MemoryType::Invalid;
-  }
+  [[nodiscard]] bool isAllocated() const { return allocated; }
   [[nodiscard]] bool isRelated(const PhysicalMemoryAllocation &left,
                                rx::AddressRange, rx::AddressRange) const {
-    return type == left.type;
+    return allocated == left.allocated;
   }
 
   [[nodiscard]] PhysicalMemoryAllocation
   merge(const PhysicalMemoryAllocation &other, rx::AddressRange,
         rx::AddressRange) const {
-    assert(other.type == type);
+    assert(other.allocated == allocated);
     return other;
   }
 
@@ -37,12 +39,22 @@ using MappableMemoryResource =
     })>;
 
 using PhysicalMemoryResource =
-    kernel::AllocableResource<PhysicalMemoryAllocation, MappableMemoryResource>;
+    kernel::AllocableResource<PhysicalMemoryAllocation, orbis::kallocator,
+                              MappableMemoryResource>;
 
 static auto g_pmemInstance = orbis::createGlobalObject<
     kernel::LockableKernelObject<PhysicalMemoryResource>>();
 
 struct PhysicalMemory : orbis::IoDevice {
+  orbis::File file;
+
+  PhysicalMemory() {
+    incRef(); // do not delete global object
+
+    file.device = this;
+    file.incRef(); // do not delete property
+  }
+
   orbis::ErrorCode open(rx::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override {
@@ -50,11 +62,12 @@ struct PhysicalMemory : orbis::IoDevice {
   }
 
   orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
-                       rx::EnumBitSet<rx::mem::Protection> protection,
-                       orbis::Process *) override {
+                       rx::EnumBitSet<orbis::vmem::Protection> protection,
+                       orbis::File *, orbis::Process *) override {
     return orbis::pmem::map(
         range.beginAddress(),
-        rx::AddressRange::fromBeginSize(offset, range.size()), protection);
+        rx::AddressRange::fromBeginSize(offset, range.size()),
+        orbis::vmem::toCpuProtection(protection));
   }
 
   void serialize(rx::Serializer &s) const {}
@@ -65,6 +78,8 @@ static auto g_phyMemory = orbis::createGlobalObject<PhysicalMemory>();
 
 orbis::ErrorCode orbis::pmem::initialize(std::uint64_t size) {
   std::lock_guard lock(*g_pmemInstance);
+  rx::println("pmem: {:x}", size);
+
   return toErrorCode(
       g_pmemInstance->create(rx::AddressRange::fromBeginSize(0, size)));
 }
@@ -74,11 +89,12 @@ void orbis::pmem::destroy() {
   g_pmemInstance->destroy();
 }
 
-std::pair<rx::AddressRange, orbis::ErrorCode> orbis::pmem::allocate(
-    std::uint64_t addressHint, std::uint64_t size, MemoryType memoryType,
-    rx::EnumBitSet<AllocationFlags> flags, std::uint64_t alignment) {
+std::pair<rx::AddressRange, orbis::ErrorCode>
+orbis::pmem::allocate(std::uint64_t addressHint, std::uint64_t size,
+                      rx::EnumBitSet<AllocationFlags> flags,
+                      std::uint64_t alignment) {
   std::lock_guard lock(*g_pmemInstance);
-  PhysicalMemoryAllocation allocation{.type = memoryType};
+  PhysicalMemoryAllocation allocation{.allocated = true};
   auto [it, errc, range] =
       g_pmemInstance->map(addressHint, size, allocation, flags, alignment);
 
@@ -99,8 +115,7 @@ orbis::ErrorCode orbis::pmem::deallocate(rx::AddressRange range) {
   return toErrorCode(errc);
 }
 
-std::optional<orbis::pmem::AllocatedMemory>
-orbis::pmem::query(std::uint64_t address) {
+std::optional<rx::AddressRange> orbis::pmem::query(std::uint64_t address) {
   std::lock_guard lock(*g_pmemInstance);
   auto result = g_pmemInstance->query(address);
 
@@ -108,7 +123,7 @@ orbis::pmem::query(std::uint64_t address) {
     return {};
   }
 
-  return AllocatedMemory{.range = result.range(), .memoryType = result->type};
+  return result.range();
 }
 
 orbis::ErrorCode
@@ -117,11 +132,11 @@ orbis::pmem::map(std::uint64_t virtualAddress, rx::AddressRange range,
   auto virtualRange =
       rx::AddressRange::fromBeginSize(virtualAddress, range.size());
   auto errc = g_pmemInstance->mappable.map(virtualRange, range.beginAddress(),
-                                           protection, orbis::vmem::kPageSize);
+                                           protection, vmem::kPageSize);
 
   return toErrorCode(errc);
 }
 
 std::size_t orbis::pmem::getSize() { return g_pmemInstance->size; }
 orbis::IoDevice *orbis::pmem::getDevice() { return g_phyMemory.get(); }
-
+orbis::File *orbis::pmem::getFile() { return &g_phyMemory->file; }

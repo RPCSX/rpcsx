@@ -40,31 +40,33 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
   return {};
 }
 
-static bool isReadEventTriggered(int hostFd) {
+static bool isReadEventTriggered(const rx::Mappable &hostFd) {
 #ifdef __linux
   fd_set fds{};
-  FD_SET(hostFd, &fds);
+  FD_SET(hostFd.native_handle(), &fds);
   timeval timeout{};
-  if (::select(hostFd + 1, &fds, nullptr, nullptr, &timeout) < 0) {
+  if (::select(hostFd.native_handle() + 1, &fds, nullptr, nullptr, &timeout) <
+      0) {
     return false;
   }
-  return FD_ISSET(hostFd, &fds);
+  return FD_ISSET(hostFd.native_handle(), &fds);
 #else
 #warning "Not implemented"
   return false;
 #endif
 }
 
-static bool isWriteEventTriggered(int hostFd) {
+static bool isWriteEventTriggered(const rx::Mappable &hostFd) {
 #ifdef __linux
   fd_set fds{};
-  FD_SET(hostFd, &fds);
+  FD_SET(hostFd.native_handle(), &fds);
   timeval timeout{};
-  if (::select(hostFd + 1, nullptr, &fds, nullptr, &timeout) < 0) {
+  if (::select(hostFd.native_handle() + 1, nullptr, &fds, nullptr, &timeout) <
+      0) {
     return false;
   }
 
-  return FD_ISSET(hostFd, &fds);
+  return FD_ISSET(hostFd.native_handle(), &fds);
 #else
 #warning "Not implemented"
   return false;
@@ -131,7 +133,7 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
           eventEmitter->subscribe(&*nodeIt);
           nodeIt->triggered = true;
           kq->cv.notify_all(kq->mtx);
-        } else if (note.file->hostFd < 0) {
+        } else if (!note.file->hostFd) {
           ORBIS_LOG_ERROR("Unimplemented event emitter", change.ident);
         }
       } else if (change.filter == kEvFiltGraphicsCore ||
@@ -303,7 +305,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
 
             if (!note.triggered) {
               if (note.event.filter == kEvFiltRead) {
-                if (note.file->hostFd >= 0) {
+                if (note.file->hostFd) {
                   if (isReadEventTriggered(note.file->hostFd)) {
                     note.triggered = true;
                   } else {
@@ -311,7 +313,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
                   }
                 }
               } else if (note.event.filter == kEvFiltWrite) {
-                if (note.file->hostFd >= 0) {
+                if (note.file->hostFd) {
                   if (isWriteEventTriggered(note.file->hostFd)) {
                     note.triggered = true;
                   } else {

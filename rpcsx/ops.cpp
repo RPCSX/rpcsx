@@ -2,8 +2,6 @@
 #include "backtrace.hpp"
 #include "io-device.hpp"
 #include "io-devices.hpp"
-#include "iodev/blockpool.hpp"
-#include "iodev/dmem.hpp"
 #include "linker.hpp"
 #include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
@@ -14,14 +12,12 @@
 #include "orbis/uio.hpp"
 #include "orbis/umtx.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "orbis/vm.hpp"
+#include "orbis/vmem.hpp"
 #include "rx/Rc.hpp"
 #include "rx/watchdog.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
-#include "vm.hpp"
 #include <chrono>
-#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
@@ -31,10 +27,15 @@
 #include <set>
 #include <string>
 #include <string_view>
+
+#ifdef __linux
 #include <sys/prctl.h>
 #include <sys/socket.h>
-#include <thread>
 #include <unistd.h>
+#include <csignal>
+#endif
+
+#include <thread>
 
 using namespace orbis;
 
@@ -89,7 +90,7 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
 
   loadedObjects[module->soName] = module.get();
   if (loadedModules.try_emplace(module->moduleName, module.get()).second) {
-    std::printf("Setting '%s' as '%s' module\n", module->soName,
+    std::printf("Registering '%s' as '%s' module\n", module->soName,
                 module->moduleName);
   }
 
@@ -142,17 +143,7 @@ loadPrx(orbis::Thread *thread, std::string_view path, bool relocate) {
 
   std::string expectedName;
   if (auto sep = path.rfind('/'); sep != std::string_view::npos) {
-    auto tmpExpectedName = path.substr(sep + 1);
-
-    if (tmpExpectedName.ends_with(".sprx")) {
-      tmpExpectedName.remove_suffix(5);
-    }
-
-    expectedName += tmpExpectedName;
-
-    if (!expectedName.ends_with(".prx")) {
-      expectedName += ".prx";
-    }
+    expectedName = path.substr(sep + 1);
   }
 
   return loadPrx(thread, path, relocate, loadedObjects, loadedModules,
@@ -172,126 +163,6 @@ std::string getAbsolutePath(std::string path, Thread *thread) {
   }
 
   return std::filesystem::path(path).lexically_normal().string();
-}
-
-orbis::SysResult mmap(orbis::Thread *thread, orbis::caddr_t addr,
-                      orbis::size_t len, orbis::sint prot, orbis::sint flags,
-                      orbis::sint fd, orbis::off_t pos) {
-  if (fd == -1) {
-    auto result = vm::map(addr, len, prot, flags);
-    if (result == (void *)-1) {
-      return ErrorCode::NOMEM;
-    }
-
-    thread->retval[0] = reinterpret_cast<std::uint64_t>(result);
-    return {};
-  }
-
-  auto file = thread->tproc->fileDescriptors.get(fd);
-  if (file == nullptr) {
-    return ErrorCode::BADF;
-  }
-
-  if (file->ops->mmap == nullptr) {
-    ORBIS_LOG_FATAL("unimplemented mmap", fd, (void *)addr, len, prot, flags,
-                    pos);
-    return mmap(thread, addr, len, prot, flags, -1, 0);
-  }
-
-  void *maddr = addr;
-  auto result =
-      file->ops->mmap(file.get(), &maddr, len, prot, flags, pos, thread);
-
-  if (result != ErrorCode{}) {
-    return result;
-  }
-
-  thread->retval[0] = reinterpret_cast<std::uint64_t>(maddr);
-  return {};
-}
-
-orbis::SysResult dmem_mmap(orbis::Thread *thread, orbis::caddr_t addr,
-                           orbis::size_t len, orbis::sint memoryType,
-                           orbis::sint prot, sint flags,
-                           orbis::off_t directMemoryStart) {
-  auto dmem = static_cast<DmemDevice *>(orbis::g_context->dmemDevice.get());
-  void *address = addr;
-  auto result = dmem->mmap(&address, len, prot, flags, directMemoryStart);
-  if (result != ErrorCode{}) {
-    return result;
-  }
-
-  thread->retval[0] = reinterpret_cast<std::uint64_t>(address);
-  return {};
-}
-
-orbis::SysResult munmap(orbis::Thread *, orbis::ptr<void> addr,
-                        orbis::size_t len) {
-  if (vm::unmap(addr, len)) {
-    return {};
-  }
-  return ErrorCode::INVAL;
-}
-
-orbis::SysResult msync(orbis::Thread *thread, orbis::ptr<void> addr,
-                       orbis::size_t len, orbis::sint flags) {
-  return {};
-}
-
-orbis::SysResult mprotect(orbis::Thread *thread, orbis::ptr<const void> addr,
-                          orbis::size_t len, orbis::sint prot) {
-  if (!vm::protect((void *)addr, len, prot)) {
-    return ErrorCode::INVAL;
-  }
-  return {};
-}
-
-orbis::SysResult minherit(orbis::Thread *thread, orbis::ptr<void> addr,
-                          orbis::size_t len, orbis::sint inherit) {
-  return ErrorCode::INVAL;
-}
-
-orbis::SysResult madvise(orbis::Thread *thread, orbis::ptr<void> addr,
-                         orbis::size_t len, orbis::sint behav) {
-  return {};
-}
-
-orbis::SysResult mincore(orbis::Thread *thread, orbis::ptr<const void> addr,
-                         orbis::size_t len, orbis::ptr<char> vec) {
-  return ErrorCode::INVAL;
-}
-
-orbis::SysResult mlock(orbis::Thread *thread, orbis::ptr<const void> addr,
-                       orbis::size_t len) {
-  return {};
-}
-orbis::SysResult mlockall(orbis::Thread *thread, orbis::sint how) { return {}; }
-orbis::SysResult munlockall(orbis::Thread *thread) { return {}; }
-orbis::SysResult munlock(orbis::Thread *thread, orbis::ptr<const void> addr,
-                         orbis::size_t len) {
-  return {};
-}
-orbis::SysResult virtual_query(orbis::Thread *thread,
-                               orbis::ptr<const void> addr, orbis::sint flags,
-                               orbis::ptr<void> info, orbis::ulong infoSize) {
-  if (infoSize != sizeof(vm::VirtualQueryInfo)) {
-    return ErrorCode::INVAL;
-  }
-
-  if (!vm::virtualQuery(addr, flags, (vm::VirtualQueryInfo *)info)) {
-    return ErrorCode::ACCES;
-  }
-  return {};
-}
-
-orbis::SysResult
-query_memory_protection(orbis::Thread *thread, orbis::ptr<void> address,
-                        orbis::ptr<MemoryProtection> protection) {
-  if (vm::queryProtection(address, &protection->startAddress,
-                          &protection->endAddress, &protection->prot)) {
-    return {};
-  }
-  return ErrorCode::INVAL;
 }
 
 orbis::SysResult open(orbis::Thread *thread, orbis::ptr<const char> path,
@@ -322,33 +193,6 @@ orbis::SysResult rename(Thread *thread, ptr<const char> from,
   ORBIS_LOG_TODO(__FUNCTION__, from, to);
   return vfs::rename(getAbsolutePath(from, thread), getAbsolutePath(to, thread),
                      thread);
-}
-
-orbis::SysResult blockpool_open(orbis::Thread *thread,
-                                rx::Ref<orbis::File> *file) {
-  auto dev = static_cast<IoDevice *>(orbis::g_context->blockpoolDevice.get());
-  return dev->open(file, nullptr, 0, 0, thread);
-}
-
-orbis::SysResult blockpool_map(orbis::Thread *thread, orbis::caddr_t addr,
-                               orbis::size_t len, orbis::sint prot,
-                               orbis::sint flags) {
-  auto blockpool =
-      static_cast<BlockPoolDevice *>(orbis::g_context->blockpoolDevice.get());
-  void *address = addr;
-  auto result = blockpool->map(&address, len, prot, flags, thread);
-  if (result != ErrorCode{}) {
-    return result;
-  }
-
-  thread->retval[0] = reinterpret_cast<std::uint64_t>(address);
-  return {};
-}
-orbis::SysResult blockpool_unmap(orbis::Thread *thread, orbis::caddr_t addr,
-                                 orbis::size_t len) {
-  auto blockpool =
-      static_cast<BlockPoolDevice *>(orbis::g_context->blockpoolDevice.get());
-  return blockpool->unmap(addr, len, thread);
 }
 
 orbis::SysResult socket(orbis::Thread *thread, orbis::ptr<const char> name,
@@ -780,6 +624,7 @@ SysResult fork(Thread *thread, slong flags) {
   }
 
   auto process = orbis::createProcess(thread->tproc, childPid);
+  orbis::vmem::fork(process, thread->tproc);
   process->hostPid = ::getpid();
   process->sysent = thread->tproc->sysent;
   process->onSysEnter = thread->tproc->onSysEnter;
@@ -803,7 +648,6 @@ SysResult fork(Thread *thread, slong flags) {
     }
   }
 
-  vm::fork(childPid);
   vfs::fork();
 
   *flag = true;
@@ -892,7 +736,7 @@ SysResult execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
     }
   }
 
-  vm::reset();
+  orbis::vmem::initialize(thread->tproc, true);
 
   thread->tproc->nextTlsSlot = 1;
   for (auto [id, mod] : thread->tproc->modulesMap) {
@@ -940,6 +784,7 @@ void block(Thread *thread) {
   if (--thread->unblocked != 0) {
     return;
   }
+#ifdef __linux
   sigset_t set;
   sigemptyset(&set);
   sigaddset(&set, SIGUSR1);
@@ -954,6 +799,7 @@ void block(Thread *thread) {
   std::free(thread->altStack.back());
   thread->altStack.pop_back();
   thread->sigReturns.pop_back();
+#endif
 }
 
 void unblock(Thread *thread) {
@@ -982,29 +828,12 @@ void unblock(Thread *thread) {
 } // namespace
 
 ProcessOps rx::procOpsTable = {
-    .mmap = mmap,
-    .dmem_mmap = dmem_mmap,
-    .munmap = munmap,
-    .msync = msync,
-    .mprotect = mprotect,
-    .minherit = minherit,
-    .madvise = madvise,
-    .mincore = mincore,
-    .mlock = mlock,
-    .mlockall = mlockall,
-    .munlockall = munlockall,
-    .munlock = munlock,
-    .virtual_query = virtual_query,
-    .query_memory_protection = query_memory_protection,
     .open = open,
     .shm_open = shm_open,
     .unlink = unlink,
     .mkdir = mkdir,
     .rmdir = rmdir,
     .rename = rename,
-    .blockpool_open = blockpool_open,
-    .blockpool_map = blockpool_map,
-    .blockpool_unmap = blockpool_unmap,
     .socket = socket,
     .socketpair = socketPair,
     .shm_unlink = shm_unlink,

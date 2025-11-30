@@ -174,13 +174,29 @@ constexpr auto calcFieldCount() {
   } else if constexpr (requires { EnumT::count; }) {
     return static_cast<std::size_t>(EnumT::count);
   } else if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
-    return N;
+    if constexpr (requires { getNameOf<EnumT(N + 1)>()[0]; }) {
+      if constexpr (constexpr auto c = getNameOf<EnumT(N + 1)>()[0];
+                    c >= '0' && c <= '9') {
+        return N;
+      } else {
+        return calcFieldCount<EnumT, N + 2>();
+      }
+    } else {
+      return N;
+    }
   } else {
-    constexpr auto c = getNameOf<EnumT(N)>()[0];
-    if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
-      return N;
-    } else if constexpr (c >= '0' && c <= '9') {
-      return N;
+    if constexpr (constexpr auto c = getNameOf<EnumT(N)>()[0];
+                  c >= '0' && c <= '9') {
+      if constexpr (requires { getNameOf<EnumT(N + 1)>()[0]; }) {
+        if constexpr (constexpr auto c = getNameOf<EnumT(N + 1)>()[0];
+                      c >= '0' && c <= '9') {
+          return N;
+        } else {
+          return calcFieldCount<EnumT, N + 2>();
+        }
+      } else {
+        return N;
+      }
     } else {
       return calcFieldCount<EnumT, N + 1>();
     }

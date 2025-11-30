@@ -4,6 +4,7 @@
 #include "KernelAllocator.hpp"
 #include "error/ErrorCode.hpp"
 #include "note.hpp"
+#include "rx/Mappable.hpp"
 #include "rx/Rc.hpp"
 #include "rx/SharedMutex.hpp"
 #include "stat.hpp"
@@ -42,12 +43,6 @@ struct FileOps {
   // TODO: chown
   // TODO: chmod
 
-  ErrorCode (*mmap)(File *file, void **address, std::uint64_t size,
-                    std::int32_t prot, std::int32_t flags, std::int64_t offset,
-                    Thread *thread) = nullptr;
-  ErrorCode (*munmap)(File *file, void **address, std::uint64_t size,
-                      Thread *thread) = nullptr;
-
   ErrorCode (*bind)(orbis::File *file, SocketAddress *address,
                     std::size_t addressLen, Thread *thread) = nullptr;
   ErrorCode (*listen)(orbis::File *file, int backlog, Thread *thread) = nullptr;
@@ -84,7 +79,7 @@ struct File : rx::RcBase {
   std::uint64_t nextOff = 0;
   int flags = 0;
   int mode = 0;
-  int hostFd = -1;
+  rx::Mappable hostFd;
   kvector<Dirent> dirEntries;
 
   bool noBlock() const { return (flags & 4) != 0; }

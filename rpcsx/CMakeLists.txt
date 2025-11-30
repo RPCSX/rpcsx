@@ -72,7 +72,6 @@ if(LINUX AND WITH_PS4)
     main.cpp
     AudioOut.cpp
     backtrace.cpp
-    vm.cpp
     ops.cpp
     linker.cpp
     io-device.cpp

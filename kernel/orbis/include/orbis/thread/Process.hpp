@@ -102,16 +102,14 @@ struct Process final {
   rx::RcIdMap<Thread, lwpid_t> threadsMap;
   rx::RcIdMap<orbis::File, sint> fileDescriptors;
 
+  rx::AddressRange libkernelRange;
+
   // Named objects for debugging
   rx::shared_mutex namedObjMutex;
   kmap<void *, kstring> namedObjNames;
   rx::OwningIdMap<NamedObjInfo, uint, 65535, 1> namedObjIds;
 
   kmap<std::int32_t, SigAction> sigActions;
-
-  // Named memory ranges for debugging
-  rx::shared_mutex namedMemMutex;
-  kmap<NamedMemoryRange, kstring> namedMem;
 
   // FIXME: implement process destruction
   void incRef() {}
@@ -126,6 +124,8 @@ struct Process final {
           ref) {
     return ref.get(storage);
   }
+
+  Budget *getBudget() const;
 };
 
 pid_t allocatePid();

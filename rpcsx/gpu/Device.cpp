@@ -7,6 +7,8 @@
 #include "orbis-config.hpp"
 #include "orbis/KernelContext.hpp"
 #include "orbis/note.hpp"
+#include "orbis/pmem.hpp"
+#include "orbis/vmem.hpp"
 #include "rx/AddressRange.hpp"
 #include "rx/Config.hpp"
 #include "rx/bits.hpp"
@@ -135,8 +137,8 @@ static vk::Context createVkContext(Device *device) {
         &device->debugMessenger));
   }
 
-  glfwCreateWindowSurface(vk::context->instance, device->window, nullptr,
-                          &device->surface);
+  VK_VERIFY(glfwCreateWindowSurface(vk::context->instance, device->window,
+                                    nullptr, &device->surface));
 
   result.createDevice(device->surface, rx::g_config.gpuIndex,
                       {
@@ -293,18 +295,6 @@ Device::~Device() {
                                       vk::context->allocator);
   }
 
-  for (auto fd : dmemFd) {
-    if (fd >= 0) {
-      ::close(fd);
-    }
-  }
-
-  for (auto &[pid, info] : processInfo) {
-    if (info.vmFd >= 0) {
-      ::close(info.vmFd);
-    }
-  }
-
   for (auto &cachePage : cachePages) {
     orbis::kfree(cachePage, kCachePageSize);
   }
@@ -319,28 +309,6 @@ void Device::start() {
         .width = static_cast<uint32_t>(width),
         .height = static_cast<uint32_t>(height),
     });
-  }
-
-  for (std::size_t i = 0; i < std::size(dmemFd); ++i) {
-    if (dmemFd[i] != -1) {
-      continue;
-    }
-
-    auto path = rx::format("{}/dmem-{}", rx::getShmPath(), i);
-    if (!std::filesystem::exists(path)) {
-      std::println("Waiting for dmem {}", i);
-
-      while (!std::filesystem::exists(path)) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
-      }
-    }
-
-    dmemFd[i] = ::open(path.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
-
-    if (dmemFd[i] < 0) {
-      std::println(stderr, "failed to open dmem {}", path);
-      std::abort();
-    }
   }
 
   std::jthread vblankThread([](const std::stop_token &stopToken) {
@@ -573,45 +541,27 @@ void Device::mapProcess(std::uint32_t pid, int vmId) {
 
   auto memory = amdgpu::RemoteMemory{vmId};
 
-  std::string pidVmName = rx::format("{}/memory-{}", rx::getShmPath(), pid);
-  int memoryFd = ::open(pidVmName.c_str(), O_RDWR, S_IRUSR | S_IWUSR);
-  process.vmFd = memoryFd;
-
-  if (memoryFd < 0) {
-    std::println("failed to open shared memory of process {}", (int)pid);
-    std::abort();
-  }
-
   for (auto slot : process.vmTable) {
-    auto gpuProt = slot->prot >> 4;
-    if (gpuProt == 0) {
+    auto gpuProt = orbis::vmem::toGpuProtection(slot->prot);
+    if (!gpuProt) {
       continue;
     }
 
     auto devOffset = slot->offset + slot.beginAddress() - slot->baseAddress;
-    int mapFd = memoryFd;
 
-    if (slot->memoryType >= 0) {
-      mapFd = dmemFd[slot->memoryType];
-    }
+    auto errc = orbis::pmem::map(
+        memory.getVirtualAddress(slot.beginAddress()),
+        rx::AddressRange::fromBeginSize(devOffset, slot.size()), gpuProt);
+    rx::dieIf(
+        errc != orbis::ErrorCode{},
+        "failed to map process {} memory, address {}-{}, type {}, vmId {}",
+        (int)pid, memory.getPointer(slot.beginAddress()),
+        memory.getPointer(slot.endAddress()), slot->memoryType, vmId);
 
-    auto mmapResult =
-        ::mmap(memory.getPointer(slot.beginAddress()), slot.size(), gpuProt,
-               MAP_FIXED | MAP_SHARED, mapFd, devOffset);
-
-    if (mmapResult == MAP_FAILED) {
-      std::println(
-          stderr,
-          "failed to map process {} memory, address {}-{}, type {:x}, vmId {}",
-          (int)pid, memory.getPointer(slot.beginAddress()),
-          memory.getPointer(slot.endAddress()), slot->memoryType, vmId);
-      std::abort();
-    }
-
-    // std::println(stderr,
-    //              "map process {} memory, address {}-{}, type {:x}, vmId {}",
-    //              (int)pid, memory.getPointer(startAddress),
-    //              memory.getPointer(endAddress), slot.memoryType, vmId);
+    std::println(stderr, "map process {} memory, address {}-{}, vmId {}",
+                 (int)pid, memory.getVirtualAddress(slot.beginAddress()),
+                 memory.getVirtualAddress(slot.beginAddress()) + slot.size(),
+                 vmId);
   }
 }
 
@@ -629,13 +579,12 @@ void Device::unmapProcess(std::uint32_t pid) {
     rx::die("failed to release userspace memory: {}", (int)errc);
   }
 
-  ::close(process.vmFd);
-  process.vmFd = -1;
   process.vmId = -1;
 }
 
 void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
-                           std::uint64_t size, int prot) {
+                           std::uint64_t size,
+                           rx::EnumBitSet<orbis::vmem::Protection> prot) {
   auto &process = processInfo[pid];
 
   auto vmSlotIt = process.vmTable.queryArea(address);
@@ -648,22 +597,20 @@ void Device::protectMemory(std::uint32_t pid, std::uint64_t address,
   process.vmTable.map(rx::AddressRange::fromBeginSize(address, size),
                       VmMapSlot{
                           .memoryType = vmSlot.memoryType,
-                          .prot = static_cast<int>(prot),
+                          .prot = prot,
                           .offset = vmSlot.offset,
                           .baseAddress = vmSlot.baseAddress,
                       });
 
   if (process.vmId >= 0) {
     auto memory = amdgpu::RemoteMemory{process.vmId};
-    rx::mem::protect(
-        rx::AddressRange::fromBeginSize(memory.getVirtualAddress(address),
-                                        size),
-        rx::EnumBitSet<rx::mem::Protection>::fromUnderlying(prot >> 4));
+    rx::mem::protect(rx::AddressRange::fromBeginSize(
+                         memory.getVirtualAddress(address), size),
+                     orbis::vmem::toGpuProtection(prot));
 
-    // std::println(stderr, "protect process {} memory, address {}-{}, prot
-    // {:x}",
-    //              (int)pid, memory.getPointer(address),
-    //              memory.getPointer(address + size), prot);
+    std::println(stderr, "protect process {} memory, address {}-{}, prot {}",
+                 (int)pid, memory.getPointer(address),
+                 memory.getPointer(address + size), prot);
   }
 }
 
@@ -1006,17 +953,18 @@ void Device::waitForIdle() {
   }
 }
 
-void Device::mapMemory(std::uint32_t pid, std::uint64_t address,
-                       std::uint64_t size, int memoryType, int dmemIndex,
-                       int prot, std::int64_t offset) {
+void Device::mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
+                       orbis::MemoryType memoryType,
+                       rx::EnumBitSet<orbis::vmem::Protection> prot,
+                       std::uint64_t physicalOffset) {
   auto &process = processInfo[pid];
 
-  process.vmTable.map(rx::AddressRange::fromBeginSize(address, size),
+  process.vmTable.map(virtualRange,
                       VmMapSlot{
-                          .memoryType = memoryType >= 0 ? dmemIndex : -1,
+                          .memoryType = memoryType,
                           .prot = prot,
-                          .offset = offset,
-                          .baseAddress = address,
+                          .offset = physicalOffset,
+                          .baseAddress = virtualRange.beginAddress(),
                       });
 
   if (process.vmId < 0) {
@@ -1025,33 +973,29 @@ void Device::mapMemory(std::uint32_t pid, std::uint64_t address,
 
   auto memory = amdgpu::RemoteMemory{process.vmId};
 
-  int mapFd = process.vmFd;
-
-  if (memoryType >= 0) {
-    mapFd = dmemFd[dmemIndex];
+  auto vmemAddress = memory.getVirtualAddress(virtualRange.beginAddress());
+  auto errc = orbis::pmem::map(vmemAddress,
+                               rx::AddressRange::fromBeginSize(
+                                   physicalOffset, virtualRange.beginAddress()),
+                               orbis::vmem::toGpuProtection(prot));
+  if (errc != orbis::ErrorCode{}) {
+    rx::die("failed to map process {} memory, address {:x}-{:x}, type {}, "
+            "offset {:x}, prot {}, error {}",
+            pid, vmemAddress, vmemAddress + virtualRange.size(), memoryType,
+            physicalOffset, prot, errc);
   }
 
-  auto mmapResult = ::mmap(memory.getPointer(address), size, prot >> 4,
-                           MAP_FIXED | MAP_SHARED, mapFd, offset);
-
-  if (mmapResult == MAP_FAILED) {
-    perror("::mmap");
-
-    rx::die("failed to map process {} memory, address {}-{}, type {:x}, offset "
-            "{:x}, prot {:x}",
-            pid, memory.getPointer(address), memory.getPointer(address + size),
-            memoryType, offset, prot);
-  }
-
-  // std::println(stderr, "map memory of process {}, address {}-{}, prot {:x}",
-  //              (int)pid, memory.getPointer(address),
-  //              memory.getPointer(address + size), prot);
+  std::println(
+      stderr,
+      "map memory of process {}, address {:x}-{:x}, prot {}, phy memory {:x}",
+      (int)pid, vmemAddress, vmemAddress + virtualRange.size(), prot,
+      physicalOffset);
 }
 
 void Device::unmapMemory(std::uint32_t pid, std::uint64_t address,
                          std::uint64_t size) {
   // TODO
-  protectMemory(pid, address, size, 0);
+  protectMemory(pid, address, size, {});
 }
 
 static void notifyPageChanges(Device *device, int vmId, std::uint32_t firstPage,

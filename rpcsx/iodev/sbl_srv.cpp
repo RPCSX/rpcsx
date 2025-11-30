@@ -5,7 +5,6 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "rx/SharedMutex.hpp"
-#include "vm.hpp"
 
 struct SblSrvFile : public orbis::File {};
 
@@ -23,24 +22,8 @@ static orbis::ErrorCode sbl_srv_ioctl(orbis::File *file, std::uint64_t request,
   return {};
 }
 
-static orbis::ErrorCode sbl_srv_mmap(orbis::File *file, void **address,
-                                     std::uint64_t size, std::int32_t prot,
-                                     std::int32_t flags, std::int64_t offset,
-                                     orbis::Thread *thread) {
-  ORBIS_LOG_FATAL("sbl_srv mmap", address, size, offset);
-  auto result = vm::map(*address, size, prot, flags);
-
-  if (result == (void *)-1) {
-    return orbis::ErrorCode::INVAL; // TODO
-  }
-
-  *address = result;
-  return {};
-}
-
 static const orbis::FileOps ops = {
     .ioctl = sbl_srv_ioctl,
-    .mmap = sbl_srv_mmap,
 };
 
 orbis::ErrorCode SblSrvDevice::open(rx::Ref<orbis::File> *file,

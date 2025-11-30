@@ -1,106 +1,113 @@
-#include "blockpool.hpp"
-#include "dmem.hpp"
+#include "orbis/blockpool.hpp"
 #include "orbis/IoDevice.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/KernelContext.hpp"
+#include "orbis/dmem.hpp"
 #include "orbis/file.hpp"
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "vm.hpp"
-#include <cstddef>
-#include <mutex>
-#include <sys/mman.h>
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+
+enum {
+  BLOCKPOOL_IOCTL_EXPAND = 0xc020a801,
+  BLOCKPOOL_IOCTL_GET_BLOCK_STATS = 0x4010a802,
+};
+
+struct BlockPoolAllocation {
+  bool allocated = false;
+
+  [[nodiscard]] bool isAllocated() const { return allocated; }
+  [[nodiscard]] bool isRelated(const BlockPoolAllocation &, rx::AddressRange,
+                               rx::AddressRange) const {
+    return true;
+  }
+
+  [[nodiscard]] BlockPoolAllocation merge(const BlockPoolAllocation &other,
+                                          rx::AddressRange,
+                                          rx::AddressRange) const {
+    return other;
+  }
+
+  bool operator==(const BlockPoolAllocation &) const = default;
+};
+
+using DirectMemoryResource =
+    kernel::AllocableResource<BlockPoolAllocation, orbis::kallocator>;
 
 struct BlockPoolFile : public orbis::File {};
+struct BlockPoolDevice
+    : orbis::IoDeviceWithIoctl<orbis::ioctl::group(BLOCKPOOL_IOCTL_EXPAND)> {
+  rx::shared_mutex mtx;
+  rx::MemoryAreaTable<> pool;
+  orbis::sint availBlocks{};
+  orbis::sint commitBlocks{};
 
-static orbis::ErrorCode blockpool_ioctl(orbis::File *file,
-                                        std::uint64_t request, void *argp,
-                                        orbis::Thread *thread) {
-  auto blockPool = static_cast<BlockPoolDevice *>(file->device.get());
-  std::lock_guard lock(blockPool->mtx);
+  BlockPoolDevice();
 
-  switch (request) {
-  case 0xc020a801: {
-    struct Args {
-      std::uint64_t len;
-      std::uint64_t searchStart;
-      std::uint64_t searchEnd;
-      std::uint32_t flags;
-    };
-    auto args = reinterpret_cast<Args *>(argp);
-    ORBIS_LOG_TODO("blockpool expand", args->len, args->searchStart,
-                   args->searchEnd, args->flags);
-
-    auto dmem = orbis::g_context->dmemDevice.rawStaticCast<DmemDevice>();
-    std::lock_guard lock(dmem->mtx);
-    std::uint64_t start = args->searchStart;
-    ORBIS_RET_ON_ERROR(
-        dmem->allocate(&start, args->searchEnd, args->len, 1, args->flags));
-
-    blockPool->pool.map(rx::AddressRange::fromBeginSize(start, args->len));
-    return {};
-  }
-  }
-
-  ORBIS_LOG_FATAL("Unhandled blockpool ioctl", request);
-  thread->where();
-  return {};
-}
-
-static orbis::ErrorCode blockpool_mmap(orbis::File *file, void **address,
-                                       std::uint64_t size, std::int32_t prot,
-                                       std::int32_t flags, std::int64_t offset,
-                                       orbis::Thread *thread) {
-  auto blockPool = static_cast<BlockPoolDevice *>(file->device.get());
-  std::lock_guard lock(blockPool->mtx);
-  ORBIS_LOG_FATAL("blockpool mmap", *address, size, offset);
-
-  std::size_t totalBlockPoolSize = 0;
-  for (auto entry : blockPool->pool) {
-    totalBlockPoolSize += entry.endAddress - entry.beginAddress;
-  }
-
-  if (totalBlockPoolSize < size) {
-    return orbis::ErrorCode::NOMEM;
-  }
-
-  auto dmem = orbis::g_context->dmemDevice.rawStaticCast<DmemDevice>();
-  auto mapped = reinterpret_cast<std::byte *>(vm::map(
-      *address, size, prot, flags, vm::kMapInternalReserveOnly, blockPool));
-
-  if (mapped == MAP_FAILED) {
-    return orbis::ErrorCode::NOMEM;
-  }
-
-  auto result = mapped;
-
-  flags |= vm::kMapFlagFixed;
-  flags &= ~vm::kMapFlagNoOverwrite;
-  while (true) {
-    auto entry = *blockPool->pool.begin();
-    auto blockSize = std::min(entry.endAddress - entry.beginAddress, size);
-    void *mapAddress = mapped;
-    ORBIS_LOG_FATAL("blockpool mmap", mapAddress, blockSize, entry.beginAddress,
-                    blockSize);
-    ORBIS_RET_ON_ERROR(
-        dmem->mmap(&mapAddress, blockSize, prot, flags, entry.beginAddress));
-
-    mapped += blockSize;
-    size -= blockSize;
-    blockPool->pool.unmap(entry.beginAddress, entry.beginAddress + blockSize);
-    if (size == 0) {
-      break;
-    }
-  }
-
-  *address = result;
-  return {};
-}
-
-static const orbis::FileOps ops = {
-    .ioctl = blockpool_ioctl,
-    .mmap = blockpool_mmap,
+  orbis::ErrorCode open(rx::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override;
+  orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
+                       rx::EnumBitSet<orbis::vmem::Protection> protection,
+                       orbis::File *file, orbis::Process *process) override;
 };
+
+#pragma pack(push, 1)
+
+struct BlockPoolIoctlExpand {
+  orbis::uint64_t len;
+  orbis::uint64_t searchStart;
+  orbis::uint64_t searchEnd;
+  orbis::uint32_t flags;
+  orbis::uint32_t _padding;
+};
+#pragma pack(pop)
+
+static orbis::ErrorCode blockpool_ioctl_expand(orbis::Thread *thread,
+                                               BlockPoolDevice *device,
+                                               BlockPoolIoctlExpand &args) {
+  ORBIS_LOG_TODO(__FUNCTION__, args.len, args.searchStart, args.searchEnd,
+                 args.flags);
+
+  if (args.len % orbis::dmem::kPageSize || args.len == 0) {
+    return orbis::ErrorCode::INVAL;
+  }
+
+  auto alignment = args.flags == 0 ? 0 : 1ull << ((args.flags >> 24) & 0x1f);
+
+  auto [dmemOffset, dmemErrc] = orbis::dmem::allocate(
+      0, rx::AddressRange::fromBeginEnd(args.searchStart, args.searchEnd),
+      args.len, orbis::MemoryType::WbOnion, alignment, true);
+
+  if (dmemErrc != orbis::ErrorCode{}) {
+    return dmemErrc;
+  }
+
+  auto [pmemOffset, pmemErrc] = orbis::dmem::getPmemOffset(0, dmemOffset);
+
+  if (pmemErrc != orbis::ErrorCode{}) {
+    return pmemErrc;
+  }
+
+  args.searchStart = dmemOffset;
+  return orbis::blockpool::expand(
+      rx::AddressRange::fromBeginSize(pmemOffset, args.len));
+}
+
+static std::pair<orbis::ErrorCode, orbis::blockpool::BlockStats>
+blockpool_ioctl_get_block_stats(orbis::Thread *, BlockPoolDevice *) {
+  return {{}, orbis::blockpool::stats()};
+}
+
+static const orbis::FileOps ops = {};
+
+BlockPoolDevice::BlockPoolDevice() {
+  blockFlags = orbis::vmem::BlockFlags::PooledMemory;
+
+  addIoctl<BLOCKPOOL_IOCTL_EXPAND>(blockpool_ioctl_expand);
+  addIoctl<BLOCKPOOL_IOCTL_GET_BLOCK_STATS>(blockpool_ioctl_get_block_stats);
+}
 
 orbis::ErrorCode BlockPoolDevice::open(rx::Ref<orbis::File> *file,
                                        const char *path, std::uint32_t flags,
@@ -113,32 +120,17 @@ orbis::ErrorCode BlockPoolDevice::open(rx::Ref<orbis::File> *file,
   return {};
 }
 
-orbis::ErrorCode BlockPoolDevice::map(void **address, std::uint64_t len,
-                                      std::int32_t prot, std::int32_t flags,
-                                      orbis::Thread *thread) {
-  ORBIS_LOG_FATAL("blockpool device map", *address, len);
-  if (prot == 0) {
-    // FIXME: investigate it
-    prot = 0x33;
+orbis::ErrorCode
+BlockPoolDevice::map(rx::AddressRange range, std::int64_t offset,
+                     rx::EnumBitSet<orbis::vmem::Protection> protection,
+                     orbis::File *file, orbis::Process *process) {
+  if (protection || offset != 0) {
+    return orbis::ErrorCode::INVAL;
   }
 
-  auto result = vm::map(*address, len, prot, flags);
-
-  if (result == (void *)-1) {
-    return orbis::ErrorCode::NOMEM;
-  }
-
-  *address = result;
   return {};
 }
-orbis::ErrorCode BlockPoolDevice::unmap(void *address, std::uint64_t len,
-                                        orbis::Thread *thread) {
-  ORBIS_LOG_FATAL("blockpool device unmap", address, len);
-  if (vm::unmap(address, len)) {
-    return {};
-  }
-  return orbis::ErrorCode::INVAL;
-}
+
 orbis::IoDevice *createBlockPoolDevice() {
   return orbis::knew<BlockPoolDevice>();
 }

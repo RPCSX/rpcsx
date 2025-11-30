@@ -5,6 +5,11 @@
 #include "Pipe.hpp"
 #include "amdgpu/tiler_vulkan.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/dmem.hpp"
+#include "orbis/thread/Process.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
 #include "rx/MemoryTable.hpp"
 #include "rx/Rc.hpp"
 #include "rx/SharedMutex.hpp"
@@ -37,9 +42,9 @@ std::array<std::uint32_t, sizeof...(T) + 1> createPm4Packet(std::uint32_t op,
 }
 
 struct VmMapSlot {
-  int memoryType;
-  int prot;
-  std::int64_t offset;
+  orbis::MemoryType memoryType;
+  rx::EnumBitSet<orbis::vmem::Protection> prot;
+  std::uint64_t offset;
   std::uint64_t baseAddress;
 
   auto operator<=>(const VmMapSlot &) const = default;
@@ -47,7 +52,6 @@ struct VmMapSlot {
 
 struct ProcessInfo {
   int vmId = -1;
-  int vmFd = -1;
   BufferAttribute bufferAttributes[10];
   Buffer buffers[10];
   rx::MemoryTableWithPayload<VmMapSlot> vmTable;
@@ -90,7 +94,6 @@ struct Device : rx::RcBase, DeviceContext {
 
   std::jthread cacheUpdateThread;
 
-  int dmemFd[3] = {-1, -1, -1};
   orbis::kmap<std::int32_t, ProcessInfo> processInfo;
 
   Cache caches[kMaxProcessCount]{
@@ -123,7 +126,8 @@ struct Device : rx::RcBase, DeviceContext {
   void mapProcess(std::uint32_t pid, int vmId);
   void unmapProcess(std::uint32_t pid);
   void protectMemory(std::uint32_t pid, std::uint64_t address,
-                     std::uint64_t size, int prot);
+                     std::uint64_t size,
+                     rx::EnumBitSet<orbis::vmem::Protection> prot);
   void onCommandBuffer(std::uint32_t pid, int cmdHeader, std::uint64_t address,
                        std::uint64_t size);
   bool processPipes();
@@ -131,8 +135,10 @@ struct Device : rx::RcBase, DeviceContext {
             VkImage swapchainImage, VkImageView swapchainImageView);
   void flip(std::uint32_t pid, int bufferIndex, std::uint64_t arg);
   void waitForIdle();
-  void mapMemory(std::uint32_t pid, std::uint64_t address, std::uint64_t size,
-                 int memoryType, int dmemIndex, int prot, std::int64_t offset);
+  void mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
+                 orbis::MemoryType memoryType,
+                 rx::EnumBitSet<orbis::vmem::Protection> prot,
+                 std::uint64_t physicalOffset);
   void unmapMemory(std::uint32_t pid, std::uint64_t address,
                    std::uint64_t size);
   void watchWrites(int vmId, std::uint64_t address, std::uint64_t size);

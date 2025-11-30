@@ -1,6 +1,7 @@
 #include "DeviceCtl.hpp"
 #include "Device.hpp"
 #include "gnm/pm4.hpp"
+#include "orbis/KernelContext.hpp"
 #include "orbis/error/ErrorCode.hpp"
 #include "rx/bits.hpp"
 #include "rx/die.hpp"
@@ -230,3 +231,26 @@ void DeviceCtl::submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
 
 void DeviceCtl::start() { mDevice->start(); }
 void DeviceCtl::waitForIdle() { mDevice->waitForIdle(); }
+
+void amdgpu::mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
+                       orbis::MemoryType memoryType,
+                       rx::EnumBitSet<orbis::vmem::Protection> prot,
+                       std::uint64_t offset) {
+  if (auto gpu = DeviceCtl{orbis::g_context->gpuDevice.rawCast<Device>()}) {
+    gpu.submitMapMemory(pid, virtualRange.beginAddress(), virtualRange.size(),
+                        (int)memoryType, 0, prot.toUnderlying(), offset);
+  }
+}
+void amdgpu::unmapMemory(std::uint32_t pid, rx::AddressRange virtualRange) {
+  if (auto gpu = DeviceCtl{orbis::g_context->gpuDevice.rawCast<Device>()}) {
+    gpu.submitUnmapMemory(pid, virtualRange.beginAddress(),
+                          virtualRange.size());
+  }
+}
+void amdgpu::protectMemory(std::uint32_t pid, rx::AddressRange virtualRange,
+                           rx::EnumBitSet<orbis::vmem::Protection> prot) {
+  if (auto gpu = DeviceCtl{orbis::g_context->gpuDevice.rawCast<Device>()}) {
+    gpu.submitProtectMemory(pid, virtualRange.beginAddress(),
+                            virtualRange.size(), prot.toUnderlying());
+  }
+}

@@ -8,6 +8,7 @@
 
 namespace rx {
 class Mappable {
+public:
 #ifdef _WIN32
   using NativeHandle = void *;
   static constexpr NativeHandle kInvalidHandle = nullptr;
@@ -16,9 +17,6 @@ class Mappable {
   static constexpr auto kInvalidHandle = NativeHandle(-1);
 #endif
 
-  NativeHandle m_handle = kInvalidHandle;
-
-public:
   Mappable() = default;
   Mappable(Mappable &&other) noexcept { *this = std::move(other); }
   Mappable(const Mappable &) = delete;
@@ -31,6 +29,12 @@ public:
     if (m_handle != kInvalidHandle) {
       destroy();
     }
+  }
+
+  static Mappable CreateFromNativeHandle(NativeHandle handle) {
+    Mappable result;
+    result.m_handle = handle;
+    return result;
   }
 
   static std::pair<Mappable, std::errc> CreateMemory(std::size_t size);
@@ -47,5 +51,7 @@ public:
 
 private:
   void destroy();
+
+  NativeHandle m_handle = kInvalidHandle;
 };
 } // namespace rx

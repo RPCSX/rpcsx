@@ -1,11 +1,23 @@
 #include "linker.hpp"
-#include "io-device.hpp"
+#include "kernel/KernelObject.hpp"
+#include "orbis/IoDevice.hpp"
 #include "orbis/KernelAllocator.hpp"
+#include "orbis/KernelObject.hpp"
+#include "orbis/fmem.hpp"
 #include "orbis/module/Module.hpp"
+#include "orbis/pmem.hpp"
 #include "orbis/stat.hpp"
 #include "orbis/uio.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/SharedMutex.hpp"
+#include "rx/StrUtil.hpp"
+#include "rx/debug.hpp"
+#include "rx/die.hpp"
+#include "rx/format.hpp"
+#include "rx/mem.hpp"
+#include "rx/print.hpp"
 #include "vfs.hpp"
-#include "vm.hpp"
 #include <bit>
 #include <crypto/sha1.h>
 #include <elf.h>
@@ -15,8 +27,6 @@
 #include <rx/align.hpp>
 #include <sys/mman.h>
 #include <unordered_map>
-
-std::uint64_t monoPimpAddress;
 
 static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
   struct [[gnu::packed]] Header {
@@ -70,8 +80,7 @@ static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
     auto &segment = segments[i];
     if ((segment.flags & 0x7fb) != 0 ||
         segment.decryptedSize != segment.encryptedSize) {
-      std::fprintf(stderr, "Unsupported self segment (%lx)\n", segment.flags);
-      std::abort();
+      rx::die("Unsupported self segment ({:x})", segment.flags);
     }
 
     if (~segment.flags & 0x800) {
@@ -91,6 +100,8 @@ static std::vector<std::byte> unself(const std::byte *image, std::size_t size) {
 
   return result;
 }
+
+std::uint64_t monoPimpAddress;
 
 std::uint64_t rx::linker::encodeFid(std::string_view fid) {
   static const char suffix[] =
@@ -359,12 +370,159 @@ void rx::linker::override(std::string originalModuleName,
       std::move(replacedModulePath);
 }
 
-rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
-                                              orbis::Process *process) {
+struct ElfFile : orbis::File {
+  rx::AddressRange physicalMemory;
+  orbis::kvector<std::byte> image;
+  bool initialized = false;
+};
+
+struct ElfDevice : orbis::IoDevice {
+  rx::shared_mutex mtx;
+  orbis::kmap<orbis::kstring, rx::Ref<ElfFile>, rx::StringLess> files;
+
+  orbis::ErrorCode open(rx::Ref<orbis::File> *file, const char *path,
+                        std::uint32_t flags, std::uint32_t mode,
+                        orbis::Thread *thread) override {
+    std::lock_guard lock(mtx);
+    auto it = files.lower_bound(path);
+
+    if (it != files.end() && it->first == path) {
+      *file = it->second;
+      return {};
+    }
+
+    rx::Ref<orbis::File> rawFile;
+    if (auto result =
+            vfs::open(path, orbis::kOpenFlagReadOnly, 0, &rawFile, thread)) {
+      return result.errc();
+    }
+
+    orbis::Stat fileStat;
+    if (auto error = rawFile->ops->stat(rawFile.get(), &fileStat, nullptr);
+        error != orbis::ErrorCode{}) {
+      return error;
+    }
+
+    auto len = fileStat.size;
+
+    std::vector<std::byte> image(len);
+    auto ptr = image.data();
+    orbis::IoVec ioVec{
+        .base = ptr,
+        .len = static_cast<std::uint64_t>(len),
+    };
+
+    orbis::Uio io{
+        .offset = 0,
+        .iov = &ioVec,
+        .iovcnt = 1,
+        .resid = 0,
+        .segflg = orbis::UioSeg::SysSpace,
+        .rw = orbis::UioRw::Read,
+        .td = thread,
+    };
+
+    while (io.offset < image.size()) {
+      ioVec = {
+          .base = ptr + io.offset,
+          .len = image.size() - io.offset,
+      };
+
+      auto result = rawFile->ops->read(rawFile.get(), &io, thread);
+      rx::dieIf(result != orbis::ErrorCode{}, "elf: '{}' read failed: {}", path,
+                static_cast<int>(result));
+    }
+
+    rawFile = {};
+
+    if (image[0] != std::byte{'\x7f'} || image[1] != std::byte{'E'} ||
+        image[2] != std::byte{'L'} || image[3] != std::byte{'F'}) {
+      image = unself(image.data(), image.size());
+    }
+
+    Elf64_Ehdr header;
+    std::memcpy(&header, image.data(), sizeof(Elf64_Ehdr));
+
+    Elf64_Phdr phdrsStorage[16];
+    if (header.e_phnum > std::size(phdrsStorage)) {
+      rx::die("elf: unexpected count of segments {}, {}", header.e_phnum, path);
+    }
+
+    std::memcpy(phdrsStorage, image.data() + header.e_phoff,
+                header.e_phnum * sizeof(Elf64_Phdr));
+    auto phdrs = std::span(phdrsStorage, header.e_phnum);
+
+    std::uint64_t endAddress = 0;
+    std::uint64_t baseAddress = ~static_cast<std::uint64_t>(0);
+
+    for (auto &phdr : phdrs) {
+      switch (phdr.p_type) {
+      case kElfProgramTypeLoad:
+        baseAddress =
+            std::min(baseAddress, rx::alignDown(phdr.p_vaddr, phdr.p_align));
+
+        if ((phdr.p_flags & PF_W) == 0) {
+          endAddress =
+              std::max(endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz,
+                                               orbis::vmem::kPageSize));
+        }
+        break;
+      }
+    }
+
+    auto imageSize = endAddress - baseAddress;
+    auto alignedImageSize = rx::alignUp(imageSize, orbis::vmem::kPageSize);
+
+    auto [allocationRange, errc] = orbis::pmem::allocate(
+        orbis::pmem::getSize() - 1, alignedImageSize,
+        orbis::AllocationFlags::Stack, orbis::vmem::kPageSize);
+
+    if (errc != orbis::ErrorCode{}) {
+      return errc;
+    }
+
+    auto newFile = orbis::knew<ElfFile>();
+    newFile->physicalMemory = allocationRange;
+    newFile->image = orbis::kvector<std::byte>(image.begin(), image.end());
+    newFile->device = this;
+    *file = newFile;
+
+    files.emplace_hint(it, orbis::kstring(path), newFile);
+    return {};
+  }
+
+  orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
+                       rx::EnumBitSet<orbis::vmem::Protection> protection,
+                       orbis::File *file, orbis::Process *) override {
+    auto elf = static_cast<ElfFile *>(file);
+    auto physicalRange = rx::AddressRange::fromBeginSize(
+        elf->physicalMemory.beginAddress() + offset, range.size());
+    if (!physicalRange.isValid() ||
+        physicalRange.endAddress() > elf->physicalMemory.endAddress()) {
+      return orbis::ErrorCode::INVAL;
+    }
+
+    return orbis::pmem::map(range.beginAddress(), physicalRange,
+                            orbis::vmem::toCpuProtection(protection));
+  }
+
+  void serialize(rx::Serializer &s) const {
+    // FIXME: implement
+  }
+
+  void deserialize(rx::Deserializer &d) {
+    // FIXME: implement
+  }
+};
+
+static auto g_elfDevice = orbis::createGlobalObject<ElfDevice>();
+
+static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
+                                         std::string_view name) {
   rx::Ref<orbis::Module> result{orbis::knew<orbis::Module>()};
 
   Elf64_Ehdr header;
-  std::memcpy(&header, image.data(), sizeof(Elf64_Ehdr));
+  std::memcpy(&header, elf->image.data(), sizeof(Elf64_Ehdr));
   result->type = header.e_type;
 
   Elf64_Phdr phdrsStorage[16];
@@ -372,7 +530,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     std::abort();
   }
 
-  std::memcpy(phdrsStorage, image.data() + header.e_phoff,
+  std::memcpy(phdrsStorage, elf->image.data() + header.e_phoff,
               header.e_phnum * sizeof(Elf64_Phdr));
   auto phdrs = std::span(phdrsStorage, header.e_phnum);
 
@@ -402,8 +560,8 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     case kElfProgramTypeLoad:
       baseAddress =
           std::min(baseAddress, rx::alignDown(phdr.p_vaddr, phdr.p_align));
-      endAddress = std::max(
-          endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize));
+      endAddress = std::max(endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz,
+                                                    orbis::vmem::kPageSize));
       break;
     case kElfProgramTypeDynamic:
       dynamicPhdrIndex = index;
@@ -436,8 +594,8 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       sceRelRoPhdrIndex = index;
       baseAddress =
           std::min(baseAddress, rx::alignDown(phdr.p_vaddr, phdr.p_align));
-      endAddress = std::max(
-          endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize));
+      endAddress = std::max(endAddress, rx::alignUp(phdr.p_vaddr + phdr.p_memsz,
+                                                    orbis::vmem::kPageSize));
       break;
     case kElfProgramTypeGnuEhFrame:
       gnuEhFramePhdrIndex = index;
@@ -455,16 +613,26 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   }
 
   auto imageSize = endAddress - baseAddress;
+  auto alignedImageSize = rx::alignUp(imageSize, orbis::vmem::kPageSize);
 
-  auto imageBase = reinterpret_cast<std::byte *>(
-      vm::map(reinterpret_cast<void *>(baseAddress),
-              rx::alignUp(imageSize, vm::kPageSize), 0,
-              vm::kMapFlagPrivate | vm::kMapFlagAnonymous |
-                  (baseAddress ? vm::kMapFlagFixed : 0)));
+  rx::EnumBitSet<orbis::AllocationFlags> allocationFlags = {};
 
-  if (imageBase == MAP_FAILED) {
-    std::abort();
+  auto mapHitAddress = baseAddress;
+  if (baseAddress != 0) {
+    allocationFlags |= orbis::AllocationFlags::Fixed;
+  } else if (header.e_type == rx::linker::kElfTypeDyn ||
+             header.e_type == rx::linker::kElfTypeSceDynamic) {
+    mapHitAddress = 0x800000000;
   }
+
+  auto [imageRange, errc] = orbis::vmem::reserve(
+      process, mapHitAddress, alignedImageSize, allocationFlags);
+
+  rx::dieIf(errc != orbis::ErrorCode{},
+            "failed to map image memory {}, errno {}", imageSize,
+            static_cast<int>(errc));
+
+  auto imageBase = reinterpret_cast<std::byte *>(imageRange.beginAddress());
 
   result->entryPoint = header.e_entry
                            ? reinterpret_cast<std::uintptr_t>(
@@ -473,7 +641,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
   if (interpPhdrIndex >= 0) {
     result->interp = reinterpret_cast<const char *>(
-        image.data() + phdrs[interpPhdrIndex].p_offset);
+        elf->image.data() + phdrs[interpPhdrIndex].p_offset);
   }
 
   if (sceProcParamIndex >= 0) {
@@ -518,19 +686,12 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     };
 
     auto *exinfo = reinterpret_cast<GnuExceptionInfo *>(
-        image.data() + phdrs[gnuEhFramePhdrIndex].p_offset);
+        elf->image.data() + phdrs[gnuEhFramePhdrIndex].p_offset);
 
-    if (exinfo->version != 1) {
-      std::abort();
-    }
-
-    if (exinfo->fdeCount != 0x03) {
-      std::abort();
-    }
-
-    if (exinfo->encodingTable != 0x3b) {
-      std::abort();
-    }
+    rx::dieIf(exinfo->version != 1, "Unexpected gnu ehframe version");
+    rx::dieIf(exinfo->fdeCount != 0x03, "Unexpected gnu ehframe fde count");
+    rx::dieIf(exinfo->encodingTable != 0x3b,
+              "Unexpected gnu ehframe encoding table");
 
     std::byte *dataBuffer = nullptr;
 
@@ -541,7 +702,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       auto offset = *reinterpret_cast<std::int32_t *>(&exinfo->first);
       dataBuffer = &exinfo->first + sizeof(std::int32_t) + offset;
     } else {
-      std::abort();
+      rx::die("unexpected gnu ehframe encoding {:x}", exinfo->encoding);
     }
 
     auto *dataBufferIt = dataBuffer;
@@ -563,7 +724,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
     result->ehFrame =
         imageBase - baseAddress + phdrs[gnuEhFramePhdrIndex].p_vaddr +
-        (dataBuffer - image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
+        (dataBuffer - elf->image.data() - phdrs[gnuEhFramePhdrIndex].p_offset);
     result->ehFrameSize = dataBufferIt - dataBuffer;
   }
 
@@ -575,7 +736,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   if (dynamicPhdrIndex >= 0 && phdrs[dynamicPhdrIndex].p_filesz > 0) {
     auto &dynPhdr = phdrs[dynamicPhdrIndex];
     std::vector<Elf64_Dyn> dyns(dynPhdr.p_filesz / sizeof(Elf64_Dyn));
-    std::memcpy(dyns.data(), image.data() + dynPhdr.p_offset,
+    std::memcpy(dyns.data(), elf->image.data() + dynPhdr.p_offset,
                 dyns.size() * sizeof(Elf64_Dyn));
 
     int sceStrtabIndex = -1;
@@ -616,7 +777,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     auto sceStrtab =
         sceStrtabIndex >= 0 && sceDynlibDataPhdrIndex >= 0
             ? reinterpret_cast<const char *>(
-                  image.data() +
+                  elf->image.data() +
                   dynTabOffsetGet(dyns[sceStrtabIndex].d_un.d_val) +
                   phdrs[sceDynlibDataPhdrIndex].p_offset)
             : nullptr;
@@ -625,12 +786,12 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
     if (strtab == nullptr && strtabIndex >= 0) {
       strtab = reinterpret_cast<const char *>(
-          image.data() + dynTabOffsetGet(dyns[strtabIndex].d_un.d_val));
+          elf->image.data() + dynTabOffsetGet(dyns[strtabIndex].d_un.d_val));
     }
 
     auto sceDynlibData =
         sceDynlibDataPhdrIndex >= 0
-            ? image.data() + phdrs[sceDynlibDataPhdrIndex].p_offset
+            ? elf->image.data() + phdrs[sceDynlibDataPhdrIndex].p_offset
             : nullptr;
 
     auto sceSymtabData =
@@ -646,15 +807,13 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             : 0;
 
     if (symtab == nullptr && symtabIndex >= 0) {
-      if (hashIndex < 0) {
-        std::fprintf(stderr, "SYMTAB without HASH!\n");
-        std::abort();
-      }
+      rx::dieIf(hashIndex < 0, "elf: SYMTAB without HASH! {}",
+                result->moduleName);
 
       symtab = reinterpret_cast<const Elf64_Sym *>(
-          image.data() + dynTabOffsetGet(dyns[symtabIndex].d_un.d_val));
+          elf->image.data() + dynTabOffsetGet(dyns[symtabIndex].d_un.d_val));
       symtabSize = *reinterpret_cast<const std::uint32_t *>(
-          image.data() + dynTabOffsetGet(dyns[hashIndex].d_un.d_val) +
+          elf->image.data() + dynTabOffsetGet(dyns[hashIndex].d_un.d_val) +
           sizeof(std::uint32_t));
     }
 
@@ -760,7 +919,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
               sceDynlibData + dyn.d_un.d_ptr);
         } else {
           pltRelocations = reinterpret_cast<orbis::Relocation *>(
-              image.data() + dyn.d_un.d_ptr);
+              elf->image.data() + dyn.d_un.d_ptr);
         }
         break;
       case kElfDynamicTypeScePltRel:
@@ -781,7 +940,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
               sceDynlibData + dyn.d_un.d_ptr);
         } else {
           nonPltRelocations = reinterpret_cast<orbis::Relocation *>(
-              image.data() + dyn.d_un.d_ptr);
+              elf->image.data() + dyn.d_un.d_ptr);
         }
         break;
       case kElfDynamicTypeRelaSize:
@@ -800,10 +959,7 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
       }
     }
 
-    if (hasPs4Dyn && hasPs5Dyn) {
-      std::fprintf(stderr, "unexpected import type\n");
-      std::abort();
-    }
+    rx::dieIf(hasPs4Dyn && hasPs5Dyn, "unexpected import type");
 
     if (!hasPs4Dyn && !hasPs5Dyn && interpPhdrIndex >= 0) {
       result->dynType = orbis::DynType::FreeBsd;
@@ -854,24 +1010,23 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
             library = moduleLibary.substr(0, hashPos);
             module = moduleLibary.substr(hashPos + 1);
 
-            auto libaryNid = *decodeNid(library);
-            auto moduleNid = *decodeNid(module);
+            auto libaryNid = *rx::linker::decodeNid(library);
+            auto moduleNid = *rx::linker::decodeNid(module);
 
             symbol.libraryIndex = idToLibraryIndex.at(libaryNid);
             symbol.moduleIndex = idToModuleIndex.at(moduleNid);
-            symbol.id = *decodeNid(name);
+            symbol.id = *rx::linker::decodeNid(name);
             if (name == "5JrIq4tzVIo") {
               monoPimpAddress = symbol.address + (std::uint64_t)imageBase;
-              std::fprintf(stderr, "mono_pimp address = %lx\n",
-                           monoPimpAddress);
+              rx::println(stderr, "mono_pimp address = {:x}", monoPimpAddress);
             }
-          } else if (auto nid = decodeNid(fullName)) {
+          } else if (auto nid = rx::linker::decodeNid(fullName)) {
             symbol.id = *nid;
             symbol.libraryIndex = -1;
             symbol.moduleIndex = -1;
           } else {
-            symbol.id =
-                encodeFid(strtab + static_cast<std::uint32_t>(sym.st_name));
+            symbol.id = rx::linker::encodeFid(
+                strtab + static_cast<std::uint32_t>(sym.st_name));
             symbol.libraryIndex = -1;
             symbol.moduleIndex = -1;
           }
@@ -882,50 +1037,126 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
     }
   }
 
+  std::string_view mapName = result->moduleName;
+
+  if (header.e_type == rx::linker::kElfTypeExec ||
+      header.e_type == rx::linker::kElfTypeSceExec ||
+      header.e_type == rx::linker::kElfTypeSceDynExec) {
+    mapName = "executable";
+  }
+
   for (auto phdr : phdrs) {
     if (phdr.p_type == kElfProgramTypeLoad ||
         phdr.p_type == kElfProgramTypeSceRelRo ||
         phdr.p_type == kElfProgramTypeGnuRelRo) {
-      auto segmentEnd = rx::alignUp(phdr.p_vaddr + phdr.p_memsz, vm::kPageSize);
-      auto segmentBegin =
-          rx::alignDown(phdr.p_vaddr - baseAddress, phdr.p_align);
-      auto segmentSize = segmentEnd - segmentBegin;
-      ::mprotect(imageBase + segmentBegin, segmentSize, PROT_WRITE);
-      std::memcpy(imageBase + phdr.p_vaddr - baseAddress,
-                  image.data() + phdr.p_offset, phdr.p_filesz);
-
-      if (phdr.p_type == kElfProgramTypeSceRelRo ||
-          phdr.p_type == kElfProgramTypeGnuRelRo) {
-        phdr.p_flags |= vm::kMapProtCpuWrite; // TODO: reprotect on relocations
-      }
-
-      int mapFlags = 0;
+      rx::EnumBitSet<orbis::vmem::Protection> protFlags = {};
 
       if (phdr.p_flags & PF_X) {
-        mapFlags |= vm::kMapProtCpuExec;
+        protFlags |= orbis::vmem::Protection::CpuExec;
       }
       if (phdr.p_flags & PF_W) {
-        mapFlags |= vm::kMapProtCpuWrite;
+        protFlags |= orbis::vmem::Protection::CpuWrite;
       }
       if (phdr.p_flags & PF_R) {
-        mapFlags |= vm::kMapProtCpuRead;
+        protFlags |= orbis::vmem::Protection::CpuRead;
       }
 
-      if (mapFlags == 0) {
-        mapFlags = vm::kMapProtCpuWrite;
+      if (!protFlags) {
+        protFlags = orbis::vmem::Protection::CpuRead |
+                    orbis::vmem::Protection::CpuWrite;
       }
 
-      vm::protect(imageBase + segmentBegin, segmentSize, mapFlags);
+      phdr.p_memsz = rx::alignUp(phdr.p_memsz, orbis::vmem::kPageSize);
 
-      if (phdr.p_type == kElfProgramTypeLoad) {
-        if (result->segmentCount >= std::size(result->segments)) {
-          std::abort();
+      auto segmentEnd =
+          rx::alignUp(phdr.p_vaddr + phdr.p_memsz, orbis::vmem::kPageSize);
+      auto segmentBegin = rx::alignDown(phdr.p_vaddr, phdr.p_align);
+
+      auto segmentRange =
+          rx::AddressRange::fromBeginEnd(segmentBegin, segmentEnd);
+
+      if ((phdr.p_flags & PF_W) || phdr.p_type == kElfProgramTypeSceRelRo ||
+          phdr.p_type == kElfProgramTypeGnuRelRo) {
+        // map anonymous memory, copy segment data
+
+        auto [vmem, vmemErrc] =
+            orbis::vmem::mapFlex(process, segmentRange.size(), protFlags,
+                                 imageRange.beginAddress() + segmentBegin,
+                                 orbis::AllocationFlags::Fixed, {}, mapName);
+
+        rx::dieIf(vmemErrc != orbis::ErrorCode{},
+                  "elf: failed to map flexible to virtual memory {}",
+                  (int)vmemErrc);
+
+        if ((phdr.p_flags & PF_W) == 0) {
+          rx::mem::protect(vmem,
+                           rx::mem::Protection::R | rx::mem::Protection::W);
         }
 
-        auto &segment = result->segments[result->segmentCount++];
+        std::memcpy(imageBase + phdr.p_vaddr, elf->image.data() + phdr.p_offset,
+                    phdr.p_filesz);
+
+        rx::println(stderr, "{}: RW segment {:x}-{:x}, {}", result->moduleName,
+                    segmentRange.beginAddress(), segmentRange.endAddress(),
+                    protFlags.raw());
+      } else {
+        // map elf device directly
+        rx::dieIf(rx::alignUp(phdr.p_filesz, orbis::vmem::kPageSize) !=
+                      segmentRange.size(),
+                  "unexpected read only segment size, {:x} vs {:x}",
+                  phdr.p_filesz, segmentRange.size());
+
+        rx::println(stderr, "{}: RX segment {:x}-{:x}, {}", result->moduleName,
+                    segmentRange.beginAddress(), segmentRange.endAddress(),
+                    protFlags.raw());
+
+        {
+          std::lock_guard lock(elf->mtx);
+          if (!elf->initialized) {
+            auto [vmem, vmemErrc] = orbis::vmem::mapFile(
+                process, imageRange.beginAddress() + segmentBegin,
+                segmentRange.size(), orbis::AllocationFlags::Fixed,
+                protFlags | orbis::vmem::Protection::CpuWrite, {}, {}, elf,
+                segmentBegin, mapName);
+
+            rx::dieIf(vmemErrc != orbis::ErrorCode{},
+                      "elf: failed to map elf to virtual memory {}", vmemErrc);
+
+            std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0,
+                        phdr.p_memsz - phdr.p_filesz);
+            std::memcpy(imageBase + phdr.p_vaddr,
+                        elf->image.data() + phdr.p_offset, phdr.p_filesz);
+            elf->initialized = true;
+          }
+        }
+
+        auto [vmem, vmemErrc] = orbis::vmem::mapFile(
+            process, imageRange.beginAddress() + segmentBegin,
+            segmentRange.size(), orbis::AllocationFlags::Fixed, protFlags,
+            orbis::vmem::BlockFlags::FlexibleMemory |
+                orbis::vmem::BlockFlags::Commited,
+            orbis::vmem::BlockFlagsEx::Shared, elf, segmentBegin, mapName);
+
+        rx::dieIf(vmemErrc != orbis::ErrorCode{},
+                  "elf: failed to map elf to virtual memory {}", (int)vmemErrc);
+      }
+
+      std::uint32_t segmentIndex;
+      if (phdr.p_type == kElfProgramTypeLoad) {
+        segmentIndex = protFlags & orbis::vmem::Protection::CpuExec ? 0 : 1;
+      } else {
+        segmentIndex = 2;
+      }
+
+      auto &segment = result->segments[segmentIndex];
+      if (segment.addr != nullptr) {
+        rx::println(stderr, "elf: corrupted, segment {} overriding. {}",
+                    segmentIndex, name);
+      } else {
         segment.addr = imageBase + segmentBegin;
         segment.size = phdr.p_memsz;
-        segment.prot = phdr.p_flags;
+        segment.prot = protFlags.toUnderlying();
+        result->segmentCount = std::max(segmentIndex + 1, result->segmentCount);
       }
     }
   }
@@ -951,16 +1182,19 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
   result->phNum = header.e_phnum;
   result->proc = process;
 
-  std::printf("Loaded module '%s' (%lx) from object '%s', address: %p - %p\n",
+  std::strncpy(result->soName, name.data(), sizeof(result->soName));
+  rx::println("Loaded module '{}' ({:x}) from object '{}', "
+              "address: {} - {}",
               result->moduleName, (unsigned long)result->attributes,
-              result->soName, imageBase, (char *)imageBase + result->size);
+              result->soName, (void *)imageBase,
+              (void *)((char *)imageBase + result->size));
   for (const auto &mod : result->neededModules) {
-    std::printf("  needed module '%s' (%lx)\n", mod.name.c_str(),
+    rx::println("  needed module '{}' ({:x})", mod.name.c_str(),
                 (unsigned long)mod.attr);
   }
 
   for (const auto &lib : result->neededLibraries) {
-    std::printf("  needed library '%s' (%lx), kind %s\n", lib.name.c_str(),
+    rx::println("  needed library '{}' ({:x}), kind {}", lib.name.c_str(),
                 (unsigned long)lib.attr, lib.isExport ? "export" : "import");
   }
 
@@ -973,59 +1207,17 @@ rx::Ref<orbis::Module> rx::linker::loadModule(std::span<std::byte> image,
 
 static rx::Ref<orbis::Module> loadModuleFileImpl(std::string_view path,
                                                  orbis::Thread *thread) {
-  rx::Ref<orbis::File> instance;
-  if (vfs::open(path, orbis::kOpenFlagReadOnly, 0, &instance, thread)
-          .isError()) {
+  rx::Ref<orbis::File> elf;
+  if (auto errc = g_elfDevice->open(&elf, path.data(), 0, 0, thread);
+      errc != orbis::ErrorCode{}) {
     return {};
   }
 
-  orbis::Stat fileStat;
-  if (instance->ops->stat(instance.get(), &fileStat, nullptr) !=
-      orbis::ErrorCode{}) {
-    return {};
+  if (auto sepPos = path.rfind('/'); sepPos != std::string_view::npos) {
+    path.remove_prefix(sepPos + 1);
   }
 
-  auto len = fileStat.size;
-
-  std::vector<std::byte> image(len);
-  auto ptr = image.data();
-  orbis::IoVec ioVec{
-      .base = ptr,
-      .len = static_cast<std::uint64_t>(len),
-  };
-  orbis::Uio io{
-      .offset = 0,
-      .iov = &ioVec,
-      .iovcnt = 1,
-      .resid = 0,
-      .segflg = orbis::UioSeg::SysSpace,
-      .rw = orbis::UioRw::Read,
-      .td = thread,
-  };
-
-  while (io.offset < image.size()) {
-    ioVec = {
-        .base = ptr + io.offset,
-        .len = image.size() - io.offset,
-    };
-    auto result = instance->ops->read(instance.get(), &io, thread);
-    if (result != orbis::ErrorCode{}) {
-      std::fprintf(stderr, "Module file reading error\n");
-      std::abort();
-    }
-  }
-
-  if (image[0] != std::byte{'\x7f'} || image[1] != std::byte{'E'} ||
-      image[2] != std::byte{'L'} || image[3] != std::byte{'F'}) {
-    image = unself(image.data(), image.size());
-
-    // std::ofstream(
-    //     std::filesystem::path(path).filename().replace_extension("elf"),
-    //     std::ios::binary)
-    //     .write((const char *)image.data(), image.size());
-  }
-
-  return rx::linker::loadModule(image, thread->tproc);
+  return loadModule(elf.rawStaticCast<ElfFile>(), thread->tproc, path);
 }
 
 rx::Ref<orbis::Module> rx::linker::loadModuleFile(std::string_view path,

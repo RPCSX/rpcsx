@@ -75,11 +75,13 @@ concept AllocationInfo = requires(T &t, rx::AddressRange range) {
   requires rx::Serializable<T>;
 };
 
-template <AllocationInfo AllocationT,
+template <AllocationInfo AllocationT, template <typename> typename Allocator,
           rx::Serializable Resource = ExternalResource>
 struct AllocableResource : Resource {
-  mutable rx::MemoryTableWithPayload<AllocationT> allocations;
-  using iterator = typename rx::MemoryTableWithPayload<AllocationT>::iterator;
+  mutable rx::MemoryTableWithPayload<AllocationT, Allocator> allocations;
+  using BaseResource = AllocableResource;
+  using iterator =
+      typename rx::MemoryTableWithPayload<AllocationT, Allocator>::iterator;
 
   struct AllocationResult {
     iterator it;
@@ -133,6 +135,10 @@ struct AllocableResource : Resource {
     }
   }
 
+  iterator lowerBound(std::uint64_t address) {
+    return allocations.lowerBound(address);
+  }
+
   iterator query(std::uint64_t address) {
     return allocations.queryArea(address);
   }
@@ -164,7 +170,14 @@ struct AllocableResource : Resource {
     if (flags & AllocationFlags::Fixed) {
       it = allocations.queryArea(addressHint);
     } else {
-      it = allocations.lowerBound(addressHint);
+      if (addressHint == 0 && (flags & AllocationFlags::Stack)) {
+        it = allocations.end();
+        if (it != allocations.begin()) {
+          --it;
+        }
+      } else {
+        it = allocations.lowerBound(addressHint);
+      }
     }
 
     if (it == allocations.end()) {
@@ -245,7 +258,7 @@ struct AllocableResource : Resource {
       }
     } else {
       auto hasEnoughSpace = [=](rx::AddressRange range) {
-        if (range.contains(addressHint)) {
+        if (addressHint != 0 && range.contains(addressHint)) {
           if (flags & AllocationFlags::Stack) {
             range = rx::AddressRange::fromBeginEnd(
                 rx::alignDown(range.beginAddress(), alignment), addressHint);
@@ -253,6 +266,11 @@ struct AllocableResource : Resource {
             range =
                 rx::AddressRange::fromBeginEnd(addressHint, range.endAddress());
           }
+        } else if (flags & AllocationFlags::Stack) {
+          auto alignedStackRange = rx::AddressRange::fromBeginEnd(
+              rx::alignDown(range.endAddress() - size, alignment),
+              range.endAddress());
+          range = range.intersection(alignedStackRange);
         }
 
         auto alignedAddress = rx::AddressRange::fromBeginEnd(
@@ -261,7 +279,7 @@ struct AllocableResource : Resource {
         return alignedAddress.isValid() && alignedAddress.size() >= size;
       };
 
-      if (addressHint != 0 && (flags & AllocationFlags::Stack)) {
+      if (flags & AllocationFlags::Stack) {
         while (it != begin()) {
           if (!it->isAllocated() && hasEnoughSpace(it.range())) {
             break;
@@ -288,23 +306,28 @@ struct AllocableResource : Resource {
       }
 
       // now `it` points to region that meets requirements, create fixed range
-      if (it.range().contains(addressHint)) {
+      if (addressHint != 0 && it.range().contains(addressHint)) {
         if (flags & AllocationFlags::Stack) {
-          fixedRange =
-              rx::AddressRange::fromBeginSize(rx::alignDown(addressHint - size, alignment), size);
+          fixedRange = rx::AddressRange::fromBeginSize(
+              rx::alignDown(addressHint - size, alignment), size);
         } else {
           fixedRange =
               rx::AddressRange::fromBeginEnd(addressHint, it.endAddress());
         }
       } else {
-        fixedRange = rx::AddressRange::fromBeginEnd(
-            rx::alignUp(it.beginAddress(), alignment), it.endAddress());
+        if (flags & AllocationFlags::Stack) {
+          fixedRange = rx::AddressRange::fromBeginSize(
+              rx::alignDown(it.endAddress() - size, alignment),
+              size);
+        } else {
+          fixedRange = rx::AddressRange::fromBeginSize(
+              rx::alignUp(it.beginAddress(), alignment), size);
+        }
       }
     }
 
     if (fixedRange.size() > size) {
-      if ((flags & AllocationFlags::Stack) &&
-          !it.range().contains(addressHint)) {
+      if (flags & AllocationFlags::Stack) {
         fixedRange = rx::AddressRange::fromBeginSize(
             rx::alignDown(fixedRange.endAddress() - size, alignment), size);
       } else {

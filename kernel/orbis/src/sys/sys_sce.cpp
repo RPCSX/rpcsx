@@ -7,6 +7,9 @@
 #include "module/ModuleInfoEx.hpp"
 #include "orbis/time.hpp"
 #include "osem.hpp"
+#include "pmem.hpp"
+#include "rx/AddressRange.hpp"
+#include "rx/EnumBitSet.hpp"
 #include "sys/sysproto.hpp"
 #include "thread/Process.hpp"
 #include "thread/ProcessOps.hpp"
@@ -14,6 +17,7 @@
 #include "ucontext.hpp"
 #include "uio.hpp"
 #include "utils/Logs.hpp"
+#include "vmem.hpp"
 #include <fcntl.h>
 #include <ranges>
 #include <utility>
@@ -69,8 +73,12 @@ orbis::SysResult orbis::sys_netgetiflist(Thread *thread /* TODO */) {
   return {};
 }
 
-orbis::SysResult orbis::sys_mtypeprotect(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
+orbis::SysResult
+orbis::sys_mtypeprotect(Thread *thread, uintptr_t addr, size_t len,
+                        MemoryType type,
+                        rx::EnumBitSet<vmem::Protection> prot) {
+  auto range = rx::AddressRange::fromBeginSize(addr, len);
+  return vmem::setTypeAndProtect(thread->tproc, range, type, prot);
 }
 orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
                                         uint32_t id, ptr<void> result,
@@ -393,19 +401,20 @@ orbis::SysResult orbis::sys_evf_cancel(Thread *thread, sint id, uint64_t value,
   return {};
 }
 orbis::SysResult
-orbis::sys_query_memory_protection(Thread *thread, ptr<void> address,
-                                   ptr<MemoryProtection> protection) {
-  if (auto query_memory_protection =
-          thread->tproc->ops->query_memory_protection) {
-    return query_memory_protection(thread, address, protection);
+orbis::sys_query_memory_protection(Thread *thread, uintptr_t address,
+                                   ptr<vmem::MemoryProtection> protection) {
+  auto result = vmem::queryProtection(thread->tproc, address);
+
+  if (!result) {
+    return ErrorCode::ACCES;
   }
 
-  return ErrorCode::NOSYS;
+  return uwrite(protection, *result);
 }
 
 namespace orbis {
 struct BatchMapEntry {
-  ptr<char> start;
+  uintptr_t start;
   off_t offset;
   size_t length;
   char protection;
@@ -419,14 +428,14 @@ struct BatchMapEntry {
 };
 } // namespace orbis
 
-orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk, sint flags,
+orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
+                                      rx::EnumBitSet<vmem::MapFlags> flags,
                                       ptr<BatchMapEntry> entries,
                                       sint entriesCount,
                                       ptr<sint> processedCount) {
-  auto ops = thread->tproc->ops;
   SysResult result = ErrorCode{};
-  ORBIS_LOG_ERROR(__FUNCTION__, unk, flags, entries, entriesCount,
-                  processedCount);
+  ORBIS_LOG_ERROR(__FUNCTION__, unk, flags.toUnderlying(), entries,
+                  entriesCount, processedCount);
 
   int processed = 0;
   for (int i = 0; i < entriesCount; ++i) {
@@ -438,16 +447,29 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk, sint flags,
 
     switch (_entry.operation) {
     case 0:
-      result = ops->dmem_mmap(thread, _entry.start, _entry.length, _entry.type,
-                              _entry.protection, flags, _entry.offset);
-      break;
+      result = sys_mmap_dmem(
+          thread, _entry.start, _entry.length,
+          static_cast<MemoryType>(_entry.type),
+          rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection),
+          flags, _entry.offset);
     case 1:
-      result = ops->munmap(thread, _entry.start, _entry.length);
+      result = sys_munmap(thread, _entry.start, _entry.length);
       break;
     case 2:
-      result =
-          ops->mprotect(thread, _entry.start, _entry.length, _entry.protection);
+      result = sys_mprotect(
+          thread, _entry.start, _entry.length,
+          rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection));
       break;
+    case 3:
+      result = sys_mmap(
+          thread, _entry.start, _entry.length,
+          rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection),
+          vmem::MapFlags::Void | vmem::MapFlags::Anon | flags, -1, 0);
+      break;
+    case 4:
+      ORBIS_LOG_ERROR(__FUNCTION__, "unimplemented type protect");
+      break;
+
     default:
       result = ErrorCode::INVAL;
       break;
@@ -880,14 +902,22 @@ orbis::SysResult orbis::sys_budget_set(Thread *thread, sint budgetId) {
   thread->tproc->budgetId = budgetId;
   return {};
 }
-orbis::SysResult orbis::sys_virtual_query(Thread *thread, ptr<void> addr,
-                                          uint64_t unk, ptr<void> info,
+
+orbis::SysResult orbis::sys_virtual_query(Thread *thread, uintptr_t addr,
+                                          uint64_t flags, ptr<void> info,
                                           size_t infosz) {
-  if (auto virtual_query = thread->tproc->ops->virtual_query) {
-    return virtual_query(thread, addr, unk, info, infosz);
+
+  if (infosz != sizeof(vmem::QueryResult)) {
+    return ErrorCode::INVAL;
   }
 
-  return ErrorCode::NOSYS;
+  auto result = vmem::query(thread->tproc, addr, flags & 1);
+
+  if (!result || result->start >= 0x800000000) {
+    return ErrorCode::ACCES;
+  }
+
+  return uwrite(ptr<vmem::QueryResult>(info), *result);
 }
 orbis::SysResult orbis::sys_mdbg_call(Thread *thread /* TODO */) { return {}; }
 orbis::SysResult orbis::sys_obs_sblock_create(Thread *thread /* TODO */) {
@@ -930,7 +960,7 @@ orbis::SysResult orbis::sys_is_in_sandbox(Thread *thread /* TODO */) {
 }
 orbis::SysResult orbis::sys_dmem_container(Thread *thread, uint id) {
   ORBIS_LOG_NOTICE(__FUNCTION__, id);
-  thread->retval[0] = 1; // returns default direct memory device
+  thread->retval[0] = 0; // returns default direct memory device
   if (id + 1)
     return ErrorCode::PERM;
   return {};
@@ -955,24 +985,11 @@ orbis::SysResult orbis::sys_mname(Thread *thread, uint64_t addr, uint64_t len,
     return result;
   }
 
-  NamedMemoryRange range;
-  range.begin = addr & ~0x3fffull;
-  range.end = range.begin;
-  range.end += ((addr & 0x3fff) + 0x3fff + len) & ~0x3fffull;
-
-  std::lock_guard lock(thread->tproc->namedMemMutex);
-  auto [it, end] = thread->tproc->namedMem.equal_range<NamedMemoryRange>(range);
-  while (it != end) {
-    auto [addr2, end2] = it->first;
-    auto len2 = end2 - addr2;
-    ORBIS_LOG_NOTICE("sys_mname: removed overlapped", it->second, addr2, len2);
-    it = thread->tproc->namedMem.erase(it);
+  auto range = rx::AddressRange::fromBeginSize(addr, len);
+  if (auto error = vmem::setName(thread->tproc, range, _name);
+      error != ErrorCode{}) {
+    ORBIS_LOG_ERROR(__FUNCTION__, "failure:", static_cast<int>(error));
   }
-  if (!thread->tproc->namedMem.try_emplace(range, _name).second)
-    std::abort();
-  if (!thread->tproc->namedMem.count(addr))
-    std::abort();
-
   return {};
 }
 orbis::SysResult orbis::sys_dynlib_dlopen(Thread *thread /* TODO */) {
@@ -1019,7 +1036,7 @@ orbis::SysResult orbis::sys_dynlib_get_info(Thread *thread,
 
   ModuleInfo result = {};
   result.size = sizeof(ModuleInfo);
-  std::strncpy(result.name, module->moduleName, sizeof(result.name));
+  std::strncpy(result.name, module->soName, sizeof(result.name));
   std::memcpy(result.segments, module->segments,
               sizeof(ModuleSegment) * module->segmentCount);
   result.segmentCount = module->segmentCount;
@@ -1485,14 +1502,56 @@ orbis::SysResult orbis::sys_get_cpu_usage_all(Thread *thread, uint32_t unk,
   ORBIS_LOG_TODO(__FUNCTION__, unk, result);
   return {};
 }
-orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
-                                      sint memoryType, sint prot, sint flags,
+orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
+                                      size_t len, MemoryType memoryType,
+                                      rx::EnumBitSet<vmem::Protection> prot,
+                                      rx::EnumBitSet<vmem::MapFlags> flags,
                                       off_t directMemoryStart) {
-  if (auto dmem_mmap = thread->tproc->ops->dmem_mmap) {
-    return dmem_mmap(thread, addr, len, memoryType, prot, flags,
-                     directMemoryStart);
+
+  auto callerAddress = getCallerAddress(thread);
+  auto alignment = dmem::kPageSize;
+
+  {
+    auto unpacked = unpackMapFlags(flags, dmem::kPageSize);
+    alignment = unpacked.first;
+    flags = unpacked.second;
   }
-  return ErrorCode::NOSYS;
+
+  len = rx::alignUp(len, dmem::kPageSize);
+
+  rx::EnumBitSet<AllocationFlags> allocFlags{};
+
+  if (!prot) {
+    // HACK
+    // FIXME: implement protect for pid
+    prot = vmem::Protection::CpuRead | vmem::Protection::CpuWrite |
+           vmem::Protection::GpuRead | vmem::Protection::GpuWrite;
+  }
+
+  if (flags & vmem::MapFlags::Fixed) {
+    allocFlags = AllocationFlags::Fixed;
+  } else if (addr == 0) {
+    addr = 0xfe0000000;
+  }
+
+  if (flags & vmem::MapFlags::NoOverwrite) {
+    allocFlags |= AllocationFlags::NoOverwrite;
+  }
+
+  auto name =
+      callerAddress ? rx::format("anon:{:012x}", callerAddress) : "<dmem unk>";
+
+  auto [range, errc] =
+      vmem::mapDirect(thread->tproc, addr,
+                      rx::AddressRange::fromBeginSize(directMemoryStart, len),
+                      prot, allocFlags, name, alignment, memoryType);
+
+  if (errc != ErrorCode{}) {
+    return errc;
+  }
+
+  thread->retval[0] = range.beginAddress();
+  return {};
 }
 orbis::SysResult orbis::sys_physhm_open(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
@@ -1694,31 +1753,53 @@ orbis::SysResult orbis::sys_process_terminate(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_blockpool_open(Thread *thread) {
-  if (auto blockpool_open = thread->tproc->ops->blockpool_open) {
-    rx::Ref<File> file;
-    auto result = blockpool_open(thread, &file);
-    if (result.isError()) {
-      return result;
-    }
+  if (!g_context->blockpool) {
+    return ErrorCode::NOSYS;
+  }
 
-    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
-    return {};
+  auto fd = thread->tproc->fileDescriptors.insert(g_context->blockpool);
+
+  if (fd == thread->tproc->fileDescriptors.npos) {
+    return ErrorCode::MFILE;
   }
-  return ErrorCode::NOSYS;
+
+  thread->retval[0] = fd;
+  return {};
 }
-orbis::SysResult orbis::sys_blockpool_map(Thread *thread, caddr_t addr,
-                                          size_t len, sint prot, sint flags) {
-  if (auto blockpool_map = thread->tproc->ops->blockpool_map) {
-    return blockpool_map(thread, addr, len, prot, flags);
+orbis::SysResult
+orbis::sys_blockpool_map(Thread *thread, uintptr_t addr, size_t len,
+                         MemoryType type, rx::EnumBitSet<vmem::Protection> prot,
+                         rx::EnumBitSet<vmem::MapFlags> flags) {
+  rx::EnumBitSet<AllocationFlags> allocFlags{};
+
+  if (flags & vmem::MapFlags::Fixed) {
+    allocFlags |= AllocationFlags::Fixed;
   }
-  return ErrorCode::NOSYS;
+  if (flags & vmem::MapFlags::NoOverwrite) {
+    allocFlags |= AllocationFlags::NoOverwrite;
+  }
+  if (flags & vmem::MapFlags::NoCoalesce) {
+    allocFlags |= AllocationFlags::NoMerge;
+  }
+
+  auto [range, errc] = vmem::commitPooled(
+      thread->tproc, rx::AddressRange::fromBeginSize(addr, len), type, prot);
+
+  if (errc != ErrorCode{}) {
+    return errc;
+  }
+
+  thread->retval[0] = range.beginAddress();
+  return {};
 }
-orbis::SysResult orbis::sys_blockpool_unmap(Thread *thread, caddr_t addr,
+orbis::SysResult orbis::sys_blockpool_unmap(Thread *thread, uintptr_t addr,
                                             size_t len, sint flags) {
-  if (auto blockpool_unmap = thread->tproc->ops->blockpool_unmap) {
-    return blockpool_unmap(thread, addr, len);
+  if (flags != 0) {
+    return ErrorCode::INVAL;
   }
-  return ErrorCode::NOSYS;
+
+  return vmem::decommitPooled(thread->tproc,
+                              rx::AddressRange::fromBeginSize(addr, len));
 }
 orbis::SysResult
 orbis::sys_dynlib_get_info_for_libdbg(Thread *thread /* TODO */) {

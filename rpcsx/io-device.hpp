@@ -35,6 +35,6 @@ rx::Ref<orbis::File> wrapSocket(int hostFd, orbis::kstring name, int dom,
                                 int type, int prot);
 orbis::ErrorCode createSocket(rx::Ref<orbis::File> *file, orbis::kstring name,
                               int dom, int type, int prot);
-orbis::File *createHostFile(int hostFd, rx::Ref<orbis::IoDevice> device,
+orbis::File *createHostFile(int hostFd, orbis::IoDevice *device,
                             bool alignTruncate = false);
 orbis::IoDevice *createFdWrapDevice(int fd);

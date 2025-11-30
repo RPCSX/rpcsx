@@ -1,6 +1,9 @@
 #include "IoDevice.hpp"
+#include "file.hpp"
+#include "rx/Mappable.hpp"
 #include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
+#include "vmem.hpp"
 
 static std::string iocGroupToString(unsigned iocGroup) {
   if (iocGroup >= 128) {
@@ -62,6 +65,23 @@ static std::string iocGroupToString(unsigned iocGroup) {
   }
 
   return "'?'";
+}
+
+orbis::ErrorCode
+orbis::IoDevice::map(rx::AddressRange range, std::int64_t offset,
+                     rx::EnumBitSet<vmem::Protection> protection, File *file,
+                     Process *) {
+  if (!file->dirEntries.empty()) {
+    return orbis::ErrorCode::ISDIR;
+  }
+
+  if (!file->hostFd) {
+    return ErrorCode::NOTSUP;
+  }
+
+  auto errc = file->hostFd.map(range, offset, vmem::toCpuProtection(protection),
+                               orbis::vmem::kPageSize);
+  return orbis::toErrorCode(errc);
 }
 
 orbis::ErrorCode orbis::IoDevice::ioctl(std::uint64_t request,

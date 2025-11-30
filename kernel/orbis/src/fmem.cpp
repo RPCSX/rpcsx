@@ -1,12 +1,14 @@
 #include "fmem.hpp"
 
+#include "KernelAllocator.hpp"
 #include "KernelObject.hpp"
 #include "error.hpp"
 #include "kernel/KernelObject.hpp"
 #include "kernel/MemoryResource.hpp"
 #include "pmem.hpp"
 #include "rx/AddressRange.hpp"
-#include "thread/Process.hpp"
+#include "rx/debug.hpp"
+#include "rx/print.hpp"
 #include "vmem.hpp"
 #include <cassert>
 #include <rx/Mappable.hpp>
@@ -30,43 +32,39 @@ struct FlexibleMemoryAllocation {
 };
 
 using FlexibleMemoryResource =
-    kernel::AllocableResource<FlexibleMemoryAllocation>;
+    kernel::AllocableResource<FlexibleMemoryAllocation, orbis::kallocator>;
 
-static auto g_fmemInstance = orbis::createProcessLocalObject<
+static auto g_fmemInstance = orbis::createGlobalObject<
     kernel::LockableKernelObject<FlexibleMemoryResource>>();
 
-orbis::ErrorCode orbis::fmem::initialize(Process *process, std::uint64_t size) {
+orbis::ErrorCode orbis::fmem::initialize(std::uint64_t size) {
   auto [range, errc] =
-      pmem::allocate(pmem::getSize() - 1, size, pmem::MemoryType::WbOnion,
-                     kernel::AllocationFlags::Stack, vmem::kPageSize);
+      pmem::allocate(0, size, kernel::AllocationFlags::Stack, vmem::kPageSize);
   if (errc != ErrorCode{}) {
     return errc;
   }
 
-  auto fmem = process->get(g_fmemInstance);
-  std::lock_guard lock(*fmem);
-  return toErrorCode(fmem->create(range));
+  rx::println("fmem: {:x}-{:x}", range.beginAddress(), range.endAddress());
+
+  std::lock_guard lock(*g_fmemInstance);
+  return toErrorCode(g_fmemInstance->create(range));
 }
 
-void orbis::fmem::destroy(Process *process) {
-  auto fmem = process->get(g_fmemInstance);
+void orbis::fmem::destroy() {
+  std::lock_guard lock(*g_fmemInstance);
 
-  std::lock_guard lock(*fmem);
-
-  for (auto allocation : fmem->allocations) {
+  for (auto allocation : g_fmemInstance->allocations) {
     pmem::deallocate(allocation);
   }
 
-  fmem->destroy();
+  g_fmemInstance->destroy();
 }
 
 std::pair<rx::AddressRange, orbis::ErrorCode>
-orbis::fmem::allocate(Process *process, std::uint64_t size) {
-  auto fmem = process->get(g_fmemInstance);
-
-  std::lock_guard lock(*fmem);
+orbis::fmem::allocate(std::uint64_t size) {
+  std::lock_guard lock(*g_fmemInstance);
   FlexibleMemoryAllocation allocation{.allocated = true};
-  auto [it, errc, range] = fmem->map(
+  auto [it, errc, range] = g_fmemInstance->map(
       0, size, allocation, kernel::AllocationFlags::NoMerge, vmem::kPageSize);
 
   if (errc != std::errc{}) {
@@ -76,13 +74,12 @@ orbis::fmem::allocate(Process *process, std::uint64_t size) {
   return {range, {}};
 }
 
-orbis::ErrorCode orbis::fmem::deallocate(Process *process,
-                                         rx::AddressRange range) {
+orbis::ErrorCode orbis::fmem::deallocate(rx::AddressRange range) {
   FlexibleMemoryAllocation allocation{};
-  auto fmem = process->get(g_fmemInstance);
-  std::lock_guard lock(*fmem);
-  auto [it, errc, _] = fmem->map(range.beginAddress(), range.size(), allocation,
-                                 AllocationFlags::Fixed, 1);
+  std::lock_guard lock(*g_fmemInstance);
+  auto [it, errc, _] =
+      g_fmemInstance->map(range.beginAddress(), range.size(), allocation,
+                          AllocationFlags::Fixed, 1);
 
   return toErrorCode(errc);
 }

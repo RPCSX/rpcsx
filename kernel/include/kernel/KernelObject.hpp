@@ -65,6 +65,7 @@ struct LockableKernelObject : KernelObjectBase, StateT {
 
   void lock() const { mtx.lock(); }
   void unlock() const { mtx.unlock(); }
+  bool try_lock() const { return mtx.try_lock(); }
 };
 
 namespace detail {
@@ -175,6 +176,7 @@ private:
 
 template <typename Namespace, typename Scope, rx::Serializable T>
 struct StaticObjectRef {
+  using type = T;
   std::uint32_t offset;
 
   T *get(std::byte *storage) { return reinterpret_cast<T *>(storage + offset); }

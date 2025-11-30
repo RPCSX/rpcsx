@@ -15,7 +15,7 @@ struct rtprio {
 struct thr_param {
   ptr<void(void *)> start_func;
   ptr<void> arg;
-  ptr<char> stack_base;
+  uint64_t stack_base;
   size_t stack_size;
   ptr<char> tls_base;
   size_t tls_size;

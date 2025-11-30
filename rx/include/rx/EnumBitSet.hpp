@@ -20,7 +20,9 @@ Examples:
 Intersection (&) and symmetric difference (^) is also available.
 */
 
-#include "types.hpp"
+#include "format-base.hpp"
+#include "rx/refl.hpp"
+#include <type_traits>
 
 namespace rx {
 template <typename T>
@@ -52,8 +54,8 @@ private:
       : m_data(data) {}
 
 public:
-  static constexpr usz bitmax = sizeof(T) * 8;
-  static constexpr usz bitsize =
+  static constexpr std::size_t bitmax = sizeof(T) * 8;
+  static constexpr std::size_t bitsize =
       static_cast<underlying_type>(T::bitset_last) + 1;
 
   static_assert(std::is_enum_v<T>,
@@ -69,7 +71,7 @@ public:
            << static_cast<underlying_type>(value);
   }
 
-  EnumBitSet() = default;
+  constexpr EnumBitSet() = default;
 
   // Construct from a single bit
   constexpr EnumBitSet(T bit) noexcept : m_data(shift(bit)) {}
@@ -91,7 +93,9 @@ public:
     return m_data;
   }
 
-  constexpr detail::InvertedEnumBitSet<T> operator~() const { return {m_data}; }
+  constexpr detail::InvertedEnumBitSet<T> operator~() const {
+    return static_cast<underlying_type>(~m_data);
+  }
 
   [[deprecated("Use operator|=")]] constexpr EnumBitSet &
   operator+=(EnumBitSet rhs) {
@@ -123,6 +127,11 @@ public:
 
   constexpr EnumBitSet &operator&=(EnumBitSet rhs) {
     m_data &= static_cast<underlying_type>(rhs);
+    return *this;
+  }
+
+  constexpr EnumBitSet &operator&=(detail::InvertedEnumBitSet<T> rhs) {
+    m_data &= rhs.m_data;
     return *this;
   }
 
@@ -191,7 +200,9 @@ public:
     return (m_data & arg.m_data) == 0;
   }
 
-  underlying_type &raw() { return m_data; }
+  constexpr underlying_type &raw() { return m_data; }
+
+  constexpr auto operator<=>(const EnumBitSet &) const = default;
 };
 
 template <BitSetEnum T> constexpr EnumBitSet<T> toBitSet(T bit) {
@@ -287,5 +298,51 @@ constexpr EnumBitSet<T> operator^(const U &lhs, T rhs) {
 }
 } // namespace bitset
 } // namespace rx
+
+template <typename T>
+  requires requires(rx::format_parse_context &ctx) {
+    rx::formatter<T>().parse(ctx);
+  }
+struct rx::formatter<rx::EnumBitSet<T>> {
+  constexpr rx::format_parse_context::iterator
+  parse(rx::format_parse_context &ctx) {
+    return ctx.begin();
+  }
+
+  rx::format_context::iterator format(rx::EnumBitSet<T> bitSet,
+                                      rx::format_context &ctx) const {
+    auto raw = bitSet.toUnderlying();
+    if (raw != 0) {
+      bool first = true;
+      for (std::size_t i = 0; i <= static_cast<std::size_t>(T::bitset_last);
+           ++i) {
+        auto mask = 1ull << i;
+        if (!(raw & mask)) {
+          continue;
+        }
+
+        if (first) {
+          first = false;
+        } else {
+          rx::format_to(ctx.out(), " | ");
+        }
+
+        rx::format_to(ctx.out(), "{}", T(i));
+        raw &= ~mask;
+      }
+
+      if (raw) {
+        if (!first) {
+          rx::format_to(ctx.out(), " | ");
+        }
+
+        rx::format_to(ctx.out(), "{:#x}", raw);
+      }
+    } else {
+      rx::format_to(ctx.out(), "{}::None", rx::getNameOf<T>());
+    }
+    return ctx.out();
+  }
+};
 
 using namespace rx::bitset;

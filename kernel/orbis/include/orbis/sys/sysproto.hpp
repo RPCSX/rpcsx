@@ -1,4 +1,7 @@
 #include "orbis-config.hpp"
+#include "orbis/dmem.hpp"
+#include "orbis/vmem.hpp"
+#include "rx/EnumBitSet.hpp"
 #include <orbis/Budget.hpp>
 #include <orbis/error.hpp>
 #include <orbis/module/ModuleHandle.hpp>
@@ -18,7 +21,9 @@ using id_t = uint32_t;
 
 struct Thread;
 struct AuthInfo;
+namespace vmem {
 struct MemoryProtection;
+}
 struct ModuleInfo;
 struct ModuleInfoEx;
 struct KEvent;
@@ -105,16 +110,16 @@ SysResult sys_execve(Thread *thread, ptr<char> fname, ptr<ptr<char>> argv,
                      ptr<ptr<char>> envv);
 SysResult sys_umask(Thread *thread, sint newmask);
 SysResult sys_chroot(Thread *thread, ptr<char> path);
-SysResult sys_msync(Thread *thread, ptr<void> addr, size_t len, sint flags);
+SysResult sys_msync(Thread *thread, uintptr_t addr, size_t len, sint flags);
 SysResult sys_vfork(Thread *thread);
 SysResult sys_sbrk(Thread *thread, sint incr);
 SysResult sys_sstk(Thread *thread, sint incr);
 SysResult sys_ovadvise(Thread *thread, sint anom);
-SysResult sys_munmap(Thread *thread, ptr<void> addr, size_t len);
-SysResult sys_mprotect(Thread *thread, ptr<const void> addr, size_t len,
-                       sint prot);
-SysResult sys_madvise(Thread *thread, ptr<void> addr, size_t len, sint behav);
-SysResult sys_mincore(Thread *thread, ptr<const void> addr, size_t len,
+SysResult sys_munmap(Thread *thread, uintptr_t addr, size_t len);
+SysResult sys_mprotect(Thread *thread, uintptr_t addr, size_t len,
+                       rx::EnumBitSet<vmem::Protection> prot);
+SysResult sys_madvise(Thread *thread, uintptr_t addr, size_t len, sint behav);
+SysResult sys_mincore(Thread *thread, uintptr_t addr, size_t len,
                       ptr<char> vec);
 SysResult sys_getgroups(Thread *thread, uint gidsetsize, ptr<gid_t> gidset);
 SysResult sys_setgroups(Thread *thread, uint gidsetsize, ptr<gid_t> gidset);
@@ -198,8 +203,10 @@ SysResult sys_getrlimit(Thread *thread, uint which, ptr<struct rlimit> rlp);
 SysResult sys_setrlimit(Thread *thread, uint which, ptr<struct rlimit> rlp);
 SysResult sys_getdirentries(Thread *thread, sint fd, ptr<char> buf, uint count,
                             ptr<slong> basep);
-SysResult sys_freebsd6_mmap(Thread *thread, caddr_t addr, size_t len, sint prot,
-                            sint flags, sint fd, sint pad, off_t pos);
+SysResult sys_freebsd6_mmap(Thread *thread, uintptr_t addr, size_t len,
+                            rx::EnumBitSet<vmem::Protection> prot,
+                            rx::EnumBitSet<vmem::MapFlags> flags, sint fd,
+                            sint pad, off_t pos);
 SysResult sys_freebsd6_lseek(Thread *thread, sint fd, sint pad, off_t offset,
                              sint whence);
 SysResult sys_freebsd6_truncate(Thread *thread, ptr<char> path, sint pad,
@@ -209,8 +216,8 @@ SysResult sys_freebsd6_ftruncate(Thread *thread, sint fd, sint pad,
 SysResult sys___sysctl(Thread *thread, ptr<sint> name, uint namelen,
                        ptr<void> old, ptr<size_t> oldenp, ptr<void> new_,
                        size_t newlen);
-SysResult sys_mlock(Thread *thread, ptr<const void> addr, size_t len);
-SysResult sys_munlock(Thread *thread, ptr<const void> addr, size_t len);
+SysResult sys_mlock(Thread *thread, uintptr_t addr, size_t len);
+SysResult sys_munlock(Thread *thread, uintptr_t addr, size_t len);
 SysResult sys_undelete(Thread *thread, ptr<char> path);
 SysResult sys_futimes(Thread *thread, sint fd, ptr<struct timeval> tptr);
 SysResult sys_getpgid(Thread *thread, pid_t pid);
@@ -246,7 +253,7 @@ SysResult sys_ktimer_getoverrun(Thread *thread, sint timerid);
 SysResult sys_nanosleep(Thread *thread, cptr<timespec> rqtp,
                         ptr<timespec> rmtp);
 SysResult sys_ntp_gettime(Thread *thread, ptr<struct ntptimeval> ntvp);
-SysResult sys_minherit(Thread *thread, ptr<void> addr, size_t len,
+SysResult sys_minherit(Thread *thread, uintptr_t addr, size_t len,
                        sint inherit);
 SysResult sys_rfork(Thread *thread, sint flags);
 SysResult sys_openbsd_poll(Thread *thread, ptr<struct pollfd> fds, uint nfds,
@@ -519,8 +526,9 @@ SysResult sys_pread(Thread *thread, sint fd, ptr<void> buf, size_t nbyte,
                     off_t offset);
 SysResult sys_pwrite(Thread *thread, sint fd, ptr<const void> buf, size_t nbyte,
                      off_t offset);
-SysResult sys_mmap(Thread *thread, caddr_t addr, size_t len, sint prot,
-                   sint flags, sint fd, off_t pos);
+SysResult sys_mmap(Thread *thread, uintptr_t addr, size_t len,
+                   rx::EnumBitSet<vmem::Protection> prot,
+                   rx::EnumBitSet<vmem::MapFlags> flags, sint fd, off_t pos);
 SysResult sys_lseek(Thread *thread, sint fd, off_t offset, sint whence);
 SysResult sys_truncate(Thread *thread, ptr<char> path, off_t length);
 SysResult sys_ftruncate(Thread *thread, sint fd, off_t length);
@@ -621,7 +629,9 @@ SysResult sys_socketex(Thread *thread, ptr<const char> name, sint domain,
 SysResult sys_socketclose(Thread *thread, sint fd);
 SysResult sys_netgetiflist(Thread *thread /* TODO */);
 SysResult sys_kqueueex(Thread *thread, ptr<char> name, sint flags);
-SysResult sys_mtypeprotect(Thread *thread /* TODO */);
+SysResult sys_mtypeprotect(Thread *thread, uintptr_t addr, size_t len,
+                           MemoryType type,
+                           rx::EnumBitSet<vmem::Protection> prot);
 SysResult sys_regmgr_call(Thread *thread, uint32_t op, uint32_t id,
                           ptr<void> result, ptr<void> value, uint64_t len);
 SysResult sys_jitshm_create(Thread *thread /* TODO */);
@@ -644,9 +654,10 @@ SysResult sys_evf_set(Thread *thread, sint id, uint64_t value);
 SysResult sys_evf_clear(Thread *thread, sint id, uint64_t value);
 SysResult sys_evf_cancel(Thread *thread, sint id, uint64_t value,
                          ptr<sint> pNumWaitThreads);
-SysResult sys_query_memory_protection(Thread *thread, ptr<void> address,
-                                      ptr<MemoryProtection> protection);
-SysResult sys_batch_map(Thread *thread, sint unk, sint flags,
+SysResult sys_query_memory_protection(Thread *thread, uintptr_t address,
+                                      ptr<vmem::MemoryProtection> protection);
+SysResult sys_batch_map(Thread *thread, sint unk,
+                        rx::EnumBitSet<vmem::MapFlags> flags,
                         ptr<BatchMapEntry> entries, sint entriesCount,
                         ptr<sint> processedCount);
 SysResult sys_osem_create(Thread *thread, ptr<const char[32]> name, uint attrs,
@@ -679,7 +690,7 @@ SysResult sys_budget_delete(Thread *thread, sint budget);
 SysResult sys_budget_get(Thread *thread, sint id, ptr<BudgetInfo> budgetInfo,
                          ptr<sint> count);
 SysResult sys_budget_set(Thread *thread, sint budget);
-SysResult sys_virtual_query(Thread *thread, ptr<void> addr, uint64_t unk,
+SysResult sys_virtual_query(Thread *thread, uintptr_t addr, uint64_t unk,
                             ptr<void> info, size_t infosz);
 SysResult sys_mdbg_call(Thread *thread /* TODO */);
 SysResult sys_obs_sblock_create(Thread *thread /* TODO */);
@@ -752,8 +763,10 @@ SysResult sys_opmc_set_hw(Thread *thread /* TODO */);
 SysResult sys_opmc_get_hw(Thread *thread /* TODO */);
 SysResult sys_get_cpu_usage_all(Thread *thread, uint32_t unk,
                                 ptr<uint32_t> result);
-SysResult sys_mmap_dmem(Thread *thread, caddr_t addr, size_t len,
-                        sint memoryType, sint prot, sint flags,
+SysResult sys_mmap_dmem(Thread *thread, uintptr_t addr, size_t len,
+                        MemoryType memoryType,
+                        rx::EnumBitSet<vmem::Protection> prot,
+                        rx::EnumBitSet<vmem::MapFlags> flags,
                         off_t directMemoryStart);
 SysResult sys_physhm_open(Thread *thread /* TODO */);
 SysResult sys_physhm_unlink(Thread *thread /* TODO */);
@@ -785,9 +798,11 @@ SysResult sys_budget_get_ptype_of_budget(Thread *thread, sint budgetId);
 SysResult sys_prepare_to_resume_process(Thread *thread /* TODO */);
 SysResult sys_process_terminate(Thread *thread /* TODO */);
 SysResult sys_blockpool_open(Thread *thread);
-SysResult sys_blockpool_map(Thread *thread, caddr_t addr, size_t len, sint prot,
-                            sint flags);
-SysResult sys_blockpool_unmap(Thread *thread, caddr_t addr, size_t len,
+SysResult sys_blockpool_map(Thread *thread, uintptr_t addr, size_t len,
+                            MemoryType type,
+                            rx::EnumBitSet<vmem::Protection> prot,
+                            rx::EnumBitSet<vmem::MapFlags> flags);
+SysResult sys_blockpool_unmap(Thread *thread, uintptr_t addr, size_t len,
                               sint flags);
 SysResult sys_dynlib_get_info_for_libdbg(Thread *thread /* TODO */);
 SysResult sys_blockpool_batch(Thread *thread /* TODO */);

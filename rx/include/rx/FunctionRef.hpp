@@ -20,7 +20,7 @@ public:
       : context(
             const_cast<std::remove_const_t<std::remove_cvref_t<T>> *>(&object)),
         invoke(+[](void *context, ArgsT... args) -> RT {
-          return (*reinterpret_cast<T *>(context))(std::move(args)...);
+          return (*reinterpret_cast<T *>(context))(args...);
         }) {}
 
   template <typename... InvokeArgsT>

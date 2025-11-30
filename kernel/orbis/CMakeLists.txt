@@ -1,6 +1,8 @@
 set(CMAKE_POSITION_INDEPENDENT_CODE on)
 
 add_library(obj.orbis-kernel OBJECT
+  src/blockpool.cpp
+  src/dmem.cpp
   src/event.cpp
   src/evf.cpp
   src/fmem.cpp

@@ -169,19 +169,17 @@ struct Deserializer {
     if constexpr (requires {
                     { type::deserialize(*this) } -> std::convertible_to<type>;
                   }) {
-      return T::deserialize(*this);
+      return type::deserialize(*this);
     } else if constexpr (requires(type &result) {
                            type::deserialize(*this, result);
                          }) {
       type result;
-      T::deserialize(*this, result);
+      type::deserialize(*this, result);
       return result;
     } else if constexpr (requires(type &result) {
-                           {
-                             result.deserialize(*this)
-                           } -> std::convertible_to<type>;
+                           result.deserialize(*this);
                          }) {
-      T result;
+      type result;
       result.deserialize(*this);
       return result;
     } else if constexpr (requires(type &result) {
