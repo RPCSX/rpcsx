@@ -228,7 +228,7 @@ orbis::ErrorCode orbis::dmem::release(unsigned dmemIndex,
     return ErrorCode::INVAL;
   }
 
-  if (range.beginAddress() % kPageSize || range.endAddress() % kPageSize ||
+  if (range.beginAddress() % kPageSize || range.size() % vmem::kPageSize ||
       !range.isValid()) {
     return ErrorCode::INVAL;
   }
