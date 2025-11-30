@@ -9,6 +9,7 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/vmem.hpp"
+#include "rx/format.hpp"
 #include "rx/AddressRange.hpp"
 #include "rx/EnumBitSet.hpp"
 
