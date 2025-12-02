@@ -2452,9 +2452,9 @@ Cache::ComputeTag::getShader(const Registers::ComputeConfig &pgm) {
   gcn::Environment env{
       .vgprCount = pgm.rsrc1.getVGprCount(),
       .sgprCount = pgm.rsrc1.getSGprCount(),
-      .numThreadX = static_cast<std::uint8_t>(pgm.numThreadX),
-      .numThreadY = static_cast<std::uint8_t>(pgm.numThreadY),
-      .numThreadZ = static_cast<std::uint8_t>(pgm.numThreadZ),
+      .numThreadX = std::max<std::uint8_t>(pgm.numThreadX, 1),
+      .numThreadY = std::max<std::uint8_t>(pgm.numThreadY, 1),
+      .numThreadZ = std::max<std::uint8_t>(pgm.numThreadZ, 1),
       .userSgprs = std::span(pgm.userData.data(), pgm.rsrc2.userSgpr),
   };
 
