@@ -7,6 +7,7 @@
 #include "rx/MemoryTable.hpp"
 #include "rx/die.hpp"
 #include "rx/format.hpp"
+#include "rx/print.hpp"
 #include "thread/Process.hpp"
 #include "vmem.hpp"
 #include <algorithm>
@@ -272,6 +273,13 @@ void orbis::blockpool::clear() {
 }
 
 orbis::ErrorCode orbis::blockpool::expand(rx::AddressRange dmemRange) {
+  rx::println(stderr, "blockpool::expand({:x}-{:x})", dmemRange.beginAddress(),
+              dmemRange.endAddress());
+
+  if (!dmemRange.isValid()) {
+    return ErrorCode::INVAL;
+  }
+
   std::scoped_lock lock(*g_blockpool);
   g_blockpool->expand(dmemRange);
   return {};
@@ -315,6 +323,9 @@ orbis::ErrorCode
 orbis::blockpool::commit(Process *process, rx::AddressRange vmemRange,
                          MemoryType type,
                          rx::EnumBitSet<orbis::vmem::Protection> protection) {
+  rx::println(stderr, "blockpool::commit({:x}-{:x}, {}, {})",
+              vmemRange.beginAddress(), vmemRange.endAddress(), type,
+              protection);
   auto pool = type == MemoryType::WbOnion ? g_cachedBlockpool : g_blockpool;
   auto otherPool =
       type == MemoryType::WbOnion ? g_blockpool : g_cachedBlockpool;

@@ -720,28 +720,29 @@ orbis::ErrorCode orbis::dmem::notifyUnmap(orbis::Process *process,
 
   for (auto mapIt = it->mappings.begin(); mapIt != it->mappings.end();) {
     if (mapIt->process == process && mapIt->vmRange.intersects(range)) {
-      if (mapIt->vmRange == range) {
+      auto blockRange = range.intersection(mapIt->vmRange);
+      if (mapIt->vmRange == blockRange) {
         mapIt = it->mappings.erase(mapIt);
         break;
       }
 
-      if (mapIt->vmRange.beginAddress() == range.beginAddress()) {
+      if (mapIt->vmRange.beginAddress() == blockRange.beginAddress()) {
         mapIt->vmRange = rx::AddressRange::fromBeginEnd(
-            range.endAddress(), mapIt->vmRange.endAddress());
+            blockRange.endAddress(), mapIt->vmRange.endAddress());
         break;
       }
 
-      if (mapIt->vmRange.endAddress() == range.endAddress()) {
+      if (mapIt->vmRange.endAddress() == blockRange.endAddress()) {
         mapIt->vmRange = rx::AddressRange::fromBeginEnd(
-            mapIt->vmRange.beginAddress(), range.beginAddress());
+            mapIt->vmRange.beginAddress(), blockRange.beginAddress());
         break;
       }
 
       auto leftAllocation = rx::AddressRange::fromBeginEnd(
-          mapIt->vmRange.beginAddress(), range.beginAddress());
+          mapIt->vmRange.beginAddress(), blockRange.beginAddress());
 
       auto rightAllocation = rx::AddressRange::fromBeginEnd(
-          range.endAddress(), mapIt->vmRange.endAddress());
+          blockRange.endAddress(), mapIt->vmRange.endAddress());
 
       mapIt->vmRange = leftAllocation;
       it->mappings.push_back({.process = process, .vmRange = rightAllocation});
