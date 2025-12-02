@@ -2,33 +2,156 @@
 
 #include "Vector.hpp"
 #include "ir/Value.hpp"
+#include "rx/align.hpp"
+#include "rx/die.hpp"
+#include <algorithm>
 #include <array>
 #include <cstdint>
-#include <variant>
+#include <cstring>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace shader::eval {
 struct Value {
-  using Storage = std::variant<
-      std::nullptr_t, std::int8_t, std::int16_t, std::int32_t, std::int64_t,
-      std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t, float16_t,
-      float32_t, float64_t, u8vec2, u8vec3, u8vec4, i8vec2, i8vec3, i8vec4,
-      u16vec2, u16vec3, u16vec4, i16vec2, i16vec3, i16vec4, u32vec2, u32vec3,
-      u32vec4, i32vec2, i32vec3, i32vec4, u64vec2, u64vec3, u64vec4, i64vec2,
-      i64vec3, i64vec4, f32vec2, f32vec3, f32vec4, f64vec2, f64vec3, f64vec4,
-      f16vec2, f16vec3, f16vec4, bool, bvec2, bvec3, bvec4,
-      std::array<uint32_t, 8>, std::array<std::uint32_t, 16>>;
-  static constexpr auto StorageSize = std::variant_size_v<Storage>;
-  Storage storage;
+  using Types = std::tuple<std::nullptr_t, bool, int8_t, int16_t, int32_t,
+                           int64_t, uint8_t, uint16_t, uint32_t, uint64_t,
+                           float16_t, float32_t, float64_t>;
+
+  static constexpr auto kMaxElementCount = 32;
+  static constexpr auto kMaxTypeAlignment = [] {
+    auto impl = []<std::size_t... I>(std::index_sequence<I...>) {
+      std::size_t result = 1;
+      ((result = std::max(alignof(std::tuple_element_t<I, Types>), result)),
+       ...);
+      return result;
+    };
+    return impl(std::make_index_sequence<std::tuple_size_v<Types>>{});
+  }();
+  static constexpr auto kMaxTypeSize = [] {
+    auto impl = []<std::size_t... I>(std::index_sequence<I...>) {
+      std::size_t result = 1;
+      ((result = std::max(sizeof(std::tuple_element_t<I, Types>), result)),
+       ...);
+      return result;
+    };
+    return rx::alignUp(
+        impl(std::make_index_sequence<std::tuple_size_v<Types>>{}),
+        kMaxTypeAlignment);
+  }();
+
+  template <typename T> static consteval std::size_t getTypeIndex() {
+    auto impl = []<std::size_t... I>(std::index_sequence<I...>) {
+      std::size_t result = -1;
+      ((result =
+            std::is_same_v<T, std::tuple_element_t<I, Types>> ? I : result),
+       ...);
+      return result;
+    };
+    return impl(std::make_index_sequence<std::tuple_size_v<Types>>{});
+  }
+
+  static constexpr auto StorageSize = std::tuple_size_v<Types>;
+
+  template <typename T, typename RT = std::invoke_result_t<
+                            T, std::span<std::tuple_element_t<0, Types>>>>
+  RT visit(T &&cb) const {
+    static constexpr auto table = [] {
+      std::array<RT (*)(void *cb, const char *data, std::uint32_t count),
+                 std::tuple_size_v<Types>>
+          result;
+
+      auto impl = [&]<std::size_t... I>(std::index_sequence<I...>) {
+        ((result[I] = [](void *cb, const char *data,
+                         std::uint32_t count) -> RT {
+           return (*reinterpret_cast<T *>(cb))(std::span(
+               reinterpret_cast<const std::tuple_element_t<I, Types> *>(data),
+               count));
+         }),
+         ...);
+      };
+
+      impl(std::make_index_sequence<std::tuple_size_v<Types>>{});
+
+      return result;
+    }();
+
+    return table[mTypeIndex](&cb, mData, mCount);
+  }
+
+  [[nodiscard]] std::size_t getConstituentSize() const {
+    return visit([](auto values) -> std::size_t {
+      if constexpr (std::is_same_v<decltype(values[0]), std::nullptr_t>) {
+        return 0;
+      } else {
+        return sizeof(values[0]);
+      }
+    });
+  }
 
   explicit operator bool() const { return !empty(); }
-  bool empty() const { return storage.index() == 0; }
+  [[nodiscard]] bool empty() const {
+    return mCount == 0 || mTypeIndex == getTypeIndex<std::nullptr_t>();
+  }
+  [[nodiscard]] std::size_t size() const { return mCount; }
 
-  Value() : storage(nullptr) {}
+  Value() = default;
+
+  template <typename FT, typename... T>
+    requires(getTypeIndex<FT>() < std::tuple_size_v<Types> &&
+             (std::is_same_v<FT, T> && ...))
+  Value(FT firstValue, T... value) {
+    add(firstValue);
+    (add(value), ...);
+  }
+
+  void add(const Value &value) {
+    if (value.mCount != 1) {
+      mTypeIndex = getTypeIndex<std::nullptr_t>();
+      mCount = 1;
+      return;
+    }
+
+    if (mCount == 0) {
+      mTypeIndex = value.mTypeIndex;
+      mCount = 1;
+      std::memcpy(mData, value.mData, kMaxTypeSize);
+      return;
+    }
+
+    rx::dieIf(mCount >= kMaxElementCount, "storage too small");
+
+    if (mTypeIndex != value.mTypeIndex) {
+      mTypeIndex = getTypeIndex<std::nullptr_t>();
+      mCount = 1;
+      return;
+    }
+
+    auto index = mCount++;
+    auto elemSize = getConstituentSize();
+    std::memcpy(mData + elemSize * index, value.mData, kMaxTypeSize);
+  }
 
   template <typename T>
-  Value(T &&value)
-    requires requires { Storage(std::forward<T>(value)); }
-      : storage(std::forward<T>(value)) {}
+    requires(getTypeIndex<T>() < std::tuple_size_v<Types>)
+  void add(T value) {
+    if (mCount == 0) {
+      mTypeIndex = getTypeIndex<T>();
+      mCount = 1;
+      *getData<T>() = value;
+      return;
+    }
+
+    rx::dieIf(mCount >= kMaxElementCount, "storage too small");
+
+    if (mTypeIndex != getTypeIndex<T>()) {
+      mTypeIndex = getTypeIndex<std::nullptr_t>();
+      mCount = 1;
+      return;
+    }
+
+    getData<T>()[mCount++] = value;
+  }
 
   static Value compositeConstruct(ir::Value type,
                                   std::span<const Value> constituents);
@@ -52,19 +175,41 @@ struct Value {
   std::optional<std::int64_t> sExtScalar() const;
 
   template <typename T>
-    requires requires { std::get<T>(storage); }
-  T get() const {
-    return std::get<T>(storage);
+    requires(getTypeIndex<T>() < std::tuple_size_v<Types>)
+  [[nodiscard]] const T &get(std::size_t index = 0) const {
+    rx::dieIf(mTypeIndex != getTypeIndex<T>(),
+              "eval::Value::get(): invalid type");
+    rx::dieIf(index >= std::tuple_size_v<Types>,
+              "eval::Value::get(): invalid index");
+    return getData<T>()[index];
+  }
+
+  template <auto I>
+    requires(I < std::tuple_size_v<Types>)
+  [[nodiscard]] const std::tuple_element_t<I, Types> &
+  get(std::size_t index = 0) const {
+    rx::dieIf(mTypeIndex != I, "eval::Value::get(): invalid type");
+    rx::dieIf(index >= std::tuple_size_v<Types>,
+              "eval::Value::get(): invalid index");
+    return getData<std::tuple_element_t<I, Types>>()[index];
   }
 
   template <typename T>
-    requires requires { std::get<T>(storage); }
-  std::optional<T> as() const {
-    if (auto result = std::get_if<T>(&storage)) {
-      return *result;
+    requires(getTypeIndex<T>() < std::tuple_size_v<Types>)
+  [[nodiscard]] std::optional<T> as(std::size_t index = 0) const {
+    rx::dieIf(index >= std::tuple_size_v<Types>,
+              "eval::Value::as(): invalid index");
+    if (mTypeIndex == getTypeIndex<T>()) {
+      return getData<T>()[index];
     }
 
     return std::nullopt;
+  }
+
+  template <typename T>
+    requires(getTypeIndex<T>() < std::tuple_size_v<Types>)
+  [[nodiscard]] bool is() const {
+    return mTypeIndex == getTypeIndex<T>();
   }
 
   Value operator+(const Value &rhs) const;
@@ -89,5 +234,17 @@ struct Value {
   Value operator-() const;
   Value operator~() const;
   Value operator!() const;
+
+  std::size_t index() const { return mTypeIndex; }
+
+private:
+  template <typename T> T *getData() { return reinterpret_cast<T *>(mData); }
+  template <typename T> const T *getData() const {
+    return reinterpret_cast<const T *>(mData);
+  }
+
+  std::uint32_t mTypeIndex = 0;
+  std::uint32_t mCount = 0;
+  alignas(kMaxTypeAlignment) char mData[kMaxTypeSize * kMaxElementCount];
 };
 } // namespace shader::eval

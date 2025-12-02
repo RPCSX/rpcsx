@@ -453,20 +453,16 @@ Cache::ShaderResources::eval(ir::InstructionId instId,
     case 8:
       result = readPointer<std::uint64_t>(address);
       break;
-    case 12:
-      result = readPointer<u32vec3>(address);
-      break;
-    case 16:
-      result = readPointer<u32vec4>(address);
-      break;
-    case 32:
-      result = readPointer<std::array<std::uint32_t, 8>>(address);
-      break;
-    case 64:
-      result = readPointer<std::array<std::uint32_t, 16>>(address);
-      break;
+
     default:
-      rx::die("unexpected pointer load size {}", loadSize);
+      rx::dieIf(loadSize % sizeof(std::uint32_t), "unaligned load size {}",
+                loadSize);
+
+      for (std::int32_t offset = 0; offset < loadSize;
+           offset += sizeof(std::uint32_t)) {
+        result.add(readPointer<std::uint32_t>(address + offset));
+      }
+      break;
     }
 
     return result;
@@ -2368,7 +2364,7 @@ Cache::Shader Cache::GraphicsTag::getShader(
           std::bit_cast<std::uint32_t>(context.paClVports[slot.data].zScale);
       break;
     case gcn::ConfigType::PsInputVGpr:
-      if (slot.data > psVgprInput.size()) {
+      if (slot.data >= psVgprInput.size()) {
         configPtr[index] = ~0;
       } else {
         configPtr[index] = std::bit_cast<std::uint32_t>(psVgprInput[slot.data]);
