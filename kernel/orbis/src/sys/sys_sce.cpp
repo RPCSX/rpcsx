@@ -472,7 +472,10 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
           vmem::MapFlags::Void | vmem::MapFlags::Anon | flags, -1, 0);
       break;
     case 4:
-      ORBIS_LOG_ERROR(__FUNCTION__, "unimplemented type protect");
+      result = sys_mtypeprotect(
+          thread, _entry.start, _entry.length,
+          static_cast<MemoryType>(_entry.type),
+          rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection));
       break;
 
     default:
@@ -1546,10 +1549,10 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
 
   auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
 
-  auto [range, errc] =
-      vmem::mapDirect(thread->tproc, addr,
-                      rx::AddressRange::fromBeginSize(directMemoryStart, len),
-                      prot, allocFlags, name, alignment, callerAddress, memoryType);
+  auto [range, errc] = vmem::mapDirect(
+      thread->tproc, addr,
+      rx::AddressRange::fromBeginSize(directMemoryStart, len), prot, allocFlags,
+      name, alignment, callerAddress, memoryType);
 
   if (errc != ErrorCode{}) {
     return errc;
