@@ -74,7 +74,8 @@ struct DirectMemoryAllocation {
   merge(const DirectMemoryAllocation &other, rx::AddressRange,
         rx::AddressRange) const {
     auto result = *this;
-    result.mappings.insert_range(result.mappings.end(), other.mappings);
+    result.mappings.insert(result.mappings.end(), other.mappings.begin(),
+                           other.mappings.end());
     return result;
   }
 
