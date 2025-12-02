@@ -6,6 +6,7 @@
 #include "rx/AddressRange.hpp"
 #include "rx/MemoryTable.hpp"
 #include "rx/die.hpp"
+#include "rx/format.hpp"
 #include "thread/Process.hpp"
 #include "vmem.hpp"
 #include <algorithm>
@@ -187,14 +188,16 @@ struct PooledMemoryResource {
       auto mapVirtualRange = rx::AddressRange::fromBeginSize(
           virtualRange.beginAddress(), block.size());
 
-      virtualRange = rx::AddressRange::fromBeginEnd(
-          mapVirtualRange.endAddress(), virtualRange.endAddress());
-
       auto errc = orbis::pmem::map(mapVirtualRange.beginAddress(), block,
                                    orbis::vmem::toCpuProtection(protection));
 
       rx::dieIf(errc != orbis::ErrorCode{},
-                "blockpool: failed to map physical memory");
+                "blockpool: failed to map physical memory, vmem {:x}-{:x}, "
+                "pmem {:x}-{:x}, commit vmem {:x}-{:x}, error {}",
+                mapVirtualRange.beginAddress(), mapVirtualRange.endAddress(),
+                block.beginAddress(), block.endAddress(),
+                virtualRange.beginAddress(), virtualRange.endAddress(), errc);
+
       amdgpu::mapMemory(process->pid, mapVirtualRange, type, protection,
                         block.beginAddress());
 
@@ -202,6 +205,9 @@ struct PooledMemoryResource {
                      {.pmemAddress = block.beginAddress(), .type = type},
                      false);
       freeBlocks.pop_back();
+
+      virtualRange = rx::AddressRange::fromBeginEnd(
+          mapVirtualRange.endAddress(), virtualRange.endAddress());
     }
   }
 
@@ -309,8 +315,7 @@ orbis::ErrorCode
 orbis::blockpool::commit(Process *process, rx::AddressRange vmemRange,
                          MemoryType type,
                          rx::EnumBitSet<orbis::vmem::Protection> protection) {
-  auto pool =
-      type == MemoryType::WbOnion ? g_cachedBlockpool : g_blockpool;
+  auto pool = type == MemoryType::WbOnion ? g_cachedBlockpool : g_blockpool;
   auto otherPool =
       type == MemoryType::WbOnion ? g_blockpool : g_cachedBlockpool;
 

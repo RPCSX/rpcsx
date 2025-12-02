@@ -673,9 +673,9 @@ orbis::ErrorCode orbis::dmem::map(orbis::Process *process, unsigned dmemIndex,
     return ErrorCode::ACCES;
   }
 
-  if (!allocationInfoIt->mappings.empty() && !process->allowDmemAliasing) {
-    return ErrorCode::INVAL;
-  }
+  // if (!allocationInfoIt->mappings.empty() && !process->allowDmemAliasing) {
+  //   return ErrorCode::INVAL;
+  // }
 
   auto directRange = rx::AddressRange::fromBeginSize(offset, range.size())
                          .intersection(allocationInfoIt.range());
