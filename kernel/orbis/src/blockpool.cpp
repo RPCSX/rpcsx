@@ -226,6 +226,7 @@ struct PooledMemoryResource {
                      {.pmemAddress = block.beginAddress(), .type = type},
                      false);
       freeBlocks.pop_back();
+      used += mapVirtualRange.size();
 
       virtualRange = rx::AddressRange::fromBeginEnd(
           mapVirtualRange.endAddress(), virtualRange.endAddress());
