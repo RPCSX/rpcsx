@@ -311,7 +311,7 @@ void Device::start() {
     });
   }
 
-  std::jthread vblankThread([](const std::stop_token &stopToken) {
+  std::jthread vblankThread([this](const std::stop_token &stopToken) {
     orbis::g_context->deviceEventEmitter->emit(
         orbis::kEvFiltDisplay,
         [=](orbis::KNote *note) -> std::optional<orbis::intptr_t> {
@@ -329,6 +329,8 @@ void Device::start() {
       prevVBlank +=
           std::chrono::duration_cast<std::chrono::nanoseconds>(period);
       std::this_thread::sleep_until(prevVBlank);
+
+      vblankCount++;
 
       orbis::g_context->deviceEventEmitter->emit(
           orbis::kEvFiltDisplay,

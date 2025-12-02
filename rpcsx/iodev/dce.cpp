@@ -469,6 +469,22 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
             return {};
           });
 
+    } else if (args->id == 0xb) {
+      struct VblankStatus {
+        orbis::uint64_t count;
+        orbis::uint64_t processTime;
+        orbis::uint64_t tsc;
+        char flags;
+      };
+
+      VblankStatus vblankStatus{};
+      // TODO: lock bridge header
+      vblankStatus.count = gpuCtx.vblankCount;
+      vblankStatus.processTime = 0; // TODO
+      vblankStatus.tsc = 0;         // TODO
+      vblankStatus.flags = 0;       // TODO
+
+      std::memcpy(args->ptr, &vblankStatus, sizeof(VblankStatus));
     } else { // used during open/close
       ORBIS_LOG_NOTICE("dce: UNIMPLEMENTED FlipControl", args->id, args->arg2,
                        args->ptr, args->size);
