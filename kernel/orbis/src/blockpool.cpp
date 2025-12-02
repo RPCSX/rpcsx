@@ -46,6 +46,26 @@ struct PooledMemoryResource {
     reservedPages.clear();
   }
 
+  std::size_t calcUsed() const {
+    std::size_t result = 0;
+
+    for (auto block : usedBlocks) {
+      result += block.size();
+    }
+
+    return result + reservedPages.size() * orbis::dmem::kPageSize;
+  }
+
+  std::size_t calcFree() const {
+    std::size_t result = 0;
+
+    for (auto block : freeBlocks) {
+      result += block.size();
+    }
+
+    return result;
+  }
+
   void addFreeBlock(rx::AddressRange dmemRange) {
     if (freeBlocks.empty()) {
       freeBlocks.push_back(dmemRange);
@@ -64,8 +84,8 @@ struct PooledMemoryResource {
 
     if (it != freeBlocks.end() &&
         dmemRange.endAddress() == it->beginAddress()) {
-      *it = rx::AddressRange::fromBeginEnd(it->beginAddress(),
-                                           dmemRange.endAddress());
+      *it = rx::AddressRange::fromBeginEnd(dmemRange.beginAddress(),
+                                           it->endAddress());
       return;
     }
 
@@ -86,15 +106,8 @@ struct PooledMemoryResource {
   void expand(rx::AddressRange dmemRange) {
     addFreeBlock(dmemRange);
     total += dmemRange.size();
-  }
-
-  orbis::ErrorCode reserve(std::size_t size) {
-    if (size > total) {
-      return orbis::ErrorCode::INVAL;
-    }
-
-    used += size;
-    return {};
+    assert(calcUsed() == used);
+    assert(calcFree() + used == total);
   }
 
   std::pair<std::uint64_t, orbis::ErrorCode> reservePage() {
@@ -114,6 +127,8 @@ struct PooledMemoryResource {
     }
 
     reservedPages.push_back(allocatedPage);
+    assert(calcUsed() == used);
+    assert(calcFree() + used == total);
     return {allocatedPage, {}};
   }
 
@@ -127,6 +142,8 @@ struct PooledMemoryResource {
 
     auto address = reservedPages.back();
     reservedPages.pop_back();
+    assert(calcUsed() == used);
+    assert(calcFree() + used == total);
     return {address, {}};
   }
 
@@ -152,6 +169,9 @@ struct PooledMemoryResource {
       other.expand(block);
       freeBlocks.pop_back();
     }
+
+    assert(calcUsed() == used);
+    assert(calcFree() + used == total);
   }
 
   void commit(orbis::Process *process, rx::AddressRange virtualRange,
@@ -210,6 +230,9 @@ struct PooledMemoryResource {
       virtualRange = rx::AddressRange::fromBeginEnd(
           mapVirtualRange.endAddress(), virtualRange.endAddress());
     }
+
+    assert(calcUsed() == used);
+    assert(calcFree() + used == total);
   }
 
   void decommit(orbis::Process *process, rx::AddressRange virtualRange) {
@@ -248,6 +271,9 @@ struct PooledMemoryResource {
         break;
       }
     }
+
+    assert(calcUsed() == used);
+    assert(calcFree() + used == total);
   }
 
   std::optional<orbis::MemoryType> getMemoryType(std::uint64_t address) {
@@ -350,6 +376,9 @@ orbis::blockpool::commit(Process *process, rx::AddressRange vmemRange,
 }
 
 void orbis::blockpool::decommit(Process *process, rx::AddressRange vmemRange) {
+  rx::println(stderr, "blockpool::decommit({:x}-{:x})",
+              vmemRange.beginAddress(), vmemRange.endAddress());
+
   std::scoped_lock lock(*g_cachedBlockpool, *g_blockpool);
   g_cachedBlockpool->decommit(process, vmemRange);
   g_blockpool->decommit(process, vmemRange);
