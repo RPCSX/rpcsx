@@ -26,6 +26,7 @@ struct DirectMemoryAllocation {
   struct Mapping {
     orbis::Process *process;
     rx::AddressRange vmRange;
+    std::uint64_t dmemOffset;
 
     void serialize(rx::Serializer &s) const {
       s.serialize(process->pid);
@@ -77,6 +78,58 @@ struct DirectMemoryAllocation {
     result.mappings.insert(result.mappings.end(), other.mappings.begin(),
                            other.mappings.end());
     return result;
+  }
+
+  void unmap(orbis::Process *process, rx::AddressRange range) {
+    for (std::size_t i = 0; i < mappings.size(); ++i) {
+      auto &map = mappings[i];
+
+      if (process != nullptr && map.process != process) {
+        continue;
+      }
+
+      auto blockRange = range.intersection(map.vmRange);
+
+      if (!blockRange.isValid()) {
+        continue;
+      }
+
+      if (map.vmRange == blockRange) {
+        if (i != mappings.size() - 1) {
+          std::swap(mappings[i], mappings.back());
+        }
+        mappings.pop_back();
+        --i;
+        continue;
+      }
+
+      if (map.vmRange.beginAddress() == blockRange.beginAddress()) {
+        map.vmRange = rx::AddressRange::fromBeginEnd(blockRange.endAddress(),
+                                                     map.vmRange.endAddress());
+        map.dmemOffset += blockRange.size();
+        continue;
+      }
+
+      if (map.vmRange.endAddress() == blockRange.endAddress()) {
+        map.vmRange = rx::AddressRange::fromBeginEnd(map.vmRange.beginAddress(),
+                                                     blockRange.beginAddress());
+        continue;
+      }
+
+      auto leftAllocation = rx::AddressRange::fromBeginEnd(
+          map.vmRange.beginAddress(), blockRange.beginAddress());
+
+      auto rightAllocation = rx::AddressRange::fromBeginEnd(
+          blockRange.endAddress(), map.vmRange.endAddress());
+
+      map.vmRange = leftAllocation;
+      mappings.push_back({
+          .process = process,
+          .vmRange = rightAllocation,
+          .dmemOffset = map.dmemOffset + (rightAllocation.beginAddress() -
+                                          leftAllocation.beginAddress()),
+      });
+    }
   }
 
   bool operator==(const DirectMemoryAllocation &) const = default;
@@ -326,43 +379,78 @@ orbis::ErrorCode orbis::dmem::release(unsigned dmemIndex,
     return ErrorCode::INVAL;
   }
 
-  auto dmem = g_dmemPools[dmemIndex];
-  std::lock_guard lock(*dmem);
+  orbis::kvector<DirectMemoryAllocation::Mapping> clearMappings;
+  {
+    auto dmem = g_dmemPools[dmemIndex];
+    std::lock_guard lock(*dmem);
 
-  constexpr auto razorGpuMemory =
-      rx::AddressRange::fromBeginSize(0x3000000000, 0x20000000);
+    constexpr auto razorGpuMemory =
+        rx::AddressRange::fromBeginSize(0x3000000000, 0x20000000);
 
-  if (dmemIndex == 0 && razorGpuMemory.contains(range.beginAddress())) {
-    return ErrorCode::OPNOTSUPP;
+    if (dmemIndex == 0 && razorGpuMemory.contains(range.beginAddress())) {
+      return ErrorCode::OPNOTSUPP;
+    }
+
+    auto beginIt = dmem->query(range.beginAddress());
+
+    if (beginIt == dmem->end()) {
+      return ErrorCode::NOENT;
+    }
+
+    auto endIt = beginIt;
+    while (endIt != dmem->end() && endIt.beginAddress() < range.endAddress()) {
+      if (!beginIt->isAllocated()) {
+        return ErrorCode::NOENT;
+      }
+
+      if (endIt->isPooled() && !pooled) {
+        return ErrorCode::NOENT;
+      }
+
+      ++endIt;
+    }
+
+    for (auto it = beginIt; it != endIt; ++it) {
+      for (auto &mapping : it->mappings) {
+        auto mapRange = rx::AddressRange::fromBeginSize(mapping.dmemOffset,
+                                                        mapping.vmRange.size());
+        auto releaseRange = mapRange.intersection(range);
+
+        if (!releaseRange.isValid()) {
+          continue;
+        }
+
+        auto releaseVirtualRange = rx::AddressRange::fromBeginSize(
+            mapping.vmRange.beginAddress() +
+                (releaseRange.beginAddress() - mapRange.beginAddress()),
+            releaseRange.size());
+
+        clearMappings.push_back({
+            .process = mapping.process,
+            .vmRange = releaseVirtualRange,
+        });
+      }
+
+      it->unmap(nullptr, range);
+    }
+
+    DirectMemoryAllocation allocation{};
+    auto result = dmem->map(range.beginAddress(), range.size(), allocation,
+                            AllocationFlags::Fixed, vmem::kPageSize);
+
+    if (result.errc != std::errc{}) {
+      return toErrorCode(result.errc);
+    }
+
+    dmemDump(dmemIndex, rx::format("released {:x}-{:x}", range.beginAddress(),
+                                   range.endAddress()));
   }
 
-  auto it = dmem->query(range.beginAddress());
-
-  if (it == dmem->end() || !it->isAllocated()) {
-    return ErrorCode::NOENT;
-  }
-
-  if (it->isPooled() && !pooled) {
-    return ErrorCode::NOENT;
-  }
-
-  for (auto mapping : it->mappings) {
+  for (auto mapping : clearMappings) {
     mapping.process->invoke(
         [=] { vmem::unmap(mapping.process, mapping.vmRange); });
   }
 
-  it->mappings.clear();
-
-  DirectMemoryAllocation allocation{};
-  auto result = dmem->map(range.beginAddress(), range.size(), allocation,
-                          AllocationFlags::Fixed, vmem::kPageSize);
-
-  if (result.errc != std::errc{}) {
-    return toErrorCode(result.errc);
-  }
-
-  dmemDump(dmemIndex, rx::format("released {:x}-{:x}", range.beginAddress(),
-                                 range.endAddress()));
   return {};
 }
 
@@ -647,41 +735,44 @@ orbis::ErrorCode orbis::dmem::map(orbis::Process *process, unsigned dmemIndex,
     return orbis::ErrorCode::ACCES;
   }
 
-  auto allocationInfoIt = dmem->query(offset);
+  auto beginIt = dmem->query(offset);
 
-  if (allocationInfoIt == dmem->end() || !allocationInfoIt->isAllocated()) {
-    if (allocationInfoIt != dmem->end()) {
-      dmemDump(
-          dmemIndex,
-          rx::format("map unallocated {:x}-{:x}, requested range {:x}-{:x}",
-                     allocationInfoIt.beginAddress(),
-                     allocationInfoIt.endAddress(), range.beginAddress(),
-                     range.endAddress()));
-    } else {
-      dmemDump(dmemIndex, rx::format("map out of memory {:x}-{:x}",
-                                     range.beginAddress(), range.endAddress()));
+  if (beginIt == dmem->end()) {
+    dmemDump(dmemIndex, rx::format("map out of memory {:x}-{:x}",
+                                   range.beginAddress(), range.endAddress()));
+    return orbis::ErrorCode::ACCES;
+  }
+
+  auto endIt = beginIt;
+  while (endIt != dmem->end() && endIt.beginAddress() < offset + range.size()) {
+    if (!endIt->isAllocated() || endIt->isPooled()) {
+      return orbis::ErrorCode::ACCES;
     }
+
+    if (!vmem::validateMemoryType(endIt->getMemoryType(), protection)) {
+      return ErrorCode::ACCES;
+    }
+
+    // if (!endIt->mappings.empty() && !process->allowDmemAliasing) {
+    //   return ErrorCode::INVAL;
+    // }
+
+    ++endIt;
+  }
+
+  if (auto last = endIt; (--last).endAddress() < offset + range.size()) {
     return orbis::ErrorCode::ACCES;
   }
 
-  if (allocationInfoIt->isPooled()) {
-    return orbis::ErrorCode::ACCES;
-  }
-
-  if (!vmem::validateMemoryType(allocationInfoIt->getMemoryType(),
-                                protection)) {
-    return ErrorCode::ACCES;
-  }
-
-  // if (!allocationInfoIt->mappings.empty() && !process->allowDmemAliasing) {
-  //   return ErrorCode::INVAL;
-  // }
-
-  auto directRange = rx::AddressRange::fromBeginSize(offset, range.size())
-                         .intersection(allocationInfoIt.range());
-
-  if (range.size() > directRange.size()) {
-    return orbis::ErrorCode::INVAL;
+  for (auto it = beginIt; it != endIt; ++it) {
+    auto itRange = it.range();
+    auto mappingRange = range.intersection(itRange);
+    it->mappings.push_back({
+        .process = process,
+        .vmRange = mappingRange,
+        .dmemOffset =
+            offset + (mappingRange.beginAddress() - itRange.beginAddress()),
+    });
   }
 
   auto physicalRange =
@@ -692,14 +783,8 @@ orbis::ErrorCode orbis::dmem::map(orbis::Process *process, unsigned dmemIndex,
                             vmem::toCpuProtection(protection));
   });
 
-  if (result == ErrorCode{}) {
-    allocationInfoIt->mappings.push_back({
-        .process = process,
-        .vmRange = range,
-    });
-  }
-
-  return result;
+  rx::dieIf(result != ErrorCode{}, "failed to map physical memory");
+  return {};
 }
 
 orbis::ErrorCode orbis::dmem::notifyUnmap(orbis::Process *process,
@@ -713,43 +798,11 @@ orbis::ErrorCode orbis::dmem::notifyUnmap(orbis::Process *process,
   auto dmem = g_dmemPools[dmemIndex];
   std::lock_guard lock(*dmem);
 
-  auto it = dmem->query(offset);
-  if (it == dmem->end()) {
-    return ErrorCode::INVAL;
-  }
+  auto it = dmem->lowerBound(offset);
 
-  for (auto mapIt = it->mappings.begin(); mapIt != it->mappings.end();) {
-    if (mapIt->process == process && mapIt->vmRange.intersects(range)) {
-      auto blockRange = range.intersection(mapIt->vmRange);
-      if (mapIt->vmRange == blockRange) {
-        mapIt = it->mappings.erase(mapIt);
-        break;
-      }
-
-      if (mapIt->vmRange.beginAddress() == blockRange.beginAddress()) {
-        mapIt->vmRange = rx::AddressRange::fromBeginEnd(
-            blockRange.endAddress(), mapIt->vmRange.endAddress());
-        break;
-      }
-
-      if (mapIt->vmRange.endAddress() == blockRange.endAddress()) {
-        mapIt->vmRange = rx::AddressRange::fromBeginEnd(
-            mapIt->vmRange.beginAddress(), blockRange.beginAddress());
-        break;
-      }
-
-      auto leftAllocation = rx::AddressRange::fromBeginEnd(
-          mapIt->vmRange.beginAddress(), blockRange.beginAddress());
-
-      auto rightAllocation = rx::AddressRange::fromBeginEnd(
-          blockRange.endAddress(), mapIt->vmRange.endAddress());
-
-      mapIt->vmRange = leftAllocation;
-      it->mappings.push_back({.process = process, .vmRange = rightAllocation});
-      break;
-    }
-
-    ++mapIt;
+  while (it != dmem->end() && it.beginAddress() < offset + range.size()) {
+    it->unmap(process, range);
+    ++it;
   }
 
   return {};
