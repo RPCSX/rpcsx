@@ -76,8 +76,6 @@ void initializeAllocator() {
   sMemoryResource->m_heap_next = ptr + sizeof(KernelMemoryResource);
   sMemoryResource->m_heap = std::move(heap);
 
-  rx::print(stderr, "global: size {}, alignment {}\n", GlobalStorage::GetSize(),
-            GlobalStorage::GetAlignment());
   // allocate whole global storage
   g_globalStorage = (std::byte *)sMemoryResource->kalloc(
       GlobalStorage::GetSize(), GlobalStorage::GetAlignment());

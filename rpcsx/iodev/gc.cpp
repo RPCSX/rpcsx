@@ -15,6 +15,7 @@
 #include "rx/die.hpp"
 #include "rx/format.hpp"
 #include "rx/print.hpp"
+#include "rx/watchdog.hpp"
 #include <cstdio>
 #include <mutex>
 #include <sys/mman.h>
@@ -83,14 +84,14 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
   auto gcFile = static_cast<GcFile *>(file);
   auto device = file->device.rawStaticCast<GcDevice>();
-  // std::lock_guard lock(device->mtx);
+  std::lock_guard lock(device->mtx);
 
   switch (request) {
   case 0xc008811b: // get submit done flag ptr?
     if (device->submitArea == 0) {
       auto [dmemOffset, dmemErrc] = orbis::dmem::allocate(
           0, rx::AddressRange::fromBeginEnd(0, 0), orbis::dmem::kPageSize,
-          orbis::MemoryType::WbGarlic);
+          orbis::MemoryType::WcGarlic);
 
       if (dmemErrc != orbis::ErrorCode{}) {
         return dmemErrc;
@@ -108,7 +109,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
       if (vmemErrc != orbis::ErrorCode{}) {
         orbis::dmem::release(0, directRange);
-        return dmemErrc;
+        return vmemErrc;
       }
 
       device->submitArea = vmemRange.beginAddress();
@@ -441,6 +442,7 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   case 0xc004811f: {
     ORBIS_LOG_WARNING("Unknown gc ioctl", request,
                       (unsigned long)*(std::uint32_t *)argp);
+    *(std::uint32_t *)argp = 0;
     break;
   }
 
@@ -481,9 +483,26 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
 static const orbis::FileOps ops = {.ioctl = gc_ioctl};
 
+static void createGpu() {
+  {
+    std::lock_guard lock(orbis::g_context->gpuDeviceMtx);
+    if (orbis::g_context->gpuDevice != nullptr) {
+      return;
+    }
+
+    rx::createGpuDevice();
+  }
+
+  while (orbis::g_context->gpuDevice == nullptr) {
+    std::this_thread::yield();
+  }
+}
+
 orbis::ErrorCode GcDevice::open(rx::Ref<orbis::File> *file, const char *path,
                                 std::uint32_t flags, std::uint32_t mode,
                                 orbis::Thread *thread) {
+  createGpu();
+
   auto newFile = orbis::knew<GcFile>();
   newFile->device = this;
   newFile->ops = &ops;
@@ -520,7 +539,7 @@ orbis::IoDevice *createGcCharacterDevice() {
       0,
       rx::AddressRange::fromBeginEnd(dmemSize - orbis::dmem::kPageSize * 2,
                                      dmemSize),
-      orbis::dmem::kPageSize, orbis::MemoryType::WbGarlic);
+      orbis::dmem::kPageSize, orbis::MemoryType::WcGarlic);
 
   rx::dieIf(errc != orbis::ErrorCode{},
             "failed to allocate GC memory, error {}", errc);

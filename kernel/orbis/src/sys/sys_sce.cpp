@@ -78,6 +78,10 @@ orbis::sys_mtypeprotect(Thread *thread, uintptr_t addr, size_t len,
                         MemoryType type,
                         rx::EnumBitSet<vmem::Protection> prot) {
   auto range = rx::AddressRange::fromBeginSize(addr, len);
+  if (!range.isValid() || static_cast<unsigned>(type) > 10) {
+    return ErrorCode::INVAL;
+  }
+
   return vmem::setTypeAndProtect(thread->tproc, range, type, prot);
 }
 orbis::SysResult orbis::sys_regmgr_call(Thread *thread, uint32_t op,
@@ -1289,7 +1293,7 @@ orbis::sys_dynlib_get_info_ex(Thread *thread, SceKernelModule handle,
   result.ehFrameSize = module->ehFrameSize;
   std::memcpy(result.segments, module->segments, sizeof(ModuleSegment) * 2);
   result.segmentCount = 2;
-  result.refCount = 1;
+  result.refCount = module->refCount;
   ORBIS_LOG_WARNING(__FUNCTION__, result.id, result.name, result.tlsIndex,
                     result.tlsInit, result.tlsInitSize, result.tlsSize,
                     result.tlsOffset, result.tlsAlign, result.initProc,
@@ -1512,6 +1516,10 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
   auto callerAddress = getCallerAddress(thread);
   auto alignment = dmem::kPageSize;
 
+  if (static_cast<unsigned>(memoryType) > 10) {
+    return ErrorCode::INVAL;
+  }
+
   {
     auto unpacked = unpackMapFlags(flags, dmem::kPageSize);
     alignment = unpacked.first;
@@ -1521,13 +1529,6 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
   len = rx::alignUp(len, dmem::kPageSize);
 
   rx::EnumBitSet<AllocationFlags> allocFlags{};
-
-  if (!prot) {
-    // HACK
-    // FIXME: implement protect for pid
-    prot = vmem::Protection::CpuRead | vmem::Protection::CpuWrite |
-           vmem::Protection::GpuRead | vmem::Protection::GpuWrite;
-  }
 
   if (prot & vmem::Protection::CpuExec) {
     return ErrorCode::INVAL;
@@ -1548,7 +1549,7 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
   auto [range, errc] =
       vmem::mapDirect(thread->tproc, addr,
                       rx::AddressRange::fromBeginSize(directMemoryStart, len),
-                      prot, allocFlags, name, alignment, memoryType);
+                      prot, allocFlags, name, alignment, callerAddress, memoryType);
 
   if (errc != ErrorCode{}) {
     return errc;
@@ -1696,7 +1697,7 @@ orbis::SysResult orbis::sys_get_cpu_usage_proc(Thread *thread /* TODO */) {
 orbis::SysResult orbis::sys_get_map_statistics(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_set_chicken_switches(Thread *thread /* TODO */) {
+orbis::SysResult orbis::sys_set_chicken_switches(Thread *thread, sint flags) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_extend_page_table_pool(Thread *thread) {

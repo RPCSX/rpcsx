@@ -4,10 +4,16 @@
 #include "KernelObject.hpp"
 #include "kernel/KernelObject.hpp"
 #include "rx/LinkedNode.hpp"
+#include "rx/Process.hpp"
 #include "rx/Serializer.hpp"
+#include "rx/SharedMutex.hpp"
 #include "rx/align.hpp"
+#include "rx/die.hpp"
 #include "thread/Thread.hpp"
 #include <algorithm>
+#include <bit>
+#include <csignal>
+#include <mutex>
 
 struct ProcessIdList {
   rx::OwningIdMap<std::uint8_t, orbis::pid_t, 256, 0> pidMap;
@@ -130,6 +136,148 @@ orbis::Process *orbis::findProcessByHostId(std::uint64_t pid) {
   }
 
   return nullptr;
+}
+
+struct InvokeDeliveryState {
+  void (*invokeCb)(void *returnValue, void *fnPtr) = nullptr;
+  alignas(8) std::byte returnData[64];
+  alignas(8) std::byte callerObject[64];
+
+  static void invoke();
+
+  void serialize(rx::Serializer &) const {}
+  void deserialize(rx::Deserializer &) {}
+};
+
+struct AsyncInvokeDeliveryState {
+  void (*invokeCb)() = nullptr;
+
+  static void invoke();
+
+  void serialize(rx::Serializer &) const {}
+  void deserialize(rx::Deserializer &) {}
+};
+
+auto g_invokeDelivery = orbis::createProcessLocalObject<
+    kernel::LockableKernelObject<InvokeDeliveryState>>();
+auto g_asyncInvokeDelivery = orbis::createProcessLocalObject<
+    kernel::LockableKernelObject<AsyncInvokeDeliveryState>>();
+
+void InvokeDeliveryState::invoke() {
+  auto state = orbis::g_currentThread->tproc->get(g_invokeDelivery);
+  state->invokeCb(state->returnData, state->callerObject);
+  state->invokeCb = {};
+  state->unlock();
+}
+
+void AsyncInvokeDeliveryState::invoke() {
+  auto state = orbis::g_currentThread->tproc->get(g_asyncInvokeDelivery);
+  auto cb = state->invokeCb;
+  state->invokeCb = {};
+  state->unlock();
+
+  cb();
+}
+
+struct SignalHandlerObject {
+  SignalHandlerObject() {
+    struct sigaction act{};
+    act.sa_sigaction = handleSignal;
+    act.sa_flags = SA_SIGINFO | SA_ONSTACK;
+
+    if (sigaction(SIGUSR2, &act, nullptr)) {
+      rx::die("SignalHandlerObject: failed to setup signal handler");
+    }
+  }
+
+  ~SignalHandlerObject() {
+    struct sigaction act{};
+    act.sa_handler = SIG_DFL;
+
+    sigaction(SIGUSR2, &act, nullptr);
+  }
+
+  [[gnu::no_stack_protector]] static void handleSignal(int sig, siginfo_t *info,
+                                                       void *context) {
+    if (auto hostFs = _readgsbase_u64()) {
+      _writefsbase_u64(hostFs);
+    }
+
+    if (sig == SIGUSR2) {
+      std::bit_cast<void (*)()>(info->si_value.sival_ptr)();
+    }
+
+    auto ctx = reinterpret_cast<ucontext_t *>(context);
+
+    if (ctx->uc_mcontext.gregs[REG_RIP] < orbis::kMaxAddress) {
+      if (auto thread = orbis::g_currentThread) {
+        _writefsbase_u64(thread->fsBase);
+      }
+    }
+  }
+
+  void serialize(rx::Serializer &) const {}
+  void deserialize(rx::Deserializer &) {}
+};
+
+[[maybe_unused, gnu::used]] static auto g_signalHandler =
+    orbis::createGlobalObject<SignalHandlerObject>();
+
+void orbis::Process::invokeImpl(
+    void *returnValue, void (*copyResult)(void *to, void *from), void *fnPtr,
+    void (*constructObject)(void *to, void *from),
+    void (*destroyObject)(void *to),
+    void (*invokeCb)(void *returnValue, void *fnPtr)) {
+  if (rx::getCurrentProcessId() == hostPid) {
+    invokeCb(returnValue, fnPtr);
+    return;
+  }
+
+  auto invoker = get(g_invokeDelivery);
+
+  while (true) {
+    std::lock_guard lock(*invoker);
+    if (invoker->invokeCb != nullptr) {
+      continue;
+    }
+
+    invoker->invokeCb = invokeCb;
+    constructObject(invoker->callerObject, fnPtr);
+    sigqueue(hostPid, SIGUSR2,
+             sigval{.sival_ptr =
+                        std::bit_cast<void *>(&InvokeDeliveryState::invoke)});
+    invoker->lock();
+
+    destroyObject(invoker->callerObject);
+
+    if (returnValue != nullptr) {
+      copyResult(returnValue, invoker->returnData);
+    }
+    break;
+  }
+}
+
+void orbis::Process::invokeAsync(void (*fn)()) {
+  if (rx::getCurrentProcessId() == hostPid) {
+    fn();
+    return;
+  }
+
+  auto invoker = get(g_asyncInvokeDelivery);
+
+  while (true) {
+    std::lock_guard lock(*invoker);
+    if (invoker->invokeCb != nullptr) {
+      continue;
+    }
+
+    invoker->invokeCb = fn;
+    sigqueue(hostPid, SIGUSR2,
+             sigval{.sival_ptr = std::bit_cast<void *>(
+                        &AsyncInvokeDeliveryState::invoke)});
+    invoker->lock();
+    break;
+  }
 }
 
 void orbis::Process::serialize(rx::Serializer &s) const {

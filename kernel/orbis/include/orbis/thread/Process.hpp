@@ -20,6 +20,7 @@
 #include "rx/Serializer.hpp"
 #include "rx/SharedMutex.hpp"
 #include <optional>
+#include <type_traits>
 
 namespace orbis {
 class KernelContext;
@@ -93,6 +94,7 @@ struct Process final {
   std::optional<sint> exitStatus;
 
   std::uint32_t sdkVersion = 0;
+  bool allowDmemAliasing = false;
   std::uint64_t nextTlsSlot = 1;
   std::uint64_t lastTlsOffset = 0;
 
@@ -126,6 +128,50 @@ struct Process final {
   }
 
   Budget *getBudget() const;
+
+  template <typename Cb>
+    requires(alignof(Cb) <= 8 && sizeof(Cb) <= 64) &&
+            (std::is_same_v<std::invoke_result_t<Cb>, void> ||
+             (alignof(std::invoke_result_t<Cb>) <= 8 &&
+              sizeof(std::invoke_result_t<Cb>) <= 64))
+  std::invoke_result_t<Cb> invoke(Cb &&fn) {
+    auto constructObject = [](void *to, void *from) {
+      new (to) Cb(std::move(*reinterpret_cast<Cb *>(from)));
+    };
+
+    auto destroyObject = [](void *object) {
+      reinterpret_cast<Cb *>(object)->~Cb();
+    };
+
+    if constexpr (std::is_same_v<std::invoke_result_t<Cb>, void>) {
+      invokeImpl(
+          nullptr, nullptr, &fn, constructObject, destroyObject,
+          [](void *, void *fnPtr) { (*reinterpret_cast<Cb *>(fnPtr))(); });
+    } else {
+      alignas(std::invoke_result_t<Cb>) char
+          result[sizeof(std::invoke_result_t<Cb>)];
+      invokeImpl(
+          &result,
+          [](void *to, void *from) {
+            new (to) std::invoke_result_t<Cb>(
+                std::move(*reinterpret_cast<std::invoke_result_t<Cb> *>(from)));
+          },
+          &fn, constructObject, destroyObject,
+          [](void *result, void *fnPtr) {
+            new (result)
+                std::invoke_result_t<Cb>((*reinterpret_cast<Cb *>(fnPtr))());
+          });
+      return std::move(*reinterpret_cast<std::invoke_result_t<Cb> *>(result));
+    }
+  }
+
+  void invokeAsync(void (*fn)());
+
+private:
+  void invokeImpl(void *returnValue, void (*copyResult)(void *to, void *from),
+                  void *fnPtr, void (*constructObject)(void *to, void *from),
+                  void (*destroyObject)(void *to),
+                  void (*invokeImpl)(void *returnValue, void *fnPtr));
 };
 
 pid_t allocatePid();

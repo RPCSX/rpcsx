@@ -35,6 +35,10 @@ allocate(unsigned dmemIndex, rx::AddressRange searchRange, std::uint64_t len,
          MemoryType memoryType, std::uint64_t alignment = kPageSize,
          bool pooled = false);
 
+std::pair<std::uint64_t, ErrorCode>
+allocateSystem(unsigned dmemIndex, std::uint64_t len, MemoryType memoryType,
+               std::uint64_t alignment = kPageSize);
+
 ErrorCode release(unsigned dmemIndex, rx::AddressRange range,
                   bool pooled = false);
 
@@ -54,8 +58,16 @@ std::pair<rx::AddressRange, ErrorCode>
 getAvailSize(unsigned dmemIndex, rx::AddressRange searchRange,
              std::uint64_t alignment);
 
-ErrorCode map(unsigned dmemIndex, rx::AddressRange range, std::uint64_t offset,
+ErrorCode map(orbis::Process *process, unsigned dmemIndex,
+              rx::AddressRange range, std::uint64_t offset,
               rx::EnumBitSet<vmem::Protection> protection);
+
+ErrorCode notifyUnmap(orbis::Process *process, unsigned dmemIndex,
+                      std::uint64_t offset, rx::AddressRange range);
+
+ErrorCode protect(orbis::Process *process, unsigned dmemIndex,
+                  rx::AddressRange range,
+                  rx::EnumBitSet<vmem::Protection> prot);
 
 std::pair<std::uint64_t, ErrorCode> getPmemOffset(unsigned dmemIndex,
                                                   std::uint64_t dmemOffset);

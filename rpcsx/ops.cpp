@@ -29,10 +29,10 @@
 #include <string_view>
 
 #ifdef __linux
+#include <csignal>
 #include <sys/prctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <csignal>
 #endif
 
 #include <thread>
@@ -106,7 +106,7 @@ loadPrx(orbis::Thread *thread, std::string_view name, bool relocate,
   module->importedModules.clear();
   module->importedModules.reserve(module->neededModules.size());
 
-  for (auto mod : module->neededModules) {
+  for (const auto &mod : module->neededModules) {
     if (auto it = loadedModules.find(std::string_view(mod.name));
         it != loadedModules.end()) {
       module->importedModules.emplace_back(it->second);
@@ -329,7 +329,7 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
     }
   }
 
-  auto [result, module] = loadPrx(thread, path, true);
+  auto [result, resultModule] = loadPrx(thread, path, true);
   if (result.isError()) {
     return result;
   }
@@ -342,14 +342,23 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
       loadedModules[module->moduleName] = module;
     }
 
+    bool wasNeeded = false;
+
     for (auto [id, module] : thread->tproc->modulesMap) {
       module->importedModules.clear();
       module->importedModules.reserve(module->neededModules.size());
 
-      for (auto mod : module->neededModules) {
+      for (auto &mod : module->neededModules) {
         if (auto it = loadedModules.find(std::string_view(mod.name));
             it != loadedModules.end()) {
           module->importedModules.emplace_back(it->second);
+          if (id != ModuleHandle{1}) {
+            it->second->refCount = 1;
+          }
+
+          if (it->second == resultModule) {
+            wasNeeded = true;
+          }
           continue;
         }
 
@@ -358,9 +367,13 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
 
       module->relocate(thread->tproc);
     }
+
+    if (!wasNeeded) {
+      resultModule->refCount = 1;
+    }
   }
 
-  *pHandle = module->id;
+  *pHandle = resultModule->id;
   return {};
 }
 orbis::SysResult dynlib_unload_prx(orbis::Thread *thread,
@@ -593,6 +606,7 @@ SysResult processNeeded(Thread *thread) {
       module->importedModules.push_back({});
     }
 
+    module->refCount = 1;
     module->relocate(thread->tproc);
   }
 
@@ -788,6 +802,7 @@ void block(Thread *thread) {
   sigset_t set;
   sigemptyset(&set);
   sigaddset(&set, SIGUSR1);
+  sigaddset(&set, SIGUSR2);
   sigaddset(&set, SIGSYS);
   if (pthread_sigmask(SIG_BLOCK, &set, nullptr)) {
     perror("pthread_sigmask block");
@@ -819,6 +834,7 @@ void unblock(Thread *thread) {
   sigset_t set;
   sigemptyset(&set);
   sigaddset(&set, SIGUSR1);
+  sigaddset(&set, SIGUSR2);
   sigaddset(&set, SIGSYS);
   if (pthread_sigmask(SIG_UNBLOCK, &set, nullptr)) {
     perror("pthread_sigmask unblock");

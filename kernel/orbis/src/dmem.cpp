@@ -1,5 +1,6 @@
 #include "dmem.hpp"
 #include "KernelAllocator.hpp"
+#include "KernelContext.hpp"
 #include "KernelObject.hpp"
 #include "error.hpp"
 #include "kernel/KernelObject.hpp"
@@ -14,12 +15,42 @@
 #include <array>
 #include <rx/format.hpp>
 #include <string_view>
+#include <thread/Process.hpp>
 #include <utility>
 
 struct DirectMemoryAllocation {
   static constexpr std::uint32_t kAllocatedBit = 1 << 31;
   static constexpr std::uint32_t kPooledBit = 1 << 30;
   std::uint32_t type = 0;
+
+  struct Mapping {
+    orbis::Process *process;
+    rx::AddressRange vmRange;
+
+    void serialize(rx::Serializer &s) const {
+      s.serialize(process->pid);
+      s.serialize(vmRange);
+    }
+
+    void deserialize(rx::Deserializer &d) {
+      auto pid = d.deserialize<orbis::pid_t>();
+      if (d.failure()) {
+        return;
+      }
+      auto foundProcess = orbis::findProcessById(pid);
+      if (foundProcess == nullptr) {
+        d.setFailure();
+        return;
+      }
+
+      process = foundProcess;
+      d.deserialize(vmRange);
+    }
+
+    bool operator==(const Mapping &) const = default;
+  };
+
+  orbis::kvector<Mapping> mappings;
 
   [[nodiscard]] bool isPooled() const { return type & kPooledBit; }
   void markAsPooled() { type |= kPooledBit | kAllocatedBit; }
@@ -42,7 +73,9 @@ struct DirectMemoryAllocation {
   [[nodiscard]] DirectMemoryAllocation
   merge(const DirectMemoryAllocation &other, rx::AddressRange,
         rx::AddressRange) const {
-    return other;
+    auto result = *this;
+    result.mappings.insert_range(result.mappings.end(), other.mappings);
+    return result;
   }
 
   bool operator==(const DirectMemoryAllocation &) const = default;
@@ -59,6 +92,8 @@ struct DirectMemoryResource
       DirectMemoryResourceState {
   using BaseResource =
       kernel::AllocableResource<DirectMemoryAllocation, orbis::kallocator>;
+
+  BaseResource systemResource;
 
   void create(std::size_t size) {
     auto [pmemRange, errc] = orbis::pmem::allocate(0, size, {}, 64 * 1024);
@@ -86,6 +121,8 @@ struct DirectMemoryResource
     if (result != std::errc{}) {
       return orbis::toErrorCode(result);
     }
+
+    systemResource.destroy();
     dmemReservedSize = 0;
     return {};
   }
@@ -99,6 +136,22 @@ struct DirectMemoryResource
     d.deserialize(static_cast<DirectMemoryResourceState &>(*this));
     BaseResource::deserialize(d);
   }
+
+  std::pair<std::uint64_t, orbis::ErrorCode> reserveSystem(std::uint64_t size) {
+    DirectMemoryAllocation alloc;
+    alloc.setMemoryType(orbis::MemoryType::WbOnion);
+    auto result = map(0, size, alloc, orbis::AllocationFlags::Stack,
+                      orbis::dmem::kPageSize);
+
+    if (result.errc != std::errc{}) {
+      return {{}, orbis::toErrorCode(result.errc)};
+    }
+
+    allocations.unmap(result.range);
+    dmemReservedSize += size;
+    systemResource.allocations.map(result.range, {});
+    return {result.range.beginAddress(), {}};
+  }
 };
 
 static std::array g_dmemPools = {
@@ -111,9 +164,11 @@ static std::array g_dmemPools = {
 };
 
 orbis::ErrorCode orbis::dmem::initialize() {
-  g_dmemPools[0]->create(0x120000000);
+  g_dmemPools[0]->create(0x180000000);
   g_dmemPools[1]->create(0x1000000);
   g_dmemPools[2]->create(0x1000000);
+
+  g_dmemPools[0]->reserveSystem(0x60000000);
 
   return {};
 }
@@ -222,6 +277,43 @@ orbis::dmem::allocate(unsigned dmemIndex, rx::AddressRange searchRange,
   return {result, {}};
 }
 
+std::pair<std::uint64_t, orbis::ErrorCode>
+orbis::dmem::allocateSystem(unsigned dmemIndex, std::uint64_t len,
+                            MemoryType memoryType, std::uint64_t alignment) {
+  if (dmemIndex >= std::size(g_dmemPools)) {
+    return {{}, ErrorCode::INVAL};
+  }
+
+  auto dmem = g_dmemPools[dmemIndex];
+  std::lock_guard lock(*dmem);
+
+  alignment = alignment == 0 ? kPageSize : alignment;
+  len = rx::alignUp(len, dmem::kPageSize);
+
+  DirectMemoryAllocation allocation;
+  allocation.setMemoryType(memoryType);
+
+  auto allocResult = dmem->systemResource.map(0, len, allocation,
+                                              AllocationFlags::Dry, alignment);
+  if (allocResult.errc != std::errc{}) {
+    return {{}, ErrorCode::AGAIN};
+  }
+
+  auto result = allocResult.range.beginAddress();
+
+  auto commitResult =
+      dmem->map(result, len, allocation, AllocationFlags::Fixed, alignment);
+
+  rx::dieIf(commitResult.errc != std::errc{},
+            "dmem: failed to commit main memory, error {}", commitResult.errc);
+
+  dmemDump(dmemIndex, rx::format("allocated main {:x}-{:x}",
+                                 allocResult.range.beginAddress(),
+                                 allocResult.range.endAddress()));
+
+  return {allocResult.range.beginAddress() | 0x4000000000, {}};
+}
+
 orbis::ErrorCode orbis::dmem::release(unsigned dmemIndex,
                                       rx::AddressRange range, bool pooled) {
   if (dmemIndex >= std::size(g_dmemPools)) {
@@ -253,6 +345,13 @@ orbis::ErrorCode orbis::dmem::release(unsigned dmemIndex,
     return ErrorCode::NOENT;
   }
 
+  for (auto mapping : it->mappings) {
+    mapping.process->invoke(
+        [=] { vmem::unmap(mapping.process, mapping.vmRange); });
+  }
+
+  it->mappings.clear();
+
   DirectMemoryAllocation allocation{};
   auto result = dmem->map(range.beginAddress(), range.size(), allocation,
                           AllocationFlags::Fixed, vmem::kPageSize);
@@ -261,6 +360,8 @@ orbis::ErrorCode orbis::dmem::release(unsigned dmemIndex,
     return toErrorCode(result.errc);
   }
 
+  dmemDump(dmemIndex, rx::format("released {:x}-{:x}", range.beginAddress(),
+                                 range.endAddress()));
   return {};
 }
 
@@ -281,16 +382,7 @@ orbis::dmem::reserveSystem(unsigned dmemIndex, std::uint64_t size) {
     return {{}, ErrorCode::NOMEM};
   }
 
-  DirectMemoryAllocation alloc;
-  alloc.setMemoryType(MemoryType::WbOnion);
-  auto result = dmem->map(0, size, alloc, AllocationFlags::Stack, kPageSize);
-
-  if (result.errc != std::errc{}) {
-    return {{}, toErrorCode(result.errc)};
-  }
-
-  dmem->dmemReservedSize += size;
-  return {result.range.beginAddress() | 0x4000000000, {}};
+  return dmem->reserveSystem(size);
 }
 
 std::pair<std::uint64_t, orbis::ErrorCode>
@@ -465,7 +557,7 @@ orbis::dmem::getAvailSize(unsigned dmemIndex, rx::AddressRange searchRange,
 
   alignment = alignment == 0 ? kPageSize : alignment;
 
-  if (alignment % kPageSize) {
+  if (alignment % vmem::kPageSize) {
     return {{}, ErrorCode::INVAL};
   }
 
@@ -474,7 +566,9 @@ orbis::dmem::getAvailSize(unsigned dmemIndex, rx::AddressRange searchRange,
   if (searchRange.endAddress() > dmem->dmemTotalSize) {
     ORBIS_LOG_ERROR(__FUNCTION__, "out of direct memory size",
                     searchRange.endAddress(), dmem->dmemTotalSize);
-    return {{}, orbis::ErrorCode::INVAL};
+    // return {{}, orbis::ErrorCode::INVAL};
+    searchRange = rx::AddressRange::fromBeginEnd(searchRange.beginAddress(),
+                                                 dmem->dmemTotalSize);
   }
 
   if (!searchRange.isValid() &&
@@ -502,7 +596,11 @@ orbis::dmem::getAvailSize(unsigned dmemIndex, rx::AddressRange searchRange,
     ORBIS_LOG_ERROR(__FUNCTION__, "out of direct memory size",
                     searchRange.endAddress(), dmem->dmemTotalSize,
                     dmem->dmemReservedSize);
-    return {{}, orbis::ErrorCode::INVAL};
+    searchRange = rx::AddressRange::fromBeginEnd(searchRange.beginAddress(),
+                                                 dmem->dmemTotalSize -
+                                                     dmem->dmemReservedSize);
+
+    // return {{}, orbis::ErrorCode::INVAL};
   }
 
   auto it = dmem->lowerBound(searchRange.beginAddress());
@@ -529,8 +627,8 @@ orbis::dmem::getAvailSize(unsigned dmemIndex, rx::AddressRange searchRange,
   return {result, {}};
 }
 
-orbis::ErrorCode orbis::dmem::map(unsigned dmemIndex, rx::AddressRange range,
-                                  std::uint64_t offset,
+orbis::ErrorCode orbis::dmem::map(orbis::Process *process, unsigned dmemIndex,
+                                  rx::AddressRange range, std::uint64_t offset,
                                   rx::EnumBitSet<vmem::Protection> protection) {
   if (dmemIndex >= std::size(g_dmemPools)) {
     return ErrorCode::INVAL;
@@ -569,6 +667,15 @@ orbis::ErrorCode orbis::dmem::map(unsigned dmemIndex, rx::AddressRange range,
     return orbis::ErrorCode::ACCES;
   }
 
+  if (!vmem::validateMemoryType(allocationInfoIt->getMemoryType(),
+                                protection)) {
+    return ErrorCode::ACCES;
+  }
+
+  if (!allocationInfoIt->mappings.empty() && !process->allowDmemAliasing) {
+    return ErrorCode::INVAL;
+  }
+
   auto directRange = rx::AddressRange::fromBeginSize(offset, range.size())
                          .intersection(allocationInfoIt.range());
 
@@ -579,8 +686,96 @@ orbis::ErrorCode orbis::dmem::map(unsigned dmemIndex, rx::AddressRange range,
   auto physicalRange =
       rx::AddressRange::fromBeginSize(dmem->pmemOffset + offset, range.size());
 
-  return orbis::pmem::map(range.beginAddress(), physicalRange,
-                          vmem::toCpuProtection(protection));
+  auto result = process->invoke([=] {
+    return orbis::pmem::map(range.beginAddress(), physicalRange,
+                            vmem::toCpuProtection(protection));
+  });
+
+  if (result == ErrorCode{}) {
+    allocationInfoIt->mappings.push_back({
+        .process = process,
+        .vmRange = range,
+    });
+  }
+
+  return result;
+}
+
+orbis::ErrorCode orbis::dmem::notifyUnmap(orbis::Process *process,
+                                          unsigned dmemIndex,
+                                          std::uint64_t offset,
+                                          rx::AddressRange range) {
+  if (dmemIndex >= std::size(g_dmemPools)) {
+    return ErrorCode::INVAL;
+  }
+
+  auto dmem = g_dmemPools[dmemIndex];
+  std::lock_guard lock(*dmem);
+
+  auto it = dmem->query(offset);
+  if (it == dmem->end()) {
+    return ErrorCode::INVAL;
+  }
+
+  for (auto mapIt = it->mappings.begin(); mapIt != it->mappings.end();) {
+    if (mapIt->process == process && mapIt->vmRange.intersects(range)) {
+      if (mapIt->vmRange == range) {
+        mapIt = it->mappings.erase(mapIt);
+        break;
+      }
+
+      if (mapIt->vmRange.beginAddress() == range.beginAddress()) {
+        mapIt->vmRange = rx::AddressRange::fromBeginEnd(
+            range.endAddress(), mapIt->vmRange.endAddress());
+        break;
+      }
+
+      if (mapIt->vmRange.endAddress() == range.endAddress()) {
+        mapIt->vmRange = rx::AddressRange::fromBeginEnd(
+            mapIt->vmRange.beginAddress(), range.beginAddress());
+        break;
+      }
+
+      auto leftAllocation = rx::AddressRange::fromBeginEnd(
+          mapIt->vmRange.beginAddress(), range.beginAddress());
+
+      auto rightAllocation = rx::AddressRange::fromBeginEnd(
+          range.endAddress(), mapIt->vmRange.endAddress());
+
+      mapIt->vmRange = leftAllocation;
+      it->mappings.push_back({.process = process, .vmRange = rightAllocation});
+      break;
+    }
+
+    ++mapIt;
+  }
+
+  return {};
+}
+
+orbis::ErrorCode orbis::dmem::protect(orbis::Process *process,
+                                      unsigned dmemIndex,
+                                      rx::AddressRange range,
+                                      rx::EnumBitSet<vmem::Protection> prot) {
+  auto dmem = g_dmemPools[dmemIndex];
+  std::lock_guard lock(*dmem);
+
+  auto it = dmem->query(range.beginAddress());
+  if (it == dmem->end()) {
+    return ErrorCode::INVAL;
+  }
+
+  if (!it.range().contains(range)) {
+    return ErrorCode::INVAL;
+  }
+
+  for (auto mapping : it->mappings) {
+    if (process == nullptr || process == mapping.process) {
+      vmem::protect(mapping.process, mapping.vmRange, prot);
+    }
+  }
+
+  return {};
 }
 
 std::pair<std::uint64_t, orbis::ErrorCode>

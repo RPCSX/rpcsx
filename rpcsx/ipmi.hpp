@@ -266,7 +266,8 @@ orbis::EventFlag *createEventFlag(std::string_view name, uint32_t attrs,
                                   uint64_t initPattern);
 orbis::Semaphore *createSemaphore(std::string_view name, uint32_t attrs,
                                   uint64_t initCount, uint64_t maxCount);
-void createShm(const char *name, uint32_t flags, uint32_t mode, uint64_t size);
+rx::Ref<orbis::File> createShm(const char *name, uint32_t flags, uint32_t mode,
+                               uint64_t size);
 
 void createMiniSysCoreObjects(orbis::Process *process);
 void createSysAvControlObjects(orbis::Process *process);

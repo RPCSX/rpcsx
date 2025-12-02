@@ -45,6 +45,7 @@ struct VirtualMemoryAllocation {
   orbis::MemoryType type = orbis::MemoryType::Invalid;
   rx::Ref<orbis::IoDevice> device;
   std::uint64_t deviceOffset = 0;
+  std::uint64_t callerAddress = 0;
   rx::StaticString<31> name;
 
   [[nodiscard]] bool isAllocated() const {
@@ -56,7 +57,8 @@ struct VirtualMemoryAllocation {
   isRelated(const VirtualMemoryAllocation &other, rx::AddressRange selfRange,
             [[maybe_unused]] rx::AddressRange rightRange) const {
     if (flags != other.flags || flagsEx != other.flagsEx ||
-        prot != other.prot || type != other.type || device != other.device) {
+        prot != other.prot || type != other.type || device != other.device ||
+        callerAddress != other.callerAddress) {
       return false;
     }
 
@@ -64,13 +66,7 @@ struct VirtualMemoryAllocation {
       return true;
     }
 
-    bool isAnon = std::string_view(name).starts_with("anon:");
-
-    if (isAnon) {
-      if (!std::string_view(other.name).starts_with("anon:")) {
-        return false;
-      }
-    } else if (name != other.name) {
+    if (name != other.name) {
       return false;
     }
 
@@ -115,6 +111,40 @@ struct VirtualMemoryAllocation {
     if (auto executable = process->modulesMap.get(orbis::ModuleHandle{})) {
       name += executable->soName;
     }
+  }
+
+  [[nodiscard]] bool isFlex() const {
+    return (flags & orbis::vmem::BlockFlags::FlexibleMemory) ==
+           orbis::vmem::BlockFlags::FlexibleMemory;
+  }
+
+  [[nodiscard]] bool isDirect() const {
+    return (flags & orbis::vmem::BlockFlags::DirectMemory) ==
+           orbis::vmem::BlockFlags::DirectMemory;
+  }
+
+  [[nodiscard]] bool isPooled() const {
+    return (flags & orbis::vmem::BlockFlags::PooledMemory) ==
+           orbis::vmem::BlockFlags::PooledMemory;
+  }
+
+  [[nodiscard]] bool isPoolCommited() const {
+    return flags == (orbis::vmem::BlockFlags::PooledMemory |
+                     orbis::vmem::BlockFlags::Commited);
+  }
+
+  [[nodiscard]] bool isPoolReserved() const {
+    return flags == orbis::vmem::BlockFlags::PooledMemory;
+  }
+
+  [[nodiscard]] bool isPoolControl() const {
+    return flags == orbis::vmem::BlockFlags::PooledMemory &&
+           (flagsEx & orbis::vmem::BlockFlagsEx::PoolControl);
+  }
+
+  [[nodiscard]] bool isVoid() const {
+    return (flagsEx & orbis::vmem::BlockFlagsEx::Void) ==
+           orbis::vmem::BlockFlagsEx::Void;
   }
 
   void serialize(rx::Serializer &s) const {}
@@ -239,6 +269,7 @@ static void release(orbis::Process *process, decltype(g_vmInstance)::type *vmem,
     }
 
     if (it->flags & orbis::vmem::BlockFlags::DirectMemory) {
+      orbis::dmem::notifyUnmap(process, 0, it->deviceOffset, range);
       budget->release(orbis::BudgetResource::Dmem, blockRange.size());
     }
 
@@ -258,12 +289,15 @@ static void release(orbis::Process *process, decltype(g_vmInstance)::type *vmem,
   }
 }
 
-static orbis::ErrorCode validateRange(
-    decltype(g_vmInstance)::type *vmem,
-    decltype(g_vmInstance)::type::iterator it, rx::AddressRange range,
-    rx::FunctionRef<orbis::ErrorCode(const VirtualMemoryAllocation &)> cb) {
+static orbis::ErrorCode
+validateRange(decltype(g_vmInstance)::type *vmem,
+              decltype(g_vmInstance)::type::iterator it, rx::AddressRange range,
+              rx::FunctionRef<orbis::ErrorCode(const VirtualMemoryAllocation &,
+                                               rx::AddressRange)>
+                  cb) {
   while (it != vmem->end() && it.beginAddress() < range.endAddress()) {
-    if (auto errc = cb(it.get()); errc != orbis::ErrorCode{}) {
+    if (auto errc = cb(it.get(), it.range().intersection(range));
+        errc != orbis::ErrorCode{}) {
       return errc;
     }
 
@@ -273,25 +307,45 @@ static orbis::ErrorCode validateRange(
   return {};
 }
 
-static void modifyRange(
+static decltype(g_vmInstance)::type::iterator modifyRange(
     decltype(g_vmInstance)::type *vmem,
     decltype(g_vmInstance)::type::iterator it, rx::AddressRange range,
+    rx::EnumBitSet<orbis::AllocationFlags> allocFlags,
     rx::FunctionRef<void(VirtualMemoryAllocation &, rx::AddressRange)> cb) {
+  auto returnIt = it;
   while (it != vmem->end() && it.beginAddress() < range.endAddress()) {
-    auto mapRange = range.intersection(it.range());
-    auto allocInfo = it.get();
+    auto itRange = it.range();
+    auto mapRange = range.intersection(itRange);
+    if (mapRange == itRange) {
+      cb(it.get(), mapRange);
 
-    if (allocInfo.device != nullptr &&
-        !(allocInfo.flags & orbis::vmem::BlockFlags::PooledMemory)) {
-      allocInfo.deviceOffset += mapRange.beginAddress() - it.beginAddress();
+      if (!(allocFlags & orbis::AllocationFlags::NoMerge)) {
+        it = vmem->merge(it);
+      }
+    } else {
+      auto allocInfo = it.get();
+
+      if (allocInfo.device != nullptr &&
+          !(allocInfo.flags & orbis::vmem::BlockFlags::PooledMemory)) {
+        allocInfo.deviceOffset += mapRange.beginAddress() - it.beginAddress();
+      }
+
+      cb(allocInfo, mapRange);
+      auto result = vmem->map(
+          mapRange.beginAddress(), mapRange.size(), allocInfo,
+          orbis::AllocationFlags::Fixed | allocFlags, orbis::vmem::kPageSize);
+
+      if (returnIt == it) {
+        returnIt = result.it;
+      }
+
+      it = result.it;
     }
-
-    cb(allocInfo, mapRange);
-    vmem->map(mapRange.beginAddress(), mapRange.size(), allocInfo,
-              orbis::AllocationFlags::Fixed, orbis::vmem::kPageSize);
 
     ++it;
   }
+
+  return returnIt;
 }
 
 void orbis::vmem::initialize(Process *process, bool force) {
@@ -336,6 +390,7 @@ void orbis::vmem::initialize(Process *process, bool force) {
   for (auto usedRange : rx::mem::query(range)) {
     reserveRangeImpl(
         rx::AddressRange::fromBeginEnd(address, usedRange.beginAddress()));
+    vmem->allocations.map(usedRange, {.flagsEx = BlockFlagsEx::Reserved});
 
     address = usedRange.endAddress();
   }
@@ -373,17 +428,21 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     rx::EnumBitSet<BlockFlags> blockFlags,
     rx::EnumBitSet<BlockFlagsEx> blockFlagsEx, File *file,
     std::uint64_t fileOffset, std::string_view name, std::uint64_t alignment,
-    MemoryType type) {
+    std::uint64_t callerAddress, MemoryType type) {
   blockFlags |= file->device->blockFlags;
+
+  if (!validateProtection(prot)) {
+    return {{}, ErrorCode::INVAL};
+  }
 
   if (blockFlags & BlockFlags::PooledMemory) {
     if (size < dmem::kPageSize * 2 || size % dmem::kPageSize) {
-      return {{}, orbis::ErrorCode::INVAL};
+      return {{}, ErrorCode::INVAL};
     }
   }
 
   if (blockFlags & (BlockFlags::DirectMemory | BlockFlags::PooledMemory)) {
-    if (prot & vmem::Protection::CpuExec) {
+    if (prot & Protection::CpuExec) {
       return {{}, ErrorCode::ACCES};
     }
 
@@ -394,7 +453,7 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
 
   if (allocFlags & AllocationFlags::Fixed) {
     if (addressHint % alignment) {
-      return {{}, orbis::ErrorCode::INVAL};
+      return {{}, ErrorCode::INVAL};
     }
   }
 
@@ -402,6 +461,14 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
                       !(allocFlags & AllocationFlags::NoOverwrite);
 
   VirtualMemoryAllocation allocationInfo;
+  if (process->sdkVersion < 0x5500000) {
+    allocationInfo.callerAddress = callerAddress;
+  }
+  if (process->sdkVersion < 0x2000000 &&
+      (blockFlags & (BlockFlags::DirectMemory | BlockFlags::PooledMemory))) {
+    allocFlags |= AllocationFlags::NoMerge;
+  }
+
   allocationInfo.flagsEx = blockFlagsEx | BlockFlagsEx::Allocated;
   allocationInfo.device = file->device;
   allocationInfo.prot = prot;
@@ -444,13 +511,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   }
 
   if (blockFlags & BlockFlags::FlexibleMemory) {
-    if (prot) {
-      if (!budget->acquire(BudgetResource::Fmem, size)) {
-        rx::println(stderr, "map: fmem budget: failed to allocate {:#x} bytes",
-                    size);
-        return {{}, ErrorCode::INVAL};
-      }
+    if (!budget->acquire(BudgetResource::Fmem, size)) {
+      rx::println(stderr, "map: fmem budget: failed to allocate {:#x} bytes",
+                  size);
+      return {{}, ErrorCode::INVAL};
+    }
 
+    if (prot) {
       blockFlags |= BlockFlags::Commited;
     }
   }
@@ -458,35 +525,38 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   allocFlags = AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge);
 
   if (blockFlags & BlockFlags::DirectMemory) {
-    if (prot) {
-      if (!budget->acquire(BudgetResource::Dmem, size)) {
-        rx::println(stderr, "map: dmem budget: failed to allocate {:#x} bytes",
-                    size);
-        return {{}, ErrorCode::INVAL};
-      }
+    if (!budget->acquire(BudgetResource::Dmem, size)) {
+      rx::println(stderr, "map: dmem budget: failed to allocate {:#x} bytes",
+                  size);
+      return {{}, ErrorCode::INVAL};
+    }
 
+    if (prot) {
       blockFlags |= BlockFlags::Commited;
     }
   }
 
   if (blockFlags & BlockFlags::PooledMemory) {
-    if (auto errc = blockpool::allocateControlBlock();
-        errc != orbis::ErrorCode{}) {
+    if (auto errc = blockpool::allocateControlBlock(); errc != ErrorCode{}) {
       return {{}, errc};
     }
     allocationInfo.flagsEx |= BlockFlagsEx::PoolControl;
   }
 
-  if (auto error = file->device->map(range, fileOffset, prot, file, process);
-      error != ErrorCode{}) {
-    if (prot) {
-      if (blockFlags & BlockFlags::FlexibleMemory) {
-        budget->release(BudgetResource::Fmem, size);
-      }
+  if (type != MemoryType::Invalid && !validateMemoryType(type, prot)) {
+    return {{}, ErrorCode::ACCES};
+  }
 
-      if (blockFlags & BlockFlags::DirectMemory) {
-        budget->release(BudgetResource::Dmem, size);
-      }
+  if (auto error = process->invoke([=] {
+        return file->device->map(range, fileOffset, prot, file, process);
+      });
+      error != ErrorCode{}) {
+    if (blockFlags & BlockFlags::FlexibleMemory) {
+      budget->release(BudgetResource::Fmem, size);
+    }
+
+    if (blockFlags & BlockFlags::DirectMemory) {
+      budget->release(BudgetResource::Dmem, size);
     }
 
     if (blockFlags & BlockFlags::PooledMemory) {
@@ -531,8 +601,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     rx::dieIf(errc != std::errc{}, "failed to commit virtual memory {}", errc);
   }
 
-  // vmemDump(process, rx::format("mapped {:x}-{:x} {}", range.beginAddress(),
-  //                              range.endAddress(), prot));
+  vmemDump(process, rx::format("mapped {:x}-{:x} {}", range.beginAddress(),
+                               range.endAddress(), prot));
 
   return {range, {}};
 }
@@ -540,8 +610,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
 std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
     Process *process, std::uint64_t addressHint, rx::AddressRange directRange,
     rx::EnumBitSet<Protection> prot, rx::EnumBitSet<AllocationFlags> allocFlags,
-    std::string_view name, std::uint64_t alignment, MemoryType type) {
+    std::string_view name, std::uint64_t alignment, std::uint64_t callerAddress,
+    MemoryType type) {
   ScopedBudgetAcquire dmemResource;
+
+  if (!validateProtection(prot)) {
+    return {{}, ErrorCode::INVAL};
+  }
 
   if (prot) {
     dmemResource = ScopedBudgetAcquire(
@@ -557,7 +632,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
   }
 
   VirtualMemoryAllocation allocationInfo;
-  allocationInfo.flags = orbis::vmem::BlockFlags::DirectMemory;
+  if (process->sdkVersion < 0x5500000) {
+    allocationInfo.callerAddress = callerAddress;
+  }
+  if (process->sdkVersion < 0x2000000) {
+    allocFlags |= AllocationFlags::NoMerge;
+  }
+  allocationInfo.flags = BlockFlags::DirectMemory;
   allocationInfo.flagsEx = BlockFlagsEx::Allocated;
   allocationInfo.prot = prot;
   allocationInfo.device = g_context->dmem->device;
@@ -566,7 +647,7 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
   allocationInfo.setName(process, name);
 
   if (prot) {
-    allocationInfo.flags |= orbis::vmem::BlockFlags::Commited;
+    allocationInfo.flags |= BlockFlags::Commited;
   }
 
   bool canOverwrite = (allocFlags & AllocationFlags::Fixed) &&
@@ -594,13 +675,14 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
 
   if (canOverwrite) {
     if (auto errc = validateOverwrite(vmem, range, false);
-        errc != orbis::ErrorCode{}) {
+        errc != ErrorCode{}) {
       return {{}, errc};
     }
   }
 
-  if (auto errc = dmem::map(0, range, directRange.beginAddress(), prot);
-      errc != orbis::ErrorCode{}) {
+  if (auto errc =
+          dmem::map(process, 0, range, directRange.beginAddress(), prot);
+      errc != ErrorCode{}) {
     return {{}, errc};
   }
 
@@ -630,39 +712,40 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
 
   amdgpu::mapMemory(process->pid, range, type, prot, pmemOffset);
 
-  // vmemDump(process, rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
-  //                              range.endAddress()));
+  vmemDump(process, rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
+                               range.endAddress()));
 
   return {range, {}};
 }
 
-std::pair<rx::AddressRange, orbis::ErrorCode>
-orbis::vmem::mapFlex(Process *process, std::uint64_t size,
-                     rx::EnumBitSet<Protection> prot, std::uint64_t addressHint,
-                     rx::EnumBitSet<AllocationFlags> allocFlags,
-                     rx::EnumBitSet<BlockFlags> blockFlags,
-                     std::string_view name, std::uint64_t alignment) {
-  ScopedBudgetAcquire fmemResource;
+std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFlex(
+    Process *process, std::uint64_t size, rx::EnumBitSet<Protection> prot,
+    std::uint64_t addressHint, rx::EnumBitSet<AllocationFlags> allocFlags,
+    rx::EnumBitSet<BlockFlags> blockFlags, std::string_view name,
+    std::uint64_t alignment, std::uint64_t callerAddress) {
 
-  if (prot) {
-    fmemResource =
-        ScopedBudgetAcquire(process->getBudget(), BudgetResource::Fmem, size);
+  if (!validateProtection(prot)) {
+    return {{}, ErrorCode::INVAL};
+  }
 
-    if (!fmemResource) {
-      rx::println(stderr,
-                  "mapFlex: fmem budget: failed to allocate {:#x} bytes", size);
+  ScopedBudgetAcquire fmemResource(process->getBudget(), BudgetResource::Fmem,
+                                   size);
 
-      return {{}, ErrorCode::INVAL};
-    }
+  if (!fmemResource) {
+    rx::println(stderr, "mapFlex: fmem budget: failed to allocate {:#x} bytes",
+                size);
 
-    blockFlags |= orbis::vmem::BlockFlags::Commited;
+    return {{}, ErrorCode::INVAL};
   }
 
   bool canOverwrite = (allocFlags & AllocationFlags::Fixed) &&
                       !(allocFlags & AllocationFlags::NoOverwrite);
 
   VirtualMemoryAllocation allocationInfo;
-  allocationInfo.flags = orbis::vmem::BlockFlags::FlexibleMemory | blockFlags;
+  if (process->sdkVersion < 0x5500000) {
+    allocationInfo.callerAddress = callerAddress;
+  }
+  allocationInfo.flags = blockFlags | BlockFlags::FlexibleMemory;
   allocationInfo.flagsEx = BlockFlagsEx::Allocated;
   allocationInfo.prot = prot;
   allocationInfo.type = MemoryType::WbOnion;
@@ -690,40 +773,49 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
 
   if (canOverwrite) {
     if (auto errc = validateOverwrite(vmem, vmemRange, false);
-        errc != orbis::ErrorCode{}) {
+        errc != ErrorCode{}) {
       return {{}, errc};
     }
   }
 
-  rx::AddressRange flexRange;
+  if (prot) {
+    rx::AddressRange flexRange;
+    {
+      auto [range, errc] = fmem::allocate(size);
 
-  {
-    auto [range, errc] = fmem::allocate(size);
+      if (errc != ErrorCode{}) {
+        return {{}, errc};
+      }
 
-    if (errc != orbis::ErrorCode{}) {
-      return {{}, errc};
+      flexRange = range;
     }
 
-    flexRange = range;
-  }
+    allocationInfo.flags |= BlockFlags::Commited;
+    allocationInfo.deviceOffset = flexRange.beginAddress();
 
-  allocationInfo.deviceOffset = flexRange.beginAddress();
-
-  if (auto errc =
-          pmem::map(vmemRange.beginAddress(), flexRange, toCpuProtection(prot));
-      errc != orbis::ErrorCode{}) {
-    fmem::deallocate(flexRange);
-    return {{}, errc};
+    if (auto errc = process->invoke([=] {
+          return pmem::map(vmemRange.beginAddress(), flexRange,
+                           toCpuProtection(prot));
+        });
+        errc != ErrorCode{}) {
+      fmem::deallocate(flexRange);
+      return {{}, errc};
+    }
+  } else {
+    if (auto errc =
+            process->invoke([=] { return rx::mem::protect(vmemRange, {}); });
+        errc != std::errc{}) {
+      return {{}, toErrorCode(errc)};
+    }
   }
 
   if (canOverwrite) {
     release(process, vmem, process->getBudget(), vmemRange);
   }
 
-  auto [it, _errc, _range] = vmem->map(
-      vmemRange.beginAddress(), vmemRange.size(), allocationInfo,
-      AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge),
-      alignment);
+  vmem->map(vmemRange.beginAddress(), vmemRange.size(), allocationInfo,
+            AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge),
+            alignment);
 
   // vmemDump(process, rx::format("mapFlex {:x}-{:x}", vmemRange.beginAddress(),
   //                              vmemRange.endAddress()));
@@ -731,9 +823,78 @@ orbis::vmem::mapFlex(Process *process, std::uint64_t size,
   return {vmemRange, {}};
 }
 
+std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapVoid(
+    Process *process, std::uint64_t size, std::uint64_t addressHint,
+    rx::EnumBitSet<AllocationFlags> allocFlags, std::string_view name,
+    std::uint64_t alignment, std::uint64_t callerAddress) {
+  bool canOverwrite = (allocFlags & AllocationFlags::Fixed) &&
+                      !(allocFlags & AllocationFlags::NoOverwrite);
+
+  VirtualMemoryAllocation allocationInfo;
+  if (process->sdkVersion < 0x5500000) {
+    allocationInfo.callerAddress = callerAddress;
+  }
+  allocationInfo.flagsEx = BlockFlagsEx::Void | BlockFlagsEx::Allocated;
+  allocationInfo.type = MemoryType::WbOnion;
+  allocationInfo.setName(process, name);
+
+  auto vmem = process->get(g_vmInstance);
+  std::lock_guard lock(*vmem);
+
+  rx::AddressRange vmemRange;
+
+  {
+    auto [_, errc, range] =
+        vmem->map(addressHint, size, allocationInfo,
+                  allocFlags | AllocationFlags::Dry, alignment);
+    if (errc != std::errc{}) {
+      if (errc == std::errc::file_exists) {
+        return {{}, ErrorCode::NOMEM};
+      }
+
+      return {{}, toErrorCode(errc)};
+    }
+
+    vmemRange = range;
+  }
+
+  if (canOverwrite) {
+    if (auto errc = validateOverwrite(vmem, vmemRange, false);
+        errc != ErrorCode{}) {
+      return {{}, errc};
+    }
+  }
+
+  if (auto errc =
+          process->invoke([=] { return rx::mem::protect(vmemRange, {}); });
+      errc != std::errc{}) {
+    return {{}, toErrorCode(errc)};
+  }
+
+  if (canOverwrite) {
+    release(process, vmem, process->getBudget(), vmemRange);
+  }
+
+  vmem->map(vmemRange.beginAddress(), vmemRange.size(), allocationInfo,
+            AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge),
+            alignment);
+
+  // vmemDump(process, rx::format("mapVoid {:x}-{:x}", vmemRange.beginAddress(),
+  //                              vmemRange.endAddress()));
+  return {vmemRange, {}};
+}
+
 std::pair<rx::AddressRange, orbis::ErrorCode>
 orbis::vmem::commitPooled(Process *process, rx::AddressRange range,
                           MemoryType type, rx::EnumBitSet<Protection> prot) {
+  if (!validateProtection(prot)) {
+    return {{}, ErrorCode::INVAL};
+  }
+
+  if (!validateMemoryType(type, prot)) {
+    return {{}, ErrorCode::ACCES};
+  }
+
   VirtualMemoryAllocation allocationInfo;
   allocationInfo.flags = BlockFlags::PooledMemory | BlockFlags::Commited;
   allocationInfo.flagsEx = BlockFlagsEx::Allocated;
@@ -755,10 +916,8 @@ orbis::vmem::commitPooled(Process *process, rx::AddressRange range,
   auto controlBlockIt = it;
 
   while (controlBlockIt != vmem->end() && controlBlockIt->isAllocated() &&
-         (controlBlockIt->flags & BlockFlags::PooledMemory)) {
-    if (!controlBlockIt->prot &&
-        controlBlockIt->flags == BlockFlags::PooledMemory &&
-        (controlBlockIt->flagsEx & orbis::vmem::BlockFlagsEx::PoolControl)) {
+         controlBlockIt->isPooled()) {
+    if (controlBlockIt->isPoolControl()) {
       break;
     }
 
@@ -781,7 +940,7 @@ orbis::vmem::commitPooled(Process *process, rx::AddressRange range,
     }
 
     if (auto errc = blockpool::commit(process, range, type, prot);
-        errc != orbis::ErrorCode{}) {
+        errc != ErrorCode{}) {
       return {{}, errc};
     }
 
@@ -796,7 +955,7 @@ orbis::vmem::commitPooled(Process *process, rx::AddressRange range,
               controlAllocationInfo, AllocationFlags::Fixed, kPageSize);
   } else {
     if (auto errc = blockpool::commit(process, range, type, prot);
-        errc != orbis::ErrorCode{}) {
+        errc != ErrorCode{}) {
       return {{}, errc};
     }
   }
@@ -887,68 +1046,148 @@ orbis::ErrorCode orbis::vmem::decommitPooled(Process *process,
 
 orbis::ErrorCode orbis::vmem::protect(Process *process, rx::AddressRange range,
                                       rx::EnumBitSet<Protection> prot) {
+  prot &= kProtCpuAll | kProtGpuAll;
+
+  if (!validateProtection(prot)) {
+    return ErrorCode::INVAL;
+  }
+
   auto vmem = process->get(g_vmInstance);
 
   range = rx::AddressRange::fromBeginEnd(
       rx::alignDown(range.beginAddress(), kPageSize),
       rx::alignUp(range.endAddress(), kPageSize));
+
   {
     std::lock_guard lock(*vmem);
-    auto it = vmem->query(range.beginAddress());
+    std::size_t fmemSize = 0;
+    auto it = vmem->lowerBound(range.beginAddress());
 
     if (it == vmem->end()) {
       rx::println(stderr,
                   "vmem: attempt to set protection of invalid address range: "
                   "{:x}-{:x}",
                   range.beginAddress(), range.endAddress());
-      return orbis::ErrorCode::INVAL;
+      return ErrorCode::INVAL;
     }
 
-    auto errc = validateRange(vmem, it, range,
-                              [](const VirtualMemoryAllocation &alloc) {
-                                if (alloc.flags == BlockFlags::PooledMemory) {
-                                  return ErrorCode::ACCES;
-                                }
+    auto errc =
+        validateRange(vmem, it, range,
+                      [&fmemSize, prot](const VirtualMemoryAllocation &alloc,
+                                        rx::AddressRange range) {
+                        if (alloc.isPoolReserved()) {
+                          return ErrorCode::ACCES;
+                        }
 
-                                if (alloc.flagsEx & BlockFlagsEx::Reserved) {
-                                  return ErrorCode::ACCES;
-                                }
+                        if (!validateMemoryType(alloc.type, prot)) {
+                          return ErrorCode::ACCES;
+                        }
 
-                                return ErrorCode{};
-                              });
+                        if (alloc.isFlex()) {
+                          if ((prot && !alloc.prot) || (!prot && alloc.prot)) {
+                            fmemSize += range.size();
+                          }
+                        }
+
+                        return ErrorCode{};
+                      });
 
     if (errc != ErrorCode{}) {
       return errc;
     }
 
-    if (auto errc =
-            toErrorCode(rx::mem::protect(range, vmem::toCpuProtection(prot)));
-        errc != ErrorCode{}) {
-      return errc;
+    if (fmemSize && prot) {
+      if (!process->getBudget()->acquire(BudgetResource::Fmem, fmemSize)) {
+        return ErrorCode::INVAL;
+      }
     }
 
-    modifyRange(vmem, it, range,
-                [prot](VirtualMemoryAllocation &alloc, rx::AddressRange) {
-                  if (!alloc.isAllocated()) {
-                    return;
-                  }
+    rx::EnumBitSet<AllocationFlags> modifyFlags{};
 
-                  if (alloc.device != nullptr &&
-                      alloc.flags & BlockFlags::FlexibleMemory) {
-                    alloc.prot = prot & ~Protection::CpuExec;
-                  }
+    modifyRange(
+        vmem, it, range, modifyFlags,
+        [process, prot, sdkVersion = process->sdkVersion](
+            VirtualMemoryAllocation &alloc, rx::AddressRange range) {
+          if (!alloc.isAllocated()) {
+            return;
+          }
 
-                  alloc.flags = alloc.prot
-                                    ? alloc.flags | BlockFlags::Commited
-                                    : alloc.flags & ~BlockFlags::Commited;
-                });
+          if (alloc.flagsEx & BlockFlagsEx::Reserved) {
+            return;
+          }
+
+          auto blockProt = prot;
+
+          if (alloc.type == MemoryType::WbGarlic) {
+            blockProt &= ~(Protection::CpuWrite | Protection::GpuWrite);
+          }
+
+          if (!alloc.isVoid()) {
+            if (alloc.isFlex() && alloc.device == nullptr) {
+              if (blockProt && !alloc.prot) {
+                auto [pmemRange, errc] = fmem::allocate(range.size());
+                rx::dieIf(errc != ErrorCode{},
+                          "failed to allocate flexible memory");
+
+                errc = pmem::map(range.beginAddress(), pmemRange,
+                                 toCpuProtection(blockProt));
+
+                rx::dieIf(errc != ErrorCode{}, "failed to map flexible memory");
+              } else if (!blockProt && alloc.prot) {
+                auto errc = fmem::deallocate(rx::AddressRange::fromBeginSize(
+                    alloc.deviceOffset, range.size()));
+
+                rx::dieIf(errc != ErrorCode{},
+                          "failed to deallocate flexible memory {:x}-{:x}",
+                          alloc.deviceOffset,
+                          alloc.deviceOffset + range.size());
+              }
+            }
+
+            if (sdkVersion > 0x1500000) {
+              if (alloc.isDirect() || alloc.isPooled() ||
+                  (alloc.isFlex() && alloc.device != nullptr)) {
+                blockProt &= ~Protection::CpuExec;
+              }
+            }
+
+            auto cpuBlockProt = toCpuProtection(blockProt);
+
+            if (cpuBlockProt != toCpuProtection(alloc.prot)) {
+              auto errc = process->invoke(
+                  [=] { return rx::mem::protect(range, cpuBlockProt); });
+
+              rx::dieIf(errc != std::errc{},
+                        "failed to protect region {:x}-{:x}, prot {}, error {}",
+                        range.beginAddress(), range.endAddress(), cpuBlockProt,
+                        errc);
+            }
+          } else {
+            blockProt = {};
+          }
+
+          if (alloc.isDirect() || alloc.isPooled() ||
+              (alloc.isFlex() && alloc.device != nullptr)) {
+            blockProt &= ~Protection::CpuExec;
+          }
+
+          if (alloc.isVoid() && sdkVersion <= 0x1500000) {
+            alloc.prot = prot;
+          } else {
+            alloc.prot = blockProt;
+          }
+          alloc.flags = blockProt ? alloc.flags | BlockFlags::Commited
+                                  : alloc.flags & ~BlockFlags::Commited;
+        });
+    if (fmemSize && !prot) {
+      process->getBudget()->release(BudgetResource::Fmem, fmemSize);
+    }
   }
 
   amdgpu::protectMemory(process->pid, range, prot);
 
-  // vmemDump(process, rx::format("protected {:x}-{:x} {}",
-  // range.beginAddress(),
-  //                              range.endAddress(), prot));
+  vmemDump(process, rx::format("protected {:x}-{:x} {}", range.beginAddress(),
+                               range.endAddress(), prot));
 
   return {};
 }
@@ -965,10 +1204,16 @@ orbis::ErrorCode orbis::vmem::setName(Process *process, rx::AddressRange range,
                 "vmem: attempt to set name of invalid address range: "
                 "{:x}-{:x}, name: {}",
                 range.beginAddress(), range.endAddress(), name);
-    return orbis::ErrorCode::INVAL;
+    return ErrorCode::INVAL;
   }
 
-  modifyRange(vmem, it, range,
+  rx::EnumBitSet<AllocationFlags> modifyFlags{};
+
+  if (process->sdkVersion <= 0x1500000) {
+    modifyFlags |= AllocationFlags::NoMerge;
+  }
+
+  modifyRange(vmem, it, range, modifyFlags,
               [name](VirtualMemoryAllocation &alloc, rx::AddressRange) {
                 if (alloc.isAllocated()) {
                   alloc.name = name;
@@ -978,92 +1223,83 @@ orbis::ErrorCode orbis::vmem::setName(Process *process, rx::AddressRange range,
   return {};
 }
 
-orbis::ErrorCode orbis::vmem::setType(Process *process, rx::AddressRange range,
-                                      MemoryType type) {
+orbis::ErrorCode
+orbis::vmem::setTypeAndProtect(Process *process, rx::AddressRange range,
+                               MemoryType type,
+                               rx::EnumBitSet<Protection> prot) {
+  if (!validateProtection(prot)) {
+    return ErrorCode::INVAL;
+  }
+
+  if (!validateMemoryType(type, prot)) {
+    return ErrorCode::ACCES;
+  }
+
+  prot &= ~Protection::CpuExec;
+
   auto vmem = process->get(g_vmInstance);
 
   std::lock_guard lock(*vmem);
   auto it = vmem->query(range.beginAddress());
 
   if (it == vmem->end()) {
-    return orbis::ErrorCode::INVAL;
+    return ErrorCode::INVAL;
+  }
+
+  auto errc =
+      validateRange(vmem, it, range,
+                    [](const VirtualMemoryAllocation &alloc, rx::AddressRange) {
+                      if (alloc.flags == BlockFlags::PooledMemory) {
+                        return ErrorCode::ACCES;
+                      }
+
+                      if (alloc.flagsEx & BlockFlagsEx::Reserved) {
+                        return ErrorCode::ACCES;
+                      }
+
+                      if (!(alloc.flags & (BlockFlags::PooledMemory |
+                                           BlockFlags::DirectMemory))) {
+                        return ErrorCode::OPNOTSUPP;
+                      }
+
+                      return ErrorCode{};
+                    });
+
+  if (errc != ErrorCode{}) {
+    return errc;
+  }
+
+  if (auto errc = process->invoke([=] {
+        return toErrorCode(rx::mem::protect(range, toCpuProtection(prot)));
+      });
+      errc != ErrorCode{}) {
+    return errc;
+  }
+
+  rx::EnumBitSet<AllocationFlags> modifyFlags{};
+
+  if (process->sdkVersion < 0x1700000) {
+    modifyFlags |= AllocationFlags::NoMerge;
   }
 
   modifyRange(
-      vmem, it, range,
-      [type](VirtualMemoryAllocation &alloc, rx::AddressRange range) {
+      vmem, it, range, modifyFlags,
+      [type, prot](VirtualMemoryAllocation &alloc, rx::AddressRange range) {
         if (!alloc.isAllocated()) {
           return;
         }
+
+        alloc.type = type;
+        alloc.prot = prot;
+        alloc.flags = prot ? alloc.flags | BlockFlags::Commited
+                           : alloc.flags & ~BlockFlags::Commited;
 
         if (alloc.flags & BlockFlags::DirectMemory) {
           dmem::setType(
               0,
               rx::AddressRange::fromBeginSize(alloc.deviceOffset, range.size()),
               type);
-          alloc.type = type;
           return;
-        }
-
-        if (alloc.flags != (BlockFlags::PooledMemory | BlockFlags::Commited)) {
-          alloc.type = type;
-          return;
-        }
-      });
-
-  return {};
-}
-
-orbis::ErrorCode
-orbis::vmem::setTypeAndProtect(Process *process, rx::AddressRange range,
-                               MemoryType type,
-                               rx::EnumBitSet<Protection> prot) {
-  auto vmem = process->get(g_vmInstance);
-
-  std::lock_guard lock(*vmem);
-  auto it = vmem->query(range.beginAddress());
-
-  if (it == vmem->end()) {
-    return orbis::ErrorCode::INVAL;
-  }
-
-  auto errc =
-      validateRange(vmem, it, range, [](const VirtualMemoryAllocation &alloc) {
-        if (alloc.flags == BlockFlags::PooledMemory) {
-          return ErrorCode::ACCES;
-        }
-
-        if (alloc.flagsEx & BlockFlagsEx::Reserved) {
-          return ErrorCode::ACCES;
-        }
-
-        return ErrorCode{};
-      });
-
-  if (errc != ErrorCode{}) {
-    return errc;
-  }
-
-  if (auto errc =
-          toErrorCode(rx::mem::protect(range, vmem::toCpuProtection(prot)));
-      errc != ErrorCode{}) {
-    return errc;
-  }
-
-  modifyRange(
-      vmem, it, range,
-      [type, prot](VirtualMemoryAllocation &alloc, rx::AddressRange range) {
-        if (alloc.isAllocated()) {
-          alloc.type = type;
-          alloc.prot = prot;
-
-          if (alloc.flags & BlockFlags::DirectMemory) {
-            dmem::setType(0,
-                          rx::AddressRange::fromBeginSize(alloc.deviceOffset,
-                                                          range.size()),
-                          type);
-            return;
-          }
         }
       });
 
@@ -1080,12 +1316,11 @@ orbis::ErrorCode orbis::vmem::unmap(Process *process, rx::AddressRange range) {
       rx::alignDown(range.beginAddress(), kPageSize),
       rx::alignUp(range.endAddress(), kPageSize));
 
-  orbis::ErrorCode result;
+  ErrorCode result;
   {
     std::lock_guard lock(*vmem);
 
-    if (auto errc = validateOverwrite(vmem, range, true);
-        errc != orbis::ErrorCode{}) {
+    if (auto errc = validateOverwrite(vmem, range, true); errc != ErrorCode{}) {
       return errc;
     }
 
@@ -1098,7 +1333,7 @@ orbis::ErrorCode orbis::vmem::unmap(Process *process, rx::AddressRange range) {
     result = toErrorCode(errc);
   }
 
-  rx::mem::release(range, kPageSize);
+  process->invoke([=] { rx::mem::release(range, kPageSize); });
   amdgpu::unmapMemory(process->pid, range);
 
   // vmemDump(process, rx::format("unmap {:x}-{:x}", range.beginAddress(),
@@ -1134,7 +1369,7 @@ orbis::vmem::query(Process *process, std::uint64_t address, bool lowerBound) {
     return {};
   }
 
-  orbis::vmem::QueryResult result{};
+  QueryResult result{};
   result.start = it.beginAddress();
   result.end = it.endAddress();
 
@@ -1148,7 +1383,9 @@ orbis::vmem::query(Process *process, std::uint64_t address, bool lowerBound) {
     result.memoryType = it->type;
   }
 
-  result.protection = it->prot;
+  if (!it->isVoid()) {
+    result.protection = it->prot;
+  }
   result.flags = it->flags;
   result.name = it->name;
 
@@ -1184,7 +1421,7 @@ orbis::vmem::queryProtection(Process *process, std::uint64_t address,
     return {};
   }
 
-  orbis::vmem::MemoryProtection result{};
+  MemoryProtection result{};
   result.startAddress = it.beginAddress();
   result.endAddress = it.endAddress();
   result.prot = it->prot;

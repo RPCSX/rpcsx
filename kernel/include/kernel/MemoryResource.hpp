@@ -317,8 +317,7 @@ struct AllocableResource : Resource {
       } else {
         if (flags & AllocationFlags::Stack) {
           fixedRange = rx::AddressRange::fromBeginSize(
-              rx::alignDown(it.endAddress() - size, alignment),
-              size);
+              rx::alignDown(it.endAddress() - size, alignment), size);
         } else {
           fixedRange = rx::AddressRange::fromBeginSize(
               rx::alignUp(it.beginAddress(), alignment), size);
@@ -353,6 +352,10 @@ struct AllocableResource : Resource {
       return {it, {}, fixedRange};
     }
 
+    return {merge(it), {}, fixedRange};
+  }
+
+  iterator merge(iterator it) {
     if (it != begin()) {
       // try to merge with previous node
       iterator prevIt = it;
@@ -393,7 +396,7 @@ struct AllocableResource : Resource {
       }
     }
 
-    return {it, {}, fixedRange};
+    return it;
   }
 
   void destroy() {

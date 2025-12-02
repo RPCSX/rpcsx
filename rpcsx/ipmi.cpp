@@ -7,6 +7,7 @@
 #include "orbis/pmem.hpp"
 #include "orbis/thread/Process.hpp"
 #include "orbis/thread/Thread.hpp"
+#include "orbis/uio.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/vmem.hpp"
 #include "rx/AddressRange.hpp"
@@ -206,12 +207,14 @@ orbis::EventFlag *ipmi::createEventFlag(std::string_view name, uint32_t attrs,
       .first;
 }
 
-void ipmi::createShm(const char *name, uint32_t flags, uint32_t mode,
-                     uint64_t size) {
+rx::Ref<orbis::File> ipmi::createShm(const char *name, uint32_t flags,
+                                     uint32_t mode, uint64_t size) {
   rx::Ref<orbis::File> shm;
   auto shmDevice = orbis::g_context->shmDevice.staticCast<orbis::IoDevice>();
   shmDevice->open(&shm, name, flags, mode, nullptr);
   shm->ops->truncate(shm.get(), size, nullptr);
+
+  return shm;
 }
 
 orbis::ErrorCode
@@ -610,7 +613,49 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
       lnsStatusServer = 0x30010;
     }
   }
+
+  int lnsLoadExec;
+
+  if (orbis::g_context->fwType == orbis::FwType::Ps5) {
+    lnsLoadExec = 0x30013;
+  } else {
+    if (orbis::g_context->fwSdkVersion > 0x6000000) {
+      lnsLoadExec = 0x30010;
+    } else {
+      lnsLoadExec = 0x30013;
+    }
+  }
+
   createIpmiServer(process, "SceLncService")
+      .addSyncMethod(
+          lnsLoadExec,
+          [](std::vector<std::vector<std::byte>> &outData,
+             const std::vector<std::span<std::byte>> &inData) {
+            std::println(stderr,
+                         "SceLncService::loadExec(inBufCount={}, "
+                         "outBufCount={})",
+                         inData.size(), outData.size());
+
+            for (auto in : inData) {
+              std::println(stderr, "in {}", in.size());
+              rx::hexdump(in);
+            }
+
+            if (inData.size() == 3) {
+              auto action = inData[1];
+              if (std::string_view((const char *)action.data(),
+                                   action.size() - 1) == "EXIT") {
+                orbis::uint32_t status = 1;
+                if (inData[0].size() == sizeof(orbis::uint32_t)) {
+                  std::memcpy(&status, inData[0].data(), sizeof(status));
+                }
+
+                rx::println(stderr, "LNC exit request, status {}", status);
+                std::exit(status);
+              }
+            }
+            return 0;
+          })
       .addSyncMethod(lnsStatusServer,
                      [](void *out, std::uint64_t &size) -> std::int32_t {
                        struct SceLncServiceAppStatus {
@@ -1112,17 +1157,34 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
   createEventFlag("SceDataTransfer", 0x120, 0);
 
   createEventFlag("SceLncUtilAppStatus00000000", 0x100, 0);
+  createEventFlag("SceLncUtilAppStatus0", 0x100, 0);
   createEventFlag("SceLncUtilAppStatus1", 0x100, 0);
+  createEventFlag("SceAppMessaging0", 0x120, 1);
   createEventFlag("SceAppMessaging1", 0x120, 1);
+  createEventFlag("SceShellCoreUtil0", 0x120, 0x3f8c);
   createEventFlag("SceShellCoreUtil1", 0x120, 0x3f8c);
   createEventFlag("SceNpScoreIpc_" + fmtHex(process->pid), 0x120, 0);
   createEventFlag("/vmicDdEvfAin", 0x120, 0);
 
+  createSemaphore("SceAppMessaging0", 0x101, 1, 0x7fffffff);
   createSemaphore("SceAppMessaging1", 0x101, 1, 0x7fffffff);
   createSemaphore("SceLncSuspendBlock1", 0x101, 1, 10000);
 
   createShm("SceGlsSharedMemory", 0x202, 0x1a4, 262144);
-  createShm("SceShellCoreUtil", 0x202, 0x1a4, 16384);
+  {
+    auto util = createShm("SceShellCoreUtil", 0x202, 0x1a4, 16384);
+    orbis::uint64_t header = 0x6ed81ede6df17259;
+    orbis::IoVec vec{
+        .base = &header,
+        .len = sizeof(header),
+    };
+    orbis::Uio uio{
+        .iov = &vec,
+        .iovcnt = 1,
+    };
+
+    util->ops->write(util.get(), &uio, process->threadsMap.get(0).get());
+  }
   createShm("SceNpTpip", 0x202, 0x1ff, 43008);
 
   createShm("vmicDdShmAin", 0x202, 0x1b6, 43008);

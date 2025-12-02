@@ -105,6 +105,7 @@ struct Module final {
 
   DynType dynType = DynType::None;
 
+  uint32_t refCount{};
   uint32_t phNum{};
   uint64_t phdrAddress{};
 

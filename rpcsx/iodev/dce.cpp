@@ -21,6 +21,7 @@
 #include <cstring>
 #include <mutex>
 #include <sys/mman.h>
+#include <thread>
 
 static constexpr auto kDceControlMemoryOffset = 0;
 static constexpr auto kDceControlMemorySize = 0x10000;
@@ -578,10 +579,10 @@ DceDevice::map(rx::AddressRange range, std::int64_t offset,
               range.endAddress(), offset, protection);
 
   auto result =
-      orbis::dmem::map(0, range, dmemRange.beginAddress() + offset, protection);
+      orbis::dmem::map(process, 0, range, dmemRange.beginAddress() + offset, protection);
 
   if (result == orbis::ErrorCode{}) {
-    amdgpu::mapMemory(process->pid, range, orbis::MemoryType::WbGarlic,
+    amdgpu::mapMemory(process->pid, range, orbis::MemoryType::WcGarlic,
                       protection, dmemRange.beginAddress() + offset);
   }
 
@@ -603,6 +604,7 @@ static void createGpu() {
   }
 
   while (orbis::g_context->gpuDevice == nullptr) {
+    std::this_thread::yield();
   }
 }
 
@@ -642,7 +644,7 @@ orbis::IoDevice *createDceCharacterDevice(orbis::Process *process) {
       0,
       rx::AddressRange::fromBeginEnd(dmemSize - orbis::dmem::kPageSize * 2,
                                      dmemSize),
-      orbis::dmem::kPageSize, orbis::MemoryType::WbGarlic);
+      orbis::dmem::kPageSize, orbis::MemoryType::WcGarlic);
 
   rx::dieIf(errc != orbis::ErrorCode{},
             "failed to allocate DCE memory, error {}", errc);

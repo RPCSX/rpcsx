@@ -84,7 +84,7 @@ struct DmemIoctlControlRelease {
   orbis::uint64_t unk2;
 };
 struct DmemIoctlSetPidAndProtect {
-  orbis::uintptr_t address;
+  orbis::uintptr_t offset;
   orbis::size_t size;
   orbis::pid_t pid; // 0 if all
   rx::EnumBitSet<orbis::vmem::Protection> prot;
@@ -206,15 +206,32 @@ dmem_ioctl_control_release(orbis::Thread *thread, DmemDevice *device,
 static orbis::ErrorCode
 dmem_ioctl_set_pid_and_protect(orbis::Thread *thread, DmemDevice *device,
                                DmemIoctlSetPidAndProtect &args) {
-  ORBIS_LOG_WARNING(__FUNCTION__, args.pid, args.address, args.size,
+  ORBIS_LOG_WARNING(__FUNCTION__, args.pid, args.offset, args.size,
                     args.prot.toUnderlying());
-  return {};
+
+  orbis::Process *process = nullptr;
+
+  if (args.pid != 0) {
+    process = args.pid == -1 || args.pid == thread->tproc->pid
+                  ? thread->tproc
+                  : orbis::findProcessById(args.pid);
+    if (process == nullptr) {
+      return orbis::ErrorCode::SRCH;
+    }
+  }
+
+  return orbis::dmem::protect(
+      process, 0, rx::AddressRange::fromBeginSize(args.offset, args.size),
+      args.prot);
 }
 
 static orbis::ErrorCode
 dmem_ioctl_allocate_for_mini_app(orbis::Thread *thread, DmemDevice *device,
                                  DmemIoctlAllocate &args) {
   // FIXME: implement
+  ORBIS_LOG_WARNING(__FUNCTION__, args.searchStart, args.searchEnd,
+                    args.alignment, args.len, (int)args.memoryType);
+
   return dmem_ioctl_allocate(thread, device, args);
 }
 
@@ -222,6 +239,9 @@ static orbis::ErrorCode dmem_ioctl_allocate_main(orbis::Thread *thread,
                                                  DmemDevice *device,
                                                  DmemIoctlAllocate &args) {
   // FIXME: implement
+  ORBIS_LOG_WARNING(__FUNCTION__, args.searchStart, args.searchEnd,
+                    args.alignment, args.len, (int)args.memoryType);
+
   return dmem_ioctl_allocate(thread, device, args);
 }
 
@@ -303,7 +323,7 @@ static orbis::ErrorCode dmem_ioctl_reserve(orbis::Thread *thread,
   auto [offset, errc] = orbis::dmem::reserveSystem(device->index, args.size);
 
   if (errc == orbis::ErrorCode{}) {
-    args.size = offset | 0x4000000000;
+    args.size = offset;
   }
   return errc;
 }
@@ -332,7 +352,7 @@ orbis::ErrorCode
 DmemDevice::map(rx::AddressRange range, std::int64_t offset,
                 rx::EnumBitSet<orbis::vmem::Protection> protection,
                 orbis::File *, orbis::Process *process) {
-  auto result = orbis::dmem::map(index, range, offset, protection);
+  auto result = orbis::dmem::map(process, index, range, offset, protection);
 
   if (result == orbis::ErrorCode{}) {
     if (auto dmemType = orbis::dmem::query(0, offset)) {

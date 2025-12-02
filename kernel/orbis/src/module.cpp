@@ -119,7 +119,7 @@ static orbis::SysResult doPltRelocation(orbis::Process *process,
       foundInLibs.emplace_back(std::string_view(defLib.name));
     }
 
-    for (auto nsDefModule : defModule->namespaceModules) {
+    for (auto &nsDefModule : defModule->namespaceModules) {
       for (auto defSym : nsDefModule->symbols) {
         if (defSym.id != symbol.id || defSym.bind == orbis::SymbolBind::Local) {
           continue;

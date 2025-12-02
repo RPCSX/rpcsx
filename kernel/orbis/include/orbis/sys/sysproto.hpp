@@ -786,7 +786,7 @@ SysResult sys_localtime_to_utc(Thread *thread, int64_t time, uint unk,
 SysResult sys_set_uevt(Thread *thread /* TODO */);
 SysResult sys_get_cpu_usage_proc(Thread *thread /* TODO */);
 SysResult sys_get_map_statistics(Thread *thread /* TODO */);
-SysResult sys_set_chicken_switches(Thread *thread /* TODO */);
+SysResult sys_set_chicken_switches(Thread *thread, sint flags);
 SysResult sys_extend_page_table_pool(Thread *thread);
 SysResult sys_extend_page_table_pool2(Thread *thread);
 SysResult sys_get_kernel_mem_statistics(Thread *thread /* TODO */);

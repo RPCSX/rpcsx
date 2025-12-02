@@ -78,6 +78,7 @@ add_library(obj.orbis-kernel OBJECT
 )
 
 target_link_libraries(obj.orbis-kernel PUBLIC orbis::kernel::config rx kernel)
+target_compile_options(obj.orbis-kernel PRIVATE "-mfsgsbase")
 
 target_include_directories(obj.orbis-kernel
     PUBLIC

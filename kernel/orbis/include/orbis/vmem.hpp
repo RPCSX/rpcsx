@@ -44,6 +44,7 @@ enum class BlockFlagsEx : std::uint8_t {
   Private,
   Shared,
   PoolControl,
+  Void,
   Reserved,
 
   bitset_last = Reserved
@@ -149,6 +150,31 @@ toGpuProtection(rx::EnumBitSet<Protection> prot) {
   return result;
 }
 
+inline bool validateProtection(rx::EnumBitSet<Protection> &prot) {
+  prot = rx::EnumBitSet<Protection>::fromUnderlying(prot.toUnderlying() & 0xff);
+
+  if (prot & ~(kProtCpuAll | kProtGpuAll)) {
+    return false;
+  }
+
+  if (prot & Protection::CpuWrite) {
+    prot |= Protection::CpuRead;
+  }
+
+  return true;
+}
+
+inline bool validateMemoryType(MemoryType type,
+                               rx::EnumBitSet<Protection> prot) {
+  if (type == MemoryType::WbGarlic) {
+    if (prot & (Protection::CpuWrite | Protection::GpuWrite)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void initialize(Process *process, bool force = false);
 void fork(Process *process, Process *parentThread);
 
@@ -164,22 +190,27 @@ mapFile(Process *process, std::uint64_t addressHint, std::uint64_t size,
         rx::EnumBitSet<Protection> prot, rx::EnumBitSet<BlockFlags> blockFlags,
         rx::EnumBitSet<BlockFlagsEx> blockFlagsEx, File *file,
         std::uint64_t fileOffset, std::string_view name = {},
-        std::uint64_t alignment = kPageSize,
+        std::uint64_t alignment = kPageSize, std::uint64_t callerAddress = 0,
         MemoryType type = MemoryType::Invalid);
 
-std::pair<rx::AddressRange, ErrorCode>
-mapDirect(Process *process, std::uint64_t addressHint,
-          rx::AddressRange directRange, rx::EnumBitSet<Protection> prot,
-          rx::EnumBitSet<AllocationFlags> allocFlags,
-          std::string_view name = {}, std::uint64_t alignment = kPageSize,
-          MemoryType type = MemoryType::Invalid);
+std::pair<rx::AddressRange, ErrorCode> mapDirect(
+    Process *process, std::uint64_t addressHint, rx::AddressRange directRange,
+    rx::EnumBitSet<Protection> prot, rx::EnumBitSet<AllocationFlags> allocFlags,
+    std::string_view name = {}, std::uint64_t alignment = kPageSize,
+    std::uint64_t callerAddress = 0, MemoryType type = MemoryType::Invalid);
 
 std::pair<rx::AddressRange, ErrorCode>
 mapFlex(Process *process, std::uint64_t size, rx::EnumBitSet<Protection> prot,
         std::uint64_t addressHint = 0,
         rx::EnumBitSet<AllocationFlags> allocFlags = {},
         rx::EnumBitSet<BlockFlags> blockFlags = {}, std::string_view name = {},
-        std::uint64_t alignment = kPageSize);
+        std::uint64_t alignment = kPageSize, std::uint64_t callerAddress = 0);
+
+std::pair<rx::AddressRange, ErrorCode>
+mapVoid(Process *process, std::uint64_t size, std::uint64_t addressHint = 0,
+        rx::EnumBitSet<AllocationFlags> allocFlags = {},
+        std::string_view name = {}, std::uint64_t alignment = kPageSize,
+        std::uint64_t callerAddress = 0);
 
 std::pair<rx::AddressRange, ErrorCode>
 commitPooled(Process *process, rx::AddressRange addressRange, MemoryType type,
@@ -191,7 +222,6 @@ ErrorCode protect(Process *process, rx::AddressRange range,
 ErrorCode unmap(Process *process, rx::AddressRange range);
 ErrorCode setName(Process *process, rx::AddressRange range,
                   std::string_view name);
-ErrorCode setType(Process *process, rx::AddressRange range, MemoryType type);
 ErrorCode setTypeAndProtect(Process *process, rx::AddressRange range,
                             MemoryType type, rx::EnumBitSet<Protection> prot);
 std::optional<QueryResult> query(Process *process, std::uint64_t address,

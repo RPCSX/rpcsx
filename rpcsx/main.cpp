@@ -57,7 +57,6 @@
 #include <cstdint>
 #include <filesystem>
 
-static int g_gpuPid;
 extern bool allowMonoDebug;
 
 __attribute__((no_stack_protector)) static void
@@ -145,11 +144,6 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
     orbis::g_currentThread->tproc->exitStatus = sig;
     orbis::g_currentThread->tproc->event.emit(orbis::kEvFiltProc,
                                               orbis::kNoteExit, sig);
-  }
-
-  if (g_gpuPid > 0) {
-    // stop gpu thread
-    // ::kill(g_gpuPid, SIGINT);
   }
 
   allowMonoDebug = true;
@@ -361,15 +355,15 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   funlockfile(stderr);
 }
 
-static void guestInitDev(orbis::Thread *thread) {
+static void guestInitDev(orbis::Thread *thread, int stdinFd, int stdoutFd,
+                         int stderrFd) {
   auto dmem0 = createDmemCharacterDevice(0);
   dmem0->open(&orbis::g_context->dmem, "", 0, 0, thread);
 
   auto dce = createDceCharacterDevice(thread->tproc);
   orbis::g_context->dceDevice = dce;
 
-  auto ttyFd = ::open("tty.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
-  auto consoleDev = createConsoleCharacterDevice(STDIN_FILENO, ttyFd);
+  auto consoleDev = createConsoleCharacterDevice(stdinFd, stdoutFd);
   auto mbus = static_cast<MBusDevice *>(createMBusCharacterDevice());
   auto mbusAv = static_cast<MBusAVDevice *>(createMBusAVCharacterDevice());
 
@@ -461,7 +455,7 @@ static void guestInitDev(orbis::Thread *thread) {
   vfs::addDevice("devctl", createDevCtlCharacterDevice());
   vfs::addDevice("uvd", createUVDCharacterDevice());
   vfs::addDevice("vce", createVCECharacterDevice());
-  vfs::addDevice("evlg1", createEvlgCharacterDevice(ttyFd));
+  vfs::addDevice("evlg1", createEvlgCharacterDevice(stderrFd));
   vfs::addDevice("srtc", createSrtcCharacterDevice());
   vfs::addDevice("sshot", createScreenShotCharacterDevice());
   vfs::addDevice("lvdctl", createLvdCtlCharacterDevice());
@@ -926,8 +920,6 @@ int main(int argc, const char *argv[]) {
         return 1;
       }
 
-      rx::println("mounting '{}' to virtual '{}'", argv[argIndex + 1],
-                  argv[argIndex + 2]);
       if (!std::filesystem::is_directory(argv[argIndex + 1])) {
         rx::println(stderr, "Directory '{}' not exists", argv[argIndex + 1]);
         return 1;
@@ -944,8 +936,6 @@ int main(int argc, const char *argv[]) {
         usage(argv[0]);
         return 1;
       }
-
-      rx::println("mounting firmware '{}'", argv[argIndex + 1]);
 
       vfs::mount("/", createHostIoDevice(argv[argIndex + 1], "/"));
 
@@ -1032,6 +1022,18 @@ int main(int argc, const char *argv[]) {
     break;
   }
 
+  setvbuf(stdout, nullptr, _IONBF, 0);
+  auto stdinFd = dup(STDIN_FILENO);
+  auto stdoutFd = dup(STDOUT_FILENO);
+  auto stderrFd = dup(STDERR_FILENO);
+
+  auto logFd = ::open("log-init.txt", O_CREAT | O_TRUNC | O_WRONLY, 0666);
+  dup2(logFd, STDOUT_FILENO);
+  dup2(logFd, STDERR_FILENO);
+  close(logFd);
+
+  rx::println(stderr, "RPCSX v{}", rx::getVersion().toString());
+
   setupSigHandlers();
   orbis::constructAllGlobals();
   orbis::g_context->deviceEventEmitter = orbis::knew<orbis::EventEmitter>();
@@ -1042,12 +1044,7 @@ int main(int argc, const char *argv[]) {
   orbis::fmem::initialize(2ull * 1024 * 1024 * 1024);
 
   rx::startWatchdog();
-  rx::createGpuDevice();
   vfs::initialize();
-
-  while (orbis::g_context->gpuDevice == nullptr) {
-    std::this_thread::yield();
-  }
 
   std::vector<std::string> guestArgv(argv + argIndex, argv + argc);
   if (guestArgv.empty()) {
@@ -1097,7 +1094,7 @@ int main(int argc, const char *argv[]) {
           .flags = 0,
           .item =
               {
-                  .total = 2ul * 1024 * 1024 * 1024,
+                  .total = 0x1C000000,
               },
       },
       {
@@ -1260,7 +1257,7 @@ int main(int argc, const char *argv[]) {
     executableModule->dynType = orbis::DynType::Ps5;
   }
 
-  guestInitDev(mainThread);
+  guestInitDev(mainThread, stdinFd, stdoutFd, stderrFd);
   guestInitFd(mainThread);
 
   // data transfer mode
