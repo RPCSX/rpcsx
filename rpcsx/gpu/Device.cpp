@@ -984,7 +984,7 @@ void Device::mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
   auto vmemAddress = memory.getVirtualAddress(virtualRange.beginAddress());
   auto errc = orbis::pmem::map(vmemAddress,
                                rx::AddressRange::fromBeginSize(
-                                   physicalOffset, virtualRange.beginAddress()),
+                                   physicalOffset, virtualRange.size()),
                                orbis::vmem::toGpuProtection(prot));
   if (errc != orbis::ErrorCode{}) {
     rx::die("failed to map process {} memory, address {:x}-{:x}, type {}, "
