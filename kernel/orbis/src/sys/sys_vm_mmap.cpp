@@ -81,12 +81,22 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
     addr = flags & vmem::MapFlags::System ? 0xfc0000000 : 0x200000000;
   }
 
-  if (flags & vmem::MapFlags::Void) {
-    flags |= vmem::MapFlags::Anon;
+  auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
 
+  if (flags & vmem::MapFlags::Void) {
     if (fd != -1 || pos != 0) {
       return ErrorCode::INVAL;
     }
+
+    auto [range, errc] = vmem::mapVoid(thread->tproc, len, addr, allocFlags,
+                                       name, alignment, callerAddress);
+
+    if (errc != orbis::ErrorCode{}) {
+      return errc;
+    }
+
+    thread->retval[0] = range.beginAddress();
+    return {};
   }
 
   if (flags & vmem::MapFlags::Stack) {
@@ -105,15 +115,14 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
     shift = 0;
   }
 
-  auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
-
   if (flags & vmem::MapFlags::Anon) {
     if (fd != -1 || pos != 0) {
       return ErrorCode::INVAL;
     }
 
-    auto [range, errc] = vmem::mapFlex(thread->tproc, len, prot, addr,
-                                       allocFlags, blockFlags, name, alignment);
+    auto [range, errc] =
+        vmem::mapFlex(thread->tproc, len, prot, addr, allocFlags, blockFlags,
+                      name, alignment, callerAddress);
 
     if (errc != orbis::ErrorCode{}) {
       return errc;
@@ -130,11 +139,12 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
 
   if (!file->device->blockFlags) {
     blockFlags |= vmem::BlockFlags::FlexibleMemory;
+    prot &= ~vmem::Protection::CpuExec;
   }
 
-  auto [range, errc] =
-      vmem::mapFile(thread->tproc, addr, len, allocFlags, prot, blockFlags,
-                    blockFlagsEx, file.get(), pos, name, alignment);
+  auto [range, errc] = vmem::mapFile(thread->tproc, addr, len, allocFlags, prot,
+                                     blockFlags, blockFlagsEx, file.get(), pos,
+                                     name, alignment, callerAddress);
 
   if (errc != ErrorCode{}) {
     return errc;
