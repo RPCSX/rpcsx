@@ -68,6 +68,7 @@ struct DeviceContext {
   static constexpr auto kMaxProcessCount = 6;
 
   PadState kbPadState{};
+  std::atomic<std::uint64_t> vblankCount{};
   std::atomic<std::uint64_t> cpuCacheCommands[kMaxProcessCount][4]{};
   rx::shared_atomic32 cpuCacheCommandsIdle[kMaxProcessCount]{};
   rx::shared_atomic32 gpuCacheCommand[kMaxProcessCount]{};
