@@ -432,11 +432,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   blockFlags |= file->device->blockFlags;
 
   if (!validateProtection(prot)) {
+    rx::println(stderr, "map: invalid prot {}", prot);
     return {{}, ErrorCode::INVAL};
   }
 
   if (blockFlags & BlockFlags::PooledMemory) {
     if (size < dmem::kPageSize * 2 || size % dmem::kPageSize) {
+      rx::println(stderr, "map: blockpool: invalid size {}", size);
       return {{}, ErrorCode::INVAL};
     }
   }
@@ -452,7 +454,9 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   }
 
   if (allocFlags & AllocationFlags::Fixed) {
-    if (addressHint % alignment) {
+    if (addressHint & (alignment - 1)) {
+      rx::println(stderr, "map: invalid fixed address {:x}, alignment {:x}",
+                  addressHint, alignment);
       return {{}, ErrorCode::INVAL};
     }
   }
@@ -485,10 +489,12 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   if (errc != std::errc{}) {
     if (errc == std::errc::not_enough_memory) {
       // virtual memory shouldn't care about physical memory
+      rx::println(stderr, "map: OOM");
       return {{}, ErrorCode::INVAL};
     }
 
     if (errc == std::errc::file_exists) {
+      rx::println(stderr, "map: NoOverwrite overwrites memory");
       return {{}, ErrorCode::NOMEM};
     }
 
@@ -500,6 +506,10 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
         errc != ErrorCode{}) {
       return {{}, errc};
     }
+  }
+
+  if (type != MemoryType::Invalid && !validateMemoryType(type, prot)) {
+    return {{}, ErrorCode::ACCES};
   }
 
   auto budget = process->getBudget();
@@ -522,8 +532,6 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     }
   }
 
-  allocFlags = AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge);
-
   if (blockFlags & BlockFlags::DirectMemory) {
     if (!budget->acquire(BudgetResource::Dmem, size)) {
       rx::println(stderr, "map: dmem budget: failed to allocate {:#x} bytes",
@@ -538,13 +546,12 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
 
   if (blockFlags & BlockFlags::PooledMemory) {
     if (auto errc = blockpool::allocateControlBlock(); errc != ErrorCode{}) {
+      rx::println(stderr,
+                  "map: blockpool: failed to allocate control block, error {}",
+                  errc);
       return {{}, errc};
     }
     allocationInfo.flagsEx |= BlockFlagsEx::PoolControl;
-  }
-
-  if (type != MemoryType::Invalid && !validateMemoryType(type, prot)) {
-    return {{}, ErrorCode::ACCES};
   }
 
   if (auto error = process->invoke([=] {
@@ -563,6 +570,7 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
       blockpool::releaseControlBlock();
     }
 
+    rx::println(stderr, "map: device allocation failure, blockFlags {}", blockFlags);
     return {{}, error};
   }
 
@@ -595,8 +603,10 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   }
 
   {
-    auto [_it, errc, _range] = vmem->map(range.beginAddress(), range.size(),
-                                         allocationInfo, allocFlags, alignment);
+    auto [_it, errc, _range] = vmem->map(
+        range.beginAddress(), range.size(), allocationInfo,
+        AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge),
+        alignment);
 
     rx::dieIf(errc != std::errc{}, "failed to commit virtual memory {}", errc);
   }
