@@ -27,7 +27,7 @@
 #include <sys/uio.h>
 #include <sys/un.h>
 #include <thread>
-#include <unistd.h>
+#include <utility>
 #include <vector>
 
 struct HostFile : orbis::File {
@@ -508,8 +508,8 @@ static orbis::ErrorCode socket_accept(orbis::File *file,
 
     auto guestSocket = wrapSocket(result, "", 1, 1, 0);
     auto guestFd = thread->tproc->fileDescriptors.insert(guestSocket);
-    thread->retval[0] = guestFd;
-    ORBIS_LOG_ERROR(__FUNCTION__, socket->name, guestFd);
+    thread->retval[0] = std::to_underlying(guestFd);
+    ORBIS_LOG_ERROR(__FUNCTION__, socket->name, (int)guestFd);
     return {};
   }
 

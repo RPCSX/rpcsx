@@ -4,6 +4,7 @@
 #include "thread/Process.hpp"
 #include "thread/ProcessOps.hpp"
 #include "thread/Thread.hpp"
+#include <utility>
 
 orbis::SysResult orbis::sys_shm_open(Thread *thread, ptr<const char> path,
                                      sint flags, mode_t mode) {
@@ -20,7 +21,7 @@ orbis::SysResult orbis::sys_shm_open(Thread *thread, ptr<const char> path,
       return result;
     }
 
-    thread->retval[0] = thread->tproc->fileDescriptors.insert(file);
+    thread->retval[0] = std::to_underlying(thread->tproc->fileDescriptors.insert(file));
     return {};
   }
   return ErrorCode::NOSYS;

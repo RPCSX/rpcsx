@@ -7,8 +7,8 @@
 #include "../evf.hpp"
 #include "../ipmi.hpp"
 #include "../osem.hpp"
-#include "../thread/Thread.hpp"
-#include "../thread/types.hpp"
+#include "Thread.hpp"
+#include "types.hpp"
 #include "ProcessState.hpp"
 #include "cpuset.hpp"
 #include "orbis/AppInfo.hpp"
@@ -102,7 +102,7 @@ struct Process final {
   rx::RcIdMap<Semaphore, sint, 4097, 1> semMap;
   rx::RcIdMap<Module, ModuleHandle> modulesMap;
   rx::RcIdMap<Thread, lwpid_t> threadsMap;
-  rx::RcIdMap<orbis::File, sint> fileDescriptors;
+  rx::RcIdMap<orbis::File, FileDescriptor> fileDescriptors;
 
   rx::AddressRange libkernelRange;
 

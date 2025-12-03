@@ -7,6 +7,7 @@
 #include <chrono>
 #include <list>
 #include <span>
+#include <utility>
 
 #ifdef __linux
 #include <sys/select.h>
@@ -19,8 +20,8 @@ orbis::SysResult orbis::sys_kqueue(Thread *thread) {
   }
 
   auto fd = thread->tproc->fileDescriptors.insert(queue);
-  ORBIS_LOG_TODO(__FUNCTION__, fd);
-  thread->retval[0] = fd;
+  ORBIS_LOG_TODO(__FUNCTION__, (int)fd);
+  thread->retval[0] = std::to_underlying(fd);
   return {};
 }
 
@@ -35,8 +36,8 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
   if (name != nullptr) {
     queue->name = name;
   }
-  ORBIS_LOG_TODO(__FUNCTION__, name, flags, fd);
-  thread->retval[0] = fd;
+  ORBIS_LOG_TODO(__FUNCTION__, name, flags, (int)fd);
+  thread->retval[0] = std::to_underlying(fd);
   return {};
 }
 
@@ -121,7 +122,8 @@ static SysResult keventChange(KQueue *kq, KEvent &change, Thread *thread) {
         }
       } else if (change.filter == kEvFiltRead ||
                  change.filter == kEvFiltWrite) {
-        auto fd = thread->tproc->fileDescriptors.get(change.ident);
+        auto fd =
+            thread->tproc->fileDescriptors.get(FileDescriptor(change.ident));
 
         if (fd == nullptr) {
           return ErrorCode::BADF;
@@ -221,7 +223,7 @@ static orbis::ErrorCode ureadTimespec(orbis::timespec &ts,
 }
 } // namespace orbis
 
-orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_kevent(Thread *thread, FileDescriptor fd,
                                    ptr<KEvent> changelist, sint nchanges,
                                    ptr<KEvent> eventlist, sint nevents,
                                    ptr<const timespec> timeout) {
@@ -240,7 +242,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
         KEvent change;
         ORBIS_RET_ON_ERROR(uread(change, &changePtr));
         if (change.filter != kEvFiltUser) {
-          ORBIS_LOG_NOTICE(__FUNCTION__, fd, change.ident, change.filter,
+          ORBIS_LOG_NOTICE(__FUNCTION__, (int)fd, change.ident, change.filter,
                            change.flags, change.fflags, change.data,
                            change.udata);
         }
@@ -396,7 +398,7 @@ orbis::SysResult orbis::sys_kevent(Thread *thread, sint fd,
     }
   }
 
-  // ORBIS_LOG_TODO(__FUNCTION__, "kevent wakeup", fd);
+  // ORBIS_LOG_TODO(__FUNCTION__, "kevent wakeup", (int)fd);
 
   // for (auto evt : result) {
   //   ORBIS_LOG_TODO(__FUNCTION__,

@@ -3,13 +3,14 @@
 #include "thread/Thread.hpp"
 #include "utils/Logs.hpp"
 #include <pipe.hpp>
+#include <utility>
 
 orbis::SysResult orbis::sys_pipe(Thread *thread) {
   auto [a, b] = createPipe();
   auto fd0 = thread->tproc->fileDescriptors.insert(a);
   auto fd1 = thread->tproc->fileDescriptors.insert(b);
-  ORBIS_LOG_ERROR(__FUNCTION__, fd0, fd1);
-  thread->retval[0] = fd0;
-  thread->retval[1] = fd1;
+  ORBIS_LOG_ERROR(__FUNCTION__, (int)fd0, (int)fd1);
+  thread->retval[0] = std::to_underlying(fd0);
+  thread->retval[1] = std::to_underlying(fd1);
   return {};
 }

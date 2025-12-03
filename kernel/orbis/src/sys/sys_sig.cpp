@@ -134,7 +134,8 @@ orbis::SysResult orbis::sys_kill(Thread *thread, sint pid, sint signum) {
   return {};
 }
 
-orbis::SysResult orbis::sys_pdkill(Thread *thread, sint fd, sint signum) {
+orbis::SysResult orbis::sys_pdkill(Thread *thread, FileDescriptor fd,
+                                   sint signum) {
   return ErrorCode::NOSYS;
 }
 orbis::SysResult orbis::sys_sigqueue(Thread *thread, pid_t pid, sint signum,

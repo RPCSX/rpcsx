@@ -12,7 +12,7 @@ orbis::SysResult orbis::sys___mac_set_proc(Thread *thread,
                                            ptr<struct mac> mac_p) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys___mac_get_fd(Thread *thread, sint fd,
+orbis::SysResult orbis::sys___mac_get_fd(Thread *thread, FileDescriptor fd,
                                          ptr<struct mac> mac_p) {
   return ErrorCode::NOSYS;
 }
@@ -20,7 +20,7 @@ orbis::SysResult orbis::sys___mac_get_file(Thread *thread, ptr<const char> path,
                                            ptr<struct mac> mac_p) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys___mac_set_fd(Thread *thread, sint fd,
+orbis::SysResult orbis::sys___mac_set_fd(Thread *thread, FileDescriptor fd,
                                          ptr<struct mac> mac_p) {
   return ErrorCode::NOSYS;
 }

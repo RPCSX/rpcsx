@@ -6,7 +6,7 @@ orbis::SysResult orbis::sys_extattrctl(Thread *thread, ptr<char> path, char cmd,
                                        ptr<const char> attrname) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_extattr_set_fd(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_extattr_set_fd(Thread *thread, FileDescriptor fd,
                                            sint attrnamespace,
                                            ptr<const char> attrname,
                                            ptr<void> data, size_t nbytes) {
@@ -25,7 +25,7 @@ orbis::SysResult orbis::sys_extattr_set_link(Thread *thread,
                                              ptr<void> data, size_t nbytes) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_extattr_get_fd(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_extattr_get_fd(Thread *thread, FileDescriptor fd,
                                            sint attrnamespace,
                                            ptr<const char> attrname,
                                            ptr<void> data, size_t nbytes) {
@@ -44,7 +44,7 @@ orbis::SysResult orbis::sys_extattr_get_link(Thread *thread,
                                              ptr<void> data, size_t nbytes) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_extattr_delete_fd(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_extattr_delete_fd(Thread *thread, FileDescriptor fd,
                                               sint attrnamespace,
                                               ptr<const char> attrname) {
   return ErrorCode::NOSYS;
@@ -60,7 +60,7 @@ orbis::SysResult orbis::sys_extattr_delete_link(Thread *thread,
                                                 ptr<const char> attrname) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_extattr_list_fd(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_extattr_list_fd(Thread *thread, FileDescriptor fd,
                                             sint attrnamespace, ptr<void> data,
                                             size_t nbytes) {
   return ErrorCode::NOSYS;

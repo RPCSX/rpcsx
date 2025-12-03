@@ -18,16 +18,16 @@ orbis::SysResult orbis::sys_socket(Thread *thread, sint domain, sint type,
     }
 
     auto fd = thread->tproc->fileDescriptors.insert(file);
-    ORBIS_LOG_WARNING("Socket opened", fd);
-    thread->retval[0] = fd;
+    ORBIS_LOG_WARNING("Socket opened", (int)fd);
+    thread->retval[0] = std::to_underlying(fd);
     return {};
   }
   return ErrorCode::NOSYS;
 }
 
-orbis::SysResult orbis::sys_bind(Thread *thread, sint s, caddr_t name,
+orbis::SysResult orbis::sys_bind(Thread *thread, FileDescriptor s, caddr_t name,
                                  sint namelen) {
-  // ORBIS_LOG_ERROR(__FUNCTION__, s, name, namelen);
+  // ORBIS_LOG_ERROR(__FUNCTION__, (int)s, name, namelen);
 
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
@@ -41,8 +41,9 @@ orbis::SysResult orbis::sys_bind(Thread *thread, sint s, caddr_t name,
   return ErrorCode::NOTSUP;
 }
 
-orbis::SysResult orbis::sys_listen(Thread *thread, sint s, sint backlog) {
-  ORBIS_LOG_ERROR(__FUNCTION__, s, backlog);
+orbis::SysResult orbis::sys_listen(Thread *thread, FileDescriptor s,
+                                   sint backlog) {
+  ORBIS_LOG_ERROR(__FUNCTION__, (int)s, backlog);
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -55,10 +56,10 @@ orbis::SysResult orbis::sys_listen(Thread *thread, sint s, sint backlog) {
   return ErrorCode::NOTSUP;
 }
 
-orbis::SysResult orbis::sys_accept(Thread *thread, sint s,
+orbis::SysResult orbis::sys_accept(Thread *thread, FileDescriptor s,
                                    ptr<SocketAddress> from,
                                    ptr<uint32_t> fromlenaddr) {
-  ORBIS_LOG_ERROR(__FUNCTION__, s, from, fromlenaddr);
+  ORBIS_LOG_ERROR(__FUNCTION__, (int)s, from, fromlenaddr);
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -71,8 +72,8 @@ orbis::SysResult orbis::sys_accept(Thread *thread, sint s,
   return ErrorCode::NOTSUP;
 }
 
-orbis::SysResult orbis::sys_connect(Thread *thread, sint s, caddr_t name,
-                                    sint namelen) {
+orbis::SysResult orbis::sys_connect(Thread *thread, FileDescriptor s,
+                                    caddr_t name, sint namelen) {
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -99,26 +100,24 @@ orbis::SysResult orbis::sys_socketpair(Thread *thread, sint domain, sint type,
     auto aFd = thread->tproc->fileDescriptors.insert(a);
     auto bFd = thread->tproc->fileDescriptors.insert(b);
 
-    if (auto errc = uwrite(rsv, aFd); errc != ErrorCode{}) {
-      return errc;
-    }
+    ORBIS_RET_ON_ERROR(uwrite(rsv, std::to_underlying(aFd)));
 
-    return uwrite(rsv + 1, bFd);
+    return uwrite(rsv + 1, std::to_underlying(bFd));
   }
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_sendto(Thread *thread, sint s, caddr_t buf,
-                                   size_t len, sint flags, caddr_t to,
-                                   sint tolen) {
+orbis::SysResult orbis::sys_sendto(Thread *thread, FileDescriptor s,
+                                   caddr_t buf, size_t len, sint flags,
+                                   caddr_t to, sint tolen) {
   return {};
 }
-orbis::SysResult orbis::sys_sendmsg(Thread *thread, sint s,
+orbis::SysResult orbis::sys_sendmsg(Thread *thread, FileDescriptor s,
                                     ptr<struct msghdr> msg, sint flags) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_recvfrom(Thread *thread, sint s, caddr_t buf,
-                                     size_t len, sint flags,
+orbis::SysResult orbis::sys_recvfrom(Thread *thread, FileDescriptor s,
+                                     caddr_t buf, size_t len, sint flags,
                                      ptr<SocketAddress> from,
                                      ptr<uint32_t> fromlenaddr) {
   auto file = thread->tproc->fileDescriptors.get(s);
@@ -133,7 +132,7 @@ orbis::SysResult orbis::sys_recvfrom(Thread *thread, sint s, caddr_t buf,
 
   return ErrorCode::NOTSUP;
 }
-orbis::SysResult orbis::sys_recvmsg(Thread *thread, sint s,
+orbis::SysResult orbis::sys_recvmsg(Thread *thread, FileDescriptor s,
                                     ptr<struct msghdr> msg, sint flags) {
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
@@ -146,7 +145,8 @@ orbis::SysResult orbis::sys_recvmsg(Thread *thread, sint s,
 
   return ErrorCode::NOTSUP;
 }
-orbis::SysResult orbis::sys_shutdown(Thread *thread, sint s, sint how) {
+orbis::SysResult orbis::sys_shutdown(Thread *thread, FileDescriptor s,
+                                     sint how) {
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -158,9 +158,10 @@ orbis::SysResult orbis::sys_shutdown(Thread *thread, sint s, sint how) {
 
   return ErrorCode::NOTSUP;
 }
-orbis::SysResult orbis::sys_setsockopt(Thread *thread, sint s, sint level,
-                                       sint name, caddr_t val, sint valsize) {
-  ORBIS_LOG_TODO(__FUNCTION__, s, level, name, val, valsize);
+orbis::SysResult orbis::sys_setsockopt(Thread *thread, FileDescriptor s,
+                                       sint level, sint name, caddr_t val,
+                                       sint valsize) {
+  ORBIS_LOG_TODO(__FUNCTION__, (int)s, level, name, val, valsize);
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -172,10 +173,10 @@ orbis::SysResult orbis::sys_setsockopt(Thread *thread, sint s, sint level,
 
   return ErrorCode::NOTSUP;
 }
-orbis::SysResult orbis::sys_getsockopt(Thread *thread, sint s, sint level,
-                                       sint name, caddr_t val,
+orbis::SysResult orbis::sys_getsockopt(Thread *thread, FileDescriptor s,
+                                       sint level, sint name, caddr_t val,
                                        ptr<sint> avalsize) {
-  ORBIS_LOG_TODO(__FUNCTION__, s, level, name, val, avalsize);
+  ORBIS_LOG_TODO(__FUNCTION__, (int)s, level, name, val, avalsize);
   auto file = thread->tproc->fileDescriptors.get(s);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -187,21 +188,21 @@ orbis::SysResult orbis::sys_getsockopt(Thread *thread, sint s, sint level,
 
   return ErrorCode::NOTSUP;
 }
-orbis::SysResult orbis::sys_getsockname(Thread *thread, sint fdes,
+orbis::SysResult orbis::sys_getsockname(Thread *thread, FileDescriptor fdes,
                                         ptr<SocketAddress> asa,
                                         ptr<uint32_t> alen) {
   // return uwrite<uint32_t>(alen, sizeof(SockAddr));
   ORBIS_LOG_TODO(__FUNCTION__);
   return {};
 }
-orbis::SysResult orbis::sys_getpeername(Thread *thread, sint fdes,
+orbis::SysResult orbis::sys_getpeername(Thread *thread, FileDescriptor fdes,
                                         ptr<SocketAddress> asa,
                                         ptr<uint32_t> alen) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_sendfile(Thread *thread, sint fd, sint s,
-                                     off_t offset, size_t nbytes,
-                                     ptr<struct sf_hdtr> hdtr,
+orbis::SysResult orbis::sys_sendfile(Thread *thread, FileDescriptor fd,
+                                     FileDescriptor s, off_t offset,
+                                     size_t nbytes, ptr<struct sf_hdtr> hdtr,
                                      ptr<off_t> sbytes, sint flags) {
   return ErrorCode::NOSYS;
 }

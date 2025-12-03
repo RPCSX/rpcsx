@@ -20,8 +20,8 @@ orbis::SysResult orbis::sys_sstk(Thread *, sint) {
 
 orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
                                  rx::EnumBitSet<vmem::Protection> prot,
-                                 rx::EnumBitSet<vmem::MapFlags> flags, sint fd,
-                                 off_t pos) {
+                                 rx::EnumBitSet<vmem::MapFlags> flags,
+                                 FileDescriptor fd, off_t pos) {
 
   std::uint64_t callerAddress = getCallerAddress(thread);
 
@@ -84,7 +84,7 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
   auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
 
   if (flags & vmem::MapFlags::Void) {
-    if (fd != -1 || pos != 0) {
+    if (fd != FileDescriptor::Invalid || pos != 0) {
       return ErrorCode::INVAL;
     }
 
@@ -103,7 +103,7 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
     flags |= vmem::MapFlags::Anon;
     blockFlags |= vmem::BlockFlags::Stack;
 
-    if (fd != -1 || pos != 0) {
+    if (fd != FileDescriptor::Invalid || pos != 0) {
       return ErrorCode::INVAL;
     }
 
@@ -116,7 +116,7 @@ orbis::SysResult orbis::sys_mmap(Thread *thread, uintptr_t addr, size_t len,
   }
 
   if (flags & vmem::MapFlags::Anon) {
-    if (fd != -1 || pos != 0) {
+    if (fd != FileDescriptor::Invalid || pos != 0) {
       return ErrorCode::INVAL;
     }
 
@@ -158,7 +158,7 @@ orbis::SysResult orbis::sys_freebsd6_mmap(Thread *thread, uintptr_t addr,
                                           size_t len,
                                           rx::EnumBitSet<vmem::Protection> prot,
                                           rx::EnumBitSet<vmem::MapFlags> flags,
-                                          sint fd, sint, off_t pos) {
+                                          FileDescriptor fd, sint, off_t pos) {
   return sys_mmap(thread, addr, len, prot, flags, fd, pos);
 }
 orbis::SysResult orbis::sys_msync(Thread *thread, uintptr_t addr, size_t len,

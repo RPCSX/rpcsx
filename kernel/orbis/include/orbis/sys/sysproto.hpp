@@ -46,16 +46,18 @@ SysResult nosys(Thread *thread);
 
 SysResult sys_exit(Thread *thread, sint status);
 SysResult sys_fork(Thread *thread);
-SysResult sys_read(Thread *thread, sint fd, ptr<void> buf, size_t nbyte);
-SysResult sys_write(Thread *thread, sint fd, ptr<const void> buf, size_t nbyte);
+SysResult sys_read(Thread *thread, FileDescriptor fd, ptr<void> buf,
+                   size_t nbyte);
+SysResult sys_write(Thread *thread, FileDescriptor fd, ptr<const void> buf,
+                    size_t nbyte);
 SysResult sys_open(Thread *thread, ptr<const char> path, sint flags, sint mode);
-SysResult sys_close(Thread *thread, sint fd);
+SysResult sys_close(Thread *thread, FileDescriptor fd);
 SysResult sys_wait4(Thread *thread, sint pid, ptr<sint> status, sint options,
                     ptr<struct rusage> rusage);
 SysResult sys_link(Thread *thread, ptr<char> path, ptr<char> link);
 SysResult sys_unlink(Thread *thread, ptr<char> path);
 SysResult sys_chdir(Thread *thread, ptr<char> path);
-SysResult sys_fchdir(Thread *thread, sint fd);
+SysResult sys_fchdir(Thread *thread, FileDescriptor fd);
 SysResult sys_mknod(Thread *thread, ptr<char> path, sint mode, sint dev);
 SysResult sys_chmod(Thread *thread, ptr<char> path, sint mode);
 SysResult sys_chown(Thread *thread, ptr<char> path, sint uid, sint gid);
@@ -69,26 +71,26 @@ SysResult sys_getuid(Thread *thread);
 SysResult sys_geteuid(Thread *thread);
 SysResult sys_ptrace(Thread *thread, sint req, pid_t pid, caddr_t addr,
                      sint data);
-SysResult sys_recvmsg(Thread *thread, sint s, ptr<struct msghdr> msg,
+SysResult sys_recvmsg(Thread *thread, FileDescriptor s, ptr<struct msghdr> msg,
                       sint flags);
-SysResult sys_sendmsg(Thread *thread, sint s, ptr<struct msghdr> msg,
+SysResult sys_sendmsg(Thread *thread, FileDescriptor s, ptr<struct msghdr> msg,
                       sint flags);
-SysResult sys_recvfrom(Thread *thread, sint s, caddr_t buf, size_t len,
+SysResult sys_recvfrom(Thread *thread, FileDescriptor s, caddr_t buf, size_t len,
                        sint flags, ptr<SocketAddress> from,
                        ptr<uint32_t> fromlenaddr);
-SysResult sys_accept(Thread *thread, sint s, ptr<SocketAddress> from,
+SysResult sys_accept(Thread *thread, FileDescriptor s, ptr<SocketAddress> from,
                      ptr<uint32_t> fromlenaddr);
-SysResult sys_getpeername(Thread *thread, sint fdes, ptr<SocketAddress> asa,
+SysResult sys_getpeername(Thread *thread, FileDescriptor fdes, ptr<SocketAddress> asa,
                           ptr<uint32_t> alen);
-SysResult sys_getsockname(Thread *thread, sint fdes, ptr<SocketAddress> asa,
-                          ptr<uint32_t> alen);
+SysResult sys_getsockname(Thread *thread, FileDescriptor fdes,
+                          ptr<SocketAddress> asa, ptr<uint32_t> alen);
 SysResult sys_access(Thread *thread, ptr<char> path, sint flags);
 SysResult sys_chflags(Thread *thread, ptr<char> path, sint flags);
-SysResult sys_fchflags(Thread *thread, sint fd, sint flags);
+SysResult sys_fchflags(Thread *thread, FileDescriptor fd, sint flags);
 SysResult sys_sync(Thread *thread);
 SysResult sys_kill(Thread *thread, sint pid, sint signum);
 SysResult sys_getppid(Thread *thread);
-SysResult sys_dup(Thread *thread, uint fd);
+SysResult sys_dup(Thread *thread, FileDescriptor fd);
 SysResult sys_pipe(Thread *thread);
 SysResult sys_getegid(Thread *thread);
 SysResult sys_profil(Thread *thread, caddr_t samples, size_t size,
@@ -100,7 +102,7 @@ SysResult sys_getlogin(Thread *thread, ptr<char> namebuf, uint namelen);
 SysResult sys_setlogin(Thread *thread, ptr<char> namebuf);
 SysResult sys_acct(Thread *thread, ptr<char> path);
 SysResult sys_sigaltstack(Thread *thread, ptr<stack_t> ss, ptr<stack_t> oss);
-SysResult sys_ioctl(Thread *thread, sint fd, ulong com, caddr_t data);
+SysResult sys_ioctl(Thread *thread, FileDescriptor fd, ulong com, caddr_t data);
 SysResult sys_reboot(Thread *thread, sint opt);
 SysResult sys_revoke(Thread *thread, ptr<char> path);
 SysResult sys_symlink(Thread *thread, ptr<char> path, ptr<char> link);
@@ -130,38 +132,42 @@ SysResult sys_setitimer(Thread *thread, uint which, ptr<struct itimerval> itv,
 SysResult sys_swapon(Thread *thread, ptr<char> name);
 SysResult sys_getitimer(Thread *thread, uint which, ptr<struct itimerval> itv);
 SysResult sys_getdtablesize(Thread *thread);
-SysResult sys_dup2(Thread *thread, uint from, uint to);
-SysResult sys_fcntl(Thread *thread, sint fd, sint cmd, slong arg);
+SysResult sys_dup2(Thread *thread, FileDescriptor from, FileDescriptor to);
+SysResult sys_fcntl(Thread *thread, FileDescriptor fd, sint cmd, slong arg);
 SysResult sys_select(Thread *thread, sint nd, ptr<struct fd_set_t> in,
                      ptr<struct fd_set_t> out, ptr<struct fd_set_t> ex,
                      ptr<struct timeval> tv);
-SysResult sys_fsync(Thread *thread, sint fd);
+SysResult sys_fsync(Thread *thread, FileDescriptor fd);
 SysResult sys_setpriority(Thread *thread, sint which, sint who, sint prio);
 SysResult sys_socket(Thread *thread, sint domain, sint type, sint protocol);
-SysResult sys_connect(Thread *thread, sint s, caddr_t name, sint namelen);
+SysResult sys_connect(Thread *thread, FileDescriptor s, caddr_t name,
+                      sint namelen);
 SysResult sys_getpriority(Thread *thread, sint which, sint who);
-SysResult sys_bind(Thread *thread, sint s, caddr_t name, sint namelen);
-SysResult sys_setsockopt(Thread *thread, sint s, sint level, sint name,
-                         caddr_t val, sint valsize);
-SysResult sys_listen(Thread *thread, sint s, sint backlog);
+SysResult sys_bind(Thread *thread, FileDescriptor s, caddr_t name,
+                   sint namelen);
+SysResult sys_setsockopt(Thread *thread, FileDescriptor s, sint level,
+                         sint name, caddr_t val, sint valsize);
+SysResult sys_listen(Thread *thread, FileDescriptor s, sint backlog);
 SysResult sys_gettimeofday(Thread *thread, ptr<timeval> tp, ptr<timezone> tzp);
 SysResult sys_getrusage(Thread *thread, sint who, ptr<struct rusage> rusage);
-SysResult sys_getsockopt(Thread *thread, sint s, sint level, sint name,
-                         caddr_t val, ptr<sint> avalsize);
-SysResult sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
-SysResult sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt);
+SysResult sys_getsockopt(Thread *thread, FileDescriptor s, sint level,
+                         sint name, caddr_t val, ptr<sint> avalsize);
+SysResult sys_readv(Thread *thread, FileDescriptor fd, ptr<IoVec> iovp,
+                    uint iovcnt);
+SysResult sys_writev(Thread *thread, FileDescriptor fd, ptr<IoVec> iovp,
+                     uint iovcnt);
 SysResult sys_settimeofday(Thread *thread, ptr<struct timeval> tp,
                            ptr<timezone> tzp);
-SysResult sys_fchown(Thread *thread, sint fd, sint uid, sint gid);
-SysResult sys_fchmod(Thread *thread, sint fd, sint mode);
+SysResult sys_fchown(Thread *thread, FileDescriptor fd, sint uid, sint gid);
+SysResult sys_fchmod(Thread *thread, FileDescriptor fd, sint mode);
 SysResult sys_setreuid(Thread *thread, sint ruid, sint euid);
 SysResult sys_setregid(Thread *thread, sint rgid, sint egid);
 SysResult sys_rename(Thread *thread, ptr<char> from, ptr<char> to);
-SysResult sys_flock(Thread *thread, sint fd, sint how);
+SysResult sys_flock(Thread *thread, FileDescriptor fd, sint how);
 SysResult sys_mkfifo(Thread *thread, ptr<char> path, sint mode);
-SysResult sys_sendto(Thread *thread, sint s, caddr_t buf, size_t len,
+SysResult sys_sendto(Thread *thread, FileDescriptor s, caddr_t buf, size_t len,
                      sint flags, caddr_t to, sint tolen);
-SysResult sys_shutdown(Thread *thread, sint s, sint how);
+SysResult sys_shutdown(Thread *thread, FileDescriptor s, sint how);
 SysResult sys_socketpair(Thread *thread, sint domain, sint type, sint protocol,
                          ptr<sint> rsv);
 SysResult sys_mkdir(Thread *thread, ptr<char> path, sint mode);
@@ -185,33 +191,34 @@ SysResult sys_semsys(Thread *thread, sint which, sint a2, sint a3, sint a4,
 SysResult sys_msgsys(Thread *thread, sint which, sint a2, sint a3, sint a4,
                      sint a5, sint a6);
 SysResult sys_shmsys(Thread *thread, sint which, sint a2, sint a3, sint a4);
-SysResult sys_freebsd6_pread(Thread *thread, sint fd, ptr<void> buf,
+SysResult sys_freebsd6_pread(Thread *thread, FileDescriptor fd, ptr<void> buf,
                              size_t nbyte, sint pad, off_t offset);
-SysResult sys_freebsd6_pwrite(Thread *thread, sint fd, ptr<const void> buf,
-                              size_t nbyte, sint pad, off_t offset);
+SysResult sys_freebsd6_pwrite(Thread *thread, FileDescriptor fd,
+                              ptr<const void> buf, size_t nbyte, sint pad,
+                              off_t offset);
 SysResult sys_setfib(Thread *thread, sint fib);
 SysResult sys_ntp_adjtime(Thread *thread, ptr<struct timex> tp);
 SysResult sys_setgid(Thread *thread, gid_t gid);
 SysResult sys_setegid(Thread *thread, gid_t egid);
 SysResult sys_seteuid(Thread *thread, uid_t euid);
 SysResult sys_stat(Thread *thread, ptr<char> path, ptr<Stat> ub);
-SysResult sys_fstat(Thread *thread, sint fd, ptr<Stat> ub);
+SysResult sys_fstat(Thread *thread, FileDescriptor fd, ptr<Stat> ub);
 SysResult sys_lstat(Thread *thread, ptr<char> path, ptr<Stat> ub);
 SysResult sys_pathconf(Thread *thread, ptr<char> path, sint name);
-SysResult sys_fpathconf(Thread *thread, sint fd, sint name);
+SysResult sys_fpathconf(Thread *thread, FileDescriptor fd, sint name);
 SysResult sys_getrlimit(Thread *thread, uint which, ptr<struct rlimit> rlp);
 SysResult sys_setrlimit(Thread *thread, uint which, ptr<struct rlimit> rlp);
-SysResult sys_getdirentries(Thread *thread, sint fd, ptr<char> buf, uint count,
-                            ptr<slong> basep);
+SysResult sys_getdirentries(Thread *thread, FileDescriptor fd, ptr<char> buf,
+                            uint count, ptr<slong> basep);
 SysResult sys_freebsd6_mmap(Thread *thread, uintptr_t addr, size_t len,
                             rx::EnumBitSet<vmem::Protection> prot,
-                            rx::EnumBitSet<vmem::MapFlags> flags, sint fd,
-                            sint pad, off_t pos);
-SysResult sys_freebsd6_lseek(Thread *thread, sint fd, sint pad, off_t offset,
-                             sint whence);
+                            rx::EnumBitSet<vmem::MapFlags> flags,
+                            FileDescriptor fd, sint pad, off_t pos);
+SysResult sys_freebsd6_lseek(Thread *thread, FileDescriptor fd, sint pad,
+                             off_t offset, sint whence);
 SysResult sys_freebsd6_truncate(Thread *thread, ptr<char> path, sint pad,
                                 off_t length);
-SysResult sys_freebsd6_ftruncate(Thread *thread, sint fd, sint pad,
+SysResult sys_freebsd6_ftruncate(Thread *thread, FileDescriptor fd, sint pad,
                                  off_t length);
 SysResult sys___sysctl(Thread *thread, ptr<sint> name, uint namelen,
                        ptr<void> old, ptr<size_t> oldenp, ptr<void> new_,
@@ -219,7 +226,8 @@ SysResult sys___sysctl(Thread *thread, ptr<sint> name, uint namelen,
 SysResult sys_mlock(Thread *thread, uintptr_t addr, size_t len);
 SysResult sys_munlock(Thread *thread, uintptr_t addr, size_t len);
 SysResult sys_undelete(Thread *thread, ptr<char> path);
-SysResult sys_futimes(Thread *thread, sint fd, ptr<struct timeval> tptr);
+SysResult sys_futimes(Thread *thread, FileDescriptor fd,
+                      ptr<struct timeval> tptr);
 SysResult sys_getpgid(Thread *thread, pid_t pid);
 SysResult sys_poll(Thread *thread, ptr<struct pollfd> fds, uint nfds,
                    sint timeout);
@@ -265,16 +273,17 @@ SysResult sys_aio_write(Thread *thread, ptr<struct aiocb> aiocbp);
 SysResult sys_lio_listio(Thread *thread, sint mode,
                          ptr<cptr<struct aiocb>> aiocbp, sint nent,
                          ptr<struct sigevent> sig);
-SysResult sys_getdents(Thread *thread, sint fd, ptr<char> buf, size_t count);
+SysResult sys_getdents(Thread *thread, FileDescriptor fd, ptr<char> buf,
+                       size_t count);
 SysResult sys_lchmod(Thread *thread, ptr<char> path, mode_t mode);
 SysResult sys_lutimes(Thread *thread, ptr<char> path, ptr<struct timeval> tptr);
 SysResult sys_nstat(Thread *thread, ptr<char> path, ptr<struct nstat> ub);
-SysResult sys_nfstat(Thread *thread, sint fd, ptr<struct nstat> sb);
+SysResult sys_nfstat(Thread *thread, FileDescriptor fd, ptr<struct nstat> sb);
 SysResult sys_nlstat(Thread *thread, ptr<char> path, ptr<struct nstat> ub);
-SysResult sys_preadv(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt,
-                     off_t offset);
-SysResult sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp, uint iovcnt,
-                      off_t offset);
+SysResult sys_preadv(Thread *thread, FileDescriptor fd, ptr<IoVec> iovp,
+                     uint iovcnt, off_t offset);
+SysResult sys_pwritev(Thread *thread, FileDescriptor fd, ptr<IoVec> iovp,
+                      uint iovcnt, off_t offset);
 SysResult sys_fhopen(Thread *thread, ptr<const struct fhandle> u_fhp,
                      sint flags);
 SysResult sys_fhstat(Thread *thread, ptr<const struct fhandle> u_fhp,
@@ -296,7 +305,8 @@ SysResult sys_setresgid(Thread *thread, gid_t rgid, gid_t egid, gid_t sgid);
 SysResult sys_aio_return(Thread *thread, ptr<struct aiocb> aiocbp);
 SysResult sys_aio_suspend(Thread *thread, ptr<struct aiocb> aiocbp, sint nent,
                           ptr<const timespec> timeout);
-SysResult sys_aio_cancel(Thread *thread, sint fd, ptr<struct aiocb> aiocbp);
+SysResult sys_aio_cancel(Thread *thread, FileDescriptor fd,
+                         ptr<struct aiocb> aiocbp);
 SysResult sys_aio_error(Thread *thread, ptr<struct aiocb> aiocbp);
 SysResult sys_oaio_read(Thread *thread, ptr<struct aiocb> aiocbp);
 SysResult sys_oaio_write(Thread *thread, ptr<struct aiocb> aiocbp);
@@ -367,17 +377,17 @@ SysResult sys_getresuid(Thread *thread, ptr<uid_t> ruid, ptr<uid_t> euid,
 SysResult sys_getresgid(Thread *thread, ptr<gid_t> rgid, ptr<gid_t> egid,
                         ptr<gid_t> sgid);
 SysResult sys_kqueue(Thread *thread);
-SysResult sys_kevent(Thread *thread, sint fd, ptr<KEvent> changelist,
+SysResult sys_kevent(Thread *thread, FileDescriptor fd, ptr<KEvent> changelist,
                      sint nchanges, ptr<KEvent> eventlist, sint nevents,
                      ptr<const timespec> timeout);
-SysResult sys_extattr_set_fd(Thread *thread, sint fd, sint attrnamespace,
-                             ptr<const char> attrname, ptr<void> data,
-                             size_t nbytes);
-SysResult sys_extattr_get_fd(Thread *thread, sint fd, sint attrnamespace,
-                             ptr<const char> attrname, ptr<void> data,
-                             size_t nbytes);
-SysResult sys_extattr_delete_fd(Thread *thread, sint fd, sint attrnamespace,
-                                ptr<const char> attrname);
+SysResult sys_extattr_set_fd(Thread *thread, FileDescriptor fd,
+                             sint attrnamespace, ptr<const char> attrname,
+                             ptr<void> data, size_t nbytes);
+SysResult sys_extattr_get_fd(Thread *thread, FileDescriptor fd,
+                             sint attrnamespace, ptr<const char> attrname,
+                             ptr<void> data, size_t nbytes);
+SysResult sys_extattr_delete_fd(Thread *thread, FileDescriptor fd,
+                                sint attrnamespace, ptr<const char> attrname);
 SysResult sys___setugid(Thread *thread, sint flags);
 SysResult sys_eaccess(Thread *thread, ptr<char> path, sint flags);
 SysResult sys_afs3_syscall(Thread *thread, slong syscall, slong param1,
@@ -386,25 +396,27 @@ SysResult sys_afs3_syscall(Thread *thread, slong syscall, slong param1,
 SysResult sys_nmount(Thread *thread, ptr<IoVec> iovp, uint iovcnt, sint flags);
 SysResult sys___mac_get_proc(Thread *thread, ptr<struct mac> mac_p);
 SysResult sys___mac_set_proc(Thread *thread, ptr<struct mac> mac_p);
-SysResult sys___mac_get_fd(Thread *thread, sint fd, ptr<struct mac> mac_p);
+SysResult sys___mac_get_fd(Thread *thread, FileDescriptor fd,
+                           ptr<struct mac> mac_p);
 SysResult sys___mac_get_file(Thread *thread, ptr<const char> path,
                              ptr<struct mac> mac_p);
-SysResult sys___mac_set_fd(Thread *thread, sint fd, ptr<struct mac> mac_p);
+SysResult sys___mac_set_fd(Thread *thread, FileDescriptor fd,
+                           ptr<struct mac> mac_p);
 SysResult sys___mac_set_file(Thread *thread, ptr<const char> path,
                              ptr<struct mac> mac_p);
 SysResult sys_kenv(Thread *thread, sint what, ptr<const char> name,
                    ptr<char> value, sint len);
 SysResult sys_lchflags(Thread *thread, ptr<const char> path, sint flags);
 SysResult sys_uuidgen(Thread *thread, ptr<struct uuid> store, sint count);
-SysResult sys_sendfile(Thread *thread, sint fd, sint s, off_t offset,
-                       size_t nbytes, ptr<struct sf_hdtr> hdtr,
+SysResult sys_sendfile(Thread *thread, FileDescriptor fd, FileDescriptor s,
+                       off_t offset, size_t nbytes, ptr<struct sf_hdtr> hdtr,
                        ptr<off_t> sbytes, sint flags);
 SysResult sys_mac_syscall(Thread *thread, ptr<const char> policy, sint call,
                           ptr<void> arg);
 SysResult sys_getfsstat(Thread *thread, ptr<StatFs> buf, slong bufsize,
                         sint flags);
 SysResult sys_statfs(Thread *thread, ptr<char> path, ptr<StatFs> buf);
-SysResult sys_fstatfs(Thread *thread, sint fd, ptr<StatFs> buf);
+SysResult sys_fstatfs(Thread *thread, FileDescriptor fd, ptr<StatFs> buf);
 SysResult sys_fhstatfs(Thread *thread, ptr<const struct fhandle> u_fhp,
                        ptr<StatFs> buf);
 SysResult sys_ksem_close(Thread *thread, semid_t id);
@@ -457,8 +469,9 @@ SysResult sys_thr_kill(Thread *thread, slong id, sint sig);
 SysResult sys__umtx_lock(Thread *thread, ptr<struct umtx> umtx);
 SysResult sys__umtx_unlock(Thread *thread, ptr<struct umtx> umtx);
 SysResult sys_jail_attach(Thread *thread, sint jid);
-SysResult sys_extattr_list_fd(Thread *thread, sint fd, sint attrnamespace,
-                              ptr<void> data, size_t nbytes);
+SysResult sys_extattr_list_fd(Thread *thread, FileDescriptor fd,
+                              sint attrnamespace, ptr<void> data,
+                              size_t nbytes);
 SysResult sys_extattr_list_file(Thread *thread, ptr<const char> path,
                                 sint attrnamespace, ptr<void> data,
                                 size_t nbytes);
@@ -522,16 +535,18 @@ SysResult sys_sctp_generic_recvmsg(Thread *thread, sint sd, ptr<IoVec> iov,
                                    sint iovlen, caddr_t from, SockLen fromlen,
                                    ptr<struct sctp_sndrcvinfo> sinfo,
                                    sint flags);
-SysResult sys_pread(Thread *thread, sint fd, ptr<void> buf, size_t nbyte,
-                    off_t offset);
-SysResult sys_pwrite(Thread *thread, sint fd, ptr<const void> buf, size_t nbyte,
-                     off_t offset);
+SysResult sys_pread(Thread *thread, FileDescriptor fd, ptr<void> buf,
+                    size_t nbyte, off_t offset);
+SysResult sys_pwrite(Thread *thread, FileDescriptor fd, ptr<const void> buf,
+                     size_t nbyte, off_t offset);
 SysResult sys_mmap(Thread *thread, uintptr_t addr, size_t len,
                    rx::EnumBitSet<vmem::Protection> prot,
-                   rx::EnumBitSet<vmem::MapFlags> flags, sint fd, off_t pos);
-SysResult sys_lseek(Thread *thread, sint fd, off_t offset, sint whence);
+                   rx::EnumBitSet<vmem::MapFlags> flags, FileDescriptor fd,
+                   off_t pos);
+SysResult sys_lseek(Thread *thread, FileDescriptor fd, off_t offset,
+                    sint whence);
 SysResult sys_truncate(Thread *thread, ptr<char> path, off_t length);
-SysResult sys_ftruncate(Thread *thread, sint fd, off_t length);
+SysResult sys_ftruncate(Thread *thread, FileDescriptor fd, off_t length);
 SysResult sys_thr_kill2(Thread *thread, pid_t pid, slong id, sint sig);
 SysResult sys_shm_open(Thread *thread, ptr<const char> path, sint flags,
                        mode_t mode);
@@ -547,33 +562,36 @@ SysResult sys_cpuset_getaffinity(Thread *thread, cpulevel_t level,
 SysResult sys_cpuset_setaffinity(Thread *thread, cpulevel_t level,
                                  cpuwhich_t which, id_t id, size_t cpusetsize,
                                  ptr<const cpuset> mask);
-SysResult sys_faccessat(Thread *thread, sint fd, ptr<char> path, sint mode,
-                        sint flag);
-SysResult sys_fchmodat(Thread *thread, sint fd, ptr<char> path, mode_t mode,
-                       sint flag);
-SysResult sys_fchownat(Thread *thread, sint fd, ptr<char> path, uid_t uid,
-                       gid_t gid, sint flag);
-SysResult sys_fexecve(Thread *thread, sint fd, ptr<ptr<char>> argv,
+SysResult sys_faccessat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                        sint mode, sint flag);
+SysResult sys_fchmodat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                       mode_t mode, sint flag);
+SysResult sys_fchownat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                       uid_t uid, gid_t gid, sint flag);
+SysResult sys_fexecve(Thread *thread, FileDescriptor fd, ptr<ptr<char>> argv,
                       ptr<ptr<char>> envv);
-SysResult sys_fstatat(Thread *thread, sint fd, ptr<char> path, ptr<Stat> buf,
-                      sint flag);
-SysResult sys_futimesat(Thread *thread, sint fd, ptr<char> path,
+SysResult sys_fstatat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                      ptr<Stat> buf, sint flag);
+SysResult sys_futimesat(Thread *thread, FileDescriptor fd, ptr<char> path,
                         ptr<struct timeval> times);
-SysResult sys_linkat(Thread *thread, sint fd1, ptr<char> path1, sint fd2,
-                     ptr<char> path2, sint flag);
-SysResult sys_mkdirat(Thread *thread, sint fd, ptr<char> path, mode_t mode);
-SysResult sys_mkfifoat(Thread *thread, sint fd, ptr<char> path, mode_t mode);
-SysResult sys_mknodat(Thread *thread, sint fd, ptr<char> path, mode_t mode,
-                      dev_t dev);
-SysResult sys_openat(Thread *thread, sint fd, ptr<char> path, sint flag,
-                     mode_t mode);
-SysResult sys_readlinkat(Thread *thread, sint fd, ptr<char> path, ptr<char> buf,
-                         size_t bufsize);
-SysResult sys_renameat(Thread *thread, sint oldfd, ptr<char> old, sint newfd,
-                       ptr<char> new_);
-SysResult sys_symlinkat(Thread *thread, ptr<char> path1, sint fd,
+SysResult sys_linkat(Thread *thread, FileDescriptor fd1, ptr<char> path1,
+                     FileDescriptor fd2, ptr<char> path2, sint flag);
+SysResult sys_mkdirat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                      mode_t mode);
+SysResult sys_mkfifoat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                       mode_t mode);
+SysResult sys_mknodat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                      mode_t mode, dev_t dev);
+SysResult sys_openat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                     sint flag, mode_t mode);
+SysResult sys_readlinkat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                         ptr<char> buf, size_t bufsize);
+SysResult sys_renameat(Thread *thread, FileDescriptor oldfd, ptr<char> old,
+                       FileDescriptor newfd, ptr<char> new_);
+SysResult sys_symlinkat(Thread *thread, ptr<char> path1, FileDescriptor fd,
                         ptr<char> path2);
-SysResult sys_unlinkat(Thread *thread, sint fd, ptr<char> path, sint flag);
+SysResult sys_unlinkat(Thread *thread, FileDescriptor fd, ptr<char> path,
+                       sint flag);
 SysResult sys_posix_openpt(Thread *thread, sint flags);
 SysResult sys_gssd_syscall(Thread *thread, ptr<char> path);
 SysResult sys_jail_get(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
@@ -581,7 +599,7 @@ SysResult sys_jail_get(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
 SysResult sys_jail_set(Thread *thread, ptr<IoVec> iovp, uint iovcnt,
                        sint flags);
 SysResult sys_jail_remove(Thread *thread, sint jid);
-SysResult sys_closefrom(Thread *thread, sint lowfd);
+SysResult sys_closefrom(Thread *thread, FileDescriptor lowfd);
 SysResult sys___semctl(Thread *thread, sint semid, sint semnum, sint cmd,
                        ptr<union semun> arg);
 SysResult sys_msgctl(Thread *thread, sint msqid, sint cmd,
@@ -589,13 +607,14 @@ SysResult sys_msgctl(Thread *thread, sint msqid, sint cmd,
 SysResult sys_shmctl(Thread *thread, sint shmid, sint cmd,
                      ptr<struct shmid_ds> buf);
 SysResult sys_lpathconf(Thread *thread, ptr<char> path, sint name);
-SysResult sys_cap_new(Thread *thread, sint fd, uint64_t rights);
-SysResult sys_cap_getrights(Thread *thread, sint fd, ptr<uint64_t> rights);
+SysResult sys_cap_new(Thread *thread, FileDescriptor fd, uint64_t rights);
+SysResult sys_cap_getrights(Thread *thread, FileDescriptor fd,
+                            ptr<uint64_t> rights);
 SysResult sys_cap_enter(Thread *thread);
 SysResult sys_cap_getmode(Thread *thread, ptr<uint> modep);
 SysResult sys_pdfork(Thread *thread, ptr<sint> fdp, sint flags);
-SysResult sys_pdkill(Thread *thread, sint fd, sint signum);
-SysResult sys_pdgetpid(Thread *thread, sint fd, ptr<pid_t> pidp);
+SysResult sys_pdkill(Thread *thread, FileDescriptor fd, sint signum);
+SysResult sys_pdgetpid(Thread *thread, FileDescriptor fd, ptr<pid_t> pidp);
 SysResult sys_pselect(Thread *thread, sint nd, ptr<fd_set_t> in,
                       ptr<fd_set_t> ou, ptr<fd_set_t> ex,
                       ptr<const timespec> ts, ptr<const SigSet> sm);
@@ -616,17 +635,18 @@ SysResult sys_rctl_add_rule(Thread *thread, ptr<const void> inbufp,
 SysResult sys_rctl_remove_rule(Thread *thread, ptr<const void> inbufp,
                                size_t inbuflen, ptr<void> outbuf,
                                size_t outbuflen);
-SysResult sys_posix_fallocate(Thread *thread, sint fd, off_t offset, off_t len);
-SysResult sys_posix_fadvise(Thread *thread, sint fd, off_t offset, off_t len,
-                            sint advice);
+SysResult sys_posix_fallocate(Thread *thread, FileDescriptor fd, off_t offset,
+                              off_t len);
+SysResult sys_posix_fadvise(Thread *thread, FileDescriptor fd, off_t offset,
+                            off_t len, sint advice);
 
-SysResult sys_netcontrol(Thread *thread, sint fd, uint op, ptr<void> buf,
-                         uint nbuf);
+SysResult sys_netcontrol(Thread *thread, FileDescriptor fd, uint op,
+                         ptr<void> buf, uint nbuf);
 SysResult sys_netabort(Thread *thread /* TODO */);
 SysResult sys_netgetsockinfo(Thread *thread /* TODO */);
 SysResult sys_socketex(Thread *thread, ptr<const char> name, sint domain,
                        sint type, sint protocol);
-SysResult sys_socketclose(Thread *thread, sint fd);
+SysResult sys_socketclose(Thread *thread, FileDescriptor fd);
 SysResult sys_netgetiflist(Thread *thread /* TODO */);
 SysResult sys_kqueueex(Thread *thread, ptr<char> name, sint flags);
 SysResult sys_mtypeprotect(Thread *thread, uintptr_t addr, size_t len,
@@ -732,7 +752,7 @@ SysResult sys_mdbg_service(Thread *thread, uint32_t op, ptr<void> arg0,
                            ptr<void> arg1);
 SysResult sys_randomized_path(Thread *thread, sint type, ptr<char> path,
                               ptr<sint> length);
-SysResult sys_rdup(Thread *thread, sint a, sint b);
+SysResult sys_rdup(Thread *thread, pid_t pid, FileDescriptor fd);
 SysResult sys_dl_get_metadata(Thread *thread /* TODO */);
 SysResult sys_workaround8849(Thread *thread /* TODO */);
 SysResult sys_is_development_mode(Thread *thread /* TODO */);

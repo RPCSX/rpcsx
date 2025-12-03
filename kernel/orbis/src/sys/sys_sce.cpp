@@ -32,13 +32,11 @@ struct orbis::AppMountInfo {
 
 static_assert(sizeof(orbis::AppMountInfo) == 120);
 
-orbis::SysResult orbis::sys_netcontrol(Thread *thread, sint fd, uint op,
-                                       ptr<void> buf, uint nbuf) {
+orbis::SysResult orbis::sys_netcontrol(Thread *thread, FileDescriptor fd,
+                                       uint op, ptr<void> buf, uint nbuf) {
   return {};
 }
-orbis::SysResult orbis::sys_netabort(Thread *thread /* TODO */) {
-  return ErrorCode::NOSYS;
-}
+orbis::SysResult orbis::sys_netabort(Thread *thread /* TODO */) { return {}; }
 orbis::SysResult orbis::sys_netgetsockinfo(Thread *thread /* TODO */) {
   return ErrorCode::NOSYS;
 }
@@ -54,15 +52,15 @@ orbis::SysResult orbis::sys_socketex(Thread *thread, ptr<const char> name,
     }
 
     auto fd = thread->tproc->fileDescriptors.insert(file);
-    ORBIS_LOG_WARNING("Socket opened", name, fd);
-    thread->retval[0] = fd;
+    ORBIS_LOG_WARNING("Socket opened", name, (int)fd);
+    thread->retval[0] = std::to_underlying(fd);
     return {};
   }
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_socketclose(Thread *thread, sint fd) {
+orbis::SysResult orbis::sys_socketclose(Thread *thread, FileDescriptor fd) {
   // This syscall is identical to sys_close
-  ORBIS_LOG_NOTICE(__FUNCTION__, fd);
+  ORBIS_LOG_NOTICE(__FUNCTION__, (int)fd);
   if (thread->tproc->fileDescriptors.close(fd)) {
     return {};
   }
@@ -469,7 +467,8 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
       result = sys_mmap(
           thread, _entry.start, _entry.length,
           rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection),
-          vmem::MapFlags::Void | vmem::MapFlags::Anon | flags, -1, 0);
+          vmem::MapFlags::Void | vmem::MapFlags::Anon | flags,
+          FileDescriptor::Invalid, 0);
       break;
     case 4:
       result = sys_mtypeprotect(
@@ -1209,8 +1208,8 @@ orbis::SysResult orbis::sys_randomized_path(Thread *thread, sint type,
   }
   return {};
 }
-orbis::SysResult orbis::sys_rdup(Thread *thread, sint pid, sint fd) {
-  ORBIS_LOG_TODO(__FUNCTION__, pid, fd);
+orbis::SysResult orbis::sys_rdup(Thread *thread, pid_t pid, FileDescriptor fd) {
+  ORBIS_LOG_TODO(__FUNCTION__, pid, (int)fd);
   auto process = pid == -1 || pid == thread->tproc->pid ? thread->tproc
                                                         : findProcessById(pid);
 
@@ -1223,7 +1222,8 @@ orbis::SysResult orbis::sys_rdup(Thread *thread, sint pid, sint fd) {
     return ErrorCode::BADF;
   }
 
-  thread->retval[0] = thread->tproc->fileDescriptors.insert(std::move(file));
+  thread->retval[0] = std::to_underlying(
+      thread->tproc->fileDescriptors.insert(std::move(file)));
   return {};
 }
 orbis::SysResult orbis::sys_dl_get_metadata(Thread *thread /* TODO */) {
@@ -1771,7 +1771,7 @@ orbis::SysResult orbis::sys_blockpool_open(Thread *thread) {
     return ErrorCode::MFILE;
   }
 
-  thread->retval[0] = fd;
+  thread->retval[0] = std::to_underlying(fd);
   return {};
 }
 orbis::SysResult

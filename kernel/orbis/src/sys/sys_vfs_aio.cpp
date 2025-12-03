@@ -9,7 +9,7 @@ orbis::SysResult orbis::sys_aio_suspend(Thread *thread,
                                         ptr<const timespec> timeout) {
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_aio_cancel(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_aio_cancel(Thread *thread, FileDescriptor fd,
                                        ptr<struct aiocb> aiocbp) {
   return ErrorCode::NOSYS;
 }

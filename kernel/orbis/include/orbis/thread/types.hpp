@@ -7,6 +7,10 @@ using pid_t = int32_t;
 using uid_t = uint32_t;
 using gid_t = uint32_t;
 
+enum class FileDescriptor : std::int32_t {
+  Invalid = -1
+};
+
 struct rtprio {
   uint16_t type;
   uint16_t prio;

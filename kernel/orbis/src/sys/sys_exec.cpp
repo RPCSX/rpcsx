@@ -11,7 +11,7 @@ orbis::SysResult orbis::sys_execve(Thread *thread, ptr<char> fname,
 
   return ErrorCode::NOSYS;
 }
-orbis::SysResult orbis::sys_fexecve(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_fexecve(Thread *thread, FileDescriptor fd,
                                     ptr<ptr<char>> argv, ptr<ptr<char>> envv) {
   return ErrorCode::NOSYS;
 }

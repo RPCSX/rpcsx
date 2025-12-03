@@ -3,11 +3,11 @@
 #include "sys/sysproto.hpp"
 #include "thread/Process.hpp"
 #include "thread/Thread.hpp"
+#include "thread/types.hpp"
 #include "uio.hpp"
-#include <sstream>
 
-orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
-                                 size_t nbyte) {
+orbis::SysResult orbis::sys_read(Thread *thread, FileDescriptor fd,
+                                 ptr<void> buf, size_t nbyte) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -42,13 +42,13 @@ orbis::SysResult orbis::sys_read(Thread *thread, sint fd, ptr<void> buf,
   auto cnt = io.offset - file->nextOff;
   file->nextOff = io.offset;
 
-  // ORBIS_LOG_ERROR(__FUNCTION__, fd, buf, nbyte, cnt);
+  ORBIS_LOG_ERROR(__FUNCTION__, (int)fd, buf, nbyte, cnt);
   thread->retval[0] = cnt;
   return {};
 }
-orbis::SysResult orbis::sys_pread(Thread *thread, sint fd, ptr<void> buf,
-                                  size_t nbyte, off_t offset) {
-  // ORBIS_LOG_ERROR(__FUNCTION__, fd, buf, nbyte, offset);
+orbis::SysResult orbis::sys_pread(Thread *thread, FileDescriptor fd,
+                                  ptr<void> buf, size_t nbyte, off_t offset) {
+  ORBIS_LOG_ERROR(__FUNCTION__, (int)fd, buf, nbyte, offset);
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -79,13 +79,13 @@ orbis::SysResult orbis::sys_pread(Thread *thread, sint fd, ptr<void> buf,
   thread->retval[0] = io.offset - offset;
   return {};
 }
-orbis::SysResult orbis::sys_freebsd6_pread(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_freebsd6_pread(Thread *thread, FileDescriptor fd,
                                            ptr<void> buf, size_t nbyte, sint,
                                            off_t offset) {
   return sys_pread(thread, fd, buf, nbyte, offset);
 }
-orbis::SysResult orbis::sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp,
-                                  uint iovcnt) {
+orbis::SysResult orbis::sys_readv(Thread *thread, FileDescriptor fd,
+                                  ptr<IoVec> iovp, uint iovcnt) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -117,8 +117,8 @@ orbis::SysResult orbis::sys_readv(Thread *thread, sint fd, ptr<IoVec> iovp,
   thread->retval[0] = cnt;
   return {};
 }
-orbis::SysResult orbis::sys_preadv(Thread *thread, sint fd, ptr<IoVec> iovp,
-                                   uint iovcnt, off_t offset) {
+orbis::SysResult orbis::sys_preadv(Thread *thread, FileDescriptor fd,
+                                   ptr<IoVec> iovp, uint iovcnt, off_t offset) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -148,8 +148,10 @@ orbis::SysResult orbis::sys_preadv(Thread *thread, sint fd, ptr<IoVec> iovp,
   thread->retval[0] = io.offset - offset;
   return {};
 }
-orbis::SysResult orbis::sys_write(Thread *thread, sint fd, ptr<const void> buf,
-                                  size_t nbyte) {
+orbis::SysResult orbis::sys_write(Thread *thread, FileDescriptor fd,
+                                  ptr<const void> buf, size_t nbyte) {
+  // ORBIS_LOG_ERROR(__FUNCTION__, (int)fd, buf, nbyte);
+
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -183,8 +185,11 @@ orbis::SysResult orbis::sys_write(Thread *thread, sint fd, ptr<const void> buf,
   thread->retval[0] = cnt;
   return {};
 }
-orbis::SysResult orbis::sys_pwrite(Thread *thread, sint fd, ptr<const void> buf,
-                                   size_t nbyte, off_t offset) {
+orbis::SysResult orbis::sys_pwrite(Thread *thread, FileDescriptor fd,
+                                   ptr<const void> buf, size_t nbyte,
+                                   off_t offset) {
+  ORBIS_LOG_ERROR(__FUNCTION__, (int)fd, buf, nbyte, offset);
+
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -215,13 +220,13 @@ orbis::SysResult orbis::sys_pwrite(Thread *thread, sint fd, ptr<const void> buf,
   thread->retval[0] = io.offset - offset;
   return {};
 }
-orbis::SysResult orbis::sys_freebsd6_pwrite(Thread *thread, sint fd,
+orbis::SysResult orbis::sys_freebsd6_pwrite(Thread *thread, FileDescriptor fd,
                                             ptr<const void> buf, size_t nbyte,
                                             sint, off_t offset) {
   return sys_pwrite(thread, fd, buf, nbyte, offset);
 }
-orbis::SysResult orbis::sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp,
-                                   uint iovcnt) {
+orbis::SysResult orbis::sys_writev(Thread *thread, FileDescriptor fd,
+                                   ptr<IoVec> iovp, uint iovcnt) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -254,8 +259,9 @@ orbis::SysResult orbis::sys_writev(Thread *thread, sint fd, ptr<IoVec> iovp,
   thread->retval[0] = cnt;
   return {};
 }
-orbis::SysResult orbis::sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp,
-                                    uint iovcnt, off_t offset) {
+orbis::SysResult orbis::sys_pwritev(Thread *thread, FileDescriptor fd,
+                                    ptr<IoVec> iovp, uint iovcnt,
+                                    off_t offset) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -284,7 +290,8 @@ orbis::SysResult orbis::sys_pwritev(Thread *thread, sint fd, ptr<IoVec> iovp,
   thread->retval[0] = io.offset - offset;
   return {};
 }
-orbis::SysResult orbis::sys_ftruncate(Thread *thread, sint fd, off_t length) {
+orbis::SysResult orbis::sys_ftruncate(Thread *thread, FileDescriptor fd,
+                                      off_t length) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
     return ErrorCode::BADF;
@@ -295,15 +302,16 @@ orbis::SysResult orbis::sys_ftruncate(Thread *thread, sint fd, off_t length) {
     return ErrorCode::NOTSUP;
   }
 
-  ORBIS_LOG_WARNING(__FUNCTION__, fd, length);
+  ORBIS_LOG_WARNING(__FUNCTION__, (int)fd, length);
   std::lock_guard lock(file->mtx);
   return truncate(file.get(), length, thread);
 }
-orbis::SysResult orbis::sys_freebsd6_ftruncate(Thread *thread, sint fd, sint,
+orbis::SysResult orbis::sys_freebsd6_ftruncate(Thread *thread,
+                                               FileDescriptor fd, sint,
                                                off_t length) {
   return sys_ftruncate(thread, fd, length);
 }
-orbis::SysResult orbis::sys_ioctl(Thread *thread, sint fd, ulong com,
+orbis::SysResult orbis::sys_ioctl(Thread *thread, FileDescriptor fd, ulong com,
                                   caddr_t data) {
   rx::Ref<File> file = thread->tproc->fileDescriptors.get(fd);
   if (file == nullptr) {
