@@ -1,6 +1,6 @@
+#include "transform/transformations.hpp"
 #include "SpvConverter.hpp"
 #include "analyze.hpp"
-#include "transform/transformations.hpp"
 #include "dialect.hpp"
 #include <rx/die.hpp>
 
@@ -14,7 +14,7 @@ using namespace shader::transform;
 using Builder = ir::Builder<ir::builtin::Builder, ir::spv::Builder>;
 
 ir::Value shader::transform::transformToCanonicalRegion(spv::Context &context,
-                                            ir::RegionLike region) {
+                                                        ir::RegionLike region) {
   auto cfg = buildCFG(region.getFirst());
   std::vector<CFG::Node *> exitNodes;
   for (auto node : cfg.getPreorderNodes()) {
@@ -136,7 +136,8 @@ ir::Value shader::transform::transformToCanonicalRegion(spv::Context &context,
   return newExitBlock;
 }
 
-void shader::transform::transformToCf(spv::Context &context, ir::RegionLike region) {
+void shader::transform::transformToCf(spv::Context &context,
+                                      ir::RegionLike region) {
   ir::Block currentBlock;
 
   for (auto inst : region.children()) {
@@ -174,7 +175,8 @@ void shader::transform::transformToCf(spv::Context &context, ir::RegionLike regi
   }
 }
 
-void shader::transform::transformToFlat(spv::Context &context, ir::RegionLike region) {
+void shader::transform::transformToFlat(spv::Context &context,
+                                        ir::RegionLike region) {
   std::vector<ir::Instruction> workList;
 
   workList.push_back(region.getFirst());
@@ -268,7 +270,7 @@ void shader::transform::transformToFlat(spv::Context &context, ir::RegionLike re
     }
 
     if (auto block = inst.cast<ir::Block>()) {
-      std::cout << "processing " << context.ns.getNameOf(block) << "\n";
+      // std::cout << "processing " << context.ns.getNameOf(block) << "\n";
       unwrapBlock(block);
       block.erase();
       continue;
@@ -277,4 +279,3 @@ void shader::transform::transformToFlat(spv::Context &context, ir::RegionLike re
     insertPoint.eraseAndInsert(inst);
   }
 }
-

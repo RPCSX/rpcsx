@@ -1,8 +1,9 @@
-#include "SpvConverter.hpp"
 #include "transform/merge.hpp"
+#include "SpvConverter.hpp"
 #include "analyze.hpp"
-#include "transform/replace.hpp"
 #include "dialect.hpp"
+#include "rx/debug.hpp"
+#include "transform/replace.hpp"
 #include <rx/die.hpp>
 
 using namespace shader;
@@ -10,10 +11,9 @@ using namespace shader::transform;
 
 using Builder = ir::Builder<ir::builtin::Builder, ir::spv::Builder>;
 
-ir::Block shader::transform::createMergeBlock(spv::Context &context,
-                                  ir::InsertionPoint insertPoint,
-                                  const std::unordered_set<ir::Block> &preds,
-                                  ir::Block to) {
+ir::Block shader::transform::createMergeBlock(
+    spv::Context &context, ir::InsertionPoint insertPoint,
+    const std::unordered_set<ir::Block> &preds, ir::Block to) {
   rx::dieIf(preds.empty(), "createMergeBlock: unexpected edges count");
 
   auto loc = to.getLocation();
@@ -74,4 +74,4 @@ ir::Block shader::transform::createMergeBlock(spv::Context &context,
   }
 
   return mergeBlock;
-}                    
+}

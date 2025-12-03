@@ -4,6 +4,7 @@
 #include "analyze.hpp"
 #include "dialect.hpp"
 #include "ir/Block.hpp"
+#include "rx/FunctionRef.hpp"
 #include "transform/merge.hpp"
 #include <functional>
 #include <iostream>
@@ -24,6 +25,7 @@ struct RouteBlockData {
   std::unordered_map<ir::Block, std::unordered_set<ir::Block>> toPredecessors;
   std::unordered_map<ir::Block, std::unordered_set<ir::Block>>
       toAllPredecessors;
+  std::unordered_set<ir::Block> routePredecessors;
   std::unordered_set<ir::Block> patchPredecessors;
 };
 
@@ -81,10 +83,9 @@ static void logPhiPredecessorsMismatch(spv::Context &context, ir::Block to) {
 static RouteBlockData analyzeEdges(spv::Context &context,
                                    const std::vector<Edge> &edges) {
   RouteBlockData data;
-  std::unordered_set<ir::Block> routePredecessors;
 
   for (auto edge : edges) {
-    if (!routePredecessors.insert(edge.from()).second) {
+    if (!data.routePredecessors.insert(edge.from()).second) {
       data.patchPredecessors.insert(edge.from());
     }
 
@@ -150,12 +151,61 @@ static std::unordered_map<ir::Value, std::uint32_t> createRouteTerminator(
 
     successorToId.reserve(toPreds.size());
 
+    auto hasBranchesTo = [](ir::Block from, ir::Block to) {
+      std::vector<ir::Block> workList;
+      std::unordered_set<ir::Block> visited;
+
+      workList.push_back(from);
+      visited.insert(from);
+
+      while (!workList.empty()) {
+        auto block = workList.back();
+        workList.pop_back();
+
+        if (block == to) {
+          return true;
+        }
+
+        for (auto succ : getSuccessors(block)) {
+          if (visited.insert(succ).second) {
+            workList.push_back(succ);
+          }
+        }
+      }
+
+      visited.insert(from);
+      return false;
+    };
+
     for (std::uint32_t id = 0; auto &[succ, pred] : toPreds) {
       if (id) {
         routeSwitch.addOperand(id);
         routeSwitch.addOperand(succ);
       }
       successorToId[succ] = id++;
+    }
+
+    auto caseCount = routeSwitch.getOperandCount() / 2 - 1;
+    for (std::size_t i = 1; i < caseCount; ++i) {
+      auto caseValue0 = routeSwitch.getOperand(2 + i * 2);
+      auto caseTarget0 = routeSwitch.getOperand(2 + i * 2 + 1)
+                             .getAsValue()
+                             .staticCast<ir::Block>();
+
+      for (std::size_t t = 0; t < i; ++t) {
+        auto caseValue1 = routeSwitch.getOperand(2 + t * 2);
+        auto caseTarget1 = routeSwitch.getOperand(2 + t * 2 + 1)
+                               .getAsValue()
+                               .staticCast<ir::Block>();
+
+        if (hasBranchesTo(caseTarget0, caseTarget1)) {
+          routeSwitch.replaceOperand(2 + i * 2, caseValue1);
+          routeSwitch.replaceOperand(2 + i * 2 + 1, caseTarget1);
+          routeSwitch.replaceOperand(2 + t * 2, caseValue0);
+          routeSwitch.replaceOperand(2 + t * 2 + 1, caseTarget0);
+          break;
+        }
+      }
     }
   }
 
@@ -164,21 +214,20 @@ static std::unordered_map<ir::Value, std::uint32_t> createRouteTerminator(
 
 // Get successor ID based on routing strategy
 static ir::Value getSuccessorIdValue(
-    spv::Context &context, ir::Block successor,
-    const std::unordered_map<ir::Block, std::unordered_set<ir::Block>> &toPreds,
+    spv::Context &context, ir::Block successor, const RouteBlockData &data,
     const std::unordered_map<ir::Value, std::uint32_t> &successorToId) {
-  if (toPreds.size() == 2) {
-    return context.getBool(successor == toPreds.begin()->first);
+  if (data.toPredecessors.size() == 2) {
+    return context.getBool(successor == data.toPredecessors.begin()->first);
   }
   return context.imm32(successorToId.at(successor));
 }
 
 // Process single predecessor block that needs patching
-static void patchPredecessorBlock(
-    spv::Context &context, ir::Block patchBlock, ir::Block route,
-    ir::Value routePhi, const RouteBlockData &data,
-    const std::unordered_map<ir::Block, std::unordered_set<ir::Block>> &toPreds,
-    const std::function<ir::Value(ir::Block)> &getSuccessorId) {
+static void
+patchPredecessorBlock(spv::Context &context, ir::Block patchBlock,
+                      ir::Block route, ir::Value routePhi,
+                      const RouteBlockData &data,
+                      rx::FunctionRef<ir::Value(ir::Block)> getSuccessorId) {
 
   auto predSuccessors = getAllSuccessors(patchBlock);
   auto terminator = getTerminator(patchBlock);
@@ -249,6 +298,8 @@ static void patchPredecessorBlock(
       terminator.replaceOperand(1, route);
     }
   } else {
+    assert(terminator == ir::spv::OpBranchConditional);
+
     if (routeSuccessors.contains(1)) {
       condValueToSucc[context.getTrue()] =
           terminator.getOperand(1).getAsValue().staticCast<ir::Block>();
@@ -271,8 +322,7 @@ static void patchPredecessorBlock(
       selector = getSuccessorId(defaultSucc);
     }
 
-    auto selectorType =
-        toPreds.size() == 2 ? boolType : context.getTypeUInt32();
+    auto selectorType = routePhi.getOperand(0).getAsValue();
     for (auto &[value, to] : condValueToSucc) {
       if (!selector) {
         selector = getSuccessorId(to);
@@ -357,8 +407,8 @@ static void updatePhiNodesForSinglePred(ir::Block to, ir::Block pred,
 static void updatePhiNodesPartial(spv::Context &context, ir::Block to,
                                   ir::Block route,
                                   const std::unordered_set<ir::Block> &preds,
-                                  const std::vector<Edge> &edges) {
-  for (auto phi : ir::range(ir::Block(to).getFirst())) {
+                                  RouteBlockData &data) {
+  for (auto phi : ir::range(to.getFirst())) {
     if (phi != ir::spv::OpPhi) {
       break;
     }
@@ -381,16 +431,15 @@ static void updatePhiNodesPartial(spv::Context &context, ir::Block to,
     phi.addOperand(newPhi);
     phi.addOperand(route);
 
-    if (preds.size() != edges.size()) {
+    if (preds.size() != data.routePredecessors.size()) {
       // merge block has additional edges. add dummy nodes to phi, this
       // block not reachable from new blocks
 
-      auto dummyValue = phi.getOperand(1).getAsValue();
-
-      for (auto edge : edges) {
-        if (!preds.contains(edge.from())) {
-          phi.addOperand(dummyValue);
-          phi.addOperand(edge.from());
+      for (auto pred : data.routePredecessors) {
+        if (!preds.contains(pred)) {
+          auto dummyValue = context.getUndef(phi.getOperand(0).getAsValue());
+          newPhi.addOperand(dummyValue);
+          newPhi.addOperand(pred);
         }
       }
     }
@@ -398,31 +447,23 @@ static void updatePhiNodesPartial(spv::Context &context, ir::Block to,
 }
 
 // Process all target blocks and update their phi nodes
-static void processTargetBlocks(
-    spv::Context &context, ir::Block route, ir::Value routePhi,
-    const RouteBlockData &data,
-    const std::unordered_map<ir::Block, std::unordered_set<ir::Block>> &toPreds,
-    const std::vector<Edge> &edges,
-    const std::function<ir::Value(ir::Block)> &getSuccessorId) {
+static void
+processTargetBlocks(spv::Context &context, ir::Block route, ir::Value routePhi,
+                    RouteBlockData &data, const std::vector<Edge> &edges,
+                    const std::function<ir::Value(ir::Block)> &getSuccessorId) {
 
-  for (auto &[to, preds] : toPreds) {
-    if (toPreds.size() > 1) {
-      auto successorId = getSuccessorId(to);
-
-      for (auto from : preds) {
-        // branches already resolved
-        if (data.patchPredecessors.contains(from)) {
-          continue;
-        }
-
-        routePhi.addOperand(successorId);
-        routePhi.addOperand(from);
-      }
-    }
+  for (auto &[to, preds] : data.toPredecessors) {
+    auto successorId = routePhi ? getSuccessorId(to) : ir::Value();
 
     for (auto from : preds) {
+      // branches already resolved
       if (data.patchPredecessors.contains(from)) {
         continue;
+      }
+
+      if (routePhi) {
+        routePhi.addOperand(successorId);
+        routePhi.addOperand(from);
       }
 
       replaceTerminatorTarget(getTerminator(from), to, route);
@@ -441,7 +482,7 @@ static void processTargetBlocks(
     }
 
     // partial predecessors replacement, update PHIs
-    updatePhiNodesPartial(context, to, route, preds, edges);
+    updatePhiNodesPartial(context, to, route, preds, data);
   }
 }
 
@@ -472,19 +513,17 @@ ir::Block shader::transform::createRouteBlock(spv::Context &context,
 
   // Step 5: Create lambda for getting successor IDs
   auto getSuccessorId = [&](ir::Block successor) {
-    return getSuccessorIdValue(context, successor, data.toPredecessors,
-                               successorToId);
+    return getSuccessorIdValue(context, successor, data, successorToId);
   };
 
   // Step 6: Patch predecessor blocks that have multiple routes
   for (auto patchBlock : data.patchPredecessors) {
     patchPredecessorBlock(context, patchBlock, route, routePhi, data,
-                          data.toPredecessors, getSuccessorId);
+                          getSuccessorId);
   }
 
   // Step 7: Process target blocks and update phi nodes
-  processTargetBlocks(context, route, routePhi, data, data.toPredecessors,
-                      edges, getSuccessorId);
+  processTargetBlocks(context, route, routePhi, data, edges, getSuccessorId);
 
   return route;
 }

@@ -11,8 +11,6 @@ using namespace shader::transform;
 
 using Builder = ir::Builder<ir::builtin::Builder, ir::spv::Builder>;
 
-
-
 void shader::structurizeCfg(spv::Context &context, ir::RegionLike region) {
   // std::cerr << "before transforms: ";
   // region.print(std::cerr, context.ns);

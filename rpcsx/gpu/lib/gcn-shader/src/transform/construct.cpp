@@ -72,7 +72,10 @@ shader::transform::createSelectionConstruct(spv::Context &context,
 
     std::unordered_set<ir::Block> successors;
     if (auto construct = block.cast<ir::Construct>()) {
-      successors = {construct.getMerge()};
+      auto merge = construct.getMerge();
+      merge.erase();
+      selectionConstruct.addChild(merge);
+      successors = getSuccessors(merge);
     } else {
       successors = getSuccessors(block);
     }

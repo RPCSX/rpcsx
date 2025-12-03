@@ -1,10 +1,12 @@
+#include "transform/wrap.hpp"
 #include "SpvConverter.hpp"
+#include "dialect.hpp"
+#include "rx/print.hpp"
 #include "transform/Edge.hpp"
 #include "transform/construct.hpp"
 #include "transform/merge.hpp"
 #include "transform/route.hpp"
-#include "transform/wrap.hpp"
-#include "dialect.hpp"
+#include <iostream>
 #include <rx/die.hpp>
 
 using namespace shader;
@@ -52,7 +54,6 @@ calculateCycleEdges(const std::unordered_set<ir::Block> &cycles) {
 
   return result;
 }
-
 
 static ir::Instruction skipPhis(ir::Instruction inst) {
   while (inst && inst == ir::spv::OpPhi) {
@@ -140,7 +141,8 @@ findSCCs(ir::Range<ir::Block> nodes) {
   return sccs;
 }
 
-void shader::transform::wrapLoopConstructs(spv::Context &context, ir::RegionLike root) {
+void shader::transform::wrapLoopConstructs(spv::Context &context,
+                                           ir::RegionLike root) {
   auto region = root.children<ir::Block>();
   auto sccs = findSCCs(region);
 
@@ -281,12 +283,20 @@ void shader::transform::wrapLoopConstructs(spv::Context &context, ir::RegionLike
         phi.erase();
         loopConstruct.prependChild(phi);
       }
+    } else {
+      rx::print(stderr, "infinity loop in the shader:");
+      for (auto block : scc) {
+        rx::print(stderr, " {}", context.ns.getNameOf(block));
+      }
+      rx::println("");
+      root.print(std::cerr, context.ns);
+      rx::die("infinity loop");
     }
   }
 }
 
 void shader::transform::wrapSelectionConstructs(spv::Context &context,
-                                    ir::RegionLike root) {
+                                                ir::RegionLike root) {
   std::vector<ir::Range<ir::Block>> workList;
   workList.push_back(root.children<ir::Block>());
   std::unordered_set<ir::Block> usedMergeBlocks;
