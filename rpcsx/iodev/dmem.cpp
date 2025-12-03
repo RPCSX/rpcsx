@@ -9,9 +9,10 @@
 #include "orbis/thread/Thread.hpp"
 #include "orbis/utils/Logs.hpp"
 #include "orbis/vmem.hpp"
-#include "rx/format.hpp"
 #include "rx/AddressRange.hpp"
 #include "rx/EnumBitSet.hpp"
+#include "rx/format.hpp"
+#include <string>
 
 enum {
   DMEM_IOCTL_ALLOCATE = 0xc0288001,
@@ -42,6 +43,10 @@ struct DmemDevice
   orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
                        rx::EnumBitSet<orbis::vmem::Protection> protection,
                        orbis::File *file, orbis::Process *process) override;
+
+  [[nodiscard]] std::string toString() const override {
+    return "dmem" + std::to_string(index);
+  }
 };
 
 struct DmemFile : public orbis::File {};

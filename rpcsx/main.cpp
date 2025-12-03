@@ -15,6 +15,7 @@
 #include "orbis/utils/Logs.hpp"
 #include "orbis/vmem.hpp"
 #include "rx/Config.hpp"
+#include "rx/FileLock.hpp"
 #include "rx/die.hpp"
 #include "rx/format.hpp"
 #include "rx/mem.hpp"
@@ -299,26 +300,26 @@ static void onSysEnter(orbis::Thread *thread, int id, uint64_t *args,
   if (!g_traceSyscalls) {
     return;
   }
-  flockfile(stderr);
-  std::fprintf(stderr, "   [%u] ", thread->tid);
+
+  rx::ScopedFileLock lock(stderr);
+  rx::print(stderr, "   [{}] ", thread->tid);
 
   if (auto ent = getSyscallEnt(thread, id)) {
-    std::fprintf(stderr, "%s\n", ent->format(args).c_str());
+    rx::println(stderr, "{}", ent->format(thread, args).c_str());
     return;
   }
 
-  std::fprintf(stderr, "sys_%u(", id);
+  rx::print(stderr, "sys_{}(", id);
 
   for (int i = 0; i < argsCount; ++i) {
     if (i != 0) {
-      std::fprintf(stderr, ", ");
+      rx::print(stderr, ", ");
     }
 
-    std::fprintf(stderr, "%#lx", args[i]);
+    rx::print(stderr, "{:#x}", args[i]);
   }
 
-  std::fprintf(stderr, ")\n");
-  funlockfile(stderr);
+  rx::println(stderr, ")");
 }
 
 static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
@@ -327,11 +328,11 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
     return;
   }
 
-  flockfile(stderr);
+  rx::ScopedFileLock lock(stderr);
   rx::print(stderr, "{}: [{}] ", result.isError() ? 'E' : 'S', thread->tid);
 
   if (auto ent = getSyscallEnt(thread, id)) {
-    rx::print(stderr, "{}", ent->format(args));
+    rx::print(stderr, "{}", ent->format(thread, args));
   } else {
     rx::print(stderr, "sys_{}(", id);
 
@@ -352,7 +353,6 @@ static void onSysExit(orbis::Thread *thread, int id, uint64_t *args,
   if (result.isError()) {
     thread->where();
   }
-  funlockfile(stderr);
 }
 
 static void guestInitDev(orbis::Thread *thread, int stdinFd, int stdoutFd,

@@ -76,6 +76,8 @@ struct IoDevice : rx::RcBase {
   virtual ErrorCode map(rx::AddressRange range, std::int64_t offset,
                         rx::EnumBitSet<vmem::Protection> protection, File *file,
                         Process *process);
+
+  [[nodiscard]] virtual std::string toString() const;
 };
 
 namespace ioctl {
@@ -95,6 +97,8 @@ constexpr std::uint32_t paramSize(std::uint32_t cmd) {
 }
 constexpr std::uint32_t group(std::uint32_t cmd) { return (cmd >> 8) & 0xff; }
 constexpr std::uint32_t id(std::uint32_t cmd) { return cmd & 0xff; }
+
+std::string groupToString(unsigned iocGroup);
 } // namespace ioctl
 
 struct IoctlHandlerEntry;
@@ -200,6 +204,10 @@ template <int Group> struct IoDeviceWithIoctl : IoDevice {
     }
 
     return ioctlTable[id].handler(thread, argp, this, ioctlTable[id].impl);
+  }
+
+  [[nodiscard]] std::string toString() const override {
+    return ioctl::groupToString(Group) + " " + IoDevice::toString();
   }
 };
 } // namespace orbis

@@ -9,6 +9,7 @@
 #include "orbis/utils/Logs.hpp"
 #include "rx/Rc.hpp"
 #include <bits/types/struct_iovec.h>
+#include <string>
 // #include <rx/hexdump.hpp>
 
 #define SNDCTL_DSP_RESET 0x20005000
@@ -37,6 +38,10 @@ struct AoutDevice : public orbis::IoDevice {
   orbis::ErrorCode open(rx::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
+
+  [[nodiscard]] std::string toString() const override {
+    return "aout" + std::to_string(id);
+  }
 };
 
 static orbis::ErrorCode aout_ioctl(orbis::File *file, std::uint64_t request,

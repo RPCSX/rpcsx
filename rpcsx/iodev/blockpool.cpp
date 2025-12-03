@@ -51,6 +51,8 @@ struct BlockPoolDevice
   orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
                        rx::EnumBitSet<orbis::vmem::Protection> protection,
                        orbis::File *file, orbis::Process *process) override;
+
+  [[nodiscard]] std::string toString() const override { return "blockpool"; }
 };
 
 #pragma pack(push, 1)

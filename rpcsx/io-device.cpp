@@ -10,6 +10,7 @@
 #include "orbis/utils/Logs.hpp"
 #include "orbis/vmem.hpp"
 #include "rx/Mappable.hpp"
+#include "rx/format-base.hpp"
 #include "vfs.hpp"
 #include <cerrno>
 #include <dirent.h>
@@ -33,6 +34,7 @@
 struct HostFile : orbis::File {
   bool closeOnExit = true;
   bool alignTruncate = false;
+  orbis::kstring path;
 
   ~HostFile() {
     if (!closeOnExit && hostFd) {
@@ -611,11 +613,26 @@ orbis::ErrorCode socket_recvfrom(orbis::File *file, void *buf,
   return orbis::ErrorCode::NOTSUP;
 }
 
+static std::string host_toString(orbis::File *file, orbis::Thread *thread) {
+  auto hostFile = static_cast<HostFile *>(file);
+
+  if (!hostFile->path.empty()) {
+    std::string result;
+    result += '"';
+    result += hostFile->path;
+    result += '"';
+    return result;
+  }
+
+  return rx::format("host fd {}", hostFile->hostFd.native_handle());
+}
+
 static const orbis::FileOps hostOps = {
     .read = host_read,
     .write = host_write,
     .truncate = host_truncate,
     .stat = host_stat,
+    .toString = host_toString,
 };
 
 static const orbis::FileOps socketOps = {
@@ -828,6 +845,7 @@ orbis::ErrorCode HostFsDevice::open(rx::Ref<orbis::File> *file,
   newFile->dirEntries = std::move(dirEntries);
   newFile->ops = &hostOps;
   newFile->device = this;
+  newFile->path = path;
   *file = newFile;
   return {};
 }

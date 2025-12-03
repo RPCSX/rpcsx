@@ -106,7 +106,7 @@ struct WrapImpl<Fn> {
     sysent result;
     result.narg = sizeof...(Args);
     result.call = &WrapImpl::call;
-    result.format = [](uint64_t *values) -> std::string {
+    result.format = [](Thread *thread, uint64_t *values) -> std::string {
       std::string result = getSysentName(&WrapImpl::call);
       result += "(";
 
@@ -134,7 +134,9 @@ struct WrapImpl<Fn> {
             } else if constexpr (std::is_pointer_v<type>) {
               result += rx::format("{}", (void *)value);
 
-              // using pointee = std::remove_cvref_t<std::remove_pointer_t<type>>;
+              // using pointee =
+              // std::remove_cvref_t<std::remove_pointer_t<type>>;
+              //
               // if constexpr (requires(rx::format_parse_context &ctx) {
               //                 rx::formatter<pointee>().parse(ctx);
               //               }) {
@@ -149,6 +151,27 @@ struct WrapImpl<Fn> {
               //     }
               //   }
               // }
+            } else if constexpr (std::is_same_v<type, FileDescriptor>) {
+              result += rx::format("{}", std::to_underlying(value));
+              if (std::to_underlying(value) >= 0) {
+                auto file = thread->tproc->fileDescriptors.get(value);
+                result += " (";
+
+                if (file) {
+                  if (file->ops && file->ops->toString) {
+                    result += file->ops->toString(file.get(), thread);
+                  } else if (file->device) {
+                    result += file->device->toString();
+                  } else {
+                    result += "<null device>";
+                  }
+
+                } else {
+                  result += "<invalid fd>";
+                }
+
+                result += ")";
+              }
             } else if constexpr (requires(rx::format_parse_context &ctx) {
                                    rx::formatter<type>().parse(ctx);
                                  }) {
