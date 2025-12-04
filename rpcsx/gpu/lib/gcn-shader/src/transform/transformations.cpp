@@ -2,6 +2,7 @@
 #include "SpvConverter.hpp"
 #include "analyze.hpp"
 #include "dialect.hpp"
+#include <algorithm>
 #include <list>
 #include <rx/die.hpp>
 
@@ -316,61 +317,61 @@ toCanonicalSwitchSelectionConstruct(spv::Context &context,
     return;
   }
 
-  std::vector<ir::Block> workList;
+  {
+    std::vector<ir::Block> workList;
 
-  for (auto &[target, caseInfo] : cases) {
-    workList.push_back(target);
+    for (auto &[target, caseInfo] : cases) {
+      workList.push_back(target);
 
-    while (!workList.empty()) {
-      auto block = workList.back();
-      workList.pop_back();
+      while (!workList.empty()) {
+        auto block = workList.back();
+        workList.pop_back();
 
-      if (block == mergeBlock) {
-        continue;
-      }
+        if (block == mergeBlock) {
+          continue;
+        }
 
-      if (block != target && cases.contains(block)) {
-        caseInfo.fallthroughBlock = block;
-        workList.clear();
-        break;
-      }
+        if (block != target && cases.contains(block)) {
+          caseInfo.fallthroughBlock = block;
+          workList.clear();
+          break;
+        }
 
-      if (auto construct = block.cast<ir::Construct>()) {
-        workList.push_back(construct.getMerge());
-        continue;
-      }
+        if (auto construct = block.cast<ir::Construct>()) {
+          workList.push_back(construct.getMerge());
+          continue;
+        }
 
-      for (auto succ : getSuccessors(block)) {
-        workList.push_back(succ);
+        for (auto succ : getSuccessors(block)) {
+          workList.push_back(succ);
+        }
       }
     }
   }
 
   std::list<ir::Block> sortedCases;
+  std::list<std::pair<ir::Block, ir::Block>> workList;
 
   for (auto &[target, caseInfo] : cases) {
     if (caseInfo.fallthroughBlock == nullptr) {
       sortedCases.push_back(target);
+    } else {
+      workList.emplace_back(target, caseInfo.fallthroughBlock);
     }
   }
 
   assert(!sortedCases.empty());
 
-  for (auto &[target, caseInfo] : cases) {
-    if (caseInfo.fallthroughBlock == nullptr) {
-      continue;
+  while (!workList.empty()) {
+    auto [block, fallthroughBlock] = workList.front();
+    workList.pop_front();
+
+    if (auto it = std::ranges::find(sortedCases, fallthroughBlock);
+        it != sortedCases.end()) {
+      sortedCases.insert(it, block);
+    } else {
+      workList.emplace_back(block, fallthroughBlock);
     }
-
-    auto it = sortedCases.begin();
-    while (it != sortedCases.end()) {
-      if (caseInfo.fallthroughBlock == *it) {
-        break;
-      }
-
-      ++it;
-    }
-
-    sortedCases.insert(it, target);
   }
 
   for (auto target : sortedCases) {
