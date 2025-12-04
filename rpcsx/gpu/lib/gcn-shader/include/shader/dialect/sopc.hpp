@@ -50,17 +50,17 @@ inline const char *getInstructionName(unsigned id) {
   case CMP_LE_U32:
     return "s_cmp_le_u32";
   case BITCMP0_B32:
-    return "bitcmp0_b32";
+    return "s_bitcmp0_b32";
   case BITCMP1_B32:
-    return "bitcmp1_b32";
+    return "s_bitcmp1_b32";
   case BITCMP0_B64:
-    return "bitcmp0_b64";
+    return "s_bitcmp0_b64";
   case BITCMP1_B64:
-    return "bitcmp1_b64";
+    return "s_bitcmp1_b64";
   case SETVSKIP:
-    return "setvskip";
+    return "s_setvskip";
   case ILLEGALD:
-    return "illegald";
+    return "s_illegald";
   }
   return nullptr;
 }
