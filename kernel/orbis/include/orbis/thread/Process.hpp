@@ -8,6 +8,7 @@
 #include "../ipmi.hpp"
 #include "../osem.hpp"
 #include "Thread.hpp"
+#include "rx/StaticString.hpp"
 #include "types.hpp"
 #include "ProcessState.hpp"
 #include "cpuset.hpp"
@@ -108,7 +109,7 @@ struct Process final {
 
   // Named objects for debugging
   rx::shared_mutex namedObjMutex;
-  kmap<void *, kstring> namedObjNames;
+  kmap<void *, rx::StaticString<32>> namedObjNames;
   rx::OwningIdMap<NamedObjInfo, uint, 65535, 1> namedObjIds;
 
   kmap<std::int32_t, SigAction> sigActions;
@@ -127,6 +128,7 @@ struct Process final {
     return ref.get(storage);
   }
 
+  rx::StaticString<32> getNameOfObject(ptr<const void> addr);
   Budget *getBudget() const;
 
   template <typename Cb>

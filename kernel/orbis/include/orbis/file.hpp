@@ -68,7 +68,7 @@ struct FileOps {
                         ptr<struct sf_hdtr> hdtr, ptr<off_t> sbytes, sint flags,
                         Thread *thread) = nullptr;
 
-  std::string (*toString)(File *file, Thread *thread);
+  std::string (*toString)(File *file);
 };
 
 struct File : rx::RcBase {
@@ -83,5 +83,6 @@ struct File : rx::RcBase {
   kvector<Dirent> dirEntries;
 
   bool noBlock() const { return (flags & 4) != 0; }
+  std::string toString();
 };
 } // namespace orbis

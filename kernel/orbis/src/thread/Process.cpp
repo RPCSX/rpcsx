@@ -326,6 +326,15 @@ orbis::Process *orbis::createProcess(Process *parentProcess, pid_t pid) {
   return &result->object;
 }
 
+rx::StaticString<32>
+orbis::Process::getNameOfObject(ptr<const void> addr) {
+  std::lock_guard lock(namedObjMutex);
+  if (auto it = namedObjNames.find(addr); it != namedObjNames.end()) {
+    return it->second;
+  }
+  return {};
+}
+
 orbis::Budget *orbis::Process::getBudget() const {
   auto result = g_context->budgets.get(budgetId);
 

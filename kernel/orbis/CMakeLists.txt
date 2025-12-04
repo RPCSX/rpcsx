@@ -5,6 +5,7 @@ add_library(obj.orbis-kernel OBJECT
   src/dmem.cpp
   src/event.cpp
   src/evf.cpp
+  src/file.cpp
   src/fmem.cpp
   src/IoDevice.cpp
   src/ipmi.cpp

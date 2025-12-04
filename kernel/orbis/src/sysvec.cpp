@@ -158,14 +158,7 @@ struct WrapImpl<Fn> {
                 result += " (";
 
                 if (file) {
-                  if (file->ops && file->ops->toString) {
-                    result += file->ops->toString(file.get(), thread);
-                  } else if (file->device) {
-                    result += file->device->toString();
-                  } else {
-                    result += "<null device>";
-                  }
-
+                  result += file->toString();
                 } else {
                   result += "<invalid fd>";
                 }

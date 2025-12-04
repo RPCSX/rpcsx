@@ -1,5 +1,6 @@
 #include "KernelAllocator.hpp"
 #include "KernelContext.hpp"
+#include "rx/format-base.hpp"
 #include "sys/sysproto.hpp"
 
 #include "thread/Process.hpp"
@@ -13,11 +14,98 @@
 #include <sys/select.h>
 #endif
 
+static std::string filterToString(orbis::sshort filter) {
+  switch (filter) {
+  case orbis::kEvFiltRead:
+    return "Read";
+  case orbis::kEvFiltWrite:
+    return "Write";
+  case orbis::kEvFiltAio:
+    return "Aio";
+  case orbis::kEvFiltVnode:
+    return "Vnode";
+  case orbis::kEvFiltProc:
+    return "Proc";
+  case orbis::kEvFiltSignal:
+    return "Signal";
+  case orbis::kEvFiltTimer:
+    return "Timer";
+  case orbis::kEvFiltFs:
+    return "Fs";
+  case orbis::kEvFiltLio:
+    return "Lio";
+  case orbis::kEvFiltUser:
+    return "User";
+  case orbis::kEvFiltPolling:
+    return "Polling";
+  case orbis::kEvFiltDisplay:
+    return "Display";
+  case orbis::kEvFiltGraphicsCore:
+    return "GraphicsCore";
+  case orbis::kEvFiltHrTimer:
+    return "HrTimer";
+  case orbis::kEvFiltUvdTrap:
+    return "UvdTrap";
+  case orbis::kEvFiltVceTrap:
+    return "VceTrap";
+  case orbis::kEvFiltSdmaTrap:
+    return "SdmaTrap";
+  case orbis::kEvFiltRegEv:
+    return "RegEv";
+  case orbis::kEvFiltGpuException:
+    return "GpuException";
+  case orbis::kEvFiltGpuSystemException:
+    return "GpuSystemException";
+  case orbis::kEvFiltGpuDbgGcEv:
+    return "GpuDbgGcEv";
+  }
+
+  return "<invalid " + std::to_string(filter) + ">";
+}
+
+static std::string kqueue_toString(orbis::File *file) {
+  auto queue = static_cast<orbis::KQueue *>(file);
+
+  std::string result = "kqueue";
+
+  if (!queue->name.empty()) {
+    result += " \"";
+    result += queue->name;
+    result += "\"";
+  }
+
+  result += " {";
+
+  for (auto &note : queue->notes) {
+    result += " knote {";
+    result += filterToString(note.event.filter);
+
+    if (auto file = note.file) {
+      result += " ";
+      result += file->toString();
+    }
+
+    result += rx::format(
+        " ident {:#x}, flags {:#x} fflags {:#x}, data {:#x}, udata {}",
+        note.event.ident, note.event.flags, note.event.fflags, note.event.data,
+        note.event.udata);
+    result += "}";
+  }
+  result += " }";
+
+  return result;
+}
+
+static orbis::FileOps kqueueOps = {
+    .toString = kqueue_toString,
+};
+
 orbis::SysResult orbis::sys_kqueue(Thread *thread) {
   auto queue = knew<KQueue>();
   if (queue == nullptr) {
     return ErrorCode::NOMEM;
   }
+  queue->ops = &kqueueOps;
 
   auto fd = thread->tproc->fileDescriptors.insert(queue);
   ORBIS_LOG_TODO(__FUNCTION__, (int)fd);
@@ -36,6 +124,7 @@ orbis::SysResult orbis::sys_kqueueex(Thread *thread, ptr<char> name,
   if (name != nullptr) {
     queue->name = name;
   }
+  queue->ops = &kqueueOps;
   ORBIS_LOG_TODO(__FUNCTION__, name, flags, (int)fd);
   thread->retval[0] = std::to_underlying(fd);
   return {};

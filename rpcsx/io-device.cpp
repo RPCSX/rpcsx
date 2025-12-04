@@ -613,7 +613,7 @@ orbis::ErrorCode socket_recvfrom(orbis::File *file, void *buf,
   return orbis::ErrorCode::NOTSUP;
 }
 
-static std::string host_toString(orbis::File *file, orbis::Thread *thread) {
+static std::string host_toString(orbis::File *file) {
   auto hostFile = static_cast<HostFile *>(file);
 
   if (!hostFile->path.empty()) {
