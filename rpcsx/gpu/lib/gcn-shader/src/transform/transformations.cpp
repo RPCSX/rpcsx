@@ -2,6 +2,7 @@
 #include "SpvConverter.hpp"
 #include "analyze.hpp"
 #include "dialect.hpp"
+#include <list>
 #include <rx/die.hpp>
 
 #include <iostream>
@@ -13,8 +14,8 @@ using namespace shader::transform;
 
 using Builder = ir::Builder<ir::builtin::Builder, ir::spv::Builder>;
 
-ir::Value shader::transform::transformToCanonicalRegion(spv::Context &context,
-                                                        ir::RegionLike region) {
+ir::Value shader::transform::toCanonicalRegion(spv::Context &context,
+                                               ir::RegionLike region) {
   auto cfg = buildCFG(region.getFirst());
   std::vector<CFG::Node *> exitNodes;
   for (auto node : cfg.getPreorderNodes()) {
@@ -136,9 +137,9 @@ ir::Value shader::transform::transformToCanonicalRegion(spv::Context &context,
   return newExitBlock;
 }
 
-void shader::transform::transformToCf(spv::Context &context,
-                                      ir::RegionLike region) {
+void shader::transform::toCf(spv::Context &context, ir::RegionLike region) {
   ir::Block currentBlock;
+  ir::Block terminationBlock;
 
   for (auto inst : region.children()) {
     if (inst == ir::builtin::BLOCK) {
@@ -170,13 +171,21 @@ void shader::transform::transformToCf(spv::Context &context,
     currentBlock.addChild(inst);
 
     if (isTerminator(inst)) {
+      if (!isBranch(inst)) {
+        terminationBlock = currentBlock;
+      }
+
       currentBlock = nullptr;
     }
   }
+
+  if (terminationBlock != nullptr) {
+    terminationBlock.erase();
+    region.addChild(terminationBlock);
+  }
 }
 
-void shader::transform::transformToFlat(spv::Context &context,
-                                        ir::RegionLike region) {
+void shader::transform::toFlat(spv::Context &context, ir::RegionLike region) {
   std::vector<ir::Instruction> workList;
 
   workList.push_back(region.getFirst());
@@ -277,5 +286,118 @@ void shader::transform::transformToFlat(spv::Context &context,
     }
 
     insertPoint.eraseAndInsert(inst);
+  }
+}
+
+static void
+toCanonicalSwitchSelectionConstruct(spv::Context &context,
+                                    ir::SelectionConstruct switchConstruct) {
+  auto switchOp = switchConstruct.getHeader().getLast();
+  auto mergeBlock = switchConstruct.getMerge();
+
+  struct CaseInfo {
+    ir::Operand value;
+    ir::Block fallthroughBlock;
+  };
+
+  std::unordered_map<ir::Block, CaseInfo> cases;
+
+  for (std::size_t i = 2; i < switchOp.getOperandCount();) {
+    if (switchOp.getOperand(i + 1) == mergeBlock) {
+      i += 2;
+    } else {
+      auto value = switchOp.eraseOperand(i);
+      auto target = switchOp.eraseOperand(i).getAsValue().cast<ir::Block>();
+      cases[target] = {.value = std::move(value)};
+    }
+  }
+
+  if (cases.empty()) {
+    return;
+  }
+
+  std::vector<ir::Block> workList;
+
+  for (auto &[target, caseInfo] : cases) {
+    workList.push_back(target);
+
+    while (!workList.empty()) {
+      auto block = workList.back();
+      workList.pop_back();
+
+      if (block == mergeBlock) {
+        continue;
+      }
+
+      if (block != target && cases.contains(block)) {
+        caseInfo.fallthroughBlock = block;
+        workList.clear();
+        break;
+      }
+
+      if (auto construct = block.cast<ir::Construct>()) {
+        workList.push_back(construct.getMerge());
+        continue;
+      }
+
+      for (auto succ : getSuccessors(block)) {
+        workList.push_back(succ);
+      }
+    }
+  }
+
+  std::list<ir::Block> sortedCases;
+
+  for (auto &[target, caseInfo] : cases) {
+    if (caseInfo.fallthroughBlock == nullptr) {
+      sortedCases.push_back(target);
+    }
+  }
+
+  assert(!sortedCases.empty());
+
+  for (auto &[target, caseInfo] : cases) {
+    if (caseInfo.fallthroughBlock == nullptr) {
+      continue;
+    }
+
+    auto it = sortedCases.begin();
+    while (it != sortedCases.end()) {
+      if (caseInfo.fallthroughBlock == *it) {
+        break;
+      }
+
+      ++it;
+    }
+
+    sortedCases.insert(it, target);
+  }
+
+  for (auto target : sortedCases) {
+    auto &info = cases.at(target);
+
+    switchOp.addOperand(info.value);
+    switchOp.addOperand(target);
+  }
+}
+
+void shader::transform::canonicalizeSwitchSelectionConstructs(
+    spv::Context &context, ir::RegionLike root) {
+  std::vector<ir::Range<ir::Block>> workList;
+  workList.push_back(root.children<ir::Block>());
+
+  while (!workList.empty()) {
+    auto region = workList.back();
+    workList.pop_back();
+
+    for (auto entryBlock : region) {
+      if (auto selection = entryBlock.cast<ir::SelectionConstruct>()) {
+        if (selection.getHeader().getLast() == ir::spv::OpSwitch) {
+          toCanonicalSwitchSelectionConstruct(context, selection);
+        }
+      }
+
+      workList.emplace_back(entryBlock.children<ir::Block>());
+    }
   }
 }

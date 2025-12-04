@@ -151,61 +151,12 @@ static std::unordered_map<ir::Value, std::uint32_t> createRouteTerminator(
 
     successorToId.reserve(toPreds.size());
 
-    auto hasBranchesTo = [](ir::Block from, ir::Block to) {
-      std::vector<ir::Block> workList;
-      std::unordered_set<ir::Block> visited;
-
-      workList.push_back(from);
-      visited.insert(from);
-
-      while (!workList.empty()) {
-        auto block = workList.back();
-        workList.pop_back();
-
-        if (block == to) {
-          return true;
-        }
-
-        for (auto succ : getSuccessors(block)) {
-          if (visited.insert(succ).second) {
-            workList.push_back(succ);
-          }
-        }
-      }
-
-      visited.insert(from);
-      return false;
-    };
-
     for (std::uint32_t id = 0; auto &[succ, pred] : toPreds) {
       if (id) {
         routeSwitch.addOperand(id);
         routeSwitch.addOperand(succ);
       }
       successorToId[succ] = id++;
-    }
-
-    auto caseCount = routeSwitch.getOperandCount() / 2 - 1;
-    for (std::size_t i = 1; i < caseCount; ++i) {
-      auto caseValue0 = routeSwitch.getOperand(2 + i * 2);
-      auto caseTarget0 = routeSwitch.getOperand(2 + i * 2 + 1)
-                             .getAsValue()
-                             .staticCast<ir::Block>();
-
-      for (std::size_t t = 0; t < i; ++t) {
-        auto caseValue1 = routeSwitch.getOperand(2 + t * 2);
-        auto caseTarget1 = routeSwitch.getOperand(2 + t * 2 + 1)
-                               .getAsValue()
-                               .staticCast<ir::Block>();
-
-        if (hasBranchesTo(caseTarget0, caseTarget1)) {
-          routeSwitch.replaceOperand(2 + i * 2, caseValue1);
-          routeSwitch.replaceOperand(2 + i * 2 + 1, caseTarget1);
-          routeSwitch.replaceOperand(2 + t * 2, caseValue0);
-          routeSwitch.replaceOperand(2 + t * 2 + 1, caseTarget0);
-          break;
-        }
-      }
     }
   }
 

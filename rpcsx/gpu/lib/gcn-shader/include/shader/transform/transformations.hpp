@@ -4,8 +4,9 @@
 #include "ir.hpp"
 
 namespace shader::transform {
-ir::Value transformToCanonicalRegion(spv::Context &context,
-                                     ir::RegionLike region);
-void transformToCf(spv::Context &context, ir::RegionLike region);
-void transformToFlat(spv::Context &context, ir::RegionLike region);
+ir::Value toCanonicalRegion(spv::Context &context, ir::RegionLike region);
+void toCf(spv::Context &context, ir::RegionLike region);
+void toFlat(spv::Context &context, ir::RegionLike region);
+void canonicalizeSwitchSelectionConstructs(spv::Context &context,
+                                           ir::RegionLike root);
 } // namespace shader::transform
