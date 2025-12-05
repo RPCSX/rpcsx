@@ -9,7 +9,8 @@
         "--cap-add=SYS_PTRACE",
         "--security-opt",
         "seccomp=unconfined",
-        "--platform", "linux/amd64"
+        "--platform", "linux/amd64",
+        // "--gpus", "all"
     ],
     "updateRemoteUserUID": true,
     "remoteUser": "${localEnv:USER}",
