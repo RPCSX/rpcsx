@@ -261,8 +261,10 @@ static void release(orbis::Process *process, decltype(g_vmInstance)::type *vmem,
 
     auto blockRange = range.intersection(it.range());
 
+    auto gpuProt = orbis::vmem::toGpuProtection(it->prot);
     if (it->flags & orbis::vmem::BlockFlags::FlexibleMemory) {
-      if (it->device == nullptr) {
+      if (it->device == nullptr && gpuProt) {
+        amdgpu::unmapMemory(process->pid, blockRange);
         orbis::fmem::deallocate(blockRange);
       }
       budget->release(orbis::BudgetResource::Fmem, blockRange.size());
@@ -281,9 +283,8 @@ static void release(orbis::Process *process, decltype(g_vmInstance)::type *vmem,
       }
     }
 
-    if (orbis::vmem::toGpuProtection(it->prot) &&
-        (it->flags & orbis::vmem::BlockFlags::DirectMemory |
-         orbis::vmem::BlockFlags::PooledMemory)) {
+    if (gpuProt && (it->flags & orbis::vmem::BlockFlags::DirectMemory |
+                    orbis::vmem::BlockFlags::PooledMemory)) {
       amdgpu::unmapMemory(process->pid, blockRange);
     }
   }
@@ -566,7 +567,8 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
       blockpool::releaseControlBlock();
     }
 
-    rx::println(stderr, "map: device allocation failure, blockFlags {}", blockFlags);
+    rx::println(stderr, "map: device allocation failure, blockFlags {}",
+                blockFlags);
     return {{}, error};
   }
 
@@ -823,7 +825,13 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFlex(
             AllocationFlags::Fixed | (allocFlags & AllocationFlags::NoMerge),
             alignment);
 
-  // vmemDump(process, rx::format("mapFlex {:x}-{:x}", vmemRange.beginAddress(),
+  if (prot) {
+    amdgpu::mapMemory(process->pid, vmemRange, MemoryType::WbOnion, prot,
+                      allocationInfo.deviceOffset);
+  }
+
+  // vmemDump(process, rx::format("mapFlex {:x}-{:x}",
+  // vmemRange.beginAddress(),
   //                              vmemRange.endAddress()));
   fmemResource.commit();
   return {vmemRange, {}};
@@ -1139,6 +1147,9 @@ orbis::ErrorCode orbis::vmem::protect(Process *process, rx::AddressRange range,
                                  toCpuProtection(blockProt));
 
                 rx::dieIf(errc != ErrorCode{}, "failed to map flexible memory");
+
+                amdgpu::mapMemory(process->pid, range, MemoryType::WbOnion,
+                                  prot, pmemRange.beginAddress());
               } else if (!blockProt && alloc.prot) {
                 auto errc = fmem::deallocate(rx::AddressRange::fromBeginSize(
                     alloc.deviceOffset, range.size()));

@@ -357,7 +357,7 @@ orbis::SysResult dynlib_load_prx(orbis::Thread *thread,
           }
 
           if (it->second == resultModule) {
-            wasNeeded = true;
+            // wasNeeded = true;
           }
           continue;
         }
