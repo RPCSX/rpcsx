@@ -874,7 +874,70 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
   createIpmiServer(process, "SceNpGameIntent");
   createIpmiServer(process, "SceBgft");
   createIpmiServer(process, "SceCntMgrService");
-  createIpmiServer(process, "ScePlayGo");
+  createIpmiServer(process, "ScePlayGo")
+      // .addSyncMethod<std::uint32_t, void>(0x30000,
+      //                                     [](std::uint32_t &result) {
+      //                                       rx::println(stderr,
+      //                                                   "PlayGo: 0x30000");
+      //                                       result = 1;
+      //                                       return 0;
+      //                                     })
+      // .addSyncMethod<std::uint32_t>(0x30001,
+      //                               [](std::uint32_t unk) {
+      //                                 rx::println(stderr,
+      //                                             "PlayGo: 0x30001 {:x}",
+      //                                             unk);
+      //                                 return 0;
+      //                               })
+      .addSyncMethod(0x30008,
+                     [](std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &in) {
+                       // scePlayGoGetLocus
+                       rx::println(stderr, "PlayGo: 0x30008 out {}, in {}",
+                                   out.size(), in.size());
+
+                       std::memset(out[0].data(), 3, out[0].size());
+                       return orbis::ErrorCode{};
+                     })
+      .addSyncMethod(0x3000a,
+                     [](std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &in) {
+                       rx::println(stderr, "PlayGo: 0x3000a out {}, in {}",
+                                   out.size(), in.size());
+                       // scePlayGoGetToDoList
+
+                       if (out.size() != 2 || in.size() != 1) {
+                         return orbis::ErrorCode::INVAL;
+                       }
+
+                       std::memset(out[0].data(), 0, out[0].size());
+                       out[1] = toBytes<std::uint32_t>(1000);
+                       return orbis::ErrorCode{};
+                     })
+      .addSyncMethod(0x3000e,
+                     [](std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &in) {
+                       rx::println(stderr, "PlayGo: 0x3000a out {}, in {}",
+                                   out.size(), in.size());
+                       // scePlayGoGetChunkId
+
+                       if (out.size() != 2 || in.size() != 1) {
+                         return orbis::ErrorCode::INVAL;
+                       }
+
+                       std::memset(out[0].data(), 0, out[0].size());
+                       out[1] = toBytes<std::uint32_t>(1);
+                       return orbis::ErrorCode{};
+                     })
+
+      .addSyncMethod<std::uint32_t, std::uint32_t>(
+          0x3000f, [](std::uint32_t &result, std::uint32_t unk) {
+            rx::println(stderr, "PlayGo: 0x3000f {:x}", unk);
+            result = 1000;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            return 0;
+          });
+
   createIpmiServer(process, "SceCompAppProxyUtil");
   createIpmiServer(process, "SceShareSpIpcService");
   createIpmiServer(process, "SceRnpsAppMgr");
