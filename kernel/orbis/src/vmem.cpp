@@ -447,10 +447,6 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     if (prot & Protection::CpuExec) {
       return {{}, ErrorCode::ACCES};
     }
-
-    if (alignment < dmem::kPageSize) {
-      alignment = dmem::kPageSize;
-    }
   }
 
   if (allocFlags & AllocationFlags::Fixed) {
