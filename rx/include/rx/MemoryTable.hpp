@@ -625,7 +625,7 @@ public:
     bool lastRemovedIsOpen = false;
     PayloadT lastRemovedOpenPayload;
     if (noOverride && !beginInserted && !endInserted &&
-        std::next(beginIt) == endIt) {
+        std::next(beginIt) == endIt && !beginIt->second.isClose()) {
       return beginIt;
     }
 
