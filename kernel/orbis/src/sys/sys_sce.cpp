@@ -516,8 +516,7 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
       result = sys_mmap(
           thread, _entry.start, _entry.length,
           rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection),
-          vmem::MapFlags::Void | vmem::MapFlags::Anon | flags,
-          FileDescriptor::Invalid, 0);
+          vmem::MapFlags::Anon | flags, FileDescriptor::Invalid, 0);
       break;
     case 4:
       result = sys_mtypeprotect(
