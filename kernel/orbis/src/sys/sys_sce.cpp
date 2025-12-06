@@ -32,6 +32,52 @@ struct orbis::AppMountInfo {
 
 static_assert(sizeof(orbis::AppMountInfo) == 120);
 
+static std::pair<std::uint64_t, orbis::ErrorCode>
+mmap_dmem(orbis::Thread *thread, orbis::uintptr_t addr, orbis::size_t len,
+          orbis::MemoryType memoryType,
+          rx::EnumBitSet<orbis::vmem::Protection> prot,
+          rx::EnumBitSet<orbis::vmem::MapFlags> flags,
+          orbis::off_t directMemoryStart, std::uint64_t callerAddress) {
+  auto alignment = orbis::dmem::kPageSize;
+
+  {
+    auto unpacked = unpackMapFlags(flags, orbis::dmem::kPageSize);
+    alignment = unpacked.first;
+    flags = unpacked.second;
+  }
+
+  len = rx::alignUp(len, orbis::dmem::kPageSize);
+
+  rx::EnumBitSet<orbis::AllocationFlags> allocFlags{};
+
+  if (prot & orbis::vmem::Protection::CpuExec) {
+    return {{}, orbis::ErrorCode::INVAL};
+  }
+
+  if (flags & orbis::vmem::MapFlags::Fixed) {
+    allocFlags = orbis::AllocationFlags::Fixed;
+  } else if (addr == 0) {
+    addr = 0xfe0000000;
+  }
+
+  if (flags & orbis::vmem::MapFlags::NoOverwrite) {
+    allocFlags |= orbis::AllocationFlags::NoOverwrite;
+  }
+
+  auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
+
+  auto [range, errc] = orbis::vmem::mapDirect(
+      thread->tproc, addr,
+      rx::AddressRange::fromBeginSize(directMemoryStart, len), prot, allocFlags,
+      name, alignment, callerAddress, memoryType);
+
+  if (errc != orbis::ErrorCode{}) {
+    return {{}, errc};
+  }
+
+  return {range.beginAddress(), {}};
+}
+
 orbis::SysResult orbis::sys_netcontrol(Thread *thread, FileDescriptor fd,
                                        uint op, ptr<void> buf, uint nbuf) {
   return {};
@@ -439,6 +485,8 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
   ORBIS_LOG_ERROR(__FUNCTION__, unk, flags.toUnderlying(), entries,
                   entriesCount, processedCount);
 
+  auto callerAddress = getCallerAddress(thread);
+
   int processed = 0;
   for (int i = 0; i < entriesCount; ++i) {
     BatchMapEntry _entry;
@@ -448,13 +496,14 @@ orbis::SysResult orbis::sys_batch_map(Thread *thread, sint unk,
                     _entry.offset);
 
     switch (_entry.operation) {
-    case 0:
-      result = sys_mmap_dmem(
-          thread, _entry.start, _entry.length,
-          static_cast<MemoryType>(_entry.type),
+    case 0: {
+      auto [address, errc] = mmap_dmem(
+          thread, _entry.start, _entry.length, MemoryType::Invalid,
           rx::EnumBitSet<vmem::Protection>::fromUnderlying(_entry.protection),
-          flags, _entry.offset);
+          flags, _entry.offset, callerAddress);
+      result = errc;
       break;
+    }
     case 1:
       result = sys_munmap(thread, _entry.start, _entry.length);
       break;
@@ -1515,50 +1564,20 @@ orbis::SysResult orbis::sys_mmap_dmem(Thread *thread, uintptr_t addr,
                                       rx::EnumBitSet<vmem::Protection> prot,
                                       rx::EnumBitSet<vmem::MapFlags> flags,
                                       off_t directMemoryStart) {
-
-  auto callerAddress = getCallerAddress(thread);
-  auto alignment = dmem::kPageSize;
-
   if (static_cast<unsigned>(memoryType) > 10) {
     return ErrorCode::INVAL;
   }
 
-  {
-    auto unpacked = unpackMapFlags(flags, dmem::kPageSize);
-    alignment = unpacked.first;
-    flags = unpacked.second;
-  }
+  auto callerAddress = getCallerAddress(thread);
 
-  len = rx::alignUp(len, dmem::kPageSize);
-
-  rx::EnumBitSet<AllocationFlags> allocFlags{};
-
-  if (prot & vmem::Protection::CpuExec) {
-    return ErrorCode::INVAL;
-  }
-
-  if (flags & vmem::MapFlags::Fixed) {
-    allocFlags = AllocationFlags::Fixed;
-  } else if (addr == 0) {
-    addr = 0xfe0000000;
-  }
-
-  if (flags & vmem::MapFlags::NoOverwrite) {
-    allocFlags |= AllocationFlags::NoOverwrite;
-  }
-
-  auto name = callerAddress ? rx::format("anon:{:012x}", callerAddress) : "";
-
-  auto [range, errc] = vmem::mapDirect(
-      thread->tproc, addr,
-      rx::AddressRange::fromBeginSize(directMemoryStart, len), prot, allocFlags,
-      name, alignment, callerAddress, memoryType);
+  auto [result, errc] = mmap_dmem(thread, addr, len, memoryType, prot, flags,
+                                  directMemoryStart, callerAddress);
 
   if (errc != ErrorCode{}) {
     return errc;
   }
 
-  thread->retval[0] = range.beginAddress();
+  thread->retval[0] = result;
   return {};
 }
 orbis::SysResult orbis::sys_physhm_open(Thread *thread /* TODO */) {
