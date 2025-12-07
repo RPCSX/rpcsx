@@ -683,7 +683,8 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
             auto commonDialog = std::get<0>(orbis::g_context->dialogs.front());
             auto currentDialogId =
                 *reinterpret_cast<std::int16_t *>(commonDialog + 4);
-            auto currentDialog = std::get<0>(orbis::g_context->dialogs.back());
+            auto [currentDialog, currentDialogSize] =
+                orbis::g_context->dialogs.back();
             if (currentDialogId == 5) {
               std::int32_t titleSize = 8192;
               std::int32_t buttonNameSize = 64;
@@ -698,8 +699,7 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
               auto buttonType =
                   *reinterpret_cast<std::uint8_t *>(currentDialog + 0x488);
               ORBIS_LOG_TODO("Activate message dialog", dialogTitle.data(),
-                             buttonOk.data(), buttonCancel.data(),
-                             (std::int16_t)buttonType);
+                             buttonOk.data(), buttonCancel.data(), buttonType);
               // ignore dialogs without buttons
               if (buttonType != 2 && buttonType != 5 && buttonType != 6) {
                 *reinterpret_cast<std::uint8_t *>(currentDialog + 0x18) =
@@ -709,8 +709,20 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
                 *reinterpret_cast<std::uint8_t *>(currentDialog + 0x24ec) =
                     1; // pressed button type
               }
+            } else if (currentDialogId == 0x11) {
+              // playgo dialog
+
+              ORBIS_LOG_TODO("Activate playgo dialog");
+
+              *reinterpret_cast<std::uint8_t *>(currentDialog + 0x18) =
+                  1; // finished state
+              *reinterpret_cast<std::int32_t *>(currentDialog + 0x30) =
+                  0; // result code
+              *reinterpret_cast<std::uint8_t *>(currentDialog + 0x24ec) =
+                  1; // pressed button type
             } else {
               ORBIS_LOG_TODO("Activate unsupported dialog", currentDialogId);
+              rx::hexdump(currentDialog, currentDialogSize);
             }
             return 0;
           })
@@ -816,6 +828,19 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
           });
 
   createIpmiServer(process, "SceNpTrophyIpc")
+      .addSyncMethod(0,
+                     [](orbis::IpmiSession &session,
+                        std::vector<std::vector<std::byte>> &out,
+                        const std::vector<std::span<std::byte>> &) {
+                       if (out.size() != 1 ||
+                           out[0].size() < sizeof(std::uint32_t)) {
+                         return orbis::ErrorCode::INVAL;
+                       }
+
+                       out = {toBytes<std::uint32_t>(1)};
+                       session.client->eventFlags[0].set(1);
+                       return orbis::ErrorCode{};
+                     })
       .addSyncMethod(2,
                      [](std::vector<std::vector<std::byte>> &out,
                         const std::vector<std::span<std::byte>> &) {
@@ -854,11 +879,11 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
                        return orbis::ErrorCode{};
                      })
       .addAsyncMethod(0x90024,
-                      [](orbis::IpmiSession &,
+                      [](orbis::IpmiSession &session,
                          std::vector<std::vector<std::byte>> &out,
                          const std::vector<std::span<std::byte>> &) {
                         out.push_back(toBytes<std::uint32_t>(0));
-                        // session.client->eventFlags[0].set(1);
+                        session.client->eventFlags[0].set(1);
                         return orbis::ErrorCode{};
                       })
       .addAsyncMethod(0x90026, [](orbis::IpmiSession &session,
@@ -929,7 +954,6 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
                        out[1] = toBytes<std::uint32_t>(1);
                        return orbis::ErrorCode{};
                      })
-
       .addSyncMethod<std::uint32_t, std::uint32_t>(
           0x3000f, [](std::uint32_t &result, std::uint32_t unk) {
             rx::println(stderr, "PlayGo: 0x3000f {:x}", unk);
