@@ -140,7 +140,7 @@ handleSigUser(int sig, siginfo_t *info, void *ucontext) {
     ORBIS_LOG_WARNING(__FUNCTION__, "handled signal", guestSignal, inGuestCode,
                       ::getpid(), thread->tid);
 
-    if (!rx::thread::invokeSignalHandler(thread, guestSignal,
+    if (!rx::thread::invokeSignalHandler(thread, info, guestSignal,
                                          inGuestCode ? context : nullptr)) {
       // no handler, mark signal as delivered
       std::uint32_t prevValue = 1;
@@ -174,8 +174,8 @@ std::size_t rx::thread::getSigAltStackSize() {
   return sigStackSize;
 }
 
-bool rx::thread::invokeSignalHandler(orbis::Thread *thread, int guestSignal,
-                                     ucontext_t *context) {
+bool rx::thread::invokeSignalHandler(orbis::Thread *thread, siginfo_t *siginfo,
+                                     int guestSignal, ucontext_t *context) {
   auto it = thread->tproc->sigActions.find(guestSignal);
 
   if (it == thread->tproc->sigActions.end()) {
@@ -202,7 +202,8 @@ bool rx::thread::invokeSignalHandler(orbis::Thread *thread, int guestSignal,
   auto &sigFrame = *std::bit_cast<orbis::SigFrame *>(rsp);
   sigFrame = {};
 
-  rx::thread::copyContext(thread, sigFrame.context, *guestContext);
+  rx::thread::copyContext(thread, sigFrame.context, *guestContext,
+                          std::bit_cast<std::uint64_t>(siginfo->si_addr));
   sigFrame.info.signo = guestSignal;
   sigFrame.handler = handlerPtr;
 
@@ -219,7 +220,8 @@ bool rx::thread::invokeSignalHandler(orbis::Thread *thread, int guestSignal,
   return true;
 }
 
-void rx::thread::copyContext(orbis::MContext &dst, const mcontext_t &src) {
+void rx::thread::copyContext(orbis::MContext &dst, const mcontext_t &src,
+                             std::uint64_t addr) {
   // dst.onstack = src.gregs[REG_ONSTACK];
   dst.rdi = src.gregs[REG_RDI];
   dst.rsi = src.gregs[REG_RSI];
@@ -239,7 +241,7 @@ void rx::thread::copyContext(orbis::MContext &dst, const mcontext_t &src) {
   dst.trapno = src.gregs[REG_TRAPNO];
   dst.fs = src.gregs[REG_CSGSFS] & 0xffff;
   dst.gs = (src.gregs[REG_CSGSFS] >> 16) & 0xffff;
-  // dst.addr = src.gregs[REG_ADDR];
+  dst.addr = addr;
   // dst.flags = src.gregs[REG_FLAGS];
   // dst.es = src.gregs[REG_ES];
   // dst.ds = src.gregs[REG_DS];
@@ -264,13 +266,13 @@ void rx::thread::copyContext(orbis::MContext &dst, const mcontext_t &src) {
 }
 
 void rx::thread::copyContext(orbis::Thread *thread, orbis::UContext &dst,
-                             const ucontext_t &src) {
+                             const ucontext_t &src, std::uint64_t addr) {
   dst = {};
   dst.stack.sp = thread->stackStart;
   dst.stack.size = (char *)thread->stackEnd - (char *)thread->stackStart;
   dst.stack.align = 16;
   dst.sigmask = thread->sigMask;
-  copyContext(dst.mcontext, src.uc_mcontext);
+  copyContext(dst.mcontext, src.uc_mcontext, addr);
 }
 
 void rx::thread::setContext(orbis::Thread *thread, const orbis::UContext &src) {

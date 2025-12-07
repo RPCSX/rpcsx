@@ -194,7 +194,7 @@ handle_signal(int sig, siginfo_t *info, void *ucontext) {
             context->uc_mcontext.gregs[REG_RIP] < orbis::kMaxAddress;
 
         if (inGuestCode) {
-          if (rx::thread::invokeSignalHandler(orbis::g_currentThread,
+          if (rx::thread::invokeSignalHandler(orbis::g_currentThread, info,
                                               *guestSigno, context)) {
             return;
           }
