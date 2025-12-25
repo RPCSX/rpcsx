@@ -220,7 +220,7 @@ void amdgpu::draw(GraphicsPipe &pipe, int vmId, std::uint32_t firstVertex,
       continue;
     }
 
-    auto viewPortScissor = pipe.context.paScScreenScissor;
+    PaScRect viewPortScissor = pipe.context.paScScreenScissor;
     viewPortScissor = gnm::intersection(
         viewPortScissor, pipe.context.paScVportScissor[renderTargets]);
     viewPortScissor =

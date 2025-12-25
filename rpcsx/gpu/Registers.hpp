@@ -4,6 +4,7 @@
 #include "gnm/constants.hpp"
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 
 namespace amdgpu {
@@ -55,8 +56,8 @@ struct Register<Offset, ImplT> : detail::Padding<Offset> {
   ImplT value;
 
   Register() = default;
-  Register(const Register &) = default;
-  Register &operator=(const Register &) = default;
+  Register(const Register &) = delete;
+  Register &operator=(const Register &) = delete;
   Register &operator=(ImplT newValue) {
     value = newValue;
     return *this;
@@ -549,19 +550,21 @@ struct Registers {
   struct Config {
     static constexpr auto kMmioOffset = 0x2000;
 
-    Register<0xad, std::array<std::uint32_t, 3>> cpPrtLodStatsCntls;
-    Register<0x1c0> cpRbRptr;
-    Register<0x1bf> cpRb1Rptr;
-    Register<0x1be> cpRb2Rptr;
-    Register<0x232> vgtEsGsRingSize;
-    Register<0x233> vgtGsVsRingSize;
-    Register<0x262> vgtTfRingSize;
-    Register<0x26e> vgtTfMemoryBase;
-    Register<0x3c0, std::array<std::uint32_t, 4>> sqBufRsrcWords;
-    Register<0x3c4, std::array<std::uint32_t, 7>> sqImgRsrcWords;
-    Register<0x3cc, std::array<std::uint32_t, 4>> sqImgSampWords;
-    Register<0x644, std::array<TileMode, 32>> gbTileModes;
-    Register<0x664, std::array<MacroTileMode, 16>> gbMacroTileModes;
+    union {
+      Register<0xad, std::array<std::uint32_t, 3>> cpPrtLodStatsCntls;
+      Register<0x1c0> cpRbRptr;
+      Register<0x1bf> cpRb1Rptr;
+      Register<0x1be> cpRb2Rptr;
+      Register<0x232> vgtEsGsRingSize;
+      Register<0x233> vgtGsVsRingSize;
+      Register<0x262> vgtTfRingSize;
+      Register<0x26e> vgtTfMemoryBase;
+      Register<0x3c0, std::array<std::uint32_t, 4>> sqBufRsrcWords;
+      Register<0x3c4, std::array<std::uint32_t, 7>> sqImgRsrcWords;
+      Register<0x3cc, std::array<std::uint32_t, 4>> sqImgSampWords;
+      Register<0x644, std::array<TileMode, 32>> gbTileModes;
+      Register<0x664, std::array<MacroTileMode, 16>> gbMacroTileModes;
+    };
   };
 
   struct ComputeConfig {
@@ -667,6 +670,16 @@ struct Registers {
   struct Context {
     static constexpr auto kMmioOffset = 0xa000;
     static Context Default;
+
+    Context() = default;
+    Context(const Context &other) {
+      std::memcpy(static_cast<void *>(this), &other, sizeof(Context));
+    }
+
+    Context &operator=(const Context &other) {
+      std::memcpy(static_cast<void *>(this), &other, sizeof(Context));
+      return *this;
+    }
 
     union {
       Register<0x0, DbRenderControl> dbRenderControl;
