@@ -1,8 +1,8 @@
 #include "debug.hpp"
 #include "Process.hpp"
+#include "filesystem.hpp"
 #include "print.hpp"
 #include <fstream>
-#include <list>
 #include <thread>
 #include <vector>
 
@@ -15,7 +15,6 @@
 #else
 
 #ifdef __linux__
-#include <linux/limits.h>
 #include <sys/ptrace.h>
 #endif
 #include <unistd.h>
@@ -86,37 +85,36 @@ void rx::waitForDebugger() {
 }
 
 void rx::runDebugger() {
-#ifdef __linux__
-  int pid = ::getpid();
-  char path[PATH_MAX];
-  ::readlink("/proc/self/exe", path, sizeof(path));
-  if (fork()) {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    waitForDebugger();
+  auto pid = getCurrentProcessId();
+  auto path = rx::getExecutablePath();
+
+  auto pidString = std::to_string(pid);
+
+  // Find gdb in PATH
+  auto gdbPath = rx::findExecutable("gdb");
+
+  if (gdbPath.empty()) {
     return;
   }
 
-  auto pidString = std::to_string(pid);
-  const char *gdbPath = "/usr/bin/gdb";
+  std::vector<std::string> args = {
+      path,
+      pidString,
+      "-iex",
+      "set pagination off",
+      "-ex",
+      "handle SIGSYS nostop noprint",
+      "-ex",
+      "handle SIGUSR1 nostop noprint"
+      // TODO: collect elfs
+      //   "-ex", "add-symbol-file <path to elf> 0x400000"
+  };
 
-  std::list<std::string> storage;
-  std::vector<const char *> argv;
-  argv.push_back(gdbPath);
-  argv.push_back(path);
-  argv.push_back(pidString.c_str());
-  argv.push_back("-iex");
-  argv.push_back("set pagination off");
-  argv.push_back("-ex");
-  argv.push_back("handle SIGSYS nostop noprint");
-  argv.push_back("-ex");
-  argv.push_back("handle SIGUSR1 nostop noprint");
-  // TODO: collect elfs
-  //   argv.push_back("-ex");
-  //   argv.push_back("add-symbol-file <path to elf> 0x400000");
-  argv.push_back(nullptr);
-
-  execv(gdbPath, (char **)argv.data());
-#endif
+  ProcessId debuggerPid = rx::spawn(gdbPath, args);
+  if (debuggerPid != static_cast<ProcessId>(-1)) {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    waitForDebugger();
+  }
 }
 
 void rx::breakpoint() {
