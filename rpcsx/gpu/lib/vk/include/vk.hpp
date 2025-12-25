@@ -211,17 +211,43 @@ public:
   }
 
   static DeviceMemory CreateExternalFd(int fd, std::size_t size,
-                                       unsigned memoryTypeIndex) {
-    VkImportMemoryFdInfoKHR importMemoryInfo{
-        VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR,
-        nullptr,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
-        fd,
+                                       VkMemoryPropertyFlags properties) {
+    VkMemoryAllocateFlagsInfo flags{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+        .flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,
     };
+
+    VkImportMemoryFdInfoKHR importFdInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR,
+        .pNext = &flags,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
+        .fd = fd,
+    };
+
+    VkMemoryFdPropertiesKHR fdProperties = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR,
+    };
+
+    auto vkGetMemoryFdPropertiesKHR =
+        (PFN_vkGetMemoryFdPropertiesKHR)vkGetDeviceProcAddr(
+            context->device, "vkGetMemoryFdPropertiesKHR");
+
+    auto vkGetMemoryFdPropertiesResult = vkGetMemoryFdPropertiesKHR(
+        context->device, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
+        fd, &fdProperties);
+
+    if (vkGetMemoryFdPropertiesResult != VK_SUCCESS) {
+      fdProperties.memoryTypeBits = ~0;
+    }
+
+    auto memoryTypeBits = fdProperties.memoryTypeBits;
+
+    auto memoryTypeIndex =
+        context->findPhysicalMemoryTypeIndex(memoryTypeBits, properties);
 
     VkMemoryAllocateInfo allocInfo{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = &importMemoryInfo,
+        .pNext = &importFdInfo,
         .allocationSize = size,
         .memoryTypeIndex = memoryTypeIndex,
     };
@@ -233,11 +259,13 @@ public:
     result.mMemoryTypeIndex = memoryTypeIndex;
     return result;
   }
+
   static DeviceMemory
   CreateExternalHostMemory(void *hostPointer, std::size_t size,
                            VkMemoryPropertyFlags properties) {
     VkMemoryHostPointerPropertiesEXT hostPointerProperties = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT};
+        .sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT,
+    };
 
     auto vkGetMemoryHostPointerPropertiesEXT =
         (PFN_vkGetMemoryHostPointerPropertiesEXT)vkGetDeviceProcAddr(
@@ -249,15 +277,20 @@ public:
 
     auto memoryTypeBits = hostPointerProperties.memoryTypeBits;
 
-    VkImportMemoryHostPointerInfoEXT importMemoryInfo = {
-        VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
-        nullptr,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
-        hostPointer,
-    };
-
     auto memoryTypeIndex =
         context->findPhysicalMemoryTypeIndex(memoryTypeBits, properties);
+
+    VkMemoryAllocateFlagsInfo flags{
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+        .flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,
+    };
+
+    VkImportMemoryHostPointerInfoEXT importMemoryInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
+        .pNext = &flags,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
+        .pHostPointer = hostPointer,
+    };
 
     VkMemoryAllocateInfo allocInfo{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -315,6 +348,15 @@ public:
   void free() {
     clear();
     mMemory = {};
+  }
+
+  void initFromFd(int fd, std::size_t size) {
+    assert(mMemory.getHandle() == nullptr);
+    auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    mMemory = DeviceMemory::CreateExternalFd(fd, size, properties);
+    table.map(rx::AddressRange::fromBeginSize(0, size));
+    // debugName = "fd-direct";
   }
 
   void initFromHost(void *data, std::size_t size) {
@@ -732,8 +774,10 @@ public:
                  VkSharingMode sharingMode = VK_SHARING_MODE_EXCLUSIVE,
                  std::span<const std::uint32_t> queueFamilyIndices = {}) {
     VkExternalMemoryBufferCreateInfo info{
-        VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO, nullptr,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT};
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT,
+    };
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
