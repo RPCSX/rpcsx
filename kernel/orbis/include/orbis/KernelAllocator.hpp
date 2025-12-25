@@ -3,6 +3,7 @@
 #include "rx/Rc.hpp"
 #include <deque>
 #include <map>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -78,11 +79,27 @@ T *knew(Args &&...args) {
 
 // clang-format off
 template <typename T> void kdelete(T *ptr) {
-  static_assert(std::is_final_v<T>, "Uncertain type size");
-  ptr->~T();
-  kfree(ptr, sizeof(T));
+  static_assert(!std::is_void_v<T>);
+  static_assert(sizeof(T) > 0);
+
+  if constexpr (std::is_base_of_v<rx::RcBase, T>) {
+    delete ptr;
+  } else {
+    static_assert(!std::is_polymorphic_v<T>,
+                  "Polymorphic type should be derived from rx::RcBase");
+    ptr->~T();
+    kfree(ptr, sizeof(T));
+  }
 }
 // clang-format on
+
+template <typename T> struct KDelete {
+  void operator()(T *ptr) const {
+    kdelete(ptr);
+  }
+};
+
+template <typename T> using kunique_ptr = std::unique_ptr<T, KDelete<T>>;
 
 void initializeAllocator();
 void deinitializeAllocator();
