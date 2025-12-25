@@ -107,7 +107,7 @@ struct SamplerKey {
   bool compareEnable;
   bool unnormalizedCoordinates;
 
-  static SamplerKey createFrom(const gnm::SSampler &sampler);
+  static SamplerKey createFrom(const gnm::Sampler &sampler);
 
   auto operator<=>(const SamplerKey &other) const = default;
 };

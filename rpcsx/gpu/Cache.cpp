@@ -195,17 +195,18 @@ void Cache::ShaderResources::loadResources(
     std::memcpy(reinterpret_cast<std::uint32_t *>(&buffer) + 3, &*word3,
                 sizeof(std::uint32_t));
 
-    if (auto it = bufferMemoryTable.queryArea(buffer.address());
+    if (auto it = bufferMemoryTable.queryArea(buffer.getAddress());
         it != bufferMemoryTable.end() &&
-        it.beginAddress() == buffer.address() && it.size() == buffer.size()) {
+        it.beginAddress() == buffer.getAddress() &&
+        it.size() == buffer.size()) {
       it.get() |= bufferRes.access;
     } else {
       bufferMemoryTable.map(
-          rx::AddressRange::fromBeginSize(buffer.address(), buffer.size()),
+          rx::AddressRange::fromBeginSize(buffer.getAddress(), buffer.size()),
           bufferRes.access);
     }
     resourceSlotToAddress.emplace_back(slotOffset + bufferRes.resourceSlot,
-                                       buffer.address());
+                                       buffer.getAddress());
   }
 
   for (auto &imageBuffer : res.imageBuffers) {
@@ -251,24 +252,24 @@ void Cache::ShaderResources::loadResources(
     }
 
     auto info = computeSurfaceInfo(
-        getDefaultTileModes()[tbuffer.tiling_idx], tbuffer.type, tbuffer.dfmt,
-        tbuffer.width + 1, tbuffer.height + 1, tbuffer.depth + 1,
-        tbuffer.pitch + 1, 0, tbuffer.last_array + 1, 0, tbuffer.last_level + 1,
-        tbuffer.pow2pad != 0);
+        getDefaultTileModes()[tbuffer.getTilingIndex()], tbuffer.getType(),
+        tbuffer.getDataFormat(), tbuffer.getWidth(), tbuffer.getHeight(),
+        tbuffer.getDepth(), tbuffer.getPitch(), 0, tbuffer.getTotalArrayCount(),
+        0, tbuffer.getTotalLevelCount(), tbuffer.isPow2Pad());
 
-    if (auto it = imageMemoryTable.queryArea(tbuffer.address());
+    if (auto it = imageMemoryTable.queryArea(tbuffer.getAddress());
         it != imageMemoryTable.end() &&
-        it.beginAddress() == tbuffer.address() &&
+        it.beginAddress() == tbuffer.getAddress() &&
         it.size() == info.totalTiledSize) {
       it.get().second |= imageBuffer.access;
     } else {
       imageMemoryTable.map(
-          rx::AddressRange::fromBeginSize(tbuffer.address(),
+          rx::AddressRange::fromBeginSize(tbuffer.getAddress(),
                                           info.totalTiledSize),
           {ImageBufferKey::createFrom(tbuffer), imageBuffer.access});
     }
     resourceSlotToAddress.emplace_back(slotOffset + imageBuffer.resourceSlot,
-                                       tbuffer.address());
+                                       tbuffer.getAddress());
   }
 
   for (auto &texture : res.textures) {
@@ -315,7 +316,7 @@ void Cache::ShaderResources::loadResources(
 
     std::vector<amdgpu::Cache::ImageView> *resources = nullptr;
 
-    switch (tbuffer.type) {
+    switch (tbuffer.getType()) {
     case gnm::TextureType::Array1D:
     case gnm::TextureType::Dim1D:
       resources = &imageResources[0];
@@ -333,8 +334,7 @@ void Cache::ShaderResources::loadResources(
     }
 
     rx::dieIf(resources == nullptr,
-              "ShaderResources: unexpected texture type %u",
-              static_cast<unsigned>(tbuffer.type));
+              "ShaderResources: unexpected texture type {}", tbuffer.getType());
 
     slotResources[slotOffset + texture.resourceSlot] = resources->size();
     resources->push_back(cacheTag->getImageView(
@@ -352,7 +352,7 @@ void Cache::ShaderResources::loadResources(
       rx::die("failed to evaluate S#");
     }
 
-    gnm::SSampler sSampler{};
+    gnm::Sampler sSampler{};
     std::memcpy(reinterpret_cast<std::uint32_t *>(&sSampler), &*word0,
                 sizeof(std::uint32_t));
     std::memcpy(reinterpret_cast<std::uint32_t *>(&sSampler) + 1, &*word1,
@@ -363,7 +363,7 @@ void Cache::ShaderResources::loadResources(
                 sizeof(std::uint32_t));
 
     if (sampler.unorm) {
-      sSampler.force_unorm_coords = true;
+      sSampler.setForceUnormCoords(true);
     }
 
     slotResources[slotOffset + sampler.resourceSlot] = samplerResources.size();
@@ -1117,12 +1117,12 @@ struct CachedImageView : Cache::Entry {
 };
 
 ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &tbuffer) {
-  std::uint32_t width = tbuffer.width + 1u;
-  std::uint32_t height = tbuffer.height + 1u;
-  std::uint32_t depth = tbuffer.depth + 1u;
-  std::uint32_t arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u;
+  std::uint32_t width = tbuffer.getWidth();
+  std::uint32_t height = tbuffer.getHeight();
+  std::uint32_t depth = tbuffer.getDepth();
+  std::uint32_t arrayLayerCount = tbuffer.getArrayCount();
 
-  switch (tbuffer.type) {
+  switch (tbuffer.getType()) {
   case gnm::TextureType::Dim1D:
     height = 1;
     [[fallthrough]];
@@ -1147,39 +1147,39 @@ ImageViewKey ImageViewKey::createFrom(const gnm::TBuffer &tbuffer) {
   }
 
   return {
-      .readAddress = tbuffer.address(),
-      .writeAddress = tbuffer.address(),
-      .type = tbuffer.type,
-      .dfmt = tbuffer.dfmt,
-      .nfmt = tbuffer.nfmt,
-      .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
+      .readAddress = tbuffer.getAddress(),
+      .writeAddress = tbuffer.getAddress(),
+      .type = tbuffer.getType(),
+      .dfmt = tbuffer.getDataFormat(),
+      .nfmt = tbuffer.getNumericFormat(),
+      .tileMode = getDefaultTileModes()[tbuffer.getTilingIndex()],
       .extent =
           {
               .width = width,
               .height = height,
               .depth = depth,
           },
-      .pitch = tbuffer.pitch + 1u,
-      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
-      .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
-      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
+      .pitch = tbuffer.getPitch(),
+      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.getBaseLevel()),
+      .mipCount = tbuffer.getTotalLevelCount(),
+      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.getBaseArray()),
       .arrayLayerCount = arrayLayerCount,
       .kind = ImageKind::Color,
-      .pow2pad = tbuffer.pow2pad != 0,
-      .r = tbuffer.dst_sel_x,
-      .g = tbuffer.dst_sel_y,
-      .b = tbuffer.dst_sel_z,
-      .a = tbuffer.dst_sel_w,
+      .pow2pad = tbuffer.isPow2Pad(),
+      .r = tbuffer.getDstSelX(),
+      .g = tbuffer.getDstSelY(),
+      .b = tbuffer.getDstSelZ(),
+      .a = tbuffer.getDstSelW(),
   };
 }
 
 ImageKey ImageKey::createFrom(const gnm::TBuffer &tbuffer) {
-  std::uint32_t width = tbuffer.width + 1u;
-  std::uint32_t height = tbuffer.height + 1u;
-  std::uint32_t depth = tbuffer.depth + 1u;
-  std::uint32_t arrayLayerCount = tbuffer.last_array + 1u;
+  std::uint32_t width = tbuffer.getWidth();
+  std::uint32_t height = tbuffer.getHeight();
+  std::uint32_t depth = tbuffer.getDepth();
+  std::uint32_t arrayLayerCount = tbuffer.getTotalArrayCount();
 
-  switch (tbuffer.type) {
+  switch (tbuffer.getType()) {
   case gnm::TextureType::Dim1D:
     height = 1;
     [[fallthrough]];
@@ -1204,25 +1204,25 @@ ImageKey ImageKey::createFrom(const gnm::TBuffer &tbuffer) {
   }
 
   return {
-      .readAddress = tbuffer.address(),
-      .writeAddress = tbuffer.address(),
-      .type = tbuffer.type,
-      .dfmt = tbuffer.dfmt,
-      .nfmt = tbuffer.nfmt,
-      .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
+      .readAddress = tbuffer.getAddress(),
+      .writeAddress = tbuffer.getAddress(),
+      .type = tbuffer.getType(),
+      .dfmt = tbuffer.getDataFormat(),
+      .nfmt = tbuffer.getNumericFormat(),
+      .tileMode = getDefaultTileModes()[tbuffer.getTilingIndex()],
       .extent =
           {
               .width = width,
               .height = height,
               .depth = depth,
           },
-      .pitch = tbuffer.pitch + 1u,
-      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
-      .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
+      .pitch = tbuffer.getPitch(),
+      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.getBaseLevel()),
+      .mipCount = tbuffer.getLevelCount(),
       .baseArrayLayer = 0,
       .arrayLayerCount = arrayLayerCount,
       .kind = ImageKind::Color,
-      .pow2pad = tbuffer.pow2pad != 0,
+      .pow2pad = tbuffer.isPow2Pad(),
   };
 }
 
@@ -1247,22 +1247,22 @@ ImageKey ImageKey::createFrom(const ImageViewKey &imageView) {
 
 ImageBufferKey ImageBufferKey::createFrom(const gnm::TBuffer &tbuffer) {
   return {
-      .address = tbuffer.address(),
-      .type = tbuffer.type,
-      .dfmt = tbuffer.dfmt,
-      .tileMode = getDefaultTileModes()[tbuffer.tiling_idx],
+      .address = tbuffer.getAddress(),
+      .type = tbuffer.getType(),
+      .dfmt = tbuffer.getDataFormat(),
+      .tileMode = getDefaultTileModes()[tbuffer.getTilingIndex()],
       .extent =
           {
-              .width = tbuffer.width + 1u,
-              .height = tbuffer.height + 1u,
-              .depth = tbuffer.depth + 1u,
+              .width = tbuffer.getWidth(),
+              .height = tbuffer.getHeight(),
+              .depth = tbuffer.getDepth(),
           },
-      .pitch = tbuffer.pitch + 1u,
-      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.base_level),
-      .mipCount = tbuffer.last_level - tbuffer.base_level + 1u,
-      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.base_array),
-      .arrayLayerCount = tbuffer.last_array - tbuffer.base_array + 1u,
-      .pow2pad = tbuffer.pow2pad != 0,
+      .pitch = tbuffer.getPitch(),
+      .baseMipLevel = static_cast<std::uint32_t>(tbuffer.getBaseLevel()),
+      .mipCount = tbuffer.getLevelCount(),
+      .baseArrayLayer = static_cast<std::uint32_t>(tbuffer.getBaseArray()),
+      .arrayLayerCount = tbuffer.getArrayCount(),
+      .pow2pad = tbuffer.isPow2Pad(),
   };
 }
 
@@ -1282,26 +1282,26 @@ ImageBufferKey ImageBufferKey::createFrom(const ImageKey &imageKey) {
   };
 }
 
-SamplerKey SamplerKey::createFrom(const gnm::SSampler &sampler) {
-  float lodBias = sampler.lod_bias / 256.f;
+SamplerKey SamplerKey::createFrom(const gnm::Sampler &sampler) {
+  float lodBias = sampler.getLodBias() / 256.f;
   // FIXME: lodBias can be scaled by gnm::TBuffer
 
   return {
-      .magFilter = toVkFilter(sampler.xy_mag_filter),
-      .minFilter = toVkFilter(sampler.xy_min_filter),
-      .mipmapMode = toVkSamplerMipmapMode(sampler.mip_filter),
-      .addressModeU = toVkSamplerAddressMode(sampler.clamp_x),
-      .addressModeV = toVkSamplerAddressMode(sampler.clamp_y),
-      .addressModeW = toVkSamplerAddressMode(sampler.clamp_z),
+      .magFilter = toVkFilter(sampler.getXYMagFilter()),
+      .minFilter = toVkFilter(sampler.getXYMinFilter()),
+      .mipmapMode = toVkSamplerMipmapMode(sampler.getMipFilter()),
+      .addressModeU = toVkSamplerAddressMode(sampler.getClampX()),
+      .addressModeV = toVkSamplerAddressMode(sampler.getClampY()),
+      .addressModeW = toVkSamplerAddressMode(sampler.getClampZ()),
       .mipLodBias = lodBias,
       .maxAnisotropy = 0, // max_aniso_ratio
-      .compareOp = toVkCompareOp(sampler.depth_compare_func),
-      .minLod = sampler.min_lod / 256.f,
-      .maxLod = sampler.max_lod / 256.f,
-      .borderColor = toVkBorderColor(sampler.border_color_type),
+      .compareOp = toVkCompareOp(sampler.getDepthCompareFunc()),
+      .minLod = sampler.getMinLod() / 256.f,
+      .maxLod = sampler.getMaxLod() / 256.f,
+      .borderColor = toVkBorderColor(sampler.getBorderColor()),
       .anisotropyEnable = false,
-      .compareEnable = sampler.depth_compare_func != gnm::CompareFunc::Never,
-      .unnormalizedCoordinates = sampler.force_unorm_coords != 0,
+      .compareEnable = sampler.getDepthCompareFunc() != gnm::CompareFunc::Never,
+      .unnormalizedCoordinates = sampler.isForceUnormCoords(),
   };
 }
 
