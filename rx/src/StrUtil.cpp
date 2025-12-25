@@ -21,7 +21,7 @@
 std::wstring rx::toWchar(std::string_view src) {
 #ifdef _WIN32
   std::wstring wchar_string;
-  const int size = ::narrow<int>(src.size());
+  const int size = static_cast<int>(src.size());
   const auto tmp_size =
       MultiByteToWideChar(CP_UTF8, 0, src.data(), size, nullptr, 0);
   wchar_string.resize(tmp_size);
@@ -37,7 +37,7 @@ std::wstring rx::toWchar(std::string_view src) {
 std::string rx::toUtf8(std::wstring_view src) {
 #ifdef _WIN32
   std::string utf8_string;
-  const int size = ::narrow<int>(src.size());
+  const int size = static_cast<int>(src.size());
   const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src.data(), size,
                                             nullptr, 0, nullptr, nullptr);
   utf8_string.resize(tmp_size);
