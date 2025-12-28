@@ -28,12 +28,32 @@ rx::Mappable::CreateMemory(std::size_t size) {
   rx::Mappable result;
 
 #ifdef _WIN32
-  auto handle = CreateFileMapping2(INVALID_HANDLE_VALUE, nullptr,
-                                   FILE_MAP_ALL_ACCESS, PAGE_EXECUTE_READWRITE,
-                                   SEC_COMMIT, size, nullptr, nullptr, 0);
+  HANDLE handle = nullptr;
 
-  if (!handle) {
-    return {rx::Mappable{}, std::errc::invalid_argument};
+  for (std::size_t i = 0; i < 100; ++i) {
+    handle = CreateFileMapping2(INVALID_HANDLE_VALUE, nullptr,
+                                FILE_MAP_ALL_ACCESS, PAGE_EXECUTE_READWRITE,
+                                SEC_COMMIT, size, nullptr, nullptr, 0);
+
+    if (!handle) {
+      int error = ::GetLastError();
+
+      if (error == ERROR_NO_SYSTEM_RESOURCES) {
+        continue;
+      }
+
+      if (error == ERROR_COMMITMENT_LIMIT) {
+        return {rx::Mappable{}, std::errc::not_enough_memory};
+      }
+
+      return {rx::Mappable{}, std::errc::invalid_argument};
+    }
+
+    break;
+  }
+
+  if (handle == nullptr) {
+    return {rx::Mappable{}, std::errc::resource_unavailable_try_again};
   }
 
   result.m_handle = handle;
@@ -96,6 +116,19 @@ std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
                             .toUnderlying()];
 
   mem::release(virtualRange, alignment);
+
+  if (alignment == 0) {
+    auto pointer = std::bit_cast<void *>(virtualRange.beginAddress());
+
+    auto result = MapViewOfFile3((HANDLE)m_handle, nullptr, pointer, offset,
+                                 virtualRange.size(), MEM_REPLACE_PLACEHOLDER,
+                                 prot, nullptr, 0);
+    if (!result) {
+      return std::errc::invalid_argument;
+    }
+
+    return {};
+  }
 
   for (std::uintptr_t address = virtualRange.beginAddress();
        address < virtualRange.endAddress();
