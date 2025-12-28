@@ -7,6 +7,7 @@ add_library(${PROJECT_NAME} OBJECT
     src/die.cpp
     src/FileLock.cpp
     src/filesystem.cpp
+    src/fork.cpp
     src/hexdump.cpp
     src/Mappable.cpp
     src/mem.cpp
