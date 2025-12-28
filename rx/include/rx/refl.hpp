@@ -173,6 +173,8 @@ constexpr auto calcFieldCount() {
     return static_cast<std::size_t>(EnumT::_count);
   } else if constexpr (requires { EnumT::count; }) {
     return static_cast<std::size_t>(EnumT::count);
+  } else if constexpr (requires { EnumT::_last; }) {
+    return static_cast<std::size_t>(EnumT::_last) + 1;
   } else if constexpr (!requires { getNameOf<EnumT(N)>()[0]; }) {
     if constexpr (requires { getNameOf<EnumT(N + 1)>()[0]; }) {
       if constexpr (constexpr auto c = getNameOf<EnumT(N + 1)>()[0];

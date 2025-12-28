@@ -41,15 +41,27 @@ struct format_string_impl : fmt::format_string<Args...> {
     return std::string_view(this->str);
   }
 };
+
+template <typename T> struct make_format_arg_type {
+  using type = T &;
+};
+
+template <typename T>
+  requires requires(const T &arg) { fmt::make_format_args(arg); }
+struct make_format_arg_type<T> {
+  using type = const T &;
+};
+
 } // namespace detail
 
 template <typename... Args>
 using format_string = std::type_identity_t<detail::format_string_impl<Args...>>;
 
 template <typename... Args>
-auto make_format_args(const Args &...args)
-    -> decltype(fmt::make_format_args(const_cast<Args &>(args)...)) {
-  return fmt::make_format_args(const_cast<Args &>(args)...);
+auto make_format_args(const Args &...args) -> decltype(fmt::make_format_args(
+    const_cast<detail::make_format_arg_type<Args>::type>(args)...)) {
+  return fmt::make_format_args(
+      const_cast<detail::make_format_arg_type<Args>::type>(args)...);
 }
 
 using fmt::format_to;
