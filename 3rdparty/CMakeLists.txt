@@ -50,14 +50,21 @@ target_link_libraries(3rdparty_json INTERFACE nlohmann_json)
 add_subdirectory(LibAtrac9)
 
 if (COMPILE_FFMPEG)
-	set(FFMPEG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg) 
+	set(FFMPEG_SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/FFmpeg)
+	set(FFMPEG_BIN_PATH ${CMAKE_CURRENT_BINARY_DIR}/FFmpeg)
+	make_directory(${FFMPEG_BIN_PATH})
+
+	if (${CMAKE_CROSSCOMPILING})
+		set(FFMPEG_FLAGS --enable-cross-compile --extra-cflags="--target=${CMAKE_C_COMPILER_TARGET}" --extra-ldflags="--target=${CMAKE_C_COMPILER_TARGET}")
+	endif()
+
 	add_custom_command(
-		OUTPUT ${FFMPEG_PATH}/config.h
-		COMMAND ./configure --disable-libdrm --disable-vaapi --disable-vdpau --disable-zlib --disable-lzma
+		OUTPUT ${FFMPEG_BIN_PATH}/config.h
+		COMMAND "${FFMPEG_SRC_PATH}/configure" "--cc=${CMAKE_C_COMPILER}" "--windres=${CMAKE_RC_COMPILER}" "--ld=${CMAKE_C_COMPILER}" ${FFMPEG_FLAGS} --disable-libdrm --disable-vaapi --disable-vdpau --disable-zlib --disable-lzma
 		COMMENT "Configuring FFmpeg..."
-		WORKING_DIRECTORY ${FFMPEG_PATH}
+		WORKING_DIRECTORY ${FFMPEG_BIN_PATH}
 	)
-	add_custom_target(ffmpeg-configure DEPENDS ${FFMPEG_PATH}/config.h)
+	add_custom_target(ffmpeg-configure DEPENDS ${FFMPEG_BIN_PATH}/config.h)
 
 	function(import_ffmpeg_library name)
 		if (${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
@@ -69,18 +76,18 @@ if (COMPILE_FFMPEG)
 		endif()
 
 		add_custom_command(
-			OUTPUT "${FFMPEG_PATH}/lib${name}/lib${name}.a"
-			COMMAND ${MAKE_COMMAND} -C ${FFMPEG_PATH} "lib${name}/lib${name}.a"
+			OUTPUT "${FFMPEG_BIN_PATH}/lib${name}/lib${name}.a"
+			COMMAND ${MAKE_COMMAND} -C "${FFMPEG_BIN_PATH}" "lib${name}/lib${name}.a"
 			COMMENT "Building lib${name}/lib${name}.a"
 			DEPENDS ffmpeg-configure
-			WORKING_DIRECTORY ${FFMPEG_PATH}
+			WORKING_DIRECTORY ${FFMPEG_BIN_PATH}
 		)
 
-		add_custom_target(ffmpeg-build-${name} DEPENDS "${FFMPEG_PATH}/lib${name}/lib${name}.a")
+		add_custom_target(ffmpeg-build-${name} DEPENDS "${FFMPEG_BIN_PATH}/lib${name}/lib${name}.a")
 
 		add_library(ffmpeg::${name} STATIC IMPORTED GLOBAL)
-		set_property(TARGET ffmpeg::${name} PROPERTY IMPORTED_LOCATION "${FFMPEG_PATH}/lib${name}/lib${name}.a")
-		set_property(TARGET ffmpeg::${name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_PATH}")
+		set_property(TARGET ffmpeg::${name} PROPERTY IMPORTED_LOCATION "${FFMPEG_BIN_PATH}/lib${name}/lib${name}.a")
+		set_property(TARGET ffmpeg::${name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_SRC_PATH}" "${FFMPEG_BIN_PATH}")
 		add_dependencies(ffmpeg::${name} ffmpeg-build-${name})
 	endfunction()
 
@@ -279,13 +286,13 @@ if (NOT COMPILE_VULKAN_LOADER OR ANDROID OR APPLE)
 endif()
 
 if (COMPILE_VULKAN_LOADER)
-	find_package(xcb)
+	find_package(xcb QUIET)
 	if (NOT xcb_FOUND)
 		message(WARNING "Compiling Vulkan-Loader without XCB support")
 		set(BUILD_WSI_XCB_SUPPORT off)
 	endif()
 
-	find_package(x11)
+	find_package(x11 QUIET)
 	if (NOT x11_FOUND)
 		message(WARNING "Compiling Vulkan-Loader without X11 support")
 		set(BUILD_WSI_XLIB_SUPPORT off)
