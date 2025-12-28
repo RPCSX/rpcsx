@@ -143,6 +143,27 @@ int shared_atomic32::notify_n(int count) const {
 #include <cmath>
 #include <windows.h>
 
+static auto g_events = [] {
+  std::array<HANDLE, 256> result;
+  SECURITY_ATTRIBUTES securityAttr{
+      .nLength = sizeof(SECURITY_ATTRIBUTES),
+      .lpSecurityDescriptor = nullptr,
+      .bInheritHandle = true,
+  };
+
+  for (auto &handle : result) {
+    handle = CreateEvent(&securityAttr, false, false, nullptr);
+  }
+  return result;
+}();
+
+static HANDLE getEventFor(const shared_atomic32 *atomic) {
+  auto hash = (2654404609 * std::bit_cast<std::uintptr_t>(atomic)) >> 26;
+  hash ^= hash >> 16;
+  hash ^= hash >> 8;
+  return g_events[hash & 0xff];
+}
+
 std::errc shared_atomic32::wait_impl(std::uint32_t oldValue,
                                      std::chrono::microseconds usec_timeout) {
 
@@ -151,57 +172,48 @@ std::errc shared_atomic32::wait_impl(std::uint32_t oldValue,
   bool unblock = (!useTimeout || usec_timeout.count() > 1000) &&
                  g_scopedUnblock != nullptr;
 
+  auto event = getEventFor(this);
+
   if (unblock) {
     if (!g_scopedUnblock(true)) {
       return std::errc::interrupted;
     }
   }
 
-  BOOL result = WaitOnAddress(
-      this, &oldValue, sizeof(std::uint32_t),
-      useTimeout
-          ? std::chrono::duration_cast<std::chrono::milliseconds>(usec_timeout)
-                .count()
-          : INFINITY);
-
-  DWORD error = 0;
-  if (!result) {
-    error = GetLastError();
-  } else {
-    if (load(std::memory_order::relaxed) == oldValue) {
-      error = ERROR_ALERTED; // dummy error
-    }
+  if (load(std::memory_order::relaxed) != oldValue) {
+    return {};
   }
 
-  if (unblock) {
-    if (!g_scopedUnblock(false)) {
-      if (result != TRUE) {
-        return std::errc::interrupted;
-      }
+  auto timeoutMs = INFINITE;
 
-      return {};
-    }
+  if (useTimeout) {
+    timeoutMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(usec_timeout)
+            .count();
   }
 
-  if (error == ERROR_TIMEOUT) {
+  auto result = WaitForSingleObject(event, timeoutMs);
+
+  bool unblockInterrupted = unblock && !g_scopedUnblock(false);
+
+  if (result == WAIT_OBJECT_0) {
+    return {};
+  }
+
+  if (result == WAIT_TIMEOUT) {
     return std::errc::timed_out;
+  }
+
+  if (unblockInterrupted) {
+    return std::errc::interrupted;
   }
 
   return std::errc::resource_unavailable_try_again;
 }
 
 int shared_atomic32::notify_n(int count) const {
-  if (count == 1) {
-    WakeByAddressSingle(const_cast<shared_atomic32 *>(this));
-  } else if (count == std::numeric_limits<int>::max()) {
-    WakeByAddressAll(const_cast<shared_atomic32 *>(this));
-  } else {
-    for (int i = 0; i < count; ++i) {
-      WakeByAddressSingle(const_cast<shared_atomic32 *>(this));
-    }
-  }
-
-  return 1; // FIXME
+  SetEvent(getEventFor(this));
+  return 1;
 }
 #else
 #error Unimplemented atomic for this platform
