@@ -457,6 +457,27 @@ else()
 	add_library(3rdparty::glfw ALIAS glfw)
 endif()
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+set(XED_SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/xed) 
+set(XED_BIN_PATH ${CMAKE_CURRENT_BINARY_DIR}/xed)
+make_directory(${XED_BIN_PATH}/obj)
+
+if (${CMAKE_CROSSCOMPILING})
+	set(XED_FLAGS --extra-flags="--target=${CMAKE_C_COMPILER_TARGET}" --extra-linkflags="--target=${CMAKE_C_COMPILER_TARGET}")
+endif()
+
+add_custom_command(
+	OUTPUT "${XED_BIN_PATH}/obj/libxed.a"
+	COMMAND "${Python3_EXECUTABLE}" "${XED_SRC_PATH}/mfile.py" "--cc=${CMAKE_C_COMPILER}" "--cxx=${CMAKE_CXX_COMPILER}" "--linker=${CMAKE_CXX_COMPILER}" ${XED_FLAGS}
+	COMMENT "Building xed..."
+	WORKING_DIRECTORY ${XED_BIN_PATH}
+)
+add_custom_target(xed-build DEPENDS "${XED_BIN_PATH}/obj/libxed.a")
+add_library(xed STATIC IMPORTED GLOBAL)
+set_property(TARGET xed PROPERTY IMPORTED_LOCATION "${XED_BIN_PATH}/obj/libxed.a")
+set_property(TARGET xed PROPERTY INTERFACE_INCLUDE_DIRECTORIES "${XED_SRC_PATH}/include/public/xed/" "${XED_BIN_PATH}/obj")
+add_dependencies(xed xed-build)
 
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
