@@ -142,7 +142,7 @@
 	url = ../../glfw/glfw.git
 [submodule "3rdparty/xed"]
 	path = 3rdparty/xed
-	url = https://github.com/intelxed/xed.git
+	url = ../../intelxed/xed.git
 [submodule "3rdparty/mbuild"]
 	path = 3rdparty/mbuild
-	url = https://github.com/intelxed/mbuild.git
+	url = ../../intelxed/mbuild.git
