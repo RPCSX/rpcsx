@@ -1,5 +1,6 @@
 #include "mem.hpp"
 #include "die.hpp"
+#include "print.hpp"
 
 #ifdef _WIN32
 #define NTDDI_VERSION NTDDI_WIN10_NI
@@ -17,8 +18,15 @@ const std::size_t rx::mem::pageSize = [] {
   ::GetSystemInfo(&info);
   return info.dwPageSize;
 }();
+const std::size_t rx::mem::allocationPageSize = [] {
+  SYSTEM_INFO info;
+  ::GetSystemInfo(&info);
+  return info.dwAllocationGranularity;
+}();
+
 #else
 const std::size_t rx::mem::pageSize = sysconf(_SC_PAGE_SIZE);
+const std::size_t rx::mem::allocationPageSize = rx::mem::pageSize;
 #endif
 
 std::errc rx::mem::reserve(rx::AddressRange range) {
@@ -53,6 +61,16 @@ std::errc rx::mem::release(rx::AddressRange range,
                            [[maybe_unused]] std::size_t alignment) {
 #ifdef _WIN32
   // simple and stupid implementation
+  if (alignment == 0) {
+    auto pointer = std::bit_cast<void *>(range.beginAddress());
+    if (!UnmapViewOfFileEx(pointer, MEM_PRESERVE_PLACEHOLDER)) {
+      VirtualFree(pointer, range.size(),
+                  MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+    }
+
+    return {};
+  }
+
   for (std::uintptr_t address = range.beginAddress();
        address < range.endAddress(); address += alignment) {
     auto pointer = std::bit_cast<void *>(address);
@@ -118,8 +136,15 @@ std::vector<rx::mem::VirtualQueryEntry> rx::mem::query(rx::AddressRange range) {
     }
 
     auto region = rx::AddressRange::fromBeginSize(
-                      (std::uintptr_t)info.BaseAddress, info.RegionSize)
-                      .intersection(range);
+        (std::uintptr_t)info.BaseAddress, info.RegionSize);
+
+    if (info.State != MEM_FREE) {
+      region = rx::AddressRange::fromBeginEnd(
+          rx::alignDown(region.beginAddress(), allocationPageSize),
+          rx::alignUp(region.endAddress(), allocationPageSize));
+    }
+
+    region = region.intersection(range);
 
     address = region.endAddress();
 

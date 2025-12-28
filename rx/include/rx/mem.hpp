@@ -24,6 +24,8 @@ struct VirtualQueryEntry : rx::AddressRange {
 };
 
 extern const std::size_t pageSize;
+extern const std::size_t allocationPageSize;
+
 std::errc reserve(rx::AddressRange range);
 std::errc release(rx::AddressRange range, std::size_t alignment);
 std::errc protect(rx::AddressRange range, rx::EnumBitSet<Protection> prot);
