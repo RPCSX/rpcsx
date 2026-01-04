@@ -100,6 +100,8 @@ enum class TextureType : std::uint8_t {
   Array2D,
   Msaa2D,
   MsaaArray2D,
+
+  _last = MsaaArray2D
 };
 
 enum class IndexType : std::uint8_t {
@@ -177,8 +179,8 @@ enum class CompareFunc : std::uint8_t {
 };
 
 enum class BorderColor : std::uint8_t {
-  OpaqueBlack,
   TransparentBlack,
+  OpaqueBlack,
   White,
   Custom,
 };
