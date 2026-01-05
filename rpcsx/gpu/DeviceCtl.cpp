@@ -21,9 +21,9 @@ DeviceCtl &DeviceCtl::operator=(const DeviceCtl &) = default;
 
 DeviceCtl::~DeviceCtl() = default;
 
-DeviceCtl DeviceCtl::createDevice() {
+DeviceCtl DeviceCtl::createDevice(std::uint64_t dmemSize) {
   DeviceCtl result;
-  result.mDevice = orbis::knew<Device>();
+  result.mDevice = orbis::knew<Device>(dmemSize);
   return result;
 }
 
@@ -229,7 +229,10 @@ void DeviceCtl::submitComputeQueue(std::uint32_t meId, std::uint32_t pipeId,
   pipe.submit(queueId, offset);
 }
 
-void DeviceCtl::start() { mDevice->start(); }
+void DeviceCtl::start() {
+  mDevice->initialize();
+  mDevice->start();
+}
 void DeviceCtl::waitForIdle() { mDevice->waitForIdle(); }
 
 void amdgpu::mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,

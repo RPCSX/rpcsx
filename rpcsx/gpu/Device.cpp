@@ -63,18 +63,9 @@ makeDisplayEvent(DisplayEvent id, std::uint16_t unk0 = 0,
   return result;
 }
 
-static vk::Context createVkContext(Device *device) {
+static vk::Context createVkContext(Device *device, std::size_t dmemSize) {
   std::vector<const char *> optionalLayers;
   bool enableValidation = rx::g_config.validateGpu;
-
-  for (std::size_t process = 0; process < 6; ++process) {
-    auto range = rx::AddressRange::fromBeginSize(
-        0x40'0000 + 0x100'0000'0000 * process, 0x100'0000'0000 - 0x40'0000);
-    if (auto errc = rx::mem::reserve(range); errc != std::errc{}) {
-      rx::die("failed to reserve userspace memory: {} {:x}-{:x}", (int)errc,
-              range.beginAddress(), range.endAddress());
-    }
-  }
 
   auto createWindow = [=] {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -142,17 +133,22 @@ static vk::Context createVkContext(Device *device) {
 
   result.createDevice(device->surface, rx::g_config.gpuIndex,
                       {
-                          // VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
-                          // VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
-                          // VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
-                          // VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
-                          // VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
-                          // VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+
+#ifdef _WIN32
+                          VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
+#else
+                          VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
+#endif
+                          VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME,
                           VK_EXT_SEPARATE_STENCIL_USAGE_EXTENSION_NAME,
                           VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                           VK_EXT_SHADER_OBJECT_EXTENSION_NAME,
                           VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
                           VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+                          // VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+                          // VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
+                          // VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
+                          // VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
                       },
                       {
                           VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME,
@@ -180,18 +176,70 @@ static vk::Context createVkContext(Device *device) {
       getTotalMemorySize(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-  vk::getHostVisibleMemory().initHostVisible(
-      std::min(hostVisibleMemoryTotalSize / 2, 1ul * 1024 * 1024 * 1024));
+  vk::getDirectMemory().initHostDirect(dmemSize);
+
+  vk::getHostVisibleMemory().initHostVisible(512 * 1024 *
+                                             1024); // FIXME: reduce RAM usage
   vk::getDeviceLocalMemory().initDeviceLocal(
       std::min(localMemoryTotalSize / 4, 4ul * 1024 * 1024 * 1024));
-
   vk::context = &device->vkContext;
   return result;
 }
 
 const auto kCachePageSize = 0x100'0000'0000 / rx::mem::pageSize;
 
-Device::Device() : vkContext(createVkContext(this)) {
+Device::Device(std::size_t dmemSize)
+    : vkContext(createVkContext(this, dmemSize)) {
+  for (auto &pipe : graphicsPipes) {
+    pipe.device = this;
+  }
+
+  for (auto &cachePage : cachePages) {
+    cachePage = static_cast<std::atomic<std::uint8_t> *>(
+        orbis::kalloc(kCachePageSize, 1));
+    std::memset(cachePage, 0, kCachePageSize);
+  }
+
+  commandPipe.device = this;
+  commandPipe.ring = {
+      .base = std::data(cmdRing),
+      .size = std::size(cmdRing),
+      .rptr = std::data(cmdRing),
+      .wptr = std::data(cmdRing),
+  };
+
+  for (auto &pipe : computePipes) {
+    pipe.device = this;
+  }
+
+  for (int i = 0; i < kGfxPipeCount; ++i) {
+    graphicsPipes[i].setDeQueue(
+        Ring{
+            .base = mainGfxRings[i],
+            .size = std::size(mainGfxRings[i]),
+            .rptr = mainGfxRings[i],
+            .wptr = mainGfxRings[i],
+        },
+        0);
+  }
+}
+
+Device::~Device() {
+  vkDeviceWaitIdle(vk::context->device);
+
+  if (debugMessenger != VK_NULL_HANDLE) {
+    vk::DestroyDebugUtilsMessengerEXT(vk::context->instance, debugMessenger,
+                                      vk::context->allocator);
+  }
+
+  for (auto &cachePage : cachePages) {
+    orbis::kfree(cachePage, kCachePageSize);
+  }
+}
+
+void Device::initialize() {
+  vk::context = &vkContext;
+
   if (!shader::spv::validate(g_rdna_semantic_spirv)) {
     shader::spv::dump(g_rdna_semantic_spirv, true);
     rx::die("builtin semantic validation failed");
@@ -207,16 +255,6 @@ Device::Device() : vkContext(createVkContext(this)) {
     gcnSemantic = shader::gcn::collectSemanticInfo(gcnSemanticModuleInfo);
   } else {
     rx::die("failed to deserialize builtin semantics\n");
-  }
-
-  for (auto &pipe : graphicsPipes) {
-    pipe.device = this;
-  }
-
-  for (auto &cachePage : cachePages) {
-    cachePage = static_cast<std::atomic<std::uint8_t> *>(
-        orbis::kalloc(kCachePageSize, 1));
-    std::memset(cachePage, 0, kCachePageSize);
   }
 
   cacheUpdateThread = std::jthread([this](const std::stop_token &stopToken) {
@@ -262,42 +300,6 @@ Device::Device() : vkContext(createVkContext(this)) {
       }
     }
   });
-
-  commandPipe.device = this;
-  commandPipe.ring = {
-      .base = std::data(cmdRing),
-      .size = std::size(cmdRing),
-      .rptr = std::data(cmdRing),
-      .wptr = std::data(cmdRing),
-  };
-
-  for (auto &pipe : computePipes) {
-    pipe.device = this;
-  }
-
-  for (int i = 0; i < kGfxPipeCount; ++i) {
-    graphicsPipes[i].setDeQueue(
-        Ring{
-            .base = mainGfxRings[i],
-            .size = std::size(mainGfxRings[i]),
-            .rptr = mainGfxRings[i],
-            .wptr = mainGfxRings[i],
-        },
-        0);
-  }
-}
-
-Device::~Device() {
-  vkDeviceWaitIdle(vk::context->device);
-
-  if (debugMessenger != VK_NULL_HANDLE) {
-    vk::DestroyDebugUtilsMessengerEXT(vk::context->instance, debugMessenger,
-                                      vk::context->allocator);
-  }
-
-  for (auto &cachePage : cachePages) {
-    orbis::kfree(cachePage, kCachePageSize);
-  }
 }
 
 void Device::start() {
@@ -984,10 +986,10 @@ void Device::mapMemory(std::uint32_t pid, rx::AddressRange virtualRange,
   auto memory = amdgpu::RemoteMemory{process.vmId};
 
   auto vmemAddress = memory.getVirtualAddress(virtualRange.beginAddress());
-  auto errc = orbis::pmem::map(vmemAddress,
-                               rx::AddressRange::fromBeginSize(
-                                   physicalOffset, virtualRange.size()),
-                               orbis::vmem::toGpuProtection(prot));
+  auto errc = orbis::pmem::map(
+      vmemAddress,
+      rx::AddressRange::fromBeginSize(physicalOffset, virtualRange.size()),
+      orbis::vmem::toGpuProtection(prot));
   if (errc != orbis::ErrorCode{}) {
     rx::die("failed to map process {} memory, address {:x}-{:x}, type {}, "
             "offset {:x}, prot {}, error {}",

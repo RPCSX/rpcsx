@@ -9,6 +9,7 @@
 vk::Context *vk::context;
 static vk::MemoryResource g_hostVisibleMemory;
 static vk::MemoryResource g_deviceLocalMemory;
+static vk::MemoryResource g_directMemory;
 
 void vk::verifyFailed(VkResult result, const char *message) {
   std::fprintf(stderr, "vk verification failed: %s\n", message);
@@ -782,6 +783,7 @@ vk::Context::findPhysicalMemoryTypeIndex(std::uint32_t typeBits,
 
 vk::MemoryResource &vk::getHostVisibleMemory() { return g_hostVisibleMemory; }
 vk::MemoryResource &vk::getDeviceLocalMemory() { return g_deviceLocalMemory; }
+vk::MemoryResource &vk::getDirectMemory() { return g_directMemory; }
 
 static auto importDeviceVkProc(VkDevice device, const char *name) {
   auto result = vkGetDeviceProcAddr(device, name);

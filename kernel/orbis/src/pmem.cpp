@@ -33,14 +33,28 @@ struct PhysicalMemoryAllocation {
   bool operator==(const PhysicalMemoryAllocation &) const = default;
 };
 
-using MappableMemoryResource =
-    kernel::MappableResource<decltype([](std::size_t size) {
-      return rx::Mappable::CreateMemory(size);
-    })>;
+struct PhysicalMemoryResource
+    : kernel::AllocableResource<PhysicalMemoryAllocation, orbis::kallocator,
+                                kernel::ExternalResource> {
+  std::size_t size;
+  rx::Mappable mappable;
 
-using PhysicalMemoryResource =
-    kernel::AllocableResource<PhysicalMemoryAllocation, orbis::kallocator,
-                              MappableMemoryResource>;
+  std::errc create(rx::Mappable mappable, std::size_t size) {
+    if (size == 0 || !mappable) {
+      return std::errc::invalid_argument;
+    }
+
+    if (auto errc =
+            BaseResource::create(rx::AddressRange::fromBeginSize(0, size));
+        errc != std::errc{}) {
+      return errc;
+    }
+
+    this->size = size;
+    this->mappable = std::move(mappable);
+    return {};
+  }
+};
 
 static auto g_pmemInstance = orbis::createGlobalObject<
     kernel::LockableKernelObject<PhysicalMemoryResource>>();
@@ -76,12 +90,12 @@ struct PhysicalMemory : orbis::IoDevice {
 
 static auto g_phyMemory = orbis::createGlobalObject<PhysicalMemory>();
 
-orbis::ErrorCode orbis::pmem::initialize(std::uint64_t size) {
+orbis::ErrorCode orbis::pmem::initialize(rx::Mappable mappable,
+                                         std::uint64_t size) {
   std::lock_guard lock(*g_pmemInstance);
   rx::println("pmem: {:x}", size);
 
-  return toErrorCode(
-      g_pmemInstance->create(rx::AddressRange::fromBeginSize(0, size)));
+  return toErrorCode(g_pmemInstance->create(std::move(mappable), size));
 }
 
 void orbis::pmem::destroy() {

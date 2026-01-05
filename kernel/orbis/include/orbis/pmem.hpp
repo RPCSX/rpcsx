@@ -13,7 +13,7 @@ struct File;
 } // namespace orbis
 
 namespace orbis::pmem {
-ErrorCode initialize(std::uint64_t size);
+ErrorCode initialize(rx::Mappable mappable, std::uint64_t size);
 void destroy();
 std::pair<rx::AddressRange, ErrorCode>
 allocate(std::uint64_t addressHint, std::uint64_t size,

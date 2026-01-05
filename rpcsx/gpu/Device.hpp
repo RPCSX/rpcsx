@@ -103,9 +103,10 @@ struct Device : rx::RcBase, DeviceContext {
   std::uint32_t mainGfxRings[kGfxPipeCount][0x4000 / sizeof(std::uint32_t)];
   std::uint32_t cmdRing[0x4000 / sizeof(std::uint32_t)];
 
-  Device();
+  Device(std::size_t dmemSize);
   ~Device();
 
+  void initialize();
   void start();
 
   Cache::Tag getCacheTag(int vmId, Scheduler &scheduler) {

@@ -43,6 +43,9 @@ public:
                 rx::EnumBitSet<mem::Protection> protection,
                 std::size_t alignment);
 
+  std::pair<void *, std::errc> map(std::size_t size, std::size_t offset,
+                                   rx::EnumBitSet<mem::Protection> protection);
+
   [[nodiscard]] NativeHandle release() {
     return std::exchange(m_handle, kInvalidHandle);
   }

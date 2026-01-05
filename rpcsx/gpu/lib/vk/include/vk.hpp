@@ -1,7 +1,10 @@
 #pragma once
 
-#include "rx/MemoryTable.hpp"
-#include "rx/die.hpp"
+#include <rx/FileLock.hpp>
+#include <rx/MemoryTable.hpp>
+#include <rx/die.hpp>
+#include <rx/format.hpp>
+#include <rx/print.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -157,6 +160,12 @@ public:
   DeviceMemory(DeviceMemory &&other) noexcept { *this = std::move(other); }
   DeviceMemory() = default;
 
+#ifdef _WIN32
+  using NativeHandle = void *;
+#else
+  using NativeHandle = int;
+#endif
+
   ~DeviceMemory() {
     if (mDeviceMemory != nullptr) {
       vkFreeMemory(context->device, mDeviceMemory, context->allocator);
@@ -176,9 +185,20 @@ public:
   [[nodiscard]] unsigned getMemoryTypeIndex() const { return mMemoryTypeIndex; }
 
   static DeviceMemory AllocateFromType(std::size_t size,
-                                       unsigned memoryTypeIndex) {
+                                       unsigned memoryTypeIndex,
+                                       bool withExportSupport = false) {
+    VkExportMemoryAllocateInfo exportInfo = {
+        .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO,
+#ifdef _WIN32
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT,
+#else
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
+#endif
+    };
+
     VkMemoryAllocateFlagsInfo flags{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO,
+        .pNext = withExportSupport ? &exportInfo : nullptr,
         .flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT,
     };
 
@@ -198,16 +218,20 @@ public:
   }
 
   static DeviceMemory Allocate(std::size_t size, unsigned memoryTypeBits,
-                               VkMemoryPropertyFlags properties) {
+                               VkMemoryPropertyFlags properties,
+                               bool withExportSupport = false) {
     return AllocateFromType(
-        size, context->findPhysicalMemoryTypeIndex(memoryTypeBits, properties));
+        size, context->findPhysicalMemoryTypeIndex(memoryTypeBits, properties),
+        withExportSupport);
   }
 
   static DeviceMemory Allocate(VkMemoryRequirements requirements,
-                               VkMemoryPropertyFlags properties) {
+                               VkMemoryPropertyFlags properties,
+                               bool withExportSupport = false) {
     return AllocateFromType(requirements.size,
                             context->findPhysicalMemoryTypeIndex(
-                                requirements.memoryTypeBits, properties));
+                                requirements.memoryTypeBits, properties),
+                            withExportSupport);
   }
 
   static DeviceMemory CreateExternalFd(int fd, std::size_t size,
@@ -315,6 +339,33 @@ public:
   }
 
   void unmap() { vkUnmapMemory(context->device, mDeviceMemory); }
+
+  VkResult getNativeHandle(NativeHandle &handle) const {
+#ifdef _WIN32
+    VkMemoryGetWin32HandleInfoKHR info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_GET_WIN32_HANDLE_INFO_KHR,
+        .memory = mDeviceMemory,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT_KHR,
+    };
+
+    auto vkGetMemoryWin32HandleKHR =
+        (PFN_vkGetMemoryWin32HandleKHR)vkGetDeviceProcAddr(
+            context->device, "vkGetMemoryWin32HandleKHR");
+
+    return vkGetMemoryWin32HandleKHR(context->device, &info, &handle);
+#else
+    VkMemoryGetFdInfoKHR info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR,
+        .memory = mDeviceMemory,
+        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR,
+    };
+
+    auto vkGetMemoryFdKHR = (PFN_vkGetMemoryFdKHR)vkGetDeviceProcAddr(
+        context->device, "vkGetMemoryFdKHR");
+
+    return vkGetMemoryFdKHR(context->device, &info, &handle);
+#endif
+  }
 };
 
 struct DeviceMemoryRef {
@@ -331,13 +382,15 @@ class MemoryResource {
   DeviceMemory mMemory;
   char *mData = nullptr;
   rx::MemoryAreaTable<> table;
-  // const char *debugName = "<unknown>";
+  const char *debugName = "<unknown>";
 
   std::mutex mMtx;
 
 public:
   MemoryResource() = default;
   ~MemoryResource() { clear(); }
+
+  using NativeHandle = DeviceMemory::NativeHandle;
 
   void clear() {
     if (mMemory.getHandle() != nullptr && mData != nullptr) {
@@ -356,7 +409,7 @@ public:
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     mMemory = DeviceMemory::CreateExternalFd(fd, size, properties);
     table.map(rx::AddressRange::fromBeginSize(0, size));
-    // debugName = "fd-direct";
+    debugName = "fd-direct";
   }
 
   void initFromHost(void *data, std::size_t size) {
@@ -365,7 +418,16 @@ public:
                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     mMemory = DeviceMemory::CreateExternalHostMemory(data, size, properties);
     table.map(rx::AddressRange::fromBeginSize(0, size));
-    // debugName = "direct";
+    debugName = "imported-direct";
+  }
+
+  void initHostDirect(std::size_t size) {
+    assert(mMemory.getHandle() == nullptr);
+    auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+    mMemory = DeviceMemory::Allocate(size, ~0, properties, true);
+    debugName = "direct";
   }
 
   void initHostVisible(std::size_t size) {
@@ -381,7 +443,7 @@ public:
     mMemory = std::move(memory);
     table.map(rx::AddressRange::fromBeginSize(0, size));
     mData = reinterpret_cast<char *>(data);
-    // debugName = "host";
+    debugName = "host";
   }
 
   void initDeviceLocal(std::size_t size) {
@@ -390,13 +452,14 @@ public:
 
     mMemory = DeviceMemory::Allocate(size, ~0, properties);
     table.map(rx::AddressRange::fromBeginSize(0, size));
-    // debugName = "local";
+    debugName = "local";
   }
 
   DeviceMemoryRef allocate(VkMemoryRequirements requirements) {
     if ((requirements.memoryTypeBits & (1 << mMemory.getMemoryTypeIndex())) ==
         0) {
-      std::abort();
+      rx::die("unexpected requirements for {} memory, {}", debugName,
+              requirements);
     }
 
     std::lock_guard lock(mMtx);
@@ -415,26 +478,23 @@ public:
         continue;
       }
 
-      // if (debugName == std::string_view{"local"}) {
-      // std::printf("memory: allocation %s memory %lx-%lx\n", debugName,
-      // offset,
-      //             offset + requirements.size);
-      // }
-
       table.unmap(offset, offset + requirements.size);
-      return {.deviceMemory = mMemory.getHandle(),
-              .offset = offset,
-              .size = requirements.size,
-              .data = mData,
-              .allocator = this,
-              .release = [](DeviceMemoryRef &memoryRef) {
+      return {
+          .deviceMemory = mMemory.getHandle(),
+          .offset = offset,
+          .size = requirements.size,
+          .data = mData,
+          .allocator = this,
+          .release =
+              [](DeviceMemoryRef &memoryRef) {
                 auto self =
                     reinterpret_cast<MemoryResource *>(memoryRef.allocator);
                 self->deallocate(memoryRef);
-              }};
+              },
+      };
     }
 
-    std::abort();
+    return {};
   }
 
   void deallocate(DeviceMemoryRef memory) {
@@ -445,13 +505,16 @@ public:
   void dump() {
     std::lock_guard lock(mMtx);
 
+    rx::ScopedFileLock errLock(stderr);
+    rx::println(stderr, "{} resource\n", debugName);
     for (auto elem : table) {
-      std::fprintf(stderr, "%zu - %zu\n", elem.beginAddress, elem.endAddress);
+      rx::println(stderr, "  {:#x} - {:#x}\n", elem.beginAddress,
+                  elem.endAddress);
     }
   }
 
-  DeviceMemoryRef getFromOffset(std::uint64_t offset, std::size_t size) {
-    return {mMemory.getHandle(), offset, size, nullptr, nullptr, nullptr};
+  VkResult getNativeHandle(NativeHandle &handle) const {
+    return mMemory.getNativeHandle(handle);
   }
 
   explicit operator bool() const { return mMemory.getHandle() != nullptr; }
@@ -479,8 +542,11 @@ public:
 
   static Semaphore Create(std::uint64_t initialValue = 0) {
     VkSemaphoreTypeCreateInfo typeCreateInfo = {
-        VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, nullptr,
-        VK_SEMAPHORE_TYPE_TIMELINE, initialValue};
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .pNext = nullptr,
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue = initialValue,
+    };
 
     VkSemaphoreCreateInfo createInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
                                         &typeCreateInfo, 0};
@@ -492,19 +558,25 @@ public:
   }
 
   VkResult wait(std::uint64_t value, uint64_t timeout) const {
-    VkSemaphoreWaitInfo waitInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
-                                    nullptr,
-                                    VK_SEMAPHORE_WAIT_ANY_BIT,
-                                    1,
-                                    &mSemaphore,
-                                    &value};
+    VkSemaphoreWaitInfo waitInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .pNext = nullptr,
+        .flags = VK_SEMAPHORE_WAIT_ANY_BIT,
+        .semaphoreCount = 1,
+        .pSemaphores = &mSemaphore,
+        .pValues = &value,
+    };
 
     return vkWaitSemaphores(context->device, &waitInfo, timeout);
   }
 
   void signal(std::uint64_t value) {
-    VkSemaphoreSignalInfo signalInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
-                                        nullptr, mSemaphore, value};
+    VkSemaphoreSignalInfo signalInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
+        .pNext = nullptr,
+        .semaphore = mSemaphore,
+        .value = value,
+    };
 
     VK_VERIFY(vkSignalSemaphore(context->device, &signalInfo));
   }
@@ -543,11 +615,17 @@ public:
 
   static BinSemaphore Create() {
     VkSemaphoreTypeCreateInfo typeCreateInfo = {
-        VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, nullptr,
-        VK_SEMAPHORE_TYPE_BINARY, 0};
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .pNext = nullptr,
+        .semaphoreType = VK_SEMAPHORE_TYPE_BINARY,
+        .initialValue = 0,
+    };
 
-    VkSemaphoreCreateInfo createInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-                                        &typeCreateInfo, 0};
+    VkSemaphoreCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &typeCreateInfo,
+        .flags = 0,
+    };
 
     BinSemaphore result;
     VK_VERIFY(vkCreateSemaphore(context->device, &createInfo, nullptr,
@@ -581,8 +659,11 @@ public:
   }
 
   static Fence Create() {
-    VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-                                         nullptr, 0};
+    VkFenceCreateInfo fenceCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+    };
     Fence result;
     VK_VERIFY(vkCreateFence(context->device, &fenceCreateInfo, nullptr,
                             &result.mFence));
@@ -1027,6 +1108,7 @@ public:
 
 vk::MemoryResource &getHostVisibleMemory();
 vk::MemoryResource &getDeviceLocalMemory();
+vk::MemoryResource &getDirectMemory();
 
 VkResult CreateShadersEXT(VkDevice device, uint32_t createInfoCount,
                           const VkShaderCreateInfoEXT *pCreateInfos,

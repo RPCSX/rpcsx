@@ -25,7 +25,7 @@ public:
   DeviceCtl &operator=(const DeviceCtl &);
   ~DeviceCtl();
 
-  static DeviceCtl createDevice();
+  static DeviceCtl createDevice(std::uint64_t dmemSize);
   DeviceContext &getContext();
   rx::Ref<rx::RcBase> getOpaque();
 

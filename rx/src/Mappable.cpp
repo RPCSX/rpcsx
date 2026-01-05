@@ -169,6 +169,55 @@ std::errc rx::Mappable::map(rx::AddressRange virtualRange, std::size_t offset,
   return {};
 }
 
+std::pair<void *, std::errc>
+rx::Mappable::map(std::size_t size, std::size_t offset,
+                  rx::EnumBitSet<mem::Protection> protection) {
+#ifdef _WIN32
+  static const DWORD protTable[] = {
+      PAGE_NOACCESS,          // 0
+      PAGE_READONLY,          // R
+      PAGE_EXECUTE_READWRITE, // W
+      PAGE_EXECUTE_READWRITE, // RW
+      PAGE_EXECUTE,           // X
+      PAGE_EXECUTE_READWRITE, // XR
+      PAGE_EXECUTE_READWRITE, // XW
+      PAGE_EXECUTE_READWRITE, // XRW
+  };
+
+  auto prot = protTable[(protection & (mem::Protection::R | mem::Protection::W |
+                                       mem::Protection::X))
+                            .toUnderlying()];
+
+  auto result = MapViewOfFile3((HANDLE)m_handle, nullptr, nullptr, offset, size,
+                               0, prot, nullptr, 0);
+  if (!result) {
+    return {{}, std::errc::invalid_argument};
+  }
+
+  return {};
+#else
+  int prot = 0;
+
+  if (protection & mem::Protection::R) {
+    prot |= PROT_READ;
+  }
+  if (protection & mem::Protection::W) {
+    prot |= PROT_READ | PROT_WRITE;
+  }
+  if (protection & mem::Protection::X) {
+    prot |= PROT_EXEC;
+  }
+
+  auto result = ::mmap(nullptr, size, prot, MAP_SHARED, m_handle, offset);
+
+  if (result == MAP_FAILED) {
+    return {{}, std::errc{errno}};
+  }
+#endif
+
+  return {result, {}};
+}
+
 void rx::Mappable::destroy() {
 #ifdef _WIN32
   CloseHandle((HANDLE)m_handle);

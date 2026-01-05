@@ -16,6 +16,7 @@
 #include "orbis/vmem.hpp"
 #include "rx/Config.hpp"
 #include "rx/FileLock.hpp"
+#include "rx/Mappable.hpp"
 #include "rx/die.hpp"
 #include "rx/format.hpp"
 #include "rx/mem.hpp"
@@ -23,6 +24,7 @@
 #include "rx/watchdog.hpp"
 #include "thread.hpp"
 #include "vfs.hpp"
+#include "vk.hpp"
 #include "xbyak/xbyak.h"
 #include <bit>
 #include <optional>
@@ -1034,16 +1036,84 @@ int main(int argc, const char *argv[]) {
 
   rx::println(stderr, "RPCSX v{}", rx::getVersion().toString());
 
-  setupSigHandlers();
+  // FIXME: determine mode by reading elf file
   orbis::constructAllGlobals();
+
+  setupSigHandlers();
+  rx::startWatchdog();
+
+  orbis::allocatePid();
+  auto initProcess = orbis::createProcess(nullptr, asRoot ? 1 : 10);
+  orbis::vmem::initialize(initProcess);
+
+  auto pmemSize = 9ull * 1024 * 1024 * 1024;
+  orbis::g_context->gpuDevice =
+      amdgpu::DeviceCtl::createDevice(pmemSize).getOpaque();
+
   orbis::g_context->deviceEventEmitter = orbis::knew<orbis::EventEmitter>();
 
-  // FIXME: determine mode by reading elf file
-  orbis::pmem::initialize(10ull * 1024 * 1024 * 1024);
-  orbis::dmem::initialize();
-  orbis::fmem::initialize(2ull * 1024 * 1024 * 1024);
+  vk::DeviceMemory::NativeHandle handle;
+  VK_VERIFY(vk::getDirectMemory().getNativeHandle(handle));
+  auto mappable = rx::Mappable::CreateFromNativeHandle(handle);
+  rx::AddressRange importedVkMemory;
+  if (mappable.map(rx::AddressRange::fromBeginSize(orbis::kMinAddress,
+                                                   orbis::vmem::kPageSize),
+                   0, rx::mem::Protection::R,
+                   orbis::vmem::kPageSize) != std::errc{}) {
+    rx::println(stderr, "warning: failed to use Vulkan exported memory, "
+                        "switching to imported memory");
 
-  rx::startWatchdog();
+    vk::getDirectMemory().free();
+    auto [cpuMappable, errc] = rx::Mappable::CreateMemory(pmemSize);
+
+    rx::dieIf(errc != std::errc{},
+              "failed to allocate physical memory, errc {}", errc);
+    mappable = std::move(cpuMappable);
+    auto [addr, mapErrc] = mappable.map(
+        pmemSize, 0, rx::mem::Protection::R | rx::mem::Protection::W);
+    rx::dieIf(mapErrc != std::errc{}, "failed to map physical memory, errc {}",
+              mapErrc);
+    vk::getDirectMemory().initFromHost(addr, pmemSize);
+    importedVkMemory = rx::AddressRange::fromBeginSize(
+        std::bit_cast<std::uintptr_t>(addr), pmemSize);
+  } else {
+    rx::mem::release(rx::AddressRange::fromBeginSize(orbis::kMinAddress,
+                                                     orbis::vmem::kPageSize),
+                     orbis::vmem::kPageSize);
+  }
+
+  if (auto errc = orbis::pmem::initialize(std::move(mappable), pmemSize);
+      errc != orbis::ErrorCode{}) {
+    rx::die("pmem initialization failed, {}", errc);
+  }
+  if (auto errc = orbis::dmem::initialize(); errc != orbis::ErrorCode{}) {
+    rx::die("dmem initialization failed, {}", errc);
+  }
+  if (auto errc = orbis::fmem::initialize(2ull * 1024 * 1024 * 1024);
+      errc != orbis::ErrorCode{}) {
+    rx::die("fmem initialization failed, {}", errc);
+  }
+
+  if (::fork() != 0) {
+    rx::attachGpuProcess(::getpid());
+    pthread_setname_np(pthread_self(), "rpcsx-gpu");
+
+    int logFd =
+        ::open("log-gpu.txt", O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
+    dup2(logFd, 1);
+    dup2(logFd, 2);
+    ::close(logFd);
+
+    amdgpu::DeviceCtl{orbis::g_context->gpuDevice}.start();
+    return 0;
+  }
+
+  rx::attachProcess(::getpid());
+
+  if (importedVkMemory.isValid()) {
+    rx::mem::release(importedVkMemory, 0);
+  }
+
   vfs::initialize();
 
   std::vector<std::string> guestArgv(argv + argIndex, argv + argc);
@@ -1054,11 +1124,6 @@ int main(int argc, const char *argv[]) {
   }
 
   rx::thread::initialize();
-
-  // vm::printHostStats();
-  orbis::allocatePid();
-  auto initProcess = orbis::createProcess(nullptr, asRoot ? 1 : 10);
-  orbis::vmem::initialize(initProcess);
 
   // pthread_setname_np(pthread_self(), "10.MAINTHREAD");
 
