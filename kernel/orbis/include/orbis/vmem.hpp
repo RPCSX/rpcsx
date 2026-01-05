@@ -167,7 +167,8 @@ inline bool validateProtection(rx::EnumBitSet<Protection> &prot) {
 inline bool validateMemoryType(MemoryType type,
                                rx::EnumBitSet<Protection> prot) {
   if (type == MemoryType::WbGarlic) {
-    if (prot & (Protection::CpuWrite | Protection::GpuWrite)) {
+    if ((prot & (Protection::CpuWrite | Protection::GpuWrite)) ==
+        (Protection::CpuWrite | Protection::GpuWrite)) {
       return false;
     }
   }

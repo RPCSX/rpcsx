@@ -647,6 +647,9 @@ SysResult fork(Thread *thread, slong flags) {
   process->authInfo = thread->tproc->authInfo;
   process->sdkVersion = thread->tproc->sdkVersion;
   process->type = thread->tproc->type;
+  process->budgetProcessType = thread->tproc->budgetProcessType;
+  process->budgetId = thread->tproc->budgetId;
+
   for (auto [id, mod] : thread->tproc->modulesMap) {
     if (!process->modulesMap.insert(id, mod)) {
       std::abort();

@@ -118,6 +118,13 @@ struct VirtualMemoryAllocation {
            orbis::vmem::BlockFlags::FlexibleMemory;
   }
 
+  [[nodiscard]] bool isCommited() const {
+    return (flags & orbis::vmem::BlockFlags::Commited) ==
+           orbis::vmem::BlockFlags::Commited;
+  }
+
+  [[nodiscard]] bool isFlexCommited() const { return isFlex() && isCommited(); }
+
   [[nodiscard]] bool isDirect() const {
     return (flags & orbis::vmem::BlockFlags::DirectMemory) ==
            orbis::vmem::BlockFlags::DirectMemory;
@@ -400,7 +407,43 @@ void orbis::vmem::initialize(Process *process, bool force) {
 }
 
 void orbis::vmem::fork(Process *process, Process *parentThread) {
-  // FIXME: implement
+  auto vmem = process->get(g_vmInstance);
+  auto parentVmem = parentThread->get(g_vmInstance);
+
+  std::lock_guard lock(*parentVmem);
+
+  std::vector<std::byte> tmpData;
+
+  for (auto alloc : parentVmem->allocations) {
+    if (alloc->isAllocated() && alloc->isFlexCommited()) {
+      auto clonedAllocation = alloc.get();
+      auto [flexRange, errc] = fmem::allocate(alloc.size());
+
+      rx::dieIf(errc != ErrorCode{}, "fork: fmem allocation failed: {}", errc);
+      clonedAllocation.deviceOffset = flexRange.beginAddress();
+      auto cpuProt = toCpuProtection(alloc->prot);
+      tmpData.resize(alloc.size());
+      std::memcpy(tmpData.data(), std::bit_cast<void *>(alloc.beginAddress()),
+                  alloc.size());
+
+      pmem::map(alloc.beginAddress(), flexRange, cpuProt);
+      vmem->allocations.map(alloc, clonedAllocation);
+
+      if (!(cpuProt & rx::mem::Protection::W)) {
+        rx::mem::protect(alloc, cpuProt | rx::mem::Protection::W);
+      }
+
+      std::memcpy(std::bit_cast<void *>(alloc.beginAddress()), tmpData.data(),
+                  tmpData.size());
+
+      if (!(cpuProt & rx::mem::Protection::W)) {
+        rx::mem::protect(alloc, cpuProt);
+      }
+
+    } else {
+      vmem->allocations.map(alloc, alloc.get());
+    }
+  }
 }
 
 std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::reserve(
@@ -826,6 +869,18 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFlex(
             alignment);
 
   if (prot) {
+    auto cpuProt = toCpuProtection(prot);
+    if (!(cpuProt & rx::mem::Protection::W)) {
+      rx::mem::protect(vmemRange, cpuProt | rx::mem::Protection::W);
+    }
+
+    std::memset(std::bit_cast<void *>(vmemRange.beginAddress()), 0,
+                vmemRange.size());
+
+    if (!(cpuProt & rx::mem::Protection::W)) {
+      rx::mem::protect(vmemRange, cpuProt);
+    }
+
     amdgpu::mapMemory(process->pid, vmemRange, MemoryType::WbOnion, prot,
                       allocationInfo.deviceOffset);
   }
@@ -1143,10 +1198,23 @@ orbis::ErrorCode orbis::vmem::protect(Process *process, rx::AddressRange range,
                 rx::dieIf(errc != ErrorCode{},
                           "failed to allocate flexible memory");
 
-                errc = pmem::map(range.beginAddress(), pmemRange,
-                                 toCpuProtection(blockProt));
+                alloc.deviceOffset = pmemRange.beginAddress();
+
+                auto cpuProt = toCpuProtection(blockProt);
+                errc = pmem::map(range.beginAddress(), pmemRange, cpuProt);
 
                 rx::dieIf(errc != ErrorCode{}, "failed to map flexible memory");
+
+                if (!(cpuProt & rx::mem::Protection::W)) {
+                  rx::mem::protect(range, cpuProt | rx::mem::Protection::W);
+                }
+
+                std::memset(std::bit_cast<void *>(range.beginAddress()), 0,
+                            range.size());
+
+                if (!(cpuProt & rx::mem::Protection::W)) {
+                  rx::mem::protect(range, cpuProt);
+                }
 
                 amdgpu::mapMemory(process->pid, range, MemoryType::WbOnion,
                                   prot, pmemRange.beginAddress());

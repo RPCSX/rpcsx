@@ -3,7 +3,6 @@
 #include "orbis/IoDevice.hpp"
 #include "orbis/KernelAllocator.hpp"
 #include "orbis/KernelObject.hpp"
-#include "orbis/fmem.hpp"
 #include "orbis/module/Module.hpp"
 #include "orbis/pmem.hpp"
 #include "orbis/stat.hpp"
@@ -12,7 +11,6 @@
 #include "rx/AddressRange.hpp"
 #include "rx/SharedMutex.hpp"
 #include "rx/StrUtil.hpp"
-#include "rx/debug.hpp"
 #include "rx/die.hpp"
 #include "rx/format.hpp"
 #include "rx/mem.hpp"
@@ -519,7 +517,7 @@ static auto g_elfDevice = orbis::createGlobalObject<ElfDevice>();
 
 static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
                                          std::string_view name) {
-  rx::Ref<orbis::Module> result{orbis::knew<orbis::Module>()};
+  rx::Ref result{orbis::knew<orbis::Module>()};
 
   Elf64_Ehdr header;
   std::memcpy(&header, elf->image.data(), sizeof(Elf64_Ehdr));
@@ -1079,10 +1077,10 @@ static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
           phdr.p_type == kElfProgramTypeGnuRelRo) {
         // map anonymous memory, copy segment data
 
-        auto [vmem, vmemErrc] =
-            orbis::vmem::mapFlex(process, segmentRange.size(), protFlags,
-                                 imageRange.beginAddress() + segmentBegin,
-                                 orbis::AllocationFlags::Fixed, {}, mapName);
+        auto [vmem, vmemErrc] = orbis::vmem::mapFlex(
+            process, segmentRange.size(), protFlags,
+            imageRange.beginAddress() + segmentBegin - baseAddress,
+            orbis::AllocationFlags::Fixed, {}, mapName);
 
         rx::dieIf(vmemErrc != orbis::ErrorCode{},
                   "elf: failed to map flexible to virtual memory {}",
@@ -1093,8 +1091,8 @@ static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
                            rx::mem::Protection::R | rx::mem::Protection::W);
         }
 
-        std::memcpy(imageBase + phdr.p_vaddr, elf->image.data() + phdr.p_offset,
-                    phdr.p_filesz);
+        std::memcpy(imageBase + phdr.p_vaddr - baseAddress,
+                    elf->image.data() + phdr.p_offset, phdr.p_filesz);
 
         rx::println(stderr, "{}: RW segment {:x}-{:x}, {}", result->moduleName,
                     segmentRange.beginAddress(), segmentRange.endAddress(),
@@ -1114,28 +1112,29 @@ static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
           std::lock_guard lock(elf->mtx);
           if (!elf->initialized) {
             auto [vmem, vmemErrc] = orbis::vmem::mapFile(
-                process, imageRange.beginAddress() + segmentBegin,
+                process, imageRange.beginAddress() + segmentBegin - baseAddress,
                 segmentRange.size(), orbis::AllocationFlags::Fixed,
                 protFlags | orbis::vmem::Protection::CpuWrite, {}, {}, elf,
-                segmentBegin, mapName);
+                segmentBegin - baseAddress, mapName);
 
             rx::dieIf(vmemErrc != orbis::ErrorCode{},
                       "elf: failed to map elf to virtual memory {}", vmemErrc);
 
-            std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz, 0,
-                        phdr.p_memsz - phdr.p_filesz);
-            std::memcpy(imageBase + phdr.p_vaddr,
+            std::memset(imageBase + phdr.p_vaddr + phdr.p_filesz - baseAddress,
+                        0, phdr.p_memsz - phdr.p_filesz);
+            std::memcpy(imageBase + phdr.p_vaddr - baseAddress,
                         elf->image.data() + phdr.p_offset, phdr.p_filesz);
             elf->initialized = true;
           }
         }
 
         auto [vmem, vmemErrc] = orbis::vmem::mapFile(
-            process, imageRange.beginAddress() + segmentBegin,
+            process, imageRange.beginAddress() + segmentBegin - baseAddress,
             segmentRange.size(), orbis::AllocationFlags::Fixed, protFlags,
             orbis::vmem::BlockFlags::FlexibleMemory |
                 orbis::vmem::BlockFlags::Commited,
-            orbis::vmem::BlockFlagsEx::Shared, elf, segmentBegin, mapName);
+            orbis::vmem::BlockFlagsEx::Shared, elf, segmentBegin - baseAddress,
+            mapName);
 
         rx::dieIf(vmemErrc != orbis::ErrorCode{},
                   "elf: failed to map elf to virtual memory {}", (int)vmemErrc);
@@ -1153,7 +1152,7 @@ static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
         rx::println(stderr, "elf: corrupted, segment {} overriding. {}",
                     segmentIndex, name);
       } else {
-        segment.addr = imageBase + segmentBegin;
+        segment.addr = imageBase + segmentBegin - baseAddress;
         segment.size = phdr.p_memsz;
         segment.prot = protFlags.toUnderlying();
         result->segmentCount = std::max(segmentIndex + 1, result->segmentCount);

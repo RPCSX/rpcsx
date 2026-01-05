@@ -1212,14 +1212,89 @@ int main(int argc, const char *argv[]) {
       },
   };
 
+  orbis::BudgetInfo systemBudgetInfo[]{
+      {
+          .resourceId = orbis::BudgetResource::Dmem,
+          .flags = 0,
+          .item =
+              {
+                  .total = 0x1'8000'0000,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Vmem,
+          .flags = 0,
+          .item =
+              {
+                  .total = 2ul * 1024 * 1024 * 1024,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Fmem,
+          .flags = 0,
+          .item =
+              {
+                  .total = 2ul * 1024 * 1024 * 1024,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::CpuSet,
+          .flags = 0,
+          .item =
+              {
+                  .total = 8,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::File,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Socket,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Equeue,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Pipe,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+      {
+          .resourceId = orbis::BudgetResource::Device,
+          .flags = 0,
+          .item =
+              {
+                  .total = 4096,
+              },
+      },
+  };
+
   auto bigAppBudget = orbis::g_context->createProcessTypeBudget(
       orbis::Budget::ProcessType::BigApp, "big app budget", bigAppBudgetInfo);
 
   // FIXME: define following budgets
   orbis::g_context->createProcessTypeBudget(
       orbis::Budget::ProcessType::MiniApp, "mini-app budget", bigAppBudgetInfo);
-  orbis::g_context->createProcessTypeBudget(orbis::Budget::ProcessType::System,
-                                            "system budget", bigAppBudgetInfo);
+  auto systemBudget = orbis::g_context->createProcessTypeBudget(
+      orbis::Budget::ProcessType::System, "system budget", systemBudgetInfo);
   orbis::g_context->createProcessTypeBudget(
       orbis::Budget::ProcessType::NonGameMiniApp, "non-game mini-app budget",
       bigAppBudgetInfo);
@@ -1251,6 +1326,7 @@ int main(int argc, const char *argv[]) {
                                  -1ul,
                              }};
     initProcess->budgetProcessType = orbis::Budget::ProcessType::System;
+    initProcess->budgetId = orbis::g_context->budgets.insert(systemBudget);
     initProcess->isInSandbox = false;
   } else {
     initProcess->authInfo = {
