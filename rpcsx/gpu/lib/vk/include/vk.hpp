@@ -3,7 +3,6 @@
 #include <rx/FileLock.hpp>
 #include <rx/MemoryTable.hpp>
 #include <rx/die.hpp>
-#include <rx/format.hpp>
 #include <rx/print.hpp>
 
 #include <cstddef>
@@ -171,6 +170,12 @@ public:
       vkFreeMemory(context->device, mDeviceMemory, context->allocator);
     }
     mDeviceMemory = nullptr;
+  }
+
+  VkDeviceMemory release() {
+    auto result = mDeviceMemory;
+    mDeviceMemory = nullptr;
+    return result;
   }
 
   DeviceMemory &operator=(DeviceMemory &&other) noexcept {
@@ -388,7 +393,10 @@ class MemoryResource {
 
 public:
   MemoryResource() = default;
-  ~MemoryResource() { clear(); }
+  ~MemoryResource() {
+    clear();
+    mMemory.release();
+  }
 
   using NativeHandle = DeviceMemory::NativeHandle;
 
@@ -459,7 +467,7 @@ public:
     if ((requirements.memoryTypeBits & (1 << mMemory.getMemoryTypeIndex())) ==
         0) {
       rx::die("unexpected requirements for {} memory, {}", debugName,
-              requirements);
+              requirements.memoryTypeBits);
     }
 
     std::lock_guard lock(mMtx);
