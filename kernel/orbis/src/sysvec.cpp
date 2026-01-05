@@ -1,5 +1,6 @@
 #include "orbis-config.hpp"
 #include "rx/EnumBitSet.hpp"
+#include "rx/die.hpp"
 #include "rx/format.hpp"
 #include "sys/syscall.hpp"
 #include "sys/sysentry.hpp"
@@ -54,9 +55,10 @@ void orbis::syscall_entry(Thread *thread) {
     std::memcpy(args, regsptr,
                 std::min(regcnt, sysent.narg) * sizeof(uint64_t));
     if (sysent.narg > regcnt) {
-      if (sysent.narg > std::ssize(args)) {
-        std::abort();
-      }
+      rx::dieIf(sysent.narg > std::ssize(args),
+                "syscall {} uses unexpected number of "
+                "arguments, narg = {}",
+                syscall_num, sysent.narg);
 
       error = int(
           ureadRaw(args + regcnt,

@@ -321,7 +321,7 @@ orbis::SysResult orbis::sysIpmiSendConnectResult(Thread *thread,
 
   if (client == nullptr) {
     ORBIS_LOG_FATAL(__FUNCTION__);
-    std::abort();
+    rx::die("client is null");
   }
 
   sint status;

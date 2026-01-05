@@ -140,14 +140,14 @@ uint UmtxChain::notify_all(const UmtxKey &key) {
 orbis::ErrorCode orbis::umtx_lock_umtx(Thread *thread, ptr<umtx> umtx, ulong id,
                                        std::uint64_t ut) {
   ORBIS_LOG_TODO(__FUNCTION__, thread->tid, umtx, id, ut);
-  std::abort();
+  rx::die("unimplemented umtx lock");
   return ErrorCode::NOSYS;
 }
 
 orbis::ErrorCode orbis::umtx_unlock_umtx(Thread *thread, ptr<umtx> umtx,
                                          ulong id) {
   ORBIS_LOG_TODO(__FUNCTION__, thread->tid, umtx, id);
-  std::abort();
+  rx::die("unimplemented umtx unlock");
   return ErrorCode::NOSYS;
 }
 

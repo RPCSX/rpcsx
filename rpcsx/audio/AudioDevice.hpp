@@ -16,6 +16,7 @@ enum class AudioFormat : std::uint32_t {
   S16_LE = 0x10,
   AC3 = 0x400,
   S32_LE = 0x1000,
+  _last = S32_LE,
 };
 
 class AudioDevice : public rx::RcBase {

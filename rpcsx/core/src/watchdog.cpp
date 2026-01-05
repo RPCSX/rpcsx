@@ -32,7 +32,7 @@ enum class MessageId {
 };
 
 static void runGPU() {
-  if (g_gpuPid != 0 || orbis::g_context->gpuDevice != nullptr) {
+  if (g_gpuPid != 0) {
     return;
   }
 
@@ -51,26 +51,16 @@ static void runGPU() {
     }
   }
 
-  amdgpu::DeviceCtl gpu;
-  {
-    pthread_setname_np(pthread_self(), "rpcsx-gpu");
-    std::lock_guard lock(orbis::g_context->gpuDeviceMtx);
-    if (orbis::g_context->gpuDevice != nullptr) {
-      std::exit(0);
-    }
+  pthread_setname_np(pthread_self(), "rpcsx-gpu");
 
-    int logFd =
-        ::open("log-gpu.txt", O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
-    dup2(logFd, 1);
-    dup2(logFd, 2);
-    ::close(logFd);
+  int logFd =
+      ::open("log-gpu.txt", O_CREAT | O_RDWR | O_TRUNC, S_IRUSR | S_IWUSR);
+  dup2(logFd, 1);
+  dup2(logFd, 2);
+  ::close(logFd);
 
-    gpu = amdgpu::DeviceCtl::createDevice();
-    orbis::g_context->gpuDevice = gpu.getOpaque();
-  }
-
-  gpu.start();
-  std::exit(0);
+  amdgpu::DeviceCtl{orbis::g_context->gpuDevice}.start();
+  std::_Exit(0);
 }
 
 static void handleManagementSignal(siginfo_t *info) {
@@ -121,6 +111,7 @@ void rx::createGpuDevice() {
 void rx::shutdown() { kill(g_watchdogPid, SIGQUIT); }
 
 void rx::attachProcess(int pid) { sendMessage(MessageId::AttachProcess, pid); }
+void rx::attachGpuProcess(int pid) { g_gpuPid = pid; }
 
 static void killProcesses(std::vector<int> list) {
   int iteration = 0;

@@ -743,22 +743,19 @@ void ipmi::createShellCoreObjects(orbis::Process *process) {
             int shmFd =
                 ::open(hostPath.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
             if (shmFd == -1) {
-              perror("shm_open");
-              std::abort();
+              rx::die("shm_open failed, errc {}", std::errc{ errno });
             }
 
             struct stat controlStat;
             if (::fstat(shmFd, &controlStat)) {
-              perror("fstat");
-              std::abort();
+              rx::die("fstat failed, errc {}", std::errc{errno});
             }
 
             auto shmAddress = reinterpret_cast<std::uint8_t *>(
                 ::mmap(nullptr, controlStat.st_size, PROT_READ | PROT_WRITE,
                        MAP_SHARED, shmFd, 0));
             if (shmAddress == MAP_FAILED) {
-              perror("mmap");
-              std::abort();
+              rx::die("mmap failed, errc {}", std::errc{errno});
             }
             orbis::g_context->dialogs.emplace_back(shmAddress,
                                                    controlStat.st_size);

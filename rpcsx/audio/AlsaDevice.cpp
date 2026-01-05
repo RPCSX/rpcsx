@@ -1,6 +1,6 @@
 #include "AlsaDevice.hpp"
 #include "orbis/utils/Logs.hpp"
-#include "rx/hexdump.hpp"
+#include "rx/format.hpp"
 
 void AlsaDevice::start() {
   if (mWorking) {
@@ -19,9 +19,7 @@ void AlsaDevice::start() {
       break;
     case AudioFormat::AC3:
     default:
-      ORBIS_LOG_FATAL("Format is not supported", int(mFormat));
-      std::abort();
-      break;
+      rx::die("Format is not supported, {}", mFormat);
     }
     mAlsaFormat = fmt;
   }
@@ -29,60 +27,51 @@ void AlsaDevice::start() {
   if (auto err =
           snd_pcm_open(&mPCMHandle, "default", SND_PCM_STREAM_PLAYBACK, 0);
       err < 0) {
-    ORBIS_LOG_FATAL("Cannot open audio device", snd_strerror(err));
-    std::abort();
+    rx::die("Cannot open audio device: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_hw_params_malloc(&mHWParams); err < 0) {
-    ORBIS_LOG_FATAL("Cannot allocate hardware parameter structure",
-                    snd_strerror(err));
-    std::abort();
+    rx::die("Cannot allocate hardware parameter structure: {}",
+            snd_strerror(err));
   }
 
   if (auto err = snd_pcm_hw_params_any(mPCMHandle, mHWParams); err < 0) {
-    ORBIS_LOG_FATAL("Cannot initialize hardware parameter structure",
-                    snd_strerror(err));
-    std::abort();
+    rx::die("Cannot initialize hardware parameter structure: {}",
+            snd_strerror(err));
   }
 
   if (auto err = snd_pcm_hw_params_set_rate_resample(mPCMHandle, mHWParams, 0);
       err < 0) {
-    ORBIS_LOG_FATAL("Cannot disable rate resampling", snd_strerror(err));
-    std::abort();
+    rx::die("Cannot disable rate resampling: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_hw_params_set_access(mPCMHandle, mHWParams,
                                               SND_PCM_ACCESS_RW_INTERLEAVED);
       err < 0) {
-    ORBIS_LOG_FATAL("Cannot set access type", snd_strerror(err));
-    std::abort();
+    rx::die("Cannot set access type: {}", snd_strerror(err));
   }
   if (auto err =
           snd_pcm_hw_params_set_format(mPCMHandle, mHWParams, mAlsaFormat);
       err < 0) {
-    ORBIS_LOG_FATAL("Cannot set sample format", snd_strerror(err));
-    std::abort();
+    rx::die("Cannot set sample format: {}", snd_strerror(err));
   }
 
   if (auto err =
           snd_pcm_hw_params_set_rate(mPCMHandle, mHWParams, mFrequency, 0);
       err < 0) {
-    ORBIS_LOG_FATAL("Cannot set sample rate", snd_strerror(err));
-    std::abort();
+    rx::die("Cannot set sample rate: {}", snd_strerror(err));
   }
 
   if (auto err =
           snd_pcm_hw_params_set_channels(mPCMHandle, mHWParams, mChannels);
       err < 0) {
-    ORBIS_LOG_FATAL("cannot set channel count", snd_strerror(err), mChannels);
-    std::abort();
+    rx::die("cannot set channel count: {}", snd_strerror(err), mChannels);
   }
 
   if (auto err = snd_pcm_hw_params_set_periods(mPCMHandle, mHWParams,
                                                mSampleCount * 10, 0);
       err < 0) {
-    ORBIS_LOG_FATAL("Cannot set periods count", snd_strerror(err));
-    std::abort();
+    rx::die("Cannot set periods count: {}", snd_strerror(err));
   }
 
   int frameBytes = snd_pcm_format_physical_width(mAlsaFormat) * mChannels / 8;
@@ -109,8 +98,7 @@ void AlsaDevice::start() {
     }
 
     if (err < 0) {
-      ORBIS_LOG_FATAL("Cannot set buffer size", snd_strerror(err));
-      std::abort();
+      rx::die("Cannot set buffer size: {}", snd_strerror(err));
     }
   }
 
@@ -135,8 +123,7 @@ void AlsaDevice::start() {
     }
 
     if (err < 0) {
-      ORBIS_LOG_FATAL("Cannot set period size", snd_strerror(err));
-      std::abort();
+      rx::die("Cannot set period size: {}", snd_strerror(err));
     }
   }
 
@@ -144,63 +131,52 @@ void AlsaDevice::start() {
   if (auto err =
           snd_pcm_hw_params_get_period_size(mHWParams, &periodSize, nullptr);
       err < 0) {
-    ORBIS_LOG_FATAL("cannot set parameters", snd_strerror(err));
-    std::abort();
+    rx::die("cannot set parameters: {}", snd_strerror(err));
   }
 
   snd_pcm_uframes_t bufferSize;
   if (auto err = snd_pcm_hw_params_get_buffer_size(mHWParams, &bufferSize);
       err < 0) {
-    ORBIS_LOG_FATAL("cannot set parameters", snd_strerror(err));
-    std::abort();
+    rx::die("cannot set parameters: {}", snd_strerror(err));
   }
 
   ORBIS_LOG_TODO("period and buffer", periodSize, bufferSize);
 
   if (auto err = snd_pcm_hw_params(mPCMHandle, mHWParams); err < 0) {
-    ORBIS_LOG_FATAL("cannot set parameters", snd_strerror(err));
-    std::abort();
+    rx::die("cannot set parameters: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_sw_params_malloc(&mSWParams); err < 0) {
-    ORBIS_LOG_FATAL("Cannot allocate software parameter structure",
-                    snd_strerror(err));
-    std::abort();
+    rx::die("Cannot allocate software parameter structure: {}",
+            snd_strerror(err));
   }
 
   if (auto err = snd_pcm_sw_params_current(mPCMHandle, mSWParams); err < 0) {
-    ORBIS_LOG_FATAL("cannot sw params current", snd_strerror(err));
-    std::abort();
+    rx::die("cannot sw params current: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_sw_params_set_start_threshold(mPCMHandle, mSWParams,
                                                        periodSize);
       err < 0) {
-    ORBIS_LOG_FATAL("cannot set start threshold", snd_strerror(err));
-    std::abort();
+    rx::die("cannot set start threshold: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_sw_params_set_stop_threshold(mPCMHandle, mSWParams,
                                                       bufferSize);
       err < 0) {
-    ORBIS_LOG_FATAL("cannot set stop threshold", snd_strerror(err));
-    std::abort();
+    rx::die("cannot set stop threshold: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_sw_params(mPCMHandle, mSWParams); err < 0) {
-    ORBIS_LOG_FATAL("cannot set parameters", snd_strerror(err));
-    std::abort();
+    rx::die("cannot set parameters: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_nonblock(mPCMHandle, 1); err < 0) {
-    ORBIS_LOG_FATAL("set nonblock mode failed", snd_strerror(err));
-    std::abort();
+    rx::die("set nonblock mode failed: {}", snd_strerror(err));
   }
 
   if (auto err = snd_pcm_prepare(mPCMHandle); err < 0) {
-    ORBIS_LOG_FATAL("cannot prepare audio interface for use",
-                    snd_strerror(err));
-    std::abort();
+    rx::die("cannot prepare audio interface for use: {}", snd_strerror(err));
   }
 
   mWorking = true;

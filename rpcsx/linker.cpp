@@ -527,7 +527,7 @@ static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
 
   Elf64_Phdr phdrsStorage[16];
   if (header.e_phnum > std::size(phdrsStorage)) {
-    std::abort();
+    rx::die("unexpected phnum {}", header.e_phnum);
   }
 
   std::memcpy(phdrsStorage, elf->image.data() + header.e_phoff,
@@ -1004,7 +1004,7 @@ static rx::Ref<orbis::Module> loadModule(ElfFile *elf, orbis::Process *process,
             hashPos = moduleLibary.find('#');
 
             if (hashPos == std::string_view::npos) {
-              std::abort();
+              rx::die("unexpected symbol name {}", fullName);
             }
 
             library = moduleLibary.substr(0, hashPos);
