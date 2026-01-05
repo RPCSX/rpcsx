@@ -19,7 +19,7 @@ void AlsaDevice::start() {
       break;
     case AudioFormat::AC3:
     default:
-      rx::die("Format is not supported, {}", mFormat);
+      rx::die("Format is not supported, {}", static_cast<int>(mFormat));
     }
     mAlsaFormat = fmt;
   }
