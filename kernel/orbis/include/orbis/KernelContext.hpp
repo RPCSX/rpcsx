@@ -137,6 +137,7 @@ public:
 
   rx::shared_mutex regMgrMtx;
   kmap<std::uint32_t, std::uint32_t> regMgrInt;
+  kmap<std::uint32_t, rx::StaticCString<2048>> regMgrStr;
   std::vector<std::tuple<std::uint8_t *, size_t>> dialogs{};
 
   FwType fwType = FwType::Unknown;
