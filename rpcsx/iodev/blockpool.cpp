@@ -14,27 +14,6 @@ enum {
   BLOCKPOOL_IOCTL_GET_BLOCK_STATS = 0x4010a802,
 };
 
-struct BlockPoolAllocation {
-  bool allocated = false;
-
-  [[nodiscard]] bool isAllocated() const { return allocated; }
-  [[nodiscard]] bool isRelated(const BlockPoolAllocation &, rx::AddressRange,
-                               rx::AddressRange) const {
-    return true;
-  }
-
-  [[nodiscard]] BlockPoolAllocation merge(const BlockPoolAllocation &other,
-                                          rx::AddressRange,
-                                          rx::AddressRange) const {
-    return other;
-  }
-
-  bool operator==(const BlockPoolAllocation &) const = default;
-};
-
-using DirectMemoryResource =
-    kernel::AllocableResource<BlockPoolAllocation, orbis::kallocator>;
-
 struct BlockPoolFile : public orbis::File {};
 struct BlockPoolDevice
     : orbis::IoDeviceWithIoctl<orbis::ioctl::group(BLOCKPOOL_IOCTL_EXPAND)> {
@@ -86,15 +65,15 @@ static orbis::ErrorCode blockpool_ioctl_expand(orbis::Thread *thread,
     return dmemErrc;
   }
 
-  auto [pmemOffset, pmemErrc] = orbis::dmem::getPmemOffset(0, dmemOffset);
+  auto [range, memoryType] = orbis::dmem::getPmemRange(0, dmemOffset);
 
-  if (pmemErrc != orbis::ErrorCode{}) {
-    return pmemErrc;
+  if (range.isValid()) {
+    return orbis::ErrorCode::ACCES;
   }
 
   args.searchStart = dmemOffset;
   return orbis::blockpool::expand(
-      rx::AddressRange::fromBeginSize(pmemOffset, args.len));
+      rx::AddressRange::fromBeginSize(range.beginAddress(), args.len));
 }
 
 static std::pair<orbis::ErrorCode, orbis::blockpool::BlockStats>

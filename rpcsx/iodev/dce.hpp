@@ -12,7 +12,7 @@ static constexpr auto kVmIdCount = 6;
 
 struct DceDevice : orbis::IoDevice {
   rx::shared_mutex mtx;
-  rx::AddressRange dmemRange;
+  rx::AddressRange pmemRange;
   std::uint32_t eopCount = 0;
   std::uint32_t freeVmIds = (1 << (kVmIdCount + 1)) - 1;
 
@@ -25,7 +25,17 @@ struct DceDevice : orbis::IoDevice {
   orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
                        rx::EnumBitSet<orbis::vmem::Protection> protection,
                        orbis::File *file, orbis::Process *process) override;
+  std::pair<rx::AddressRange, orbis::MemoryType>
+  getPmemRange(std::uint64_t offset, orbis::File *) override {
+    auto range = rx::AddressRange::fromBeginEnd(
+        pmemRange.beginAddress() + offset, pmemRange.endAddress());
+
+    return {range, orbis::MemoryType::WcGarlic};
+  }
+
   int allocateVmId();
   void deallocateVmId(int vmId);
   void initializeProcess(orbis::Process *process);
+
+  std::string toString() const override { return "dce"; }
 };

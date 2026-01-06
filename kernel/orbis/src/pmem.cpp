@@ -9,6 +9,7 @@
 #include "kernel/MemoryResource.hpp"
 #include "rx/AddressRange.hpp"
 #include "rx/Rc.hpp"
+#include "rx/mem.hpp"
 #include "rx/print.hpp"
 #include "vmem.hpp"
 #include <cassert>
@@ -149,6 +150,22 @@ orbis::pmem::map(std::uint64_t virtualAddress, rx::AddressRange range,
                                            protection, vmem::kPageSize);
 
   return toErrorCode(errc);
+}
+
+void *orbis::pmem::mapInternal(rx::AddressRange range,
+                               rx::EnumBitSet<rx::mem::Protection> protection) {
+  auto [pointer, errc] = g_pmemInstance->mappable.map(
+      range.size(), range.beginAddress(), protection);
+  if (errc != std::errc{}) {
+    return nullptr;
+  }
+
+  return pointer;
+}
+
+void orbis::pmem::unmapInternal(void *data, std::size_t size) {
+  auto address = std::bit_cast<uintptr_t>(data);
+  rx::mem::release(rx::AddressRange::fromBeginSize(address, size), 0);
 }
 
 std::size_t orbis::pmem::getSize() { return g_pmemInstance->size; }

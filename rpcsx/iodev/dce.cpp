@@ -278,15 +278,13 @@ static orbis::ErrorCode dce_ioctl(orbis::File *file, std::uint64_t request,
                          args->arg2, args->ptr, args->size, args->arg5,
                          args->arg6);
 
-        auto [range, errc] = orbis::vmem::mapDirect(
-            thread->tproc, 0,
-            rx::AddressRange::fromBeginSize(device->dmemRange.beginAddress(),
-                                            orbis::vmem::kPageSize),
-            orbis::vmem::Protection::CpuRead |
-                orbis::vmem::Protection::CpuWrite |
-                orbis::vmem::Protection::GpuRead |
-                orbis::vmem::Protection::GpuWrite,
-            {}, "DCE");
+        auto [range, errc] =
+            orbis::vmem::mapFile(thread->tproc, 0, orbis::vmem::kPageSize, {},
+                                 orbis::vmem::Protection::CpuRead |
+                                     orbis::vmem::Protection::CpuWrite |
+                                     orbis::vmem::Protection::GpuRead |
+                                     orbis::vmem::Protection::GpuWrite,
+                                 {}, {}, file, 0, "DCE");
 
         if (errc != orbis::ErrorCode{}) {
           return errc;
@@ -587,22 +585,18 @@ orbis::ErrorCode
 DceDevice::map(rx::AddressRange range, std::int64_t offset,
                rx::EnumBitSet<orbis::vmem::Protection> protection,
                orbis::File *, orbis::Process *process) {
-  if (offset + range.size() > dmemRange.size()) {
+  if (offset + range.size() > pmemRange.size()) {
     return orbis::ErrorCode::INVAL;
   }
 
   rx::println(stderr, "map dce {:x}-{:x} {:04x} {}", range.beginAddress(),
               range.endAddress(), offset, protection);
 
-  auto result =
-      orbis::dmem::map(process, 0, range, dmemRange.beginAddress() + offset, protection);
+  auto pmemMapRange = rx::AddressRange::fromBeginSize(
+      pmemRange.beginAddress() + offset, range.size());
 
-  if (result == orbis::ErrorCode{}) {
-    amdgpu::mapMemory(process->pid, range, orbis::MemoryType::WcGarlic,
-                      protection, dmemRange.beginAddress() + offset);
-  }
-
-  return result;
+  return orbis::pmem::map(range.beginAddress(), pmemMapRange,
+                          orbis::vmem::toCpuProtection(protection));
 }
 
 static const orbis::FileOps ops = {
@@ -624,7 +618,7 @@ static void createGpu() {
   }
 }
 
-DceDevice::~DceDevice() { orbis::dmem::release(0, dmemRange); }
+DceDevice::~DceDevice() { orbis::pmem::deallocate(pmemRange); }
 
 orbis::ErrorCode DceDevice::open(rx::Ref<orbis::File> *file, const char *path,
                                  std::uint32_t flags, std::uint32_t mode,
@@ -653,28 +647,22 @@ void DceDevice::initializeProcess(orbis::Process *process) {
   }
 }
 
-orbis::IoDevice *createDceCharacterDevice(orbis::Process *process) {
+orbis::IoDevice *createDceCharacterDevice() {
   auto result = orbis::knew<DceDevice>();
-  auto dmemSize = orbis::dmem::getSize(0);
-  auto [dmemOffset, errc] = orbis::dmem::allocate(
-      0,
-      rx::AddressRange::fromBeginEnd(dmemSize - orbis::dmem::kPageSize * 2,
-                                     dmemSize),
-      orbis::dmem::kPageSize, orbis::MemoryType::WcGarlic);
+  auto [pmemRange, errc] = orbis::pmem::allocate(0, orbis::dmem::kPageSize, {},
+                                                 orbis::dmem::kPageSize);
 
   rx::dieIf(errc != orbis::ErrorCode{},
             "failed to allocate DCE memory, error {}", errc);
-  result->dmemRange =
-      rx::AddressRange::fromBeginSize(dmemOffset, orbis::dmem::kPageSize);
+  result->pmemRange = pmemRange;
 
-  auto [vmem, mapErrc] = orbis::vmem::mapDirect(
-      process, 0, result->dmemRange, orbis::vmem::Protection::CpuWrite, {});
-  auto dceControl = reinterpret_cast<std::byte *>(vmem.beginAddress());
+  auto vmem = orbis::pmem::mapInternal(pmemRange, rx::mem::Protection::W);
+  auto dceControl = reinterpret_cast<std::byte *>(vmem);
   *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x130) = 0;
   *reinterpret_cast<orbis::uint64_t *>(dceControl + 0x138) = 1;
   *reinterpret_cast<orbis::uint16_t *>(dceControl + 0x140) =
       orbis::kEvFiltDisplay;
 
-  orbis::vmem::unmap(process, vmem);
+  orbis::pmem::unmapInternal(vmem, pmemRange.size());
   return result;
 }

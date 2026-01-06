@@ -22,6 +22,9 @@ ErrorCode deallocate(rx::AddressRange range);
 std::optional<rx::AddressRange> query(std::uint64_t address);
 ErrorCode map(std::uint64_t virtualAddress, rx::AddressRange range,
               rx::EnumBitSet<rx::mem::Protection> protection);
+void *mapInternal(rx::AddressRange range,
+                  rx::EnumBitSet<rx::mem::Protection> protection);
+void unmapInternal(void *data, std::size_t size);
 std::size_t getSize();
 IoDevice *getDevice();
 File *getFile();

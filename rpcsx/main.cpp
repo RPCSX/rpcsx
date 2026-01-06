@@ -362,7 +362,7 @@ static void guestInitDev(orbis::Thread *thread, int stdinFd, int stdoutFd,
   auto dmem0 = createDmemCharacterDevice(0);
   dmem0->open(&orbis::g_context->dmem, "", 0, 0, thread);
 
-  auto dce = createDceCharacterDevice(thread->tproc);
+  auto dce = createDceCharacterDevice();
   orbis::g_context->dceDevice = dce;
 
   auto consoleDev = createConsoleCharacterDevice(stdinFd, stdoutFd);

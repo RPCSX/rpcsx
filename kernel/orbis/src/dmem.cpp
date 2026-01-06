@@ -870,28 +870,31 @@ orbis::ErrorCode orbis::dmem::protect(orbis::Process *process,
   return {};
 }
 
-std::pair<std::uint64_t, orbis::ErrorCode>
-orbis::dmem::getPmemOffset(unsigned dmemIndex, std::uint64_t dmemOffset) {
+std::pair<rx::AddressRange, orbis::MemoryType>
+orbis::dmem::getPmemRange(unsigned dmemIndex, std::uint64_t dmemOffset) {
   if (dmemIndex > std::size(g_dmemPools)) {
-    return {{}, ErrorCode::INVAL};
+    return {};
   }
 
   auto dmem = g_dmemPools[dmemIndex];
   std::lock_guard lock(*dmem);
 
   if (dmemOffset >= dmem->dmemTotalSize) {
-    return {{}, orbis::ErrorCode::INVAL};
+    return {};
   }
 
   if (dmemOffset >= dmem->dmemTotalSize - dmem->dmemReservedSize) {
-    return {{}, orbis::ErrorCode::ACCES};
+    return {};
   }
 
   auto allocationInfoIt = dmem->query(dmemOffset);
 
   if (allocationInfoIt == dmem->end() || !allocationInfoIt->isAllocated()) {
-    return {{}, orbis::ErrorCode::ACCES};
+    return {};
   }
 
-  return {dmem->pmemOffset + dmemOffset, {}};
+  auto range = rx::AddressRange::fromBeginEnd(
+      dmem->pmemOffset + dmemOffset,
+      dmem->pmemOffset + allocationInfoIt.endAddress());
+  return {range, allocationInfoIt->getMemoryType()};
 }

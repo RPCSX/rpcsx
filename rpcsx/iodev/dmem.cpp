@@ -44,6 +44,11 @@ struct DmemDevice
                        rx::EnumBitSet<orbis::vmem::Protection> protection,
                        orbis::File *file, orbis::Process *process) override;
 
+  std::pair<rx::AddressRange, orbis::MemoryType>
+  getPmemRange(std::uint64_t offset, orbis::File *) override {
+    return orbis::dmem::getPmemRange(index, offset);
+  }
+
   [[nodiscard]] std::string toString() const override {
     return "dmem" + std::to_string(index);
   }
@@ -357,20 +362,7 @@ orbis::ErrorCode
 DmemDevice::map(rx::AddressRange range, std::int64_t offset,
                 rx::EnumBitSet<orbis::vmem::Protection> protection,
                 orbis::File *, orbis::Process *process) {
-  auto result = orbis::dmem::map(process, index, range, offset, protection);
-
-  if (result == orbis::ErrorCode{}) {
-    if (auto dmemType = orbis::dmem::query(0, offset)) {
-      auto [pmemOffset, errc] = orbis::dmem::getPmemOffset(0, offset);
-      rx::dieIf(errc != orbis::ErrorCode{}, "failed to query dmem type {}",
-                errc);
-
-      amdgpu::mapMemory(process->pid, range, dmemType->memoryType, protection,
-                        pmemOffset);
-    }
-  }
-
-  return result;
+  return orbis::dmem::map(process, index, range, offset, protection);
 }
 
 static const orbis::FileOps ops = {};

@@ -69,6 +69,6 @@ ErrorCode protect(orbis::Process *process, unsigned dmemIndex,
                   rx::AddressRange range,
                   rx::EnumBitSet<vmem::Protection> prot);
 
-std::pair<std::uint64_t, ErrorCode> getPmemOffset(unsigned dmemIndex,
-                                                  std::uint64_t dmemOffset);
+std::pair<rx::AddressRange, orbis::MemoryType>
+getPmemRange(unsigned dmemIndex, std::uint64_t dmemOffset);
 } // namespace orbis::dmem

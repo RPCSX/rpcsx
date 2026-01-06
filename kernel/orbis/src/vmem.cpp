@@ -43,7 +43,7 @@ struct VirtualMemoryAllocation {
   rx::EnumBitSet<orbis::vmem::BlockFlagsEx> flagsEx{};
   rx::EnumBitSet<orbis::vmem::Protection> prot{};
   orbis::MemoryType type = orbis::MemoryType::Invalid;
-  rx::Ref<orbis::IoDevice> device;
+  rx::Ref<orbis::File> file;
   std::uint64_t deviceOffset = 0;
   std::uint64_t callerAddress = 0;
   rx::StaticString<31> name;
@@ -57,7 +57,7 @@ struct VirtualMemoryAllocation {
   isRelated(const VirtualMemoryAllocation &other, rx::AddressRange selfRange,
             [[maybe_unused]] rx::AddressRange rightRange) const {
     if (flags != other.flags || flagsEx != other.flagsEx ||
-        prot != other.prot || type != other.type || device != other.device ||
+        prot != other.prot || type != other.type || file != other.file ||
         callerAddress != other.callerAddress) {
       return false;
     }
@@ -70,7 +70,7 @@ struct VirtualMemoryAllocation {
       return false;
     }
 
-    if (device == nullptr || flags == orbis::vmem::BlockFlags::PooledMemory) {
+    if (file == nullptr || flags == orbis::vmem::BlockFlags::PooledMemory) {
       return true;
     }
 
@@ -86,7 +86,7 @@ struct VirtualMemoryAllocation {
   [[nodiscard]] std::pair<rx::AddressRange, VirtualMemoryAllocation>
   truncate(rx::AddressRange selfRange, rx::AddressRange leftRange,
            rx::AddressRange rightRange) const {
-    if (!rightRange.isValid() || device == nullptr) {
+    if (!rightRange.isValid() || file == nullptr) {
       return {};
     }
 
@@ -270,7 +270,7 @@ static void release(orbis::Process *process, decltype(g_vmInstance)::type *vmem,
 
     auto gpuProt = orbis::vmem::toGpuProtection(it->prot);
     if (it->flags & orbis::vmem::BlockFlags::FlexibleMemory) {
-      if (it->device == nullptr && gpuProt) {
+      if (it->file == nullptr && gpuProt) {
         amdgpu::unmapMemory(process->pid, blockRange);
         orbis::fmem::deallocate(blockRange);
       }
@@ -333,7 +333,7 @@ static decltype(g_vmInstance)::type::iterator modifyRange(
     } else {
       auto allocInfo = it.get();
 
-      if (allocInfo.device != nullptr &&
+      if (allocInfo.file != nullptr &&
           !(allocInfo.flags & orbis::vmem::BlockFlags::PooledMemory)) {
         allocInfo.deviceOffset += mapRange.beginAddress() - it.beginAddress();
       }
@@ -514,7 +514,7 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
   }
 
   allocationInfo.flagsEx = blockFlagsEx | BlockFlagsEx::Allocated;
-  allocationInfo.device = file->device;
+  allocationInfo.file = file;
   allocationInfo.prot = prot;
   allocationInfo.deviceOffset = fileOffset;
   allocationInfo.setName(process, name);
@@ -652,7 +652,14 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapFile(
     rx::dieIf(errc != std::errc{}, "failed to commit virtual memory {}", errc);
   }
 
-  vmemDump(process, rx::format("mapped {:x}-{:x} {}", range.beginAddress(),
+  if (auto [pmemRange, memoryType] =
+          file->device->getPmemRange(fileOffset, file);
+      pmemRange.isValid()) {
+    amdgpu::mapMemory(process->pid, range, type, prot,
+                      pmemRange.beginAddress());
+  }
+
+  vmemDump(process, rx::format("file mapped {:x}-{:x} {}", range.beginAddress(),
                                range.endAddress(), prot));
 
   return {range, {}};
@@ -692,7 +699,7 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
   allocationInfo.flags = BlockFlags::DirectMemory;
   allocationInfo.flagsEx = BlockFlagsEx::Allocated;
   allocationInfo.prot = prot;
-  allocationInfo.device = g_context->dmem->device;
+  allocationInfo.file = g_context->dmem;
   allocationInfo.deviceOffset = directRange.beginAddress();
   allocationInfo.type = type;
   allocationInfo.setName(process, name);
@@ -757,11 +764,14 @@ std::pair<rx::AddressRange, orbis::ErrorCode> orbis::vmem::mapDirect(
 
   dmemResource.commit();
 
-  auto [pmemOffset, errc] = dmem::getPmemOffset(0, directRange.beginAddress());
-  rx::dieIf(errc != ErrorCode{},
-            "mapDirect: failed to query physical offset {}", errc);
+  auto [pmemRange, pmemType] =
+      dmem::getPmemRange(0, directRange.beginAddress());
+  rx::dieIf(!pmemRange.isValid(), "mapDirect: failed to query physical offset");
+  rx::dieIf(pmemType != type,
+            "mapDirect: unexpected queried pmem type. mapped {}, queried {}",
+            type, pmemType);
 
-  amdgpu::mapMemory(process->pid, range, type, prot, pmemOffset);
+  amdgpu::mapMemory(process->pid, range, type, prot, pmemRange.beginAddress());
 
   vmemDump(process, rx::format("mapped dmem {:x}-{:x}", range.beginAddress(),
                                range.endAddress()));
@@ -1192,7 +1202,7 @@ orbis::ErrorCode orbis::vmem::protect(Process *process, rx::AddressRange range,
           }
 
           if (!alloc.isVoid()) {
-            if (alloc.isFlex() && alloc.device == nullptr) {
+            if (alloc.isFlex() && alloc.file == nullptr) {
               if (blockProt && !alloc.prot) {
                 auto [pmemRange, errc] = fmem::allocate(range.size());
                 rx::dieIf(errc != ErrorCode{},
@@ -1231,7 +1241,7 @@ orbis::ErrorCode orbis::vmem::protect(Process *process, rx::AddressRange range,
 
             if (sdkVersion > 0x1500000) {
               if (alloc.isDirect() || alloc.isPooled() ||
-                  (alloc.isFlex() && alloc.device != nullptr)) {
+                  (alloc.isFlex() && alloc.file != nullptr)) {
                 blockProt &= ~Protection::CpuExec;
               }
             }
@@ -1252,7 +1262,7 @@ orbis::ErrorCode orbis::vmem::protect(Process *process, rx::AddressRange range,
           }
 
           if (alloc.isDirect() || alloc.isPooled() ||
-              (alloc.isFlex() && alloc.device != nullptr)) {
+              (alloc.isFlex() && alloc.file != nullptr)) {
             blockProt &= ~Protection::CpuExec;
           }
 
@@ -1458,7 +1468,7 @@ orbis::vmem::query(Process *process, std::uint64_t address, bool lowerBound) {
   result.start = it.beginAddress();
   result.end = it.endAddress();
 
-  if (!(it->flags & BlockFlags::FlexibleMemory) || it->device != nullptr) {
+  if (!(it->flags & BlockFlags::FlexibleMemory) || it->file != nullptr) {
     result.offset = it->deviceOffset;
   }
 
@@ -1511,4 +1521,37 @@ orbis::vmem::queryProtection(Process *process, std::uint64_t address,
   result.endAddress = it.endAddress();
   result.prot = it->prot;
   return result;
+}
+
+std::pair<rx::AddressRange, orbis::MemoryType>
+orbis::vmem::getPmemRange(Process *process, std::uint64_t address) {
+  rx::Ref<File> file;
+  std::uint64_t deviceOffset;
+  {
+    auto vmem = process->get(g_vmInstance);
+    std::lock_guard lock(*vmem);
+
+    auto it = vmem->query(address);
+
+    if (it == vmem->end()) {
+      return {};
+    }
+
+    auto disp = address - it.beginAddress();
+
+    if (it->isFlexCommited()) {
+      return {rx::AddressRange::fromBeginSize(it->deviceOffset + disp,
+                                              it.size() - disp),
+              orbis::MemoryType::WbOnion};
+    }
+
+    if (it->file == nullptr) {
+      return {};
+    }
+
+    file = it->file;
+    deviceOffset = it->deviceOffset + disp;
+  }
+
+  return file->device->getPmemRange(deviceOffset, file.get());
 }

@@ -77,6 +77,11 @@ struct IoDevice : rx::RcBase {
                         rx::EnumBitSet<vmem::Protection> protection, File *file,
                         Process *process);
 
+  virtual std::pair<rx::AddressRange, orbis::MemoryType>
+  getPmemRange(std::uint64_t offset, File *file) {
+    return {};
+  }
+
   [[nodiscard]] virtual std::string toString() const;
 };
 

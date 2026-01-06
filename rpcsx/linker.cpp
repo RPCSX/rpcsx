@@ -504,6 +504,16 @@ struct ElfDevice : orbis::IoDevice {
                             orbis::vmem::toCpuProtection(protection));
   }
 
+  std::pair<rx::AddressRange, orbis::MemoryType>
+  getPmemRange(std::uint64_t offset, orbis::File *file) override {
+    auto elf = static_cast<ElfFile *>(file);
+    auto range = rx::AddressRange::fromBeginEnd(
+        elf->physicalMemory.beginAddress() + offset,
+        elf->physicalMemory.endAddress());
+
+    return {range, orbis::MemoryType::WbOnion};
+  }
+
   void serialize(rx::Serializer &s) const {
     // FIXME: implement
   }

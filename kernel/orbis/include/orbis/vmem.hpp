@@ -230,4 +230,6 @@ std::optional<QueryResult> query(Process *process, std::uint64_t address,
 std::optional<MemoryProtection> queryProtection(Process *process,
                                                 std::uint64_t address,
                                                 bool lowerBound = false);
+std::pair<rx::AddressRange, MemoryType> getPmemRange(Process *process,
+                                                     std::uint64_t address);
 } // namespace orbis::vmem

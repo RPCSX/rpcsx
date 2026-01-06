@@ -30,10 +30,9 @@ struct ComputeQueue {
 
 struct GcDevice : public orbis::IoDevice {
   rx::shared_mutex mtx;
-  rx::AddressRange dmemRange;
+  rx::AddressRange pmemRange;
   orbis::kmap<orbis::pid_t, int> clients;
   orbis::kmap<std::uint64_t, ComputeQueue> computeQueues;
-  orbis::uintptr_t submitArea = 0;
   orbis::ErrorCode open(rx::Ref<orbis::File> *file, const char *path,
                         std::uint32_t flags, std::uint32_t mode,
                         orbis::Thread *thread) override;
@@ -43,30 +42,31 @@ struct GcDevice : public orbis::IoDevice {
 
   GcDevice() { blockFlags = orbis::vmem::BlockFlags::DirectMemory; }
 
-  ~GcDevice() { orbis::pmem::deallocate(dmemRange); }
+  ~GcDevice() { orbis::pmem::deallocate(pmemRange); }
 
   orbis::ErrorCode map(rx::AddressRange range, std::int64_t offset,
                        rx::EnumBitSet<orbis::vmem::Protection> protection,
                        orbis::File *file, orbis::Process *process) override {
-    if (offset + range.size() > dmemRange.size()) {
+    if (offset + range.size() > pmemRange.size()) {
       return orbis::ErrorCode::INVAL;
     }
 
     rx::println(stderr, "map gc {:x}-{:x} {:04x} {}", range.beginAddress(),
                 range.endAddress(), offset, protection);
 
-    auto result =
-        orbis::pmem::map(range.beginAddress(),
-                         rx::AddressRange::fromBeginSize(
-                             dmemRange.beginAddress() + offset, range.size()),
-                         orbis::vmem::toCpuProtection(protection));
+    return orbis::pmem::map(
+        range.beginAddress(),
+        rx::AddressRange::fromBeginSize(pmemRange.beginAddress() + offset,
+                                        range.size()),
+        orbis::vmem::toCpuProtection(protection));
+  }
 
-    if (result == orbis::ErrorCode{}) {
-      amdgpu::mapMemory(process->pid, range, orbis::MemoryType::WbOnion,
-                        protection, dmemRange.beginAddress() + offset);
-    }
+  std::pair<rx::AddressRange, orbis::MemoryType>
+  getPmemRange(std::uint64_t offset, orbis::File *) override {
+    auto range = rx::AddressRange::fromBeginEnd(
+        pmemRange.beginAddress() + offset, pmemRange.endAddress());
 
-    return result;
+    return {range, orbis::MemoryType::WcGarlic};
   }
 };
 
@@ -87,37 +87,34 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
   std::lock_guard lock(device->mtx);
 
   switch (request) {
-  case 0xc008811b: // get submit done flag ptr?
-    if (device->submitArea == 0) {
-      auto [dmemOffset, dmemErrc] = orbis::dmem::allocate(
-          0, rx::AddressRange::fromBeginEnd(0, 0), orbis::dmem::kPageSize,
-          orbis::MemoryType::WcGarlic);
+  case 0xc008811b: { // get submit done flag ptr?
+    auto [dmemOffset, dmemErrc] = orbis::dmem::allocate(
+        0, rx::AddressRange::fromBeginEnd(0, 0), orbis::dmem::kPageSize,
+        orbis::MemoryType::WcGarlic);
 
-      if (dmemErrc != orbis::ErrorCode{}) {
-        return dmemErrc;
-      }
+    if (dmemErrc != orbis::ErrorCode{}) {
+      return dmemErrc;
+    }
 
-      auto directRange =
-          rx::AddressRange::fromBeginSize(dmemOffset, orbis::dmem::kPageSize);
+    auto directRange =
+        rx::AddressRange::fromBeginSize(dmemOffset, orbis::dmem::kPageSize);
 
-      auto [vmemRange, vmemErrc] = orbis::vmem::mapDirect(
-          thread->tproc, 0xfe0100000, directRange,
-          orbis::vmem::Protection::CpuRead | orbis::vmem::Protection::CpuWrite |
-              orbis::vmem::Protection::GpuRead |
-              orbis::vmem::Protection::GpuWrite,
-          {});
+    auto [vmemRange, vmemErrc] = orbis::vmem::mapFile(
+        thread->tproc, 0xfe0100000, orbis::dmem::kPageSize, {},
+        orbis::vmem::Protection::CpuRead | orbis::vmem::Protection::CpuWrite |
+            orbis::vmem::Protection::GpuRead |
+            orbis::vmem::Protection::GpuWrite,
+        {}, {}, file, orbis::dmem::kPageSize, "GC");
 
-      if (vmemErrc != orbis::ErrorCode{}) {
-        orbis::dmem::release(0, directRange);
-        return vmemErrc;
-      }
-
-      device->submitArea = vmemRange.beginAddress();
+    if (vmemErrc != orbis::ErrorCode{}) {
+      orbis::dmem::release(0, directRange);
+      return vmemErrc;
     }
 
     ORBIS_LOG_ERROR("gc ioctl 0xc008811b", *(std::uint64_t *)argp);
-    *reinterpret_cast<orbis::uintptr_t *>(argp) = device->submitArea;
+    *reinterpret_cast<orbis::uintptr_t *>(argp) = vmemRange.beginAddress();
     break;
+  }
 
   case 0xc004812e: {
     if (orbis::g_context->fwType != orbis::FwType::Ps5) {
@@ -534,16 +531,12 @@ void GcDevice::removeClient(orbis::Process *process) {
 
 orbis::IoDevice *createGcCharacterDevice() {
   auto result = orbis::knew<GcDevice>();
-  auto dmemSize = orbis::dmem::getSize(0);
-  auto [dmemOffset, errc] = orbis::dmem::allocate(
-      0,
-      rx::AddressRange::fromBeginEnd(dmemSize - orbis::dmem::kPageSize * 2,
-                                     dmemSize),
-      orbis::dmem::kPageSize, orbis::MemoryType::WcGarlic);
+  auto [pmemRange, errc] = orbis::pmem::allocate(0, orbis::dmem::kPageSize * 2,
+                                                 {}, orbis::dmem::kPageSize);
 
   rx::dieIf(errc != orbis::ErrorCode{},
             "failed to allocate GC memory, error {}", errc);
-  result->dmemRange =
-      rx::AddressRange::fromBeginSize(dmemOffset, orbis::dmem::kPageSize);
+
+  result->pmemRange = pmemRange;
   return result;
 }
