@@ -88,17 +88,6 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
 
   switch (request) {
   case 0xc008811b: { // get submit done flag ptr?
-    auto [dmemOffset, dmemErrc] = orbis::dmem::allocate(
-        0, rx::AddressRange::fromBeginEnd(0, 0), orbis::dmem::kPageSize,
-        orbis::MemoryType::WcGarlic);
-
-    if (dmemErrc != orbis::ErrorCode{}) {
-      return dmemErrc;
-    }
-
-    auto directRange =
-        rx::AddressRange::fromBeginSize(dmemOffset, orbis::dmem::kPageSize);
-
     auto [vmemRange, vmemErrc] = orbis::vmem::mapFile(
         thread->tproc, 0xfe0100000, orbis::dmem::kPageSize, {},
         orbis::vmem::Protection::CpuRead | orbis::vmem::Protection::CpuWrite |
@@ -107,7 +96,6 @@ static orbis::ErrorCode gc_ioctl(orbis::File *file, std::uint64_t request,
         {}, {}, file, orbis::dmem::kPageSize, "GC");
 
     if (vmemErrc != orbis::ErrorCode{}) {
-      orbis::dmem::release(0, directRange);
       return vmemErrc;
     }
 
