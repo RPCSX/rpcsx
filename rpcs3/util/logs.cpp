@@ -489,7 +489,7 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 #ifdef _WIN32
 	// Autodelete compressed log file
 	FILE_DISPOSITION_INFO disp{};
-	disp.DeleteFileW = true;
+	disp.DeleteFile = true;
 	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #endif
 
@@ -558,7 +558,7 @@ logs::file_writer::~file_writer()
 #ifdef _WIN32
 	// Cancel compressed log file auto-deletion
 	FILE_DISPOSITION_INFO disp;
-	disp.DeleteFileW = false;
+	disp.DeleteFile = false;
 	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #else
 	// Restore compressed log file permissions
@@ -744,7 +744,7 @@ void logs::file_writer::close_prematurely()
 #ifdef _WIN32
 		// Cancel compressed log file auto-deletion
 		FILE_DISPOSITION_INFO disp;
-		disp.DeleteFileW = false;
+		disp.DeleteFile = false;
 		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #else
 		// Restore compressed log file permissions

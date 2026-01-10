@@ -5,7 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #define DBGHELP_TRANSLATE_TCHAR
-#include <DbgHelp.h>
+#include <dbghelp.h>
 #include <codecvt>
 #else
 #include <execinfo.h>

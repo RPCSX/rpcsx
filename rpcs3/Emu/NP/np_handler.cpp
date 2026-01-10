@@ -19,7 +19,7 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
-#include <WS2tcpip.h>
+#include <ws2tcpip.h>
 #include <iphlpapi.h>
 #else
 #ifdef __clang__
