@@ -13,7 +13,7 @@
 
 #ifdef _WIN32
 #include <WinSock2.h>
-#include <WS2tcpip.h>
+#include <ws2tcpip.h>
 #include <afunix.h> // sockaddr_un
 #else
 #ifdef __clang__

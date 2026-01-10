@@ -13,8 +13,8 @@
 #include <unordered_set>
 
 #ifdef _WIN32
-#include <bcrypt.h>
 #include <windows.h>
+#include <bcrypt.h> //Must be included after windows.h for mingw
 #endif
 
 struct lv2_update_manager {

@@ -359,7 +359,7 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec) {
   // Get time difference in nanoseconds (using 128 bit accumulator)
   const u64 diff_sl = diff_base * 1000000000ull;
   const u64 diff_sh = rx::umulh64(diff_base, 1000000000ull);
-  const u64 diff = utils::udiv128(diff_sh, diff_sl, s_time_aux_info.perf_freq);
+  const u64 diff = rx::udiv128(diff_sh, diff_sl, s_time_aux_info.perf_freq);
 
   // get time since Epoch in nanoseconds
   const u64 time = s_time_aux_info.start_ftime * 100u +

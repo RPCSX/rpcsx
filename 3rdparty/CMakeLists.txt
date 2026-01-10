@@ -99,6 +99,14 @@ if (COMPILE_FFMPEG)
 	import_ffmpeg_library(swscale)
 	import_ffmpeg_library(swresample)
 	import_ffmpeg_library(postproc)
+	add_library(3rdparty_ffmpeg INTERFACE)
+    target_link_libraries(3rdparty_ffmpeg INTERFACE
+        ffmpeg::avformat
+        ffmpeg::avcodec
+        ffmpeg::swscale
+        ffmpeg::avutil
+        ffmpeg::avfilter
+        ffmpeg::swresample)
 endif()
 
 # Dummy target to use when lib isn't available

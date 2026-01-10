@@ -19,7 +19,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <Psapi.h>
+#include <psapi.h>
 #include <process.h>
 #include <sysinfoapi.h>
 
@@ -1494,7 +1494,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
-				reader_lock lock(pf_entries.mutex);
+				::reader_lock lock(pf_entries.mutex);
 
 				for (const auto& entry : pf_entries.entries)
 				{

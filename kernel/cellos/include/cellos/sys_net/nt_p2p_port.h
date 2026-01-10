@@ -5,7 +5,7 @@
 #include "lv2_socket_p2ps.h"
 
 #ifdef _WIN32
-#include <WS2tcpip.h>
+#include <ws2tcpip.h>
 #include <winsock2.h>
 #else
 #ifdef __clang__
