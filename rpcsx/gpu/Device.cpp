@@ -24,6 +24,7 @@
 #include <stop_token>
 #include <sys/mman.h>
 #include <thread>
+#include <unistd.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>

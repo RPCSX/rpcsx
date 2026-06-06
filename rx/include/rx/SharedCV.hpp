@@ -3,6 +3,7 @@
 #include "SharedAtomic.hpp"
 #include "SharedMutex.hpp"
 #include <chrono>
+#include <climits>
 #include <cstdint>
 #include <mutex>
 #include <system_error>
