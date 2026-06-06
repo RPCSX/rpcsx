@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <set>
 #include <string>
+#include <unistd.h>
 #include <unordered_set>
 #include <vector>
 

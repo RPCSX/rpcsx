@@ -6,6 +6,7 @@
 #include "orbis/error/SysResult.hpp"
 #include <filesystem>
 #include <map>
+#include <mutex>
 #include <string_view>
 
 static orbis::ErrorCode devfs_stat(orbis::File *file, orbis::Stat *sb,
