@@ -169,7 +169,7 @@ bool ComputePipe::processRing(Ring &ring) {
       }
 
       if (type == 2) {
-        ++ring.rptr;
+        ring.rptr = ring.rptr + 1;
         continue;
       }
 
@@ -860,7 +860,7 @@ void GraphicsPipe::processRing(Ring &ring) {
     }
 
     if (type == 2) {
-      ++ring.rptr;
+      ring.rptr = ring.rptr + 1;
       continue;
     }
 
@@ -2202,7 +2202,7 @@ void CommandPipe::processRing(Ring &ring) {
     }
 
     if (type == 2) {
-      ++ring.rptr;
+      ring.rptr = ring.rptr + 1;
       continue;
     }
 
