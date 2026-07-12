@@ -48,3 +48,7 @@ PRIVATE
 )
 
 add_subdirectory(shaders)
+
+if(RPCSX_ENABLE_TESTS)
+    add_subdirectory(tests)
+endif()

@@ -134,6 +134,13 @@ endfunction()
 option(WITH_PS3 "Enable PS3 emulation support" OFF)
 option(WITH_PS4 "Enable PS4 emulation support" ON)
 
+option(RPCSX_ENABLE_TESTS "Build unit tests" OFF)
+if(RPCSX_ENABLE_TESTS)
+    enable_testing()
+    # Only rpcsx's own tests; don't pull in 3rdparty test suites
+    set(SPIRV_SKIP_TESTS ON CACHE BOOL "" FORCE)
+endif()
+
 option(COMPILE_GLFW "Compile GLFW" OFF)
 option(COMPILE_VULKAN_LOADER "Compile Vulkan Loader" OFF)
 
