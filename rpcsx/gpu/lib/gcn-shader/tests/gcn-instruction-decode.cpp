@@ -262,6 +262,95 @@ void testSmrdLoadDwordImmediateOffset() {
   CHECK(inst.getOperand(3).value == 16);
 }
 
+// VOP3a (64-bit): word0 [31:26]=0b110100, op[25:17], clamp[11], abs[10:8],
+// vdst[7:0]; word1 neg[31:29], omod[28:27], src2[26:18], src1[17:9], src0[8:0]
+void testVop3MadF32Modifiers() {
+  // v_mad_f32 v1, |v2|, -v3, v4 clamp omod:1
+  auto [inst, size] = decode({0xD2820901, 0x4C120702});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Vop3);
+  CHECK(inst.op == ir::vop3::MAD_F32);
+  CHECK(inst.operandCount == 4);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 1);
+  CHECK(inst.getOperand(0).access == (GcnOperand::R | GcnOperand::W));
+  CHECK(inst.getOperand(0).clamp == true);
+  CHECK(inst.getOperand(0).omod == 1);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(1).value == 2);
+  CHECK(inst.getOperand(1).abs == true);
+  CHECK(inst.getOperand(1).neg == false);
+
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(2).value == 3);
+  CHECK(inst.getOperand(2).abs == false);
+  CHECK(inst.getOperand(2).neg == true);
+
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(3).value == 4);
+}
+
+// VOP3b variant: carry-writing ops replace abs/clamp bits with an explicit
+// SGPR carry destination in word0 [14:8].
+void testVop3bAddI32SgprCarry() {
+  // v_add_i32 v0, s10, v1, v2
+  auto [inst, size] = decode({0xD24A0A00, 0x00020501});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Vop3);
+  CHECK(inst.op == ir::vop3::ADD_I32);
+  CHECK(inst.operandCount == 4);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 0);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(1).value == 10);
+  CHECK(inst.getOperand(1).access == (GcnOperand::R | GcnOperand::W));
+
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(2).value == 1);
+
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(3).value == 2);
+}
+
+// VINTRP: [31:26]=0b110010, vdst[25:18], op[17:16], attr[15:10],
+// attrChan[9:8], vsrc[7:0]
+void testVintrpP1() {
+  // v_interp_p1_f32 v5, v0, attr2.y
+  auto [inst, size] = decode({0xC8140900});
+
+  CHECK(size == 4);
+  CHECK(inst.kind == ir::Kind::Vintrp);
+  CHECK(inst.op == ir::vintrp::P1_F32);
+  CHECK(inst.operandCount == 3);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 5);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(1).value == 0);
+
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Attr);
+  CHECK(inst.getOperand(2).attrId == 2);
+  CHECK(inst.getOperand(2).attrChannel == 1);
+}
+
+// P2 additionally reads the accumulator VGPR: vdst access becomes RW.
+void testVintrpP2ReadsVdst() {
+  // v_interp_p2_f32 v5, v1, attr2.y
+  auto [inst, size] = decode({0xC8150901});
+
+  CHECK(inst.kind == ir::Kind::Vintrp);
+  CHECK(inst.op == ir::vintrp::P2_F32);
+  CHECK(inst.getOperand(0).access == (GcnOperand::R | GcnOperand::W));
+}
+
 } // namespace
 
 int main() {
@@ -278,6 +367,10 @@ int main() {
   testVopcCmpEqF32();
   testSopkMovkI32SignExtension();
   testSmrdLoadDwordImmediateOffset();
+  testVop3MadF32Modifiers();
+  testVop3bAddI32SgprCarry();
+  testVintrpP1();
+  testVintrpP2ReadsVdst();
 
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);
