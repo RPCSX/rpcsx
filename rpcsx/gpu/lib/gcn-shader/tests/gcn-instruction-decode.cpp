@@ -433,6 +433,79 @@ void testExpCompressed() {
   CHECK(inst.getOperand(6).value == 6);
 }
 
+// MIMG (64-bit): word0 [31:26]=0b111100, slc[25], op[24:18], lwe[17],
+// tfe[16], r128[15], da[14], glc[13], unrm[12], dmask[11:8];
+// word1 ssamp[25:21] (<<2), srsrc[20:16] (<<2), vdata[15:8], vaddr[7:0]
+void testMimgImageSample() {
+  // image_sample v[0:3], v[4:7], s[8:15], s[16:19] dmask:0xf
+  auto [inst, size] = decode({0xF0800F00, 0x00820004});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Mimg);
+  CHECK(inst.op == ir::mimg::SAMPLE);
+  CHECK(inst.operandCount == 7);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 0);
+  CHECK(inst.getOperand(0).access == (GcnOperand::R | GcnOperand::W));
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(1).value == 4);
+
+  // T# resource: srsrc field 2 selects s[8:15]; r128=0 -> 256-bit descriptor
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Texture256);
+  CHECK(inst.getOperand(2).access == GcnOperand::R);
+  CHECK(inst.getOperand(2).firstRegisterKind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(2).firstRegisterIndex == 8);
+
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(3).value == 8);
+
+  // S# sampler: ssamp field 4 selects s[16:19]
+  CHECK(inst.getOperand(4).kind == GcnOperand::Kind::Sampler);
+  CHECK(inst.getOperand(4).access == GcnOperand::R);
+  CHECK(inst.getOperand(4).firstRegisterIndex == 16);
+  CHECK(inst.getOperand(4).samplerUnorm == false);
+
+  CHECK(inst.getOperand(5).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(5).value == 16);
+
+  // dmask constant, with no unrm/da/r128/tfe flag bits folded in
+  CHECK(inst.getOperand(6).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(6).value == 0xF);
+}
+
+// DS (64-bit): word0 [31:26]=0b110110, op[25:18], gds[17], offset1[15:8],
+// offset0[7:0]; word1 vdst[31:24], data1[23:16], data0[15:8], addr[7:0]
+void testDsReadB32() {
+  // ds_read_b32 v5, v1 offset:16
+  auto [inst, size] = decode({0xD8D80010, 0x05000001});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Ds);
+  CHECK(inst.op == ir::ds::READ_B32);
+  CHECK(inst.operandCount == 6);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 5);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(1).value == 1);
+  CHECK(inst.getOperand(1).access == GcnOperand::R);
+
+  // data0/data1 unused by reads but still decoded
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Vgpr);
+
+  // single-offset op: offset0 | (offset1 << 8)
+  CHECK(inst.getOperand(4).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(4).value == 16);
+
+  CHECK(inst.getOperand(5).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(5).value == 0); // gds
+}
+
 } // namespace
 
 int main() {
@@ -456,6 +529,8 @@ int main() {
   testMubufLoadDwordIdxen();
   testExpMrt0DoneVm();
   testExpCompressed();
+  testMimgImageSample();
+  testDsReadB32();
 
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);
