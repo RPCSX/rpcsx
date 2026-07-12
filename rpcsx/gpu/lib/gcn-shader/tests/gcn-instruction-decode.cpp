@@ -178,6 +178,90 @@ void testVop2AddI32ImplicitVcc() {
   CHECK(inst.getOperand(1).access == GcnOperand::W);
 }
 
+// VOP1: [31:25]=0b0111111, vdst[24:17], op[16:9], src0[8:0]
+void testVop1MovB32() {
+  // v_mov_b32 v3, v0  (src0 = 256 -> v0)
+  auto [inst, size] = decode({0x7E060300});
+
+  CHECK(size == 4);
+  CHECK(inst.kind == ir::Kind::Vop1);
+  CHECK(inst.op == ir::vop1::MOV_B32);
+  CHECK(inst.operandCount == 2);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 3);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(1).value == 0);
+  CHECK(inst.getOperand(1).access == GcnOperand::R);
+}
+
+// VOPC: [31:25]=0b0111110, op[24:17], vsrc1[16:9], src0[8:0]
+// Comparisons implicitly read/write VCC.
+void testVopcCmpEqF32() {
+  // v_cmp_eq_f32 vcc, s0, v1
+  auto [inst, size] = decode({0x7C040200});
+
+  CHECK(size == 4);
+  CHECK(inst.kind == ir::Kind::Vopc);
+  CHECK(inst.op == ir::vopc::CMP_EQ_F32);
+  CHECK(inst.operandCount == 3);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::VccLo);
+  CHECK(inst.getOperand(0).access == (GcnOperand::R | GcnOperand::W));
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(1).value == 0);
+
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(2).value == 1);
+}
+
+// SOPK: [31:28]=0b1011, op[27:23], sdst[22:16], simm16[15:0]
+void testSopkMovkI32SignExtension() {
+  // s_movk_i32 s4, -2  (simm16 = 0xFFFE, must sign-extend)
+  auto [inst, size] = decode({0xB004FFFE});
+
+  CHECK(size == 4);
+  CHECK(inst.kind == ir::Kind::Sopk);
+  CHECK(inst.op == ir::sopk::MOVK_I32);
+  CHECK(inst.operandCount == 2);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(0).value == 4);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(1).value == 0xFFFFFFFE);
+}
+
+// SMRD: [31:27]=0b11000, op[26:22], sdst[21:15], sbase[14:9], imm[8],
+// offset[7:0]. sbase selects an aligned SGPR pair (field value << 1); with
+// imm=1 the offset field is a dword offset exposed as bytes (<< 2).
+void testSmrdLoadDwordImmediateOffset() {
+  // s_load_dword s6, s[0:1], 0x4  (dword offset 4 -> byte offset 16)
+  auto [inst, size] = decode({0xC0030104});
+
+  CHECK(size == 4);
+  CHECK(inst.kind == ir::Kind::Smrd);
+  CHECK(inst.op == ir::smrd::LOAD_DWORD);
+  CHECK(inst.operandCount == 4);
+
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(0).value == 6);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Pointer);
+  CHECK(inst.getOperand(1).access == GcnOperand::R);
+
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(2).value == 0);
+
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(3).value == 16);
+}
+
 } // namespace
 
 int main() {
@@ -190,6 +274,10 @@ int main() {
   testVop2AddF32();
   testVop2LiteralSource();
   testVop2AddI32ImplicitVcc();
+  testVop1MovB32();
+  testVopcCmpEqF32();
+  testSopkMovkI32SignExtension();
+  testSmrdLoadDwordImmediateOffset();
 
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);
