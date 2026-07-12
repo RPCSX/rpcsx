@@ -351,6 +351,88 @@ void testVintrpP2ReadsVdst() {
   CHECK(inst.getOperand(0).access == (GcnOperand::R | GcnOperand::W));
 }
 
+// MUBUF (64-bit): word0 [31:26]=0b111000, op[24:18], lds[16], glc[14],
+// idxen[13], offen[12], offset[11:0]; word1 soffset[31:24], tfe[23], slc[22],
+// srsrc[20:16] (<<2), vdata[15:8], vaddr[7:0]
+void testMubufLoadDwordIdxen() {
+  // buffer_load_dword v0, v1, s[4:7], s2 idxen
+  auto [inst, size] = decode({0xE0302000, 0x02010001});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Mubuf);
+  CHECK(inst.op == ir::mubuf::LOAD_DWORD);
+  CHECK(inst.operandCount == 12);
+
+  // vdata: load destination
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 0);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  // offen disabled -> constant 0 placeholder; idxen enabled -> vaddr VGPR
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(1).value == 0);
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(2).value == 1);
+
+  // V# resource: srsrc field 1 selects s[4:7] (field << 2)
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Buffer);
+  CHECK(inst.getOperand(3).access == GcnOperand::R);
+  CHECK(inst.getOperand(3).firstRegisterKind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(3).firstRegisterIndex == 4);
+
+  CHECK(inst.getOperand(4).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(4).value == 4);
+
+  CHECK(inst.getOperand(5).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(5).value == 2);
+
+  // offset, idxen, glc, lds, slc, tfe constants
+  CHECK(inst.getOperand(6).value == 0);
+  CHECK(inst.getOperand(7).value == 1);
+  CHECK(inst.getOperand(8).value == 0);
+  CHECK(inst.getOperand(9).value == 0);
+  CHECK(inst.getOperand(10).value == 0);
+  CHECK(inst.getOperand(11).value == 0);
+}
+
+// EXP (64-bit): word0 [31:26]=0b111110, vm[12], done[11], compr[10],
+// target[9:4], en[3:0]; word1 vsrc3..vsrc0 (byte each). The decoder emits
+// target/en/compr/done/vm as leading constants, then only enabled sources.
+void testExpMrt0DoneVm() {
+  // exp mrt0 v0, v1, v2, v3 done vm
+  auto [inst, size] = decode({0xF800180F, 0x03020100});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Exp);
+  CHECK(inst.operandCount == 9);
+
+  CHECK(inst.getOperand(0).value == 0);  // target mrt0
+  CHECK(inst.getOperand(1).value == 15); // en
+  CHECK(inst.getOperand(2).value == 0);  // compr
+  CHECK(inst.getOperand(3).value == 1);  // done
+  CHECK(inst.getOperand(4).value == 1);  // vm
+
+  for (unsigned i = 0; i < 4; ++i) {
+    CHECK(inst.getOperand(5 + i).kind == GcnOperand::Kind::Vgpr);
+    CHECK(inst.getOperand(5 + i).value == i);
+    CHECK(inst.getOperand(5 + i).access == GcnOperand::R);
+  }
+}
+
+// compr=1 halves the source count: vsrc2/vsrc3 are ignored even if enabled.
+void testExpCompressed() {
+  // exp mrt0 v5, v6 compr (en = 0b0011)
+  auto [inst, size] = decode({0xF8000403, 0x00000605});
+
+  CHECK(inst.kind == ir::Kind::Exp);
+  CHECK(inst.operandCount == 7);
+  CHECK(inst.getOperand(2).value == 1); // compr
+  CHECK(inst.getOperand(5).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(5).value == 5);
+  CHECK(inst.getOperand(6).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(6).value == 6);
+}
+
 } // namespace
 
 int main() {
@@ -371,6 +453,9 @@ int main() {
   testVop3bAddI32SgprCarry();
   testVintrpP1();
   testVintrpP2ReadsVdst();
+  testMubufLoadDwordIdxen();
+  testExpMrt0DoneVm();
+  testExpCompressed();
 
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);
