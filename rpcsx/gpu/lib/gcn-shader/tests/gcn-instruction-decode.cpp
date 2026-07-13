@@ -506,6 +506,58 @@ void testDsReadB32() {
   CHECK(inst.getOperand(5).value == 0); // gds
 }
 
+// MTBUF (64-bit): word0 [31:26]=0b111010, nfmt[26:23], dfmt[22:19],
+// op[18:16], glc[14], idxen[13], offen[12], offset[11:0];
+// word1 soffset[31:24], tfe[23], slc[22], srsrc[20:16] (<<2), vdata[15:8],
+// vaddr[7:0]. Unlike MUBUF, the typed format (dfmt/nfmt) rides in the
+// instruction and is emitted as constants after the address operands.
+void testMtbufLoadFormatX() {
+  // tbuffer_load_format_x v0, v1, s[8:11], s3 idxen dfmt:4(32) nfmt:4(uint)
+  auto [inst, size] = decode({0xEA202000, 0x03020001});
+
+  CHECK(size == 8);
+  CHECK(inst.kind == ir::Kind::Mtbuf);
+  CHECK(inst.op == ir::mtbuf::LOAD_FORMAT_X);
+  CHECK(inst.operandCount == 13);
+
+  // vdata: load destination
+  CHECK(inst.getOperand(0).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(0).value == 0);
+  CHECK(inst.getOperand(0).access == GcnOperand::W);
+
+  // offen disabled -> constant placeholder; idxen enabled -> vaddr VGPR
+  CHECK(inst.getOperand(1).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(1).value == 0);
+  CHECK(inst.getOperand(2).kind == GcnOperand::Kind::Vgpr);
+  CHECK(inst.getOperand(2).value == 1);
+  CHECK(inst.getOperand(2).access == GcnOperand::R);
+
+  // instruction-embedded buffer format
+  CHECK(inst.getOperand(3).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(3).value == 4); // dfmt: 32
+  CHECK(inst.getOperand(4).kind == GcnOperand::Kind::Constant);
+  CHECK(inst.getOperand(4).value == 4); // nfmt: uint
+
+  // V# resource: srsrc field 2 selects s[8:11]; loads read the buffer
+  CHECK(inst.getOperand(5).kind == GcnOperand::Kind::Buffer);
+  CHECK(inst.getOperand(5).access == GcnOperand::R);
+  CHECK(inst.getOperand(5).firstRegisterKind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(5).firstRegisterIndex == 8);
+
+  CHECK(inst.getOperand(6).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(6).value == 8);
+
+  CHECK(inst.getOperand(7).kind == GcnOperand::Kind::Sgpr);
+  CHECK(inst.getOperand(7).value == 3); // soffset
+
+  // offset, idxen, glc, slc, tfe constants
+  CHECK(inst.getOperand(8).value == 0);
+  CHECK(inst.getOperand(9).value == 1);
+  CHECK(inst.getOperand(10).value == 0);
+  CHECK(inst.getOperand(11).value == 0);
+  CHECK(inst.getOperand(12).value == 0);
+}
+
 } // namespace
 
 int main() {
@@ -531,6 +583,7 @@ int main() {
   testExpCompressed();
   testMimgImageSample();
   testDsReadB32();
+  testMtbufLoadFormatX();
 
   if (g_failures != 0) {
     std::printf("%d check(s) failed\n", g_failures);
